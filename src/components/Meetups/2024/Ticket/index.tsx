@@ -63,6 +63,9 @@ export default function Ticket({ sponsors }: TicketProps) {
           <p className="text-xs font-semibold text-yellow-400 lg:absolute lg:right-4 lg:top-6">01.11.2025</p>
           <p className="text-gray-400/150 text-xs text-gray-400 lg:absolute lg:right-4 lg:top-11">SINERGIA FARO</p>
           <img alt="OWU Uruguay" className="mt-4 max-w-[90px] object-cover lg:max-w-[190px]" src="/ticket_logo.webp" />
+          <p className="text-gray-400/150 absolute bottom-6 right-4 text-xs text-gray-400">
+            ¡Haz clic para ver más información!
+          </p>
           <div className="mt-[5px] flex h-[35px] w-full flex-row items-center gap-2">
             {currentSponsors.map((sponsor) => (
               <img

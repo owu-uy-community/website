@@ -9,17 +9,6 @@ import { FaHeart } from "react-icons/fa6";
 import TicketHome from "components/Meetups/2024/TicketHome";
 
 type HeroProps = {
-  title?: string;
-  subtitle?: string;
-  date?: string;
-  location?: string;
-  locationUrl?: string;
-  primaryButtonName?: string;
-  primaryButtonUrl?: string;
-  secondaryButtonName?: string;
-  secondaryButtonUrl?: string;
-  ctaText?: string;
-  ctaUrl?: string;
   sponsors?: readonly {
     readonly name: string;
     readonly image: string;
@@ -27,19 +16,19 @@ type HeroProps = {
   }[];
 };
 
-export default function Hero({ ctaText, ctaUrl = "#", sponsors }: HeroProps) {
+export default function Hero({ sponsors }: HeroProps) {
   return (
     <section
       className="relative flex min-h-[calc(100dvh-300px)] w-full flex-1 flex-col items-center justify-center"
       id="inicio"
     >
       <div className="flex w-full flex-row flex-wrap-reverse items-center justify-center gap-8 xl:flex-nowrap">
-        <div className="flex min-h-[calc(100dvh-56px)] w-full max-w-[650px] flex-col items-center justify-center">
-          <h1 className="mb-12 text-center text-7xl font-black uppercase italic leading-none text-primary text-yellow-400 xl:mb-6 xl:text-[80px]">
+        <div className="flex min-h-[calc(100dvh-56px)] w-full max-w-[650px] flex-col items-center justify-center lg:min-h-[calc(100dvh-165px)]">
+          <h1 className="mb-12 text-center text-7xl font-black uppercase italic leading-none text-primary text-yellow-400 xl:mb-2 xl:text-[80px]">
             LA
             <span className="block text-7xl uppercase lg:text-8xl xl:text-9xl">MEETUP</span>
           </h1>
-          <div className="flex w-full flex-col gap-10 xl:gap-2">
+          <div className="flex w-full flex-col gap-2">
             <span className="flex w-full flex-col items-center justify-center">
               <h2 className="animate-fadeIn animate-delay-200 text-center text-3xl font-extrabold text-white md:text-4xl lg:text-5xl">
                 {format(parseISO(new Date("2025-11-01 00:00:00").toISOString()), "dd 'de' MMMM yyyy", {
@@ -54,11 +43,8 @@ export default function Hero({ ctaText, ctaUrl = "#", sponsors }: HeroProps) {
               </Link>
             </span>
 
-            <span className="flex-column flex w-full flex-wrap items-center justify-center gap-8">
-              <Link
-                className="hidden xl:block"
-                href="https://gdg.community.dev/events/details/google-gdg-montevideo-presents-la-meetup-owu-1/"
-              >
+            <span className="flex-column flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-4">
+              <Link className="hidden xl:block" href="/la-meetup/interes">
                 <TicketHome sponsors={sponsors} />
               </Link>
               <Link

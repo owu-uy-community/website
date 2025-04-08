@@ -1,8 +1,11 @@
+import { type Metadata } from "next";
+
 import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
 
-export const metadata = {
-  title: "Sponsors | OWU Uruguay",
-  description: "Te invitamos a formar parte de la comunidad de sponsors de La Meetup 2024",
+export const metadata: Metadata = {
+  title: "Sponsors | La Meetup 2025",
+  description:
+    "Formulario de declaración de interés para ser sponsor de la tercera edición de La Meetup, el encuentro anual que reúne a las comunidades tecnológicas de Uruguay para estrechar lazos, colaborar e impulsar la cultura del software.",
 };
 
 export default function Sponsors() {
