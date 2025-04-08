@@ -14,18 +14,13 @@ titles:
   - Compartimos
   - Conectamos
   - Construimos
-subtitle: en OWU
 description: >-
   Un espacio donde personas apasionadas por la tecnología se reúnen, comparten y convierten sus ideas en realidad
 mainButton: ¡Sumate a la Comunidad!
 mainButtonLink: https://slack.owu.uy/
 cta: ¡Conocé nuestra historia y próximos eventos!
 ctaLink: /#historia
-mainSectionTitle: ¿Qué es OWU Uruguay?
-mainSectionSubtitle: Nuestra Historia
 mainSectionImage: /carpincho.png
-statsSectionTitle: Nuestra comunidad en cifras
-statsSectionSubtitle: ¡Creciendo juntos, nuestra comunidad en números!
 stats:
   - title: Meetups
     subtitle: coordinadas
@@ -39,5 +34,3 @@ stats:
   - title: Años
     subtitle: desde su creación
     count: 9
-eventsSectionTitle: Eventos de la comunidad
-eventsSectionSubtitle: ¡Listado de próximos eventos!
