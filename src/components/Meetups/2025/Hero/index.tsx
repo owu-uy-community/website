@@ -31,7 +31,7 @@ export default function Hero({ sponsors }: HeroProps) {
           <div className="flex w-full flex-col gap-2">
             <span className="flex w-full flex-col items-center justify-center">
               <h2 className="animate-fadeIn animate-delay-200 text-center text-3xl font-extrabold text-white md:text-4xl lg:text-5xl">
-                {format(parseISO(new Date("2025-11-01 00:00:00").toISOString()), "dd 'de' MMMM yyyy", {
+                {format(parseISO(new Date("2025-11-01 00:00:00").toISOString()), "d 'de' MMMM yyyy", {
                   locale: es,
                 })}
               </h2>
