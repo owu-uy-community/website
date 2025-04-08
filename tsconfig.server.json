@@ -8,5 +8,5 @@
     "jsx": "react",
     "baseUrl": "src"
   },
-  "include": ["src/admin/server.ts", "src/admin/payload.config.ts"]
+  "include": ["src/admin/server.ts"]
 }

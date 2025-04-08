@@ -1,6 +1,0 @@
-{
-  "watch": ["admin/server.ts"],
-  "exec": "ts-node --interactive --project tsconfig.server.json src/admin/server.ts",
-  "ext": "js ts",
-  "stdin": false
-}
