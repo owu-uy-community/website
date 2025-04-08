@@ -2,37 +2,36 @@
 
 import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
+import Event from "components/Landing/Event";
 
-import Event from "../Event";
-
-type EventsProps = {
-  title?: string;
-  subtitle?: string;
-  events?: {
-    id: number;
-    name: string;
-    title: string;
-    datetime: string;
-    end_datetime: string;
-    event_url: string;
-  }[];
+type Event = {
+  id: number;
+  name: string;
+  title: string;
+  datetime: string;
+  end_datetime: string;
+  event_url: string;
 };
 
-export default function Events({ title, subtitle, events }: EventsProps) {
+type EventsProps = {
+  events?: Event[];
+};
+
+export default function Events({ events }: EventsProps) {
   const { sectionsRefs } = useNavigationContext();
 
   return (
     <section
       ref={sectionsRefs[SectionKey.Events]}
-      className="relative flex min-h-[800px] w-full flex-col items-center justify-center gap-8 self-center pt-20 text-white"
+      className="relative flex min-h-[500px] w-full flex-col items-center gap-8 self-center pt-20 text-white"
       id={SectionKey.Events}
     >
       <span className="flex flex-col gap-1">
-        <h2 className="text-center text-3xl font-bold sm:text-4xl">{title}</h2>
-        <h3 className="text-center text-zinc-400">{subtitle}</h3>
+        <h2 className="text-center text-3xl font-bold sm:text-4xl">Eventos de la comunidad</h2>
+        <h3 className="text-center text-zinc-400">¡Listado de próximos eventos!</h3>
       </span>
       {!!events?.length ? (
-        <ol className="flex w-full flex-col items-center justify-center gap-4">
+        <ol className="flex w-full flex-col items-center justify-center gap-4 pb-4">
           {events.map(({ id, name, title, datetime, end_datetime, event_url }) => (
             <Event
               key={id}

@@ -1,5 +1,3 @@
-"use client";
-import { motion } from "framer-motion";
 import Link from "next/link";
 
 import { randomArraySort } from "app/lib/utils";
@@ -7,8 +5,6 @@ import { randomArraySort } from "app/lib/utils";
 import Sponsor from "../Sponsor";
 
 type SponsorsProps = {
-  title?: string;
-  subtitle?: string;
   sponsors?: {
     name: string;
     logo: {
@@ -18,14 +14,16 @@ type SponsorsProps = {
   }[];
 };
 
-export default function Sponsors({ title, subtitle, sponsors = [] }: SponsorsProps) {
+export default function Sponsors({ sponsors = [] }: SponsorsProps) {
   const sponsorsList = randomArraySort(sponsors);
 
   return (
     <div className="flex w-full max-w-[1200px] flex-col items-center gap-5">
       <span>
-        <h2 className="text-center text-5xl font-bold text-yellow-400">{title}</h2>
-        <p className="mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
+        <h2 className="text-center text-5xl font-bold text-yellow-400">Sponsors</h2>
+        <p className="mt-2 text-center text-lg font-[400] text-white">
+          ¡Nuestros aliados y patrocinadores que hacen este evento posible!
+        </p>
       </span>
       <div className="flex flex-row flex-wrap items-center justify-center gap-5">
         {sponsorsList.map(({ name, logo, website }) => (

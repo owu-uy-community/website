@@ -5,8 +5,6 @@ import { useNavigationContext } from "components/shared/Navbar/navigationProvide
 import Stat from "../Stat";
 
 type StatsProps = {
-  title?: string;
-  subtitle?: string;
   stats?: readonly {
     title: string;
     subtitle: string;
@@ -14,7 +12,7 @@ type StatsProps = {
   }[];
 };
 
-export default function Stats({ title, subtitle, stats }: StatsProps) {
+export default function Stats({ stats }: StatsProps) {
   const { sectionsRefs } = useNavigationContext();
 
   return (
@@ -24,8 +22,8 @@ export default function Stats({ title, subtitle, stats }: StatsProps) {
       id={SectionKey.Stats}
     >
       <span className="flex flex-col gap-1">
-        <h2 className="text-center text-4xl font-semibold text-white">{title}</h2>
-        <h3 className="text-center text-zinc-400">{subtitle}</h3>
+        <h2 className="text-center text-4xl font-semibold text-white">Nuestra comunidad en cifras</h2>
+        <h3 className="text-center text-zinc-400">¡Creciendo juntos, nuestra comunidad en números!</h3>
       </span>
       <div className="grid w-full place-items-center gap-5 xl:grid-cols-[1fr_550px]">
         <img

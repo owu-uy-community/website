@@ -3,46 +3,45 @@
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { type ElementNode } from "@payloadcms/richtext-slate";
 
 import { Avatar, AvatarImage } from "components/shared/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "components/shared/ui/tooltip";
-import { PayloadCMSRichText } from "components/shared/RichText";
 
 type AgendaProps = {
   title?: string;
   subtitle?: string;
   lastUpdate?: string;
-  agenda?: {
-    id: number;
-    title: string;
-    richText: ElementNode[];
-    startTime: Date;
-    endTime: Date;
-    presenter?: {
-      firstname: string;
-      lastname?: string;
-      picture?: {
-        url: string;
+  agenda?: readonly {
+    readonly id: number;
+    readonly title: string;
+    readonly description: string;
+    readonly startTime: Date;
+    readonly endTime: Date;
+    readonly presenter?: {
+      readonly firstname: string;
+      readonly lastname?: string;
+      readonly picture?: {
+        readonly url: string;
       };
     };
-    location?: {
-      name: string;
-      capacity: number;
+    readonly location?: {
+      readonly name: string;
     };
-    attendees?: {
-      name: string;
-      image: string;
+    readonly attendees?: readonly {
+      readonly name: string;
+      readonly image: string;
     }[];
   }[];
 };
 
-export default function Agenda({ title, subtitle, lastUpdate, agenda }: AgendaProps) {
+export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
   return (
     <div className="flex w-full max-w-[1200px] flex-col items-center gap-5">
       <span>
-        <h2 className="text-center text-5xl font-bold text-yellow-400">{title}</h2>
-        <p className="mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
+        <h2 className="text-center text-5xl font-bold text-yellow-400">Agenda</h2>
+        <p className="mt-2 text-center text-lg font-[400] text-white">
+          ¡Conocé el cronograma de actividades y charlas!
+        </p>
         {lastUpdate ? (
           <p className="mt-2 text-center text-xs text-gray-400">
             Última actualización: {format(parseISO(lastUpdate), "dd/MM/yyyy HH:mm:ss", { locale: es })}
@@ -52,7 +51,7 @@ export default function Agenda({ title, subtitle, lastUpdate, agenda }: AgendaPr
       <div className="flex w-full flex-row justify-center gap-5">
         <div className="w-full max-w-[1200px] text-white">
           <div className="flex min-h-[35px] flex-col gap-4">
-            {agenda?.map(({ id, startTime, endTime, presenter, title, richText, location }) => (
+            {agenda?.map(({ id, startTime, endTime, presenter, title, location, description }) => (
               <div
                 key={id}
                 className="flex w-full flex-row items-center justify-between gap-3 rounded-lg border-[1.5px] border-gray-400 px-4 py-5 text-sm md:px-8 md:text-lg"
@@ -79,9 +78,7 @@ export default function Agenda({ title, subtitle, lastUpdate, agenda }: AgendaPr
                   ) : null}
                   <span className="flex flex-col gap-0.5">
                     <span className="text-left text-xs sm:text-sm lg:text-base">{title}</span>
-                    <span className="text-left text-xs text-gray-400 sm:text-sm">
-                      <PayloadCMSRichText richText={richText} />
-                    </span>
+                    <span className="text-left text-xs text-gray-400 sm:text-sm">{description}</span>
                   </span>
                 </div>
                 <span className="flex h-[30px] flex-row flex-wrap gap-4 md:h-[35px]">
@@ -96,17 +93,6 @@ export default function Agenda({ title, subtitle, lastUpdate, agenda }: AgendaPr
                         <p>Ubicación: {location?.name}</p>
                       </TooltipContent>
                     </Tooltip>
-                    {/* Enable this tooltip when the location capacity is available */}
-                    {/* <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="hidden min-w-[180px] flex-row items-center justify-center gap-1 rounded-md bg-red-600 px-5 text-center text-sm font-semibold text-white lg:flex">
-                                <FaUsers /> {location?.capacity} ASISTENTES
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="mb-1 border-[1.5px] border-gray-400">
-                              <p>Máximo {location?.capacity ?? 0} asistentes</p>
-                            </TooltipContent>
-                          </Tooltip> */}
                   </TooltipProvider>
                 </span>
               </div>

@@ -1,10 +1,4 @@
-type IntroductionProps = {
-  title?: string;
-  subtitle?: string;
-  description?: string;
-};
-
-export default function Introduction({ title, subtitle, description }: IntroductionProps) {
+export default function Introduction() {
   return (
     <div className="flex w-full max-w-[1200px] flex-col items-center gap-5" id="bienvenida">
       <span>
@@ -17,8 +11,8 @@ export default function Introduction({ title, subtitle, description }: Introduct
           <b>La Meetup</b> ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología locales.
         </p>
         <p className="text-white xl:text-center">
-          Este evento será un punto de encuentro para profesionales, estudiantes y entusiastas de la tecnología de todo
-          el país. Es una gran oportunidad para intercambiar ideas, compartir experiencias y construir relaciones que
+          Este evento es un punto de encuentro para profesionales, estudiantes y entusiastas de la tecnología de todo el
+          país. Es una gran oportunidad para intercambiar ideas, compartir experiencias y construir relaciones que
           fomenten el crecimiento y la unidad dentro de la comunidad tecnológica uruguaya.
         </p>
       </div>

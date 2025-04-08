@@ -7,8 +7,7 @@ import Story from "components/Landing/Story";
 import Footer from "components/shared/Footer";
 
 import keystaticConfig from "../../../../../keystatic.config";
-import getMeetup from "../(meetups)/(2024)/la-meetup/services/getMeetup";
-import getEvents from "../(meetups)/(2024)/la-meetup/services/getEvents";
+import getEvents from "../(meetups)/2024/la-meetup/services/getEvents";
 
 const reader = createReader(process.cwd(), keystaticConfig);
 
@@ -16,33 +15,12 @@ export default async function Landing() {
   const landing = await reader.collections.landing.read("2024");
   let content;
 
-  const {
-    titles,
-    subtitle,
-    description,
-    cta,
-    ctaLink,
-    mainSectionTitle,
-    mainSectionSubtitle,
-    mainSectionContent,
-    mainSectionImage,
-    mainButton,
-    mainButtonLink,
-    eventsSectionTitle,
-    eventsSectionSubtitle,
-    statsSectionTitle,
-    statsSectionSubtitle,
-    stats,
-  } = landing ?? {};
+  const { titles, description, cta, ctaLink, mainSectionContent, mainSectionImage, mainButton, mainButtonLink, stats } =
+    landing ?? {};
 
   if (mainSectionContent) content = await mainSectionContent();
 
-  const { docs: meetup } = await getMeetup();
   const events = await getEvents();
-
-  const { sponsors } = meetup[0] ?? {
-    sponsors: [],
-  };
 
   return (
     <div className="container flex w-full flex-col items-center justify-center">
@@ -53,14 +31,12 @@ export default async function Landing() {
         heroWords={titles}
         slackButtonText={mainButton}
         slackButtonUrl={mainButtonLink}
-        sponsors={sponsors}
-        subtitle={subtitle}
       />
 
-      <Story content={content} image={mainSectionImage} subtitle={mainSectionSubtitle} title={mainSectionTitle} />
-      <Stats stats={stats} subtitle={statsSectionSubtitle} title={statsSectionTitle} />
+      <Story content={content} image={mainSectionImage} />
+      <Stats stats={stats} />
       <div className="flex w-full flex-col">
-        <Events events={events} subtitle={eventsSectionSubtitle} title={eventsSectionTitle} />
+        <Events events={events} />
         <Footer />
       </div>
     </div>

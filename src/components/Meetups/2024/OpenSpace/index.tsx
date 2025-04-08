@@ -10,31 +10,26 @@ type OpenSpaceProps = {
   content?: string;
   primaryButtonName?: string;
   primaryButtonUrl?: string;
-  gallery?: {
-    id: string;
-    url: string;
-    alt: string;
+  gallery?: readonly {
+    readonly id: string;
+    readonly image: string;
+    readonly alt: string;
   }[];
 };
 
-export default function OpenSpace({
-  title,
-  subtitle,
-  content,
-  primaryButtonName,
-  primaryButtonUrl = "#",
-  gallery,
-}: OpenSpaceProps) {
+export default function OpenSpace({ content, primaryButtonName, primaryButtonUrl = "#", gallery }: OpenSpaceProps) {
   return (
     <div className="relative flex w-full flex-col items-center justify-center gap-8 rounded-2xl text-white xl:py-14">
       <span className="group flex flex-row items-center gap-3">
         <span className="flex flex-col items-center justify-center">
           <span className="flex flex-row items-center gap-4">
             <FaRocket className="hidden -rotate-180 text-4xl text-yellow-400 group-hover:mr-2 group-hover:text-yellow-500 md:flex" />
-            <h2 className="text-center text-5xl font-bold text-yellow-400">{title}</h2>
+            <h2 className="text-center text-5xl font-bold text-yellow-400">Open Space</h2>
             <FaRocket className="hidden text-4xl text-yellow-400 group-hover:ml-2 group-hover:text-yellow-500 md:flex" />
           </span>
-          <p className="mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
+          <p className="mt-2 text-center text-lg font-[400] text-white">
+            ¡Un espacio para compartir y aprender de manera colaborativa!
+          </p>
         </span>
       </span>
       <div className="flex w-full flex-row flex-wrap justify-center gap-5 xl:justify-between">
@@ -47,9 +42,9 @@ export default function OpenSpace({
             <Carousel className="max-h-[500px] w-full max-w-[900px]">
               <CarouselContent>
                 {gallery?.length ? (
-                  gallery.map(({ id, url, alt }) => (
+                  gallery.map(({ id, image, alt }) => (
                     <CarouselItem key={id}>
-                      <img alt={alt} className="h-full max-h-[380px] w-full rounded-md object-cover" src={url} />
+                      <img alt={alt} className="h-full max-h-[380px] w-full rounded-md object-cover" src={image} />
                     </CarouselItem>
                   ))
                 ) : (
