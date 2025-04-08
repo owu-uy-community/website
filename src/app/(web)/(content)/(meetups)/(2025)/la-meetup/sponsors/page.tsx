@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function Sponsors() {
   const url =
-    "https://docs.google.com/forms/d/e/1FAIpQLSemC7vrDw38LTWcBUhIYjarqMMVUfE-dSnBPUAsNzBWd6uqcQ/viewform?embedded=true";
+    "https://docs.google.com/forms/d/e/1FAIpQLSeZGSpB95IZH6Texu2CqjHNw27pJye1nzEtJn5Y90gJiD0orA/viewform?embedded=true";
 
   return (
     <EmbeddedFormLayout title="¡Formulario de Sponsors!">

@@ -9,12 +9,12 @@ export const metadata: Metadata = {
 
 export default function Intrest() {
   const url =
-    "https://docs.google.com/forms/d/e/1FAIpQLSe7QPkYcoz1tZ-j4N-BvqNfkLMtp9Oq8vQ285mTR7EuJPDVnw/viewform?embedded=true";
+    "https://docs.google.com/forms/d/e/1FAIpQLSf5c4z67ZcVvv7ONQYhlzaXXsRd0ZWyBrLKamtXanD3b1Bz4w/viewform?embedded=true";
 
   return (
     <EmbeddedFormLayout title="¡Formulario de Interés!">
       <iframe
-        className="iframeembed flex min-h-[70rem] w-full max-w-[750px] flex-1 flex-col md:min-h-[60rem]"
+        className="iframeembed flex min-h-[65rem] w-full max-w-[750px] flex-1 flex-col md:min-h-[46rem]"
         src={url}
         title="form"
       >
