@@ -12,11 +12,17 @@ import Introduction from "components/Meetups/2024/Introduction";
 import { SectionKey } from "components/shared/Navbar/navSections";
 import Gallery from "components/Meetups/2024/Gallery";
 
+import {
+  transformAgendaItem,
+  transformArray,
+  transformCommunity,
+  transformSponsor,
+  transformStaffMember,
+  type AgendaItem,
+} from "../../../../../lib/keystatic/utils";
 import keystaticConfig from "../../../../../../../keystatic.config";
 
-import getAgenda from "./services/getAgenda";
-import getMeetup from "./services/getMeetup";
-import getGallery from "./services/getGallery";
+const reader = cache(() => createReader(process.cwd(), keystaticConfig));
 
 export const metadata = {
   title: "La Meetup 2024 | OWU Uruguay",
@@ -24,13 +30,10 @@ export const metadata = {
     "La Meetup ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología uruguayas.",
 };
 
-const reader = cache(() => {
-  return createReader(process.cwd(), keystaticConfig);
-});
-
 export default async function LaMeetup2024Page() {
   const laMeetup = await reader().collections.laMeetup2024.read(SectionKey.MeetupEvent);
-  let content;
+
+  if (!laMeetup) return null;
 
   const {
     title,
@@ -44,38 +47,36 @@ export default async function LaMeetup2024Page() {
     secondaryButtonUrl,
     ctaText,
     ctaUrl,
-    agendaTitle,
-    agendaSubtitle,
-    // speakersTitle,
-    // speakersSubtitle,
-    openSpaceTitle,
-    openSpaceSubtitle,
+    agenda,
     openSpaceDescription,
     openSpacePrimaryButtonName,
     openSpacePrimaryButtonUrl,
-    sponsorsTitle,
-    sponsorsSubtitle,
-    staffTitle,
-    staffSubtitle,
-    communitiesTitle,
-    communitiesSubtitle,
-  } = laMeetup ?? {};
+    openspaceGallery,
+    gallery,
+    sponsors,
+    staff,
+    communities,
+  } = laMeetup;
 
-  if (openSpaceDescription) content = await openSpaceDescription();
+  // Transform content
+  const content = await openSpaceDescription();
 
-  const { docs: agenda } = await getAgenda();
+  // Type assertions for Keystatic collections
+  const agendaItems = agenda as unknown as AgendaItem[];
+  const sponsorSlugs = sponsors as unknown as string[];
+  const staffSlugs = staff as unknown as string[];
+  const communitySlugs = communities as unknown as string[];
 
-  const { docs: meetup } = await getMeetup();
+  const transformedAgenda = await transformArray(agendaItems, transformAgendaItem);
+  const transformedSponsors = await transformArray(sponsorSlugs, transformSponsor);
+  const transformedStaff = await transformArray(staffSlugs, transformStaffMember);
+  const transformedCommunities = await transformArray(communitySlugs, transformCommunity);
 
-  const { docs: gallery } = await getGallery();
-
-  const { staff, openspaceGallery, sponsors, communities } = meetup[0] ?? {
-    staff: [],
-    communities: [],
-    speakers: [],
-    sponsors: [],
-    openspaceGallery: [],
-  };
+  const transformedGallery = gallery.map((item) => ({
+    id: item.id,
+    url: item.image,
+    alt: item.alt,
+  }));
 
   return (
     <div className="container flex w-full flex-col items-center justify-center gap-12 self-center xl:gap-28">
@@ -89,24 +90,22 @@ export default async function LaMeetup2024Page() {
         primaryButtonUrl={primaryButtonUrl}
         secondaryButtonName={secondaryButtonName}
         secondaryButtonUrl={secondaryButtonUrl}
-        sponsors={sponsors}
+        sponsors={transformedSponsors}
         subtitle={subtitle}
         title={title}
       />
       <Introduction />
-      <Agenda agenda={agenda} subtitle={agendaSubtitle} title={agendaTitle} />
+      <Agenda agenda={transformedAgenda} />
       <OpenSpaceSummary
         content={content}
         gallery={openspaceGallery}
         primaryButtonName={openSpacePrimaryButtonName}
         primaryButtonUrl={openSpacePrimaryButtonUrl}
-        subtitle={openSpaceSubtitle}
-        title={openSpaceTitle}
       />
-      <Gallery gallery={gallery} />
-      <Sponsors sponsors={sponsors} subtitle={sponsorsSubtitle} title={sponsorsTitle} />
-      <Staff staff={staff} subtitle={staffSubtitle} title={staffTitle} />
-      <CommunitiesCarousel communities={communities} subtitle={communitiesSubtitle} title={communitiesTitle} />
+      <Gallery gallery={transformedGallery} />
+      <Sponsors sponsors={transformedSponsors} />
+      <Staff staff={transformedStaff} />
+      <CommunitiesCarousel communities={transformedCommunities} />
       <Footer />
     </div>
   );

@@ -6,19 +6,17 @@ import classNames from "classnames";
 import "atropos/css";
 
 type Sponsor = {
-  id: string;
-  name: string;
-  logo: {
-    url: string;
-  };
+  readonly name: string;
+  readonly image: string;
+  readonly website?: string;
 };
 
 type TicketProps = {
-  sponsors?: Sponsor[];
+  sponsors?: readonly Sponsor[];
 };
 
 export default function Ticket({ sponsors }: TicketProps) {
-  const [currentSponsors, setCurrentSponsors] = useState<Sponsor[]>([]);
+  const [currentSponsors, setCurrentSponsors] = useState<readonly Sponsor[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -34,9 +32,11 @@ export default function Ticket({ sponsors }: TicketProps) {
   }, [currentIndex]);
 
   useEffect(() => {
-    const slicedSponsors = sponsors?.slice(currentIndex, currentIndex + 5) ?? [];
+    if (sponsors?.length) {
+      const slicedSponsors = sponsors.slice(currentIndex, currentIndex + 5);
 
-    setCurrentSponsors(slicedSponsors);
+      setCurrentSponsors(slicedSponsors);
+    }
   }, [currentIndex, sponsors ?? []]);
 
   return (
@@ -59,18 +59,18 @@ export default function Ticket({ sponsors }: TicketProps) {
           #0001
         </span>
         <div className="flex w-full flex-col px-5 text-left">
-          <span className="spacing text-sm tracking-wider text-gray-300 lg:text-lg">#LaMeetup2024</span>
-          <p className="text-xs font-semibold text-yellow-400 lg:absolute lg:right-4 lg:top-6">19.10.2024</p>
+          <span className="spacing text-sm tracking-wider text-gray-300 lg:text-lg">#LaMeetup2025</span>
+          <p className="text-xs font-semibold text-yellow-400 lg:absolute lg:right-4 lg:top-6">01.11.2025</p>
           <p className="text-gray-400/150 text-xs text-gray-400 lg:absolute lg:right-4 lg:top-11">SINERGIA FARO</p>
           <img alt="OWU Uruguay" className="mt-4 max-w-[90px] object-cover lg:max-w-[190px]" src="/ticket_logo.webp" />
           <div className="mt-[5px] flex h-[35px] w-full flex-row items-center gap-2">
-            {currentSponsors.map((sponsor: Sponsor) => (
+            {currentSponsors.map((sponsor) => (
               <img
-                key={sponsor.id}
+                key={sponsor.name}
                 alt={sponsor.name}
                 className="w-full max-w-[75px] object-scale-down brightness-0 contrast-100 invert filter"
                 loading="eager"
-                src={sponsor.logo.url}
+                src={sponsor.image}
               />
             ))}
           </div>

@@ -4,7 +4,11 @@ import { Container3D } from "components/Meetups/2024/Container3D";
 import Ticket from "components/Meetups/2024/Ticket";
 
 type TicketHomeProps = {
-  sponsors?: any[];
+  sponsors?: readonly {
+    readonly name: string;
+    readonly image: string;
+    readonly website?: string;
+  }[];
 };
 
 export default function TicketHome({ sponsors }: TicketHomeProps) {

@@ -6,12 +6,10 @@ import Link from "next/link";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "components/shared/ui/carousel";
 
 type GalleryProps = {
-  gallery?: {
-    id: string;
-    image: {
-      url: string;
-    };
-    alt?: string;
+  gallery?: readonly {
+    readonly id: string;
+    readonly url: string;
+    readonly alt: string;
   }[];
 };
 
@@ -34,7 +32,7 @@ export default function Gallery({ gallery }: GalleryProps) {
         ]}
       >
         <CarouselContent className="relative">
-          {gallery?.map(({ id, image: { url }, alt }) => (
+          {gallery?.map(({ id, url, alt }) => (
             <CarouselItem key={id}>
               <img
                 alt={alt}
