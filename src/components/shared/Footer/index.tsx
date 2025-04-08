@@ -34,7 +34,7 @@ export default function Footer() {
   return (
     <footer className="w-full border-t border-zinc-500 px-4 sm:px-6 lg:px-8 xl:px-0">
       <div className="flex flex-col justify-between py-8 text-center text-white lg:flex-row">
-        <ul className="flex flex-col gap-4 pb-8 text-sm font-[550] sm:text-base md:pb-3 lg:flex-row lg:text-left">
+        <ul className="flex flex-col gap-4 pb-8 text-sm font-[550] sm:text-base md:pb-3 lg:flex-row lg:pb-0 lg:text-left">
           {LINKS.map(({ href, label, external }) => (
             <li key={href} className="hover:text-yellow-400">
               <Link
