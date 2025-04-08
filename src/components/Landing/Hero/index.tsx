@@ -56,7 +56,6 @@ function Hero({
   slackButtonUrl,
   ctaButtonText,
   ctaButtonUrl,
-  sponsors,
 }: HeroProps) {
   const [isInitialWord, setIsInitialWord] = useState(true);
   const { sectionsRefs } = useNavigationContext();
@@ -74,13 +73,13 @@ function Hero({
   return (
     <div
       ref={sectionsRefs[SectionKey.Hero]}
-      className="relative mx-auto min-h-[calc(100dvh-56px)] pt-32 lg:pt-5 2xl:pt-24"
+      className="relative mx-auto min-h-[calc(100dvh-56px)] pt-32"
       id={SectionKey.Hero}
     >
       <div className="flex h-full items-center justify-center bg-cover bg-center text-primary md:justify-around">
         <div className="z-10 w-auto text-center">
           <div className="flex flex-col items-center">
-            <div className="mb-8">
+            <div className="mb-12">
               <p className="font-title text-5xl font-extrabold sm:text-5xl md:text-7xl xl:text-8xl">
                 <motion.span
                   key={title}
@@ -114,12 +113,9 @@ function Hero({
                 {slackButtonText}
               </button>
             </Link>
-            <div className="mt-5 hidden lg:block">
-              <Link href="/la-meetup">
-                <TicketHome sponsors={sponsors} />
-              </Link>
-            </div>
-
+            <Link className="mt-5 hidden lg:block" href="/la-meetup">
+              <TicketHome />
+            </Link>
             <Link
               className="absolute bottom-2 flex flex-col items-center justify-center gap-2.5 self-center text-sm font-semibold text-white md:text-lg"
               href={ctaButtonUrl ?? "#"}

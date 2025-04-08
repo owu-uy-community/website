@@ -2,7 +2,7 @@
 
 import classNames from "classnames";
 import Link from "next/link";
-import { FaSignInAlt } from "react-icons/fa";
+import { FaInstagram, FaLinkedin, FaSlack } from "react-icons/fa";
 
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
 
@@ -57,12 +57,26 @@ function Navbar() {
         <div className="flex h-full items-center">
           <MobileNav />
         </div>
-        <div
-          className="group hidden h-full cursor-not-allowed flex-row justify-end gap-1.5 lg:inline-flex"
-          title="¡Próximamente!"
-        >
-          <FaSignInAlt className="mt-1 text-[16px] text-gray-300 group-hover:text-gray-300" />
-          <p className="text-base font-semibold text-gray-300 group-hover:text-gray-300">INICIAR SESIÓN</p>
+        <div className="hidden items-center justify-center gap-4 lg:flex">
+          <Link
+            className="font-light text-white hover:text-yellow-400"
+            href="https://www.instagram.com/owu__uy/"
+            rel="noopener"
+            target="_blank"
+          >
+            <FaInstagram size={20} />
+          </Link>
+          <Link
+            className="font-light text-white hover:text-yellow-400"
+            href="https://www.linkedin.com/company/owu-uruguay/"
+            rel="noopener"
+            target="_blank"
+          >
+            <FaLinkedin size={20} />
+          </Link>
+          <Link className="font-light text-white hover:text-yellow-400" href="https://slack.owu.uy/" target="_blank">
+            <FaSlack size={20} />
+          </Link>
         </div>
       </div>
     </nav>

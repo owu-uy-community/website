@@ -8,7 +8,7 @@ export default function Footer() {
       label: "Sumate a la comunidad",
       external: true,
     },
-    // Enable FAQS when the page is ready :)
+    // Enable FAQS when the pages are ready :)
     // {
     //   href: "/la-meetup/faqs",
     //   label: "Preguntas frecuentes",
@@ -22,8 +22,12 @@ export default function Footer() {
       label: "La Meetup 2023",
     },
     {
-      href: "/la-meetup",
+      href: "/2024/la-meetup/",
       label: "La Meetup 2024",
+    },
+    {
+      href: "/la-meetup/",
+      label: "La Meetup 2025",
     },
   ];
 
@@ -47,8 +51,8 @@ export default function Footer() {
 
         <div className="flex items-center justify-center gap-4">
           <Link
-            className="font-light hover:text-yellow-400"
             key="instagram-link"
+            className="font-light hover:text-yellow-400"
             href="https://www.instagram.com/owu__uy/"
             rel="noopener"
             target="_blank"
@@ -56,8 +60,8 @@ export default function Footer() {
             <FaInstagram size={20} />
           </Link>
           <Link
-            className="font-light hover:text-yellow-400"
             key="linkedin"
+            className="font-light hover:text-yellow-400"
             href="https://www.linkedin.com/company/owu-uruguay/"
             rel="noopener"
             target="_blank"

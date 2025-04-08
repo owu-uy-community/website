@@ -1,19 +1,3 @@
-const getPayloadApiUrl = () => {
-  if (process.env.VERCEL_ENV === "production") {
-    return "https://www.owu.uy";
-  } else if (process.env.VERCEL_ENV === "preview") {
-    if (process.env.VERCEL_BRANCH_URL) {
-      return `https://${process.env.VERCEL_BRANCH_URL}`;
-    }
-  } else if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  } else {
-    return "http://localhost:3000";
-  }
-};
-
-export const PAYLOAD_API_URL = getPayloadApiUrl();
-
 export const LA_MEETUP = {
   title: "LA",
   subtitle: "MEETUP",

@@ -6,13 +6,11 @@ import { useNavigationContext } from "components/shared/Navbar/navigationProvide
 import { RichText } from "components/shared/RichText";
 
 type StoryProps = {
-  title?: string;
-  subtitle?: string;
-  content?: string;
+  content?: unknown;
   image?: string;
 };
 
-export default function Story({ title, subtitle, content, image }: StoryProps) {
+export default function Story({ content, image }: StoryProps) {
   const { sectionsRefs } = useNavigationContext();
 
   return (
@@ -22,12 +20,12 @@ export default function Story({ title, subtitle, content, image }: StoryProps) {
       id={SectionKey.Story}
     >
       <span className="flex flex-col gap-1">
-        <h2 className="text-center text-3xl font-bold sm:text-4xl">{title}</h2>
-        <h3 className="text-center text-zinc-400">{subtitle}</h3>
+        <h2 className="text-center text-3xl font-bold sm:text-4xl">¿Qué es OWU Uruguay?</h2>
+        <h3 className="text-center text-zinc-400">Nuestra Historia</h3>
       </span>
       <span className="grid place-items-center md:grid-cols-[1fr_500px]">
         <div className="flex w-full flex-col gap-4">
-          <RichText content={content} />
+          <RichText content={content as string} />
         </div>
         <div className="flex min-h-[400px] w-full flex-col items-center justify-end xl:items-end">
           <span className="relative min-h-[400px] w-full max-w-[400px]">

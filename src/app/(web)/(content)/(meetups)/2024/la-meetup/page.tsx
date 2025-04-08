@@ -90,7 +90,6 @@ export default async function LaMeetup2024Page() {
         primaryButtonUrl={primaryButtonUrl}
         secondaryButtonName={secondaryButtonName}
         secondaryButtonUrl={secondaryButtonUrl}
-        sponsors={transformedSponsors}
         subtitle={subtitle}
         title={title}
       />
