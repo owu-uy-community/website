@@ -1,6 +1,6 @@
 /* eslint-disable react/no-array-index-key */
 "use client";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { AbsoluteFill, Sequence } from "remotion";
 
 import { BackgroundCircleNoise } from "../../../design/atoms/BackgroundCircleNoise";
