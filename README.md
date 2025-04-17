@@ -21,7 +21,7 @@ OWU.uy es una aplicación web construida con Next.js 15, TypeScript y una rica c
 ### Prerrequisitos
 
 - Node.js (versión recomendada: 18.x o superior)
-- npm o yarn
+- pnpm (recomendado) o npm
 - Git
 
 ### Instalación
@@ -36,9 +36,7 @@ cd owu
 2. Instala las dependencias:
 
 ```bash
-npm install
-# o
-yarn install
+pnpm install
 ```
 
 3. Copia el archivo de variables de entorno:
@@ -52,9 +50,7 @@ cp .env.example .env
 5. Inicia el servidor de desarrollo:
 
 ```bash
-npm run dev
-# o
-yarn dev
+pnpm dev
 ```
 
 La aplicación estará disponible en `http://localhost:3000`
@@ -77,13 +73,13 @@ owu/
 
 ## 📜 Scripts Disponibles
 
-- `npm run dev`: Inicia el servidor de desarrollo
-- `npm run build`: Construye la aplicación para producción
-- `npm run start`: Inicia la aplicación en modo producción
-- `npm run lint`: Ejecuta el linter
-- `npm run lint:fix`: Corrige automáticamente problemas de linting
-- `npm run remotion`: Inicia el studio de Remotion
-- `npm run render`: Renderiza videos con Remotion
+- `pnpm dev`: Inicia el servidor de desarrollo
+- `pnpm build`: Construye la aplicación para producción
+- `pnpm start`: Inicia la aplicación en modo producción
+- `pnpm lint`: Ejecuta el linter
+- `pnpm lint:fix`: Corrige automáticamente problemas de linting
+- `pnpm remotion`: Inicia el studio de Remotion
+- `pnpm render`: Renderiza videos con Remotion
 
 ## 🤝 Contribuciones
 

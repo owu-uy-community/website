@@ -6,6 +6,10 @@
 .pnp.js
 .yarn/install-state.gz
 
+# pnpm
+.pnpm-store/
+pnpm-debug.log*
+
 # testing
 /coverage
 

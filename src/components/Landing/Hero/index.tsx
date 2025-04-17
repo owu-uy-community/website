@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition */
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
