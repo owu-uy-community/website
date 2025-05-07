@@ -8,9 +8,9 @@ primaryButtonName: AGREGAR AL CALENDARIO
 primaryButtonUrl: >-
   https://www.google.com/calendar/render?action=TEMPLATE&text=La+Meetup&details=La+meetup+descripci%C3%B3n&location=Sinergia+Faro%2C+V%C3%ADctor+Soli%C3%B1o+349%2C+Montevideo&dates=20241019T120000Z%2F20241019T210000Z
 secondaryButtonName: ¡REVIVÍ LA MEETUP!
-secondaryButtonUrl: /la-meetup/#galeria
+secondaryButtonUrl: /2024/la-meetup/#galeria
 ctaText: ¡Te invitamos a conocer más acerca de la meetup!
-ctaUrl: /la-meetup/#bienvenida
+ctaUrl: /2024/la-meetup/#bienvenida
 agenda:
   - id: 1
     title: Recepción y desayuno
