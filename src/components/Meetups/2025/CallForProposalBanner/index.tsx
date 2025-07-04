@@ -26,7 +26,8 @@ export default function CallForProposalsBanner() {
                     ¡Call for Proposals Abierto!
                   </h3>
                   <p className="text-balance text-xs text-black/80 md:text-sm">
-                    Primera vez que abrimos propuestas para charlas. <strong>Fecha límite: 31 de Julio</strong>
+                    Enviá tu propuesta y compartí lo que sabés con la comunidad.{" "}
+                    <strong>Fecha límite: 31 de Julio</strong>
                   </p>
                 </div>
                 <Link href="/la-meetup/#call-for-proposals" className="hidden lg:block">
