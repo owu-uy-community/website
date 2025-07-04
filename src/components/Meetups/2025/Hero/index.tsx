@@ -1,5 +1,3 @@
-"use client";
-
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -7,6 +5,7 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaBullhorn, FaTicket } from "react-icons/fa6";
 
 import TicketHome from "components/Meetups/2024/TicketHome";
+import classNames from "classnames";
 
 type HeroProps = {
   sponsors?: readonly {
@@ -17,13 +16,20 @@ type HeroProps = {
 };
 
 export default function Hero({ sponsors }: HeroProps) {
+  // Check if current date is past the deadline (July 31, 2025)
+  const now = new Date();
+  const deadline = new Date("2025-07-31T23:59:59"); // TODO: Move to a constant
+
   return (
     <section
-      className="relative flex min-h-[calc(100dvh-300px)] w-full flex-1 flex-col items-center justify-center"
+      className={classNames("relative flex w-full flex-1 flex-col items-center justify-center", {
+        "min-h-[calc(100dvh-126px)]": now < deadline,
+        "min-h-[calc(100dvh-56px)]": now >= deadline,
+      })}
       id="inicio"
     >
       <div className="flex w-full flex-row flex-wrap-reverse items-center justify-center gap-8 xl:flex-nowrap">
-        <div className="flex min-h-[calc(100dvh-56px)] w-full max-w-[650px] flex-col items-center justify-center lg:min-h-[calc(100dvh-165px)]">
+        <div className="flex w-full max-w-[650px] flex-col items-center justify-center lg:min-h-[calc(100dvh-165px)]">
           <h1 className="mb-12 text-center text-7xl font-black uppercase italic leading-none text-primary text-yellow-400 xl:mb-2 xl:text-[80px]">
             LA
             <span className="block text-7xl uppercase lg:text-8xl xl:text-9xl">MEETUP</span>

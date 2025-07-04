@@ -18,10 +18,10 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
   const sponsorsList = randomArraySort(sponsors);
 
   return (
-    <div className="flex w-full max-w-[1200px] flex-col items-center gap-5">
+    <div className="my-16 flex w-full max-w-[1200px] flex-col items-center gap-5">
       <span>
-        <h2 className="text-center text-5xl font-bold text-yellow-400">Sponsors</h2>
-        <p className="mt-2 text-center text-lg font-[400] text-white">
+        <h2 className="mb-4 text-center text-4xl font-bold text-white md:text-5xl">Sponsors</h2>
+        <p className="mx-auto mt-2 max-w-3xl text-balance text-center text-base leading-relaxed text-gray-300 lg:text-lg">
           ¡Nuestros aliados y patrocinadores que hacen este evento posible!
         </p>
       </span>

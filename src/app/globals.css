@@ -126,3 +126,17 @@
   fill: red !important;
   background: red !important;
 }
+
+@layer components {
+  .active-stage > div:first-child {
+    @apply border-yellow-300 bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-lg;
+  }
+
+  .active-stage > div:first-child > svg {
+    @apply text-black;
+  }
+
+  .active-stage > div:last-child > div {
+    @apply border-yellow-400/30 bg-gray-900/70 shadow-md;
+  }
+}
