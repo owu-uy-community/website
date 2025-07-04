@@ -24,6 +24,8 @@ export const metadata: Metadata = {
 export default async function LaMeetup2025() {
   const laMeetup = await reader().collections.laMeetup2025.read(SectionKey.MeetupEvent);
 
+  if (!laMeetup) return null;
+
   const { sponsors } = laMeetup ?? {};
   const sponsorSlugs = sponsors as unknown as string[];
   const transformedSponsors = await transformArray(sponsorSlugs, transformSponsor);
