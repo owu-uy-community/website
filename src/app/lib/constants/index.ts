@@ -12,7 +12,7 @@ export const LA_MEETUP = {
         title: "Recepción y desayuno",
         startTime: "2023-11-25 09:00",
         endTime: "2023-11-25 10:00",
-        description: "Te invitamos a compartir y disfrutar de un rico desayuno. ¡Bienvenidos a La Meetup 2023!",
+        description: "Te invitamos a compartir y disfrutar de un rico desayuno. ¡Bienvenidos a La Meetup I!",
       },
       {
         title: "Open Space",
@@ -414,7 +414,7 @@ export const LA_MEETUP = {
   },
   conductCode: {
     conductCodeTitle: "Código de Conducta",
-    conductCodeSubtitle: "Te presentamos el Código de Conducta de La Meetup 2023",
+    conductCodeSubtitle: "Te presentamos el Código de Conducta de La Meetup I",
     conductCodeIntroduction:
       "En nuestra meetup, estamos comprometidos a proporcionar un entorno amigable, respetuoso e inclusivo para todas las personas, independientemente de su género, identidad de género y expresión, orientación sexual, discapacidad, apariencia física, tamaño corporal, raza, edad o religión.",
     conductCodeExpectations:
@@ -433,13 +433,13 @@ export const LA_MEETUP = {
     conductCodeScope: "Este código de conducta se aplica a todos los eventos y canales relacionados con la meetup.",
   },
   seo: {
-    title: "La Meetup 2023 | OWU Uruguay",
+    title: "La Meetup I | OWU Uruguay",
     description:
-      "La Meetup 2023 ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología uruguayas.",
+      "La Meetup I ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología uruguayas.",
     og: {
-      title: "La Meetup 2023 | OWU Uruguay",
+      title: "La Meetup I | OWU Uruguay",
       description:
-        "La Meetup 2023 ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología uruguayas.",
+        "La Meetup I ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología uruguayas.",
       image: "la-meetup-2023.jpg",
     },
   },

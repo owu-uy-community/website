@@ -19,15 +19,15 @@ export default function Footer() {
     // },
     {
       href: "/2023/la-meetup/",
-      label: "La Meetup 2023",
+      label: "La Meetup I",
     },
     {
       href: "/2024/la-meetup/",
-      label: "La Meetup 2024",
+      label: "La Meetup II",
     },
     {
       href: "/la-meetup/",
-      label: "La Meetup 2025",
+      label: "La Meetup III",
     },
   ];
 

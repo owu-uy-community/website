@@ -3,7 +3,7 @@ import { type Metadata } from "next";
 import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
 
 export const metadata: Metadata = {
-  title: "Sponsors | La Meetup 2025",
+  title: "Sponsors | La Meetup III",
   description:
     "Formulario de declaración de interés para ser sponsor de la tercera edición de La Meetup, el encuentro anual que reúne a las comunidades tecnológicas de Uruguay para estrechar lazos, colaborar e impulsar la cultura del software.",
 };

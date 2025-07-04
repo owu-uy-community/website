@@ -3,7 +3,7 @@ import { type Metadata } from "next";
 import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
 
 export const metadata: Metadata = {
-  title: "Formulario de Interés | La Meetup 2025",
+  title: "Formulario de Interés | La Meetup III",
   description: "Formulario de interés para la tercera edición de La Meetup",
 };
 

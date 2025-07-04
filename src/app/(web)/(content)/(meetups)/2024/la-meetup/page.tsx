@@ -25,7 +25,7 @@ import keystaticConfig from "../../../../../../../keystatic.config";
 const reader = cache(() => createReader(process.cwd(), keystaticConfig));
 
 export const metadata = {
-  title: "La Meetup 2024 | OWU Uruguay",
+  title: "La Meetup II | OWU Uruguay",
   description:
     "La Meetup ofrece un espacio para reunirnos en persona y conectar con comunidades de tecnología uruguayas.",
 };
