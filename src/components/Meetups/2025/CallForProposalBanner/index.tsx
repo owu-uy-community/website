@@ -31,7 +31,7 @@ export default function CallForProposalsBanner() {
                 </div>
                 <Link href="/la-meetup/#call-for-proposals" className="hidden lg:block">
                   <Button size="sm" className="whitespace-nowrap bg-black font-semibold text-white hover:bg-gray-800">
-                    <Search className="mr-1.5 h-4 w-4 rotate-90" strokeWidth={2} />
+                    <Search className="mr-1.5 h-4 w-4" strokeWidth={2} />
                     Quiero saber más
                   </Button>
                 </Link>
