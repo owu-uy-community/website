@@ -1,6 +1,6 @@
 "use client";
 
-import { randomArraySort } from "app/lib/utils";
+import { alphabeticalSort } from "app/lib/utils";
 
 import Sponsor from "../Sponsor";
 
@@ -25,7 +25,7 @@ export default function Sponsors({ title, subtitle, sponsors }: SponsorsProps) {
         <p className="mb-2 mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
       </span>
       <div className="grid w-full max-w-[800px] grid-cols-1 justify-items-center gap-5 md:grid-cols-3 lg:grid-cols-4">
-        {randomArraySort(sponsors).map(({ name, logo, url }) => (
+        {alphabeticalSort(sponsors).map(({ name, logo, url }) => (
           <Sponsor key={name} logo={logo} name={name} url={url} />
         ))}
       </div>

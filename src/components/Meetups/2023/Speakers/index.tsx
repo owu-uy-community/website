@@ -1,6 +1,6 @@
 "use client";
 
-import { randomArraySort } from "app/lib/utils";
+import { alphabeticalSort } from "app/lib/utils";
 
 import Speaker from "../Speaker";
 
@@ -26,7 +26,7 @@ export default function Speakers({ title, subtitle, speakers }: SpeakersProps) {
         <p className="mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
       </span>
       <div className="grid w-full max-w-[800px] grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2 lg:grid-cols-2">
-        {randomArraySort(speakers).map(({ image, name, role, linkedin }) => (
+        {alphabeticalSort(speakers).map(({ image, name, role, linkedin }) => (
           <Speaker key={name} image={image} linkedin={linkedin} name={name} role={role} />
         ))}
       </div>

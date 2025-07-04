@@ -3,6 +3,8 @@
 import { motion } from "motion/react";
 import { AbsoluteFill, Sequence } from "remotion";
 
+import { alphabeticalSort } from "../../../../../utils";
+
 import { BackgroundCircleNoise } from "../../../design/atoms/BackgroundCircleNoise";
 
 import { Sponsor } from "./Sponsor";
@@ -20,7 +22,7 @@ type SponsorProps = {
   };
 };
 
-const sponsorsList = [
+const sponsorsList = alphabeticalSort([
   {
     id: 5,
     name: "Mimiquate",
@@ -213,7 +215,7 @@ const sponsorsList = [
       height: 1395,
     },
   },
-];
+]);
 
 function chunkArray(arr: SponsorProps[], chunkSize: number): SponsorProps[][] {
   const result = [];
