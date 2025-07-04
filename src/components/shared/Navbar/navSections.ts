@@ -17,5 +17,5 @@ export const navSections: Record<SectionKey, Section> = {
   [SectionKey.Story]: { title: "Historia", link: "/#historia", id: SectionKey.Story },
   [SectionKey.Stats]: { title: "Estadísticas", link: "/#estadisticas", id: SectionKey.Stats },
   [SectionKey.Events]: { title: "Eventos", link: "/#eventos", id: SectionKey.Events },
-  [SectionKey.MeetupEvent]: { title: "La Meetup 2025", link: "/la-meetup", id: SectionKey.MeetupEvent },
+  [SectionKey.MeetupEvent]: { title: "La Meetup III", link: "/la-meetup", id: SectionKey.MeetupEvent },
 };

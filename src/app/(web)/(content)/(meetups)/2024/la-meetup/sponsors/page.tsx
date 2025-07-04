@@ -2,7 +2,7 @@ import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
 
 export const metadata = {
   title: "Sponsors | OWU Uruguay",
-  description: "Te invitamos a formar parte de la comunidad de sponsors de La Meetup 2024",
+  description: "Te invitamos a formar parte de la comunidad de sponsors de La Meetup II",
 };
 
 export default function Sponsors() {

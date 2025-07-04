@@ -1,7 +1,7 @@
 import { collection, fields } from "@keystatic/core";
 
 export const laMeetup2024 = collection({
-  label: "La Meetup 2024 - Landing",
+  label: "La Meetup II - Landing",
   slugField: "slug",
   schema: {
     slug: fields.slug({ name: { label: "Slug", validation: { isRequired: true } } }),

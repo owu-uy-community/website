@@ -4,6 +4,7 @@ import { config, fields } from "@keystatic/core";
 
 import { landing } from "keystatic/collections/landing";
 import { laMeetup2024 } from "keystatic/collections/la-meetup-2024";
+import { laMeetup2025 } from "keystatic/collections/la-meetup-2025";
 import { sponsors } from "keystatic/collections/sponsors";
 import { speakers } from "keystatic/collections/speakers";
 import { staff } from "keystatic/collections/staff";
@@ -27,6 +28,7 @@ export default config({
   collections: {
     landing,
     laMeetup2024,
+    laMeetup2025,
     sponsors,
     speakers,
     staff,
