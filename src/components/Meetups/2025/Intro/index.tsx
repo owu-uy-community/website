@@ -10,15 +10,15 @@ export default function IntroSection() {
   const [isHovering, setIsHovering] = useState(false);
 
   const images = [
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/23b0d528f1c54545a49be2e2d65969cb/revisions/f4f47a89dc6323fa21be8afd7c79384b/renditions/566f84e3fd6a725e0d1c6e9464d9488b",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/5368ba5e794546c0927e1e2533346f0d/revisions/a40313bcec934ea6afe8fd964fbf44e3/renditions/9ac26cc0648459abb700d659f02e9eff",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/5b21e09f698145a6a2bca8869cac5d4a/revisions/d962e6faa1bb43d482a1995c1db5e91e/renditions/7cf85a08418935e50c3d838248895a8f",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/6d8769e699b4413b92f2ff73d8b3a972/revisions/b58e67ea0d2b4f979541df49581622c9/renditions/c14120772b424d82ea662fc6bb02b749",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/d722abf88bab40db92b777478e7662c6/revisions/f4d195753d2a4079b5911e41ba1c9069/renditions/107de20f30a7fc379a7d9639483bcfad",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/849c96745b6f45a08c6fbfc6d879bdd0/revisions/32a1f7d13d28fb0b13595e033229f9a6/renditions/7a475f583f354a2d7d5ba46ffb55af58",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/2b209bc8cdfe433c9cf6b9cc0a37474a/revisions/51d54a51d9314ed4b4d9be93a9a62420/renditions/0525c2086a01aeee3e0012a04eb688c9",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/b4b56d8ab1a34105bf56db611d4b6bc5/revisions/00c80d528c16434bab4b4aa164721187/renditions/4953f4ad3c76323f907064e6e095215f",
-    "https://lightroom.adobe.com/v2c/spaces/c7e86bdd53454fb0955913dc868ec128/assets/7c781acc275c45f9b21b490b3c8a362a/revisions/3e293719ee064d1e1061bf46f8aa8076/renditions/2d998fd7be1d651152af12c1442fc1b3",
+    "/static/2025/intro/1.webp",
+    "/static/2025/intro/2.webp",
+    "/static/2025/intro/3.webp",
+    "/static/2025/intro/4.webp",
+    "/static/2025/intro/5.webp",
+    "/static/2025/intro/6.webp",
+    "/static/2025/intro/7.webp",
+    "/static/2025/intro/8.webp",
+    "/static/2025/intro/9.webp",
   ];
 
   // Auto-rotate images only when not hovering
