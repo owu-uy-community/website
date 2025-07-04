@@ -1,6 +1,6 @@
 "use client";
 
-import { randomArraySort } from "app/lib/utils";
+import { alphabeticalSort } from "app/lib/utils";
 
 import Member from "../Member";
 
@@ -26,7 +26,7 @@ export default function Staff({ title, subtitle, staff }: StaffProps) {
         <p className="mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
       </span>
       <div className="flex w-full max-w-[800px] flex-row flex-wrap items-center justify-center gap-5">
-        {randomArraySort(staff).map(({ name, role, image, linkedin }) => (
+        {alphabeticalSort(staff).map(({ name, role, image, linkedin }) => (
           <Member key={name} image={image} linkedin={linkedin} name={name} role={role} />
         ))}
       </div>

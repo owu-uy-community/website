@@ -20,3 +20,21 @@ export function randomArraySort<T>(array?: T[]): T[] {
 
   return shuffled;
 }
+
+/**
+ * Sorts an array alphabetically by a specified key
+ * @param array - The array to sort
+ * @param key - The key to sort by (defaults to 'name')
+ * @returns A new sorted array
+ */
+export function alphabeticalSort<T>(array?: T[], key: keyof T = "name" as keyof T): T[] {
+  if (!array) {
+    return [];
+  }
+
+  return [...array].sort((a, b) => {
+    const aValue = String(a[key] || "");
+    const bValue = String(b[key] || "");
+    return aValue.localeCompare(bValue);
+  });
+}

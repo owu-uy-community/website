@@ -1,6 +1,6 @@
 "use client";
 
-import { randomArraySort } from "app/lib/utils";
+import { alphabeticalSort } from "app/lib/utils";
 
 import Member from "../Member";
 
@@ -29,17 +29,19 @@ export default function Staff({ staff = [] }: StaffProps) {
         <p className="mt-2 text-center text-lg font-[400] text-white">Personas que organizan el evento</p>
       </span>
       <div className="flex flex-row flex-wrap items-center justify-center gap-5">
-        {randomArraySort(staff).map(({ firstname, lastname, picture, jobtitle, linkedin, github, twitter }) => (
-          <Member
-            key={lastname}
-            github={github}
-            image={picture?.url ?? "/carpincho.png"}
-            linkedin={linkedin}
-            name={`${firstname} ${lastname}`}
-            role={jobtitle}
-            twitter={twitter}
-          />
-        ))}
+        {alphabeticalSort(staff, "lastname").map(
+          ({ firstname, lastname, picture, jobtitle, linkedin, github, twitter }) => (
+            <Member
+              key={lastname}
+              github={github}
+              image={picture?.url ?? "/carpincho.png"}
+              linkedin={linkedin}
+              name={`${firstname} ${lastname}`}
+              role={jobtitle}
+              twitter={twitter}
+            />
+          )
+        )}
       </div>
     </section>
   );
