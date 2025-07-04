@@ -1,8 +1,10 @@
+"use client";
 import Link from "next/link";
 
 import { randomArraySort } from "app/lib/utils";
 
 import Sponsor from "components/shared/Sponsor";
+import { useEffect, useState } from "react";
 
 type SponsorsProps = {
   sponsors?: {
@@ -15,8 +17,11 @@ type SponsorsProps = {
 };
 
 export default function Sponsors({ sponsors = [] }: SponsorsProps) {
-  const sponsorsList = randomArraySort(sponsors);
+  const [randomSponsors, setRandomSponsors] = useState(sponsors);
 
+  useEffect(() => {
+    setRandomSponsors(randomArraySort(sponsors));
+  }, [sponsors]);
   return (
     <div className="my-16 flex w-full max-w-[1200px] flex-col items-center gap-5">
       <span>
@@ -26,7 +31,7 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
         </p>
       </span>
       <div className="flex flex-row flex-wrap items-center justify-center gap-5">
-        {sponsorsList.map(({ name, logo, website }) => (
+        {randomSponsors?.map(({ name, logo, website }) => (
           <Sponsor key={name} image={logo.url} name={name} website={website} />
         ))}
       </div>

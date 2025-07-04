@@ -10,5 +10,13 @@ export function randomArraySort<T>(array?: T[]): T[] {
     return [];
   }
 
-  return array.sort(() => Math.random() - 0.5);
+  const shuffled = [...array];
+
+  // Fisher-Yates shuffle algorithm
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  return shuffled;
 }
