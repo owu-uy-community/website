@@ -115,7 +115,7 @@ export default function IntroSection() {
 
   return (
     <>
-      <section className="mt-16">
+      <section id="introducción" className="mt-16">
         <div className="mx-auto max-w-[1280px]">
           <div className="grid gap-12 lg:grid-cols-2">
             {/* Content */}
