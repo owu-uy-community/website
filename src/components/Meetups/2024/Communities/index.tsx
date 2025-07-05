@@ -3,6 +3,8 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 
+import { addUtmParams } from "app/lib/utils";
+
 type CommunitiesProps = {
   title?: string;
   subtitle?: string;
@@ -40,7 +42,7 @@ export default function Communities({ title, subtitle, communities = [] }: Commu
             <Link
               key={website ?? "#"}
               className="z-50 mx-2 flex w-2/6 flex-shrink-0 hover:scale-105 md:w-1/6"
-              href={website ?? "#"}
+              href={addUtmParams(website ?? "#")}
               target="_blank"
             >
               <img alt={name} className="w-full max-w-[150px]" src={picture.url} />

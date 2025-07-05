@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FaGithub, FaLinkedin } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 
+import { addUtmParams } from "app/lib/utils";
+
 type MemberProps = {
   name: string;
   role: string;
@@ -32,17 +34,17 @@ export default function Member({ name, role, image, github, linkedin, twitter }:
           </span>
           <span className="flex flex-row gap-2">
             {github ? (
-              <Link href={github} target="_blank">
+              <Link href={addUtmParams(github)} target="_blank">
                 <FaGithub className="cursor-pointer text-[24px] text-white hover:scale-105" />
               </Link>
             ) : null}
             {linkedin ? (
-              <Link href={linkedin} target="_blank">
+              <Link href={addUtmParams(linkedin)} target="_blank">
                 <FaLinkedin className="cursor-pointer text-[24px] text-white hover:scale-105" />
               </Link>
             ) : null}
             {twitter ? (
-              <Link href={twitter} target="_blank">
+              <Link href={addUtmParams(twitter)} target="_blank">
                 <FaXTwitter className="cursor-pointer text-[24px] text-white hover:scale-105" />
               </Link>
             ) : null}
