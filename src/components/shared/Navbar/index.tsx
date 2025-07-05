@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FaInstagram, FaLinkedin, FaSlack } from "react-icons/fa";
 
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
+import { addUtmParams } from "app/lib/utils";
 
 import MobileNav from "./mobileNav";
 import { navSections, SectionKey } from "./navSections";
@@ -60,7 +61,7 @@ function Navbar() {
         <div className="hidden items-center justify-center gap-4 lg:flex">
           <Link
             className="font-light text-white hover:text-yellow-400"
-            href="https://www.instagram.com/owu__uy/"
+            href={addUtmParams("https://www.instagram.com/owu__uy/")}
             rel="noopener"
             target="_blank"
           >
@@ -68,13 +69,13 @@ function Navbar() {
           </Link>
           <Link
             className="font-light text-white hover:text-yellow-400"
-            href="https://www.linkedin.com/company/owu-uruguay/"
+            href={addUtmParams("https://www.linkedin.com/company/owu-uruguay/")}
             rel="noopener"
             target="_blank"
           >
             <FaLinkedin size={20} />
           </Link>
-          <Link className="font-light text-white hover:text-yellow-400" href="https://slack.owu.uy/" target="_blank">
+          <Link className="font-light text-white hover:text-yellow-400" href={addUtmParams("https://slack.owu.uy/")} target="_blank">
             <FaSlack size={20} />
           </Link>
         </div>

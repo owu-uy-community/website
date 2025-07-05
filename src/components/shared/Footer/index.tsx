@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { FaInstagram, FaLinkedin } from "react-icons/fa";
 
+import { addUtmParams } from "app/lib/utils";
+
 export default function Footer() {
   const LINKS = [
     {
@@ -39,7 +41,7 @@ export default function Footer() {
             <li key={href} className="hover:text-yellow-400">
               <Link
                 key={href}
-                href={href}
+                href={external ? addUtmParams(href) : href}
                 rel={external ? "noopener" : undefined}
                 target={external ? "_blank" : undefined}
               >
@@ -53,7 +55,7 @@ export default function Footer() {
           <Link
             key="instagram-link"
             className="font-light hover:text-yellow-400"
-            href="https://www.instagram.com/owu__uy/"
+            href={addUtmParams("https://www.instagram.com/owu__uy/")}
             rel="noopener"
             target="_blank"
           >
@@ -62,13 +64,13 @@ export default function Footer() {
           <Link
             key="linkedin"
             className="font-light hover:text-yellow-400"
-            href="https://www.linkedin.com/company/owu-uruguay/"
+            href={addUtmParams("https://www.linkedin.com/company/owu-uruguay/")}
             rel="noopener"
             target="_blank"
           >
             <FaLinkedin size={20} />
           </Link>
-          <Link className="font-light hover:text-yellow-400" href="/">
+          <Link className="font-light hover:text-yellow-400" href={addUtmParams("/")}>
             © OWU Uruguay
           </Link>
         </div>

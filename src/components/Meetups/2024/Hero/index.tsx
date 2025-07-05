@@ -5,6 +5,8 @@ import { es } from "date-fns/locale";
 import Link from "next/link";
 import { FaCalendarAlt, FaChevronDown, FaImages, FaMapMarkerAlt } from "react-icons/fa";
 
+import { addUtmParams } from "app/lib/utils";
+
 type HeroProps = {
   title?: string;
   subtitle?: string;
@@ -59,7 +61,7 @@ export default function Hero({
                     })
                   : "Not Defined"}
               </h2>
-              <Link href={locationUrl} rel="noopener" target="_blank">
+              <Link href={addUtmParams(locationUrl)} rel="noopener" target="_blank">
                 <h3 className="animate-fadeIn animate-delay-200 md:underline-transition mt-2 flex w-fit flex-row items-center justify-center pb-2 text-center text-sm font-[600] text-white transition-all duration-300 ease-in-out motion-reduce:transition-none lg:text-lg">
                   <FaMapMarkerAlt className="mr-2 hidden md:inline-block" />
                   {location}
@@ -70,7 +72,7 @@ export default function Hero({
             <span className="flex-column mt-5 flex w-full flex-wrap items-center justify-center gap-8">
               <Link
                 className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
-                href={primaryButtonUrl}
+                href={addUtmParams(primaryButtonUrl)}
                 target="_blank"
               >
                 <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
@@ -80,7 +82,7 @@ export default function Hero({
               </Link>
               <Link
                 className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
-                href={secondaryButtonUrl}
+                href={addUtmParams(secondaryButtonUrl)}
               >
                 <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
                   <FaImages className="mr-1.5 inline-block text-xl" />

@@ -6,6 +6,7 @@ import { FaBullhorn, FaTicket } from "react-icons/fa6";
 
 import TicketHome from "components/Meetups/2024/TicketHome";
 import classNames from "classnames";
+import { addUtmParams } from "app/lib/utils";
 
 type HeroProps = {
   sponsors?: readonly {
@@ -41,7 +42,7 @@ export default function Hero({ sponsors }: HeroProps) {
                   locale: es,
                 })}
               </h2>
-              <Link href="https://maps.app.goo.gl/PWsJEYZGZdzGkmaRA" rel="noopener" target="_blank">
+              <Link href={addUtmParams("https://maps.app.goo.gl/PWsJEYZGZdzGkmaRA")} rel="noopener" target="_blank">
                 <h3 className="animate-fadeIn animate-delay-200 md:underline-transition mt-2 flex w-fit flex-row items-center justify-center pb-2 text-center text-sm font-[600] text-white transition-all duration-300 ease-in-out motion-reduce:transition-none lg:text-lg">
                   <FaMapMarkerAlt className="mr-2 hidden md:inline-block" />
                   Sinergia Faro, Víctor Soliño 349, Montevideo

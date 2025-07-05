@@ -10,6 +10,7 @@ import { FaChevronDown } from "react-icons/fa";
 import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
 import TicketHome from "components/Meetups/2024/TicketHome";
+import { addUtmParams } from "app/lib/utils";
 
 function useCounter(initialValue: number, max: number, seconds: number) {
   const [counter, setCounter] = useState(initialValue);
@@ -105,7 +106,7 @@ function Hero({
                 {description}
               </p>
             </div>
-            <Link href={slackButtonUrl ?? "#"} rel="noreferrer" target="_blank">
+            <Link href={addUtmParams(slackButtonUrl ?? "#")} rel="noreferrer" target="_blank">
               <button
                 className="text-md m-auto flex min-w-[220px] items-center justify-center rounded-md bg-white py-2 font-semibold text-black hover:bg-yellow-400 md:px-8 md:py-3"
                 type="button"
