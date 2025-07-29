@@ -1,3 +1,79 @@
+// Auth Constants
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+export const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN ?? "localhost";
+export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
+export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
+export const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID!;
+export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET!;
+export const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID!;
+export const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!;
+export const USE_SECURE_COOKIES = DOMAIN === "localhost" ? false : true;
+
+// Social Media Links
+export const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/owu__uy/",
+  linkedin: "https://www.linkedin.com/company/owu-uruguay/",
+  slack: "https://slack.owu.uy/",
+} as const;
+
+// External Service URLs
+export const EXTERNAL_SERVICES = {
+  googleForms: {
+    callForProposals: "https://forms.gle/FJErDF2AvDW4kDba6",
+    interest2024:
+      "https://docs.google.com/forms/d/e/1FAIpQLSe7QPkYcoz1tZ-j4N-BvqNfkLMtp9Oq8vQ285mTR7EuJPDVnw/viewform?embedded=true",
+    interest2025:
+      "https://docs.google.com/forms/d/e/1FAIpQLSf5c4z67ZcVvv7ONQYhlzaXXsRd0ZWyBrLKamtXanD3b1Bz4w/viewform?embedded=true",
+    sponsors2024:
+      "https://docs.google.com/forms/d/e/1FAIpQLSemC7vrDw38LTWcBUhIYjarqMMVUfE-dSnBPUAsNzBWd6uqcQ/viewform?embedded=true",
+    sponsors2025:
+      "https://docs.google.com/forms/d/e/1FAIpQLSeZGSpB95IZH6Texu2CqjHNw27pJye1nzEtJn5Y90gJiD0orA/viewform?embedded=true",
+  },
+  googleSheets: {
+    openSpaceEpg:
+      "https://docs.google.com/spreadsheets/d/1GPhu-OIcZbIZE3x4xmQvpL0j_rqPfr6wqDwiYdgcC1U/export?format=csv",
+  },
+  googleTagManager: "https://www.googletagmanager.com/gtag/js?id=G-RVTWHW4J21",
+  meetupBot: "https://meetup-bot.marpo60.xyz/json",
+} as const;
+
+// Maps and Location URLs
+export const MAPS_URLS = {
+  meetupLocation: "https://maps.app.goo.gl/PWsJEYZGZdzGkmaRA",
+} as const;
+
+// Internal Routes
+export const INTERNAL_ROUTES = {
+  auth: {
+    login: "/login",
+    register: "/registro",
+    profile: "/perfil",
+    community: "/comunidad",
+  },
+  legal: {
+    terms: "/terms",
+    privacy: "/privacy",
+  },
+  meetups: {
+    current: "/la-meetup",
+    interest: "/la-meetup/interes",
+    sponsors: "/la-meetup/sponsors",
+    callForProposals: "/la-meetup/#call-for-proposals",
+    meetup2023: "/2023/la-meetup/",
+    meetup2024: "/2024/la-meetup/",
+    meetup2025: "/la-meetup/",
+  },
+} as const;
+
+// External Platform URLs
+export const EXTERNAL_PLATFORMS = {
+  linkedin: {
+    base: "https://linkedin.com/in/",
+    company: "https://www.linkedin.com/company/owu-uruguay/",
+    posts: "https://www.linkedin.com/company/owu-uruguay/posts/",
+  },
+} as const;
+
 export const LA_MEETUP = {
   title: "LA",
   subtitle: "MEETUP",
