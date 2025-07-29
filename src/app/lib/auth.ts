@@ -12,11 +12,13 @@ import {
   LINKEDIN_CLIENT_SECRET,
   USE_SECURE_COOKIES,
 } from "./constants";
+import { oAuthProxy } from "better-auth/plugins";
 
 export const auth = betterAuth({
   database: prismaAdapter(db, {
     provider: "postgresql",
   }),
+  plugins: [oAuthProxy()],
   crossSubDomainCookies: {
     enabled: true,
     domain: DOMAIN,
