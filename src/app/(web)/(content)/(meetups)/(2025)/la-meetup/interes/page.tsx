@@ -1,15 +1,15 @@
 import { type Metadata } from "next";
 
 import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
+import { EXTERNAL_SERVICES } from "app/lib/constants";
 
 export const metadata: Metadata = {
   title: "Formulario de Interés | La Meetup III",
   description: "Formulario de interés para la tercera edición de La Meetup",
 };
 
-export default function Intrest() {
-  const url =
-    "https://docs.google.com/forms/d/e/1FAIpQLSf5c4z67ZcVvv7ONQYhlzaXXsRd0ZWyBrLKamtXanD3b1Bz4w/viewform?embedded=true";
+export default function Interest() {
+  const url = EXTERNAL_SERVICES.googleForms.interest2025;
 
   return (
     <EmbeddedFormLayout title="¡Formulario de Interés!">
