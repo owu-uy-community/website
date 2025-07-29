@@ -8,6 +8,8 @@
     "dev": "next dev --turbo",
     "lint": "next lint",
     "lint:fix": "eslint --fix",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
     "remotion": "remotion studio src/app/lib/videos/remotion/index.ts",
     "render": "remotion render",
     "start": "next start"
