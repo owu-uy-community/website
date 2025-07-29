@@ -11,7 +11,7 @@ export default function AuthLayout({
       <div className="relative hidden overflow-hidden lg:flex lg:w-1/2">
         <div className="absolute inset-0 z-10 bg-gradient-to-br from-zinc-900/20 to-zinc-900/60" />
         <Image
-          src="/static/login_background.jpg"
+          src="/static/auth/background.webp"
           alt="Tech Community"
           fill
           className="object-cover opacity-75"
