@@ -5,14 +5,29 @@ export const laMeetup2025 = collection({
   slugField: "slug",
   schema: {
     slug: fields.slug({ name: { label: "Slug", validation: { isRequired: true } } }),
+    title: fields.text({ label: "Title", validation: { isRequired: true } }),
+    subtitle: fields.text({ label: "Subtitle", validation: { isRequired: true } }),
     date: fields.date({ label: "Date", validation: { isRequired: true } }),
     location: fields.text({ label: "Location", validation: { isRequired: true } }),
     locationUrl: fields.text({ label: "Location URL", validation: { isRequired: true } }),
+    primaryButtonName: fields.text({ label: "Primary Button Name", validation: { isRequired: true } }),
+    primaryButtonUrl: fields.text({ label: "Primary Button Url", validation: { isRequired: true } }),
+    secondaryButtonName: fields.text({ label: "Secondary Button Name", validation: { isRequired: true } }),
+    secondaryButtonUrl: fields.text({
+      label: "Secondary Button Url",
+      validation: { isRequired: true },
+    }),
+    ctaText: fields.text({ label: "CTA Text", validation: { isRequired: true } }),
+    ctaUrl: fields.text({ label: "CTA Url", validation: { isRequired: true } }),
     agenda: fields.array(
       fields.object({
         id: fields.integer({ label: "ID", validation: { isRequired: true } }),
         title: fields.text({ label: "Title", validation: { isRequired: true } }),
         description: fields.text({ label: "Description" }),
+        extendedDescription: fields.text({
+          label: "Extended Description",
+          multiline: true,
+        }),
         startTime: fields.datetime({ label: "Start Time", validation: { isRequired: true } }),
         endTime: fields.datetime({ label: "End Time", validation: { isRequired: true } }),
         presenter: fields.relationship({
@@ -24,6 +39,25 @@ export const laMeetup2025 = collection({
         }),
       }),
       { label: "Agenda Items" }
+    ),
+    openSpaceDescription: fields.mdx({
+      label: "Open Space Description",
+      extension: "md",
+    }),
+    openSpacePrimaryButtonName: fields.text({ label: "Open Space Primary Button Name" }),
+    openSpacePrimaryButtonUrl: fields.text({ label: "Open Space Primary Button URL" }),
+    openspaceGallery: fields.array(
+      fields.object({
+        id: fields.text({ label: "ID", validation: { isRequired: true } }),
+        image: fields.image({
+          label: "Image",
+          directory: "public/static/2025/openspace",
+          publicPath: "/static/2025/openspace/",
+          validation: { isRequired: true },
+        }),
+        alt: fields.text({ label: "Alt Text", validation: { isRequired: true } }),
+      }),
+      { label: "Open Space Gallery" }
     ),
     gallery: fields.array(
       fields.object({
