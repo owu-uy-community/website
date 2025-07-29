@@ -1,4 +1,5 @@
 import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
+import { EXTERNAL_SERVICES } from "app/lib/constants";
 
 export const metadata = {
   title: "Sponsors | OWU Uruguay",
@@ -6,8 +7,7 @@ export const metadata = {
 };
 
 export default function Sponsors() {
-  const url =
-    "https://docs.google.com/forms/d/e/1FAIpQLSemC7vrDw38LTWcBUhIYjarqMMVUfE-dSnBPUAsNzBWd6uqcQ/viewform?embedded=true";
+  const url = EXTERNAL_SERVICES.googleForms.sponsors2024;
 
   return (
     <EmbeddedFormLayout title="¡Formulario de Sponsors!">
