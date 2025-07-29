@@ -261,7 +261,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
 
                     {/* Speaker info - Mobile - only show when there's a presenter or it's vacant */}
                     {(isVacante || presenter) && (
-                      <div className="mb-2 ml-13 flex items-center gap-2">
+                      <div className="mb-2 ml-12 flex items-center gap-2">
                         {isVacante ? (
                           <>
                             <div className="h-8 w-8 rounded-full border-2 border-orange-400/50 bg-orange-400/10 flex items-center justify-center">
