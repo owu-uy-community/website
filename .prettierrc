@@ -6,6 +6,6 @@
   "singleQuote": false,
   "arrowParens": "always",
   "endOfLine": "lf",
-  "plugins": ["prettier-plugin-tailwindcss", "prettier-plugin-packagejson"],
+  "plugins": ["prettier-plugin-tailwindcss"],
   "useTabs": false
 }
