@@ -11,6 +11,7 @@ import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
 import TicketHome from "components/Meetups/2024/TicketHome";
 import { addUtmParams } from "app/lib/utils";
+import { INTERNAL_ROUTES } from "app/lib/constants";
 
 function useCounter(initialValue: number, max: number, seconds: number) {
   const [counter, setCounter] = useState(initialValue);
@@ -114,7 +115,7 @@ function Hero({
                 {slackButtonText}
               </button>
             </Link>
-            <Link className="mt-5 hidden lg:block" href="/la-meetup">
+            <Link className="mt-5 hidden lg:block" href={INTERNAL_ROUTES.meetups.current}>
               <TicketHome />
             </Link>
             <Link

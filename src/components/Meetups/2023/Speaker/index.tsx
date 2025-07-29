@@ -1,3 +1,5 @@
+import { EXTERNAL_PLATFORMS } from "app/lib/constants";
+
 type SpeakerProps = {
   name: string;
   role: string;
@@ -10,7 +12,7 @@ export default function Speaker({ name, role, image, linkedin }: SpeakerProps) {
     <a
       key={name}
       className="flex flex-1 flex-col items-center justify-center"
-      href={`https://linkedin.com/in/${linkedin}`}
+      href={`${EXTERNAL_PLATFORMS.linkedin.base}${linkedin}`}
       rel="external noopener nofollow"
       target="_blank"
     >

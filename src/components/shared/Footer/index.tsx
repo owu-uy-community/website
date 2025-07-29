@@ -2,11 +2,12 @@ import Link from "next/link";
 import { FaInstagram, FaLinkedin } from "react-icons/fa";
 
 import { addUtmParams } from "app/lib/utils";
+import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
 
 export default function Footer() {
   const LINKS = [
     {
-      href: "https://slack.owu.uy/",
+      href: SOCIAL_LINKS.slack,
       label: "Sumate a la comunidad",
       external: true,
     },
@@ -20,15 +21,15 @@ export default function Footer() {
     //   label: "Código de conducta",
     // },
     {
-      href: "/2023/la-meetup/",
+      href: INTERNAL_ROUTES.meetups.meetup2023,
       label: "La Meetup I",
     },
     {
-      href: "/2024/la-meetup/",
+      href: INTERNAL_ROUTES.meetups.meetup2024,
       label: "La Meetup II",
     },
     {
-      href: "/la-meetup/",
+      href: INTERNAL_ROUTES.meetups.meetup2025,
       label: "La Meetup III",
     },
   ];
@@ -55,7 +56,7 @@ export default function Footer() {
           <Link
             key="instagram-link"
             className="font-light hover:text-yellow-400"
-            href={addUtmParams("https://www.instagram.com/owu__uy/")}
+            href={addUtmParams(SOCIAL_LINKS.instagram)}
             rel="noopener"
             target="_blank"
           >
@@ -64,7 +65,7 @@ export default function Footer() {
           <Link
             key="linkedin"
             className="font-light hover:text-yellow-400"
-            href={addUtmParams("https://www.linkedin.com/company/owu-uruguay/")}
+            href={addUtmParams(SOCIAL_LINKS.linkedin)}
             rel="noopener"
             target="_blank"
           >

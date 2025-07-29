@@ -3,6 +3,7 @@ import { es } from "date-fns/locale";
 import Link from "next/link";
 
 import { addUtmParams } from "app/lib/utils";
+import { MAPS_URLS } from "app/lib/constants";
 
 type HeroProps = {
   title: string;
@@ -28,7 +29,7 @@ export default function Hero({ title, subtitle, date, location, locationHref }: 
             locale: es,
           })}
         </h2>
-        <Link href={addUtmParams("https://maps.app.goo.gl/PWsJEYZGZdzGkmaRA")} rel="noopener" target="_blank">
+        <Link href={addUtmParams(MAPS_URLS.meetupLocation)} rel="noopener" target="_blank">
           <h3 className="animate-fadeIn animate-delay-200 mt-2 text-center text-lg font-[600] text-white lg:text-lg">
             {location}
           </h3>
