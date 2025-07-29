@@ -12,7 +12,7 @@ export default function RootLayout({
     <NavigationProvider>
       <Starfield speedFactor={0.05} starColor={[255, 255, 255]} starCount={1000} />
       <Navbar />
-      <section className="max-w-screen relative z-50 flex flex-col">{children}</section>
+      <section className="max-w-screen relative z-50 flex flex-col w-full">{children}</section>
     </NavigationProvider>
   );
 }
