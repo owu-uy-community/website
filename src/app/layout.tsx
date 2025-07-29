@@ -25,7 +25,7 @@ export default function RootLayout({
       <meta content="/la_meetup_2024.png" property="twitter:image" />
       <Analytics />
       <SpeedInsights />
-      <Script async src="https://www.googletagmanager.com/gtag/js?id=G-RVTWHW4J21" />
+      <Script async src={EXTERNAL_SERVICES.googleTagManager} />
       <Script id="google-analytics">
         {`
           window.dataLayer = window.dataLayer || [];
