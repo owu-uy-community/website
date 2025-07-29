@@ -28,6 +28,18 @@ export const laMeetup2025 = collection({
           label: "Extended Description",
           multiline: true,
         }),
+        icon: fields.select({
+          label: "Icon",
+          options: [
+            { label: "Microphone (Default)", value: "Mic" },
+            { label: "Coffee Cup", value: "Coffee" },
+            { label: "Message Circle", value: "MessageCircle" },
+            { label: "Party Popper", value: "PartyPopper" },
+            { label: "Beer", value: "Beer" },
+            { label: "Clock", value: "Clock" },
+          ],
+          defaultValue: "Mic",
+        }),
         startTime: fields.datetime({ label: "Start Time", validation: { isRequired: true } }),
         endTime: fields.datetime({ label: "End Time", validation: { isRequired: true } }),
         presenter: fields.relationship({
