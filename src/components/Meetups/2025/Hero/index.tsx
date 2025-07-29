@@ -7,6 +7,7 @@ import { FaBullhorn, FaTicket } from "react-icons/fa6";
 import TicketHome from "components/Meetups/2024/TicketHome";
 import classNames from "classnames";
 import { addUtmParams } from "app/lib/utils";
+import { MAPS_URLS, INTERNAL_ROUTES } from "app/lib/constants";
 
 type HeroProps = {
   sponsors?: readonly {
@@ -42,7 +43,7 @@ export default function Hero({ sponsors }: HeroProps) {
                   locale: es,
                 })}
               </h2>
-              <Link href={addUtmParams("https://maps.app.goo.gl/PWsJEYZGZdzGkmaRA")} rel="noopener" target="_blank">
+              <Link href={addUtmParams(MAPS_URLS.meetupLocation)} rel="noopener" target="_blank">
                 <h3 className="animate-fadeIn animate-delay-200 md:underline-transition mt-2 flex w-fit flex-row items-center justify-center pb-2 text-center text-sm font-[600] text-white transition-all duration-300 ease-in-out motion-reduce:transition-none lg:text-lg">
                   <FaMapMarkerAlt className="mr-2 hidden md:inline-block" />
                   Sinergia Faro, Víctor Soliño 349, Montevideo
@@ -51,12 +52,12 @@ export default function Hero({ sponsors }: HeroProps) {
             </span>
 
             <span className="flex-column flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-4">
-              <Link className="hidden xl:block" href="/la-meetup/interes">
+              <Link className="hidden xl:block" href={INTERNAL_ROUTES.meetups.interest}>
                 <TicketHome sponsors={sponsors} />
               </Link>
               <Link
                 className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
-                href="/la-meetup/interes"
+                href={INTERNAL_ROUTES.meetups.interest}
               >
                 <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
                   <FaTicket className="mr-1.5 inline-block" />
@@ -65,7 +66,7 @@ export default function Hero({ sponsors }: HeroProps) {
               </Link>
               <Link
                 className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
-                href="/la-meetup/sponsors"
+                href={INTERNAL_ROUTES.meetups.sponsors}
               >
                 <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
                   <FaBullhorn className="mr-1.5 inline-block text-base" />

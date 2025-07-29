@@ -1,6 +1,7 @@
 import { Button } from "components/shared/ui/button";
 import { Megaphone, Search } from "lucide-react";
 import Link from "next/link";
+import { INTERNAL_ROUTES } from "app/lib/constants";
 
 export default function CallForProposalsBanner() {
   // Check if current date is past the deadline (July 31, 2025)
@@ -30,7 +31,7 @@ export default function CallForProposalsBanner() {
                     <strong>Fecha límite: 31 de Julio</strong>
                   </p>
                 </div>
-                <Link href="/la-meetup/#call-for-proposals" className="hidden lg:block">
+                <Link href={INTERNAL_ROUTES.meetups.callForProposals} className="hidden lg:block">
                   <Button size="sm" className="whitespace-nowrap bg-black font-semibold text-white hover:bg-gray-800">
                     <Search className="mr-1.5 h-4 w-4" strokeWidth={2} />
                     Quiero saber más
