@@ -1,12 +1,13 @@
 "use server";
 
+import { EXTERNAL_SERVICES } from "app/lib/constants";
+
+const GOOGLE_SHEETS_URL = EXTERNAL_SERVICES.googleSheets.openSpaceEpg;
+
 export default async function epg() {
-  const csv = await fetch(
-    "https://docs.google.com/spreadsheets/d/1GPhu-OIcZbIZE3x4xmQvpL0j_rqPfr6wqDwiYdgcC1U/export?format=csv",
-    {
-      next: { tags: ["csv"] },
-    }
-  ).then((res) => res.text());
+  const csv = await fetch(GOOGLE_SHEETS_URL, {
+    next: { tags: ["csv"] },
+  }).then((res) => res.text());
 
   const events = csv
     .split("\n")
