@@ -207,7 +207,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                   </div>
 
                   {/* Mobile Layout */}
-                  <div className="px-3 py-4 md:hidden">
+                  <div className="p-5 md:hidden">
                     {/* Header row */}
                     <div className="mb-2 flex items-start gap-3">
                       {/* Icon */}
