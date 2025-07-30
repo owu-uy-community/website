@@ -81,8 +81,6 @@ export async function transformAgendaItem(item: AgendaItem) {
 
   return {
     ...item,
-    startTime: new Date(item.startTime),
-    endTime: new Date(item.endTime),
     presenter: presenter
       ? {
           firstname: presenter.firstname,

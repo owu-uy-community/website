@@ -9,8 +9,9 @@ import CallForProposalBanner from "components/Meetups/2025/CallForProposalBanner
 import CallForProposals from "components/Meetups/2025/CallForProposals";
 import Sponsors from "components/Meetups/2025/Sponsors";
 import { SectionKey } from "components/shared/Navbar/navSections";
+import AgendaSection from "components/Meetups/2025/Agenda";
 
-import { transformArray, transformSponsor } from "../../../../../lib/keystatic/utils";
+import { transformArray, transformSponsor, transformAgendaItem, type AgendaItem } from "../../../../../lib/keystatic/utils";
 import keystaticConfig from "../../../../../../../keystatic.config";
 
 const reader = cache(() => createReader(process.cwd(), keystaticConfig));
@@ -26,8 +27,13 @@ export default async function LaMeetup2025() {
 
   if (!laMeetup) return null;
 
-  const { sponsors } = laMeetup ?? {};
+  const { agenda, sponsors } = laMeetup ?? {};
+  
+  // Type assertions for Keystatic collections
+  const agendaItems = agenda as unknown as AgendaItem[];
   const sponsorSlugs = sponsors as unknown as string[];
+  
+  const transformedAgenda = await transformArray(agendaItems, transformAgendaItem);
   const transformedSponsors = await transformArray(sponsorSlugs, transformSponsor);
 
   return (
@@ -37,6 +43,7 @@ export default async function LaMeetup2025() {
         <Hero />
         <Intro />
         <CallForProposals />
+        <AgendaSection agenda={transformedAgenda} />
         <Sponsors sponsors={transformedSponsors} />
         <Footer />
       </div>

@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   description: "Únete a nuestra comunidad de desarrolladores.",
@@ -35,7 +33,7 @@ export default function RootLayout({
           gtag('config', 'G-RVTWHW4J21');
         `}
       </Script>
-      <body className={inter.className}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

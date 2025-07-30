@@ -15,8 +15,8 @@ type AgendaProps = {
     readonly id: number;
     readonly title: string;
     readonly description: string;
-    readonly startTime: Date;
-    readonly endTime: Date;
+    readonly startTime: string;
+    readonly endTime: string;
     readonly presenter?: {
       readonly firstname: string;
       readonly lastname?: string;
@@ -58,7 +58,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
               >
                 <div className="flex flex-row items-center justify-between gap-3">
                   <span className="min-w-[6rem] text-yellow-400 sm:min-w-[7.5rem] md:mr-3">
-                    {format(startTime, "HH:mm")} - {format(endTime, "HH:mm")}
+                    {format(parseISO(startTime), "HH:mm", { locale: es })} - {format(parseISO(endTime), "HH:mm", { locale: es })}
                   </span>
                   {presenter ? (
                     <TooltipProvider delayDuration={0}>
