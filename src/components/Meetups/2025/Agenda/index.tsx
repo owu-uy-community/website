@@ -67,7 +67,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
     <section id="agenda" className="mt-16 w-full">
       <div className="mb-8 text-center">
         <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Agenda</h2>
-        <p className="mx-auto max-w-2xl text-lg text-gray-400">¡Conocé el cronograma de actividades y charlas!</p>
+        <p className="mx-auto max-w-2xl text-lg text-gray-300">¡Conocé el cronograma de actividades y charlas!</p>
         {lastUpdate ? (
           <p className="mt-2 text-center text-xs text-gray-400">
             Última actualización: {format(parseISO(lastUpdate), "dd/MM/yyyy HH:mm:ss", { locale: es })}
