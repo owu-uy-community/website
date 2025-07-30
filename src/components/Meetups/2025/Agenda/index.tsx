@@ -18,8 +18,8 @@ type AgendaProps = {
     readonly description: string;
     readonly extendedDescription?: string;
     readonly icon?: string;
-    readonly startTime: Date;
-    readonly endTime: Date;
+    readonly startTime: string;
+    readonly endTime: string;
     readonly presenter?: {
       readonly firstname: string;
       readonly lastname?: string;
@@ -112,7 +112,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                     {/* Time */}
                     <div className="flex min-w-[110px] items-center text-yellow-400">
                       <Clock className="mr-2 h-4 w-4" />
-                      <span className="font-mono text-xl font-bold">{format(startTime, "HH:mm")}</span>
+                      <span className="font-mono text-xl font-bold">{format(parseISO(startTime), "HH:mm", { locale: es })}</span>
                     </div>
 
                     {/* Icon */}
@@ -230,7 +230,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4 text-yellow-400" />
                           <span className="font-mono text-[16px] font-bold text-yellow-400">
-                            {format(startTime, "HH:mm")}
+                            {format(parseISO(startTime), "HH:mm", { locale: es })}
                           </span>
                         </div>
                         <h3 className="mb-1 text-base font-bold text-white transition-colors group-hover:text-yellow-400">
