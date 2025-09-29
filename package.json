@@ -74,6 +74,7 @@
     "zod": "3.24.3"
   },
   "devDependencies": {
+    "prettier-plugin-packagejson": "2.5.19",
     "@next/eslint-plugin-next": "15.3.1",
     "@remotion/eslint-config": "4.0.288",
     "@remotion/tailwind": "4.0.288",
