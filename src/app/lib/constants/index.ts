@@ -1,12 +1,8 @@
 // Auth Constants
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://localhost:3000";
 export const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN ?? "localhost";
-export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
-export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
-export const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID!;
-export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET!;
-export const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID!;
-export const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!;
+export const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID!;
+export const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET!;
 export const USE_SECURE_COOKIES = DOMAIN === "localhost" ? false : true;
 
 // Social Media Links
