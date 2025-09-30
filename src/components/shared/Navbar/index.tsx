@@ -119,11 +119,11 @@ function Navbar() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Link href={INTERNAL_ROUTES.auth.login} className="font-light text-white hover:text-yellow-400">
-              <LogIn size={20} />
-            </Link>
-          )}
+          ) : null
+          // <Link href={INTERNAL_ROUTES.auth.login} className="font-light text-white hover:text-yellow-400">
+          //   <LogIn size={20} />
+          // </Link>
+          }
         </div>
       </div>
     </nav>

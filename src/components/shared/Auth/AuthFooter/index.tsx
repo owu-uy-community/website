@@ -18,7 +18,8 @@ export default function AuthFooter({ actionText }: AuthFooterProps) {
       y la{" "}
       <Link href={INTERNAL_ROUTES.legal.privacy} className="text-yellow-400 hover:underline">
         Política de Privacidad
-      </Link>
+      </Link>{" "}
+      de la comunidad OWU Uruguay.
     </div>
   );
 }
