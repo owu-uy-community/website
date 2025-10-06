@@ -13,11 +13,63 @@ type Sponsor = {
 
 type TicketProps = {
   sponsors?: readonly Sponsor[];
+  releaseDate?: string; // ISO date string for ticket release
 };
 
-export default function Ticket({ sponsors }: TicketProps) {
+type TimeLeft = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
+export default function Ticket({ sponsors, releaseDate }: TicketProps) {
   const [currentSponsors, setCurrentSponsors] = useState<readonly Sponsor[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+  });
+  const [isReleased, setIsReleased] = useState(!releaseDate);
+
+  // Countdown calculation
+  const calculateTimeLeft = () => {
+    if (!releaseDate) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+    const difference = +new Date(releaseDate) - +new Date();
+
+    if (difference > 0) {
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      };
+    }
+
+    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+  };
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!releaseDate) return;
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      const newTimeLeft = calculateTimeLeft();
+      setTimeLeft(newTimeLeft);
+
+      // Check if countdown is finished
+      if (newTimeLeft.days === 0 && newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
+        setIsReleased(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [releaseDate]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -39,6 +91,8 @@ export default function Ticket({ sponsors }: TicketProps) {
     }
   }, [currentIndex, sponsors ?? []]);
 
+  const formatNumber = (num: number) => String(num).padStart(2, "0");
+
   return (
     <div
       className={classNames(
@@ -51,6 +105,64 @@ export default function Ticket({ sponsors }: TicketProps) {
         )}
       >
         <div className="absolute left-1/2 top-1/2 h-[300%] w-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gradient-to-r from-[#41b3ff00] via-[#b0a9ff13] to-[#41b3ff00]" />
+
+        {/* Countdown Overlay */}
+        {!isReleased && releaseDate && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[10px] bg-[#24292e]/90 backdrop-blur-sm">
+            <div className="flex flex-col gap-4 px-4 text-center">
+              <h3 className="mb-2 text-lg font-bold text-white lg:text-xl">
+                Entradas disponibles desde el <br />
+                <span className="text-yellow-400">13 de Octubre de 2025 a las 13:10</span>
+              </h3>
+
+              <div className="flex justify-center gap-3 lg:gap-4">
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#18181b] shadow-lg lg:h-20 lg:w-20">
+                      <span className="text-2xl font-bold text-white lg:text-3xl">{formatNumber(timeLeft.days)}</span>
+                    </div>
+                  </div>
+                  <span className="mt-2 text-xs text-gray-400 lg:text-sm">{timeLeft.days === 1 ? "Día" : "Días"}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#18181b] shadow-lg lg:h-20 lg:w-20">
+                      <span className="text-2xl font-bold text-white lg:text-3xl">{formatNumber(timeLeft.hours)}</span>
+                    </div>
+                  </div>
+                  <span className="mt-2 text-xs text-gray-400 lg:text-sm">
+                    {timeLeft.hours === 1 ? "Hora" : "Horas"}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#18181b] shadow-lg lg:h-20 lg:w-20">
+                      <span className="text-2xl font-bold text-white lg:text-3xl">
+                        {formatNumber(timeLeft.minutes)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="mt-2 text-xs text-gray-400 lg:text-sm">
+                    {timeLeft.minutes === 1 ? "Minuto" : "Minutos"}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="relative">
+                    <div className="flex h-16 w-16 animate-pulse items-center justify-center rounded-lg bg-[#18181b] shadow-lg lg:h-20 lg:w-20">
+                      <span className="text-2xl font-bold text-white lg:text-3xl">
+                        {formatNumber(timeLeft.seconds)}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="mt-2 text-xs text-gray-400 lg:text-sm">
+                    {timeLeft.seconds === 1 ? "Segundo" : "Segundos"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <span
           className={classNames(
             "ticket-dash-border hidden h-full items-center justify-center px-4 py-0 text-center font-mono text-3xl font-bold leading-none text-white [writing-mode:vertical-lr] lg:flex"
