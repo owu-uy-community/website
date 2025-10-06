@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import { FaBullhorn, FaTicket } from "react-icons/fa6";
 
-import TicketHome from "components/Meetups/2024/TicketHome";
+import TicketHome from "components/Meetups/2025/TicketHome";
 import classNames from "classnames";
 import { addUtmParams } from "app/lib/utils";
 
@@ -51,10 +51,10 @@ export default function Hero({ sponsors }: HeroProps) {
             </span>
 
             <span className="flex-column flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-4">
-              <Link className="hidden xl:block" href="/la-meetup/interes">
+              <div className="hidden xl:block">
                 <TicketHome sponsors={sponsors} />
-              </Link>
-              <Link
+              </div>
+              {/* <Link
                 className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
                 href="/la-meetup/interes"
               >
@@ -71,7 +71,7 @@ export default function Hero({ sponsors }: HeroProps) {
                   <FaBullhorn className="mr-1.5 inline-block text-base" />
                   ¡QUIERO SER SPONSOR!
                 </span>
-              </Link>
+              </Link> */}
             </span>
           </div>
         </div>
