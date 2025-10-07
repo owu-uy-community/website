@@ -34,38 +34,13 @@ export default function Speakers({ talks = [] }: SpeakersProps) {
         <p className="mb-10 mt-2 text-center text-lg font-[400] text-white">
           ¡Nuestros oradores que compartirán sus conocimientos!
         </p>
-        <div className="mx-auto w-full overflow-hidden">
-          <div className="animate-marquee flex">
-            <p className="whitespace-nowrap pr-8 text-2xl font-black leading-relaxed text-yellow-400 md:text-4xl">
-              {allSpeakers.map((s) => `${s.firstname.toUpperCase()} ${s.lastname.toUpperCase()}`).join(" · ")} ·
-            </p>
-            <p className="whitespace-nowrap pr-8 text-2xl font-black leading-relaxed text-yellow-400 md:text-4xl">
-              {allSpeakers.map((s) => `${s.firstname.toUpperCase()} ${s.lastname.toUpperCase()}`).join(" · ")} ·
-            </p>
-          </div>
-        </div>
       </div>
 
-      <div className="mx-auto max-w-7xl space-y-4">
+      <div className="mx-auto max-w-7xl space-y-12">
         {talks.map((talk, talkIndex) => (
-          <div key={talkIndex}>
-            {/* Talk title and description */}
-            <div className="mx-auto max-w-6xl text-center">
-              <h3 className="mb-4 text-xl font-bold text-white lg:text-2xl">{talk.title}</h3>
-              <div className="text-balance text-sm leading-relaxed text-white/80 lg:text-base">
-                <ReactMarkdown
-                  components={{
-                    p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
-                    strong: ({ children }) => <strong className="font-bold text-yellow-400">{children}</strong>,
-                  }}
-                >
-                  {talk.description}
-                </ReactMarkdown>
-              </div>
-            </div>
-
-            {/* Speakers for this talk */}
-            <div className="flex flex-wrap justify-center gap-x-8">
+          <div key={talkIndex} className="flex flex-col-reverse gap-8 lg:flex-row lg:items-start">
+            {/* Speakers for this talk - Left side */}
+            <div className="flex flex-row flex-wrap items-center gap-4 lg:w-1/2">
               {talk.speakers.map((speaker, speakerIndex) => (
                 <SpeakerCard
                   key={`${talkIndex}-${speakerIndex}`}
@@ -78,6 +53,25 @@ export default function Speakers({ talks = [] }: SpeakersProps) {
                   x={speaker.x}
                 />
               ))}
+            </div>
+
+            {/* Talk title and description - Right side */}
+            <div className="flex flex-col justify-center lg:w-1/2">
+              <h3 className="mb-4 text-balance text-center text-lg font-bold text-white lg:text-left lg:text-xl">
+                {talk.title}
+              </h3>
+              <div className="text-balance text-center text-sm text-white/80 lg:text-left lg:text-base">
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-4 leading-6 last:mb-0">{children}</p>,
+                    strong: ({ children }) => (
+                      <strong className="font-bold leading-6 text-yellow-400">{children}</strong>
+                    ),
+                  }}
+                >
+                  {talk.description}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
         ))}

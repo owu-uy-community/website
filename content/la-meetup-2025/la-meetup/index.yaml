@@ -202,16 +202,11 @@ talks:
 
       El ataque consiste en **escribir una nota de rescate y una clave secreta
       directamente en el chip**, dejando al usuario con un artefacto bloqueado
-      dentro de su propio cuerpo. A partir de este experimento, vamos a hablar
-      sobre los desafíos reales de **seguridad en el biohacking**, cómo funciona
-      LockSkin y qué implicancias tiene todo esto para el futuro del biohacking.
+      dentro de su propio cuerpo.
 
 
       **¿Vas a abrir esa puerta? ¿Vas a agarrar ese micrófono? ¿Vas a apoyarte en
       esa mesa?** Yo me lo pensaría dos veces.
-
-
-      *(No se liberará el código fuente)*
     speakers:
       - mauro-eldritch
   - title: "Debugging Organizacional: Cuando el problema no es el código"
