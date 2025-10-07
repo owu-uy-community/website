@@ -15,6 +15,9 @@ export interface Speaker {
   lastname: string;
   picture?: string;
   jobTitle?: string;
+  github?: string;
+  linkedin?: string;
+  x?: string;
 }
 
 export interface Sponsor {
@@ -39,6 +42,12 @@ export interface Community {
   name: string;
   picture: string;
   website?: string;
+}
+
+export interface Talk {
+  title: string;
+  description: string;
+  speakers: Array<string | null>;
 }
 
 export interface AgendaItem {
@@ -129,5 +138,31 @@ export async function transformCommunity(communitySlug: string | null) {
     name: community.name,
     picture: formatImageUrl(community.picture),
     website: community.website,
+  };
+}
+
+export async function transformSpeaker(speakerSlug: string | null) {
+  const speaker = await readRelatedContent<Speaker>("speakers", speakerSlug);
+
+  if (!speaker) return null;
+
+  return {
+    firstname: speaker.firstname,
+    lastname: speaker.lastname,
+    picture: speaker.picture ? formatImageUrl(speaker.picture) : undefined,
+    jobTitle: speaker.jobTitle,
+    github: speaker.github,
+    linkedin: speaker.linkedin,
+    x: speaker.x,
+  };
+}
+
+export async function transformTalk(talk: Talk) {
+  const speakers = await transformArray(talk.speakers, transformSpeaker);
+
+  return {
+    title: talk.title,
+    description: talk.description,
+    speakers,
   };
 }

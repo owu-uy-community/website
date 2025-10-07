@@ -105,6 +105,20 @@ export const laMeetup2025 = collection({
       }),
       { label: "Communities" }
     ),
+    talks: fields.array(
+      fields.object({
+        title: fields.text({ label: "Talk Title", validation: { isRequired: true } }),
+        description: fields.text({ label: "Talk Description", multiline: true, validation: { isRequired: true } }),
+        speakers: fields.array(
+          fields.relationship({
+            label: "Speaker",
+            collection: "speakers",
+          }),
+          { label: "Speakers", validation: { length: { min: 1 } } }
+        ),
+      }),
+      { label: "Talks" }
+    ),
   },
   path: "content/la-meetup-2025/*/",
 });
