@@ -73,13 +73,13 @@ export default async function LaMeetup2025() {
         <Intro />
         {/* <CallForProposals /> */}
         <AgendaSection agenda={transformedAgenda} />
+        <Speakers talks={transformedTalks} />
         <OpenSpace
           content={openSpaceContent}
           primaryButtonName={openSpacePrimaryButtonName}
           primaryButtonUrl={openSpacePrimaryButtonUrl}
           facilitator={transformedFacilitator ?? undefined}
         />
-        <Speakers talks={transformedTalks} />
         <Sponsors sponsors={transformedSponsors} />
         <Staff staff={transformedStaff} />
         <Footer />
