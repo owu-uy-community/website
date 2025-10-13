@@ -1,12 +1,14 @@
+"use client";
+
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 import { FaMapMarkerAlt } from "react-icons/fa";
-import { FaBullhorn, FaTicket } from "react-icons/fa6";
+import { FaTicket } from "react-icons/fa6";
 
 import TicketHome from "components/Meetups/2025/TicketHome";
-import classNames from "classnames";
 import { addUtmParams } from "app/lib/utils";
+import classNames from "classnames";
 
 type HeroProps = {
   sponsors?: readonly {
@@ -20,6 +22,10 @@ export default function Hero({ sponsors }: HeroProps) {
   // Check if current date is past the deadline (July 31, 2025)
   const now = new Date();
   const deadline = new Date("2025-07-31T23:59:59"); // TODO: Move to a constant
+
+  // Check if tickets are released (October 13, 2025 at 13:10 Uruguay time)
+  const ticketReleaseDate = new Date("2025-10-13T13:10:00-03:00");
+  const areTicketsReleased = now >= ticketReleaseDate;
 
   return (
     <section
@@ -51,27 +57,32 @@ export default function Hero({ sponsors }: HeroProps) {
             </span>
 
             <span className="flex-column flex w-full flex-wrap items-center justify-center gap-x-8 gap-y-4">
-              <div className="hidden xl:block">
-                <TicketHome sponsors={sponsors} />
-              </div>
-              {/* <Link
-                className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
-                href="/la-meetup/interes"
+              <TicketHome sponsors={sponsors} />
+              <Link
+                className={classNames(
+                  "inline-flex w-full max-w-[280px] skew-x-[-21deg] items-center justify-center border-2 px-5 py-2.5 text-base font-semibold uppercase ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out",
+                  {
+                    // Enabled state - white style
+                    "cursor-pointer border-white text-white before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100":
+                      areTicketsReleased,
+                    // Disabled state - muted gray with clear visual feedback
+                    "cursor-not-allowed border-gray-500 bg-gray-800 text-gray-500 opacity-50": !areTicketsReleased,
+                  }
+                )}
+                href={
+                  areTicketsReleased
+                    ? addUtmParams("https://www.eventbrite.com/e/la-meetup-iii-tickets-1735441254509")
+                    : "#"
+                }
+                target={areTicketsReleased ? "_blank" : undefined}
+                rel={areTicketsReleased ? "noopener noreferrer" : undefined}
+                aria-disabled={!areTicketsReleased}
               >
                 <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
                   <FaTicket className="mr-1.5 inline-block" />
-                  ¡ME INTERESA!
+                  ¡QUIERO MI TICKET!
                 </span>
               </Link>
-              <Link
-                className="inline-flex w-full max-w-[280px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-white px-5 py-2.5 text-base font-semibold uppercase text-white ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-white hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
-                href="/la-meetup/sponsors"
-              >
-                <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
-                  <FaBullhorn className="mr-1.5 inline-block text-base" />
-                  ¡QUIERO SER SPONSOR!
-                </span>
-              </Link> */}
             </span>
           </div>
         </div>

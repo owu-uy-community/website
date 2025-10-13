@@ -1,6 +1,7 @@
 slug: franco-correa
 firstname: Franco
 lastname: Correa
-picture: /static/staff/franco-correa/picture.webp
+picture: /static/staff/franco-correa/picture.png
 jobTitle: Engineer, Revenuecat
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/"

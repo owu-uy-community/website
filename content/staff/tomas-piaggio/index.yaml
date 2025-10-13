@@ -1,6 +1,7 @@
 slug: tomas-piaggio
 firstname: Tomas
 lastname: Piaggio
-picture: /static/staff/tomas-piaggio/picture.webp
+picture: /static/staff/tomas-piaggio/picture.png
 jobTitle: Director of Engineering
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/"

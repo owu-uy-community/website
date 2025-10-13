@@ -15,6 +15,10 @@ export interface Speaker {
   lastname: string;
   picture?: string;
   jobTitle?: string;
+  company?: string;
+  github?: string;
+  linkedin?: string;
+  x?: string;
 }
 
 export interface Sponsor {
@@ -39,6 +43,12 @@ export interface Community {
   name: string;
   picture: string;
   website?: string;
+}
+
+export interface Talk {
+  title: string;
+  description: string;
+  speakers: Array<string | null>;
 }
 
 export interface AgendaItem {
@@ -120,6 +130,22 @@ export async function transformStaffMember(staffSlug: string | null) {
   };
 }
 
+export async function transformStaffMember2025(staffSlug: string | null) {
+  const member = await readRelatedContent<StaffMember>("staff", staffSlug);
+
+  if (!member) return null;
+
+  return {
+    firstname: member.firstname,
+    lastname: member.lastname,
+    picture: member.picture ? formatImageUrl(member.picture) : undefined,
+    jobTitle: member.jobTitle,
+    linkedin: member.socialNetworks.linkedin,
+    github: member.socialNetworks.github,
+    x: member.socialNetworks.twitter,
+  };
+}
+
 export async function transformCommunity(communitySlug: string | null) {
   const community = await readRelatedContent<Community>("communities", communitySlug);
 
@@ -129,5 +155,32 @@ export async function transformCommunity(communitySlug: string | null) {
     name: community.name,
     picture: formatImageUrl(community.picture),
     website: community.website,
+  };
+}
+
+export async function transformSpeaker(speakerSlug: string | null) {
+  const speaker = await readRelatedContent<Speaker>("speakers", speakerSlug);
+
+  if (!speaker) return null;
+
+  return {
+    firstname: speaker.firstname,
+    lastname: speaker.lastname,
+    picture: speaker.picture ? formatImageUrl(speaker.picture) : undefined,
+    jobTitle: speaker.jobTitle,
+    company: speaker.company,
+    github: speaker.github,
+    linkedin: speaker.linkedin,
+    x: speaker.x,
+  };
+}
+
+export async function transformTalk(talk: Talk) {
+  const speakers = await transformArray(talk.speakers, transformSpeaker);
+
+  return {
+    title: talk.title,
+    description: talk.description,
+    speakers,
   };
 }

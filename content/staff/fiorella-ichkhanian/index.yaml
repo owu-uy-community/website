@@ -1,6 +1,7 @@
 slug: fiorella-ichkhanian
 firstname: Fiorella
 lastname: Ichkhanian
-picture: /static/staff/fiorella-ichkhanian/picture.webp
+picture: /static/staff/fiorella-ichkhanian/picture.png
 jobTitle: CEO, BetaBrains
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/"

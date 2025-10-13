@@ -81,38 +81,38 @@ agenda:
 openSpacePrimaryButtonName: ¡VER AGENDA!
 openSpacePrimaryButtonUrl: /la-meetup/openspace
 openspaceGallery:
-  - id: '1'
+  - id: "1"
     image: /static/2024/openspace/la-meetup/openspaceGallery/0/image.webp
     alt: Open Space Image
-  - id: '2'
+  - id: "2"
     image: /static/2024/openspace/la-meetup/openspaceGallery/1/image.webp
     alt: Open Space Image
-  - id: '3'
+  - id: "3"
     image: /static/2024/openspace/la-meetup/openspaceGallery/2/image.webp
     alt: Open Space Image
-  - id: '4'
+  - id: "4"
     image: /static/2024/openspace/la-meetup/openspaceGallery/3/image.webp
     alt: Open Space Image
-  - id: '5'
+  - id: "5"
     image: /static/2024/openspace/la-meetup/openspaceGallery/4/image.webp
     alt: Open Space Image
-  - id: '6'
+  - id: "6"
     image: /static/2024/openspace/la-meetup/openspaceGallery/5/image.webp
     alt: Open Space Image
-  - id: '7'
+  - id: "7"
     image: /static/2024/openspace/la-meetup/openspaceGallery/6/image.webp
     alt: Open Space Image
-  - id: '8'
+  - id: "8"
     image: /static/2024/openspace/la-meetup/openspaceGallery/7/image.webp
     alt: Open Space Image
-  - id: '9'
+  - id: "9"
     image: /static/2024/openspace/la-meetup/openspaceGallery/8/image.webp
     alt: Open Space Image
-  - id: '10'
+  - id: "10"
     image: /static/2024/openspace/la-meetup/openspaceGallery/9/image.webp
     alt: Open Space Image
 gallery:
-  - id: '1'
+  - id: "1"
     image: /static/2024/gallery/la-meetup/gallery/0/image.jpeg
     alt: Closing Picture
 sponsors:
@@ -132,22 +132,22 @@ sponsors:
   - trupropel
   - ort
 staff:
-  - francisco-bergeret
-  - mauricio-mena
-  - laura-rodriguez
-  - javier-valenzani
-  - federico-kauffman
-  - valentina-olivera
-  - kevin-exposito
-  - fiorella-ichkhanian
-  - mikaela-pisani
-  - leticia-esperon
-  - juan-oliu
   - agustin-tornielli
-  - marcelo-dominguez
-  - tomas-piaggio
-  - victoria-perez
-  - santiago-ferreira
+  - federico-kauffman
+  - fiorella-ichkhanian
+  - francisco-bergeret
   - franco-correa
   - gabriela-alcarraz
+  - javier-valenzani
+  - juan-oliu
+  - kevin-exposito
+  - laura-rodriguez
+  - leticia-esperon
+  - marcelo-dominguez
+  - mauricio-mena
+  - mikaela-pisani
+  - santiago-ferreira
+  - tomas-piaggio
+  - valentina-olivera
+  - victoria-perez
 communities: []

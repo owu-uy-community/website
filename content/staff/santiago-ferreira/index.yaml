@@ -1,6 +1,7 @@
 slug: santiago-ferreira
 firstname: Santiago
 lastname: Ferreira
-picture: /static/staff/santiago-ferreira/picture.webp
-jobTitle: Developer
-socialNetworks: {}
+picture: /static/staff/santiago-ferreira/picture.png
+jobTitle: Software Developer
+socialNetworks:
+  linkedin: "https://www.linkedin.com/in/santiagoferreira/"

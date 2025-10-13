@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "analyze": "next analyze",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
-    "dev": "next dev",
+    "dev": "next dev --turbo",
     "lint": "next lint",
     "lint:fix": "eslint --fix",
     "remotion": "remotion studio src/app/lib/videos/remotion/index.ts",
@@ -55,7 +56,7 @@
     "embla-carousel-react": "8.6.0",
     "lucide-react": "0.488.0",
     "motion": "12.7.4",
-    "next": "15.3.1",
+    "next": "15.5.4",
     "next-themes": "0.4.6",
     "planby": "1.1.7",
     "react": "19.1.0",
@@ -74,8 +75,8 @@
     "zod": "3.24.3"
   },
   "devDependencies": {
-    "prettier-plugin-packagejson": "2.5.19",
-    "@next/eslint-plugin-next": "15.3.1",
+    "@next/bundle-analyzer": "15.5.4",
+    "@next/eslint-plugin-next": "15.5.4",
     "@remotion/eslint-config": "4.0.288",
     "@remotion/tailwind": "4.0.288",
     "@svgr/webpack": "8.1.0",
@@ -101,6 +102,7 @@
     "eslint-plugin-simple-import-sort": "12.1.1",
     "postcss": "8.5.3",
     "prettier": "3.5.3",
+    "prettier-plugin-packagejson": "2.5.19",
     "prettier-plugin-tailwindcss": "0.6.11",
     "tailwindcss": "3.4.4",
     "typescript": "5.8.3"

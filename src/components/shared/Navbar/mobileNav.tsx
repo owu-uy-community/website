@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import classNames from "classnames";
 import Image from "next/image";
 import Link from "next/link";
@@ -42,16 +43,19 @@ function NavItems() {
 }
 
 export default function MobileNav() {
+  const [isOpen, setIsOpen] = React.useState(false);
+
   return (
     <nav className="lg:hidden">
-      <Sheet>
-        <SheetTrigger className="align-middle">
-          <Image alt="menu" className="cursor-pointer" height={24} src="/menu.svg" width={24} />
-        </SheetTrigger>
-        <SheetContent className="z-[60] flex flex-col gap-6 bg-opacity-5 lg:hidden">
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        {!isOpen && (
+          <SheetTrigger className="align-middle">
+            <Image alt="menu" className="cursor-pointer" height={24} src="/menu.svg" width={24} />
+          </SheetTrigger>
+        )}
+        <SheetContent className="z-[60] flex max-w-[240px] flex-col gap-6 bg-opacity-5 lg:hidden">
           <div className="flex w-full flex-row items-center justify-start gap-4">
             <Image alt="logo" height={34} src="/carpincho.png" width={34} />
-            <h2 className="text-xl font-semibold text-white">OWU Uruguay</h2>
           </div>
           <NavItems />
           <Separator />

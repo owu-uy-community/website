@@ -1,6 +1,7 @@
 slug: kevin-exposito
 firstname: Kevin
 lastname: Exposito
-picture: /static/staff/kevin-exposito/picture.webp
+picture: /static/staff/kevin-exposito/picture.png
 jobTitle: Engineer, Mimiquate
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/in/kevinexposito/"

@@ -1,6 +1,7 @@
 slug: mauricio-mena
 firstname: Mauricio
 lastname: Mena
-picture: /static/staff/mauricio-mena/picture.webp
+picture: /static/staff/mauricio-mena/picture.png
 jobTitle: Software Developer
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/in/mauricio-mena-7bb13271/"

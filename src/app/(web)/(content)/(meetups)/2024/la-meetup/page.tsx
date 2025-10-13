@@ -104,7 +104,7 @@ export default async function LaMeetup2024Page() {
       <Gallery gallery={transformedGallery} />
       <Sponsors sponsors={transformedSponsors} />
       <Staff staff={transformedStaff} />
-      <CommunitiesCarousel communities={transformedCommunities} />
+      {/* <CommunitiesCarousel communities={transformedCommunities} /> */}
       <Footer />
     </div>
   );

@@ -64,27 +64,25 @@ agenda:
     location:
       name: SHOPPING
   - id: 4
-    title: Actualmente en definición...
-    description: Charla pendiente del llamado a propuestas.
+    title: "Charla #1"
+    description: Primera charla de la jornada
     extendedDescription: >-
-      Esta charla está pendiente de definición. ¡Te invitamos a postular tu
-      charla antes del 31 de julio!
+      Actualizaremos quién presentará en este bloque el mismo día de La Meetup
     icon: Mic
     startTime: 2025-11-01T15:00:00.000Z
     endTime: 2025-11-01T15:40:00.000Z
-    presenter: ''
+    presenter: ""
     location:
       name: SINERGIA
   - id: 5
-    title: Actualmente en definición...
-    description: Charla pendiente del llamado a propuestas.
+    title: "Charla #2"
+    description: Segunda charla de la jornada
     extendedDescription: >-
-      Esta charla está pendiente de definición. ¡Te invitamos a postular tu
-      charla antes del 31 de julio!
+      Actualizaremos quién presentará en este bloque el mismo día de La Meetup
     icon: Mic
     startTime: 2025-11-01T15:40:00.000Z
     endTime: 2025-11-01T16:20:00.000Z
-    presenter: ''
+    presenter: ""
     location:
       name: SINERGIA
   - id: 6
@@ -102,22 +100,21 @@ agenda:
     location:
       name: SINERGIA
   - id: 7
-    title: Actualmente en definición...
-    description: Charla pendiente del llamado a propuestas.
+    title: "Charla #3"
+    description: Tercera charla de la jornada
     extendedDescription: >-
-      Esta charla está pendiente de definición. ¡Te invitamos a postular tu
-      charla antes del 31 de julio!
+      Actualizaremos quién presentará en este bloque el mismo día de La Meetup
     icon: Mic
     startTime: 2025-11-01T16:45:00.000Z
     endTime: 2025-11-01T17:50:00.000Z
-    presenter: ''
+    presenter: ""
     location:
       name: SINERGIA
   - id: 8
     title: Cierre y agradecimientos
     description: Cierre del evento y agradecimientos a los ponentes y colaboradores.
     extendedDescription: >
-      ¡Momento especial para cerrar **La Meetup 2025**!
+      ¡Momento especial para cerrar **La Meetup III**!
 
 
       Agradecimientos a todos los **speakers**, **sponsors** y **colaboradores**
@@ -143,13 +140,16 @@ agenda:
       conexiones generadas durante el día.
 
 
-      **Ambiente informal** perfecto para cerrar La Meetup III compartiendo
+      **Ambiente informal** perfecto para cerrar **La Meetup III** compartiendo
       experiencias.
     icon: Beer
     startTime: 2025-11-01T18:00:00.000Z
     endTime: 2025-11-02T00:00:00.000Z
     location:
       name: MVC
+openSpacePrimaryButtonName: Más sobre el open space
+openSpacePrimaryButtonUrl: /2025/la-meetup/openspace
+openSpaceFacilitator: juan-mello
 openspaceGallery: []
 gallery: []
 sponsors:
@@ -173,5 +173,66 @@ sponsors:
   - sicfe
   - trupropel
   - segalerba
-staff: []
+staff:
+  - agustin-tornielli
+  - francisco-bergeret
+  - itay-brenner
+  - javier-valenzani
+  - juan-diana
+  - kevin-exposito
+  - laura-rodriguez
+  - leticia-esperon
+  - marcelo-dominguez
+  - mauricio-mena
+  - santiago-ferreira
 communities: []
+talks:
+  - title: "¿Internet funciona? ¿Cómo? ¿… Y es segura?"
+    description: >-
+      **Menú degustación en 40 minutos:** De entrada degustaremos una de las
+      especialidades de los Chefs **¿Cómo funciona Internet?**, un plato típico
+      pero en ocasiones poco apreciado.
+
+
+      Luego como plato fuerte tendremos al **Sistema de Nombres de Dominio** y de
+      los **registros regionales**, cocinados a fuego lento desde la década de 1980.
+      Todo con una pizca de historias locales.
+
+
+      Y para finalizar como postre algunas consideraciones sobre **seguridad** con
+      salsa de ciberataques… si es que las hay.
+    speakers:
+      - carlos-martinez
+      - nicolas-antoniello
+  - title: "LockSkin: un ransomware para bioimplantes"
+    description: >-
+      Los **bioimplantes (NFC+RFID)** abren un mundo nuevo de posibilidades, pero
+      también traen algunos riesgos inesperados. En esta charla presentamos
+      **LockSkin**, un ransomware educativo pensado específicamente para bioimplantes.
+
+
+      El ataque consiste en **escribir una nota de rescate y una clave secreta
+      directamente en el chip**, dejando al usuario con un artefacto bloqueado
+      dentro de su propio cuerpo.
+
+
+      **¿Vas a abrir esa puerta? ¿Vas a agarrar ese micrófono? ¿Vas a apoyarte en
+      esa mesa?** 
+
+
+      Yo me lo pensaría dos veces...
+    speakers:
+      - mauro-eldritch
+  - title: "Debugging Organizacional: Cuando el problema no es el código"
+    description: >-
+      En el mundo del desarrollo de software estamos acostumbrados a buscar **bugs
+      en el código**, pero **¿qué pasa con los errores que no están en los sistemas,
+      sino en las dinámicas humanas?**
+
+
+      En esta charla proponemos un cambio de enfoque: detectar y resolver los
+      **'bugs organizacionales'**, esas fallas invisibles que surgen en la
+      **comunicación, la gestión y la colaboración** dentro de los equipos.
+    speakers:
+      - johana-rios
+      - gaston-cabana

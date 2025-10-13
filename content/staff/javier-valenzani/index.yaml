@@ -1,6 +1,7 @@
 slug: javier-valenzani
 firstname: Javier
 lastname: Valenzani
-picture: /static/staff/javier-valenzani/picture.webp
+picture: /static/staff/javier-valenzani/picture.png
 jobTitle: Director, Holberton
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/in/jvalenzani/"

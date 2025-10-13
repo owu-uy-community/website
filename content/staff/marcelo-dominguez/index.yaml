@@ -1,6 +1,7 @@
 slug: marcelo-dominguez
 firstname: Marcelo
 lastname: Dominguez
-picture: /static/staff/marcelo-dominguez/picture.webp
+picture: /static/staff/marcelo-dominguez/picture.png
 jobTitle: Engineer, Mimiquate
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/in/marpo60/"
