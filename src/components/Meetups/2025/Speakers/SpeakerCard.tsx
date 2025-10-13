@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { FaGithub, FaLinkedin, FaXTwitter } from "react-icons/fa6";
-import { Presentation } from "lucide-react";
+import { MicVocal, MicVocalIcon, Presentation } from "lucide-react";
 import SpeakerModal from "./SpeakerModal";
+import SocialLinks from "./SocialLinks";
 
 type Speaker = {
   firstname: string;
@@ -84,50 +84,17 @@ export default function SpeakerCard({
           {/* Social Links and Presentation Icon - Centered */}
           {(github || linkedin || x || (talkTitle && talkDescription)) && (
             <div className="mt-3 flex items-center justify-center gap-3">
-              {github && (
-                <a
-                  href={github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 transition-colors hover:text-yellow-400"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={`GitHub de ${fullName}`}
-                >
-                  <FaGithub size={20} />
-                </a>
-              )}
-              {linkedin && (
-                <a
-                  href={linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 transition-colors hover:text-yellow-400"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={`LinkedIn de ${fullName}`}
-                >
-                  <FaLinkedin size={20} />
-                </a>
-              )}
-              {x && (
-                <a
-                  href={x}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 transition-colors hover:text-yellow-400"
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label={`X (Twitter) de ${fullName}`}
-                >
-                  <FaXTwitter size={20} />
-                </a>
-              )}
+              <div onClick={(e) => e.stopPropagation()}>
+                <SocialLinks github={github} linkedin={linkedin} x={x} speakerName={fullName} />
+              </div>
               {talkTitle && talkDescription && (
                 <button
                   type="button"
-                  className="text-gray-400 transition-colors hover:text-yellow-400 focus:outline-none"
+                  className="text-white transition-colors hover:text-yellow-400 focus:outline-none"
                   aria-label={`Ver descripción de la charla de ${fullName}`}
                   title="Ver descripción de la charla"
                 >
-                  <Presentation size={20} strokeWidth={2.5} />
+                  <MicVocalIcon size={22} strokeWidth={2.5} />
                 </button>
               )}
             </div>

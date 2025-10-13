@@ -24,7 +24,7 @@ export default function SocialLinks({ github, linkedin, x, speakerName }: Social
           rel="noopener noreferrer"
           aria-label={`Perfil de GitHub de ${speakerName}`}
         >
-          <FaGithub size={20} />
+          <FaGithub size={22} />
         </a>
       )}
       {github && (linkedin || x) && <div className="h-4 w-px bg-gray-600" aria-hidden="true" />}
@@ -36,7 +36,7 @@ export default function SocialLinks({ github, linkedin, x, speakerName }: Social
           rel="noopener noreferrer"
           aria-label={`Perfil de LinkedIn de ${speakerName}`}
         >
-          <FaLinkedin size={20} />
+          <FaLinkedin size={22} />
         </a>
       )}
       {linkedin && x && <div className="h-4 w-px bg-gray-600" aria-hidden="true" />}
@@ -48,7 +48,7 @@ export default function SocialLinks({ github, linkedin, x, speakerName }: Social
           rel="noopener noreferrer"
           aria-label={`Perfil de X de ${speakerName}`}
         >
-          <FaXTwitter size={20} />
+          <FaXTwitter size={22} />
         </a>
       )}
     </div>
