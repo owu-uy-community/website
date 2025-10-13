@@ -46,7 +46,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
     MessageCircle,
     PartyPopper,
     Beer,
-    Clock
+    Clock,
   };
 
   const getIconComponent = (iconName?: string) => {
@@ -58,16 +58,15 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
 
   const isVacanteSpeaker = (title: string) => title.toLowerCase().startsWith("vacante");
 
-  const getCleanTitle = (title: string) => 
-    title.toLowerCase().startsWith("vacante - ") 
-      ? title.substring(10) 
-      : title;
+  const getCleanTitle = (title: string) => (title.toLowerCase().startsWith("vacante - ") ? title.substring(10) : title);
 
   return (
     <section id="agenda" className="mt-16 w-full">
       <div className="mb-8 text-center">
         <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Agenda</h2>
-        <p className="mx-auto mt-2 max-w-3xl text-balance text-base leading-relaxed text-gray-300 lg:text-lg">¡Conocé el cronograma de actividades y charlas!</p>
+        <p className="mx-auto mt-2 max-w-3xl text-balance text-base leading-relaxed text-gray-300 lg:text-lg">
+          ¡Conocé el cronograma de actividades y charlas!
+        </p>
         {lastUpdate ? (
           <p className="mt-2 text-center text-xs text-gray-400">
             Última actualización: {format(parseISO(lastUpdate), "dd/MM/yyyy HH:mm:ss", { locale: es })}
@@ -87,7 +86,8 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
             const isSelected = selectedItem === index;
             const isVacante = isVacanteSpeaker(title);
             const cleanTitle = getCleanTitle(title);
-            const hasExtendedDescription = extendedDescription && extendedDescription.trim().length > 0 && extendedDescription !== description;
+            const hasExtendedDescription =
+              extendedDescription && extendedDescription.trim().length > 0 && extendedDescription !== description;
 
             return (
               <div
@@ -112,7 +112,9 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                     {/* Time */}
                     <div className="flex min-w-[110px] items-center text-yellow-400">
                       <Clock className="mr-2 h-4 w-4" />
-                      <span className="font-mono text-xl font-bold">{format(parseISO(startTime), "HH:mm", { locale: es })}</span>
+                      <span className="font-mono text-xl font-bold">
+                        {format(parseISO(startTime), "HH:mm", { locale: es })}
+                      </span>
                     </div>
 
                     {/* Icon */}
@@ -120,7 +122,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                       className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                         isSelected
                           ? "border-yellow-300 bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-lg"
-                          : "bg-gray-700/30 border-gray-700 group-hover:border-yellow-400/50"
+                          : "border-gray-700 bg-gray-700/30 group-hover:border-yellow-400/50"
                       }`}
                     >
                       <IconComponent
@@ -163,8 +165,8 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                               ) : null}
                             </div>
                             {isVacante ? (
-                              <div className="h-10 w-10 rounded-full border-2 border-orange-400/50 bg-orange-400/10 flex items-center justify-center">
-                                <span className="text-orange-400 font-bold text-sm">?</span>
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-orange-400/50 bg-orange-400/10">
+                                <span className="text-sm font-bold text-orange-400">?</span>
                               </div>
                             ) : presenter ? (
                               <Avatar className="h-10 w-10">
@@ -178,11 +180,13 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                       {/* Extended description */}
                       {isSelected && hasExtendedDescription && (
                         <div className="mt-4 border-t border-gray-700 pt-4 duration-300 animate-in slide-in-from-top-2">
-                          <div className="text-gray-300 text-sm leading-relaxed">
+                          <div className="text-sm leading-relaxed text-gray-300">
                             <ReactMarkdown
                               components={{
                                 p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-                                strong: ({ children }) => <strong className="font-semibold text-yellow-400">{children}</strong>,
+                                strong: ({ children }) => (
+                                  <strong className="font-semibold text-yellow-400">{children}</strong>
+                                ),
                               }}
                             >
                               {extendedDescription}
@@ -215,7 +219,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                         className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                           isSelected
                             ? "border-yellow-300 bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-lg"
-                            : "bg-gray-700/30 border-gray-700 group-hover:border-yellow-400/50"
+                            : "border-gray-700 bg-gray-700/30 group-hover:border-yellow-400/50"
                         }`}
                       >
                         <IconComponent
@@ -264,8 +268,8 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                       <div className="mb-2 ml-12 flex items-center gap-2">
                         {isVacante ? (
                           <>
-                            <div className="h-8 w-8 rounded-full border-2 border-orange-400/50 bg-orange-400/10 flex items-center justify-center">
-                              <span className="text-orange-400 font-bold text-xs">?</span>
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-orange-400/50 bg-orange-400/10">
+                              <span className="text-xs font-bold text-orange-400">?</span>
                             </div>
                             <div>
                               <p className="text-sm font-medium text-orange-400">Vacante</p>
@@ -289,11 +293,13 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                     {/* Extended description - Mobile */}
                     {isSelected && hasExtendedDescription && (
                       <div className="mt-3 border-t border-gray-700 pt-3 duration-300 animate-in slide-in-from-top-2">
-                        <div className="text-gray-300 text-sm leading-relaxed">
+                        <div className="text-sm leading-relaxed text-gray-300">
                           <ReactMarkdown
                             components={{
                               p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
-                              strong: ({ children }) => <strong className="font-semibold text-yellow-400">{children}</strong>,
+                              strong: ({ children }) => (
+                                <strong className="font-semibold text-yellow-400">{children}</strong>
+                              ),
                             }}
                           >
                             {extendedDescription}
