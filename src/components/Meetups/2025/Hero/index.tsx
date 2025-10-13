@@ -8,6 +8,7 @@ import { FaTicket } from "react-icons/fa6";
 
 import TicketHome from "components/Meetups/2025/TicketHome";
 import { addUtmParams } from "app/lib/utils";
+import { useTicketRelease } from "hooks/useTicketRelease";
 import classNames from "classnames";
 
 type HeroProps = {
@@ -23,9 +24,8 @@ export default function Hero({ sponsors }: HeroProps) {
   const now = new Date();
   const deadline = new Date("2025-07-31T23:59:59"); // TODO: Move to a constant
 
-  // Check if tickets are released (October 13, 2025 at 13:10 Uruguay time)
-  const ticketReleaseDate = new Date("2025-10-13T13:10:00-03:00");
-  const areTicketsReleased = now >= ticketReleaseDate;
+  // Check if tickets are released using centralized hook
+  const { isReleased: areTicketsReleased, ticketUrl } = useTicketRelease();
 
   return (
     <section
@@ -69,11 +69,7 @@ export default function Hero({ sponsors }: HeroProps) {
                     "cursor-not-allowed border-gray-500 bg-gray-800 text-gray-500 opacity-50": !areTicketsReleased,
                   }
                 )}
-                href={
-                  areTicketsReleased
-                    ? addUtmParams("https://www.eventbrite.com/e/la-meetup-iii-tickets-1735441254509")
-                    : "#"
-                }
+                href={areTicketsReleased ? addUtmParams(ticketUrl) : "#"}
                 target={areTicketsReleased ? "_blank" : undefined}
                 rel={areTicketsReleased ? "noopener noreferrer" : undefined}
                 aria-disabled={!areTicketsReleased}
