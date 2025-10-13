@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Container3D } from "components/Meetups/2024/Container3D";
 import Ticket from "components/Meetups/2024/Ticket";
 import { addUtmParams } from "app/lib/utils";
-import { useTicketRelease } from "hooks/useTicketRelease";
+import { useTicketRelease } from "contexts/TicketReleaseContext";
 
 type TicketHomeProps = {
   sponsors?: readonly {

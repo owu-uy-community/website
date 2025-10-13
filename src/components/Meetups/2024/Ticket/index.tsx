@@ -4,6 +4,7 @@
 import { useState, useEffect } from "react";
 import classNames from "classnames";
 import "atropos/css";
+import { useTicketRelease } from "contexts/TicketReleaseContext";
 
 type Sponsor = {
   readonly name: string;
@@ -13,8 +14,8 @@ type Sponsor = {
 
 type TicketProps = {
   sponsors?: readonly Sponsor[];
-  releaseDate?: string; // ISO date string for ticket release
-  ticketUrl?: string; // URL for ticket purchase after release
+  releaseDate?: string; // ISO date string for ticket release (kept for backward compatibility but will use context)
+  ticketUrl?: string; // URL for ticket purchase after release (kept for backward compatibility but will use context)
 };
 
 type TimeLeft = {
@@ -24,7 +25,10 @@ type TimeLeft = {
   seconds: number;
 };
 
-export default function Ticket({ sponsors, releaseDate, ticketUrl }: TicketProps) {
+export default function Ticket({ sponsors, releaseDate: _releaseDate, ticketUrl: _ticketUrl }: TicketProps) {
+  // Use centralized ticket release state
+  const { isReleased, releaseDate, ticketUrl } = useTicketRelease();
+
   const [currentSponsors, setCurrentSponsors] = useState<readonly Sponsor[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({
@@ -33,7 +37,6 @@ export default function Ticket({ sponsors, releaseDate, ticketUrl }: TicketProps
     minutes: 0,
     seconds: 0,
   });
-  const [isReleased, setIsReleased] = useState(!releaseDate);
   const [localReleaseTime, setLocalReleaseTime] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -72,7 +75,7 @@ export default function Ticket({ sponsors, releaseDate, ticketUrl }: TicketProps
     return { days: 0, hours: 0, minutes: 0, seconds: 0 };
   };
 
-  // Countdown timer effect
+  // Countdown timer effect - only updates countdown display, not release status
   useEffect(() => {
     if (!releaseDate) {
       setIsLoading(false);
@@ -81,27 +84,12 @@ export default function Ticket({ sponsors, releaseDate, ticketUrl }: TicketProps
 
     const initialTimeLeft = calculateTimeLeft();
     setTimeLeft(initialTimeLeft);
-
-    // Check if already released on mount
-    if (
-      initialTimeLeft.days === 0 &&
-      initialTimeLeft.hours === 0 &&
-      initialTimeLeft.minutes === 0 &&
-      initialTimeLeft.seconds === 0
-    ) {
-      setIsReleased(true);
-    }
-
     setIsLoading(false);
 
     const timer = setInterval(() => {
       const newTimeLeft = calculateTimeLeft();
       setTimeLeft(newTimeLeft);
-
-      // Check if countdown is finished
-      if (newTimeLeft.days === 0 && newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
-        setIsReleased(true);
-      }
+      // Note: isReleased state is now managed by TicketReleaseContext
     }, 1000);
 
     return () => clearInterval(timer);

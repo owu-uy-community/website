@@ -8,7 +8,7 @@ import { FaTicket } from "react-icons/fa6";
 
 import TicketHome from "components/Meetups/2025/TicketHome";
 import { addUtmParams } from "app/lib/utils";
-import { useTicketRelease } from "hooks/useTicketRelease";
+import { useTicketRelease } from "contexts/TicketReleaseContext";
 import classNames from "classnames";
 
 type HeroProps = {

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
+import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
 
 export const metadata: Metadata = {
   description: "Únete a nuestra comunidad de desarrolladores.",
@@ -33,7 +34,9 @@ export default function RootLayout({
           gtag('config', 'G-RVTWHW4J21');
         `}
       </Script>
-      <body>{children}</body>
+      <body>
+        <TicketReleaseProvider>{children}</TicketReleaseProvider>
+      </body>
     </html>
   );
 }
