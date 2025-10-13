@@ -15,6 +15,7 @@ export interface Speaker {
   lastname: string;
   picture?: string;
   jobTitle?: string;
+  company?: string;
   github?: string;
   linkedin?: string;
   x?: string;
@@ -129,6 +130,22 @@ export async function transformStaffMember(staffSlug: string | null) {
   };
 }
 
+export async function transformStaffMember2025(staffSlug: string | null) {
+  const member = await readRelatedContent<StaffMember>("staff", staffSlug);
+
+  if (!member) return null;
+
+  return {
+    firstname: member.firstname,
+    lastname: member.lastname,
+    picture: member.picture ? formatImageUrl(member.picture) : undefined,
+    jobTitle: member.jobTitle,
+    linkedin: member.socialNetworks.linkedin,
+    github: member.socialNetworks.github,
+    x: member.socialNetworks.twitter,
+  };
+}
+
 export async function transformCommunity(communitySlug: string | null) {
   const community = await readRelatedContent<Community>("communities", communitySlug);
 
@@ -151,6 +168,7 @@ export async function transformSpeaker(speakerSlug: string | null) {
     lastname: speaker.lastname,
     picture: speaker.picture ? formatImageUrl(speaker.picture) : undefined,
     jobTitle: speaker.jobTitle,
+    company: speaker.company,
     github: speaker.github,
     linkedin: speaker.linkedin,
     x: speaker.x,

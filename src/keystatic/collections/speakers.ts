@@ -14,6 +14,7 @@ export const speakers = collection({
       validation: { isRequired: true },
     }),
     jobTitle: fields.text({ label: "Job Title" }),
+    company: fields.text({ label: "Company" }),
     bio: fields.text({ label: "Biography", multiline: true }),
     linkedin: fields.text({ label: "LinkedIn URL" }),
     github: fields.text({ label: "GitHub URL" }),

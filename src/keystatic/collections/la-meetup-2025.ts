@@ -58,6 +58,10 @@ export const laMeetup2025 = collection({
     }),
     openSpacePrimaryButtonName: fields.text({ label: "Open Space Primary Button Name" }),
     openSpacePrimaryButtonUrl: fields.text({ label: "Open Space Primary Button URL" }),
+    openSpaceFacilitator: fields.relationship({
+      label: "Open Space Facilitator",
+      collection: "staff",
+    }),
     openspaceGallery: fields.array(
       fields.object({
         id: fields.text({ label: "ID", validation: { isRequired: true } }),
