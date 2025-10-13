@@ -9,6 +9,8 @@ import CallForProposalBanner from "components/Meetups/2025/CallForProposalBanner
 import CallForProposals from "components/Meetups/2025/CallForProposals";
 import Sponsors from "components/Meetups/2025/Sponsors";
 import Speakers from "components/Meetups/2025/Speakers";
+import Staff from "components/Meetups/2025/Staff";
+import OpenSpace from "components/Meetups/2025/OpenSpace";
 import { SectionKey } from "components/shared/Navbar/navSections";
 import AgendaSection from "components/Meetups/2025/Agenda";
 
@@ -17,6 +19,7 @@ import {
   transformSponsor,
   transformAgendaItem,
   transformTalk,
+  transformStaffMember2025,
   type AgendaItem,
   type Talk,
 } from "../../../../../lib/keystatic/utils";
@@ -35,16 +38,32 @@ export default async function LaMeetup2025() {
 
   if (!laMeetup) return null;
 
-  const { agenda, sponsors, talks } = laMeetup ?? {};
+  const {
+    agenda,
+    sponsors,
+    talks,
+    staff,
+    openSpaceDescription,
+    openSpacePrimaryButtonName,
+    openSpacePrimaryButtonUrl,
+    openSpaceFacilitator,
+  } = laMeetup ?? {};
+
+  // Transform content
+  const openSpaceContent = await openSpaceDescription?.();
 
   // Type assertions for Keystatic collections
   const agendaItems = agenda as unknown as AgendaItem[];
   const sponsorSlugs = sponsors as unknown as string[];
   const talksList = talks as unknown as Talk[];
+  const staffSlugs = staff as unknown as string[];
+  const facilitatorSlug = openSpaceFacilitator as unknown as string | null;
 
   const transformedAgenda = await transformArray(agendaItems, transformAgendaItem);
   const transformedSponsors = await transformArray(sponsorSlugs, transformSponsor);
   const transformedTalks = await transformArray(talksList, transformTalk);
+  const transformedStaff = await transformArray(staffSlugs, transformStaffMember2025);
+  const transformedFacilitator = facilitatorSlug ? await transformStaffMember2025(facilitatorSlug) : null;
 
   return (
     <>
@@ -54,8 +73,15 @@ export default async function LaMeetup2025() {
         <Intro />
         {/* <CallForProposals /> */}
         <AgendaSection agenda={transformedAgenda} />
+        <OpenSpace
+          content={openSpaceContent}
+          primaryButtonName={openSpacePrimaryButtonName}
+          primaryButtonUrl={openSpacePrimaryButtonUrl}
+          facilitator={transformedFacilitator ?? undefined}
+        />
         <Speakers talks={transformedTalks} />
         <Sponsors sponsors={transformedSponsors} />
+        <Staff staff={transformedStaff} />
         <Footer />
       </div>
     </>
