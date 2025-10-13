@@ -35,7 +35,7 @@ export default function OpenSpace({ content, primaryButtonName, primaryButtonUrl
         <div className="flex w-full max-w-[300px] flex-col items-center justify-center gap-3">
           {facilitator ? (
             <>
-              <span className="text-2xl font-bold text-yellow-400">Facilitador del espacio</span>
+              <span className="text-2xl font-bold text-white">Facilitador del espacio</span>
 
               <div className="flex w-full min-w-[250px] max-w-[300px] items-center justify-center lg:min-w-[230px] lg:max-w-[230px]">
                 <SpeakerCard
