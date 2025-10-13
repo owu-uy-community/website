@@ -1,6 +1,7 @@
 slug: mikaela-pisani
 firstname: Mikaela
 lastname: Pisani
-picture: /static/staff/mikaela-pisani/picture.jpg
+picture: /static/staff/mikaela-pisani/picture.png
 jobTitle: ML Lead, Rootstrap
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/"

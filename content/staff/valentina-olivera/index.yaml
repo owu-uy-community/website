@@ -1,6 +1,7 @@
 slug: valentina-olivera
 firstname: Valentina
 lastname: Olivera
-picture: /static/staff/valentina-olivera/picture.webp
+picture: /static/staff/valentina-olivera/picture.png
 jobTitle: Quality Assurance Analyst
-socialNetworks: {}
+socialNetworks:
+  linkedin: "https://www.linkedin.com/"
