@@ -64,11 +64,10 @@ agenda:
     location:
       name: SHOPPING
   - id: 4
-    title: Actualmente en definición...
-    description: Charla pendiente del llamado a propuestas.
+    title: "Charla #1"
+    description: Primera charla de la jornada
     extendedDescription: >-
-      Esta charla está pendiente de definición. ¡Te invitamos a postular tu
-      charla antes del 31 de julio!
+      Actualizaremos quién presentará en este bloque el mismo día de La Meetup
     icon: Mic
     startTime: 2025-11-01T15:00:00.000Z
     endTime: 2025-11-01T15:40:00.000Z
@@ -76,11 +75,10 @@ agenda:
     location:
       name: SINERGIA
   - id: 5
-    title: Actualmente en definición...
-    description: Charla pendiente del llamado a propuestas.
+    title: "Charla #2"
+    description: Segunda charla de la jornada
     extendedDescription: >-
-      Esta charla está pendiente de definición. ¡Te invitamos a postular tu
-      charla antes del 31 de julio!
+      Actualizaremos quién presentará en este bloque el mismo día de La Meetup
     icon: Mic
     startTime: 2025-11-01T15:40:00.000Z
     endTime: 2025-11-01T16:20:00.000Z
@@ -102,11 +100,10 @@ agenda:
     location:
       name: SINERGIA
   - id: 7
-    title: Actualmente en definición...
-    description: Charla pendiente del llamado a propuestas.
+    title: "Charla #3"
+    description: Tercera charla de la jornada
     extendedDescription: >-
-      Esta charla está pendiente de definición. ¡Te invitamos a postular tu
-      charla antes del 31 de julio!
+      Actualizaremos quién presentará en este bloque el mismo día de La Meetup
     icon: Mic
     startTime: 2025-11-01T16:45:00.000Z
     endTime: 2025-11-01T17:50:00.000Z
@@ -117,7 +114,7 @@ agenda:
     title: Cierre y agradecimientos
     description: Cierre del evento y agradecimientos a los ponentes y colaboradores.
     extendedDescription: >
-      ¡Momento especial para cerrar **La Meetup 2025**!
+      ¡Momento especial para cerrar **La Meetup III**!
 
 
       Agradecimientos a todos los **speakers**, **sponsors** y **colaboradores**
@@ -143,13 +140,16 @@ agenda:
       conexiones generadas durante el día.
 
 
-      **Ambiente informal** perfecto para cerrar La Meetup III compartiendo
+      **Ambiente informal** perfecto para cerrar **La Meetup III** compartiendo
       experiencias.
     icon: Beer
     startTime: 2025-11-01T18:00:00.000Z
     endTime: 2025-11-02T00:00:00.000Z
     location:
       name: MVC
+openSpacePrimaryButtonName: Más sobre el open space
+openSpacePrimaryButtonUrl: /2025/la-meetup/openspace
+openSpaceFacilitator: juan-mello
 openspaceGallery: []
 gallery: []
 sponsors:
@@ -173,7 +173,18 @@ sponsors:
   - sicfe
   - trupropel
   - segalerba
-staff: []
+staff:
+  - agustin-tornielli
+  - francisco-bergeret
+  - itay-brenner
+  - javier-valenzani
+  - juan-diana
+  - kevin-exposito
+  - laura-rodriguez
+  - leticia-esperon
+  - marcelo-dominguez
+  - mauricio-mena
+  - santiago-ferreira
 communities: []
 talks:
   - title: "¿Internet funciona? ¿Cómo? ¿… Y es segura?"
@@ -206,7 +217,10 @@ talks:
 
 
       **¿Vas a abrir esa puerta? ¿Vas a agarrar ese micrófono? ¿Vas a apoyarte en
-      esa mesa?** Yo me lo pensaría dos veces.
+      esa mesa?** 
+
+
+      Yo me lo pensaría dos veces...
     speakers:
       - mauro-eldritch
   - title: "Debugging Organizacional: Cuando el problema no es el código"
