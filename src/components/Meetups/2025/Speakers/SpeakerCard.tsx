@@ -1,46 +1,156 @@
+"use client";
+
 import Image from "next/image";
-import SocialLinks from "./SocialLinks";
+import { FaGithub, FaLinkedin, FaXTwitter } from "react-icons/fa6";
+import { Presentation } from "lucide-react";
+import SpeakerModal from "./SpeakerModal";
+
+type Speaker = {
+  firstname: string;
+  lastname: string;
+  picture?: { url: string };
+  jobTitle?: string;
+  company?: string;
+  github?: string;
+  linkedin?: string;
+  x?: string;
+};
 
 type SpeakerCardProps = {
   firstname: string;
   lastname: string;
   picture?: { url: string };
   jobTitle?: string;
+  company?: string;
   github?: string;
   linkedin?: string;
   x?: string;
+  talkTitle?: string;
+  talkDescription?: string;
+  allSpeakers?: Speaker[]; // All speakers for this talk
 };
 
-export default function SpeakerCard({ firstname, lastname, picture, jobTitle, github, linkedin, x }: SpeakerCardProps) {
+export default function SpeakerCard({
+  firstname,
+  lastname,
+  picture,
+  jobTitle,
+  company,
+  github,
+  linkedin,
+  x,
+  talkTitle,
+  talkDescription,
+  allSpeakers,
+}: SpeakerCardProps) {
   const fullName = `${firstname} ${lastname}`;
   const imageSrc = picture?.url || "/placeholder.webp";
 
-  return (
-    <article className="relative flex min-w-0 flex-1 flex-col">
-      <div className="relative h-[200px] w-full overflow-hidden">
-        <Image
-          className="h-full w-full cursor-pointer object-contain object-center grayscale transition-all duration-500 [mask-image:linear-gradient(to_bottom,_black_80%,transparent_100%)] hover:grayscale-0"
-          alt={`Fotografía de ${fullName}`}
-          src={imageSrc}
-          width={400}
-          height={350}
-          priority={false}
-        />
-      </div>
-
-      {/* Speaker Name overlapping image */}
-      <h4 className="relative bottom-10 flex flex-col text-center text-2xl font-black uppercase italic leading-[.8em] text-yellow-400 [text-shadow:0_0_20px_black] md:text-3xl md:leading-[.8em]">
-        <span>{firstname}</span>
-        <span>{lastname}</span>
-      </h4>
-
-      {/* Footer with speaker details */}
-      <footer className="relative bottom-8 flex flex-1 flex-col">
-        <div className="text-center">
-          {jobTitle && <p className="mb-2 text-xs font-semibold text-yellow-400 md:text-sm">{jobTitle}</p>}
-          <SocialLinks github={github} linkedin={linkedin} x={x} speakerName={fullName} />
+  const cardContent = (
+    <article className="group flex h-full w-full min-w-[250px] max-w-[300px] cursor-pointer flex-col items-center rounded-md bg-white/10 p-[1px] transition-all lg:min-w-[230px] lg:max-w-[230px]">
+      <div className="flex h-full w-full flex-col items-center rounded-md bg-[#000214]/50 px-6 py-6 transition">
+        {/* Circular profile image with border ring */}
+        <div className="relative mb-4 h-[120px] w-[120px] shrink-0 md:h-[150px] md:w-[150px]">
+          <div className="absolute inset-0 rounded-full bg-zinc-800 p-[3px]">
+            <div className="h-full w-full overflow-hidden rounded-full bg-[#000214]/50">
+              <Image
+                className="h-full w-full cursor-pointer object-cover object-center transition-all duration-300 group-hover:scale-105"
+                alt={`Fotografía de ${fullName}`}
+                src={imageSrc}
+                width={150}
+                height={150}
+                priority={false}
+              />
+            </div>
+          </div>
         </div>
-      </footer>
+
+        {/* Speaker Name */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
+          <h4 className="text-center font-black uppercase tracking-wide text-yellow-400">
+            <div className="text-sm">
+              {firstname} {lastname}
+            </div>
+          </h4>
+
+          {/* Speaker details */}
+          <div className="flex flex-col items-center gap-1 text-center">
+            {jobTitle && <p className="text-[13px] font-medium text-gray-300">{jobTitle}</p>}
+            {company && (
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 md:text-xs">{company}</p>
+            )}
+          </div>
+
+          {/* Social Links and Presentation Icon - Centered */}
+          {(github || linkedin || x || (talkTitle && talkDescription)) && (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              {github && (
+                <a
+                  href={github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 transition-colors hover:text-yellow-400"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`GitHub de ${fullName}`}
+                >
+                  <FaGithub size={20} />
+                </a>
+              )}
+              {linkedin && (
+                <a
+                  href={linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 transition-colors hover:text-yellow-400"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`LinkedIn de ${fullName}`}
+                >
+                  <FaLinkedin size={20} />
+                </a>
+              )}
+              {x && (
+                <a
+                  href={x}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 transition-colors hover:text-yellow-400"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label={`X (Twitter) de ${fullName}`}
+                >
+                  <FaXTwitter size={20} />
+                </a>
+              )}
+              {talkTitle && talkDescription && (
+                <button
+                  type="button"
+                  className="text-gray-400 transition-colors hover:text-yellow-400 focus:outline-none"
+                  aria-label={`Ver descripción de la charla de ${fullName}`}
+                  title="Ver descripción de la charla"
+                >
+                  <Presentation size={20} strokeWidth={2.5} />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </article>
+  );
+
+  return (
+    <SpeakerModal
+      trigger={cardContent}
+      firstname={firstname}
+      lastname={lastname}
+      picture={picture}
+      jobTitle={jobTitle}
+      company={company}
+      github={github}
+      linkedin={linkedin}
+      x={x}
+      talkTitle={talkTitle}
+      talkDescription={talkDescription}
+      allSpeakers={allSpeakers}
+    />
   );
 }

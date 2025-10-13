@@ -1,4 +1,4 @@
-import { Github, Linkedin, Twitter } from "lucide-react";
+import { FaGithub, FaLinkedin, FaXTwitter } from "react-icons/fa6";
 
 type SocialLinksProps = {
   github?: string;
@@ -15,38 +15,40 @@ export default function SocialLinks({ github, linkedin, x, speakerName }: Social
   }
 
   return (
-    <div className="flex justify-center gap-x-4 text-white">
+    <div className="flex items-center justify-center gap-x-3 text-white">
       {github && (
         <a
-          className="transition hover:scale-150 hover:text-yellow-400"
+          className="transition hover:scale-125 hover:text-yellow-400"
           href={github}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Perfil de GitHub de ${speakerName}`}
         >
-          <Github className="h-6 w-6" />
+          <FaGithub size={20} />
         </a>
       )}
+      {github && (linkedin || x) && <div className="h-4 w-px bg-gray-600" aria-hidden="true" />}
       {linkedin && (
         <a
-          className="transition hover:scale-150 hover:text-yellow-400"
+          className="transition hover:scale-125 hover:text-yellow-400"
           href={linkedin}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Perfil de LinkedIn de ${speakerName}`}
         >
-          <Linkedin className="h-6 w-6" />
+          <FaLinkedin size={20} />
         </a>
       )}
+      {linkedin && x && <div className="h-4 w-px bg-gray-600" aria-hidden="true" />}
       {x && (
         <a
-          className="transition hover:scale-150 hover:text-yellow-400"
+          className="transition hover:scale-125 hover:text-yellow-400"
           href={x}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`Perfil de X de ${speakerName}`}
         >
-          <Twitter className="h-6 w-6" />
+          <FaXTwitter size={20} />
         </a>
       )}
     </div>
