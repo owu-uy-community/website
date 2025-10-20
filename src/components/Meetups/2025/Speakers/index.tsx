@@ -17,28 +17,12 @@ type Talk = {
   speakers: Speaker[];
 };
 
-type SpeakerWithTalk = Speaker & {
-  talkTitle: string;
-  talkDescription: string;
-  allSpeakers: Speaker[]; // All speakers for this talk
-};
-
 type SpeakersProps = {
   talks: Talk[];
 };
 
 export default function Speakers({ talks = [] }: SpeakersProps) {
-  // Map each speaker to include their talk information and all speakers for that talk
-  const speakersWithTalks: SpeakerWithTalk[] = talks.flatMap((talk) =>
-    talk.speakers.map((speaker) => ({
-      ...speaker,
-      talkTitle: talk.title,
-      talkDescription: talk.description,
-      allSpeakers: talk.speakers, // Pass all speakers for this talk
-    }))
-  );
-
-  if (talks.length === 0 || speakersWithTalks.length === 0) {
+  if (talks.length === 0) {
     return null;
   }
 
@@ -51,22 +35,27 @@ export default function Speakers({ talks = [] }: SpeakersProps) {
         </p>
       </div>
 
-      <div className="flex max-w-7xl flex-row flex-wrap items-stretch justify-center gap-5">
-        {speakersWithTalks.map((speaker, index) => (
-          <SpeakerCard
-            key={`${speaker.firstname}-${speaker.lastname}-${index}`}
-            firstname={speaker.firstname}
-            lastname={speaker.lastname}
-            picture={speaker.picture}
-            jobTitle={speaker.jobTitle}
-            company={speaker.company}
-            github={speaker.github}
-            linkedin={speaker.linkedin}
-            x={speaker.x}
-            talkTitle={speaker.talkTitle}
-            talkDescription={speaker.talkDescription}
-            allSpeakers={speaker.allSpeakers}
-          />
+      {/* 3x2 Grid: 3 columns (talks) x 2 rows (speakers per talk) */}
+      <div className="mx-auto grid w-fit max-w-7xl grid-cols-1 gap-5 lg:grid-cols-3">
+        {talks.map((talk, talkIndex) => (
+          <div key={talkIndex} className="flex flex-col items-center gap-5">
+            {talk.speakers.map((speaker, speakerIndex) => (
+              <SpeakerCard
+                key={`${speaker.firstname}-${speaker.lastname}-${speakerIndex}`}
+                firstname={speaker.firstname}
+                lastname={speaker.lastname}
+                picture={speaker.picture}
+                jobTitle={speaker.jobTitle}
+                company={speaker.company}
+                github={speaker.github}
+                linkedin={speaker.linkedin}
+                x={speaker.x}
+                talkTitle={talk.title}
+                talkDescription={talk.description}
+                allSpeakers={talk.speakers}
+              />
+            ))}
+          </div>
         ))}
       </div>
     </section>
