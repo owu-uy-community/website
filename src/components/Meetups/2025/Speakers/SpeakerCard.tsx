@@ -47,7 +47,7 @@ export default function SpeakerCard({
   const imageSrc = picture?.url || "/placeholder.webp";
 
   const cardContent = (
-    <article className="group flex h-full w-full min-w-[250px] max-w-[300px] cursor-pointer flex-col items-center rounded-md bg-white/10 p-[1px] transition-all lg:min-w-[230px] lg:max-w-[240px]">
+    <article className="group flex h-full w-full min-w-[230px] max-w-[300px] cursor-pointer flex-col items-center rounded-md bg-white/10 p-[1px] transition-all lg:max-w-[240px]">
       <div className="flex h-full w-full flex-col items-center rounded-md bg-[#000214]/50 px-6 py-6 transition">
         {/* Circular profile image with border ring */}
         <div className="relative mb-4 h-[120px] w-[120px] shrink-0 md:h-[150px] md:w-[150px]">

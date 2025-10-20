@@ -36,7 +36,7 @@ export default function Speakers({ talks = [] }: SpeakersProps) {
       </div>
 
       {/* 3x2 Grid: 3 columns (talks) x 2 rows (speakers per talk) */}
-      <div className="mx-auto grid w-fit max-w-7xl grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-5 lg:w-fit lg:grid-cols-3">
         {talks.map((talk, talkIndex) => (
           <div key={talkIndex} className="flex flex-col items-center gap-5">
             {talk.speakers.map((speaker, speakerIndex) => (
