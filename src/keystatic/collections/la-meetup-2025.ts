@@ -42,10 +42,13 @@ export const laMeetup2025 = collection({
         }),
         startTime: fields.datetime({ label: "Start Time", validation: { isRequired: true } }),
         endTime: fields.datetime({ label: "End Time", validation: { isRequired: true } }),
-        presenter: fields.relationship({
-          label: "Presenter",
-          collection: "speakers",
-        }),
+        presenters: fields.array(
+          fields.relationship({
+            label: "Presenter",
+            collection: "speakers",
+          }),
+          { label: "Presenters" }
+        ),
         location: fields.object({
           name: fields.text({ label: "Location Name", validation: { isRequired: true } }),
         }),

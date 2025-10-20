@@ -57,7 +57,7 @@ export interface AgendaItem {
   description: string;
   startTime: string;
   endTime: string;
-  presenter: string | null;
+  presenters: Array<string | null>;
   location: {
     name: string;
   };
@@ -87,17 +87,11 @@ export async function transformArray<T, R>(
 
 // Transform functions for each content type
 export async function transformAgendaItem(item: AgendaItem) {
-  const presenter = item.presenter ? await readRelatedContent<Speaker>("speakers", item.presenter) : null;
+  const presenters = await transformArray(item.presenters, transformSpeaker);
 
   return {
     ...item,
-    presenter: presenter
-      ? {
-          firstname: presenter.firstname,
-          lastname: presenter.lastname,
-          picture: presenter.picture ? formatImageUrl(presenter.picture) : undefined,
-        }
-      : undefined,
+    presenters,
   };
 }
 
