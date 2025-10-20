@@ -1,5 +1,5 @@
 import { RichText } from "components/shared/RichText";
-import SpeakerCard from "../Speakers/SpeakerCard";
+import FacilitatorCard from "./FacilitatorCard";
 
 type OpenSpaceProps = {
   title?: string;
@@ -14,6 +14,7 @@ type OpenSpaceProps = {
     picture?: {
       url: string;
     };
+    github?: string;
     linkedin?: string;
     x?: string;
   };
@@ -37,12 +38,13 @@ export default function OpenSpace({ content, primaryButtonName, primaryButtonUrl
             <>
               <span className="text-2xl font-bold text-white">Facilitador del espacio</span>
 
-              <div className="flex w-full min-w-[250px] max-w-[300px] items-center justify-center lg:min-w-[230px] lg:max-w-[230px]">
-                <SpeakerCard
+              <div className="flex w-full items-center justify-center">
+                <FacilitatorCard
                   firstname={facilitator.firstname}
                   lastname={facilitator.lastname}
                   picture={facilitator.picture}
                   jobTitle={facilitator.jobTitle}
+                  github={facilitator.github}
                   linkedin={facilitator.linkedin}
                   x={facilitator.x}
                 />

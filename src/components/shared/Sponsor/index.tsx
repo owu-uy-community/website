@@ -12,7 +12,7 @@ type Sponsor = {
 export default function Sponsor({ name, image, website }: Sponsor) {
   return (
     <Link
-      className="relative flex min-w-[250px] max-w-[300px] flex-1 flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all"
+      className="relative flex min-w-[250px] max-w-[300px] flex-1 flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20"
       href={addUtmParams(website ?? "#")}
       target="_blank"
     >
