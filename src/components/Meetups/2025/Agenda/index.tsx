@@ -20,13 +20,13 @@ type AgendaProps = {
     readonly icon?: string;
     readonly startTime: string;
     readonly endTime: string;
-    readonly presenter?: {
+    readonly presenters?: readonly {
       readonly firstname: string;
       readonly lastname?: string;
       readonly picture?: {
         readonly url: string;
       };
-    };
+    }[];
     readonly location?: {
       readonly name: string;
     };
@@ -81,13 +81,15 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
 
         <div className="relative space-y-3">
           {agenda?.map((item, index) => {
-            const { id, startTime, endTime, presenter, title, location, description, extendedDescription, icon } = item;
+            const { id, startTime, endTime, presenters, title, location, description, extendedDescription, icon } =
+              item;
             const IconComponent = getIconComponent(icon);
             const isSelected = selectedItem === index;
             const isVacante = isVacanteSpeaker(title);
             const cleanTitle = getCleanTitle(title);
             const hasExtendedDescription =
               extendedDescription && extendedDescription.trim().length > 0 && extendedDescription !== description;
+            const hasPresenters = presenters && presenters.length > 0;
 
             return (
               <div
@@ -149,29 +151,44 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                         </div>
 
                         {/* Speaker info - only show when there's a presenter or it's vacant */}
-                        {(isVacante || presenter) && (
+                        {(isVacante || hasPresenters) && (
                           <div className="flex flex-shrink-0 items-center gap-2">
-                            <div className="text-right">
-                              {isVacante ? (
-                                <>
+                            {isVacante ? (
+                              <>
+                                <div className="text-right">
                                   <p className="text-sm font-medium text-orange-400">Vacante</p>
                                   <p className="text-xs text-gray-400">Próximamente</p>
-                                </>
-                              ) : presenter ? (
-                                <>
-                                  <p className="text-sm font-medium text-white">{`${presenter.firstname} ${presenter.lastname ?? ""}`}</p>
-                                  <p className="text-xs text-gray-400">Speaker</p>
-                                </>
-                              ) : null}
-                            </div>
-                            {isVacante ? (
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-orange-400/50 bg-orange-400/10">
-                                <span className="text-sm font-bold text-orange-400">?</span>
-                              </div>
-                            ) : presenter ? (
-                              <Avatar className="h-10 w-10">
-                                <AvatarImage src={presenter.picture?.url ?? "/carpincho.png"} />
-                              </Avatar>
+                                </div>
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-orange-400/50 bg-orange-400/10">
+                                  <span className="text-sm font-bold text-orange-400">?</span>
+                                </div>
+                              </>
+                            ) : hasPresenters ? (
+                              <>
+                                <div className="text-right">
+                                  <p className="text-sm font-medium text-white">
+                                    {presenters?.map((p, i) => (
+                                      <span key={i}>
+                                        {`${p.firstname} ${p.lastname ?? ""}`}
+                                        {i < presenters.length - 1 ? ", " : ""}
+                                      </span>
+                                    ))}
+                                  </p>
+                                  <p className="text-xs text-gray-400">
+                                    {presenters && presenters.length > 1 ? "Speakers" : "Speaker"}
+                                  </p>
+                                </div>
+                                <div className="flex -space-x-2">
+                                  {presenters?.map((presenter, i) => (
+                                    <Avatar key={i} className="h-12 w-12 bg-zinc-800 p-[3px]">
+                                      <AvatarImage
+                                        src={presenter.picture?.url ?? "/carpincho.png"}
+                                        className="rounded-full bg-[#000214]/50 object-cover"
+                                      />
+                                    </Avatar>
+                                  ))}
+                                </div>
+                              </>
                             ) : null}
                           </div>
                         )}
@@ -264,7 +281,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                     </div>
 
                     {/* Speaker info - Mobile - only show when there's a presenter or it's vacant */}
-                    {(isVacante || presenter) && (
+                    {(isVacante || hasPresenters) && (
                       <div className="mb-2 ml-12 flex items-center gap-2">
                         {isVacante ? (
                           <>
@@ -276,14 +293,30 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                               <p className="text-xs text-gray-400">Próximamente</p>
                             </div>
                           </>
-                        ) : presenter ? (
+                        ) : hasPresenters ? (
                           <>
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={presenter.picture?.url ?? "/carpincho.png"} />
-                            </Avatar>
+                            <div className="flex -space-x-2">
+                              {presenters?.map((presenter, i) => (
+                                <Avatar key={i} className="h-10 w-10 bg-zinc-800 p-[3px]">
+                                  <AvatarImage
+                                    src={presenter.picture?.url ?? "/carpincho.png"}
+                                    className="rounded-full bg-[#000214]/50 object-cover"
+                                  />
+                                </Avatar>
+                              ))}
+                            </div>
                             <div>
-                              <p className="text-sm font-medium text-white">{`${presenter.firstname} ${presenter.lastname ?? ""}`}</p>
-                              <p className="text-xs text-gray-400">Speaker</p>
+                              <p className="text-[13px] font-medium text-white">
+                                {presenters?.map((p, i) => (
+                                  <span key={i}>
+                                    {`${p.firstname} ${p.lastname ?? ""}`}
+                                    {i < presenters.length - 1 ? ", " : ""}
+                                  </span>
+                                ))}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {presenters && presenters.length > 1 ? "Speakers" : "Speaker"}
+                              </p>
                             </div>
                           </>
                         ) : null}
