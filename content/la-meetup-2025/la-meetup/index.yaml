@@ -184,7 +184,7 @@ agenda:
     startTime: 2025-11-01T18:30:00.000Z
     endTime: 2025-11-01T23:59:59.999Z
     location:
-      name: MVC
+      name: MBC
 openSpacePrimaryButtonName: Más sobre el open space
 openSpacePrimaryButtonUrl: /2025/la-meetup/openspace
 openSpaceFacilitator: juan-mello
