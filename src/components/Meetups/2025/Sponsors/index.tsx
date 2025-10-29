@@ -37,6 +37,17 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
           crossOrigin="anonymous"
         />
       </Link>
+      <Link href="https://www.anii.org.uy/" target="_blank" prefetch={false}>
+        <p className="mx-auto mt-2 max-w-3xl text-balance text-center text-base leading-relaxed text-gray-300">
+          Evento declarado de interés por la ANII
+        </p>
+        <img
+            src={"/static/2025/anii/anii.png"}
+            alt="Evento declarado de interés ANII"
+            className="mt-5 w-full max-w-[280px] md:max-w-[400px] invert"
+            crossOrigin="anonymous"
+        />
+      </Link>
     </div>
   );
 }
