@@ -66,6 +66,8 @@ import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./o
 
 import { UpdateCountdownStateSchema, getCountdownState, updateCountdownState } from "./countdown";
 
+import { getDashboardStats } from "./dashboard";
+
 import { withErrorHandling } from "./utilities";
 import { requireAdmin } from "./middleware";
 
@@ -202,6 +204,11 @@ export const updateCountdownStateHandler = adminOs
   .input(UpdateCountdownStateSchema)
   .handler(withErrorHandling(async ({ input }) => updateCountdownState(input), "update countdown state"));
 
+// Dashboard procedures (admin only)
+export const getDashboardStatsHandler = adminOs.handler(
+  withErrorHandling(async () => getDashboardStats(), "get dashboard statistics")
+);
+
 // Main router
 export const router = {
   // OpenSpace management
@@ -266,6 +273,11 @@ export const router = {
   countdown: {
     getState: getCountdownStateHandler,
     updateState: updateCountdownStateHandler,
+  },
+
+  // Dashboard Statistics
+  dashboard: {
+    getStats: getDashboardStatsHandler,
   },
 };
 

@@ -681,31 +681,56 @@ export default function OpenSpaceClient() {
     if (!schedulesData || schedulesData.length === 0) return -1;
 
     const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-    const currentDate = now.toISOString().split("T")[0];
+
+    // Get local date components
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const currentDateLocal = `${year}-${month}-${day}`;
+
+    // Get current time in HH:MM format (local time)
+    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    console.log(`🔍 Auto-highlight checking: Current local date=${currentDateLocal}, time=${currentTime}`);
 
     // Find schedule that matches current date and time is between startTime and endTime
     for (let i = 0; i < schedulesData.length; i++) {
       const schedule = schedulesData[i];
-      const scheduleDate = new Date(schedule.date).toISOString().split("T")[0];
 
-      // Check if schedule is today
-      if (scheduleDate === currentDate) {
+      // Parse the schedule date to local date string (YYYY-MM-DD)
+      const scheduleDate = new Date(schedule.date);
+      const schedYear = scheduleDate.getFullYear();
+      const schedMonth = String(scheduleDate.getMonth() + 1).padStart(2, "0");
+      const schedDay = String(scheduleDate.getDate()).padStart(2, "0");
+      const scheduleDateLocal = `${schedYear}-${schedMonth}-${schedDay}`;
+
+      console.log(`  📅 Schedule ${i}: date=${scheduleDateLocal}, time=${schedule.startTime}-${schedule.endTime}, highlighted=${schedule.highlightInKiosk}`);
+
+      // Check if schedule is today (using local dates)
+      if (scheduleDateLocal === currentDateLocal) {
         // Check if current time is within the schedule time range
         if (currentTime >= schedule.startTime && currentTime < schedule.endTime) {
+          console.log(`  ✅ Found matching schedule at index ${i}`);
           return i;
         }
       }
     }
 
+    console.log(`  ❌ No matching schedule found for current time`);
     return -1; // No matching schedule found
   }, [schedulesData]);
 
   // Auto-highlight effect: Check every minute and update highlight
   useEffect(() => {
-    if (!autoHighlightEnabled) return;
+    if (!autoHighlightEnabled) {
+      console.log("⏰ Auto-highlight is disabled");
+      return;
+    }
+
+    console.log("⏰ Auto-highlight is enabled - starting check interval");
 
     const checkAndUpdateHighlight = async () => {
+      console.log("🔄 Auto-highlight check triggered...");
       const currentIndex = findCurrentScheduleIndex();
 
       if (currentIndex === -1) {
@@ -714,6 +739,7 @@ export default function OpenSpaceClient() {
       }
 
       const currentSchedule = schedulesData[currentIndex];
+      console.log(`⏰ Current schedule found: ${timeSlots[currentIndex]}, already highlighted: ${currentSchedule.highlightInKiosk}`);
 
       // Only update if the current schedule is not already highlighted
       if (!currentSchedule.highlightInKiosk) {
@@ -722,6 +748,7 @@ export default function OpenSpaceClient() {
           // Un-highlight all other schedules first
           const currentlyHighlighted = schedulesData.filter((s) => s.highlightInKiosk && s.id !== currentSchedule.id);
 
+          console.log(`  🔄 Un-highlighting ${currentlyHighlighted.length} other schedules...`);
           for (const otherSchedule of currentlyHighlighted) {
             await updateScheduleMutation.mutateAsync({
               id: otherSchedule.id,
@@ -732,6 +759,7 @@ export default function OpenSpaceClient() {
           }
 
           // Highlight the current schedule
+          console.log(`  ✅ Highlighting schedule ID: ${currentSchedule.id}`);
           await updateScheduleMutation.mutateAsync({
             id: currentSchedule.id,
             data: {
@@ -752,20 +780,29 @@ export default function OpenSpaceClient() {
           });
 
           toast.info("Auto-resaltado", `El horario "${timeSlots[currentIndex]}" ahora se muestra en el kiosco`);
+          console.log("✅ Auto-highlight complete!");
         } catch (error) {
-          console.error("Failed to auto-highlight schedule:", error);
+          console.error("❌ Failed to auto-highlight schedule:", error);
+          toast.error("Error", "No se pudo actualizar el auto-resaltado");
         }
+      } else {
+        console.log("⏰ Current schedule is already highlighted - no action needed");
       }
     };
 
     // Check immediately
+    console.log("⏰ Running initial auto-highlight check...");
     checkAndUpdateHighlight();
 
     // Then check every minute
+    console.log("⏰ Setting up 60-second interval for auto-highlight checks");
     const interval = setInterval(checkAndUpdateHighlight, 60000); // 60 seconds
 
-    return () => clearInterval(interval);
-  }, [autoHighlightEnabled, findCurrentScheduleIndex, schedulesData, timeSlots, updateScheduleMutation, queryClient]);
+    return () => {
+      console.log("⏰ Cleaning up auto-highlight interval");
+      clearInterval(interval);
+    };
+  }, [autoHighlightEnabled, findCurrentScheduleIndex, schedulesData, timeSlots, updateScheduleMutation, queryClient, broadcastScheduleChange]);
 
   // Cast to screen functionality
   const handleCastToScreen = useCallback(

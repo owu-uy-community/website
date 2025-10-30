@@ -72,20 +72,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Asistentes">
-                      <Link href="/admin/attendees" className="group/attendees">
-                        <Users
-                          className={`transition-colors group-hover/attendees:text-yellow-400 ${pathname?.includes("/attendees") ? "text-yellow-400" : "text-white"}`}
-                        />
-                        <span
-                          className={`transition-colors group-hover/attendees:text-yellow-400 ${pathname?.includes("/attendees") ? "text-yellow-400" : "text-white"}`}
-                        >
-                          Asistentes
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Pantalla">
                       <Link href="/admin/screen" className="group/screen">
                         <Monitor
@@ -109,6 +95,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           className={`transition-colors group-hover/launchpad:text-yellow-400 ${pathname?.includes("/launchpad") ? "text-yellow-400" : "text-white"}`}
                         >
                           Launchpad
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Asistentes">
+                      <Link href="/admin/attendees" className="group/attendees">
+                        <Users
+                          className={`transition-colors group-hover/attendees:text-yellow-400 ${pathname?.includes("/attendees") ? "text-yellow-400" : "text-white"}`}
+                        />
+                        <span
+                          className={`transition-colors group-hover/attendees:text-yellow-400 ${pathname?.includes("/attendees") ? "text-yellow-400" : "text-white"}`}
+                        >
+                          Asistentes
                         </span>
                       </Link>
                     </SidebarMenuButton>
