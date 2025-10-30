@@ -5,6 +5,9 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
+import { QueryProvider } from "components/providers/QueryProvider";
+import { Toaster } from "components/shared/ui/sonner";
+import { EXTERNAL_SERVICES } from "./lib/constants";
 
 export const metadata: Metadata = {
   description: "Únete a nuestra comunidad de desarrolladores.",
@@ -35,7 +38,10 @@ export default function RootLayout({
         `}
       </Script>
       <body>
-        <TicketReleaseProvider>{children}</TicketReleaseProvider>
+        <QueryProvider>
+          <TicketReleaseProvider>{children}</TicketReleaseProvider>
+          <Toaster />
+        </QueryProvider>
       </body>
     </html>
   );
