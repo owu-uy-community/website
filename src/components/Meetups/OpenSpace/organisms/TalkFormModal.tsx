@@ -153,46 +153,48 @@ export function TalkFormModal({
     hasWhiteboard: r.hasWhiteboard || false,
   }));
 
-  // Process image mutation
+  // Process image mutation with automatic AI suggestion
   const processImageMutation = useMutation({
     mutationFn: async (imageData: string) => {
-      const result = await client.ocr.processImage({ imageData });
+      // Use the combined endpoint that does OCR + AI suggestion automatically
+      const result = await client.ocr.processImageWithSuggestion({
+        imageData,
+        existingNotes: notes,
+        roomsWithResources,
+        availableRooms: rooms,
+        availableTimeSlots: timeSlots,
+      });
       return result;
     },
-    onSuccess: async (data) => {
-      setOcrProcessing(true);
-      try {
-        // Find best spot using AI via oRPC (server-side)
-        const result = await client.ocr.findFreeSpot({
-          title: data.title,
-          speaker: data.speaker,
-          needsTV: watchedValues.needsTV,
-          needsWhiteboard: watchedValues.needsWhiteboard,
-          roomsWithResources,
-          existingNotes: notes,
-          availableRooms: rooms,
-          availableTimeSlots: timeSlots,
-        });
+    onSuccess: (data) => {
+      // Update form with OCR data
+      if (data.title) setValue("title", data.title);
+      if (data.speaker) setValue("speaker", data.speaker);
+      if (data.needsTV) setValue("needsTV", data.needsTV);
+      if (data.needsWhiteboard) setValue("needsWhiteboard", data.needsWhiteboard);
 
-        // Update form with OCR data and AI-suggested spot
-        if (data.title) setValue("title", data.title);
-        if (data.speaker) setValue("speaker", data.speaker);
-        if (result.suggestedRoom) setValue("room", result.suggestedRoom);
-        if (result.suggestedTimeSlot) setValue("timeSlot", result.suggestedTimeSlot);
+      // Update form with AI-suggested spot
+      if (data.suggestedRoom) setValue("room", data.suggestedRoom);
+      if (data.suggestedTimeSlot) setValue("timeSlot", data.suggestedTimeSlot);
 
-        // Switch to form tab to show the filled data
-        setTimeout(() => setActiveTab("form"), 300);
-      } catch (error) {
-        console.error("Error finding spot:", error);
-        // Just use OCR data without AI spot finding
-        if (data.title) setValue("title", data.title);
-        if (data.speaker) setValue("speaker", data.speaker);
+      // Add AI suggestion to history
+      const mainSuggestion = {
+        room: data.suggestedRoom,
+        timeSlot: data.suggestedTimeSlot,
+        reasoning: data.reasoning,
+        alternatives: data.alternatives,
+        swapSuggestion: data.swapSuggestion,
+      };
 
-        // Still switch to form tab
-        setTimeout(() => setActiveTab("form"), 300);
-      } finally {
-        setOcrProcessing(false);
-      }
+      setSuggestionHistory((prev) => [...prev, mainSuggestion]);
+      setCurrentHistoryIndex((prev) => prev + 1);
+
+      // Set AI reasoning
+      setAiReasoning(data.reasoning);
+      setShowAiReasoning(false); // Start collapsed
+
+      // Switch to form tab to show the filled data
+      setTimeout(() => setActiveTab("form"), 300);
     },
     onError: (error: any) => {
       console.error("Error processing image:", error);
@@ -906,7 +908,7 @@ export function TalkFormModal({
                             className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-zinc-400 hover:text-zinc-300"
                           >
                             <Tv className="h-4 w-4" />
-                            Necesita TV/Proyector
+                            Necesita TV
                           </Label>
                         </div>
                         {watchedValues.needsTV &&

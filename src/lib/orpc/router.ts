@@ -60,7 +60,14 @@ import {
 
 import { GetAttendeesSchema, GetSummarySchema, getAttendees, getSummary } from "./eventbrite";
 
-import { ProcessImageSchema, FindFreeSpotSchema, processImage, findFreeSpot } from "./ocr";
+import {
+  ProcessImageSchema,
+  FindFreeSpotSchema,
+  ProcessImageWithSuggestionSchema,
+  processImage,
+  findFreeSpot,
+  processImageWithSuggestion,
+} from "./ocr";
 
 import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./obs-queue";
 
@@ -173,7 +180,9 @@ export const getAttendeesHandler = adminOs
   .input(GetAttendeesSchema)
   .handler(withErrorHandling(async ({ input }) => getAttendees(input), "fetch Eventbrite attendees"));
 
-export const getSummaryHandler = adminOs.handler(withErrorHandling(async () => getSummary(), "fetch Eventbrite summary"));
+export const getSummaryHandler = adminOs.handler(
+  withErrorHandling(async () => getSummary(), "fetch Eventbrite summary")
+);
 
 /**
  * OCR handlers (admin only)
@@ -185,6 +194,12 @@ export const processImageHandler = adminOs
 export const findFreeSpotHandler = adminOs
   .input(FindFreeSpotSchema)
   .handler(withErrorHandling(async ({ input }) => findFreeSpot(input), "find free spot with AI"));
+
+export const processImageWithSuggestionHandler = adminOs
+  .input(ProcessImageWithSuggestionSchema)
+  .handler(
+    withErrorHandling(async ({ input }) => processImageWithSuggestion(input), "process image with OCR and suggest spot")
+  );
 
 // OBS Queue procedures (public read, admin write)
 export const getOBSState = os
@@ -261,6 +276,7 @@ export const router = {
   ocr: {
     processImage: processImageHandler,
     findFreeSpot: findFreeSpotHandler,
+    processImageWithSuggestion: processImageWithSuggestionHandler,
   },
 
   // OBS Queue State Management
