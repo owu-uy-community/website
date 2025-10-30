@@ -7,20 +7,11 @@ import { FaInstagram, FaLinkedin, FaSlack } from "react-icons/fa";
 import { addUtmParams } from "app/lib/utils";
 import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
 
-import { navSections, SectionKey } from "./navSections";
-import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
 import MobileNav from "./mobileNav";
-import { Avatar, AvatarFallback, AvatarImage } from "components/shared/ui/avatar";
 import { signOut, useSession } from "app/lib/auth-client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "components/shared/ui/dropdown-menu";
-import { Handshake, LogIn, LogOut, UserCircle } from "lucide-react";
+import { UserAvatarMenu } from "components/shared/ui/user-avatar-menu";
+import { useNavigationContext } from "./navigationProvider";
+import { navSections, SectionKey } from "./navSections";
 
 export interface NavItemProps {
   title: string;
@@ -94,36 +85,13 @@ function Navbar() {
           >
             <FaSlack size={20} />
           </Link>
-          {/* TODO: Add a dropdown menu with the user's name and email */}
           {session?.user && !isPending ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild disabled={!session?.user}>
-                <Avatar className="cursor-pointer">
-                  <AvatarImage src={session?.user?.image ?? ""} />
-                  <AvatarFallback>{session?.user?.name?.charAt(0) ?? ""}</AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent sideOffset={15} align="end">
-                <DropdownMenuItem>
-                  <UserCircle size={16} />
-                  <Link href={INTERNAL_ROUTES.auth.profile}>Mi Perfil</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Handshake size={16} />
-                  <Link href={INTERNAL_ROUTES.auth.community}>Comunidad</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
-                  <LogOut size={16} />
-                  Cerrar sesión
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null
-          // <Link href={INTERNAL_ROUTES.auth.login} className="font-light text-white hover:text-yellow-400">
-          //   <LogIn size={20} />
-          // </Link>
-          }
+            <UserAvatarMenu
+              user={session.user}
+              onSignOut={() => signOut()}
+              showAdminSettings={session.user.role === "admin"}
+            />
+          ) : null}
         </div>
       </div>
     </nav>

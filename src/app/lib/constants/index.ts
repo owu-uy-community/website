@@ -3,7 +3,58 @@ export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://localhost:3
 export const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN ?? "localhost";
 export const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID!;
 export const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET!;
-export const USE_SECURE_COOKIES = DOMAIN === "localhost" ? false : true;
+
+// Only use secure cookies in production
+export const IS_PRODUCTION = process.env.NODE_ENV === "production";
+export const USE_SECURE_COOKIES = IS_PRODUCTION;
+
+// Allowed emails for authentication (comma-separated in env variable)
+// Example: ALLOWED_EMAILS=user1@example.com,user2@example.com,admin@company.com
+export const ALLOWED_EMAILS = process.env.ALLOWED_EMAILS
+  ? process.env.ALLOWED_EMAILS.split(",").map((email) => email.trim().toLowerCase())
+  : [];
+
+// Eventbrite Constants
+export const EVENTBRITE_API_URL = "https://www.eventbriteapi.com/v3";
+export const EVENTBRITE_API_KEY = process.env.EVENTBRITE_API_KEY!;
+export const EVENTBRITE_EVENT_ID = process.env.NEXT_PUBLIC_EVENTBRITE_EVENT_ID ?? "";
+
+// Event Dates
+export const EVENT_DATES = {
+  ticketDeadline: new Date("2025-07-31T23:59:59"),
+  meetup2025: new Date("2025-11-01T00:00:00"),
+} as const;
+
+// OpenSpace Room Colors
+export const ROOM_COLORS = {
+  LOBBY: "#03A9F4",
+  CENTRO: "#FFEB3B",
+  VENTANA: "#FF9800",
+  CUEVA: "#74B276",
+  RINCÓN: "#CD363C",
+} as const;
+
+export type RoomName = keyof typeof ROOM_COLORS;
+
+// OBS Configuration
+export const OBS_CONFIG = {
+  defaults: {
+    address: "localhost",
+    port: "4455",
+    screenshotDelay: "1000",
+    streamFps: "15",
+    streamQuality: "85",
+  },
+  timeouts: {
+    sceneSwitch: 2000, // ms - timeout for optimistic scene switch
+    gracePeriod: 2000, // ms - grace period for scene drift detection
+  },
+  delays: {
+    default: 5, // seconds - default delay between scenes
+    min: 1, // seconds - minimum delay
+    max: 300, // seconds - maximum delay
+  },
+} as const;
 
 // Social Media Links
 export const SOCIAL_LINKS = {
