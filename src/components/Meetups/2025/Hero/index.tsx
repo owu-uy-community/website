@@ -8,6 +8,7 @@ import { FaTicket } from "react-icons/fa6";
 
 import TicketHome from "components/Meetups/2025/TicketHome";
 import { addUtmParams } from "app/lib/utils";
+import { MAPS_URLS, EVENT_DATES, SOCIAL_LINKS } from "app/lib/constants";
 import { useTicketRelease } from "contexts/TicketReleaseContext";
 import classNames from "classnames";
 
@@ -20,9 +21,9 @@ type HeroProps = {
 };
 
 export default function Hero({ sponsors }: HeroProps) {
-  // Check if current date is past the deadline (July 31, 2025)
+  // Check if current date is past the ticket deadline
   const now = new Date();
-  const deadline = new Date("2025-07-31T23:59:59"); // TODO: Move to a constant
+  const deadline = EVENT_DATES.ticketDeadline;
 
   // Check if tickets are released using centralized hook
   const { isReleased: areTicketsReleased, ticketUrl } = useTicketRelease();
@@ -44,7 +45,7 @@ export default function Hero({ sponsors }: HeroProps) {
           <div className="flex w-full flex-col gap-2">
             <span className="flex w-full flex-col items-center justify-center">
               <h2 className="animate-fadeIn animate-delay-200 text-center text-3xl font-extrabold text-white md:text-4xl lg:text-5xl">
-                {format(parseISO(new Date("2025-11-01 00:00:00").toISOString()), "d 'de' MMMM yyyy", {
+                {format(parseISO(EVENT_DATES.meetup2025.toISOString()), "d 'de' MMMM yyyy", {
                   locale: es,
                 })}
               </h2>
