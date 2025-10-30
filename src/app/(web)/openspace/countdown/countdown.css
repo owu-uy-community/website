@@ -1,0 +1,23 @@
+@font-face {
+  font-family: 'Organic Stencil';
+  src: url('/fonts/organic-stencil.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.countdown-font {
+  font-family: 'Organic Stencil', sans-serif;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.animate-timer-pulse {
+  animation: timerPulse 1s ease-in-out infinite;
+}
