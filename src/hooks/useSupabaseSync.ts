@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import { v4 as uuidv4 } from "uuid";
 import { supabase } from "../app/lib/supabase";
 import { orpc } from "../lib/orpc";
 import type { StickyNote } from "../lib/orpc";
@@ -27,23 +28,9 @@ interface UseSupabaseSyncOptions {
   enabled?: boolean;
 }
 
-// Cross-browser UUID generator fallback
-const generateUUID = (): string => {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-
-  // Fallback for environments without crypto.randomUUID
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0;
-    const v = c === "x" ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
-};
-
 export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSyncOptions) => {
   const queryClient = useQueryClient();
-  const sessionIdRef = useRef(generateUUID()); // Unique session ID with fallback
+  const sessionIdRef = useRef(uuidv4()); // Unique session ID
   const isLocalUpdateRef = useRef(false);
   const channelRef = useRef<RealtimeChannel | null>(null); // Store channel reference for broadcasting
   const isSubscribedRef = useRef(false); // Track subscription status
@@ -96,16 +83,14 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
             if (event.payload.updatedCard) {
               // Update the main tracks list cache
               queryClient.setQueryData<StickyNote[]>(orpc.tracks.list.queryKey(), (oldNotes = []) => {
-                return oldNotes.map((note) => 
-                  note.id === event.payload.cardId ? event.payload.updatedCard! : note
-                );
+                return oldNotes.map((note) => (note.id === event.payload.cardId ? event.payload.updatedCard! : note));
               });
 
               // Also invalidate highlighted tracks query (used by map kiosk "Sesión seleccionada")
               queryClient.invalidateQueries({
                 queryKey: ["tracks", "highlighted", openSpaceId],
               });
-              
+
               console.log("✅ [Sync] Updated sticky notes + highlighted tracks");
 
               // Add visual highlight to the updated card
@@ -211,7 +196,7 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
     };
 
     console.log("📤 [Sync] Broadcasting CARD_UPDATE:", card.id);
-    
+
     await channelRef.current.send({
       type: "broadcast",
       event: "card_change",
