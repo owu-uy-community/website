@@ -1,3 +1,5 @@
+import { EXTERNAL_PLATFORMS } from "app/lib/constants";
+
 type MemberProps = {
   name: string;
   role: string;
@@ -9,7 +11,7 @@ export default function Member({ name, role, image, linkedin }: MemberProps) {
   return (
     <a
       className="flex h-full min-h-[270px] w-full min-w-[160px] max-w-[185px] flex-1 flex-col items-center justify-center"
-      href={`https://linkedin.com/in/${linkedin}`}
+      href={`${EXTERNAL_PLATFORMS.linkedin.base}${linkedin}`}
       rel="external noopener nofollow"
       target="_blank"
     >

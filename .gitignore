@@ -43,3 +43,7 @@ out/
 build/
 data/
 dist/
+/src/generated/prisma
+
+certificates
+dev.db

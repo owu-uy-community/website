@@ -40,7 +40,7 @@ module.exports = {
         arrowParens: "always",
         endOfLine: "lf",
         useTabs: false,
-        plugins: ["prettier-plugin-tailwindcss", "prettier-plugin-packagejson"],
+        plugins: ["prettier-plugin-tailwindcss"],
       },
     ],
     "@next/next/no-document-import-in-page": "off",

@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum UserStatus {
+  active
+  inactive
+}
+
+model User {
+  id            String      @id
+  name          String
+  email         String
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  role          UserRole    @default(user)
+  status        UserStatus  @default(inactive)
+  sessions      Session[]
+  accounts      Account[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model OpenSpace {
+  id                   String   @id @default(cuid())
+  name                 String
+  description          String?
+  startDate            DateTime
+  endDate              DateTime
+  isActive             Boolean  @default(true)
+  autoHighlightEnabled Boolean  @default(false) // Auto-highlight time slots based on current time
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  // Relations
+  schedules Schedule[]
+  rooms     Room[]
+  tracks    Track[]
+
+  @@map("open_spaces")
+}
+
+model Schedule {
+  id               String   @id @default(cuid())
+  name             String   // e.g., "Morning Session", "Afternoon Block"
+  startTime        String   // e.g., "09:00"
+  endTime          String   // e.g., "10:00"
+  date             DateTime
+  isActive         Boolean  @default(true)
+  highlightInKiosk Boolean  @default(false) // Highlight entire time slot in kiosk map
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Relations
+  openSpaceId String
+  openSpace   OpenSpace @relation(fields: [openSpaceId], references: [id], onDelete: Cascade)
+  tracks      Track[]
+
+  @@map("schedules")
+}
+
+model Room {
+  id            String   @id @default(cuid())
+  name          String   // e.g., "lobby", "centro", "cueva"
+  description   String?
+  capacity      Int?
+  hasTV         Boolean  @default(false) // Room has a TV/projector available
+  hasWhiteboard Boolean  @default(false) // Room has a whiteboard available
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  openSpaceId String
+  openSpace   OpenSpace @relation(fields: [openSpaceId], references: [id], onDelete: Cascade)
+  tracks      Track[]
+
+  @@map("rooms")
+}
+
+model Track {
+  id             String   @id @default(cuid())
+  title          String
+  speaker        String?
+  description    String?
+  needsTV        Boolean  @default(false) // Track requires a TV/projector
+  needsWhiteboard Boolean @default(false) // Track requires a whiteboard
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  openSpaceId String
+  openSpace   OpenSpace @relation(fields: [openSpaceId], references: [id], onDelete: Cascade)
+  
+  scheduleId  String
+  schedule    Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  
+  roomId      String
+  room        Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  // Ensure unique placement (one track per room per schedule)
+  @@unique([scheduleId, roomId])
+  @@map("tracks")
+}
+
+// OBS Queue State Management - Normalized Schema
+model OBSInstance {
+  id                Int      @id // 1 = admin screen, 2 = standalone app
+  isPlaying         Boolean  @default(false)
+  currentItemIndex  Int      @default(0)
+  directMode        Boolean  @default(false)
+  currentPresetId   String?  // References OBSPreset.id
+  version           Int      @default(1) // For conflict resolution
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
+
+  // Relations
+  queueItems        OBSQueueItem[]
+  presets          OBSPreset[]
+
+  @@map("obs_instances")
+}
+
+model OBSQueueItem {
+  id         String      @id @default(cuid())
+  sceneName  String      // For main app
+  sceneId    Int?        // For standalone app (nullable)
+  delay      Int         @default(5) // seconds
+  position   Int         // Order in queue (0-based)
+  instanceId Int
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relations
+  instance   OBSInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId, position])
+  @@map("obs_queue_items")
+}
+
+model OBSPreset {
+  id         String           @id @default(cuid())
+  name       String
+  instanceId Int
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  // Relations
+  instance   OBSInstance      @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  items      OBSPresetItem[]
+
+  @@map("obs_presets")
+}
+
+model OBSPresetItem {
+  id        String    @id @default(cuid())
+  sceneName String    // For main app
+  sceneId   Int?      // For standalone app (nullable)
+  delay     Int       @default(5) // seconds
+  position  Int       // Order in preset (0-based)
+  presetId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  preset    OBSPreset @relation(fields: [presetId], references: [id], onDelete: Cascade)
+
+  @@index([presetId, position])
+  @@map("obs_preset_items")
+}

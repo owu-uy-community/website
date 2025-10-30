@@ -1,3 +1,126 @@
+// Auth Constants
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://localhost:3000";
+export const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN ?? "localhost";
+export const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID!;
+export const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET!;
+
+// Only use secure cookies in production
+export const IS_PRODUCTION = process.env.NODE_ENV === "production";
+export const USE_SECURE_COOKIES = IS_PRODUCTION;
+
+// Allowed emails for authentication (comma-separated in env variable)
+// Example: ALLOWED_EMAILS=user1@example.com,user2@example.com,admin@company.com
+export const ALLOWED_EMAILS = process.env.ALLOWED_EMAILS
+  ? process.env.ALLOWED_EMAILS.split(",").map((email) => email.trim().toLowerCase())
+  : [];
+
+// Eventbrite Constants
+export const EVENTBRITE_API_URL = "https://www.eventbriteapi.com/v3";
+export const EVENTBRITE_API_KEY = process.env.EVENTBRITE_API_KEY!;
+export const EVENTBRITE_EVENT_ID = process.env.NEXT_PUBLIC_EVENTBRITE_EVENT_ID ?? "";
+
+// Event Dates
+export const EVENT_DATES = {
+  ticketDeadline: new Date("2025-07-31T23:59:59"),
+  meetup2025: new Date("2025-11-01T00:00:00"),
+} as const;
+
+// OpenSpace Room Colors
+export const ROOM_COLORS = {
+  LOBBY: "#03A9F4",
+  CENTRO: "#FFEB3B",
+  VENTANA: "#FF9800",
+  CUEVA: "#74B276",
+  RINCÓN: "#CD363C",
+} as const;
+
+export type RoomName = keyof typeof ROOM_COLORS;
+
+// OBS Configuration
+export const OBS_CONFIG = {
+  defaults: {
+    address: "localhost",
+    port: "4455",
+    screenshotDelay: "1000",
+    streamFps: "15",
+    streamQuality: "85",
+  },
+  timeouts: {
+    sceneSwitch: 2000, // ms - timeout for optimistic scene switch
+    gracePeriod: 2000, // ms - grace period for scene drift detection
+  },
+  delays: {
+    default: 5, // seconds - default delay between scenes
+    min: 1, // seconds - minimum delay
+    max: 300, // seconds - maximum delay
+  },
+} as const;
+
+// Social Media Links
+export const SOCIAL_LINKS = {
+  instagram: "https://www.instagram.com/owu__uy/",
+  linkedin: "https://www.linkedin.com/company/owu-uruguay/",
+  slack: "https://slack.owu.uy/",
+} as const;
+
+// External Service URLs
+export const EXTERNAL_SERVICES = {
+  googleForms: {
+    callForProposals: "https://forms.gle/FJErDF2AvDW4kDba6",
+    interest2024:
+      "https://docs.google.com/forms/d/e/1FAIpQLSe7QPkYcoz1tZ-j4N-BvqNfkLMtp9Oq8vQ285mTR7EuJPDVnw/viewform?embedded=true",
+    interest2025:
+      "https://docs.google.com/forms/d/e/1FAIpQLSf5c4z67ZcVvv7ONQYhlzaXXsRd0ZWyBrLKamtXanD3b1Bz4w/viewform?embedded=true",
+    sponsors2024:
+      "https://docs.google.com/forms/d/e/1FAIpQLSemC7vrDw38LTWcBUhIYjarqMMVUfE-dSnBPUAsNzBWd6uqcQ/viewform?embedded=true",
+    sponsors2025:
+      "https://docs.google.com/forms/d/e/1FAIpQLSeZGSpB95IZH6Texu2CqjHNw27pJye1nzEtJn5Y90gJiD0orA/viewform?embedded=true",
+  },
+  googleSheets: {
+    openSpaceEpg:
+      "https://docs.google.com/spreadsheets/d/1GPhu-OIcZbIZE3x4xmQvpL0j_rqPfr6wqDwiYdgcC1U/export?format=csv",
+  },
+  googleTagManager: "https://www.googletagmanager.com/gtag/js?id=G-RVTWHW4J21",
+  meetupBot: "https://meetup-bot.marpo60.xyz/json",
+} as const;
+
+// Maps and Location URLs
+export const MAPS_URLS = {
+  meetupLocation: "https://maps.app.goo.gl/PWsJEYZGZdzGkmaRA",
+} as const;
+
+// Internal Routes
+export const INTERNAL_ROUTES = {
+  auth: {
+    login: "/login",
+    register: "/registro",
+    profile: "/perfil",
+    community: "/comunidad",
+  },
+  legal: {
+    terms: "/terms",
+    privacy: "/privacy",
+  },
+  meetups: {
+    current: "/la-meetup",
+    interest: "/la-meetup/interes",
+    sponsors: "/la-meetup/sponsors",
+    callForProposals: "/la-meetup/#call-for-proposals",
+    meetup2023: "/2023/la-meetup/",
+    meetup2024: "/2024/la-meetup/",
+    meetup2025: "/la-meetup/",
+  },
+} as const;
+
+// External Platform URLs
+export const EXTERNAL_PLATFORMS = {
+  linkedin: {
+    base: "https://linkedin.com/in/",
+    company: "https://www.linkedin.com/company/owu-uruguay/",
+    posts: "https://www.linkedin.com/company/owu-uruguay/posts/",
+  },
+} as const;
+
 export const LA_MEETUP = {
   title: "LA",
   subtitle: "MEETUP",

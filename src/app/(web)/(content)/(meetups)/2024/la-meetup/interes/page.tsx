@@ -1,8 +1,8 @@
 import EmbeddedFormLayout from "components/Meetups/2024/EmbeddedFormLayout";
+import { EXTERNAL_SERVICES } from "app/lib/constants";
 
 export default function Intrest() {
-  const url =
-    "https://docs.google.com/forms/d/e/1FAIpQLSe7QPkYcoz1tZ-j4N-BvqNfkLMtp9Oq8vQ285mTR7EuJPDVnw/viewform?embedded=true";
+  const url = EXTERNAL_SERVICES.googleForms.interest2024;
 
   return (
     <EmbeddedFormLayout title="¡Formulario de Interés!">
