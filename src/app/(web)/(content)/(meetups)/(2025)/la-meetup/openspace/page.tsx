@@ -3,6 +3,9 @@ import { DEFAULT_OPENSPACE_ID } from "components/Meetups/OpenSpace/utils/constan
 
 import OpenSpaceClient from "./OpenSpaceClient";
 
+// Force dynamic rendering to prevent caching issues with countdown
+export const dynamic = "force-dynamic";
+
 export default async function LaMeetup2025OpenSpacePage() {
   let initialOpenSpaceData;
   try {
