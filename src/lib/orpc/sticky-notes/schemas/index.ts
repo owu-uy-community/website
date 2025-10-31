@@ -91,6 +91,15 @@ export const GetTracksByOpenSpaceSchema = z.object({
   highlightedOnly: z.boolean().optional().default(false),
 });
 
+/**
+ * Schema for bulk updating tracks when a schedule time changes
+ */
+export const BulkUpdateTracksByScheduleSchema = z.object({
+  scheduleId: z.string().min(1, "Schedule ID is required"),
+  newTimeSlot: z.string().min(1, "New time slot is required"),
+  newScheduleId: z.string().optional(), // If schedule ID changes (shouldn't happen, but for safety)
+});
+
 // Type exports
 export type Track = z.infer<typeof TrackSchema>;
 export type CreateTrackInput = z.infer<typeof CreateTrackSchema>;
@@ -100,6 +109,7 @@ export type DeleteTrackInput = z.infer<typeof DeleteTrackSchema>;
 export type UpdateTrackInputType = z.infer<typeof UpdateTrackInputSchema>;
 export type SwapTracksInput = z.infer<typeof SwapTracksSchema>;
 export type GetTracksByOpenSpaceInput = z.infer<typeof GetTracksByOpenSpaceSchema>;
+export type BulkUpdateTracksByScheduleInput = z.infer<typeof BulkUpdateTracksByScheduleSchema>;
 
 // StickyNote type for UI compatibility (includes room and timeSlot as readable strings)
 export type StickyNote = Track & {

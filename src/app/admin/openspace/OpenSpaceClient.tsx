@@ -6,6 +6,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { TimeGrid } from "components/Meetups/OpenSpace/organisms/TimeGrid";
 import { DragPreview } from "components/Meetups/OpenSpace/organisms/DragPreview";
 import { TalkFormModal } from "components/Meetups/OpenSpace/organisms/TalkFormModal";
+import { ScheduleFormModal } from "components/Meetups/OpenSpace/organisms/ScheduleFormModal";
 import { SearchInput } from "components/Meetups/OpenSpace/atoms/SearchInput";
 import { AddButton } from "components/Meetups/OpenSpace/atoms/AddButton";
 import { RealtimeIndicator } from "components/Meetups/OpenSpace/atoms/RealtimeIndicator";
@@ -13,8 +14,9 @@ import { OpenSpaceSkeleton } from "components/Meetups/OpenSpace/organisms/OpenSp
 import { CountdownControls } from "components/Meetups/OpenSpace/organisms/CountdownControls";
 import { Button } from "components/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
-import { Tv, Clock, Bot } from "lucide-react";
+import { Bot, Clock } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import type { Schedule } from "../../../lib/orpc";
 
 import type { CellCoordinates } from "components/Meetups/OpenSpace/types";
 import { useDragAndDrop, useLayoutCache, useCardStyles } from "components/Meetups/OpenSpace/hooks";
@@ -23,9 +25,12 @@ import { filterNotes } from "components/Meetups/OpenSpace/utils/calculations";
 import { useOpenSpaceNotesORPC, type StickyNote } from "../../../hooks/useOpenSpaceNotesORPC";
 import { useOpenSpaceSetup } from "../../../hooks/useOpenSpaceSetup";
 import { toast } from "../../../components/shared/ui/toast-utils";
-import { orpc, client } from "../../../lib/orpc";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { orpc } from "../../../lib/orpc";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRealtimeBroadcastWithInvalidation } from "../../../hooks/useRealtimeBroadcast";
+import { useScheduleManagement } from "../../../hooks/useScheduleManagement";
+import { useNoteManagement } from "../../../hooks/useNoteManagement";
+import { useAutoHighlight } from "../../../hooks/useAutoHighlight";
 
 export default function OpenSpaceClient() {
   const queryClient = useQueryClient();
@@ -52,25 +57,6 @@ export default function OpenSpaceClient() {
     isLoading: setupLoading,
     findIdsForPosition,
   } = useOpenSpaceSetup(DEFAULT_OPENSPACE_ID);
-
-  // Fetch OpenSpace to get auto-highlight state
-  const { data: openSpaceData, isLoading: openSpaceLoading } = useQuery({
-    queryKey: ["openSpace", DEFAULT_OPENSPACE_ID],
-    queryFn: async () => {
-      return await client.openSpaces.get({ id: DEFAULT_OPENSPACE_ID });
-    },
-    staleTime: 10000,
-    refetchOnWindowFocus: true,
-  });
-
-  // Mutation to update OpenSpace settings
-  const updateOpenSpaceMutation = useMutation(
-    orpc.openSpaces.update.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["openSpace", DEFAULT_OPENSPACE_ID] });
-      },
-    })
-  );
 
   // Real-time broadcast management for OpenSpace updates
   const { broadcast: broadcastScheduleChange } = useRealtimeBroadcastWithInvalidation({
@@ -104,159 +90,74 @@ export default function OpenSpaceClient() {
     revertMove: (() => void) | null;
   }>({ show: false, message: "", confirmMove: null, revertMove: null });
 
-  // Time editing state
-  const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
-  const [editingTimeValue, setEditingTimeValue] = useState("");
+  // Schedule form modal state
+  const [isScheduleFormOpen, setIsScheduleFormOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
 
-  // Get auto-highlight state from OpenSpace data
-  const autoHighlightEnabled = openSpaceData?.autoHighlightEnabled ?? false;
+  // ============ Custom Hooks ============
 
-  // Toggle auto-highlight state and persist to database
-  const handleToggleAutoHighlight = useCallback(async () => {
-    const newState = !autoHighlightEnabled;
+  // Schedule management
+  const {
+    updateScheduleMutation,
+    createScheduleMutation,
+    deleteScheduleMutation,
+    handleToggleScheduleHighlight,
+    handleSaveSchedule,
+    handleDeleteSchedule,
+  } = useScheduleManagement({
+    schedulesData,
+    notes,
+    broadcastScheduleChange,
+  });
 
-    try {
-      // Update in database
-      await updateOpenSpaceMutation.mutateAsync({
-        id: DEFAULT_OPENSPACE_ID,
-        data: {
-          autoHighlightEnabled: newState,
-        },
-      });
+  // Auto-highlight management (needs updateScheduleMutation from schedule hook)
+  const { autoHighlightEnabled, openSpaceLoading, handleToggleAutoHighlight, updateOpenSpaceMutation } =
+    useAutoHighlight({
+      openSpaceId: DEFAULT_OPENSPACE_ID,
+      schedulesData,
+      timeSlots,
+      updateScheduleMutation,
+      broadcastScheduleChange,
+    });
 
-      // Invalidate query
-      await queryClient.invalidateQueries({ queryKey: ["openSpace", DEFAULT_OPENSPACE_ID] });
-
-      // Broadcast the change to all clients
-      await broadcastScheduleChange("auto_highlight_changed", {
-        openSpaceId: DEFAULT_OPENSPACE_ID,
-        autoHighlightEnabled: newState,
-        timestamp: new Date().toISOString(),
-      });
-
-      toast.info(
-        newState ? "Auto-resaltado activado" : "Auto-resaltado desactivado",
-        newState
-          ? "Los horarios se resaltarán automáticamente según la hora actual"
-          : "El auto-resaltado ha sido desactivado"
-      );
-    } catch (error) {
-      console.error("Failed to toggle auto-highlight:", error);
-      toast.error("Error", "No se pudo actualizar la configuración de auto-resaltado");
-    }
-  }, [autoHighlightEnabled, updateOpenSpaceMutation, queryClient]);
+  // Note management
+  const {
+    handleNotesChange: handleNotesChangeBase,
+    handleSaveNote: handleSaveNoteBase,
+    handleDeleteNote,
+  } = useNoteManagement({
+    notes,
+    roomsData,
+    findIdsForPosition,
+    updateNote,
+    swapNotes,
+    createNote,
+    deleteNote,
+  });
 
   const boardRef = useRef<HTMLDivElement>(null);
   const { layoutCache, boardRectRef, updateBoardRect, getCachedElement, clearElementCache } = useLayoutCache();
 
-  // Handle drag and drop updates (optimistic with confirmation)
+  // Handle drag and drop updates with resource validation UI
   const handleNotesChange = useCallback(
     async (updatedNotes: StickyNote[]) => {
-      const changedNotes = updatedNotes.filter((updatedNote) => {
-        const originalNote = notes.find((n) => n.id === updatedNote.id);
-        return (
-          originalNote && (originalNote.room !== updatedNote.room || originalNote.timeSlot !== updatedNote.timeSlot)
-        );
-      });
+      const result = await handleNotesChangeBase(updatedNotes);
 
-      // Store original positions for potential revert
-      const originalPositions = changedNotes.map((changedNote) => {
-        const original = notes.find((n) => n.id === changedNote.id);
-        return {
-          id: changedNote.id,
-          room: original?.room,
-          timeSlot: original?.timeSlot,
-        };
-      });
-
-      // Check for resource mismatches
-      const resourceIssues: string[] = [];
-      for (const changedNote of changedNotes) {
-        const originalNote = notes.find((n) => n.id === changedNote.id);
-        if (!originalNote) continue;
-
-        const targetRoomData = roomsData.find((r) => r.name === changedNote.room);
-        if (!targetRoomData) continue;
-
-        const missingResources: string[] = [];
-        if (originalNote.needsTV && !targetRoomData.hasTV) {
-          missingResources.push("TV");
-        }
-        if (originalNote.needsWhiteboard && !targetRoomData.hasWhiteboard) {
-          missingResources.push("Pizarra");
-        }
-
-        if (missingResources.length > 0) {
-          resourceIssues.push(
-            `"${originalNote.title}" requiere ${missingResources.join(" y ")} pero la sala "${changedNote.room}" no lo tiene`
-          );
-        }
-      }
-
-      // Define the actual backend move
-      const confirmAction = async () => {
-        // Detect swaps (2 notes exchanging positions)
-        if (changedNotes.length === 2) {
-          const [noteA, noteB] = changedNotes;
-          const originalA = originalPositions.find((p) => p.id === noteA.id);
-          const originalB = originalPositions.find((p) => p.id === noteB.id);
-
-          if (
-            originalA &&
-            originalB &&
-            originalA.room === noteB.room &&
-            originalA.timeSlot === noteB.timeSlot &&
-            originalB.room === noteA.room &&
-            originalB.timeSlot === noteA.timeSlot
-          ) {
-            await swapNotes(noteA.id, noteB.id);
-            return;
-          }
-        }
-
-        // Handle single moves
-        for (const changedNote of changedNotes) {
-          const ids = findIdsForPosition(changedNote.room, changedNote.timeSlot);
-          if (ids) {
-            await updateNote(changedNote.id, {
-              roomId: ids.roomId,
-              scheduleId: ids.scheduleId,
-              room: changedNote.room,
-              timeSlot: changedNote.timeSlot,
-              skipResourceValidation: true,
-            });
-          }
-        }
-      };
-
-      // Define revert action (reverts UI back to original positions)
-      const revertAction = () => {
-        const revertedNotes = notes.map((note) => {
-          const original = originalPositions.find((p) => p.id === note.id);
-          if (original && original.room && original.timeSlot) {
-            return { ...note, room: original.room, timeSlot: original.timeSlot };
-          }
-          return note;
-        });
-        // Trigger a re-render with reverted positions by invalidating queries
-        queryClient.setQueryData(orpc.tracks.list.queryKey(), revertedNotes);
-      };
-
-      // If there are resource issues, show confirmation modal AFTER optimistic move
-      if (resourceIssues.length > 0) {
+      // If there are resource issues, show confirmation modal
+      if (result.resourceIssues.length > 0) {
         setResourceWarningModal({
           show: true,
-          message: `⚠️ ${resourceIssues.join("\n")}.\n\n¿Deseas continuar de todos modos?`,
-          confirmMove: confirmAction,
-          revertMove: revertAction,
+          message: `⚠️ ${result.resourceIssues.join("\n")}.\n\n¿Deseas continuar de todos modos?`,
+          confirmMove: result.confirmAction,
+          revertMove: result.revertAction,
         });
         return;
       }
 
       // No resource issues, proceed with backend update immediately
-      await confirmAction();
+      await result.confirmAction();
     },
-    [notes, updateNote, swapNotes, findIdsForPosition, roomsData, queryClient, orpc]
+    [handleNotesChangeBase]
   );
 
   const { dragState, handleCardMouseDown, handleRoomMouseDown, handleDirectClick } = useDragAndDrop({
@@ -284,54 +185,23 @@ export default function OpenSpaceClient() {
     }
   }, [dbError]);
 
-  // Note CRUD handlers
+  // Note CRUD handlers (with UI state management)
   const handleSaveNote = useCallback(
     async (noteData: Partial<StickyNote>) => {
-      const room = noteData.room || rooms[0];
-      const timeSlot = noteData.timeSlot || timeSlots[0];
-      const ids = findIdsForPosition(room, timeSlot);
-
-      if (!ids) {
-        throw new Error(`Invalid position: ${room}, ${timeSlot}`);
-      }
-
-      if (editingNote?.id) {
-        // Update existing
-        await updateNote(editingNote.id, {
-          ...noteData,
-          roomId: ids.roomId,
-          scheduleId: ids.scheduleId,
-          room,
-          timeSlot,
-        });
-      } else {
-        // Create new
-        await createNote({
-          title: noteData.title || "New Session",
-          speaker: noteData.speaker,
-          description: noteData.description,
-          needsTV: noteData.needsTV || false,
-          needsWhiteboard: noteData.needsWhiteboard || false,
-          room,
-          timeSlot,
-          openSpaceId: DEFAULT_OPENSPACE_ID,
-          scheduleId: ids.scheduleId,
-          roomId: ids.roomId,
-        });
-      }
+      await handleSaveNoteBase(noteData, editingNote, rooms, timeSlots, DEFAULT_OPENSPACE_ID);
       setEditingNote(null);
       setIsFormOpen(false);
     },
-    [editingNote, createNote, updateNote, rooms, timeSlots, findIdsForPosition]
+    [handleSaveNoteBase, editingNote, rooms, timeSlots]
   );
 
-  const handleDeleteNote = useCallback(
+  const handleDeleteNoteWrapper = useCallback(
     async (noteId: string) => {
-      await deleteNote(noteId);
+      await handleDeleteNote(noteId);
       setEditingNote(null);
       setIsFormOpen(false);
     },
-    [deleteNote]
+    [handleDeleteNote]
   );
 
   const addNewNote = useCallback((prefilledData?: { room?: string; timeSlot?: string }) => {
@@ -348,547 +218,61 @@ export default function OpenSpaceClient() {
     }
   }, []);
 
-  // Schedule mutations with optimistic updates for highlight toggle
-  const updateScheduleMutation = useMutation(
-    orpc.schedules.update.mutationOptions({
-      onMutate: async ({ id, data }) => {
-        // Cancel any outgoing refetches
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-        // Snapshot the previous value
-        const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-          input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-        }).queryKey;
-        const previousSchedules = queryClient.getQueryData(queryKey);
-
-        // Optimistically update the schedule
-        if (data.highlightInKiosk !== undefined) {
-          queryClient.setQueryData(queryKey, (old: any) => {
-            if (!old) return old;
-            return old.map((schedule: any) => {
-              if (schedule.id === id) {
-                return { ...schedule, highlightInKiosk: data.highlightInKiosk };
-              }
-              return schedule;
-            });
-          });
-        }
-
-        return { previousSchedules, queryKey };
-      },
-      onError: (error, variables, context) => {
-        // Rollback on error
-        if (context?.previousSchedules && context?.queryKey) {
-          queryClient.setQueryData(context.queryKey, context.previousSchedules);
-        }
-      },
-      onSuccess: () => {
-        // Invalidate to ensure we're in sync with the server
-        queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-      },
-    })
-  );
-
-  const createScheduleMutation = useMutation(
-    orpc.schedules.create.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-      },
-    })
-  );
-
-  const deleteScheduleMutation = useMutation(
-    orpc.schedules.delete.mutationOptions({
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-      },
-    })
-  );
-
-  // Toggle schedule highlight for kiosk map (entire row)
-  // Only one row can be highlighted at a time
-  // Uses optimistic updates for instant UI feedback
-  const handleToggleScheduleHighlight = useCallback(
-    async (timeIndex: number) => {
-      const schedule = schedulesData[timeIndex];
-      if (!schedule) return;
-
-      const willBeHighlighted = !schedule.highlightInKiosk;
-
-      // Get the query key for schedule data
-      const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-        input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-      }).queryKey;
-
-      try {
-        // Optimistically update all schedules at once
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-        // Snapshot the previous value for rollback
-        const previousSchedules = queryClient.getQueryData(queryKey);
-
-        // Optimistically update the UI immediately
-        queryClient.setQueryData(queryKey, (old: any) => {
-          if (!old) return old;
-          return old.map((s: any) => {
-            if (s.id === schedule.id) {
-              return { ...s, highlightInKiosk: willBeHighlighted };
-            }
-            // If we're highlighting the clicked schedule, un-highlight all others
-            if (willBeHighlighted && s.highlightInKiosk) {
-              return { ...s, highlightInKiosk: false };
-            }
-            return s;
-          });
-        });
-
-        // Show success toast immediately (optimistic)
-        toast.success(
-          willBeHighlighted ? "Agregado al bucle de open space" : "Removido del bucle de open space",
-          willBeHighlighted
-            ? `Solo el horario "${timeSlots[timeIndex]}" se mostrará en el mapa de open space.`
-            : `Horario "${timeSlots[timeIndex]}" removido del mapa de open space.`
-        );
-
-        // Now perform the actual server updates in the background
-        if (willBeHighlighted) {
-          const currentlyHighlighted = schedulesData.filter((s) => s.highlightInKiosk && s.id !== schedule.id);
-
-          // Un-highlight all other schedules first
-          for (const otherSchedule of currentlyHighlighted) {
-            await updateScheduleMutation.mutateAsync({
-              id: otherSchedule.id,
-              data: {
-                highlightInKiosk: false,
-              },
-            });
-          }
-        }
-
-        // Now update the clicked schedule
-        await updateScheduleMutation.mutateAsync({
-          id: schedule.id,
-          data: {
-            highlightInKiosk: willBeHighlighted,
-          },
-        });
-
-        // Broadcast the change to all connected clients
-        await broadcastScheduleChange("highlight_changed", {
-          scheduleId: schedule.id,
-          highlightInKiosk: willBeHighlighted,
-          openSpaceId: DEFAULT_OPENSPACE_ID,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        console.error("Failed to update schedule highlight:", error);
-
-        // Rollback on error
-        const previousSchedules = queryClient.getQueryData(queryKey);
-        if (previousSchedules) {
-          queryClient.setQueryData(queryKey, previousSchedules);
-        }
-
-        toast.error("Error", "No se pudo actualizar el estado de resaltado del kiosco.");
-      }
-    },
-    [schedulesData, timeSlots, updateScheduleMutation, queryClient, broadcastScheduleChange]
-  );
-
-  // Time editing handlers
+  // Schedule handlers with UI state management
   const handleTimeDoubleClick = useCallback(
     (timeIndex: number) => {
       const schedule = schedulesData[timeIndex];
       if (!schedule) return;
-
-      setEditingTimeIndex(timeIndex);
-      setEditingTimeValue(`${schedule.startTime} - ${schedule.endTime}`);
+      setEditingSchedule(schedule);
+      setIsScheduleFormOpen(true);
     },
     [schedulesData]
   );
 
-  const handleTimeEditChange = useCallback((value: string) => {
-    setEditingTimeValue(value);
+  const handleAddScheduleClick = useCallback(() => {
+    setEditingSchedule(null);
+    setIsScheduleFormOpen(true);
   }, []);
 
-  const handleTimeEditSave = useCallback(async () => {
-    if (editingTimeIndex === null) return;
+  const handleDeleteScheduleFromModal = useCallback(async () => {
+    if (!editingSchedule) return;
+    const timeSlot = `${editingSchedule.startTime} - ${editingSchedule.endTime}`;
+    await handleDeleteSchedule(editingSchedule.id, timeSlot);
+  }, [editingSchedule, handleDeleteSchedule]);
 
-    const schedule = schedulesData[editingTimeIndex];
-    if (!schedule) return;
-
-    // Parse the time value (format: "HH:MM - HH:MM")
-    const parts = editingTimeValue.split(" - ").map((s) => s.trim());
-    if (parts.length !== 2) {
-      toast.error("Formato inválido", "Usa el formato: HH:MM - HH:MM (ej: 09:00 - 10:00)");
-      return;
-    }
-
-    const [startTime, endTime] = parts;
-
-    // Validate time format (HH:MM)
-    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
-      toast.error("Formato de hora inválido", "Usa el formato HH:MM (ej: 09:00)");
-      return;
-    }
-
-    // Get the query key for schedule data
-    const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-      input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-    }).queryKey;
-
-    try {
-      // Optimistically update the UI immediately
-      await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-      const previousSchedules = queryClient.getQueryData(queryKey);
-
-      queryClient.setQueryData(queryKey, (old: any) => {
-        if (!old) return old;
-        return old.map((s: any) => {
-          if (s.id === schedule.id) {
-            return { ...s, startTime, endTime };
-          }
-          return s;
-        });
-      });
-
-      // Reset editing state immediately (optimistic)
-      setEditingTimeIndex(null);
-      setEditingTimeValue("");
-
-      // Show success toast immediately (optimistic)
-      toast.success("Horario actualizado", `Horario cambiado a ${startTime} - ${endTime}`);
-
-      // Now perform the actual server update in the background
-      await updateScheduleMutation.mutateAsync({
-        id: schedule.id,
-        data: {
-          startTime,
-          endTime,
-        },
-      });
-
-      // Broadcast the change to all connected clients
-      await broadcastScheduleChange("highlight_changed", {
-        scheduleId: schedule.id,
-        openSpaceId: DEFAULT_OPENSPACE_ID,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Failed to update schedule time:", error);
-
-      // Rollback on error - restore editing state
-      setEditingTimeIndex(editingTimeIndex);
-      setEditingTimeValue(`${schedule.startTime} - ${schedule.endTime}`);
-
-      toast.error("Error", "No se pudo actualizar el horario.");
-    }
-  }, [editingTimeIndex, editingTimeValue, schedulesData, updateScheduleMutation, queryClient, broadcastScheduleChange]);
-
-  const handleTimeEditCancel = useCallback(() => {
-    setEditingTimeIndex(null);
-    setEditingTimeValue("");
-  }, []);
-
-  const handleTimeEditKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleTimeEditSave();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        handleTimeEditCancel();
-      }
-    },
-    [handleTimeEditSave, handleTimeEditCancel]
-  );
-
-  // Delete schedule handler with optimistic updates
-  const handleDeleteSchedule = useCallback(
+  const handleDeleteScheduleFromButton = useCallback(
     async (timeIndex: number) => {
       const schedule = schedulesData[timeIndex];
       if (!schedule) return;
-
-      const timeSlot = timeSlots[timeIndex];
+      const timeSlot = `${schedule.startTime} - ${schedule.endTime}`;
+      const hasTracksInSlot = notes.some((note) => note.timeSlot === timeSlot);
 
       // Confirm before deleting
-      if (!confirm(`¿Estás seguro de eliminar el horario "${timeSlot}"?\n\nEsta acción no se puede deshacer.`)) {
-        return;
-      }
-
-      // Get the query key for schedule data
-      const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-        input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-      }).queryKey;
-
-      try {
-        // Optimistically update the UI immediately
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-        const previousSchedules = queryClient.getQueryData(queryKey);
-
-        queryClient.setQueryData(queryKey, (old: any) => {
-          if (!old) return old;
-          return old.filter((s: any) => s.id !== schedule.id);
-        });
-
-        // Show success toast immediately (optimistic)
-        toast.success("Horario eliminado", `El horario "${timeSlot}" ha sido eliminado.`);
-
-        // Now perform the actual server delete in the background
-        await deleteScheduleMutation.mutateAsync({ id: schedule.id });
-
-        // Broadcast the change to all connected clients
-        await broadcastScheduleChange("highlight_changed", {
-          scheduleId: schedule.id,
-          openSpaceId: DEFAULT_OPENSPACE_ID,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        console.error("Failed to delete schedule:", error);
-
-        // Rollback on error
-        const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-          input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-        }).queryKey;
-        const previousSchedules = queryClient.getQueryData(queryKey);
-        if (previousSchedules) {
-          queryClient.setQueryData(queryKey, previousSchedules);
-        }
-
-        toast.error("Error", "No se pudo eliminar el horario.");
-      }
-    },
-    [schedulesData, timeSlots, deleteScheduleMutation, queryClient, broadcastScheduleChange]
-  );
-
-  // Create new schedule handler with optimistic updates
-  const handleAddSchedule = useCallback(async () => {
-    // Default values for new schedule
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-
-    // Find the last schedule to suggest a time after it
-    const lastSchedule = schedulesData[schedulesData.length - 1];
-    let startTime = "09:00";
-    let endTime = "10:00";
-
-    if (lastSchedule) {
-      // Parse the last schedule's end time and add 1 hour
-      const [hours, minutes] = lastSchedule.endTime.split(":").map(Number);
-      const nextStartHour = hours;
-      const nextEndHour = hours + 1;
-      startTime = `${String(nextStartHour).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-      endTime = `${String(nextEndHour).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-    }
-
-    const newScheduleData = {
-      name: `Time Slot ${schedulesData.length + 1}`,
-      startTime,
-      endTime,
-      date: `${currentDate}T00:00:00.000Z`,
-      isActive: true,
-      highlightInKiosk: false,
-      openSpaceId: DEFAULT_OPENSPACE_ID,
-    };
-
-    // Get the query key for schedule data
-    const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-      input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-    }).queryKey;
-
-    try {
-      // Optimistically update the UI immediately
-      await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-      const previousSchedules = queryClient.getQueryData(queryKey);
-
-      // Create optimistic schedule with temporary ID
-      const optimisticSchedule = {
-        id: `temp-${Date.now()}`,
-        name: newScheduleData.name,
-        startTime: newScheduleData.startTime,
-        endTime: newScheduleData.endTime,
-        date: newScheduleData.date,
-        isActive: newScheduleData.isActive,
-        highlightInKiosk: newScheduleData.highlightInKiosk,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      queryClient.setQueryData(queryKey, (old: any) => {
-        if (!old) return [optimisticSchedule];
-        return [...old, optimisticSchedule];
-      });
-
-      // Show success toast immediately (optimistic)
-      toast.success("Horario agregado", `Nuevo horario ${startTime} - ${endTime} creado.`);
-
-      // Now perform the actual server create in the background
-      await createScheduleMutation.mutateAsync(newScheduleData);
-
-      // Broadcast the change to all connected clients
-      await broadcastScheduleChange("highlight_changed", {
-        openSpaceId: DEFAULT_OPENSPACE_ID,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      console.error("Failed to create schedule:", error);
-
-      // Rollback on error
-      const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-        input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-      }).queryKey;
-      const previousSchedules = queryClient.getQueryData(queryKey);
-      if (previousSchedules) {
-        queryClient.setQueryData(queryKey, previousSchedules);
-      }
-
-      toast.error("Error", "No se pudo crear el horario.");
-    }
-  }, [schedulesData, createScheduleMutation, queryClient, broadcastScheduleChange]);
-
-  // Auto-highlight: Find current time slot based on schedule times
-  const findCurrentScheduleIndex = useCallback(() => {
-    if (!schedulesData || schedulesData.length === 0) return -1;
-
-    const now = new Date();
-
-    // Get local date components
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const currentDateLocal = `${year}-${month}-${day}`;
-
-    // Get current time in HH:MM format (local time)
-    const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-    console.log(`🔍 Auto-highlight checking: Current local date=${currentDateLocal}, time=${currentTime}`);
-
-    // Find schedule that matches current date and time is between startTime and endTime
-    for (let i = 0; i < schedulesData.length; i++) {
-      const schedule = schedulesData[i];
-
-      // Parse the schedule date to local date string (YYYY-MM-DD)
-      const scheduleDate = new Date(schedule.date);
-      const schedYear = scheduleDate.getFullYear();
-      const schedMonth = String(scheduleDate.getMonth() + 1).padStart(2, "0");
-      const schedDay = String(scheduleDate.getDate()).padStart(2, "0");
-      const scheduleDateLocal = `${schedYear}-${schedMonth}-${schedDay}`;
-
-      console.log(
-        `  📅 Schedule ${i}: date=${scheduleDateLocal}, time=${schedule.startTime}-${schedule.endTime}, highlighted=${schedule.highlightInKiosk}`
-      );
-
-      // Check if schedule is today (using local dates)
-      if (scheduleDateLocal === currentDateLocal) {
-        // Check if current time is within the schedule time range
-        if (currentTime >= schedule.startTime && currentTime < schedule.endTime) {
-          console.log(`  ✅ Found matching schedule at index ${i}`);
-          return i;
-        }
-      }
-    }
-
-    console.log(`  ❌ No matching schedule found for current time`);
-    return -1; // No matching schedule found
-  }, [schedulesData]);
-
-  // Auto-highlight effect: Check every minute and update highlight
-  useEffect(() => {
-    if (!autoHighlightEnabled) {
-      console.log("⏰ Auto-highlight is disabled");
-      return;
-    }
-
-    console.log("⏰ Auto-highlight is enabled - starting check interval");
-
-    const checkAndUpdateHighlight = async () => {
-      console.log("🔄 Auto-highlight check triggered...");
-      const currentIndex = findCurrentScheduleIndex();
-
-      if (currentIndex === -1) {
-        console.log("⏰ No schedule active at current time - waiting for next schedule");
-        return;
-      }
-
-      const currentSchedule = schedulesData[currentIndex];
-      console.log(
-        `⏰ Current schedule found: ${timeSlots[currentIndex]}, already highlighted: ${currentSchedule.highlightInKiosk}`
-      );
-
-      // Only update if the current schedule is not already highlighted
-      if (!currentSchedule.highlightInKiosk) {
-        console.log("⏰ Auto-highlighting current time slot:", timeSlots[currentIndex]);
-        try {
-          // Un-highlight all other schedules first
-          const currentlyHighlighted = schedulesData.filter((s) => s.highlightInKiosk && s.id !== currentSchedule.id);
-
-          console.log(`  🔄 Un-highlighting ${currentlyHighlighted.length} other schedules...`);
-          for (const otherSchedule of currentlyHighlighted) {
-            await updateScheduleMutation.mutateAsync({
-              id: otherSchedule.id,
-              data: {
-                highlightInKiosk: false,
-              },
-            });
-          }
-
-          // Highlight the current schedule
-          console.log(`  ✅ Highlighting schedule ID: ${currentSchedule.id}`);
-          await updateScheduleMutation.mutateAsync({
-            id: currentSchedule.id,
-            data: {
-              highlightInKiosk: true,
-            },
-          });
-
-          // Wait for query invalidation to complete
-          await queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-          // Broadcast the change
-          await broadcastScheduleChange("highlight_changed", {
-            scheduleId: currentSchedule.id,
-            highlightInKiosk: true,
-            openSpaceId: DEFAULT_OPENSPACE_ID,
-            timestamp: new Date().toISOString(),
-            auto: true,
-          });
-
-          toast.info("Auto-resaltado", `El horario "${timeSlots[currentIndex]}" ahora se muestra en el kiosco`);
-          console.log("✅ Auto-highlight complete!");
-        } catch (error) {
-          console.error("❌ Failed to auto-highlight schedule:", error);
-          toast.error("Error", "No se pudo actualizar el auto-resaltado");
+      if (hasTracksInSlot) {
+        if (
+          !confirm(
+            `⚠️ Este horario tiene charlas asignadas. ¿Estás seguro de eliminarlo?\n\nEsta acción no se puede deshacer y las charlas se perderán.`
+          )
+        ) {
+          return;
         }
       } else {
-        console.log("⏰ Current schedule is already highlighted - no action needed");
+        if (!confirm(`¿Estás seguro de eliminar el horario "${timeSlot}"?\n\nEsta acción no se puede deshacer.`)) {
+          return;
+        }
       }
-    };
 
-    // Check immediately
-    console.log("⏰ Running initial auto-highlight check...");
-    checkAndUpdateHighlight();
+      await handleDeleteSchedule(schedule.id, timeSlot);
+    },
+    [schedulesData, notes, handleDeleteSchedule]
+  );
 
-    // Then check every minute
-    console.log("⏰ Setting up 60-second interval for auto-highlight checks");
-    const interval = setInterval(checkAndUpdateHighlight, 60000); // 60 seconds
-
-    return () => {
-      console.log("⏰ Cleaning up auto-highlight interval");
-      clearInterval(interval);
-    };
-  }, [
-    autoHighlightEnabled,
-    findCurrentScheduleIndex,
-    schedulesData,
-    timeSlots,
-    updateScheduleMutation,
-    queryClient,
-    broadcastScheduleChange,
-  ]);
+  const handleToggleScheduleHighlightWrapper = useCallback(
+    async (timeIndex: number) => {
+      await handleToggleScheduleHighlight(timeIndex, timeSlots);
+    },
+    [handleToggleScheduleHighlight, timeSlots]
+  );
 
   // Cast to screen functionality
   const handleCastToScreen = useCallback(
@@ -1002,7 +386,7 @@ export default function OpenSpaceClient() {
               {autoHighlightEnabled ? "Auto ON" : "Auto Highlight"}
             </Button>
             <CountdownControls />
-            <AddButton variant="outline" onClick={handleAddSchedule}>
+            <AddButton variant="outline" onClick={handleAddScheduleClick}>
               Slot
             </AddButton>
             <AddButton variant="outline" onClick={() => addNewNote()}>
@@ -1020,19 +404,19 @@ export default function OpenSpaceClient() {
             timeSlots={timeSlots}
             schedulesData={schedulesData}
             dragState={dragState}
-            editingTimeIndex={editingTimeIndex}
-            editingTimeValue={editingTimeValue}
+            editingTimeIndex={null}
+            editingTimeValue=""
             hoveredEmptyCell={hoveredEmptyCell}
             noteColors={NOTE_COLORS}
             getNotesForCell={getNotesForCell}
             onRoomMouseDown={handleRoomMouseDown}
-            onToggleScheduleHighlight={handleToggleScheduleHighlight}
+            onToggleScheduleHighlight={handleToggleScheduleHighlightWrapper}
             onTimeDoubleClick={handleTimeDoubleClick}
-            onTimeEditChange={handleTimeEditChange}
-            onTimeEdit={handleTimeEditKeyDown}
-            onTimeEditBlur={handleTimeEditCancel}
-            onTimeEditSave={handleTimeEditSave}
-            onTimeDelete={handleDeleteSchedule}
+            onTimeEditChange={() => {}}
+            onTimeEdit={() => {}}
+            onTimeEditBlur={() => {}}
+            onTimeEditSave={async () => {}}
+            onTimeDelete={handleDeleteScheduleFromButton}
             onEmptyCellMouseEnter={handleEmptyCellMouseEnter}
             onEmptyCellMouseLeave={() => setHoveredEmptyCell(null)}
             onEmptyCellClick={(room, timeSlot) => addNewNote({ room, timeSlot })}
@@ -1066,7 +450,7 @@ export default function OpenSpaceClient() {
         roomsData={roomsData}
         timeSlots={timeSlots}
         onSave={handleSaveNote}
-        onDelete={editingNote?.id ? () => handleDeleteNote(editingNote.id) : undefined}
+        onDelete={editingNote?.id ? () => handleDeleteNoteWrapper(editingNote.id) : undefined}
         isSaving={editingNote?.id ? isUpdating : isCreating}
         isDeleting={isDeleting}
       />
@@ -1126,6 +510,23 @@ export default function OpenSpaceClient() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Schedule Form Modal */}
+      <ScheduleFormModal
+        open={isScheduleFormOpen}
+        onOpenChange={setIsScheduleFormOpen}
+        schedule={editingSchedule}
+        schedules={schedulesData}
+        onSave={handleSaveSchedule}
+        onDelete={editingSchedule ? handleDeleteScheduleFromModal : undefined}
+        isSaving={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+        isDeleting={deleteScheduleMutation.isPending}
+        hasTracksInSlot={
+          editingSchedule
+            ? notes.some((note) => note.timeSlot === `${editingSchedule.startTime} - ${editingSchedule.endTime}`)
+            : false
+        }
+      />
     </div>
   );
 }

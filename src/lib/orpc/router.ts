@@ -9,6 +9,7 @@ import {
   DeleteTrackSchema,
   SwapTracksSchema,
   GetTracksByOpenSpaceSchema,
+  BulkUpdateTracksByScheduleSchema,
   getAllTracks,
   getTrackById,
   getTracksByOpenSpace,
@@ -16,6 +17,7 @@ import {
   updateTrack,
   deleteTrack,
   swapTracks,
+  bulkUpdateTracksBySchedule,
 } from "./sticky-notes";
 
 import {
@@ -176,6 +178,10 @@ export const swapTracksHandler = adminOs
   .input(SwapTracksSchema)
   .handler(withErrorHandling(async ({ input }) => swapTracks(input), "swap tracks"));
 
+export const bulkUpdateTracksByScheduleHandler = adminOs
+  .input(BulkUpdateTracksByScheduleSchema)
+  .handler(withErrorHandling(async ({ input }) => bulkUpdateTracksBySchedule(input), "bulk update tracks by schedule"));
+
 /**
  * Eventbrite handlers (admin only)
  */
@@ -271,6 +277,7 @@ export const router = {
     update: updateTrackHandler,
     delete: deleteTrackHandler,
     swap: swapTracksHandler,
+    bulkUpdateBySchedule: bulkUpdateTracksByScheduleHandler,
   },
 
   // Eventbrite integration
