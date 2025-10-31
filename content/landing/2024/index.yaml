@@ -20,7 +20,7 @@ mainButton: ¡Sumate a la Comunidad!
 mainButtonLink: https://slack.owu.uy/
 cta: ¡Conocé nuestra historia y próximos eventos!
 ctaLink: /#historia
-mainSectionImage: /carpincho.png
+mainSectionImage: /images/logos/carpincho.png
 stats:
   - title: Meetups
     subtitle: coordinadas
