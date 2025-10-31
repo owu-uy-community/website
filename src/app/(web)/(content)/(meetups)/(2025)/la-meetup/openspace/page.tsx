@@ -3,8 +3,6 @@ import { DEFAULT_OPENSPACE_ID } from "components/Meetups/OpenSpace/utils/constan
 
 import OpenSpaceClient from "./OpenSpaceClient";
 
-export const revalidate = 60;
-
 export default async function LaMeetup2025OpenSpacePage() {
   let initialOpenSpaceData;
   try {
