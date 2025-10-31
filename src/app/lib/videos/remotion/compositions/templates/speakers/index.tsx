@@ -9,17 +9,17 @@ import { SpeakerCard } from "./SpeakersCard";
 const speakers = [
   {
     name: "El Cuervo",
-    photo: "/el-cuervo.png",
+    photo: "/images/speakers/el-cuervo/picture.webp",
     talk: "Historias de filtraciones pesadas y la ley nueva de ciberdelincuencia",
   },
   {
     name: "Eliana Budelli",
-    photo: "/eliana-baudeli.png",
+    photo: "/images/speakers/eliana-budelli/picture.png",
     talk: "Sesgos en GenAI: Tipos, causas y estrategias de mitigación!",
   },
   {
     name: "Rodrigo Ponce de León",
-    photo: "/rodrigo-ponce-de-leon.png",
+    photo: "/images/speakers/rodrigo-ponce-de-leon/picture.png",
     talk: "Despertá al líder que llevás dentro",
   },
 ];

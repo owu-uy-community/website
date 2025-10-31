@@ -70,8 +70,8 @@ export const laMeetup2025 = collection({
         id: fields.text({ label: "ID", validation: { isRequired: true } }),
         image: fields.image({
           label: "Image",
-          directory: "public/static/2025/openspace",
-          publicPath: "/static/2025/openspace/",
+          directory: "public/images/2025/openspace",
+          publicPath: "/images/2025/openspace/",
           validation: { isRequired: true },
         }),
         alt: fields.text({ label: "Alt Text", validation: { isRequired: true } }),
@@ -83,8 +83,8 @@ export const laMeetup2025 = collection({
         id: fields.text({ label: "ID", validation: { isRequired: true } }),
         image: fields.image({
           label: "Image",
-          directory: "public/static/2025/gallery",
-          publicPath: "/static/2025/gallery/",
+          directory: "public/images/2025/gallery",
+          publicPath: "/images/2025/gallery/",
           validation: { isRequired: true },
         }),
         alt: fields.text({ label: "Alt Text", validation: { isRequired: true } }),

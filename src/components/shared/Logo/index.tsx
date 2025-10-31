@@ -11,7 +11,7 @@ export default function Logo() {
         gap: "1rem",
       }}
     >
-      <img alt="OWU Uruguay logo" loading="lazy" src="/carpincho.png" style={{ maxWidth: "250px" }} />
+      <img alt="OWU Uruguay logo" loading="lazy" src="/images/speakers/carpincho/picture.png" style={{ maxWidth: "250px" }} />
       <h1
         style={{
           color: "white",

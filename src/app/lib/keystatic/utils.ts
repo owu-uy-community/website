@@ -57,7 +57,7 @@ export interface AgendaItem {
   description: string;
   startTime: string;
   endTime: string;
-  presenters: Array<string | null>;
+  presenters?: Array<string | null>;
   location: {
     name: string;
   };
@@ -87,7 +87,7 @@ export async function transformArray<T, R>(
 
 // Transform functions for each content type
 export async function transformAgendaItem(item: AgendaItem) {
-  const presenters = await transformArray(item.presenters, transformSpeaker);
+  const presenters = await transformArray(item.presenters ?? [], transformSpeaker);
 
   return {
     ...item,

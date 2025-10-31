@@ -9,8 +9,8 @@ export const staff = collection({
     lastname: fields.text({ label: "Last Name", validation: { isRequired: true } }),
     picture: fields.image({
       label: "Picture",
-      directory: "public/static/staff",
-      publicPath: "/static/staff/",
+      directory: "public/images/staff",
+      publicPath: "/images/staff/",
       validation: { isRequired: true },
     }),
     jobTitle: fields.text({ label: "Job Title", validation: { isRequired: true } }),

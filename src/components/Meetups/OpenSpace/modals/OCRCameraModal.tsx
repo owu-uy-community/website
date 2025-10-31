@@ -14,7 +14,6 @@ import { Camera, X, RefreshCw, Check, Loader2, RotateCcw } from "lucide-react";
 import Image from "next/image";
 import { client } from "lib/orpc";
 import { useMutation } from "@tanstack/react-query";
-import { cn } from "app/lib/utils";
 
 interface OCRCameraModalProps {
   open: boolean;

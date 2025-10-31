@@ -29,9 +29,9 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
           <Sponsor key={name} image={logo.url} name={name} website={website} />
         ))}
       </div>
-      <Link href="/static/2025/government/declaracion_interes_mec.pdf" target="_blank" prefetch={false}>
+      <Link href="/images/2025/government/declaracion_interes_mec.pdf" target="_blank" prefetch={false}>
         <img
-          src={"/static/2025/government/mec.webp"}
+          src={"/images/2025/government/mec.webp"}
           alt="Evento declarado de interés Ministerial (MEC Uruguay)"
           className="mt-5 w-full max-w-[280px] md:max-w-[400px]"
           crossOrigin="anonymous"
@@ -42,7 +42,7 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
           Evento declarado de interés por la ANII
         </p>
         <img
-            src={"/static/2025/anii/anii.png"}
+            src={"/images/2025/anii/anii.png"}
             alt="Evento declarado de interés ANII"
             className="mt-5 w-full max-w-[280px] md:max-w-[400px] invert"
             crossOrigin="anonymous"

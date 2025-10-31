@@ -44,7 +44,7 @@ export default function SpeakerCard({
   allSpeakers,
 }: SpeakerCardProps) {
   const fullName = `${firstname} ${lastname}`;
-  const imageSrc = picture?.url || "/placeholder.webp";
+  const imageSrc = picture?.url || "/images/events/placeholder.webp";
 
   const cardContent = (
     <article className="group flex h-full w-full min-w-[230px] max-w-[300px] cursor-pointer flex-col items-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20 lg:max-w-[240px]">

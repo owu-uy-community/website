@@ -10,15 +10,15 @@ export default function IntroSection() {
   const [isHovering, setIsHovering] = useState(false);
 
   const images = [
-    "/static/2025/intro/1.webp",
-    "/static/2025/intro/2.webp",
-    "/static/2025/intro/3.webp",
-    "/static/2025/intro/4.webp",
-    "/static/2025/intro/5.webp",
-    "/static/2025/intro/6.webp",
-    "/static/2025/intro/7.webp",
-    "/static/2025/intro/8.webp",
-    "/static/2025/intro/9.webp",
+    "/images/2025/intro/1.webp",
+    "/images/2025/intro/2.webp",
+    "/images/2025/intro/3.webp",
+    "/images/2025/intro/4.webp",
+    "/images/2025/intro/5.webp",
+    "/images/2025/intro/6.webp",
+    "/images/2025/intro/7.webp",
+    "/images/2025/intro/8.webp",
+    "/images/2025/intro/9.webp",
   ];
 
   // Auto-rotate images only when not hovering

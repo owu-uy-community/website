@@ -182,7 +182,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                                   {presenters?.map((presenter, i) => (
                                     <Avatar key={i} className="h-12 w-12 bg-zinc-800 p-[3px]">
                                       <AvatarImage
-                                        src={presenter.picture?.url ?? "/carpincho.png"}
+                                        src={presenter.picture?.url ?? "/images/speakers/carpincho/picture.png"}
                                         className="rounded-full bg-[#000214]/50 object-cover"
                                       />
                                     </Avatar>
@@ -299,7 +299,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                               {presenters?.map((presenter, i) => (
                                 <Avatar key={i} className="h-10 w-10 bg-zinc-800 p-[3px]">
                                   <AvatarImage
-                                    src={presenter.picture?.url ?? "/carpincho.png"}
+                                    src={presenter.picture?.url ?? "/images/speakers/carpincho/picture.png"}
                                     className="rounded-full bg-[#000214]/50 object-cover"
                                   />
                                 </Avatar>

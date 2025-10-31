@@ -23,9 +23,9 @@ export default function RootLayout({
     <html lang="es">
       <meta charSet="utf-8" />
       <meta content="website" property="og:type" />
-      <meta content="/la_meetup_2024.png" property="og:image" />
+      <meta content="/images/events/la_meetup_2024.png" property="og:image" />
       <meta content="summary_large_image" property="twitter:card" />
-      <meta content="/la_meetup_2024.png" property="twitter:image" />
+      <meta content="/images/events/la_meetup_2024.png" property="twitter:image" />
       <Analytics />
       <SpeedInsights />
       <Script async src={EXTERNAL_SERVICES.googleTagManager} />

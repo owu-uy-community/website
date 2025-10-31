@@ -29,7 +29,7 @@ export default function Stats({ stats }: StatsProps) {
         <img
           alt="Ilustración de un carpincho"
           className="w-full min-w-[280px] max-w-[600px] self-center object-contain"
-          src="/community.svg"
+          src="/icons/community.svg"
         />
         {stats ? (
           <div className="grid grid-cols-2 place-items-center gap-16">
@@ -39,7 +39,7 @@ export default function Stats({ stats }: StatsProps) {
           </div>
         ) : (
           <div className="flex w-full flex-col items-center justify-center gap-4 text-center text-white">
-            <img alt="No encontrado" className="w-full max-w-[300px] object-contain" src="/not_found.svg" />
+            <img alt="No encontrado" className="w-full max-w-[300px] object-contain" src="/icons/not_found.svg" />
             <span>
               <h2 className="text-lg font-semibold">¡Lo sentimos!</h2>
               <p className="text-lg">No se han encontrado estadísticas</p>

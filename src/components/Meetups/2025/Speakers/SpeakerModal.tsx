@@ -124,7 +124,7 @@ export default function SpeakerModal({
   const [currentSpeaker, setCurrentSpeaker] = React.useState<Speaker>(initialSpeaker);
 
   const fullName = `${currentSpeaker.firstname} ${currentSpeaker.lastname}`;
-  const imageSrc = currentSpeaker.picture?.url || "/placeholder.webp";
+  const imageSrc = currentSpeaker.picture?.url || "/images/events/placeholder.webp";
   const hasMultipleSpeakers = allSpeakers && allSpeakers.length > 1;
 
   // Reset to initial speaker when modal opens
@@ -176,7 +176,7 @@ export default function SpeakerModal({
                   {allSpeakers
                     .filter((speaker) => `${speaker.firstname} ${speaker.lastname}` !== fullName)
                     .map((speaker, index) => {
-                      const speakerImageSrc = speaker.picture?.url || "/placeholder.webp";
+                      const speakerImageSrc = speaker.picture?.url || "/images/events/placeholder.webp";
                       const speakerFullName = `${speaker.firstname} ${speaker.lastname}`;
                       const otherSpeakers = allSpeakers.filter((s) => `${s.firstname} ${s.lastname}` !== fullName);
                       return (

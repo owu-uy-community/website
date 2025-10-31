@@ -26,10 +26,13 @@ export const laMeetup2024 = collection({
         description: fields.text({ label: "Description" }),
         startTime: fields.datetime({ label: "Start Time", validation: { isRequired: true } }),
         endTime: fields.datetime({ label: "End Time", validation: { isRequired: true } }),
-        presenter: fields.relationship({
-          label: "Presenter",
-          collection: "speakers",
-        }),
+        presenters: fields.array(
+          fields.relationship({
+            label: "Presenter",
+            collection: "speakers",
+          }),
+          { label: "Presenters" }
+        ),
         location: fields.object({
           name: fields.text({ label: "Location Name", validation: { isRequired: true } }),
         }),
@@ -47,8 +50,8 @@ export const laMeetup2024 = collection({
         id: fields.text({ label: "ID", validation: { isRequired: true } }),
         image: fields.image({
           label: "Image",
-          directory: "public/static/2024/openspace",
-          publicPath: "/static/2024/openspace/",
+          directory: "public/images/2024/openspace",
+          publicPath: "/images/2024/openspace/",
           validation: { isRequired: true },
         }),
         alt: fields.text({ label: "Alt Text", validation: { isRequired: true } }),
@@ -60,8 +63,8 @@ export const laMeetup2024 = collection({
         id: fields.text({ label: "ID", validation: { isRequired: true } }),
         image: fields.image({
           label: "Image",
-          directory: "public/static/2024/gallery",
-          publicPath: "/static/2024/gallery/",
+          directory: "public/images/2024/gallery",
+          publicPath: "/images/2024/gallery/",
           validation: { isRequired: true },
         }),
         alt: fields.text({ label: "Alt Text", validation: { isRequired: true } }),

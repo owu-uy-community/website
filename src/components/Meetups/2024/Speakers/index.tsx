@@ -34,7 +34,7 @@ export default function Speakers({ speakers = [] }: SpeakersProps) {
             <Member
               key={lastname}
               github={github}
-              image={picture?.url ?? "/carpincho.png"}
+              image={picture?.url ?? "/images/speakers/carpincho/picture.png"}
               linkedin={linkedin}
               name={`${firstname} ${lastname}`}
               role={jobtitle}

@@ -44,7 +44,7 @@ export default function Hero({
           <img
             alt="carpincho"
             className="hidden w-full max-w-[250px] gap-4 xl:flex xl:max-w-[500px]"
-            src="/carpincho.png"
+            src="/images/speakers/carpincho/picture.png"
           />
         </div>
         <div className="flex min-h-[calc(100dvh-156px)] w-full max-w-[650px] flex-col items-center justify-center">

@@ -12,7 +12,7 @@ type StaffCardProps = {
 
 export default function StaffCard({ firstname, lastname, picture, jobTitle, linkedin }: StaffCardProps) {
   const fullName = `${firstname} ${lastname}`;
-  const imageSrc = picture?.url || "/placeholder.webp";
+  const imageSrc = picture?.url || "/images/events/placeholder.webp";
 
   const cardContent = (
     <article className="group flex h-full w-full flex-1 cursor-pointer flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20">

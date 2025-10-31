@@ -30,7 +30,7 @@ export default function Staff({ staff = [] }: StaffProps) {
         {alphabeticalSort(staff, "firstname").map(({ firstname, lastname, picture, jobtitle, linkedin }) => (
           <Member
             key={lastname}
-            image={picture?.url ?? "/carpincho.png"}
+            image={picture?.url ?? "/images/speakers/carpincho/picture.png"}
             linkedin={linkedin}
             name={`${firstname} ${lastname}`}
             role={jobtitle}

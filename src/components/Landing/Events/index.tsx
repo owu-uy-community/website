@@ -46,7 +46,7 @@ export default function Events({ events }: EventsProps) {
         </ol>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-5">
-          <img alt="Calendario Triste" className="w-full max-w-[300px]" src="/sad_calendar.svg" />
+          <img alt="Calendario Triste" className="w-full max-w-[300px]" src="/icons/sad_calendar.svg" />
           <span className="flex flex-col items-center justify-center">
             <h2 className="text-center text-lg font-semibold">¡Lo sentimos!</h2>
             <h3 className="text-center text-lg">No se han encontrado eventos</h3>
@@ -54,8 +54,8 @@ export default function Events({ events }: EventsProps) {
         </div>
       )}
       <div className="position absolute bottom-1 z-[-1] hidden w-full max-w-[1200px] flex-row items-end justify-between self-center xl:flex">
-        <img alt="Ilustración de una mujer" className="max-h-[380px]" src="/girl.svg" />
-        <img alt="Ilustración de un hombre" className="max-h-[380px]" src="/man.svg" />
+        <img alt="Ilustración de una mujer" className="max-h-[380px]" src="/icons/girl.svg" />
+        <img alt="Ilustración de un hombre" className="max-h-[380px]" src="/icons/man.svg" />
       </div>
     </section>
   );

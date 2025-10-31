@@ -221,7 +221,7 @@ export default function Ticket({ sponsors, releaseDate: _releaseDate, ticketUrl:
 
           {/* Logo - centered on mobile, left-aligned and vertically centered on desktop */}
           <div className="flex flex-col items-center justify-center sm:absolute sm:left-5 sm:top-1/2 sm:mt-2.5 sm:-translate-y-1/2">
-            <img alt="OWU Uruguay" className="max-w-[150px] object-cover lg:max-w-[190px]" src="/ticket_logo.webp" />
+            <img alt="OWU Uruguay" className="max-w-[150px] object-cover lg:max-w-[190px]" src="/images/events/ticket_logo.webp" />
           </div>
 
           {/* Click text - mobile centered, desktop bottom right */}

@@ -16,10 +16,10 @@ export function TalksComposition() {
           title: "¿Cómo crear un video con Remotion?",
           startingDate,
           location: "Sinergia Faro, Montevideo",
-          logoUrl: "https://www.owu.uy/carpincho.png",
+          logoUrl: "https://www.owu.uy/images/speakers/carpincho/picture.png",
           speakers: [
             {
-              pictureUrl: "https://www.owu.uy/carpincho.png",
+              pictureUrl: "https://www.owu.uy/images/speakers/carpincho/picture.png",
               name: "OWU BOT",
               company: "OWU Company",
               job: "Software Developer",

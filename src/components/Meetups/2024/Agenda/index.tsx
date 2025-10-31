@@ -17,13 +17,13 @@ type AgendaProps = {
     readonly description: string;
     readonly startTime: string;
     readonly endTime: string;
-    readonly presenter?: {
+    readonly presenters?: readonly {
       readonly firstname: string;
       readonly lastname?: string;
       readonly picture?: {
         readonly url: string;
       };
-    };
+    }[];
     readonly location?: {
       readonly name: string;
     };
@@ -51,7 +51,10 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
       <div className="flex w-full flex-row justify-center gap-5">
         <div className="w-full max-w-[1200px] text-white">
           <div className="flex min-h-[35px] flex-col gap-4">
-            {agenda?.map(({ id, startTime, endTime, presenter, title, location, description }) => (
+            {agenda?.map(({ id, startTime, endTime, presenters, title, location, description }) => {
+              const presenter = presenters && presenters.length > 0 ? presenters[0] : null;
+              
+              return (
               <div
                 key={id}
                 className="flex w-full flex-row items-center justify-between gap-3 rounded-lg border-[1.5px] border-gray-400 px-4 py-5 text-sm md:px-8 md:text-lg"
@@ -66,7 +69,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                         <TooltipTrigger asChild>
                           <span className="flex flex-row items-center gap-2">
                             <Avatar>
-                              <AvatarImage src={presenter.picture?.url ?? "/carpincho.png"} />
+                              <AvatarImage src={presenter.picture?.url ?? "/images/speakers/carpincho/picture.png"} />
                             </Avatar>
                           </span>
                         </TooltipTrigger>
@@ -96,7 +99,8 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                   </TooltipProvider>
                 </span>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

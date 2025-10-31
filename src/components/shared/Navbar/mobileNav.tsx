@@ -50,12 +50,12 @@ export default function MobileNav() {
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         {!isOpen && (
           <SheetTrigger className="align-middle">
-            <Image alt="menu" className="cursor-pointer" height={24} src="/menu.svg" width={24} />
+            <Image alt="menu" className="cursor-pointer" height={24} src="/icons/menu.svg" width={24} />
           </SheetTrigger>
         )}
         <SheetContent className="z-[60] flex max-w-[240px] flex-col gap-6 bg-opacity-5 lg:hidden">
           <div className="flex w-full flex-row items-center justify-start gap-4">
-            <Image alt="logo" height={34} src="/carpincho.png" width={34} />
+            <Image alt="logo" height={34} src="/images/speakers/carpincho/picture.png" width={34} />
           </div>
           <NavItems />
           <Separator />

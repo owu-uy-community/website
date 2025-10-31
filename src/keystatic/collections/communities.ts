@@ -12,8 +12,8 @@ export const communities = collection({
     }),
     picture: fields.image({
       label: "Picture",
-      directory: "public/static/communities",
-      publicPath: "/static/communities/",
+      directory: "public/images/communities",
+      publicPath: "/images/communities/",
       validation: { isRequired: true },
     }),
     website: fields.text({

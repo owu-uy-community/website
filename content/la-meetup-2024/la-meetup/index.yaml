@@ -17,7 +17,8 @@ agenda:
     description: ¡Te invitamos a comenzar la jornada disfrutando de un delicioso desayuno!
     startTime: 2025-10-19T09:00:00.000Z
     endTime: 2025-10-19T10:00:00.000Z
-    presenter: coffe
+    presenters:
+      - coffe
     location:
       name: SINERGIA
   - id: 2
@@ -25,7 +26,8 @@ agenda:
     description: Espacio abierto para discutir sobre tecnología y programación.
     startTime: 2024-10-19T10:00:00.000Z
     endTime: 2024-10-19T13:30:00.000Z
-    presenter: openspace
+    presenters:
+      - openspace
     location:
       name: SINERGIA
   - id: 3
@@ -35,7 +37,8 @@ agenda:
       los alrededores!
     startTime: 2024-10-19T13:30:00.000Z
     endTime: 2024-10-19T15:00:00.000Z
-    presenter: carpincho
+    presenters:
+      - carpincho
     location:
       name: SHOPPING
   - id: 4
@@ -45,7 +48,8 @@ agenda:
       mismo?
     startTime: 2024-10-19T15:00:00.000Z
     endTime: 2024-10-19T15:40:00.000Z
-    presenter: rodrigo-ponce-de-leon
+    presenters:
+      - rodrigo-ponce-de-leon
     location:
       name: SINERGIA
   - id: 5
@@ -57,7 +61,8 @@ agenda:
       generativa.
     startTime: 2024-10-19T15:40:00.000Z
     endTime: 2024-10-19T16:20:00.000Z
-    presenter: eliana-budelli
+    presenters:
+      - eliana-budelli
     location:
       name: SINERGIA
   - id: 6
@@ -67,7 +72,8 @@ agenda:
       participantes!
     startTime: 2024-10-19T16:20:00.000Z
     endTime: 2024-10-19T17:00:00.000Z
-    presenter: coffe
+    presenters:
+      - coffe
     location:
       name: SINERGIA
   - id: 7
@@ -75,45 +81,46 @@ agenda:
     description: Historias de filtraciones pesadas y la ley nueva de ciberdelincuencia
     startTime: 2024-10-19T16:45:00.000Z
     endTime: 2024-10-19T17:50:00.000Z
-    presenter: el-cuervo
+    presenters:
+      - el-cuervo
     location:
       name: SINERGIA
 openSpacePrimaryButtonName: ¡VER AGENDA!
 openSpacePrimaryButtonUrl: /la-meetup/openspace
 openspaceGallery:
   - id: "1"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/0/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/0/image.webp
     alt: Open Space Image
   - id: "2"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/1/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/1/image.webp
     alt: Open Space Image
   - id: "3"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/2/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/2/image.webp
     alt: Open Space Image
   - id: "4"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/3/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/3/image.webp
     alt: Open Space Image
   - id: "5"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/4/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/4/image.webp
     alt: Open Space Image
   - id: "6"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/5/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/5/image.webp
     alt: Open Space Image
   - id: "7"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/6/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/6/image.webp
     alt: Open Space Image
   - id: "8"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/7/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/7/image.webp
     alt: Open Space Image
   - id: "9"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/8/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/8/image.webp
     alt: Open Space Image
   - id: "10"
-    image: /static/2024/openspace/la-meetup/openspaceGallery/9/image.webp
+    image: /images/2024/openspace/la-meetup/openspaceGallery/9/image.webp
     alt: Open Space Image
 gallery:
   - id: "1"
-    image: /static/2024/gallery/la-meetup/gallery/0/image.jpeg
+    image: /images/2024/gallery/la-meetup/gallery/0/image.jpeg
     alt: Closing Picture
 sponsors:
   - tryo-labs
