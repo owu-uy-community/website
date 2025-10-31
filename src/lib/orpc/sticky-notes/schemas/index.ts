@@ -105,4 +105,5 @@ export type GetTracksByOpenSpaceInput = z.infer<typeof GetTracksByOpenSpaceSchem
 export type StickyNote = Track & {
   room: string;
   timeSlot: string;
+  skipResourceValidation?: boolean; // Optional flag to skip validation during updates
 };

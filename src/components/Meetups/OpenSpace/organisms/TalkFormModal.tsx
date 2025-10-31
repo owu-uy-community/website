@@ -512,7 +512,7 @@ export function TalkFormModal({
         const missingResources: string[] = [];
 
         if (formData.needsTV && !selectedRoomData.hasTV) {
-          missingResources.push("TV/Proyector");
+          missingResources.push("TV");
         }
         if (formData.needsWhiteboard && !selectedRoomData.hasWhiteboard) {
           missingResources.push("Pizarra");

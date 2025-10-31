@@ -10,7 +10,7 @@ import { TimeGridKioskSkeleton } from "components/Meetups/OpenSpace/organisms/Ti
 import { SessionInfoCard } from "components/Meetups/OpenSpace/molecules/SessionInfoCard";
 import { CountdownSection } from "components/Meetups/OpenSpace/molecules/CountdownSection";
 import { NOTE_COLORS, MAP_KIOSK_CONFIG, DEFAULT_OPENSPACE_ID } from "components/Meetups/OpenSpace/utils/constants";
-import { useCountdownState } from "hooks/useCountdownState";
+import { useCountdownEndtime } from "hooks/useCountdownEndtime";
 import { useLocationCycling } from "hooks/useLocationCycling";
 import { useMapKioskData } from "hooks/useMapKioskData";
 import { useOpenSpaceNotesORPC } from "hooks/useOpenSpaceNotesORPC";
@@ -39,8 +39,8 @@ interface OpenSpaceClientProps {
 }
 
 export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClientProps) {
-  // Countdown is always client-side and needs fresh data for live updates
-  const { state: countdownState } = useCountdownState({
+  // Countdown endtime - lightweight endpoint that only fetches targetTime
+  const { remainingSeconds } = useCountdownEndtime({
     enableRealtime: true,
   });
 
@@ -102,7 +102,7 @@ export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClien
   const scheduleLoading = notesLoading || setupLoading;
   const hasScheduleData = rooms.length > 0 && timeSlots.length > 0;
   const nextLocationColor = currentLocation?.color ?? "#FF9933";
-  const countdownSeconds = mapLoading && activeLocations.length === 0 ? 0 : countdownState.remainingSeconds;
+  const countdownSeconds = mapLoading && activeLocations.length === 0 ? 0 : remainingSeconds;
 
   return (
     <>

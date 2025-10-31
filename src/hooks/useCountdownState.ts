@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../app/lib/supabase";
 import { orpc } from "../lib/orpc/client";
-import type { CountdownState } from "../lib/orpc/countdown";
+import type { CountdownState } from "../lib/orpc/countdown/schemas";
 
 const COUNTDOWN_CHANNEL = "countdown-state";
 
@@ -26,11 +26,11 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
     refetch,
   } = useQuery(
     orpc.countdown.getState.queryOptions({
-      staleTime: Infinity, // Never consider stale - we manage state client-side
+      staleTime: 5000, // Consider stale after 5 seconds so visibility changes trigger refetch
       gcTime: Infinity, // Keep in cache forever
-      refetchOnMount: 'always', // Only fetch once when component mounts
-      refetchOnWindowFocus: false, // Don't refetch on window focus - use client state
-      refetchOnReconnect: false, // Don't refetch on reconnect - use realtime sync
+      refetchOnMount: "always", // Fetch when component mounts
+      refetchOnWindowFocus: true, // Refetch when user returns (phone unlock, tab switch)
+      refetchOnReconnect: true, // Refetch when internet reconnects
       refetchInterval: false, // No polling - use realtime for sync
     })
   );
@@ -39,13 +39,14 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
   // Each client calculates remainingSeconds independently from targetTime
   const [localState, setLocalState] = useState<CountdownState | null>(null);
 
-  // Initialize local state from server state ONCE when it first arrives
+  // Initialize local state from server state when it arrives or updates
+  // This will sync when user returns from phone lock (due to refetchOnWindowFocus)
   useEffect(() => {
-    if (serverState && !localState) {
+    if (serverState) {
       setLocalState(serverState);
       lastTickRef.current = Date.now(); // Reset tick reference
     }
-  }, [serverState, localState]);
+  }, [serverState]);
 
   // Calculate remainingSeconds from targetTime (if set) or use stored value
   // This way all clients calculate independently from the same end time
@@ -59,14 +60,15 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
   // IMPORTANT: Wait for server state before showing countdown
   // Use localState if available, otherwise use fresh serverState
   // Default to 00:00 while loading (better UX than showing 05:00)
-  const baseState: CountdownState = localState || serverState || {
-    isRunning: false,
-    remainingSeconds: 0,
-    totalSeconds: 0,
-    lastUpdated: new Date().toISOString(),
-    soundEnabled: false,
-    targetTime: undefined,
-  };
+  const baseState: CountdownState = localState ||
+    serverState || {
+      isRunning: false,
+      remainingSeconds: 0,
+      totalSeconds: 0,
+      lastUpdated: new Date().toISOString(),
+      soundEnabled: false,
+      targetTime: undefined,
+    };
 
   // Calculate current remaining seconds from targetTime
   const state: CountdownState = {
@@ -106,7 +108,11 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
   );
 
   const updateState = useCallback(
-    async (action: "start" | "pause" | "reset" | "setDuration" | "toggleSound" | "setTargetTime", durationSeconds?: number, targetTime?: string) => {
+    async (
+      action: "start" | "pause" | "reset" | "setDuration" | "toggleSound" | "setTargetTime",
+      durationSeconds?: number,
+      targetTime?: string
+    ) => {
       // Backend calculates targetTime automatically on "start"
       return updateMutation.mutateAsync({
         action,
@@ -128,19 +134,18 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
       return;
     }
 
-    // Trigger re-render every 100ms to recalculate remainingSeconds from targetTime
-    // No need to update state - calculation happens in render
+    // Trigger re-render every second to recalculate remainingSeconds from targetTime
     intervalRef.current = setInterval(() => {
       // Force re-render by updating a dummy timestamp
       setLocalState((prev) => {
         if (!prev) return prev;
-        
+
         // If we have targetTime, we're calculating from it automatically
         // Just return the same state to trigger re-render
         if (prev.targetTime) {
           return { ...prev, lastUpdated: new Date().toISOString() };
         }
-        
+
         // Fallback: if no targetTime, decrement manually (shouldn't happen)
         const newRemaining = Math.max(0, prev.remainingSeconds - 1);
         return {

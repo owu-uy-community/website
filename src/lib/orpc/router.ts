@@ -71,7 +71,10 @@ import {
 
 import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./obs-queue";
 
-import { UpdateCountdownStateSchema, getCountdownState, updateCountdownState } from "./countdown";
+import { UpdateCountdownStateSchema } from "./countdown/schemas";
+import { getCountdownState } from "./countdown/services/get-state";
+import { updateCountdownState } from "./countdown/services/update-state";
+import { getCountdownEndtime } from "./countdown/services/get-endtime";
 
 import { getDashboardStats } from "./dashboard";
 
@@ -215,6 +218,10 @@ export const getCountdownStateHandler = os.handler(
   withErrorHandling(async () => getCountdownState(), "get countdown state")
 );
 
+export const getCountdownEndtimeHandler = os.handler(
+  withErrorHandling(async () => getCountdownEndtime(), "get countdown endtime")
+);
+
 export const updateCountdownStateHandler = adminOs
   .input(UpdateCountdownStateSchema)
   .handler(withErrorHandling(async ({ input }) => updateCountdownState(input), "update countdown state"));
@@ -288,6 +295,7 @@ export const router = {
   // Countdown Timer Management
   countdown: {
     getState: getCountdownStateHandler,
+    getEndtime: getCountdownEndtimeHandler,
     updateState: updateCountdownStateHandler,
   },
 

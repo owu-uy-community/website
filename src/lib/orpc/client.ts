@@ -31,4 +31,4 @@ export type { AppRouter };
 
 // Re-export types from features for external usage
 export type { StickyNote } from "./sticky-notes";
-export type { CountdownState, UpdateCountdownStateInput } from "./countdown";
+export type { CountdownState, UpdateCountdownStateInput } from "./countdown/schemas";

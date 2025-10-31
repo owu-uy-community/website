@@ -15,5 +15,10 @@ export const UpdateCountdownStateSchema = z.object({
   targetTime: z.string().optional(), // ISO timestamp or time string
 });
 
+export const CountdownEndtimeSchema = z.object({
+  targetTime: z.string().nullable(), // ISO timestamp or null if no countdown is active
+});
+
 export type CountdownState = z.infer<typeof CountdownStateSchema>;
 export type UpdateCountdownStateInput = z.infer<typeof UpdateCountdownStateSchema>;
+export type CountdownEndtime = z.infer<typeof CountdownEndtimeSchema>;

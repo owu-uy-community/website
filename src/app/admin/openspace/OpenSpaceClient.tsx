@@ -180,7 +180,7 @@ export default function OpenSpaceClient() {
 
         const missingResources: string[] = [];
         if (originalNote.needsTV && !targetRoomData.hasTV) {
-          missingResources.push("TV/Proyector");
+          missingResources.push("TV");
         }
         if (originalNote.needsWhiteboard && !targetRoomData.hasWhiteboard) {
           missingResources.push("Pizarra");
@@ -1092,11 +1092,20 @@ export default function OpenSpaceClient() {
           <div className="mt-4 flex gap-3">
             <Button
               variant="outline"
-              onClick={async () => {
-                if (resourceWarningModal.confirmMove) {
-                  await resourceWarningModal.confirmMove();
-                }
+              onClick={() => {
+                // Close modal immediately (optimistic)
                 setResourceWarningModal({ show: false, message: "", confirmMove: null, revertMove: null });
+
+                // Show immediate feedback
+                toast.success("Guardando...", "Confirmando el movimiento");
+
+                // Execute backend update in background
+                if (resourceWarningModal.confirmMove) {
+                  resourceWarningModal.confirmMove().catch((error) => {
+                    console.error("Failed to confirm move:", error);
+                    toast.error("Error", "No se pudo guardar el movimiento");
+                  });
+                }
               }}
               className="flex-1 border-orange-600 bg-orange-500/20 text-orange-200 hover:bg-orange-500/30"
             >
