@@ -99,9 +99,13 @@ export function OCRCameraModal({
       setCameraActive(true);
       setPermissionMessage("Por favor permite el acceso a la cámara cuando se solicite");
 
-      // Request camera access
+      // Request camera access with Full HD resolution
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
       });
 
       if (videoRef.current) {
@@ -135,32 +139,16 @@ export function OCRCameraModal({
       const video = videoRef.current;
       const canvas = canvasRef.current;
 
-      // Set canvas dimensions to match video (square aspect ratio)
-      const size = Math.min(video.videoWidth, video.videoHeight);
-      canvas.width = size;
-      canvas.height = size;
+      // Set canvas dimensions to Full HD (1920x1080)
+      canvas.width = 1920;
+      canvas.height = 1080;
 
-      // Calculate offset to center the crop
-      const xOffset = (video.videoWidth - size) / 2;
-      const yOffset = (video.videoHeight - size) / 2;
-
-      // Draw the video frame to the canvas
+      // Draw the video frame to the canvas at Full HD
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        ctx.drawImage(
-          video,
-          xOffset,
-          yOffset,
-          size,
-          size, // Source rectangle
-          0,
-          0,
-          size,
-          size // Destination rectangle
-        );
+        ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, 1920, 1080);
 
-        // Convert canvas to data URL
-        const imageData = canvas.toDataURL("image/jpeg");
+        const imageData = canvas.toDataURL("image/jpeg", 1.0);
         setCapturedImage(imageData);
         stopCamera();
       }
@@ -214,10 +202,10 @@ export function OCRCameraModal({
 
         <div className="flex flex-col items-center gap-4">
           {/* Camera/Image Display Area */}
-          <div className="relative aspect-square w-full overflow-hidden rounded-md bg-zinc-800">
+          <div className="relative aspect-video w-full overflow-hidden rounded-md bg-zinc-800">
             {cameraActive ? (
               <>
-                <video ref={videoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
+                <video ref={videoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-contain" />
                 {permissionMessage && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 p-4 text-center text-white">
                     <p>{permissionMessage}</p>
@@ -225,7 +213,7 @@ export function OCRCameraModal({
                 )}
               </>
             ) : capturedImage ? (
-              <Image src={capturedImage} alt="Captured track card" fill className="object-cover" />
+              <Image src={capturedImage} alt="Captured track card" fill className="object-contain" />
             ) : (
               <div className="flex h-full items-center justify-center">
                 <Camera className="h-12 w-12 text-zinc-500" />
@@ -309,19 +297,12 @@ export function OCRCameraModal({
           </Button>
           <div className="flex gap-2">
             {result && (
-              <Button
-                onClick={handleUseData}
-                className="bg-yellow-400 text-black hover:bg-yellow-500"
-              >
+              <Button onClick={handleUseData} className="bg-yellow-400 text-black hover:bg-yellow-500">
                 <Check className="mr-2 h-4 w-4" />
                 Usar Datos
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={handleClose}
-              className="border-zinc-700 text-white hover:bg-zinc-800"
-            >
+            <Button variant="outline" onClick={handleClose} className="border-zinc-700 text-white hover:bg-zinc-800">
               Cerrar
             </Button>
           </div>
