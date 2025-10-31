@@ -57,18 +57,19 @@ export function useCountdownEndtime(options: UseCountdownEndtimeOptions = {}) {
     const channel = supabase.channel(COUNTDOWN_CHANNEL);
 
     channel
-      .on("broadcast", { event: "countdown_update" }, ({ payload }: { payload: any }) => {
-        console.log("⏱️ [CountdownEndtime] Received broadcast update:", payload);
+      .on(
+        "broadcast",
+        { event: "countdown_endtime_update" },
+        ({ payload }: { payload: { targetTime: string | null } }) => {
+          console.log("⏱️ [CountdownEndtime] Received endtime update:", payload);
 
-        // Extract targetTime from the full state update
-        if (payload && typeof payload === "object") {
-          const newTargetTime = payload.targetTime ?? null;
-          setLocalEndtime(newTargetTime);
+          // Payload only contains targetTime (optimized)
+          setLocalEndtime(payload.targetTime);
         }
-      })
+      )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-          console.log("✅ [CountdownEndtime] Subscribed to countdown updates");
+          console.log("✅ [CountdownEndtime] Subscribed to countdown endtime updates");
         }
       });
 

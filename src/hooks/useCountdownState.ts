@@ -91,12 +91,23 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
 
         // Broadcast the update via Supabase realtime for other devices
         if (enableRealtime) {
-          supabase
-            .channel(COUNTDOWN_CHANNEL)
+          const channel = supabase.channel(COUNTDOWN_CHANNEL);
+
+          // Send full state update for admin/control listeners
+          channel
             .send({
               type: "broadcast",
-              event: "countdown_update",
+              event: "countdown_state_update",
               payload: result,
+            })
+            .catch(console.error);
+
+          // Send lightweight endtime update for display listeners
+          channel
+            .send({
+              type: "broadcast",
+              event: "countdown_endtime_update",
+              payload: { targetTime: result.targetTime ?? null },
             })
             .catch(console.error);
         }
@@ -170,9 +181,9 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
 
     const channel = supabase
       .channel(COUNTDOWN_CHANNEL)
-      .on("broadcast", { event: "countdown_update" }, ({ payload }) => {
+      .on("broadcast", { event: "countdown_state_update" }, ({ payload }) => {
         if (payload) {
-          console.log("📡 [Countdown] Received realtime update");
+          console.log("📡 [Countdown] Received full state update");
           setLocalState(payload as CountdownState);
           queryClient.setQueryData(orpc.countdown.getState.queryKey(), payload);
           lastTickRef.current = Date.now();
