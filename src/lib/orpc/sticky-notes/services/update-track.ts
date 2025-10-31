@@ -40,15 +40,17 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
       throw new Error("Room not found");
     }
 
-    // Validate room has required resources
+    // Validate room has required resources (unless validation is skipped)
     const needsTV = data.needsTV ?? currentTrack.needsTV;
     const needsWhiteboard = data.needsWhiteboard ?? currentTrack.needsWhiteboard;
 
-    if (needsTV && !room.hasTV) {
-      throw new Error(`Room "${room.name}" does not have a TV/projector`);
-    }
-    if (needsWhiteboard && !room.hasWhiteboard) {
-      throw new Error(`Room "${room.name}" does not have a whiteboard`);
+    if (!data.skipResourceValidation) {
+      if (needsTV && !room.hasTV) {
+        throw new Error(`Room "${room.name}" does not have a TV/projector`);
+      }
+      if (needsWhiteboard && !room.hasWhiteboard) {
+        throw new Error(`Room "${room.name}" does not have a whiteboard`);
+      }
     }
 
     // Check for slot conflicts if schedule/room changed

@@ -29,6 +29,8 @@ export const CreateTrackSchema = TrackSchema.omit({
   // Display fields for optimistic updates (not stored in DB, computed from relations)
   room: z.string().optional(),
   timeSlot: z.string().optional(),
+  // Allow bypassing resource validation when user confirms
+  skipResourceValidation: z.boolean().optional().default(false),
 });
 
 /**
@@ -46,6 +48,8 @@ export const UpdateTrackSchema = z
     // Display fields for optimistic updates (not stored in DB, computed from relations)
     room: z.string().optional(),
     timeSlot: z.string().optional(),
+    // Allow bypassing resource validation when user confirms
+    skipResourceValidation: z.boolean().optional().default(false),
   })
   .partial();
 

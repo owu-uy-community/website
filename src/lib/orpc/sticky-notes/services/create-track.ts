@@ -24,12 +24,14 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
     throw new Error("Room not found");
   }
 
-  // Validate room has required resources
-  if (input.needsTV && !room.hasTV) {
-    throw new Error(`Room "${room.name}" does not have a TV/projector`);
-  }
-  if (input.needsWhiteboard && !room.hasWhiteboard) {
-    throw new Error(`Room "${room.name}" does not have a whiteboard`);
+  // Validate room has required resources (unless validation is skipped)
+  if (!input.skipResourceValidation) {
+    if (input.needsTV && !room.hasTV) {
+      throw new Error(`Room "${room.name}" does not have a TV/projector`);
+    }
+    if (input.needsWhiteboard && !room.hasWhiteboard) {
+      throw new Error(`Room "${room.name}" does not have a whiteboard`);
+    }
   }
 
   // Check for slot conflicts (one track per room per schedule)

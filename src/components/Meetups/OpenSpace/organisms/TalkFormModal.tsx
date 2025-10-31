@@ -69,7 +69,7 @@ interface TalkFormModalProps {
   rooms: string[];
   roomsData: RoomWithResources[];
   timeSlots: string[];
-  onSave: (noteData: Partial<StickyNote>) => void;
+  onSave: (noteData: Partial<StickyNote> & { skipResourceValidation?: boolean }) => void;
   onDelete?: () => void;
   isSaving?: boolean;
   isDeleting?: boolean;
@@ -563,6 +563,8 @@ export function TalkFormModal({
         timeSlot: formData.timeSlot,
         needsTV: formData.needsTV,
         needsWhiteboard: formData.needsWhiteboard,
+        // Skip resource validation if user has confirmed to proceed without required resources
+        skipResourceValidation: confirmedProceed,
       });
       // Reset form and OCR state after successful save
       resetAll();

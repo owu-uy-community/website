@@ -1,15 +1,5 @@
-// Client exports
+// Client-safe exports only
 export { orpc, client } from "./client";
-export type { AppRouter } from "./client";
+export type { AppRouter, StickyNote } from "./client";
 
-// Router exports
-export { router } from "./router";
-
-// Feature exports
-export * from "./open-spaces";
-export * from "./schedules";
-export * from "./rooms";
-export * from "./sticky-notes"; // Track management
-
-// Utility exports
-export * from "./utilities";
+// Note: Server-only exports (router, services) are in ./server.ts

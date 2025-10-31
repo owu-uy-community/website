@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { db } from "./db";
+import { prisma as db } from "../../lib/prisma";
 import {
   ALLOWED_EMAILS,
   BASE_URL,

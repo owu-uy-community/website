@@ -12,6 +12,7 @@ import { RealtimeIndicator } from "components/Meetups/OpenSpace/atoms/RealtimeIn
 import { OpenSpaceSkeleton } from "components/Meetups/OpenSpace/organisms/OpenSpaceSkeleton";
 import { CountdownControls } from "components/Meetups/OpenSpace/organisms/CountdownControls";
 import { Button } from "components/shared/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
 import { Tv, Clock, Bot } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
@@ -95,6 +96,14 @@ export default function OpenSpaceClient() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
 
+  // Resource warning modal state for drag-and-drop (optimistic)
+  const [resourceWarningModal, setResourceWarningModal] = useState<{
+    show: boolean;
+    message: string;
+    confirmMove: (() => Promise<void>) | null;
+    revertMove: (() => void) | null;
+  }>({ show: false, message: "", confirmMove: null, revertMove: null });
+
   // Time editing state
   const [editingTimeIndex, setEditingTimeIndex] = useState<number | null>(null);
   const [editingTimeValue, setEditingTimeValue] = useState("");
@@ -140,7 +149,7 @@ export default function OpenSpaceClient() {
   const boardRef = useRef<HTMLDivElement>(null);
   const { layoutCache, boardRectRef, updateBoardRect, getCachedElement, clearElementCache } = useLayoutCache();
 
-  // Handle drag and drop updates
+  // Handle drag and drop updates (optimistic with confirmation)
   const handleNotesChange = useCallback(
     async (updatedNotes: StickyNote[]) => {
       const changedNotes = updatedNotes.filter((updatedNote) => {
@@ -150,39 +159,104 @@ export default function OpenSpaceClient() {
         );
       });
 
-      // Detect swaps (2 notes exchanging positions)
-      if (changedNotes.length === 2) {
-        const [noteA, noteB] = changedNotes;
-        const originalA = notes.find((n) => n.id === noteA.id);
-        const originalB = notes.find((n) => n.id === noteB.id);
+      // Store original positions for potential revert
+      const originalPositions = changedNotes.map((changedNote) => {
+        const original = notes.find((n) => n.id === changedNote.id);
+        return {
+          id: changedNote.id,
+          room: original?.room,
+          timeSlot: original?.timeSlot,
+        };
+      });
 
-        if (
-          originalA &&
-          originalB &&
-          originalA.room === noteB.room &&
-          originalA.timeSlot === noteB.timeSlot &&
-          originalB.room === noteA.room &&
-          originalB.timeSlot === noteA.timeSlot
-        ) {
-          await swapNotes(noteA.id, noteB.id);
-          return;
-        }
-      }
-
-      // Handle single moves
+      // Check for resource mismatches
+      const resourceIssues: string[] = [];
       for (const changedNote of changedNotes) {
-        const ids = findIdsForPosition(changedNote.room, changedNote.timeSlot);
-        if (ids) {
-          await updateNote(changedNote.id, {
-            roomId: ids.roomId,
-            scheduleId: ids.scheduleId,
-            room: changedNote.room,
-            timeSlot: changedNote.timeSlot,
-          });
+        const originalNote = notes.find((n) => n.id === changedNote.id);
+        if (!originalNote) continue;
+
+        const targetRoomData = roomsData.find((r) => r.name === changedNote.room);
+        if (!targetRoomData) continue;
+
+        const missingResources: string[] = [];
+        if (originalNote.needsTV && !targetRoomData.hasTV) {
+          missingResources.push("TV/Proyector");
+        }
+        if (originalNote.needsWhiteboard && !targetRoomData.hasWhiteboard) {
+          missingResources.push("Pizarra");
+        }
+
+        if (missingResources.length > 0) {
+          resourceIssues.push(
+            `"${originalNote.title}" requiere ${missingResources.join(" y ")} pero la sala "${changedNote.room}" no lo tiene`
+          );
         }
       }
+
+      // Define the actual backend move
+      const confirmAction = async () => {
+        // Detect swaps (2 notes exchanging positions)
+        if (changedNotes.length === 2) {
+          const [noteA, noteB] = changedNotes;
+          const originalA = originalPositions.find((p) => p.id === noteA.id);
+          const originalB = originalPositions.find((p) => p.id === noteB.id);
+
+          if (
+            originalA &&
+            originalB &&
+            originalA.room === noteB.room &&
+            originalA.timeSlot === noteB.timeSlot &&
+            originalB.room === noteA.room &&
+            originalB.timeSlot === noteA.timeSlot
+          ) {
+            await swapNotes(noteA.id, noteB.id);
+            return;
+          }
+        }
+
+        // Handle single moves
+        for (const changedNote of changedNotes) {
+          const ids = findIdsForPosition(changedNote.room, changedNote.timeSlot);
+          if (ids) {
+            await updateNote(changedNote.id, {
+              roomId: ids.roomId,
+              scheduleId: ids.scheduleId,
+              room: changedNote.room,
+              timeSlot: changedNote.timeSlot,
+              skipResourceValidation: true,
+            });
+          }
+        }
+      };
+
+      // Define revert action (reverts UI back to original positions)
+      const revertAction = () => {
+        const revertedNotes = notes.map((note) => {
+          const original = originalPositions.find((p) => p.id === note.id);
+          if (original && original.room && original.timeSlot) {
+            return { ...note, room: original.room, timeSlot: original.timeSlot };
+          }
+          return note;
+        });
+        // Trigger a re-render with reverted positions by invalidating queries
+        queryClient.setQueryData(orpc.tracks.list.queryKey(), revertedNotes);
+      };
+
+      // If there are resource issues, show confirmation modal AFTER optimistic move
+      if (resourceIssues.length > 0) {
+        setResourceWarningModal({
+          show: true,
+          message: `⚠️ ${resourceIssues.join("\n")}.\n\n¿Deseas continuar de todos modos?`,
+          confirmMove: confirmAction,
+          revertMove: revertAction,
+        });
+        return;
+      }
+
+      // No resource issues, proceed with backend update immediately
+      await confirmAction();
     },
-    [notes, updateNote, swapNotes, findIdsForPosition]
+    [notes, updateNote, swapNotes, findIdsForPosition, roomsData, queryClient, orpc]
   );
 
   const { dragState, handleCardMouseDown, handleRoomMouseDown, handleDirectClick } = useDragAndDrop({
@@ -704,7 +778,9 @@ export default function OpenSpaceClient() {
       const schedDay = String(scheduleDate.getDate()).padStart(2, "0");
       const scheduleDateLocal = `${schedYear}-${schedMonth}-${schedDay}`;
 
-      console.log(`  📅 Schedule ${i}: date=${scheduleDateLocal}, time=${schedule.startTime}-${schedule.endTime}, highlighted=${schedule.highlightInKiosk}`);
+      console.log(
+        `  📅 Schedule ${i}: date=${scheduleDateLocal}, time=${schedule.startTime}-${schedule.endTime}, highlighted=${schedule.highlightInKiosk}`
+      );
 
       // Check if schedule is today (using local dates)
       if (scheduleDateLocal === currentDateLocal) {
@@ -739,7 +815,9 @@ export default function OpenSpaceClient() {
       }
 
       const currentSchedule = schedulesData[currentIndex];
-      console.log(`⏰ Current schedule found: ${timeSlots[currentIndex]}, already highlighted: ${currentSchedule.highlightInKiosk}`);
+      console.log(
+        `⏰ Current schedule found: ${timeSlots[currentIndex]}, already highlighted: ${currentSchedule.highlightInKiosk}`
+      );
 
       // Only update if the current schedule is not already highlighted
       if (!currentSchedule.highlightInKiosk) {
@@ -802,7 +880,15 @@ export default function OpenSpaceClient() {
       console.log("⏰ Cleaning up auto-highlight interval");
       clearInterval(interval);
     };
-  }, [autoHighlightEnabled, findCurrentScheduleIndex, schedulesData, timeSlots, updateScheduleMutation, queryClient, broadcastScheduleChange]);
+  }, [
+    autoHighlightEnabled,
+    findCurrentScheduleIndex,
+    schedulesData,
+    timeSlots,
+    updateScheduleMutation,
+    queryClient,
+    broadcastScheduleChange,
+  ]);
 
   // Cast to screen functionality
   const handleCastToScreen = useCallback(
@@ -984,6 +1070,53 @@ export default function OpenSpaceClient() {
         isSaving={editingNote?.id ? isUpdating : isCreating}
         isDeleting={isDeleting}
       />
+
+      {/* Resource Warning Modal for Drag and Drop (Optimistic) */}
+      <Dialog
+        open={resourceWarningModal.show}
+        onOpenChange={(open) => {
+          if (!open && resourceWarningModal.revertMove) {
+            // If user closes modal without confirming, revert the move
+            resourceWarningModal.revertMove();
+          }
+          setResourceWarningModal({ show: false, message: "", confirmMove: null, revertMove: null });
+        }}
+      >
+        <DialogContent className="border-orange-600/50 bg-zinc-900">
+          <DialogHeader>
+            <DialogTitle className="text-orange-300">Advertencia de Recursos</DialogTitle>
+            <DialogDescription className="whitespace-pre-line text-zinc-300">
+              {resourceWarningModal.message}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex gap-3">
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (resourceWarningModal.confirmMove) {
+                  await resourceWarningModal.confirmMove();
+                }
+                setResourceWarningModal({ show: false, message: "", confirmMove: null, revertMove: null });
+              }}
+              className="flex-1 border-orange-600 bg-orange-500/20 text-orange-200 hover:bg-orange-500/30"
+            >
+              Sí, Continuar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (resourceWarningModal.revertMove) {
+                  resourceWarningModal.revertMove();
+                }
+                setResourceWarningModal({ show: false, message: "", confirmMove: null, revertMove: null });
+              }}
+              className="flex-1 text-zinc-400 hover:text-zinc-300"
+            >
+              No, Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

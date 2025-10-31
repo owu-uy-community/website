@@ -39,10 +39,6 @@ export async function processImage(input: ProcessImageInput): Promise<ProcessIma
               type: "text",
               text: `Analyze this handwritten sign for a talk/presentation.
 
-REQUISITOS SECTION INSTRUCTIONS:
-The sign has a "REQUISITOS" (requirements) section with THREE icons that can be circled:
-Only ONE icon should be marked with a black X. If you cannot clearly identify which icon is marked with a black X, or if the NO icon is marked with a black X, set both requirements to false.
-
 Extract the talk title, speaker name, and determine which requirements are needed based on which icon is circled.`,
             },
             {

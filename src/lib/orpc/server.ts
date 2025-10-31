@@ -35,21 +35,5 @@ export async function fetchOpenSpaceData(openSpaceId: string) {
   }
 }
 
-/**
- * Individual server-side fetchers for more granular control
- */
-export const serverOrpc = {
-  tracks: {
-    list: getAllTracks,
-    getByOpenSpace: getTracksByOpenSpace,
-  },
-  rooms: {
-    getByOpenSpace: getRoomsByOpenSpace,
-  },
-  schedules: {
-    getByOpenSpace: getSchedulesByOpenSpace,
-  },
-} as const;
-
 // Export types
 export type { StickyNote, Room, Schedule, TrackWithRelations };
