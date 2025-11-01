@@ -78,9 +78,10 @@ export const useMapKioskData = (options?: UseMapKioskDataOptions) => {
     },
     // Use server-side data as initial data for instant first render (ISR)
     initialData: options?.initialData,
-    // No refetchInterval - rely on Supabase realtime for updates
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
-    refetchOnWindowFocus: true, // Still refetch when user returns to tab
+    // No cache - always fresh
+    staleTime: 0, // No cache - always fresh
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
     retry: MAP_KIOSK_CONFIG.RETRY_COUNT,
   });
 

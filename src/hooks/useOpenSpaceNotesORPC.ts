@@ -38,8 +38,10 @@ export const useOpenSpaceNotesORPC = ({
     isError,
   } = useQuery(
     orpc.tracks.list.queryOptions({
-      staleTime: 30 * 1000, // Consider data fresh for 30 seconds
+      staleTime: 0, // No cache - always fresh
       gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+      refetchOnMount: true, // Always refetch when component mounts
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
       // Use server-side data as initial data for instant first render
       initialData: initialData,
     })
