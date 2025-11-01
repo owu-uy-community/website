@@ -60,10 +60,29 @@ export function useOBSWebSocket(config?: OBSConnectionConfig) {
           obsRef.current = new OBSWebSocket();
         }
 
-        await obsRef.current.connect(
-          `ws://${connectionConfig.address}:${connectionConfig.port}`,
-          connectionConfig.password
-        );
+        // Use ws:// for localhost and private IPs, wss:// for other addresses
+        const isPrivateIP = (address: string) => {
+          // Check for localhost
+          if (address === "localhost" || address === "127.0.0.1" || address === "::1") {
+            return true;
+          }
+          // Check for private IPv4 ranges (10.x.x.x, 172.16.x.x-172.31.x.x, 192.168.x.x)
+          const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+          const match = address.match(ipv4Regex);
+          if (match) {
+            const [, a, b] = match.map(Number);
+            return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+          }
+          return false;
+        };
+
+        const isLocal = isPrivateIP(connectionConfig.address);
+        const protocol = isLocal ? "ws" : "wss";
+        const url = isLocal
+          ? `${protocol}://${connectionConfig.address}:${connectionConfig.port}`
+          : `${protocol}://${connectionConfig.address}`;
+
+        await obsRef.current.connect(url, connectionConfig.password);
 
         setIsConnected(true);
         setIsConnecting(false);
