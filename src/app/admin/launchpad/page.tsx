@@ -62,6 +62,7 @@ import {
   Music4,
   Megaphone,
   Speaker,
+  Bath,
 } from "lucide-react";
 
 // ============================================================================
@@ -143,6 +144,8 @@ const SOUND_BUTTONS: SoundButton[] = [
   { id: "38", name: "Violin Screech", icon: Music4, audioFile: "/sounds/violin-screech.mp3" },
   { id: "39", name: "Error XP Remix", icon: AlertTriangle, audioFile: "/sounds/error-xp-remix.mp3" },
   { id: "40", name: "Gurice", icon: Megaphone, audioFile: "/sounds/uy-gurice.mp3" },
+  { id: "41", name: "Inodoro", icon: Bath, audioFile: "/sounds/inodoro.mp3" },
+  { id: "42", name: "Ascensor", icon: Bell, audioFile: "/sounds/ascensor.mp3" },
 ];
 
 const CHANNEL_NAME = "launchpad-sounds";
