@@ -5,6 +5,7 @@ import type { Schedule } from "../lib/orpc";
 import type { StickyNote } from "./useOpenSpaceNotesORPC";
 import { toast } from "../components/shared/ui/toast-utils";
 import { DEFAULT_OPENSPACE_ID } from "../components/Meetups/OpenSpace/utils/constants";
+import { revalidateOpenSpace } from "../lib/revalidation";
 
 interface UseScheduleManagementProps {
   schedulesData: Schedule[];
@@ -53,25 +54,31 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
           queryClient.setQueryData(context.queryKey, context.previousSchedules);
         }
       },
-      onSuccess: () => {
+      onSuccess: async () => {
         // Invalidate to ensure we're in sync with the server
         queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
+        // Trigger ISR revalidation for future visitors
+        revalidateOpenSpace().catch(console.error);
       },
     })
   );
 
   const createScheduleMutation = useMutation(
     orpc.schedules.create.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
+        // Trigger ISR revalidation for future visitors
+        revalidateOpenSpace().catch(console.error);
       },
     })
   );
 
   const deleteScheduleMutation = useMutation(
     orpc.schedules.delete.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
+        // Trigger ISR revalidation for future visitors
+        revalidateOpenSpace().catch(console.error);
       },
     })
   );

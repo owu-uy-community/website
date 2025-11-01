@@ -10,7 +10,7 @@ import { TimeGridKioskSkeleton } from "components/Meetups/OpenSpace/organisms/Ti
 import { SessionInfoCard } from "components/Meetups/OpenSpace/molecules/SessionInfoCard";
 import { CountdownSection } from "components/Meetups/OpenSpace/molecules/CountdownSection";
 import { NOTE_COLORS, MAP_KIOSK_CONFIG, DEFAULT_OPENSPACE_ID } from "components/Meetups/OpenSpace/utils/constants";
-import { useCountdownEndtime } from "hooks/useCountdownEndtime";
+import { useCountdownClient } from "hooks/useCountdownClient";
 import { useLocationCycling } from "hooks/useLocationCycling";
 import { useMapKioskData } from "hooks/useMapKioskData";
 import { useOpenSpaceNotesORPC } from "hooks/useOpenSpaceNotesORPC";
@@ -39,8 +39,10 @@ interface OpenSpaceClientProps {
 }
 
 export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClientProps) {
-  // Countdown endtime - lightweight endpoint that only fetches targetTime
-  const { remainingSeconds } = useCountdownEndtime({
+  // Countdown - pure client-side calculation (Vercel-compatible!)
+  // Clients calculate from targetTime independently
+  // Server only broadcasts when admin changes state (start/pause/reset)
+  const { remainingSeconds } = useCountdownClient({
     enableRealtime: true,
   });
 

@@ -3,8 +3,10 @@ import { DEFAULT_OPENSPACE_ID } from "components/Meetups/OpenSpace/utils/constan
 
 import OpenSpaceClient from "./OpenSpaceClient";
 
-// Force dynamic rendering to prevent caching issues with countdown
-export const dynamic = "force-dynamic";
+// Enable ISR with 30 second revalidation
+// Static page that's updated via on-demand revalidation when data changes
+// Countdown is always fetched client-side for real-time updates
+export const revalidate = 30;
 
 export default async function LaMeetup2025OpenSpacePage() {
   let initialOpenSpaceData;

@@ -8,10 +8,10 @@ export async function updateCountdownState(input: UpdateCountdownStateInput): Pr
   switch (input.action) {
     case "start":
       // Calculate targetTime from current remainingSeconds or use provided targetTime
-      const startTargetTime = input.targetTime 
-        ? input.targetTime 
+      const startTargetTime = input.targetTime
+        ? input.targetTime
         : new Date(Date.now() + currentState.remainingSeconds * 1000).toISOString();
-      
+
       newState = {
         ...currentState,
         isRunning: true,
@@ -26,7 +26,7 @@ export async function updateCountdownState(input: UpdateCountdownStateInput): Pr
       if (currentState.targetTime) {
         remainingOnPause = Math.max(0, Math.floor((new Date(currentState.targetTime).getTime() - Date.now()) / 1000));
       }
-      
+
       newState = {
         ...currentState,
         isRunning: false,
@@ -50,7 +50,7 @@ export async function updateCountdownState(input: UpdateCountdownStateInput): Pr
       if (!input.durationSeconds || input.durationSeconds <= 0) {
         throw new Error("durationSeconds must be positive");
       }
-      
+
       newState = {
         ...currentState,
         isRunning: false,
@@ -97,5 +97,39 @@ export async function updateCountdownState(input: UpdateCountdownStateInput): Pr
   }
 
   updateCachedState(newState);
+
+  // Broadcast state CHANGE (not every second - only when admin changes it)
+  // Clients calculate independently from targetTime
+  await broadcastStateChange(newState);
+
   return newState;
+}
+
+/**
+ * Broadcast state change to all clients
+ * Called ONLY when admin changes state (not every second!)
+ */
+async function broadcastStateChange(state: CountdownState) {
+  const { createClient } = await import("@supabase/supabase-js");
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  try {
+    const channel = supabase.channel("countdown-state");
+
+    await channel.send({
+      type: "broadcast",
+      event: "countdown_state_change", // Changed event name
+      payload: state,
+    });
+
+    console.log("📡 [Countdown] State change broadcasted:", {
+      isRunning: state.isRunning,
+      targetTime: state.targetTime,
+      remainingSeconds: state.remainingSeconds,
+    });
+  } catch (error) {
+    console.error("❌ [Countdown] Failed to broadcast state change:", error);
+  }
 }

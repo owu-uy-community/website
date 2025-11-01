@@ -1,9 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
 import type { CountdownState } from "../schemas";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 const COUNTDOWN_CHANNEL = "countdown-state";
 const DEFAULT_STATE: CountdownState = {
@@ -15,6 +10,8 @@ const DEFAULT_STATE: CountdownState = {
 };
 
 // In-memory cache for the countdown state
+// NOTE: Clients calculate remainingSeconds from targetTime independently
+// No server-side interval needed!
 let cachedState: CountdownState = DEFAULT_STATE;
 
 export async function getCountdownState(): Promise<CountdownState> {
