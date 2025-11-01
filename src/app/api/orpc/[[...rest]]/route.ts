@@ -1,8 +1,11 @@
 import { RPCHandler } from "@orpc/server/fetch";
+import { BatchHandlerPlugin } from "@orpc/server/plugins";
 import { router } from "../../../../lib/orpc/router";
 import { auth } from "../../../lib/auth";
 
-const handler = new RPCHandler(router);
+const handler = new RPCHandler(router, {
+  plugins: [new BatchHandlerPlugin()],
+});
 
 async function handleRequest(request: Request) {
   // Get session from better-auth

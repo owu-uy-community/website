@@ -127,24 +127,12 @@ async function persistCountdownState(state: CountdownState) {
 export async function getCountdownState(): Promise<CountdownState> {
   const persisted = await loadCountdownStateFromStore();
   const result = persisted ?? deriveCurrentState(DEFAULT_STATE);
-  console.log("🔍 [Countdown] getCountdownState returning:", {
-    isRunning: result.isRunning,
-    remainingSeconds: result.remainingSeconds,
-    totalSeconds: result.totalSeconds,
-    targetTime: result.targetTime,
-  });
   return result;
 }
 
 export async function saveCountdownState(state: CountdownState): Promise<CountdownState> {
   // When saving, we should persist the state as-is (not derive it)
   // Derivation only happens when loading from storage
-  console.log("💾 [Countdown] saveCountdownState saving:", {
-    isRunning: state.isRunning,
-    remainingSeconds: state.remainingSeconds,
-    totalSeconds: state.totalSeconds,
-    targetTime: state.targetTime,
-  });
   await persistCountdownState(state);
   return state;
 }

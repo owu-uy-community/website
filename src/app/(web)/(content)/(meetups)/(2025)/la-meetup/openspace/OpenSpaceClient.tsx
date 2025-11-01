@@ -1,5 +1,22 @@
 "use client";
 
+/**
+ * OpenSpace Client Component
+ *
+ * This is a fully client-side component that uses oRPC batching to efficiently
+ * fetch all required data in a single HTTP request on initial load.
+ *
+ * Batched requests on mount:
+ * 1. countdown.getState - Get countdown timer state
+ * 2. tracks.getByOpenSpace - Get highlighted tracks for map
+ * 3. tracks.list - Get all sticky notes
+ * 4. rooms.getByOpenSpace - Get room configuration
+ * 5. schedules.getByOpenSpace - Get schedule time slots
+ *
+ * All these requests are automatically batched by oRPC's BatchLinkPlugin,
+ * reducing network overhead and improving initial load performance.
+ */
+
 import { memo, useMemo } from "react";
 import Starfield from "react-starfield";
 
@@ -38,7 +55,7 @@ interface OpenSpaceClientProps {
   };
 }
 
-export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClientProps) {
+export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClientProps = {}) {
   // Countdown - pure client-side calculation (Vercel-compatible!)
   // Clients calculate from targetTime independently
   // Server only broadcasts when admin changes state (start/pause/reset)
@@ -47,6 +64,7 @@ export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClien
   });
 
   // Map data with highlighted tracks
+  // With oRPC batching, this request will be batched with others on initial load
   const {
     events,
     activeLocations,
@@ -69,6 +87,7 @@ export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClien
   });
 
   // OpenSpace notes with realtime sync
+  // With oRPC batching, this request will be batched with others on initial load
   const { notes, loading: notesLoading } = useOpenSpaceNotesORPC({
     openSpaceId: DEFAULT_OPENSPACE_ID,
     enableRealtime: true,
@@ -76,6 +95,7 @@ export default function OpenSpaceClient({ initialOpenSpaceData }: OpenSpaceClien
   });
 
   // Rooms and schedules setup
+  // With oRPC batching, these requests will be batched with others on initial load
   const {
     rooms,
     timeSlots,
