@@ -38,8 +38,11 @@ export function useAutoHighlight({
   // Mutation to update OpenSpace settings
   const updateOpenSpaceMutation = useMutation(
     orpc.openSpaces.update.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: ["openSpace", openSpaceId] });
+        // Trigger ISR revalidation for future visitors
+        const { revalidateOpenSpace } = await import("../lib/revalidation");
+        revalidateOpenSpace().catch(console.error);
       },
     })
   );
@@ -236,4 +239,3 @@ export function useAutoHighlight({
     updateOpenSpaceMutation,
   };
 }
-
