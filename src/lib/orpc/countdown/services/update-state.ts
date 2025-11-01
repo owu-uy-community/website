@@ -1,21 +1,39 @@
 import type { UpdateCountdownStateInput, CountdownState } from "../schemas";
-import { getCountdownState, updateCachedState } from "./get-state";
+import { getCountdownState, saveCountdownState } from "./get-state";
 
 export async function updateCountdownState(input: UpdateCountdownStateInput): Promise<CountdownState> {
   const currentState = await getCountdownState();
+  console.log("⚙️ [Countdown] updateCountdownState - action:", input.action, "currentState:", {
+    isRunning: currentState.isRunning,
+    remainingSeconds: currentState.remainingSeconds,
+    totalSeconds: currentState.totalSeconds,
+    targetTime: currentState.targetTime,
+  });
   let newState: CountdownState;
 
   switch (input.action) {
     case "start":
       // Calculate targetTime from current remainingSeconds or use provided targetTime
+      // If remainingSeconds is 0 but totalSeconds exists, use totalSeconds (for restarting expired countdown)
+      const secondsToUse =
+        currentState.remainingSeconds > 0
+          ? currentState.remainingSeconds
+          : currentState.totalSeconds > 0
+            ? currentState.totalSeconds
+            : 0;
+
+      console.log("▶️ [Countdown] Start - secondsToUse:", secondsToUse);
+
       const startTargetTime = input.targetTime
         ? input.targetTime
-        : new Date(Date.now() + currentState.remainingSeconds * 1000).toISOString();
+        : new Date(Date.now() + secondsToUse * 1000).toISOString();
 
       newState = {
         ...currentState,
         isRunning: true,
         targetTime: startTargetTime,
+        remainingSeconds: secondsToUse,
+        totalSeconds: currentState.totalSeconds || secondsToUse,
         lastUpdated: new Date().toISOString(),
       };
       break;
@@ -96,13 +114,13 @@ export async function updateCountdownState(input: UpdateCountdownStateInput): Pr
       throw new Error(`Unknown action: ${input.action}`);
   }
 
-  updateCachedState(newState);
+  const persistedState = await saveCountdownState(newState);
 
-  // Broadcast state CHANGE (not every second - only when admin changes it)
+  // Broadcast state CHANGE
   // Clients calculate independently from targetTime
-  await broadcastStateChange(newState);
+  await broadcastStateChange(persistedState);
 
-  return newState;
+  return persistedState;
 }
 
 /**

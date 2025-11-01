@@ -212,6 +212,19 @@ model OBSPreset {
   @@map("obs_presets")
 }
 
+// Countdown State - Global countdown timer state
+model CountdownState {
+  id              String   @id @default("global") // Single row for global state
+  targetTime      DateTime? // ISO timestamp for countdown target (null when not running)
+  remainingSeconds Int     @default(0) // Remaining seconds when paused
+  totalSeconds    Int      @default(0) // Total duration for restart
+  soundEnabled    Boolean  @default(false)
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@map("countdown_state")
+}
+
 model OBSPresetItem {
   id        String    @id @default(cuid())
   sceneName String    // For main app
