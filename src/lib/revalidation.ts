@@ -14,18 +14,19 @@ import { revalidatePath } from "next/cache";
  */
 export async function revalidateOpenSpace(): Promise<{ success: boolean; error?: string }> {
   try {
-    // Revalidate the OpenSpace page
-    revalidatePath("/la-meetup/openspace");
+    console.log("🔄 [Revalidation] Starting revalidation for OpenSpace pages...");
 
-    // Also revalidate the kiosk page if it exists
-    revalidatePath("/openspace/kiosk");
+    // Revalidate the OpenSpace page with 'page' type
+    revalidatePath("/la-meetup/openspace", "page");
+    console.log("✅ [Revalidation] /la-meetup/openspace revalidated");
 
-    console.log("OpenSpace pages revalidated successfully");
+    console.log("✅ [Revalidation] OpenSpace pages revalidated successfully");
 
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error("Error revalidating OpenSpace:", errorMessage);
+    console.error("❌ [Revalidation] Error revalidating OpenSpace:", errorMessage);
+    console.error("❌ [Revalidation] Full error:", error);
     return { success: false, error: errorMessage };
   }
 }

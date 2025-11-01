@@ -58,7 +58,13 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
         // Invalidate to ensure we're in sync with the server
         queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
         // Trigger ISR revalidation for future visitors
-        revalidateOpenSpace().catch(console.error);
+        console.log("🔄 [Schedules] Triggering revalidation after schedule update");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Schedules] Revalidation triggered successfully after schedule update");
+        } else {
+          console.error("❌ [Schedules] Revalidation failed after schedule update:", result.error);
+        }
       },
     })
   );
@@ -68,7 +74,13 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
       onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
         // Trigger ISR revalidation for future visitors
-        revalidateOpenSpace().catch(console.error);
+        console.log("🔄 [Schedules] Triggering revalidation after schedule creation");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Schedules] Revalidation triggered successfully after schedule creation");
+        } else {
+          console.error("❌ [Schedules] Revalidation failed after schedule creation:", result.error);
+        }
       },
     })
   );
@@ -78,7 +90,13 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
       onSuccess: async () => {
         queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
         // Trigger ISR revalidation for future visitors
-        revalidateOpenSpace().catch(console.error);
+        console.log("🔄 [Schedules] Triggering revalidation after schedule deletion");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Schedules] Revalidation triggered successfully after schedule deletion");
+        } else {
+          console.error("❌ [Schedules] Revalidation failed after schedule deletion:", result.error);
+        }
       },
     })
   );

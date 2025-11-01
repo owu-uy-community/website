@@ -113,8 +113,14 @@ export const useOpenSpaceNotesORPC = ({
         showSuccessToast("Sesión creada", `"${createdNote.title}" ha sido creada exitosamente.`);
         // Broadcast to other devices
         await broadcastCardCreate(createdNote);
-        // Trigger ISG revalidation for future visitors using Server Action
-        revalidateOpenSpace().catch(console.error);
+        // Trigger ISR revalidation for future visitors using Server Action
+        console.log("🔄 [Tracks] Triggering revalidation after note creation");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Tracks] Revalidation triggered successfully after note creation");
+        } else {
+          console.error("❌ [Tracks] Revalidation failed after note creation:", result.error);
+        }
       },
       onSettled: () => {
         // Always refetch after error or success using oRPC key management
@@ -148,8 +154,14 @@ export const useOpenSpaceNotesORPC = ({
         showSuccessToast("Sesión actualizada", `"${updatedNote.title}" ha sido actualizada exitosamente.`);
         // Broadcast to other devices
         await broadcastCardUpdate(updatedNote);
-        // Trigger ISG revalidation for future visitors using Server Action
-        revalidateOpenSpace().catch(console.error);
+        // Trigger ISR revalidation for future visitors using Server Action
+        console.log("🔄 [Tracks] Triggering revalidation after note update");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Tracks] Revalidation triggered successfully after note update");
+        } else {
+          console.error("❌ [Tracks] Revalidation failed after note update:", result.error);
+        }
       },
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
@@ -183,8 +195,14 @@ export const useOpenSpaceNotesORPC = ({
         showSuccessToast("Sesión eliminada", `"${deletedNote.title}" ha sido eliminada exitosamente.`);
         // Broadcast to other devices
         await broadcastCardDelete(deletedNote.id);
-        // Trigger ISG revalidation for future visitors using Server Action
-        revalidateOpenSpace().catch(console.error);
+        // Trigger ISR revalidation for future visitors using Server Action
+        console.log("🔄 [Tracks] Triggering revalidation after note deletion");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Tracks] Revalidation triggered successfully after note deletion");
+        } else {
+          console.error("❌ [Tracks] Revalidation failed after note deletion:", result.error);
+        }
       },
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
@@ -228,8 +246,14 @@ export const useOpenSpaceNotesORPC = ({
       onSuccess: async (swappedNotes, variables) => {
         // Broadcast to other devices - this is the most important one for multi-device sync!
         await broadcastCardSwap(variables.trackAId, variables.trackBId);
-        // Trigger ISG revalidation for future visitors using Server Action
-        revalidateOpenSpace().catch(console.error);
+        // Trigger ISR revalidation for future visitors using Server Action
+        console.log("🔄 [Tracks] Triggering revalidation after note swap");
+        const result = await revalidateOpenSpace();
+        if (result.success) {
+          console.log("✅ [Tracks] Revalidation triggered successfully after note swap");
+        } else {
+          console.error("❌ [Tracks] Revalidation failed after note swap:", result.error);
+        }
       },
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
