@@ -46,7 +46,12 @@ function Navbar() {
       <div className="container flex flex-row items-center justify-between">
         <div className="flex h-full min-w-[140px] items-center">
           <Link className="flex h-full flex-col justify-center" href={navSections[SectionKey.Hero].link}>
-            <h2 className="text-base font-semibold text-white hover:text-yellow-400">OWU URUGUAY</h2>
+            <h1 className="hidden">OWU URUGUAY</h1>
+            <img
+              alt="OWU Uruguay"
+              className="max-w-[90px] object-cover transition-all duration-300 hover:scale-105 lg:max-w-[110px]"
+              src="/images/logos/owu.webp"
+            />
           </Link>
         </div>
         <ul className="hidden w-full max-w-[700px] md:text-base lg:flex lg:justify-center lg:self-center lg:py-0 xl:flex">
