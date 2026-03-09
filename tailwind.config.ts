@@ -18,6 +18,9 @@ const config = {
         "2xl": "1280px",
       },
     },
+    fontFamily: {
+      pixel: ['"Press Start 2P"', "monospace"],
+    },
     extend: {
       colors: {
         border: "hsl(var(--border))",

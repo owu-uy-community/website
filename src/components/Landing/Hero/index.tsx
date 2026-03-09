@@ -9,9 +9,8 @@ import { FaChevronDown } from "react-icons/fa";
 
 import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
-import TicketHome from "components/Meetups/2024/TicketHome";
+import UnpluggedTicket from "components/Landing/UnpluggedTicket";
 import { addUtmParams } from "app/lib/utils";
-import { INTERNAL_ROUTES } from "app/lib/constants";
 
 function useCounter(initialValue: number, max: number, seconds: number) {
   const [counter, setCounter] = useState(initialValue);
@@ -75,10 +74,10 @@ function Hero({
   return (
     <div
       ref={sectionsRefs[SectionKey.Hero]}
-      className="relative mx-auto min-h-[calc(100dvh-56px)] pt-32"
+      className="relative mx-auto min-h-[calc(100dvh-56px)] pt-16 sm:pt-32 lg:pt-5 2xl:pt-24"
       id={SectionKey.Hero}
     >
-      <div className="flex h-full items-center justify-center bg-cover bg-center text-primary md:justify-around">
+      <div className="flex h-full items-start justify-center bg-cover bg-center text-primary sm:items-center md:justify-around">
         <div className="z-10 w-auto text-center">
           <div className="flex flex-col items-center">
             <div className="mb-12">
@@ -115,9 +114,9 @@ function Hero({
                 {slackButtonText}
               </button>
             </Link>
-            <Link className="mt-5 hidden lg:block" href={INTERNAL_ROUTES.meetups.current}>
-              <TicketHome />
-            </Link>
+            <div className="mt-5 flex w-full justify-center px-4 sm:px-0">
+              <UnpluggedTicket />
+            </div>
             <Link
               className="absolute bottom-2 flex flex-col items-center justify-center gap-2.5 self-center text-sm font-semibold text-white md:text-lg"
               href={ctaButtonUrl ?? "#"}
