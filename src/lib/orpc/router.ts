@@ -1,4 +1,5 @@
 import { os } from "@orpc/server";
+import { eventIterator } from "@orpc/server";
 
 // Import all feature modules
 import {
@@ -79,6 +80,8 @@ import { updateCountdownState } from "./countdown/services/update-state";
 import { getCountdownEndtime } from "./countdown/services/get-endtime";
 
 import { getDashboardStats } from "./dashboard";
+
+import { GenerateAvatarSchema, AvatarEventSchema, generateAvatar } from "./foto";
 
 import { withErrorHandling } from "./utilities";
 import { requireAdmin } from "./middleware";
@@ -237,6 +240,35 @@ export const getDashboardStatsHandler = adminOs.handler(
   withErrorHandling(async () => getDashboardStats(), "get dashboard statistics")
 );
 
+// Foto procedures (public - SSE streaming for real-time progress)
+export const generateAvatarHandler = os
+  .input(GenerateAvatarSchema)
+  .output(eventIterator(AvatarEventSchema))
+  .handler(async function* ({ input }) {
+    yield { status: "analyzing" as const, message: "Analizando rasgos faciales..." };
+
+    try {
+      yield { status: "generating" as const, message: "Generando personaje RPG..." };
+
+      const result = await generateAvatar(input);
+
+      yield { status: "finalizing" as const, message: "Aplicando estilo pixel art..." };
+
+      yield {
+        status: "complete" as const,
+        message: "Avatar generado!",
+        avatarBase64: result.avatarBase64,
+        mediaType: result.mediaType,
+      };
+    } catch (error) {
+      console.error("Avatar generation error:", error);
+      yield {
+        status: "error" as const,
+        message: error instanceof Error ? error.message : "Error al generar avatar",
+      };
+    }
+  });
+
 // Main router
 export const router = {
   // OpenSpace management
@@ -309,6 +341,11 @@ export const router = {
   // Dashboard Statistics
   dashboard: {
     getStats: getDashboardStatsHandler,
+  },
+
+  // Foto Avatar Generator
+  foto: {
+    generateAvatar: generateAvatarHandler,
   },
 };
 

@@ -44,9 +44,9 @@ const link = new RPCLink({
       mode: typeof window === "undefined" ? "buffered" : "streaming",
       groups: [
         {
-          // Batch all requests by default
-          condition: () => true,
-          context: {}, // Context for the batch request
+          // Batch all requests except SSE streaming endpoints
+          condition: ({ path }) => path?.[0] !== "foto",
+          context: {},
         },
       ],
     }),
