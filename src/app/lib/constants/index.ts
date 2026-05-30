@@ -75,6 +75,8 @@ export const EXTERNAL_SERVICES = {
       "https://docs.google.com/forms/d/e/1FAIpQLSemC7vrDw38LTWcBUhIYjarqMMVUfE-dSnBPUAsNzBWd6uqcQ/viewform?embedded=true",
     sponsors2025:
       "https://docs.google.com/forms/d/e/1FAIpQLSeZGSpB95IZH6Texu2CqjHNw27pJye1nzEtJn5Y90gJiD0orA/viewform?embedded=true",
+    sponsorsConf:
+      "https://docs.google.com/forms/d/e/1FAIpQLSfSxLS-ZerYnLh2pRrSC8wyQRoVw_WhcJk3R5IXaB76qxMWRg/viewform?embedded=true",
   },
   googleSheets: {
     openSpaceEpg:
