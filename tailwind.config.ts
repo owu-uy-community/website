@@ -7,7 +7,7 @@ const config = {
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
-    "*.{svg}",
+    "*.svg",
   ],
   prefix: "",
   theme: {
@@ -22,6 +22,7 @@ const config = {
       fontFamily: {
         pixel: ['"Press Start 2P"', "monospace"],
         display: ["Poppins", "sans-serif"],
+        title: ["Poppins", "sans-serif"],
         terminal: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       colors: {

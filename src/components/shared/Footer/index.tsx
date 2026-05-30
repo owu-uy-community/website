@@ -35,9 +35,9 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="w-full border-t border-zinc-500 px-4 sm:px-6 lg:px-8 xl:px-0">
-      <div className="flex flex-col justify-between py-8 text-center text-white lg:flex-row">
-        <ul className="flex flex-col gap-4 pb-8 text-sm font-[550] sm:text-base md:pb-3 lg:flex-row lg:pb-0 lg:text-left">
+    <footer className="w-full border-t border-white/10 px-4 sm:px-6 lg:px-8 xl:px-0">
+      <div className="flex flex-col items-center justify-between gap-6 py-10 text-center text-white lg:flex-row lg:gap-4">
+        <ul className="flex flex-col gap-4 text-sm font-[550] sm:text-base lg:flex-row lg:gap-6 lg:text-left">
           {LINKS.map(({ href, label, external }) => (
             <li key={href} className="hover:text-yellow-400">
               <Link
