@@ -1,6 +1,10 @@
 "use client";
+import { useInView } from "motion/react";
+import { useRef } from "react";
+
 import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
+import SectionHeading from "components/Landing/SectionHeading";
 
 import Stat from "../Stat";
 
@@ -14,27 +18,33 @@ type StatsProps = {
 
 export default function Stats({ stats }: StatsProps) {
   const { sectionsRefs } = useNavigationContext();
+  const statsGridRef = useRef<HTMLDivElement>(null);
+  const statsInView = useInView(statsGridRef, { once: true, amount: 0.3 });
 
   return (
     <section
       ref={sectionsRefs[SectionKey.Stats]}
-      className="flex w-full flex-col items-center justify-center gap-12 pt-20"
+      className="flex w-full flex-col items-center gap-12 pt-24 sm:pt-28 lg:pt-32"
       id={SectionKey.Stats}
     >
-      <span className="flex flex-col gap-1">
-        <h2 className="text-center text-4xl font-semibold text-white">Nuestra comunidad en cifras</h2>
-        <h3 className="text-center text-zinc-400">¡Creciendo juntos, nuestra comunidad en números!</h3>
-      </span>
-      <div className="grid w-full place-items-center gap-5 xl:grid-cols-[1fr_550px]">
+      <SectionHeading subtitle="¡Creciendo juntos, nuestra comunidad en números!" title="Nuestra comunidad en cifras" />
+      <div className="grid w-full place-items-center gap-10 xl:grid-cols-[1fr_550px] xl:gap-8">
         <img
           alt="Ilustración de un carpincho"
           className="w-full min-w-[280px] max-w-[600px] self-center object-contain"
           src="/icons/community.svg"
         />
         {stats ? (
-          <div className="grid grid-cols-2 place-items-center gap-16">
-            {stats.map(({ title, subtitle, count }) => (
-              <Stat key={`${title}-${subtitle}`} count={count} subtitle={subtitle} title={title} />
+          <div ref={statsGridRef} className="grid grid-cols-2 place-items-center gap-x-10 gap-y-12 sm:gap-x-16">
+            {stats.map(({ title, subtitle, count }, index) => (
+              <Stat
+                key={`${title}-${subtitle}`}
+                count={count}
+                index={index}
+                play={statsInView}
+                subtitle={subtitle}
+                title={title}
+              />
             ))}
           </div>
         ) : (
