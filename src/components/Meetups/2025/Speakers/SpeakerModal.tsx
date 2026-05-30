@@ -234,9 +234,8 @@ export default function SpeakerModal({
             <div>
               <h3 className="mb-2 text-xl font-bold text-yellow-400">{talkTitle}</h3>
               {talkDescription && (
-                <div className="prose prose-invert prose-sm max-w-none">
+                <div className="prose prose-invert prose-sm max-w-none text-sm leading-relaxed text-gray-300">
                   <ReactMarkdown
-                    className="text-sm leading-relaxed text-gray-300"
                     components={{
                       p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
                       strong: ({ children }) => <strong className="font-bold text-yellow-400">{children}</strong>,
