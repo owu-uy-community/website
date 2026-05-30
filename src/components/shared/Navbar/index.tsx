@@ -49,7 +49,7 @@ function Navbar() {
             <h1 className="hidden">OWU URUGUAY</h1>
             <img
               alt="OWU Uruguay"
-              className="max-w-[90px] object-cover transition-all duration-300 hover:scale-105 lg:max-w-[110px]"
+              className="max-h-[32px] w-auto object-contain transition-all duration-300 hover:scale-105"
               src="/images/logos/owu.webp"
             />
           </Link>
