@@ -38,7 +38,7 @@ export default function SponsorForm({ open, onClose }: { open: boolean; onClose:
         <div className="bg-white" style={{ filter: "invert(1)" }}>
           <div style={{ filter: "hue-rotate(189.73deg) saturate(18.61%)" }}>
             <iframe
-              className="block h-[calc(100svh-23rem)] max-h-[1532px] min-h-[360px] w-full"
+              className="block h-[calc(100dvh-23rem)] max-h-[1532px] min-h-[360px] w-full"
               src={url}
               title="Formulario para ser sponsor de OWU Conf"
             >

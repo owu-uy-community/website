@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 
 export default function ConfComingSoonPage() {
   return (
-    <main className="relative isolate flex min-h-[100svh] w-full flex-col items-center justify-center overflow-hidden bg-black px-6 py-24 text-center text-white">
+    <main className="relative isolate flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-black px-6 py-24 text-center text-white">
       <GeometryField />
 
       <div

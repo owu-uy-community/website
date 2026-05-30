@@ -312,7 +312,7 @@ export default function ShapeGame({ onClose }: { onClose: () => void }) {
         <span className="ml-2 font-terminal text-[0.65rem] tracking-tight text-white/35">owu@conf: ~/game</span>
       </div>
 
-      <div ref={wrapRef} className="relative h-[clamp(240px,40vh,360px)] w-full">
+      <div ref={wrapRef} className="relative h-[clamp(240px,40dvh,360px)] w-full">
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full touch-none" />
 
         {phase !== "playing" && (

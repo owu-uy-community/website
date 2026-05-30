@@ -86,7 +86,7 @@ export default function GeometryField() {
       </Accent>
 
       <Accent
-        wrap="-left-6 top-[30%] h-40 w-40 sm:h-52 sm:w-52"
+        wrap="-left-6 top-[30%] hidden h-40 w-40 sm:block sm:h-52 sm:w-52"
         depth={30}
         anim="animate-assemble [animation-delay:0.16s] motion-reduce:animate-none"
         drift="animate-drift motion-reduce:animate-none"
