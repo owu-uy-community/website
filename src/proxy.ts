@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const CONF_HOST = "conf.owu.uy";
+const CONF_URL = "https://conf.owu.uy";
+const MAIN_HOSTS = new Set(["owu.uy", "www.owu.uy"]);
 
 function getHost(request: NextRequest): string {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
@@ -9,13 +11,18 @@ function getHost(request: NextRequest): string {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = getHost(request);
 
-  if (getHost(request) === CONF_HOST) {
+  if (host === CONF_HOST) {
     const url = request.nextUrl.clone();
     url.pathname = "/conf";
     const response = NextResponse.rewrite(url);
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
     return response;
+  }
+
+  if (MAIN_HOSTS.has(host) && (pathname === "/conf" || pathname.startsWith("/conf/"))) {
+    return NextResponse.redirect(CONF_URL, 308);
   }
 
   if (pathname.startsWith("/admin")) {
