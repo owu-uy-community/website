@@ -3,6 +3,7 @@
 import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
 import Event from "components/Landing/Event";
+import SectionHeading from "components/Landing/SectionHeading";
 
 type Event = {
   id: number;
@@ -23,15 +24,12 @@ export default function Events({ events }: EventsProps) {
   return (
     <section
       ref={sectionsRefs[SectionKey.Events]}
-      className="relative flex min-h-[500px] w-full flex-col items-center gap-8 self-center pt-20 text-white"
+      className="relative flex min-h-[500px] w-full flex-col items-center gap-12 self-center pb-12 pt-24 text-white sm:pt-28 lg:pt-32"
       id={SectionKey.Events}
     >
-      <span className="flex flex-col gap-1">
-        <h2 className="text-center text-3xl font-bold sm:text-4xl">Eventos de la comunidad</h2>
-        <h3 className="text-center text-zinc-400">¡Listado de próximos eventos!</h3>
-      </span>
+      <SectionHeading subtitle="¡Listado de próximos eventos!" title="Eventos de la comunidad" />
       {!!events?.length ? (
-        <ol className="flex w-full flex-col items-center justify-center gap-4 pb-4">
+        <ol className="flex w-full flex-col items-center justify-center gap-3">
           {events.map(({ id, name, title, datetime, end_datetime, event_url }) => (
             <Event
               key={id}
@@ -53,9 +51,9 @@ export default function Events({ events }: EventsProps) {
           </span>
         </div>
       )}
-      <div className="position absolute bottom-1 z-[-1] hidden w-full max-w-[1200px] flex-row items-end justify-between self-center xl:flex">
-        <img alt="Ilustración de una mujer" className="max-h-[380px]" src="/icons/girl.svg" />
-        <img alt="Ilustración de un hombre" className="max-h-[380px]" src="/icons/man.svg" />
+      <div className="absolute inset-x-0 bottom-0 z-[-1] mx-auto hidden w-full max-w-[1200px] flex-row items-end justify-between xl:flex">
+        <img alt="Ilustración de una mujer" className="block max-h-[380px]" src="/icons/girl.svg" />
+        <img alt="Ilustración de un hombre" className="block max-h-[380px]" src="/icons/man.svg" />
       </div>
     </section>
   );
