@@ -1,4 +1,6 @@
-import { prisma } from "../../../prisma";
+import { eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { schedules, tracks } from "../../../db/schema";
 import type { SwapTracksInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -11,16 +13,10 @@ export const swapTracks = async ({ trackAId, trackBId }: SwapTracksInput): Promi
     throw new Error("Cannot swap a track with itself");
   }
 
-  // Fetch both tracks with their relations in a single query to avoid duplicate fetches
+  // Fetch both tracks with their relations in a single round-trip to avoid duplicate fetches
   const [trackA, trackB] = await Promise.all([
-    prisma.track.findUnique({
-      where: { id: trackAId },
-      include: { room: true, schedule: true },
-    }),
-    prisma.track.findUnique({
-      where: { id: trackBId },
-      include: { room: true, schedule: true },
-    }),
+    db.query.tracks.findFirst({ where: eq(tracks.id, trackAId), with: { room: true, schedule: true } }),
+    db.query.tracks.findFirst({ where: eq(tracks.id, trackBId), with: { room: true, schedule: true } }),
   ]);
 
   if (!trackA || !trackB) {
@@ -32,56 +28,43 @@ export const swapTracks = async ({ trackAId, trackBId }: SwapTracksInput): Promi
   const timestamp = new Date();
 
   // Perform the entire swap operation in a single transaction for atomicity
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // Create temporary schedule for atomic swap
-    const tempSchedule = await tx.schedule.create({
-      data: {
+    const [tempSchedule] = await tx
+      .insert(schedules)
+      .values({
         openSpaceId: trackA.openSpaceId,
         startTime: "99:99",
         endTime: "99:99",
         name: "TEMP_SWAP_SCHEDULE",
         date: timestamp,
-      },
-    });
+      })
+      .returning();
 
-    // Swap positions using 3-step process with temporary position
-    await Promise.all([
-      // Step 1: Move trackA to temporary position
-      tx.track.update({
-        where: { id: trackAId },
-        data: {
-          scheduleId: tempSchedule.id,
-          roomId: trackB.roomId,
-          updatedAt: timestamp,
-        },
-      }),
-    ]);
+    // Swap positions using a 3-step process with a temporary slot.
+    // Steps run sequentially so each target slot is free before a track
+    // moves into it (the unique (scheduleId, roomId) constraint requires it).
 
-    await Promise.all([
-      // Step 2: Move trackB to trackA's original position
-      tx.track.update({
-        where: { id: trackBId },
-        data: {
-          scheduleId: trackA.scheduleId,
-          roomId: trackA.roomId,
-          updatedAt: timestamp,
-        },
-      }),
-      // Step 3: Move trackA to trackB's original position
-      tx.track.update({
-        where: { id: trackAId },
-        data: {
-          scheduleId: trackB.scheduleId,
-          roomId: trackB.roomId,
-          updatedAt: timestamp,
-        },
-      }),
-    ]);
+    // Step 1: Move trackA to the temporary schedule (frees its original slot)
+    await tx
+      .update(tracks)
+      .set({ scheduleId: tempSchedule.id, roomId: trackB.roomId, updatedAt: timestamp })
+      .where(eq(tracks.id, trackAId));
+
+    // Step 2: Move trackB into trackA's original slot
+    await tx
+      .update(tracks)
+      .set({ scheduleId: trackA.scheduleId, roomId: trackA.roomId, updatedAt: timestamp })
+      .where(eq(tracks.id, trackBId));
+
+    // Step 3: Move trackA into trackB's original slot
+    await tx
+      .update(tracks)
+      .set({ scheduleId: trackB.scheduleId, roomId: trackB.roomId, updatedAt: timestamp })
+      .where(eq(tracks.id, trackAId));
 
     // Clean up temporary schedule within transaction
-    await tx.schedule.delete({
-      where: { id: tempSchedule.id },
-    });
+    await tx.delete(schedules).where(eq(schedules.id, tempSchedule.id));
 
     // Return updated tracks with their new positions
     return {

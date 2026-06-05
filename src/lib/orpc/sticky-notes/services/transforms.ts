@@ -1,10 +1,10 @@
 import type { Track, StickyNote } from "../schemas";
-import type { Track as PrismaTrack, Room, Schedule } from "../../../../generated/prisma";
+import type { RoomRow, ScheduleRow, TrackRow } from "../../../db/schema";
 
 /**
  * Transform database track to API format
  */
-export const transformTrack = (track: PrismaTrack): Track => ({
+export const transformTrack = (track: TrackRow): Track => ({
   ...track,
   speaker: track.speaker || undefined,
   description: track.description || undefined,
@@ -17,9 +17,9 @@ export const transformTrack = (track: PrismaTrack): Track => ({
  * Converts foreign keys to readable strings (room name and time slot) for display
  */
 export const transformTrackForStickyNote = (
-  track: PrismaTrack & {
-    room?: Room | null;
-    schedule?: Schedule | null;
+  track: TrackRow & {
+    room?: RoomRow | null;
+    schedule?: ScheduleRow | null;
   }
 ): StickyNote => ({
   id: track.id,

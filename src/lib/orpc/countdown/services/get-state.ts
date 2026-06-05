@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import type { CountdownState } from "../schemas";
-import { prisma } from "../../../prisma";
+import { db } from "../../../db";
+import { countdownState } from "../../../db/schema";
 
 const COUNTDOWN_CHANNEL = "countdown-state";
 const DEFAULT_STATE: CountdownState = {
@@ -79,9 +81,11 @@ function deriveCurrentState(input: StoredCountdownState | null | undefined): Cou
 
 async function loadCountdownStateFromStore(): Promise<CountdownState | null> {
   try {
-    const persisted = await prisma.countdownState.findUnique({
-      where: { id: COUNTDOWN_STATE_ID },
-    });
+    const [persisted] = await db
+      .select()
+      .from(countdownState)
+      .where(eq(countdownState.id, COUNTDOWN_STATE_ID))
+      .limit(1);
 
     if (persisted) {
       const derived = deriveCurrentState(persisted);
@@ -103,22 +107,24 @@ async function loadCountdownStateFromStore(): Promise<CountdownState | null> {
 
 async function persistCountdownState(state: CountdownState) {
   try {
-    await prisma.countdownState.upsert({
-      where: { id: COUNTDOWN_STATE_ID },
-      create: {
+    await db
+      .insert(countdownState)
+      .values({
         id: COUNTDOWN_STATE_ID,
         targetTime: state.targetTime ? new Date(state.targetTime) : null,
         remainingSeconds: state.remainingSeconds,
         totalSeconds: state.totalSeconds,
         soundEnabled: state.soundEnabled,
-      },
-      update: {
-        targetTime: state.targetTime ? new Date(state.targetTime) : null,
-        remainingSeconds: state.remainingSeconds,
-        totalSeconds: state.totalSeconds,
-        soundEnabled: state.soundEnabled,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: countdownState.id,
+        set: {
+          targetTime: state.targetTime ? new Date(state.targetTime) : null,
+          remainingSeconds: state.remainingSeconds,
+          totalSeconds: state.totalSeconds,
+          soundEnabled: state.soundEnabled,
+        },
+      });
   } catch (error) {
     console.error("❌ [Countdown] Unexpected error persisting countdown state:", error);
   }

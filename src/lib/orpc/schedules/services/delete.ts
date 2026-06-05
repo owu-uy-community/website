@@ -1,11 +1,12 @@
-import { prisma } from "../../../prisma";
+import { eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { schedules, type ScheduleRow } from "../../../db/schema";
 import type { DeleteScheduleInput, Schedule } from "../schemas";
-import type { Schedule as PrismaSchedule } from "../../../../generated/prisma";
 
 /**
  * Transform database schedule to API format
  */
-const transformSchedule = (schedule: PrismaSchedule): Schedule => ({
+const transformSchedule = (schedule: ScheduleRow): Schedule => ({
   ...schedule,
   date: schedule.date.toISOString(),
   createdAt: schedule.createdAt.toISOString(),
@@ -16,17 +17,11 @@ const transformSchedule = (schedule: PrismaSchedule): Schedule => ({
  * Delete a schedule by ID
  */
 export const deleteSchedule = async ({ id }: DeleteScheduleInput): Promise<Schedule> => {
-  const schedule = await prisma.schedule.findUnique({
-    where: { id },
-  });
+  const [schedule] = await db.delete(schedules).where(eq(schedules.id, id)).returning();
 
   if (!schedule) {
     throw new Error("Schedule not found");
   }
-
-  await prisma.schedule.delete({
-    where: { id },
-  });
 
   return transformSchedule(schedule);
 };

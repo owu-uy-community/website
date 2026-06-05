@@ -1,11 +1,12 @@
-import { prisma } from "../../../prisma";
-import type { UpdateScheduleInput, Schedule, UpdateScheduleInputType } from "../schemas";
-import type { Schedule as PrismaSchedule, Prisma } from "../../../../generated/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { schedules, type ScheduleRow } from "../../../db/schema";
+import type { Schedule, UpdateScheduleInputType } from "../schemas";
 
 /**
  * Transform database schedule to API format
  */
-const transformSchedule = (schedule: PrismaSchedule): Schedule => ({
+const transformSchedule = (schedule: ScheduleRow): Schedule => ({
   ...schedule,
   date: schedule.date.toISOString(),
   createdAt: schedule.createdAt.toISOString(),
@@ -17,9 +18,7 @@ const transformSchedule = (schedule: PrismaSchedule): Schedule => ({
  */
 export const updateSchedule = async ({ id, data }: UpdateScheduleInputType): Promise<Schedule> => {
   // Check if schedule exists
-  const currentSchedule = await prisma.schedule.findUnique({
-    where: { id },
-  });
+  const [currentSchedule] = await db.select().from(schedules).where(eq(schedules.id, id)).limit(1);
 
   if (!currentSchedule) {
     throw new Error("Schedule not found");
@@ -29,7 +28,7 @@ export const updateSchedule = async ({ id, data }: UpdateScheduleInputType): Pro
   const timestamp = new Date();
 
   // Build update data object, only including provided fields
-  const updateData: Prisma.ScheduleUpdateInput = {
+  const updateData: Partial<typeof schedules.$inferInsert> = {
     updatedAt: timestamp,
   };
 
@@ -40,10 +39,7 @@ export const updateSchedule = async ({ id, data }: UpdateScheduleInputType): Pro
   if (data.isActive !== undefined) updateData.isActive = data.isActive;
   if (data.highlightInKiosk !== undefined) updateData.highlightInKiosk = data.highlightInKiosk;
 
-  const schedule = await prisma.schedule.update({
-    where: { id },
-    data: updateData,
-  });
+  const [schedule] = await db.update(schedules).set(updateData).where(eq(schedules.id, id)).returning();
 
   return transformSchedule(schedule);
 };

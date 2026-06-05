@@ -1,4 +1,6 @@
-import { prisma } from "../../../prisma";
+import { eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { openSpaces, rooms, tracks } from "../../../db/schema";
 import { getSummary } from "../../eventbrite/services/get-summary";
 import type { DashboardStats } from "../schemas";
 
@@ -10,31 +12,21 @@ const DEFAULT_OPENSPACE_ID = "default-openspace";
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   try {
     // Fetch all data in parallel for better performance
-    const [tracks, rooms, openSpace, eventbriteSummary] = await Promise.all([
+    const [trackRows, roomRows, openSpaceRows, eventbriteSummary] = await Promise.all([
       // Get all tracks/sessions
-      prisma.track.findMany({
-        where: {
-          openSpaceId: DEFAULT_OPENSPACE_ID,
-        },
-      }),
+      db.select().from(tracks).where(eq(tracks.openSpaceId, DEFAULT_OPENSPACE_ID)),
 
       // Get all rooms for the OpenSpace
-      prisma.room.findMany({
-        where: {
-          openSpaceId: DEFAULT_OPENSPACE_ID,
-        },
-      }),
+      db.select().from(rooms).where(eq(rooms.openSpaceId, DEFAULT_OPENSPACE_ID)),
 
       // Get OpenSpace details
-      prisma.openSpace.findUnique({
-        where: {
-          id: DEFAULT_OPENSPACE_ID,
-        },
-      }),
+      db.select().from(openSpaces).where(eq(openSpaces.id, DEFAULT_OPENSPACE_ID)).limit(1),
 
       // Get Eventbrite summary (with error handling)
       getSummary().catch(() => null),
     ]);
+
+    const openSpace = openSpaceRows[0];
 
     // Determine OpenSpace status
     let openSpaceStatus: "active" | "inactive" | "upcoming" = "inactive";
@@ -53,8 +45,8 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
     }
 
     return {
-      totalSessions: tracks.length,
-      activeRooms: rooms.length,
+      totalSessions: trackRows.length,
+      activeRooms: roomRows.length,
       totalParticipants: eventbriteSummary?.summary.total_attendees ?? 0,
       checkedInParticipants: eventbriteSummary?.summary.checked_in ?? 0,
       openSpaceStatus,

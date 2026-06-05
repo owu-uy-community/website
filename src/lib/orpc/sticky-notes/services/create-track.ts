@@ -1,4 +1,6 @@
-import { prisma } from "../../../prisma";
+import { and, eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { openSpaces, rooms, schedules, tracks } from "../../../db/schema";
 import type { CreateTrackInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -9,9 +11,9 @@ import { transformTrackForStickyNote } from "./transforms";
 export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> => {
   // Verify the OpenSpace, Schedule, and Room exist
   const [openSpace, schedule, room] = await Promise.all([
-    prisma.openSpace.findUnique({ where: { id: input.openSpaceId } }),
-    prisma.schedule.findUnique({ where: { id: input.scheduleId } }),
-    prisma.room.findUnique({ where: { id: input.roomId } }),
+    db.query.openSpaces.findFirst({ where: eq(openSpaces.id, input.openSpaceId) }),
+    db.query.schedules.findFirst({ where: eq(schedules.id, input.scheduleId) }),
+    db.query.rooms.findFirst({ where: eq(rooms.id, input.roomId) }),
   ]);
 
   if (!openSpace) {
@@ -35,34 +37,30 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
   }
 
   // Check for slot conflicts (one track per room per schedule)
-  const existingTrack = await prisma.track.findFirst({
-    where: {
-      scheduleId: input.scheduleId,
-      roomId: input.roomId,
-    },
-  });
+  const [existingTrack] = await db
+    .select()
+    .from(tracks)
+    .where(and(eq(tracks.scheduleId, input.scheduleId), eq(tracks.roomId, input.roomId)))
+    .limit(1);
 
   if (existingTrack) {
     throw new Error(`Slot is already occupied by "${existingTrack.title}"`);
   }
 
-  const track = await prisma.track.create({
-    data: {
+  const [track] = await db
+    .insert(tracks)
+    .values({
       title: input.title,
       speaker: input.speaker || null,
       description: input.description || null,
       needsTV: input.needsTV || false,
       needsWhiteboard: input.needsWhiteboard || false,
-
       openSpaceId: input.openSpaceId,
       scheduleId: input.scheduleId,
       roomId: input.roomId,
-    },
-    include: {
-      room: true,
-      schedule: true,
-    },
-  });
+    })
+    .returning();
 
-  return transformTrackForStickyNote(track);
+  // Reuse the already-fetched room and schedule for the readable transform
+  return transformTrackForStickyNote({ ...track, room, schedule });
 };

@@ -1,5 +1,6 @@
-import { prisma } from "../../../prisma";
-import { Prisma } from "../../../../generated/prisma";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { db } from "../../../db";
+import { obsInstances, obsPresetItems, obsPresets, obsQueueItems } from "../../../db/schema";
 import type { OBSQueueState, UpdateStateInput } from "../schemas";
 
 /**
@@ -7,68 +8,60 @@ import type { OBSQueueState, UpdateStateInput } from "../schemas";
  * Uses transactions to ensure data consistency
  */
 export const updateState = async ({ instanceId, data }: UpdateStateInput): Promise<OBSQueueState> => {
-  return await prisma.$transaction(async (tx) => {
+  return await db.transaction(async (tx) => {
     // Get current instance or create if doesn't exist
-    let instance = await tx.oBSInstance.findUnique({
-      where: { id: instanceId },
-    });
+    const [existing] = await tx.select().from(obsInstances).where(eq(obsInstances.id, instanceId)).limit(1);
 
-    if (!instance) {
-      instance = await tx.oBSInstance.create({
-        data: {
-          id: instanceId,
-          isPlaying: false,
-          currentItemIndex: 0,
-          directMode: false,
-          version: 1,
-        },
+    if (!existing) {
+      await tx.insert(obsInstances).values({
+        id: instanceId,
+        isPlaying: false,
+        currentItemIndex: 0,
+        directMode: false,
+        version: 1,
       });
     }
 
     // Prepare update data
-    const updateData: Prisma.OBSInstanceUpdateInput = {
-      version: { increment: 1 },
-    };
+    const updateData: Partial<typeof obsInstances.$inferInsert> = {};
 
     if (data.isPlaying !== undefined) updateData.isPlaying = data.isPlaying;
     if (data.currentItemIndex !== undefined) updateData.currentItemIndex = data.currentItemIndex;
     if (data.directMode !== undefined) updateData.directMode = data.directMode;
     if (data.currentPreset !== undefined) updateData.currentPresetId = data.currentPreset || null;
 
-    // Update main instance
-    await tx.oBSInstance.update({
-      where: { id: instanceId },
-      data: updateData,
-    });
+    // Update main instance (always bump version for conflict resolution)
+    await tx
+      .update(obsInstances)
+      .set({ ...updateData, version: sql`${obsInstances.version} + 1` })
+      .where(eq(obsInstances.id, instanceId));
 
     // Update queue items if provided
     if (data.queueItems !== undefined) {
       // Delete all existing queue items
-      await tx.oBSQueueItem.deleteMany({
-        where: { instanceId },
-      });
+      await tx.delete(obsQueueItems).where(eq(obsQueueItems.instanceId, instanceId));
 
       // Create new queue items
       if (data.queueItems.length > 0) {
-        await tx.oBSQueueItem.createMany({
-          data: data.queueItems.map((item) => ({
+        await tx.insert(obsQueueItems).values(
+          data.queueItems.map((item) => ({
             id: item.id,
             sceneName: item.sceneName,
             sceneId: null,
             delay: item.delay,
             position: item.position,
             instanceId,
-          })),
-        });
+          }))
+        );
       }
     }
 
     // Update presets if provided
     if (data.presets !== undefined) {
-      const existingPresets = await tx.oBSPreset.findMany({
-        where: { instanceId },
-        select: { id: true },
-      });
+      const existingPresets = await tx
+        .select({ id: obsPresets.id })
+        .from(obsPresets)
+        .where(eq(obsPresets.instanceId, instanceId));
 
       const existingPresetIds = new Set(existingPresets.map((p) => p.id));
       const newPresetIds = new Set(data.presets.map((p) => p.id));
@@ -77,76 +70,64 @@ export const updateState = async ({ instanceId, data }: UpdateStateInput): Promi
       const presetsToDelete = existingPresets.filter((p) => !newPresetIds.has(p.id)).map((p) => p.id);
 
       if (presetsToDelete.length > 0) {
-        await tx.oBSPreset.deleteMany({
-          where: {
-            id: { in: presetsToDelete },
-            instanceId,
-          },
-        });
+        await tx
+          .delete(obsPresets)
+          .where(and(inArray(obsPresets.id, presetsToDelete), eq(obsPresets.instanceId, instanceId)));
       }
 
       // Create or update presets
       for (const preset of data.presets) {
         if (!existingPresetIds.has(preset.id)) {
           // Create new preset
-          await tx.oBSPreset.create({
-            data: {
-              id: preset.id,
-              name: preset.name,
-              instanceId,
-              items: {
-                createMany: {
-                  data: preset.items.map((item) => ({
-                    id: item.id,
-                    sceneName: item.sceneName,
-                    sceneId: null,
-                    delay: item.delay,
-                    position: item.position,
-                  })),
-                },
-              },
-            },
-          });
-        } else {
-          // Update existing preset
-          await tx.oBSPreset.update({
-            where: { id: preset.id },
-            data: { name: preset.name },
-          });
-
-          // Recreate preset items
-          await tx.oBSPresetItem.deleteMany({
-            where: { presetId: preset.id },
+          await tx.insert(obsPresets).values({
+            id: preset.id,
+            name: preset.name,
+            instanceId,
           });
 
           if (preset.items.length > 0) {
-            await tx.oBSPresetItem.createMany({
-              data: preset.items.map((item) => ({
+            await tx.insert(obsPresetItems).values(
+              preset.items.map((item) => ({
                 id: item.id,
                 sceneName: item.sceneName,
                 sceneId: null,
                 delay: item.delay,
                 position: item.position,
                 presetId: preset.id,
-              })),
-            });
+              }))
+            );
+          }
+        } else {
+          // Update existing preset
+          await tx.update(obsPresets).set({ name: preset.name }).where(eq(obsPresets.id, preset.id));
+
+          // Recreate preset items
+          await tx.delete(obsPresetItems).where(eq(obsPresetItems.presetId, preset.id));
+
+          if (preset.items.length > 0) {
+            await tx.insert(obsPresetItems).values(
+              preset.items.map((item) => ({
+                id: item.id,
+                sceneName: item.sceneName,
+                sceneId: null,
+                delay: item.delay,
+                position: item.position,
+                presetId: preset.id,
+              }))
+            );
           }
         }
       }
     }
 
     // Fetch and return complete updated state
-    const finalInstance = await tx.oBSInstance.findUnique({
-      where: { id: instanceId },
-      include: {
-        queueItems: {
-          orderBy: { position: "asc" },
-        },
+    const finalInstance = await tx.query.obsInstances.findFirst({
+      where: eq(obsInstances.id, instanceId),
+      with: {
+        queueItems: { orderBy: (queueItems, { asc }) => [asc(queueItems.position)] },
         presets: {
-          include: {
-            items: {
-              orderBy: { position: "asc" },
-            },
+          with: {
+            items: { orderBy: (items, { asc }) => [asc(items.position)] },
           },
         },
       },
