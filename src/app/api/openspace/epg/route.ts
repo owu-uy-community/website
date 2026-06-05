@@ -1,5 +1,7 @@
+import { asc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { prisma } from "lib/prisma";
+import { db } from "lib/db";
+import { rooms, schedules, tracks } from "lib/db/schema";
 
 /**
  * GET /api/openspace/epg
@@ -11,22 +13,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const highlightedOnly = searchParams.get("highlighted") === "true";
 
-    // Fetch tracks with their relations, filtering by schedule highlight if needed
-    const tracks = await prisma.track.findMany({
-      where: highlightedOnly ? { schedule: { highlightInKiosk: true } } : {},
-      include: {
-        room: true,
-        schedule: true,
-      },
-      orderBy: [{ schedule: { date: "asc" } }, { schedule: { startTime: "asc" } }],
-    });
+    // Fetch tracks joined with their schedule and room. Filtering/ordering by
+    // schedule columns requires an explicit join (relational queries cannot do it).
+    const rows = await db
+      .select()
+      .from(tracks)
+      .innerJoin(rooms, eq(tracks.roomId, rooms.id))
+      .innerJoin(schedules, eq(tracks.scheduleId, schedules.id))
+      .where(highlightedOnly ? eq(schedules.highlightInKiosk, true) : undefined)
+      .orderBy(asc(schedules.date), asc(schedules.startTime));
 
     // Transform to EPG format
-    const events = tracks.map((track) => {
+    const events = rows.map(({ tracks: track, rooms: room, schedules: schedule }) => {
       // Parse schedule date and times
-      const scheduleDate = track.schedule.date.toISOString().split("T")[0];
-      const startDateTime = `${scheduleDate}T${track.schedule.startTime}`;
-      const endDateTime = `${scheduleDate}T${track.schedule.endTime}`;
+      const scheduleDate = schedule.date.toISOString().split("T")[0];
+      const startDateTime = `${scheduleDate}T${schedule.startTime}`;
+      const endDateTime = `${scheduleDate}T${schedule.endTime}`;
 
       // Normalize room names to match the expected format in MapKioskClient
       const normalizeRoomName = (name: string): string => {
@@ -45,12 +47,12 @@ export async function GET(request: Request) {
       return {
         since: startDateTime,
         till: endDateTime,
-        location: normalizeRoomName(track.room.name),
+        location: normalizeRoomName(room.name),
         title: track.title,
         channelUuid: track.roomId,
         speaker: track.speaker || "",
         scheduleId: track.scheduleId,
-        highlightInKiosk: track.schedule.highlightInKiosk,
+        highlightInKiosk: schedule.highlightInKiosk,
       };
     });
 

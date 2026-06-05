@@ -1,59 +1,42 @@
-import { prisma } from "../../../prisma";
+import { eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { obsInstances } from "../../../db/schema";
 import type { OBSQueueState, GetInstanceInput } from "../schemas";
-
-const DEFAULT_STATE: Omit<OBSQueueState, "version"> = {
-  queueItems: [],
-  isPlaying: false,
-  currentItemIndex: 0,
-  directMode: false,
-  presets: [],
-  currentPreset: "",
-};
 
 /**
  * Get OBS queue state for a specific instance
  * Creates default instance if it doesn't exist
  */
 export const getState = async ({ instanceId }: GetInstanceInput): Promise<OBSQueueState> => {
-  let instance = await prisma.oBSInstance.findUnique({
-    where: { id: instanceId },
-    include: {
-      queueItems: {
-        orderBy: { position: "asc" },
-      },
-      presets: {
-        include: {
-          items: {
-            orderBy: { position: "asc" },
-          },
-        },
-      },
-    },
-  });
-
-  // Create default instance if it doesn't exist
-  if (!instance) {
-    instance = await prisma.oBSInstance.create({
-      data: {
-        id: instanceId,
-        isPlaying: false,
-        currentItemIndex: 0,
-        directMode: false,
-        version: 1,
-      },
-      include: {
-        queueItems: {
-          orderBy: { position: "asc" },
-        },
+  const fetchInstance = () =>
+    db.query.obsInstances.findFirst({
+      where: eq(obsInstances.id, instanceId),
+      with: {
+        queueItems: { orderBy: (queueItems, { asc }) => [asc(queueItems.position)] },
         presets: {
-          include: {
-            items: {
-              orderBy: { position: "asc" },
-            },
+          with: {
+            items: { orderBy: (items, { asc }) => [asc(items.position)] },
           },
         },
       },
     });
+
+  let instance = await fetchInstance();
+
+  // Create default instance if it doesn't exist
+  if (!instance) {
+    await db.insert(obsInstances).values({
+      id: instanceId,
+      isPlaying: false,
+      currentItemIndex: 0,
+      directMode: false,
+      version: 1,
+    });
+    instance = await fetchInstance();
+  }
+
+  if (!instance) {
+    throw new Error("Failed to load OBS instance");
   }
 
   // Transform database records to client format

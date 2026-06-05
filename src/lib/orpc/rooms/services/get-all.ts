@@ -1,26 +1,24 @@
-import { prisma } from '../../../prisma'
-import type { Room } from '../schemas'
-import type { Room as PrismaRoom } from '../../../../generated/prisma'
+import { asc } from "drizzle-orm";
+import { db } from "../../../db";
+import { rooms, type RoomRow } from "../../../db/schema";
+import type { Room } from "../schemas";
 
 /**
  * Transform database room to API format
  */
-const transformRoom = (room: PrismaRoom): Room => ({
+const transformRoom = (room: RoomRow): Room => ({
   ...room,
   description: room.description || undefined,
   capacity: room.capacity || undefined,
   createdAt: room.createdAt.toISOString(),
   updatedAt: room.updatedAt.toISOString(),
-})
+});
 
 /**
  * Get all rooms ordered by name
  */
 export const getAllRooms = async (): Promise<Room[]> => {
-  const rooms = await prisma.room.findMany({
-    orderBy: { name: 'asc' }
-  })
-  
-  return rooms.map(transformRoom)
-}
+  const rows = await db.select().from(rooms).orderBy(asc(rooms.name));
 
+  return rows.map(transformRoom);
+};

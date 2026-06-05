@@ -1,11 +1,12 @@
-import { prisma } from "../../../prisma";
+import { asc, eq } from "drizzle-orm";
+import { db } from "../../../db";
+import { schedules, type ScheduleRow } from "../../../db/schema";
 import type { GetSchedulesByOpenSpaceInput, Schedule } from "../schemas";
-import type { Schedule as PrismaSchedule } from "../../../../generated/prisma";
 
 /**
  * Transform database schedule to API format
  */
-const transformSchedule = (schedule: PrismaSchedule): Schedule => ({
+const transformSchedule = (schedule: ScheduleRow): Schedule => ({
   ...schedule,
   date: schedule.date.toISOString(),
   createdAt: schedule.createdAt.toISOString(),
@@ -16,10 +17,11 @@ const transformSchedule = (schedule: PrismaSchedule): Schedule => ({
  * Get schedules by OpenSpace ID
  */
 export const getSchedulesByOpenSpace = async ({ openSpaceId }: GetSchedulesByOpenSpaceInput): Promise<Schedule[]> => {
-  const schedules = await prisma.schedule.findMany({
-    where: { openSpaceId },
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
-  });
+  const rows = await db
+    .select()
+    .from(schedules)
+    .where(eq(schedules.openSpaceId, openSpaceId))
+    .orderBy(asc(schedules.date), asc(schedules.startTime));
 
-  return schedules.map(transformSchedule);
+  return rows.map(transformSchedule);
 };

@@ -1,7 +1,8 @@
-import { Pool } from "pg";
 import { attachDatabasePool } from "@vercel/functions";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "../generated/prisma";
+import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as relations from "./relations";
+import * as schema from "./schema";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -9,15 +10,16 @@ if (!connectionString) {
   throw new Error("POSTGRES_URL or DATABASE_URL environment variable must be set");
 }
 
-// Create a global pool instance
-const globalForPrisma = globalThis as unknown as {
+const fullSchema = { ...schema, ...relations };
+
+// Reuse the pool and client in development to prevent too many connections
+const globalForDb = globalThis as unknown as {
   pool: Pool | undefined;
-  prisma: PrismaClient | undefined;
+  db: NodePgDatabase<typeof fullSchema> | undefined;
 };
 
-// Reuse pool in development to prevent too many connections
 const pool =
-  globalForPrisma.pool ??
+  globalForDb.pool ??
   new Pool({
     connectionString,
     // Best practices for Vercel Functions with Fluid Compute
@@ -28,21 +30,14 @@ const pool =
   });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.pool = pool;
+  globalForDb.pool = pool;
 }
 
 // Attach the pool to Vercel Fluid for proper lifecycle management
 attachDatabasePool(pool);
 
-// Create Prisma Client with the pg adapter
-const adapter = new PrismaPg(pool);
-
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    adapter,
-  });
+export const db = globalForDb.db ?? drizzle({ client: pool, schema: fullSchema });
 
 if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  globalForDb.db = db;
 }

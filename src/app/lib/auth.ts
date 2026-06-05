@@ -1,7 +1,9 @@
 import { betterAuth } from "better-auth";
-import { prismaAdapter } from "better-auth/adapters/prisma";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { prisma as db } from "../../lib/prisma";
+import { eq } from "drizzle-orm";
+import { db } from "../../lib/db";
+import * as schema from "../../lib/db/schema";
 import {
   ALLOWED_EMAILS,
   BASE_URL,
@@ -14,8 +16,14 @@ import {
 import { oAuthProxy } from "better-auth/plugins";
 
 export const auth = betterAuth({
-  database: prismaAdapter(db, {
-    provider: "postgresql",
+  database: drizzleAdapter(db, {
+    provider: "pg",
+    schema: {
+      user: schema.user,
+      session: schema.session,
+      account: schema.account,
+      verification: schema.verification,
+    },
   }),
   session: {
     cookieCache: {
@@ -53,7 +61,7 @@ export const auth = betterAuth({
         // Best-effort cleanup to avoid persisting unauthorized users
         try {
           if (user.id) {
-            await db.user.delete({ where: { id: user.id } });
+            await db.delete(schema.user).where(eq(schema.user.id, user.id));
           }
         } catch (err) {
           console.error("Failed to delete unauthorized user:", err);

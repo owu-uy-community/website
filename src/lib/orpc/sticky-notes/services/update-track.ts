@@ -1,4 +1,6 @@
-import { prisma } from "../../../prisma";
+import { and, eq, ne } from "drizzle-orm";
+import { db } from "../../../db";
+import { rooms, schedules, tracks } from "../../../db/schema";
 import type { UpdateTrackInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -8,9 +10,7 @@ import { transformTrackForStickyNote } from "./transforms";
  */
 export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackInput }): Promise<StickyNote> => {
   // Check if track exists
-  const currentTrack = await prisma.track.findUnique({
-    where: { id },
-  });
+  const [currentTrack] = await db.select().from(tracks).where(eq(tracks.id, id)).limit(1);
 
   if (!currentTrack) {
     console.error("❌ Track not found:", id);
@@ -29,8 +29,8 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
     const roomId = data.roomId ?? currentTrack.roomId;
 
     const [schedule, room] = await Promise.all([
-      prisma.schedule.findUnique({ where: { id: scheduleId } }),
-      prisma.room.findUnique({ where: { id: roomId } }),
+      db.query.schedules.findFirst({ where: eq(schedules.id, scheduleId) }),
+      db.query.rooms.findFirst({ where: eq(rooms.id, roomId) }),
     ]);
 
     if (!schedule) {
@@ -54,20 +54,18 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
     }
 
     // Check for slot conflicts if schedule/room changed
-    const existingTrack = await prisma.track.findFirst({
-      where: {
-        scheduleId,
-        roomId,
-        id: { not: id },
-      },
-    });
+    const [existingTrack] = await db
+      .select()
+      .from(tracks)
+      .where(and(eq(tracks.scheduleId, scheduleId), eq(tracks.roomId, roomId), ne(tracks.id, id)))
+      .limit(1);
 
     if (existingTrack) {
       throw new Error(`Slot is already occupied by "${existingTrack.title}"`);
     }
   }
 
-  const updateData = {
+  const updateData: Partial<typeof tracks.$inferInsert> = {
     updatedAt: new Date(),
     ...(data.title !== undefined && { title: data.title }),
     ...(data.speaker !== undefined && { speaker: data.speaker || null }),
@@ -79,18 +77,23 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
   };
 
   try {
-    const track = await prisma.track.update({
-      where: { id },
-      data: updateData,
-      include: {
+    await db.update(tracks).set(updateData).where(eq(tracks.id, id));
+
+    const track = await db.query.tracks.findFirst({
+      where: eq(tracks.id, id),
+      with: {
         room: true,
         schedule: true,
       },
     });
 
+    if (!track) {
+      throw new Error("Track not found");
+    }
+
     return transformTrackForStickyNote(track);
   } catch (error) {
-    console.error("❌ Prisma update error:", error);
+    console.error("❌ Track update error:", error);
     throw error;
   }
 };

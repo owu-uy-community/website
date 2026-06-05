@@ -1,4 +1,4 @@
-import { prisma } from "../../../prisma";
+import { db } from "../../../db";
 import type { StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -7,12 +7,12 @@ import { transformTrackForStickyNote } from "./transforms";
  * Returns StickyNote format with readable room names and time slots for UI
  */
 export const getAllTracks = async (): Promise<StickyNote[]> => {
-  const tracks = await prisma.track.findMany({
-    include: {
+  const tracks = await db.query.tracks.findMany({
+    with: {
       room: true,
       schedule: true,
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: (tracks, { desc }) => [desc(tracks.createdAt)],
   });
 
   return tracks.map(transformTrackForStickyNote);
