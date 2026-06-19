@@ -9,7 +9,7 @@ import { FaChevronDown } from "react-icons/fa";
 
 import { SectionKey } from "components/shared/Navbar/navSections";
 import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
-import UnpluggedTicket from "components/Landing/UnpluggedTicket";
+import ConfTicket from "components/Landing/ConfTicket";
 import { addUtmParams } from "app/lib/utils";
 
 function useCounter(initialValue: number, max: number, seconds: number) {
@@ -117,7 +117,7 @@ function Hero({
           </button>
         </Link>
         <div className="mt-10 flex w-full justify-center">
-          <UnpluggedTicket />
+          <ConfTicket />
         </div>
       </div>
       <Link

@@ -17,5 +17,7 @@ export const navSections: Record<SectionKey, Section> = {
   [SectionKey.Story]: { title: "Historia", link: "/#historia", id: SectionKey.Story },
   [SectionKey.Stats]: { title: "Estadísticas", link: "/#estadisticas", id: SectionKey.Stats },
   [SectionKey.Events]: { title: "Eventos", link: "/#eventos", id: SectionKey.Events },
-  [SectionKey.MeetupEvent]: { title: "La Meetup III", link: "/la-meetup", id: SectionKey.MeetupEvent },
+  // The headline event now points to OWU CONF. The enum value ("la-meetup") is reused
+  // as a Keystatic content slug in the La Meetup pages, so only the label + link change.
+  [SectionKey.MeetupEvent]: { title: "OWU CONF", link: "https://conf.owu.uy", id: SectionKey.MeetupEvent },
 };

@@ -110,15 +110,6 @@ export default function GeometryField() {
       >
         <Triangle fill={YELLOW} points={TRI_CORNER} />
       </Accent>
-
-      <Accent
-        wrap="left-[12%] top-[24%] hidden h-14 w-14 xl:block"
-        depth={9}
-        anim="animate-assemble [animation-delay:0.6s] motion-reduce:animate-none"
-        drift="animate-drift [animation-delay:0.4s] motion-reduce:animate-none"
-      >
-        <div className="h-full w-full rounded-full border-[5px] border-white/15" />
-      </Accent>
     </div>
   );
 }
