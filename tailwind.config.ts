@@ -137,6 +137,16 @@ const config = {
             boxShadow: "0 0 0 4px rgba(245,187,3,0.32), 0 8px 30px rgba(0,0,0,0.45)",
           },
         },
+        sheen: {
+          "0%": { transform: "translateX(-160%) skewX(-12deg)", opacity: "0" },
+          "8%": { opacity: "0.85" },
+          "26%, 100%": { transform: "translateX(260%) skewX(-12deg)", opacity: "0" },
+        },
+        "barcode-scan": {
+          "0%": { transform: "translateY(-130%)", opacity: "0" },
+          "12%, 88%": { opacity: "1" },
+          "100%": { transform: "translateY(130%)", opacity: "0" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -149,6 +159,8 @@ const config = {
         assemble: "assemble 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.25) both",
         drift: "drift 7s ease-in-out infinite",
         "terminal-pulse": "terminal-pulse 0.55s ease-out",
+        sheen: "sheen 6s ease-in-out infinite",
+        "barcode-scan": "barcode-scan 2.4s ease-in-out infinite",
       },
     },
   },
