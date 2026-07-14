@@ -66,7 +66,10 @@ export const SOCIAL_LINKS = {
 // External Service URLs
 export const EXTERNAL_SERVICES = {
   googleForms: {
+    // La Meetup III (2025); el archivo de esa edición sigue apuntando acá
     callForProposals: "https://forms.gle/FJErDF2AvDW4kDba6",
+    callForProposalsConf:
+      "https://docs.google.com/forms/d/e/1FAIpQLSc0phWkd_wmbg21EmQWRvjjASn0wvhQm3k0V5fJ8oCALD05vQ/viewform?embedded=true",
     interest2024:
       "https://docs.google.com/forms/d/e/1FAIpQLSe7QPkYcoz1tZ-j4N-BvqNfkLMtp9Oq8vQ285mTR7EuJPDVnw/viewform?embedded=true",
     interest2025:
@@ -111,6 +114,11 @@ export const INTERNAL_ROUTES = {
     meetup2023: "/2023/la-meetup/",
     meetup2024: "/2024/la-meetup/",
     meetup2025: "/la-meetup/",
+  },
+  conf: {
+    current: "/conf",
+    callForProposals: "/conf/call-for-proposals",
+    sponsors: "/conf/sponsors",
   },
 } as const;
 
