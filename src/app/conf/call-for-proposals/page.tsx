@@ -113,7 +113,12 @@ export default function CallForProposalsPage() {
               </Reveal>
             </div>
 
-            <FormEmbed src={EXTERNAL_SERVICES.googleForms.callForProposalsConf} title="Call for Proposals de OWU CONF" />
+            {/* Heights measured against the live form (3165px @360w, 2617px @792w) plus a small buffer */}
+            <FormEmbed
+              heightClassName="h-[3300px] sm:h-[2700px]"
+              src={EXTERNAL_SERVICES.googleForms.callForProposalsConf}
+              title="Call for Proposals de OWU CONF"
+            />
           </div>
         </main>
         <Footer />
