@@ -14,15 +14,18 @@ export async function proxy(request: NextRequest) {
   const host = getHost(request);
 
   if (host === CONF_HOST) {
+    // Normalize direct /conf hits on the subdomain to the clean path
+    if (pathname === "/conf" || pathname.startsWith("/conf/")) {
+      return NextResponse.redirect(new URL(pathname.slice("/conf".length) || "/", CONF_URL), 308);
+    }
+
     const url = request.nextUrl.clone();
-    url.pathname = "/conf";
-    const response = NextResponse.rewrite(url);
-    response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    return response;
+    url.pathname = pathname === "/" ? "/conf" : `/conf${pathname}`;
+    return NextResponse.rewrite(url);
   }
 
   if (MAIN_HOSTS.has(host) && (pathname === "/conf" || pathname.startsWith("/conf/"))) {
-    return NextResponse.redirect(CONF_URL, 308);
+    return NextResponse.redirect(new URL(pathname.slice("/conf".length) || "/", CONF_URL), 308);
   }
 
   if (pathname.startsWith("/admin")) {
