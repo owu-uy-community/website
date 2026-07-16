@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
-import GeometryField from "./GeometryField";
-import RebrandReveal from "./RebrandReveal";
+import ConfLanding from "./ConfLanding";
 
 export const metadata: Metadata = {
   title: "OWU CONF",
@@ -21,17 +20,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ConfComingSoonPage() {
+export default function ConfPage() {
   return (
-    <main className="relative isolate flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-hidden bg-black px-6 py-24 text-center text-white">
-      <GeometryField />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(58%_58%_at_50%_50%,rgba(0,0,0,0.78)_0%,transparent_80%)]"
-      />
-
-      <RebrandReveal />
+    <main className="min-h-[100dvh] overflow-x-clip bg-black">
+      <ConfLanding />
     </main>
   );
 }
