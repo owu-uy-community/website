@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 const CONF_HOST = "conf.owu.uy";
 const CONF_URL = "https://conf.owu.uy";
+const MAIN_URL = "https://owu.uy";
 const MAIN_HOSTS = new Set(["owu.uy", "www.owu.uy"]);
+
+// Pages that exist under /conf; anything else on the subdomain belongs to the main site
+const CONF_PATHS = new Set(["/", "/call-for-proposals", "/sponsors"]);
 
 function getHost(request: NextRequest): string {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
@@ -17,6 +21,11 @@ export async function proxy(request: NextRequest) {
     // Normalize direct /conf hits on the subdomain to the clean path
     if (pathname === "/conf" || pathname.startsWith("/conf/")) {
       return NextResponse.redirect(new URL(pathname.slice("/conf".length) || "/", CONF_URL), 308);
+    }
+
+    // Main-site links (e.g. past meetup editions) must leave the subdomain instead of 404ing under /conf
+    if (!CONF_PATHS.has(pathname)) {
+      return NextResponse.redirect(new URL(`${pathname}${request.nextUrl.search}`, MAIN_URL), 308);
     }
 
     const url = request.nextUrl.clone();
