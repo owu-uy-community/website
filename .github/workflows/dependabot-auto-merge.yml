@@ -1,0 +1,80 @@
+name: Dependabot Auto-Merge
+
+on:
+  workflow_run:
+    workflows: ["Create vercel preview URL on pull request"]
+    types: [completed]
+
+concurrency:
+  group: dependabot-auto-merge
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  auto-merge:
+    name: Auto-Merge
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    steps:
+      - name: Get PR number
+        id: pr
+        run: |
+          PR_NUMBER=$(gh api -X GET "repos/$REPO/pulls" -f head="$HEAD_OWNER:$HEAD_BRANCH" -f state=open \
+            --jq '[.[] | select(.user.login == "dependabot[bot]")][0].number // empty')
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No open Dependabot PR for $HEAD_BRANCH — nothing to do."
+          fi
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+        env:
+          REPO: ${{ github.repository }}
+          HEAD_OWNER: ${{ github.event.workflow_run.head_repository.owner.login }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check update type
+        id: update-type
+        if: steps.pr.outputs.number != ''
+        # Dependabot embeds machine-readable metadata in its commit messages
+        # (updated-dependencies / update-type), which also covers grouped PRs —
+        # PR titles of grouped updates carry no version info, so titles can't be
+        # trusted for major detection. Unclassifiable PRs are never merged.
+        run: |
+          COMMITS=$(gh api "repos/$REPO/pulls/$PR_NUMBER/commits" --jq '.[].commit.message')
+          if ! echo "$COMMITS" | grep -q 'updated-dependencies:'; then
+            echo "No Dependabot metadata found — leaving for manual review."
+            echo "mergeable=false" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMITS" | grep -q 'version-update:semver-major'; then
+            echo "Contains a major version bump — leaving for manual review."
+            echo "mergeable=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "mergeable=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge PR
+        if: steps.update-type.outputs.mergeable == 'true'
+        run: gh pr merge --squash "$PR_NUMBER" --repo "$REPO" --match-head-commit "$HEAD_SHA"
+        env:
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger production deploy
+        if: steps.update-type.outputs.mergeable == 'true'
+        # Pushes made with GITHUB_TOKEN don't fire push-triggered workflows, so
+        # the merge above won't start "Deploy to vercel on merge" by itself.
+        run: gh workflow run vercel-merge.yml --ref main --repo "$REPO"
+        env:
+          REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
