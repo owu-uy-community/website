@@ -1,13 +1,104 @@
 version: 2
+
 updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+      timezone: "America/Montevideo"
+    labels:
+      - dependencies
+    # why: supply-chain cooldown — skip freshly published releases until compromised versions are typically detected and unpublished
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns:
+          - "*"
+
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: "daily"
       time: "09:00"
       timezone: "America/Montevideo"
-    open-pull-requests-limit: 5
-    target-branch: development
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
     labels:
       - dependencies
+    # why: supply-chain cooldown — skip freshly published releases until compromised versions are typically detected and unpublished
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 14
+      semver-patch-days: 7
+    groups:
+      framework:
+        patterns:
+          - "next"
+          - "@next/*"
+          - "eslint-config-next"
+          - "react"
+          - "react-dom"
+        update-types:
+          - "minor"
+          - "patch"
+      remotion:
+        patterns:
+          - "remotion"
+          - "@remotion/*"
+      orpc:
+        patterns:
+          - "@orpc/*"
+      drizzle:
+        patterns:
+          - "drizzle-orm"
+          - "drizzle-kit"
+      ai:
+        patterns:
+          - "ai"
+          - "@ai-sdk/*"
+      keystatic:
+        patterns:
+          - "@keystatic/*"
+      ui:
+        patterns:
+          - "@radix-ui/*"
+          - "lucide-react"
+          - "class-variance-authority"
+          - "clsx"
+          - "tailwind-merge"
+          - "cmdk"
+          - "sonner"
+          - "next-themes"
+          - "embla-carousel-*"
+      forms:
+        patterns:
+          - "react-hook-form"
+          - "@hookform/*"
+          - "zod"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      styling:
+        patterns:
+          - "tailwindcss"
+          - "tailwindcss-animate"
+          - "postcss"
+      tooling:
+        dependency-type: "development"
+        patterns:
+          - "eslint*"
+          - "prettier*"
+          - "@typescript-eslint/*"
+          - "@vercel/style-guide"
+          - "typescript"
+          - "tsx"
+          - "cross-env"
+          - "@svgr/webpack"
+        exclude-patterns:
+          - "eslint-config-next"
+      types:
+        patterns:
+          - "@types/*"
