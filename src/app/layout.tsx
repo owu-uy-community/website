@@ -10,8 +10,17 @@ import { Toaster } from "components/shared/ui/sonner";
 import { EXTERNAL_SERVICES } from "./lib/constants";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.owu.uy"),
   description: "Únete a nuestra comunidad de desarrolladores.",
   title: "OWU | Comunidad TI de Uruguay",
+  openGraph: {
+    type: "website",
+    images: ["/images/events/la_meetup_2024.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/images/events/la_meetup_2024.png"],
+  },
 };
 
 export default function RootLayout({
@@ -21,11 +30,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <meta charSet="utf-8" />
-      <meta content="website" property="og:type" />
-      <meta content="/images/events/la_meetup_2024.png" property="og:image" />
-      <meta content="summary_large_image" property="twitter:card" />
-      <meta content="/images/events/la_meetup_2024.png" property="twitter:image" />
       <Analytics />
       <SpeedInsights />
       <Script async src={EXTERNAL_SERVICES.googleTagManager} />
