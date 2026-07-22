@@ -43,10 +43,6 @@ const REASONS = [
     title: "Comunidad",
     description: "Apoyo concreto a un evento sin fines de lucro, organizado a pulmón por la comunidad.",
   },
-  {
-    title: "A tu medida",
-    description: "Distintos niveles de sponsorship para empresas de todos los tamaños.",
-  },
 ];
 
 export default function SponsorsFormPage() {
@@ -106,7 +102,7 @@ export default function SponsorsFormPage() {
 
               <Reveal delay={0.42} y={20}>
                 <p className="mt-10 border-l-2 border-[#F5BB03] pl-5 text-base leading-7 text-[#FBF5E7]/70">
-                  Dejanos tus datos y te enviamos el brochure de sponsorship con los niveles, beneficios y todos los
+                  Dejanos tus datos y te enviamos el brochure de sponsorship con los beneficios y todos los
                   detalles.
                 </p>
               </Reveal>
