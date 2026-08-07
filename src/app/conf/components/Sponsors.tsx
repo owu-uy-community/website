@@ -1,5 +1,6 @@
-import { INTERNAL_ROUTES } from "app/lib/constants";
+import { CONF_DATES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import Countdown from "./Countdown";
 import PillLink from "./PillLink";
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -38,6 +39,25 @@ export default function Sponsors() {
           <PillLink href={INTERNAL_ROUTES.conf.sponsors}>¡QUIERO SER SPONSOR!</PillLink>
         </Reveal>
       </div>
+
+      <Reveal delay={0.15} y={20}>
+        <div className="mt-12 flex flex-col gap-8 border-2 border-[#FBF5E7]/15 p-5 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
+              Aceptamos postulaciones
+            </p>
+            <p className="mt-3 text-balance font-display text-2xl font-extrabold uppercase leading-none tracking-[-0.02em] text-[#F5BB03] sm:text-3xl">
+              Hasta el 15 de septiembre
+            </p>
+          </div>
+          <Countdown
+            className="shrink-0"
+            expiredLabel="CONVOCATORIA CERRADA"
+            size="lg"
+            target={CONF_DATES.sponsorsDeadline}
+          />
+        </div>
+      </Reveal>
 
       <Reveal delay={0.1} y={16}>
         <p className="mt-14 font-display text-xs font-semibold uppercase tracking-[0.18em] text-[#FBF5E7]/60">
