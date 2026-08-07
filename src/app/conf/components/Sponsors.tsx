@@ -14,12 +14,17 @@ type Sponsor = {
 
 /* CONFIRMED sponsors only for OWU CONF 2026 (also feeds the hero carousel) */
 export const SPONSORS_2026: Sponsor[] = [
-  { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.webp", website: "https://www.mimiquate.com/" },
-  { name: "RevenueCat", logo: "/images/sponsors/revenuecat/logo.webp", website: "https://www.revenuecat.com/" },
-  { name: "Sentry", logo: "/images/conf/sponsors/sentry.webp", website: "https://sentry.io/" },
-  { name: "Streaver", logo: "/images/sponsors/streaver/logo.webp", website: "https://www.streaver.com/" },
-  { name: "WyeWorks", logo: "/images/sponsors/wyeworks/logo.webp", website: "https://www.wyeworks.com/" },
-  { name: "Xmartlabs", logo: "/images/sponsors/xmartlabs/logo.webp", website: "https://xmartlabs.com/" },
+  { name: "Crunchloop", logo: "/images/conf/sponsors/crunchloop.svg", website: "https://www.crunchloop.io/" },
+  { name: "Estudio Hahn", logo: "/images/conf/sponsors/han.svg", website: "https://estudiohahn.com/" },
+  { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.svg", website: "https://www.mimiquate.com/" },
+  { name: "Neocoast", logo: "/images/conf/sponsors/neocoast.svg", website: "https://www.neocoast.com/" },
+  { name: "RevenueCat", logo: "/images/conf/sponsors/revenuecat.svg", website: "https://www.revenuecat.com/" },
+  { name: "Segalerba", logo: "/images/conf/sponsors/segalerba.svg", website: "https://segalerba.com.uy/" },
+  { name: "Sentry", logo: "/images/conf/sponsors/sentry.svg", website: "https://sentry.io/" },
+  { name: "Streaver", logo: "/images/conf/sponsors/streaver.svg", website: "https://www.streaver.com/" },
+  { name: "Trupropel", logo: "/images/conf/sponsors/trupropel.svg", website: "https://www.trupropel.com/" },
+  { name: "WyeWorks", logo: "/images/conf/sponsors/wyeworks.svg", website: "https://www.wyeworks.com/" },
+  { name: "Xmartlabs", logo: "/images/conf/sponsors/xmartlabs.svg", website: "https://xmartlabs.com/" },
 ];
 
 export default function Sponsors() {
