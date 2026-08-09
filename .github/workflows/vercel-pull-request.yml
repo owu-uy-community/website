@@ -12,7 +12,33 @@ jobs:
       repository-projects: write
     steps:
       - uses: actions/checkout@v6
+
+      # Dependabot pull requests cannot access repository secrets. Validate
+      # their dependency updates locally instead of attempting a deployment
+      # that is guaranteed to fail without VERCEL_TOKEN.
+      - name: Set up pnpm
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.9.0
+
+      - name: Set up Node.js
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Typecheck
+        if: github.event.pull_request.user.login == 'dependabot[bot]'
+        run: pnpm exec tsc --noEmit
+
       - uses: amondnet/vercel-action@v42.3.0
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         id: vercel-deploy
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
