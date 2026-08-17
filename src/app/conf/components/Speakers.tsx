@@ -3,8 +3,9 @@
 import classNames from "classnames";
 import { useCallback, useState } from "react";
 
-import { INTERNAL_ROUTES } from "app/lib/constants";
+import { CONF_DATES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import Countdown from "./Countdown";
 import Lightbox, { openWithMorph, withViewTransition, type LightboxPhoto } from "./Lightbox";
 import PillLink from "./PillLink";
 import Reveal from "./Reveal";
@@ -71,12 +72,23 @@ export default function Speakers() {
               ¡POSTULAR MI CHARLA!
             </PillLink>
           </Reveal>
-          <Reveal className="max-sm:text-center" delay={0.44} y={14}>
-            <p className="mt-4 text-sm text-[#FBF5E7]/60">
-              Fecha límite para enviar propuestas:{" "}
-              <strong className="font-semibold text-[#F5BB03]">15 de septiembre</strong>
-            </p>
-          </Reveal>
+          {/* w-fit is measured by the deadline line, so the countdown below stretches to exactly its width */}
+          <div className="mx-auto w-fit sm:mx-0">
+            <Reveal className="max-sm:text-center" delay={0.44} y={14}>
+              <p className="mt-4 text-sm text-[#FBF5E7]/60">
+                Fecha límite para enviar propuestas:{" "}
+                <strong className="font-semibold text-[#F5BB03]">15 de septiembre</strong>
+              </p>
+            </Reveal>
+            <Reveal delay={0.54} y={14}>
+              <Countdown
+                className="mt-5"
+                expiredLabel="CONVOCATORIA CERRADA"
+                fullWidth
+                target={CONF_DATES.cfpDeadline}
+              />
+            </Reveal>
+          </div>
         </div>
 
         <Reveal amount={0.3} className="hidden w-full max-w-[480px] shrink-0 md:block" delay={0.15} x={48} y={0}>
