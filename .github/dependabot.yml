@@ -86,6 +86,9 @@ updates:
           - "tailwindcss"
           - "tailwindcss-animate"
           - "postcss"
+          # @tailwindcss/postcss pins tailwindcss exactly, so it has to move in
+          # the same PR or the tree ends up with two Tailwind versions.
+          - "@tailwindcss/*"
       tooling:
         dependency-type: "development"
         patterns:
