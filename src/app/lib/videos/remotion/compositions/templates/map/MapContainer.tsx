@@ -45,7 +45,7 @@ export default function MapContainer({ event, animate = false, events = [], scen
         filter: animate ? `blur(${mapUnblur}px` : "none",
       }}
     >
-      <div className="relative h-full w-full rounded-lg bg-transparent p-5 shadow-md backdrop-blur-sm backdrop-brightness-[1]">
+      <div className="relative h-full w-full rounded-lg bg-transparent p-5 shadow-md backdrop-blur-xs backdrop-brightness-[1]">
         <OpenSpaceMap event={event} events={events} scene={scene} />
         {event ? (
           <h2 className="mt-10 text-5xl font-bold text-white">

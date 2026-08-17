@@ -144,7 +144,7 @@ function TicketContent({ isLoading, size }: { isLoading: boolean; size: "mobile"
 
         {/* Loading Skeleton Overlay */}
         {isLoading && (
-          <div className="pointer-events-none absolute inset-0 z-20 animate-pulse rounded-[10px] bg-black/95 backdrop-blur-sm" />
+          <div className="pointer-events-none absolute inset-0 z-20 animate-pulse rounded-[10px] bg-black/95 backdrop-blur-xs" />
         )}
 
         {/* Left section - Logo */}

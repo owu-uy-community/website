@@ -142,7 +142,7 @@ export default function RebrandReveal() {
                 type="button"
                 onClick={() => runViewTransition(() => setGameOpen(true))}
                 aria-label="Jugar"
-                className="h-2.5 w-2.5 rounded-full bg-[#27C93F] outline-none transition-transform hover:scale-125 focus-visible:scale-125"
+                className="h-2.5 w-2.5 rounded-full bg-[#27C93F] outline-hidden transition-transform hover:scale-125 focus-visible:scale-125"
               />
               <span className="ml-2 font-terminal text-[0.65rem] tracking-tight text-white/35">owu@conf: ~/2026</span>
             </div>
@@ -184,7 +184,7 @@ export default function RebrandReveal() {
             <button
               type="button"
               onClick={() => runViewTransition(() => setSponsorOpen(true))}
-              className="group relative inline-flex h-[54px] items-center gap-2.5 overflow-hidden rounded-full border-2 border-[#F5BB03] bg-[#F5BB03] px-8 font-display text-base font-extrabold uppercase tracking-wide text-black outline-none transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#0162C8] hover:shadow-[0_12px_34px_-8px_rgba(245,187,3,0.55)] focus-visible:ring-2 focus-visible:ring-[#F5BB03] focus-visible:ring-offset-2 focus-visible:ring-offset-black active:translate-y-0 sm:text-lg"
+              className="group relative inline-flex h-[54px] items-center gap-2.5 overflow-hidden rounded-full border-2 border-[#F5BB03] bg-[#F5BB03] px-8 font-display text-base font-extrabold uppercase tracking-wide text-black outline-hidden transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#0162C8] hover:shadow-[0_12px_34px_-8px_rgba(245,187,3,0.55)] focus-visible:ring-2 focus-visible:ring-[#F5BB03] focus-visible:ring-offset-2 focus-visible:ring-offset-black active:translate-y-0 sm:text-lg"
             >
               <span
                 aria-hidden="true"

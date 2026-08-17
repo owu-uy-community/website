@@ -33,7 +33,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
             {post.tags.slice(0, 2).map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-black/60 px-2.5 py-1 font-terminal text-[11px] text-yellow-400 backdrop-blur-sm"
+                className="rounded-full bg-black/60 px-2.5 py-1 font-terminal text-[11px] text-yellow-400 backdrop-blur-xs"
               >
                 #{tag}
               </span>

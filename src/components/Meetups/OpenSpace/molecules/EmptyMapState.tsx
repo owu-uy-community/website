@@ -69,7 +69,7 @@ export const EmptyMapState: React.FC<EmptyMapStateProps> = ({ scene = 1 }) => {
             />
 
             {/* Icon circle with pulse */}
-            <div className="absolute inset-0 flex animate-pulse items-center justify-center rounded-full border-2 border-yellow-500/40 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-2xl shadow-yellow-500/20 backdrop-blur-sm">
+            <div className="absolute inset-0 flex animate-pulse items-center justify-center rounded-full border-2 border-yellow-500/40 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-2xl shadow-yellow-500/20 backdrop-blur-xs">
               <Map className="h-24 w-24 text-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" strokeWidth={1.5} />
             </div>
           </div>

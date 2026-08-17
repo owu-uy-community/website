@@ -27,7 +27,7 @@ export default function LoginPage() {
     <>
       <AuthHeader title="¡Qué alegría verte de nuevo!" description="Estás a un paso de entrar a la comunidad de OWU" />
 
-      <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-sm">
+      <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-xs">
         <CardHeader className="pb-6 text-center">
           <CardTitle className="text-2xl text-white">Iniciar sesión</CardTitle>
           <CardDescription className="text-zinc-400">Ingresa con tu cuenta de Slack de OWU</CardDescription>

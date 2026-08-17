@@ -508,7 +508,7 @@ function OBSSceneLooper() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-3 rounded-xl bg-white/5 p-3 backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-xl bg-white/5 p-3 backdrop-blur-xs sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-400">
@@ -620,7 +620,7 @@ function OBSSceneLooper() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="rounded-xl bg-white/5 p-4 backdrop-blur-sm"
+              className="rounded-xl bg-white/5 p-4 backdrop-blur-xs"
             >
               <h3 className="mb-3 text-sm font-medium text-white">OBS Connection Settings</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -744,7 +744,7 @@ function OBSSceneLooper() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-col gap-3 rounded-xl bg-white/5 p-3 backdrop-blur-sm md:flex-row md:items-center"
+          className="flex flex-col gap-3 rounded-xl bg-white/5 p-3 backdrop-blur-xs md:flex-row md:items-center"
         >
           <div className="flex flex-1 items-center gap-2 overflow-x-auto">
             <span className="whitespace-nowrap text-sm font-medium text-white/70">Presets</span>
@@ -753,7 +753,7 @@ function OBSSceneLooper() {
                 key={preset.id}
                 onClick={() => loadPreset(preset.id)}
                 className={cn(
-                  "h-8 flex-shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium",
+                  "h-8 shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium",
                   currentPreset === preset.id
                     ? "bg-white text-black"
                     : "bg-white/10 text-white hover:bg-white/20 hover:!text-white"
@@ -879,14 +879,14 @@ function OBSSceneLooper() {
               )}
               {/* Current scene overlay */}
               {currentActiveSceneId && (
-                <div className="absolute bottom-4 left-4 rounded-lg bg-black/70 px-4 py-2 backdrop-blur-sm">
+                <div className="absolute bottom-4 left-4 rounded-lg bg-black/70 px-4 py-2 backdrop-blur-xs">
                   <p className="text-xs text-white/60">Current Scene</p>
                   <p className="text-sm font-medium text-white">{currentActiveSceneId}</p>
                 </div>
               )}
               {/* Stream error */}
               {streamError && (
-                <div className="absolute right-4 top-4 rounded-lg bg-red-500/20 px-3 py-2 backdrop-blur-sm">
+                <div className="absolute right-4 top-4 rounded-lg bg-red-500/20 px-3 py-2 backdrop-blur-xs">
                   <p className="text-xs text-red-400">{streamError}</p>
                 </div>
               )}
@@ -897,7 +897,7 @@ function OBSSceneLooper() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="flex-shrink-0 rounded-xl bg-white/5 p-3 backdrop-blur-sm"
+              className="shrink-0 rounded-xl bg-white/5 p-3 backdrop-blur-xs"
             >
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-medium text-white">Direct Scene Switch</h3>
@@ -916,7 +916,7 @@ function OBSSceneLooper() {
                         whileTap={{ scale: 0.95 }}
                         disabled={!isConnected}
                         className={cn(
-                          "relative flex min-w-[120px] flex-shrink-0 flex-col items-center gap-2 rounded-lg p-3 transition-all duration-200",
+                          "relative flex min-w-[120px] shrink-0 flex-col items-center gap-2 rounded-lg p-3 transition-all duration-200",
                           isActive
                             ? "bg-white text-black shadow-lg"
                             : "bg-white/10 text-white hover:bg-white/20 hover:text-white",
@@ -955,7 +955,7 @@ function OBSSceneLooper() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mb-3 flex items-center justify-between rounded-xl bg-white/5 p-3 text-sm backdrop-blur-sm"
+                  className="mb-3 flex items-center justify-between rounded-xl bg-white/5 p-3 text-sm backdrop-blur-xs"
                 >
                   <div className="flex items-center gap-6">
                     {isPlaying && (
@@ -1000,7 +1000,7 @@ function OBSSceneLooper() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="mb-3 grid flex-shrink-0 grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8"
+              className="mb-3 grid shrink-0 grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8"
             >
               {[...scenes]
                 .sort((a, b) => a.sceneName.localeCompare(b.sceneName))
@@ -1139,7 +1139,7 @@ function OBSSceneLooper() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ delay: 0.3 }}
-              className="flex min-h-0 flex-1 flex-col rounded-xl bg-white/5 p-3 backdrop-blur-sm"
+              className="flex min-h-0 flex-1 flex-col rounded-xl bg-white/5 p-3 backdrop-blur-xs"
             >
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1253,7 +1253,7 @@ function OBSSceneLooper() {
                               onDragEnd={handleDragEnd}
                               style={{ position: "relative" }}
                               className={cn(
-                                "relative flex w-40 flex-shrink-0 cursor-grab select-none flex-col gap-2 rounded-lg border-0 p-3 active:cursor-grabbing sm:w-48 lg:w-56",
+                                "relative flex w-40 shrink-0 cursor-grab select-none flex-col gap-2 rounded-lg border-0 p-3 active:cursor-grabbing sm:w-48 lg:w-56",
                                 isCurrentlyActive
                                   ? "bg-white text-black shadow-lg"
                                   : "bg-white/10 text-white hover:bg-white/15 hover:text-white"
@@ -1368,7 +1368,7 @@ function OBSSceneLooper() {
                                 <div className="flex items-center gap-1">
                                   <Clock
                                     className={cn(
-                                      "h-3 w-3 flex-shrink-0",
+                                      "h-3 w-3 shrink-0",
                                       isCurrentlyActive ? "text-black" : "text-white"
                                     )}
                                   />
