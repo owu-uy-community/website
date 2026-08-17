@@ -75,6 +75,38 @@ export const verification = pgTable("verification", {
   updatedAt: ts("updatedAt"),
 });
 
+/**
+ * Better Auth `apiKey` plugin table. Machine callers (today: the Owy bot,
+ * see /owy) send their key as `x-api-key` and get a normal session for the
+ * user that owns it, so the whole app authorizes them like any other user.
+ * Field names follow the plugin's schema — do not rename.
+ */
+export const apikey = pgTable("apikey", {
+  id: text("id").primaryKey(),
+  configId: text("configId").notNull().default("default"),
+  name: text("name"),
+  start: text("start"),
+  /** The owning user's id (the plugin's generic owner reference). */
+  referenceId: text("referenceId").notNull(),
+  prefix: text("prefix"),
+  key: text("key").notNull(),
+  refillInterval: integer("refillInterval"),
+  refillAmount: integer("refillAmount"),
+  lastRefillAt: ts("lastRefillAt"),
+  enabled: boolean("enabled").default(true),
+  rateLimitEnabled: boolean("rateLimitEnabled").default(true),
+  rateLimitTimeWindow: integer("rateLimitTimeWindow"),
+  rateLimitMax: integer("rateLimitMax"),
+  requestCount: integer("requestCount"),
+  remaining: integer("remaining"),
+  lastRequest: ts("lastRequest"),
+  expiresAt: ts("expiresAt"),
+  createdAt: ts("createdAt").notNull(),
+  updatedAt: ts("updatedAt").notNull(),
+  permissions: text("permissions"),
+  metadata: text("metadata"),
+});
+
 // ---------------------------------------------------------------------------
 // Tenancy: communities own events (open spaces)
 // ---------------------------------------------------------------------------

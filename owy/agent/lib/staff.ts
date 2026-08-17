@@ -70,7 +70,15 @@ export function requireStaff(ctx: ToolSessionCtx): void {
 interface ApprovalPolicyCtx extends ToolSessionCtx {
   toolName: string;
   approvedTools: ReadonlySet<string>;
+  toolInput?: unknown;
 }
+
+/**
+ * Fixed mode, or one derived from the call's input (e.g. destructive actions).
+ * "none" lets a read-only branch of a mixed tool through without prompting.
+ */
+type ApprovalModeValue = "none" | "once" | "always";
+type ApprovalMode = ApprovalModeValue | ((input: unknown) => ApprovalModeValue);
 
 /**
  * Approval policy for staff-only write tools: non-staff callers are denied
@@ -79,7 +87,7 @@ interface ApprovalPolicyCtx extends ToolSessionCtx {
  * call per session (`once`). Tools still call `requireStaff` inside `execute`
  * as defense in depth.
  */
-export function staffApproval(mode: "once" | "always" = "once") {
+export function staffApproval(mode: ApprovalMode = "once") {
   return (ctx: ApprovalPolicyCtx) => {
     if (!isStaff(ctx)) {
       return {
@@ -88,9 +96,15 @@ export function staffApproval(mode: "once" | "always" = "once") {
           "Acción denegada: la gestión del evento es solo para el staff. Explicale a la persona que lo pida en el canal del staff.",
       };
     }
-    if (mode === "once" && ctx.approvedTools.has(ctx.toolName)) {
+
+    const resolved = typeof mode === "function" ? mode(ctx.toolInput) : mode;
+    if (resolved === "none") {
       return "not-applicable" as const;
     }
+    if (resolved === "once" && ctx.approvedTools.has(ctx.toolName)) {
+      return "not-applicable" as const;
+    }
+
     return "user-approval" as const;
   };
 }

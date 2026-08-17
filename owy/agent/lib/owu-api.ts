@@ -9,9 +9,9 @@ import { RPCLink } from "@orpc/client/fetch";
  * of importing the website's `AppRouter` type) so owy's typecheck doesn't drag
  * in the whole website graph. If the website API changes, update this file.
  *
- * Auth: the website accepts the `x-owy-api-key` header as a service-account
- * credential and runs the request with an admin context (see
- * `src/app/api/orpc/[[...rest]]/route.ts`).
+ * Auth: the key travels as `x-api-key`. Better Auth's apiKey plugin turns it
+ * into a session for the bot's own user account, so the API authorizes Owy
+ * like any other admin user. Mint keys on the site with `pnpm owy:key`.
  */
 
 // ---------------------------------------------------------------------------
@@ -166,6 +166,105 @@ export interface OcrSuggestionInput {
   additionalContext?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Staff coordination (event-day task board + announcements)
+// ---------------------------------------------------------------------------
+
+export type StaffTaskType = "task" | "ongoing" | "milestone";
+export type StaffTaskStatus = "pending" | "in_progress" | "done" | "blocked";
+
+export interface StaffTaskAssignee {
+  userId: string;
+  name: string;
+  image: string | null;
+}
+
+export interface StaffTask {
+  id: string;
+  openSpaceId: string;
+  title: string;
+  notes: string | null;
+  type: StaffTaskType;
+  /** "YYYY-MM-DD" */
+  dayDate: string;
+  /** "HH:MM" */
+  startTime: string | null;
+  endTime: string | null;
+  minPeople: number | null;
+  location: string | null;
+  status: StaffTaskStatus;
+  statusUpdatedById: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  assignees: StaffTaskAssignee[];
+}
+
+export interface CreateStaffTaskInput {
+  eventId: string;
+  title: string;
+  notes?: string;
+  type?: StaffTaskType;
+  /** "YYYY-MM-DD" */
+  dayDate: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  minPeople?: number | null;
+  location?: string | null;
+  assigneeIds?: string[];
+}
+
+export interface UpdateStaffTaskData {
+  title?: string;
+  notes?: string | null;
+  type?: StaffTaskType;
+  dayDate?: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  minPeople?: number | null;
+  location?: string | null;
+  /** Replaces the whole assignee set when present. */
+  assigneeIds?: string[];
+}
+
+/** A community member; the roster Owy assigns tasks from. */
+export interface CommunityMember {
+  id: string;
+  communityId: string;
+  userId: string;
+  role: "member" | "editor" | "admin" | "owner";
+  name: string;
+  email: string;
+  image: string | null;
+  createdAt: string;
+}
+
+export interface StaffAnnouncement {
+  id: string;
+  openSpaceId: string;
+  body: string;
+  urgent: boolean;
+  audience: "all" | "task";
+  taskId: string | null;
+  taskTitle: string | null;
+  author: { id: string; name: string; image: string | null } | null;
+  createdAt: string;
+  ackCount: number;
+  ackedByMe: boolean;
+  acks: { userId: string; name: string; image: string | null; ackedAt: string }[];
+  /** Expected recipients who have NOT acked yet — the useful half on event day. */
+  pending: { userId: string; name: string; image: string | null }[];
+}
+
+// ---------------------------------------------------------------------------
+// Cast to screen
+// ---------------------------------------------------------------------------
+
+export interface CastState {
+  trackId: string | null;
+  note: StickyNote | null;
+}
+
 export interface OcrSuggestionResponse {
   title: string;
   speaker: string;
@@ -208,6 +307,38 @@ export interface OwuApi {
   ocr: {
     processImageWithSuggestion: (input: OcrSuggestionInput) => Promise<OcrSuggestionResponse>;
   };
+  cast: {
+    getState: (input?: { eventId?: string }) => Promise<CastState>;
+    setHighlightedNote: (input: { eventId?: string; trackId: string | null }) => Promise<CastState>;
+  };
+  staffTasks: {
+    list: (input: { eventId: string }) => Promise<StaffTask[]>;
+    create: (input: CreateStaffTaskInput) => Promise<StaffTask>;
+    update: (input: { eventId: string; taskId: string; data: UpdateStaffTaskData }) => Promise<StaffTask>;
+    delete: (input: { eventId: string; taskId: string }) => Promise<unknown>;
+    setStatus: (input: { eventId: string; taskId: string; status: StaffTaskStatus }) => Promise<StaffTask>;
+    assign: (input: { eventId: string; taskId: string; userId: string }) => Promise<StaffTask>;
+    unassign: (input: { eventId: string; taskId: string; userId: string }) => Promise<StaffTask>;
+    /** Moves every task of a day starting at/after `fromTime` by ±minutes. */
+    shiftFrom: (input: {
+      eventId: string;
+      dayDate: string;
+      fromTime: string;
+      deltaMinutes: number;
+    }) => Promise<unknown>;
+    roster: (input: { eventId: string }) => Promise<CommunityMember[]>;
+    announcements: {
+      list: (input: { eventId: string }) => Promise<StaffAnnouncement[]>;
+      /** Returns only the new id; read it back with `list` for author/acks. */
+      create: (input: {
+        eventId: string;
+        body: string;
+        urgent?: boolean;
+        audience?: "all" | "task";
+        taskId?: string;
+      }) => Promise<{ id: string }>;
+    };
+  };
   dashboard: {
     getStats: (input?: { eventId?: string }) => Promise<unknown>;
   };
@@ -240,7 +371,7 @@ export function owuApi(): OwuApi {
   const link = new RPCLink({
     url: `${owuApiUrl()}/api/orpc`,
     headers: () => ({
-      "x-owy-api-key": requireApiKey(),
+      "x-api-key": requireApiKey(),
     }),
   });
 

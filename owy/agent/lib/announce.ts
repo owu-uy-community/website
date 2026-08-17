@@ -1,6 +1,7 @@
 import type { ScheduleHandlerArgs } from "eve/schedules";
 import slack from "../channels/slack";
 import telegram from "../channels/telegram";
+import { eventToday } from "./dates";
 
 /**
  * Proactive announcement plumbing for the day-of schedules.
@@ -15,14 +16,7 @@ import telegram from "../channels/telegram";
 
 export function isConfDay(now: Date = new Date()): boolean {
   const confDate = process.env.OWY_CONF_DATE ?? "2026-11-07";
-  // en-CA formats as YYYY-MM-DD
-  const todayInMontevideo = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Montevideo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-  return todayInMontevideo === confDate;
+  return eventToday(now) === confDate;
 }
 
 /**

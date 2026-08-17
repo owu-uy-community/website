@@ -9,7 +9,7 @@ Slack / Telegram / HTTP (eve TUI)        Vercel Cron (día del evento)
         │  webhooks /eve/v1/*                    │ agent/schedules/conf-day/*
         ▼                                        ▼
    owy (Eve agent, proyecto Vercel propio) ──────┘
-        │  tools tipadas (@orpc/client + x-owy-api-key)
+        │  tools tipadas (@orpc/client + x-api-key)
         ▼
    owu.uy  /api/orpc  (openSpaces · schedules · rooms · tracks · obsQueue · countdown · ocr · dashboard · eventbrite)
         │
@@ -40,7 +40,7 @@ AI_GATEWAY_API_KEY=
 
 # --- API de OWU ---
 OWU_API_URL=https://owu.uy            # local: http://localhost:3000
-OWY_API_KEY=                          # openssl rand -hex 32 — el MISMO valor va en el proyecto Vercel del sitio
+OWY_API_KEY=                          # API key de Better Auth; se emite en el sitio con `pnpm owy:key`
 OWY_EVENT_ID=                         # id o slug del evento que maneja Owy (el sitio es multi-tenant).
                                       # Sin esto usa el evento más reciente que puede operar.
 
@@ -67,7 +67,20 @@ ROUTE_AUTH_BASIC_USER=
 ROUTE_AUTH_BASIC_PASSWORD=
 ```
 
-El sitio (proyecto Vercel de owu.uy) necesita **una** variable nueva: `OWY_API_KEY` (mismo valor que acá). Con ese header (`x-owy-api-key`) la ruta `/api/orpc` le da a Owy contexto admin de servicio.
+### Cómo se autentica Owy
+
+Owy usa el **plugin `apiKey` de Better Auth**: manda su key en el header `x-api-key` y el sitio la resuelve a una sesión normal de la cuenta del bot (`owy-bot`, rol `admin`). No hay auth a medida: la API autoriza a Owy como a cualquier otro usuario, y sus escrituras quedan firmadas con su nombre (los avisos al staff aparecen como "Owy").
+
+Emitir la key **en el sitio** (crea la cuenta del bot si no existe y la imprime una sola vez):
+
+```bash
+pnpm owy:key                     # o: pnpm owy:key -- --name "owy prod"
+# → OWY_API_KEY=owy...
+```
+
+Copiás ese valor al `OWY_API_KEY` del proyecto de Owy. El sitio **no** necesita ninguna variable nueva: la key vive hasheada en la tabla `apikey`.
+
+**Revocar**: deshabilitá (`enabled = false`) o borrá la fila en `apikey` — sin redeploy. Emitir una key nueva no invalida las viejas; borralas si querés rotar. Las keys tienen rate limit (240 req/min) y quedan con registro de último uso.
 
 ## Desarrollo local
 
@@ -75,14 +88,17 @@ El sitio (proyecto Vercel de owu.uy) necesita **una** variable nueva: `OWY_API_K
 # 1. deps (workspace pnpm, desde la raíz del repo)
 pnpm install
 
-# 2. levantar el sitio con la API (en la raíz; db docker en :5433)
-OWY_API_KEY=dev-key pnpm dev
+# 2. emitir una key para el bot (una vez, contra tu db local)
+pnpm owy:key                     # → copiá el OWY_API_KEY que imprime
+
+# 3. levantar el sitio con la API (en la raíz; db docker en :5433)
+pnpm dev
 # (en otra terminal, para ver los cambios en vivo en las pantallas)
 pnpm dev:realtime
 
-# 3. correr Owy con la TUI de eve
+# 4. correr Owy con la TUI de eve
 cd owy
-OWU_API_URL=http://localhost:3000 OWY_API_KEY=dev-key pnpm dev
+OWU_API_URL=http://localhost:3000 OWY_API_KEY=owy... pnpm dev
 ```
 
 En la TUI local sos `local-dev` → contás como staff: podés probar todo (grilla, OBS, countdown, stats). Smoke test sugerido:
@@ -99,10 +115,11 @@ Chequeos: `pnpm --filter owy typecheck` · `pnpm --filter owy build` (eve build)
 ## Deploy (proyecto Vercel propio)
 
 1. En Vercel: **Add New Project** sobre este repo con **Root Directory = `owy`** (Framework: Other; el build usa `eve build` vía el script `build`). Alternativa CLI: `cd owy && eve link && eve deploy`.
-2. Cargar las variables de entorno de arriba en el proyecto.
-3. Agregar `OWY_API_KEY` al proyecto Vercel **del sitio** y redeployar el sitio.
-4. Verificar salud: `curl https://<owy>.vercel.app/eve/v1/health`.
-5. (Opcional) dominio: `owy.owu.uy`.
+2. Emitir la key contra la base de producción del sitio (`pnpm owy:key` con el `DATABASE_URL` de prod) y cargarla como `OWY_API_KEY` junto al resto de las variables de arriba.
+3. Verificar salud: `curl https://<owy>.vercel.app/eve/v1/health`.
+4. (Opcional) dominio: `owy.owu.uy`.
+
+> El proyecto del sitio no necesita variables nuevas; sí requiere la tabla `apikey` (ya está en el schema de Drizzle: `pnpm db:push` / `db:migrate` al desplegar).
 
 ### Slack (app portable)
 
