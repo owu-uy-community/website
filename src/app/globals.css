@@ -17,66 +17,99 @@
 }
 
 @layer base {
+  /* owu.uy is a permanently dark product: the semantic tokens ARE the dark theme.
+     Values are HSL triplets so alpha modifiers (bg-background/50) work. */
   :root {
-    --background: #18181b;
-    --foreground: 222.2 84% 4.9%;
+    --background: 240 6% 10%; /* #18181b zinc-900 — must stay: public body bg */
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 240 5% 12%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 48 96% 53%; /* yellow-400 — the single brand accent */
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 240 4% 16%; /* zinc-800 */
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 5% 65%; /* zinc-400 */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 240 5% 14%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%; /* red-600 */
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 240 4% 16%; /* zinc-800 hairlines */
+    --input: 240 4% 16%;
+    --ring: 48 96% 53%;
 
     --radius: 0.5rem;
+
+    --sidebar-background: 240 10% 4%; /* zinc-950 */
+    --sidebar-foreground: 240 5% 84%;
+    --sidebar-primary: 48 96% 53%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 240 4% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 48 96% 53%;
+
+    --chart-1: 48 96% 53%; /* yellow-400 */
+    --chart-2: 217 91% 60%; /* blue-500 */
+    --chart-3: 240 5% 65%; /* zinc-400 */
+    --chart-4: 160 84% 39%; /* emerald-500 */
+    --chart-5: 0 72% 51%; /* red-600 */
   }
 
+  /* Kept identical on purpose: mounting a theme switcher later must not shift colors. */
   .dark {
-    --background: #18181b;
-    --foreground: 210 40% 98%;
+    --background: 240 6% 10%;
+    --foreground: 0 0% 98%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 5% 12%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 48 96% 53%;
+    --primary-foreground: 240 10% 4%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 5% 14%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 5% 14%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 48 96% 53%;
+
+    --sidebar-background: 240 10% 4%;
+    --sidebar-foreground: 240 5% 84%;
+    --sidebar-primary: 48 96% 53%;
+    --sidebar-primary-foreground: 240 10% 4%;
+    --sidebar-accent: 240 4% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 48 96% 53%;
+
+    --chart-1: 48 96% 53%;
+    --chart-2: 217 91% 60%;
+    --chart-3: 240 5% 65%;
+    --chart-4: 160 84% 39%;
+    --chart-5: 0 72% 51%;
   }
 }
 
@@ -199,101 +232,26 @@
   }
 }
 
-/* OpenSpace Sticky Notes - Custom styles for drag and drop functionality */
+/* OpenSpace admin board: quiet thin scrollbars on the sticky-axes surface */
 @layer components {
-  .openspace-board {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-  }
-
-  .openspace-dragging * {
-    pointer-events: none !important;
-  }
-
-  .openspace-sticky-note {
-    touch-action: none;
-    transform-origin: center;
-  }
-
-  .openspace-sticky-note:hover {
-    transform: rotate(-1deg) scale(1.02);
-    transition: transform 0.2s ease-out;
-  }
-
-  .openspace-sticky-note.dragging {
-    z-index: 1000;
-    pointer-events: none;
-  }
-
-  .openspace-drop-zone {
-    transition: all 0.3s ease;
-  }
-
-  .openspace-drop-zone.hover {
-    background-color: rgba(250, 204, 21, 0.1) !important;
-    border-color: rgba(250, 204, 21, 0.3) !important;
-  }
-
-  .openspace-room-header {
-    cursor: move;
-    transition: all 0.2s ease-out;
-  }
-
-  .openspace-room-header:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-
-  .openspace-room-header.dragging {
-    opacity: 0.6;
-    background-color: rgba(250, 204, 21, 0.2);
-  }
-
-  .openspace-time-grid {
-    overflow-x: auto;
+  .openspace-surface {
     scrollbar-width: thin;
-    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+    scrollbar-color: hsl(var(--border)) transparent;
   }
 
-  .openspace-time-grid::-webkit-scrollbar {
-    height: 6px;
+  .openspace-surface::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
   }
 
-  .openspace-time-grid::-webkit-scrollbar-track {
+  .openspace-surface::-webkit-scrollbar-track,
+  .openspace-surface::-webkit-scrollbar-corner {
     background: transparent;
   }
 
-  .openspace-time-grid::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.3);
-    border-radius: 3px;
-  }
-
-  .openspace-time-grid::-webkit-scrollbar-thumb:hover {
-    background: rgba(156, 163, 175, 0.5);
-  }
-
-  /* Realtime update visual feedback */
-  .realtime-updated {
-    animation: elegantPulse 1.2s ease-out;
-  }
-
-  @keyframes elegantPulse {
-    0% {
-      transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
-    }
-
-    50% {
-      transform: scale(1.02);
-      box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
-    }
-
-    100% {
-      transform: scale(1);
-      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-    }
+  .openspace-surface::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 4px;
   }
 }
 

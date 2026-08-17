@@ -20,8 +20,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "components/shared/ui/button";
 import { Card, CardContent } from "components/shared/ui/card";
 import { Slider } from "components/shared/ui/slider";
+import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import { toast } from "components/shared/ui/toast-utils";
-import { useRealtimeBroadcast } from "../../../hooks/useRealtimeBroadcast";
+import { useRealtimeBroadcast } from "hooks/useRealtimeBroadcast";
 import {
   Volume2,
   VolumeX,
@@ -175,7 +176,7 @@ function getInitialOutputMode(): boolean {
 // MAIN COMPONENT
 // ============================================================================
 
-export default function LaunchpadPage() {
+export default function LaunchpadClient() {
   // ========== State Management ==========
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -415,141 +416,122 @@ export default function LaunchpadPage() {
 
   // ========== Render ==========
   return (
-    <div className="h-full w-full overflow-auto bg-zinc-950 p-3 sm:p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-6">
-          {/* Title and Mode Status */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">Launchpad</h1>
-              <p className="text-xs leading-relaxed text-zinc-400 sm:text-sm">
-                {isOutputDevice ? "Salida de Audio - Reproduce sonidos" : "Controlador - Envía comandos"}
-              </p>
-            </div>
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Launchpad</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isOutputDevice
+              ? "Salida de audio — este dispositivo reproduce los sonidos"
+              : "Controlador — envía comandos a los dispositivos de salida"}
+          </p>
+        </div>
 
-            {/* Mode Toggle */}
-            <Button
-              variant={isOutputDevice ? "default" : "outline"}
-              size="lg"
-              onClick={toggleOutputDevice}
-              className={`w-full transition-all sm:w-auto ${
-                isOutputDevice
-                  ? "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-                  : "border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-black"
-              }`}
-              title={isOutputDevice ? "Este dispositivo reproduce sonidos" : "Este dispositivo envía comandos"}
-            >
-              <Speaker className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="text-sm sm:text-base">{isOutputDevice ? "Salida de Audio" : "Controlador"}</span>
-            </Button>
+        <ToggleGroup
+          type="single"
+          value={isOutputDevice ? "output" : "controller"}
+          variant="outline"
+          onValueChange={(value) => {
+            if (value && (value === "output") !== isOutputDevice) toggleOutputDevice();
+          }}
+        >
+          <ToggleGroupItem aria-label="Modo controlador" value="controller">
+            <Radio />
+            Controlador
+          </ToggleGroupItem>
+          <ToggleGroupItem aria-label="Modo salida de audio" value="output">
+            <Speaker />
+            Salida de audio
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {/* Audio Controls - Output Mode Only */}
+      {isOutputDevice && (
+        <div className="flex flex-col items-stretch gap-3 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex flex-1 items-center gap-3">
+            <Volume2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <Slider
+              className="flex-1"
+              max={100}
+              step={1}
+              value={[volume]}
+              onValueChange={(value) => setVolume(value[0])}
+            />
+            <span className="min-w-[3ch] font-terminal text-sm tabular-nums text-muted-foreground">{volume}%</span>
           </div>
+          <Button size="sm" variant={isMuted ? "destructive" : "outline"} onClick={toggleMute}>
+            {isMuted ? <VolumeX /> : <Volume2 />}
+            {isMuted ? "Silenciado" : "Activo"}
+          </Button>
+        </div>
+      )}
 
-          {/* Audio Controls - Output Mode Only */}
-          {isOutputDevice && (
-            <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-3 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex flex-1 items-center gap-3">
-                <Volume2 className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
-                <Slider
-                  value={[volume]}
-                  onValueChange={(value) => setVolume(value[0])}
-                  max={100}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="min-w-[3ch] text-sm text-zinc-400">{volume}%</span>
-              </div>
-              <Button
-                variant={isMuted ? "destructive" : "outline"}
-                size="lg"
-                onClick={toggleMute}
-                className={`w-full transition-all sm:w-auto ${!isMuted ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black" : ""}`}
-              >
-                {isMuted ? (
+      {/* Sound Grid */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
+        {SOUND_BUTTONS.map((button) => {
+          const Icon = button.icon;
+          const isPlaying = playingId === button.id;
+
+          return (
+            <Card
+              key={button.id}
+              className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 ${
+                isPlaying
+                  ? "border-primary bg-accent shadow-lg shadow-primary/20"
+                  : "border-border hover:border-muted-foreground/40"
+              } ${isMuted && isOutputDevice ? "cursor-not-allowed opacity-50" : ""}`}
+              onClick={() => playSound(button)}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  playSound(button);
+                }
+              }}
+              tabIndex={isMuted && isOutputDevice ? -1 : 0}
+              role="button"
+              aria-label={isOutputDevice ? `Play ${button.name}` : `Trigger ${button.name} remotely`}
+              aria-pressed={isPlaying}
+              aria-disabled={isMuted && isOutputDevice}
+            >
+              <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6">
+                <div className="mb-2 transition-transform group-hover:scale-110 sm:mb-3">
+                  <Icon
+                    className={`h-8 w-8 transition-colors sm:h-10 sm:w-10 md:h-12 md:w-12 ${
+                      isPlaying ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    }`}
+                  />
+                </div>
+                <div
+                  className={`line-clamp-2 text-center text-xs font-medium transition-colors sm:text-sm ${
+                    isPlaying ? "text-primary" : "text-foreground"
+                  }`}
+                >
+                  {button.name}
+                </div>
+
+                {/* Playing Indicator */}
+                {isPlaying && (
                   <>
-                    <VolumeX className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-sm sm:text-base">Silenciado</span>
-                  </>
-                ) : (
-                  <>
-                    <Volume2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-sm sm:text-base">Activo</span>
+                    <div className="absolute right-2 top-2 h-2 w-2 animate-ping rounded-full bg-primary" />
+                    <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+                    {!isOutputDevice && (
+                      <div className="pointer-events-none absolute inset-0 animate-pulse rounded-lg border-2 border-primary" />
+                    )}
                   </>
                 )}
-              </Button>
-            </div>
-          )}
-        </div>
 
-        {/* Sound Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-          {SOUND_BUTTONS.map((button) => {
-            const Icon = button.icon;
-            const isPlaying = playingId === button.id;
-
-            return (
-              <Card
-                key={button.id}
-                className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-zinc-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 ${
-                  isPlaying
-                    ? "border-yellow-500 bg-zinc-800 shadow-lg shadow-yellow-500/20"
-                    : isOutputDevice
-                      ? "border-zinc-800 bg-zinc-900 hover:border-zinc-700"
-                      : "border-blue-800 bg-zinc-900 hover:border-blue-600 hover:bg-zinc-800"
-                } ${isMuted && isOutputDevice ? "cursor-not-allowed opacity-50" : ""} ${
-                  isOutputDevice ? "focus-visible:ring-yellow-500" : "focus-visible:ring-blue-500"
-                }`}
-                onClick={() => playSound(button)}
-                onKeyDown={(e) => {
-                  if (e.key === " " || e.key === "Enter") {
-                    e.preventDefault();
-                    playSound(button);
-                  }
-                }}
-                tabIndex={isMuted && isOutputDevice ? -1 : 0}
-                role="button"
-                aria-label={isOutputDevice ? `Play ${button.name}` : `Trigger ${button.name} remotely`}
-                aria-pressed={isPlaying}
-                aria-disabled={isMuted && isOutputDevice}
-              >
-                <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6">
-                  <div className="mb-2 transition-transform group-hover:scale-110 sm:mb-3">
-                    <Icon
-                      className={`h-8 w-8 transition-colors sm:h-10 sm:w-10 md:h-12 md:w-12 ${
-                        isPlaying ? "text-yellow-400" : "text-zinc-400 group-hover:text-white"
-                      }`}
-                    />
+                {/* Controller Mode Indicator */}
+                {!isOutputDevice && !isPlaying && (
+                  <div className="absolute right-1.5 top-1.5 rounded-full bg-muted p-0.5 sm:right-2 sm:top-2 sm:p-1">
+                    <Radio className="h-2.5 w-2.5 text-muted-foreground sm:h-3 sm:w-3" />
                   </div>
-                  <div
-                    className={`line-clamp-2 text-center text-xs font-medium transition-colors sm:text-sm ${
-                      isPlaying ? "text-yellow-400" : "text-white"
-                    }`}
-                  >
-                    {button.name}
-                  </div>
-
-                  {/* Playing Indicator */}
-                  {isPlaying && (
-                    <>
-                      <div className="absolute right-2 top-2 h-2 w-2 animate-ping rounded-full bg-yellow-500" />
-                      <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-yellow-500" />
-                      {!isOutputDevice && (
-                        <div className="pointer-events-none absolute inset-0 animate-pulse rounded-lg border-2 border-yellow-500" />
-                      )}
-                    </>
-                  )}
-
-                  {/* Controller Mode Indicator */}
-                  {!isOutputDevice && !isPlaying && (
-                    <div className="absolute right-1.5 top-1.5 rounded-full bg-blue-500/20 p-0.5 sm:right-2 sm:top-2 sm:p-1">
-                      <Radio className="h-2.5 w-2.5 text-blue-400 sm:h-3 sm:w-3" />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

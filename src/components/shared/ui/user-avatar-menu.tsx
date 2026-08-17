@@ -41,14 +41,14 @@ export function UserAvatarMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full hover:bg-yellow-400/10">
+        <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full hover:bg-primary/10">
           <Avatar className="h-8 w-8 cursor-pointer">
             <AvatarImage src={avatarUrl} alt={user.name || user.email || "User avatar"} />
-            <AvatarFallback className="bg-yellow-400 text-black">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 border-zinc-800 bg-zinc-900" align="end" sideOffset={15}>
+      <DropdownMenuContent className="w-56" align="end" sideOffset={15}>
         {/* <DropdownMenuItem
           className="cursor-pointer text-white hover:bg-zinc-800 hover:text-yellow-400 focus:bg-zinc-800 focus:text-yellow-400"
           asChild
@@ -69,10 +69,7 @@ export function UserAvatarMenu({
         </DropdownMenuItem> */}
 
         {showAdminSettings && (
-          <DropdownMenuItem
-            className="cursor-pointer text-white hover:bg-zinc-800 hover:text-yellow-400 focus:bg-zinc-800 focus:text-yellow-400"
-            asChild
-          >
+          <DropdownMenuItem className="cursor-pointer" asChild>
             <Link href="/admin">
               <ShieldCheck size={16} className="mr-2" />
               Admin
@@ -80,10 +77,10 @@ export function UserAvatarMenu({
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuSeparator className="bg-zinc-800" />
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={onSignOut}
-          className="cursor-pointer text-red-400 hover:bg-red-900/30 hover:text-red-300 focus:bg-red-900/30 focus:text-red-300"
+          className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
           <LogOut size={16} className="mr-2" />
           Cerrar sesión
