@@ -39,6 +39,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname.startsWith(navSections[SectionKey.Blog].link)) {
+      setActiveSection(SectionKey.Blog);
+
+      return;
+    }
+
     if (pathname !== navSections[SectionKey.MeetupEvent].link) return;
 
     setActiveSection(SectionKey.MeetupEvent);
@@ -46,6 +52,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   const observerHero = useSectionObserver(SectionKey.Hero, setActiveSection);
   const observerEvents = useSectionObserver(SectionKey.Events, setActiveSection);
+  const observerBlog = useSectionObserver(SectionKey.Blog, setActiveSection);
   const observerMeetupEvent = useSectionObserver(SectionKey.MeetupEvent, setActiveSection);
   const observerStats = useSectionObserver(SectionKey.Stats, setActiveSection);
   const observerHistory = useSectionObserver(SectionKey.Story, setActiveSection);
@@ -53,6 +60,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const sectionsRefs: SectionObserversMap = {
     [SectionKey.Hero]: observerHero.ref,
     [SectionKey.Events]: observerEvents.ref,
+    [SectionKey.Blog]: observerBlog.ref,
     [SectionKey.MeetupEvent]: observerMeetupEvent.ref,
     [SectionKey.Stats]: observerStats.ref,
     [SectionKey.Story]: observerHistory.ref,

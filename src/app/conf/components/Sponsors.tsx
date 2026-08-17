@@ -1,5 +1,6 @@
-import { INTERNAL_ROUTES } from "app/lib/constants";
+import { CONF_DATES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import Countdown from "./Countdown";
 import PillLink from "./PillLink";
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -14,12 +15,18 @@ type Sponsor = {
 
 /* CONFIRMED sponsors only for OWU CONF 2026 (also feeds the hero carousel) */
 export const SPONSORS_2026: Sponsor[] = [
-  { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.webp", website: "https://www.mimiquate.com/" },
-  { name: "RevenueCat", logo: "/images/sponsors/revenuecat/logo.webp", website: "https://www.revenuecat.com/" },
-  { name: "Sentry", logo: "/images/conf/sponsors/sentry.webp", website: "https://sentry.io/" },
-  { name: "Streaver", logo: "/images/sponsors/streaver/logo.webp", website: "https://www.streaver.com/" },
-  { name: "WyeWorks", logo: "/images/sponsors/wyeworks/logo.webp", website: "https://www.wyeworks.com/" },
-  { name: "Xmartlabs", logo: "/images/sponsors/xmartlabs/logo.webp", website: "https://xmartlabs.com/" },
+  { name: "Crunchloop", logo: "/images/conf/sponsors/crunchloop.svg", website: "https://www.crunchloop.io/" },
+  { name: "Estudio Hahn", logo: "/images/conf/sponsors/han.svg", website: "https://estudiohahn.com/" },
+  { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.svg", website: "https://www.mimiquate.com/" },
+  { name: "Neocoast", logo: "/images/conf/sponsors/neocoast.svg", website: "https://www.neocoast.com/" },
+  { name: "Nexchange", logo: "/images/conf/sponsors/nexchange.svg", website: "https://www.nex-change.com/" },
+  { name: "RevenueCat", logo: "/images/conf/sponsors/revenuecat.svg", website: "https://www.revenuecat.com/" },
+  { name: "Segalerba", logo: "/images/conf/sponsors/segalerba.svg", website: "https://segalerba.com.uy/" },
+  { name: "Sentry", logo: "/images/conf/sponsors/sentry.svg", website: "https://sentry.io/" },
+  { name: "Streaver", logo: "/images/conf/sponsors/streaver.svg", website: "https://www.streaver.com/" },
+  { name: "Trupropel", logo: "/images/conf/sponsors/trupropel.svg", website: "https://www.trupropel.com/" },
+  { name: "WyeWorks", logo: "/images/conf/sponsors/wyeworks.svg", website: "https://www.wyeworks.com/" },
+  { name: "Xmartlabs", logo: "/images/conf/sponsors/xmartlabs.svg", website: "https://xmartlabs.com/" },
 ];
 
 export default function Sponsors() {
@@ -38,6 +45,25 @@ export default function Sponsors() {
           <PillLink href={INTERNAL_ROUTES.conf.sponsors}>¡QUIERO SER SPONSOR!</PillLink>
         </Reveal>
       </div>
+
+      <Reveal delay={0.15} y={20}>
+        <div className="mt-12 flex flex-col gap-8 border-2 border-[#FBF5E7]/15 p-5 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
+              Aceptamos postulaciones
+            </p>
+            <p className="mt-3 text-balance font-display text-2xl font-extrabold uppercase leading-none tracking-[-0.02em] text-[#F5BB03] sm:text-3xl">
+              Hasta el 15 de septiembre
+            </p>
+          </div>
+          <Countdown
+            className="shrink-0"
+            expiredLabel="CONVOCATORIA CERRADA"
+            size="lg"
+            target={CONF_DATES.sponsorsDeadline}
+          />
+        </div>
+      </Reveal>
 
       <Reveal delay={0.1} y={16}>
         <p className="mt-14 font-display text-xs font-semibold uppercase tracking-[0.18em] text-[#FBF5E7]/60">
