@@ -1,6 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "../../../db";
 import { rooms, schedules, tracks } from "../../../db/schema";
+import { broadcastCardChange } from "../../../realtime/broadcast";
 import type { UpdateTrackInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -91,7 +92,17 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
       throw new Error("Track not found");
     }
 
-    return transformTrackForStickyNote(track);
+    const stickyNote = transformTrackForStickyNote(track);
+
+    // Notify connected screens (grid admin, kiosk) — best-effort
+    await broadcastCardChange({
+      type: "CARD_UPDATE",
+      openSpaceId: stickyNote.openSpaceId,
+      cardId: stickyNote.id,
+      updatedCard: stickyNote,
+    });
+
+    return stickyNote;
   } catch (error) {
     console.error("❌ Track update error:", error);
     throw error;

@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../db";
 import { obsInstances, obsPresetItems, obsPresets, obsQueueItems } from "../../../db/schema";
+import { broadcastOBSStateChange } from "../../../realtime/broadcast";
 import type { OBSQueueState, UpdateStateInput } from "../schemas";
 
 /**
@@ -8,7 +9,7 @@ import type { OBSQueueState, UpdateStateInput } from "../schemas";
  * Uses transactions to ensure data consistency
  */
 export const updateState = async ({ instanceId, data }: UpdateStateInput): Promise<OBSQueueState> => {
-  return await db.transaction(async (tx) => {
+  const state = await db.transaction(async (tx) => {
     // Get current instance or create if doesn't exist
     const [existing] = await tx.select().from(obsInstances).where(eq(obsInstances.id, instanceId)).limit(1);
 
@@ -166,4 +167,9 @@ export const updateState = async ({ instanceId, data }: UpdateStateInput): Promi
       version: finalInstance.version,
     };
   });
+
+  // Notify connected screens (admin screen, standalone app) — best-effort
+  await broadcastOBSStateChange(instanceId, state.version);
+
+  return state;
 };

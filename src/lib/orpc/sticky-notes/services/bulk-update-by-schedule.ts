@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { schedules, tracks } from "../../../db/schema";
+import { broadcastCardChange } from "../../../realtime/broadcast";
 import type { BulkUpdateTracksByScheduleInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -76,7 +77,7 @@ export const bulkUpdateTracksBySchedule = async (input: BulkUpdateTracksBySchedu
   });
 
   // Transform to StickyNote format with the new timeSlot
-  return updatedTracks.map((track) => {
+  const stickyNotes = updatedTracks.map((track) => {
     // Override the timeSlot with the new value since the schedule might not be updated yet
     const stickyNote = transformTrackForStickyNote(track);
     return {
@@ -84,4 +85,16 @@ export const bulkUpdateTracksBySchedule = async (input: BulkUpdateTracksBySchedu
       timeSlot: newTimeSlot,
     };
   });
+
+  // Notify connected screens (grid admin, kiosk) — best-effort, one event per card
+  for (const stickyNote of stickyNotes) {
+    await broadcastCardChange({
+      type: "CARD_UPDATE",
+      openSpaceId: stickyNote.openSpaceId,
+      cardId: stickyNote.id,
+      updatedCard: stickyNote,
+    });
+  }
+
+  return stickyNotes;
 };
