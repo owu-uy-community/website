@@ -1,5 +1,5 @@
 import { Button } from "components/shared/ui/button";
-import { SlackIcon } from "lucide-react";
+import { FaSlack } from "react-icons/fa";
 
 type SocialProvider = "slack";
 
@@ -13,7 +13,7 @@ interface SocialButtonProps {
 
 const providerConfig = {
   slack: {
-    icon: SlackIcon,
+    icon: FaSlack,
     name: "Slack",
   },
 };

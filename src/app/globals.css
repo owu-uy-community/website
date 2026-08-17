@@ -290,3 +290,33 @@
     opacity: 0;
   }
 }
+
+/* Blog (/blog): tokens de sugar-high para los bloques de código MDX */
+:root {
+  --sh-class: #7aa2f7;
+  --sh-identifier: #d4d4d8;
+  --sh-sign: #89ddff;
+  --sh-property: #73daca;
+  --sh-entity: #e0af68;
+  --sh-jsxliterals: #7aa2f7;
+  --sh-string: #9ece6a;
+  --sh-keyword: #bb9af7;
+  --sh-comment: #565f89;
+}
+
+/* Scoped a .blog-prose para no afectar admin/openspace */
+.blog-prose code {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.blog-prose :not(pre) > code {
+  border-radius: 0.3em;
+  background-color: rgba(255, 255, 255, 0.08);
+  padding: 0.2em 0.4em;
+  font-size: 0.875em;
+  color: #f4f4f5;
+}
+
+.blog-prose :not(pre) > code span {
+  color: inherit;
+}
