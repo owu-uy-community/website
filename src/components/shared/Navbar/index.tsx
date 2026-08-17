@@ -40,7 +40,7 @@ function Navbar() {
   const { data: session, isPending } = useSession();
   return (
     <nav
-      className="sticky top-[-1px] z-[60] mx-auto flex h-full max-h-[56px] w-full bg-opacity-25 bg-gradient-to-b from-[#1d1e1757] via-transparent to-transparent py-4 backdrop-blur-lg backdrop-filter"
+      className="sticky top-[-1px] z-[60] mx-auto flex h-full max-h-[56px] w-full bg-gradient-to-b from-[#1d1e1757] via-transparent to-transparent py-4 backdrop-blur-lg backdrop-filter"
       id="site-menu"
     >
       <div className="container flex flex-row items-center justify-between">

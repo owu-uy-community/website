@@ -449,7 +449,7 @@ export default function LaunchpadPage() {
           {isOutputDevice && (
             <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-3 sm:flex-row sm:items-center sm:gap-4">
               <div className="flex flex-1 items-center gap-3">
-                <Volume2 className="h-4 w-4 flex-shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+                <Volume2 className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
                 <Slider
                   value={[volume]}
                   onValueChange={(value) => setVolume(value[0])}
@@ -490,7 +490,7 @@ export default function LaunchpadPage() {
             return (
               <Card
                 key={button.id}
-                className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-zinc-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 ${
+                className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-zinc-800 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 active:scale-95 ${
                   isPlaying
                     ? "border-yellow-500 bg-zinc-800 shadow-lg shadow-yellow-500/20"
                     : isOutputDevice

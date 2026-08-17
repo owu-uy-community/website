@@ -274,7 +274,7 @@ export function ScheduleFormModal({
           {/* Warning about tracks in edit mode */}
           {isEditMode && hasTracksInSlot && (
             <div className="flex items-start gap-2 rounded-md border border-blue-600/50 bg-blue-500/10 p-3">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0 text-blue-400" />
+              <AlertTriangle className="h-5 w-5 shrink-0 text-blue-400" />
               <div className="text-sm text-blue-200">
                 <strong>Nota:</strong> Este horario tiene charlas asignadas. Al cambiar el horario, todas las charlas se
                 actualizarán automáticamente al nuevo horario.
@@ -285,7 +285,7 @@ export function ScheduleFormModal({
           {/* Error message */}
           {formErrors.root && (
             <div className="flex items-start gap-2 rounded-md border border-red-600/50 bg-red-500/10 p-3">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0 text-red-400" />
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
               <p className="text-sm text-red-200">{formErrors.root.message}</p>
             </div>
           )}

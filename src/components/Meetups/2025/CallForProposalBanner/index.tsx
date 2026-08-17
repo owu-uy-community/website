@@ -17,7 +17,7 @@ export default function CallForProposalsBanner() {
       <div className="mx-auto max-w-[1280px] px-4">
         <div className="relative flex items-center justify-between gap-4">
           <div className="flex flex-1 items-center gap-4">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-black/10">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black/10">
               <Megaphone className="h-6 w-6 text-black" />
             </div>
             <div className="min-w-0 flex-1">

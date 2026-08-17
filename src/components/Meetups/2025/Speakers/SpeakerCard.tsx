@@ -90,7 +90,7 @@ export default function SpeakerCard({
               {talkTitle && talkDescription && (
                 <button
                   type="button"
-                  className="text-white transition-colors hover:text-yellow-400 focus:outline-none"
+                  className="text-white transition-colors hover:text-yellow-400 focus:outline-hidden"
                   aria-label={`Ver descripción de la charla de ${fullName}`}
                   title="Ver descripción de la charla"
                 >

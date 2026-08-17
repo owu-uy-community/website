@@ -86,7 +86,7 @@ export default function Lightbox({ photos, index, downloadPrefix, onClose, onSte
     <div
       aria-label={photo.alt}
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm animate-[lightbox-fade-in_250ms_ease-out]"
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xs animate-[lightbox-fade-in_250ms_ease-out]"
       role="dialog"
       onClick={onClose}
     >

@@ -275,8 +275,8 @@ export default function StickyNoteDisplay() {
           {/* Sticky Note */}
           <div
             className={`relative h-[600px] w-[800px] rounded-lg bg-gradient-to-br from-yellow-200 via-yellow-100 to-yellow-200 shadow-2xl transition-all duration-500 ${
-              isUpdating ? "scale-105 ring-4 ring-blue-400 ring-opacity-75" : ""
-            } ${isCasting ? "scale-105 ring-4 ring-green-400 ring-opacity-75" : ""}`}
+              isUpdating ? "scale-105 ring-4 ring-blue-400/75" : ""
+            } ${isCasting ? "scale-105 ring-4 ring-green-400/75" : ""}`}
             style={{
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 2px 4px 0 rgba(255, 255, 255, 0.6)",
               ...(!selectedNote && {

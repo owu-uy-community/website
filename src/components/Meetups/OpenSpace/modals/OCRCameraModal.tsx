@@ -206,7 +206,7 @@ export function OCRCameraModal({
               <>
                 <video ref={videoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-contain" />
                 {permissionMessage && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 p-4 text-center text-white">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-white">
                     <p>{permissionMessage}</p>
                   </div>
                 )}
