@@ -121,7 +121,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
 
                     {/* Icon */}
                     <div
-                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                         isSelected
                           ? "border-yellow-300 bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-lg"
                           : "border-gray-700 bg-gray-700/30 group-hover:border-yellow-400/50"
@@ -152,7 +152,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
 
                         {/* Speaker info - only show when there's a presenter or it's vacant */}
                         {(isVacante || hasPresenters) && (
-                          <div className="flex flex-shrink-0 items-center gap-2">
+                          <div className="flex shrink-0 items-center gap-2">
                             {isVacante ? (
                               <>
                                 <div className="text-right">
@@ -233,7 +233,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                     <div className="mb-2 flex items-start gap-3">
                       {/* Icon */}
                       <div
-                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                           isSelected
                             ? "border-yellow-300 bg-gradient-to-r from-yellow-400 to-yellow-500 shadow-lg"
                             : "border-gray-700 bg-gray-700/30 group-hover:border-yellow-400/50"
@@ -268,7 +268,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
 
                       {/* Expand indicator */}
                       <div
-                        className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
                           isSelected
                             ? "rotate-180 bg-yellow-400 text-black"
                             : "bg-gray-800 text-gray-400 group-hover:bg-gray-700"

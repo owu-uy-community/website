@@ -132,7 +132,7 @@ export default function IntroSection() {
               {/* Features */}
               <div className="grid gap-10 sm:grid-cols-2">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
                     <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -148,7 +148,7 @@ export default function IntroSection() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
                     <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -164,7 +164,7 @@ export default function IntroSection() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
                     <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -180,7 +180,7 @@ export default function IntroSection() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-700 bg-gray-800">
                     <svg className="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
@@ -264,7 +264,7 @@ export default function IntroSection() {
                       {/* Hover overlay */}
                       <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-all duration-300 group-hover:bg-black/20">
                         <div className="opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                          <div className="rounded-full bg-white/20 p-2 backdrop-blur-sm">
+                          <div className="rounded-full bg-white/20 p-2 backdrop-blur-xs">
                             <ZoomIn className="h-4 w-4 text-white" />
                           </div>
                         </div>
@@ -294,7 +294,7 @@ export default function IntroSection() {
       {/* Fullscreen Modal */}
       {fullscreenImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 pt-[56px] backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 pt-[56px] backdrop-blur-xs"
           onClick={closeFullscreen}
         >
           <div className="relative flex h-[calc(100dvh-56px)] w-full max-w-7xl items-center justify-center">
@@ -336,7 +336,7 @@ export default function IntroSection() {
             </div>
 
             {/* Image counter */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-4 py-2 text-sm text-white backdrop-blur-sm">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-4 py-2 text-sm text-white backdrop-blur-xs">
               {images.findIndex((img) => img === fullscreenImage) + 1} / {images.length}
             </div>
           </div>

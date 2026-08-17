@@ -33,7 +33,7 @@ export default function OpenSpaceAgendaContainer({ animate = false }: OpenSpaceA
         filter: animate ? `blur(${mapUnblur}px` : "none",
       }}
     >
-      <div className="relative h-full w-full rounded-lg bg-transparent p-5 shadow-md backdrop-blur-sm backdrop-brightness-[1]">
+      <div className="relative h-full w-full rounded-lg bg-transparent p-5 shadow-md backdrop-blur-xs backdrop-brightness-[1]">
         <OpenSpaceAgenda initialEpg={[]} isApp={false} />
       </div>
     </AbsoluteFill>

@@ -41,7 +41,7 @@ export default function Communities({ title, subtitle, communities = [] }: Commu
           {logos.map(({ name, picture, website }) => (
             <Link
               key={website ?? "#"}
-              className="z-50 mx-2 flex w-2/6 flex-shrink-0 hover:scale-105 md:w-1/6"
+              className="z-50 mx-2 flex w-2/6 shrink-0 hover:scale-105 md:w-1/6"
               href={addUtmParams(website ?? "#")}
               target="_blank"
             >

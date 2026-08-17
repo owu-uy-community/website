@@ -663,7 +663,7 @@ export function TalkFormModal({
                         className="absolute inset-0 h-full w-full object-cover"
                       />
                       {permissionMessage && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 p-4 text-center text-sm text-white">
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-sm text-white">
                           <p>{permissionMessage}</p>
                         </div>
                       )}
@@ -1016,7 +1016,7 @@ export function TalkFormModal({
                           {suggestionHistory[currentHistoryIndex]?.swapSuggestion?.shouldSwap && (
                             <div className="rounded-md border border-orange-600/50 bg-orange-500/10 p-3">
                               <div className="flex items-start gap-2">
-                                <Repeat2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-400" />
+                                <Repeat2 className="mt-0.5 h-4 w-4 shrink-0 text-orange-400" />
                                 <div className="flex-1">
                                   <p className="text-xs font-medium text-orange-400">Sugerencia de Intercambio:</p>
                                   <p className="mt-1 text-xs text-orange-200">

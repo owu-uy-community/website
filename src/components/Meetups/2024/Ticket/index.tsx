@@ -136,12 +136,12 @@ export default function Ticket({ sponsors, releaseDate: _releaseDate, ticketUrl:
 
         {/* Loading Skeleton Overlay */}
         {isLoading && (
-          <div className="pointer-events-none absolute inset-0 z-20 animate-pulse rounded-[10px] bg-[#24292e]/95 backdrop-blur-sm"></div>
+          <div className="pointer-events-none absolute inset-0 z-20 animate-pulse rounded-[10px] bg-[#24292e]/95 backdrop-blur-xs"></div>
         )}
 
         {/* Countdown Overlay */}
         {!isLoading && !isReleased && releaseDate && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[10px] bg-[#24292e]/95 backdrop-blur-sm">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[10px] bg-[#24292e]/95 backdrop-blur-xs">
             <div className="flex flex-col gap-3 px-3 text-center sm:gap-4 sm:px-4">
               <h3 className="mb-1 text-sm font-bold leading-tight text-white sm:mb-2 sm:text-base lg:text-lg">
                 Entradas disponibles desde el <br />

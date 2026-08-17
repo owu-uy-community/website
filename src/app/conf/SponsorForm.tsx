@@ -24,7 +24,7 @@ export default function SponsorForm({ open, onClose }: { open: boolean; onClose:
             type="button"
             onClick={onClose}
             aria-label="Volver"
-            className="group/dot relative flex h-2.5 w-2.5 items-center justify-center rounded-full bg-[#FF5F56] outline-none transition-transform hover:scale-110 focus-visible:scale-110"
+            className="group/dot relative flex h-2.5 w-2.5 items-center justify-center rounded-full bg-[#FF5F56] outline-hidden transition-transform hover:scale-110 focus-visible:scale-110"
           >
             <span className="font-terminal text-[7px] leading-none text-black/0 transition-colors group-hover/dot:text-black/60">
               ✕

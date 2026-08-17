@@ -4,9 +4,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap");
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Keep the v3-style JS config as the source of truth for the design system
+   (colors, fonts, keyframes, animations) instead of porting it to @theme. */
+@config "../../tailwind.config.ts";
 
 ::view-transition-group(conf-window),
 ::view-transition-group(conf-logo) {
@@ -79,8 +81,24 @@
 }
 
 @layer base {
-  * {
+  /* v4's preflight defaults borders to currentColor on pseudo-elements too, so
+     the theme border colour is applied across the same set v3 covered. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
     @apply border-border;
+  }
+  /* v3's preflight gave buttons a pointer cursor; v4 leaves them at `default`. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  /* v3's preflight coloured placeholders gray-400; v4 uses currentColor/50%. */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400, oklch(0.707 0.022 261.325));
   }
   html {
     scroll-behavior: smooth;
@@ -289,4 +307,34 @@
   from {
     opacity: 0;
   }
+}
+
+/* Blog (/blog): tokens de sugar-high para los bloques de código MDX */
+:root {
+  --sh-class: #7aa2f7;
+  --sh-identifier: #d4d4d8;
+  --sh-sign: #89ddff;
+  --sh-property: #73daca;
+  --sh-entity: #e0af68;
+  --sh-jsxliterals: #7aa2f7;
+  --sh-string: #9ece6a;
+  --sh-keyword: #bb9af7;
+  --sh-comment: #565f89;
+}
+
+/* Scoped a .blog-prose para no afectar admin/openspace */
+.blog-prose code {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.blog-prose :not(pre) > code {
+  border-radius: 0.3em;
+  background-color: rgba(255, 255, 255, 0.08);
+  padding: 0.2em 0.4em;
+  font-size: 0.875em;
+  color: #f4f4f5;
+}
+
+.blog-prose :not(pre) > code span {
+  color: inherit;
 }

@@ -197,7 +197,7 @@ export function TimeGridKiosk({ rooms, timeSlots, noteColors, getNotesForCell }:
                 </div>
                 <ChevronDown
                   className={cn(
-                    "h-6 w-6 flex-shrink-0 text-yellow-400 transition-transform duration-200",
+                    "h-6 w-6 shrink-0 text-yellow-400 transition-transform duration-200",
                     isExpanded ? "rotate-180" : ""
                   )}
                 />
