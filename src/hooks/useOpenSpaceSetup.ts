@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
 import { orpc } from "../lib/orpc/client";
+import { roomColorFor } from "../lib/rooms/palette";
 import { toast } from "../components/shared/ui/toast-utils";
 
 /**
@@ -11,6 +12,8 @@ export const useOpenSpaceSetup = (
   options?: {
     initialRooms?: any[];
     initialSchedules?: any[];
+    /** For always-on screens that never refire window focus (kiosks). */
+    refetchInterval?: number;
   }
 ) => {
   // Fetch rooms and schedules
@@ -19,9 +22,9 @@ export const useOpenSpaceSetup = (
       input: { openSpaceId },
       // Use server-side data as initial data for instant first render
       initialData: options?.initialRooms,
-      staleTime: 0, // No cache - always fresh
-      refetchOnMount: true, // Always refetch when component mounts
+      staleTime: 30 * 1000,
       refetchOnWindowFocus: true, // Refetch when user returns to tab
+      refetchInterval: options?.refetchInterval,
     })
   );
 
@@ -30,9 +33,9 @@ export const useOpenSpaceSetup = (
       input: { openSpaceId },
       // Use server-side data as initial data for instant first render
       initialData: options?.initialSchedules,
-      staleTime: 0, // No cache - always fresh
-      refetchOnMount: true, // Always refetch when component mounts
+      staleTime: 30 * 1000,
       refetchOnWindowFocus: true, // Refetch when user returns to tab
+      refetchInterval: options?.refetchInterval,
     })
   );
 
@@ -44,6 +47,26 @@ export const useOpenSpaceSetup = (
   // Build display arrays
   const rooms = useMemo(() => roomsData.map((r) => r.name), [roomsData]);
   const timeSlots = useMemo(() => schedulesData.map((s) => `${s.startTime} - ${s.endTime}`), [schedulesData]);
+
+  // Resolved color per room name (explicit rooms.color or stable palette fallback)
+  const roomColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const room of roomsData) {
+      map[room.name] = roomColorFor(room.id, room.color);
+    }
+
+    return map;
+  }, [roomsData]);
+
+  // Picked shape key per room name; rooms without one render no icon.
+  const roomIcons = useMemo(() => {
+    const map: Record<string, string | null> = {};
+    for (const room of roomsData) {
+      map[room.name] = room.icon ?? null;
+    }
+
+    return map;
+  }, [roomsData]);
 
   // Helper to find IDs from display strings
   const findIdsForPosition = useCallback(
@@ -72,6 +95,8 @@ export const useOpenSpaceSetup = (
   return {
     rooms,
     timeSlots,
+    roomColors,
+    roomIcons,
     roomsData,
     schedulesData,
     isLoading: shouldShowLoading,

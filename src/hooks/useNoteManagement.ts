@@ -4,11 +4,12 @@ import type { StickyNote } from "./useOpenSpaceNotesORPC";
 import { orpc } from "../lib/orpc";
 
 interface UseNoteManagementProps {
+  openSpaceId: string;
   notes: StickyNote[];
   roomsData: any[];
   findIdsForPosition: (room: string, timeSlot: string) => { roomId: string; scheduleId: string } | null;
   updateNote: (id: string, updates: any) => Promise<any>;
-  swapNotes: (noteId1: string, noteId2: string) => Promise<any>;
+  swapNotes: (noteId1: string, noteId2: string, options?: { alreadyApplied?: boolean }) => Promise<any>;
   createNote: (data: any) => Promise<any>;
   deleteNote: (id: string) => Promise<any>;
 }
@@ -18,6 +19,7 @@ interface UseNoteManagementProps {
  * Handles: CRUD operations, drag-and-drop validation, resource checks
  */
 export function useNoteManagement({
+  openSpaceId,
   notes,
   roomsData,
   findIdsForPosition,
@@ -29,11 +31,15 @@ export function useNoteManagement({
   const queryClient = useQueryClient();
 
   /**
-   * Handle drag-and-drop note changes with optimistic updates and resource validation
-   * Detects swaps and single moves, validates resources, shows confirmation modal if needed
+   * Handle drag-and-drop note changes with resource validation.
+   * Detects swaps and single moves, validates resources, returns the actions.
+   *
+   * Deliberately SYNCHRONOUS: the board applies the optimistic cache write in
+   * the same batch as the drop, and any await here would push that past the
+   * paint where dnd-kit measures the drop-animation target.
    */
   const handleNotesChange = useCallback(
-    async (updatedNotes: StickyNote[]) => {
+    (updatedNotes: StickyNote[]) => {
       const changedNotes = updatedNotes.filter((updatedNote) => {
         const originalNote = notes.find((n) => n.id === updatedNote.id);
         return (
@@ -75,8 +81,10 @@ export function useNoteManagement({
         }
       }
 
-      // Define the actual backend move
-      const confirmAction = async () => {
+      // Define the actual backend move. `preApplied` = the caller already
+      // wrote this arrangement to the cache synchronously (drag drop) — a
+      // swap must then skip its optimistic write or it would undo itself.
+      const confirmAction = async (options?: { preApplied?: boolean }) => {
         // Detect swaps (2 notes exchanging positions)
         if (changedNotes.length === 2) {
           const [noteA, noteB] = changedNotes;
@@ -91,7 +99,7 @@ export function useNoteManagement({
             originalB.room === noteA.room &&
             originalB.timeSlot === noteA.timeSlot
           ) {
-            await swapNotes(noteA.id, noteB.id);
+            await swapNotes(noteA.id, noteB.id, { alreadyApplied: options?.preApplied });
             return;
           }
         }
@@ -121,7 +129,7 @@ export function useNoteManagement({
           return note;
         });
         // Trigger a re-render with reverted positions by invalidating queries
-        queryClient.setQueryData(orpc.tracks.list.queryKey(), revertedNotes);
+        queryClient.setQueryData(orpc.tracks.list.queryKey({ input: { openSpaceId } }), revertedNotes);
       };
 
       return {
@@ -138,7 +146,7 @@ export function useNoteManagement({
    */
   const handleSaveNote = useCallback(
     async (
-      noteData: Partial<StickyNote>,
+      noteData: Partial<StickyNote> & { skipResourceValidation?: boolean },
       editingNote: StickyNote | null,
       rooms: string[],
       timeSlots: string[],
@@ -174,6 +182,10 @@ export function useNoteManagement({
           openSpaceId: openSpaceId,
           scheduleId: ids.scheduleId,
           roomId: ids.roomId,
+          // Forwarded explicitly: this branch builds its payload field by
+          // field, so the confirmation from the resource warning would be
+          // dropped here and the server would reject the talk again.
+          skipResourceValidation: noteData.skipResourceValidation ?? false,
         });
       }
     },

@@ -2,16 +2,25 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { Button } from "../../../shared/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../../../shared/ui/dialog";
-import { Input } from "../../../shared/ui/input";
-import { Label } from "../../../shared/ui/label";
-import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX } from "lucide-react";
-import { useCountdownState } from "../../../../hooks/useCountdownState";
-import { toast } from "../../../shared/ui/toast-utils";
+import { Pause, Play, RotateCcw, Timer, Volume2, VolumeX } from "lucide-react";
 
-export function CountdownControls() {
-  const { state, loading, updateState } = useCountdownState({ enableRealtime: true });
+import { Button } from "components/shared/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "components/shared/ui/dialog";
+import { Input } from "components/shared/ui/input";
+import { Label } from "components/shared/ui/label";
+import { Separator } from "components/shared/ui/separator";
+import { useCountdownState } from "hooks/useCountdownState";
+import { toast } from "components/shared/ui/toast-utils";
+
+export function CountdownControls({ eventId }: { eventId: string }) {
+  const { state, loading, updateState } = useCountdownState({ enableRealtime: true, eventId });
   const [isOpen, setIsOpen] = useState(false);
   const [minutes, setMinutes] = useState("5");
   const [seconds, setSeconds] = useState("0");
@@ -27,12 +36,12 @@ export function CountdownControls() {
     try {
       if (state.isRunning) {
         await updateState("pause");
-        toast.info("Temporizador Pausado");
+        toast.info("Temporizador pausado");
       } else {
         await updateState("start");
-        toast.info("Temporizador Iniciado");
+        toast.info("Temporizador iniciado");
       }
-    } catch (error) {
+    } catch {
       toast.error("Error", "No se pudo actualizar el temporizador");
     }
   };
@@ -40,8 +49,8 @@ export function CountdownControls() {
   const handleReset = async () => {
     try {
       await updateState("reset");
-      toast.info("Temporizador Reiniciado");
-    } catch (error) {
+      toast.info("Temporizador reiniciado");
+    } catch {
       toast.error("Error", "No se pudo reiniciar el temporizador");
     }
   };
@@ -51,13 +60,13 @@ export function CountdownControls() {
       const totalSeconds = parseInt(minutes) * 60 + parseInt(seconds);
 
       if (isNaN(totalSeconds) || totalSeconds <= 0) {
-        toast.error("Tiempo Inválido", "Por favor ingresá un tiempo válido");
+        toast.error("Tiempo inválido", "Ingresá una duración mayor a cero");
         return;
       }
 
       await updateState("setDuration", totalSeconds);
-      toast.success("Duración Establecida", `Temporizador configurado a ${formatTime(totalSeconds)}`);
-    } catch (error) {
+      toast.success("Duración establecida", `Temporizador configurado a ${formatTime(totalSeconds)}`);
+    } catch {
       toast.error("Error", "No se pudo establecer la duración");
     }
   };
@@ -65,15 +74,15 @@ export function CountdownControls() {
   const handleSetTargetTime = async () => {
     try {
       if (!targetTime) {
-        toast.error("Tiempo Inválido", "Por favor ingresá una hora objetivo");
+        toast.error("Hora inválida", "Ingresá una hora objetivo");
         return;
       }
 
       // Combine today's date with the input time
       const now = new Date();
-      const [hours, minutes] = targetTime.split(":");
+      const [hours, mins] = targetTime.split(":");
       const target = new Date(now);
-      target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      target.setHours(parseInt(hours), parseInt(mins), 0, 0);
 
       // If the time has already passed today, set it for tomorrow
       if (target <= now) {
@@ -83,149 +92,132 @@ export function CountdownControls() {
       await updateState("setTargetTime", undefined, target.toISOString());
 
       const secondsUntil = Math.floor((target.getTime() - now.getTime()) / 1000);
-      toast.success("Hora Objetivo Establecida", `Temporizador configurado hasta las ${targetTime} (${formatTime(secondsUntil)})`);
-    } catch (error) {
+      toast.success(
+        "Hora objetivo establecida",
+        `Cuenta regresiva hasta las ${targetTime} (${formatTime(secondsUntil)})`
+      );
+    } catch {
       toast.error("Error", "No se pudo establecer la hora objetivo");
     }
   };
 
   const handleToggleSound = async () => {
+    // Read the target state BEFORE the update so the toast can't lie.
+    const willBeEnabled = !state.soundEnabled;
     try {
       await updateState("toggleSound");
       toast.info(
-        state.soundEnabled ? "Sonido Desactivado" : "Sonido Activado",
-        state.soundEnabled
-          ? "El temporizador será silencioso al terminar"
-          : "El temporizador reproducirá sonido al terminar"
+        willBeEnabled ? "Sonido activado" : "Sonido desactivado",
+        willBeEnabled ? "El temporizador va a sonar al terminar" : "El temporizador termina en silencio"
       );
-    } catch (error) {
+    } catch {
       toast.error("Error", "No se pudo cambiar el sonido");
     }
-  };
-
-  const openCountdownDisplay = () => {
-    window.open("/openspace/countdown", "_blank", "width=1920,height=1080");
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Timer className="h-4 w-4" />
+        <Button size="sm" variant="outline">
+          <Timer />
           Temporizador
         </Button>
       </DialogTrigger>
-      <DialogContent className="border-zinc-700 bg-zinc-900 text-white sm:max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Control del Temporizador</DialogTitle>
+          <DialogTitle>Temporizador</DialogTitle>
+          <DialogDescription>Controla la cuenta regresiva de la pantalla del evento.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5">
           {/* Current Timer Display */}
-          <div className="rounded-lg bg-zinc-800 p-6 text-center">
-            <div className="font-mono text-5xl font-bold text-yellow-400">{formatTime(state.remainingSeconds)}</div>
+          <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
+            <div className="font-terminal text-5xl font-bold tabular-nums text-primary">
+              {formatTime(state.remainingSeconds)}
+            </div>
           </div>
 
           {/* Controls */}
           <div className="flex gap-2">
-            <Button
-              onClick={handlePlayPause}
-              disabled={loading}
-              className="flex-1 bg-green-600 text-white hover:bg-green-700"
-            >
+            <Button className="flex-1" disabled={loading} onClick={handlePlayPause}>
               {state.isRunning ? (
                 <>
-                  <Pause className="mr-2 h-4 w-4" />
+                  <Pause />
                   Pausar
                 </>
               ) : (
                 <>
-                  <Play className="mr-2 h-4 w-4" />
+                  <Play />
                   Iniciar
                 </>
               )}
             </Button>
-            <Button
-              onClick={handleReset}
-              disabled={loading}
-              variant="outline"
-              size="icon"
-              className="h-10 w-10"
-              title="Reiniciar"
-            >
-              <RotateCcw className="h-4 w-4" />
+            <Button disabled={loading} size="icon" title="Reiniciar" variant="outline" onClick={handleReset}>
+              <RotateCcw />
             </Button>
             <Button
-              onClick={handleToggleSound}
               disabled={loading}
-              variant={state.soundEnabled ? "default" : "outline"}
               size="icon"
-              className={`h-10 w-10 ${state.soundEnabled ? "text-black" : ""}`}
-              title={state.soundEnabled ? "Sonido Activado" : "Sonido Desactivado"}
+              title={state.soundEnabled ? "Sonido activado" : "Sonido desactivado"}
+              variant={state.soundEnabled ? "secondary" : "outline"}
+              onClick={handleToggleSound}
             >
-              {state.soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              {state.soundEnabled ? <Volume2 /> : <VolumeX />}
             </Button>
           </div>
 
           {/* Set Timer */}
-          <div className="space-y-4 rounded-lg border border-zinc-700 p-4">
-            <Label className="text-sm font-semibold text-white">Configurar Temporizador</Label>
-
-            {/* Duration Inputs */}
+          <div className="space-y-4 rounded-lg border border-border p-4">
             <div className="space-y-3">
-              <Label className="text-xs text-zinc-400">Por Duración</Label>
+              <Label className="text-xs text-muted-foreground" htmlFor="countdown-minutes">
+                Por duración
+              </Label>
               <div className="flex gap-2">
-                <div className="flex-1">
-                  <Input
-                    id="minutes"
-                    type="number"
-                    min="0"
-                    placeholder="Min"
-                    value={minutes}
-                    onChange={(e) => setMinutes(e.target.value)}
-                    className="border-zinc-600 bg-zinc-800 text-white placeholder:text-zinc-500"
-                  />
-                </div>
-                <div className="flex-1">
-                  <Input
-                    id="seconds"
-                    type="number"
-                    min="0"
-                    max="59"
-                    placeholder="Seg"
-                    value={seconds}
-                    onChange={(e) => setSeconds(e.target.value)}
-                    className="border-zinc-600 bg-zinc-800 text-white placeholder:text-zinc-500"
-                  />
-                </div>
+                <Input
+                  className="flex-1 tabular-nums"
+                  id="countdown-minutes"
+                  min="0"
+                  placeholder="Min"
+                  type="number"
+                  value={minutes}
+                  onChange={(e) => setMinutes(e.target.value)}
+                />
+                <Input
+                  className="flex-1 tabular-nums"
+                  id="countdown-seconds"
+                  max="59"
+                  min="0"
+                  placeholder="Seg"
+                  type="number"
+                  value={seconds}
+                  onChange={(e) => setSeconds(e.target.value)}
+                />
               </div>
-              <Button onClick={handleSetDuration} disabled={loading} className="w-full" variant="secondary">
-                Establecer Duración
+              <Button className="w-full" disabled={loading} variant="secondary" onClick={handleSetDuration}>
+                Establecer duración
               </Button>
             </div>
 
-            {/* Divider */}
             <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-zinc-700" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-zinc-900 px-2 text-zinc-500">O</span>
-              </div>
+              <Separator />
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-popover px-2 text-xs uppercase text-muted-foreground">
+                o
+              </span>
             </div>
 
-            {/* Target Time Input */}
             <div className="space-y-3">
-              <Label className="text-xs text-zinc-400">Hasta Hora Específica</Label>
+              <Label className="text-xs text-muted-foreground" htmlFor="countdown-target">
+                Hasta una hora específica
+              </Label>
               <Input
-                id="targetTime"
+                className="font-terminal tabular-nums [&::-webkit-calendar-picker-indicator]:invert"
+                id="countdown-target"
                 type="time"
                 value={targetTime}
                 onChange={(e) => setTargetTime(e.target.value)}
-                className="border-zinc-600 bg-zinc-800 text-white [&::-webkit-calendar-picker-indicator]:invert"
               />
-              <Button onClick={handleSetTargetTime} disabled={loading} className="w-full" variant="secondary">
-                Establecer Hora
+              <Button className="w-full" disabled={loading} variant="secondary" onClick={handleSetTargetTime}>
+                Establecer hora
               </Button>
             </div>
           </div>

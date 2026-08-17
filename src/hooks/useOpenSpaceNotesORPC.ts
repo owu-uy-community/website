@@ -1,36 +1,53 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { toast } from "../components/shared/ui/toast-utils";
 import { orpc, type StickyNote } from "../lib/orpc";
 import { useSupabaseSync } from "./useSupabaseSync";
-import { revalidateOpenSpace } from "../lib/revalidation";
-import { DEFAULT_OPENSPACE_ID } from "../components/Meetups/OpenSpace/utils/constants";
 
 interface UseOpenSpaceNotesOptions {
-  openSpaceId?: string;
+  /** Required: notes are always scoped to one event. */
+  openSpaceId: string;
   enableRealtime?: boolean;
   initialData?: StickyNote[];
+  /** For always-on screens that never refire window focus (kiosks). */
+  refetchInterval?: number;
 }
 
 /**
- * Hook for managing OpenSpace sticky notes with official oRPC + Tanstack Query integration
- * Provides CRUD operations with optimistic updates, type-safe error handling, and built-in key management
- * Now with Supabase realtime sync for multi-device collaboration
+ * Hook for managing OpenSpace sticky notes with oRPC + Tanstack Query.
+ *
+ * Every mutation writes the cache optimistically and SYNCHRONOUSLY inside
+ * onMutate (cancelQueries is fired without awaiting it) — the board's drop
+ * animation measures the card's final cell on the very next frame, so any
+ * microtask between mutate() and setQueryData shows up as a visible flash
+ * of the card back in its source cell.
+ *
+ * Successful mutations do NOT invalidate: the optimistic write is already
+ * the server state and realtime covers remote changes. Errors roll back and
+ * then invalidate to resync with the server.
  */
 export const useOpenSpaceNotesORPC = ({
-  openSpaceId = DEFAULT_OPENSPACE_ID,
+  openSpaceId,
   enableRealtime = true,
   initialData,
-}: UseOpenSpaceNotesOptions = {}) => {
+  refetchInterval,
+}: UseOpenSpaceNotesOptions) => {
   const queryClient = useQueryClient();
 
-  // Supabase realtime sync
-  const { broadcastCardUpdate, broadcastCardSwap, broadcastCardCreate, broadcastCardDelete } = useSupabaseSync({
+  // Realtime sync (multi-device) over the WebSocket transport
+  const {
+    broadcastCardUpdate,
+    broadcastCardSwap,
+    broadcastCardCreate,
+    broadcastCardDelete,
+    isConnected,
+    recentlyUpdatedIds,
+  } = useSupabaseSync({
     openSpaceId,
     enabled: enableRealtime,
   });
 
-  // Query for fetching all sticky notes using official oRPC integration
+  // Query for fetching all sticky notes
   const {
     data: notes = [],
     isLoading: queryLoading,
@@ -38,10 +55,13 @@ export const useOpenSpaceNotesORPC = ({
     isError,
   } = useQuery(
     orpc.tracks.list.queryOptions({
-      staleTime: 0, // No cache - always fresh
-      gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-      refetchOnMount: true, // Always refetch when component mounts
-      refetchOnWindowFocus: true, // Refetch when user returns to tab
+      input: { openSpaceId },
+      // Realtime keeps this fresh; a small staleTime stops the triple refetch
+      // storm every time the admin tabs back in.
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: true,
+      refetchInterval,
       // Use server-side data as initial data for instant first render
       initialData: initialData,
     })
@@ -51,11 +71,12 @@ export const useOpenSpaceNotesORPC = ({
   const hasInitialData = Boolean(initialData);
   const loading = queryLoading && !hasInitialData;
 
+  const listKey = useCallback(() => orpc.tracks.list.queryKey({ input: { openSpaceId } }), [openSpaceId]);
+
   // Helper function for showing error toasts with type-safe error handling
   const showErrorToast = useCallback((title: string, error: unknown) => {
     let description = "Ocurrió un error inesperado.";
 
-    // Check if error has a message property
     if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
       description = error.message;
     }
@@ -63,22 +84,25 @@ export const useOpenSpaceNotesORPC = ({
     toast.error(title, description);
   }, []);
 
-  // Helper function for showing success toasts
-  const showSuccessToast = useCallback((title: string, description: string) => {
-    toast.success(title, description);
-  }, []);
+  /** Rollback to the snapshot, then resync with the server. */
+  const rollbackAndResync = useCallback(
+    (previousNotes: StickyNote[] | undefined) => {
+      if (previousNotes) {
+        queryClient.setQueryData(listKey(), previousNotes);
+      }
+      void queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
+    },
+    [queryClient, listKey, openSpaceId]
+  );
 
-  // Create mutation with optimistic updates using official oRPC integration
+  // Create mutation with optimistic updates
   const createNoteMutation = useMutation(
     orpc.tracks.create.mutationOptions({
-      onMutate: async (newNote) => {
-        // Cancel outgoing refetches using oRPC key management
-        await queryClient.cancelQueries({ queryKey: orpc.tracks.list.key() });
+      onMutate: (newNote) => {
+        void queryClient.cancelQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
 
-        // Snapshot the previous value
-        const previousNotes = queryClient.getQueryData<StickyNote[]>(orpc.tracks.list.queryKey());
+        const previousNotes = queryClient.getQueryData<StickyNote[]>(listKey());
 
-        // Optimistically update to the new value
         const optimisticNote: StickyNote = {
           ...newNote,
           id: `temp-${Date.now()}`, // Temporary ID
@@ -92,173 +116,117 @@ export const useOpenSpaceNotesORPC = ({
           needsWhiteboard: newNote.needsWhiteboard || false,
         };
 
-        queryClient.setQueryData<StickyNote[]>(orpc.tracks.list.queryKey(), (oldNotes = []) => [
-          ...oldNotes,
-          optimisticNote,
-        ]);
+        queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) => [...oldNotes, optimisticNote]);
 
-        return { previousNotes };
+        return { previousNotes, optimisticId: optimisticNote.id };
       },
-      onError: (error, newNote, context) => {
-        console.log("Create mutation error:", error);
-        console.log("Error type:", typeof error);
-        console.log("Error structure:", JSON.stringify(error, null, 2));
-
-        // Rollback on error
-        if (context?.previousNotes) {
-          queryClient.setQueryData(orpc.tracks.list.queryKey(), context.previousNotes);
-        }
-        // Don't show toast here - let the caller handle it
-        // showErrorToast("Failed to create session", error)
+      onError: (_error, _newNote, context) => {
+        rollbackAndResync(context?.previousNotes);
+        // No toast here: the talk form surfaces create errors inline.
       },
-      onSuccess: async (createdNote) => {
-        showSuccessToast("Sesión creada", `"${createdNote.title}" ha sido creada exitosamente.`);
-        // Broadcast to other devices
+      onSuccess: async (createdNote, _variables, context) => {
+        // Swap the temp id for the real row so the card doesn't remount.
+        queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) =>
+          oldNotes.map((note) => (note.id === context?.optimisticId ? createdNote : note))
+        );
+        toast.success("Charla creada", `"${createdNote.title}" ya está en la grilla.`);
         await broadcastCardCreate(createdNote);
-        // Trigger ISR revalidation for future visitors using Server Action
-        console.log("🔄 [Tracks] Triggering revalidation after note creation");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Tracks] Revalidation triggered successfully after note creation");
-        } else {
-          console.error("❌ [Tracks] Revalidation failed after note creation:", result.error);
-        }
-      },
-      onSettled: () => {
-        // Always refetch after error or success using oRPC key management
-        queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
       },
     })
   );
 
-  // Update mutation with optimistic updates using official oRPC integration
+  // Update mutation with optimistic updates
   const updateNoteMutation = useMutation(
     orpc.tracks.update.mutationOptions({
-      onMutate: async ({ id, data: updates }) => {
-        await queryClient.cancelQueries({ queryKey: orpc.tracks.list.key() });
+      onMutate: ({ id, data: updates }) => {
+        void queryClient.cancelQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
 
-        const previousNotes = queryClient.getQueryData<StickyNote[]>(orpc.tracks.list.queryKey());
+        const previousNotes = queryClient.getQueryData<StickyNote[]>(listKey());
 
-        // Optimistically update
-        queryClient.setQueryData<StickyNote[]>(orpc.tracks.list.queryKey(), (oldNotes = []) =>
+        queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) =>
           oldNotes.map((note) => (note.id === id ? { ...note, ...updates, updatedAt: new Date().toISOString() } : note))
         );
 
         return { previousNotes };
       },
-      onError: (error, variables, context) => {
-        if (context?.previousNotes) {
-          queryClient.setQueryData(orpc.tracks.list.queryKey(), context.previousNotes);
-        }
-        showErrorToast("Error al actualizar sesión", error);
+      onError: (error, _variables, context) => {
+        rollbackAndResync(context?.previousNotes);
+        showErrorToast("No se pudo actualizar la charla", error);
       },
       onSuccess: async (updatedNote) => {
-        showSuccessToast("Sesión actualizada", `"${updatedNote.title}" ha sido actualizada exitosamente.`);
-        // Broadcast to other devices
+        // Deliberately no toast: drag moves route through here and a toast
+        // per drop is noise while re-planning the grid.
         await broadcastCardUpdate(updatedNote);
-        // Trigger ISR revalidation for future visitors using Server Action
-        console.log("🔄 [Tracks] Triggering revalidation after note update");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Tracks] Revalidation triggered successfully after note update");
-        } else {
-          console.error("❌ [Tracks] Revalidation failed after note update:", result.error);
-        }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
       },
     })
   );
 
-  // Delete mutation with optimistic updates using official oRPC integration
+  // Delete mutation with optimistic updates
   const deleteNoteMutation = useMutation(
     orpc.tracks.delete.mutationOptions({
-      onMutate: async (input) => {
+      onMutate: (input) => {
         const noteId = typeof input === "string" ? input : input.id;
-        await queryClient.cancelQueries({ queryKey: orpc.tracks.list.key() });
+        void queryClient.cancelQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
 
-        const previousNotes = queryClient.getQueryData<StickyNote[]>(orpc.tracks.list.queryKey());
+        const previousNotes = queryClient.getQueryData<StickyNote[]>(listKey());
 
-        // Optimistically remove the note
-        queryClient.setQueryData<StickyNote[]>(orpc.tracks.list.queryKey(), (oldNotes = []) =>
+        queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) =>
           oldNotes.filter((note) => note.id !== noteId)
         );
 
         return { previousNotes };
       },
-      onError: (error, input, context) => {
-        if (context?.previousNotes) {
-          queryClient.setQueryData(orpc.tracks.list.queryKey(), context.previousNotes);
-        }
-        showErrorToast("Error al eliminar sesión", error);
+      onError: (error, _input, context) => {
+        rollbackAndResync(context?.previousNotes);
+        showErrorToast("No se pudo eliminar la charla", error);
       },
       onSuccess: async (deletedNote) => {
-        showSuccessToast("Sesión eliminada", `"${deletedNote.title}" ha sido eliminada exitosamente.`);
-        // Broadcast to other devices
+        toast.success("Charla eliminada", `"${deletedNote.title}" fue eliminada.`);
         await broadcastCardDelete(deletedNote.id);
-        // Trigger ISR revalidation for future visitors using Server Action
-        console.log("🔄 [Tracks] Triggering revalidation after note deletion");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Tracks] Revalidation triggered successfully after note deletion");
-        } else {
-          console.error("❌ [Tracks] Revalidation failed after note deletion:", result.error);
-        }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
       },
     })
   );
 
-  // Swap mutation with optimistic updates using official oRPC integration
+  // A cache swap is an involution, NOT idempotent: when the board already
+  // applied it synchronously at drop time (to win the drop-animation race),
+  // running it again here would swap the cards straight back.
+  const skipNextSwapOptimisticRef = useRef(false);
+
+  // Swap mutation with optimistic updates
   const swapNotesMutation = useMutation(
     orpc.tracks.swap.mutationOptions({
-      onMutate: async ({ trackAId, trackBId }) => {
-        await queryClient.cancelQueries({ queryKey: orpc.tracks.list.key() });
+      onMutate: ({ trackAId, trackBId }) => {
+        void queryClient.cancelQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
 
-        const previousNotes = queryClient.getQueryData<StickyNote[]>(orpc.tracks.list.queryKey());
+        const previousNotes = queryClient.getQueryData<StickyNote[]>(listKey());
 
-        // Optimistically swap the notes
-        queryClient.setQueryData<StickyNote[]>(orpc.tracks.list.queryKey(), (oldNotes = []) => {
-          const noteA = oldNotes.find((n) => n.id === trackAId);
-          const noteB = oldNotes.find((n) => n.id === trackBId);
+        if (!skipNextSwapOptimisticRef.current) {
+          queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) => {
+            const noteA = oldNotes.find((n) => n.id === trackAId);
+            const noteB = oldNotes.find((n) => n.id === trackBId);
 
-          if (!noteA || !noteB) return oldNotes;
+            if (!noteA || !noteB) return oldNotes;
 
-          return oldNotes.map((note) => {
-            if (note.id === trackAId) {
-              return { ...note, room: noteB.room, timeSlot: noteB.timeSlot };
-            } else if (note.id === trackBId) {
-              return { ...note, room: noteA.room, timeSlot: noteA.timeSlot };
-            }
-            return note;
+            return oldNotes.map((note) => {
+              if (note.id === trackAId) {
+                return { ...note, room: noteB.room, timeSlot: noteB.timeSlot };
+              } else if (note.id === trackBId) {
+                return { ...note, room: noteA.room, timeSlot: noteA.timeSlot };
+              }
+              return note;
+            });
           });
-        });
+        }
+        skipNextSwapOptimisticRef.current = false;
 
         return { previousNotes };
       },
-      onError: (error, variables, context) => {
-        if (context?.previousNotes) {
-          queryClient.setQueryData(orpc.tracks.list.queryKey(), context.previousNotes);
-        }
-        showErrorToast("Error al intercambiar sesiones", error);
+      onError: (error, _variables, context) => {
+        rollbackAndResync(context?.previousNotes);
+        showErrorToast("No se pudo intercambiar las charlas", error);
       },
-      onSuccess: async (swappedNotes, variables) => {
-        // Broadcast to other devices - this is the most important one for multi-device sync!
+      onSuccess: async (_swappedNotes, variables) => {
         await broadcastCardSwap(variables.trackAId, variables.trackBId);
-        // Trigger ISR revalidation for future visitors using Server Action
-        console.log("🔄 [Tracks] Triggering revalidation after note swap");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Tracks] Revalidation triggered successfully after note swap");
-        } else {
-          console.error("❌ [Tracks] Revalidation failed after note swap:", result.error);
-        }
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() });
       },
     })
   );
@@ -285,19 +253,24 @@ export const useOpenSpaceNotesORPC = ({
   const deleteNote = useCallback((id: string) => deleteNoteMutation.mutateAsync({ id }), [deleteNoteMutation]);
 
   /**
-   * Swap positions of two sticky notes
+   * Swap positions of two sticky notes.
+   * `alreadyApplied` = the caller wrote the swap to the cache synchronously
+   * (drag drop); skip the optimistic write so it isn't undone.
    */
   const swapNotes = useCallback(
-    (trackAId: string, trackBId: string) => swapNotesMutation.mutateAsync({ trackAId, trackBId }),
+    (trackAId: string, trackBId: string, options?: { alreadyApplied?: boolean }) => {
+      if (options?.alreadyApplied) skipNextSwapOptimisticRef.current = true;
+      return swapNotesMutation.mutateAsync({ trackAId, trackBId });
+    },
     [swapNotesMutation]
   );
 
   /**
-   * Manually refresh sticky notes data using oRPC key management
+   * Manually refresh sticky notes data
    */
   const refreshNotes = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key() }),
-    [queryClient]
+    () => queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) }),
+    [queryClient, openSpaceId]
   );
 
   return {
@@ -306,6 +279,10 @@ export const useOpenSpaceNotesORPC = ({
     loading,
     error: error?.message || null,
     isError,
+
+    // Realtime state
+    isConnected,
+    recentlyUpdatedIds,
 
     // CRUD operations
     createNote,

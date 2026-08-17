@@ -4,10 +4,10 @@ import { orpc, client } from "../lib/orpc";
 import type { Schedule } from "../lib/orpc";
 import type { StickyNote } from "./useOpenSpaceNotesORPC";
 import { toast } from "../components/shared/ui/toast-utils";
-import { DEFAULT_OPENSPACE_ID } from "../components/Meetups/OpenSpace/utils/constants";
-import { revalidateOpenSpace } from "../lib/revalidation";
 
 interface UseScheduleManagementProps {
+  /** Event the board is scoped to — every cache key and payload uses it. */
+  openSpaceId: string;
   schedulesData: Schedule[];
   notes: StickyNote[];
   broadcastScheduleChange: (event: string, payload: any) => Promise<void>;
@@ -16,26 +16,33 @@ interface UseScheduleManagementProps {
 /**
  * Custom hook to manage schedule operations with optimistic updates
  * Handles: create, update, delete, highlight toggle, and bulk track updates
+ *
+ * Historical note: this used to key every optimistic write to the legacy
+ * DEFAULT_OPENSPACE_ID while the board read by eventId — so stars and slot
+ * edits had no optimistic UI at all and rollbacks patched a phantom cache.
  */
-export function useScheduleManagement({ schedulesData, notes, broadcastScheduleChange }: UseScheduleManagementProps) {
+export function useScheduleManagement({
+  openSpaceId,
+  schedulesData,
+  notes,
+  broadcastScheduleChange,
+}: UseScheduleManagementProps) {
   const queryClient = useQueryClient();
+
+  const schedulesKey = orpc.schedules.getByOpenSpace.queryOptions({ input: { openSpaceId } }).queryKey;
+  const tracksKey = orpc.tracks.list.queryKey({ input: { openSpaceId } });
 
   // ============ Mutations ============
   const updateScheduleMutation = useMutation(
     orpc.schedules.update.mutationOptions({
       onMutate: async ({ id, data }) => {
-        // Cancel any outgoing refetches
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
+        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }) });
 
-        // Snapshot the previous value
-        const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-          input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-        }).queryKey;
-        const previousSchedules = queryClient.getQueryData(queryKey);
+        const previousSchedules = queryClient.getQueryData(schedulesKey);
 
         // Optimistically update the schedule
         if (data.highlightInKiosk !== undefined) {
-          queryClient.setQueryData(queryKey, (old: any) => {
+          queryClient.setQueryData(schedulesKey, (old: any) => {
             if (!old) return old;
             return old.map((schedule: any) => {
               if (schedule.id === id) {
@@ -46,57 +53,38 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
           });
         }
 
-        return { previousSchedules, queryKey };
+        return { previousSchedules, queryKey: schedulesKey };
       },
-      onError: (error, variables, context) => {
-        // Rollback on error
+      onError: (_error, _variables, context) => {
         if (context?.previousSchedules && context?.queryKey) {
           queryClient.setQueryData(context.queryKey, context.previousSchedules);
         }
       },
-      onSuccess: async () => {
-        // Invalidate to ensure we're in sync with the server
-        queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-        // Trigger ISR revalidation for future visitors
-        console.log("🔄 [Schedules] Triggering revalidation after schedule update");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Schedules] Revalidation triggered successfully after schedule update");
-        } else {
-          console.error("❌ [Schedules] Revalidation failed after schedule update:", result.error);
-        }
+      onSuccess: () => {
+        // Resync with the server (covers renames of derived fields).
+        void queryClient.invalidateQueries({
+          queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }),
+        });
       },
     })
   );
 
   const createScheduleMutation = useMutation(
     orpc.schedules.create.mutationOptions({
-      onSuccess: async () => {
-        queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-        // Trigger ISR revalidation for future visitors
-        console.log("🔄 [Schedules] Triggering revalidation after schedule creation");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Schedules] Revalidation triggered successfully after schedule creation");
-        } else {
-          console.error("❌ [Schedules] Revalidation failed after schedule creation:", result.error);
-        }
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }),
+        });
       },
     })
   );
 
   const deleteScheduleMutation = useMutation(
     orpc.schedules.delete.mutationOptions({
-      onSuccess: async () => {
-        queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-        // Trigger ISR revalidation for future visitors
-        console.log("🔄 [Schedules] Triggering revalidation after schedule deletion");
-        const result = await revalidateOpenSpace();
-        if (result.success) {
-          console.log("✅ [Schedules] Revalidation triggered successfully after schedule deletion");
-        } else {
-          console.error("❌ [Schedules] Revalidation failed after schedule deletion:", result.error);
-        }
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }),
+        });
       },
     })
   );
@@ -115,20 +103,15 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
 
       const willBeHighlighted = !schedule.highlightInKiosk;
 
-      // Get the query key for schedule data
-      const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-        input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-      }).queryKey;
+      // Snapshot BEFORE the optimistic write, and keep it in the closure —
+      // re-reading inside catch would "roll back" to the broken state.
+      const previousSchedules = queryClient.getQueryData(schedulesKey);
 
       try {
-        // Optimistically update all schedules at once
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-        // Snapshot the previous value for rollback
-        const previousSchedules = queryClient.getQueryData(queryKey);
+        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }) });
 
         // Optimistically update the UI immediately
-        queryClient.setQueryData(queryKey, (old: any) => {
+        queryClient.setQueryData(schedulesKey, (old: any) => {
           if (!old) return old;
           return old.map((s: any) => {
             if (s.id === schedule.id) {
@@ -142,15 +125,7 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
           });
         });
 
-        // Show success toast immediately (optimistic)
-        toast.success(
-          willBeHighlighted ? "Agregado al bucle de open space" : "Removido del bucle de open space",
-          willBeHighlighted
-            ? `Solo el horario "${timeSlots[timeIndex]}" se mostrará en el mapa de open space.`
-            : `Horario "${timeSlots[timeIndex]}" removido del mapa de open space.`
-        );
-
-        // Now perform the actual server updates in the background
+        // Server updates in the background
         if (willBeHighlighted) {
           const currentlyHighlighted = schedulesData.filter((s) => s.highlightInKiosk && s.id !== schedule.id);
 
@@ -158,41 +133,34 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
           for (const otherSchedule of currentlyHighlighted) {
             await updateScheduleMutation.mutateAsync({
               id: otherSchedule.id,
-              data: {
-                highlightInKiosk: false,
-              },
+              data: { highlightInKiosk: false },
             });
           }
         }
 
-        // Now update the clicked schedule
         await updateScheduleMutation.mutateAsync({
           id: schedule.id,
-          data: {
-            highlightInKiosk: willBeHighlighted,
-          },
+          data: { highlightInKiosk: willBeHighlighted },
         });
 
         // Broadcast the change to all connected clients
         await broadcastScheduleChange("highlight_changed", {
           scheduleId: schedule.id,
           highlightInKiosk: willBeHighlighted,
-          openSpaceId: DEFAULT_OPENSPACE_ID,
+          openSpaceId,
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.error("Failed to update schedule highlight:", error);
 
-        // Rollback on error
-        const previousSchedules = queryClient.getQueryData(queryKey);
         if (previousSchedules) {
-          queryClient.setQueryData(queryKey, previousSchedules);
+          queryClient.setQueryData(schedulesKey, previousSchedules);
         }
 
-        toast.error("Error", "No se pudo actualizar el estado de resaltado del kiosco.");
+        toast.error("Error", `No se pudo resaltar el horario "${timeSlots[timeIndex]}".`);
       }
     },
-    [schedulesData, updateScheduleMutation, queryClient, broadcastScheduleChange]
+    [schedulesData, updateScheduleMutation, queryClient, broadcastScheduleChange, openSpaceId, schedulesKey]
   );
 
   /**
@@ -203,16 +171,10 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
     async (data: { startTime: string; endTime: string; scheduleId?: string }) => {
       const isEdit = !!data.scheduleId;
 
-      // Get the query key for schedule data
-      const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-        input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-      }).queryKey;
+      const previousSchedules = queryClient.getQueryData(schedulesKey);
 
       try {
-        // Optimistically update the UI immediately
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-
-        const previousSchedules = queryClient.getQueryData(queryKey);
+        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }) });
 
         if (isEdit && data.scheduleId) {
           // Find the original schedule to get the old time slot
@@ -221,7 +183,7 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
           const newTimeSlot = `${data.startTime} - ${data.endTime}`;
 
           // Update existing schedule
-          queryClient.setQueryData(queryKey, (old: any) => {
+          queryClient.setQueryData(schedulesKey, (old: any) => {
             if (!old) return old;
             return old.map((s: any) => {
               if (s.id === data.scheduleId) {
@@ -231,8 +193,7 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
             });
           });
 
-          // Show success toast immediately (optimistic)
-          toast.success("Horario actualizado", `Horario cambiado a ${data.startTime} - ${data.endTime}`);
+          toast.success("Horario actualizado", `El bloque ahora es ${data.startTime} - ${data.endTime}.`);
 
           // Update all tracks that have the old time slot (optimistic UI)
           let previousTracks: any = null;
@@ -240,57 +201,37 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
             const tracksToUpdate = notes.filter((note) => note.timeSlot === oldTimeSlot);
 
             if (tracksToUpdate.length > 0) {
-              console.log(
-                `🔄 [Optimistic] Updating ${tracksToUpdate.length} tracks from "${oldTimeSlot}" to "${newTimeSlot}"`
-              );
+              await queryClient.cancelQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
 
-              // Cancel any outgoing refetches for tracks
-              await queryClient.cancelQueries({ queryKey: orpc.tracks.list.queryKey() });
+              previousTracks = queryClient.getQueryData(tracksKey);
 
-              // Snapshot the previous tracks for rollback
-              previousTracks = queryClient.getQueryData(orpc.tracks.list.queryKey());
-
-              // We already have the scheduleId from the schedule we just updated
               const updatedScheduleId = data.scheduleId;
 
-              // Optimistically update tracks in the cache
-              queryClient.setQueryData(orpc.tracks.list.queryKey(), (old: any) => {
+              queryClient.setQueryData(tracksKey, (old: any) => {
                 if (!old) return old;
                 return old.map((track: any) => {
-                  // If this track has the old time slot, update it to the new one
                   if (track.timeSlot === oldTimeSlot) {
-                    return {
-                      ...track,
-                      timeSlot: newTimeSlot,
-                      scheduleId: updatedScheduleId,
-                    };
+                    return { ...track, timeSlot: newTimeSlot, scheduleId: updatedScheduleId };
                   }
                   return track;
                 });
               });
 
-              // Show success toast immediately (optimistic)
               toast.info(
                 "Charlas actualizadas",
-                `${tracksToUpdate.length} charla${tracksToUpdate.length > 1 ? "s" : ""} actualizada${tracksToUpdate.length > 1 ? "s" : ""} al nuevo horario`
+                `${tracksToUpdate.length} charla${tracksToUpdate.length > 1 ? "s" : ""} movida${tracksToUpdate.length > 1 ? "s" : ""} al nuevo horario.`
               );
             }
           }
 
-          // 🚀 Fire-and-forget: Perform both backend updates in the background (don't await)
-          // This allows the modal to close immediately while the backend updates happen
+          // Fire-and-forget: the modal closes immediately while the backend
+          // updates happen; errors roll back both caches below.
           updateScheduleMutation
             .mutateAsync({
               id: data.scheduleId,
-              data: {
-                startTime: data.startTime,
-                endTime: data.endTime,
-              },
+              data: { startTime: data.startTime, endTime: data.endTime },
             })
             .then(() => {
-              console.log("✅ Schedule updated successfully in backend");
-
-              // Chain track update if needed
               if (oldTimeSlot && oldTimeSlot !== newTimeSlot && data.scheduleId) {
                 const tracksToUpdate = notes.filter((note) => note.timeSlot === oldTimeSlot);
                 if (tracksToUpdate.length > 0) {
@@ -301,26 +242,21 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
                 }
               }
             })
-            .then((trackResult) => {
-              if (trackResult) {
-                console.log("✅ Successfully bulk updated tracks in database transaction");
-              }
-            })
             .catch((error) => {
-              console.error("❌ Failed to update schedule or tracks:", error);
+              console.error("Failed to update schedule or tracks:", error);
 
-              // Rollback both schedule and tracks on error
               if (previousSchedules) {
-                queryClient.setQueryData(queryKey, previousSchedules);
+                queryClient.setQueryData(schedulesKey, previousSchedules);
               }
               if (previousTracks) {
-                queryClient.setQueryData(orpc.tracks.list.queryKey(), previousTracks);
+                queryClient.setQueryData(tracksKey, previousTracks);
               }
 
-              toast.error("Error", "No se pudo actualizar el horario. Recargando...");
-              // Invalidate to refetch and show actual state
-              queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
-              queryClient.invalidateQueries({ queryKey: orpc.tracks.list.queryKey() });
+              toast.error("Error", "No se pudo actualizar el horario.");
+              void queryClient.invalidateQueries({
+                queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }),
+              });
+              void queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
             });
         } else {
           // Create new schedule
@@ -334,7 +270,7 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
             date: `${currentDate}T00:00:00.000Z`,
             isActive: true,
             highlightInKiosk: false,
-            openSpaceId: DEFAULT_OPENSPACE_ID,
+            openSpaceId,
           };
 
           // Create optimistic schedule with temporary ID
@@ -350,37 +286,43 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
             updatedAt: new Date().toISOString(),
           };
 
-          queryClient.setQueryData(queryKey, (old: any) => {
+          queryClient.setQueryData(schedulesKey, (old: any) => {
             if (!old) return [optimisticSchedule];
             return [...old, optimisticSchedule];
           });
 
-          // Show success toast immediately (optimistic)
-          toast.success("Horario agregado", `Nuevo horario ${data.startTime} - ${data.endTime} creado.`);
+          toast.success("Horario agregado", `Nuevo bloque ${data.startTime} - ${data.endTime}.`);
 
-          // Now perform the actual server create in the background
           await createScheduleMutation.mutateAsync(newScheduleData);
         }
 
         // Broadcast the change to all connected clients
         await broadcastScheduleChange("highlight_changed", {
-          openSpaceId: DEFAULT_OPENSPACE_ID,
+          openSpaceId,
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.error(`Failed to ${isEdit ? "update" : "create"} schedule:`, error);
 
-        // Rollback on error
-        const previousSchedules = queryClient.getQueryData(queryKey);
         if (previousSchedules) {
-          queryClient.setQueryData(queryKey, previousSchedules);
+          queryClient.setQueryData(schedulesKey, previousSchedules);
         }
 
         toast.error("Error", `No se pudo ${isEdit ? "actualizar" : "crear"} el horario.`);
         throw error; // Re-throw so the modal knows
       }
     },
-    [schedulesData, createScheduleMutation, updateScheduleMutation, queryClient, broadcastScheduleChange, notes]
+    [
+      schedulesData,
+      createScheduleMutation,
+      updateScheduleMutation,
+      queryClient,
+      broadcastScheduleChange,
+      notes,
+      openSpaceId,
+      schedulesKey,
+      tracksKey,
+    ]
   );
 
   /**
@@ -388,48 +330,38 @@ export function useScheduleManagement({ schedulesData, notes, broadcastScheduleC
    */
   const handleDeleteSchedule = useCallback(
     async (scheduleId: string, timeSlot: string) => {
-      // Get the query key for schedule data
-      const queryKey = orpc.schedules.getByOpenSpace.queryOptions({
-        input: { openSpaceId: DEFAULT_OPENSPACE_ID },
-      }).queryKey;
+      const previousSchedules = queryClient.getQueryData(schedulesKey);
 
       try {
-        // Optimistically update the UI immediately
-        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key() });
+        await queryClient.cancelQueries({ queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }) });
 
-        const previousSchedules = queryClient.getQueryData(queryKey);
-
-        queryClient.setQueryData(queryKey, (old: any) => {
+        queryClient.setQueryData(schedulesKey, (old: any) => {
           if (!old) return old;
           return old.filter((s: any) => s.id !== scheduleId);
         });
 
-        // Show success toast immediately (optimistic)
-        toast.success("Horario eliminado", `El horario "${timeSlot}" ha sido eliminado.`);
+        toast.success("Horario eliminado", `El bloque "${timeSlot}" fue eliminado.`);
 
-        // Now perform the actual server delete in the background
         await deleteScheduleMutation.mutateAsync({ id: scheduleId });
 
         // Broadcast the change to all connected clients
         await broadcastScheduleChange("highlight_changed", {
           scheduleId: scheduleId,
-          openSpaceId: DEFAULT_OPENSPACE_ID,
+          openSpaceId,
           timestamp: new Date().toISOString(),
         });
       } catch (error) {
         console.error("Failed to delete schedule:", error);
 
-        // Rollback on error
-        const previousSchedules = queryClient.getQueryData(queryKey);
         if (previousSchedules) {
-          queryClient.setQueryData(queryKey, previousSchedules);
+          queryClient.setQueryData(schedulesKey, previousSchedules);
         }
 
         toast.error("Error", "No se pudo eliminar el horario.");
         throw error; // Re-throw so the modal knows
       }
     },
-    [deleteScheduleMutation, queryClient, broadcastScheduleChange]
+    [deleteScheduleMutation, queryClient, broadcastScheduleChange, openSpaceId, schedulesKey]
   );
 
   return {

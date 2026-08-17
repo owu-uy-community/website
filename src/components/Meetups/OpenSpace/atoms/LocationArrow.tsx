@@ -8,7 +8,9 @@ interface LocationArrowProps {
 }
 
 /**
- * Vertical location label with triangular arrow pointing to map
+ * Vertical location label with triangular arrow pointing to map.
+ * The name fades in on every cycle (CSS keyed animation), in sync with
+ * the header.
  */
 export const LocationArrow = React.memo(({ color, locationName }: LocationArrowProps) => {
   return (
@@ -27,19 +29,22 @@ export const LocationArrow = React.memo(({ color, locationName }: LocationArrowP
           transform: "rotate(180deg)",
         }}
       >
-        <span className="font-inter text-3xl font-bold uppercase tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]">
+        <span
+          key={locationName}
+          className="font-display text-3xl font-bold uppercase tracking-tight text-white duration-300 animate-in fade-in sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]"
+        >
           {locationName}
         </span>
       </div>
       {/* Triangular Arrow */}
       <div className="flex justify-center">
         <svg
-          className="h-8 w-8 transition-colors duration-500 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-20 lg:w-20"
-          viewBox="0 0 60 80"
-          fill="none"
           aria-hidden="true"
+          className="h-8 w-8 transition-colors duration-300 sm:h-12 sm:w-12 md:h-16 md:w-16 lg:h-20 lg:w-20"
+          fill="none"
+          viewBox="0 0 60 80"
         >
-          <path d="M60 40L0 0L0 80L60 40Z" fill={color} />
+          <path d="M60 40L0 0L0 80L60 40Z" fill={color} style={{ transition: "fill 300ms ease" }} />
         </svg>
       </div>
     </div>
@@ -47,4 +52,3 @@ export const LocationArrow = React.memo(({ color, locationName }: LocationArrowP
 });
 
 LocationArrow.displayName = "LocationArrow";
-

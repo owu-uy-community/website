@@ -1,47 +1,45 @@
 "use client";
 
 import * as React from "react";
-import { Diamond, Square, Pentagon, Circle, Triangle } from "lucide-react";
 
-const getRoomIcon = (room: string) => {
-  const baseClasses = "h-[18px] w-[18px]";
-
-  switch (room.toLowerCase()) {
-    case "lobby":
-      return <Diamond className={`${baseClasses} fill-blue-500 text-blue-500`} />;
-    case "ventana":
-      return <Square className={`${baseClasses} fill-orange-500 text-orange-500`} />;
-    case "cueva":
-      return <Pentagon className={`${baseClasses} fill-green-500 text-green-500`} />;
-    case "centro":
-      return <Circle className={`${baseClasses} fill-yellow-400 text-yellow-400`} />;
-    case "rincon":
-      return <Triangle className={`${baseClasses} fill-red-500 text-red-500`} />;
-    default:
-      return null;
-  }
-};
+import { cn } from "app/lib/utils";
+import { roomIconFor } from "../../../../lib/rooms/icons";
 
 interface RoomHeaderProps {
   room: string;
-  index: number;
-  isBeingDragged: boolean;
-  isHoveredTarget: boolean;
-  onMouseDown: (e: React.MouseEvent, index: number) => void;
+  /** Resolved room color (explicit or palette fallback). */
+  color?: string;
+  /** Picked shape key from ROOM_ICONS; null/unset renders no icon. */
+  icon?: string | null;
+  /** Opens the room editor; without it the header is plain text. */
+  onEdit?: () => void;
 }
 
-export function RoomHeader({ room, index, isBeingDragged, isHoveredTarget, onMouseDown }: RoomHeaderProps) {
+export function RoomHeader({ room, color, icon, onEdit }: RoomHeaderProps) {
+  const Shape = roomIconFor(icon);
+
+  const content = (
+    <>
+      {Shape ? <Shape aria-hidden className="h-3.5 w-3.5 shrink-0" style={{ color: color, fill: color }} /> : null}
+      <span className="truncate font-display text-xs font-semibold uppercase tracking-wide text-foreground md:text-sm">
+        {room}
+      </span>
+    </>
+  );
+
+  const className =
+    "sticky top-0 z-20 flex h-14 w-full items-center justify-center gap-2 border-b border-r border-border/60 bg-card px-2";
+
+  if (!onEdit) return <div className={className}>{content}</div>;
+
   return (
-    <div
-      className={`openspace-room-header flex h-16 items-center justify-center border-b border-l border-zinc-600 bg-zinc-800 px-1 transition-all duration-200 ease-out md:h-20 ${
-        isBeingDragged ? "dragging translate-y-[-1px]" : "translate-y-0"
-      } ${isHoveredTarget ? "border-yellow-400/50 bg-yellow-400/30" : ""}`}
-      onMouseDown={(e) => onMouseDown(e, index)}
+    <button
+      className={cn(className, "transition-colors hover:bg-muted/60")}
+      title={`Editar "${room}"`}
+      type="button"
+      onClick={onEdit}
     >
-      <div className="flex items-center justify-center gap-1.5">
-        {getRoomIcon(room)}
-        <span className="text-center text-sm font-medium capitalize text-zinc-200 md:text-base">{room}</span>
-      </div>
-    </div>
+      {content}
+    </button>
   );
 }
