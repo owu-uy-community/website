@@ -25,6 +25,14 @@ export const EVENT_DATES = {
   meetup2025: new Date("2025-11-01T00:00:00"),
 } as const;
 
+// OWU CONF 2026 — ISO 8601 with an explicit -03:00 (Uruguay) offset: absolute instants,
+// so countdowns resolve to the same moment in every visitor's timezone
+export const CONF_DATES = {
+  cfpDeadline: "2026-09-15T23:59:59-03:00",
+  sponsorsDeadline: "2026-09-15T23:59:59-03:00",
+  event: "2026-11-07T14:30:00-03:00",
+} as const;
+
 // OpenSpace Room Colors
 export const ROOM_COLORS = {
   LOBBY: "#03A9F4",

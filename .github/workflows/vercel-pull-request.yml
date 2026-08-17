@@ -11,20 +11,20 @@ jobs:
       pull-requests: write
       repository-projects: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Dependabot pull requests cannot access repository secrets. Validate
       # their dependency updates locally instead of attempting a deployment
       # that is guaranteed to fail without VERCEL_TOKEN.
       - name: Set up pnpm
         if: github.event.pull_request.user.login == 'dependabot[bot]'
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           version: 10.9.0
 
       - name: Set up Node.js
         if: github.event.pull_request.user.login == 'dependabot[bot]'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: pnpm
