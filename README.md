@@ -2,11 +2,11 @@
 
 ## 📖 Descripción
 
-OWU.uy es una aplicación web construida con Next.js 15, TypeScript y una rica colección de herramientas y librerías modernas. Diseñada para ofrecer una experiencia de usuario excepcional con un rendimiento óptimo.
+OWU.uy es una aplicación web construida con Next.js 16, TypeScript y una rica colección de herramientas y librerías modernas. Diseñada para ofrecer una experiencia de usuario excepcional con un rendimiento óptimo.
 
 ## 🛠️ Tecnologías Principales
 
-- Next.js 15
+- Next.js 16
 - TypeScript
 - Tailwind CSS
 - Supabase
@@ -30,7 +30,7 @@ OWU.uy es una aplicación web construida con Next.js 15, TypeScript y una rica c
 
 ```bash
 git clone git@github.com:owu-uy-community/website.git
-cd owu
+cd website
 ```
 
 2. Instala las dependencias:
