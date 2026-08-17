@@ -19,6 +19,7 @@ export const SPONSORS_2026: Sponsor[] = [
   { name: "Estudio Hahn", logo: "/images/conf/sponsors/han.svg", website: "https://estudiohahn.com/" },
   { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.svg", website: "https://www.mimiquate.com/" },
   { name: "Neocoast", logo: "/images/conf/sponsors/neocoast.svg", website: "https://www.neocoast.com/" },
+  { name: "Nexchange", logo: "/images/conf/sponsors/nexchange.svg", website: "https://www.nex-change.com/" },
   { name: "RevenueCat", logo: "/images/conf/sponsors/revenuecat.svg", website: "https://www.revenuecat.com/" },
   { name: "Segalerba", logo: "/images/conf/sponsors/segalerba.svg", website: "https://segalerba.com.uy/" },
   { name: "Sentry", logo: "/images/conf/sponsors/sentry.svg", website: "https://sentry.io/" },
