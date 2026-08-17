@@ -1,12 +1,12 @@
 "use client";
 
-import { useCountdownState } from "../../../../hooks/useCountdownState";
-import { useCountdownAudio } from "../../../../hooks/useCountdownAudio";
-import { formatTime } from "../../../../lib/utils";
+import { useCountdownState } from "hooks/useCountdownState";
+import { useCountdownAudio } from "hooks/useCountdownAudio";
+import { formatTime } from "lib/utils";
 import "./countdown.css";
 
-export default function CountdownDisplayClient() {
-  const { state, loading } = useCountdownState({ enableRealtime: true });
+export default function CountdownDisplayClient({ eventId }: { eventId: string }) {
+  const { state, loading } = useCountdownState({ enableRealtime: true, eventId });
 
   // Handle audio playback when countdown reaches zero
   useCountdownAudio({

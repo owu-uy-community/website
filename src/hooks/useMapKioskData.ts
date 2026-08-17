@@ -2,14 +2,21 @@ import { useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { client } from "lib/orpc";
 import { useRealtimeBroadcast } from "hooks/useRealtimeBroadcast";
-import { MAP_KIOSK_CONFIG, MAP_LOCATIONS, ROOM_NAME_MAP } from "components/Meetups/OpenSpace/utils/constants";
+import { MAP_KIOSK_CONFIG } from "components/Meetups/OpenSpace/utils/constants";
+import { eventChannel } from "lib/realtime/channels";
+import { roomColorFor } from "lib/rooms/palette";
 import type { TrackWithRelations } from "lib/orpc/sticky-notes/services/get-by-open-space";
-import type { LocationConfig } from "components/Meetups/OpenSpace/utils/constants";
+
+export interface LocationConfig {
+  name: string;
+  color: string;
+}
 
 interface Event {
   since: string;
   till: string;
   location: string;
+  locationColor: string;
   title: string;
   channelUuid: string;
   speaker: string;
@@ -20,15 +27,6 @@ interface Event {
 /**
  * Query key for highlighted tracks
  */
-const HIGHLIGHTED_TRACKS_KEY = ["tracks", "highlighted", MAP_KIOSK_CONFIG.OPENSPACE_ID];
-
-/**
- * Normalize room names to match the expected format
- */
-const normalizeRoomName = (name: string): string => {
-  const normalized = name.toLowerCase();
-  return ROOM_NAME_MAP[normalized] || name.toUpperCase();
-};
 
 /**
  * Transform track data to event format
@@ -42,7 +40,8 @@ const transformTrackToEvent = (track: TrackWithRelations): Event => {
   return {
     since: startDateTime,
     till: endDateTime,
-    location: normalizeRoomName(track.room.name),
+    location: track.room.name.toUpperCase(),
+    locationColor: roomColorFor(track.room.id, track.room.color),
     title: track.title,
     channelUuid: track.roomId,
     speaker: track.speaker || "",
@@ -53,13 +52,16 @@ const transformTrackToEvent = (track: TrackWithRelations): Event => {
 
 interface UseMapKioskDataOptions {
   initialData?: TrackWithRelations[];
+  /** Required: kiosk data is always scoped to one event. */
+  eventId: string;
 }
 
 /**
  * Hook to fetch and transform highlighted openspace tracks for map kiosk
  * Accepts initial data from server-side fetch (ISR) and manages client-side updates via React Query
  */
-export const useMapKioskData = (options?: UseMapKioskDataOptions) => {
+export const useMapKioskData = (options: UseMapKioskDataOptions) => {
+  const eventId = options.eventId;
   // Fetch highlighted tracks using React Query
   const {
     data: tracks = [],
@@ -68,10 +70,10 @@ export const useMapKioskData = (options?: UseMapKioskDataOptions) => {
     isError,
     error,
   } = useQuery({
-    queryKey: HIGHLIGHTED_TRACKS_KEY,
+    queryKey: ["tracks", "highlighted", eventId],
     queryFn: async () => {
       const result = await client.tracks.getByOpenSpace({
-        openSpaceId: MAP_KIOSK_CONFIG.OPENSPACE_ID,
+        openSpaceId: eventId,
         highlightedOnly: true,
       });
       return result;
@@ -100,12 +102,12 @@ export const useMapKioskData = (options?: UseMapKioskDataOptions) => {
   // Note: This is disabled on the display page - only admin needs this
   // The display page gets updates via the tracks query invalidation
   const { invalidate } = useRealtimeBroadcast({
-    channelName: "openspace-schedule-highlights",
+    channelName: eventChannel(eventId, "highlights"),
     eventHandlers: [
       {
         event: "highlight_changed",
         onReceive: () => {
-          invalidate(HIGHLIGHTED_TRACKS_KEY);
+          invalidate(["tracks", "highlighted", eventId]);
         },
       },
     ],
@@ -123,15 +125,17 @@ export const useMapKioskData = (options?: UseMapKioskDataOptions) => {
     const scheduleIds = new Set(events.map((e) => e.scheduleId));
 
     // If there are multiple schedules somehow, just take the first one
-    if (scheduleIds.size > 1) {
-      const firstScheduleId = Array.from(scheduleIds)[0];
-      const filteredEvents = events.filter((e) => e.scheduleId === firstScheduleId);
-      const uniqueLocations = new Set(filteredEvents.map((e) => e.location));
-      return MAP_LOCATIONS.filter((loc) => uniqueLocations.has(loc.name));
+    const firstScheduleId = Array.from(scheduleIds)[0];
+    const relevantEvents = scheduleIds.size > 1 ? events.filter((e) => e.scheduleId === firstScheduleId) : events;
+
+    const seen = new Map<string, LocationConfig>();
+    for (const event of relevantEvents) {
+      if (!seen.has(event.location)) {
+        seen.set(event.location, { name: event.location, color: event.locationColor });
+      }
     }
 
-    const uniqueLocations = new Set(events.map((e) => e.location));
-    return MAP_LOCATIONS.filter((loc) => uniqueLocations.has(loc.name));
+    return Array.from(seen.values());
   }, [events]);
 
   if (isError) {

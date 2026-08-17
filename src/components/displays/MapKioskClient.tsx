@@ -7,19 +7,16 @@ import { useCountdownState } from "hooks/useCountdownState";
 import { useMapKioskData } from "hooks/useMapKioskData";
 import { useLocationCycling } from "hooks/useLocationCycling";
 import { MAP_KIOSK_CONFIG } from "components/Meetups/OpenSpace/utils/constants";
-import { LoadingSpinner } from "components/Meetups/OpenSpace/atoms/LoadingSpinner";
 import { MapHeader } from "components/Meetups/OpenSpace/molecules/MapHeader";
 import { EmptyMapState } from "components/Meetups/OpenSpace/molecules/EmptyMapState";
 import { LocationArrow } from "components/Meetups/OpenSpace/atoms/LocationArrow";
 import { LogoCorner } from "components/Meetups/OpenSpace/atoms/LogoCorner";
 
-// Memoized Map wrapper to prevent unnecessary re-renders
+// Memoized Map wrapper: the SVG only reads `event.location`, so comparing
+// the `events` array identity (new after every refetch) forced pointless
+// re-renders of the 300-line SVG on every data churn.
 const MemoizedMap = memo(OpenSpaceMap, (prevProps, nextProps) => {
-  return (
-    prevProps.event?.location === nextProps.event?.location &&
-    prevProps.events === nextProps.events &&
-    prevProps.scene === nextProps.scene
-  );
+  return prevProps.event?.location === nextProps.event?.location;
 });
 
 MemoizedMap.displayName = "MemoizedMap";
@@ -29,11 +26,11 @@ MemoizedMap.displayName = "MemoizedMap";
  * Displays an auto-cycling map of openspace locations with highlighted talks
  * Only shows locations that have highlighted talks
  */
-export default function MapKioskClient() {
-  const { state: countdownState } = useCountdownState({ enableRealtime: true });
+export default function MapKioskClient({ eventId }: { eventId: string }) {
+  const { state: countdownState } = useCountdownState({ enableRealtime: true, eventId });
 
   // Fetch highlighted tracks and active locations
-  const { events, activeLocations, isLoading } = useMapKioskData();
+  const { events, activeLocations, isLoading } = useMapKioskData({ eventId });
 
   // Handle location cycling
   const { currentLocation } = useLocationCycling({ activeLocations, isLoading });
@@ -55,10 +52,11 @@ export default function MapKioskClient() {
 
   return (
     <div className="relative h-screen w-full overflow-hidden bg-transparent">
-      {/* Header Bar with title and countdown */}
+      {/* Header Bar with title and countdown. While loading, stay neutral —
+          the old orange fallback flashed an alien color before data landed. */}
       <MapHeader
-        title={currentEvent?.title || "OPENSPACE"}
-        color={currentLocation?.color || "#FF9933"}
+        title={currentEvent?.title || "OPEN SPACE"}
+        color={currentLocation?.color || "#a1a1aa"}
         remainingSeconds={countdownState.remainingSeconds}
       />
 

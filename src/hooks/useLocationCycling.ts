@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { MAP_KIOSK_CONFIG } from "components/Meetups/OpenSpace/utils/constants";
-import type { LocationConfig } from "components/Meetups/OpenSpace/utils/constants";
+import type { LocationConfig } from "hooks/useMapKioskData";
 
 interface UseLocationCyclingProps {
   activeLocations: LocationConfig[];
@@ -26,7 +26,6 @@ export const useLocationCycling = ({
   const [currentLocationIndex, setCurrentLocationIndex] = useState<number>(-1);
 
   // Immediately set to first location on mount if we have data (ISR)
-  // Use layout effect to run synchronously before paint
   useEffect(() => {
     if (activeLocations.length === 0) {
       if (currentLocationIndex !== -1) {
@@ -37,16 +36,18 @@ export const useLocationCycling = ({
     }
   }, [activeLocations.length, isLoading, currentLocationIndex]);
 
-  // Location cycling logic
+  // Location cycling. Depends on `hasStarted`, NOT the index itself — the old
+  // version tore down and recreated the interval on every single tick.
+  const hasStarted = currentLocationIndex !== -1;
   useEffect(() => {
-    if (currentLocationIndex === -1 || activeLocations.length === 0) return;
+    if (!hasStarted || activeLocations.length === 0) return;
 
     const cycleInterval = setInterval(() => {
       setCurrentLocationIndex((prev) => (prev + 1) % activeLocations.length);
     }, MAP_KIOSK_CONFIG.LOCATION_DURATION);
 
     return () => clearInterval(cycleInterval);
-  }, [currentLocationIndex, activeLocations.length]);
+  }, [hasStarted, activeLocations.length]);
 
   // Get current location
   const currentLocation = useMemo(() => {
@@ -58,4 +59,3 @@ export const useLocationCycling = ({
     currentLocation,
   };
 };
-

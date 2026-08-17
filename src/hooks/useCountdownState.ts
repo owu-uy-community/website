@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../app/lib/supabase";
+import { eventChannel } from "../lib/realtime/channels";
 import { orpc } from "../lib/orpc/client";
 import type { CountdownState } from "../lib/orpc/countdown/schemas";
 
-const COUNTDOWN_CHANNEL = "countdown-state";
 const BROADCAST_TIMEOUT_MS = 3000; // Consider disconnected if no broadcast for 3 seconds
 const FALLBACK_INTERVAL_MS = 1000; // Client-side fallback interval
 
@@ -17,6 +17,8 @@ const DEFAULT_STATE: CountdownState = {
 };
 
 interface UseCountdownStateOptions {
+  /** Required: countdown state is always scoped to one event. */
+  eventId: string;
   enableRealtime?: boolean;
 }
 
@@ -26,13 +28,16 @@ interface UseCountdownStateOptions {
  * Primary: Receives state broadcasts from server every second
  * Fallback: If no broadcasts received, calculates locally from targetTime
  */
-export function useCountdownState(options: UseCountdownStateOptions = {}) {
-  const { enableRealtime = true } = options;
+export function useCountdownState(options: UseCountdownStateOptions) {
+  const { enableRealtime = true, eventId } = options;
   const queryClient = useQueryClient();
   const [state, setState] = useState<CountdownState>(DEFAULT_STATE);
   const [usingFallback, setUsingFallback] = useState(false);
 
   const lastBroadcastRef = useRef<number>(Date.now());
+  /** Mirrors usingFallback so the broadcast handler can read it without redeclaring the subscription. */
+  const usingFallbackRef = useRef(false);
+  usingFallbackRef.current = usingFallback;
   const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch countdown state using oRPC + Tanstack Query (only when needed)
@@ -43,6 +48,7 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
     refetch,
   } = useQuery(
     orpc.countdown.getState.queryOptions({
+      input: { eventId },
       enabled: state.remainingSeconds === 0 && !state.isRunning, // Only fetch if we have no meaningful state
       staleTime: Infinity, // We rely on broadcasts
       gcTime: Infinity,
@@ -148,7 +154,7 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
       onSuccess: (result) => {
         console.log("⏱️ [Countdown] State updated via oRPC");
         setState(result);
-        queryClient.setQueryData(orpc.countdown.getState.queryKey(), result);
+        queryClient.setQueryData(orpc.countdown.getState.queryKey({ input: { eventId } }), result);
         // Server-side broadcast service will handle broadcasting to all clients
       },
       onError: (err) => {
@@ -168,9 +174,10 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
         action,
         durationSeconds,
         targetTime,
+        eventId,
       });
     },
-    [updateMutation]
+    [updateMutation, eventId]
   );
 
   // Subscribe to countdown broadcasts from server (every second)
@@ -179,17 +186,17 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
 
     console.log("⏱️ [Countdown] Subscribing to countdown broadcasts");
 
-    const channel = supabase.channel(COUNTDOWN_CHANNEL);
+    const channel = supabase.channel(eventChannel(eventId, "countdown"));
 
     channel
       .on("broadcast", { event: "countdown_tick" }, ({ payload }: { payload: CountdownState }) => {
         // Server sends the fully calculated state every second
         setState(payload);
-        queryClient.setQueryData(orpc.countdown.getState.queryKey(), payload);
+        queryClient.setQueryData(orpc.countdown.getState.queryKey({ input: { eventId } }), payload);
         lastBroadcastRef.current = Date.now();
 
         // If we were using fallback, we're back online
-        if (usingFallback) {
+        if (usingFallbackRef.current) {
           console.log("✅ [Countdown] Broadcast received, exiting fallback mode");
           setUsingFallback(false);
         }
@@ -211,7 +218,11 @@ export function useCountdownState(options: UseCountdownStateOptions = {}) {
       console.log("🔌 [Countdown] Unsubscribing from countdown broadcasts");
       supabase.removeChannel(channel);
     };
-  }, [enableRealtime, queryClient, usingFallback]);
+    // eventId belongs here: without it a switch between events keeps the
+    // subscription pointed at the previous event's channel. usingFallback must
+    // NOT be here — it is written from inside this subscription, so depending
+    // on it resubscribes in a loop and drops ticks mid-churn.
+  }, [enableRealtime, eventId, queryClient]);
 
   /**
    * Handle page visibility changes (tab switch, phone lock/unlock)

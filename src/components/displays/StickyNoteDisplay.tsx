@@ -3,9 +3,9 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { Cast, Sparkles } from "lucide-react";
-import { supabase } from "app/lib/supabase";
-import type { StickyNote } from "../../../../lib/orpc";
-import { DEFAULT_OPENSPACE_ID } from "../../../../components/Meetups/OpenSpace/utils/constants";
+import { client, type StickyNote } from "lib/orpc";
+import { eventChannel } from "lib/realtime/channels";
+import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 
 interface OpenSpaceRealtimeEvent {
   type: "CARD_UPDATE" | "CARD_SWAP" | "CARD_CREATE" | "CARD_DELETE";
@@ -129,77 +129,56 @@ const motivationalPhrases = [
   "¡Bo, preparate que el remote despega! 🌐",
 ];
 
-export default function StickyNoteDisplay() {
+export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
   const [selectedNote, setSelectedNote] = useState<StickyNote | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isCasting, setIsCasting] = useState(false);
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
 
-  useEffect(() => {
-    // Subscribe to highlighted note changes via Supabase
-    const highlightedChannel = supabase
-      .channel("highlighted-note")
-      .on("broadcast", { event: "note_highlighted" }, (payload: { payload: { note: StickyNote | null } }) => {
-        console.log("📢 Note highlighted:", payload.payload.note);
+  // Cast state changes (persisted server-side, broadcast over WebSockets)
+  useRealtimeChannel(eventChannel(eventId, "cast"), (event, payload) => {
+    if (event !== "note_highlighted") return;
+    const note = (payload as { note: StickyNote | null }).note;
+    console.log("📢 Note highlighted:", note);
 
-        // Show casting animation when a new note is cast
-        if (payload.payload.note) {
-          setIsCasting(true);
-          setSelectedNote(payload.payload.note);
+    if (note) {
+      // Show casting animation when a new note is cast
+      setIsCasting(true);
+      setSelectedNote(note);
+      setTimeout(() => setIsCasting(false), 1000);
+    } else {
+      // No animation when clearing the screen
+      setSelectedNote(null);
+      setIsCasting(false);
+    }
+  });
 
-          // Remove the casting indicator after animation
-          setTimeout(() => {
-            setIsCasting(false);
-          }, 1000);
-        } else {
-          // No animation when clearing the screen
-          setSelectedNote(null);
-          setIsCasting(false);
-        }
-      })
-      .subscribe();
+  // Live edits to the currently displayed card
+  useRealtimeChannel(eventChannel(eventId, "sync"), (event, payload) => {
+    if (event !== "card_change") return;
+    const realtimeEvent = payload as OpenSpaceRealtimeEvent;
 
-    // Subscribe to real-time card updates for the currently displayed card
-    const cardUpdatesChannel = supabase
-      .channel(`openspace:${DEFAULT_OPENSPACE_ID}`)
-      .on("broadcast", { event: "card_change" }, (payload: { payload: OpenSpaceRealtimeEvent }) => {
-        const event = payload.payload;
-
-        // Only handle CARD_UPDATE events
-        if (event.type === "CARD_UPDATE" && event.payload.updatedCard && selectedNote) {
-          // Check if the updated card is the one currently being displayed
-          if (event.payload.cardId === selectedNote.id) {
-            console.log("🔄 Updating displayed card with new content:", event.payload.updatedCard);
-
-            // Show visual feedback for the update
-            setIsUpdating(true);
-            setSelectedNote(event.payload.updatedCard);
-
-            // Remove the update indicator after animation
-            setTimeout(() => {
-              setIsUpdating(false);
-            }, 1000);
-          }
-        }
-      })
-      .subscribe();
-
-    // Fetch initial highlighted note if any
-    const fetchHighlightedNote = async () => {
-      const { data } = await supabase.from("highlighted_note").select("*").eq("id", 1).single();
-
-      if (data && data.note_data) {
-        setSelectedNote(JSON.parse(data.note_data));
+    if (realtimeEvent.type === "CARD_UPDATE" && realtimeEvent.payload.updatedCard && selectedNote) {
+      if (realtimeEvent.payload.cardId === selectedNote.id) {
+        console.log("🔄 Updating displayed card with new content:", realtimeEvent.payload.updatedCard);
+        setIsUpdating(true);
+        setSelectedNote(realtimeEvent.payload.updatedCard);
+        setTimeout(() => setIsUpdating(false), 1000);
       }
-    };
+    }
+  });
 
-    fetchHighlightedNote();
-
-    return () => {
-      supabase.removeChannel(highlightedChannel);
-      supabase.removeChannel(cardUpdatesChannel);
-    };
-  }, [selectedNote?.id]); // Re-subscribe when the selected note changes
+  // Fetch the persisted highlighted note on mount
+  useEffect(() => {
+    client.cast
+      .getState({ eventId })
+      .then((state) => {
+        if (state.note) setSelectedNote(state.note);
+      })
+      .catch((error) => {
+        console.error("Failed to load cast state:", error);
+      });
+  }, [eventId]);
 
   // Rotate motivational phrases
   useEffect(() => {
@@ -214,7 +193,9 @@ export default function StickyNoteDisplay() {
 
   return (
     <>
-      <style jsx>{`
+      {/* global: styled-jsx scoping renames the keyframe, but the inline
+          style below references it by its plain name */}
+      <style jsx global>{`
         @keyframes smoothZoom {
           0%,
           100% {
@@ -344,7 +325,12 @@ export default function StickyNoteDisplay() {
             {/* Motivational Phrase - Only when waiting */}
             {!selectedNote && (
               <div className="absolute bottom-2 left-0 right-0 px-4">
-                <p className="animate-fade-in max-w-full text-center text-2xl font-bold text-gray-800 transition-all duration-500">
+                {/* Keyed so every phrase re-runs the entrance animation
+                    (animate-fade-in never existed in the Tailwind config) */}
+                <p
+                  key={currentPhraseIndex}
+                  className="max-w-full animate-fade-up text-center text-2xl font-bold text-gray-800"
+                >
                   {motivationalPhrases[currentPhraseIndex]}
                 </p>
               </div>
