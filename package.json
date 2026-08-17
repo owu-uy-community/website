@@ -108,7 +108,7 @@
     "@remotion/eslint-config": "4.0.489",
     "@remotion/tailwind-v4": "4.0.489",
     "@svgr/webpack": "8.1.0",
-    "@tailwindcss/postcss": "4.3.1",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/dotenv": "8.2.3",
     "@types/mdx": "2.0.14",
     "@types/node": "25.9.1",
