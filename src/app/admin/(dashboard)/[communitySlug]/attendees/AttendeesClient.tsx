@@ -14,7 +14,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "components/shared/ui/avatar
 import type { EventbriteAttendee } from "lib/eventbrite/types";
 import { getGravatarUrl } from "lib/gravatar";
 import { cn } from "app/lib/utils";
-import { AdminAuthWrapper } from "components/shared/AdminAuthWrapper";
 
 function AttendeesContent() {
   const searchParams = useSearchParams();
@@ -42,6 +41,7 @@ function AttendeesContent() {
     error,
     refreshAttendees,
     isRefreshing,
+    notConfigured,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -151,6 +151,15 @@ function AttendeesContent() {
           <CardHeader>
             <CardTitle className="text-red-400">Error al cargar datos</CardTitle>
             <CardDescription className="text-red-300">{error}</CardDescription>
+          </CardHeader>
+        </Card>
+      ) : notConfigured ? (
+        <Card className="mb-8 border-zinc-800 bg-zinc-900">
+          <CardHeader>
+            <CardTitle className="text-zinc-200">Eventbrite sin configurar</CardTitle>
+            <CardDescription className="text-zinc-400">
+              Definí EVENTBRITE_API_KEY y NEXT_PUBLIC_EVENTBRITE_EVENT_ID para ver los asistentes del evento.
+            </CardDescription>
           </CardHeader>
         </Card>
       ) : (
@@ -329,18 +338,16 @@ function AttendeeCard({ attendee }: { attendee: EventbriteAttendee }) {
   );
 }
 
-export default function AttendeesPage() {
+export default function AttendeesClient() {
   return (
-    <AdminAuthWrapper>
-      <Suspense
-        fallback={
-          <div className="w-full p-6">
-            <Skeleton className="h-32 w-full bg-zinc-800" />
-          </div>
-        }
-      >
-        <AttendeesContent />
-      </Suspense>
-    </AdminAuthWrapper>
+    <Suspense
+      fallback={
+        <div className="w-full p-6">
+          <Skeleton className="h-32 w-full" />
+        </div>
+      }
+    >
+      <AttendeesContent />
+    </Suspense>
   );
 }
