@@ -1,0 +1,30 @@
+import { postMetadata } from "../post-metadata";
+
+export const post = {
+  title: "Título del post",
+  description: "Resumen corto que se muestra en la card del índice, en los buscadores y al compartir el link.",
+  slug: "titulo-del-post",
+  date: "2026-01-01T12:00:00.000Z",
+  author: "Tu Nombre",
+  tags: ["comunidad"],
+};
+
+export const metadata = postMetadata(post);
+
+# Título del post
+
+<PostHeader post={post} />
+
+Arrancá con una introducción corta. Cómo publicar: ver el README de esta carpeta.
+
+## Una sección
+
+El contenido soporta **negrita**, [links](https://owu.uy), listas y bloques de código:
+
+```ts
+export function saludar(nombre: string) {
+  return `¡Hola, ${nombre}!`;
+}
+```
+
+> Y también citas, tablas y todo lo que permite GFM.
