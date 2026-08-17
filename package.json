@@ -19,7 +19,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@ai-sdk/openai": "3.0.74",
+    "@ai-sdk/openai": "4.0.16",
     "@hookform/resolvers": "5.4.3",
     "@iconify/react": "6.0.2",
     "@keystatic/core": "0.5.51",
@@ -66,7 +66,7 @@
     "@vercel/analytics": "2.0.1",
     "@vercel/functions": "3.6.1",
     "@vercel/speed-insights": "2.0.0",
-    "ai": "6.0.208",
+    "ai": "7.0.31",
     "atropos": "2.0.2",
     "better-auth": "1.6.22",
     "class-variance-authority": "0.7.1",
