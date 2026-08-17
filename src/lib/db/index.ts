@@ -18,7 +18,7 @@ const globalForDb = globalThis as unknown as {
   db: NodePgDatabase<typeof fullSchema> | undefined;
 };
 
-const pool =
+export const pool =
   globalForDb.pool ??
   new Pool({
     connectionString,

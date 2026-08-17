@@ -1,81 +1,72 @@
 import * as React from "react";
 import { Skeleton } from "components/shared/ui/skeleton";
 
+/**
+ * Mirrors the real board's dimensions (h-14 header row, h-28/md:h-32 cells)
+ * so the layout doesn't jump when data lands.
+ */
 export function OpenSpaceSkeleton() {
-  // Match the default number of rooms and time slots
-  const skeletonRooms = 5;
-  const skeletonTimeSlots = 5;
+  const skeletonRooms = 4;
+  const skeletonTimeSlots = 4;
 
   return (
-    <div className="openspace-board w-full p-6">
-      {/* Page Title Section */}
-      <div className="mb-6">
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <Skeleton className="mb-2 h-9 w-80 bg-zinc-800" />
-            <Skeleton className="h-5 w-96 bg-zinc-800" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-32 bg-zinc-800" />
-          </div>
+    <div className="space-y-4 p-4 md:p-6">
+      {/* Page header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="mt-2 h-4 w-72" />
         </div>
+        <Skeleton className="h-6 w-24" />
+      </div>
 
-        {/* Controls Section */}
-        <div className="flex flex-col items-stretch gap-3 border-t border-zinc-800 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <Skeleton className="h-10 w-full bg-zinc-800 sm:w-64" />
-
-          <div className="flex gap-2">
-            <Skeleton className="h-10 w-32 bg-zinc-800" />
-            <Skeleton className="h-10 w-36 bg-zinc-800" />
-          </div>
+      {/* Toolbar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Skeleton className="h-9 w-full sm:w-64" />
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-9 w-32" />
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-24" />
         </div>
       </div>
 
-      {/* Board Section */}
-      <div className="flex-1 overflow-auto">
-        <div className="relative overflow-hidden rounded-lg border-2 border-zinc-600 shadow-xl">
-          <div
-            className="grid min-w-[600px] md:min-w-[800px]"
-            style={{
-              gridTemplateColumns: `120px repeat(${skeletonRooms}, 1fr)`,
-            }}
-          >
-            {/* Header Row - "Horario" cell */}
-            <div className="flex h-16 items-center justify-center border-b border-zinc-600 bg-zinc-800 md:h-20">
-              <Skeleton className="h-4 w-16 bg-zinc-700" />
-            </div>
-
-            {/* Room Headers */}
-            {Array.from({ length: skeletonRooms }).map((_, index) => (
-              <div
-                key={`skeleton-room-${index}`}
-                className="flex h-16 items-center justify-center border-b border-l border-zinc-600 bg-zinc-800 px-1 md:h-20"
-              >
-                <Skeleton className="h-4 w-20 bg-zinc-700" />
-              </div>
-            ))}
-
-            {/* Time Slots and Cells */}
-            {Array.from({ length: skeletonTimeSlots }).map((_, timeIndex) => (
-              <React.Fragment key={`skeleton-timeslot-${timeIndex}`}>
-                {/* Time Slot Label */}
-                <div className="flex h-20 items-center justify-center border-b border-zinc-600 bg-zinc-800 px-1 md:h-24">
-                  <Skeleton className="h-4 w-16 bg-zinc-700" />
-                </div>
-
-                {/* Room Cells */}
-                {Array.from({ length: skeletonRooms }).map((_, roomIndex) => (
-                  <div
-                    key={`skeleton-cell-${timeIndex}-${roomIndex}`}
-                    className="relative h-20 border-b border-l border-zinc-600 bg-zinc-900 p-2 md:h-24"
-                  >
-                    {/* Randomly show some skeleton cards to make it look more realistic */}
-                    {(timeIndex + roomIndex) % 3 === 0 && <Skeleton className="h-full w-full rounded bg-zinc-800" />}
-                  </div>
-                ))}
-              </React.Fragment>
-            ))}
+      {/* Board */}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="grid" style={{ gridTemplateColumns: `88px repeat(${skeletonRooms}, minmax(170px, 1fr))` }}>
+          {/* Corner */}
+          <div className="flex h-14 items-center justify-center border-b border-r border-border/60">
+            <Skeleton className="h-3 w-10" />
           </div>
+
+          {/* Room headers */}
+          {Array.from({ length: skeletonRooms }).map((_, index) => (
+            <div
+              key={`skeleton-room-${index}`}
+              className="flex h-14 items-center justify-center border-b border-r border-border/60"
+            >
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+
+          {/* Time slots and cells */}
+          {Array.from({ length: skeletonTimeSlots }).map((_, timeIndex) => (
+            <React.Fragment key={`skeleton-timeslot-${timeIndex}`}>
+              <div className="flex h-28 flex-col items-center justify-center gap-1.5 border-b border-r border-border/60 md:h-32">
+                <Skeleton className="h-3.5 w-12" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+
+              {Array.from({ length: skeletonRooms }).map((_, roomIndex) => (
+                <div
+                  key={`skeleton-cell-${timeIndex}-${roomIndex}`}
+                  className="relative h-28 border-b border-r border-border/60 p-1.5 md:h-32"
+                >
+                  {(timeIndex + roomIndex) % 3 === 0 && <Skeleton className="h-full w-full rounded-lg" />}
+                </div>
+              ))}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </div>

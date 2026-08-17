@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm";
 import type { CountdownState } from "../schemas";
 import { db } from "../../../db";
-import { countdownState } from "../../../db/schema";
+import { eventLiveState } from "../../../db/schema";
 
-const COUNTDOWN_CHANNEL = "countdown-state";
 const DEFAULT_STATE: CountdownState = {
   isRunning: false,
   remainingSeconds: 0, // Default to 00:00
@@ -12,7 +11,8 @@ const DEFAULT_STATE: CountdownState = {
   soundEnabled: false,
 };
 
-const COUNTDOWN_STATE_ID = "global";
+// TODO(multi-tenant): becomes a required eventId input once the frontend threads event ids.
+export const LEGACY_EVENT_ID = "default-openspace";
 
 type StoredCountdownState = {
   targetTime?: Date | string | null;
@@ -79,68 +79,49 @@ function deriveCurrentState(input: StoredCountdownState | null | undefined): Cou
   };
 }
 
-async function loadCountdownStateFromStore(): Promise<CountdownState | null> {
-  try {
-    const [persisted] = await db
-      .select()
-      .from(countdownState)
-      .where(eq(countdownState.id, COUNTDOWN_STATE_ID))
-      .limit(1);
+async function loadCountdownStateFromStore(eventId: string): Promise<CountdownState | null> {
+  const [persisted] = await db.select().from(eventLiveState).where(eq(eventLiveState.eventId, eventId)).limit(1);
 
-    if (persisted) {
-      const derived = deriveCurrentState(persisted);
-      console.log("✅ [Countdown] Loaded persisted countdown state from database", {
-        isRunning: derived.isRunning,
-        targetTime: derived.targetTime,
-        remainingSeconds: derived.remainingSeconds,
-      });
-      return derived;
-    }
+  if (!persisted) return null;
 
-    console.log("ℹ️ [Countdown] No persisted countdown state found - using defaults");
-    return null;
-  } catch (error) {
-    console.error("❌ [Countdown] Unexpected error loading countdown state:", error);
-    return null;
-  }
+  return deriveCurrentState({
+    targetTime: persisted.countdownTargetTime,
+    remainingSeconds: persisted.countdownRemainingSeconds,
+    totalSeconds: persisted.countdownTotalSeconds,
+    soundEnabled: persisted.countdownSoundEnabled,
+    updatedAt: persisted.updatedAt,
+  });
 }
 
-async function persistCountdownState(state: CountdownState) {
-  try {
-    await db
-      .insert(countdownState)
-      .values({
-        id: COUNTDOWN_STATE_ID,
-        targetTime: state.targetTime ? new Date(state.targetTime) : null,
-        remainingSeconds: state.remainingSeconds,
-        totalSeconds: state.totalSeconds,
-        soundEnabled: state.soundEnabled,
-      })
-      .onConflictDoUpdate({
-        target: countdownState.id,
-        set: {
-          targetTime: state.targetTime ? new Date(state.targetTime) : null,
-          remainingSeconds: state.remainingSeconds,
-          totalSeconds: state.totalSeconds,
-          soundEnabled: state.soundEnabled,
-        },
-      });
-  } catch (error) {
-    console.error("❌ [Countdown] Unexpected error persisting countdown state:", error);
-  }
+async function persistCountdownState(eventId: string, state: CountdownState) {
+  const values = {
+    countdownTargetTime: state.targetTime ? new Date(state.targetTime) : null,
+    countdownRemainingSeconds: state.remainingSeconds,
+    countdownTotalSeconds: state.totalSeconds,
+    countdownSoundEnabled: state.soundEnabled,
+  };
+
+  await db
+    .insert(eventLiveState)
+    .values({ eventId, ...values })
+    .onConflictDoUpdate({ target: eventLiveState.eventId, set: values });
 }
 
-export async function getCountdownState(): Promise<CountdownState> {
-  const persisted = await loadCountdownStateFromStore();
-  const result = persisted ?? deriveCurrentState(DEFAULT_STATE);
-  return result;
+export async function getCountdownState(eventId: string = LEGACY_EVENT_ID): Promise<CountdownState> {
+  const persisted = await loadCountdownStateFromStore(eventId);
+
+  return persisted ?? deriveCurrentState(DEFAULT_STATE);
 }
 
-export async function saveCountdownState(state: CountdownState): Promise<CountdownState> {
+export async function saveCountdownState(
+  state: CountdownState,
+  eventId: string = LEGACY_EVENT_ID
+): Promise<CountdownState> {
   // When saving, we should persist the state as-is (not derive it)
   // Derivation only happens when loading from storage
-  await persistCountdownState(state);
+  await persistCountdownState(eventId, state);
+
   return state;
 }
 
-export { COUNTDOWN_CHANNEL, DEFAULT_STATE };
+export { DEFAULT_STATE };

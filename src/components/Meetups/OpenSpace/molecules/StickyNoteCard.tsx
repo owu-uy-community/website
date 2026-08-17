@@ -1,147 +1,196 @@
 "use client";
 
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useRef } from "react";
+import { useDraggable } from "@dnd-kit/core";
+import { ArrowLeftRight, Tv } from "lucide-react";
 
-import { Card } from "components/shared/ui/card";
+import { cn } from "app/lib/utils";
 import { Button } from "components/shared/ui/button";
-import { DogEar } from "../atoms/DogEar";
-import { Tv } from "lucide-react";
+import { roomSwapShadow } from "lib/rooms/palette";
+import { DRAG_BOX_SHADOW } from "../utils/constants";
+import { StickyNoteSurface } from "./StickyNoteSurface";
 
 import type { StickyNote } from "../../../../lib/orpc";
 
+/** One source of truth: the FLIP effect must restore exactly this value. */
+const CARD_TRANSITION = "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)";
+
 interface StickyNoteCardProps {
   note: StickyNote;
-  isDragged: boolean;
-  isSwapTarget: boolean;
-  isHighlighted?: boolean;
-  noteColors: Record<string, string>;
-  onMouseDown: (e: React.MouseEvent | React.TouchEvent) => void;
-  onDirectClick?: (note: StickyNote) => void;
+  /** Resolved room color (explicit or palette fallback). */
+  color: string;
+  /**
+   * In the user's hand: the card hides completely — the DragOverlay ghost is
+   * the visible copy — so the grid underneath always previews the end state.
+   */
+  isActive: boolean;
+  /** Right after a drop: stay hidden while the ghost glides into the cell. */
+  isSettling: boolean;
+  /** Temporarily slid to the drag origin, previewing the swap. */
+  isSwapPreview: boolean;
+  /** Pixel offset toward the drag origin while previewing a swap. */
+  previewOffset: { x: number; y: number } | null;
+  /** Currently cast to the sticky-note screen. */
+  isCast: boolean;
+  /** Touched by a remote update moments ago — ring in place. */
+  wasJustUpdated: boolean;
+  /** Timestamp of the last drag end, to swallow the synthetic click. */
+  lastDragEndAt: React.MutableRefObject<number>;
+  /** Drop-time screen positions: remounts FLIP from here (mid-flight swaps). */
+  flipRects?: React.MutableRefObject<Map<string, { left: number; top: number }>>;
+  onOpen: (note: StickyNote) => void;
   onCast?: (note: StickyNote) => void;
-  style?: React.CSSProperties;
-  className?: string;
 }
 
+/**
+ * Deliberately motion-free: this repo has a documented motion frameloop
+ * freeze (see /admin/screen history), so every interaction here is dnd-kit +
+ * plain CSS transitions — nothing can strand the board mid-animation.
+ */
 const StickyNoteCardComponent = ({
   note,
-  isDragged,
-  isSwapTarget,
-  isHighlighted = false,
-  noteColors,
-  onMouseDown,
-  onDirectClick,
+  color,
+  isActive,
+  isSettling,
+  isSwapPreview,
+  previewOffset,
+  isCast,
+  wasJustUpdated,
+  lastDragEndAt,
+  flipRects,
+  onOpen,
   onCast,
-  style,
-  className,
 }: StickyNoteCardProps) => {
-  const [isHovering, setIsHovering] = useState(false);
-  // Memoize the class names computation to avoid string concatenation on every render
-  const cardClassName = useMemo(() => {
-    const baseClasses = "openspace-sticky-note absolute cursor-move border-2 text-white";
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: note.id, data: { note } });
+  const hidden = isActive || isDragging || isSettling;
 
-    // Use consistent transitions to prevent flickering
-    const transitionClasses = "transition-all duration-200 ease-out"; // Consistent timing for all states
-
-    const stateClasses = isDragged
-      ? "dragging opacity-30 shadow-lg" // Higher opacity to reduce flicker on release
-      : isSwapTarget
-        ? "opacity-80 shadow-2xl z-20 ring-2 ring-white/30" // More prominent swap target styling
-        : isHighlighted
-          ? "ring-4 ring-yellow-400 shadow-2xl z-30 animate-pulse" // Highlighted state for cast notes
-          : "hover:shadow-xl z-10";
-
-    return `${baseClasses} ${transitionClasses} ${stateClasses} ${className || ""}`;
-  }, [isDragged, isSwapTarget, isHighlighted, className]);
-
-  // Handle clicks for recently moved cards
-  const handleClick = useMemo(
-    () => (e: React.MouseEvent) => {
-      const cardElement = e.currentTarget as HTMLElement;
-      if (cardElement.getAttribute("data-recently-moved") === "true" && onDirectClick) {
-        e.preventDefault();
-        e.stopPropagation();
-        onDirectClick(note);
-      }
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  const setRefs = useCallback(
+    (node: HTMLDivElement | null) => {
+      elementRef.current = node;
+      setNodeRef(node);
     },
-    [note, onDirectClick]
+    [setNodeRef]
   );
 
-  const handleCastClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onCast) {
-      onCast(note);
-    }
+  // FLIP continuation: when a swap partner remounts in its new cell, start
+  // from the drop-time position (possibly mid-slide) and let the existing
+  // CSS transition carry it the rest of the way — no reversal, no cut.
+  useLayoutEffect(() => {
+    if (!flipRects) return;
+    const from = flipRects.current.get(note.id);
+    if (!from) return;
+    flipRects.current.delete(note.id);
+
+    const el = elementRef.current;
+    if (!el) return;
+    const to = el.getBoundingClientRect();
+    const dx = from.left - to.left;
+    const dy = from.top - to.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+
+    el.style.transition = "none";
+    el.style.transform = `translate(${dx}px, ${dy}px)`;
+    void el.getBoundingClientRect(); // commit the start position
+    requestAnimationFrame(() => {
+      // Restore the React-managed inline value, not "" (which would drop the
+      // transition entirely and turn the release into a cut).
+      el.style.transition = CARD_TRANSITION;
+      el.style.transform = "";
+    });
+    // Runs only for the freshly-mounted element.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleClick = () => {
+    // A drop over the source card fires a click on mouseup; ignore it.
+    if (Date.now() - lastDragEndAt.current < 250) return;
+    onOpen(note);
   };
 
-  const handleCastMouseDown = (e: React.MouseEvent) => {
-    // Prevent the card's onMouseDown from triggering drag
-    e.preventDefault();
+  const stopDragActivation = (e: React.SyntheticEvent) => {
     e.stopPropagation();
   };
 
   return (
-    <Card
-      className={cardClassName}
-      onMouseDown={onMouseDown}
-      onTouchStart={onMouseDown}
-      onClick={handleClick}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-      style={style}
+    <div
+      ref={setRefs}
       data-note-id={note.id}
+      className={cn(
+        "group/card absolute inset-1.5 touch-none select-none",
+        hidden ? "pointer-events-none z-[4] opacity-0" : "z-[5]",
+        isSwapPreview && "z-[6]"
+      )}
+      style={{
+        transform: previewOffset ? `translate(${previewOffset.x}px, ${previewOffset.y}px)` : undefined,
+        transition: CARD_TRANSITION,
+      }}
+      onClick={handleClick}
+      {...attributes}
+      {...listeners}
     >
-      <div className="relative flex h-full flex-col items-center justify-center p-2 text-center md:p-3">
-        <DogEar />
+      <StickyNoteSurface
+        className={cn(
+          "duration-200 animate-in fade-in",
+          !hidden && "cursor-grab active:cursor-grabbing",
+          isCast && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+          wasJustUpdated && !isCast && "ring-2 ring-primary/60"
+        )}
+        color={color}
+        noteId={note.id}
+        speaker={note.speaker}
+        style={isSwapPreview ? { boxShadow: roomSwapShadow(color) } : undefined}
+        title={note.title}
+      >
+        {isSwapPreview && (
+          <span className="absolute -left-1.5 -top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+          </span>
+        )}
 
-        {/* Cast Button - Shows on hover */}
-        {onCast && isHovering && !isDragged && (
+        {onCast && !hidden && (
           <div
-            className="absolute right-1 top-1 z-[100]"
-            onMouseDown={handleCastMouseDown}
-            onMouseEnter={(e) => e.stopPropagation()}
+            className={cn(
+              "absolute right-1 top-1 z-20 transition-opacity",
+              isCast ? "opacity-100" : "opacity-0 focus-within:opacity-100 group-hover/card:opacity-100"
+            )}
+            onMouseDown={stopDragActivation}
+            onTouchStart={stopDragActivation}
           >
             <Button
-              size="sm"
-              variant={isHighlighted ? "destructive" : "secondary"}
-              className={`h-8 w-8 p-0 opacity-90 hover:opacity-100 ${isHighlighted ? "animate-pulse" : ""}`}
-              onClick={handleCastClick}
-              onMouseDown={handleCastMouseDown}
-              title={isHighlighted ? "Clear from screen (LIVE)" : "Cast to screen"}
+              className="h-7 w-7 shadow-md"
+              size="icon"
+              title={isCast ? "Quitar de la pantalla (en vivo)" : "Enviar a la pantalla"}
+              variant={isCast ? "destructive" : "secondary"}
+              onClick={(e) => {
+                e.stopPropagation();
+                onCast(note);
+              }}
             >
-              <Tv className="h-5 w-5" />
+              <Tv />
             </Button>
           </div>
         )}
-
-        <div className="relative z-10 w-full space-y-0.5">
-          <h3 className="hyphens-auto break-words text-xs font-bold leading-tight md:text-sm">{note.title}</h3>
-          {note.speaker && (
-            <p className="text-[10px] font-medium leading-tight opacity-90 md:text-xs">{note.speaker}</p>
-          )}
-        </div>
-      </div>
-    </Card>
+      </StickyNoteSurface>
+    </div>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders when props haven't changed
-export const StickyNoteCard = React.memo(StickyNoteCardComponent, (prevProps, nextProps) => {
-  // Custom comparison function to avoid re-renders for style objects that have the same values
-  return (
-    prevProps.note.id === nextProps.note.id &&
-    prevProps.note.title === nextProps.note.title &&
-    prevProps.note.speaker === nextProps.note.speaker &&
-    prevProps.note.room === nextProps.note.room &&
-    prevProps.isDragged === nextProps.isDragged &&
-    prevProps.isSwapTarget === nextProps.isSwapTarget &&
-    prevProps.isHighlighted === nextProps.isHighlighted &&
-    prevProps.className === nextProps.className &&
-    prevProps.onDirectClick === nextProps.onDirectClick &&
-    prevProps.onCast === nextProps.onCast &&
-    JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style)
-  );
-});
-
+export const StickyNoteCard = React.memo(StickyNoteCardComponent);
 StickyNoteCard.displayName = "StickyNoteCard";
+
+/** Static clone rendered inside the DragOverlay while dragging. */
+export function StickyNoteGhost({ note, color }: { note: StickyNote; color: string }) {
+  return (
+    <div className="h-full w-full cursor-grabbing" style={{ transform: "rotate(-2deg) scale(1.04)" }}>
+      <StickyNoteSurface
+        color={color}
+        noteId={note.id}
+        speaker={note.speaker}
+        style={{ boxShadow: DRAG_BOX_SHADOW }}
+        title={note.title}
+      />
+    </div>
+  );
+}

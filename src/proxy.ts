@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { LEGACY_REDIRECTS } from "./lib/tenant";
+
 const CONF_HOST = "conf.owu.uy";
 const CONF_URL = "https://conf.owu.uy";
 const MAIN_URL = "https://owu.uy";
@@ -37,7 +39,24 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(pathname.slice("/conf".length) || "/", CONF_URL), 308);
   }
 
-  if (pathname.startsWith("/admin")) {
+  // Community routes moved from /c to /comunidad; keep the short form alive so
+  // links shared while it was /c do not dead-end.
+  if (pathname === "/c" || pathname.startsWith("/c/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/comunidad${pathname.slice(2)}`;
+
+    return NextResponse.redirect(url, 308);
+  }
+
+  // Pre-multi-tenant URLs (kiosk devices, bookmarks) → tenant equivalents
+  const legacyTarget = LEGACY_REDIRECTS[pathname];
+  if (legacyTarget) {
+    return NextResponse.redirect(new URL(`${legacyTarget}${request.nextUrl.search}`, request.url), 308);
+  }
+
+  // Cookie-presence bounce only (the proxy cannot query the DB); role checks
+  // live server-side in every admin page (requireAdmin) and in the oRPC middleware.
+  if (pathname.startsWith("/admin") || pathname.startsWith("/keystatic")) {
     const sessionCookie =
       request.cookies.get("better-auth.session_token") || request.cookies.get("__Secure-better-auth.session_token");
 

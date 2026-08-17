@@ -7,6 +7,8 @@ const withMDX = createMDX({});
 module.exports = withMDX({
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
   reactStrictMode: true,
+  // Allow hitting the dev server via 127.0.0.1 (separate cookie jar from localhost)
+  allowedDevOrigins: ["127.0.0.1"],
   images: {
     domains: ["localhost"],
   },

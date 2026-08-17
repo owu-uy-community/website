@@ -47,3 +47,6 @@ dist/
 
 certificates
 dev.db
+
+# Playwright MCP run artifacts
+.playwright-mcp/

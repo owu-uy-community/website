@@ -19,11 +19,11 @@ export const CountdownBadge = React.memo(({ seconds, color }: CountdownBadgeProp
 
   return (
     <div
-      className="flex w-full items-center justify-center rounded-md border-2 bg-gray-900/50 px-3 py-1 transition-colors duration-500 sm:border-4 sm:px-4 sm:py-2 md:px-6"
+      className="flex w-full items-center justify-center rounded-md border-2 bg-black/50 px-3 py-1 transition-colors duration-300 sm:border-4 sm:px-4 sm:py-2 md:px-6"
       style={{ borderColor: color }}
     >
       <span
-        className="text-center font-mono text-3xl font-bold transition-colors duration-500 sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]"
+        className="text-center font-terminal text-3xl font-bold tabular-nums transition-colors duration-300 sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]"
         style={{ color }}
       >
         {formatTime(seconds)}

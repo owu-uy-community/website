@@ -1,16 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Clock, AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
 import { Label } from "components/shared/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "components/shared/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "components/shared/ui/alert-dialog";
 import type { Schedule } from "../../../../lib/orpc";
 
 // Zod schema for form validation
@@ -29,7 +46,7 @@ const scheduleFormSchema = z
       return endMinutes > startMinutes;
     },
     {
-      message: "La hora de fin debe ser posterior a la hora de inicio",
+      message: "La hora de fin debe ser posterior a la de inicio",
       path: ["endTime"],
     }
   );
@@ -46,6 +63,8 @@ interface ScheduleFormModalProps {
   isSaving?: boolean;
   isDeleting?: boolean;
   hasTracksInSlot?: boolean; // Indicates if this schedule has tracks
+  /** How many talks live in this slot (for the delete confirmation copy). */
+  talksInSlot?: number;
 }
 
 export function ScheduleFormModal({
@@ -58,7 +77,10 @@ export function ScheduleFormModal({
   isSaving = false,
   isDeleting = false,
   hasTracksInSlot = false,
+  talksInSlot = 0,
 }: ScheduleFormModalProps) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   // React Hook Form setup
   const {
     register,
@@ -159,183 +181,172 @@ export function ScheduleFormModal({
         scheduleId: schedule?.id,
       });
       // Success! Clean up and close
-      reset({
-        startTime: "09:00",
-        endTime: "10:00",
-      });
+      reset({ startTime: "09:00", endTime: "10:00" });
       clearErrors();
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving schedule:", error);
       setError("root", {
-        message: "Error al guardar el horario",
+        message: "No se pudo guardar el horario",
       });
     }
   };
 
-  const handleDelete = async () => {
+  const handleConfirmedDelete = async () => {
     if (!onDelete) return;
-
-    if (hasTracksInSlot) {
-      if (
-        !confirm(
-          "⚠️ Este horario tiene charlas asignadas. ¿Estás seguro de eliminarlo?\n\nEsta acción no se puede deshacer y las charlas se perderán."
-        )
-      ) {
-        return;
-      }
-    } else {
-      if (!confirm("¿Estás seguro de eliminar este horario?\n\nEsta acción no se puede deshacer.")) {
-        return;
-      }
-    }
 
     try {
       await onDelete();
       // Success! Clean up and close
-      reset({
-        startTime: "09:00",
-        endTime: "10:00",
-      });
+      setConfirmingDelete(false);
+      reset({ startTime: "09:00", endTime: "10:00" });
       clearErrors();
       onOpenChange(false);
     } catch (error) {
       console.error("Error deleting schedule:", error);
+      setConfirmingDelete(false);
       setError("root", {
-        message: "Error al eliminar el horario",
+        message: "No se pudo eliminar el horario",
       });
     }
   };
 
   // Handle modal close - cleanup form state
   const handleModalClose = useCallback(
-    (open: boolean) => {
-      if (!open) {
-        // Reset form to default values
-        reset({
-          startTime: "09:00",
-          endTime: "10:00",
-        });
-        // Clear all errors
+    (isOpen: boolean) => {
+      if (!isOpen) {
+        if (isSaving || isDeleting) return; // Don't close mid-mutation
+        reset({ startTime: "09:00", endTime: "10:00" });
         clearErrors();
       }
-      onOpenChange(open);
+      onOpenChange(isOpen);
     },
-    [onOpenChange, reset, clearErrors]
+    [onOpenChange, reset, clearErrors, isSaving, isDeleting]
   );
 
   const isEditMode = !!schedule;
-  const title = isEditMode ? "Editar Horario" : "Agregar Nuevo Horario";
+  const title = isEditMode ? "Editar horario" : "Nuevo horario";
   const description = isEditMode
-    ? "Modifica los horarios de inicio y fin del slot"
-    : "El horario se insertará automáticamente en orden cronológico";
+    ? "Modificá el inicio y el fin del bloque."
+    : "El bloque se inserta automáticamente en orden cronológico.";
 
   return (
-    <Dialog open={open} onOpenChange={handleModalClose}>
-      <DialogContent className="border-blue-600/50 bg-zinc-900 sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-blue-300">
-            <Clock className="h-5 w-5" />
-            {title}
-          </DialogTitle>
-          <DialogDescription className="text-zinc-300">{description}</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleModalClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              {title}
+            </DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={rhfHandleSubmit(onSubmit)} className="space-y-4">
-          {/* Time inputs */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startTime" className="text-white">
-                Hora de Inicio *
-              </Label>
-              <Input
-                id="startTime"
-                {...register("startTime")}
-                placeholder="09:00"
-                className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
-              />
-              {formErrors.startTime && <p className="text-sm text-red-400">{formErrors.startTime.message}</p>}
-            </div>
+          <form className="space-y-4" onSubmit={rhfHandleSubmit(onSubmit)}>
+            {/* Time inputs */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Inicio</Label>
+                <Input
+                  id="startTime"
+                  type="time"
+                  {...register("startTime")}
+                  className="font-terminal tabular-nums [&::-webkit-calendar-picker-indicator]:invert"
+                />
+                {formErrors.startTime && <p className="text-sm text-destructive">{formErrors.startTime.message}</p>}
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endTime" className="text-white">
-                Hora de Fin *
-              </Label>
-              <Input
-                id="endTime"
-                {...register("endTime")}
-                placeholder="10:00"
-                className="border-zinc-700 bg-zinc-800 text-white placeholder:text-zinc-500"
-              />
-              {formErrors.endTime && <p className="text-sm text-red-400">{formErrors.endTime.message}</p>}
-            </div>
-          </div>
-
-          {/* Warning about tracks in edit mode */}
-          {isEditMode && hasTracksInSlot && (
-            <div className="flex items-start gap-2 rounded-md border border-blue-600/50 bg-blue-500/10 p-3">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-blue-400" />
-              <div className="text-sm text-blue-200">
-                <strong>Nota:</strong> Este horario tiene charlas asignadas. Al cambiar el horario, todas las charlas se
-                actualizarán automáticamente al nuevo horario.
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Fin</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  {...register("endTime")}
+                  className="font-terminal tabular-nums [&::-webkit-calendar-picker-indicator]:invert"
+                />
+                {formErrors.endTime && <p className="text-sm text-destructive">{formErrors.endTime.message}</p>}
               </div>
             </div>
-          )}
 
-          {/* Error message */}
-          {formErrors.root && (
-            <div className="flex items-start gap-2 rounded-md border border-red-600/50 bg-red-500/10 p-3">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
-              <p className="text-sm text-red-200">{formErrors.root.message}</p>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="submit"
-              disabled={isSaving}
-              className="flex-1 border-blue-600 bg-blue-500/20 text-blue-200 hover:bg-blue-500/30"
-            >
-              {isSaving ? (
-                <>
-                  <span className="animate-spin">⏳</span> Guardando...
-                </>
-              ) : (
-                <>{isEditMode ? "Actualizar" : "Crear"} Horario</>
-              )}
-            </Button>
-
-            {isEditMode && onDelete && (
-              <Button
-                type="button"
-                onClick={handleDelete}
-                disabled={isDeleting || isSaving}
-                variant="outline"
-                className="border-red-600 bg-red-500/20 text-red-200 hover:bg-red-500/30"
-              >
-                {isDeleting ? (
-                  <>
-                    <span className="animate-spin">⏳</span> Eliminando...
-                  </>
-                ) : (
-                  "Eliminar"
-                )}
-              </Button>
+            {/* Warning about tracks in edit mode */}
+            {isEditMode && hasTracksInSlot && (
+              <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/[0.06] px-3 py-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <p className="text-sm text-foreground">
+                  Este bloque tiene charlas asignadas: al cambiar el horario se mueven todas al nuevo bloque.
+                </p>
+              </div>
             )}
 
-            <Button
-              type="button"
-              onClick={() => handleModalClose(false)}
-              disabled={isSaving || isDeleting}
-              variant="outline"
-              className="text-zinc-400 hover:text-zinc-300"
+            {/* Error message */}
+            {formErrors.root && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <p className="text-sm text-foreground">{formErrors.root.message}</p>
+              </div>
+            )}
+
+            <DialogFooter className="border-t border-border pt-4 sm:justify-between">
+              <div>
+                {isEditMode && onDelete && (
+                  <Button
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    disabled={isDeleting || isSaving}
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setConfirmingDelete(true)}
+                  >
+                    {isDeleting ? "Eliminando…" : "Eliminar"}
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <Button
+                  disabled={isSaving || isDeleting}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => handleModalClose(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button disabled={isSaving || isDeleting} type="submit">
+                  {isSaving ? "Guardando…" : isEditMode ? "Guardar cambios" : "Crear horario"}
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation (used to be a native window.confirm) */}
+      <AlertDialog open={confirmingDelete} onOpenChange={setConfirmingDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              ¿Eliminar el horario {schedule ? `${schedule.startTime} - ${schedule.endTime}` : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {talksInSlot > 0
+                ? `Este bloque tiene ${talksInSlot} charla${talksInSlot > 1 ? "s" : ""} asignada${talksInSlot > 1 ? "s" : ""} que también se van a eliminar. `
+                : ""}
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              variant="destructive"
+              onClick={(e) => {
+                e.preventDefault();
+                void handleConfirmedDelete();
+              }}
             >
-              Cancelar
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+              {isDeleting ? "Eliminando…" : "Eliminar horario"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

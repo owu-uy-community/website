@@ -1,18 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { Users, UserCheck, UserX, RefreshCw } from "lucide-react";
+import { RefreshCw, UserCheck, Users, UserX } from "lucide-react";
+
 import { useEventbriteAttendees } from "hooks/useEventbriteAttendees";
+import { scopedAdminHref, useSelectedEvent } from "components/Admin/shell/use-selected-event";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { cn } from "app/lib/utils";
 
+const ROWS = [
+  { filter: null, icon: Users, label: "Total", key: "total_attendees" },
+  { filter: "checked_in", icon: UserCheck, label: "Check-in", key: "checked_in" },
+  { filter: "not_checked_in", icon: UserX, label: "Pendientes", key: "not_checked_in" },
+] as const;
+
 export function AttendeesSidebarSection() {
-  const { summary, isLoading, error, refreshAttendees, isRefreshing } = useEventbriteAttendees({
+  const { selected } = useSelectedEvent();
+  const { summary, isLoading, error, refreshAttendees, isRefreshing, notConfigured } = useEventbriteAttendees({
     pageSize: 10, // Just fetch a small amount for the sidebar
   });
 
-  // Default values while loading or on error
+  // Scoped to the selected event's community so the rows never bounce the
+  // admin to another tenant via the legacy redirect.
+  const base = selected
+    ? scopedAdminHref(selected.communitySlug, "/admin/attendees", selected.slug)
+    : "/admin/attendees";
+  const hrefFor = (filter: string | null) =>
+    filter ? `${base}${base.includes("?") ? "&" : "?"}filter=${filter}` : base;
+
   const displayData = summary || {
     total_attendees: 0,
     checked_in: 0,
@@ -22,60 +38,41 @@ export function AttendeesSidebarSection() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-medium text-white/70">Asistentes</h3>
+        <h3 className="text-xs font-medium text-sidebar-foreground/70">Asistentes</h3>
         <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-zinc-400 hover:text-yellow-400"
-          onClick={refreshAttendees}
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
           disabled={isRefreshing || isLoading}
+          size="icon"
+          variant="ghost"
+          onClick={refreshAttendees}
         >
-          <RefreshCw size={14} className={cn((isRefreshing || isLoading) && "animate-spin")} />
+          <RefreshCw className={cn((isRefreshing || isLoading) && "animate-spin")} size={14} />
         </Button>
       </div>
 
-      <div className="space-y-2">
-        <Link
-          href="/admin/attendees"
-          className="flex items-center justify-between rounded-md bg-zinc-800/50 px-3 py-2 text-sm transition-colors hover:bg-zinc-800"
-        >
-          <div className="flex items-center gap-2">
-            <Users size={14} className="text-zinc-400" />
-            <span className="text-zinc-300">Total</span>
-          </div>
-          <Badge variant="secondary" className="bg-zinc-700 text-white">
-            {displayData.total_attendees}
-          </Badge>
-        </Link>
+      {notConfigured ? (
+        <p className="px-2 text-xs text-sidebar-foreground/50">Eventbrite sin configurar</p>
+      ) : (
+        <div className="space-y-1">
+          {ROWS.map((row) => (
+            <Link
+              key={row.key}
+              className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-sidebar-accent"
+              href={hrefFor(row.filter)}
+            >
+              <div className="flex items-center gap-2">
+                <row.icon className="text-sidebar-foreground/60" size={14} />
+                <span className="text-sidebar-foreground/80">{row.label}</span>
+              </div>
+              <Badge className="bg-transparent font-terminal tabular-nums text-foreground" variant="secondary">
+                {displayData[row.key]}
+              </Badge>
+            </Link>
+          ))}
+        </div>
+      )}
 
-        <Link
-          href="/admin/attendees?filter=checked_in"
-          className="flex items-center justify-between rounded-md bg-zinc-800/50 px-3 py-2 text-sm transition-colors hover:bg-zinc-800"
-        >
-          <div className="flex items-center gap-2">
-            <UserCheck size={14} className="text-green-400" />
-            <span className="text-zinc-300">Check-in</span>
-          </div>
-          <Badge variant="secondary" className="bg-green-900/30 text-green-400">
-            {displayData.checked_in}
-          </Badge>
-        </Link>
-
-        <Link
-          href="/admin/attendees?filter=not_checked_in"
-          className="flex items-center justify-between rounded-md bg-zinc-800/50 px-3 py-2 text-sm transition-colors hover:bg-zinc-800"
-        >
-          <div className="flex items-center gap-2">
-            <UserX size={14} className="text-yellow-400" />
-            <span className="text-zinc-300">Pendientes</span>
-          </div>
-          <Badge variant="secondary" className="bg-yellow-900/30 text-yellow-400">
-            {displayData.not_checked_in}
-          </Badge>
-        </Link>
-      </div>
-
-      {error && <p className="text-xs text-red-400">Error al cargar datos</p>}
+      {error && <p className="text-xs text-destructive">Error al cargar datos</p>}
     </div>
   );
 }

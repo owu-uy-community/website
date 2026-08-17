@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CircleCheck,
-  Info,
-  LoaderCircle,
-  OctagonX,
-  TriangleAlert,
-} from "lucide-react";
+import { CircleCheck, Info, LoaderCircle, OctagonX, TriangleAlert } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
@@ -28,18 +22,19 @@ function Toaster({ ...props }: ToasterProps) {
       }}
       toastOptions={{
         classNames: {
+          // Neutral surface; the state is carried by the icon color, not a loud fill.
           toast:
-            "group toast group-[.toaster]:bg-zinc-900 group-[.toaster]:text-white group-[.toaster]:border-zinc-700 group-[.toaster]:shadow-2xl",
-          title: "group-[.toast]:text-white group-[.toast]:font-semibold",
-          description: "group-[.toast]:text-zinc-300",
+            "group toast group-[.toaster]:bg-popover group-[.toaster]:text-popover-foreground group-[.toaster]:border-border group-[.toaster]:shadow-2xl",
+          title: "group-[.toast]:text-foreground group-[.toast]:font-semibold",
+          description: "group-[.toast]:text-muted-foreground",
           actionButton:
-            "group-[.toast]:bg-zinc-700 group-[.toast]:text-white group-[.toast]:hover:bg-zinc-600",
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground group-[.toast]:hover:bg-primary/90",
           cancelButton:
-            "group-[.toast]:bg-zinc-800 group-[.toast]:text-zinc-300 group-[.toast]:hover:bg-zinc-700",
-          success: "group-[.toast]:bg-green-900 group-[.toast]:border-green-700",
-          error: "group-[.toast]:bg-red-900 group-[.toast]:border-red-700",
-          warning: "group-[.toast]:bg-yellow-900 group-[.toast]:border-yellow-700",
-          info: "group-[.toast]:bg-blue-900 group-[.toast]:border-blue-700",
+            "group-[.toast]:bg-secondary group-[.toast]:text-secondary-foreground group-[.toast]:hover:bg-secondary/80",
+          success: "group-[.toast]:[&_svg]:text-emerald-500",
+          error: "group-[.toast]:[&_svg]:text-destructive",
+          warning: "group-[.toast]:[&_svg]:text-primary",
+          info: "group-[.toast]:[&_svg]:text-chart-2",
         },
       }}
       {...props}

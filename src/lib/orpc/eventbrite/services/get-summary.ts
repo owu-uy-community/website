@@ -1,23 +1,25 @@
-import { EVENTBRITE_API_URL, EVENTBRITE_API_KEY, EVENTBRITE_EVENT_ID } from "app/lib/constants"
-import type { EventbriteEvent, EventbriteSummary, EventbriteAttendeesResponse } from "lib/eventbrite/types"
+import { EVENTBRITE_API_URL, EVENTBRITE_API_KEY, EVENTBRITE_EVENT_ID } from "app/lib/constants";
+import type { EventbriteEvent, EventbriteSummary, EventbriteAttendeesResponse } from "lib/eventbrite/types";
 
 /**
- * Fetch event summary including attendee stats
+ * Fetch event summary including attendee stats.
+ * Returns null when Eventbrite is not configured: that's an expected state
+ * (local dev, events without ticketing), not an error — throwing here used to
+ * spam the console on every admin page via the sidebar poll.
  */
 export const getSummary = async (): Promise<{
   event: {
-    id: string
-    name: string
-    start: string
-    end: string
-    capacity?: number
-    status: string
-  }
-  summary: EventbriteSummary
-}> => {
-  // Check if Eventbrite is configured
+    id: string;
+    name: string;
+    start: string;
+    end: string;
+    capacity?: number;
+    status: string;
+  };
+  summary: EventbriteSummary;
+} | null> => {
   if (!EVENTBRITE_API_KEY || !EVENTBRITE_EVENT_ID) {
-    throw new Error("Eventbrite not configured. EVENTBRITE_API_KEY and NEXT_PUBLIC_EVENTBRITE_EVENT_ID must be set.")
+    return null;
   }
 
   // Fetch event details and attendees in parallel
@@ -40,15 +42,15 @@ export const getSummary = async (): Promise<{
         revalidate: 60, // Cache for 1 minute
       },
     }),
-  ])
+  ]);
 
   if (!eventResponse.ok || !attendeesResponse.ok) {
-    const errorData = await (eventResponse.ok ? attendeesResponse : eventResponse).json().catch(() => ({}))
-    throw new Error(errorData.error_description || "Failed to fetch event summary from Eventbrite")
+    const errorData = await (eventResponse.ok ? attendeesResponse : eventResponse).json().catch(() => ({}));
+    throw new Error(errorData.error_description || "Failed to fetch event summary from Eventbrite");
   }
 
-  const event: EventbriteEvent = await eventResponse.json()
-  const attendeesData: EventbriteAttendeesResponse = await attendeesResponse.json()
+  const event: EventbriteEvent = await eventResponse.json();
+  const attendeesData: EventbriteAttendeesResponse = await attendeesResponse.json();
 
   // Calculate summary statistics
   const summary: EventbriteSummary = {
@@ -57,7 +59,7 @@ export const getSummary = async (): Promise<{
     not_checked_in: attendeesData.attendees.filter((a) => !a.checked_in && !a.cancelled && !a.refunded).length,
     cancelled: attendeesData.attendees.filter((a) => a.cancelled).length,
     refunded: attendeesData.attendees.filter((a) => a.refunded).length,
-  }
+  };
 
   return {
     event: {
@@ -69,6 +71,5 @@ export const getSummary = async (): Promise<{
       status: event.status,
     },
     summary,
-  }
-}
-
+  };
+};

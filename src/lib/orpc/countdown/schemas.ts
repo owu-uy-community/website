@@ -13,7 +13,14 @@ export const UpdateCountdownStateSchema = z.object({
   action: z.enum(["start", "pause", "reset", "setDuration", "toggleSound", "setTargetTime"]),
   durationSeconds: z.number().optional(),
   targetTime: z.string().optional(), // ISO timestamp or time string
+  eventId: z.string().optional(), // TODO(multi-tenant): becomes required
 });
+
+export const GetCountdownStateSchema = z
+  .object({
+    eventId: z.string().optional(),
+  })
+  .optional();
 
 export const CountdownEndtimeSchema = z.object({
   targetTime: z.string().nullable(), // ISO timestamp or null if no countdown is active

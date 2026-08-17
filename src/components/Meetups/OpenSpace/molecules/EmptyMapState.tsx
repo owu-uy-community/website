@@ -8,6 +8,15 @@ interface EmptyMapStateProps {
   scene?: number;
 }
 
+// Deterministic particle field: Math.random() in render meant new positions
+// on every re-render plus a hydration-mismatch risk on an always-on screen.
+const PARTICLES = Array.from({ length: 12 }, (_, i) => ({
+  left: `${(i * 137.5) % 100}%`,
+  top: `${(i * 61.8 + 13) % 100}%`,
+  delay: `${(i % 5) * 0.6}s`,
+  duration: `${3 + (i % 4)}s`,
+}));
+
 /**
  * Empty state displayed when no time slots are highlighted
  * Shows blurred map background with animated icon and message
@@ -27,75 +36,45 @@ export const EmptyMapState: React.FC<EmptyMapStateProps> = ({ scene = 1 }) => {
       {/* Dark overlay with blur */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-2xl" />
 
-      {/* Animated background particles */}
+      {/* Background particles */}
       <div className="absolute inset-0 z-0">
-        {[...Array(30)].map((_, i) => (
+        {PARTICLES.map((particle, i) => (
           <div
             key={i}
             className="absolute h-1 w-1 animate-pulse rounded-full bg-yellow-500/20"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 4}s`,
+              left: particle.left,
+              top: particle.top,
+              animationDelay: particle.delay,
+              animationDuration: particle.duration,
             }}
           />
         ))}
       </div>
 
-      {/* Animated rings */}
+      {/* One slow ring — was two pings + a spinner + three bouncing dots */}
       <div className="absolute z-0">
         <div
-          className="h-64 w-64 animate-ping rounded-full border-2 border-yellow-500/20"
-          style={{ animationDuration: "2s" }}
-        />
-      </div>
-      <div className="absolute z-0" style={{ animationDelay: "1s" }}>
-        <div
-          className="h-96 w-96 animate-ping rounded-full border-2 border-yellow-500/10"
+          className="h-80 w-80 animate-ping rounded-full border-2 border-yellow-500/15"
           style={{ animationDuration: "3s" }}
         />
       </div>
 
       {/* Content */}
       <div className="relative z-10 text-center">
-        {/* Animated Map Icon */}
         <div className="mb-8 flex justify-center">
-          <div className="relative h-64 w-64">
-            {/* Spinning ring */}
-            <div
-              className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-r-yellow-500/50 border-t-yellow-500"
-              style={{ animationDuration: "4s" }}
-            />
-
-            {/* Icon circle with pulse */}
-            <div className="absolute inset-0 flex animate-pulse items-center justify-center rounded-full border-2 border-yellow-500/40 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-2xl shadow-yellow-500/20 backdrop-blur-xs">
-              <Map className="h-24 w-24 text-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" strokeWidth={1.5} />
+          <div className="relative h-56 w-56">
+            <div className="absolute inset-0 flex items-center justify-center rounded-full border-2 border-yellow-500/40 bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 shadow-2xl shadow-yellow-500/20 backdrop-blur-xs">
+              <Map className="h-20 w-20 text-yellow-500 drop-shadow-[0_0_20px_rgba(234,179,8,0.6)]" strokeWidth={1.5} />
             </div>
           </div>
         </div>
 
-        {/* Text with fade animation */}
-        <div className="animate-pulse">
-          <p className="mb-4 text-5xl font-bold text-yellow-500 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)]">
-            Waiting for Schedule
-          </p>
-          <p className="text-2xl text-gray-300">No time slot highlighted</p>
-          <p className="mt-6 text-base text-gray-500">Click the star icon on a time slot row in the admin panel</p>
-        </div>
-
-        {/* Animated dots */}
-        <div className="mt-10 flex justify-center gap-3">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="h-4 w-4 animate-bounce rounded-full bg-yellow-500 shadow-lg shadow-yellow-500/50"
-              style={{
-                animationDelay: `${i * 0.2}s`,
-              }}
-            />
-          ))}
-        </div>
+        <p className="mb-4 font-display text-5xl font-bold text-yellow-500 drop-shadow-[0_0_30px_rgba(234,179,8,0.5)]">
+          Esperando la grilla
+        </p>
+        <p className="text-2xl text-white/70">Ningún horario está resaltado</p>
+        <p className="mt-6 text-base text-white/40">Marcá la estrella de un horario en el panel de administración</p>
       </div>
     </div>
   );

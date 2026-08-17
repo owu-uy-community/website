@@ -89,7 +89,12 @@ export function clampValue(value: number, min: number, max: number): number {
  */
 export function calculateProgressRing(current: number, total: number, radius: number): number {
   const circumference = 2 * Math.PI * radius;
-  const progress = total > 0 ? (total - current) / total : 0;
+  if (!(total > 0) || !Number.isFinite(current)) return 0;
+
+  // Clamped: an out-of-range queue index or an overshooting timer would
+  // otherwise produce a dash offset outside the circle and a broken ring.
+  const progress = Math.min(1, Math.max(0, (total - current) / total));
+
   return circumference * progress;
 }
 

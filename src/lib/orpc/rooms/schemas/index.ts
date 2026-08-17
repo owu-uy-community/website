@@ -11,18 +11,41 @@ export const RoomSchema = z.object({
   hasTV: z.boolean().default(false).describe("Room has a TV/projector available"),
   hasWhiteboard: z.boolean().default(false).describe("Room has a whiteboard available"),
   isActive: z.boolean().default(true),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a #rrggbb hex")
+    .nullable()
+    .optional(),
+  /** Shape key from ROOM_ICONS ("diamond", "star", …); null renders no icon. */
+  icon: z
+    .string()
+    .regex(/^[a-z]+$/, "Icon must be a shape key")
+    .nullable()
+    .optional(),
+  sortOrder: z.number().int().default(0),
   openSpaceId: z.string().min(1, "OpenSpace ID is required"),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 
 /**
- * Schema for creating a new room (omits auto-generated fields)
+ * Schema for creating a new room (omits auto-generated fields).
+ * sortOrder defaults to the end of the board when not provided.
  */
 export const CreateRoomSchema = RoomSchema.omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  sortOrder: z.number().int().optional(),
+});
+
+/**
+ * Schema for reordering an event's rooms (board columns)
+ */
+export const ReorderRoomsSchema = z.object({
+  openSpaceId: z.string().min(1, "OpenSpace ID is required"),
+  orderedIds: z.array(z.string().min(1)).min(1),
 });
 
 /**
@@ -67,3 +90,4 @@ export type GetRoomInput = z.infer<typeof GetRoomSchema>;
 export type DeleteRoomInput = z.infer<typeof DeleteRoomSchema>;
 export type UpdateRoomInputType = z.infer<typeof UpdateRoomInputSchema>;
 export type GetRoomsByOpenSpaceInput = z.infer<typeof GetRoomsByOpenSpaceSchema>;
+export type ReorderRoomsInput = z.infer<typeof ReorderRoomsSchema>;

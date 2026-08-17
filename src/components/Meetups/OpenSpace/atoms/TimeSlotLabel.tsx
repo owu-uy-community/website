@@ -1,139 +1,62 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { Star } from "lucide-react";
 
-import { Input } from "components/shared/ui/input";
+import { cn } from "app/lib/utils";
 import { Button } from "components/shared/ui/button";
-import { Star, Check, Trash2 } from "lucide-react";
 
 interface TimeSlotLabelProps {
+  /** Display string, e.g. "10:00 - 10:45". */
   timeSlot: string;
-  isEditing: boolean;
-  editValue: string;
+  /** Row starred to highlight in the kiosk. */
   isHighlighted?: boolean;
   onDoubleClick: () => void;
-  onEditChange: (value: string) => void;
-  onEditKeyDown: (e: React.KeyboardEvent) => void;
-  onEditBlur: () => void;
   onToggleHighlight?: () => void;
-  onSave?: () => void;
-  onDelete?: () => void;
 }
 
 export function TimeSlotLabel({
   timeSlot,
-  isEditing,
-  editValue,
   isHighlighted = false,
   onDoubleClick,
-  onEditChange,
-  onEditKeyDown,
-  onEditBlur,
   onToggleHighlight,
-  onSave,
-  onDelete,
 }: TimeSlotLabelProps) {
-  const [isHovering, setIsHovering] = useState(false);
-
-  const handleStarClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onToggleHighlight) {
-      onToggleHighlight();
-    }
-  };
-
-  const handleSaveClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onSave) {
-      onSave();
-    }
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onDelete) {
-      onDelete();
-    }
-  };
-
-  const handleSaveMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent blur from firing
-  };
-
-  const handleDeleteMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent blur from firing
-  };
+  const [start, end] = timeSlot.split(" - ");
 
   return (
     <div
-      className={`group relative flex h-28 cursor-pointer items-center justify-center border-b border-zinc-600 px-1 md:h-32 transition-colors duration-200 ${
-        isHighlighted 
-          ? "bg-yellow-500/20 border-yellow-500/40" 
-          : "bg-zinc-800"
-      }`}
+      className="group/time sticky left-0 z-10 flex h-28 cursor-pointer flex-col items-center justify-center border-b border-r border-border/60 bg-card px-1 md:h-32"
+      title="Doble click para editar el horario"
       onDoubleClick={onDoubleClick}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
-      {isEditing ? (
-        <div className="flex w-full flex-col items-center gap-1.5 px-1">
-          <Input
-            value={editValue}
-            onChange={(e) => onEditChange(e.target.value)}
-            onKeyDown={onEditKeyDown}
-            onBlur={onEditBlur}
-            className="h-8 w-full border-zinc-600 bg-zinc-900 text-center text-xs font-medium text-white placeholder:text-zinc-500 focus:border-yellow-500 focus:ring-yellow-500 md:text-sm"
-            autoFocus
-            placeholder="HH:MM - HH:MM"
-          />
-          <div className="flex w-full gap-1">
-            <Button
-              size="sm"
-              variant="default"
-              className="h-6 flex-1 bg-yellow-500 px-2 text-xs font-semibold text-black transition-colors hover:bg-yellow-400"
-              onMouseDown={handleSaveMouseDown}
-              onClick={handleSaveClick}
-            >
-              <Check className="mr-1 h-3 w-3" />
-              Guardar
-            </Button>
-            {onDelete && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0 bg-red-600/10 hover:bg-red-600"
-                onMouseDown={handleDeleteMouseDown}
-                onClick={handleDeleteClick}
-                title="Eliminar horario"
-              >
-                <Trash2 className="h-3 w-3 text-red-400 hover:text-white" />
-              </Button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <>
-          <span className="text-center text-sm font-medium leading-tight text-zinc-200 md:text-base">{timeSlot}</span>
-          
-          {/* Highlight Toggle Button - Always visible */}
-          {onToggleHighlight && (
-            <Button
-              size="sm"
-              variant={isHighlighted ? "default" : "ghost"}
-              className={`absolute right-1 top-1 h-6 w-6 p-0 transition-opacity ${
-                isHighlighted 
-                  ? "bg-yellow-500 hover:bg-yellow-600 opacity-100" 
-                  : "hover:bg-zinc-700 opacity-60 hover:opacity-100"
-              }`}
-              onClick={handleStarClick}
-              title={isHighlighted ? "Quitar del mapa kiosco" : "Agregar al mapa kiosco"}
-            >
-              <Star className={`h-3 w-3 ${isHighlighted ? "fill-current text-black" : "text-zinc-400"}`} />
-            </Button>
+      {/* Star tint as an overlay so the sticky background stays opaque. */}
+      {isHighlighted && <div aria-hidden className="pointer-events-none absolute inset-0 bg-primary/[0.08]" />}
+
+      <span className="relative font-terminal text-xs font-medium tabular-nums text-foreground md:text-sm">
+        {start}
+      </span>
+      {end && (
+        <span className="relative font-terminal text-[10px] tabular-nums text-muted-foreground md:text-xs">{end}</span>
+      )}
+
+      {onToggleHighlight && (
+        <Button
+          className={cn(
+            "absolute right-0.5 top-0.5 h-6 w-6 transition-opacity",
+            isHighlighted
+              ? "text-primary opacity-100 hover:text-primary"
+              : "text-muted-foreground opacity-0 focus-visible:opacity-100 group-hover/time:opacity-100"
           )}
-        </>
+          size="icon"
+          title={isHighlighted ? "Quitar del kiosco" : "Resaltar en el kiosco"}
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleHighlight();
+          }}
+        >
+          <Star className={cn("h-3.5 w-3.5", isHighlighted && "fill-current")} />
+        </Button>
       )}
     </div>
   );

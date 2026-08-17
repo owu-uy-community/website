@@ -1,6 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { openSpaces, rooms, type RoomRow } from "../../../db/schema";
+import { ROOM_PALETTE } from "../../../rooms/palette";
 import type { CreateRoomInput, Room } from "../schemas";
 
 /**
@@ -36,13 +37,30 @@ export const createRoom = async (input: CreateRoomInput): Promise<Room> => {
     throw new Error(`Room "${input.name}" already exists in this OpenSpace`);
   }
 
+  // New rooms go to the end of the board unless an explicit order is given
+  const existing = await db
+    .select({ sortOrder: rooms.sortOrder })
+    .from(rooms)
+    .where(eq(rooms.openSpaceId, input.openSpaceId))
+    .orderBy(desc(rooms.sortOrder));
+  const sortOrder = input.sortOrder ?? (existing[0]?.sortOrder ?? -1) + 1;
+
+  // Persist a distinct palette color by default so boards start legible;
+  // admins can change it any time.
+  const color = input.color ?? ROOM_PALETTE[existing.length % ROOM_PALETTE.length];
+
   const [room] = await db
     .insert(rooms)
     .values({
       name: input.name,
       description: input.description || null,
       capacity: input.capacity || null,
+      hasTV: input.hasTV,
+      hasWhiteboard: input.hasWhiteboard,
       isActive: input.isActive,
+      color,
+      icon: input.icon ?? null,
+      sortOrder,
       openSpaceId: input.openSpaceId,
     })
     .returning();

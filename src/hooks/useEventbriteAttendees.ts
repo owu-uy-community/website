@@ -48,6 +48,7 @@ export const useEventbriteAttendees = ({
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined; // Eventbrite not configured
       const { page_number, page_count } = lastPage.pagination;
       return page_number < page_count ? page_number + 1 : undefined;
     },
@@ -93,10 +94,10 @@ export const useEventbriteAttendees = ({
         isFetching: regularQueryResult.isFetching,
       };
 
-  // Flatten pages for infinite query
+  // Flatten pages for infinite query (pages are null when not configured)
   const allAttendees =
     infinite && infiniteQueryResult.data
-      ? infiniteQueryResult.data.pages.flatMap((page) => page.attendees)
+      ? infiniteQueryResult.data.pages.flatMap((page) => page?.attendees ?? [])
       : attendeesData && "attendees" in attendeesData
         ? attendeesData.attendees
         : [];
@@ -141,6 +142,8 @@ export const useEventbriteAttendees = ({
     isRefreshing: isAttendeesRefreshing || isSummaryRefreshing,
     error: attendeesError?.message || null,
     isError: attendeesIsError,
+    /** Definite "Eventbrite is not set up" (null response) — not a failure. */
+    notConfigured: summaryData === null,
 
     // Infinite scroll specific
     fetchNextPage: infinite ? infiniteQueryResult.fetchNextPage : undefined,

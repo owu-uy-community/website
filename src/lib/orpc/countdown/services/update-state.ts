@@ -1,8 +1,11 @@
+import { eventChannel } from "../../../realtime/channels";
+import { publishServer } from "../../../realtime/publish";
 import type { UpdateCountdownStateInput, CountdownState } from "../schemas";
-import { getCountdownState, saveCountdownState } from "./get-state";
+import { getCountdownState, LEGACY_EVENT_ID, saveCountdownState } from "./get-state";
 
 export async function updateCountdownState(input: UpdateCountdownStateInput): Promise<CountdownState> {
-  const currentState = await getCountdownState();
+  const eventId = input.eventId ?? LEGACY_EVENT_ID;
+  const currentState = await getCountdownState(eventId);
   console.log("⚙️ [Countdown] updateCountdownState - action:", input.action, "currentState:", {
     isRunning: currentState.isRunning,
     remainingSeconds: currentState.remainingSeconds,
@@ -114,40 +117,13 @@ export async function updateCountdownState(input: UpdateCountdownStateInput): Pr
       throw new Error(`Unknown action: ${input.action}`);
   }
 
-  const persistedState = await saveCountdownState(newState);
+  const persistedState = await saveCountdownState(newState, eventId);
 
-  // Broadcast state CHANGE
-  // Clients calculate independently from targetTime
-  await broadcastStateChange(persistedState);
+  // Broadcast the state CHANGE over the WebSocket transport (only on admin
+  // actions — clients tick independently from targetTime).
+  await publishServer(eventChannel(eventId, "countdown"), "countdown_state_change", persistedState).catch((error) => {
+    console.error("❌ [Countdown] Failed to broadcast state change:", error);
+  });
 
   return persistedState;
-}
-
-/**
- * Broadcast state change to all clients
- * Called ONLY when admin changes state (not every second!)
- */
-async function broadcastStateChange(state: CountdownState) {
-  const { createClient } = await import("@supabase/supabase-js");
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-  const supabase = createClient(supabaseUrl, supabaseKey);
-
-  try {
-    const channel = supabase.channel("countdown-state");
-
-    await channel.send({
-      type: "broadcast",
-      event: "countdown_state_change", // Changed event name
-      payload: state,
-    });
-
-    console.log("📡 [Countdown] State change broadcasted:", {
-      isRunning: state.isRunning,
-      targetTime: state.targetTime,
-      remainingSeconds: state.remainingSeconds,
-    });
-  } catch (error) {
-    console.error("❌ [Countdown] Failed to broadcast state change:", error);
-  }
 }
