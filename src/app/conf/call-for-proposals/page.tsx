@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { EXTERNAL_SERVICES, INTERNAL_ROUTES } from "app/lib/constants";
+import { CONF_DATES, EXTERNAL_SERVICES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import Countdown from "../components/Countdown";
 import Footer from "../components/Footer";
 import FormEmbed from "../components/FormEmbed";
 import MotionRoot from "../components/MotionRoot";
@@ -81,6 +82,10 @@ export default function CallForProposalsPage() {
                   Fecha límite para enviar propuestas:{" "}
                   <strong className="font-display font-bold uppercase text-[#F5BB03]">15 de septiembre</strong>
                 </p>
+              </Reveal>
+
+              <Reveal delay={0.3} y={18}>
+                <Countdown className="mt-6" expiredLabel="CONVOCATORIA CERRADA" target={CONF_DATES.cfpDeadline} />
               </Reveal>
 
               <Reveal delay={0.32} y={20}>
