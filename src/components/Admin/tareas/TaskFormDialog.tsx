@@ -218,7 +218,7 @@ export function TaskFormDialog({
                         <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
+                    <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
                       <Command>
                         <CommandInput placeholder="Buscar por nombre…" />
                         <CommandList>
