@@ -2,8 +2,9 @@
 
 import { m } from "motion/react";
 
-import { INTERNAL_ROUTES, MAPS_URLS } from "app/lib/constants";
+import { CONF_DATES, INTERNAL_ROUTES, MAPS_URLS } from "app/lib/constants";
 
+import Countdown from "./Countdown";
 import PillLink from "./PillLink";
 import { EASE_OUT } from "./Reveal";
 
@@ -72,12 +73,22 @@ export default function Hero() {
           </a>
         </m.div>
 
-        <m.div className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:justify-start" {...contentEntrance(2)}>
-          <PillLink href={INTERNAL_ROUTES.conf.callForProposals}>¡POSTULAR MI CHARLA!</PillLink>
-          <PillLink href={INTERNAL_ROUTES.conf.sponsors} variant="outline">
-            ¡QUIERO SER SPONSOR!
-          </PillLink>
-        </m.div>
+        {/* w-fit is measured by the CTA row, so the countdown below stretches to exactly the buttons' width */}
+        <div className="mx-auto w-fit sm:mx-0">
+          <m.div {...contentEntrance(2)}>
+            <Countdown className="mt-8" expiredLabel="¡LLEGÓ EL DÍA!" fullWidth target={CONF_DATES.event} />
+          </m.div>
+
+          <m.div
+            className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:justify-start"
+            {...contentEntrance(3)}
+          >
+            <PillLink href={INTERNAL_ROUTES.conf.callForProposals}>¡POSTULAR MI CHARLA!</PillLink>
+            <PillLink href={INTERNAL_ROUTES.conf.sponsors} variant="outline">
+              ¡QUIERO SER SPONSOR!
+            </PillLink>
+          </m.div>
+        </div>
 
         {/* Right edge aligns with the navbar content line (inner px-8 edge); desktop LCP image */}
         <m.img

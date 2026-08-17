@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
-import { EXTERNAL_SERVICES, INTERNAL_ROUTES } from "app/lib/constants";
+import { CONF_DATES, EXTERNAL_SERVICES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import Countdown from "../components/Countdown";
 import Footer from "../components/Footer";
 import FormEmbed from "../components/FormEmbed";
 import MotionRoot from "../components/MotionRoot";
@@ -105,6 +106,14 @@ export default function SponsorsFormPage() {
                   Dejanos tus datos y te enviamos el brochure de sponsorship con los beneficios y todos los
                   detalles.
                 </p>
+              </Reveal>
+
+              <Reveal delay={0.48} y={18}>
+                <p className="mt-10 font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
+                  Aceptamos postulaciones hasta el{" "}
+                  <strong className="text-[#F5BB03]">15 de septiembre</strong>
+                </p>
+                <Countdown className="mt-4" expiredLabel="CONVOCATORIA CERRADA" target={CONF_DATES.sponsorsDeadline} />
               </Reveal>
             </div>
 
