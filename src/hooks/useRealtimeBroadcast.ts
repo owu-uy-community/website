@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "app/lib/supabase";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import { supabase, type RealtimeChannel } from "app/lib/supabase";
 
 /**
  * Event handler configuration
@@ -39,10 +38,10 @@ interface RealtimeBroadcastReturn {
 
 /**
  * Generic hook for managing Supabase real-time broadcasts
- * 
+ *
  * Handles channel creation, subscription, cleanup, and broadcasting
  * with automatic query invalidation support.
- * 
+ *
  * @example
  * ```tsx
  * const { broadcast, invalidate } = useRealtimeBroadcast({
@@ -57,7 +56,7 @@ interface RealtimeBroadcastReturn {
  *     },
  *   ],
  * });
- * 
+ *
  * // Broadcast an event
  * await broadcast("data_updated", { id: "123", value: "new" });
  * ```
@@ -71,7 +70,7 @@ export function useRealtimeBroadcast({
   const queryClient = useQueryClient();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isConnectedRef = useRef(false);
-  
+
   // Store event handlers in a ref to avoid re-subscribing on every render
   const eventHandlersRef = useRef(eventHandlers);
   useEffect(() => {
@@ -98,7 +97,7 @@ export function useRealtimeBroadcast({
           console.log(`📡 [${channelName}] Received event "${event}":`, payload);
         }
         // Use the latest handler from the ref
-        const currentHandler = eventHandlersRef.current.find(h => h.event === event);
+        const currentHandler = eventHandlersRef.current.find((h) => h.event === event);
         if (currentHandler) {
           currentHandler.onReceive(payload);
         }
@@ -175,9 +174,9 @@ export function useRealtimeBroadcast({
 
 /**
  * Hook for broadcasting with automatic query invalidation
- * 
+ *
  * Simplifies the common pattern of broadcasting an event and invalidating queries.
- * 
+ *
  * @example
  * ```tsx
  * const { broadcastAndInvalidate } = useRealtimeBroadcastWithInvalidation({
@@ -189,7 +188,7 @@ export function useRealtimeBroadcast({
  *     },
  *   ],
  * });
- * 
+ *
  * // This will broadcast AND invalidate the query
  * await broadcastAndInvalidate("schedule_updated", { scheduleId: "123" });
  * ```
@@ -211,16 +210,17 @@ export function useRealtimeBroadcastWithInvalidation({
   debug = false,
 }: BroadcastWithInvalidationConfig) {
   const queryClient = useQueryClient();
-  
+
   // Memoize the mapped event handlers to prevent re-subscribing
-  const mappedEventHandlers = useMemo(() => 
-    eventHandlers.map(({ event, queryKey }) => ({
-      event,
-      onReceive: async (payload: any) => {
-        const key = typeof queryKey === "function" ? queryKey(payload) : queryKey;
-        await queryClient.invalidateQueries({ queryKey: key });
-      },
-    })),
+  const mappedEventHandlers = useMemo(
+    () =>
+      eventHandlers.map(({ event, queryKey }) => ({
+        event,
+        onReceive: async (payload: any) => {
+          const key = typeof queryKey === "function" ? queryKey(payload) : queryKey;
+          await queryClient.invalidateQueries({ queryKey: key });
+        },
+      })),
     [eventHandlers, queryClient]
   );
 
@@ -238,12 +238,10 @@ export function useRealtimeBroadcastWithInvalidation({
     async <T = any>(event: string, payload: T): Promise<void> => {
       // Find the query key for this event
       const handler = eventHandlers.find((h) => h.event === event);
-      
+
       if (handler) {
-        const key = typeof handler.queryKey === "function" 
-          ? handler.queryKey(payload) 
-          : handler.queryKey;
-        
+        const key = typeof handler.queryKey === "function" ? handler.queryKey(payload) : handler.queryKey;
+
         // Invalidate first (optimistic local update)
         await invalidate(key);
       }
@@ -261,4 +259,3 @@ export function useRealtimeBroadcastWithInvalidation({
     isConnected,
   };
 }
-
