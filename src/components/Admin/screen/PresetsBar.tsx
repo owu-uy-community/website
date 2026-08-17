@@ -37,7 +37,7 @@ export function PresetsBar({
   deletePreset,
 }: PresetsBarProps) {
   return (
-    <motion.div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 backdrop-blur-sm md:flex-row md:items-center">
+    <motion.div className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3 backdrop-blur-xs md:flex-row md:items-center">
       <div className="flex flex-1 items-center gap-2 overflow-x-auto">
         <span className="whitespace-nowrap text-sm font-medium text-white/70">Presets</span>
         {presets.map((preset) => (
@@ -45,7 +45,7 @@ export function PresetsBar({
             key={preset.id}
             onClick={() => loadPreset(preset.id)}
             className={cn(
-              "h-8 flex-shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium",
+              "h-8 shrink-0 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium",
               currentPreset === preset.id
                 ? "bg-white text-black"
                 : "bg-white/10 text-white hover:bg-white/20 hover:!text-white"

@@ -58,7 +58,7 @@ export function QueueList({
   updateItemDelay,
 }: QueueListProps) {
   return (
-    <motion.div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-card p-3 backdrop-blur-sm">
+    <motion.div className="flex min-h-0 flex-1 flex-col rounded-xl border border-border bg-card p-3 backdrop-blur-xs">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {editingPresetId ? (
@@ -155,7 +155,7 @@ export function QueueList({
                       onDragEnd={handleDragEnd}
                       style={{ position: "relative" }}
                       className={cn(
-                        "relative flex w-40 flex-shrink-0 cursor-grab select-none flex-col gap-2 rounded-lg border-0 p-3 active:cursor-grabbing sm:w-48 lg:w-56",
+                        "relative flex w-40 shrink-0 cursor-grab select-none flex-col gap-2 rounded-lg border-0 p-3 active:cursor-grabbing sm:w-48 lg:w-56",
                         isCurrentlyActive
                           ? "bg-white text-black shadow-lg"
                           : "bg-white/10 text-white hover:bg-white/15 hover:text-white"
@@ -261,7 +261,7 @@ export function QueueList({
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                           <Clock
-                            className={cn("h-3 w-3 flex-shrink-0", isCurrentlyActive ? "text-black" : "text-white")}
+                            className={cn("h-3 w-3 shrink-0", isCurrentlyActive ? "text-black" : "text-white")}
                           />
                         </div>
                         <div

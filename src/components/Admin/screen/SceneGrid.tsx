@@ -34,7 +34,7 @@ export function SceneGrid({
   handleSceneClick,
 }: SceneGridProps) {
   return (
-    <motion.div className="mb-3 grid flex-shrink-0 grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8">
+    <motion.div className="mb-3 grid shrink-0 grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8">
       {[...scenes]
         .sort((a, b) => a.sceneName.localeCompare(b.sceneName))
         .map((scene, index) => {

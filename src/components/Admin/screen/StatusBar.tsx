@@ -15,7 +15,7 @@ export function StatusBar({ isPlaying, currentActiveSceneId, timeRemaining, queu
   return (
     <AnimatePresence>
       {(isPlaying || currentActiveSceneId || queueItems.length > 0) && (
-        <motion.div className="mb-3 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-sm backdrop-blur-sm">
+        <motion.div className="mb-3 flex items-center justify-between rounded-xl border border-border bg-card p-3 text-sm backdrop-blur-xs">
           <div className="flex items-center gap-6">
             {isPlaying && (
               <motion.div className="flex items-center gap-2">

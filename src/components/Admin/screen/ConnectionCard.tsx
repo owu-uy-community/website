@@ -49,7 +49,7 @@ export function ConnectionCard({
   return (
     <AnimatePresence>
       {showConnectionSettings && (
-        <motion.div className="rounded-xl border border-border bg-card p-4 backdrop-blur-sm">
+        <motion.div className="rounded-xl border border-border bg-card p-4 backdrop-blur-xs">
           <h3 className="mb-3 text-sm font-medium text-white">OBS Connection Settings</h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div>

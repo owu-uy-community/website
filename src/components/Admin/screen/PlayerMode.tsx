@@ -65,21 +65,21 @@ export function PlayerMode({
         )}
         {/* Current scene overlay */}
         {currentActiveSceneId && (
-          <div className="absolute bottom-4 left-4 rounded-lg bg-black/70 px-4 py-2 backdrop-blur-sm">
+          <div className="absolute bottom-4 left-4 rounded-lg bg-black/70 px-4 py-2 backdrop-blur-xs">
             <p className="text-xs text-white/60">Current Scene</p>
             <p className="text-sm font-medium text-white">{currentActiveSceneId}</p>
           </div>
         )}
         {/* Stream error */}
         {streamError && (
-          <div className="absolute right-4 top-4 rounded-lg bg-red-500/20 px-3 py-2 backdrop-blur-sm">
+          <div className="absolute right-4 top-4 rounded-lg bg-red-500/20 px-3 py-2 backdrop-blur-xs">
             <p className="text-xs text-red-400">{streamError}</p>
           </div>
         )}
       </div>
 
       {/* Direct Scene Switcher */}
-      <motion.div className="flex-shrink-0 rounded-xl border border-border bg-card p-3 backdrop-blur-sm">
+      <motion.div className="shrink-0 rounded-xl border border-border bg-card p-3 backdrop-blur-xs">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-sm font-medium text-white">Direct Scene Switch</h3>
           <div className="text-xs text-white/60">{scenes.length} scenes available</div>
@@ -98,7 +98,7 @@ export function PlayerMode({
                   whileTap={{ scale: 0.95 }}
                   disabled={!isConnected}
                   className={cn(
-                    "relative flex min-w-[120px] flex-shrink-0 flex-col items-center gap-2 rounded-lg p-3 transition-all duration-200",
+                    "relative flex min-w-[120px] shrink-0 flex-col items-center gap-2 rounded-lg p-3 transition-all duration-200",
                     isActive
                       ? "bg-white text-black shadow-lg"
                       : "bg-secondary text-secondary-foreground hover:bg-secondary/80",

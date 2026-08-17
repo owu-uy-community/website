@@ -451,7 +451,7 @@ export default function LaunchpadClient() {
       {isOutputDevice && (
         <div className="flex flex-col items-stretch gap-3 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
           <div className="flex flex-1 items-center gap-3">
-            <Volume2 className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <Volume2 className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Slider
               className="flex-1"
               max={100}
@@ -477,7 +477,7 @@ export default function LaunchpadClient() {
           return (
             <Card
               key={button.id}
-              className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 ${
+              className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 ${
                 isPlaying
                   ? "border-primary bg-accent shadow-lg shadow-primary/20"
                   : "border-border hover:border-muted-foreground/40"
