@@ -18,7 +18,11 @@ const transformRoom = (room: RoomRow): Room => ({
  * Get rooms by OpenSpace ID
  */
 export const getRoomsByOpenSpace = async ({ openSpaceId }: GetRoomsByOpenSpaceInput): Promise<Room[]> => {
-  const rows = await db.select().from(rooms).where(eq(rooms.openSpaceId, openSpaceId)).orderBy(asc(rooms.name));
+  const rows = await db
+    .select()
+    .from(rooms)
+    .where(eq(rooms.openSpaceId, openSpaceId))
+    .orderBy(asc(rooms.sortOrder), asc(rooms.name));
 
   return rows.map(transformRoom);
 };

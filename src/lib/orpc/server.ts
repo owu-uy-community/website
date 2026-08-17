@@ -1,4 +1,4 @@
-import { getAllTracks } from "./sticky-notes/services/get-all-tracks";
+import { getTracksForEvent } from "./sticky-notes/services/get-all-tracks";
 import { getTracksByOpenSpace } from "./sticky-notes/services/get-by-open-space";
 import { getRoomsByOpenSpace } from "./rooms/services/get-by-open-space";
 import { getSchedulesByOpenSpace } from "./schedules/services/get-by-open-space";
@@ -17,7 +17,7 @@ export async function fetchOpenSpaceData(openSpaceId: string) {
     // Fetch all data in parallel for better performance
     // Countdown is excluded - it needs to be fresh/live on client
     const [notes, rooms, schedules, highlightedTracks] = await Promise.all([
-      getAllTracks(),
+      getTracksForEvent(openSpaceId),
       getRoomsByOpenSpace({ openSpaceId }),
       getSchedulesByOpenSpace({ openSpaceId }),
       getTracksByOpenSpace({ openSpaceId, highlightedOnly: true }),

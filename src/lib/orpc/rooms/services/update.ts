@@ -38,17 +38,19 @@ export const updateRoom = async ({ id, data }: { id: string; data: UpdateRoomInp
     }
   }
 
-  const [room] = await db
-    .update(rooms)
-    .set({
-      name: data.name,
-      description: data.description || null,
-      capacity: data.capacity || null,
-      isActive: data.isActive,
-      updatedAt: new Date(),
-    })
-    .where(eq(rooms.id, id))
-    .returning();
+  // Only touch the fields actually present in the partial update
+  const patch: Partial<typeof rooms.$inferInsert> = { updatedAt: new Date() };
+  if (data.name !== undefined) patch.name = data.name;
+  if (data.description !== undefined) patch.description = data.description || null;
+  if (data.capacity !== undefined) patch.capacity = data.capacity || null;
+  if (data.hasTV !== undefined) patch.hasTV = data.hasTV;
+  if (data.hasWhiteboard !== undefined) patch.hasWhiteboard = data.hasWhiteboard;
+  if (data.isActive !== undefined) patch.isActive = data.isActive;
+  if (data.color !== undefined) patch.color = data.color;
+  if (data.icon !== undefined) patch.icon = data.icon;
+  if (data.sortOrder !== undefined) patch.sortOrder = data.sortOrder;
+
+  const [room] = await db.update(rooms).set(patch).where(eq(rooms.id, id)).returning();
 
   return transformRoom(room);
 };

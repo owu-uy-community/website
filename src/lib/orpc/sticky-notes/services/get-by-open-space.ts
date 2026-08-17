@@ -22,6 +22,7 @@ export type TrackWithRelations = {
   room: {
     id: string;
     name: string;
+    color: string | null;
   };
   schedule: {
     id: string;
@@ -72,6 +73,7 @@ export const getTracksByOpenSpace = async ({
       room: {
         id: room.id,
         name: room.name,
+        color: room.color,
       },
       schedule: {
         id: schedule.id,

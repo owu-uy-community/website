@@ -92,6 +92,13 @@ export const GetTracksByOpenSpaceSchema = z.object({
 });
 
 /**
+ * Schema for listing an event's board tracks (StickyNote shape)
+ */
+export const ListTracksByEventSchema = z.object({
+  openSpaceId: z.string().min(1, "OpenSpace ID is required"),
+});
+
+/**
  * Schema for bulk updating tracks when a schedule time changes
  */
 export const BulkUpdateTracksByScheduleSchema = z.object({
@@ -115,5 +122,7 @@ export type BulkUpdateTracksByScheduleInput = z.infer<typeof BulkUpdateTracksByS
 export type StickyNote = Track & {
   room: string;
   timeSlot: string;
+  /** Explicit room color (rooms.color); UI falls back to a palette by roomId. */
+  roomColor?: string;
   skipResourceValidation?: boolean; // Optional flag to skip validation during updates
 };
