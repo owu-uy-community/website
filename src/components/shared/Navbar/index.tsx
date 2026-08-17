@@ -2,7 +2,7 @@
 
 import classNames from "classnames";
 import Link from "next/link";
-import { FaInstagram, FaLinkedin, FaSlack } from "react-icons/fa";
+import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
 import { addUtmParams } from "app/lib/utils";
 import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
@@ -89,6 +89,13 @@ function Navbar() {
             target="_blank"
           >
             <FaSlack size={20} />
+          </Link>
+          <Link
+            className="font-light text-white hover:text-yellow-400"
+            href={addUtmParams(SOCIAL_LINKS.telegram)}
+            target="_blank"
+          >
+            <FaTelegram size={20} />
           </Link>
           {session?.user && !isPending ? (
             <UserAvatarMenu

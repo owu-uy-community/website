@@ -69,6 +69,7 @@ export const SOCIAL_LINKS = {
   instagram: "https://www.instagram.com/owu__uy/",
   linkedin: "https://www.linkedin.com/company/owu-uruguay/",
   slack: "https://slack.owu.uy/",
+  telegram: "https://t.me/MeetupsOWU"
 } as const;
 
 // External Service URLs

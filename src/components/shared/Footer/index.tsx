@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FaInstagram, FaLinkedin } from "react-icons/fa";
+import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
 import { addUtmParams } from "app/lib/utils";
 import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
@@ -52,30 +52,51 @@ export default function Footer() {
           ))}
         </ul>
 
-        <div className="flex items-center justify-center gap-4">
-          <Link
-            key="instagram-link"
-            className="font-light hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.instagram)}
-            rel="noopener"
-            target="_blank"
-          >
-            <FaInstagram size={20} />
-          </Link>
-          <Link
-            key="linkedin"
-            className="font-light hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.linkedin)}
-            rel="noopener"
-            target="_blank"
-          >
-            <FaLinkedin size={20} />
-          </Link>
+        <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-end gap-4">
+          <div className="flex items-center justify-center gap-4">
+            <Link
+              key="instagram-link"
+              className="font-light hover:text-yellow-400"
+              href={addUtmParams(SOCIAL_LINKS.instagram)}
+              rel="noopener"
+              target="_blank"
+            >
+              <FaInstagram size={20} />
+            </Link>
+            <Link
+              key="linkedin-link"
+              className="font-light hover:text-yellow-400"
+              href={addUtmParams(SOCIAL_LINKS.linkedin)}
+              rel="noopener"
+              target="_blank"
+            >
+              <FaLinkedin size={20} />
+            </Link>
+            <Link
+              key="slack-link"
+              className="font-light hover:text-yellow-400"
+              href={addUtmParams(SOCIAL_LINKS.slack)}
+              rel="noopener"
+              target="_blank"
+            >
+              <FaSlack size={20} />
+            </Link>
+            <Link
+              key="telegram-link"
+              className="font-light hover:text-yellow-400"
+              href={addUtmParams(SOCIAL_LINKS.telegram)}
+              rel="noopener"
+              target="_blank"
+            >
+              <FaTelegram size={20} />
+            </Link>
+          </div>
+
           <Link className="font-light hover:text-yellow-400" href={addUtmParams("/")}>
             © OWU Uruguay
           </Link>
         </div>
       </div>
-    </footer>
+    </footer >
   );
 }

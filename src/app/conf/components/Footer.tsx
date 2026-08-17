@@ -1,4 +1,4 @@
-import { FaGithub, FaInstagram, FaLinkedin, FaSlack } from "react-icons/fa6";
+import { FaGithub, FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { addUtmParams } from "app/lib/utils";
@@ -10,6 +10,7 @@ const SOCIALS = [
   { href: "https://github.com/owu-uy-community", label: "GitHub", Icon: FaGithub },
   { href: SOCIAL_LINKS.linkedin, label: "LinkedIn", Icon: FaLinkedin },
   { href: SOCIAL_LINKS.instagram, label: "Instagram", Icon: FaInstagram },
+  { href: SOCIAL_LINKS.telegram, label: "Telegram", Icon: FaTelegram },
 ];
 
 export default function Footer() {
