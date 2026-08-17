@@ -6,9 +6,6 @@ type MarqueeProps = {
   className?: string;
 };
 
-/* Per-logo height overrides for extreme aspect ratios (empty today; all current lockups are horizontal) */
-const LOGO_HEIGHTS: Record<string, string> = {};
-
 /* With 6 sponsors one lap is narrower than the viewport; repeat the set so the loop never shows gaps */
 const LOOP = [...SPONSORS_2026, ...SPONSORS_2026];
 
@@ -33,21 +30,15 @@ export default function Marquee({ className }: MarqueeProps) {
                 <a
                   key={`${name}-${i}`}
                   aria-label={isClone ? undefined : `Sitio de ${name}`}
-                  className="shrink-0 opacity-80 transition-[opacity,transform] duration-300 hover:scale-110 hover:!opacity-100 focus-visible:scale-110 focus-visible:!opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[#F5BB03] group-hover/marquee:opacity-40"
+                  className="flex h-[40px] w-[148px] shrink-0 items-center justify-center opacity-80 transition-[opacity,transform] duration-300 hover:scale-110 hover:!opacity-100 focus-visible:scale-110 focus-visible:!opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[#F5BB03] group-hover/marquee:opacity-40"
                   href={website}
                   rel="noopener"
                   tabIndex={isClone ? -1 : undefined}
                   target="_blank"
                   title={name}
                 >
-                  <img
-                    alt=""
-                    className={classNames(
-                      "w-auto max-w-none brightness-0 invert",
-                      LOGO_HEIGHTS[name] ?? "h-[32px]"
-                    )}
-                    src={logo}
-                  />
+                  {/* object-contain inside a fixed box: every logo gets the same footprint regardless of its own aspect ratio */}
+                  <img alt="" className="max-h-full max-w-full object-contain brightness-0 invert" src={logo} />
                 </a>
               );
             })}
