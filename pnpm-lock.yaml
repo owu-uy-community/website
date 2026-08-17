@@ -18,11 +18,11 @@ importers:
         specifier: 6.0.2
         version: 6.0.2(react@19.2.7)
       '@keystatic/core':
-        specifier: 0.5.50
-        version: 0.5.50(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        specifier: 0.5.51
+        version: 0.5.51(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@keystatic/next':
         specifier: 5.0.4
-        version: 5.0.4(@keystatic/core@0.5.50(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 5.0.4(@keystatic/core@0.5.51(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@next/mdx':
         specifier: 16.2.6
         version: 16.2.6
@@ -2420,8 +2420,8 @@ packages:
   '@juggle/resize-observer@3.4.0':
     resolution: {integrity: sha512-dfLbk+PwWvFzSxwk3n5ySL0hfBog779o8h68wK/7/APo/7cgyWp5jcXockbxdk5kFRkbeXWm4Fbi9FrdN381sA==}
 
-  '@keystar/ui@0.7.21':
-    resolution: {integrity: sha512-DgAfdtcieYMMG5S0EaGf/F8T8e5nol9iLfZqIZOXHkjnc7UBHY3qHea2Zzd0hUrIoAcXiv4JyCtAND0vNKjJYA==}
+  '@keystar/ui@0.7.22':
+    resolution: {integrity: sha512-/b4GvVtPkAZNNPjUsyVxHr6Ryp4uwWfA/sNqvS9GJdCDMuzKG2Cc8VquTUcTGWwn9mmmmyZOStMbhSGfPPZyGA==}
     peerDependencies:
       next: '>=14'
       react: ^18.2.0 || ^19.0.0
@@ -2430,8 +2430,8 @@ packages:
       next:
         optional: true
 
-  '@keystatic/core@0.5.50':
-    resolution: {integrity: sha512-ilgG9hw1iWZsT8iCV+1WFX1VNo6eK+iHIs61x4vRtce6SstKad6ib7BLhXEP41Q8ja6JIKWXvv6qBPVumyy88Q==}
+  '@keystatic/core@0.5.51':
+    resolution: {integrity: sha512-/Tw1r3iKCaqIuJfoxL6KO03sn+B/S2z3rly2jYUCjVMxwBInNyNIzOvrCK0Bg64FXHU1MAyUUD/stacnM0aUgA==}
     peerDependencies:
       react: ^18.2.0 || ^19.0.0
       react-dom: ^18.2.0 || ^19.0.0
@@ -4993,11 +4993,6 @@ packages:
     resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
     engines: {node: '>=0.4.0'}
 
-  acorn@8.14.1:
-    resolution: {integrity: sha512-OvQ/2pUDKmgfCg++xsTX1wGxfTaszcHVcTctW4UJB4hibJx2HXxxO5UmVgyjMa+ZDsiaf5wWLXYpRWMmBI0QHg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
-
   acorn@8.16.0:
     resolution: {integrity: sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==}
     engines: {node: '>=0.4.0'}
@@ -5421,10 +5416,6 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
-
-  cookie@1.0.2:
-    resolution: {integrity: sha512-9Kr/j4O16ISv8zBBhJoi4bXOYNTkFLOqSL3UDB0njXxCXNezjeyVrJyGOWtgfs/q2km1gwBcfH8q1yEGoMYunA==}
-    engines: {node: '>=18'}
 
   cookie@1.1.1:
     resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
@@ -11236,7 +11227,7 @@ snapshots:
 
   '@juggle/resize-observer@3.4.0': {}
 
-  '@keystar/ui@0.7.21(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@keystar/ui@0.7.22(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@babel/runtime': 7.27.0
       '@emotion/css': 11.13.5
@@ -11333,14 +11324,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@keystatic/core@0.5.50(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@keystatic/core@0.5.51(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@babel/runtime': 7.27.0
       '@braintree/sanitize-url': 6.0.4
       '@emotion/weak-memoize': 0.3.1
       '@floating-ui/react': 0.24.8(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@internationalized/string': 3.2.6
-      '@keystar/ui': 0.7.21(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@keystar/ui': 0.7.22(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@markdoc/markdoc': 0.4.0(@types/react@19.2.17)(react@19.2.7)
       '@react-aria/focus': 3.20.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@react-aria/i18n': 3.12.8(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -11363,7 +11354,7 @@ snapshots:
       '@urql/exchange-auth': 2.2.1(@urql/core@5.1.1(graphql@16.10.0))
       '@urql/exchange-graphcache': 7.2.3(@urql/core@5.1.1(graphql@16.10.0))(graphql@16.10.0)
       '@urql/exchange-persisted': 4.3.1(@urql/core@5.1.1(graphql@16.10.0))
-      cookie: 1.0.2
+      cookie: 1.1.1
       emery: 1.4.4
       escape-string-regexp: 4.0.0
       fast-deep-equal: 3.1.3
@@ -11411,10 +11402,10 @@ snapshots:
       - next
       - supports-color
 
-  '@keystatic/next@5.0.4(@keystatic/core@0.5.50(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@keystatic/next@5.0.4(@keystatic/core@0.5.51(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@babel/runtime': 7.27.0
-      '@keystatic/core': 0.5.50(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@keystatic/core': 0.5.51(next@16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@types/react': 19.2.17
       chokidar: 3.6.0
       next: 16.2.11(@babel/core@7.26.10)(@opentelemetry/api@1.9.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -14718,10 +14709,6 @@ snapshots:
     dependencies:
       acorn: 8.16.0
 
-  acorn-jsx@5.3.2(acorn@8.14.1):
-    dependencies:
-      acorn: 8.14.1
-
   acorn-jsx@5.3.2(acorn@8.16.0):
     dependencies:
       acorn: 8.16.0
@@ -14729,8 +14716,6 @@ snapshots:
   acorn-walk@8.3.4:
     dependencies:
       acorn: 8.16.0
-
-  acorn@8.14.1: {}
 
   acorn@8.16.0: {}
 
@@ -15151,8 +15136,6 @@ snapshots:
   convert-source-map@1.9.0: {}
 
   convert-source-map@2.0.0: {}
-
-  cookie@1.0.2: {}
 
   cookie@1.1.1: {}
 
@@ -17080,8 +17063,8 @@ snapshots:
 
   micromark-extension-mdxjs@3.0.0:
     dependencies:
-      acorn: 8.14.1
-      acorn-jsx: 5.3.2(acorn@8.14.1)
+      acorn: 8.16.0
+      acorn-jsx: 5.3.2(acorn@8.16.0)
       micromark-extension-mdx-expression: 3.0.1
       micromark-extension-mdx-jsx: 3.0.2
       micromark-extension-mdx-md: 2.0.0
