@@ -108,7 +108,7 @@
     "@remotion/eslint-config": "4.0.489",
     "@remotion/tailwind-v4": "4.0.489",
     "@svgr/webpack": "8.1.0",
-    "@tailwindcss/postcss": "4.3.1",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/dotenv": "8.2.3",
     "@types/mdx": "2.0.14",
     "@types/node": "25.9.1",
@@ -131,11 +131,11 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "eslint-plugin-simple-import-sort": "13.0.0",
-    "postcss": "8.5.23",
+    "postcss": "8.5.26",
     "prettier": "3.9.4",
     "prettier-plugin-packagejson": "3.0.2",
     "prettier-plugin-tailwindcss": "0.8.1",
-    "tailwindcss": "4.3.1",
+    "tailwindcss": "4.3.3",
     "tsx": "4.23.0",
     "typescript": "6.0.3"
   }
