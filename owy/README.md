@@ -5,10 +5,10 @@ Owy es el asistente durable de la **OWU Conf** y la comunidad OWU, construido co
 ## Arquitectura
 
 ```
-Slack / Telegram / HTTP (eve TUI)        Vercel Cron (día del evento)
-        │  webhooks /eve/v1/*                    │ agent/schedules/conf-day/*
-        ▼                                        ▼
-   owy (Eve agent, proyecto Vercel propio) ──────┘
+Slack / Telegram / HTTP (eve TUI)
+        │  webhooks /eve/v1/*
+        ▼
+   owy (Eve agent, proyecto Vercel propio)
         │  tools tipadas (@orpc/client + x-api-key)
         ▼
    owu.uy  /api/orpc  (openSpaces · schedules · rooms · tracks · obsQueue · countdown · ocr · dashboard · eventbrite)
@@ -25,7 +25,6 @@ Slack / Telegram / HTTP (eve TUI)        Vercel Cron (día del evento)
 - **Conocimiento estático** (evento, comunidad, FAQ): `agent/sandbox/workspace/knowledge/*.md` — editá esos markdown para actualizar lo que Owy sabe.
 - **Datos en vivo** (grilla, OBS, countdown, stats): tools en `agent/tools/`.
 - **Fotos → grilla**: el staff manda una foto de la card física y `digitize_board_photo` la pasa por el OCR del sitio + sugerencia de lugar; la creación siempre se confirma y va por `create_track`.
-- **Anuncios proactivos**: `agent/schedules/conf-day/{apertura,bloques,cierre}.ts` postean en Slack/Telegram el día del evento (ver sección Anuncios).
 - **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown), stats y OCR es **solo staff** (allowlist por env + aprobación humana con botones en el chat; borrar pide aprobación siempre).
 - **Persona**: `agent/instructions.md` (rioplatense, amable, no inventa datos).
 
@@ -43,11 +42,6 @@ OWU_API_URL=https://owu.uy            # local: http://localhost:3000
 OWY_API_KEY=                          # API key de Better Auth; se emite en el sitio con `pnpm owy:key`
 OWY_EVENT_ID=                         # id o slug del evento que maneja Owy (el sitio es multi-tenant).
                                       # Sin esto usa el evento más reciente que puede operar.
-
-# --- Anuncios proactivos del día del evento (opcionales; sin esto no postean) ---
-OWY_ANNOUNCE_SLACK_CHANNEL_ID=        # canal de Slack (C…) donde anunciar
-OWY_ANNOUNCE_TELEGRAM_CHAT_ID=        # chat de Telegram (negativo si es grupo)
-OWY_CONF_DATE=2026-11-07              # los crons solo anuncian en esta fecha (America/Montevideo)
 
 # --- Slack (app portable) ---
 SLACK_BOT_TOKEN=                      # xoxb-...
@@ -109,7 +103,6 @@ En la TUI local sos `local-dev` → contás como staff: podés probar todo (gril
 3. "mové «X» a la Cueva a las 15:30" → botón de aprobación → mueve y avisa; con la grilla admin abierta en el navegador se ve moverse en vivo (el broadcast lo emite el sitio server-side; en local necesitás el sidecar de realtime del sitio corriendo).
 4. "pausá la rotación de OBS" → `obs_control` → versión sube y la pantalla admin lo toma.
 5. Adjuntá una foto de una card física + "cargala en la grilla" → `digitize_board_photo` extrae los datos y sugiere lugar → confirmás → `create_track`.
-6. Disparar un anuncio programado sin esperar al cron (solo en dev): `curl -X POST http://localhost:2000/eve/v1/dev/schedules/conf-day%2Fapertura` (ajustá el puerto al que muestre `eve dev`; requiere `OWY_ANNOUNCE_*` y que `OWY_CONF_DATE` sea hoy).
 
 Chequeos (desde `owy/`): `pnpm typecheck` · `pnpm build` (eve build) · `pnpm eval` (evals, necesita modelo configurado).
 
@@ -154,19 +147,22 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 - **Slack**: perfil del usuario → ⋯ → *Copy member ID* (`U…`). Cargarlos en `OWY_STAFF_SLACK_IDS`.
 - **Telegram**: cada uno le escribe a [@userinfobot](https://t.me/userinfobot) (o similar) para conocer su ID numérico. Cargarlos en `OWY_STAFF_TELEGRAM_IDS`.
 
-## Anuncios proactivos (día del evento)
+## Anuncios proactivos (pendiente)
 
-`agent/schedules/conf-day/` define tres crons (Vercel Cron evalúa en UTC; Uruguay es UTC-3 sin DST):
+Owy **no** tiene crons hoy. Había tres (`apertura`, `bloques`, `cierre` en
+`agent/schedules/conf-day/`) pero el plan Hobby de Vercel sólo permite crons
+**una vez por día** y con precisión de **±59 minutos**, así que el anunciador de
+bloques (cada 30') no deploya y los otros dos podrían llegar hasta una hora tarde.
 
-| Schedule   | Cron (UTC)         | Hora UY        | Qué hace                                                                   |
-| ---------- | ------------------ | -------------- | -------------------------------------------------------------------------- |
-| `apertura` | `30 17 7 11 *`     | 14:30          | Mensaje de bienvenida y arranque del mercado de ideas                       |
-| `bloques`  | `0,30 18-22 7 11 *`| 15:00–19:30    | Cada 30 min mira la grilla en vivo y anuncia el bloque que empieza (si hay) |
-| `cierre`   | `15 23 7 11 *`     | 20:15          | Despedida, after, foto y links de la comunidad                              |
+Para recuperarlos antes del evento hay dos caminos:
 
-- Postean en `OWY_ANNOUNCE_SLACK_CHANNEL_ID` y/o `OWY_ANNOUNCE_TELEGRAM_CHAT_ID`; sin esos env no hacen nada.
-- Doble guarda de fecha: el cron corre cada 7/11, y `lib/announce.ts` además exige que la fecha (America/Montevideo) sea `OWY_CONF_DATE` — para reutilizarlos otro año solo se actualiza esa variable (y los crons si cambia el día).
-- `eve dev` no dispara crons; usá la ruta de dispatch de dev (ver smoke test) o esperá a producción (`eve start`/Vercel Cron).
+1. **Pasar el proyecto a Pro** — vuelven tal cual estaban (precisión al minuto).
+   Los archivos están en el historial: `git show 5ff3597 -- owy/agent/schedules`.
+2. **Un solo cron diario que se auto-marque el ritmo** — arranca 14:30 y la
+   sesión (durable) duerme entre anuncios con la tool `sleep` de eve. Entra en
+   Hobby y evita el ±59' salvo en el disparo inicial.
+
+Mientras tanto Owy responde igual a demanda en Slack y Telegram.
 
 ## Mantener el conocimiento
 
