@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { owuApi, type OBSUpdateData } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -24,7 +24,7 @@ export default defineTool({
     presetName: z.string().optional().describe("Para activate_preset: nombre del preset guardado"),
     directMode: z.boolean().optional().describe("Para set_direct_mode: true = fijar escena, false = rotación normal"),
   }),
-  approval: staffApproval("once"),
+  approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     const api = owuApi();

@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { findCard, getBoard } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -11,7 +11,7 @@ export default defineTool({
     trackA: z.string().min(1).describe("Primera card (id o parte del título)"),
     trackB: z.string().min(1).describe("Segunda card (id o parte del título)"),
   }),
-  approval: staffApproval("once"),
+  approval: staffOnly(),
   async execute({ trackA, trackB }, ctx) {
     requireStaff(ctx);
     const board = await getBoard();

@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { findCard, findRoom, findSchedule, getBoard } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -20,7 +20,7 @@ export default defineTool({
     .refine((input) => input.room !== undefined || input.timeSlot !== undefined, {
       message: "Indicá al menos sala o horario destino",
     }),
-  approval: staffApproval("once"),
+  approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     const board = await getBoard();

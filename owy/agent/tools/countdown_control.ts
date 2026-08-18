@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { resolveActiveEvent } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -12,7 +12,7 @@ export default defineTool({
     durationSeconds: z.number().int().positive().optional().describe("Para setDuration: duración en segundos"),
     targetTime: z.string().optional().describe("Para setTargetTime: timestamp ISO o hora 'HH:MM'"),
   }),
-  approval: staffApproval("once"),
+  approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     if (input.action === "setDuration" && !input.durationSeconds) {
