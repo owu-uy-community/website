@@ -40,6 +40,13 @@ class RealtimeHub {
   private warnedNoBackplane = false;
 
   attach(ws: WebSocket, options: { canPublish: boolean }): void {
+    // Join the backplane as soon as a socket lands here. Redis is what carries
+    // publishes between function instances, and `ensureRedis` is where this
+    // instance SUBSCRIBES — an instance that only holds sockets never
+    // publishes, so without this it would never hear anything another instance
+    // sent (a server-side write, or a client on a different instance).
+    void this.ensureRedis();
+
     const connection: Connection = { ws, canPublish: options.canPublish, channels: new Set() };
 
     ws.on("message", (data: unknown) => {
