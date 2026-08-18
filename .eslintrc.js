@@ -13,6 +13,8 @@ module.exports = {
     "dist/",
     "data/",
     "build/",
+    // Separate app with its own deps, tsconfig and conventions — see owy/README.md
+    "owy/",
     "src/admin/migrations/",
     "src/admin/types/",
   ],
