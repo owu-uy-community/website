@@ -25,7 +25,8 @@ Slack / Telegram / HTTP (eve TUI)
 - **Conocimiento estático** (evento, comunidad, FAQ): `agent/sandbox/workspace/knowledge/*.md` — editá esos markdown para actualizar lo que Owy sabe.
 - **Datos en vivo** (grilla, OBS, countdown, stats): tools en `agent/tools/`.
 - **Fotos → grilla**: el staff manda una foto de la card física y `digitize_board_photo` la pasa por el OCR del sitio + sugerencia de lugar; la creación siempre se confirma y va por `create_track`.
-- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (allowlist por env; quien no es staff queda denegado antes de que la tool corra). Las acciones se ejecutan directo: la confirmación es conversacional, no hay botones de aprobación (ver `lib/staff.ts` si se quieren volver a activar).
+- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (allowlist por env; quien no es staff queda denegado antes de que la tool corra). Las acciones se ejecutan directo: **no** hay botones de "Approve tool call" (ver `lib/staff.ts` si se quieren volver a activar).
+- **Botones de pregunta**: para desambiguar ("¿cuál de estas tres cards?") o confirmar algo irreversible ("¿borro «X»?"), Owy usa la tool `ask_question` de eve, que Slack dibuja como botones y Telegram como teclado. Siempre con `allowFreeform`, así también se puede contestar escribiendo.
 - **Persona**: `agent/instructions.md` (rioplatense, amable, no inventa datos).
 
 ## Variables de entorno
@@ -121,7 +122,7 @@ Chequeos (desde `owy/`): `pnpm typecheck` · `pnpm build` (eve build) · `pnpm e
 2. **OAuth & Permissions → Bot Token Scopes**: `app_mentions:read`, `chat:write`, `im:history` (DMs), `files:read` (fotos para digitalizar cards), y para hilos sin re-mención: `channels:history` (+ `groups:history` si se usa en canales privados).
 3. Instalar la app en el workspace → copiar **Bot User OAuth Token** → `SLACK_BOT_TOKEN`. De **Basic Information** copiar el **Signing Secret** → `SLACK_SIGNING_SECRET`.
 4. **Event Subscriptions** → Request URL: `https://<owy-domain>/eve/v1/slack` → suscribir `app_mention` y `message.im` (+ `message.channels` para hilos).
-5. **Interactivity & Shortcuts** → misma URL. Hoy no hay botones de aprobación, pero Slack necesita esto para cualquier interacción futura (y para los prompts de eve si se reactivan).
+5. **Interactivity & Shortcuts** → misma URL. **Necesario**: sin esto los botones de `ask_question` se dibujan pero al tocarlos no pasa nada (Slack no tiene a dónde mandar el click). Mientras no esté, la gente puede igual contestar escribiendo la opción.
 6. Invitar a `@Owy` a los canales donde deba responder.
 
 > Alternativa recomendada por eve si se prefiere no manejar tokens: **Vercel Connect** (`vercel connect create slack --name owy --triggers` + `connectSlackCredentials("slack/owy")` en `agent/channels/slack.ts`). Requiere permisos de admin en el workspace.

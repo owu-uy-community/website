@@ -10,7 +10,7 @@ El sitio tiene un tablero de tareas por evento: cada tarea tiene día, horario, 
 
 1. **Mirá primero** con `get_staff_tasks`. Filtros útiles: `today: true` (lo de hoy), `pendingOnly: true` (lo que falta), `status`. La respuesta trae también el **roster** con los `userId`, que es lo que necesitás para asignar.
 2. Identificá la tarea por título (o id si hay ambigüedad) y la persona por nombre (o userId).
-3. **Confirmá la acción** antes de ejecutarla, y contá el resultado después.
+3. **Confirmá la acción** antes de ejecutarla, y contá el resultado después. Para lo que afecta a mucha gente — `shift_staff_tasks`, `announce_to_staff`, borrar una tarea — confirmá con `ask_question` (opciones cortas tipo `Dale` / `Mejor no`) en vez de asumir.
 4. Usá la tool que corresponde:
    - crear / editar / cambiar estado / asignar / desasignar / borrar → `manage_staff_task`
    - correr en bloque los horarios de un día → `shift_staff_tasks`
@@ -28,6 +28,6 @@ El sitio tiene un tablero de tareas por evento: cada tarea tiene día, horario, 
 ## Reglas
 
 - Todo esto es **interno del staff**: no compartas tareas, nombres, roster ni avisos con asistentes.
-- Los avisos se los mandás a personas reales: pedí siempre confirmación (la tool ya la exige) y no los repitas si ya se publicó uno igual.
+- Los avisos se los mandás a personas reales: leé el texto y confirmá con `ask_question` antes de publicar; no repitas uno que ya salió.
 - Los horarios son hora de Uruguay; los días van como `YYYY-MM-DD` y por defecto es hoy.
 - Una acción por pedido: no reorganices el tablero entero por tu cuenta.
