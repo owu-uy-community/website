@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { and, asc, eq } from "drizzle-orm";
 
 import { isValidCommunitySlug } from "../../../tenant";
@@ -132,12 +133,14 @@ async function requesterIsOwner(communityId: string, userId: string, isSiteStaff
 export async function addCommunityMember(input: AddCommunityMemberInput, requester: { userId: string; isSiteStaff: boolean }) {
   const [targetUser] = await db.select({ id: user.id }).from(user).where(eq(user.email, input.email.toLowerCase().trim()));
   if (!targetUser) {
-    throw new Error("No existe un usuario con ese email (debe iniciar sesión al menos una vez)");
+    throw new ORPCError("BAD_REQUEST", {
+      message: "No existe un usuario con ese email (debe iniciar sesión al menos una vez)",
+    });
   }
 
   // Only owners (or site staff) can grant the owner role
   if (input.role === "owner" && !(await requesterIsOwner(input.communityId, requester.userId, requester.isSiteStaff))) {
-    throw new Error("Solo un owner puede otorgar el rol owner");
+    throw new ORPCError("FORBIDDEN", { message: "Solo un owner puede otorgar el rol owner" });
   }
 
   const [row] = await db
