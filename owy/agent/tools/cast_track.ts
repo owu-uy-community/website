@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { findCard, getBoard, resolveActiveEvent } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -11,10 +11,7 @@ export default defineTool({
     action: z.enum(["highlight", "clear", "status"]).describe("highlight, clear o status"),
     track: z.string().optional().describe("Para highlight: la charla (id o parte del título)"),
   }),
-  // Consultar qué hay en pantalla no pide aprobación; cambiarla sí.
-  approval: staffApproval((input) =>
-    (input as { action?: string } | undefined)?.action === "status" ? "none" : "once"
-  ),
+  approval: staffOnly(),
   async execute({ action, track }, ctx) {
     requireStaff(ctx);
     const event = await resolveActiveEvent();

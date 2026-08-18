@@ -3,7 +3,7 @@ import { z } from "zod";
 import { resolveActiveEvent } from "../lib/board";
 import { eventToday } from "../lib/dates";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -26,7 +26,7 @@ export default defineTool({
       .optional()
       .describe("Día afectado (default: hoy en Uruguay)"),
   }),
-  approval: staffApproval("always"),
+  approval: staffOnly(),
   async execute({ fromTime, deltaMinutes, day }, ctx) {
     requireStaff(ctx);
     const event = await resolveActiveEvent();

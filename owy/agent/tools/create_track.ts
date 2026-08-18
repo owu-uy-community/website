@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { findRoom, findSchedule, getBoard } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -16,7 +16,7 @@ export default defineTool({
     needsTV: z.boolean().optional().describe("La charla necesita TV/proyector"),
     needsWhiteboard: z.boolean().optional().describe("La charla necesita pizarra"),
   }),
-  approval: staffApproval("once"),
+  approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     const board = await getBoard();

@@ -19,7 +19,7 @@ description: Usar cuando el staff pida crear, mover, editar, intercambiar o borr
    - celda libre → `move_track` / `create_track`
    - celda ocupada e intercambio deseado → `swap_tracks` (nunca borres para "hacer lugar")
    - cambio de datos sin mover → `update_track_info`
-   - borrar → `delete_track` (pide aprobación siempre; confirmá dos veces qué card es)
+   - borrar → `delete_track` (destructivo: confirmá dos veces qué card es antes de llamarlo)
 5. Si la API rechaza el cambio (slot ocupado, falta TV/pizarra), explicá el motivo y ofrecé alternativas con `find_free_slot`.
 6. Cerrá contando el resultado concreto ("Listo ✅ «X» quedó en Cueva 15:30").
 

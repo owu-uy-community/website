@@ -25,7 +25,7 @@ Slack / Telegram / HTTP (eve TUI)
 - **Conocimiento estático** (evento, comunidad, FAQ): `agent/sandbox/workspace/knowledge/*.md` — editá esos markdown para actualizar lo que Owy sabe.
 - **Datos en vivo** (grilla, OBS, countdown, stats): tools en `agent/tools/`.
 - **Fotos → grilla**: el staff manda una foto de la card física y `digitize_board_photo` la pasa por el OCR del sitio + sugerencia de lugar; la creación siempre se confirma y va por `create_track`.
-- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown), stats y OCR es **solo staff** (allowlist por env + aprobación humana con botones en el chat; borrar pide aprobación siempre).
+- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (allowlist por env; quien no es staff queda denegado antes de que la tool corra). Las acciones se ejecutan directo: la confirmación es conversacional, no hay botones de aprobación (ver `lib/staff.ts` si se quieren volver a activar).
 - **Persona**: `agent/instructions.md` (rioplatense, amable, no inventa datos).
 
 ## Variables de entorno
@@ -100,7 +100,7 @@ En la TUI local sos `local-dev` → contás como staff: podés probar todo (gril
 
 1. "¿cuándo y dónde es la conf?" → responde desde knowledge, tono rioplatense.
 2. "mostrame la grilla" → llama `get_openspace_board`.
-3. "mové «X» a la Cueva a las 15:30" → botón de aprobación → mueve y avisa; con la grilla admin abierta en el navegador se ve moverse en vivo (el broadcast lo emite el sitio server-side; en local necesitás el sidecar de realtime del sitio corriendo).
+3. "mové «X» a la Cueva a las 15:30" → confirma y mueve; con la grilla admin abierta en el navegador se ve moverse en vivo (el broadcast lo emite el sitio server-side; en local necesitás el sidecar de realtime del sitio corriendo).
 4. "pausá la rotación de OBS" → `obs_control` → versión sube y la pantalla admin lo toma.
 5. Adjuntá una foto de una card física + "cargala en la grilla" → `digitize_board_photo` extrae los datos y sugiere lugar → confirmás → `create_track`.
 
@@ -121,7 +121,7 @@ Chequeos (desde `owy/`): `pnpm typecheck` · `pnpm build` (eve build) · `pnpm e
 2. **OAuth & Permissions → Bot Token Scopes**: `app_mentions:read`, `chat:write`, `im:history` (DMs), `files:read` (fotos para digitalizar cards), y para hilos sin re-mención: `channels:history` (+ `groups:history` si se usa en canales privados).
 3. Instalar la app en el workspace → copiar **Bot User OAuth Token** → `SLACK_BOT_TOKEN`. De **Basic Information** copiar el **Signing Secret** → `SLACK_SIGNING_SECRET`.
 4. **Event Subscriptions** → Request URL: `https://<owy-domain>/eve/v1/slack` → suscribir `app_mention` y `message.im` (+ `message.channels` para hilos).
-5. **Interactivity & Shortcuts** → misma URL (para los botones de aprobación).
+5. **Interactivity & Shortcuts** → misma URL. Hoy no hay botones de aprobación, pero Slack necesita esto para cualquier interacción futura (y para los prompts de eve si se reactivan).
 6. Invitar a `@Owy` a los canales donde deba responder.
 
 > Alternativa recomendada por eve si se prefiere no manejar tokens: **Vercel Connect** (`vercel connect create slack --name owy --triggers` + `connectSlackCredentials("slack/owy")` en `agent/channels/slack.ts`). Requiere permisos de admin en el workspace.

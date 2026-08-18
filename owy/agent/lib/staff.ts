@@ -74,20 +74,17 @@ interface ApprovalPolicyCtx extends ToolSessionCtx {
 }
 
 /**
- * Fixed mode, or one derived from the call's input (e.g. destructive actions).
- * "none" lets a read-only branch of a mixed tool through without prompting.
+ * Gate for staff-only tools, used as a tool's `approval` policy.
+ *
+ * Non-staff callers are denied outright — the model gets the reason and the
+ * tool never runs. Staff execute immediately: no human-in-the-loop button.
+ * The safety net is conversational (the instructions and skills tell Owy to
+ * confirm before mutating) plus `requireStaff` inside every `execute`.
+ *
+ * To bring the buttons back, return "user-approval" here for the calls that
+ * should pause — Slack needs Interactivity enabled for them to resolve.
  */
-type ApprovalModeValue = "none" | "once" | "always";
-type ApprovalMode = ApprovalModeValue | ((input: unknown) => ApprovalModeValue);
-
-/**
- * Approval policy for staff-only write tools: non-staff callers are denied
- * outright (the model gets the reason, no approval prompt is rendered), staff
- * get a human-in-the-loop prompt — every time (`always`) or only on the first
- * call per session (`once`). Tools still call `requireStaff` inside `execute`
- * as defense in depth.
- */
-export function staffApproval(mode: ApprovalMode = "once") {
+export function staffOnly() {
   return (ctx: ApprovalPolicyCtx) => {
     if (!isStaff(ctx)) {
       return {
@@ -97,14 +94,6 @@ export function staffApproval(mode: ApprovalMode = "once") {
       };
     }
 
-    const resolved = typeof mode === "function" ? mode(ctx.toolInput) : mode;
-    if (resolved === "none") {
-      return "not-applicable" as const;
-    }
-    if (resolved === "once" && ctx.approvedTools.has(ctx.toolName)) {
-      return "not-applicable" as const;
-    }
-
-    return "user-approval" as const;
+    return "not-applicable" as const;
   };
 }
