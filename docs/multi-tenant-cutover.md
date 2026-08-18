@@ -161,6 +161,38 @@ event would violate the new NOT NULLs), then Phase D one release later
 (`countdown_state` drop; the out-of-band tables in item 2 turned out not to
 exist in prod, so that sub-step is a no-op).
 
+### Follow-up: missing `updatedAt` defaults (applied 2026-08-18)
+
+Swapping two talks failed in production with
+`null value in column "updatedAt" violates not-null constraint`.
+
+Prisma used to set `updatedAt` from the client, so the column was created
+`NOT NULL` with **no database default**. Drizzle declares `.defaultNow()` and
+emits `DEFAULT` for it on insert, which resolved to NULL. It only bites on
+insert paths, which is why the migration and normal editing looked healthy.
+
+Every pre-Drizzle table was affected. Metadata only — no rows touched:
+
+```sql
+BEGIN;
+ALTER TABLE "open_spaces"      ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "schedules"        ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "rooms"            ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "tracks"           ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "countdown_state"  ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "obs_instances"    ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "obs_queue_items"  ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "obs_presets"      ALTER COLUMN "updatedAt" SET DEFAULT now();
+ALTER TABLE "obs_preset_items" ALTER COLUMN "updatedAt" SET DEFAULT now();
+COMMIT;
+```
+
+**Lesson for any future drift check**: comparing columns, constraints, indexes
+and enums is not enough — compare `column_default` too. `drizzle-kit push`
+reports "No changes detected" for a missing default, so it will not catch this
+either. The auth tables (`user`, `session`, `account`, `verification`) legitimately
+have no defaults: Better Auth always supplies both timestamps.
+
 ## Staff tasks (additive — event-day coordination board)
 
 Purely additive DDL for the `/admin/tareas` staff coordination page. Constraint
