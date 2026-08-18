@@ -84,21 +84,22 @@ Copiás ese valor al `OWY_API_KEY` del proyecto de Owy. El sitio **no** necesita
 
 ## Desarrollo local
 
+> **Owy instala aparte del sitio.** No es parte del workspace pnpm de la web:
+> eve necesita **Node >= 24** y el sitio buildea en Node 22, así que con
+> `engine-strict=true` un único workspace rompía el install de la web. Owy tiene
+> su propio `pnpm-workspace.yaml` y su propio lockfile.
+
 ```bash
-# 1. deps (workspace pnpm, desde la raíz del repo)
+# --- en la raíz del repo (el sitio; db docker en :5433) ---
 pnpm install
+pnpm owy:key            # una vez: crea la cuenta del bot e imprime su OWY_API_KEY
+pnpm dev                # la API en :3000
+pnpm dev:realtime       # (otra terminal) para ver los cambios en vivo en las pantallas
 
-# 2. emitir una key para el bot (una vez, contra tu db local)
-pnpm owy:key                     # → copiá el OWY_API_KEY que imprime
-
-# 3. levantar el sitio con la API (en la raíz; db docker en :5433)
-pnpm dev
-# (en otra terminal, para ver los cambios en vivo en las pantallas)
-pnpm dev:realtime
-
-# 4. correr Owy con la TUI de eve
+# --- en owy/ (el agente, con su propio install) ---
 cd owy
-OWU_API_URL=http://localhost:3000 OWY_API_KEY=owy... pnpm dev
+pnpm install
+OWU_API_URL=http://localhost:3000 OWY_API_KEY=owy... pnpm dev   # TUI de eve
 ```
 
 En la TUI local sos `local-dev` → contás como staff: podés probar todo (grilla, OBS, countdown, stats). Smoke test sugerido:
@@ -110,7 +111,7 @@ En la TUI local sos `local-dev` → contás como staff: podés probar todo (gril
 5. Adjuntá una foto de una card física + "cargala en la grilla" → `digitize_board_photo` extrae los datos y sugiere lugar → confirmás → `create_track`.
 6. Disparar un anuncio programado sin esperar al cron (solo en dev): `curl -X POST http://localhost:2000/eve/v1/dev/schedules/conf-day%2Fapertura` (ajustá el puerto al que muestre `eve dev`; requiere `OWY_ANNOUNCE_*` y que `OWY_CONF_DATE` sea hoy).
 
-Chequeos: `pnpm --filter owy typecheck` · `pnpm --filter owy build` (eve build) · `pnpm --filter owy eval` (evals, necesita modelo configurado).
+Chequeos (desde `owy/`): `pnpm typecheck` · `pnpm build` (eve build) · `pnpm eval` (evals, necesita modelo configurado).
 
 ## Deploy (proyecto Vercel propio)
 

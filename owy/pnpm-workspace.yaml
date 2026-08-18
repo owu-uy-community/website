@@ -1,0 +1,5 @@
+# Marks owy as its own pnpm root, so `pnpm install` here installs the agent's
+# dependencies instead of walking up to the website's workspace (which builds
+# on Node 22, while eve requires Node >=24).
+packages:
+  - "."
