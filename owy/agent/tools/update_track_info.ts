@@ -2,7 +2,7 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { findCard, getBoard } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
@@ -25,7 +25,7 @@ export default defineTool({
         input.needsWhiteboard !== undefined,
       { message: "Indicá al menos un campo a cambiar" }
     ),
-  approval: staffApproval("once"),
+  approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     const board = await getBoard();

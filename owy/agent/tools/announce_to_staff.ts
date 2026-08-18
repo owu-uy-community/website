@@ -2,11 +2,11 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { normalizeText, resolveActiveEvent } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
-    "SOLO STAFF: publica un aviso en el tablero del staff del evento (les llega a las pantallas y al panel de coordinación). Se puede marcar como urgente y dirigir solo a quienes están asignados a una tarea. Lo firma Owy. Pide aprobación siempre: es un mensaje a personas reales.",
+    "SOLO STAFF: publica un aviso en el tablero del staff del evento (les llega a las pantallas y al panel de coordinación). Se puede marcar como urgente y dirigir solo a quienes están asignados a una tarea. Lo firma Owy. Le llega a personas reales: leele el texto a quien lo pide y esperá su OK antes de publicar; no publiques dos veces lo mismo.",
   inputSchema: z.object({
     body: z.string().min(1).max(2000).describe("El mensaje, redactado y listo para publicar"),
     urgent: z.boolean().optional().describe("true para marcarlo como urgente"),
@@ -15,7 +15,7 @@ export default defineTool({
       .optional()
       .describe("Si se indica, el aviso va solo a quienes están en esa tarea (id o parte del título)"),
   }),
-  approval: staffApproval("always"),
+  approval: staffOnly(),
   async execute({ body, urgent, task }, ctx) {
     requireStaff(ctx);
     const event = await resolveActiveEvent();

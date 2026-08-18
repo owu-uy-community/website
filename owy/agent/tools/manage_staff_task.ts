@@ -4,7 +4,7 @@ import { resolveActiveEvent } from "../lib/board";
 import { eventToday } from "../lib/dates";
 import { normalizeText } from "../lib/board";
 import { owuApi, type StaffTask, type UpdateStaffTaskData } from "../lib/owu-api";
-import { requireStaff, staffApproval } from "../lib/staff";
+import { requireStaff, staffOnly } from "../lib/staff";
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -63,10 +63,7 @@ export default defineTool({
     status: z.enum(["pending", "in_progress", "done", "blocked"]).optional().describe("Para set_status"),
     person: z.string().optional().describe("Para assign/unassign: nombre o userId de la persona"),
   }),
-  // Borrar una tarea pide aprobación siempre; el resto, una vez por sesión.
-  approval: staffApproval((input) =>
-    (input as { action?: string } | undefined)?.action === "delete" ? "always" : "once"
-  ),
+  approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     const event = await resolveActiveEvent();
