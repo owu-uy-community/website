@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { schedules, tracks } from "../../../db/schema";
+import { broadcastCardChange } from "../../../realtime/broadcast";
 import type { SwapTracksInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -74,7 +75,7 @@ export const swapTracks = async ({ trackAId, trackBId }: SwapTracksInput): Promi
   });
 
   // Transform to StickyNote format with swapped positions
-  return [
+  const swapped: StickyNote[] = [
     transformTrackForStickyNote({
       ...result.trackA,
       room: trackB.room,
@@ -86,4 +87,13 @@ export const swapTracks = async ({ trackAId, trackBId }: SwapTracksInput): Promi
       schedule: trackA.schedule,
     }),
   ];
+
+  // Notify connected screens (grid admin, kiosk) — best-effort
+  await broadcastCardChange({
+    type: "CARD_SWAP",
+    openSpaceId: trackA.openSpaceId,
+    cardIds: [trackAId, trackBId],
+  });
+
+  return swapped;
 };

@@ -1,2 +1,12 @@
+# `owy/` is deliberately NOT a member: it needs Node >=24 (eve's requirement)
+# while this project builds on Node 22, and with `engine-strict=true` a single
+# workspace would fail the site's install. It installs on its own — see owy/README.md.
 packages:
   - "."
+allowBuilds:
+  '@prisma/client': true
+  '@prisma/engines': true
+  esbuild: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true

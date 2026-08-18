@@ -1,0 +1,31 @@
+{
+  "name": "owy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Owy — la mascota de OWU: asistente durable de OWU Conf y la comunidad (Eve agent)",
+  "type": "module",
+  "imports": {
+    "#*": "./agent/*",
+    "#evals/*": "./evals/*"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "eve dev",
+    "build": "eve build",
+    "start": "eve start",
+    "eval": "eve eval",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@orpc/client": "1.14.4",
+    "ai": "^7.0.58",
+    "eve": "^0.38.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.x",
+    "typescript": "^6.0.3"
+  }
+}

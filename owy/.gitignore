@@ -1,0 +1,13 @@
+# deps
+node_modules/
+
+# eve build artifacts
+.eve/
+.output/
+
+# vercel
+.vercel/
+
+# env
+.env
+.env*.local

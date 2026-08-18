@@ -14,6 +14,7 @@ import {
   USE_SECURE_COOKIES,
 } from "./constants";
 import { oAuthProxy } from "better-auth/plugins";
+import { apiKey } from "@better-auth/api-key";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -23,6 +24,7 @@ export const auth = betterAuth({
       session: schema.session,
       account: schema.account,
       verification: schema.verification,
+      apikey: schema.apikey,
     },
   }),
   session: {
@@ -45,7 +47,25 @@ export const auth = betterAuth({
       },
     },
   },
-  plugins: [oAuthProxy()],
+  plugins: [
+    oAuthProxy(),
+    /**
+     * Machine callers (the Owy bot — see /owy) authenticate with an API key
+     * sent as `x-api-key`. `enableSessionForAPIKeys` turns a valid key into a
+     * normal session for its owning user, so `getSession` and every
+     * authorization check downstream work unchanged. Mint keys with
+     * `pnpm owy:key`; revoke by disabling or deleting the row.
+     */
+    apiKey({
+      enableSessionForAPIKeys: true,
+      // Bots are chatty on event day; the default (10/day) is far too low.
+      rateLimit: {
+        enabled: true,
+        timeWindow: 60 * 1000,
+        maxRequests: 240,
+      },
+    }),
+  ],
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       // Enforce only when list is populated

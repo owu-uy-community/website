@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "app/lib/supabase";
+import { obsQueueChannel } from "lib/realtime/channels";
 import { orpc } from "lib/orpc/client";
 
 interface QueueItem {
@@ -148,7 +149,10 @@ export function useOBSQueueStateHybrid(instanceId: number = 1) {
         type: updateType,
       };
 
-      const channel = supabase.channel(`obs_queue_broadcast_${instanceId}`);
+      // One shared channel name for publishers and subscribers (this used to
+      // send on `obs_queue_broadcast_*` while everyone listened on
+      // `obs_queue_listener_*`, so cross-device sync never fired).
+      const channel = supabase.channel(obsQueueChannel(instanceId));
       await channel.send({
         type: "broadcast",
         event: "state_update",
@@ -262,7 +266,7 @@ export function useOBSQueueStateHybrid(instanceId: number = 1) {
 
     const setup = async () => {
       // Subscribe to real-time updates
-      channel = supabase.channel(`obs_queue_listener_${instanceId}`, {
+      channel = supabase.channel(obsQueueChannel(instanceId), {
         config: {
           broadcast: { self: false }, // Don't receive our own broadcasts
         },

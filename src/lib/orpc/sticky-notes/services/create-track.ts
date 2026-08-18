@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { openSpaces, rooms, schedules, tracks } from "../../../db/schema";
+import { broadcastCardChange } from "../../../realtime/broadcast";
 import type { CreateTrackInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -62,5 +63,15 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
     .returning();
 
   // Reuse the already-fetched room and schedule for the readable transform
-  return transformTrackForStickyNote({ ...track, room, schedule });
+  const stickyNote = transformTrackForStickyNote({ ...track, room, schedule });
+
+  // Notify connected screens (grid admin, kiosk) — best-effort
+  await broadcastCardChange({
+    type: "CARD_CREATE",
+    openSpaceId: stickyNote.openSpaceId,
+    cardId: stickyNote.id,
+    updatedCard: stickyNote,
+  });
+
+  return stickyNote;
 };
