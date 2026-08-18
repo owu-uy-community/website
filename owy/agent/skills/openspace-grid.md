@@ -13,14 +13,14 @@ description: Usar cuando el staff pida crear, mover, editar, intercambiar o borr
 ## Procedimiento
 
 1. **Siempre mirá primero** el estado con `get_openspace_board`. No asumas qué hay en una celda.
-2. Identificá la card por título (o id si hay ambigüedad) y el destino por nombre de sala + horario. Las tools resuelven nombres aproximados y sin acentos.
-3. **Confirmá con la persona** la acción exacta antes de ejecutar ("¿Muevo «X» de Centro 15:00 a Cueva 15:30?").
+2. Identificá la card por título (o id si hay ambigüedad) y el destino por nombre de sala + horario. Las tools resuelven nombres aproximados y sin acentos; si te avisan que hay varias coincidencias, elegí con `ask_question`.
+3. **Confirmá con la persona** la acción exacta antes de ejecutar. Para mover o editar alcanza con decirlo; para **borrar** usá `ask_question` ("¿Borro «X» de Cueva 15:30?" con opciones `Sí, borrala` / `No`) y esperá el sí.
 4. Ejecutá la tool que corresponde:
    - celda libre → `move_track` / `create_track`
    - celda ocupada e intercambio deseado → `swap_tracks` (nunca borres para "hacer lugar")
    - cambio de datos sin mover → `update_track_info`
-   - borrar → `delete_track` (destructivo: confirmá dos veces qué card es antes de llamarlo)
-5. Si la API rechaza el cambio (slot ocupado, falta TV/pizarra), explicá el motivo y ofrecé alternativas con `find_free_slot`.
+   - borrar → `delete_track` (destructivo: confirmá con `ask_question` antes de llamarlo)
+5. Si la API rechaza el cambio (slot ocupado, falta TV/pizarra), explicá el motivo y ofrecé las alternativas de `find_free_slot` como opciones de `ask_question`.
 6. Cerrá contando el resultado concreto ("Listo ✅ «X» quedó en Cueva 15:30").
 
 ## Reglas
