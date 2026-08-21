@@ -122,7 +122,7 @@
     "@tailwindcss/postcss": "4.3.3",
     "@types/dotenv": "8.2.3",
     "@types/mdx": "2.0.14",
-    "@types/node": "25.9.1",
+    "@types/node": "26.1.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "@types/uuid": "11.0.0",
