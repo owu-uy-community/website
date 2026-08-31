@@ -4,7 +4,7 @@ La OWU Conf es gratuita para quienes asisten: la hacen posible los **sponsors** 
 
 ## Sponsors confirmados (publicados en la web)
 
-Crunchloop · Estudio Hahn · Mimiquate · Neocoast · RevenueCat · Segalerba · Sentry · Streaver · Trupropel · WyeWorks · Xmartlabs
+Crunchloop · Estudio Hahn · Mimiquate · Neocoast · OrangeLoops · RevenueCat · Segalerba · Sentry · Streaver · Trupropel · WyeWorks · Xmartlabs
 
 (La lista viva está en https://owu.uy/conf — pueden sumarse más.)
 
