@@ -2,7 +2,7 @@ import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
 
-import { addUtmParams } from "app/lib/utils";
+import { confUtm } from "../utm";
 
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -28,7 +28,7 @@ function EventCard({ title, name, datetime, event_url, index }: MeetupEvent & { 
       <Reveal amount={0.4} delay={index * 0.09} x={-32} y={0}>
       <Link
         className="group flex items-center gap-5 border-2 border-[#FBF5E7]/15 p-4 transition-colors hover:border-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:gap-6 sm:p-5"
-        href={addUtmParams(event_url)}
+        href={confUtm(event_url, "meetups-agenda")}
         rel="noopener"
         target="_blank"
       >

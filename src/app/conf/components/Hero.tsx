@@ -4,6 +4,8 @@ import { m } from "motion/react";
 
 import { CONF_DATES, INTERNAL_ROUTES, MAPS_URLS } from "app/lib/constants";
 
+import { confUtm } from "../utm";
+
 import Countdown from "./Countdown";
 import PillLink from "./PillLink";
 import { EASE_OUT } from "./Reveal";
@@ -56,7 +58,7 @@ export default function Hero() {
           </p>
           <a
             className="group mt-3.5 inline-flex items-center gap-2 text-base text-[#FBF5E7]/75 transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] min-[1440px]:text-lg"
-            href={MAPS_URLS.meetupLocation}
+            href={confUtm(MAPS_URLS.meetupLocation, "hero-venue")}
             rel="noopener"
             target="_blank"
           >

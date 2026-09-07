@@ -1,5 +1,7 @@
 import classNames from "classnames";
 
+import { confUtm } from "../utm";
+
 import { SPONSORS_2026 } from "./Sponsors";
 
 type MarqueeProps = {
@@ -31,7 +33,7 @@ export default function Marquee({ className }: MarqueeProps) {
                   key={`${name}-${i}`}
                   aria-label={isClone ? undefined : `Sitio de ${name}`}
                   className="flex h-[40px] w-[148px] shrink-0 items-center justify-center opacity-80 transition-[opacity,transform] duration-300 hover:scale-110 hover:!opacity-100 focus-visible:scale-110 focus-visible:!opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[#F5BB03] group-hover/marquee:opacity-40"
-                  href={website}
+                  href={confUtm(website, "sponsor-marquee")}
                   rel="noopener"
                   tabIndex={isClone ? -1 : undefined}
                   target="_blank"
