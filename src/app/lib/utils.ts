@@ -39,15 +39,30 @@ export function alphabeticalSort<T>(array?: T[], key: keyof T = "name" as keyof 
   });
 }
 
+/** The four standard UTM fields. Empty ones are skipped, so a link only carries what it means. */
+export type UtmParams = {
+  /** The property the click came from, not the page it came from */
+  source?: string;
+  /** The channel type. `referral` is the value analytics tools group under Referral traffic */
+  medium?: string;
+  /** The initiative the link belongs to, e.g. one edition of an event */
+  campaign?: string;
+  /** The placement inside the page, so two links to the same destination stay distinguishable */
+  content?: string;
+};
+
 /**
  * Adds UTM parameters to external URLs only for tracking purposes
  * @param url - The URL to potentially add UTM parameters to
- * @param utmSource - The UTM source (defaults to 'la-meetup')
- * @param utmMedium - The UTM medium (defaults to 'owu')
+ * @param params - The UTM fields to append (defaults to the La Meetup source/medium pair)
  * @returns The URL with UTM parameters added only if it's an external link
  */
-export function addUtmParams(url: string, utmSource: string = "la-meetup", utmMedium: string = "owu"): string {
-  // Don't add UTM params to hash-only links, empty URLs, or internal links
+export function addUtmParams(
+  url: string,
+  { source = "la-meetup", medium = "owu", campaign, content }: UtmParams = {}
+): string {
+  // Don't add UTM params to hash-only links, empty URLs, or internal links:
+  // tagging our own pages restarts the visit as a new session and loses the original source
   if (!url || url === "#" || url.startsWith("#") || url.startsWith("/")) {
     return url;
   }
@@ -59,8 +74,17 @@ export function addUtmParams(url: string, utmSource: string = "la-meetup", utmMe
 
   try {
     const urlObj = new URL(url);
-    urlObj.searchParams.set("utm_source", utmSource);
-    urlObj.searchParams.set("utm_medium", utmMedium);
+    const fields = {
+      utm_source: source,
+      utm_medium: medium,
+      utm_campaign: campaign,
+      utm_content: content,
+    };
+
+    for (const [key, value] of Object.entries(fields)) {
+      // Lowercased: analytics tools report "Sponsors-Grid" and "sponsors-grid" as two placements
+      if (value) urlObj.searchParams.set(key, value.trim().toLowerCase());
+    }
 
     return urlObj.toString();
   } catch (error) {

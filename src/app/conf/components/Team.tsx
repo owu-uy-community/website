@@ -1,3 +1,5 @@
+import { confUtm } from "../utm";
+
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
 
@@ -156,7 +158,7 @@ export default function Team() {
                   <a
                     aria-label={`Perfil de LinkedIn de ${fullName}`}
                     className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-                    href={linkedin}
+                    href={confUtm(linkedin, "team-linkedin")}
                     rel="noopener"
                     target="_blank"
                   >

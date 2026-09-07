@@ -4,7 +4,8 @@ import Link from "next/link";
 import { m } from "motion/react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
-import { addUtmParams } from "app/lib/utils";
+
+import { confUtm } from "../utm";
 
 import PillLink from "./PillLink";
 import { EASE_OUT } from "./Reveal";
@@ -46,7 +47,7 @@ export default function Navbar() {
 
           <PillLink
             external
-            href={addUtmParams(SOCIAL_LINKS.slack)}
+            href={confUtm(SOCIAL_LINKS.slack, "navbar-cta")}
             sizeClassName="h-9 px-4 text-sm sm:h-12 sm:px-6 sm:text-base"
           >
             SUMATE

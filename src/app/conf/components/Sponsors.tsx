@@ -1,5 +1,7 @@
 import { CONF_DATES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import { confUtm } from "../utm";
+
 import Countdown from "./Countdown";
 import PillLink from "./PillLink";
 import Reveal from "./Reveal";
@@ -78,7 +80,7 @@ export default function Sponsors() {
             <Reveal amount={0.4} delay={0.12 + i * 0.07} scale={0.8} y={18}>
               <a
                 className="group flex h-[96px] items-center justify-center transition-transform hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-                href={website}
+                href={confUtm(website, "sponsors-grid")}
                 rel="noopener"
                 target="_blank"
                 title={name}
@@ -106,7 +108,7 @@ export default function Sponsors() {
         <Reveal amount={0.4} delay={0.1} y={24}>
           <a
             className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-            href="https://www.gub.uy/ministerio-educacion-cultura"
+            href={confUtm("https://www.gub.uy/ministerio-educacion-cultura", "institutional-support")}
             rel="noopener"
             target="_blank"
           >
@@ -121,7 +123,7 @@ export default function Sponsors() {
         <Reveal amount={0.4} delay={0.22} y={24}>
           <a
             className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-            href="https://www.anii.org.uy/"
+            href={confUtm("https://www.anii.org.uy/", "institutional-support")}
             rel="noopener"
             target="_blank"
           >

@@ -1,7 +1,8 @@
 import { FaGithub, FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
-import { addUtmParams } from "app/lib/utils";
+
+import { confUtm } from "../utm";
 
 import Reveal from "./Reveal";
 
@@ -31,7 +32,7 @@ export default function Footer() {
               key={label}
               aria-label={label}
               className="text-[#FBF5E7] transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-              href={addUtmParams(href)}
+              href={confUtm(href, "footer-social")}
               rel="noopener"
               target="_blank"
             >
