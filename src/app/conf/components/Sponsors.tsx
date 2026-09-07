@@ -15,6 +15,7 @@ type Sponsor = {
 
 /* CONFIRMED sponsors only for OWU CONF 2026 (also feeds the hero carousel) */
 export const SPONSORS_2026: Sponsor[] = [
+  { name: "Conveyor Now", logo: "/images/conf/sponsors/conveyornow.svg", website: "https://conveyornow.com/" },
   { name: "Crunchloop", logo: "/images/conf/sponsors/crunchloop.svg", website: "https://www.crunchloop.io/" },
   { name: "Estudio Hahn", logo: "/images/conf/sponsors/han.svg", website: "https://estudiohahn.com/" },
   { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.svg", website: "https://www.mimiquate.com/" },
