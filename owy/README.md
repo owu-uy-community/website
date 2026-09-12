@@ -165,6 +165,14 @@ Para recuperarlos antes del evento hay dos caminos:
 
 Mientras tanto Owy responde igual a demanda en Slack y Telegram.
 
+## Owy físico (companion)
+
+Hay una versión física de Owy para la mesa del mercado de ideas: una Waveshare
+ESP32-S3-Touch-AMOLED-1.75C con cara animada que escucha y habla, y que usa
+**estas mismas tools** (importadas tal cual, con un shim de contexto) a través de
+un bridge Node con Gemini Live. Firmware ESPHome + bridge + runbook en
+[`companion/README.md`](companion/README.md); scripts `pnpm companion:*`.
+
 ## Mantener el conocimiento
 
 - Editar `agent/sandbox/workspace/knowledge/*.md` (hay `<!-- TODO confirmar -->` marcando datos pendientes: link de inscripción, estacionamiento/accesibilidad).

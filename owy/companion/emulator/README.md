@@ -5,8 +5,9 @@ The route requires the existing admin session. React supplies the workbench;
 the round 466×466 viewport displays RGB565 pixels from real LVGL 9.5.0 in a
 Web Worker, using the firmware's C++ face/motion code and generated scene/fonts.
 
-This is **not yet full physical-device parity**. Read [PARITY.md](PARITY.md)
-before using a simulated pass as release evidence.
+It shares the firmware's renderer, not its hardware lifecycle: timing, audio
+and the physical panel still differ, so a pass here is not a substitute for
+testing on the board.
 
 ## Open it
 
