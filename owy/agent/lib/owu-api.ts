@@ -345,6 +345,19 @@ export interface OwuApi {
   eventbrite: {
     getSummary: () => Promise<unknown>;
   };
+  /** Owy Stage: the video wall (site: src/lib/owy-stage/scenes.ts). */
+  owyStage: {
+    /** Mirrors a companion's face + running transcript onto the wall's Owy. */
+    setFace: (input: StageFaceInput) => Promise<unknown>;
+  };
+}
+
+export type StageFaceState = "idle" | "listening" | "thinking" | "speaking" | "happy" | "error" | "offline";
+
+export interface StageFaceInput {
+  state: StageFaceState;
+  transcript?: { who: "input" | "output"; text: string };
+  source?: string;
 }
 
 // ---------------------------------------------------------------------------

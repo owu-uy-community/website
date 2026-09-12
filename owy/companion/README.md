@@ -226,6 +226,16 @@ por defecto; `gateway:openai/gpt-realtime-2` como plan B con `AI_GATEWAY_API_KEY
 `COMPANION_STAFF_MODE` (fallbacks cuando no hay dispositivo, p. ej. en el REPL),
 `COMPANION_LOG_LEVEL`.
 
+### Espejo en la pantalla grande (Owy Stage)
+
+Con `OWY_API_KEY` configurada, cada Owy (gadget o voz del workbench) refleja su cara y
+la transcripción de cada turno en el video wall: `bridge/src/stage.ts` manda
+`owyStage.setFace` al sitio (estados `listening/thinking/speaking/idle/happy…` y el
+texto acumulado, como mucho 4 veces por segundo), el sitio lo difunde por realtime y la
+escena **Owy** de `/owy/stage` (se elige en `/admin/owy/scenes`, se embebe en OBS como
+browser source 1920×1080) reacciona con los mismos ojos, boca y subtítulos. Sin la key el
+espejo queda apagado y el bridge lo avisa una vez al arrancar.
+
 ### Cómo funciona un turno
 
 1. Tap (o wake word) → el dispositivo manda `VoiceAssistantRequest{start}`; el bridge

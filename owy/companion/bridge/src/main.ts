@@ -1,6 +1,9 @@
+import { owuApi } from "../../../agent/lib/owu-api";
 import { loadConfig } from "./config";
+import { CompanionDevice } from "./device/esphome";
 import { DeviceSession, loadSharedRuntime } from "./index";
 import { createLogger } from "./log";
+import { createStageMirror } from "./stage";
 import { startWebBridge } from "./web/server";
 import { mkdir, writeFile, chmod } from "node:fs/promises";
 import path from "node:path";
@@ -36,7 +39,19 @@ async function main(): Promise<void> {
     await chmod(file, 0o600);
     logger.info(`web virtual-device transport ready at ${web.url}; same DeviceSession, prompts and tools`);
   }
-  const sessions = config.devices.map((spec) => new DeviceSession(spec, shared));
+  // Each gadget mirrors its face and captions onto the video wall (/owy/stage).
+  const sessions = config.devices.map((spec) => {
+    const mirror = createStageMirror({
+      api: config.OWY_API_KEY ? owuApi() : null,
+      logger: logger.child(spec.id),
+      source: spec.id,
+    });
+    return new DeviceSession(spec, shared, {
+      connectDevice: async (...args) => mirror.wrap(await CompanionDevice.connect(...args)),
+      onFace: mirror.face,
+      onTranscript: mirror.transcript,
+    });
+  });
   await Promise.all(sessions.map((session) => session.start()));
 
   let stopping = false;
