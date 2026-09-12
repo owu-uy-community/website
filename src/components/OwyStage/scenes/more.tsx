@@ -13,7 +13,7 @@ import { roomColorFor } from "lib/rooms/palette";
 
 import { Confetti } from "../effects";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
-import { DATE_LABEL, LogoReveal, Rise, SponsorRow, nowHHMM } from "./parts";
+import { DATE_LABEL, LogoReveal, MOMENT_PHOTOS, Rise, SponsorRow, nowHHMM } from "./parts";
 
 // ---------------------------------------------------------------------------
 // Agenda — the open-space grid, current block first, live
@@ -175,10 +175,7 @@ function Empty({ text }: { text: string }) {
 // Moments — Ken Burns over the La Meetup III photos
 // ---------------------------------------------------------------------------
 
-const PHOTOS = Array.from(
-  { length: 30 },
-  (_, i) => `/images/conf/gallery/momento-${String(i + 1).padStart(2, "0")}.webp`
-);
+const PHOTOS = MOMENT_PHOTOS;
 const PANS = [
   { from: { x: -30, y: 0 }, to: { x: 30, y: -10 } },
   { from: { x: 20, y: -20 }, to: { x: -25, y: 10 } },

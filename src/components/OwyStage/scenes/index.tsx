@@ -13,6 +13,7 @@ import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import OwyFace from "./OwyFace";
+import { Days, Ideas, Kaleidoscope, Launch, OwyTalks, Sponsor, Talk, Tangram, Terminal, Ticker } from "./creative";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
 
@@ -249,5 +250,15 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   closing: Closing,
   shapes: Shapes,
   team: Team,
+  launch: Launch,
+  terminal: Terminal,
+  ideas: Ideas,
+  tangram: Tangram,
+  kaleidoscope: Kaleidoscope,
+  "owy-talks": OwyTalks,
+  ticker: Ticker,
+  talk: Talk,
+  sponsor: Sponsor,
+  days: Days,
   black: Black,
 };

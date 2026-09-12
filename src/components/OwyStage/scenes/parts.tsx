@@ -82,6 +82,11 @@ export function SponsorRow({ reverse, height = 110 }: { reverse?: boolean; heigh
   );
 }
 
+/** The La Meetup III gallery (public/images/conf/gallery); #10 was never published. */
+export const MOMENT_PHOTOS = Array.from({ length: 30 }, (_, i) => i + 1)
+  .filter((n) => n !== 10)
+  .map((n) => `/images/conf/gallery/momento-${String(n).padStart(2, "0")}.webp`);
+
 /** "HH:MM" in the event's timezone, comparable to the schedule strings. */
 export function nowHHMM(timeZone = "America/Montevideo"): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(

@@ -19,7 +19,7 @@ interface OpenSpaceRealtimeEvent {
   };
 }
 
-const motivationalPhrases = [
+export const motivationalPhrases = [
   "Bo, se viene un track que va a estar de más 🚀",
   "Dale que ya deployeamos el conocimiento 💻",
   "¡Preparate que este código va a estar bárbaro! 🎯",

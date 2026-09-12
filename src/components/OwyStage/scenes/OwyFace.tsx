@@ -27,13 +27,14 @@ const OY = 40;
 
 const EYE_GREY = "#777368";
 const DOT_DIM = "#343126";
-const HAPPY_MS = 2500;
 const BLINK_MS = 160;
 
-type Mood = Exclude<FaceState, "happy">;
+export type Mood = Exclude<FaceState, "happy">;
 
-type Sim = {
+export type Sim = {
   mood: Mood;
+  /** Last frame time on the scene clock (motion's time-since-mount, not performance.now). */
+  now: number;
   happyUntil: number;
   /** Smoothed gaze offset and its target. */
   px: number;
@@ -60,7 +61,8 @@ function ease(dt: number, tau: number) {
   return 1 - Math.exp(-dt / tau);
 }
 
-function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: number) {
+export function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: number) {
+  s.now = t;
   const { mood } = s;
   const alive = mood !== "offline" && mood !== "error";
   const voice = mood === "listening" || mood === "thinking" || mood === "speaking";
@@ -149,13 +151,10 @@ function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: number) 
   }
 }
 
-type Transcript = { key: string; who: "input" | "output"; text: string };
-
-export default function OwyFace({ params }: SceneProps<"owy-face">) {
-  const { preview } = useContext(StageContext);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef<Sim>({
+export function initialSim(): Sim {
+  return {
     mood: "idle",
+    now: 0,
     happyUntil: 0,
     px: 0,
     py: 0,
@@ -165,7 +164,17 @@ export default function OwyFace({ params }: SceneProps<"owy-face">) {
     blinkAt: 2500,
     eyeH: 156,
     mouthH: 28,
-  });
+  };
+}
+
+export const HAPPY_MS = 2500;
+
+type Transcript = { key: string; who: "input" | "output"; text: string };
+
+export default function OwyFace({ params }: SceneProps<"owy-face">) {
+  const { preview } = useContext(StageContext);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const sim = useRef<Sim>(initialSim());
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const turn = useRef(0);
 
@@ -173,7 +182,7 @@ export default function OwyFace({ params }: SceneProps<"owy-face">) {
     const s = sim.current;
     if (event === "face") {
       const face = payload as FaceEvent;
-      if (face.state === "happy") s.happyUntil = performance.now() + HAPPY_MS;
+      if (face.state === "happy") s.happyUntil = s.now + HAPPY_MS;
       else s.mood = face.state;
       if (face.transcript && params.captions) {
         const { who, text } = face.transcript;
@@ -185,7 +194,7 @@ export default function OwyFace({ params }: SceneProps<"owy-face">) {
       }
     }
     if (event === "effect" && (payload as EffectEvent).effect === "owy-happy") {
-      s.happyUntil = performance.now() + HAPPY_MS;
+      s.happyUntil = s.now + HAPPY_MS;
     }
   });
 

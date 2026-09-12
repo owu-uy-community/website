@@ -88,6 +88,67 @@ export const SCENES = {
     description: "Créditos: el equipo de OWU CONF 2026.",
     params: z.object({}),
   },
+  launch: {
+    title: "Lanzamiento",
+    description: "Cuenta regresiva 10…1 y el logo explota en pantalla. Arranca al ponerla en pantalla.",
+    params: z.object({ seconds: z.coerce.number().int().min(3).max(60).default(10) }),
+  },
+  terminal: {
+    title: "Terminal",
+    description: "La secuencia de arranque, tipeada en una terminal.",
+    params: z.object({}),
+  },
+  ideas: {
+    title: "Ideas",
+    description: "Los títulos del open space flotando como una galaxia, en vivo.",
+    params: z.object({}),
+  },
+  tangram: {
+    title: "Tangram",
+    description: "El collage de fotos de /conf armándose en la pared y mezclándose.",
+    params: z.object({}),
+  },
+  kaleidoscope: {
+    title: "Caleidoscopio",
+    description: "Formas de la marca reflejadas ocho veces. Hipnótico para las pausas.",
+    params: z.object({}),
+  },
+  "owy-talks": {
+    title: "Owy charlatán",
+    description: "Owy suelta frases rioplatenses cada tanto, sin bridge.",
+    params: z.object({}),
+  },
+  ticker: {
+    title: "Ticker",
+    description: "Barra de noticias abajo (separá los ítems con ·); ideal con ?bg=transparent.",
+    params: z.object({
+      label: z.string().trim().max(24).default("OWU CONF"),
+      text: z
+        .string()
+        .trim()
+        .max(600)
+        .default("WiFi: OWU-CONF · Próxima charla 16:00 · Proponé tu charla en el open space · #OWUCONF"),
+    }),
+  },
+  talk: {
+    title: "Charla en curso",
+    description: "Título, speaker y un reloj de charla que arranca al ponerla en pantalla.",
+    params: z.object({
+      title: z.string().trim().max(90).default("Título de la charla"),
+      speaker: z.string().trim().max(60).default("Speaker"),
+      minutes: z.coerce.number().int().min(1).max(180).default(20),
+    }),
+  },
+  sponsor: {
+    title: "Sponsor destacado",
+    description: "Un sponsor por vez, en grande.",
+    params: z.object({ secondsPerSponsor: z.coerce.number().int().min(2).max(60).default(5) }),
+  },
+  days: {
+    title: "Faltan X días",
+    description: "Cuenta regresiva en días al 07 de noviembre.",
+    params: z.object({}),
+  },
   black: {
     title: "Negro",
     description: "Pantalla vacía.",
