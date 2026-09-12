@@ -108,6 +108,8 @@ import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./o
 import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
 import { getCastState, setHighlightedNote } from "./cast/services";
+import { FireEffectSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
+import { fireEffect, getStageState, setFace, setScene } from "./owy-stage/services";
 import {
   AddCommunityMemberSchema,
   CreateCommunitySchema,
@@ -382,6 +384,22 @@ export const setHighlightedNoteHandler = adminOs
   .input(SetHighlightedNoteSchema)
   .handler(withErrorHandling(async ({ input }) => setHighlightedNote(input), "set highlighted note"));
 
+// Owy Stage procedures (public read for the OBS pages, admin write — the
+// companion bridge writes through its x-api-key admin session)
+export const getStageStateHandler = os.handler(withErrorHandling(async () => getStageState(), "get stage state"));
+
+export const setSceneHandler = adminOs
+  .input(SetSceneSchema)
+  .handler(withErrorHandling(async ({ input }) => setScene(input), "set stage scene"));
+
+export const fireEffectHandler = adminOs
+  .input(FireEffectSchema)
+  .handler(withErrorHandling(async ({ input }) => fireEffect(input), "fire stage effect"));
+
+export const setFaceHandler = adminOs
+  .input(SetFaceSchema)
+  .handler(withErrorHandling(async ({ input }) => setFace(input), "set owy face"));
+
 // Dashboard procedures (admin only)
 export const getDashboardStatsHandler = adminOs
   .input(GetDashboardStatsSchema)
@@ -582,6 +600,14 @@ export const router = {
   cast: {
     getState: getCastStateHandler,
     setHighlightedNote: setHighlightedNoteHandler,
+  },
+
+  // Owy Stage (video wall scenes)
+  owyStage: {
+    getState: getStageStateHandler,
+    setScene: setSceneHandler,
+    fireEffect: fireEffectHandler,
+    setFace: setFaceHandler,
   },
 
   // Dashboard Statistics

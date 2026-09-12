@@ -1,4 +1,15 @@
-import { boolean, foreignKey, index, integer, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  foreignKey,
+  index,
+  integer,
+  jsonb,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  unique,
+} from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
 /**
@@ -389,6 +400,22 @@ export const countdownState = pgTable("countdown_state", {
     .defaultNow()
     .$onUpdate(() => new Date()),
   createdAt: ts("createdAt").notNull().defaultNow(),
+});
+
+/**
+ * Owy Stage: what the OWU video wall (OBS browser source at /owy/stage) is
+ * showing. A global singleton like the OBS rigs — the wall is OWU's hardware,
+ * not per-tenant; `eventId` only feeds the data-driven scenes (cast, countdown).
+ */
+export const owyStageState = pgTable("owy_stage_state", {
+  id: text("id").primaryKey().default("global"),
+  scene: text("scene").notNull().default("black"),
+  params: jsonb("params").$type<Record<string, unknown>>().notNull().default({}),
+  eventId: text("eventId").references(() => events.id, { onDelete: "set null" }),
+  updatedAt: ts("updatedAt")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 // ---------------------------------------------------------------------------

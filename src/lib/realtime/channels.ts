@@ -12,6 +12,8 @@ export function eventChannel(eventId: string, topic: EventChannelTopic): string 
 /** Site-ops channels that intentionally stay global (OWU's physical rigs). */
 export const GLOBAL_CHANNELS = {
   launchpad: "launchpad-sounds",
+  /** Owy Stage: what the video wall shows + Owy face events (see src/lib/owy-stage). */
+  owyStage: "owy-stage",
 } as const;
 
 /**
