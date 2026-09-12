@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "width": 466,
+  "height": 466,
+  "color": "RGB565",
+  "esphome": "2026.8.2",
+  "lvgl": "9.5.0",
+  "emscripten": "6.0.9",
+  "pages": [
+    "face_page",
+    "card_page",
+    "qr_page",
+    "text_page",
+    "pin_page",
+    "settings_page",
+    "quick_page",
+    "calibration_page",
+    "help_page"
+  ],
+  "objects": 120,
+  "sceneHash": "474ae823fd91fbfe1ea9e613ab35b0c73f9c1a1e8966a2203f8aa4d41b553d1c",
+  "fontsHash": "84612a17b9d270fc087537a5c7ddedb904275498545faef80f3cea3f18bc433d",
+  "sourceHashes": {
+    "companion_model.h": "f40e7ea588cd0cafc6848e8137557f7f576c8448d794c8c03c085f4342f8f840",
+    "companion_motion.h": "91cb07a936be6db2d3dde2ebce8ad664fe18569b245c8f93a1d0af55acec89ba",
+    "companion_lvgl.h": "e3eb36cd227e85be68bcc0257f87c219acf160a022d08a6249df0827994ea0fe",
+    "companion_sound.h": "7606317ae9d927a233dc7ed25c11b01b00ffdd67c5b23c84ecb81c70424faca3",
+    "packages/face.yaml": "0b454a5405f360a7966e18575e5afcd145687875ea7de23209a3e5a1ab149971",
+    "packages/companion.yaml": "7789e2e31e2a573280fab895861404fcb0ce7265753afe8e62138e9f885110d3",
+    "packages/voice.yaml": "824c7b7ae0c37e9c470f6c3b9137438b71bcddeb3cc895826d303c566dc15ff4",
+    "packages/controls.yaml": "db568b36e9d4268431e2cdfefd7a31d7d45fff0713a3952f795233ea624e1367"
+  },
+  "version": "3aee7f1527f793f8",
+  "wasmHash": "940c8758f69aca1a9bf3e9a52939cda32fb39e83ca3cd060e0574c4a8370b66f",
+  "glueHash": "47623d92921038f4b65c5647a2091e99283ec735ae61861078d765f788eec253",
+  "protocolHash": "fa308a9d8cc9b919e04978bba8ba6acd6080e5e20432b2acb3a7b5135745f55e",
+  "buildInputHashes": {
+    "owy/companion/emulator/runtime.cpp": "d200eedaeec0a53e6212c24f79df62f164262622e9ee973948b9e066342ec327",
+    "owy/companion/emulator/font_adapter.h": "7ea8b2f60aa987a2c989fa3f7e24a3faf08997657f86ca8857ea1fcd7c17b926",
+    "owy/companion/emulator/build.mjs": "7a7b6ab7c60758eb078f234d295825aaa325a8590a1e884b99380d71941c86b8",
+    "owy/companion/emulator/generate-scene.mjs": "dd7dba91a16464ea3946b5f8140c91fd2c047b66002fc1ca0f8f66c2deee5ca4",
+    "owy/companion/emulator/provenance.mjs": "3c396fed21bffc62deb4d3d6d60d815337b0dc048e893b985813fce6886f401e",
+    "owy/companion/emulator/bridge-adapter.ts": "a8476505a8a04b8c60f285dd6a04b6a3c9089b5bcbf63410ace0637024575040",
+    "owy/companion/emulator/THIRD-PARTY-NOTICES.txt": "33354dcac4cf237d8985a7e84f9a014671da2276408a2f158b885f79c68fabb9",
+    "owy/companion/emulator/generated/scene.generated.h": "e2a5f4b634d9f57d8930372144328eea08f3c15a9daabb19949975e25714276f",
+    "owy/companion/emulator/generated/fonts.generated.h": "84612a17b9d270fc087537a5c7ddedb904275498545faef80f3cea3f18bc433d",
+    "owy/companion/emulator/generated/lv_conf.h": "3554773cf3f45d0fc0fb8c36fe0056b01ae2f3498a7d9d20a2a199d28b831859",
+    "owy/companion/emulator/generated/manifest.json": "35ac2539e88fd50b81e94cb3e310761a2602d31a10e58e22954d3c8db639aab1",
+    "owy/companion/bridge/src/clock.ts": "c84019ab0d75e1f179f30a6098531a6b06a60392dbbc89736fbb4e82dca3bc1d",
+    "owy/companion/bridge/src/device/pipeline.ts": "d1c28e3664397b1fa69234fcc434b2ac1f97b35020d3479fc8cac01eabea0639",
+    "owy/companion/bridge/src/audio/pcm.ts": "c39321fb203c8e4712a0599b5e1aa1d0960d0cd8f4dbb75d791285e27e96455f"
+  }
+}
