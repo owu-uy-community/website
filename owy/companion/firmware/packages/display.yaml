@@ -1,0 +1,54 @@
+# 1.75" 466x466 AMOLED (CO5300 over QSPI) + CST9217 capacitive touch.
+
+spi:
+  - id: display_qspi
+    type: quad
+    clk_pin: GPIO38
+    data_pins:
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+
+display:
+  - platform: mipi_spi
+    id: amoled
+    # ESPHome's preset for this board (CO5300, 466x466, offset_width 6). The
+    # preset bakes in reset_pin 39 for the plain 1.75; the 1.75C uses GPIO1.
+    model: WAVESHARE-ESP32-S3-TOUCH-AMOLED-1.75
+    spi_id: display_qspi
+    cs_pin: GPIO12
+    reset_pin: ${lcd_reset_pin}
+    data_rate: 40MHz
+    # LVGL owns the framebuffer.
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  - platform: cst9220
+    id: touch
+    i2c_id: bus_a
+    display: amoled
+    interrupt_pin: GPIO11
+    reset_pin: ${touch_reset_pin}
+    transform:
+      mirror_x: true
+      mirror_y: true
+
+# AMOLED brightness is a panel command, exposed as a light for the settings page.
+output:
+  - platform: template
+    id: amoled_brightness
+    type: float
+    write_action:
+      - lambda: id(amoled).set_brightness(static_cast<uint8_t>(state * 255));
+
+light:
+  - platform: monochromatic
+    id: screen_light
+    name: Pantalla
+    output: amoled_brightness
+    default_transition_length: 0s
+    restore_mode: ALWAYS_ON
+    initial_state:
+      brightness: 80%

@@ -1,0 +1,73 @@
+# Owy Companion — ESPHome firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75C
+#
+# ESPHome with a local I2S startup-race fix: the voice pipeline is the regular
+# `voice_assistant` + `micro_wake_word`, served by `companion/bridge` on a
+# laptop at the venue instead of Home Assistant. The face is LVGL.
+#
+#   esphome run owy-companion.yaml --device /dev/cu.usbmodemXXXX   # first flash over USB
+#   esphome run owy-companion.yaml                                 # OTA afterwards
+#   esphome logs owy-companion.yaml --device /dev/cu.usbmodemXXXX
+#
+# Requires ESPHome >= 2026.8 (mipi_spi board preset, native cst9220 touch).
+
+substitutions:
+  name: owy-companion
+  friendly_name: Owy Companion
+
+  # Board variant. The 1.75C (aluminium case, 32MB flash, no RTC/microSD)
+  # differs from the plain 1.75 in exactly these three pins:
+  #   plain 1.75 → i2s_mclk_pin: GPIO42, lcd_reset_pin: GPIO39, touch_reset_pin: GPIO40
+  board_variant: amoled175c
+  i2s_mclk_pin: GPIO16
+  lcd_reset_pin: GPIO1
+  touch_reset_pin: GPIO2
+
+  # Mic and speaker time-share one I2S bus and run at the same rate:
+  # 16 kHz is what voice_assistant streams in both directions.
+  audio_sample_rate: "16000"
+
+  staff_pin: !secret staff_pin
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: Owy físico (${board_variant}) — companion/bridge
+  min_version: 2026.8.0
+  project:
+    name: owu.companion
+    version: "2026.09.04-companion-lab"
+  includes:
+    # System-style includes are emitted before generated global declarations;
+    # file-style entries also copy these headers into the build's src directory.
+    - <companion_model.h>
+    - <companion_lvgl.h>
+    - <companion_sound.h>
+    - companion_model.h
+    - companion_motion.h
+    - companion_lvgl.h
+    - companion_sound.h
+  # Keep PlatformIO build output out of the eve app root: `eve dev` snapshots
+  # everything under owy/ except .eve/ (which is gitignored).
+  build_path: ../../.eve/esphome-build/${name}
+  on_boot:
+    - priority: -100
+      then:
+        - script.execute:
+            id: show_face
+            state: offline
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [i2s_audio, voice_assistant]
+
+packages:
+  board: !include packages/board.yaml
+  display: !include packages/display.yaml
+  audio: !include packages/audio.yaml
+  voice: !include packages/voice.yaml
+  face: !include packages/face.yaml
+  controls: !include packages/controls.yaml
+  connectivity: !include packages/connectivity.yaml
+  companion: !include packages/companion.yaml

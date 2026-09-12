@@ -1,0 +1,764 @@
+# Local personality, deliberate input, read-only power telemetry. No new audio
+# owner, no PMIC configuration writes and no undocumented C-board peripherals.
+globals:
+  - id: saved_motion_calibration
+    type: std::array<float, 7>
+    restore_value: true
+    initial_value: '{0, 0, 0, 0, 0, 0, 1}'
+  - id: companion
+    type: owy::Companion
+    restore_value: false
+  - id: face_renderer
+    type: owy::FaceRenderer
+    restore_value: false
+  - id: display_dimmed
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+motion:
+  - platform: qmi8658
+    id: companion_imu
+    i2c_id: bus_a
+    address: 0x6B
+    accelerometer_range: 8G
+    gyroscope_range: 512DPS
+    # Enum 125HZ is ~112.1Hz in QST's 6DOF table. Actual host dt drives fusion.
+    accelerometer_odr: 125HZ
+    gyroscope_odr: 125HZ
+    update_interval: 10ms
+
+i2c_device:
+  - id: companion_pmic
+    i2c_id: bus_a
+    address: 0x34
+
+esphome:
+  on_boot:
+    - priority: -90
+      then:
+        - lambda: |-
+            const auto &saved=id(saved_motion_calibration);
+            if (saved[0]==1) id(companion).tracker.restore_calibration(
+                {saved[1],saved[2],saved[3]}, {saved[4],saved[5],saved[6]});
+            id(companion_imu).add_listener([](esphome::motion::MotionData &data) {
+              id(companion).motion(data.acceleration[0], data.acceleration[1], data.acceleration[2],
+                  data.angular_rate[0], data.angular_rate[1], data.angular_rate[2], millis(),
+                  id(motion_follow).state && !id(reduced_motion).state && !id(mic_privacy).state &&
+                  !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) &&
+                  !id(ui).is_paused() && lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj);
+              if (id(companion).take_shake()) {
+                id(last_gesture).publish_state("shake");
+                id(play_companion_feedback).execute();
+              }
+            });
+            id(companion_imu).add_temperature_listener([](float value) {
+              id(companion).chip_temperature=value;
+            });
+        - script.execute: wake_display
+
+switch:
+  - platform: template
+    id: interaction_sounds
+    name: Interaction Sounds
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    id: mic_privacy
+    name: Microphone Privacy
+    icon: mdi:microphone-off
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - script.execute: cancel_turn
+      - script.execute: apply_face
+    on_turn_off:
+      - script.execute: resume_wake_word
+  - platform: template
+    id: motion_follow
+    name: Motion Face
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+  - platform: template
+    id: reduced_motion
+    name: Reduced Motion
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: motion_invert_x
+    name: Motion Reverse X
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+  - platform: template
+    id: motion_invert_y
+    name: Motion Reverse Y
+    entity_category: config
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
+number:
+  - platform: template
+    id: screen_brightness
+    name: Screen Brightness
+    icon: mdi:brightness-6
+    min_value: 10
+    max_value: 100
+    step: 5
+    initial_value: 80
+    optimistic: true
+    restore_value: true
+    on_value:
+      - if:
+          condition:
+            lambda: return !id(display_dimmed);
+          then:
+            - light.turn_on:
+                id: screen_light
+                brightness: !lambda return x / 100.0f;
+
+button:
+  - platform: template
+    name: Calibrate Motion
+    on_press:
+      - script.execute: start_motion_calibration
+  - platform: template
+    name: Cancel Motion Calibration
+    on_press:
+      - script.execute: open_quick_controls
+  - platform: template
+    name: Center Motion Face
+    on_press:
+      - lambda: id(companion).center();
+  - platform: template
+    name: Smile
+    on_press:
+      - lambda: id(companion).delight(millis());
+  - platform: template
+    name: Companion Sound
+    entity_category: diagnostic
+    on_press:
+      - script.execute: play_companion_feedback
+  - platform: template
+    name: Quick Controls
+    on_press:
+      - script.execute: open_quick_controls
+  - platform: template
+    name: Back to Owy
+    on_press:
+      - script.execute: companion_home
+
+binary_sensor:
+  - platform: template
+    name: Motion Sensor Ready
+    id: motion_sensor_ready
+    entity_category: diagnostic
+    lambda: return id(companion).motion_ok(millis());
+
+sensor:
+  - platform: template
+    name: Motion Poll Rate
+    entity_category: diagnostic
+    unit_of_measurement: Hz
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: return id(companion).tracker.cadence.read(millis());
+  - platform: template
+    name: Motion Maximum Gap
+    entity_category: diagnostic
+    unit_of_measurement: ms
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: return id(companion).tracker.cadence.take_gap();
+  - platform: template
+    name: Animation Tick Rate
+    entity_category: diagnostic
+    unit_of_measurement: Hz
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: return id(companion).animation_cadence.read(millis());
+  - platform: template
+    name: IMU Chip Temperature
+    entity_category: diagnostic
+    device_class: temperature
+    unit_of_measurement: °C
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      return id(companion).motion_ok(millis()) ? id(companion).chip_temperature : NAN;
+  - platform: template
+    name: Battery Level
+    id: companion_battery
+    device_class: battery
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: never
+  - platform: wifi_signal
+    name: WiFi Signal
+    id: companion_wifi
+    update_interval: 30s
+  - platform: template
+    name: Internal Free Memory
+    entity_category: diagnostic
+    unit_of_measurement: "B"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: return heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  - platform: template
+    name: Internal Largest Block
+    entity_category: diagnostic
+    unit_of_measurement: "B"
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: return heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+
+text_sensor:
+  - platform: template
+    name: Saved Motion Calibration
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      const auto &s=id(saved_motion_calibration);
+      char text[160];
+      snprintf(text,sizeof(text),"v%d bias %.4f %.4f %.4f neutral %.4f %.4f %.4f",int(s[0]),s[1],s[2],s[3],s[4],s[5],s[6]);
+      return std::string(text);
+  - platform: template
+    name: Motion Calibration
+    entity_category: diagnostic
+    update_interval: 250ms
+    lambda: return std::string(id(companion).tracker.calibration_name());
+  - platform: template
+    id: last_gesture
+    name: Last Gesture
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    name: Interface Page
+    entity_category: diagnostic
+    update_interval: 1s
+    lambda: |-
+      auto *page = lv_display_get_screen_active(id(ui).get_disp());
+      if (page == id(face_page)->obj) return {"face"};
+      if (page == id(quick_page)->obj) return {"controls"};
+      if (page == id(help_page)->obj) return {"help"};
+      if (page == id(calibration_page)->obj) return {"calibration"};
+      if (page == id(pin_page)->obj) return {"pin"};
+      if (page == id(settings_page)->obj) return {"staff"};
+      if (page == id(qr_page)->obj) return {"qr"};
+      if (page == id(card_page)->obj) return {"card"};
+      if (page == id(text_page)->obj) return {"text"};
+      return {"unknown"};
+  - platform: template
+    id: power_status
+    name: Power Status
+    update_interval: 5s
+    lambda: |-
+      uint8_t status[2], percent = 255;
+      if (!id(companion_pmic).read_bytes(0x00, status, 2)) {
+        id(companion).power.unavailable();
+        id(companion_battery).publish_state(NAN);
+        return {"energía: sin datos"};
+      }
+      if (status[0] & 0x08) id(companion_pmic).read_byte(0xA4, &percent);
+      auto &power = id(companion).power;
+      power.decode(status[0], status[1], percent);
+      id(companion_battery).publish_state(power.percent >= 0 ? float(power.percent) : NAN);
+      char buf[64];
+      if (!power.battery) return power.usb ? std::string("USB · sin batería") : std::string("sin batería detectada");
+      if (power.percent < 0) return {"batería: sin porcentaje"};
+      snprintf(buf, sizeof(buf), "%s%d%% %s", power.usb ? "USB · " : "", power.percent, power.charging ? "cargando" : "");
+      return std::string(buf);
+
+script:
+  - id: wake_display
+    mode: restart
+    then:
+      - lvgl.resume:
+      - if:
+          condition:
+            lambda: return id(display_dimmed) || id(screen_light).current_values.get_brightness() < 0.2f;
+          then:
+            - light.turn_on:
+                id: screen_light
+                brightness: !lambda return id(screen_brightness).state / 100.0f;
+      - lambda: id(display_dimmed) = false;
+
+  - id: animate_companion
+    mode: single
+    then:
+      - lambda: |-
+          if (id(ui).is_paused() || lv_display_get_screen_active(id(ui).get_disp()) != id(face_page)->obj) return;
+          owy::Mood mood = owy::Mood::IDLE;
+          const auto &state = id(current_face);
+          if (state == "listening") mood = owy::Mood::LISTENING;
+          else if (state == "thinking") mood = owy::Mood::THINKING;
+          else if (state == "speaking") mood = owy::Mood::SPEAKING;
+          else if (state == "happy") mood = owy::Mood::HAPPY;
+          else if (state == "offline") mood = owy::Mood::OFFLINE;
+          else if (state == "error") mood = owy::Mood::ERROR;
+          if (id(mic_privacy).state) mood = owy::Mood::PRIVACY;
+          const int badge=id(mic_privacy).state ? 2 :
+              (id(va).is_running() && id(va_phase)==2 && id(mic).is_running() ? 1 : 0);
+          static int previous_badge=-1;
+          if (badge!=previous_badge) {
+            previous_badge=badge;
+            if (badge) lv_obj_remove_flag(id(capture_badge),LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(id(capture_badge),LV_OBJ_FLAG_HIDDEN);
+            if (badge==2) lv_obj_remove_flag(id(privacy_slash)->obj,LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(id(privacy_slash)->obj,LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_bg_color(id(capture_capsule),lv_color_hex(badge==2 ? 0xF5BB03 : 0x0162C8),0);
+          }
+          auto frame = id(companion).frame(millis(), mood, id(motion_follow).state,
+              id(reduced_motion).state || id(audio_recovering), id(motion_invert_x).state,
+              id(motion_invert_y).state, id(speak_level).state);
+          id(face_renderer).render(frame, id(eye_left), id(eye_right), id(pupil_left), id(pupil_right),
+              id(mouth), id(smile_cutout), id(cheek_left), id(cheek_right), id(brow_left), id(brow_right),
+              id(think_dot_0), id(think_dot_1), id(think_dot_2));
+
+  - id: open_quick_controls
+    mode: restart
+    then:
+      - script.execute: wake_display
+      - script.stop: return_to_face_later
+      - lambda: |-
+          id(companion).contact.cancel();
+          id(companion).tracker.cancel_calibration();
+      - script.execute: resume_wake_word
+      - lvgl.page.show: quick_page
+      - script.execute: sync_quick_controls
+
+  - id: open_companion_help
+    mode: restart
+    then:
+      - script.execute: wake_display
+      - script.stop: return_to_face_later
+      - lvgl.page.show: help_page
+
+  - id: open_public_qr
+    mode: restart
+    then:
+      - script.execute: wake_display
+      - lvgl.qrcode.update:
+          id: grid_qr
+          text: "https://owu.uy/conf"
+      - lvgl.label.update:
+          id: qr_caption
+          text: "La grilla, en tu celu"
+      - lvgl.page.show: qr_page
+      - script.execute: return_to_face_later
+
+  - id: companion_home
+    mode: restart
+    then:
+      - lambda: |-
+          id(companion).contact.cancel();
+          id(companion).tracker.cancel_calibration();
+      - script.execute: resume_wake_word
+      - script.execute: wake_display
+      - lvgl.page.show: face_page
+      - script.execute: apply_face
+
+  - id: sync_quick_controls
+    mode: single
+    then:
+      - lambda: |-
+          if (lv_display_get_screen_active(id(ui).get_disp()) != id(quick_page)->obj) return;
+          auto text = [](lv_obj_t *label, const char *value) {
+            if (strcmp(lv_label_get_text(label), value) != 0) lv_label_set_text(label, value);
+          };
+          text(id(quick_power), id(power_status).state.c_str());
+          text(id(quick_mic), id(mic_privacy).state ? "Mic: apagado · activar" : "Mic: encendido · apagar");
+          text(id(quick_motion), id(motion_follow).state ? "Seguir movimiento: sí" : "Seguir movimiento: no");
+          text(id(quick_reduce), id(reduced_motion).state ? "Animaciones: mínimas" : "Animaciones: completas");
+          text(id(quick_continue), id(continuous_conversation).state ? "Charla continua: sí" : "Charla continua: no");
+          text(id(quick_chime), id(listening_chime).state ? "Tono al escuchar: sí" : "Tono al escuchar: no");
+          text(id(quick_sounds), id(interaction_sounds).state ? "Sonidos al jugar: sí" : "Sonidos al jugar: no");
+          char volume_text[32];
+          snprintf(volume_text, sizeof(volume_text), "Volumen: %d%%", int(id(volume).state));
+          text(id(quick_volume), volume_text);
+          char brightness[32];
+          snprintf(brightness, sizeof(brightness), "Brillo: %d%%", int(id(screen_brightness).state));
+          text(id(quick_brightness), brightness);
+          text(id(quick_sensor), id(companion).motion_ok(millis()) ? "Movimiento conectado" : "Movimiento no disponible");
+
+  - id: start_motion_calibration
+    mode: restart
+    then:
+      - script.execute: cancel_turn
+      - script.execute: wake_display
+      - script.stop: return_to_face_later
+      - micro_wake_word.stop:
+      - lambda: |-
+          id(companion).contact.cancel();
+          id(companion).tracker.begin_calibration(millis());
+      - lvgl.page.show: calibration_page
+
+  - id: sync_motion_calibration
+    mode: single
+    then:
+      - lambda: |-
+          auto &tracker=id(companion).tracker;
+          const bool visible=lv_display_get_screen_active(id(ui).get_disp())==id(calibration_page)->obj;
+          if (!visible && tracker.calibrating()) { tracker.cancel_calibration(); id(resume_wake_word).execute(); }
+          const bool was_active=tracker.calibrating();
+          tracker.tick_calibration(millis());
+          using Cal=owy::MotionTracker::Calibration;
+          static bool saved=false;
+          if (tracker.calibrating()) saved=false;
+          if (tracker.calibration==Cal::SUCCESS && !saved) {
+            const auto bias=tracker.bias(), neutral=tracker.neutral();
+            id(saved_motion_calibration)={1,bias.x,bias.y,bias.z,neutral.x,neutral.y,neutral.z};
+            saved=true;
+            id(resume_wake_word).execute();
+          }
+          if (was_active && !tracker.calibrating()) id(resume_wake_word).execute();
+          if (!visible) return;
+          const char *message=tracker.calibration_message();
+          if (strcmp(lv_label_get_text(id(calibration_status)),message)) lv_label_set_text(id(calibration_status),message);
+          lv_bar_set_value(id(calibration_progress),tracker.calibration_progress(millis()),LV_ANIM_OFF);
+
+interval:
+  - interval: 100ms
+    then:
+      - script.execute: sync_motion_calibration
+  - interval: 16ms
+    then:
+      - lambda: |-
+          // Target ~60Hz idle / ~30Hz voice, not a measured panel FPS claim.
+          static bool voice_frame = false;
+          voice_frame = !voice_frame;
+          if (id(va).is_running() && !voice_frame) return;
+          id(animate_companion).execute();
+  - interval: 1s
+    then:
+      - script.execute: sync_quick_controls
+
+lvgl:
+  style_definitions:
+    - id: companion_control
+      width: 290
+      height: 52
+      radius: 16
+      bg_color: 0x1F1F1F
+      text_color: 0xFBF5E7
+      shadow_width: 0
+      border_width: 0
+      pad_all: 8
+  pages:
+    - id: quick_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 32
+            text: "a tu manera"
+            text_font: font_28_bold
+            text_color: 0xF5BB03
+        - label:
+            id: quick_power
+            align: TOP_MID
+            y: 76
+            text: "energía: sin datos"
+            text_color: 0xFBF5E7
+        - obj:
+            align: CENTER
+            y: 14
+            width: 320
+            height: 258
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 8
+            scrollbar_mode: AUTO
+            layout:
+              type: flex
+              flex_flow: COLUMN
+              flex_align_cross: CENTER
+              pad_row: 10
+            widgets:
+              - label:
+                  id: face_hint
+                  width: 290
+                  long_mode: WRAP
+                  text_align: CENTER
+                  text: "tocame y hablame"
+                  text_color: 0xF5BB03
+              - label:
+                  id: quick_volume
+                  text: "Volumen: 80%"
+                  text_color: 0xFBF5E7
+              - obj:
+                  width: 290
+                  height: 58
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  widgets:
+                    - button:
+                        id: vol_down_btn
+                        align: LEFT_MID
+                        width: 136
+                        height: 52
+                        bg_color: 0x1F1F1F
+                        radius: 16
+                        shadow_width: 0
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "Vol −"
+                        on_click:
+                          - script.execute:
+                              id: adjust_volume
+                              delta: -10
+                    - button:
+                        id: vol_up_btn
+                        align: RIGHT_MID
+                        width: 136
+                        height: 52
+                        bg_color: 0x1F1F1F
+                        radius: 16
+                        shadow_width: 0
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "Vol +"
+                        on_click:
+                          - script.execute:
+                              id: adjust_volume
+                              delta: 10
+              - button:
+                  styles: companion_control
+                  bg_color: 0x0162C8
+                  widgets:
+                    - label:
+                        id: quick_mic
+                        align: CENTER
+                        text: "Mic: encendido · apagar"
+                  on_click:
+                    - switch.toggle: mic_privacy
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_continue
+                        align: CENTER
+                        text: "Charla continua: sí"
+                  on_click:
+                    - switch.toggle: continuous_conversation
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_chime
+                        align: CENTER
+                        text: "Tono al escuchar: sí"
+                  on_click:
+                    - switch.toggle: listening_chime
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_sounds
+                        align: CENTER
+                        text: "Sonidos al jugar: sí"
+                  on_click:
+                    - switch.toggle: interaction_sounds
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_motion
+                        align: CENTER
+                        text: "Seguir movimiento: sí"
+                  on_click:
+                    - switch.toggle: motion_follow
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_reduce
+                        align: CENTER
+                        text: "Animaciones: completas"
+                  on_click:
+                    - switch.toggle: reduced_motion
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_brightness
+                        align: CENTER
+                        text: "Brillo: 80%"
+                  on_click:
+                    - number.set:
+                        id: screen_brightness
+                        value: !lambda |-
+                          return id(screen_brightness).state < 45 ? 55 : id(screen_brightness).state < 70 ? 80 : 30;
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Calibrar movimiento"
+                  on_click:
+                    - script.stop: return_to_face_later
+                    - lvgl.page.show: calibration_page
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Centrar la mirada"
+                  on_click:
+                    - lambda: id(companion).center();
+                    - script.execute: companion_home
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Haceme sonreír"
+                  on_click:
+                    - lambda: id(companion).delight(millis());
+                    - script.execute: companion_home
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Cómo jugar / gestos"
+                  on_click:
+                    - script.execute: open_companion_help
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Grilla de OWU Conf"
+                  on_click:
+                    - script.execute: open_public_qr
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        align: CENTER
+                        text: "Staff · ingresar PIN"
+                  on_click:
+                    - lvgl.page.show: pin_page
+              - label:
+                  id: quick_sensor
+                  text: "Movimiento no disponible"
+                  text_color: 0xFBF5E7
+        - button:
+            align: BOTTOM_MID
+            y: -30
+            width: 148
+            height: 48
+            radius: 24
+            bg_color: 0xF5BB03
+            shadow_width: 0
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "volver a Owy"
+                  text_color: 0x000000
+            on_click:
+              - script.execute: companion_home
+
+    - id: calibration_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 48
+            text: "calibrar movimiento"
+            text_font: font_28_bold
+            text_color: 0xF5BB03
+        - label:
+            id: calibration_status
+            align: CENTER
+            y: -46
+            width: 330
+            text_align: CENTER
+            long_mode: WRAP
+            text_color: 0xFBF5E7
+            text: "Apoyame en una superficie\nestable, mirando al frente.\nLuego tocá Comenzar."
+        - bar:
+            id: calibration_progress
+            align: CENTER
+            y: 30
+            width: 264
+            height: 10
+            value: 0
+            bg_color: 0x1F1F1F
+            indicator:
+              bg_color: 0xF5BB03
+        - button:
+            align: CENTER
+            y: 90
+            styles: companion_control
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "Comenzar / repetir"
+            on_click:
+              - script.execute: start_motion_calibration
+        - button:
+            align: BOTTOM_MID
+            y: -36
+            width: 170
+            height: 48
+            radius: 24
+            bg_color: 0xF5BB03
+            shadow_width: 0
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "volver / cancelar"
+                  text_color: 0x000000
+            on_click:
+              - script.execute: open_quick_controls
+
+    - id: help_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 38
+            text: "hola, soy Owy."
+            text_font: font_28_bold
+            text_color: 0xF5BB03
+        - obj:
+            align: CENTER
+            width: 324
+            height: 276
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 8
+            widgets:
+              - label:
+                  width: 300
+                  long_mode: WRAP
+                  text_color: 0xFBF5E7
+                  text: "Tocá: hablar o cancelar.\n\nArrastrá: sigo tu dedo.\nAcariciá de lado a lado.\nIncliname: miro con vos.\n\nDeslizá hacia arriba\no mantené: ajustes.\nIzquierda: esta ayuda.\nDerecha: grilla / QR.\n\nBOOT: hablar / cancelar.\nMantené BOOT: ajustes.\nPWR: encendido / apagado.\n\nDespués del tono, seguí\nhablando sin decir\nOkay Nabu otra vez.\n8 segundos de silencio\ny vuelvo a descansar.\n\nEn ajustes podés apagar\nel micrófono o reducir\nlas animaciones."
+        - button:
+            align: BOTTOM_MID
+            y: -28
+            width: 148
+            height: 48
+            radius: 24
+            bg_color: 0xF5BB03
+            shadow_width: 0
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "¡vamos!"
+                  text_color: 0x000000
+            on_click:
+              - script.execute: companion_home
