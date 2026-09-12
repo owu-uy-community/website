@@ -8,6 +8,10 @@ import { z } from "zod";
 
 export const OWY_STAGE_CHANNEL = "owy-stage";
 
+/** Editable from the admin; the landing's program is still the old tentative one. */
+const DEFAULT_PROGRAM =
+  "14:30 Acreditación | 15:00 Apertura | 15:15 Open Space · mercado de ideas | 17:00 Pausa | 17:30 Bloque de charlas | 20:00 Cierre";
+
 export const SCENES = {
   "owy-face": {
     title: "Owy",
@@ -148,6 +152,78 @@ export const SCENES = {
     title: "Faltan X días",
     description: "Cuenta regresiva en días al 07 de noviembre.",
     params: z.object({}),
+  },
+  program: {
+    title: "Programa del día",
+    description: "Los bloques de la jornada con el actual marcado. Ítems: “HH:MM Título | HH:MM Título”.",
+    params: z.object({
+      title: z.string().trim().max(40).default("OWU CONF 2026"),
+      items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
+    }),
+  },
+  next: {
+    title: "Próximo bloque",
+    description: "Cuenta regresiva automática al siguiente ítem del programa (mismo formato que Programa).",
+    params: z.object({
+      label: z.string().trim().max(40).default("Volvemos en"),
+      items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
+    }),
+  },
+  room: {
+    title: "Sala",
+    description: "El día completo de una sala del open space; para la pantalla de la puerta.",
+    params: z.object({ room: z.string().trim().max(40).default("Lobby") }),
+  },
+  "cast-bar": {
+    title: "Barra de cast",
+    description: "Lower third automático con la charla casteada desde el open space; para ?bg=transparent.",
+    params: z.object({}),
+  },
+  wifi: {
+    title: "WiFi",
+    description: "Red y contraseña en grande.",
+    params: z.object({
+      network: z.string().trim().max(40).default("OWU-CONF"),
+      password: z.string().trim().max(40).default("comunidad2026"),
+    }),
+  },
+  alert: {
+    title: "Aviso",
+    description: "Un anuncio imposible de ignorar (franjas amarillas, pulso).",
+    params: z.object({
+      title: z.string().trim().max(60).default("Foto grupal en 5 minutos"),
+      body: z.string().trim().max(160).default("Nos juntamos en el escenario principal"),
+    }),
+  },
+  steps: {
+    title: "Pasos",
+    description: "Instructivo numerado, hasta cuatro pasos.",
+    params: z.object({
+      title: z.string().trim().max(50).default("Proponé tu charla"),
+      step1: z.string().trim().max(90).default("Escribí tu idea en un sticky del mercado de ideas"),
+      step2: z.string().trim().max(90).default("Contala en un minuto frente a todos"),
+      step3: z.string().trim().max(90).default("Pegala en la grilla: sala y horario"),
+      step4: z.string().trim().max(90).default("Quien quiera, va. Ley de los dos pies."),
+    }),
+  },
+  "owy-howto": {
+    title: "Hablá con Owy",
+    description: "Owy explica cómo proponer una charla hablándole en la mesa del mercado.",
+    params: z.object({}),
+  },
+  social: {
+    title: "Sumate",
+    description: "Hashtag, sitio y comunidad, bien grande.",
+    params: z.object({
+      hashtag: z.string().trim().max(30).default("#OWUCONF"),
+      url: z.string().trim().max(60).default("conf.owu.uy"),
+      line: z.string().trim().max(90).default("Slack de OWU: owu.uy/slack"),
+    }),
+  },
+  photo: {
+    title: "Foto grupal",
+    description: "3, 2, 1 y flash. Arranca al ponerla en pantalla.",
+    params: z.object({ seconds: z.coerce.number().int().min(3).max(15).default(5) }),
   },
   black: {
     title: "Negro",

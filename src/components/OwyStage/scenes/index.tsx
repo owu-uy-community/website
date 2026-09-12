@@ -15,6 +15,7 @@ import { Ambient, BRAND, StageContext } from "../Stage";
 import OwyFace from "./OwyFace";
 import { Days, Ideas, Kaleidoscope, Launch, OwyTalks, Sponsor, Talk, Tangram, Terminal, Ticker } from "./creative";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
+import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
 
 // ---------------------------------------------------------------------------
@@ -260,5 +261,15 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   talk: Talk,
   sponsor: Sponsor,
   days: Days,
+  program: Program,
+  next: Next,
+  room: RoomDay,
+  "cast-bar": CastBar,
+  wifi: Wifi,
+  alert: Alert,
+  steps: Steps,
+  "owy-howto": OwyHowTo,
+  social: Social,
+  photo: Photo,
   black: Black,
 };
