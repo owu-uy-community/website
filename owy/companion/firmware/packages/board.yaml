@@ -1,0 +1,70 @@
+# MCU, memory, logging, I2C bus and BOOT key (C has no IO expander).
+
+esp32:
+  variant: esp32s3
+  # The 1.75C carries a 32MB chip, but >16MB needs IDF experimental flags for
+  # OTA. 16MB gives two 7.75 MiB app slots, plenty for LVGL + audio + wake word.
+  flash_size: 16MB
+  cpu_frequency: 240MHz
+  framework:
+    type: esp-idf
+    advanced:
+      # OTA rollback reverted good flashes when the app took a moment to settle;
+      # we verify health out-of-band (web/API) instead.
+      enable_ota_rollback: false
+    sdkconfig_options:
+      # Voice PE's cache/PSRAM tuning: audio + LVGL out of PSRAM without stalls.
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB: "y"
+      CONFIG_SPIRAM_RODATA: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: "y"
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  # DEBUG during bring-up (I2C scan results and voice_assistant state changes
+  # only show at DEBUG/CONFIG); switch to INFO for the event.
+  level: DEBUG
+  # The USB-C port is the S3's native USB-Serial/JTAG controller.
+  hardware_uart: USB_SERIAL_JTAG
+
+i2c:
+  - id: bus_a
+    sda: GPIO15
+    scl: GPIO14
+    frequency: 400kHz
+    # Expected: 0x18 ES8311, 0x34 AXP2101, 0x40 ES7210,
+    # 0x5A CST9217, 0x6B QMI8658. A 0x51 (PCF85063 RTC) means a plain 1.75.
+    scan: true
+
+# The TCA9554 IO expander (0x20, power button on P4) does not answer on the
+# 1.75C (I2C I/O error at boot), so it is left out. Plain 1.75 boards can add:
+#   pca9554: [{ id: io_expander, i2c_id: bus_a, address: 0x20 }]
+#   binary_sensor: - platform: gpio, pin: { pca9554: io_expander, number: 4 }
+
+binary_sensor:
+  - platform: gpio
+    id: boot_button
+    name: Botón BOOT
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_multi_click:
+      # Single press: same as tapping the face (talk / interrupt).
+      - timing:
+          - ON for at most 0.6s
+          - OFF for at least 0.3s
+        then:
+          - script.execute: tap_to_talk
+      # Long press: accessible quick controls. Staff still requires its PIN.
+      - timing:
+          - ON for at least 0.8s
+        then:
+          - script.execute: open_quick_controls

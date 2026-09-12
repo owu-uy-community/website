@@ -12,6 +12,8 @@
  * - The eve HTTP channel in local dev (`local-dev`) or behind the operator's
  *   basic-auth credential (`http-basic`) counts as staff: only the deployer
  *   holds those credentials.
+ * - The physical companion (`owy/companion`) sends `companion` (attendees,
+ *   never staff) or `companion-staff` (unlocked with the on-device PIN).
  */
 
 interface SessionAuthCurrent {
@@ -50,6 +52,11 @@ export function isStaff(ctx: ToolSessionCtx): boolean {
       return userId !== undefined && parseIdList(process.env.OWY_STAFF_SLACK_IDS).has(String(userId));
     case "telegram-webhook":
       return userId !== undefined && parseIdList(process.env.OWY_STAFF_TELEGRAM_IDS).has(String(userId));
+    // The physical companion (owy/companion) runs Owy's tools outside eve with a
+    // context shim. "companion" is the public kiosk (never staff);
+    // "companion-staff" is the same device after staff unlocked it from the
+    // PIN page on the touchscreen (auto-expires on the device).
+    case "companion-staff":
     case "local-dev":
     case "http-basic":
       return true;

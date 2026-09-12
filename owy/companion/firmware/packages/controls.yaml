@@ -1,0 +1,199 @@
+# Entities and actions the bridge drives over the native API.
+#
+# Object ids (derived from the names) are part of the bridge contract
+# (companion/bridge/src/device/esphome.ts):
+#   select  face_state · switch staff_mode / marketplace_open / quiet_mode / wake_word_enabled
+#   number  speak_level / volume · actions show_card / show_qr / show_text
+
+select:
+  - platform: template
+    id: face_state
+    name: Face State
+    options:
+      - idle
+      - listening
+      - thinking
+      - speaking
+      - happy
+      - error
+      - offline
+    initial_option: offline
+    optimistic: true
+    restore_value: false
+    on_value:
+      # A model's decorative expression must not hide active capture/playback.
+      - if:
+          condition:
+            lambda: return id(va).is_running() || id(turn_pending) || id(audio_recovering);
+          then:
+            - script.execute: apply_face
+          else:
+            - script.execute:
+                id: show_face
+                state: !lambda return x;
+
+switch:
+  # Unlocked from the PIN page; auto-expires so a forgotten kiosk is never staff.
+  - platform: template
+    id: staff_mode
+    name: Staff Mode
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+    on_turn_on:
+      - lvgl.label.update:
+          id: settings_staff_status
+          text: "Modo staff: ON (10 min)"
+      - delay: 10min
+      - switch.turn_off: staff_mode
+    on_turn_off:
+      - lvgl.label.update:
+          id: settings_staff_status
+          text: "Modo staff: OFF"
+      - if:
+          condition:
+            lambda: return lv_display_get_screen_active(id(ui).get_disp()) == id(settings_page)->obj;
+          then:
+            - script.execute: open_quick_controls
+
+  # Attendees can only file proposals while this is on (the marketplace slot).
+  - platform: template
+    id: marketplace_open
+    name: Marketplace Open
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+
+  # No ambient announcements (talks block, after party).
+  - platform: template
+    id: quiet_mode
+    name: Quiet Mode
+    optimistic: true
+    restore_mode: ALWAYS_OFF
+
+  - platform: template
+    id: wake_word_enabled
+    name: Wake Word
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_on:
+      - script.execute: resume_wake_word
+    on_turn_off:
+      - micro_wake_word.stop:
+      - script.execute: apply_face
+
+  - platform: template
+    id: continuous_conversation
+    name: Continuous Conversation
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    on_turn_off:
+      - if:
+          condition:
+            lambda: return id(follow_up_active) && id(va_phase) != 4;
+          then:
+            - script.execute: cancel_turn
+
+  - platform: template
+    id: listening_chime
+    name: Listening Chime
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+
+number:
+  # 0..100, written by the bridge per audio chunk; the mouth follows it.
+  - platform: template
+    id: speak_level
+    name: Speak Level
+    entity_category: diagnostic
+    min_value: 0
+    max_value: 100
+    step: 1
+    initial_value: 0
+    optimistic: true
+    # The local renderer reads this envelope; never fight its blink/mouth timers.
+
+  - platform: template
+    id: volume
+    name: Volumen
+    min_value: 0
+    # Hard ceiling: the NS4150B amp saturates above ~80, so cap it there.
+    max_value: 80
+    step: 5
+    initial_value: 80
+    optimistic: true
+    restore_value: true
+    on_value:
+      - speaker.volume_set:
+          id: va_speaker
+          volume: !lambda return x / 100.0f;
+
+button:
+  - platform: template
+    id: talk_button
+    name: Hablar
+    on_press:
+      - script.execute: tap_to_talk
+  - platform: template
+    id: test_tone
+    name: Tono de prueba
+    on_press:
+      - script.execute: play_test_tone
+  - platform: restart
+    id: restart_button
+    name: Reiniciar
+
+api:
+  actions:
+    - action: show_card
+      # Variable names must not shadow component namespaces (speaker, text…).
+      variables:
+        title: string
+        presenter: string
+        room: string
+        time_slot: string
+      then:
+        - lvgl.label.update:
+            id: card_title
+            text: !lambda return title;
+        - lvgl.label.update:
+            id: card_speaker
+            text: !lambda return presenter;
+        - lvgl.label.update:
+            id: card_where
+            text: !lambda return room + "  ·  " + time_slot;
+        - lvgl.page.show: card_page
+        - script.execute: return_to_face_later
+
+    - action: show_qr
+      variables:
+        url: string
+        caption: string
+      then:
+        - lvgl.qrcode.update:
+            id: grid_qr
+            text: !lambda return url;
+        - lvgl.label.update:
+            id: qr_caption
+            text: !lambda |-
+              if (caption.empty()) return std::string("La grilla, en tu celu");
+              return caption;
+        - lvgl.page.show: qr_page
+        - script.execute: return_to_face_later
+
+    - action: set_volume
+      variables:
+        level: int
+      then:
+        - number.set:
+            id: volume
+            value: !lambda return level;
+        - script.execute: show_volume
+
+    - action: show_text
+      variables:
+        body: string
+      then:
+        - lvgl.label.update:
+            id: text_body
+            text: !lambda return body;
+        - lvgl.page.show: text_page
+        - script.execute: return_to_face_later

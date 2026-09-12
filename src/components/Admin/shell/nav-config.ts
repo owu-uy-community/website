@@ -6,6 +6,7 @@ import {
   LayoutGrid,
   Map,
   Monitor,
+  Bot,
   Music2,
   PenLine,
   Settings,
@@ -52,6 +53,7 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { title: "Pantalla", href: "/admin/screen", icon: Monitor, keywords: ["obs", "escenas", "stream"] },
       { title: "Launchpad", href: "/admin/launchpad", icon: Music2, keywords: ["sonidos", "soundboard"] },
+      { title: "Companion lab", href: "/admin/companion", icon: Bot, keywords: ["owy", "emulador", "device", "debug"] },
     ],
   },
   {
@@ -105,6 +107,7 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   attendees: "Asistentes",
   screen: "Pantalla",
   launchpad: "Launchpad",
+  companion: "Companion lab",
   settings: "Ajustes",
   communities: "Comunidades",
   events: "Eventos",

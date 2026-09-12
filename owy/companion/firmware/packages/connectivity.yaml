@@ -1,0 +1,44 @@
+# Wi-Fi, native API (the bridge connects here), OTA, USB provisioning.
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  # No modem sleep: it adds latency/loss to the audio stream and makes the
+  # device miss ARP/first packets (EHOSTUNREACH from the bridge).
+  power_save_mode: none
+  # Fallback hotspot + captive portal when the venue Wi-Fi is not configured yet.
+  ap:
+    ssid: Owy Companion
+    password: !secret ap_password
+
+captive_portal:
+
+# Provision Wi-Fi over the USB port (web.esphome.io) without reflashing.
+improv_serial:
+
+api:
+  encryption:
+    key: !secret api_key
+  # Never reboot because "no client connected": the bridge may be down for a while.
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+mdns:
+
+web_server:
+  port: 80
+  version: 3
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      id: ip_address
+      name: IP
+      on_value:
+        - lvgl.label.update:
+            id: settings_ip
+            text: !lambda return x;

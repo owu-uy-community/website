@@ -1,0 +1,344 @@
+# One shared I2S bus: wake word -> capture -> playback -> wake word.
+# Every entry/exit path uses these scripts: touch, errors, cancellation,
+# connection loss and the hardware-test tone.
+globals:
+  - id: va_phase
+    type: int
+    restore_value: false
+    initial_value: "10"
+  - id: turn_pending
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: audio_recovering
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: follow_up_active
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+binary_sensor:
+  # The bridge waits for this acknowledgment before TTS_START/audio.
+  - platform: template
+    id: playback_ready
+    name: Playback Ready
+    entity_category: diagnostic
+    lambda: |-
+      return id(va_phase) == 3 && !id(audio_recovering) && !id(mic_privacy).state &&
+             id(mic).is_stopped() && !id(mww).is_running();
+
+text_sensor:
+  - platform: template
+    id: audio_state
+    name: Audio State
+    entity_category: diagnostic
+    update_interval: 250ms
+    lambda: |-
+      if (id(mic_privacy).state) {
+        if (!id(mic).is_stopped() || id(mww).is_running() || id(va).is_running()) return {"muting"};
+        return {"privacy"};
+      }
+      if (id(audio_recovering)) return {"recovering"};
+      if (id(companion).tracker.calibrating() && id(va_phase) != 11) return {"calibrating"};
+      if (id(play_companion_feedback).is_running()) return {"feedback"};
+      if (!(id(va).get_api_connection() != nullptr)) return {"offline"};
+      if (id(turn_pending)) return {"preparing"};
+      if (id(va_phase) == 11) return {"error"};
+      if (id(va).is_running()) {
+        if (id(va_phase) == 4) return {"speaking"};
+        if (id(va_phase) == 3) return {"thinking"};
+        return id(follow_up_active) ? std::string("follow_up") : std::string("listening");
+      }
+      if (!id(va_speaker).is_stopped()) return {"draining"};
+      if (id(mww).is_running() && id(mic).is_running()) return {"wake_word"};
+      return {"idle"};
+
+micro_wake_word:
+  id: mww
+  microphone:
+    microphone: mic
+  stop_after_detection: true
+  task_stack_in_psram: true
+  vad:
+  models:
+    - model: okay_nabu
+      id: okay_nabu
+  on_wake_word_detected:
+    - if:
+        condition:
+          lambda: return !id(mic_privacy).state && !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) && !id(play_companion_feedback).is_running() && !id(play_test_tone).is_running();
+        then:
+          - logger.log: "Wake word accepted"
+          - script.execute: start_listening
+
+voice_assistant:
+  id: va
+  microphone:
+    microphone: mic
+  speaker: va_speaker
+  micro_wake_word: mww
+  use_wake_word: false
+  noise_suppression_level: 2
+  auto_gain: 31dBFS
+  volume_multiplier: 2.0
+
+  on_client_connected:
+    - script.execute: resume_wake_word
+  on_client_disconnected:
+    - script.execute: recover_audio
+  on_listening:
+    - lambda: id(va_phase) = 2;
+    - script.execute: apply_face
+    - script.execute: idle_listening_guard
+  on_stt_vad_start:
+    - script.stop: idle_listening_guard
+    - lambda: id(va_phase) = 2;
+    - script.execute: apply_face
+  on_stt_vad_end:
+    - script.stop: idle_listening_guard
+    - micro_wake_word.stop:
+    - lambda: id(va_phase) = 3;
+    - script.execute: apply_face
+  on_tts_start:
+    - lambda: id(va_phase) = 4;
+    - script.execute: apply_face
+  on_tts_stream_end:
+    - logger.log: "Playback complete; audio bus released"
+    - script.stop: turn_watchdog
+    - if:
+        condition:
+          lambda: return !id(mic_privacy).state && id(continuous_conversation).state && !id(audio_recovering) && id(va_phase) == 4;
+        then:
+          - lambda: |-
+              id(turn_pending) = true;
+              id(follow_up_active) = true;
+          - script.execute: follow_up_listening
+        else:
+          - script.execute: resume_wake_word
+  on_end:
+    # RUN_END can precede the last audible sample. The script waits for BOTH
+    # voice_assistant IDLE and speaker STOPPED.
+    - script.execute: resume_wake_word
+  on_error:
+    - script.execute: recover_audio
+
+script:
+  - id: tap_to_talk
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: return id(mic_privacy).state;
+          then:
+            - script.execute: open_quick_controls
+          else:
+            - if:
+                condition:
+                  lambda: return id(va).is_running() || id(turn_pending) || !id(va_speaker).is_stopped() || id(play_companion_feedback).is_running() || id(play_test_tone).is_running();
+                then:
+                  - script.execute: cancel_turn
+                else:
+                  - script.execute: start_listening
+
+  - id: start_listening
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: return !id(companion).tracker.calibrating() && !id(mic_privacy).state && (id(va).get_api_connection() != nullptr) && !id(audio_recovering) && !id(va).is_running() && !id(play_companion_feedback).is_running() && !id(play_test_tone).is_running();
+          then:
+            - script.stop: resume_wake_word
+            - lambda: id(turn_pending) = true;
+            - micro_wake_word.stop:
+            - script.execute: wake_display
+            - lvgl.page.show: face_page
+            - wait_until:
+                condition:
+                  lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+                timeout: 3s
+            # wait_until continues on timeout: always recheck the condition.
+            - if:
+                condition:
+                  lambda: return !id(mic_privacy).state && (id(va).get_api_connection() != nullptr) && !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+                then:
+                  # The shared bus must stay exclusive during the cue too.
+                  - script.execute: play_listening_chime
+                  - script.wait: play_listening_chime
+                  - if:
+                      condition:
+                        lambda: return !id(listening_chime_ok) || !id(va_speaker).is_stopped() || id(va).get_api_connection() == nullptr;
+                      then:
+                        - script.execute: recover_audio
+                  # Recovery stops this script; only a successful cue reaches here.
+                  - lambda: |-
+                      id(turn_pending) = false;
+                      id(va_phase) = 2;
+                  - script.execute: apply_face
+                  - voice_assistant.start:
+                      silence_detection: true
+                  - script.execute: turn_watchdog
+                else:
+                  - script.execute: recover_audio
+          else:
+            - if:
+                condition:
+                  not:
+                    voice_assistant.connected:
+                then:
+                  - lambda: id(va_phase) = 10;
+                  - script.execute: apply_face
+
+  # Keep ESPHome's immediate continue_conversation flag OFF. This explicit
+  # handoff leaves room for the cue and verifies driver shutdown before capture.
+  - id: follow_up_listening
+    mode: restart
+    then:
+      - script.stop: resume_wake_word
+      - delay: 50ms
+      - wait_until:
+          condition:
+            lambda: return !id(va).is_running() && id(va_speaker).is_stopped();
+          timeout: 3s
+      - if:
+          condition:
+            lambda: return !id(mic_privacy).state && id(continuous_conversation).state && !id(audio_recovering) && id(va).get_api_connection() != nullptr && !id(va).is_running() && id(va_speaker).is_stopped();
+          then:
+            - logger.log: "Follow-up listening; no wake word needed"
+            - script.execute: start_listening
+          else:
+            - script.execute: recover_audio
+
+  - id: resume_wake_word
+    mode: restart
+    then:
+      # on_tts_stream_end fires immediately BEFORE the driver changes to IDLE.
+      - delay: 50ms
+      - wait_until:
+          condition:
+            lambda: return !id(va).is_running() && id(va_speaker).is_stopped();
+          timeout: 90s
+      - if:
+          condition:
+            lambda: return !id(companion).tracker.calibrating() && !id(turn_pending) && !id(audio_recovering) && !id(va).is_running() && id(va_speaker).is_stopped() && !id(play_companion_feedback).is_running() && !id(play_test_tone).is_running();
+          then:
+            - script.stop: turn_watchdog
+            - lambda: |-
+                id(follow_up_active) = false;
+                id(va_phase) = (id(va).get_api_connection() != nullptr) ? 1 : 10;
+            - script.execute: apply_face
+            - if:
+                condition:
+                  lambda: return !id(mic_privacy).state && (id(va).get_api_connection() != nullptr) && id(wake_word_enabled).state && !id(mww).is_running();
+                then:
+                  - micro_wake_word.start:
+                  - logger.log: "Wake word re-armed"
+
+  - id: cancel_turn
+    mode: single
+    then:
+      - script.stop: start_listening
+      - script.stop: follow_up_listening
+      - if:
+          condition:
+            voice_assistant.is_running:
+          then:
+            # ESPHome 2026.8 request_stop() does not stop raw-speaker playback.
+            # Its public ERROR handler signals the bridge and stops capture.
+            - lambda: |-
+                esphome::api::VoiceAssistantEventResponse event;
+                event.event_type = esphome::api::enums::VOICE_ASSISTANT_ERROR;
+                auto &code = event.data.emplace_back();
+                code.name = esphome::StringRef("code");
+                code.value = esphome::StringRef("companion-cancelled");
+                auto &message = event.data.emplace_back();
+                message.name = esphome::StringRef("message");
+                message.value = esphome::StringRef("Conversación cancelada");
+                id(va).on_event(event);
+      - script.execute: recover_audio
+
+  - id: recover_audio
+    mode: restart
+    then:
+      - script.stop: start_listening
+      - script.stop: follow_up_listening
+      - script.stop: play_listening_chime
+      - script.stop: play_companion_feedback
+      - script.stop: play_soft_cue
+      - script.stop: output_test_tone
+      - script.stop: resume_wake_word
+      - script.stop: turn_watchdog
+      - script.stop: idle_listening_guard
+      - script.stop: play_test_tone
+      - lambda: |-
+          id(turn_pending) = false;
+          id(follow_up_active) = false;
+          id(audio_recovering) = true;
+          id(va_phase) = 11;
+      - script.execute: apply_face
+      - micro_wake_word.stop:
+      - voice_assistant.stop:
+      - speaker.stop: va_speaker
+      - delay: 200ms
+      - wait_until:
+          condition:
+            lambda: return !id(va).is_running() && !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+          timeout: 5s
+      - lambda: id(audio_recovering) = false;
+      - if:
+          condition:
+            lambda: return !id(va).is_running() && !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+          then:
+            # Quiescence is successful even when calibration intentionally blocks
+            # wake re-arm. Do not leave the old error phase latched until it ends.
+            - lambda: |-
+                id(va_phase) = (id(va).get_api_connection() != nullptr) ? 1 : 10;
+            - script.execute: apply_face
+            - script.execute: resume_wake_word
+          else:
+            - logger.log:
+                level: ERROR
+                format: "Audio recovery timed out; tap to retry"
+
+  # Local backup for the bridge's normal 8 s silent completion. Never leave
+  # the mic open for 90 s if a stop message or the connection stalls. A speech
+  # acknowledgment cancels this guard, so a spoken turn may continue normally.
+  - id: idle_listening_guard
+    mode: restart
+    then:
+      - delay: 9s
+      - if:
+          condition:
+            lambda: return id(va).is_running() && id(va_phase) == 2;
+          then:
+            - logger.log:
+                level: WARN
+                format: "Idle listening guard: bridge did not close the silent window"
+            - script.execute: cancel_turn
+
+  # Also covers a bridge that stays connected but hangs after speech starts.
+  - id: turn_watchdog
+    mode: restart
+    then:
+      - delay: 90s
+      - logger.log:
+          level: WARN
+          format: "Voice turn timed out; recovering audio"
+      - script.execute: cancel_turn
+
+interval:
+  # Repair a missed idle/error callback without restarting inference during
+  # capture, playback, a tone or a pending handoff.
+  - interval: 1s
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return !id(mic_privacy).state && (id(va).get_api_connection() != nullptr) && id(wake_word_enabled).state &&
+                     !id(va).is_running() && !id(mww).is_running() &&
+                     id(va_speaker).is_stopped() && !id(turn_pending) &&
+                     !id(companion).tracker.calibrating() && !id(audio_recovering) && !id(resume_wake_word).is_running() &&
+                     !id(play_test_tone).is_running() && !id(play_companion_feedback).is_running();
+          then:
+            - script.execute: resume_wake_word

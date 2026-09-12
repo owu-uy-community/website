@@ -1,0 +1,888 @@
+# The face (LVGL 9). Brand palette: black, cream 0xFBF5E7, yellow 0xF5BB03,
+# blue 0x0162C8. Pages: face / card / qr / text / pin / settings.
+#
+# Expressions are driven by `show_face(state)`; the voice pipeline sets them
+# through `apply_face` (voice.yaml) and the bridge through the `face_state`
+# select (controls.yaml). companion_model.h is the only animated-geometry owner.
+
+font:
+  - file: "../../../public/fonts/organic-stencil.ttf"
+    id: font_brand
+    size: 32
+    bpp: 4
+    glyphs: "owy."
+  - file: "gfonts://Montserrat"
+    id: font_20
+    size: 20
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+  - file: "gfonts://Montserrat@700"
+    id: font_28_bold
+    size: 28
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+  - file: "gfonts://Montserrat@700"
+    id: font_40_bold
+    size: 40
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+
+globals:
+  - id: current_face
+    type: std::string
+    restore_value: false
+    initial_value: '"offline"'
+  - id: pin_entry
+    type: std::string
+    restore_value: false
+    initial_value: '""'
+
+lvgl:
+  id: ui
+  displays:
+    - amoled
+  touchscreens:
+    - touch
+  buffer_size: 25%
+  refresh_interval: 16ms
+  color_depth: 16
+  bg_color: 0x000000
+  bottom_layer:
+    bg_color: 0x000000
+    bg_opa: COVER
+  default_font: font_20
+  resume_on_input: true
+  on_idle:
+    - timeout: 120s
+      then:
+        - if:
+            condition:
+              lambda: return !id(va).is_running() && !id(turn_pending) && id(va_speaker).is_stopped();
+            then:
+              - lambda: id(display_dimmed) = true;
+              - light.turn_on:
+                  id: screen_light
+                  brightness: 15%
+              - lvgl.pause:
+
+  pages:
+    # ── Face ──────────────────────────────────────────────────────────────
+    - id: face_page
+      bg_color: 0x000000
+      widgets:
+        - obj:
+            id: brow_left
+            align: CENTER
+            x: -94
+            y: -150
+            width: 48
+            height: 12
+            radius: 3
+            bg_color: 0xF5BB03
+            border_width: 0
+        - obj:
+            id: brow_right
+            align: CENTER
+            x: 94
+            y: -150
+            width: 48
+            height: 12
+            radius: 3
+            bg_color: 0x0162C8
+            border_width: 0
+        - obj:
+            id: eye_left
+            align: CENTER
+            x: -89
+            y: -24
+            width: 152
+            height: 156
+            radius: 58
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - obj:
+                  id: pupil_left
+                  align: CENTER
+                  width: 44
+                  height: 54
+                  radius: 20
+                  bg_color: 0x000000
+                  border_width: 0
+                  pad_all: 0
+        - obj:
+            id: eye_right
+            align: CENTER
+            x: 89
+            y: -24
+            width: 152
+            height: 156
+            radius: 58
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - obj:
+                  id: pupil_right
+                  align: CENTER
+                  width: 44
+                  height: 54
+                  radius: 20
+                  bg_color: 0x000000
+                  border_width: 0
+                  pad_all: 0
+        - obj:
+            id: mouth
+            align: CENTER
+            y: 116
+            width: 100
+            height: 28
+            radius: 18
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - obj:
+                  id: smile_cutout
+                  align: CENTER
+                  y: -8
+                  width: 58
+                  height: 18
+                  radius: 12
+                  bg_color: 0x000000
+                  border_width: 0
+                  pad_all: 0
+        - obj:
+            id: cheek_left
+            align: CENTER
+            x: -151
+            y: 84
+            width: 30
+            height: 14
+            radius: 4
+            bg_color: 0xF5BB03
+            border_width: 0
+            hidden: true
+        - obj:
+            id: cheek_right
+            align: CENTER
+            x: 151
+            y: 84
+            width: 30
+            height: 14
+            radius: 4
+            bg_color: 0x0162C8
+            border_width: 0
+            hidden: true
+        - obj:
+            id: think_dots
+            align: CENTER
+            y: 168
+            width: 70
+            height: 14
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            hidden: true
+            widgets:
+              - obj:
+                  id: think_dot_0
+                  align: CENTER
+                  x: -24
+                  width: 10
+                  height: 10
+                  radius: 5
+                  bg_color: 0xF5BB03
+                  border_width: 0
+              - obj:
+                  id: think_dot_1
+                  align: CENTER
+                  width: 10
+                  height: 10
+                  radius: 5
+                  bg_color: 0x343126
+                  border_width: 0
+              - obj:
+                  id: think_dot_2
+                  align: CENTER
+                  x: 24
+                  width: 10
+                  height: 10
+                  radius: 5
+                  bg_color: 0x343126
+                  border_width: 0
+        # Non-text microphone glyph. Blue only during live capture, slashed
+        # yellow for privacy. Standby wake-word detection is explained in settings.
+        - obj:
+            id: capture_badge
+            align: CENTER
+            y: 174
+            width: 36
+            height: 40
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            hidden: true
+            scrollable: false
+            widgets:
+              - obj:
+                  id: capture_capsule
+                  align: TOP_MID
+                  y: 2
+                  width: 14
+                  height: 24
+                  radius: 7
+                  bg_color: 0x0162C8
+                  border_width: 0
+              - obj:
+                  align: CENTER
+                  y: 10
+                  width: 4
+                  height: 12
+                  bg_color: 0xFBF5E7
+                  border_width: 0
+              - obj:
+                  align: BOTTOM_MID
+                  y: -2
+                  width: 18
+                  height: 4
+                  radius: 2
+                  bg_color: 0xFBF5E7
+                  border_width: 0
+              - line:
+                  id: privacy_slash
+                  points:
+                    - 3, 3
+                    - 33, 33
+                  line_color: 0xF5BB03
+                  line_width: 5
+                  hidden: true
+
+        # One classifier owns press/move/release. No competing click/swipe
+        # callbacks: slow drags and out-and-back pets can never also start talk.
+        - obj:
+            id: tap_area
+            align: CENTER
+            width: 466
+            height: 466
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            clickable: true
+            scrollable: false
+            gesture_bubble: false
+            press_lock: true
+            on_press:
+              - lambda: id(companion).contact.begin(point.x, point.y, millis());
+            on_pressing:
+              - lambda: |-
+                  id(companion).contact.move(point.x, point.y);
+                  if (id(companion).contact.hold(millis()) == owy::Gesture::HOLD) {
+                    id(last_gesture).publish_state("hold");
+                    lv_indev_wait_release(lv_indev_active());
+                    id(open_quick_controls).execute();
+                  }
+            on_release:
+              - lambda: |-
+                  auto gesture = id(companion).contact.end(point.x, point.y, millis());
+                  if (gesture != owy::Gesture::NONE) id(last_gesture).publish_state(owy::gesture_name(gesture));
+                  switch (gesture) {
+                    case owy::Gesture::TAP: id(tap_to_talk).execute(); break;
+                    case owy::Gesture::PET:
+                      id(companion).delight(millis());
+                      id(play_companion_feedback).execute();
+                      break;
+                    case owy::Gesture::UP:
+                    case owy::Gesture::HOLD: id(open_quick_controls).execute(); break;
+                    case owy::Gesture::LEFT: id(open_companion_help).execute(); break;
+                    case owy::Gesture::RIGHT: id(open_public_qr).execute(); break;
+                    default: break;
+                  }
+            on_press_lost:
+              - lambda: id(companion).contact.cancel();
+
+    # ── Card just filed ───────────────────────────────────────────────────
+    - id: card_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 70
+            text: "quedó en la grilla"
+            text_color: 0xF5BB03
+        - label:
+            id: card_title
+            align: CENTER
+            y: -40
+            width: 340
+            long_mode: WRAP
+            text_align: CENTER
+            text: ""
+            text_color: 0xFBF5E7
+            text_font: font_28_bold
+        - label:
+            id: card_speaker
+            align: CENTER
+            y: 40
+            width: 340
+            long_mode: DOT
+            text_align: CENTER
+            text: ""
+            text_color: 0xFBF5E7
+        - label:
+            id: card_where
+            align: CENTER
+            y: 90
+            width: 340
+            text_align: CENTER
+            text: ""
+            text_color: 0x0162C8
+            text_font: font_28_bold
+        - label:
+            align: BOTTOM_MID
+            y: -60
+            text: "✓"
+            text_color: 0xF5BB03
+            text_font: font_40_bold
+        - obj:
+            align: CENTER
+            width: 466
+            height: 466
+            bg_opa: TRANSP
+            border_width: 0
+            clickable: true
+            on_click:
+              - lvgl.page.show: face_page
+
+    # ── QR to the public grid ─────────────────────────────────────────────
+    - id: qr_page
+      bg_color: 0x000000
+      widgets:
+        - qrcode:
+            id: grid_qr
+            align: CENTER
+            y: -20
+            size: 250
+            light_color: 0xFBF5E7
+            dark_color: 0x000000
+            text: "https://owu.uy/conf"
+        - label:
+            id: qr_caption
+            align: BOTTOM_MID
+            y: -56
+            width: 340
+            text_align: CENTER
+            text: "La grilla, en tu celu"
+            text_color: 0xF5BB03
+        - obj:
+            align: CENTER
+            width: 466
+            height: 466
+            bg_opa: TRANSP
+            border_width: 0
+            clickable: true
+            on_click:
+              - lvgl.page.show: face_page
+
+    # ── Free text ─────────────────────────────────────────────────────────
+    - id: text_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            id: text_body
+            align: CENTER
+            width: 360
+            long_mode: WRAP
+            text_align: CENTER
+            text: ""
+            text_color: 0xFBF5E7
+            text_font: font_28_bold
+        - obj:
+            align: CENTER
+            width: 466
+            height: 466
+            bg_opa: TRANSP
+            border_width: 0
+            clickable: true
+            on_click:
+              - lvgl.page.show: face_page
+
+    # ── Staff PIN ─────────────────────────────────────────────────────────
+    - id: pin_page
+      bg_color: 0x000000
+      widgets:
+        - label:
+            align: TOP_MID
+            y: 48
+            text: "PIN del staff"
+            text_color: 0xF5BB03
+        - label:
+            id: pin_entry_label
+            align: TOP_MID
+            y: 80
+            text: "_ _ _ _"
+            text_color: 0xFBF5E7
+            text_font: font_28_bold
+        - buttonmatrix:
+            id: pin_keypad
+            align: CENTER
+            y: 35
+            width: 290
+            height: 250
+            bg_color: 0x000000
+            border_width: 0
+            pad_all: 4
+            items:
+              bg_color: 0x1F1F1F
+              text_color: 0xFBF5E7
+              text_font: font_28_bold
+              radius: 14
+              pressed:
+                bg_color: 0x0162C8
+            rows:
+              - buttons:
+                  - id: pin_k1
+                    text: "1"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "1"
+                  - id: pin_k2
+                    text: "2"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "2"
+                  - id: pin_k3
+                    text: "3"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "3"
+              - buttons:
+                  - id: pin_k4
+                    text: "4"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "4"
+                  - id: pin_k5
+                    text: "5"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "5"
+                  - id: pin_k6
+                    text: "6"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "6"
+              - buttons:
+                  - id: pin_k7
+                    text: "7"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "7"
+                  - id: pin_k8
+                    text: "8"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "8"
+                  - id: pin_k9
+                    text: "9"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "9"
+              - buttons:
+                  - id: pin_kc
+                    text: "C"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "C"
+                  - id: pin_k0
+                    text: "0"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "0"
+                  - id: pin_kok
+                    text: "OK"
+                    on_click:
+                      - script.execute:
+                          id: pin_press
+                          key: "OK"
+        - button:
+            align: BOTTOM_MID
+            y: -22
+            width: 124
+            height: 40
+            radius: 20
+            bg_color: 0x1F1F1F
+            shadow_width: 0
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "volver"
+                  text_color: 0xFBF5E7
+            on_click:
+              - lambda: id(pin_entry).clear();
+              - lvgl.label.update:
+                  id: pin_entry_label
+                  text: "_ _ _ _"
+              - script.execute: open_quick_controls
+
+    # ── Settings (staff) ──────────────────────────────────────────────────
+    - id: settings_page
+      bg_color: 0x000000
+      widgets:
+        - obj:
+            align: CENTER
+            width: 330
+            height: 400
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            layout:
+              type: flex
+              flex_flow: column
+              flex_align_cross: center
+              pad_row: 8
+            widgets:
+              - label:
+                  text: "Configuración"
+                  text_color: 0xF5BB03
+                  text_font: font_28_bold
+              - label:
+                  id: settings_staff_status
+                  text: "Modo staff: OFF"
+                  text_color: 0xFBF5E7
+              - obj:
+                  width: 320
+                  height: 44
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: flex
+                    flex_flow: row
+                    flex_align_main: space_between
+                    flex_align_cross: center
+                  widgets:
+                    - label:
+                        text: "Mercado abierto"
+                        text_color: 0xFBF5E7
+                    - switch:
+                        id: sw_marketplace
+                        width: 64
+                        height: 32
+                        indicator:
+                          checked:
+                            bg_color: 0x0162C8
+                        on_value:
+                          - if:
+                              condition:
+                                lambda: return x;
+                              then:
+                                - switch.turn_on: marketplace_open
+                              else:
+                                - switch.turn_off: marketplace_open
+              - obj:
+                  width: 320
+                  height: 44
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: flex
+                    flex_flow: row
+                    flex_align_main: space_between
+                    flex_align_cross: center
+                  widgets:
+                    - label:
+                        text: "Modo silencioso"
+                        text_color: 0xFBF5E7
+                    - switch:
+                        id: sw_quiet
+                        width: 64
+                        height: 32
+                        indicator:
+                          checked:
+                            bg_color: 0x0162C8
+                        on_value:
+                          - if:
+                              condition:
+                                lambda: return x;
+                              then:
+                                - switch.turn_on: quiet_mode
+                              else:
+                                - switch.turn_off: quiet_mode
+              - obj:
+                  width: 320
+                  height: 44
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: flex
+                    flex_flow: row
+                    flex_align_main: space_between
+                    flex_align_cross: center
+                  widgets:
+                    - label:
+                        text: "Wake word"
+                        text_color: 0xFBF5E7
+                    - switch:
+                        id: sw_wake_word
+                        width: 64
+                        height: 32
+                        indicator:
+                          checked:
+                            bg_color: 0x0162C8
+                        on_value:
+                          - if:
+                              condition:
+                                lambda: return x;
+                              then:
+                                - switch.turn_on: wake_word_enabled
+                              else:
+                                - switch.turn_off: wake_word_enabled
+              - label:
+                  text: "Volumen"
+                  text_color: 0xF5BB03
+              - slider:
+                  id: volume_slider
+                  width: 280
+                  height: 16
+                  min_value: 0
+                  max_value: 80
+                  value: 80
+                  indicator:
+                    bg_color: 0x0162C8
+                  knob:
+                    bg_color: 0xFBF5E7
+                  on_release:
+                    - number.set:
+                        id: volume
+                        value: !lambda return x;
+              - label:
+                  text: "Brillo"
+                  text_color: 0xF5BB03
+              - slider:
+                  id: brightness_slider
+                  width: 280
+                  height: 16
+                  min_value: 10
+                  max_value: 100
+                  value: 80
+                  indicator:
+                    bg_color: 0x0162C8
+                  knob:
+                    bg_color: 0xFBF5E7
+                  on_release:
+                    - number.set:
+                        id: screen_brightness
+                        value: !lambda return x;
+              - label:
+                  id: settings_ip
+                  text: "sin IP"
+                  text_color: 0x8A8A8A
+              - obj:
+                  width: 320
+                  height: 48
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: flex
+                    flex_flow: row
+                    flex_align_main: space_evenly
+                    flex_align_cross: center
+                  widgets:
+                    - button:
+                        width: 90
+                        height: 40
+                        bg_color: 0x1F1F1F
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "Tono"
+                              text_color: 0xFBF5E7
+                        on_click:
+                          - script.execute: play_test_tone
+                    - button:
+                        width: 90
+                        height: 40
+                        bg_color: 0x1F1F1F
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "Reiniciar"
+                              text_color: 0xFBF5E7
+                        on_click:
+                          - button.press: restart_button
+                    - button:
+                        width: 90
+                        height: 40
+                        bg_color: 0xF5BB03
+                        widgets:
+                          - label:
+                              align: CENTER
+                              text: "Volver"
+                              text_color: 0x000000
+                        on_click:
+                          - lvgl.page.show: face_page
+
+script:
+  # Expression per state. Called by the face_state select (bridge) and apply_face (voice).
+  - id: show_face
+    mode: restart
+    parameters:
+      state: string
+    then:
+      - lambda: |-
+          id(current_face) = state;
+      - if:
+          condition:
+            lambda: return state == "listening" || state == "thinking" || state == "speaking";
+          then:
+            - lvgl.page.show: face_page
+      - lvgl.widget.hide: think_dots
+      - lvgl.widget.update:
+          id: eye_left
+          bg_color: !lambda |-
+            return lv_color_hex(state == "offline" ? 0x777368 : 0xFBF5E7);
+      - lvgl.widget.update:
+          id: eye_right
+          bg_color: !lambda |-
+            return lv_color_hex(state == "offline" ? 0x777368 : 0xFBF5E7);
+      - if:
+          condition:
+            lambda: return state == "thinking" && !id(mic_privacy).state;
+          then:
+            - lvgl.widget.show: think_dots
+      - lvgl.label.update:
+          id: face_hint
+          text: !lambda |-
+            if (id(mic_privacy).state) return std::string("micrófono apagado");
+            if (state == "offline") return std::string("sin conexión con Owy");
+            if (state == "listening") return std::string(id(follow_up_active) ? "¿algo más? te escucho" : "te escucho");
+            if (state == "thinking") return std::string("dejame pensar");
+            if (state == "speaking") return std::string("tocame para cancelar");
+            if (state == "error") return std::string("ups, probá de nuevo");
+            return std::string(id(wake_word_enabled).state ? "decí Okay Nabu o tocame" : "tocame y hablame");
+      - script.execute: animate_companion
+
+  # Voice pipeline phase (voice.yaml) → face.
+  - id: apply_face
+    mode: restart
+    then:
+      - lambda: |-
+          std::string face = "idle";
+          switch (id(va_phase)) {
+            case 2: face = "listening"; break;
+            case 3: face = "thinking"; break;
+            case 4: face = "speaking"; break;
+            case 10: face = "offline"; break;
+            case 11: face = "error"; break;
+            default: face = "idle";
+          }
+          id(show_face).execute(face);
+
+  - id: adjust_volume
+    mode: single
+    parameters:
+      delta: int
+    then:
+      - number.set:
+          id: volume
+          value: !lambda |-
+            float v = id(volume).state + delta;
+            if (v < 0) v = 0;
+            if (v > 80) v = 80;
+            return v;
+      - script.execute: show_volume
+
+  - id: show_volume
+    mode: restart
+    then:
+      - script.execute: sync_quick_controls
+
+  - id: return_to_face_later
+    mode: restart
+    then:
+      - delay: 12s
+      - lvgl.page.show: face_page
+
+  - id: pin_press
+    mode: queued
+    parameters:
+      key: string
+    then:
+      - lambda: |-
+          if (key == "C") {
+            id(pin_entry) = "";
+          } else if (key == "OK") {
+            if (id(pin_entry) == "${staff_pin}") {
+              id(pin_entry) = "";
+              id(staff_mode).turn_on();
+              id(pin_ok).execute();
+            } else {
+              id(pin_entry) = "";
+              id(pin_bad).execute();
+            }
+          } else if (id(pin_entry).size() < 8) {
+            id(pin_entry) += key;
+          }
+      - lvgl.label.update:
+          id: pin_entry_label
+          text: !lambda |-
+            if (id(pin_entry).empty()) return std::string("_ _ _ _");
+            return std::string(id(pin_entry).size(), '*');
+
+  - id: pin_ok
+    mode: single
+    then:
+      - lvgl.slider.update:
+          id: volume_slider
+          value: !lambda return static_cast<int>(id(volume).state);
+      - lvgl.widget.update:
+          id: sw_marketplace
+          state:
+            checked: !lambda return id(marketplace_open).state;
+      - lvgl.widget.update:
+          id: sw_quiet
+          state:
+            checked: !lambda return id(quiet_mode).state;
+      - lvgl.widget.update:
+          id: sw_wake_word
+          state:
+            checked: !lambda return id(wake_word_enabled).state;
+      - lvgl.page.show: settings_page
+
+  - id: pin_bad
+    mode: single
+    then:
+      - lvgl.label.update:
+          id: pin_entry_label
+          text: "PIN incorrecto"
+      - delay: 1200ms
+      - lvgl.label.update:
+          id: pin_entry_label
+          text: "_ _ _ _"
+
+touchscreen:
+  - id: !extend touch
+    on_touch:
+      - script.execute: wake_display

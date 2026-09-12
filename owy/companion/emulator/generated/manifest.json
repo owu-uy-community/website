@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "width": 466,
+  "height": 466,
+  "color": "RGB565",
+  "esphome": "2026.8.2",
+  "lvgl": "9.5.0",
+  "emscripten": "6.0.9",
+  "pages": [
+    "face_page",
+    "card_page",
+    "qr_page",
+    "text_page",
+    "pin_page",
+    "settings_page",
+    "quick_page",
+    "calibration_page",
+    "help_page"
+  ],
+  "objects": 120,
+  "sceneHash": "474ae823fd91fbfe1ea9e613ab35b0c73f9c1a1e8966a2203f8aa4d41b553d1c",
+  "fontsHash": "84612a17b9d270fc087537a5c7ddedb904275498545faef80f3cea3f18bc433d",
+  "sourceHashes": {
+    "companion_model.h": "f40e7ea588cd0cafc6848e8137557f7f576c8448d794c8c03c085f4342f8f840",
+    "companion_motion.h": "91cb07a936be6db2d3dde2ebce8ad664fe18569b245c8f93a1d0af55acec89ba",
+    "companion_lvgl.h": "e3eb36cd227e85be68bcc0257f87c219acf160a022d08a6249df0827994ea0fe",
+    "companion_sound.h": "7606317ae9d927a233dc7ed25c11b01b00ffdd67c5b23c84ecb81c70424faca3",
+    "packages/face.yaml": "0b454a5405f360a7966e18575e5afcd145687875ea7de23209a3e5a1ab149971",
+    "packages/companion.yaml": "7789e2e31e2a573280fab895861404fcb0ce7265753afe8e62138e9f885110d3",
+    "packages/voice.yaml": "824c7b7ae0c37e9c470f6c3b9137438b71bcddeb3cc895826d303c566dc15ff4",
+    "packages/controls.yaml": "db568b36e9d4268431e2cdfefd7a31d7d45fff0713a3952f795233ea624e1367"
+  },
+  "version": "2a2f2af4327efb98"
+}

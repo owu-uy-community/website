@@ -16,16 +16,31 @@
     "build": "eve build",
     "start": "eve start",
     "eval": "eve eval",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "companion:dev": "tsx watch companion/bridge/src/main.ts",
+    "companion:start": "tsx companion/bridge/src/main.ts",
+    "companion:text": "tsx companion/bridge/src/cli/text.ts",
+    "companion:test": "vitest run --config companion/bridge/vitest.config.ts",
+    "companion:tools": "tsx companion/bridge/src/cli/tools.ts",
+    "companion:probe": "tsx companion/bridge/src/cli/probe.ts",
+    "companion:audio-check": "tsx companion/bridge/src/cli/audio-check.ts",
+    "companion:driver-test": "node companion/firmware/tests/speaker-startup.mjs && node companion/firmware/tests/voice-buffer.mjs",
+    "companion:interaction-test": "node companion/firmware/tests/companion.mjs"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.63",
     "@orpc/client": "1.14.4",
-    "ai": "^7.0.58",
+    "ai": "^7.0.66",
+    "esphome-client": "2.0.0",
     "eve": "^0.38.3",
+    "ws": "^8.21.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "24.x",
-    "typescript": "^6.0.3"
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.0"
   }
 }

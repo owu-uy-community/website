@@ -1,0 +1,234 @@
+# Audio: ES7210 ADC (dual MEMS mics) in, ES8311 DAC + NS4150B amp out.
+#
+# ONE I2S bus that carries MCLK, time-shared by mic and speaker. ESPHome's I2S
+# bus is a mutex (mic and speaker never run at once) and voice is half-duplex
+# anyway, so a single bus is exactly what every working ES7210+ES8311 config
+# uses (ESP32-S3-BOX-3, the community AMOLED-1.75 voice satellites).
+#
+# Do NOT split this into two buses sharing pins (the devices.esphome.io
+# example does): the ES7210 is an I2S slave that needs MCLK on its pin, and
+# with two buses only the speaker port drives MCLK — the mic then streams
+# pure silence except right after the speaker played (seen on hardware).
+# Do NOT set `timeout: never` on the speaker either: it would hold the bus
+# forever and the mic could never take it ("Parent bus is busy").
+
+i2s_audio:
+  - id: i2s_bus
+    i2s_lrclk_pin:
+      number: GPIO45
+      ignore_strapping_warning: true
+    i2s_bclk_pin: GPIO9
+    i2s_mclk_pin: ${i2s_mclk_pin}
+
+audio_adc:
+  - platform: es7210
+    id: mic_adc
+    i2c_id: bus_a
+    address: 0x40
+    bits_per_sample: 16bit
+    sample_rate: ${audio_sample_rate}
+    mic_gain: 30db
+
+microphone:
+  - platform: i2s_audio
+    id: mic
+    i2s_audio_id: i2s_bus
+    adc_type: external
+    i2s_din_pin: GPIO10
+    sample_rate: ${audio_sample_rate}
+    bits_per_sample: 16bit
+    # Both MEMS mics come interleaved on SDOUT1; voice_assistant and
+    # micro_wake_word take channel 0 (their default).
+    channel: stereo
+    pdm: false
+    on_data:
+      - lambda: id(companion).audio(x.data(), x.size(), millis());
+
+audio_dac:
+  - platform: es8311
+    id: speaker_dac
+    i2c_id: bus_a
+    address: 0x18
+    bits_per_sample: 16bit
+    sample_rate: ${audio_sample_rate}
+
+speaker:
+  - platform: i2s_audio
+    id: va_speaker
+    i2s_audio_id: i2s_bus
+    dac_type: external
+    i2s_dout_pin: GPIO8
+    audio_dac: speaker_dac
+    sample_rate: ${audio_sample_rate}
+    bits_per_sample: 16bit
+    channel: left
+    # Jitter headroom is in the PSRAM voice receive buffer, not this shared-bus
+    # driver ring. Keep the low-latency ring and original release behavior.
+    buffer_duration: 100ms
+    # timeout left at its default (500ms) on purpose: the speaker must release
+    # the shared bus after playback so the mic can start.
+
+esphome:
+  on_boot:
+    # number.volume only calls speaker.volume_set on change; without this the
+    # ES8311 stays at its hardware default (near silent) until someone moves it.
+    - priority: 200
+      then:
+        - speaker.volume_set:
+            id: va_speaker
+            volume: !lambda return std::min(80.0f, id(volume).state) / 100.0f;
+
+switch:
+  - platform: gpio
+    id: amp_enable
+    name: Amplificador
+    internal: true
+    pin: GPIO46
+    restore_mode: RESTORE_DEFAULT_ON
+
+globals:
+  - id: listening_chime_ok
+    type: bool
+    restore_value: false
+    initial_value: "true"
+  - id: feedback_at
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: feedback_played
+    type: bool
+    restore_value: false
+    initial_value: "false"
+
+script:
+  # Called only while start_listening owns the handoff and both mic consumers
+  # are stopped. 80 ms / 2560 bytes fits the speaker ring in one write.
+  - id: play_listening_chime
+    mode: single
+    then:
+      - lambda: id(listening_chime_ok) = true;
+      - if:
+          condition:
+            lambda: return id(listening_chime).state && !id(quiet_mode).state && id(volume).state > 0;
+          then:
+            - script.execute:
+                id: play_soft_cue
+                kind: 0
+            - script.wait: play_soft_cue
+            - lambda: 'ESP_LOGD("owy.audio", "Listening chime queued: %s", id(listening_chime_ok) ? "ok" : "failed");'
+
+  # One bounded renderer for every local sound; caller MUST own the bus.
+  - id: play_soft_cue
+    mode: single
+    parameters:
+      kind: int
+    then:
+      - lambda: |-
+          id(listening_chime_ok)=false;
+          id(va_speaker).start();
+      - wait_until:
+          condition:
+            speaker.is_playing: va_speaker
+          timeout: 2s
+      - if:
+          condition:
+            lambda: return id(va_speaker).is_running();
+          then:
+            - lambda: |-
+                static_assert(${audio_sample_rate} == 16000, "Cue PCM requires 16 kHz");
+                static uint8_t cue[owy::CUE_BYTES];
+                static int cached_kind=-1;
+                if (cached_kind!=kind) { owy::make_cue(cue,kind); cached_kind=kind; }
+                id(listening_chime_ok)=id(va_speaker).play(cue,sizeof(cue))==sizeof(cue);
+            - speaker.finish: va_speaker
+      - wait_until:
+          condition:
+            speaker.is_stopped: va_speaker
+          timeout: 2s
+      - lambda: id(listening_chime_ok) = id(listening_chime_ok) && id(va_speaker).is_stopped();
+
+  # Never queue stale reactions; voice, privacy and cancellation have priority.
+  - id: play_companion_feedback
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return id(interaction_sounds).state && !id(quiet_mode).state && !id(mic_privacy).state &&
+                !id(reduced_motion).state && id(volume).state>0 && !id(va).is_running() &&
+                !id(turn_pending) && !id(audio_recovering) && !id(play_test_tone).is_running() &&
+                id(va_speaker).is_stopped() && !id(ui).is_paused() &&
+                lv_display_get_screen_active(id(ui).get_disp())==id(face_page)->obj &&
+                (!id(feedback_played) || uint32_t(millis()-id(feedback_at))>=4000);
+          then:
+            - lambda: |-
+                id(feedback_at)=millis();
+                id(feedback_played)=true;
+                ESP_LOGD("owy.audio", "Interaction cue accepted");
+            - script.stop: resume_wake_word
+            - micro_wake_word.stop:
+            - wait_until:
+                condition:
+                  lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+                timeout: 500ms
+            - if:
+                condition:
+                  lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+                then:
+                  - script.execute:
+                      id: play_soft_cue
+                      kind: 1
+                  - script.wait: play_soft_cue
+                  - lambda: 'ESP_LOGD("owy.audio", "Interaction cue queued: %s", id(listening_chime_ok) ? "ok" : "failed");'
+                  - if:
+                      condition:
+                        lambda: return !id(listening_chime_ok);
+                      then:
+                        - script.execute: recover_audio
+                else:
+                  - script.execute: recover_audio
+            - script.execute: resume_wake_word
+
+  # Phase 1 hardware check: a 1 kHz tone through the speaker.
+  - id: play_test_tone
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: return !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) && !id(play_companion_feedback).is_running();
+          then:
+            - script.stop: resume_wake_word
+            - micro_wake_word.stop:
+            - wait_until:
+                condition:
+                  lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+                timeout: 3s
+            - if:
+                condition:
+                  lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();
+                then:
+                  - script.execute: output_test_tone
+                  - script.wait: output_test_tone
+            - script.execute: resume_wake_word
+
+  - id: output_test_tone
+    mode: single
+    then:
+      - script.execute:
+          id: play_soft_cue
+          kind: 2
+      - script.wait: play_soft_cue
+      - if:
+          condition:
+            lambda: return !id(listening_chime_ok);
+          then:
+            - script.execute: recover_audio
+
+sensor:
+  - platform: template
+    id: mic_level
+    name: Nivel de micrófono
+    internal: true
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: never
