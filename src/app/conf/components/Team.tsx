@@ -15,7 +15,7 @@ type TeamMember = {
  * OWU CONF 2026 team, alphabetical by first name. Background-removed portraits
  * live in public/images/conf/staff/ (identities validated against the designer mockup).
  */
-const TEAM_2026: TeamMember[] = [
+export const TEAM_2026: TeamMember[] = [
   {
     firstname: "Agustín",
     lastname: "Tornielli",
@@ -100,7 +100,7 @@ const SHAPE_VARIANTS = ["blue", "yellow", "cream"] as const;
 function TileShape({ variant }: { variant: (typeof SHAPE_VARIANTS)[number] }) {
   if (variant === "blue") {
     return (
-      <svg aria-hidden="true" className="absolute -left-[2%] top-[22%] w-[86%]" fill="none" viewBox="0 0 190 96">
+      <svg aria-hidden="true" className="absolute top-[22%] -left-[2%] w-[86%]" fill="none" viewBox="0 0 190 96">
         <polygon fill="#0162C8" points="0,0 190,0 95,96" />
       </svg>
     );
@@ -108,13 +108,13 @@ function TileShape({ variant }: { variant: (typeof SHAPE_VARIANTS)[number] }) {
 
   if (variant === "yellow") {
     return (
-      <svg aria-hidden="true" className="absolute -right-[2%] top-[13%] h-[80%]" fill="none" viewBox="0 0 100 200">
+      <svg aria-hidden="true" className="absolute top-[13%] -right-[2%] h-[80%]" fill="none" viewBox="0 0 100 200">
         <polygon fill="#F5BB03" points="100,0 100,200 0,100" />
       </svg>
     );
   }
 
-  return <div aria-hidden="true" className="absolute -left-[2%] -top-[2%] h-[84%] w-[40%] bg-[#FBF5E7]" />;
+  return <div aria-hidden="true" className="absolute -top-[2%] -left-[2%] h-[84%] w-[40%] bg-[#FBF5E7]" />;
 }
 
 export default function Team() {
@@ -123,7 +123,7 @@ export default function Team() {
       <SectionHeader eyebrow="¿QUIÉNES ESTÁN DETRÁS?" title="EQUIPO" />
 
       <Reveal delay={0.12} y={22}>
-        <p className="mt-6 max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
+        <p className="mt-6 max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
           El equipo de voluntarios de la comunidad que organiza La Meetup desde 2023.
         </p>
       </Reveal>
@@ -144,7 +144,7 @@ export default function Team() {
                   src={picture}
                 />
               </div>
-              <p className="mt-5 text-center font-display text-base font-bold uppercase leading-none text-[#F5BB03]">
+              <p className="font-display mt-5 text-center text-base leading-none font-bold text-[#F5BB03] uppercase">
                 {fullName}
               </p>
               <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{jobTitle}</p>

@@ -53,7 +53,7 @@ function ScaledFrame({ src, title }: { src: string; title: string }) {
   return (
     <div ref={box} className="relative aspect-video w-full overflow-hidden rounded-md bg-black">
       <iframe
-        className="pointer-events-none absolute left-0 top-0 h-[1080px] w-[1920px] origin-top-left border-0"
+        className="pointer-events-none absolute top-0 left-0 h-[1080px] w-[1920px] origin-top-left border-0"
         loading="lazy"
         src={src}
         style={{ transform: `scale(${scale})` }}
@@ -114,7 +114,7 @@ export default function ScenesClient() {
       eventId: live.eventId ?? selected?.id ?? null,
     });
 
-  const liveParams = parseSceneParams(live.scene, live.params) as Record<string, string | boolean>;
+  const liveParams = parseSceneParams(live.scene, live.params) as Record<string, string | boolean | number>;
   const paramKeys = Object.keys(liveParams);
   const stageUrl = (path: string) => `${origin}${path}${transparent ? "?bg=transparent" : ""}`;
 
@@ -122,8 +122,8 @@ export default function ScenesClient() {
     <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Escenas Owy</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Escenas Owy</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
             Lo que muestra la pantalla grande. Cada escena es una página que OBS embebe como browser source (1920×1080).
           </p>
         </div>
@@ -173,7 +173,7 @@ export default function ScenesClient() {
           </CardHeader>
           <CardContent className="space-y-3">
             <ScaledFrame src="/owy/stage" title="Al aire" />
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+            <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-xs">
               <label className="flex items-center gap-2">
                 <Switch checked={transparent} onCheckedChange={setTransparent} />
                 Fondo transparente en las URLs (overlay sobre cámara)
@@ -194,7 +194,7 @@ export default function ScenesClient() {
             </CardHeader>
             <CardContent>
               {paramKeys.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Esta escena no tiene parámetros.</p>
+                <p className="text-muted-foreground text-sm">Esta escena no tiene parámetros.</p>
               ) : (
                 <form
                   key={live.scene}
@@ -204,7 +204,9 @@ export default function ScenesClient() {
                     const form = new FormData(event.currentTarget);
                     const params = Object.fromEntries(
                       paramKeys.map((key) =>
-                        typeof liveParams[key] === "boolean" ? [key, form.get(key) === "on"] : [key, form.get(key) ?? ""]
+                        typeof liveParams[key] === "boolean"
+                          ? [key, form.get(key) === "on"]
+                          : [key, form.get(key) ?? ""]
                       )
                     );
                     take(live.scene, params);
@@ -218,7 +220,12 @@ export default function ScenesClient() {
                       {typeof liveParams[key] === "boolean" ? (
                         <Switch defaultChecked={liveParams[key]} id={`param-${key}`} name={key} />
                       ) : (
-                        <Input defaultValue={liveParams[key]} id={`param-${key}`} name={key} />
+                        <Input
+                          defaultValue={String(liveParams[key])}
+                          id={`param-${key}`}
+                          name={key}
+                          type={typeof liveParams[key] === "number" ? "number" : "text"}
+                        />
                       )}
                     </div>
                   ))}
@@ -256,7 +263,11 @@ export default function ScenesClient() {
                   setCaption("");
                 }}
               >
-                <Input placeholder="Texto para un lower third…" value={caption} onChange={(e) => setCaption(e.target.value)} />
+                <Input
+                  placeholder="Texto para un lower third…"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                />
                 <Button size="sm" type="submit" variant="secondary">
                   <Subtitles className="mr-1 h-4 w-4" /> Mostrar
                 </Button>
@@ -328,12 +339,12 @@ export default function ScenesClient() {
                   <div className="relative">
                     <ScaledFrame src={`/owy/stage/${id}?preview=1`} title={SCENES[id].title} />
                     {onAir && (
-                      <Badge className="absolute left-2 top-2 bg-red-600 text-white hover:bg-red-600">AL AIRE</Badge>
+                      <Badge className="absolute top-2 left-2 bg-red-600 text-white hover:bg-red-600">AL AIRE</Badge>
                     )}
                   </div>
                   <div>
                     <p className="font-medium">{SCENES[id].title}</p>
-                    <p className="text-xs text-muted-foreground">{SCENES[id].description}</p>
+                    <p className="text-muted-foreground text-xs">{SCENES[id].description}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button

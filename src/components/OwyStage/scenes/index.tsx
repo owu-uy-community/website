@@ -3,9 +3,7 @@
 import { useContext, useEffect, useState, type ComponentType } from "react";
 import { m } from "motion/react";
 
-import { SPONSORS_2026 } from "app/conf/components/Sponsors";
 import { EASE_OUT } from "app/conf/components/Reveal";
-import { CONF_DATES } from "app/lib/constants";
 import { useCountdownState } from "hooks/useCountdownState";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client, type StickyNote } from "lib/orpc";
@@ -15,49 +13,8 @@ import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import OwyFace from "./OwyFace";
-
-// ---------------------------------------------------------------------------
-// Small shared bits
-// ---------------------------------------------------------------------------
-
-/** Masked line rise from the /conf hero, at wall scale. */
-function Rise({ children, delay, className = "" }: { children: React.ReactNode; delay: number; className?: string }) {
-  return (
-    <span className={`block overflow-hidden pt-[0.05em] pb-[0.1em] ${className}`}>
-      <m.span
-        animate={{ y: 0, rotate: 0 }}
-        className="block origin-bottom-left"
-        initial={{ y: "110%", rotate: 3 }}
-        transition={{ duration: 0.8, delay, ease: EASE_OUT }}
-      >
-        {children}
-      </m.span>
-    </span>
-  );
-}
-
-function LogoReveal({ delay = 0, className = "" }: { delay?: number; className?: string }) {
-  return (
-    <m.img
-      alt="OWU CONF"
-      animate={{ clipPath: "inset(0 0% 0 0)", opacity: 1 }}
-      className={`w-[1200px] ${className}`}
-      initial={{ clipPath: "inset(0 100% 0 0)", opacity: 0.6 }}
-      src="/images/logos/conf.webp"
-      transition={{ duration: 1.1, delay, ease: EASE_OUT }}
-    />
-  );
-}
-
-const DATE_LABEL = new Intl.DateTimeFormat("es-UY", {
-  weekday: "long",
-  day: "2-digit",
-  month: "long",
-  year: "numeric",
-  timeZone: "America/Montevideo",
-})
-  .format(new Date(CONF_DATES.event))
-  .toUpperCase();
+import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
+import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
 
 // ---------------------------------------------------------------------------
 // Scenes
@@ -211,29 +168,6 @@ function UpNext({ eventId }: SceneProps<"up-next">) {
   );
 }
 
-const SPONSOR_LOOP = [...SPONSORS_2026, ...SPONSORS_2026];
-
-function SponsorRow({ reverse }: { reverse?: boolean }) {
-  return (
-    <div className="flex w-full overflow-hidden">
-      <div
-        className="animate-marquee flex w-max items-center"
-        style={{ animationDuration: reverse ? "34s" : "28s", animationDirection: reverse ? "reverse" : "normal" }}
-      >
-        {[0, 1].map((half) => (
-          <div key={half} aria-hidden={half === 1} className="flex items-center gap-[120px] pr-[120px]">
-            {SPONSOR_LOOP.map(({ name, logo }, i) => (
-              <div key={`${name}-${i}`} className="flex h-[110px] w-[300px] shrink-0 items-center justify-center">
-                <img alt={name} className="max-h-full max-w-full object-contain brightness-0 invert" src={logo} />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Sponsors() {
   return (
     <>
@@ -308,5 +242,12 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   "up-next": UpNext,
   sponsors: Sponsors,
   countdown: CountdownScene,
+  agenda: Agenda,
+  moments: Moments,
+  "lower-third": LowerThird,
+  clock: Clock,
+  closing: Closing,
+  shapes: Shapes,
+  team: Team,
   black: Black,
 };

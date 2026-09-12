@@ -47,6 +47,47 @@ export const SCENES = {
     description: "El countdown del evento, en pantalla grande.",
     params: z.object({ label: z.string().trim().max(40).default("") }),
   },
+  agenda: {
+    title: "Agenda",
+    description: "La grilla del open space: bloque actual y los que siguen, en vivo.",
+    params: z.object({ title: z.string().trim().max(40).default("Open Space") }),
+  },
+  moments: {
+    title: "Momentos",
+    description: "Fotos de La Meetup III con movimiento lento (Ken Burns).",
+    params: z.object({ secondsPerPhoto: z.coerce.number().int().min(3).max(60).default(6) }),
+  },
+  "lower-third": {
+    title: "Lower third",
+    description: "Nombre y charla del speaker; pensado para ?bg=transparent sobre la cámara.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Nombre Apellido"),
+      subtitle: z.string().trim().max(100).default("Título de la charla"),
+    }),
+  },
+  clock: {
+    title: "Reloj",
+    description: "Hora y fecha en grande, con un aviso opcional.",
+    params: z.object({ label: z.string().trim().max(60).default("") }),
+  },
+  closing: {
+    title: "Cierre",
+    description: "Gracias, confetti y los sponsors para despedir el evento.",
+    params: z.object({
+      title: z.string().trim().max(40).default("¡GRACIAS!"),
+      subtitle: z.string().trim().max(100).default("Nos vemos en la próxima"),
+    }),
+  },
+  shapes: {
+    title: "Formas",
+    description: "Salvapantallas generativo con la geometría de la marca.",
+    params: z.object({}),
+  },
+  team: {
+    title: "Equipo",
+    description: "Créditos: el equipo de OWU CONF 2026.",
+    params: z.object({}),
+  },
   black: {
     title: "Negro",
     description: "Pantalla vacía.",
