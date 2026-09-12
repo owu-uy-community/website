@@ -65,7 +65,7 @@
     "@remotion/paths": "4.0.507",
     "@remotion/player": "4.0.507",
     "@remotion/zod-types": "4.0.507",
-    "@scalar/nextjs-api-reference": "0.10.19",
+    "@scalar/nextjs-api-reference": "0.11.12",
     "@tanstack/react-query": "5.101.4",
     "@tanstack/react-query-devtools": "5.101.4",
     "@tanstack/react-table": "9.1.2",
