@@ -108,7 +108,14 @@ import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./o
 import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
 import { getCastState, setHighlightedNote } from "./cast/services";
-import { FireEffectSchema, GetInputsSchema, GetPulseSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
+import {
+  FireEffectSchema,
+  GetInputsSchema,
+  GetPulseSchema,
+  SetFaceSchema,
+  SetNowPlayingSchema,
+  SetSceneSchema,
+} from "./owy-stage/schemas";
 import { SubmitInputSchema } from "../owy-stage/scenes";
 import {
   fireEffect,
@@ -119,6 +126,7 @@ import {
   getStageSpeakers,
   getStageWeather,
   setFace,
+  setNowPlaying,
   setScene,
   submitInput,
 } from "./owy-stage/services";
@@ -425,6 +433,9 @@ export const getStageWeatherHandler = os.handler(withErrorHandling(async () => g
 export const getStageSpeakersHandler = os.handler(
   withErrorHandling(async () => getStageSpeakers(), "get stage speakers")
 );
+export const setNowPlayingHandler = adminOs
+  .input(SetNowPlayingSchema)
+  .handler(withErrorHandling(async ({ input }) => setNowPlaying(input), "set now playing"));
 export const submitStageInputHandler = os
   .input(SubmitInputSchema)
   .handler(withErrorHandling(async ({ input }) => submitInput(input), "submit stage input"));
@@ -646,6 +657,7 @@ export const router = {
     getSpeakers: getStageSpeakersHandler,
     submit: submitStageInputHandler,
     inputs: getStageInputsHandler,
+    nowPlaying: setNowPlayingHandler,
   },
 
   // Dashboard Statistics

@@ -17,7 +17,7 @@ import {
   type SubmitInput,
 } from "../../../owy-stage/scenes";
 import { publishServer } from "../../../realtime/publish";
-import type { FireEffectInput, SetFaceInput, SetSceneInput } from "../schemas";
+import type { FireEffectInput, SetFaceInput, SetNowPlayingInput, SetSceneInput } from "../schemas";
 
 const ROW_ID = "global";
 
@@ -56,6 +56,30 @@ export async function setScene(input: SetSceneInput): Promise<StageState> {
   await publishServer(OWY_STAGE_CHANNEL, "scene", state);
 
   return state;
+}
+
+/**
+ * A recogniser heard a song. Only touches the wall while `now-playing` is on
+ * air (so a listener can run all day without hijacking other scenes) and only
+ * when the song actually changed.
+ */
+export async function setNowPlaying(input: SetNowPlayingInput): Promise<{ applied: boolean }> {
+  const state = await getStageState();
+  if (state.scene !== "now-playing") return { applied: false };
+  const params = parseSceneParams("now-playing", state.params) as { song: string; artist: string; playlist: string };
+  if (params.song === input.song && params.artist === input.artist) return { applied: false };
+  await setScene({
+    scene: "now-playing",
+    params: {
+      ...params,
+      song: input.song,
+      artist: input.artist,
+      ...(input.playlist ? { playlist: input.playlist } : {}),
+    },
+    eventId: state.eventId,
+  });
+
+  return { applied: true };
 }
 
 /** One-shot overlay (confetti, flash, caption…) — broadcast only, nothing to persist. */
