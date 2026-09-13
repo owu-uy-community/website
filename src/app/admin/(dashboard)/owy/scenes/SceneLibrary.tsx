@@ -1,0 +1,315 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp, Copy, ListPlus, Play, Search, Smartphone, Star, X } from "lucide-react";
+
+import { SceneThumb } from "components/Admin/stage/SceneThumb";
+import { Badge } from "components/shared/ui/badge";
+import { Button } from "components/shared/ui/button";
+import { Card, CardContent } from "components/shared/ui/card";
+import { Input } from "components/shared/ui/input";
+import {
+  INTERACTIVE_SCENES,
+  SCENES,
+  SCENE_CATEGORIES,
+  SCENE_GROUPS,
+  isSceneId,
+  type SceneCategory,
+  type SceneId,
+} from "lib/owy-stage/scenes";
+
+type Filter = "all" | "favorites" | "recent" | SceneCategory;
+
+const PHONE = new Set<string>(INTERACTIVE_SCENES);
+const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/** A list of scene ids kept in localStorage (favorites, recents, the rundown). */
+function useStoredIds(key: string) {
+  const [ids, setIds] = useState<SceneId[]>([]);
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(key) ?? "[]") as unknown;
+      if (Array.isArray(stored)) setIds(stored.filter((id): id is SceneId => typeof id === "string" && isSceneId(id)));
+    } catch {
+      // Corrupt or missing: start empty.
+    }
+  }, [key]);
+  const update = (next: SceneId[] | ((prev: SceneId[]) => SceneId[])) =>
+    setIds((prev) => {
+      const value = typeof next === "function" ? next(prev) : next;
+      window.localStorage.setItem(key, JSON.stringify(value));
+      return value;
+    });
+  return [ids, update] as const;
+}
+
+export function SceneLibrary({
+  liveScene,
+  pending,
+  take,
+  copyUrl,
+}: {
+  liveScene: SceneId;
+  pending: boolean;
+  take: (id: SceneId) => void;
+  copyUrl: (id: SceneId) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
+  const [favorites, setFavorites] = useStoredIds("owy-stage-favorites");
+  const [recent, setRecent] = useStoredIds("owy-stage-recent");
+  const [rundown, setRundown] = useStoredIds("owy-stage-rundown");
+
+  // `/` jumps to the search box, Escape clears it.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (event.key === "/" && !typing) {
+        event.preventDefault();
+        document.getElementById("scene-search")?.focus();
+      }
+      if (event.key === "Escape" && target?.id === "scene-search") setQuery("");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  const put = (id: SceneId) => {
+    take(id);
+    setRecent((prev) => [id, ...prev.filter((r) => r !== id)].slice(0, 12));
+  };
+  const toggleFavorite = (id: SceneId) =>
+    setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
+  const queue = (id: SceneId) => setRundown((prev) => [...prev, id]);
+  const move = (index: number, dir: -1 | 1) =>
+    setRundown((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(index, 1);
+      next.splice(index + dir, 0, item);
+      return next;
+    });
+  const cue = rundown.indexOf(liveScene);
+  const next = rundown[cue + 1] ?? rundown[0];
+
+  const q = fold(query.trim());
+  const matches = (id: SceneId) => !q || fold(`${id} ${SCENES[id].title} ${SCENES[id].description}`).includes(q);
+  const groups = useMemo(() => {
+    if (filter === "favorites")
+      return [{ category: "favorites", title: "Favoritos", scenes: favorites.filter(matches) }];
+    if (filter === "recent") return [{ category: "recent", title: "Recientes", scenes: recent.filter(matches) }];
+    return SCENE_GROUPS.filter((g) => filter === "all" || g.category === filter)
+      .map((g) => ({ ...g, scenes: g.scenes.filter(matches) }))
+      .filter((g) => g.scenes.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, favorites, recent, q]);
+  const shown = groups.reduce((n, g) => n + g.scenes.length, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <h2 className="font-display text-lg font-semibold">
+          Escenas{" "}
+          <span className="text-muted-foreground text-sm font-normal">
+            · {shown} de {Object.keys(SCENES).length}
+          </span>
+        </h2>
+        <div className="relative w-full lg:w-[360px]">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            className="pr-9 pl-9"
+            id="scene-search"
+            placeholder="Buscar escena…  ( / )"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button
+              aria-label="Limpiar"
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+              onClick={() => setQuery("")}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {(
+          [
+            ["all", "Todas"],
+            ["favorites", `★ Favoritos${favorites.length ? ` · ${favorites.length}` : ""}`],
+            ["recent", "Recientes"],
+            ...SCENE_GROUPS.map((g) => [g.category, `${g.title} · ${g.scenes.length}`] as const),
+          ] as const
+        ).map(([id, label]) => (
+          <Button
+            key={id}
+            className="h-8 rounded-full"
+            size="sm"
+            variant={filter === id ? "default" : "outline"}
+            onClick={() => setFilter(id)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      <Card>
+        <CardContent className="p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold">Guion</span>
+            <span className="text-muted-foreground text-xs">
+              Armá el orden del día con «+» en cada escena y avanzá con Siguiente.
+            </span>
+            <div className="ml-auto flex items-center gap-2">
+              {rundown.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => setRundown([])}>
+                  Vaciar
+                </Button>
+              )}
+              <Button disabled={!next || pending} size="sm" onClick={() => next && put(next)}>
+                <Play className="mr-1 h-4 w-4" /> Siguiente{next ? `: ${SCENES[next].title}` : ""}
+              </Button>
+            </div>
+          </div>
+          {rundown.length > 0 && (
+            <ol className="mt-3 flex flex-wrap gap-2">
+              {rundown.map((id, i) => (
+                <li
+                  key={`${id}-${i}`}
+                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
+                    i === cue ? "border-[#F5BB03] bg-[#F5BB03]/15" : i === cue + 1 ? "border-[#0162C8]" : ""
+                  }`}
+                >
+                  <span className="text-muted-foreground text-xs tabular-nums">{i + 1}.</span>
+                  <button className="font-medium hover:underline" onClick={() => put(id)} type="button">
+                    {SCENES[id].title}
+                  </button>
+                  <button
+                    aria-label="Subir"
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                    type="button"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    aria-label="Bajar"
+                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+                    disabled={i === rundown.length - 1}
+                    onClick={() => move(i, 1)}
+                    type="button"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    aria-label="Quitar"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => setRundown(rundown.filter((_, k) => k !== i))}
+                    type="button"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
+        </CardContent>
+      </Card>
+
+      {groups.length === 0 && (
+        <p className="text-muted-foreground py-10 text-center text-sm">
+          {filter === "favorites"
+            ? "Marcá escenas con ★ para tenerlas acá."
+            : filter === "recent"
+              ? "Las escenas que pongas en pantalla aparecen acá."
+              : "Nada coincide con la búsqueda."}
+        </p>
+      )}
+      {groups.map((group) => (
+        <section key={group.category}>
+          {(filter === "all" || groups.length > 1) && (
+            <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.2em] uppercase">
+              {group.title} · {group.scenes.length}
+            </h3>
+          )}
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+            {group.scenes.map((id) => {
+              const onAir = liveScene === id;
+              const starred = favorites.includes(id);
+              return (
+                <Card key={id} className={`flex flex-col ${onAir ? "ring-2 ring-[#F5BB03]" : ""}`}>
+                  <CardContent className="flex flex-1 flex-col gap-3 p-3">
+                    <div className="relative">
+                      <SceneThumb id={id} title={SCENES[id].title} />
+                      {onAir && (
+                        <Badge className="absolute top-2 left-2 bg-red-600 text-white hover:bg-red-600">AL AIRE</Badge>
+                      )}
+                      {PHONE.has(id) && (
+                        <Badge
+                          className="absolute top-2 right-2 gap-1"
+                          title="La gente participa desde el celular"
+                          variant="secondary"
+                        >
+                          <Smartphone className="h-3 w-3" /> celular
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{SCENES[id].title}</p>
+                        <p className="text-muted-foreground line-clamp-2 text-xs" title={SCENES[id].description}>
+                          {SCENES[id].description}
+                        </p>
+                      </div>
+                      <button
+                        aria-label={starred ? "Quitar de favoritos" : "Marcar favorito"}
+                        className={`shrink-0 ${starred ? "text-[#F5BB03]" : "text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => toggleFavorite(id)}
+                        type="button"
+                      >
+                        <Star className="h-4 w-4" fill={starred ? "currentColor" : "none"} />
+                      </button>
+                    </div>
+                    <div className="mt-auto flex items-center gap-1.5">
+                      <Button
+                        className="flex-1"
+                        disabled={pending}
+                        size="sm"
+                        variant={onAir ? "secondary" : "default"}
+                        onClick={() => put(id)}
+                      >
+                        {onAir ? "Al aire" : "Poner en pantalla"}
+                      </Button>
+                      <Button size="icon" title="Agregar al guion" variant="ghost" onClick={() => queue(id)}>
+                        <ListPlus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        title="Copiar URL de esta escena (fuente fija para OBS)"
+                        variant="ghost"
+                        onClick={() => copyUrl(id)}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+      {filter !== "all" && (
+        <p className="text-muted-foreground text-xs">
+          Categoría: {filter in SCENE_CATEGORIES ? SCENE_CATEGORIES[filter as SceneCategory].title : filter}.
+        </p>
+      )}
+    </div>
+  );
+}

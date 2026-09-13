@@ -6,7 +6,8 @@ import { Copy, ExternalLink, Music, PartyPopper, Radio, Smile, Sparkles, Subtitl
 
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
 import { ScaledFrame } from "components/Admin/stage/ScaledFrame";
-import { SceneThumb } from "components/Admin/stage/SceneThumb";
+
+import { SceneLibrary } from "./SceneLibrary";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
@@ -22,7 +23,6 @@ import {
   FACE_STATES,
   OWY_STAGE_CHANNEL,
   SCENES,
-  SCENE_IDS,
   parseSceneParams,
   type FaceState,
   type SceneId,
@@ -367,52 +367,12 @@ export default function ScenesClient() {
         </div>
       </div>
 
-      <div>
-        <h2 className="font-display text-lg font-semibold">Escenas</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
-          {SCENE_IDS.map((id) => {
-            const onAir = live.scene === id;
-
-            return (
-              <Card key={id} className={`flex flex-col ${onAir ? "ring-2 ring-[#F5BB03]" : ""}`}>
-                <CardContent className="flex flex-1 flex-col gap-3 p-3">
-                  <div className="relative">
-                    <SceneThumb id={id} title={SCENES[id].title} />
-                    {onAir && (
-                      <Badge className="absolute top-2 left-2 bg-red-600 text-white hover:bg-red-600">AL AIRE</Badge>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-medium">{SCENES[id].title}</p>
-                    <p className="text-muted-foreground line-clamp-2 text-xs" title={SCENES[id].description}>
-                      {SCENES[id].description}
-                    </p>
-                  </div>
-                  <div className="mt-auto flex items-center gap-2">
-                    <Button
-                      className="flex-1"
-                      disabled={setScene.isPending}
-                      size="sm"
-                      variant={onAir ? "secondary" : "default"}
-                      onClick={() => take(id)}
-                    >
-                      {onAir ? "Al aire" : "Poner en pantalla"}
-                    </Button>
-                    <Button
-                      size="icon"
-                      title="Copiar URL de esta escena (fuente fija para OBS)"
-                      variant="ghost"
-                      onClick={() => copy(stageUrl(`/owy/stage/${id}`))}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+      <SceneLibrary
+        copyUrl={(id) => copy(stageUrl(`/owy/stage/${id}`))}
+        liveScene={live.scene}
+        pending={setScene.isPending}
+        take={(id) => take(id)}
+      />
     </div>
   );
 }
