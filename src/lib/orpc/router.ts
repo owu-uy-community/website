@@ -109,7 +109,15 @@ import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
 import { getCastState, setHighlightedNote } from "./cast/services";
 import { FireEffectSchema, GetPulseSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
-import { fireEffect, getStageMeetups, getStagePulse, getStageState, setFace, setScene } from "./owy-stage/services";
+import {
+  fireEffect,
+  getStageMeetups,
+  getStagePulse,
+  getStageState,
+  getStageWeather,
+  setFace,
+  setScene,
+} from "./owy-stage/services";
 import {
   AddCommunityMemberSchema,
   CreateCommunitySchema,
@@ -409,6 +417,8 @@ export const getStageMeetupsHandler = os.handler(
   withErrorHandling(async () => getStageMeetups(), "get community meetups")
 );
 
+export const getStageWeatherHandler = os.handler(withErrorHandling(async () => getStageWeather(), "get stage weather"));
+
 // Dashboard procedures (admin only)
 export const getDashboardStatsHandler = adminOs
   .input(GetDashboardStatsSchema)
@@ -619,6 +629,7 @@ export const router = {
     setFace: setFaceHandler,
     getPulse: getStagePulseHandler,
     getMeetups: getStageMeetupsHandler,
+    getWeather: getStageWeatherHandler,
   },
 
   // Dashboard Statistics

@@ -46,6 +46,7 @@ import {
   Rounds,
   Transport,
 } from "./service";
+import { Badges, Checkin, Grid, Lightning, Live, LostFound, Reminders, Stands, Timeline, Weather } from "./service2";
 import {
   Automaton,
   DoublePendulum,
@@ -415,5 +416,15 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   food: Food,
   feedback: Feedback,
   checklist: Checklist,
+  grid: Grid,
+  checkin: Checkin,
+  badges: Badges,
+  stands: Stands,
+  "lost-found": LostFound,
+  live: Live,
+  weather: Weather,
+  timeline: Timeline,
+  reminders: Reminders,
+  lightning: Lightning,
   black: Black,
 };

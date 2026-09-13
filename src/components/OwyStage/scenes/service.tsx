@@ -12,18 +12,18 @@ import { Ambient, BRAND, StageContext } from "../Stage";
 import { QrCode, Rise } from "./parts";
 import { parseProgram, secondsUntil, useNow } from "./useful";
 
-const splitList = (value: string) =>
+export const splitList = (value: string) =>
   value
     .split("|")
     .map((v) => v.trim())
     .filter(Boolean);
 /** "🚻 Baños: planta baja" → { icon, name, detail }. The icon is optional. */
-function parseItem(line: string) {
+export function parseItem(line: string) {
   const match = line.match(/^(\p{Extended_Pictographic}\S*)?\s*([^:]+?)(?::\s*(.*))?$/u);
   return { icon: match?.[1] ?? "", name: (match?.[2] ?? line).trim(), detail: (match?.[3] ?? "").trim() };
 }
 
-function Header({ eyebrow, title, wide = false }: { eyebrow: string; title: string; wide?: boolean }) {
+export function Header({ eyebrow, title, wide = false }: { eyebrow: string; title: string; wide?: boolean }) {
   return (
     <div className={`absolute top-[100px] left-[140px] ${wide ? "w-[1400px]" : "w-[1100px]"}`}>
       <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>

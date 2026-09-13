@@ -887,6 +887,117 @@ export const SCENES = {
         ),
     }),
   },
+  grid: {
+    title: "Grilla del open space",
+    description: "La grilla salas × horarios con las sesiones del muro, en vivo; resalta el bloque en curso.",
+    params: z.object({}),
+  },
+  checkin: {
+    title: "Acreditación",
+    description: "Los pasos de la recepción y el aviso de fotos, para la pantalla del lobby a las 14:30.",
+    params: z.object({
+      eyebrow: z.string().trim().max(60).default("Bienvenidos · 14:30 a 15:00"),
+      step1: z.string().trim().max(90).default("Buscá tu nombre en la lista o mostrá tu entrada"),
+      step2: z.string().trim().max(90).default("Retirá tu lanyard y los stickers"),
+      step3: z.string().trim().max(90).default("Dejá el abrigo en guardarropa y pasá al hall"),
+      photoNote: z
+        .string()
+        .trim()
+        .max(160)
+        .default("Hoy se sacan fotos y video. Si preferís no aparecer, pedí el sticker rojo en acreditación."),
+    }),
+  },
+  badges: {
+    title: "Colores y stickers",
+    description: "Qué significa cada lanyard y sticker. Formato: emoji Nombre: qué es | …",
+    params: z.object({
+      lines: z
+        .string()
+        .trim()
+        .max(800)
+        .default(
+          "🟡 Lanyard amarillo: staff, preguntales lo que sea | 🔵 Lanyard azul: speakers y facilitadores | 🔴 Sticker rojo: sin fotos, por favor | 🟢 Sticker verde: es mi primera OWU, hablame | 🧉 Sticker mate: comparto mate | ⚫ Lanyard negro: sponsors"
+        ),
+    }),
+  },
+  stands: {
+    title: "Stands",
+    description: "Dónde está cada sponsor. Formato: Nombre: ubicación | …",
+    params: z.object({
+      eyebrow: z.string().trim().max(60).default("Pasá a saludar"),
+      lines: z
+        .string()
+        .trim()
+        .max(800)
+        .default(
+          "Sponsor uno: hall, junto a la entrada | Sponsor dos: hall, frente al café | Sponsor tres: primer piso | Comunidad OWU: mesa del lobby"
+        ),
+    }),
+  },
+  "lost-found": {
+    title: "Objetos perdidos",
+    description: "Lo que apareció y dónde retirarlo. Objetos separados por |.",
+    params: z.object({
+      items: z
+        .string()
+        .trim()
+        .max(600)
+        .default("Campera negra | Cargador USB-C | Termo verde | Lentes de sol | Paraguas"),
+      where: z.string().trim().max(60).default("Mesa de acreditación"),
+    }),
+  },
+  live: {
+    title: "En vivo",
+    description: "Aviso de transmisión con QR: para quien no pudo venir.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Estamos transmitiendo"),
+      subtitle: z.string().trim().max(140).default("Compartilo con quien no pudo venir: las charlas se ven en vivo."),
+      url: z.string().trim().max(200).default("https://www.youtube.com/@owuuy"),
+    }),
+  },
+  weather: {
+    title: "Tiempo afuera",
+    description: "Montevideo ahora y las próximas horas (Open-Meteo); útil antes de la salida.",
+    params: z.object({}),
+  },
+  timeline: {
+    title: "Línea del día",
+    description: "Barra del día completo con la aguja de la hora: cuánto va y cuánto falta.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Así va el día"),
+      items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
+      end: z.string().trim().max(5).default("20:40"),
+    }),
+  },
+  reminders: {
+    title: "Avisos programados",
+    description: "Mensajes que aparecen solos a su hora y se quedan unos minutos. Formato: HH:MM texto | …",
+    params: z.object({
+      lines: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "15:55 El open space arranca en 5 minutos: buscá tu sala | 18:20 Coffee break en 5 minutos en el hall | 18:55 Las charlas empiezan a las 19:00 en el escenario | 20:20 Foto grupal en 5 minutos en el escenario"
+        ),
+      hold: z.number().int().min(1).max(60).default(8),
+    }),
+  },
+  lightning: {
+    title: "Lightning talks",
+    description: "Cola de charlas relámpago con timer por charla; avanza sola desde que se pone en pantalla.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Lightning talks"),
+      talks: z
+        .string()
+        .trim()
+        .max(1500)
+        .default(
+          "Ana · Cómo dejé de temerle a los regex | Bruno · Mi setup de terminal | Camila · Lo que aprendí organizando meetups | Diego · Rust en 5 minutos"
+        ),
+      minutes: z.number().int().min(1).max(30).default(5),
+    }),
+  },
   frame: {
     title: "Marco",
     description:

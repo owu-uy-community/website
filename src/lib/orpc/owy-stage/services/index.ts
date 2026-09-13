@@ -144,3 +144,45 @@ export async function getStageMeetups(): Promise<StageMeetup[]> {
       url: meetup.event_url,
     }));
 }
+
+export type StageWeather = {
+  temp: number;
+  feels: number;
+  code: number;
+  wind: number;
+  hours: { time: string; temp: number; rain: number; code: number }[];
+};
+
+/** Montevideo right now, from Open-Meteo (no key); cached 15 minutes. */
+export async function getStageWeather(): Promise<StageWeather | null> {
+  const url =
+    "https://api.open-meteo.com/v1/forecast?latitude=-34.9011&longitude=-56.1645" +
+    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m" +
+    "&hourly=temperature_2m,precipitation_probability,weather_code&forecast_days=2&timezone=America%2FMontevideo";
+  const response = await fetch(url, { next: { revalidate: 900 } });
+  if (!response.ok) return null;
+  const data = (await response.json()) as {
+    current: {
+      time: string;
+      temperature_2m: number;
+      apparent_temperature: number;
+      weather_code: number;
+      wind_speed_10m: number;
+    };
+    hourly: { time: string[]; temperature_2m: number[]; precipitation_probability: number[]; weather_code: number[] };
+  };
+  const start = data.hourly.time.findIndex((time) => time > data.current.time);
+  const hours = data.hourly.time.slice(start, start + 6).map((time, i) => ({
+    time: time.slice(11, 16),
+    temp: data.hourly.temperature_2m[start + i],
+    rain: data.hourly.precipitation_probability[start + i],
+    code: data.hourly.weather_code[start + i],
+  }));
+  return {
+    temp: data.current.temperature_2m,
+    feels: data.current.apparent_temperature,
+    code: data.current.weather_code,
+    wind: data.current.wind_speed_10m,
+    hours,
+  };
+}
