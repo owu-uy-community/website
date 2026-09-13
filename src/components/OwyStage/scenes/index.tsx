@@ -28,6 +28,7 @@ import {
   Until,
   Warp,
 } from "./extra";
+import { History, Meetups, OwyCard, Principles, Pulse, Raffle, Selfie, Venue, Welcome } from "./discover";
 import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
@@ -306,5 +307,14 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   rain: Rain,
   warp: Warp,
   qa: Questions,
+  meetups: Meetups,
+  pulse: Pulse,
+  principles: Principles,
+  "owy-card": OwyCard,
+  history: History,
+  venue: Venue,
+  selfie: Selfie,
+  raffle: Raffle,
+  welcome: Welcome,
   black: Black,
 };

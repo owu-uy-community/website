@@ -375,6 +375,72 @@ export const SCENES = {
       subtitle: z.string().trim().max(120).default("Levantá la mano o escribí en #owuconf del Slack"),
     }),
   },
+  meetups: {
+    title: "Próximos meetups",
+    description: "La agenda real de la comunidad (meetup-bot) para el cierre: la comunidad sigue.",
+    params: z.object({}),
+  },
+  pulse: {
+    title: "Somos",
+    description: "Cuántos ya llegaron (Eventbrite, solo totales) más ideas y salas de la grilla. Se actualiza solo.",
+    params: z.object({ title: z.string().trim().max(40).default("Ya somos") }),
+  },
+  principles: {
+    title: "Principios del open space",
+    description: "Los cuatro principios y la ley de los dos pies.",
+    params: z.object({}),
+  },
+  "owy-card": {
+    title: "Conocé a Owy",
+    description: "El carpincho ilustrado con su bio.",
+    params: z.object({
+      bio: z
+        .string()
+        .trim()
+        .max(220)
+        .default(
+          "El carpincho de OWU. Toma mate, escucha ideas y las anota en la grilla. Hoy está en la mesa del mercado de ideas y en esta pantalla."
+        ),
+    }),
+  },
+  history: {
+    title: "Historia",
+    description: "De La Meetup I (2023) a OWU CONF (2026), en una línea de tiempo animada.",
+    params: z.object({}),
+  },
+  venue: {
+    title: "Estamos en",
+    description: "Lugar, dirección y QR con cómo llegar.",
+    params: z.object({
+      name: z.string().trim().max(40).default("Sinergia Faro"),
+      address: z.string().trim().max(80).default("Víctor Soliño 349 · Montevideo"),
+      mapUrl: z.string().trim().max(300).default(""),
+    }),
+  },
+  selfie: {
+    title: "Selfie",
+    description: "Marco para sacarse fotos frente a la pantalla, con el hashtag.",
+    params: z.object({
+      hashtag: z.string().trim().max(30).default("#OWUCONF"),
+      line: z.string().trim().max(60).default("Etiquetá a @owu_uy"),
+    }),
+  },
+  raffle: {
+    title: "Sorteo",
+    description: "Gira por los nombres y cae en uno al azar, con confetti. Nombres separados por coma.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Sorteo"),
+      names: z.string().trim().max(3000).default("Ana, Bruno, Camila, Diego, Elena, Fede, Gabi, Hernán"),
+    }),
+  },
+  welcome: {
+    title: "Bienvenida",
+    description: "La foto de la comunidad con el saludo en grande.",
+    params: z.object({
+      eyebrow: z.string().trim().max(60).default("Sábado 07 de noviembre · Sinergia Faro"),
+      title: z.string().trim().max(60).default("Bienvenidos a OWU CONF"),
+    }),
+  },
   frame: {
     title: "Marco",
     description:

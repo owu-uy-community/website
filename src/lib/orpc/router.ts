@@ -108,8 +108,8 @@ import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./o
 import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
 import { getCastState, setHighlightedNote } from "./cast/services";
-import { FireEffectSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
-import { fireEffect, getStageState, setFace, setScene } from "./owy-stage/services";
+import { FireEffectSchema, GetPulseSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
+import { fireEffect, getStageMeetups, getStagePulse, getStageState, setFace, setScene } from "./owy-stage/services";
 import {
   AddCommunityMemberSchema,
   CreateCommunitySchema,
@@ -400,6 +400,15 @@ export const setFaceHandler = adminOs
   .input(SetFaceSchema)
   .handler(withErrorHandling(async ({ input }) => setFace(input), "set owy face"));
 
+// Aggregates only (counts), safe for the public wall pages
+export const getStagePulseHandler = os
+  .input(GetPulseSchema)
+  .handler(withErrorHandling(async ({ input }) => getStagePulse(input?.eventId), "get stage pulse"));
+
+export const getStageMeetupsHandler = os.handler(
+  withErrorHandling(async () => getStageMeetups(), "get community meetups")
+);
+
 // Dashboard procedures (admin only)
 export const getDashboardStatsHandler = adminOs
   .input(GetDashboardStatsSchema)
@@ -608,6 +617,8 @@ export const router = {
     setScene: setSceneHandler,
     fireEffect: fireEffectHandler,
     setFace: setFaceHandler,
+    getPulse: getStagePulseHandler,
+    getMeetups: getStageMeetupsHandler,
   },
 
   // Dashboard Statistics
