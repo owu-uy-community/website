@@ -998,6 +998,118 @@ export const SCENES = {
       minutes: z.number().int().min(1).max(30).default(5),
     }),
   },
+  hosts: {
+    title: "Quiénes facilitan",
+    description: "Los nombres de quienes proponen sesiones, en vivo desde el muro.",
+    params: z.object({}),
+  },
+  "room-cards": {
+    title: "Las salas",
+    description: "Cada sala como cartel: color, ícono, capacidad, pantalla y pizarra; desde la base.",
+    params: z.object({}),
+  },
+  topics: {
+    title: "De qué se habla",
+    description: "Nube de palabras armada con los títulos de las sesiones del muro.",
+    params: z.object({}),
+  },
+  links: {
+    title: "Links",
+    description: "Hasta cuatro QR a la vez. Formato: Etiqueta: https://… | …",
+    params: z.object({
+      title: z.string().trim().max(40).default("Todo en tu celular"),
+      lines: z
+        .string()
+        .trim()
+        .max(600)
+        .default(
+          "Programa: https://owu.uy/conf | Instagram: https://www.instagram.com/owu__uy/ | Slack: https://slack.owu.uy/ | LinkedIn: https://www.linkedin.com/company/owu-uruguay/"
+        ),
+    }),
+  },
+  "wifi-qr": {
+    title: "Wi-Fi con QR",
+    description: "Red y contraseña, más el QR que conecta el celular solo.",
+    params: z.object({
+      network: z.string().trim().max(40).default("OWU-CONF"),
+      password: z.string().trim().max(60).default("comunidad2026"),
+    }),
+  },
+  alumni: {
+    title: "Speakers de OWU",
+    description: "Las caras de quienes ya dieron charlas en OWU (contenido del sitio).",
+    params: z.object({}),
+  },
+  breathe: {
+    title: "Respirar",
+    description: "Un minuto de respiración guiada entre bloques: 4 · 4 · 6.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Un minuto para respirar"),
+      subtitle: z.string().trim().max(120).default("Seguí el círculo. Después seguimos."),
+    }),
+  },
+  bingo: {
+    title: "Bingo",
+    description: "Cartón de bingo de conferencia que se marca solo; canta bingo y reparte otro.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Bingo OWU"),
+      phrases: z
+        .string()
+        .trim()
+        .max(2000)
+        .default(
+          "¿Se escucha? | Depende | En mi máquina anda | Lo hicimos con IA | Es legacy | Refactor pendiente | ¿Alguien tiene un cargador? | Pasame el mate | Eso es un tema para otra sesión | Lo resolvimos con un cron | Los tests estaban en verde | El wifi | Vamos a hacerlo simple | ¿Vieron la última de …? | Después te paso el link | Microservicios | Monolito | Kubernetes | Lo dejamos para la retro | Rust lo resuelve | Está en producción | Un momento que comparto pantalla | Sticker nuevo | Café | Nos vemos en el afterparty | Escalabilidad | ¿Preguntas? | Deuda técnica | Lo vi en un hilo | Vibe coding"
+        ),
+    }),
+  },
+  "now-playing": {
+    title: "Sonando",
+    description: "Qué suena en el break: tema, artista y playlist, con el vinilo girando.",
+    params: z.object({
+      song: z.string().trim().max(80).default("Cuando la cigarra canta"),
+      artist: z.string().trim().max(80).default("Jorge Drexler"),
+      playlist: z.string().trim().max(60).default("Playlist OWU · break"),
+    }),
+  },
+  departures: {
+    title: "Panel de salidas",
+    description: "El programa como el panel de un aeropuerto: letras que giran y estado de cada bloque.",
+    params: z.object({
+      title: z.string().trim().max(30).default("OWU CONF · Salidas"),
+      items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
+    }),
+  },
+  networking: {
+    title: "Speed networking",
+    description: "Rondas con una pregunta cada una y campana de cambio; arranca al ponerla.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Speed networking"),
+      minutes: z.number().int().min(1).max(15).default(3),
+      prompts: z
+        .string()
+        .trim()
+        .max(1500)
+        .default(
+          "¿Qué estás construyendo ahora? | ¿Cuál fue tu primer lenguaje? | ¿Qué aprendiste este año que te cambió cómo trabajás? | ¿Qué comunidad te gustaría que exista en Uruguay? | ¿Qué herramienta no podés dejar de usar? | ¿Qué charla te gustaría dar algún día?"
+        ),
+    }),
+  },
+  icebreaker: {
+    title: "Rompehielos",
+    description: "Preguntas que rotan para charlar con la persona de al lado.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Mientras esperamos"),
+      subtitle: z.string().trim().max(100).default("Contestala con la persona de al lado."),
+      questions: z
+        .string()
+        .trim()
+        .max(1500)
+        .default(
+          "¿Cuál fue tu primer lenguaje de programación? | ¿Tabs o espacios? | ¿Qué bug te hizo perder más horas? | ¿Qué proyecto te gustaría empezar este año? | ¿Con qué comunidad tech te identificás? | ¿Cuál es tu atajo de teclado favorito?"
+        ),
+      seconds: z.number().int().min(5).max(120).default(15),
+    }),
+  },
   frame: {
     title: "Marco",
     description:

@@ -48,6 +48,20 @@ import {
 } from "./service";
 import { Badges, Checkin, Grid, Lightning, Live, LostFound, Reminders, Stands, Timeline, Weather } from "./service2";
 import {
+  Alumni,
+  Bingo,
+  Breathe,
+  Departures,
+  Hosts,
+  Icebreaker,
+  Links,
+  Networking,
+  NowPlaying,
+  RoomCards,
+  Topics,
+  WifiQr,
+} from "./more2";
+import {
   Automaton,
   DoublePendulum,
   Langton,
@@ -426,5 +440,17 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   timeline: Timeline,
   reminders: Reminders,
   lightning: Lightning,
+  hosts: Hosts,
+  "room-cards": RoomCards,
+  topics: Topics,
+  links: Links,
+  "wifi-qr": WifiQr,
+  alumni: Alumni,
+  breathe: Breathe,
+  bingo: Bingo,
+  "now-playing": NowPlaying,
+  departures: Departures,
+  networking: Networking,
+  icebreaker: Icebreaker,
   black: Black,
 };

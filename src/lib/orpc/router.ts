@@ -114,6 +114,7 @@ import {
   getStageMeetups,
   getStagePulse,
   getStageState,
+  getStageSpeakers,
   getStageWeather,
   setFace,
   setScene,
@@ -418,6 +419,9 @@ export const getStageMeetupsHandler = os.handler(
 );
 
 export const getStageWeatherHandler = os.handler(withErrorHandling(async () => getStageWeather(), "get stage weather"));
+export const getStageSpeakersHandler = os.handler(
+  withErrorHandling(async () => getStageSpeakers(), "get stage speakers")
+);
 
 // Dashboard procedures (admin only)
 export const getDashboardStatsHandler = adminOs
@@ -630,6 +634,7 @@ export const router = {
     getPulse: getStagePulseHandler,
     getMeetups: getStageMeetupsHandler,
     getWeather: getStageWeatherHandler,
+    getSpeakers: getStageSpeakersHandler,
   },
 
   // Dashboard Statistics

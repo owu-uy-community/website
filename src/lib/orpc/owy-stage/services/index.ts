@@ -186,3 +186,24 @@ export async function getStageWeather(): Promise<StageWeather | null> {
     hours,
   };
 }
+
+export type StageSpeaker = { slug: string; name: string; picture: string | null; role: string | null };
+
+// Placeholder entries the talks use for breaks and the open space block.
+const NOT_PEOPLE = new Set(["carpincho", "coffe", "openspace", "el-cuervo"]);
+
+/** Past speakers from the keystatic collection (the site's content folder). */
+export async function getStageSpeakers(): Promise<StageSpeaker[]> {
+  const { createReader } = await import("@keystatic/core/reader");
+  const { default: keystaticConfig } = await import("../../../../../keystatic.config");
+  const entries = await createReader(process.cwd(), keystaticConfig).collections.speakers.all();
+  return entries
+    .filter((entry) => !NOT_PEOPLE.has(entry.slug))
+    .map((entry) => ({
+      slug: entry.slug,
+      name: `${entry.entry.firstname} ${entry.entry.lastname}`.trim(),
+      picture: entry.entry.picture ?? null,
+      role: [entry.entry.jobTitle, entry.entry.company].filter(Boolean).join(" · ") || null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
