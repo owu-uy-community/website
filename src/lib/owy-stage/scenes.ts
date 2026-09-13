@@ -765,6 +765,128 @@ export const SCENES = {
     description: "Seleccioná todas las imágenes con mate. Se resuelve solo.",
     params: z.object({}),
   },
+  // --- Servicio: para el día ---
+  rounds: {
+    title: "Rondas del open space",
+    description: "Ronda actual, tiempo restante y las que faltan; el reloj facilita solo. Formato HH:MM-HH:MM | …",
+    params: z.object({
+      title: z.string().trim().max(40).default("Open space"),
+      rounds: z.string().trim().max(300).default("16:00-16:40 | 16:45-17:25 | 17:30-18:10"),
+    }),
+  },
+  "now-bar": {
+    title: "Barra ahora / sigue",
+    description:
+      "Lower third con el bloque actual, el siguiente y la hora, según el programa. Para cámaras con ?bg=transparent.",
+    params: z.object({ items: z.string().trim().max(1200).default(DEFAULT_PROGRAM) }),
+  },
+  notices: {
+    title: "Avisos",
+    description: "Anuncios que rotan de a uno. Separados por |.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Avisos"),
+      lines: z
+        .string()
+        .trim()
+        .max(1500)
+        .default(
+          "Guardarropa en planta baja, junto a acreditación | El coffee break es a las 18:25 en el hall | Las sesiones del open space se proponen en la grilla del lobby | Foto grupal a las 20:25 en el escenario"
+        ),
+      seconds: z.number().int().min(3).max(60).default(8),
+    }),
+  },
+  changes: {
+    title: "Cambios en el programa",
+    description: "Qué se movió y qué se canceló. Formato: antes → después | …",
+    params: z.object({
+      lines: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "16:45 Sesión de IA · Sala Lobby → Sala Faro | 17:30 Taller de Rust → cancelada | 18:25 Coffee break → 18:40"
+        ),
+    }),
+  },
+  facilities: {
+    title: "Servicios",
+    description: "Dónde está cada cosa: baños, agua, café, guardarropa… Formato: emoji Nombre: dónde | …",
+    params: z.object({
+      title: z.string().trim().max(40).default("Dónde está cada cosa"),
+      items: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "🚻 Baños: planta baja y primer piso | 💧 Agua: dispensers en el hall | ☕ Café: hall central, todo el día | 🎒 Guardarropa: junto a acreditación | 🤫 Sala silenciosa: primer piso, al fondo | ♿ Accesibilidad: ascensor junto a la escalera | 🩹 Primeros auxilios: preguntá al staff | 🔌 Cargadores: mesas del lobby"
+        ),
+    }),
+  },
+  emergency: {
+    title: "Emergencia",
+    description: "Salidas, punto de encuentro y a quién avisar.",
+    params: z.object({
+      exits: z
+        .string()
+        .trim()
+        .max(600)
+        .default(
+          "Salida principal por la puerta de acreditación | Salida lateral al fondo del hall | Escaleras: no uses el ascensor"
+        ),
+      meetingPoint: z.string().trim().max(80).default("Vereda de enfrente, sobre Víctor Soliño"),
+      contact: z.string().trim().max(120).default("Cualquiera del staff con remera OWU"),
+      phone: z.string().trim().max(12).default("911"),
+    }),
+  },
+  transport: {
+    title: "Cómo volver",
+    description: "Ómnibus, taxis y bici para volver a casa, con el QR al mapa.",
+    params: z.object({
+      address: z.string().trim().max(80).default("Sinergia Faro · Víctor Soliño 349"),
+      bus: z.string().trim().max(160).default("Paradas en la rambla y en Río Negro. Consultá tu línea en la app STM."),
+      taxi: z.string().trim().max(160).default("Punto de encuentro para taxis y apps: puerta principal."),
+      bike: z.string().trim().max(160).default("Bicicletero adentro. La rambla te lleva a casi todos lados."),
+    }),
+  },
+  food: {
+    title: "Coffee break",
+    description: "Qué hay para comer y a qué hora. Formato: emoji Nombre: detalle | …",
+    params: z.object({
+      title: z.string().trim().max(40).default("Coffee break"),
+      time: z.string().trim().max(5).default("18:25"),
+      items: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "☕ Café y té | 🧉 Mate: traé el tuyo, hay agua caliente | 🥐 Medialunas | 🥪 Sándwiches | 🍎 Fruta | 🌱 Opción vegana: preguntá al staff | 🌾 Sin gluten: preguntá al staff | 🥤 Agua y jugos"
+        ),
+      note: z.string().trim().max(120).default("Usá los tachos de reciclaje. Gracias."),
+    }),
+  },
+  feedback: {
+    title: "Encuesta",
+    description: "Pedido de feedback con QR al formulario.",
+    params: z.object({
+      title: z.string().trim().max(60).default("¿Cómo la pasaste?"),
+      subtitle: z.string().trim().max(160).default("Dos minutos y nos ayudás a que la próxima sea mejor."),
+      url: z.string().trim().max(200).default("https://owu.uy/conf"),
+    }),
+  },
+  checklist: {
+    title: "Antes de irte",
+    description: "Lista de cierre que se va tildando sola.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Antes de irte"),
+      items: z
+        .string()
+        .trim()
+        .max(800)
+        .default(
+          "Foto grupal en el escenario | Devolvé el lanyard en acreditación | Contestá la encuesta | Seguinos en @owu_uy | Afterparty: te esperamos"
+        ),
+    }),
+  },
   frame: {
     title: "Marco",
     description:

@@ -35,6 +35,18 @@ import { Blob, Dragon, Fireworks, Network, ParticleText, Rays, Ripples, Sand, Te
 import { Captcha, Coin, Pipeline, Poll, Scoreboard, TalkTimer, TrafficLight, Update, Wheel, Wordle } from "./play";
 import { Bsod, Credits, Crawl, Cube, Donut, Equalizer, Halftone, HelloWorld, Kinetic, Neon } from "./show";
 import {
+  Changes,
+  Checklist,
+  Emergency,
+  Facilities,
+  Feedback,
+  Food,
+  Notices,
+  NowBar,
+  Rounds,
+  Transport,
+} from "./service";
+import {
   Automaton,
   DoublePendulum,
   Langton,
@@ -393,5 +405,15 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   pipeline: Pipeline,
   update: Update,
   captcha: Captcha,
+  rounds: Rounds,
+  "now-bar": NowBar,
+  notices: Notices,
+  changes: Changes,
+  facilities: Facilities,
+  emergency: Emergency,
+  transport: Transport,
+  food: Food,
+  feedback: Feedback,
+  checklist: Checklist,
   black: Black,
 };
