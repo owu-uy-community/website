@@ -79,3 +79,67 @@ export function useVoterId(): string {
   }, []);
   return id;
 }
+
+export const PIXEL_SIZE = 16;
+export const PIXEL_COLORS = ["transparent", "#F5BB03", "#0162C8", "#FBF5E7"];
+
+/** 16×16 cells with 4 colours → 2 bits each → 64 bytes → 88 chars of base64 (fits a 140-char value). */
+export function encodePixels(cells: number[]): string {
+  let bytes = "";
+  for (let i = 0; i < PIXEL_SIZE * PIXEL_SIZE; i += 4) {
+    bytes += String.fromCharCode(
+      ((cells[i] & 3) << 6) | ((cells[i + 1] & 3) << 4) | ((cells[i + 2] & 3) << 2) | (cells[i + 3] & 3)
+    );
+  }
+  return btoa(bytes);
+}
+
+export function decodePixels(value: string): number[] {
+  const cells: number[] = [];
+  try {
+    for (const ch of atob(value)) {
+      const b = ch.charCodeAt(0);
+      cells.push((b >> 6) & 3, (b >> 4) & 3, (b >> 2) & 3, b & 3);
+    }
+  } catch {
+    return [];
+  }
+  return cells.length === PIXEL_SIZE * PIXEL_SIZE ? cells : [];
+}
+
+/** Seconds since the take, from the server's timestamp (so wall and phones agree). */
+export function useElapsed(takenAt: string, tick = 250): number {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const start = takenAt ? new Date(takenAt).getTime() : Date.now();
+    const update = () => setElapsed(Math.max(0, (Date.now() - start) / 1000));
+    update();
+    const id = setInterval(update, tick);
+    return () => clearInterval(id);
+  }, [takenAt, tick]);
+  return elapsed;
+}
+
+export type RaceQuestion = { question: string; options: string[]; answer: number };
+
+/** "¿Q?: a, b, c, d = 2 | …" */
+export function parseRace(value: string): RaceQuestion[] {
+  return value
+    .split("|")
+    .map((line) => {
+      const eq = line.lastIndexOf("=");
+      const colon = line.indexOf(":");
+      if (eq < 0 || colon < 0 || colon > eq) return null;
+      const options = line
+        .slice(colon + 1, eq)
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean);
+      const answer = Number(line.slice(eq + 1).trim());
+      if (options.length < 2 || !Number.isInteger(answer) || answer < 0 || answer >= options.length) return null;
+      return { question: line.slice(0, colon).trim(), options, answer };
+    })
+    .filter((q): q is RaceQuestion => q !== null);
+}
+
+export const RACE_REVEAL = 7;

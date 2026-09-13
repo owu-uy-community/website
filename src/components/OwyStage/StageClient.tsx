@@ -69,7 +69,12 @@ export default function StageClient({ bg, fixed, preview = false }: Props) {
   }, [isConnected, preview, load]);
 
   const Scene = shown
-    ? (SCENE_COMPONENTS[shown.scene] as React.ComponentType<{ params: unknown; eventId: string | null; round: string }>)
+    ? (SCENE_COMPONENTS[shown.scene] as React.ComponentType<{
+        params: unknown;
+        eventId: string | null;
+        round: string;
+        takenAt: string;
+      }>)
     : null;
 
   return (
@@ -85,6 +90,7 @@ export default function StageClient({ bg, fixed, preview = false }: Props) {
           eventId={shown.eventId}
           params={parseSceneParams(shown.scene, shown.params)}
           round={shown.round ?? ""}
+          takenAt={shown.takenAt ?? ""}
         />
       )}
       {wipe > 0 && <Wipe key={wipe} onDone={() => setWipe(0)} />}

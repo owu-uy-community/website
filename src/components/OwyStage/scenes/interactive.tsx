@@ -516,7 +516,10 @@ export function SessionVote({ params, round, eventId }: SceneProps<"session-vote
   const data = useBoard(eventId, preview);
   if (!eventId) return <EmptyText text="Elegí un evento en el admin" />;
   if (!data) return null;
-  const counts = new Map(tally(inputs, "session"));
+  // One row per person, holding up to `max` picks separated by |.
+  const counts = new Map<string, number>();
+  for (const input of inputs)
+    if (input.key === "session") for (const id of input.value.split("|")) counts.set(id, (counts.get(id) ?? 0) + 1);
   const total = inputs.filter((i) => i.key === "session").length;
   const ranked = [...data.tracks]
     .map((track) => ({ track, n: counts.get(track.id) ?? 0 }))
@@ -527,7 +530,7 @@ export function SessionVote({ params, round, eventId }: SceneProps<"session-vote
   return (
     <>
       <Ambient />
-      <Header eyebrow={`${total} votos · ${data.tracks.length} sesiones`} title={params.title} />
+      <Header eyebrow={`${total} personas · hasta ${params.max} por persona`} title={params.title} />
       <JoinCard label="Votá tu sesión" />
       <div className="absolute top-[380px] left-[340px] flex w-[1060px] flex-col gap-[14px]">
         {ranked.map(({ track, n }, i) => (

@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useInputs, useVoterId } from "components/OwyStage/inputs";
+import {
+  PIXEL_COLORS,
+  PIXEL_SIZE,
+  RACE_REVEAL,
+  encodePixels,
+  parseRace,
+  useElapsed,
+  useInputs,
+  useVoterId,
+} from "components/OwyStage/inputs";
 import { REACTION_EMOJIS } from "components/OwyStage/scenes/interactive";
 import { GROUP_EMOJIS } from "components/OwyStage/scenes/interactive2";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
@@ -126,8 +135,49 @@ function Activity({
         return <GuessNumber prompt={String(params.question)} send={(v) => send("guess", v)} />;
       case "buzzer":
         return <Buzz prompt={String(params.title)} send={(v) => send("buzz", v, "once")} />;
-      case "session-vote":
-        return <Sessions eventId={state.eventId} prompt={String(params.title)} send={(v) => send("session", v)} />;
+      case "session-vote": {
+        const p = params as SceneParams<"session-vote">;
+        return <Sessions eventId={state.eventId} max={p.max} prompt={p.title} send={(v) => send("session", v)} />;
+      }
+      case "pixel":
+        return <PixelEditor prompt={String(params.prompt)} send={(v) => send("pixel", v, "once")} />;
+      case "mood-grid": {
+        const p = params as SceneParams<"mood-grid">;
+        return <MoodPad prompt={p.title} send={(v) => send("mood", v)} x={p.x} y={p.y} />;
+      }
+      case "quiz-race": {
+        const p = params as SceneParams<"quiz-race">;
+        return <Race questions={p.questions} seconds={p.seconds} send={send} takenAt={state.takenAt} />;
+      }
+      case "open-mic":
+        return <Mic prompt={String(params.title)} send={(v) => send("mic", v, "once")} />;
+      case "tug": {
+        const p = params as SceneParams<"tug">;
+        return <TugButtons a={p.a} b={p.b} prompt={p.question} send={(side, n) => send(`tug:${side}`, String(n))} />;
+      }
+      case "pick-number":
+        return (
+          <Choice
+            options={Array.from({ length: 10 }, (_, i) => String(i + 1))}
+            prompt="Pensá un número del 1 al 10"
+            send={(v) => send("pick", v)}
+          />
+        );
+      case "draw": {
+        const p = params as SceneParams<"draw">;
+        return <Signature prompt={`${p.title} · ${p.prize}`} send={(v) => send("entry", v, "once")} />;
+      }
+      case "typing":
+        return <TypeRace phrase={String(params.phrase)} send={(v) => send("typed", v, "once")} />;
+      case "story":
+        return (
+          <StoryWord
+            prompt={String(params.opening)}
+            round={state.round}
+            send={(v) => send("story", v, "multi")}
+            voter={voter}
+          />
+        );
       case "scale": {
         const p = params as SceneParams<"scale">;
         return <Slider left={p.left} prompt={p.statement} right={p.right} send={(v) => send("scale", v)} />;
@@ -482,14 +532,16 @@ function Buzz({ prompt, send }: { prompt: string; send: (v: string) => Promise<b
 function Sessions({
   eventId,
   prompt,
+  max,
   send,
 }: {
   eventId: string | null;
   prompt: string;
+  max: number;
   send: (v: string) => Promise<boolean>;
 }) {
   const [tracks, setTracks] = useState<StickyNote[] | null>(null);
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<string[]>([]);
   useEffect(() => {
     if (!eventId) return;
     client.tracks
@@ -504,8 +556,20 @@ function Sessions({
         {tracks?.map((track) => (
           <button
             key={track.id}
-            className={chosen === track.id ? picked : idle}
-            onClick={() => send(track.id).then((ok) => ok && setChosen(track.id))}
+            className={chosen.includes(track.id) ? picked : idle}
+            onClick={() => {
+              const next = chosen.includes(track.id)
+                ? chosen.filter((id) => id !== track.id)
+                : max === 1
+                  ? [track.id]
+                  : chosen.length < max
+                    ? [...chosen, track.id]
+                    : chosen;
+              if (next === chosen) return;
+              setChosen(next);
+              // One row per person holds every pick; the wall splits it.
+              if (next.length) send(next.join("|"));
+            }}
             type="button"
           >
             <span className="block">{track.title}</span>
@@ -517,7 +581,8 @@ function Sessions({
         ))}
         {tracks && !tracks.length && <p className="text-[#FBF5E7]/60">Todavía no hay sesiones en el muro.</p>}
       </div>
-      <Sent shown={chosen !== null} />
+      <Sent shown={chosen.length > 0} />
+      {max > 1 && <p className="mt-2 text-center text-sm text-[#FBF5E7]/60">Hasta {max} sesiones.</p>}
     </>
   );
 }
@@ -827,6 +892,385 @@ function Taps({
       >
         {taps}
       </button>
+    </>
+  );
+}
+
+function PixelEditor({ prompt, send }: { prompt: string; send: (v: string) => Promise<boolean> }) {
+  const [cells, setCells] = useState<number[]>(() => Array(PIXEL_SIZE * PIXEL_SIZE).fill(0));
+  const [color, setColor] = useState(1);
+  const [sent, setSent] = useState(false);
+  const painting = useRef(false);
+  const paint = (i: number) => setCells((c) => (c[i] === color ? c : c.map((v, k) => (k === i ? color : v))));
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <div className="mt-4 flex gap-3">
+        {PIXEL_COLORS.map((c, i) => (
+          <button
+            key={c}
+            aria-label={i === 0 ? "borrar" : `color ${i}`}
+            className={`h-12 w-12 rounded-full border-4 ${color === i ? "border-[#FBF5E7]" : "border-transparent"}`}
+            onClick={() => setColor(i)}
+            style={{ background: i === 0 ? "#333" : c }}
+            type="button"
+          />
+        ))}
+      </div>
+      <div
+        className="mt-4 grid touch-none border-2 border-[#FBF5E7]/20 bg-black select-none"
+        onPointerDown={() => (painting.current = true)}
+        onPointerLeave={() => (painting.current = false)}
+        onPointerUp={() => (painting.current = false)}
+        style={{ gridTemplateColumns: `repeat(${PIXEL_SIZE}, 1fr)`, aspectRatio: "1" }}
+      >
+        {cells.map((c, i) => (
+          <span
+            key={i}
+            className="border-[0.5px] border-[#FBF5E7]/10"
+            onPointerDown={() => paint(i)}
+            onPointerEnter={() => painting.current && paint(i)}
+            style={{ background: PIXEL_COLORS[c] }}
+          />
+        ))}
+      </div>
+      <button
+        className="mt-4 w-full rounded-2xl bg-[#F5BB03] py-4 text-xl font-extrabold text-black disabled:opacity-40"
+        disabled={sent}
+        onClick={() => send(encodePixels(cells)).then((ok) => ok && setSent(true))}
+        type="button"
+      >
+        {sent ? "✓ En la pared" : "Mandar a la pared"}
+      </button>
+    </>
+  );
+}
+
+function MoodPad({
+  prompt,
+  x,
+  y,
+  send,
+}: {
+  prompt: string;
+  x: string;
+  y: string;
+  send: (v: string) => Promise<boolean>;
+}) {
+  const [point, setPoint] = useState<{ x: number; y: number } | null>(null);
+  const tap = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = Math.round(((e.clientX - r.left) / r.width) * 100);
+    const py = Math.round((1 - (e.clientY - r.top) / r.height) * 100);
+    setPoint({ x: px, y: py });
+    send(`${px},${py}`);
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <p className="mt-2 text-sm text-[#FBF5E7]/60">↑ {y}</p>
+      <div
+        className="relative mt-2 aspect-square w-full touch-none border-2 border-[#FBF5E7]/25 bg-[#FBF5E7]/5"
+        onPointerDown={tap}
+      >
+        <div className="absolute inset-y-0 left-1/2 w-px bg-[#FBF5E7]/15" />
+        <div className="absolute inset-x-0 top-1/2 h-px bg-[#FBF5E7]/15" />
+        {point && (
+          <span
+            className="absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5BB03]"
+            style={{ left: `${point.x}%`, top: `${100 - point.y}%` }}
+          />
+        )}
+      </div>
+      <p className="mt-2 text-right text-sm text-[#FBF5E7]/60">{x} →</p>
+      <Sent shown={point !== null} />
+    </>
+  );
+}
+
+function Race({
+  questions,
+  seconds,
+  takenAt,
+  send,
+}: {
+  questions: string;
+  seconds: number;
+  takenAt: string;
+  send: (key: string, value: string, mode?: Mode) => Promise<boolean>;
+}) {
+  const list = parseRace(questions);
+  const elapsed = useElapsed(takenAt, 500);
+  const slot = seconds + RACE_REVEAL;
+  const index = Math.min(list.length, Math.floor(elapsed / slot));
+  const answering = index < list.length && elapsed - index * slot < seconds;
+  const [name, setName] = useState("");
+  const [named, setNamed] = useState(false);
+  const [answered, setAnswered] = useState<Record<number, string>>({});
+  useEffect(() => {
+    setName(window.localStorage.getItem("owy-name") ?? "");
+  }, []);
+  if (!named) {
+    return (
+      <>
+        <Prompt>¿Cómo te llamás?</Prompt>
+        <form
+          className="mt-6 flex gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const value = name.trim().slice(0, 24);
+            if (!value) return;
+            window.localStorage.setItem("owy-name", value);
+            if (await send("name", value, "once")) setNamed(true);
+          }}
+        >
+          <input
+            className={field}
+            maxLength={24}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Tu nombre"
+            value={name}
+          />
+          <button className="rounded-2xl bg-[#F5BB03] px-5 text-xl font-extrabold text-black" type="submit">
+            →
+          </button>
+        </form>
+      </>
+    );
+  }
+  if (index >= list.length) return <Prompt>Se terminó. Mirá la tabla en la pantalla.</Prompt>;
+  const q = list[index];
+  const mine = answered[index];
+  return (
+    <>
+      <p className="mt-2 text-sm text-[#FBF5E7]/60">
+        Pregunta {index + 1} de {list.length} ·{" "}
+        {answering ? `${Math.max(0, Math.ceil(seconds - (elapsed - index * slot)))} s` : "respuesta en pantalla"}
+      </p>
+      <Prompt>{q.question}</Prompt>
+      <div className="mt-6 flex flex-col gap-3">
+        {q.options.map((option, i) => (
+          <button
+            key={option}
+            className={mine === String(i) ? picked : idle}
+            disabled={!answering || mine !== undefined}
+            onClick={() =>
+              send(`q:${index}`, String(i)).then((ok) => ok && setAnswered((a) => ({ ...a, [index]: String(i) })))
+            }
+            type="button"
+          >
+            <span className="mr-3 opacity-60">{"ABCD"[i]}</span>
+            {option}
+          </button>
+        ))}
+      </div>
+      {mine !== undefined && <p className="mt-4 text-center text-sm font-semibold text-[#F5BB03]">✓ Respondido</p>}
+    </>
+  );
+}
+
+function Mic({ prompt, send }: { prompt: string; send: (v: string) => Promise<boolean> }) {
+  const [name, setName] = useState("");
+  const [topic, setTopic] = useState("");
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    setName(window.localStorage.getItem("owy-name") ?? "");
+  }, []);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <form
+        className="mt-6 flex flex-col gap-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const n = name.trim().slice(0, 24);
+          const t = topic.trim().slice(0, 60);
+          if (!n || !t) return;
+          window.localStorage.setItem("owy-name", n);
+          if (await send(`${n} — ${t}`)) setDone(true);
+        }}
+      >
+        <input
+          className={field}
+          disabled={done}
+          maxLength={24}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Tu nombre"
+          value={name}
+        />
+        <input
+          className={field}
+          disabled={done}
+          maxLength={60}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="¿De qué vas a hablar?"
+          value={topic}
+        />
+        <button
+          className="rounded-2xl bg-[#F5BB03] py-4 text-xl font-extrabold text-black disabled:opacity-40"
+          disabled={done}
+          type="submit"
+        >
+          {done ? "✓ Estás en la cola" : "Anotarme"}
+        </button>
+      </form>
+    </>
+  );
+}
+
+function TugButtons({
+  prompt,
+  a,
+  b,
+  send,
+}: {
+  prompt: string;
+  a: string;
+  b: string;
+  send: (side: "a" | "b", n: number) => Promise<boolean>;
+}) {
+  const counts = useRef({ a: 0, b: 0 });
+  const timers = useRef<{ a: boolean; b: boolean }>({ a: false, b: false });
+  const [shown, setShown] = useState({ a: 0, b: 0 });
+  const pull = (side: "a" | "b") => {
+    counts.current[side] += 1;
+    setShown({ ...counts.current });
+    if (timers.current[side]) return;
+    timers.current[side] = true;
+    setTimeout(() => {
+      timers.current[side] = false;
+      send(side, counts.current[side]);
+    }, 500);
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <p className="mt-2 text-sm text-[#FBF5E7]/60">Tocá tu lado, muchas veces.</p>
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <button
+          className="rounded-3xl bg-[#F5BB03] py-16 text-2xl font-extrabold text-black active:scale-95"
+          onClick={() => pull("a")}
+          type="button"
+        >
+          {a}
+          <span className="block text-4xl tabular-nums">{shown.a}</span>
+        </button>
+        <button
+          className="rounded-3xl bg-[#0162C8] py-16 text-2xl font-extrabold text-[#FBF5E7] active:scale-95"
+          onClick={() => pull("b")}
+          type="button"
+        >
+          {b}
+          <span className="block text-4xl tabular-nums">{shown.b}</span>
+        </button>
+      </div>
+    </>
+  );
+}
+
+function TypeRace({ phrase, send }: { phrase: string; send: (v: string) => Promise<boolean> }) {
+  const [text, setText] = useState("");
+  const [name, setName] = useState("");
+  const [ms, setMs] = useState<number | null>(null);
+  const started = useRef(0);
+  useEffect(() => {
+    setName(window.localStorage.getItem("owy-name") ?? "");
+  }, []);
+  const change = (value: string) => {
+    if (ms !== null) return;
+    if (!started.current) started.current = Date.now();
+    setText(value);
+    if (value === phrase) {
+      const time = Date.now() - started.current;
+      setMs(time);
+      const who = name.trim().slice(0, 24) || "Anónimo";
+      window.localStorage.setItem("owy-name", who);
+      send(`${time}:${who}`);
+    }
+  };
+  return (
+    <>
+      <Prompt>Tipeá esto sin errores</Prompt>
+      <p className="font-terminal mt-4 rounded-2xl bg-[#FBF5E7]/10 p-4 text-lg break-all text-[#F5BB03]">{phrase}</p>
+      <input
+        className={`${field} mt-3`}
+        maxLength={24}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Tu nombre (opcional)"
+        value={name}
+      />
+      <input
+        autoCapitalize="off"
+        autoComplete="off"
+        autoCorrect="off"
+        className={`${field} font-terminal mt-3 ${text && !phrase.startsWith(text) ? "border-red-500" : ""}`}
+        disabled={ms !== null}
+        onChange={(e) => change(e.target.value)}
+        placeholder="El cronómetro arranca con la primera tecla"
+        spellCheck={false}
+        value={text}
+      />
+      {ms !== null && (
+        <p className="mt-4 text-center text-2xl font-extrabold text-[#F5BB03]">
+          {(ms / 1000).toFixed(2)} s · mirá la tabla
+        </p>
+      )}
+    </>
+  );
+}
+
+function StoryWord({
+  prompt,
+  round,
+  voter,
+  send,
+}: {
+  prompt: string;
+  round: string;
+  voter: string;
+  send: (v: string) => Promise<boolean>;
+}) {
+  const inputs = useInputs(round);
+  const words = inputs.filter((i) => i.key === "story");
+  const mine = words.filter((i) => i.voter === voter).length;
+  const [text, setText] = useState("");
+  return (
+    <>
+      <Prompt>Una palabra para seguir la historia</Prompt>
+      <p className="mt-3 text-[#FBF5E7]/70">
+        <span className="text-[#F5BB03]">{prompt}</span>{" "}
+        {words
+          .slice(-12)
+          .map((w) => w.value)
+          .join(" ")}
+        …
+      </p>
+      <form
+        className="mt-6 flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const word = text.trim().split(/\s+/)[0]?.slice(0, 24) ?? "";
+          if (word && mine < 3 && (await send(word))) setText("");
+        }}
+      >
+        <input
+          className={field}
+          maxLength={24}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Una sola palabra"
+          value={text}
+        />
+        <button
+          className="rounded-2xl bg-[#F5BB03] px-5 text-xl font-extrabold text-black disabled:opacity-40"
+          disabled={mine >= 3}
+          type="submit"
+        >
+          →
+        </button>
+      </form>
+      <p className="mt-3 text-sm text-[#FBF5E7]/60">
+        {mine >= 3 ? "Ya pusiste tres. Dejá lugar a otros." : `Te quedan ${3 - mine}.`}
+      </p>
     </>
   );
 }

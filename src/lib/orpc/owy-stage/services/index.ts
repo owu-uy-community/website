@@ -29,19 +29,29 @@ export async function getStageState(): Promise<StageState> {
   const [row] = await db.select().from(owyStageState).where(eq(owyStageState.id, ROW_ID)).limit(1);
   if (!row || !isSceneId(row.scene)) return DEFAULT_STAGE_STATE;
 
-  return { scene: row.scene, params: row.params, eventId: row.eventId, round: row.round };
+  return {
+    scene: row.scene,
+    params: row.params,
+    eventId: row.eventId,
+    round: row.round,
+    takenAt: row.updatedAt.toISOString(),
+  };
 }
 
 /** Persist the active scene (params validated against the scene's schema) and tell every stage. */
 export async function setScene(input: SetSceneInput): Promise<StageState> {
   const params = parseSceneParams(input.scene, input.params) as Record<string, unknown>;
   const eventId = input.eventId === undefined ? (await getStageState()).eventId : input.eventId;
-  const state: StageState = { scene: input.scene, params, eventId, round: createId() };
+  const takenAt = new Date();
+  const state: StageState = { scene: input.scene, params, eventId, round: createId(), takenAt: takenAt.toISOString() };
 
   await db
     .insert(owyStageState)
-    .values({ id: ROW_ID, ...state })
-    .onConflictDoUpdate({ target: owyStageState.id, set: { scene: state.scene, params, eventId, round: state.round } });
+    .values({ id: ROW_ID, scene: state.scene, params, eventId, round: state.round, updatedAt: takenAt })
+    .onConflictDoUpdate({
+      target: owyStageState.id,
+      set: { scene: state.scene, params, eventId, round: state.round, updatedAt: takenAt },
+    });
 
   await publishServer(OWY_STAGE_CHANNEL, "scene", state);
 

@@ -93,6 +93,20 @@ import {
   TapRace,
 } from "./interactive2";
 import {
+  Draw,
+  HumanMap,
+  Mirror,
+  MoodGrid,
+  OpenMic,
+  PaperPlanes,
+  PickNumber,
+  Pixel,
+  QuizRace,
+  Story,
+  Tug,
+  Typing,
+} from "./interactive3";
+import {
   Automaton,
   DoublePendulum,
   Langton,
@@ -510,5 +524,17 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   stretch: Stretch,
   clap: Clap,
   columns: Columns,
+  pixel: Pixel,
+  "mood-grid": MoodGrid,
+  "quiz-race": QuizRace,
+  "open-mic": OpenMic,
+  tug: Tug,
+  "pick-number": PickNumber,
+  draw: Draw,
+  typing: Typing,
+  story: Story,
+  mirror: Mirror,
+  "paper-planes": PaperPlanes,
+  "human-map": HumanMap,
   black: Black,
 };

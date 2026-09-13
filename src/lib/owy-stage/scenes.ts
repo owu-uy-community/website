@@ -1173,8 +1173,11 @@ export const SCENES = {
   },
   "session-vote": {
     title: "Votación de sesiones",
-    description: "Las sesiones del muro se votan desde el celular; las más votadas suben.",
-    params: z.object({ title: z.string().trim().max(60).default("¿A cuál vas?") }),
+    description: "Las sesiones del muro se votan desde el celular (hasta N por persona); las más votadas suben.",
+    params: z.object({
+      title: z.string().trim().max(60).default("¿A cuál vas?"),
+      max: z.number().int().min(1).max(5).default(1),
+    }),
   },
   // --- Interactivos en persona: la pantalla guía, la gente se mueve ---
   "stand-up": {
@@ -1362,6 +1365,109 @@ export const SCENES = {
       seconds: z.number().int().min(10).max(180).default(40),
     }),
   },
+  pixel: {
+    title: "Pixel art",
+    description: "Cada persona dibuja en una grilla de 16×16 en el celular; la pared arma la galería.",
+    params: z.object({ prompt: z.string().trim().max(80).default("Dibujá a Owy (o lo que quieras)") }),
+  },
+  "mood-grid": {
+    title: "Mapa de ánimo",
+    description: "Tocá un punto en dos ejes (energía × ánimo) desde el celular; la pared muestra la nube de puntos.",
+    params: z.object({
+      title: z.string().trim().max(80).default("¿Cómo venís?"),
+      x: z.string().trim().max(40).default("Sin energía → con energía"),
+      y: z.string().trim().max(40).default("Meh → feliz"),
+    }),
+  },
+  "quiz-race": {
+    title: "Quiz por rondas",
+    description:
+      "Varias preguntas seguidas con tiempo y tabla de posiciones (estilo Kahoot). Formato: Pregunta: a, b, c, d = índice correcto (0-3) | …",
+    params: z.object({
+      questions: z
+        .string()
+        .trim()
+        .max(2000)
+        .default(
+          "¿Qué significa OWU?: Open Web Uruguay, Otra Web Uruguaya, Open Workshop Uruguay, Objetos Web Únicos = 0 | ¿Dónde es OWU CONF 2026?: Antel Arena, Sinergia Faro, LATU, Teatro Solís = 1 | ¿Cuántos principios tiene el open space?: 2, 3, 4, 5 = 2 | ¿Qué toma Owy?: Café, Mate, Té, Agua = 1"
+        ),
+      seconds: z.number().int().min(8).max(90).default(20),
+    }),
+  },
+  "open-mic": {
+    title: "Micrófono abierto",
+    description: "Anotarse desde el celular para hablar (nombre y tema); la pared muestra la cola.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Charlas relámpago: anotate"),
+      minutes: z.number().int().min(1).max(30).default(5),
+    }),
+  },
+  tug: {
+    title: "Cinchada",
+    description: "Dos opiniones, una soga: cada toque tira para tu lado. Hasta que alguien cruza la línea.",
+    params: z.object({
+      question: z.string().trim().max(100).default("¿Qué es mejor?"),
+      a: z.string().trim().max(24).default("Tabs"),
+      b: z.string().trim().max(24).default("Espacios"),
+    }),
+  },
+  "pick-number": {
+    title: "Pensá un número",
+    description: "Del 1 al 10 desde el celular; al cerrar, el histograma y el truco: casi siempre gana el 7.",
+    params: z.object({ seconds: z.number().int().min(5).max(120).default(25) }),
+  },
+  draw: {
+    title: "Sorteo por celular",
+    description: "La gente se anota con su nombre; al terminar la cuenta, la pared elige una persona al azar.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Sorteo"),
+      prize: z.string().trim().max(80).default("Una remera OWU"),
+      seconds: z.number().int().min(10).max(600).default(60),
+    }),
+  },
+  typing: {
+    title: "Carrera de tipeo",
+    description: "Tipeá la frase lo más rápido posible; el celular mide el tiempo y la pared arma el ranking.",
+    params: z.object({
+      phrase: z.string().trim().max(80).default("git push --force-with-lease origin main"),
+    }),
+  },
+  story: {
+    title: "Historia colectiva",
+    description: "Una palabra por persona, en orden de llegada: la pared arma la historia.",
+    params: z.object({ opening: z.string().trim().max(80).default("Había una vez, en una conferencia,") }),
+  },
+  mirror: {
+    title: "Espejo",
+    description: "De a dos: una persona guía y la otra copia sus movimientos; cambian de rol con el temporizador.",
+    params: z.object({
+      rounds: z.number().int().min(2).max(8).default(4),
+      seconds: z.number().int().min(10).max(120).default(30),
+    }),
+  },
+  "paper-planes": {
+    title: "Aviones de papel",
+    description: "Escribí una pregunta, armá el avión, tiralo al escenario y agarrá otro. Pasos con temporizador.",
+    params: z.object({
+      steps: z
+        .string()
+        .trim()
+        .max(600)
+        .default(
+          "✍️ Escribí una pregunta para el escenario en un papel: 60 | ✈️ Armá tu avión de papel: 60 | 🚀 ¡A volar! Tiralo hacia el escenario: 10 | 🙌 Agarrá uno del piso y leelo en voz alta si te lo piden: 30"
+        ),
+    }),
+  },
+  "human-map": {
+    title: "Mapa humano",
+    description: "La sala es Uruguay: pará donde naciste (o donde vivís) y mirá cómo queda el mapa.",
+    params: z.object({
+      prompt: z.string().trim().max(80).default("Pará en el lugar donde naciste"),
+      north: z.string().trim().max(40).default("la entrada"),
+      south: z.string().trim().max(40).default("el escenario"),
+      seconds: z.number().int().min(20).max(300).default(90),
+    }),
+  },
   frame: {
     title: "Marco",
     description:
@@ -1379,7 +1485,13 @@ export type SceneId = keyof typeof SCENES;
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[];
 export type SceneParams<K extends SceneId> = z.infer<(typeof SCENES)[K]["params"]>;
 /** What a scene component receives: its validated params plus the wall's working event. */
-export type SceneProps<K extends SceneId> = { params: SceneParams<K>; eventId: string | null; round: string };
+export type SceneProps<K extends SceneId> = {
+  params: SceneParams<K>;
+  eventId: string | null;
+  round: string;
+  /** ISO time of the take (see StageState.takenAt). */
+  takenAt: string;
+};
 
 export function isSceneId(value: string): value is SceneId {
   return value in SCENES;
@@ -1397,10 +1509,12 @@ export const StageStateSchema = z.object({
   eventId: z.string().nullable().default(null),
   /** Changes on every take; interactive scenes key their phone inputs on it. */
   round: z.string().default(""),
+  /** ISO time of the take, so wall and phones agree on timers. */
+  takenAt: z.string().default(""),
 });
 export type StageState = z.infer<typeof StageStateSchema>;
 
-export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null, round: "" };
+export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null, round: "", takenAt: "" };
 
 /** Scenes that take input from phones at /owy/play. */
 export const INTERACTIVE_SCENES = [
@@ -1422,6 +1536,15 @@ export const INTERACTIVE_SCENES = [
   "signatures",
   "pairs",
   "tap-race",
+  "pixel",
+  "mood-grid",
+  "quiz-race",
+  "open-mic",
+  "tug",
+  "pick-number",
+  "draw",
+  "typing",
+  "story",
 ] as const satisfies readonly SceneId[];
 
 export const InputModeSchema = z.enum(["single", "multi", "once"]);
