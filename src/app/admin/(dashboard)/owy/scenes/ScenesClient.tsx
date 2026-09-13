@@ -93,7 +93,7 @@ export default function ScenesClient() {
   const stageUrl = (path: string) => `${origin}${path}${transparent ? "?bg=transparent" : ""}`;
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Escenas Owy</h1>
@@ -110,7 +110,7 @@ export default function ScenesClient() {
             value={live.eventId ?? ""}
             onValueChange={(eventId) => setScene.mutate({ scene: live.scene, params: live.params, eventId })}
           >
-            <SelectTrigger className="w-[260px]">
+            <SelectTrigger className="w-[320px]">
               <SelectValue placeholder="Evento para countdown / cast" />
             </SelectTrigger>
             <SelectContent>
@@ -303,13 +303,13 @@ export default function ScenesClient() {
 
       <div>
         <h2 className="font-display text-lg font-semibold">Escenas</h2>
-        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
           {SCENE_IDS.map((id) => {
             const onAir = live.scene === id;
 
             return (
-              <Card key={id} className={onAir ? "ring-2 ring-[#F5BB03]" : undefined}>
-                <CardContent className="space-y-3 p-3">
+              <Card key={id} className={`flex flex-col ${onAir ? "ring-2 ring-[#F5BB03]" : ""}`}>
+                <CardContent className="flex flex-1 flex-col gap-3 p-3">
                   <div className="relative">
                     <ScaledFrame src={`/owy/stage/${id}?preview=1`} title={SCENES[id].title} />
                     {onAir && (
@@ -318,9 +318,11 @@ export default function ScenesClient() {
                   </div>
                   <div>
                     <p className="font-medium">{SCENES[id].title}</p>
-                    <p className="text-muted-foreground text-xs">{SCENES[id].description}</p>
+                    <p className="text-muted-foreground line-clamp-2 text-xs" title={SCENES[id].description}>
+                      {SCENES[id].description}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="mt-auto flex items-center gap-2">
                     <Button
                       className="flex-1"
                       disabled={setScene.isPending}

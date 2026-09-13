@@ -450,7 +450,7 @@ export default function CompanionWorkbench() {
   const modeLabel = live ? "Bridge en vivo · dispositivo virtual" : locked ? "Replay grabado" : "Dispositivo simulado";
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
+    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Owy Companion</h1>
@@ -458,9 +458,13 @@ export default function CompanionWorkbench() {
             El firmware real corriendo en el navegador: la misma cara, gestos y voz que el Owy físico de la mesa.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={ready ? "default" : "outline"}>{ready ? "Runtime listo" : "Cargando runtime…"}</Badge>
-          <Badge variant="outline">{modeLabel}</Badge>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Badge className="whitespace-nowrap" variant={ready ? "default" : "outline"}>
+            {ready ? "Runtime listo" : "Cargando runtime…"}
+          </Badge>
+          <Badge className="whitespace-nowrap" variant="outline">
+            {modeLabel}
+          </Badge>
           <Button size="icon" title="Cómo funciona este emulador" variant="ghost" onClick={() => setHelp(!help)}>
             <CircleHelp className="h-4 w-4" />
           </Button>
@@ -526,7 +530,7 @@ export default function CompanionWorkbench() {
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_400px]">
+      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_380px] 2xl:grid-cols-[300px_minmax(0,1fr)_420px]">
         <div className="space-y-6">
           <Card>
             <CardHeader className="pb-3">
@@ -538,7 +542,7 @@ export default function CompanionWorkbench() {
               </CardTitle>
               <CardDescription>Historias cortas, comportamiento reproducible.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-1 p-2 pt-0">
+            <CardContent className="max-h-[640px] [scrollbar-width:thin] [scrollbar-color:#3f3f46_transparent] space-y-1 overflow-y-auto p-2 pt-0">
               {scenarios.map((scenario, index) => {
                 const isSelected = selected === scenario.id;
                 return (
@@ -687,7 +691,7 @@ export default function CompanionWorkbench() {
 
             <div>
               <SectionTitle icon={Fingerprint}>Gestos</SectionTitle>
-              <div className="mt-2 grid grid-cols-3 gap-2">
+              <div className="mt-2 grid grid-cols-2 gap-2 2xl:grid-cols-3">
                 {(
                   [
                     ["Tocar / BOOT", Mic, () => input("boot", [100]), "␣"],
@@ -700,16 +704,17 @@ export default function CompanionWorkbench() {
                 ).map(([label, Icon, action, key]) => (
                   <Button
                     key={label}
-                    className="justify-between"
+                    className="min-w-0 justify-between overflow-hidden"
                     disabled={!ready || inputsLocked}
                     size="sm"
                     variant="outline"
                     onClick={action}
                   >
-                    <span className="flex items-center gap-2">
-                      <Icon className="h-3.5 w-3.5" /> {label}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{label}</span>
                     </span>
-                    <Kbd>{key}</Kbd>
+                    <Kbd className="ml-2 shrink-0">{key}</Kbd>
                   </Button>
                 ))}
               </div>
@@ -881,7 +886,7 @@ export default function CompanionWorkbench() {
       <Card>
         <Tabs defaultValue="inputs">
           <CardHeader className="pb-0">
-            <TabsList>
+            <TabsList className="w-fit">
               <TabsTrigger value="inputs">
                 <Move3D className="mr-2 h-4 w-4" /> Entradas
               </TabsTrigger>
