@@ -39,7 +39,7 @@ function currentIndex(program: ProgramItem[], now: string): number {
   return index;
 }
 
-function useNow(everyMs = 1000) {
+export function useNow(everyMs = 1000) {
   const [now, setNow] = useState(nowHHMM);
   useEffect(() => {
     const id = setInterval(() => setNow(nowHHMM()), everyMs);
@@ -49,7 +49,7 @@ function useNow(everyMs = 1000) {
 }
 
 /** Seconds from now (HH:MM:SS in the event timezone) until an HH:MM today. */
-function secondsUntil(time: string): number {
+export function secondsUntil(time: string): number {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "America/Montevideo",
     hour: "2-digit",
@@ -166,7 +166,7 @@ export function Next({ params }: SceneProps<"next">) {
 // Room — one room's day, for a screen at that room's door
 // ---------------------------------------------------------------------------
 
-function useBoard(eventId: string | null, preview: boolean) {
+export function useBoard(eventId: string | null, preview: boolean) {
   const [data, setData] = useState<{ rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] } | null>(null);
   const load = useCallback(() => {
     if (!eventId) return;
@@ -265,7 +265,7 @@ export function RoomDay({ params, eventId }: SceneProps<"room">) {
   );
 }
 
-function EmptyText({ text }: { text: string }) {
+export function EmptyText({ text }: { text: string }) {
   return (
     <>
       <Ambient />

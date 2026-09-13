@@ -227,6 +227,17 @@ export default function ScenesClient() {
                 <Button size="sm" variant="outline" onClick={() => fireEffect.mutate({ effect: "owy-happy" })}>
                   <Smile className="mr-1 h-4 w-4" /> Owy feliz
                 </Button>
+                {["👏", "🎉", "🧉", "❤️", "🔥"].map((emoji) => (
+                  <Button
+                    key={emoji}
+                    size="sm"
+                    title={`Lluvia de ${emoji}`}
+                    variant="outline"
+                    onClick={() => fireEffect.mutate({ effect: "emoji", payload: { text: emoji } })}
+                  >
+                    {emoji}
+                  </Button>
+                ))}
               </div>
               <form
                 className="flex gap-2"

@@ -7,7 +7,7 @@ import type { EffectEvent, EffectId } from "lib/owy-stage/scenes";
 import { BRAND, Caption, H, W, useStageFrame } from "./Stage";
 
 /** How long each one-shot stays mounted; owy-happy is consumed by the face scene. */
-const TTL: Record<EffectId, number> = { confetti: 3500, flash: 500, caption: 7000, "owy-happy": 0 };
+const TTL: Record<EffectId, number> = { confetti: 3500, flash: 500, caption: 7000, emoji: 5000, "owy-happy": 0 };
 
 type QueuedEffect = EffectEvent & { id: number };
 
@@ -42,6 +42,7 @@ export function Effects({ fx }: { fx: QueuedEffect[] }) {
             );
           }
           if (effect.effect === "caption") return <Caption key={effect.id} text={effect.payload?.text ?? ""} />;
+          if (effect.effect === "emoji") return <EmojiRain key={effect.id} chars={effect.payload?.text || "👏"} />;
           return null;
         })}
       </AnimatePresence>
@@ -139,6 +140,52 @@ export function Confetti() {
       ctx.restore();
     }
     ctx.globalAlpha = 1;
+  });
+
+  return <canvas ref={canvas} className="absolute inset-0" height={H} width={W} />;
+}
+
+// ---------------------------------------------------------------------------
+// Emoji rain — 👏 🧉 🎉 falling for a few seconds
+// ---------------------------------------------------------------------------
+
+type Drop = { x: number; y: number; vy: number; size: number; char: string; sway: number; spin: number; rot: number };
+
+export function EmojiRain({ chars, count = 70 }: { chars: string; count?: number }) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const drops = useMemo<Drop[]>(() => {
+    const glyphs = Array.from(chars.trim() || "👏");
+    return Array.from({ length: count }, (_, i) => ({
+      x: Math.random() * W,
+      y: -100 - Math.random() * H * 1.4,
+      vy: 260 + Math.random() * 340,
+      size: 56 + Math.random() * 64,
+      char: glyphs[i % glyphs.length],
+      sway: Math.random() * Math.PI * 2,
+      spin: (Math.random() - 0.5) * 1.6,
+      rot: (Math.random() - 0.5) * 0.6,
+    }));
+  }, [chars, count]);
+
+  useStageFrame((t, dt) => {
+    const ctx = canvas.current?.getContext("2d");
+    if (!ctx) return;
+    const s = dt / 1000;
+    ctx.clearRect(0, 0, W, H);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const d of drops) {
+      d.y += d.vy * s;
+      d.x += Math.sin(t / 700 + d.sway) * 30 * s;
+      d.rot += d.spin * s;
+      if (d.y > H + 80) continue;
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.rotate(d.rot);
+      ctx.font = `${d.size}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+      ctx.fillText(d.char, 0, 0);
+      ctx.restore();
+    }
   });
 
   return <canvas ref={canvas} className="absolute inset-0" height={H} width={W} />;

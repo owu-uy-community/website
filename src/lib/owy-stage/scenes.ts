@@ -291,6 +291,90 @@ export const SCENES = {
       offer: z.string().trim().max(12).default("2x1"),
     }),
   },
+  board: {
+    title: "Muro de ideas",
+    description: "Las propuestas del open space como stickies en la pared, en vivo.",
+    params: z.object({}),
+  },
+  "rooms-now": {
+    title: "Ahora en cada sala",
+    description: "Una tarjeta por sala: lo que pasa ahora y lo que sigue.",
+    params: z.object({}),
+  },
+  marquee: {
+    title: "Marquesina",
+    description: "Texto gigante desfilando en dos filas.",
+    params: z.object({ text: z.string().trim().max(120).default("OWU CONF 2026 · Hecha por la comunidad") }),
+  },
+  until: {
+    title: "Hasta las…",
+    description: "Cuenta regresiva hasta una hora del reloj.",
+    params: z.object({
+      label: z.string().trim().max(40).default("Volvemos a las"),
+      time: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default("17:30"),
+    }),
+  },
+  quote: {
+    title: "Frase",
+    description: "Una cita grande con su autor.",
+    params: z.object({
+      text: z.string().trim().max(200).default("Las mejores ideas aparecen cuando la comunidad se junta."),
+      author: z.string().trim().max(60).default("OWU"),
+    }),
+  },
+  "sponsor-wall": {
+    title: "Pared de sponsors",
+    description: "Todos los logos a la vez, con entrada escalonada.",
+    params: z.object({}),
+  },
+  applause: {
+    title: "Aplauso",
+    description: "“Un aplauso para…” con lluvia de 👏 y confetti.",
+    params: z.object({ name: z.string().trim().max(60).default("nuestros speakers") }),
+  },
+  speaker: {
+    title: "Speaker",
+    description: "La tarjeta de presentación antes de una charla: nombre, empresa y título.",
+    params: z.object({
+      name: z.string().trim().max(60).default("Nombre Apellido"),
+      company: z.string().trim().max(60).default(""),
+      talk: z.string().trim().max(120).default("Título de la charla"),
+    }),
+  },
+  numbers: {
+    title: "En números",
+    description: "Hasta tres cifras con animación de conteo.",
+    params: z.object({
+      title: z.string().trim().max(50).default("OWU CONF en números"),
+      n1: z.coerce.number().int().min(0).max(999999).default(300),
+      l1: z.string().trim().max(30).default("asistentes"),
+      n2: z.coerce.number().int().min(0).max(999999).default(20),
+      l2: z.string().trim().max(30).default("ideas"),
+      n3: z.coerce.number().int().min(0).max(999999).default(14),
+      l3: z.string().trim().max(30).default("sponsors"),
+    }),
+  },
+  rain: {
+    title: "Lluvia de código",
+    description: "Caracteres cayendo en amarillo y azul con el logo en el medio.",
+    params: z.object({}),
+  },
+  warp: {
+    title: "Hiperespacio",
+    description: "Estrellas hacia el logo. Para entrar al bloque de charlas.",
+    params: z.object({}),
+  },
+  qa: {
+    title: "Preguntas",
+    description: "“¿Preguntas?” para la ronda de Q&A.",
+    params: z.object({
+      subtitle: z.string().trim().max(120).default("Levantá la mano o escribí en #owuconf del Slack"),
+    }),
+  },
   frame: {
     title: "Marco",
     description:
@@ -314,7 +398,7 @@ export function isSceneId(value: string): value is SceneId {
   return value in SCENES;
 }
 
-export const EFFECTS = ["confetti", "flash", "owy-happy", "caption"] as const;
+export const EFFECTS = ["confetti", "flash", "owy-happy", "caption", "emoji"] as const;
 export type EffectId = (typeof EFFECTS)[number];
 
 export const FACE_STATES = ["idle", "listening", "thinking", "speaking", "happy", "error", "offline"] as const;
