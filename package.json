@@ -18,6 +18,7 @@
     "db:seed": "tsx src/lib/db/seed.ts",
     "owy:key": "tsx src/lib/db/create-owy-key.ts",
     "db:studio": "drizzle-kit studio",
+    "stage:thumbs": "node scripts/stage-thumbs.mjs",
     "dev": "next dev --turbo",
     "dev:realtime": "node scripts/dev-realtime.mjs",
     "lint": "next lint",

@@ -6,6 +6,7 @@ import { Copy, ExternalLink, Music, PartyPopper, Radio, Smile, Sparkles, Subtitl
 
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
 import { ScaledFrame } from "components/Admin/stage/ScaledFrame";
+import { SceneThumb } from "components/Admin/stage/SceneThumb";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
@@ -376,7 +377,7 @@ export default function ScenesClient() {
               <Card key={id} className={`flex flex-col ${onAir ? "ring-2 ring-[#F5BB03]" : ""}`}>
                 <CardContent className="flex flex-1 flex-col gap-3 p-3">
                   <div className="relative">
-                    <ScaledFrame src={`/owy/stage/${id}?preview=1`} title={SCENES[id].title} />
+                    <SceneThumb id={id} title={SCENES[id].title} />
                     {onAir && (
                       <Badge className="absolute top-2 left-2 bg-red-600 text-white hover:bg-red-600">AL AIRE</Badge>
                     )}
