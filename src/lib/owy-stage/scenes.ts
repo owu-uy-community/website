@@ -441,6 +441,91 @@ export const SCENES = {
       title: z.string().trim().max(60).default("Bienvenidos a OWU CONF"),
     }),
   },
+  trivia: {
+    title: "Trivia",
+    description: "Pregunta con cuatro opciones; cuenta regresiva y revela la correcta con confetti.",
+    params: z.object({
+      question: z.string().trim().max(140).default("¿En qué año fue la primera OWU CONF?"),
+      a: z.string().trim().max(60).default("2019"),
+      b: z.string().trim().max(60).default("2022"),
+      c: z.string().trim().max(60).default("2024"),
+      d: z.string().trim().max(60).default("2025"),
+      answer: z.string().trim().max(1).default("C"),
+      seconds: z.number().int().min(0).max(120).default(20),
+    }),
+  },
+  versus: {
+    title: "Versus",
+    description: "Dos mitades, la sala elige un lado a los gritos.",
+    params: z.object({
+      question: z.string().trim().max(60).default("¿Qué preferís?"),
+      left: z.string().trim().max(24).default("Tabs"),
+      right: z.string().trim().max(24).default("Spaces"),
+    }),
+  },
+  lineup: {
+    title: "Charlas",
+    description: "El bloque de charlas: hora, título y quién la da (hasta tres).",
+    params: z.object({
+      eyebrow: z.string().trim().max(60).default("Después del coffee"),
+      title: z.string().trim().max(40).default("Charlas"),
+      h1: z.string().trim().max(5).default("19:00"),
+      t1: z.string().trim().max(90).default("Charla 1"),
+      s1: z.string().trim().max(60).default(""),
+      h2: z.string().trim().max(5).default("19:45"),
+      t2: z.string().trim().max(90).default("Charla 2"),
+      s2: z.string().trim().max(60).default(""),
+      h3: z.string().trim().max(5).default(""),
+      t3: z.string().trim().max(90).default(""),
+      s3: z.string().trim().max(60).default(""),
+    }),
+  },
+  "owy-says": {
+    title: "Owy dice",
+    description: "Owy piensa, dice el mensaje que escribas y sonríe.",
+    params: z.object({
+      text: z
+        .string()
+        .trim()
+        .max(200)
+        .default("¡Hola! Vengan a hablar conmigo en el stand, tengo cosas que contarles."),
+    }),
+  },
+  aurora: {
+    title: "Aurora",
+    description: "Manchas de color de la marca flotando; fondo para el break.",
+    params: z.object({}),
+  },
+  dvd: {
+    title: "DVD",
+    description: "El logo rebota por la pantalla. Si toca una esquina, hay confetti.",
+    params: z.object({}),
+  },
+  life: {
+    title: "Game of Life",
+    description: "El autómata de Conway en colores OWU; se resiembra solo.",
+    params: z.object({}),
+  },
+  "test-card": {
+    title: "Carta de ajuste",
+    description: "Barras de color y hora para probar la señal antes de abrir puertas.",
+    params: z.object({}),
+  },
+  conduct: {
+    title: "Código de conducta",
+    description: "Tres reglas y a quién acudir.",
+    params: z.object({
+      l1: z.string().trim().max(120).default("Un entorno amigable, respetuoso e inclusivo para todas las personas."),
+      l2: z.string().trim().max(120).default("Sin comentarios ofensivos, acoso, intimidación ni discriminación."),
+      l3: z.string().trim().max(120).default("Los organizadores pueden pedirte que te retires si no lo respetás."),
+      contact: z.string().trim().max(120).default("Si algo te incomoda, buscá a cualquiera del staff con remera OWU."),
+    }),
+  },
+  mosaic: {
+    title: "Mosaico",
+    description: "Seis fotos de ediciones anteriores; van cambiando de a una.",
+    params: z.object({}),
+  },
   frame: {
     title: "Marco",
     description:

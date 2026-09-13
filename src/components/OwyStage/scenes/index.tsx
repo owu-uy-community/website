@@ -29,6 +29,7 @@ import {
   Warp,
 } from "./extra";
 import { History, Meetups, OwyCard, Principles, Pulse, Raffle, Selfie, Venue, Welcome } from "./discover";
+import { Aurora, Conduct, Dvd, Life, Lineup, Mosaic, OwySays, TestCard, Trivia, Versus } from "./fun";
 import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
@@ -316,5 +317,15 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   selfie: Selfie,
   raffle: Raffle,
   welcome: Welcome,
+  trivia: Trivia,
+  versus: Versus,
+  lineup: Lineup,
+  "owy-says": OwySays,
+  aurora: Aurora,
+  dvd: Dvd,
+  life: Life,
+  "test-card": TestCard,
+  conduct: Conduct,
+  mosaic: Mosaic,
   black: Black,
 };
