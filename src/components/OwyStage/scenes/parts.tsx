@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { m } from "motion/react";
+import { encode } from "uqr";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { SPONSORS_2026 } from "app/conf/components/Sponsors";
@@ -91,5 +93,23 @@ export const MOMENT_PHOTOS = Array.from({ length: 30 }, (_, i) => i + 1)
 export function nowHHMM(timeZone = "America/Montevideo"): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(
     new Date()
+  );
+}
+
+/** QR on a cream card (dark modules on light stays scannable on any wall). */
+export function QrCode({ value, size = 420 }: { value: string; size?: number }) {
+  const qr = useMemo(() => encode(value, { border: 0, ecc: "M" }), [value]);
+  const path = useMemo(
+    () => qr.data.flatMap((row, y) => row.map((on, x) => (on ? `M${x} ${y}h1v1h-1z` : ""))).join(""),
+    [qr]
+  );
+  const pad = size * 0.06;
+
+  return (
+    <div className="inline-block bg-[#FBF5E7]" style={{ padding: pad }}>
+      <svg height={size} shapeRendering="crispEdges" viewBox={`0 0 ${qr.size} ${qr.size}`} width={size}>
+        <path d={path} fill="#000" />
+      </svg>
+    </div>
   );
 }

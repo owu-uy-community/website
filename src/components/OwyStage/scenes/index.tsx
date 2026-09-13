@@ -14,6 +14,7 @@ import { formatTime } from "lib/utils";
 import { Ambient, BRAND, StageContext } from "../Stage";
 import OwyFace from "./OwyFace";
 import { Days, Ideas, Kaleidoscope, Launch, OwyTalks, Sponsor, Talk, Tangram, Terminal, Ticker } from "./creative";
+import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
@@ -271,5 +272,13 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   "owy-howto": OwyHowTo,
   social: Social,
   photo: Photo,
+  block: Block,
+  cams: Cams,
+  community: Community,
+  silence: Silence,
+  promo: Promo,
+  qr: Qr,
+  after: After,
+  frame: Frame,
   black: Black,
 };

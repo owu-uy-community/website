@@ -8,9 +8,9 @@ import { z } from "zod";
 
 export const OWY_STAGE_CHANNEL = "owy-stage";
 
-/** Editable from the admin; the landing's program is still the old tentative one. */
+/** The 2026 rundown (staff spreadsheet); editable from the admin on the day. */
 const DEFAULT_PROGRAM =
-  "14:30 Acreditación | 15:00 Apertura | 15:15 Open Space · mercado de ideas | 17:00 Pausa | 17:30 Bloque de charlas | 20:00 Cierre";
+  "14:30 Recepción y acreditación | 15:00 Bienvenida | 15:15 Explicación open space + marketplace | 16:00 Open Space | 18:25 Coffee Break | 19:00 Charla 1 | 19:45 Charla 2 | 20:25 Despedida + foto";
 
 export const SCENES = {
   "owy-face": {
@@ -224,6 +224,78 @@ export const SCENES = {
     title: "Foto grupal",
     description: "3, 2, 1 y flash. Arranca al ponerla en pantalla.",
     params: z.object({ seconds: z.coerce.number().int().min(3).max(15).default(5) }),
+  },
+  block: {
+    title: "Bloque",
+    description: "La tarjeta del bloque en curso (automática desde el programa) o una manual: título + horario.",
+    params: z.object({
+      title: z.string().trim().max(50).default(""),
+      time: z.string().trim().max(30).default(""),
+      items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
+    }),
+  },
+  cams: {
+    title: "Cámaras",
+    description:
+      "Marcos para 1, 2 o 3 cámaras con el nombre de la sala. Verde croma en negro; huecos reales con ?bg=transparent.",
+    params: z.object({
+      layout: z.coerce.number().int().min(1).max(3).default(2),
+      label1: z.string().trim().max(24).default("Centro"),
+      label2: z.string().trim().max(24).default("Lobby"),
+      label3: z.string().trim().max(24).default(""),
+    }),
+  },
+  community: {
+    title: "OWU",
+    description: "La tarjeta de la comunidad: logo y tagline.",
+    params: z.object({
+      tagline: z
+        .string()
+        .trim()
+        .max(200)
+        .default(
+          "Un espacio donde personas apasionadas por la tecnología se reúnen, comparten y convierten sus ideas en realidad"
+        ),
+    }),
+  },
+  silence: {
+    title: "Silencio",
+    description: "Para cuando la sala no se calla.",
+    params: z.object({ text: z.string().trim().max(20).default("SILENCIO") }),
+  },
+  promo: {
+    title: "Promo",
+    description: "Cupón de un sponsor: oferta, código y letra chica.",
+    params: z.object({
+      sponsor: z.string().trim().max(30).default("Sponsor"),
+      offer: z.string().trim().max(40).default("20% OFF"),
+      code: z.string().trim().max(30).default("OWUCONF"),
+      detail: z.string().trim().max(120).default("Mostrando este código en el local durante el evento"),
+    }),
+  },
+  qr: {
+    title: "QR",
+    description: "Un link como QR gigante: compartí tus fotos, inscripción, lo que sea.",
+    params: z.object({
+      title: z.string().trim().max(50).default("Compartí tus fotos"),
+      url: z.string().trim().max(300).default("conf.owu.uy"),
+      caption: z.string().trim().max(120).default("Subí las fotos que sacaste hoy"),
+    }),
+  },
+  after: {
+    title: "After",
+    description: "Dónde sigue la noche.",
+    params: z.object({
+      venue: z.string().trim().max(40).default("MBC"),
+      detail: z.string().trim().max(80).default("Montevideo Beer Company · a dos cuadras"),
+      offer: z.string().trim().max(12).default("2x1"),
+    }),
+  },
+  frame: {
+    title: "Marco",
+    description:
+      "Overlay permanente: marco amarillo, logo y tira de sponsors. Capa superior en OBS con ?bg=transparent.",
+    params: z.object({ label: z.string().trim().max(30).default("En vivo") }),
   },
   black: {
     title: "Negro",

@@ -13,7 +13,7 @@ import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
 import { drawFace, initialSim } from "./OwyFace";
-import { Rise, nowHHMM } from "./parts";
+import { QrCode, Rise, nowHHMM } from "./parts";
 
 // ---------------------------------------------------------------------------
 // Program items — "HH:MM Título | HH:MM Título" typed by staff in the admin
@@ -514,28 +514,38 @@ export function OwyHowTo() {
 // ---------------------------------------------------------------------------
 
 export function Social({ params }: SceneProps<"social">) {
+  const link = /^https?:\/\//i.test(params.url) ? params.url : `https://${params.url}`;
+
   return (
     <>
       <Ambient />
-      <div className="absolute inset-x-[160px] top-[190px] text-center">
+      <div className="absolute top-[200px] left-[140px] w-[1180px]">
         <Rise className="text-[36px] font-semibold tracking-[0.3em] text-[#FBF5E7]/60 uppercase" delay={0.05}>
           Sumate a la comunidad
         </Rise>
         <Rise
-          className="mt-6 text-[200px] leading-none font-extrabold tracking-[-0.03em] text-[#F5BB03] uppercase"
+          className="mt-6 text-[170px] leading-none font-extrabold tracking-[-0.03em] text-[#F5BB03] uppercase"
           delay={0.15}
         >
           {params.hashtag}
         </Rise>
-        <Rise className="mt-10 text-[72px] font-bold tracking-[-0.01em]" delay={0.35}>
+        <Rise className="mt-10 text-[64px] font-bold tracking-[-0.01em]" delay={0.35}>
           {params.url}
         </Rise>
         {params.line && (
-          <Rise className="mt-6 text-[44px] font-medium text-[#FBF5E7]/75" delay={0.5}>
+          <Rise className="mt-6 text-[40px] font-medium text-[#FBF5E7]/75" delay={0.5}>
             {params.line}
           </Rise>
         )}
       </div>
+      <m.div
+        animate={{ opacity: 1, scale: 1 }}
+        className="absolute top-[300px] right-[160px]"
+        initial={{ opacity: 0, scale: 0.85 }}
+        transition={{ duration: 0.7, delay: 0.4, ease: EASE_OUT }}
+      >
+        <QrCode size={400} value={link} />
+      </m.div>
     </>
   );
 }
