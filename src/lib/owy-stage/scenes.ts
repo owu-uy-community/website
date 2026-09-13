@@ -12,6 +12,9 @@ export const OWY_STAGE_CHANNEL = "owy-stage";
 const DEFAULT_PROGRAM =
   "14:30 Recepción y acreditación | 15:00 Bienvenida | 15:15 Explicación open space + marketplace | 16:00 Open Space | 18:25 Coffee Break | 19:00 Charla 1 | 19:45 Charla 2 | 20:25 Despedida + foto";
 
+const DEPARTMENTS =
+  "Montevideo | Canelones | Maldonado | Colonia | San José | Salto | Paysandú | Rivera | Tacuarembó | Cerro Largo | Rocha | Florida | Lavalleja | Durazno | Soriano | Río Negro | Artigas | Treinta y Tres | Flores | Otro país";
+
 export const SCENES = {
   "owy-face": {
     title: "Owy",
@@ -1246,6 +1249,119 @@ export const SCENES = {
       seconds: z.number().int().min(20).max(300).default(90),
     }),
   },
+  scale: {
+    title: "Escala",
+    description: "De 0 a 100 desde el celular: promedio y distribución en vivo. ¿Qué tan de acuerdo estás?",
+    params: z.object({
+      statement: z.string().trim().max(120).default("La IA va a cambiar mi trabajo este año"),
+      left: z.string().trim().max(30).default("Para nada"),
+      right: z.string().trim().max(30).default("Totalmente"),
+    }),
+  },
+  ranking: {
+    title: "Ranking",
+    description: "Cada persona ordena las opciones en el celular; la pared suma puntos (Borda).",
+    params: z.object({
+      question: z.string().trim().max(120).default("¿Qué es lo más importante en un equipo?"),
+      options: z.string().trim().max(300).default("Confianza | Buen código | Comunicación | Mate"),
+    }),
+  },
+  wall: {
+    title: "Muro de mensajes",
+    description: "Mensajes cortos desde el celular que aparecen como post-its.",
+    params: z.object({ prompt: z.string().trim().max(120).default("Dejá un mensaje para la comunidad") }),
+  },
+  "multi-poll": {
+    title: "Encuesta múltiple",
+    description: "Marcá todas las que apliquen; porcentaje sobre personas.",
+    params: z.object({
+      question: z.string().trim().max(120).default("¿Con qué trabajás?"),
+      options: z
+        .string()
+        .trim()
+        .max(400)
+        .default("TypeScript | Python | Go | Rust | Java | .NET | Kotlin/Swift | Otro"),
+    }),
+  },
+  origin: {
+    title: "¿De dónde venís?",
+    description: "Cada persona elige su departamento; burbujas que crecen con la gente.",
+    params: z.object({
+      question: z.string().trim().max(120).default("¿De dónde venís?"),
+      options: z.string().trim().max(600).default(DEPARTMENTS),
+    }),
+  },
+  presence: {
+    title: "¡Presente!",
+    description: "Un toque por celular, un punto por persona: cuántos somos.",
+    params: z.object({ title: z.string().trim().max(60).default("¿Cuántos somos?") }),
+  },
+  signatures: {
+    title: "Firmas",
+    description: "Cada persona deja su nombre; el muro se llena de firmas. Para el cierre.",
+    params: z.object({ title: z.string().trim().max(60).default("Estuvimos acá") }),
+  },
+  pairs: {
+    title: "Grupos al azar",
+    description: "El celular te da un grupo (un animal); buscá a los tuyos. Para armar mesas o equipos.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Buscá a tu grupo"),
+      groups: z.number().int().min(2).max(10).default(5),
+      instruction: z
+        .string()
+        .trim()
+        .max(160)
+        .default("Tocá el botón, mirá tu animal y juntate con los que tengan el mismo. Tienen dos minutos."),
+    }),
+  },
+  "tap-race": {
+    title: "Carrera de toques",
+    description: "Dos mitades de la sala tocan lo más rápido que pueden; gana la barra más larga.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Izquierda vs derecha"),
+      left: z.string().trim().max(24).default("Izquierda"),
+      right: z.string().trim().max(24).default("Derecha"),
+      seconds: z.number().int().min(5).max(60).default(15),
+    }),
+  },
+  stretch: {
+    title: "Pausa activa",
+    description: "Estiramientos guiados con temporizador, uno por vez. Formato: emoji texto | …",
+    params: z.object({
+      moves: z
+        .string()
+        .trim()
+        .max(800)
+        .default(
+          "🙆 Brazos arriba, estirá bien alto | 🙇 Cabeza a un lado y al otro, despacio | 🤸 Hombros: círculos hacia atrás | 🧘 Cerrá los ojos y respirá hondo | 🕺 Sacudí las piernas | 🙌 Choque de manos con la persona de al lado"
+        ),
+      seconds: z.number().int().min(5).max(60).default(15),
+    }),
+  },
+  clap: {
+    title: "Aplauso sincronizado",
+    description: "Un metrónomo visual: la sala aplaude al pulso y cada vuelta va más rápido.",
+    params: z.object({
+      bpm: z.number().int().min(40).max(200).default(80),
+      step: z.number().int().min(0).max(40).default(15),
+      beats: z.number().int().min(2).max(8).default(8),
+      rounds: z.number().int().min(1).max(12).default(6),
+    }),
+  },
+  columns: {
+    title: "Gráfico humano",
+    description: "La sala se ordena en columnas según la respuesta. Formato: Pregunta: opción, opción | …",
+    params: z.object({
+      prompts: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "¿Cuántos años programando?: 0-2, 3-5, 6-10, más de 10 | ¿En qué trabajás?: Frontend, Backend, Datos, Infra, Otro | ¿Cómo llegaste hoy?: Caminando, Bici, Ómnibus, Auto"
+        ),
+      seconds: z.number().int().min(10).max(180).default(40),
+    }),
+  },
   frame: {
     title: "Marco",
     description:
@@ -1297,6 +1413,15 @@ export const INTERACTIVE_SCENES = [
   "guess",
   "buzzer",
   "session-vote",
+  "scale",
+  "ranking",
+  "wall",
+  "multi-poll",
+  "origin",
+  "presence",
+  "signatures",
+  "pairs",
+  "tap-race",
 ] as const satisfies readonly SceneId[];
 
 export const InputModeSchema = z.enum(["single", "multi", "once"]);

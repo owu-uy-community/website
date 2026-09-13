@@ -30,7 +30,7 @@ export function Header({ eyebrow, title, wide = false }: { eyebrow: string; titl
         {eyebrow}
       </Rise>
       <Rise
-        className="mt-3 text-[84px] leading-none font-extrabold tracking-[-0.02em] text-balance uppercase"
+        className={`mt-3 ${title.length > 34 ? "text-[64px]" : "text-[84px]"} leading-none font-extrabold tracking-[-0.02em] text-balance uppercase`}
         delay={0.15}
       >
         {title}

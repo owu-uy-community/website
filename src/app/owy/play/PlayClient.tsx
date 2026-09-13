@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useInputs, useVoterId } from "components/OwyStage/inputs";
 import { REACTION_EMOJIS } from "components/OwyStage/scenes/interactive";
+import { GROUP_EMOJIS } from "components/OwyStage/scenes/interactive2";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client, type StickyNote } from "lib/orpc";
 import {
@@ -127,6 +128,57 @@ function Activity({
         return <Buzz prompt={String(params.title)} send={(v) => send("buzz", v, "once")} />;
       case "session-vote":
         return <Sessions eventId={state.eventId} prompt={String(params.title)} send={(v) => send("session", v)} />;
+      case "scale": {
+        const p = params as SceneParams<"scale">;
+        return <Slider left={p.left} prompt={p.statement} right={p.right} send={(v) => send("scale", v)} />;
+      }
+      case "ranking":
+        return (
+          <Rank
+            options={splitPipe(String(params.options))}
+            prompt={String(params.question)}
+            send={(v) => send("rank", v)}
+          />
+        );
+      case "wall":
+        return (
+          <Message
+            prompt={String(params.prompt)}
+            round={state.round}
+            send={(v) => send("msg", v, "multi")}
+            voter={voter}
+          />
+        );
+      case "multi-poll":
+        return (
+          <MultiChoice
+            options={splitPipe(String(params.options))}
+            prompt={String(params.question)}
+            send={(v) => send("multi", v)}
+          />
+        );
+      case "origin":
+        return (
+          <Choice
+            options={splitPipe(String(params.options))}
+            prompt={String(params.question)}
+            send={(v) => send("origin", v)}
+          />
+        );
+      case "presence":
+        return <Presence prompt={String(params.title)} send={() => send("here", "1", "once")} />;
+      case "signatures":
+        return <Signature prompt={String(params.title)} send={(v) => send("sign", v, "once")} />;
+      case "pairs": {
+        const p = params as SceneParams<"pairs">;
+        return <Group groups={p.groups} prompt={p.title} send={(v) => send("group", v, "once")} />;
+      }
+      case "tap-race": {
+        const p = params as SceneParams<"tap-race">;
+        return (
+          <Taps left={p.left} prompt={p.title} right={p.right} send={(team, n) => send(`taps:${team}`, String(n))} />
+        );
+      }
       default:
         return null;
     }
@@ -466,6 +518,315 @@ function Sessions({
         {tracks && !tracks.length && <p className="text-[#FBF5E7]/60">Todavía no hay sesiones en el muro.</p>}
       </div>
       <Sent shown={chosen !== null} />
+    </>
+  );
+}
+
+function Slider({
+  prompt,
+  left,
+  right,
+  send,
+}: {
+  prompt: string;
+  left: string;
+  right: string;
+  send: (v: string) => Promise<boolean>;
+}) {
+  const [value, setValue] = useState(50);
+  const [sent, setSent] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const change = (n: number) => {
+    setValue(n);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => send(String(n)).then((ok) => ok && setSent(true)), 400);
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <p className="mt-10 text-center text-7xl font-extrabold text-[#F5BB03] tabular-nums">{value}</p>
+      <input
+        className="mt-6 w-full accent-[#F5BB03]"
+        max={100}
+        min={0}
+        onChange={(e) => change(Number(e.target.value))}
+        type="range"
+        value={value}
+      />
+      <div className="mt-2 flex justify-between text-sm font-semibold text-[#FBF5E7]/60">
+        <span>{left}</span>
+        <span>{right}</span>
+      </div>
+      <Sent shown={sent} />
+    </>
+  );
+}
+
+function Rank({ prompt, options, send }: { prompt: string; options: string[]; send: (v: string) => Promise<boolean> }) {
+  const [order, setOrder] = useState<number[]>([]);
+  const [sent, setSent] = useState(false);
+  const pick = (i: number) => {
+    if (order.includes(i) || sent) return;
+    const next = [...order, i];
+    setOrder(next);
+    if (next.length === options.length) send(next.join(",")).then((ok) => ok && setSent(true));
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <p className="mt-3 text-sm text-[#FBF5E7]/60">Tocá en orden: primero la más importante.</p>
+      <div className="mt-6 flex flex-col gap-3">
+        {options.map((option, i) => {
+          const position = order.indexOf(i);
+          return (
+            <button key={option} className={position >= 0 ? picked : idle} onClick={() => pick(i)} type="button">
+              {position >= 0 && <span className="mr-3 opacity-60">{position + 1}º</span>}
+              {option}
+            </button>
+          );
+        })}
+      </div>
+      {sent ? (
+        <p className="mt-4 text-center text-sm font-semibold text-[#F5BB03]">✓ Enviado</p>
+      ) : (
+        order.length > 0 && (
+          <button
+            className="mt-4 w-full text-center text-sm font-semibold text-[#FBF5E7]/60"
+            onClick={() => setOrder([])}
+            type="button"
+          >
+            Empezar de nuevo
+          </button>
+        )
+      )}
+    </>
+  );
+}
+
+function Message({
+  prompt,
+  round,
+  voter,
+  send,
+}: {
+  prompt: string;
+  round: string;
+  voter: string;
+  send: (v: string) => Promise<boolean>;
+}) {
+  const inputs = useInputs(round);
+  const mine = inputs.filter((i) => i.key === "msg" && i.voter === voter).length;
+  const [text, setText] = useState("");
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <form
+        className="mt-6 flex flex-col gap-3"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const msg = text.trim().slice(0, 80);
+          if (msg && mine < 3 && (await send(msg))) setText("");
+        }}
+      >
+        <textarea
+          className={`${field} min-h-28`}
+          maxLength={80}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Hasta 80 caracteres"
+          value={text}
+        />
+        <button
+          className="rounded-2xl bg-[#F5BB03] py-4 text-xl font-extrabold text-black disabled:opacity-40"
+          disabled={mine >= 3}
+          type="submit"
+        >
+          Pegar en el muro
+        </button>
+      </form>
+      <p className="mt-3 text-sm text-[#FBF5E7]/60">
+        {mine >= 3 ? "Ya pegaste tres. Gracias." : `${3 - mine} mensajes disponibles.`}
+      </p>
+    </>
+  );
+}
+
+function MultiChoice({
+  prompt,
+  options,
+  send,
+}: {
+  prompt: string;
+  options: string[];
+  send: (v: string) => Promise<boolean>;
+}) {
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [sent, setSent] = useState(false);
+  const toggle = (option: string) => {
+    const next = chosen.includes(option) ? chosen.filter((o) => o !== option) : [...chosen, option];
+    setChosen(next);
+    setSent(false);
+    if (next.length) send(next.join("|")).then((ok) => ok && setSent(true));
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <p className="mt-3 text-sm text-[#FBF5E7]/60">Marcá todas las que apliquen.</p>
+      <div className="mt-6 flex flex-col gap-3">
+        {options.map((option) => (
+          <button
+            key={option}
+            className={chosen.includes(option) ? picked : idle}
+            onClick={() => toggle(option)}
+            type="button"
+          >
+            {chosen.includes(option) ? "☑" : "☐"} <span className="ml-2">{option}</span>
+          </button>
+        ))}
+      </div>
+      <Sent shown={sent} />
+    </>
+  );
+}
+
+function Presence({ prompt, send }: { prompt: string; send: () => Promise<boolean> }) {
+  const [done, setDone] = useState(false);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <button
+        className={`mt-10 aspect-square w-full rounded-full text-5xl font-extrabold uppercase transition active:scale-95 ${done ? "bg-[#0162C8] text-[#FBF5E7]" : "bg-[#F5BB03] text-black"}`}
+        disabled={done}
+        onClick={() => send().then((ok) => ok && setDone(true))}
+        type="button"
+      >
+        {done ? "¡Contado!" : "¡Presente!"}
+      </button>
+    </>
+  );
+}
+
+function Signature({ prompt, send }: { prompt: string; send: (v: string) => Promise<boolean> }) {
+  const [name, setName] = useState("");
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    setName(window.localStorage.getItem("owy-name") ?? "");
+  }, []);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <form
+        className="mt-6 flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const value = name.trim().slice(0, 30);
+          if (!value) return;
+          window.localStorage.setItem("owy-name", value);
+          if (await send(value)) setDone(true);
+        }}
+      >
+        <input
+          className={field}
+          disabled={done}
+          maxLength={30}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Tu nombre"
+          value={name}
+        />
+        <button
+          className="rounded-2xl bg-[#F5BB03] px-5 text-xl font-extrabold text-black disabled:opacity-40"
+          disabled={done}
+          type="submit"
+        >
+          ✍️
+        </button>
+      </form>
+      {done && <p className="mt-4 text-center text-sm font-semibold text-[#F5BB03]">✓ Firmaste. Mirá la pantalla.</p>}
+    </>
+  );
+}
+
+function Group({ prompt, groups, send }: { prompt: string; groups: number; send: (v: string) => Promise<boolean> }) {
+  const [group, setGroup] = useState<string | null>(null);
+  const draw = () => {
+    const emoji = GROUP_EMOJIS[Math.floor(Math.random() * Math.min(groups, GROUP_EMOJIS.length))];
+    send(emoji).then((ok) => ok && setGroup(emoji));
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      {group ? (
+        <div className="mt-10 text-center">
+          <p className="text-[9rem] leading-none">{group}</p>
+          <p className="mt-6 text-2xl font-bold">Tu grupo es {group}. Buscá a los demás.</p>
+        </div>
+      ) : (
+        <button
+          className="mt-10 aspect-square w-full rounded-full bg-[#F5BB03] text-4xl font-extrabold text-black uppercase transition active:scale-95"
+          onClick={draw}
+          type="button"
+        >
+          Dame mi grupo
+        </button>
+      )}
+    </>
+  );
+}
+
+function Taps({
+  prompt,
+  left,
+  right,
+  send,
+}: {
+  prompt: string;
+  left: string;
+  right: string;
+  send: (team: "a" | "b", n: number) => Promise<boolean>;
+}) {
+  const [team, setTeam] = useState<"a" | "b" | null>(null);
+  const [taps, setTaps] = useState(0);
+  const pending = useRef(0);
+  const flushing = useRef(false);
+  const tap = () => {
+    if (!team) return;
+    const n = pending.current + 1;
+    pending.current = n;
+    setTaps(n);
+    if (flushing.current) return;
+    flushing.current = true;
+    // Batch the taps: one request every half second carries the running total.
+    setTimeout(() => {
+      flushing.current = false;
+      send(team, pending.current);
+    }, 500);
+  };
+  if (!team) {
+    return (
+      <>
+        <Prompt>{prompt}</Prompt>
+        <p className="mt-3 text-sm text-[#FBF5E7]/60">¿De qué lado de la sala estás?</p>
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button className={`${idle} bg-[#F5BB03]/20 text-center`} onClick={() => setTeam("a")} type="button">
+            {left}
+          </button>
+          <button className={`${idle} bg-[#0162C8]/30 text-center`} onClick={() => setTeam("b")} type="button">
+            {right}
+          </button>
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <p className="mt-3 text-sm text-[#FBF5E7]/60">Equipo {team === "a" ? left : right} · tocá sin parar.</p>
+      <button
+        className={`mt-8 aspect-square w-full rounded-full text-6xl font-extrabold text-black transition active:scale-90 ${team === "a" ? "bg-[#F5BB03]" : "bg-[#0162C8] text-[#FBF5E7]"}`}
+        onClick={tap}
+        type="button"
+      >
+        {taps}
+      </button>
     </>
   );
 }

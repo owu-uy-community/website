@@ -79,6 +79,20 @@ import {
   Wave,
 } from "./interactive";
 import {
+  Clap,
+  Columns,
+  MessageWall,
+  MultiPoll,
+  Origin,
+  Pairs,
+  Presence,
+  Ranking,
+  Scale,
+  Signatures,
+  Stretch,
+  TapRace,
+} from "./interactive2";
+import {
   Automaton,
   DoublePendulum,
   Langton,
@@ -484,5 +498,17 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   "human-bingo": HumanBingo,
   wave: Wave,
   "line-up": LineUp,
+  scale: Scale,
+  ranking: Ranking,
+  wall: MessageWall,
+  "multi-poll": MultiPoll,
+  origin: Origin,
+  presence: Presence,
+  signatures: Signatures,
+  pairs: Pairs,
+  "tap-race": TapRace,
+  stretch: Stretch,
+  clap: Clap,
+  columns: Columns,
   black: Black,
 };
