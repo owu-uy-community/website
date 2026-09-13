@@ -30,6 +30,22 @@ import {
 } from "./extra";
 import { History, Meetups, OwyCard, Principles, Pulse, Raffle, Selfie, Venue, Welcome } from "./discover";
 import { Aurora, Conduct, Dvd, Life, Lineup, Mosaic, OwySays, TestCard, Trivia, Versus } from "./fun";
+import { Boids, Fire, FlowField, Julia, Metaballs, Plasma, ReactionDiffusion, Rotozoom, Tunnel, Voronoi } from "./gen";
+import { Blob, Dragon, Fireworks, Network, ParticleText, Rays, Ripples, Sand, Terrain, Wfc } from "./gen2";
+import { Captcha, Coin, Pipeline, Poll, Scoreboard, TalkTimer, TrafficLight, Update, Wheel, Wordle } from "./play";
+import { Bsod, Credits, Crawl, Cube, Donut, Equalizer, Halftone, HelloWorld, Kinetic, Neon } from "./show";
+import {
+  Automaton,
+  DoublePendulum,
+  Langton,
+  Maze,
+  Mystify,
+  PendulumWave,
+  Pipes,
+  Pong,
+  Raycaster,
+  Sorting,
+} from "./sims";
 import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
@@ -327,5 +343,55 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   "test-card": TestCard,
   conduct: Conduct,
   mosaic: Mosaic,
+  plasma: Plasma,
+  tunnel: Tunnel,
+  fire: Fire,
+  metaballs: Metaballs,
+  voronoi: Voronoi,
+  "reaction-diffusion": ReactionDiffusion,
+  julia: Julia,
+  "flow-field": FlowField,
+  boids: Boids,
+  rotozoom: Rotozoom,
+  terrain: Terrain,
+  ripples: Ripples,
+  rays: Rays,
+  network: Network,
+  blob: Blob,
+  dragon: Dragon,
+  wfc: Wfc,
+  sand: Sand,
+  fireworks: Fireworks,
+  "particle-text": ParticleText,
+  mystify: Mystify,
+  pipes: Pipes,
+  "pendulum-wave": PendulumWave,
+  "double-pendulum": DoublePendulum,
+  automaton: Automaton,
+  langton: Langton,
+  maze: Maze,
+  raycaster: Raycaster,
+  sorting: Sorting,
+  pong: Pong,
+  donut: Donut,
+  cube: Cube,
+  neon: Neon,
+  kinetic: Kinetic,
+  crawl: Crawl,
+  credits: Credits,
+  halftone: Halftone,
+  equalizer: Equalizer,
+  "hello-world": HelloWorld,
+  bsod: Bsod,
+  poll: Poll,
+  wheel: Wheel,
+  coin: Coin,
+  scoreboard: Scoreboard,
+  "talk-timer": TalkTimer,
+  "traffic-light": TrafficLight,
+  wordle: Wordle,
+  pipeline: Pipeline,
+  update: Update,
+  captcha: Captcha,
   black: Black,
 };

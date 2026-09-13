@@ -526,6 +526,245 @@ export const SCENES = {
     description: "Seis fotos de ediciones anteriores; van cambiando de a una.",
     params: z.object({}),
   },
+  // --- Generativos (demoscene, creative coding) ---
+  plasma: { title: "Plasma", description: "El efecto plasma de los 90, en paleta OWU.", params: z.object({}) },
+  tunnel: {
+    title: "Túnel",
+    description: "Túnel infinito de la demoscene, texturas de la marca.",
+    params: z.object({}),
+  },
+  fire: { title: "Fuego", description: "El fuego de Doom (1993), llamas azules y amarillas.", params: z.object({}) },
+  metaballs: { title: "Metaballs", description: "Bolas de energía que se funden entre sí.", params: z.object({}) },
+  voronoi: { title: "Voronoi", description: "Celdas de Voronoi que se mueven; vitral animado.", params: z.object({}) },
+  "reaction-diffusion": {
+    title: "Reacción–difusión",
+    description: "Patrones de coral (Gray–Scott) creciendo en vivo.",
+    params: z.object({}),
+  },
+  julia: { title: "Julia", description: "Conjunto de Julia animado: fractales que respiran.", params: z.object({}) },
+  "flow-field": {
+    title: "Campo de flujo",
+    description: "Partículas surcando un campo vectorial que deriva.",
+    params: z.object({}),
+  },
+  boids: { title: "Boids", description: "Bandada de pájaros (Reynolds) en colores OWU.", params: z.object({}) },
+  rotozoom: {
+    title: "Rotozoom",
+    description: "Patrón de la marca girando y haciendo zoom, con el logo.",
+    params: z.object({}),
+  },
+  terrain: { title: "Terreno", description: "Sobrevuelo wireframe con sol retro; synthwave.", params: z.object({}) },
+  ripples: { title: "Ondas", description: "Anillos que se expanden desde puntos al azar.", params: z.object({}) },
+  rays: { title: "Rayos", description: "Sunburst girando detrás del logo; fondo de promo.", params: z.object({}) },
+  network: { title: "Red", description: "Nodos y conexiones: la constelación de la comunidad.", params: z.object({}) },
+  blob: { title: "Blob", description: "Formas orgánicas de la marca respirando.", params: z.object({}) },
+  dragon: { title: "Curva del dragón", description: "El fractal se dibuja segmento a segmento.", params: z.object({}) },
+  wfc: {
+    title: "Circuito",
+    description: "Wave function collapse: un circuito impreso que se resuelve solo.",
+    params: z.object({}),
+  },
+  sand: { title: "Arena", description: "Arena que cae y se apila, píxel a píxel.", params: z.object({}) },
+  fireworks: {
+    title: "Fuegos artificiales",
+    description: "Cohetes y explosiones; para cierres y anuncios.",
+    params: z.object({ title: z.string().trim().max(40).default("") }),
+  },
+  "particle-text": {
+    title: "Texto de partículas",
+    description: "Puntos que se juntan formando palabras y se dispersan. Palabras separadas por |.",
+    params: z.object({ text: z.string().trim().max(200).default("OWU CONF | 2026 | COMUNIDAD | OPEN SPACE") }),
+  },
+  // --- Simulaciones y clásicos ---
+  mystify: { title: "Mystify", description: "El protector de pantalla de Windows, con estelas.", params: z.object({}) },
+  pipes: { title: "Cañerías", description: "Las cañerías del screensaver, en plano.", params: z.object({}) },
+  "pendulum-wave": {
+    title: "Onda de péndulos",
+    description: "16 péndulos con períodos distintos dibujando ondas.",
+    params: z.object({}),
+  },
+  "double-pendulum": {
+    title: "Péndulo doble",
+    description: "Dos péndulos casi iguales; el caos los separa.",
+    params: z.object({}),
+  },
+  automaton: {
+    title: "Autómata",
+    description: "Autómata celular de Wolfram (regla 30, 90, 110…) bajando por la pantalla.",
+    params: z.object({
+      rule: z.number().int().min(0).max(255).default(90),
+      seed: z.enum(["azar", "centro"]).default("centro"),
+    }),
+  },
+  langton: {
+    title: "Hormiga de Langton",
+    description: "Tres hormigas con reglas simples construyendo autopistas.",
+    params: z.object({}),
+  },
+  maze: {
+    title: "Laberinto",
+    description: "Se genera, se explora en BFS y se resuelve; y otra vez.",
+    params: z.object({}),
+  },
+  raycaster: {
+    title: "Raycaster",
+    description: "Paseo en primera persona por un laberinto, estilo 1992.",
+    params: z.object({}),
+  },
+  sorting: {
+    title: "Ordenamiento",
+    description: "Bubble, insertion, selection, quick y merge sort, en barras.",
+    params: z.object({}),
+  },
+  pong: { title: "Pong", description: "Se juega solo. Y pierde, a propósito.", params: z.object({}) },
+  // --- Tipográficos y 3D ---
+  donut: { title: "Donut", description: "donut.c: el toro ASCII girando.", params: z.object({}) },
+  cube: { title: "Cubo", description: "Cubo 3D con las caras de la marca y el logo.", params: z.object({}) },
+  neon: {
+    title: "Neón",
+    description: "Cartel de neón que zumba y parpadea.",
+    params: z.object({ text: z.string().trim().max(24).default("OWU CONF") }),
+  },
+  kinetic: {
+    title: "Tipografía cinética",
+    description: "Palabras que golpean la pantalla una tras otra. Separadas por |.",
+    params: z.object({
+      words: z.string().trim().max(300).default("COMUNIDAD | CÓDIGO | MATE | OPEN SPACE | CHARLAS | OWU CONF"),
+    }),
+  },
+  crawl: {
+    title: "Crawl",
+    description: "El texto que se pierde en el espacio. Párrafos separados por |.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Episodio 2026"),
+      text: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "Hace mucho tiempo, en una comunidad tech no tan lejana, un grupo de personas decidió juntarse a compartir lo que sabían. | Sin agenda cerrada: el programa lo escriben quienes vienen. Cada charla, cada mesa y cada mate suman. | Hoy la conferencia vuelve a Sinergia Faro. Que la fuerza (y el wifi) los acompañe."
+        ),
+    }),
+  },
+  credits: {
+    title: "Créditos",
+    description: "Créditos finales que suben. Formato: Rol: nombres | Rol: nombres.",
+    params: z.object({
+      lines: z
+        .string()
+        .trim()
+        .max(2000)
+        .default(
+          "Organización: OWU Uruguay | Sede: Sinergia Faro | Facilitación open space: el equipo OWU | Sponsors: gracias a todos los que hicieron esto posible | Fotos: la comunidad | Owy: hecho con cariño y mucho café | Vos: por venir"
+        ),
+    }),
+  },
+  halftone: { title: "Semitono", description: "Grilla de puntos que respira con ondas.", params: z.object({}) },
+  equalizer: {
+    title: "Ecualizador",
+    description: "Barras que siguen (o simulan seguir) la música del break.",
+    params: z.object({ title: z.string().trim().max(60).default("Playlist OWU · break") }),
+  },
+  "hello-world": {
+    title: "Hello, World!",
+    description: "El mismo programa en veinte lenguajes, tipeado en vivo.",
+    params: z.object({}),
+  },
+  bsod: {
+    title: "Pantalla azul",
+    description: "La pantalla azul de la muerte, versión OWU. Chiste para el break.",
+    params: z.object({
+      message: z
+        .string()
+        .trim()
+        .max(200)
+        .default("OWU CONF se encontró con un problema y necesita un coffee break. Estamos recolectando información."),
+      code: z.string().trim().max(40).default("MATE_NOT_FOUND"),
+    }),
+  },
+  // --- Interactivos y útiles ---
+  poll: {
+    title: "Encuesta",
+    description: "Resultados de una votación a mano alzada, cargados a mano.",
+    params: z.object({
+      question: z.string().trim().max(120).default("¿Cuál es tu editor?"),
+      options: z.string().trim().max(300).default("VS Code | Neovim | JetBrains | Otro"),
+      votes: z.string().trim().max(100).default("34 | 12 | 9 | 5"),
+    }),
+  },
+  wheel: {
+    title: "Ruleta",
+    description: "Ruleta que gira sola y cae en un nombre. Nombres separados por coma.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Ruleta"),
+      names: z.string().trim().max(1500).default("Ana, Bruno, Camila, Diego, Elena, Fede, Gabi, Hernán, Inés, Juan"),
+      loop: z.boolean().default(true),
+    }),
+  },
+  coin: {
+    title: "Moneda",
+    description: "Cara o cruz en la pantalla grande, con lo que digan las caras.",
+    params: z.object({
+      heads: z.string().trim().max(20).default("Tabs"),
+      tails: z.string().trim().max(20).default("Spaces"),
+    }),
+  },
+  scoreboard: {
+    title: "Marcador",
+    description: "Dos equipos y sus puntos; para trivias y desafíos.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Trivia OWU"),
+      a: z.string().trim().max(24).default("Backend"),
+      b: z.string().trim().max(24).default("Frontend"),
+      scoreA: z.number().int().min(0).max(999).default(0),
+      scoreB: z.number().int().min(0).max(999).default(0),
+    }),
+  },
+  "talk-timer": {
+    title: "Timer de charla",
+    description: "Cuenta regresiva para quien habla: arranca al ponerla en pantalla, avisa al final.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Tiempo de charla"),
+      minutes: z.number().int().min(1).max(180).default(20),
+      warn: z.number().int().min(0).max(60).default(5),
+    }),
+  },
+  "traffic-light": {
+    title: "Semáforo",
+    description: "Señal para quien habla: verde, amarillo o rojo, con su mensaje.",
+    params: z.object({
+      state: z.enum(["verde", "amarillo", "rojo"]).default("verde"),
+      green: z.string().trim().max(40).default("Adelante"),
+      yellow: z.string().trim().max(40).default("Últimos 5 minutos"),
+      red: z.string().trim().max(40).default("Tiempo"),
+    }),
+  },
+  wordle: {
+    title: "OWUrdle",
+    description: "Un Wordle resuelto en pantalla. Palabra + intentos separados por |.",
+    params: z.object({
+      title: z.string().trim().max(40).default("La palabra del día"),
+      word: z.string().trim().min(3).max(8).default("MATE"),
+      guesses: z.string().trim().max(120).default("CAFE | META | TEMA"),
+    }),
+  },
+  pipeline: {
+    title: "Pipeline",
+    description: "El programa del día como un pipeline de CI: qué pasó, qué corre, qué falta.",
+    params: z.object({ items: z.string().trim().max(1200).default(DEFAULT_PROGRAM) }),
+  },
+  update: {
+    title: "Actualizando",
+    description: "Instalando OWU CONF 2026… no apagues la conferencia.",
+    params: z.object({
+      message: z.string().trim().max(120).default("No apagues el equipo. Esto puede tardar un coffee break."),
+    }),
+  },
+  captcha: {
+    title: "Captcha",
+    description: "Seleccioná todas las imágenes con mate. Se resuelve solo.",
+    params: z.object({}),
+  },
   frame: {
     title: "Marco",
     description:
