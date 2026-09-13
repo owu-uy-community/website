@@ -6,32 +6,39 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   AudioLines,
-  ChevronRight,
   CircleHelp,
+  ExternalLink,
   Fingerprint,
   FlaskConical,
   Gauge,
   Hand,
   Maximize2,
   Mic,
-  MoreHorizontal,
   Move3D,
   Pause,
   Play,
   Radio,
   RotateCcw,
   Settings2,
-  ShieldCheck,
   SkipForward,
-  Sparkles,
+  Tv,
   Volume2,
   VolumeX,
-  Wifi,
   X,
 } from "lucide-react";
-import styles from "./companion.module.css";
-import LiveVoicePanel from "./LiveVoicePanel";
-import type { VoiceVisual, DeviceCommand, WebVoice } from "./web-voice";
+
+import { ScaledFrame } from "components/Admin/stage/ScaledFrame";
+import { Badge } from "components/shared/ui/badge";
+import { Button } from "components/shared/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
+import { Kbd } from "components/shared/ui/kbd";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
+import { Slider } from "components/shared/ui/slider";
+import { Switch } from "components/shared/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
+
+import LiveVoicePanel, { LevelMeter } from "./LiveVoicePanel";
+import type { DeviceCommand, VoiceVisual, WebVoice } from "./web-voice";
 
 type Snapshot = {
   time: number;
@@ -72,20 +79,106 @@ type Manifest = {
   objects: number;
   wasmHash: string;
 };
+
 const stamp = (t: number) =>
   `${String(Math.floor(t / 60000)).padStart(2, "0")}:${((t % 60000) / 1000).toFixed(2).padStart(5, "0")}`;
-const toggles = [
-  ["privacy", "Microphone privacy"],
-  ["continuous", "Continuous conversation"],
-  ["chime", "Listening tone"],
-  ["sounds", "Interaction sounds"],
-  ["motion", "Follow movement"],
-  ["reduced", "Reduced motion"],
-  ["invert_x", "Reverse horizontal"],
-  ["invert_y", "Reverse vertical"],
+
+const TOGGLES: [string, string][] = [
+  ["privacy", "Privacidad del micrófono"],
+  ["continuous", "Conversación continua"],
+  ["chime", "Tono de escucha"],
+  ["sounds", "Sonidos de interacción"],
+  ["motion", "Seguir el movimiento"],
+  ["reduced", "Animaciones mínimas"],
+  ["invert_x", "Invertir horizontal"],
+  ["invert_y", "Invertir vertical"],
   ["wake", "Wake word"],
-  ["quiet", "Quiet mode"],
+  ["quiet", "Modo silencioso"],
 ];
+const MOODS = ["Idle", "Escuchando", "Pensando", "Hablando", "Feliz", "Error", "Offline"];
+const FAULTS = [
+  "Driver demorado más allá del timeout",
+  "El parlante nunca termina de drenar",
+  "El bridge pierde el timeout de silencio",
+];
+const TRANSPORT_FAULTS = ["Ráfaga de 700 ms en el transporte", "Nunca confirmar playback ready"];
+
+function SectionTitle({
+  icon: Icon,
+  children,
+  hint,
+}: {
+  icon?: typeof Activity;
+  children: React.ReactNode;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-[0.15em] uppercase">
+        {Icon && <Icon className="h-3.5 w-3.5" />}
+        {children}
+      </p>
+      {hint && <span className="font-terminal text-muted-foreground text-[11px]">{hint}</span>}
+    </div>
+  );
+}
+
+function RangeRow({
+  label,
+  value,
+  unit = "",
+  min,
+  max,
+  step = 1,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  unit?: string;
+  min: number;
+  max: number;
+  step?: number;
+  disabled?: boolean;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-28 shrink-0 text-sm">{label}</span>
+      <Slider
+        disabled={disabled}
+        max={max}
+        min={min}
+        step={step}
+        value={[value]}
+        onValueChange={([v]) => onChange(v)}
+      />
+      <span className="font-terminal text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+        {value}
+        {unit}
+      </span>
+    </div>
+  );
+}
+
+function SwitchRow({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center justify-between gap-3 py-1 text-sm">
+      <span>{label}</span>
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
+    </label>
+  );
+}
 
 export default function CompanionWorkbench() {
   const worker = useRef<Worker | null>(null);
@@ -98,7 +191,6 @@ export default function CompanionWorkbench() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [trace, setTrace] = useState<Trace[]>([]);
-  const [tab, setTab] = useState<"inputs" | "state" | "settings" | "faults">("inputs");
   const [playing, setPlaying] = useState(false);
   const [mode, setMode] = useState("simulated");
   const [duration, setDuration] = useState(0);
@@ -116,7 +208,8 @@ export default function CompanionWorkbench() {
   const [error, setError] = useState<string | null>(null);
   const [help, setHelp] = useState(false);
   const [zoom, setZoom] = useState(false);
-  const [transport, setTransport] = useState("Browser microphone is never opened in fixture mode.");
+  const [wall, setWall] = useState(false);
+  const [transport, setTransport] = useState("En modo fixture el micrófono del navegador nunca se abre.");
   const [live, setLive] = useState(false);
   const liveRef = useRef(false);
   const liveClient = useRef<WebVoice | null>(null);
@@ -201,7 +294,7 @@ export default function CompanionWorkbench() {
         instance.postMessage({ type: "play", value: true });
       }
       if (data.type === "error") {
-        liveClient.current?.stop("The virtual device stopped. Microphone off; reload before reconnecting.");
+        liveClient.current?.stop("El dispositivo virtual se detuvo. Micrófono apagado; recargá antes de reconectar.");
         setError(data.message);
         setPlaying(false);
         stopSound();
@@ -250,8 +343,8 @@ export default function CompanionWorkbench() {
       }
     };
     instance.onerror = () => {
-      liveClient.current?.stop("The virtual device stopped. Microphone off.");
-      setError("The WASM runtime could not load. Run the companion emulator build and reload.");
+      liveClient.current?.stop("El dispositivo virtual se detuvo. Micrófono apagado.");
+      setError("No se pudo cargar el runtime WASM. Corré el build del emulador y recargá.");
     };
     instance.postMessage({ type: "init" });
     const visibility = () => {
@@ -259,7 +352,7 @@ export default function CompanionWorkbench() {
         if (!liveRef.current) instance.postMessage({ type: "play", value: false });
         stopSound();
         void audio.current?.suspend();
-        setTransport("Paused while hidden. Press Play and enable sound to continue.");
+        setTransport("Pausado mientras la pestaña estuvo oculta. Play y sonido para seguir.");
       }
     };
     document.addEventListener("visibilitychange", visibility);
@@ -304,15 +397,15 @@ export default function CompanionWorkbench() {
       soundEnabled.current = true;
       setSound(true);
       setTransport(
-        `Shared 16 kHz PCM cues · browser output ${audio.current.sampleRate / 1000} kHz. Speech transport is a silent fixture.`
+        `Cues PCM compartidos a 16 kHz · salida del navegador a ${audio.current.sampleRate / 1000} kHz. El transporte de voz es un fixture silencioso.`
       );
     } catch {
-      setError("Audio is unavailable. You can still run every silent scenario.");
+      setError("No hay audio disponible. Igual podés correr todos los escenarios silenciosos.");
     }
   };
-  const ready = !!manifest && !!state,
-    locked = mode === "replay" || live,
-    inputsLocked = mode === "replay";
+  const ready = !!manifest && !!state;
+  const locked = mode === "replay" || live;
+  const inputsLocked = mode === "replay";
   const pointer = (event: React.PointerEvent<HTMLCanvasElement>, pressed: number) => {
     if (!ready || inputsLocked) return;
     const rect = event.currentTarget.getBoundingClientRect();
@@ -322,148 +415,72 @@ export default function CompanionWorkbench() {
   };
   const changeAngle = (index: number, value: number) => {
     const next = [...angles];
-    next[index] = value;
+    next[index] = Math.max(-70, Math.min(70, value));
     setAngles(next);
     send({ type: "pose", angles: next });
   };
   const powerTelemetry = (pct: number, cable: boolean, charge: boolean) =>
     input("powerTelemetry", [0x08 | (cable ? 0x20 : 0), charge ? 0x20 : 0x40, pct, 31]);
+
+  // Keyboard on the device: the same gestures the touchscreen and the BOOT button give.
+  const shortcuts = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!ready || inputsLocked || event.repeat) return;
+    const key = event.key.toLowerCase();
+    const actions: Record<string, () => void> = {
+      " ": () => input("boot", [100]),
+      h: () => input("boot", [900]),
+      p: () => input("pet"),
+      w: () => input("wake"),
+      s: () => send({ type: "shake" }),
+      c: () => input("center"),
+      arrowleft: () => changeAngle(0, angles[0] - 10),
+      arrowright: () => changeAngle(0, angles[0] + 10),
+      arrowup: () => changeAngle(1, angles[1] - 10),
+      arrowdown: () => changeAngle(1, angles[1] + 10),
+    };
+    const action = actions[key];
+    if (!action) return;
+    event.preventDefault();
+    action();
+  };
+
   const currentScenario = scenarios.find((s) => s.id === selected);
   const progress = currentScenario ? Math.min(100, ((state?.time ?? 0) / currentScenario.duration) * 100) : 0;
+  const voiceLabel = state?.voice.replaceAll("_", " ") ?? "cargando runtime";
+  const modeLabel = live ? "Bridge en vivo · dispositivo virtual" : locked ? "Replay grabado" : "Dispositivo simulado";
 
   return (
-    <section className={styles.lab} aria-label="Owy companion emulator">
-      <header className={styles.header}>
-        <div className={styles.brand}>
-          <span className={styles.brandIcon}>
-            <Sparkles size={21} />
-          </span>
-          <div>
-            <p className={styles.eyebrow}>OWY / DEVELOPMENT STUDIO</p>
-            <h1>
-              Companion lab<span>.</span>
-            </h1>
-          </div>
-        </div>
-        <div className={styles.headerActions}>
-          <span className={styles.safe}>
-            <ShieldCheck size={14} />
-            {live ? "Virtual device · real bridge" : "Fixtures + bridge conversations"}
-          </span>
-          <button
-            className={styles.iconButton}
-            title="About parity and keyboard controls"
-            aria-label="About this emulator"
-            onClick={() => setHelp(!help)}
-          >
-            <CircleHelp size={20} />
-          </button>
-          <button className={styles.export} disabled={!ready || live} onClick={() => send({ type: "export" })}>
-            <ArrowDownToLine size={15} />
-            Export session
-          </button>
-        </div>
-      </header>
-      <LiveVoicePanel
-        disabled={!ready || mode === "replay"}
-        onActive={onLive}
-        onVisual={onLiveVisual}
-        onCue={onLiveCue}
-        onDevice={onLiveDevice}
-        onClient={onLiveClient}
-        onSetting={onLiveSetting}
-        deviceSettings={state?.settings}
-        unavailable={
-          state?.settings.privacy
-            ? "Turn off microphone privacy in device settings before starting voice."
-            : state?.powered === false
-              ? "Power the virtual device on before starting voice."
-              : state && ["settling", "collecting"].includes(state.calibration)
-                ? "Finish or cancel calibration before starting voice."
-                : undefined
-        }
-      />
-      {error && (
-        <div className={styles.error} role="alert">
-          <span>{error}</span>
-          <button aria-label="Dismiss error" onClick={() => setError(null)}>
-            <X size={16} />
-          </button>
-        </div>
-      )}
-      {help && (
-        <div className={styles.about}>
-          <strong>A device-shaped window into the real code.</strong>
-          <p>
-            All nine screens and font bitmaps come from the pinned ESPHome LVGL output. Motion fusion, calibration,
-            touch classification, animation, and cue synthesis run as the same C++ code in WebAssembly.
-          </p>
-          <p>
-            The production VoiceTurn and PacedSpeaker run against virtual time and a simulated device transport.
-            Network, power, and staff access use deterministic fixtures. Wake is injected—not recognized acoustically.
-            Fixture PIN: <code>1234</code>. Live voice connects this virtual device to the gadget's real Node bridge:
-            same prompts, tools and turn handling. Live data is excluded from replay. Production permissions are granted
-            separately; the test PIN never grants them. Acoustics and electrical faults still need hardware checks.
-          </p>
-          <p>
-            Drag directly on Owy to pet or swipe. Use the input buttons for keyboard-accessible equivalents. Pause,
-            step, and scrub to replay an issue; importing locks inputs until you reset.
+    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Owy Companion</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            El firmware real corriendo en el navegador: la misma cara, gestos y voz que el Owy físico de la mesa.
           </p>
         </div>
-      )}
-      <div className={styles.workspace}>
-        <aside className={styles.scenarios} aria-label="Scenarios">
-          <div className={styles.sectionTitle}>
-            <span>
-              <FlaskConical size={15} />
-              SCENARIOS
-            </span>
-            <span>{scenarios.length.toString().padStart(2, "0")}</span>
-          </div>
-          <p className={styles.asideIntro}>Small stories. Reproducible behavior.</p>
-          <div className={styles.scenarioList}>
-            {scenarios.map((scenario, index) => (
-              <button
-                key={scenario.id}
-                className={`${styles.scenario} ${selected === scenario.id ? styles.selected : ""}`}
-                disabled={!ready || live}
-                onClick={() => {
-                  resetControls();
-                  setSelected(scenario.id);
-                  send({ type: "scenario", id: scenario.id });
-                }}
-              >
-                <span className={styles.scenarioIndex}>{String(index + 1).padStart(2, "0")}</span>
-                <span>
-                  <strong>{scenario.name}</strong>
-                  <small>{scenario.detail}</small>
-                </span>
-                <ChevronRight size={14} />
-              </button>
-            ))}
-          </div>
-          <div className={styles.fixtureNote}>
-            <Radio size={17} />
-            <div>
-              <strong>Fixtures stay local</strong>
-              <p>Simulated scenarios never send audio. Live voice is opt-in and cannot be recorded or replayed.</p>
-            </div>
-          </div>
-          <button className={styles.import} disabled={!ready || live} onClick={() => picker.current?.click()}>
-            <ArrowUpFromLine size={15} />
-            Import a replay
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={ready ? "default" : "outline"}>{ready ? "Runtime listo" : "Cargando runtime…"}</Badge>
+          <Badge variant="outline">{modeLabel}</Badge>
+          <Button size="icon" title="Cómo funciona este emulador" variant="ghost" onClick={() => setHelp(!help)}>
+            <CircleHelp className="h-4 w-4" />
+          </Button>
+          <Button disabled={!ready || live} size="sm" variant="outline" onClick={() => picker.current?.click()}>
+            <ArrowUpFromLine className="mr-1 h-4 w-4" /> Importar replay
+          </Button>
+          <Button disabled={!ready || live} size="sm" onClick={() => send({ type: "export" })}>
+            <ArrowDownToLine className="mr-1 h-4 w-4" /> Exportar sesión
+          </Button>
           <input
             ref={picker}
             hidden
-            type="file"
             accept="application/json,.json"
+            type="file"
             onChange={async (event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file) return;
               if (file.size > 2 * 1024 * 1024) {
-                setError("Replay exceeds the 2 MiB limit.");
+                setError("El replay supera el límite de 2 MiB.");
                 return;
               }
               resetControls();
@@ -471,630 +488,702 @@ export default function CompanionWorkbench() {
               send({ type: "import", json: await file.text() });
             }}
           />
-        </aside>
+        </div>
+      </div>
 
-        <div className={styles.stage}>
-          <div className={styles.stageBar}>
-            <span className={styles.mode}>
-              <i />
-              {live ? "LIVE BRIDGE · VIRTUAL DEVICE" : locked ? "RECORDED REPLAY" : "SIMULATED DEVICE"}
-            </span>
-            <button
-              className={styles.iconButton}
-              onClick={() => setZoom(!zoom)}
-              aria-label={zoom ? "Fit device" : "Show device at native pixel size"}
-            >
-              <Maximize2 size={15} />
-            </button>
-          </div>
-          <div className={styles.deviceSpace}>
-            <div className={`${styles.device} ${zoom ? styles.nativeSize : ""}`}>
-              <div className={styles.bezelDetail} />
-              <canvas
-                ref={panel}
-                width={466}
-                height={466}
-                className={styles.screen}
-                style={{ opacity: state?.powered === false ? 0 : state?.dimmed ? 0.15 : 1 }}
-                aria-label="Interactive Owy screen, 466 by 466 pixels. Equivalent controls are in the Inputs tab."
-                role="img"
-                onPointerDown={(event) => {
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  pointer(event, 1);
-                }}
-                onPointerMove={(event) => {
-                  if (event.buttons) pointer(event, 1);
-                }}
-                onPointerUp={(event) => {
-                  pointer(event, 0);
-                  if (event.currentTarget.hasPointerCapture(event.pointerId))
-                    event.currentTarget.releasePointerCapture(event.pointerId);
-                }}
-                onPointerCancel={(event) => pointer(event, 0)}
-              />
-              {!ready && (
-                <div className={styles.loading}>
-                  <span />
-                  <p>Waking up the real pixels…</p>
-                </div>
-              )}
-            </div>
-            <p className={styles.deviceHint}>
-              <Hand size={14} />
-              {live
-                ? "Tap to cancel or start; hold for settings. Voice and screen tools use the real bridge."
-                : "Touch, tilt, and get to know Owy."}
+      {error && (
+        <div
+          className="flex items-center justify-between gap-3 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm"
+          role="alert"
+        >
+          <span>{error}</span>
+          <Button aria-label="Cerrar" size="icon" variant="ghost" onClick={() => setError(null)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {help && (
+        <Card>
+          <CardContent className="text-muted-foreground space-y-2 p-4 text-sm">
+            <p className="text-foreground font-medium">Una ventana con forma de dispositivo al código real.</p>
+            <p>
+              Las nueve pantallas y las fuentes salen del LVGL de ESPHome fijado. Fusión de movimiento, calibración,
+              clasificación de toques, animación y síntesis de cues corren como el mismo C++ en WebAssembly.
             </p>
-          </div>
-          <div className={styles.deviceStatus}>
-            <span>
-              <i className={ready ? styles.readyDot : styles.waitDot} />
-              {state?.voice.replaceAll("_", " ") ?? "loading runtime"}
-            </span>
-            <span>
-              {state?.page ?? "face"}
-              <span className={styles.divider}>/</span>466 × 466
-            </span>
-          </div>
-          <div className={styles.scenarioNow}>
-            <div>
-              <span className={styles.eyebrow}>{currentScenario ? "NOW EXPLORING" : "YOUR PLAYGROUND"}</span>
-              <h2>
-                {currentScenario?.name ?? (locked ? "A moment, reproduced." : "A little curiosity goes a long way.")}
-              </h2>
-              <p>{currentScenario?.detail ?? "Try a gesture, adjust the pose, or choose a story on the left."}</p>
-            </div>
-            <Sparkles size={24} />
-            {currentScenario && (
-              <div className={styles.scenarioProgress}>
-                <i style={{ width: `${progress}%` }} />
+            <p>
+              El VoiceTurn y el PacedSpeaker de producción corren contra tiempo virtual y un transporte simulado. Red,
+              energía y acceso de staff usan fixtures determinísticos; el wake se inyecta, no se reconoce. PIN del
+              fixture: <code className="font-terminal">1234</code>. La voz en vivo conecta este dispositivo virtual al
+              bridge Node real (mismos prompts, tools y turnos) y queda fuera del replay.
+            </p>
+            <p>
+              Arrastrá sobre Owy para acariciarlo o deslizar; los botones y el teclado hacen lo mismo. Pausá, avanzá y
+              arrastrá la línea de tiempo para reproducir un problema; importar un replay bloquea las entradas hasta
+              reiniciar.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)_400px]">
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FlaskConical className="h-4 w-4 text-yellow-400" /> Escenarios
+                <span className="font-terminal text-muted-foreground ml-auto text-xs">
+                  {scenarios.length.toString().padStart(2, "0")}
+                </span>
+              </CardTitle>
+              <CardDescription>Historias cortas, comportamiento reproducible.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1 p-2 pt-0">
+              {scenarios.map((scenario, index) => {
+                const isSelected = selected === scenario.id;
+                return (
+                  <button
+                    key={scenario.id}
+                    className={`hover:bg-accent flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors disabled:opacity-50 ${
+                      isSelected ? "bg-accent ring-1 ring-yellow-400/60" : ""
+                    }`}
+                    disabled={!ready || live}
+                    onClick={() => {
+                      resetControls();
+                      setSelected(scenario.id);
+                      send({ type: "scenario", id: scenario.id });
+                    }}
+                  >
+                    <span className="font-terminal text-muted-foreground mt-0.5 text-[11px]">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm leading-tight font-medium">{scenario.name}</span>
+                      <span className="text-muted-foreground block text-xs leading-snug">{scenario.detail}</span>
+                      {isSelected && (
+                        <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+                          <span
+                            className="block h-full bg-yellow-400 transition-[width]"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+              <p className="text-muted-foreground px-3 pt-2 pb-1 text-[11px]">
+                Los escenarios simulados nunca mandan audio. La voz en vivo es opt-in y no se graba ni se reproduce.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Tv className="h-4 w-4 text-yellow-400" /> Pantalla grande
+              </CardTitle>
+              <CardDescription>Lo que la pared muestra mientras alguien habla con Owy.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {wall ? (
+                <ScaledFrame src="/owy/stage/owy-face" title="Owy en la pantalla grande" />
+              ) : (
+                <Button className="w-full" size="sm" variant="outline" onClick={() => setWall(true)}>
+                  Mostrar la vista de la pared
+                </Button>
+              )}
+              <div className="text-muted-foreground flex items-center justify-between text-[11px]">
+                <span>Necesita el bridge con OWY_API_KEY.</span>
+                <a className="hover:text-foreground inline-flex items-center gap-1" href="/admin/owy/scenes">
+                  Escenas <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <aside className={styles.inspector} aria-label="Device debugger">
-          <div className={styles.tabs} role="tablist" aria-label="Inspector tabs">
-            {(
-              [
-                ["inputs", Fingerprint],
-                ["state", Activity],
-                ["settings", Settings2],
-                ["faults", Gauge],
-              ] as const
-            ).map(([name, Icon]) => (
-              <button
-                key={name}
-                role="tab"
-                aria-selected={tab === name}
-                aria-controls={`companion-${name}`}
-                onClick={() => setTab(name)}
-                className={tab === name ? styles.activeTab : ""}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span
+                className={`inline-block h-2.5 w-2.5 rounded-full ${live ? "animate-pulse bg-[#0162C8]" : ready ? "bg-yellow-400" : "bg-zinc-600"}`}
+              />
+              <span className="font-medium">{modeLabel}</span>
+            </div>
+            <Button
+              aria-label={zoom ? "Ajustar" : "Tamaño nativo 466 px"}
+              size="icon"
+              variant="ghost"
+              onClick={() => setZoom(!zoom)}
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div
+              aria-label="Owy. Espacio: tocar. H: mantener. P: acariciar. W: wake word. S: sacudir. C: centrar. Flechas: inclinar."
+              className="flex flex-col items-center rounded-lg bg-[radial-gradient(circle_at_50%_30%,rgba(245,187,3,0.10),transparent_60%)] p-4 outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60"
+              role="group"
+              tabIndex={0}
+              onKeyDown={shortcuts}
+            >
+              <div
+                className={`relative aspect-square shrink-0 overflow-hidden rounded-full border-[10px] border-zinc-800 bg-black shadow-[0_30px_70px_rgba(0,0,0,0.6),inset_0_0_0_2px_rgba(255,255,255,0.05)] ${
+                  zoom ? "w-[486px]" : "w-full max-w-[440px]"
+                }`}
               >
-                <Icon size={16} />
-                <span>{name}</span>
-              </button>
-            ))}
-          </div>
-          <div className={styles.inspectorBody} role="tabpanel" id={`companion-${tab}`}>
-            {locked && (
-              <p className={styles.locked}>
-                {live
-                  ? "Touch, motion and settings remain interactive. Live voice uses the bridge; replay and synthetic voice/faults are locked."
-                  : "Replay is read-only. Reset to try something new."}
-              </p>
-            )}
-            {tab === "inputs" && (
-              <>
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Move3D size={15} />
-                    MOTION RIG
-                  </span>
-                  <span>g / °/s</span>
-                </div>
-                <div className={styles.poseRig}>
-                  <div className={styles.rigGrid} />
-                  <div
-                    className={styles.rigBody}
-                    style={{ transform: `rotateX(${angles[0]}deg) rotateY(${angles[1]}deg) rotateZ(${angles[2]}deg)` }}
-                  >
-                    <span />
-                    <span />
+                <canvas
+                  ref={panel}
+                  aria-label="Pantalla interactiva de Owy, 466 por 466 píxeles. Los mismos controles están en Entradas."
+                  className="h-full w-full cursor-pointer touch-none rounded-full transition-opacity"
+                  height={466}
+                  role="img"
+                  style={{ opacity: state?.powered === false ? 0 : state?.dimmed ? 0.15 : 1 }}
+                  width={466}
+                  onPointerCancel={(event) => pointer(event, 0)}
+                  onPointerDown={(event) => {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    pointer(event, 1);
+                  }}
+                  onPointerMove={(event) => {
+                    if (event.buttons) pointer(event, 1);
+                  }}
+                  onPointerUp={(event) => {
+                    pointer(event, 0);
+                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                      event.currentTarget.releasePointerCapture(event.pointerId);
+                  }}
+                />
+                {!ready && (
+                  <div className="text-muted-foreground absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black text-xs">
+                    <span className="h-6 w-6 animate-spin rounded-full border-2 border-yellow-400 border-t-transparent" />
+                    Despertando los píxeles reales…
                   </div>
-                  <span className={styles.rigLabel}>6-axis IMU · body frame</span>
-                </div>
-                {["Roll", "Pitch", "Yaw"].map((axis, i) => (
-                  <label className={styles.range} key={axis}>
-                    <span>
-                      {axis}
-                      <output>{angles[i]}°</output>
+                )}
+              </div>
+              <p className="text-muted-foreground mt-4 flex items-center gap-2 text-xs">
+                <Hand className="h-3.5 w-3.5" />
+                {live
+                  ? "Tocá para cancelar o empezar; mantené para ajustes. Voz y pantalla usan el bridge real."
+                  : "Tocá, arrastrá, incliná. Con el foco acá, el teclado también sirve."}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="flex items-center gap-2">
+                <span className={`inline-block h-2 w-2 rounded-full ${ready ? "bg-yellow-400" : "bg-zinc-600"}`} />
+                <span className="font-terminal">{voiceLabel}</span>
+              </span>
+              <span className="font-terminal text-muted-foreground">
+                {state?.page ?? "face"} · 466 × 466 · {stamp(state?.time ?? 0)}
+              </span>
+            </div>
+
+            <div className="space-y-1.5">
+              <LevelMeter color="#0162C8" label="Mic" value={state?.envelope[0] ?? 0} />
+              <LevelMeter color="#F5BB03" label="Voz" value={(state?.envelope[1] ?? 0) / 100} />
+            </div>
+
+            <div>
+              <SectionTitle icon={Fingerprint}>Gestos</SectionTitle>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {(
+                  [
+                    ["Tocar / BOOT", Mic, () => input("boot", [100]), "␣"],
+                    ["Mantener", Settings2, () => input("boot", [900]), "H"],
+                    ["Acariciar", Hand, () => input("pet"), "P"],
+                    ["Wake word", Radio, () => input("wake"), "W"],
+                    ["Sacudir", Activity, () => send({ type: "shake" }), "S"],
+                    ["Centrar mirada", RotateCcw, () => input("center"), "C"],
+                  ] as const
+                ).map(([label, Icon, action, key]) => (
+                  <Button
+                    key={label}
+                    className="justify-between"
+                    disabled={!ready || inputsLocked}
+                    size="sm"
+                    variant="outline"
+                    onClick={action}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Icon className="h-3.5 w-3.5" /> {label}
                     </span>
-                    <input
-                      aria-label={axis}
-                      type="range"
-                      min={-70}
-                      max={70}
-                      step={1}
-                      value={angles[i]}
-                      disabled={!ready || inputsLocked}
-                      onChange={(e) => changeAngle(i, Number(e.target.value))}
-                    />
-                  </label>
+                    <Kbd>{key}</Kbd>
+                  </Button>
                 ))}
-                <div className={styles.actionGrid}>
-                  <button disabled={!ready || inputsLocked} onClick={() => send({ type: "shake" })}>
-                    <Activity size={15} />
-                    Shake
-                  </button>
-                  <button disabled={!ready || inputsLocked} onClick={() => input("center")}>
-                    <RotateCcw size={15} />
-                    Center gaze
-                  </button>
-                </div>
-                <p className={styles.microcopy}>
-                  Pose changes produce gravity and angular rate together. Yaw is relative—not a compass heading.
-                </p>
-                <div className={styles.rule} />
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Fingerprint size={15} />
-                    TOUCH & VOICE
-                  </span>
-                </div>
-                <div className={styles.actionGrid}>
-                  <button disabled={!ready || inputsLocked} onClick={() => input("boot", [100])}>
-                    <Mic size={15} />
-                    Tap / BOOT
-                  </button>
-                  <button disabled={!ready || inputsLocked} onClick={() => input("boot", [900])}>
-                    <Settings2 size={15} />
-                    Hold / menu
-                  </button>
-                  <button disabled={!ready || inputsLocked} onClick={() => input("pet")}>
-                    <Hand size={15} />
-                    Pet
-                  </button>
-                  <button disabled={!ready || inputsLocked} onClick={() => input("wake")}>
-                    <Radio size={15} />
-                    Wake word
-                  </button>
-                </div>
-                <button
-                  className={styles.primaryAction}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
                   disabled={!ready || locked || state?.phase !== 2}
+                  size="sm"
                   onClick={() => input("speech", [1, 1200])}
                 >
-                  <AudioLines size={16} />
-                  Say something (fixture)
-                </button>
-                <div className={styles.smallLinks}>
-                  <button disabled={inputsLocked} onClick={() => input("page", [], "help")}>
-                    Swipe left · help
-                  </button>
-                  <button disabled={inputsLocked} onClick={() => input("page", [], "qr")}>
-                    Swipe right · QR
-                  </button>
-                </div>
-                <div className={styles.rule} />
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Volume2 size={15} />
-                    SHARED CUES
-                  </span>
-                </div>
-                <button className={styles.audioToggle} onClick={toggleSound}>
-                  {sound ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                  {sound ? "Sound enabled" : "Enable sound"}
-                  <span>opt-in</span>
-                </button>
-                <div className={styles.smallLinks}>
-                  {["Listening", "Playful", "Diagnostic"].map((name, i) => (
-                    <button key={name} disabled={!sound || locked || !ready} onClick={() => input("cue", [i])}>
+                  <AudioLines className="mr-2 h-4 w-4" /> Decir algo (fixture)
+                </Button>
+                <Button disabled={inputsLocked} size="sm" variant="ghost" onClick={() => input("page", [], "help")}>
+                  Deslizar ← ayuda
+                </Button>
+                <Button disabled={inputsLocked} size="sm" variant="ghost" onClick={() => input("page", [], "qr")}>
+                  Deslizar → QR
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <SectionTitle icon={Activity} hint={locked ? "fijo por voz/replay" : undefined}>
+                Cara
+              </SectionTitle>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {MOODS.map((name, i) => (
+                  <Button
+                    key={name}
+                    disabled={!ready || locked}
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => input("mood", [i])}
+                  >
+                    {name}
+                  </Button>
+                ))}
+                <Button disabled={!ready || locked} size="sm" variant="outline" onClick={() => input("mood", [-1])}>
+                  Seguir la voz
+                </Button>
+              </div>
+            </div>
+
+            {currentScenario && (
+              <div className="rounded-md border bg-zinc-900/60 p-3 text-sm">
+                <p className="text-xs font-semibold tracking-[0.15em] text-yellow-400 uppercase">Explorando</p>
+                <p className="mt-1 font-medium">{currentScenario.name}</p>
+                <p className="text-muted-foreground text-xs">{currentScenario.detail}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <LiveVoicePanel
+          deviceSettings={state?.settings}
+          disabled={!ready || mode === "replay"}
+          unavailable={
+            state?.settings.privacy
+              ? "Apagá la privacidad del micrófono en los ajustes del dispositivo antes de hablar."
+              : state?.powered === false
+                ? "Encendé el dispositivo virtual antes de hablar."
+                : state && ["settling", "collecting"].includes(state.calibration)
+                  ? "Terminá o cancelá la calibración antes de hablar."
+                  : undefined
+          }
+          onActive={onLive}
+          onClient={onLiveClient}
+          onCue={onLiveCue}
+          onDevice={onLiveDevice}
+          onSetting={onLiveSetting}
+          onVisual={onLiveVisual}
+        />
+      </div>
+
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              aria-label={playing ? "Pausar el reloj virtual" : "Reanudar el reloj virtual"}
+              disabled={!ready || live}
+              size="icon"
+              onClick={() => send({ type: "play", value: !playing })}
+            >
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </Button>
+            <Button
+              aria-label="Avanzar 16 ms"
+              disabled={!ready || playing}
+              size="icon"
+              variant="outline"
+              onClick={() => send({ type: "advance", ms: 16 })}
+            >
+              <SkipForward className="h-4 w-4" />
+            </Button>
+            <Button
+              disabled={!ready || playing}
+              size="sm"
+              variant="outline"
+              onClick={() => send({ type: "advance", ms: 1000 })}
+            >
+              +1 s
+            </Button>
+            <Button
+              aria-label="Reiniciar la simulación"
+              disabled={!ready || live}
+              size="icon"
+              variant="outline"
+              onClick={reset}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            <span className="font-terminal ml-2 text-lg tabular-nums">{stamp(state?.time ?? 0)}</span>
+            <span className="text-muted-foreground text-xs">tiempo virtual</span>
+            <Select
+              disabled={live}
+              value={speed}
+              onValueChange={(value) => {
+                setSpeed(value);
+                send({ type: "speed", value: Number(value) });
+              }}
+            >
+              <SelectTrigger className="h-8 w-[90px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[0.25, 0.5, 1, 2, 4].map((v) => (
+                  <SelectItem key={v} value={String(v)}>
+                    {v}×
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Badge className="ml-auto" variant={live ? "outline" : locked ? "secondary" : "destructive"}>
+              {live ? "No graba" : locked ? "Replay" : "Grabando entradas"}
+            </Badge>
+          </div>
+          <div className="text-muted-foreground flex items-center gap-3 text-xs">
+            <span className="w-16 shrink-0">Ir a</span>
+            <Slider
+              disabled={!ready || playing || duration < 16}
+              max={Math.max(duration, 1)}
+              min={0}
+              step={16}
+              value={[Math.min(state?.time ?? 0, duration)]}
+              onValueChange={([time]) => {
+                stopSound();
+                send({ type: "seek", time });
+              }}
+            />
+            <span className="font-terminal w-16 shrink-0 text-right tabular-nums">{stamp(duration)}</span>
+          </div>
+          <div className="font-terminal text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+            <span className="tracking-[0.15em] uppercase">Traza</span>
+            {trace
+              .slice(-6)
+              .reverse()
+              .map((event, i) => (
+                <span key={`${event.t}-${i}`}>
+                  <span className="text-foreground/70 mr-1">{stamp(event.t)}</span>
+                  {event.event}
+                </span>
+              ))}
+            <span className="ml-auto">
+              {live ? "bridge real · tools en vivo" : "determinístico · acotado · exportable"}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <Tabs defaultValue="inputs">
+          <CardHeader className="pb-0">
+            <TabsList>
+              <TabsTrigger value="inputs">
+                <Move3D className="mr-2 h-4 w-4" /> Entradas
+              </TabsTrigger>
+              <TabsTrigger value="state">
+                <Activity className="mr-2 h-4 w-4" /> Estado
+              </TabsTrigger>
+              <TabsTrigger value="settings">
+                <Settings2 className="mr-2 h-4 w-4" /> Ajustes
+              </TabsTrigger>
+              <TabsTrigger value="faults">
+                <Gauge className="mr-2 h-4 w-4" /> Fallas
+              </TabsTrigger>
+            </TabsList>
+            {locked && (
+              <p className="text-muted-foreground pt-3 text-xs">
+                {live
+                  ? "Toque, movimiento y ajustes siguen activos. La voz usa el bridge; replay, voz sintética y fallas quedan bloqueados."
+                  : "El replay es de solo lectura. Reiniciá para probar otra cosa."}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent className="pt-4">
+            <TabsContent className="grid gap-8 md:grid-cols-2" value="inputs">
+              <div className="space-y-4">
+                <SectionTitle icon={Move3D} hint="g / °/s">
+                  Movimiento
+                </SectionTitle>
+                {["Roll", "Pitch", "Yaw"].map((axis, i) => (
+                  <RangeRow
+                    key={axis}
+                    disabled={!ready || inputsLocked}
+                    label={axis}
+                    max={70}
+                    min={-70}
+                    unit="°"
+                    value={angles[i]}
+                    onChange={(value) => changeAngle(i, value)}
+                  />
+                ))}
+                <p className="text-muted-foreground text-xs">
+                  Cambiar la pose produce gravedad y velocidad angular juntas. El yaw es relativo, no una brújula.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <SectionTitle icon={Volume2}>Cues y envolventes</SectionTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" variant={sound ? "secondary" : "outline"} onClick={toggleSound}>
+                    {sound ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}
+                    {sound ? "Sonido activado" : "Activar sonido"}
+                  </Button>
+                  {["Escucha", "Juguetón", "Diagnóstico"].map((name, i) => (
+                    <Button
+                      key={name}
+                      disabled={!sound || locked || !ready}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => input("cue", [i])}
+                    >
                       {name}
-                    </button>
+                    </Button>
                   ))}
                 </div>
-                <p className={styles.microcopy}>{transport}</p>
-                {["Microphone envelope", "Speaking envelope"].map((name, i) => (
-                  <label className={styles.range} key={name}>
-                    <span>
-                      {name}
-                      <output>{Math.round((state?.envelope[i] ?? 0) * (i === 0 ? 100 : 1))}%</output>
-                    </span>
-                    <input
-                      aria-label={name}
-                      type="range"
-                      min={0}
-                      max={100}
-                      step={1}
-                      disabled={!ready || locked}
-                      value={(state?.envelope[i] ?? 0) * (i === 0 ? 100 : 1)}
-                      onChange={(e) => {
-                        const values = [...(state?.envelope ?? [0, 0])];
-                        values[i] = Number(e.target.value) / (i === 0 ? 100 : 1);
-                        input("envelope", values);
-                      }}
-                    />
-                  </label>
+                <p className="text-muted-foreground text-xs">{transport}</p>
+                {["Envolvente del mic", "Envolvente de voz"].map((name, i) => (
+                  <RangeRow
+                    key={name}
+                    disabled={!ready || locked}
+                    label={name}
+                    max={100}
+                    min={0}
+                    unit="%"
+                    value={Math.round((state?.envelope[i] ?? 0) * (i === 0 ? 100 : 1))}
+                    onChange={(value) => {
+                      const values = [...(state?.envelope ?? [0, 0])];
+                      values[i] = value / (i === 0 ? 100 : 1);
+                      input("envelope", values);
+                    }}
+                  />
                 ))}
-                <p className={styles.microcopy}>
-                  Synthetic levels exercise the shared listening and mouth animation. They do not generate speech or run
-                  speech recognition.
+                <p className="text-muted-foreground text-xs">
+                  Niveles sintéticos para ejercitar la animación de escucha y de boca; no generan voz ni reconocen nada.
                 </p>
-              </>
-            )}
-            {tab === "state" && (
-              <>
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Activity size={15} />
-                    WHY THIS STATE?
-                  </span>
-                </div>
-                <p className={styles.explanation}>{state?.why ?? "Loading the runtime…"}</p>
-                <dl className={styles.values}>
+              </div>
+            </TabsContent>
+
+            <TabsContent className="grid gap-8 md:grid-cols-2" value="state">
+              <div className="space-y-3">
+                <SectionTitle icon={Activity}>Por qué este estado</SectionTitle>
+                <p className="rounded-md border bg-zinc-900/60 p-3 text-sm">{state?.why ?? "Cargando el runtime…"}</p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
                   {[
-                    ["Voice", state?.voice],
-                    ["PCM received · bytes", String(state?.audioReceived ?? 0)],
-                    ["Receive buffer · bytes", `${state?.audioBuffered ?? 0} / 32768`],
-                    ["Page", state?.page],
-                    ["IMU samples", state?.imuReady ? "fresh" : "unavailable / stale"],
-                    ["Gaze · px", state?.gaze.join(", ")],
-                    ["Fused gravity · g", state?.gravity.map((n) => n.toFixed(3)).join(", ")],
-                    ["Gyro bias · °/s", state?.bias.map((n) => n.toFixed(3)).join(", ")],
+                    ["Voz", state?.voice],
+                    ["PCM recibido", `${state?.audioReceived ?? 0} B`],
+                    ["Buffer de recepción", `${state?.audioBuffered ?? 0} / 32768 B`],
+                    ["Pantalla", state?.page],
+                    ["IMU", state?.imuReady ? "muestras frescas" : "sin muestras / viejas"],
+                    ["Mirada · px", state?.gaze.join(", ")],
+                    ["Gravedad fusionada · g", state?.gravity.map((n) => n.toFixed(3)).join(", ")],
+                    ["Bias del gyro · °/s", state?.bias.map((n) => n.toFixed(3)).join(", ")],
                     ["Neutral · g", state?.neutral.map((n) => n.toFixed(3)).join(", ")],
-                    ["Calibration", state?.calibration],
-                    ["Calibration progress", `${state?.calibrationProgress ?? 0}%`],
-                    ["Staff fixture", state?.settings.staff ? "unlocked" : "locked"],
+                    ["Calibración", `${state?.calibration ?? "—"} · ${state?.calibrationProgress ?? 0}%`],
+                    ["Staff (fixture)", state?.settings.staff ? "desbloqueado" : "bloqueado"],
                   ].map(([name, value]) => (
-                    <div key={name}>
-                      <dt>{name}</dt>
-                      <dd>{value ?? "—"}</dd>
+                    <div key={name} className="contents">
+                      <dt className="text-muted-foreground">{name}</dt>
+                      <dd className="font-terminal text-xs tabular-nums">{value ?? "—"}</dd>
                     </div>
                   ))}
                 </dl>
-                <div className={styles.rule} />
-                <div className={styles.sectionTitle}>
-                  <span>PARITY BOUNDARY</span>
-                </div>
-                <p className={styles.microcopy}>
-                  Shared C++: IMU fusion, calibration, gestures, face, PCM.
-                  <br />
-                  <br />
-                  Generated from firmware: all nine LVGL scenes and fonts.
-                  <br />
-                  <br />
-                  Shared bridge: production VoiceTurn and PacedSpeaker, with virtual timers.
-                  <br />
-                  <br />
-                  Fixture HAL: device audio driver, network, power, staff. The opt-in voice panel connects to Gemini
-                  separately; acoustic wake inference and live hardware are not connected.
+              </div>
+              <div className="text-muted-foreground space-y-3 text-xs">
+                <SectionTitle>Límite de paridad</SectionTitle>
+                <p>C++ compartido: fusión de IMU, calibración, gestos, cara, PCM.</p>
+                <p>Generado del firmware: las nueve escenas LVGL y las fuentes.</p>
+                <p>Bridge compartido: VoiceTurn y PacedSpeaker de producción con timers virtuales.</p>
+                <p>
+                  HAL de fixture: driver de audio, red, energía, staff. El panel de voz conecta a Gemini aparte; el wake
+                  acústico y el hardware real no están conectados.
                 </p>
-                <div className={styles.buildInfo}>
-                  LVGL {manifest?.lvgl} · ESPHome {manifest?.esphome}
-                  <br />
-                  {manifest?.version}
-                  <br />
-                  No ESP32 heap or panel-FPS estimates.
-                </div>
-              </>
-            )}
-            {tab === "settings" && (
-              <>
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Settings2 size={15} />
-                    DEVICE PREFERENCES
-                  </span>
-                </div>
-                {toggles.map(([key, name]) => (
-                  <label className={styles.toggle} key={key}>
-                    <span>{name}</span>
-                    <input
-                      type="checkbox"
-                      role="switch"
+                <p className="font-terminal">
+                  LVGL {manifest?.lvgl} · ESPHome {manifest?.esphome} · {manifest?.version}
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent className="grid gap-8 md:grid-cols-2" value="settings">
+              <div className="space-y-1">
+                <SectionTitle icon={Settings2}>Preferencias del dispositivo</SectionTitle>
+                <div className="mt-2 divide-y">
+                  {TOGGLES.map(([key, name]) => (
+                    <SwitchRow
+                      key={key}
                       checked={!!state?.settings[key]}
                       disabled={!ready || inputsLocked}
-                      onChange={(e) => input("setting", [Number(e.target.checked)], key)}
+                      label={name}
+                      onChange={(value) => input("setting", [Number(value)], key)}
                     />
-                    <i />
-                  </label>
-                ))}
-                {[
-                  ["volume", "Volume", 0, 80],
-                  ["brightness", "Brightness", 10, 100],
-                ].map(([key, name, min, max]) => (
-                  <label className={styles.range} key={key}>
-                    <span>
-                      {name}
-                      <output>{state?.settings[String(key)] ?? 80}%</output>
-                    </span>
-                    <input
-                      aria-label={String(name)}
-                      type="range"
-                      min={min}
-                      max={max}
-                      step={5}
-                      value={state?.settings[String(key)] ?? 80}
-                      disabled={!ready || inputsLocked}
-                      onChange={(e) => input("setting", [Number(e.target.value)], String(key))}
-                    />
-                  </label>
-                ))}
-                <button
-                  className={styles.primaryAction}
-                  disabled={!ready || inputsLocked}
-                  onClick={() => input("page", [], "calibration")}
-                >
-                  <Move3D size={16} />
-                  Open calibration menu
-                </button>
-                <p className={styles.microcopy}>
-                  Use the actual on-screen controls too. Reset restores fixture defaults. These settings never change
-                  the physical device.
-                </p>
-                <div className={styles.rule} />
-                <div className={styles.sectionTitle}>
-                  <span>DISPLAY FIXTURES</span>
-                </div>
-                <div className={styles.actionGrid}>
-                  {["Idle", "Listening", "Thinking", "Speaking", "Happy", "Error", "Offline"].map((name, i) => (
-                    <button disabled={!ready || locked} key={name} onClick={() => input("mood", [i])}>
-                      {name}
-                    </button>
                   ))}
-                  <button disabled={!ready || locked} onClick={() => input("mood", [-1])}>
-                    Follow voice
-                  </button>
                 </div>
-                <div className={styles.smallLinks}>
-                  <button disabled={locked} onClick={() => input("card", [], "Ideas que nos conectan")}>
-                    Show card
-                  </button>
-                  <button
+              </div>
+              <div className="space-y-4">
+                <SectionTitle>Volumen, brillo y pantalla</SectionTitle>
+                {(
+                  [
+                    ["volume", "Volumen", 0, 80],
+                    ["brightness", "Brillo", 10, 100],
+                  ] as const
+                ).map(([key, name, min, max]) => (
+                  <RangeRow
+                    key={key}
+                    disabled={!ready || inputsLocked}
+                    label={name}
+                    max={max}
+                    min={min}
+                    step={5}
+                    unit="%"
+                    value={state?.settings[key] ?? 80}
+                    onChange={(value) => input("setting", [value], key)}
+                  />
+                ))}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={!ready || inputsLocked}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => input("page", [], "calibration")}
+                  >
+                    <Move3D className="mr-2 h-4 w-4" /> Calibración
+                  </Button>
+                  <Button
                     disabled={locked}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => input("card", [], "Ideas que nos conectan")}
+                  >
+                    Mostrar card
+                  </Button>
+                  <Button
+                    disabled={locked}
+                    size="sm"
+                    variant="outline"
                     onClick={() =>
                       input("text", [], "Nos vemos en la próxima charla. Compartir ideas nos hace crecer.")
                     }
                   >
-                    Show text
-                  </button>
+                    Mostrar texto
+                  </Button>
                 </div>
-              </>
-            )}
-            {tab === "faults" && (
-              <>
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Gauge size={15} />
-                    FAULT INJECTION
-                  </span>
-                  <span>modeled</span>
-                </div>
-                <p className={styles.microcopy}>
-                  Repeat failures without touching a real speaker, connection, or microphone.
+                <p className="text-muted-foreground text-xs">
+                  Usá también los controles en pantalla del dispositivo. Reiniciar restaura los valores del fixture;
+                  nada de esto toca el dispositivo físico.
                 </p>
-                {["Delay driver beyond timeout", "Never finish speaker drain", "Bridge misses silence timeout"].map(
-                  (name, i) => (
-                    <label className={styles.toggle} key={name}>
-                      <span>{name}</span>
-                      <input
-                        type="checkbox"
-                        role="switch"
-                        checked={!!faults[i]}
-                        disabled={!ready || locked}
-                        onChange={(e) => {
-                          const next = [...faults];
-                          next[i] = Number(e.target.checked);
-                          setFaults(next);
-                          input("fault", next);
-                        }}
-                      />
-                      <i />
-                    </label>
-                  )
-                )}
-                {["700 ms transport burst", "Never acknowledge playback ready"].map((name, i) => (
-                  <label className={styles.toggle} key={name}>
-                    <span>{name}</span>
-                    <input
-                      type="checkbox"
-                      role="switch"
+              </div>
+            </TabsContent>
+
+            <TabsContent className="grid gap-8 md:grid-cols-2" value="faults">
+              <div className="space-y-1">
+                <SectionTitle icon={Gauge} hint="modeladas">
+                  Inyección de fallas
+                </SectionTitle>
+                <p className="text-muted-foreground pb-2 text-xs">
+                  Repetí fallas sin tocar un parlante, una conexión o un micrófono reales.
+                </p>
+                <div className="divide-y">
+                  {FAULTS.map((name, i) => (
+                    <SwitchRow
+                      key={name}
+                      checked={!!faults[i]}
+                      disabled={!ready || locked}
+                      label={name}
+                      onChange={(value) => {
+                        const next = [...faults];
+                        next[i] = Number(value);
+                        setFaults(next);
+                        input("fault", next);
+                      }}
+                    />
+                  ))}
+                  {TRANSPORT_FAULTS.map((name, i) => (
+                    <SwitchRow
+                      key={name}
                       checked={!!transportFault[i]}
                       disabled={!ready || locked}
-                      onChange={(e) => {
+                      label={name}
+                      onChange={(value) => {
                         const next = [...transportFault];
-                        next[i] = e.target.checked ? (i === 0 ? 700 : 1) : 0;
+                        next[i] = value ? (i === 0 ? 700 : 1) : 0;
                         setTransportFault(next);
                         input("transport", next);
                       }}
                     />
-                    <i />
-                  </label>
-                ))}
-                <div className={styles.rule} />
-                <div className={styles.sectionTitle}>
-                  <span>
-                    <Wifi size={15} />
-                    CONNECTIONS
-                  </span>
-                </div>
-                <label className={styles.toggle}>
-                  <span>Bridge connected</span>
-                  <input
-                    type="checkbox"
-                    role="switch"
+                  ))}
+                  <SwitchRow
                     checked={connected}
                     disabled={!ready || locked}
-                    onChange={(e) => {
-                      setConnected(e.target.checked);
-                      input("connection", [Number(e.target.checked)]);
+                    label="Bridge conectado"
+                    onChange={(value) => {
+                      setConnected(value);
+                      input("connection", [Number(value)]);
                     }}
                   />
-                  <i />
-                </label>
-                <label className={styles.toggle}>
-                  <span>IMU delivering samples</span>
-                  <input
-                    type="checkbox"
-                    role="switch"
+                  <SwitchRow
                     checked={imu}
                     disabled={!ready || inputsLocked}
-                    onChange={(e) => {
-                      setImu(e.target.checked);
-                      input("imuAvailable", [Number(e.target.checked)]);
+                    label="La IMU entrega muestras"
+                    onChange={(value) => {
+                      setImu(value);
+                      input("imuAvailable", [Number(value)]);
                     }}
                   />
-                  <i />
-                </label>
-                <div className={styles.rule} />
-                <div className={styles.sectionTitle}>
-                  <span>POWER TELEMETRY</span>
                 </div>
-                <label className={styles.range}>
-                  <span>
-                    Battery<output>{battery}%</output>
-                  </span>
-                  <input
-                    aria-label="Battery percentage"
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={battery}
+              </div>
+              <div className="space-y-4">
+                <SectionTitle>Energía</SectionTitle>
+                <RangeRow
+                  disabled={!ready || inputsLocked}
+                  label="Batería"
+                  max={100}
+                  min={0}
+                  unit="%"
+                  value={battery}
+                  onChange={(value) => {
+                    setBattery(value);
+                    powerTelemetry(value, usb, charging);
+                  }}
+                />
+                <div className="divide-y">
+                  <SwitchRow
+                    checked={usb}
                     disabled={!ready || inputsLocked}
-                    onChange={(e) => {
-                      const v = Number(e.target.value);
-                      setBattery(v);
-                      powerTelemetry(v, usb, charging);
+                    label="USB conectado"
+                    onChange={(value) => {
+                      setUsb(value);
+                      powerTelemetry(battery, value, charging);
                     }}
                   />
-                </label>
-                {[
-                  ["USB connected", usb, setUsb],
-                  ["Charging", charging, setCharging],
-                ].map(([name, value, setter]) => (
-                  <label className={styles.toggle} key={String(name)}>
-                    <span>{String(name)}</span>
-                    <input
-                      type="checkbox"
-                      role="switch"
-                      checked={Boolean(value)}
-                      disabled={!ready || inputsLocked}
-                      onChange={(e) => {
-                        (setter as (v: boolean) => void)(e.target.checked);
-                        powerTelemetry(
-                          battery,
-                          name === "USB connected" ? e.target.checked : usb,
-                          name === "Charging" ? e.target.checked : charging
-                        );
-                      }}
-                    />
-                    <i />
-                  </label>
-                ))}
-                <button
-                  className={styles.primaryAction}
+                  <SwitchRow
+                    checked={charging}
+                    disabled={!ready || inputsLocked}
+                    label="Cargando"
+                    onChange={(value) => {
+                      setCharging(value);
+                      powerTelemetry(battery, usb, value);
+                    }}
+                  />
+                </div>
+                <Button
                   disabled={!ready || inputsLocked}
+                  size="sm"
+                  variant="outline"
                   onClick={() => input("power", [state?.powered ? 0 : 1])}
                 >
-                  PWR · {state?.powered ? "Power off" : "Power on"}
-                </button>
-                <p className={styles.microcopy}>
-                  Power is a fixture input, not a PMIC electrical simulation. No fake physical memory or frame-rate
-                  telemetry.
+                  PWR · {state?.powered ? "Apagar" : "Encender"}
+                </Button>
+                <p className="text-muted-foreground text-xs">
+                  La energía es una entrada del fixture, no una simulación eléctrica del PMIC.
                 </p>
-              </>
-            )}
-          </div>
-        </aside>
-      </div>
-      <footer className={styles.timeline}>
-        <div className={styles.transport}>
-          <button
-            className={styles.play}
-            disabled={!ready || live}
-            aria-label={playing ? "Pause virtual clock" : "Play virtual clock"}
-            onClick={() => send({ type: "play", value: !playing })}
-          >
-            {playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}
-          </button>
-          <button
-            className={styles.iconButton}
-            disabled={!ready || playing}
-            aria-label="Step 16 milliseconds"
-            onClick={() => send({ type: "advance", ms: 16 })}
-          >
-            <SkipForward size={18} />
-          </button>
-          <button className={styles.iconButton} disabled={!ready || live} aria-label="Reset simulation" onClick={reset}>
-            <RotateCcw size={17} />
-          </button>
-          <time>{stamp(state?.time ?? 0)}</time>
-          <span className={styles.virtual}>virtual time</span>
-          <select
-            aria-label="Playback speed"
-            disabled={live}
-            value={speed}
-            onChange={(e) => {
-              setSpeed(e.target.value);
-              send({ type: "speed", value: Number(e.target.value) });
-            }}
-          >
-            {[0.25, 0.5, 1, 2, 4].map((v) => (
-              <option key={v} value={v}>
-                {v}×
-              </option>
-            ))}
-          </select>
-          <button
-            className={styles.jump}
-            disabled={!ready || playing}
-            onClick={() => send({ type: "advance", ms: 1000 })}
-          >
-            +1s
-          </button>
-          <span className={styles.recording}>
-            <i />
-            {live ? "NOT RECORDING" : locked ? "REPLAY" : "RECORDING INPUTS"}
-          </span>
-        </div>
-        <label className={styles.scrubber}>
-          <span>Replay to</span>
-          <input
-            aria-label="Replay timeline"
-            type="range"
-            min={0}
-            max={Math.max(duration, 1)}
-            step={16}
-            disabled={!ready || playing || duration < 16}
-            value={Math.min(state?.time ?? 0, duration)}
-            onChange={(e) => {
-              stopSound();
-              send({ type: "seek", time: Number(e.target.value) });
-            }}
-          />
-          <span>{stamp(duration)}</span>
-        </label>
-        <div className={styles.trace}>
-          <span className={styles.traceLabel}>
-            <MoreHorizontal size={17} />
-            EVENT TRACE
-          </span>
-          {trace
-            .slice(-5)
-            .reverse()
-            .map((event, i) => (
-              <span className={styles.traceEntry} key={`${event.t}-${i}`}>
-                <time>{stamp(event.t)}</time>
-                {event.event}
-              </span>
-            ))}
-          <span className={styles.traceTail}>
-            {live ? "real bridge · live tools · not recording" : "deterministic · bounded · exportable"}
-          </span>
-        </div>
-      </footer>
-    </section>
+              </div>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
+      </Card>
+    </div>
   );
 }

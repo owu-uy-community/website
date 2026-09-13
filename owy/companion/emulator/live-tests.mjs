@@ -167,7 +167,7 @@ test("permission denial ends cleanly without requesting a provider token", async
   await voice.start();
   assert.equal(tokens, 0);
   assert.equal(voice.status.stage, "error");
-  assert.match(voice.status.message, /permission/);
+  assert.match(voice.status.message, /permiso/);
   voice.stop();
 });
 test("ending while permission is pending stops a late microphone stream", async () => {
