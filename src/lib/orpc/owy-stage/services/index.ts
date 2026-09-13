@@ -1,16 +1,20 @@
-import { and, count, eq } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
+import { and, asc, count, eq } from "drizzle-orm";
 
 import { EVENTBRITE_API_KEY, EVENTBRITE_API_URL, EVENTBRITE_EVENT_ID, EXTERNAL_SERVICES } from "app/lib/constants";
 import type { EventbriteAttendeesResponse } from "lib/eventbrite/types";
 
 import { db } from "../../../db";
-import { owyStageState, rooms, tracks } from "../../../db/schema";
+import { owyStageInputs, owyStageState, rooms, tracks } from "../../../db/schema";
 import {
   DEFAULT_STAGE_STATE,
   OWY_STAGE_CHANNEL,
   isSceneId,
   parseSceneParams,
+  type InputEvent,
+  type StageInput,
   type StageState,
+  type SubmitInput,
 } from "../../../owy-stage/scenes";
 import { publishServer } from "../../../realtime/publish";
 import type { FireEffectInput, SetFaceInput, SetSceneInput } from "../schemas";
@@ -25,19 +29,19 @@ export async function getStageState(): Promise<StageState> {
   const [row] = await db.select().from(owyStageState).where(eq(owyStageState.id, ROW_ID)).limit(1);
   if (!row || !isSceneId(row.scene)) return DEFAULT_STAGE_STATE;
 
-  return { scene: row.scene, params: row.params, eventId: row.eventId };
+  return { scene: row.scene, params: row.params, eventId: row.eventId, round: row.round };
 }
 
 /** Persist the active scene (params validated against the scene's schema) and tell every stage. */
 export async function setScene(input: SetSceneInput): Promise<StageState> {
   const params = parseSceneParams(input.scene, input.params) as Record<string, unknown>;
   const eventId = input.eventId === undefined ? (await getStageState()).eventId : input.eventId;
-  const state: StageState = { scene: input.scene, params, eventId };
+  const state: StageState = { scene: input.scene, params, eventId, round: createId() };
 
   await db
     .insert(owyStageState)
     .values({ id: ROW_ID, ...state })
-    .onConflictDoUpdate({ target: owyStageState.id, set: { scene: state.scene, params, eventId } });
+    .onConflictDoUpdate({ target: owyStageState.id, set: { scene: state.scene, params, eventId, round: state.round } });
 
   await publishServer(OWY_STAGE_CHANNEL, "scene", state);
 
@@ -59,6 +63,70 @@ export async function setFace(input: SetFaceInput): Promise<SetFaceInput> {
   await publishServer(OWY_STAGE_CHANNEL, "face", input);
 
   return input;
+}
+
+// ---------------------------------------------------------------------------
+// Phone inputs (/owy/play)
+// ---------------------------------------------------------------------------
+
+/**
+ * Store one answer and tell the wall. `single` keeps the person's latest value,
+ * `once` keeps their first, `multi` keeps every one. Rejected when the wall has
+ * moved on to another round.
+ */
+export async function submitInput(input: SubmitInput): Promise<{ ok: boolean; id?: string }> {
+  const state = await getStageState();
+  if (!state.round || state.round !== input.round) return { ok: false };
+  // ponytail: no rate limit beyond one row per (round, key, voter, slot); add a per-voter cap if the wall gets spammed.
+  const row = {
+    round: input.round,
+    key: input.key,
+    value: input.value,
+    voter: input.voter,
+    slot: input.mode === "multi" ? createId() : "",
+  };
+  const target = [owyStageInputs.round, owyStageInputs.key, owyStageInputs.voter, owyStageInputs.slot];
+  const [saved] =
+    input.mode === "once"
+      ? await db.insert(owyStageInputs).values(row).onConflictDoNothing({ target }).returning()
+      : await db
+          .insert(owyStageInputs)
+          .values(row)
+          .onConflictDoUpdate({ target, set: { value: input.value, createdAt: new Date() } })
+          .returning();
+  if (!saved) return { ok: true };
+
+  const event: InputEvent = {
+    id: saved.id,
+    key: saved.key,
+    value: saved.value,
+    voter: saved.voter,
+    createdAt: saved.createdAt.toISOString(),
+    round: saved.round,
+    mode: input.mode,
+  };
+  await publishServer(OWY_STAGE_CHANNEL, "input", event);
+
+  return { ok: true, id: saved.id };
+}
+
+/** Everything sent during a round, oldest first (capped; the wall aggregates). */
+export async function getInputs(round: string): Promise<StageInput[]> {
+  if (!round) return [];
+  const rows = await db
+    .select()
+    .from(owyStageInputs)
+    .where(eq(owyStageInputs.round, round))
+    .orderBy(asc(owyStageInputs.createdAt))
+    .limit(3000);
+
+  return rows.map((row) => ({
+    id: row.id,
+    key: row.key,
+    value: row.value,
+    voter: row.voter,
+    createdAt: row.createdAt.toISOString(),
+  }));
 }
 
 // ---------------------------------------------------------------------------

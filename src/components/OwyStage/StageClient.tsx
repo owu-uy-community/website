@@ -6,6 +6,7 @@ import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client } from "lib/orpc";
 import {
   DEFAULT_STAGE_STATE,
+  INTERACTIVE_SCENES,
   OWY_STAGE_CHANNEL,
   parseSceneParams,
   type EffectEvent,
@@ -68,13 +69,23 @@ export default function StageClient({ bg, fixed, preview = false }: Props) {
   }, [isConnected, preview, load]);
 
   const Scene = shown
-    ? (SCENE_COMPONENTS[shown.scene] as React.ComponentType<{ params: unknown; eventId: string | null }>)
+    ? (SCENE_COMPONENTS[shown.scene] as React.ComponentType<{ params: unknown; eventId: string | null; round: string }>)
     : null;
 
   return (
     <Stage bg={bg} preview={preview}>
       {Scene && shown && (
-        <Scene key={shown.scene} eventId={shown.eventId} params={parseSceneParams(shown.scene, shown.params)} />
+        <Scene
+          // Interactive scenes restart (timers, inputs) on every take; the rest keep running through param edits.
+          key={
+            (INTERACTIVE_SCENES as readonly string[]).includes(shown.scene)
+              ? `${shown.scene}:${shown.round}`
+              : shown.scene
+          }
+          eventId={shown.eventId}
+          params={parseSceneParams(shown.scene, shown.params)}
+          round={shown.round ?? ""}
+        />
       )}
       {wipe > 0 && <Wipe key={wipe} onDone={() => setWipe(0)} />}
       <Effects fx={fx} />

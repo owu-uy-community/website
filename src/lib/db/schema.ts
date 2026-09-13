@@ -412,11 +412,35 @@ export const owyStageState = pgTable("owy_stage_state", {
   scene: text("scene").notNull().default("black"),
   params: jsonb("params").$type<Record<string, unknown>>().notNull().default({}),
   eventId: text("eventId").references(() => events.id, { onDelete: "set null" }),
+  /** New nonce on every take; phone submissions are scoped to it. */
+  round: text("round").notNull().default(""),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+/** What attendees send from /owy/play: votes, words, questions, reactions… */
+export const owyStageInputs = pgTable(
+  "owy_stage_inputs",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    round: text("round").notNull(),
+    key: text("key").notNull(),
+    value: text("value").notNull(),
+    /** Random id the phone keeps in localStorage; not a person. */
+    voter: text("voter").notNull(),
+    /** "" for one-per-person keys; a fresh id when the same person may send many. */
+    slot: text("slot").notNull().default(""),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("owy_stage_inputs_round_idx").on(t.round),
+    unique("owy_stage_inputs_one").on(t.round, t.key, t.voter, t.slot),
+  ]
+);
 
 // ---------------------------------------------------------------------------
 // Staff coordination (event-day task board + announcements)

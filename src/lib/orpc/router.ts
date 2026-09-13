@@ -108,16 +108,19 @@ import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./o
 import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
 import { getCastState, setHighlightedNote } from "./cast/services";
-import { FireEffectSchema, GetPulseSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
+import { FireEffectSchema, GetInputsSchema, GetPulseSchema, SetFaceSchema, SetSceneSchema } from "./owy-stage/schemas";
+import { SubmitInputSchema } from "../owy-stage/scenes";
 import {
   fireEffect,
   getStageMeetups,
   getStagePulse,
+  getInputs,
   getStageState,
   getStageSpeakers,
   getStageWeather,
   setFace,
   setScene,
+  submitInput,
 } from "./owy-stage/services";
 import {
   AddCommunityMemberSchema,
@@ -422,6 +425,12 @@ export const getStageWeatherHandler = os.handler(withErrorHandling(async () => g
 export const getStageSpeakersHandler = os.handler(
   withErrorHandling(async () => getStageSpeakers(), "get stage speakers")
 );
+export const submitStageInputHandler = os
+  .input(SubmitInputSchema)
+  .handler(withErrorHandling(async ({ input }) => submitInput(input), "submit stage input"));
+export const getStageInputsHandler = os
+  .input(GetInputsSchema)
+  .handler(withErrorHandling(async ({ input }) => getInputs(input.round), "get stage inputs"));
 
 // Dashboard procedures (admin only)
 export const getDashboardStatsHandler = adminOs
@@ -635,6 +644,8 @@ export const router = {
     getMeetups: getStageMeetupsHandler,
     getWeather: getStageWeatherHandler,
     getSpeakers: getStageSpeakersHandler,
+    submit: submitStageInputHandler,
+    inputs: getStageInputsHandler,
   },
 
   // Dashboard Statistics

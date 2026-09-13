@@ -1110,6 +1110,142 @@ export const SCENES = {
       seconds: z.number().int().min(5).max(120).default(15),
     }),
   },
+  // --- Interactivos: la gente participa desde el celular en /owy/play ---
+  "live-poll": {
+    title: "Encuesta en vivo",
+    description: "La gente vota desde el celular (QR en pantalla) y las barras se mueven en vivo.",
+    params: z.object({
+      question: z.string().trim().max(120).default("¿Qué te trajo hoy a OWU CONF?"),
+      options: z.string().trim().max(300).default("Aprender | Conocer gente | Las charlas | El mate"),
+    }),
+  },
+  "word-cloud": {
+    title: "Nube de palabras en vivo",
+    description: "Cada persona manda palabras desde el celular; la nube crece en pantalla.",
+    params: z.object({
+      prompt: z.string().trim().max(120).default("OWU CONF en una palabra"),
+    }),
+  },
+  "live-questions": {
+    title: "Preguntas del público",
+    description: "Preguntas desde el celular con votos; las más votadas suben. Para el Q&A.",
+    params: z.object({ title: z.string().trim().max(60).default("Preguntas para el escenario") }),
+  },
+  reactions: {
+    title: "Reacciones",
+    description: "Emojis desde el celular que flotan por la pantalla, con contadores.",
+    params: z.object({ title: z.string().trim().max(60).default("¿Cómo viene la charla?") }),
+  },
+  quiz: {
+    title: "Quiz en vivo",
+    description: "Pregunta con cuatro opciones; se responde desde el celular y al terminar se revela quién acertó.",
+    params: z.object({
+      question: z.string().trim().max(140).default("¿En qué año se fundó OWU?"),
+      a: z.string().trim().max(60).default("2019"),
+      b: z.string().trim().max(60).default("2021"),
+      c: z.string().trim().max(60).default("2023"),
+      d: z.string().trim().max(60).default("2024"),
+      answer: z.string().trim().max(1).default("C"),
+      seconds: z.number().int().min(5).max(180).default(30),
+    }),
+  },
+  rating: {
+    title: "Puntuación",
+    description: "Estrellas desde el celular: promedio e histograma en vivo. Para cerrar una charla.",
+    params: z.object({ title: z.string().trim().max(80).default("¿Qué te pareció la charla?") }),
+  },
+  guess: {
+    title: "Adiviná el número",
+    description: "Todos mandan un número; al cerrar se revela la respuesta y quién estuvo más cerca.",
+    params: z.object({
+      question: z.string().trim().max(140).default("¿Cuántas personas hay hoy en OWU CONF?"),
+      answer: z.number().int().min(0).max(1_000_000).default(180),
+      seconds: z.number().int().min(10).max(600).default(45),
+    }),
+  },
+  buzzer: {
+    title: "Pulsador",
+    description: "3, 2, 1, ¡ya! Quien aprieta primero en el celular aparece primero en pantalla, con su nombre.",
+    params: z.object({ title: z.string().trim().max(60).default("¿Quién responde primero?") }),
+  },
+  "session-vote": {
+    title: "Votación de sesiones",
+    description: "Las sesiones del muro se votan desde el celular; las más votadas suben.",
+    params: z.object({ title: z.string().trim().max(60).default("¿A cuál vas?") }),
+  },
+  // --- Interactivos en persona: la pantalla guía, la gente se mueve ---
+  "stand-up": {
+    title: "Levantate si…",
+    description: "Frases que rotan: quien se identifica se pone de pie. Energizante para grupos grandes.",
+    params: z.object({
+      statements: z
+        .string()
+        .trim()
+        .max(1500)
+        .default(
+          "…es tu primera OWU CONF | …tomás mate todos los días | …usás Vim o Neovim | …programaste algo esta semana | …viniste desde fuera de Montevideo | …tu primer lenguaje fue Java | …hiciste deploy un viernes | …ya propusiste una sesión hoy"
+        ),
+      seconds: z.number().int().min(5).max(60).default(12),
+    }),
+  },
+  corners: {
+    title: "Este lado o el otro",
+    description: "Dos opciones, dos lados de la sala: la gente camina hacia su respuesta. Rota con temporizador.",
+    params: z.object({
+      pairs: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "Tabs vs Espacios | Backend vs Frontend | Café vs Mate | Remoto vs Oficina | Monolito vs Microservicios | Mac vs Linux"
+        ),
+      seconds: z.number().int().min(5).max(120).default(20),
+    }),
+  },
+  rps: {
+    title: "Piedra, papel o tijera",
+    description: "Torneo relámpago: quien pierde alienta a quien le ganó, hasta que queda una persona campeona.",
+    params: z.object({
+      rounds: z.number().int().min(2).max(10).default(6),
+      seconds: z.number().int().min(10).max(120).default(25),
+    }),
+  },
+  "human-bingo": {
+    title: "Bingo humano",
+    description: "Encontrá a alguien que… nueve casilleros y un temporizador; quien completa una línea grita bingo.",
+    params: z.object({
+      traits: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "…trabaja en una startup | …tiene más de 10 años programando | …vino en bici | …contribuyó a open source | …da clases | …tiene un side project | …vino de otro departamento | …organiza una comunidad | …no es de tech"
+        ),
+      minutes: z.number().int().min(1).max(30).default(6),
+    }),
+  },
+  wave: {
+    title: "La ola",
+    description: "Una luz barre la pantalla de izquierda a derecha: cuando pasa por tu sector, te parás y gritás.",
+    params: z.object({
+      rounds: z.number().int().min(1).max(10).default(4),
+      seconds: z.number().int().min(2).max(20).default(8),
+    }),
+  },
+  "line-up": {
+    title: "Fila humana",
+    description: "Ordénense en una fila según la consigna, sin hablar. Consignas que rotan con temporizador.",
+    params: z.object({
+      prompts: z
+        .string()
+        .trim()
+        .max(1200)
+        .default(
+          "Años programando, de menos a más | Distancia que viajaste hoy, de menos a más | Hora a la que te levantaste, de más temprano a más tarde | Cantidad de lenguajes que usaste este año | Mates que tomaste hoy"
+        ),
+      seconds: z.number().int().min(20).max(300).default(90),
+    }),
+  },
   frame: {
     title: "Marco",
     description:
@@ -1127,7 +1263,7 @@ export type SceneId = keyof typeof SCENES;
 export const SCENE_IDS = Object.keys(SCENES) as SceneId[];
 export type SceneParams<K extends SceneId> = z.infer<(typeof SCENES)[K]["params"]>;
 /** What a scene component receives: its validated params plus the wall's working event. */
-export type SceneProps<K extends SceneId> = { params: SceneParams<K>; eventId: string | null };
+export type SceneProps<K extends SceneId> = { params: SceneParams<K>; eventId: string | null; round: string };
 
 export function isSceneId(value: string): value is SceneId {
   return value in SCENES;
@@ -1143,10 +1279,37 @@ export const StageStateSchema = z.object({
   scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
   params: z.record(z.string(), z.unknown()).default({}),
   eventId: z.string().nullable().default(null),
+  /** Changes on every take; interactive scenes key their phone inputs on it. */
+  round: z.string().default(""),
 });
 export type StageState = z.infer<typeof StageStateSchema>;
 
-export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null };
+export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null, round: "" };
+
+/** Scenes that take input from phones at /owy/play. */
+export const INTERACTIVE_SCENES = [
+  "live-poll",
+  "word-cloud",
+  "live-questions",
+  "reactions",
+  "quiz",
+  "rating",
+  "guess",
+  "buzzer",
+  "session-vote",
+] as const satisfies readonly SceneId[];
+
+export const InputModeSchema = z.enum(["single", "multi", "once"]);
+export const SubmitInputSchema = z.object({
+  round: z.string().trim().min(1).max(40),
+  key: z.string().trim().min(1).max(60),
+  value: z.string().trim().min(1).max(140),
+  voter: z.string().trim().min(1).max(40),
+  mode: InputModeSchema.default("single"),
+});
+export type SubmitInput = z.infer<typeof SubmitInputSchema>;
+export type StageInput = { id: string; key: string; value: string; voter: string; createdAt: string };
+export type InputEvent = StageInput & { round: string; mode: z.infer<typeof InputModeSchema> };
 
 export const EffectEventSchema = z.object({
   effect: z.enum(EFFECTS),

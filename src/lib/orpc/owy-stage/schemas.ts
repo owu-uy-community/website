@@ -16,3 +16,5 @@ export type FireEffectInput = z.infer<typeof FireEffectSchema>;
 export type SetFaceInput = z.infer<typeof SetFaceSchema>;
 
 export const GetPulseSchema = z.object({ eventId: z.string().nullable().optional() }).optional();
+
+export const GetInputsSchema = z.object({ round: z.string().trim().max(40) });

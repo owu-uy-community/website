@@ -1,0 +1,471 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { useInputs, useVoterId } from "components/OwyStage/inputs";
+import { REACTION_EMOJIS } from "components/OwyStage/scenes/interactive";
+import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { client, type StickyNote } from "lib/orpc";
+import {
+  DEFAULT_STAGE_STATE,
+  INTERACTIVE_SCENES,
+  OWY_STAGE_CHANNEL,
+  SCENES,
+  parseSceneParams,
+  type SceneParams,
+  type StageState,
+} from "lib/owy-stage/scenes";
+
+type Mode = "single" | "multi" | "once";
+
+const button = "w-full rounded-2xl px-5 py-4 text-left text-xl font-bold transition active:scale-[0.98]";
+const idle = `${button} bg-[#FBF5E7]/10 text-[#FBF5E7]`;
+const picked = `${button} bg-[#F5BB03] text-black`;
+const field =
+  "w-full rounded-2xl border-2 border-[#FBF5E7]/20 bg-transparent px-5 py-4 text-xl text-[#FBF5E7] outline-none focus:border-[#F5BB03]";
+
+/** One phone, following the wall. Renders the input the current scene asks for. */
+export default function PlayClient() {
+  const voter = useVoterId();
+  const [state, setState] = useState<StageState | null>(null);
+
+  const load = useCallback(() => {
+    client.owyStage
+      .getState()
+      .catch(() => DEFAULT_STAGE_STATE)
+      .then(setState);
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+  const { isConnected } = useRealtimeChannel(OWY_STAGE_CHANNEL, (event, payload) => {
+    if (event === "scene") setState(payload as StageState);
+  });
+  useEffect(() => {
+    if (isConnected) load();
+  }, [isConnected, load]);
+
+  const send = useCallback(
+    async (key: string, value: string, mode: Mode = "single") => {
+      if (!state?.round || !voter) return false;
+      const result = await client.owyStage
+        .submit({ round: state.round, key, value, voter, mode })
+        .catch(() => ({ ok: false }));
+      return result.ok;
+    },
+    [state?.round, voter]
+  );
+
+  const interactive = state && (INTERACTIVE_SCENES as readonly string[]).includes(state.scene);
+
+  return (
+    <main className="font-display min-h-dvh bg-black px-5 pt-6 pb-16 text-[#FBF5E7]">
+      <header className="flex items-center justify-between">
+        <img alt="OWU CONF" className="h-8" src="/images/logos/conf.webp" />
+        <span className="text-xs font-semibold tracking-[0.3em] text-[#F5BB03] uppercase">Participá</span>
+      </header>
+      {!state ? (
+        <p className="mt-16 text-center text-lg text-[#FBF5E7]/60">Conectando con la pantalla…</p>
+      ) : !interactive ? (
+        <div className="mt-16 text-center">
+          <p className="text-6xl">👀</p>
+          <p className="mt-6 text-2xl font-bold">Ahora no hay nada para hacer desde acá.</p>
+          <p className="mt-3 text-[#FBF5E7]/60">
+            Dejá esta página abierta: cuando la pantalla pida algo, aparece solo.
+          </p>
+        </div>
+      ) : (
+        <Activity key={state.round} send={send} state={state} voter={voter} />
+      )}
+    </main>
+  );
+}
+
+function Activity({
+  state,
+  send,
+  voter,
+}: {
+  state: StageState;
+  send: (key: string, value: string, mode?: Mode) => Promise<boolean>;
+  voter: string;
+}) {
+  const title = SCENES[state.scene].title;
+  const params = parseSceneParams(state.scene, state.params) as Record<string, unknown>;
+  const body = (() => {
+    switch (state.scene) {
+      case "live-poll":
+        return (
+          <Choice
+            options={splitPipe(String(params.options))}
+            prompt={String(params.question)}
+            send={(v) => send("vote", v)}
+          />
+        );
+      case "word-cloud":
+        return (
+          <Words
+            prompt={String(params.prompt)}
+            round={state.round}
+            send={(v) => send("word", v, "multi")}
+            voter={voter}
+          />
+        );
+      case "live-questions":
+        return <Questions round={state.round} send={send} voter={voter} />;
+      case "reactions":
+        return <ReactButtons send={(v) => send("reaction", v, "multi")} />;
+      case "quiz": {
+        const p = params as SceneParams<"quiz">;
+        return <Choice letters options={[p.a, p.b, p.c, p.d]} prompt={p.question} send={(v) => send("answer", v)} />;
+      }
+      case "rating":
+        return <Stars prompt={String(params.title)} send={(v) => send("rating", v)} />;
+      case "guess":
+        return <GuessNumber prompt={String(params.question)} send={(v) => send("guess", v)} />;
+      case "buzzer":
+        return <Buzz prompt={String(params.title)} send={(v) => send("buzz", v, "once")} />;
+      case "session-vote":
+        return <Sessions eventId={state.eventId} prompt={String(params.title)} send={(v) => send("session", v)} />;
+      default:
+        return null;
+    }
+  })();
+
+  return (
+    <section className="mt-8">
+      <p className="text-xs font-semibold tracking-[0.3em] text-[#F5BB03] uppercase">{title}</p>
+      {body}
+    </section>
+  );
+}
+
+const splitPipe = (value: string) =>
+  value
+    .split("|")
+    .map((v) => v.trim())
+    .filter(Boolean);
+
+function Prompt({ children }: { children: React.ReactNode }) {
+  return <h1 className="mt-2 text-3xl leading-tight font-extrabold text-balance">{children}</h1>;
+}
+
+function Sent({ shown }: { shown: boolean }) {
+  return shown ? (
+    <p className="mt-4 text-center text-sm font-semibold text-[#F5BB03]">✓ Enviado · podés cambiarlo</p>
+  ) : null;
+}
+
+function Choice({
+  prompt,
+  options,
+  send,
+  letters = false,
+}: {
+  prompt: string;
+  options: string[];
+  send: (v: string) => Promise<boolean>;
+  letters?: boolean;
+}) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <div className="mt-6 flex flex-col gap-3">
+        {options.map((option, i) => {
+          const value = letters ? "ABCD"[i] : option;
+          return (
+            <button
+              key={value}
+              className={chosen === value ? picked : idle}
+              onClick={() => send(value).then((ok) => ok && setChosen(value))}
+              type="button"
+            >
+              {letters && <span className="mr-3 opacity-60">{value}</span>}
+              {option}
+            </button>
+          );
+        })}
+      </div>
+      <Sent shown={chosen !== null} />
+    </>
+  );
+}
+
+function Words({
+  prompt,
+  round,
+  voter,
+  send,
+}: {
+  prompt: string;
+  round: string;
+  voter: string;
+  send: (v: string) => Promise<boolean>;
+}) {
+  const inputs = useInputs(round);
+  const mine = inputs.filter((i) => i.key === "word" && i.voter === voter).map((i) => i.value);
+  const [text, setText] = useState("");
+  const submit = async () => {
+    const word = text.trim().slice(0, 30);
+    if (!word || mine.length >= 5) return;
+    if (await send(word)) setText("");
+  };
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <form
+        className="mt-6 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <input
+          className={field}
+          maxLength={30}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Una palabra"
+          value={text}
+        />
+        <button
+          className="rounded-2xl bg-[#F5BB03] px-5 text-xl font-extrabold text-black"
+          disabled={mine.length >= 5}
+          type="submit"
+        >
+          →
+        </button>
+      </form>
+      <p className="mt-3 text-sm text-[#FBF5E7]/60">
+        {mine.length ? `Mandaste: ${mine.join(", ")}` : "Hasta cinco palabras por persona."}
+      </p>
+    </>
+  );
+}
+
+function Questions({
+  round,
+  voter,
+  send,
+}: {
+  round: string;
+  voter: string;
+  send: (key: string, value: string, mode?: Mode) => Promise<boolean>;
+}) {
+  const inputs = useInputs(round);
+  const [text, setText] = useState("");
+  const votes = new Map<string, number>();
+  const mine = new Set<string>();
+  for (const input of inputs) {
+    if (!input.key.startsWith("up:")) continue;
+    const id = input.key.slice(3);
+    votes.set(id, (votes.get(id) ?? 0) + 1);
+    if (input.voter === voter) mine.add(id);
+  }
+  const questions = inputs
+    .filter((i) => i.key === "question")
+    .sort((a, b) => (votes.get(b.id) ?? 0) - (votes.get(a.id) ?? 0));
+  return (
+    <>
+      <Prompt>¿Qué le preguntarías al escenario?</Prompt>
+      <form
+        className="mt-6 flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const q = text.trim().slice(0, 140);
+          if (q && (await send("question", q, "multi"))) setText("");
+        }}
+      >
+        <input
+          className={field}
+          maxLength={140}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Tu pregunta"
+          value={text}
+        />
+        <button className="rounded-2xl bg-[#F5BB03] px-5 text-xl font-extrabold text-black" type="submit">
+          →
+        </button>
+      </form>
+      <ul className="mt-6 flex flex-col gap-3">
+        {questions.map((q) => (
+          <li key={q.id} className="flex items-center gap-3 rounded-2xl bg-[#FBF5E7]/10 p-3">
+            <button
+              className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl text-sm font-extrabold ${mine.has(q.id) ? "bg-[#F5BB03] text-black" : "bg-[#0162C8] text-[#FBF5E7]"}`}
+              onClick={() => send(`up:${q.id}`, "1")}
+              type="button"
+            >
+              ▲<span>{votes.get(q.id) ?? 0}</span>
+            </button>
+            <span className="text-base leading-snug">{q.value}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+function ReactButtons({ send }: { send: (v: string) => Promise<boolean> }) {
+  const last = useRef(0);
+  const [burst, setBurst] = useState<string | null>(null);
+  const tap = (emoji: string) => {
+    if (Date.now() - last.current < 350) return;
+    last.current = Date.now();
+    setBurst(emoji);
+    send(emoji);
+  };
+  return (
+    <>
+      <Prompt>Tocá lo que sentís. Las veces que quieras.</Prompt>
+      <div className="mt-8 grid grid-cols-3 gap-3">
+        {REACTION_EMOJIS.map((emoji) => (
+          <button
+            key={emoji}
+            className="rounded-3xl bg-[#FBF5E7]/10 py-6 text-6xl active:scale-90 active:bg-[#F5BB03]/30"
+            onClick={() => tap(emoji)}
+            type="button"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+      {burst && (
+        <p key={last.current} className="mt-6 animate-bounce text-center text-4xl">
+          {burst}
+        </p>
+      )}
+    </>
+  );
+}
+
+function Stars({ prompt, send }: { prompt: string; send: (v: string) => Promise<boolean> }) {
+  const [stars, setStars] = useState(0);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <div className="mt-8 flex justify-between">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            className={`text-6xl transition ${n <= stars ? "text-[#F5BB03]" : "text-[#FBF5E7]/25"}`}
+            onClick={() => send(String(n)).then((ok) => ok && setStars(n))}
+            type="button"
+          >
+            ★
+          </button>
+        ))}
+      </div>
+      <Sent shown={stars > 0} />
+    </>
+  );
+}
+
+function GuessNumber({ prompt, send }: { prompt: string; send: (v: string) => Promise<boolean> }) {
+  const [value, setValue] = useState("");
+  const [sent, setSent] = useState(false);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <form
+        className="mt-6 flex gap-2"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const n = Number(value);
+          if (Number.isFinite(n) && (await send(String(Math.round(n))))) setSent(true);
+        }}
+      >
+        <input
+          className={field}
+          inputMode="numeric"
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="Tu número"
+          type="number"
+          value={value}
+        />
+        <button className="rounded-2xl bg-[#F5BB03] px-5 text-xl font-extrabold text-black" type="submit">
+          →
+        </button>
+      </form>
+      <Sent shown={sent} />
+    </>
+  );
+}
+
+function Buzz({ prompt, send }: { prompt: string; send: (v: string) => Promise<boolean> }) {
+  const [name, setName] = useState("");
+  const [pressed, setPressed] = useState(false);
+  useEffect(() => {
+    setName(window.localStorage.getItem("owy-name") ?? "");
+  }, []);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <input
+        className={`${field} mt-6`}
+        maxLength={30}
+        onChange={(e) => {
+          setName(e.target.value);
+          window.localStorage.setItem("owy-name", e.target.value);
+        }}
+        placeholder="Tu nombre"
+        value={name}
+      />
+      <button
+        className={`mt-6 aspect-square w-full rounded-full text-5xl font-extrabold uppercase shadow-[0_20px_60px_rgba(245,187,3,0.35)] transition active:scale-95 ${
+          pressed ? "bg-[#0162C8] text-[#FBF5E7]" : "bg-[#F5BB03] text-black"
+        }`}
+        disabled={!name.trim() || pressed}
+        onClick={() => send(name.trim()).then((ok) => ok && setPressed(true))}
+        type="button"
+      >
+        {pressed ? "¡Listo!" : "¡Ya!"}
+      </button>
+      <p className="mt-4 text-center text-sm text-[#FBF5E7]/60">
+        {pressed ? "Mirá la pantalla." : "Esperá el ¡ya! de la pantalla y apretá."}
+      </p>
+    </>
+  );
+}
+
+function Sessions({
+  eventId,
+  prompt,
+  send,
+}: {
+  eventId: string | null;
+  prompt: string;
+  send: (v: string) => Promise<boolean>;
+}) {
+  const [tracks, setTracks] = useState<StickyNote[] | null>(null);
+  const [chosen, setChosen] = useState<string | null>(null);
+  useEffect(() => {
+    if (!eventId) return;
+    client.tracks
+      .list({ openSpaceId: eventId })
+      .then(setTracks)
+      .catch(() => setTracks([]));
+  }, [eventId]);
+  return (
+    <>
+      <Prompt>{prompt}</Prompt>
+      <div className="mt-6 flex flex-col gap-3">
+        {tracks?.map((track) => (
+          <button
+            key={track.id}
+            className={chosen === track.id ? picked : idle}
+            onClick={() => send(track.id).then((ok) => ok && setChosen(track.id))}
+            type="button"
+          >
+            <span className="block">{track.title}</span>
+            <span className="block text-sm font-medium opacity-70">
+              {track.timeSlot.split(" - ")[0]} · {track.room}
+              {track.speaker ? ` · ${track.speaker}` : ""}
+            </span>
+          </button>
+        ))}
+        {tracks && !tracks.length && <p className="text-[#FBF5E7]/60">Todavía no hay sesiones en el muro.</p>}
+      </div>
+      <Sent shown={chosen !== null} />
+    </>
+  );
+}
