@@ -1067,11 +1067,13 @@ export const SCENES = {
   },
   "now-playing": {
     title: "Sonando",
-    description: "Qué suena en el break: tema, artista y playlist, con el vinilo girando.",
+    description:
+      "Qué suena en el break, con el vinilo girando. Con Spotify conectado (botón en esta página) toma el tema en vivo; si no, lo que escribas acá.",
     params: z.object({
       song: z.string().trim().max(80).default("Cuando la cigarra canta"),
       artist: z.string().trim().max(80).default("Jorge Drexler"),
       playlist: z.string().trim().max(60).default("Playlist OWU · break"),
+      spotify: z.boolean().default(true),
     }),
   },
   departures: {

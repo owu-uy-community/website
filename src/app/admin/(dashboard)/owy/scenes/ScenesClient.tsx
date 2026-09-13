@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, ExternalLink, PartyPopper, Radio, Smile, Sparkles, Subtitles, Zap } from "lucide-react";
+import { Copy, ExternalLink, Music, PartyPopper, Radio, Smile, Sparkles, Subtitles, Zap } from "lucide-react";
 
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
 import { ScaledFrame } from "components/Admin/stage/ScaledFrame";
@@ -58,6 +58,28 @@ export default function ScenesClient() {
   const [who, setWho] = useState<"input" | "output">("output");
 
   useEffect(() => setOrigin(window.location.origin), []);
+
+  const spotify = useQuery(orpc.owyStage.spotifyStatus.queryOptions());
+  const disconnectSpotify = useMutation(
+    orpc.owyStage.disconnectSpotify.mutationOptions({
+      onSuccess: () => {
+        toast.success("Spotify desconectado");
+        queryClient.invalidateQueries({ queryKey: orpc.owyStage.spotifyStatus.queryKey() });
+      },
+      onError: (error) => toast.error("No se pudo desconectar", error.message),
+    })
+  );
+  // Back from the OAuth dance: /api/spotify/callback sends ?spotify=ok|error.
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("spotify");
+    if (!result) return;
+    if (result === "ok") toast.success("Spotify conectado", "La escena Sonando ya sigue lo que se reproduce.");
+    else if (result === "unconfigured")
+      toast.error("Falta configurar Spotify", "SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET en el env.");
+    else toast.error("No se pudo conectar Spotify");
+    window.history.replaceState(null, "", window.location.pathname);
+    queryClient.invalidateQueries({ queryKey: orpc.owyStage.spotifyStatus.queryKey() });
+  }, [queryClient]);
 
   // Server publishes carry no sender id, so our own takes echo back too: the cache is the truth.
   const { isConnected } = useRealtimeChannel(OWY_STAGE_CHANNEL, (event, payload) => {
@@ -307,6 +329,38 @@ export default function ScenesClient() {
                   <Sparkles className="mr-1 h-4 w-4" /> Enviar
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Music className="h-4 w-4" /> Spotify
+              </CardTitle>
+              <CardDescription>
+                Conectá la cuenta que reproduce la música y la escena <strong>Sonando</strong> muestra el tema en vivo,
+                con tapa y progreso. Sin micrófono, sin cuota.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-3">
+              {spotify.data?.account ? (
+                <>
+                  <Badge variant="secondary">Conectado · {spotify.data.account}</Badge>
+                  <Button size="sm" variant="outline" onClick={() => disconnectSpotify.mutate({})}>
+                    Desconectar
+                  </Button>
+                </>
+              ) : spotify.data?.configured ? (
+                <Button asChild size="sm">
+                  <a href="/api/spotify/connect">Conectar Spotify</a>
+                </Button>
+              ) : null}
+              {spotify.data && !spotify.data.configured && (
+                <span className="text-muted-foreground text-xs">
+                  Falta SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET en el env (redirect URI: {origin}
+                  /api/spotify/callback).
+                </span>
+              )}
             </CardContent>
           </Card>
         </div>

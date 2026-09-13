@@ -6,6 +6,7 @@ import { AnimatePresence, m } from "motion/react";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { client } from "lib/orpc";
 import type { StageSpeaker } from "lib/orpc/owy-stage/services";
+import type { SpotifyTrack } from "lib/owy-stage/spotify";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { roomIconFor } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
@@ -440,54 +441,127 @@ export function Bingo({ params }: SceneProps<"bingo">) {
 // Now playing — the break playlist card
 // ---------------------------------------------------------------------------
 
+/** Polls Spotify through the site every few seconds; `null` when nothing is playing. */
+function useSpotify(enabled: boolean) {
+  const [track, setTrack] = useState<SpotifyTrack | null>(null);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    const load = () =>
+      client.owyStage
+        .getSpotify()
+        .then((next) => {
+          if (!cancelled) setTrack(next);
+        })
+        .catch(() => {});
+    load();
+    const id = setInterval(load, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [enabled]);
+  // Extrapolate between polls so the bar moves smoothly.
+  useStageFrame(() => {
+    if (!track) return;
+    const ahead = track.isPlaying ? Date.now() - new Date(track.at).getTime() : 0;
+    const p = Math.min(1, (track.progressMs + ahead) / Math.max(1, track.durationMs));
+    setProgress((v) => (Math.abs(v - p) < 0.002 ? v : p));
+  });
+  return { track, progress };
+}
+
 export function NowPlaying({ params }: SceneProps<"now-playing">) {
+  const { preview } = useContext(StageContext);
+  const { track, progress } = useSpotify(params.spotify && !preview);
+  const song = track?.song ?? params.song;
+  const artist = track?.artist ?? params.artist;
+  const playing = !track || track.isPlaying;
+
   return (
     <>
       <Ambient />
       <div className="absolute top-[290px] left-[340px] flex items-center gap-[70px]">
         <div className="relative flex h-[440px] w-[440px] items-center justify-center">
           <m.div
-            animate={{ rotate: 360 }}
+            animate={{ rotate: playing ? 360 : 0 }}
             className="h-full w-full rounded-full"
             style={{ background: `repeating-radial-gradient(circle, ${BRAND.black} 0 6px, #1b1b1b 6px 9px)` }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            transition={playing ? { duration: 4, repeat: Infinity, ease: "linear" } : { duration: 0.5 }}
           />
           <m.div
-            animate={{ rotate: 360 }}
-            className="absolute flex h-[160px] w-[160px] items-center justify-center rounded-full bg-[#F5BB03] text-[20px] font-extrabold text-black"
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+            animate={{ rotate: playing ? 360 : 0 }}
+            className="absolute flex h-[190px] w-[190px] items-center justify-center overflow-hidden rounded-full bg-[#F5BB03] text-[22px] font-extrabold text-black"
+            transition={playing ? { duration: 4, repeat: Infinity, ease: "linear" } : { duration: 0.5 }}
           >
             OWU
+            {track?.art && (
+              // Sits over the label; a broken cover just leaves the label visible.
+              <img
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                onError={(e) => e.currentTarget.remove()}
+                src={track.art}
+              />
+            )}
           </m.div>
           <span className="absolute h-[22px] w-[22px] rounded-full bg-black" />
         </div>
         <div className="w-[860px]">
           <p className="text-[28px] font-bold tracking-[0.3em] text-[#F5BB03] uppercase">
-            ♪ Sonando · {params.playlist}
+            {track ? (track.isPlaying ? "♪ Sonando en Spotify" : "⏸ En pausa") : `♪ Sonando · ${params.playlist}`}
           </p>
-          <p className="mt-4 text-[84px] leading-[1.02] font-extrabold tracking-[-0.02em] text-balance">
-            {params.song}
-          </p>
-          <p className="mt-4 text-[44px] font-semibold text-[#FBF5E7]/70">{params.artist}</p>
+          <AnimatePresence mode="wait">
+            <m.div
+              key={song}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              initial={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.4 }}
+            >
+              <p className="mt-4 line-clamp-2 text-[84px] leading-[1.02] font-extrabold tracking-[-0.02em] text-balance">
+                {song}
+              </p>
+              <p className="mt-4 truncate text-[44px] font-semibold text-[#FBF5E7]/70">
+                {artist}
+                {track?.album && <span className="text-[#FBF5E7]/40"> · {track.album}</span>}
+              </p>
+            </m.div>
+          </AnimatePresence>
           <div className="mt-10 flex h-[60px] items-end gap-[8px]">
             {Array.from({ length: 24 }, (_, i) => (
               <m.span
                 key={i}
-                animate={{ height: [12, rand(24, 60), 16, rand(30, 60), 12] }}
+                animate={playing ? { height: [12, rand(24, 60), 16, rand(30, 60), 12] } : { height: 12 }}
                 className="w-[14px] bg-[#0162C8]"
-                transition={{ duration: rand(0.8, 1.6), repeat: Infinity, ease: "easeInOut" }}
+                transition={
+                  playing ? { duration: rand(0.8, 1.6), repeat: Infinity, ease: "easeInOut" } : { duration: 0.4 }
+                }
               />
             ))}
           </div>
         </div>
       </div>
-      <div className="absolute right-[140px] bottom-[110px] left-[340px] h-[10px] bg-[#FBF5E7]/15">
-        <m.div
-          animate={{ width: "100%" }}
-          className="h-full bg-[#F5BB03]"
-          initial={{ width: "0%" }}
-          transition={{ duration: 210, repeat: Infinity, ease: "linear" }}
-        />
+      <div className="absolute right-[140px] bottom-[110px] left-[340px]">
+        <div className="h-[10px] bg-[#FBF5E7]/15">
+          {track ? (
+            <div className="h-full bg-[#F5BB03]" style={{ width: `${progress * 100}%` }} />
+          ) : (
+            <m.div
+              animate={{ width: "100%" }}
+              className="h-full bg-[#F5BB03]"
+              initial={{ width: "0%" }}
+              transition={{ duration: 210, repeat: Infinity, ease: "linear" }}
+            />
+          )}
+        </div>
+        {track && (
+          <div className="font-terminal mt-3 flex justify-between text-[24px] text-[#FBF5E7]/50 tabular-nums">
+            <span>{formatTime(Math.floor((progress * track.durationMs) / 1000))}</span>
+            <span>{formatTime(Math.floor(track.durationMs / 1000))}</span>
+          </div>
+        )}
       </div>
     </>
   );

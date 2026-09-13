@@ -117,6 +117,7 @@ import {
   SetSceneSchema,
 } from "./owy-stage/schemas";
 import { SubmitInputSchema } from "../owy-stage/scenes";
+import { disconnectSpotify, getSpotifyNowPlaying, spotifyStatus } from "../owy-stage/spotify";
 import {
   fireEffect,
   getStageMeetups,
@@ -433,6 +434,16 @@ export const getStageWeatherHandler = os.handler(withErrorHandling(async () => g
 export const getStageSpeakersHandler = os.handler(
   withErrorHandling(async () => getStageSpeakers(), "get stage speakers")
 );
+export const getStageSpotifyHandler = os.handler(
+  withErrorHandling(async () => getSpotifyNowPlaying(), "get spotify now playing")
+);
+export const spotifyStatusHandler = adminOs.handler(withErrorHandling(async () => spotifyStatus(), "spotify status"));
+export const disconnectSpotifyHandler = adminOs.handler(
+  withErrorHandling(async () => {
+    await disconnectSpotify();
+    return { ok: true };
+  }, "disconnect spotify")
+);
 export const setNowPlayingHandler = adminOs
   .input(SetNowPlayingSchema)
   .handler(withErrorHandling(async ({ input }) => setNowPlaying(input), "set now playing"));
@@ -658,6 +669,9 @@ export const router = {
     submit: submitStageInputHandler,
     inputs: getStageInputsHandler,
     nowPlaying: setNowPlayingHandler,
+    getSpotify: getStageSpotifyHandler,
+    spotifyStatus: spotifyStatusHandler,
+    disconnectSpotify: disconnectSpotifyHandler,
   },
 
   // Dashboard Statistics

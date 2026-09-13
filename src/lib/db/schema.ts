@@ -414,6 +414,8 @@ export const owyStageState = pgTable("owy_stage_state", {
   eventId: text("eventId").references(() => events.id, { onDelete: "set null" }),
   /** New nonce on every take; phone submissions are scoped to it. */
   round: text("round").notNull().default(""),
+  /** Spotify link for the "now-playing" scene (refresh token never leaves the server). */
+  spotify: jsonb("spotify").$type<{ refreshToken: string; account: string; connectedAt: string }>(),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()
