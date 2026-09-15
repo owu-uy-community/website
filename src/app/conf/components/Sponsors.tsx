@@ -29,6 +29,13 @@ export const SPONSORS_2026: Sponsor[] = [
   { name: "Sentry", logo: "/images/conf/sponsors/sentry.svg", website: "https://sentry.io/" },
   { name: "Streaver", logo: "/images/conf/sponsors/streaver.svg", website: "https://www.streaver.com/" },
   { name: "Trupropel", logo: "/images/conf/sponsors/trupropel.svg", website: "https://www.trupropel.com/" },
+  { name: "Tryolabs", logo: "/images/conf/sponsors/tryolabs.svg", website: "https://tryolabs.com/" },
+  {
+    name: "Universidad ORT Uruguay",
+    logo: "/images/conf/sponsors/ort.webp",
+    website: "https://www.ort.edu.uy/",
+    sizeClassName: "max-h-[76px] max-w-[min(180px,100%)]",
+  },
   { name: "WyeWorks", logo: "/images/conf/sponsors/wyeworks.svg", website: "https://www.wyeworks.com/" },
   { name: "Xmartlabs", logo: "/images/conf/sponsors/xmartlabs.svg", website: "https://xmartlabs.com/" },
 ];
