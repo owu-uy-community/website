@@ -20,6 +20,7 @@ export const SPONSORS_2026: Sponsor[] = [
   { name: "Conveyor Now", logo: "/images/conf/sponsors/conveyornow.svg", website: "https://conveyornow.com/" },
   { name: "Crunchloop", logo: "/images/conf/sponsors/crunchloop.svg", website: "https://www.crunchloop.io/" },
   { name: "Estudio Hahn", logo: "/images/conf/sponsors/han.svg", website: "https://estudiohahn.com/" },
+  { name: "KleverTax", logo: "/images/conf/sponsors/klevertax.svg", website: "https://klevertax.com/" },
   { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.svg", website: "https://www.mimiquate.com/" },
   { name: "Neocoast", logo: "/images/conf/sponsors/neocoast.svg", website: "https://www.neocoast.com/" },
   { name: "Nexchange", logo: "/images/conf/sponsors/nexchange.svg", website: "https://www.nex-change.com/" },
