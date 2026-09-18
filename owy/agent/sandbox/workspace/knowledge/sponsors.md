@@ -4,7 +4,7 @@ La OWU Conf es gratuita para quienes asisten: la hacen posible los **sponsors** 
 
 ## Sponsors confirmados (publicados en la web)
 
-Conveyor Now · Crunchloop · Estudio Hahn · Mimiquate · Neocoast · Nexchange · OrangeLoops · RevenueCat · Segalerba · Sentry · Streaver · Trupropel · Tryolabs · Universidad ORT Uruguay · WyeWorks · Xmartlabs
+Conveyor Now · Crunchloop · Estudio Hahn · KleverTax · Mimiquate · Neocoast · Nexchange · OrangeLoops · RevenueCat · Segalerba · Sentry · Streaver · Trupropel · Tryolabs · Universidad ORT Uruguay · WyeWorks · Xmartlabs
 
 (La lista viva está en https://owu.uy/conf — pueden sumarse más.)
 
