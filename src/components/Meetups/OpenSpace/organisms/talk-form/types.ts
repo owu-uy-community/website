@@ -31,6 +31,8 @@ export interface SuggestionEntry {
   timeSlot: string;
   reasoning: string;
   alternatives?: SuggestionAlternative[];
+  /** The AI call failed and this is just the first free cell — say so instead of pretending. */
+  degraded?: boolean;
 }
 
 /** A form field the OCR flagged as hard to read, so the staffer checks it before saving. */

@@ -1,7 +1,7 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { FindFreeSpotInput, FindFreeSpotResponse } from "../schemas";
-import { AI_TIMEOUT_MS, gatewayFallbacks, SLOT_PICK_MODEL } from "../models";
+import { AI_TIMEOUT_MS, describeAiFailure, gatewayFallbacks, SLOT_PICK_MODEL } from "../models";
 
 /**
  * How many free cells the model gets to choose from. Small on purpose: the prompt stays short
@@ -266,10 +266,13 @@ ${candidates.map(describe).join("\n")}`;
   } catch (error) {
     console.error("❌ Error finding free spot with AI:", error);
 
+    // Still hand back a usable cell — but flagged, because a dead gateway used to look exactly
+    // like a working suggestion, and the reasoning that said otherwise was behind a collapsed panel.
     return {
       suggestedRoom: candidates[0].room,
       suggestedTimeSlot: candidates[0].timeSlot,
-      reasoning: "Se seleccionó el primer espacio libre disponible (error en AI).",
+      reasoning: `La AI no respondió, así que este es simplemente el primer espacio libre. ${describeAiFailure(error)}`,
+      degraded: true,
     };
   }
 }
