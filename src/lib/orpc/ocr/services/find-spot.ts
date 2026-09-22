@@ -1,11 +1,106 @@
-import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { FindFreeSpotInput, FindFreeSpotResponse } from "../schemas";
+import { AI_TIMEOUT_MS, gatewayFallbacks, SLOT_PICK_MODEL } from "../models";
 
 /**
- * Use AI to find the best free spot for a new talk based on topic similarity
- * Avoids scheduling similar topics at the same time
+ * How many free cells the model gets to choose from. Small on purpose: the prompt stays short
+ * (faster) and every candidate is a cell we already know is free and resource-compatible, so the
+ * model cannot suggest something impossible.
+ */
+const MAX_CANDIDATES = 12;
+
+/** Free cells per time slot offered to the model. Two keeps room choice alive without bloat. */
+const ROOMS_PER_SLOT = 2;
+
+export interface Candidate {
+  id: string;
+  room: string;
+  timeSlot: string;
+  hasTV: boolean;
+  hasWhiteboard: boolean;
+}
+
+type CandidateInput = Pick<
+  FindFreeSpotInput,
+  "existingNotes" | "roomsWithResources" | "availableRooms" | "availableTimeSlots"
+> &
+  Partial<Pick<FindFreeSpotInput, "needsTV" | "needsWhiteboard">>;
+
+/**
+ * The free cells worth offering, best first. Everything a computer can decide is decided here so
+ * the model only has to judge topics: which cells are taken, which rooms have the resources the
+ * talk asked for, and which rooms to spend on it.
+ */
+export function buildCandidates({
+  needsTV = false,
+  needsWhiteboard = false,
+  existingNotes,
+  roomsWithResources,
+  availableRooms,
+  availableTimeSlots,
+}: CandidateInput): Candidate[] {
+  const resourcesOf = (room: string) => roomsWithResources.find((r) => r.name === room);
+  const occupied = new Set(existingNotes.map((note) => `${note.room}|${note.timeSlot}`));
+
+  // A room qualifies when it has every resource the talk asked for. A room we know nothing about
+  // is assumed usable — better to offer it than to leave the grid artificially full.
+  const fits = (room: string) => {
+    const resources = resourcesOf(room);
+
+    if (!resources) return true;
+    if (needsTV && !resources.hasTV) return false;
+    if (needsWhiteboard && !resources.hasWhiteboard) return false;
+
+    return true;
+  };
+
+  const eligibleRooms = availableRooms.filter(fits);
+  const roomsToUse = eligibleRooms.length > 0 ? eligibleRooms : availableRooms;
+
+  // Rooms whose resources this talk does not need go last: don't burn the only room with a TV on
+  // a talk that never asked for one.
+  const surplus = (room: string) => {
+    const resources = resourcesOf(room);
+
+    if (!resources) return 0;
+
+    return (resources.hasTV && !needsTV ? 1 : 0) + (resources.hasWhiteboard && !needsWhiteboard ? 1 : 0);
+  };
+
+  return availableTimeSlots
+    .flatMap((timeSlot) =>
+      roomsToUse
+        .filter((room) => !occupied.has(`${room}|${timeSlot}`))
+        .sort((a, b) => surplus(a) - surplus(b))
+        .slice(0, ROOMS_PER_SLOT)
+        .map((room) => ({
+          room,
+          timeSlot,
+          hasTV: resourcesOf(room)?.hasTV ?? false,
+          hasWhiteboard: resourcesOf(room)?.hasWhiteboard ?? false,
+        }))
+    )
+    .slice(0, MAX_CANDIDATES)
+    .map((candidate, index) => ({ id: `c${index}`, ...candidate }));
+}
+
+const INSTRUCTIONS = `Sos quien arma la grilla de un open space de la comunidad ágil uruguaya. Elegís dónde y cuándo va una charla nueva para que la gente pueda ver lo que le interesa.
+
+Criterios, en orden:
+1. Evitar choques temáticos: si en ese horario ya hay una charla del mismo tema, elegí otro horario.
+2. Continuidad por sala: si una sala ya viene con charlas del mismo tema, sumar ahí ayuda a que la gente se quede. No mezcles temas distintos en la misma sala sin motivo.
+3. A igualdad de condiciones, más temprano es mejor: la grilla se llena de adelante para atrás.
+
+Contestá en español rioplatense. La razón son dos oraciones como máximo: por qué ese lugar y qué choque estás evitando. Nada de listas ni de repetir los criterios.`;
+
+/**
+ * Suggest where to put a new talk: the free cells are computed here, the model only ranks them.
+ *
+ * Everything that can be arithmetic is arithmetic (which cells are free, which rooms have the
+ * required resources, which rooms to offer). The model is left with the one genuinely fuzzy
+ * judgement — whether two talks are about the same thing — and it picks from an enumerated list,
+ * so an unavailable slot is not a possible answer.
  */
 export async function findFreeSpot(input: FindFreeSpotInput): Promise<FindFreeSpotResponse> {
   const {
@@ -20,42 +115,16 @@ export async function findFreeSpot(input: FindFreeSpotInput): Promise<FindFreeSp
     availableTimeSlots,
   } = input;
 
-  // Create a map for quick room resource lookup
-  const roomResourceMap = new Map(
-    roomsWithResources.map((r) => [r.name, { hasTV: r.hasTV, hasWhiteboard: r.hasWhiteboard }])
-  );
-
-  // Build occupancy map
-  const occupiedSlots = new Set(existingNotes.map((note) => `${note.room}|${note.timeSlot}`));
-
-  // Filter rooms ONLY if resources are explicitly required (needsTV or needsWhiteboard = true)
-  // By default (false), any room is acceptable
-  const eligibleRooms = availableRooms.filter((room) => {
-    // If NO resources are required, ALL rooms are eligible
-    if (!needsTV && !needsWhiteboard) return true;
-
-    const resources = roomResourceMap.get(room);
-    if (!resources) return true; // If no resource info, allow the room
-
-    // Only filter out rooms that DON'T have EXPLICITLY REQUIRED resources
-    if (needsTV && !resources.hasTV) return false;
-    if (needsWhiteboard && !resources.hasWhiteboard) return false;
-
-    return true;
+  const candidates = buildCandidates({
+    needsTV,
+    needsWhiteboard,
+    existingNotes,
+    roomsWithResources,
+    availableRooms,
+    availableTimeSlots,
   });
 
-  // If no eligible rooms meet requirements, use all rooms (will show error to user later)
-  const roomsToUse = eligibleRooms.length > 0 ? eligibleRooms : availableRooms;
-
-  // Get all possible free slots from eligible rooms
-  const freeSlots = roomsToUse.flatMap((room) =>
-    availableTimeSlots
-      .filter((timeSlot) => !occupiedSlots.has(`${room}|${timeSlot}`))
-      .map((timeSlot) => ({ room, timeSlot }))
-  );
-
-  // If no free slots, return first available
-  if (freeSlots.length === 0) {
+  if (candidates.length === 0) {
     return {
       suggestedRoom: availableRooms[0] || "",
       suggestedTimeSlot: availableTimeSlots[0] || "",
@@ -63,164 +132,74 @@ export async function findFreeSpot(input: FindFreeSpotInput): Promise<FindFreeSp
     };
   }
 
-  // Build comprehensive schedule overview with room resources
-  const scheduleOverview = availableTimeSlots.map((timeSlot) => {
-    const talksAtThisTime = existingNotes.filter((note) => note.timeSlot === timeSlot);
-    const occupiedRooms = talksAtThisTime.map((t) => t.room);
-    const freeRoomsAtThisTime = roomsToUse.filter((room) => !occupiedRooms.includes(room));
+  const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const ids = candidates.map((candidate) => candidate.id) as [string, ...string[]];
+  const describe = (candidate: Candidate) =>
+    `${candidate.id} = ${candidate.room} @ ${candidate.timeSlot}` +
+    ` (TV:${candidate.hasTV ? "sí" : "no"} pizarra:${candidate.hasWhiteboard ? "sí" : "no"})`;
 
-    return {
-      timeSlot,
-      totalRooms: availableRooms.length,
-      occupiedRooms: occupiedRooms.length,
-      freeRooms: freeRoomsAtThisTime.length,
-      freeRoomsList: freeRoomsAtThisTime.map((room) => {
-        const resources = roomResourceMap.get(room);
-        return `${room}${resources ? ` (${resources.hasTV ? "TV" : ""}${resources.hasTV && resources.hasWhiteboard ? ", " : ""}${resources.hasWhiteboard ? "Whiteboard" : ""})` : ""}`;
-      }),
-      talks: talksAtThisTime.map((n) => ({
-        title: n.title,
-        speaker: n.speaker || "Unknown",
-        room: n.room,
-        needsTV: n.needsTV,
-        needsWhiteboard: n.needsWhiteboard,
-      })),
-    };
-  });
+  const scheduled = existingNotes
+    .map((note) => `${note.timeSlot} · ${note.room}: "${note.title}"`)
+    .sort()
+    .join("\n");
 
-  // Create a detailed view of all scheduled talks
-  const allScheduledTalks = existingNotes.map((note) => ({
-    title: note.title,
-    speaker: note.speaker || "Unknown",
-    room: note.room,
-    timeSlot: note.timeSlot,
-  }));
+  const prompt = `CHARLA NUEVA: "${title}"${speaker ? ` — ${speaker}` : ""}
+Necesita: ${needsTV || needsWhiteboard ? [needsTV && "TV", needsWhiteboard && "pizarra"].filter(Boolean).join(" + ") : "nada en particular"}
+${additionalContext ? `Pedido del staff: ${additionalContext}\n` : ""}
+GRILLA ACTUAL:
+${scheduled || "(vacía, es la primera charla)"}
+
+CANDIDATOS LIBRES (elegí uno de estos ids):
+${candidates.map(describe).join("\n")}`;
 
   try {
-    // Use AI to find best spot
-    const { object } = await generateObject({
-      model: openai("gpt-4.1"),
-      temperature: 0.6,
-      schema: z.object({
-        bestRoom: z.string().describe("The suggested room name"),
-        bestTimeSlot: z.string().describe("The suggested time slot"),
-        reasoning: z.string().describe("Brief explanation (2-3 sentences max) of why this spot was chosen"),
-        topicSimilarities: z
-          .array(z.string())
-          .optional()
-          .describe("List of talks with similar topics in the SAME category (e.g., both technical or both leadership)"),
-        alternatives: z
-          .array(
-            z.object({
-              room: z.string().describe("Alternative room"),
-              timeSlot: z.string().describe("Alternative time slot"),
-              reasoning: z.string().describe("Brief 1-sentence reason why this alternative works"),
-            })
-          )
-          .optional()
-          .describe("Up to 2 alternative suggestions ranked by preference"),
-        swapSuggestion: z
-          .object({
-            shouldSwap: z.boolean().describe("Whether a swap is recommended"),
-            talkToSwap: z.string().optional().describe("Title of the talk to swap"),
-            swapReasoning: z.string().optional().describe("Brief reason for the swap (1-2 sentences)"),
-          })
-          .optional()
-          .describe("Only suggest swaps as LAST RESORT when no good free slots exist"),
+    const { output } = await generateText({
+      model: SLOT_PICK_MODEL.primary,
+      providerOptions: gatewayFallbacks(SLOT_PICK_MODEL),
+      temperature: 0,
+      reasoning: "low",
+      timeout: { totalMs: AI_TIMEOUT_MS },
+      instructions: INSTRUCTIONS,
+      output: Output.object({
+        name: "slot_pick",
+        schema: z.object({
+          candidato: z.enum(ids).describe("Id del candidato elegido"),
+          razon: z.string().describe("Dos oraciones como máximo, en español"),
+          alternativas: z
+            .array(
+              z.object({
+                candidato: z.enum(ids),
+                razon: z.string().describe("Una oración"),
+              })
+            )
+            .max(2)
+            .describe("Hasta dos segundas opciones, de mejor a peor"),
+        }),
       }),
-      prompt: `You are an expert scheduler for an OpenSpace event. Maximize attendee satisfaction by avoiding topic conflicts and matching room requirements. Answer in Spanish.
-
-NEW TALK: "${title}" by ${speaker}
-${needsTV || needsWhiteboard ? `Required Resources: ${needsTV ? "TV" : ""}${needsTV && needsWhiteboard ? "+" : ""}${needsWhiteboard ? "Whiteboard" : ""}` : "No resource requirements"}
-${additionalContext ? `Context: ${additionalContext}` : ""}
-
-ROOM RESOURCES:
-${roomsWithResources.map((r) => `${r.name}: TV:${r.hasTV ? "✓" : "✗"} WB:${r.hasWhiteboard ? "✓" : "✗"}`).join(" | ")}
-
-SCHEDULE BY TIME SLOT:
-${scheduleOverview
-  .map(
-    (ts) =>
-      `${ts.timeSlot} - Free:${ts.freeRooms}/${ts.totalRooms} (${ts.freeRoomsList.join(", ") || "None"})${ts.talks.length ? `\n  Scheduled: ${ts.talks.map((t) => `"${t.title}" (${t.room})`).join("; ")}` : ""}`
-  )
-  .join("\n")}
-
-TOPIC CONTINUITY BY ROOM (analyze category match):
-${availableRooms
-  .map((room) => {
-    const talks = existingNotes.filter((n) => n.room === room);
-    return talks.length
-      ? `${room}: ${talks.map((t) => `"${t.title}"`).join(", ")}`
-      : `${room}: Empty (open for any topic)`;
-  })
-  .join("\n")}
-→ Key: Keep talks in SAME category together in one room. Separate categories should use different rooms.
-
-AVAILABLE FREE SLOTS:
-${freeSlots
-  .map((slot, i) => {
-    const r = roomResourceMap.get(slot.room);
-    return `${i + 1}. ${slot.room} ${r ? `(TV:${r.hasTV ? "✓" : "✗"} WB:${r.hasWhiteboard ? "✓" : "✗"})` : ""} @ ${slot.timeSlot}`;
-  })
-  .join("\n")}
-
-TOPIC CATEGORIES (use for similarity analysis):
-- Technical: Programming languages, frameworks, DevOps, architecture, databases, AI/ML, testing
-- Leadership: Team management, hiring, culture, organizational change
-- Soft Skills: Communication, career growth, mentoring, work-life balance
-- Business: Product, strategy, entrepreneurship, growth
-→ IMPORTANT: Only group talks within the SAME category. Don't mix technical with leadership/soft skills!
-
-PRIORITY ORDER:
-1. ${needsTV || needsWhiteboard ? `RESOURCE MATCH (MANDATORY): Must have ${needsTV ? "TV" : ""}${needsTV && needsWhiteboard ? "+" : ""}${needsWhiteboard ? "WB" : ""}. Exclude non-matching rooms.` : "No resource constraints - all rooms eligible."}
-2. TOPIC CONTINUITY IN ROOM (HIGH PRIORITY): Analyze previous talks in room. Only group talks in SAME category (e.g., technical with technical, leadership with leadership). Never mix categories.
-3. AVOID TIME CONFLICTS: Don't schedule at same time as similar topics within same category.
-4. TIME OPTIMIZATION: Prefer earlier slots when no conflicts.
-${additionalContext ? `5. ADDITIONAL CONTEXT: ${additionalContext}` : ""}
-
-DECISION (Spanish, be brief):
-- bestRoom & bestTimeSlot: From available free slots
-- reasoning: 2-3 sentences max. ${needsTV || needsWhiteboard ? "State resource match. " : ""}Identify topic category (Technical/Leadership/Soft Skills/Business). Emphasize related talks in same category already in this room. Mention conflicts avoided.
-- topicSimilarities: List similar talks in SAME category only
-- alternatives: Up to 2 with 1-sentence reasoning each
-- swapSuggestion: Only if needed
-
-Example: "${needsTV || needsWhiteboard ? `[Room] tiene ${needsTV ? "TV" : ""}${needsTV && needsWhiteboard ? " y " : ""}${needsWhiteboard ? "pizarra" : ""}. ` : ""}Tema técnico que continúa línea de [talk técnica previa] en sala. Evita conflicto con [otra talk técnica] en otro horario."`,
+      prompt,
     });
 
-    // Validate AI response matches available options
-    const selectedSlot = freeSlots.find(
-      (slot) => slot.room === object.bestRoom && slot.timeSlot === object.bestTimeSlot
-    );
+    // The enum makes an unavailable cell unrepresentable, so there is no invalid-answer branch.
+    const picked = byId.get(output.candidato)!;
 
-    if (selectedSlot) {
-      return {
-        suggestedRoom: object.bestRoom,
-        suggestedTimeSlot: object.bestTimeSlot,
-        reasoning: object.reasoning,
-        alternatives: object.alternatives,
-        swapSuggestion: object.swapSuggestion,
-      };
-    } else {
-      // Fallback to first free slot if AI returned invalid option
-      console.warn("⚠️ AI returned invalid slot, using fallback:", {
-        aiSuggestion: { room: object.bestRoom, timeSlot: object.bestTimeSlot },
-        fallback: { room: freeSlots[0].room, timeSlot: freeSlots[0].timeSlot },
-      });
+    return {
+      suggestedRoom: picked.room,
+      suggestedTimeSlot: picked.timeSlot,
+      reasoning: output.razon,
+      alternatives: output.alternativas.flatMap((alternative) => {
+        const candidate = byId.get(alternative.candidato);
 
-      return {
-        suggestedRoom: freeSlots[0].room,
-        suggestedTimeSlot: freeSlots[0].timeSlot,
-        reasoning:
-          "Se seleccionó el primer espacio libre disponible (respuesta de AI no coincide con opciones disponibles).",
-      };
-    }
+        return candidate && candidate.id !== picked.id
+          ? [{ room: candidate.room, timeSlot: candidate.timeSlot, reasoning: alternative.razon }]
+          : [];
+      }),
+    };
   } catch (error) {
     console.error("❌ Error finding free spot with AI:", error);
-    // Fallback to first free slot
+
     return {
-      suggestedRoom: freeSlots[0].room,
-      suggestedTimeSlot: freeSlots[0].timeSlot,
+      suggestedRoom: candidates[0].room,
+      suggestedTimeSlot: candidates[0].timeSlot,
       reasoning: "Se seleccionó el primer espacio libre disponible (error en AI).",
     };
   }

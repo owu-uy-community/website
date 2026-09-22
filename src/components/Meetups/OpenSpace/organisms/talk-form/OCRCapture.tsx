@@ -51,6 +51,15 @@ export function OCRCapture({
         {cameraActive ? (
           <>
             <video ref={videoRef} autoPlay className="absolute inset-0 h-full w-full object-cover" playsInline />
+            {/* The whole frame is what gets sent, so the guide is only framing advice: a card
+                that fills it is sharp enough to read. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-[5%] rounded-sm border-2 border-dashed border-white/70"
+            />
+            <p className="absolute inset-x-0 bottom-2 text-center text-xs text-white drop-shadow">
+              Encuadrá la tarjeta dentro del marco
+            </p>
             {permissionMessage && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-sm text-foreground">
                 <p>{permissionMessage}</p>
@@ -100,7 +109,7 @@ export function OCRCapture({
 
       {isProcessingImage && (
         <div className="mt-3 rounded-md border border-primary/30 bg-primary/[0.06] p-3 text-center text-sm text-foreground">
-          Extrayendo la información y buscando el mejor lugar…
+          Leyendo la tarjeta…
         </div>
       )}
 
