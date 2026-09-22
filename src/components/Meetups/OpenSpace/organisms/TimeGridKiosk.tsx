@@ -87,17 +87,19 @@ export function TimeGridKiosk({
       <div
         className="openspace-time-grid-kiosk hidden h-full min-w-full gap-0 lg:grid"
         style={{
-          gridTemplateColumns: `minmax(128px, 168px) repeat(${rooms.length}, 1fr)`,
-          gridTemplateRows: `56px repeat(${timeSlots.length}, minmax(0, 1fr))`,
+          // The gutter and the header row grow with the screen: on a 3584px wall the old fixed
+          // 168px/56px left the clock and the room names marooned in a corner of their own cells.
+          gridTemplateColumns: `minmax(128px, clamp(168px, 6vw, 260px)) repeat(${rooms.length}, 1fr)`,
+          gridTemplateRows: `clamp(56px, 7vh, 88px) repeat(${timeSlots.length}, minmax(0, 1fr))`,
         }}
       >
         {/* Corner: a real clock, seconds included so the room trusts it's live */}
         <div className="flex h-full items-center justify-center gap-2 border-b border-r border-white/10 bg-white/[0.06] px-2">
           <Clock
             aria-hidden
-            className="h-[clamp(1rem,1.3vw,1.4rem)] w-[clamp(1rem,1.3vw,1.4rem)] shrink-0 text-primary"
+            className="h-[clamp(1rem,1.3vw,2.25rem)] w-[clamp(1rem,1.3vw,2.25rem)] shrink-0 text-primary"
           />
-          <span className="font-terminal text-[clamp(0.95rem,1.5vw,1.5rem)] font-semibold tabular-nums text-white">
+          <span className="font-terminal text-[clamp(0.95rem,1.5vw,2.25rem)] font-semibold tabular-nums text-white">
             {clock}
           </span>
         </div>
@@ -114,12 +116,12 @@ export function TimeGridKiosk({
               {Shape ? (
                 <Shape
                   aria-hidden
-                  className="h-[clamp(0.9rem,1.4vw,1.5rem)] w-[clamp(0.9rem,1.4vw,1.5rem)] shrink-0"
+                  className="h-[clamp(0.9rem,1.4vw,2.25rem)] w-[clamp(0.9rem,1.4vw,2.25rem)] shrink-0"
                   style={{ color, fill: color }}
                 />
               ) : null}
               <span
-                className="truncate text-center font-display text-[clamp(1rem,1.6vw,1.75rem)] font-bold uppercase tracking-wide"
+                className="truncate text-center font-display text-[clamp(1rem,1.6vw,2.5rem)] font-bold uppercase tracking-wide"
                 style={{ color }}
               >
                 {room}
@@ -145,7 +147,10 @@ export function TimeGridKiosk({
                 )}
               >
                 {isStarred && (
-                  <Star aria-hidden className="absolute right-1.5 top-1.5 h-4 w-4 fill-primary text-primary" />
+                  <Star
+                    aria-hidden
+                    className="absolute right-1.5 top-1.5 h-[clamp(1rem,1.1vw,1.75rem)] w-[clamp(1rem,1.1vw,1.75rem)] fill-primary text-primary"
+                  />
                 )}
                 {timeSlot.split(" - ").map((time, idx) => (
                   <span
@@ -153,15 +158,15 @@ export function TimeGridKiosk({
                     className={cn(
                       "text-center font-terminal font-semibold tabular-nums leading-tight",
                       idx === 0
-                        ? "text-[clamp(1rem,1.4vw,1.5rem)] text-white"
-                        : "text-[clamp(0.85rem,1.1vw,1.2rem)] text-white/50"
+                        ? "text-[clamp(1rem,1.4vw,2.25rem)] text-white"
+                        : "text-[clamp(0.85rem,1.1vw,1.6rem)] text-white/50"
                     )}
                   >
                     {time}
                   </span>
                 ))}
                 {isNow && (
-                  <span className="mt-1 rounded bg-primary px-1.5 py-0.5 font-terminal text-[10px] font-bold uppercase tracking-widest text-black">
+                  <span className="mt-1 rounded bg-primary px-1.5 py-0.5 font-terminal text-[clamp(0.625rem,0.7vw,1.125rem)] font-bold uppercase tracking-widest text-black">
                     Ahora
                   </span>
                 )}
@@ -176,6 +181,8 @@ export function TimeGridKiosk({
                     key={`${room}-${timeSlot}`}
                     className={cn(
                       "relative h-full border-b border-r border-white/10 bg-white/[0.02] transition-colors duration-300 last:border-r-0",
+                      // Size containment, so the post-it inside can scale its type off the cell.
+                      "[container-type:size]",
                       rowTint
                     )}
                   >

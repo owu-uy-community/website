@@ -17,6 +17,15 @@ interface StickyNoteSurfaceProps {
   style?: React.CSSProperties;
   /** Overlays (badges, buttons) rendered above the dog-ear. */
   children?: React.ReactNode;
+  /**
+   * Wall mode: type sized against the cell instead of fixed at 14px.
+   *
+   * The board and the wall are the same post-it at wildly different scales — on the UCU screen
+   * (3584x960) a card is 672x177, and 14px in it reads as a smudge from the back of the room.
+   * `cq` units measure the cell the note sits in, so one rule covers every wall geometry and the
+   * laptop preview, and the height term keeps a three-line title from being clipped.
+   */
+  wall?: boolean;
 }
 
 /**
@@ -33,6 +42,7 @@ export function StickyNoteSurface({
   className,
   style,
   children,
+  wall = false,
 }: StickyNoteSurfaceProps) {
   const surface = stickyNoteStyle(color);
   const rotation = stickyNoteRotation(noteId);
@@ -50,9 +60,23 @@ export function StickyNoteSurface({
       {children}
 
       <div className="relative z-10 w-full space-y-0.5">
-        <h3 className="line-clamp-3 hyphens-auto break-words text-xs font-semibold leading-snug md:text-sm">{title}</h3>
+        <h3
+          className={cn(
+            "line-clamp-3 hyphens-auto break-words font-semibold leading-snug",
+            wall ? "text-[clamp(0.75rem,min(19cqh,5cqw),2.5rem)]" : "text-xs md:text-sm"
+          )}
+        >
+          {title}
+        </h3>
         {speaker && (
-          <p className="line-clamp-1 text-[10px] font-medium leading-tight opacity-80 md:text-xs">{speaker}</p>
+          <p
+            className={cn(
+              "line-clamp-1 font-medium leading-tight opacity-80",
+              wall ? "text-[clamp(0.625rem,min(11cqh,3cqw),1.5rem)]" : "text-[10px] md:text-xs"
+            )}
+          >
+            {speaker}
+          </p>
         )}
       </div>
     </div>
