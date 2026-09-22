@@ -24,6 +24,7 @@
     "lint:fix": "eslint --fix",
     "ocr:bench": "tsx scripts/ocr-bench.ts",
     "ocr:check": "tsx scripts/ocr-checks.ts",
+    "slot:replay": "tsx scripts/slot-replay.ts",
     "remotion": "remotion studio src/app/lib/videos/remotion/index.ts",
     "render": "remotion render",
     "start": "next start"

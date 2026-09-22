@@ -10,7 +10,11 @@ import { AI_TIMEOUT_MS, gatewayFallbacks, SLOT_PICK_MODEL } from "../models";
  */
 const MAX_CANDIDATES = 12;
 
-/** Free cells per time slot offered to the model. Two keeps room choice alive without bloat. */
+/**
+ * Free rooms offered per time slot: the thriftiest one, and the one that is already becoming a
+ * track. Two, so room choice stays alive without bloating the prompt — and picked for *different*
+ * reasons, so the continuity criterion has something to continue.
+ */
 const ROOMS_PER_SLOT = 2;
 
 export interface Candidate {
@@ -25,14 +29,35 @@ type CandidateInput = Pick<
   FindFreeSpotInput,
   "existingNotes" | "roomsWithResources" | "availableRooms" | "availableTimeSlots"
 > &
-  Partial<Pick<FindFreeSpotInput, "needsTV" | "needsWhiteboard">>;
+  Partial<Pick<FindFreeSpotInput, "speaker" | "needsTV" | "needsWhiteboard">>;
+
+/** Handwritten names arrive with inconsistent case and accents; compare them leniently. */
+function sameName(a: string | undefined, b: string | undefined): boolean {
+  const normalise = (value: string | undefined) =>
+    (value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const left = normalise(a);
+
+  return left.length > 0 && left === normalise(b);
+}
 
 /**
  * The free cells worth offering, best first. Everything a computer can decide is decided here so
  * the model only has to judge topics: which cells are taken, which rooms have the resources the
- * talk asked for, and which rooms to spend on it.
+ * talk asked for, whether the speaker is already busy, and how loaded each block is.
+ *
+ * Order matters and is part of the design. Candidates come out least-loaded block first, one room
+ * per block before any block gets a second — models measurably favour the earlier options in a
+ * labelled list, so the list is ordered to make that bias agree with the balancing rule instead of
+ * fighting it.
  */
 export function buildCandidates({
+  speaker,
   needsTV = false,
   needsWhiteboard = false,
   existingNotes,
@@ -68,21 +93,64 @@ export function buildCandidates({
     return (resources.hasTV && !needsTV ? 1 : 0) + (resources.hasWhiteboard && !needsWhiteboard ? 1 : 0);
   };
 
-  return availableTimeSlots
-    .flatMap((timeSlot) =>
-      roomsToUse
-        .filter((room) => !occupied.has(`${room}|${timeSlot}`))
-        .sort((a, b) => surplus(a) - surplus(b))
-        .slice(0, ROOMS_PER_SLOT)
-        .map((room) => ({
-          room,
+  const talksIn = (room: string) => existingNotes.filter((note) => note.room === room).length;
+  const load = (timeSlot: string) => existingNotes.filter((note) => note.timeSlot === timeSlot).length;
+
+  // Nobody can be in two rooms at once. This is arithmetic, so it is a hard constraint here rather
+  // than a line in the prompt the model may or may not honour.
+  const busyFor = new Set(
+    existingNotes.filter((note) => sameName(speaker, note.speaker)).map((note) => note.timeSlot)
+  );
+
+  const collect = (avoidSpeakerClash: boolean) => {
+    const slots = availableTimeSlots
+      .map((timeSlot, index) => ({ timeSlot, index }))
+      .filter(({ timeSlot }) => !(avoidSpeakerClash && busyFor.has(timeSlot)))
+      // Balance the grid rather than filling it front to back: front-loading crowds the block
+      // where everyone is present, which is the clash the first criterion exists to avoid.
+      .sort((a, b) => load(a.timeSlot) - load(b.timeSlot) || a.index - b.index)
+      .map(({ timeSlot }) => {
+        const free = roomsToUse.filter((room) => !occupied.has(`${room}|${timeSlot}`));
+        const byThrift = [...free].sort((a, b) => surplus(a) - surplus(b));
+        const track = [...free].sort((a, b) => talksIn(b) - talksIn(a))[0];
+
+        return {
           timeSlot,
-          hasTV: resourcesOf(room)?.hasTV ?? false,
-          hasWhiteboard: resourcesOf(room)?.hasWhiteboard ?? false,
-        }))
-    )
-    .slice(0, MAX_CANDIDATES)
-    .map((candidate, index) => ({ id: `c${index}`, ...candidate }));
+          // Thriftiest first, then whichever room is furthest along as a track — and if those are
+          // the same room (an empty grid has no track yet), just the next thriftiest, so there is
+          // still a room to choose between.
+          rooms: [byThrift[0], track, ...byThrift]
+            .filter((room, index, all) => room && all.indexOf(room) === index)
+            .slice(0, ROOMS_PER_SLOT),
+        };
+      });
+
+    // Round-robin: every block gets a candidate before any block gets a second room, so truncating
+    // at MAX_CANDIDATES can no longer make the back half of the day unreachable.
+    const cells: { room: string; timeSlot: string }[] = [];
+
+    for (let rank = 0; rank < ROOMS_PER_SLOT; rank++) {
+      for (const slot of slots) {
+        const room = slot.rooms[rank];
+
+        if (room) cells.push({ room, timeSlot: slot.timeSlot });
+      }
+    }
+
+    return cells.slice(0, MAX_CANDIDATES);
+  };
+
+  // A speaker clash must not look like a full grid: if avoiding it leaves nothing, offer the
+  // clashing cells anyway and let the staffer decide.
+  const cells = collect(true).length > 0 ? collect(true) : collect(false);
+
+  return cells.map((cell, index) => ({
+    id: `c${index}`,
+    room: cell.room,
+    timeSlot: cell.timeSlot,
+    hasTV: resourcesOf(cell.room)?.hasTV ?? false,
+    hasWhiteboard: resourcesOf(cell.room)?.hasWhiteboard ?? false,
+  }));
 }
 
 const INSTRUCTIONS = `Sos quien arma la grilla de un open space de la comunidad ágil uruguaya. Elegís dónde y cuándo va una charla nueva para que la gente pueda ver lo que le interesa.
@@ -90,7 +158,7 @@ const INSTRUCTIONS = `Sos quien arma la grilla de un open space de la comunidad 
 Criterios, en orden:
 1. Evitar choques temáticos: si en ese horario ya hay una charla del mismo tema, elegí otro horario.
 2. Continuidad por sala: si una sala ya viene con charlas del mismo tema, sumar ahí ayuda a que la gente se quede. No mezcles temas distintos en la misma sala sin motivo.
-3. A igualdad de condiciones, más temprano es mejor: la grilla se llena de adelante para atrás.
+3. Repartir la grilla: a igualdad de condiciones, preferí el bloque con menos charlas. Los candidatos ya vienen ordenados del bloque más libre al más cargado, así que ante la duda quedate con el primero que no genere choque.
 
 Contestá en español rioplatense. La razón son dos oraciones como máximo: por qué ese lugar y qué choque estás evitando. Nada de listas ni de repetir los criterios.`;
 
@@ -116,6 +184,7 @@ export async function findFreeSpot(input: FindFreeSpotInput): Promise<FindFreeSp
   } = input;
 
   const candidates = buildCandidates({
+    speaker,
     needsTV,
     needsWhiteboard,
     existingNotes,
