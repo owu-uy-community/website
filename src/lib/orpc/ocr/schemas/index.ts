@@ -7,6 +7,12 @@ export const ProcessImageSchema = z.object({
   imageData: z.string().describe("Base64 encoded image data"),
 });
 
+/** Which REQUISITOS checkbox the proposer marked on the card. */
+export const RequisitoSchema = z.enum(["tv", "pizarra", "ambos", "ninguno", "ilegible"]);
+
+/** Fields the model was unsure about, so the UI can ask a human to check them. */
+export const RevisarSchema = z.array(z.enum(["speaker", "title", "requisito"]));
+
 /**
  * Schema for OCR processing output
  */
@@ -18,6 +24,8 @@ export const ProcessImageResponseSchema = z.object({
     .boolean()
     .default(false)
     .describe("Whether the person marked with an X that they need a whiteboard"),
+  requisito: RequisitoSchema.optional().describe("The raw REQUISITOS answer, including 'ninguno' and 'ilegible'"),
+  revisar: RevisarSchema.optional().describe("Fields whose handwriting was unclear"),
 });
 
 /**
@@ -60,14 +68,6 @@ export const FindFreeSpotResponseSchema = z.object({
   suggestedRoom: z.string().describe("Suggested room"),
   suggestedTimeSlot: z.string().describe("Suggested time slot"),
   reasoning: z.string().describe("Reasoning for the suggestion"),
-  swapSuggestion: z
-    .object({
-      shouldSwap: z.boolean().describe("Whether a swap is recommended"),
-      talkToSwap: z.string().optional().describe("Title of the talk to swap"),
-      swapReasoning: z.string().optional().describe("Reason for suggesting the swap"),
-    })
-    .optional()
-    .describe("Optional swap suggestion if no better slots are available"),
   alternatives: z
     .array(
       z.object({
@@ -113,35 +113,9 @@ export const ProcessImageWithSuggestionSchema = z.object({
 /**
  * Schema for combined OCR + AI suggestion response
  */
-export const ProcessImageWithSuggestionResponseSchema = z.object({
-  // OCR results
-  title: z.string().describe("Extracted talk title"),
-  speaker: z.string().describe("Extracted speaker name"),
-  needsTV: z.boolean().describe("Whether the person marked that they need a TV"),
-  needsWhiteboard: z.boolean().describe("Whether the person marked that they need a whiteboard"),
-  // AI suggestion results
-  suggestedRoom: z.string().describe("Suggested room"),
-  suggestedTimeSlot: z.string().describe("Suggested time slot"),
-  reasoning: z.string().describe("Reasoning for the suggestion"),
-  swapSuggestion: z
-    .object({
-      shouldSwap: z.boolean().describe("Whether a swap is recommended"),
-      talkToSwap: z.string().optional().describe("Title of the talk to swap"),
-      swapReasoning: z.string().optional().describe("Reason for suggesting the swap"),
-    })
-    .optional()
-    .describe("Optional swap suggestion if no better slots are available"),
-  alternatives: z
-    .array(
-      z.object({
-        room: z.string(),
-        timeSlot: z.string(),
-        reasoning: z.string(),
-      })
-    )
-    .optional()
-    .describe("Alternative suggestions ranked by preference"),
-});
+export const ProcessImageWithSuggestionResponseSchema = ProcessImageResponseSchema.extend(
+  FindFreeSpotResponseSchema.shape
+);
 
 export type ProcessImageInput = z.infer<typeof ProcessImageSchema>;
 export type ProcessImageResponse = z.infer<typeof ProcessImageResponseSchema>;

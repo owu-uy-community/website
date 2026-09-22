@@ -26,19 +26,15 @@ export interface SuggestionAlternative {
   reasoning: string;
 }
 
-export interface SwapSuggestion {
-  shouldSwap: boolean;
-  talkToSwap?: string;
-  swapReasoning?: string;
-}
-
 export interface SuggestionEntry {
   room: string;
   timeSlot: string;
   reasoning: string;
   alternatives?: SuggestionAlternative[];
-  swapSuggestion?: SwapSuggestion;
 }
+
+/** A form field the OCR flagged as hard to read, so the staffer checks it before saving. */
+export type ReviewableField = "speaker" | "title" | "requisito";
 
 export interface ScheduleSlot {
   room: string;

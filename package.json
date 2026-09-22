@@ -22,12 +22,13 @@
     "dev:realtime": "node scripts/dev-realtime.mjs",
     "lint": "next lint",
     "lint:fix": "eslint --fix",
+    "ocr:bench": "tsx scripts/ocr-bench.ts",
+    "ocr:check": "tsx scripts/ocr-checks.ts",
     "remotion": "remotion studio src/app/lib/videos/remotion/index.ts",
     "render": "remotion render",
     "start": "next start"
   },
   "dependencies": {
-    "@ai-sdk/openai": "4.0.16",
     "@better-auth/api-key": "1.6.22",
     "@dnd-kit/core": "6.3.1",
     "@hookform/resolvers": "5.7.1",

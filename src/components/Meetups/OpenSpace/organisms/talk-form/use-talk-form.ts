@@ -9,7 +9,22 @@ import { orpc } from "lib/orpc/client";
 import { toast } from "components/shared/ui/toast-utils";
 
 import { talkFormSchema } from "./types";
-import type { RoomWithResources, ScheduleSlot, SuggestionAlternative, SuggestionEntry, TalkFormData } from "./types";
+import type {
+  ReviewableField,
+  RoomWithResources,
+  ScheduleSlot,
+  SuggestionAlternative,
+  SuggestionEntry,
+  TalkFormData,
+} from "./types";
+
+/**
+ * Long edge of the uploaded photo. ~1.5MP is the sweet spot for the vision models behind the OCR:
+ * more pixels get billed and then discarded, fewer start costing handwriting accuracy. At quality
+ * 0.85 a card lands around 150–400KB instead of several megabytes over venue wifi.
+ */
+const MAX_IMAGE_EDGE = 1600;
+const JPEG_QUALITY = 0.85;
 
 interface UseTalkFormParams {
   open: boolean;
@@ -59,6 +74,8 @@ export function useTalkForm({
   const [permissionMessage, setPermissionMessage] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("form");
+  /** Fields the OCR could not read confidently, so the form can ask for a human check. */
+  const [fieldsToReview, setFieldsToReview] = useState<ReviewableField[]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,42 +104,72 @@ export function useTalkForm({
     hasWhiteboard: r.hasWhiteboard || false,
   }));
 
-  const processImageMutation = useMutation({
-    mutationFn: async (imageData: string) => {
-      const result = await client.ocr.processImageWithSuggestion({
-        imageData,
-        existingNotes: notes,
+  /**
+   * Ask for a room + time slot. Shared by the "Sugerir con AI" button and the camera tab, which
+   * fires it right after the card is read.
+   */
+  const requestSuggestion = async (talk: Pick<TalkFormData, "title" | "speaker" | "needsTV" | "needsWhiteboard">) => {
+    setAiSuggesting(true);
+    setAiReasoning(null);
+    setValidationError("");
+
+    try {
+      const result = await client.ocr.findFreeSpot({
+        ...talk,
+        additionalContext: additionalContext.trim() || undefined,
         roomsWithResources,
+        existingNotes: notes,
         availableRooms: rooms,
         availableTimeSlots: timeSlots,
       });
 
-      return result;
-    },
+      setSuggestionHistory((prev) => [
+        ...prev,
+        {
+          room: result.suggestedRoom,
+          timeSlot: result.suggestedTimeSlot,
+          reasoning: result.reasoning,
+          alternatives: result.alternatives,
+        },
+      ]);
+      setCurrentHistoryIndex((prev) => prev + 1);
+
+      setValue("room", result.suggestedRoom);
+      setValue("timeSlot", result.suggestedTimeSlot);
+
+      setAiReasoning(result.reasoning);
+      setShowAiReasoning(false);
+    } catch (error) {
+      console.error("Error getting AI suggestion:", error);
+      setValidationError("Error al obtener sugerencias de AI. Por favor intenta nuevamente.");
+    } finally {
+      setAiSuggesting(false);
+    }
+  };
+
+  const processImageMutation = useMutation({
+    mutationFn: (imageData: string) => client.ocr.processImage({ imageData }),
     onSuccess: (data) => {
       if (data.title) setValue("title", data.title);
       if (data.speaker) setValue("speaker", data.speaker);
-      if (data.needsTV) setValue("needsTV", data.needsTV);
-      if (data.needsWhiteboard) setValue("needsWhiteboard", data.needsWhiteboard);
+      // Always set: a card that marked "NO" has to clear whatever was ticked before.
+      setValue("needsTV", data.needsTV);
+      setValue("needsWhiteboard", data.needsWhiteboard);
+      setFieldsToReview(data.revisar ?? []);
 
-      if (data.suggestedRoom) setValue("room", data.suggestedRoom);
-      if (data.suggestedTimeSlot) setValue("timeSlot", data.suggestedTimeSlot);
+      setActiveTab("form");
 
-      const mainSuggestion = {
-        room: data.suggestedRoom,
-        timeSlot: data.suggestedTimeSlot,
-        reasoning: data.reasoning,
-        alternatives: data.alternatives,
-        swapSuggestion: data.swapSuggestion,
-      };
-
-      setSuggestionHistory((prev) => [...prev, mainSuggestion]);
-      setCurrentHistoryIndex((prev) => prev + 1);
-
-      setAiReasoning(data.reasoning);
-      setShowAiReasoning(false);
-
-      setTimeout(() => setActiveTab("form"), 300);
+      // Second, slower call. The staffer can already check the handwriting we just extracted
+      // while the slot suggestion lands, instead of watching one spinner for both. With no title
+      // there is nothing to place by topic, so we leave it to the button once they type one.
+      if (data.title) {
+        void requestSuggestion({
+          title: data.title,
+          speaker: data.speaker,
+          needsTV: data.needsTV,
+          needsWhiteboard: data.needsWhiteboard,
+        });
+      }
     },
     onError: (error: any) => {
       console.error("Error processing image:", error);
@@ -164,6 +211,7 @@ export function useTalkForm({
     setCapturedImage(null);
     setPermissionMessage(null);
     setOcrError(null);
+    setFieldsToReview([]);
 
     setAiSuggesting(false);
     setAiReasoning(null);
@@ -253,7 +301,9 @@ export function useTalkForm({
       setPermissionMessage("Por favor permite el acceso a la cámara cuando se solicite");
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        // Without an explicit size the browser picks its default, often 640x480 — too coarse to
+        // read handwriting off a card.
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
 
       if (videoRef.current) {
@@ -277,28 +327,28 @@ export function useTalkForm({
   };
 
   const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
 
-      const size = Math.min(video.videoWidth, video.videoHeight);
+    if (!video || !canvas) return;
 
-      canvas.width = size;
-      canvas.height = size;
+    // The whole frame, scaled down — never a centred crop. The card is landscape, so cropping to
+    // a square cuts the ends off the NOMBRE and CHARLA lines, which is exactly what we need to
+    // read, and it also means the preview would not be showing what the model receives.
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(video.videoWidth, video.videoHeight));
 
-      const xOffset = (video.videoWidth - size) / 2;
-      const yOffset = (video.videoHeight - size) / 2;
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
 
-      const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
 
-      if (ctx) {
-        ctx.drawImage(video, xOffset, yOffset, size, size, 0, 0, size, size);
-        const imageData = canvas.toDataURL("image/jpeg");
+    if (!ctx) return;
 
-        setCapturedImage(imageData);
-        stopCamera();
-      }
-    }
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    setCapturedImage(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+    stopCamera();
   };
 
   const deleteImage = () => {
@@ -322,6 +372,7 @@ export function useTalkForm({
     setCapturedImage(null);
     setPermissionMessage(null);
     setOcrError(null);
+    setFieldsToReview([]);
   };
 
   const handleAiSuggest = async () => {
@@ -338,45 +389,12 @@ export function useTalkForm({
       });
     }
 
-    setAiSuggesting(true);
-    setAiReasoning(null);
-    setValidationError("");
-
-    try {
-      const result = await client.ocr.findFreeSpot({
-        title: watchedValues.title,
-        speaker: watchedValues.speaker,
-        needsTV: watchedValues.needsTV,
-        needsWhiteboard: watchedValues.needsWhiteboard,
-        additionalContext: additionalContext.trim() || undefined,
-        roomsWithResources,
-        existingNotes: notes,
-        availableRooms: rooms,
-        availableTimeSlots: timeSlots,
-      });
-
-      const mainSuggestion = {
-        room: result.suggestedRoom,
-        timeSlot: result.suggestedTimeSlot,
-        reasoning: result.reasoning,
-        alternatives: result.alternatives,
-        swapSuggestion: result.swapSuggestion,
-      };
-
-      setSuggestionHistory((prev) => [...prev, mainSuggestion]);
-      setCurrentHistoryIndex((prev) => prev + 1);
-
-      setValue("room", result.suggestedRoom);
-      setValue("timeSlot", result.suggestedTimeSlot);
-
-      setAiReasoning(result.reasoning);
-      setShowAiReasoning(false);
-    } catch (error) {
-      console.error("Error getting AI suggestion:", error);
-      setValidationError("Error al obtener sugerencias de AI. Por favor intenta nuevamente.");
-    } finally {
-      setAiSuggesting(false);
-    }
+    await requestSuggestion({
+      title: watchedValues.title,
+      speaker: watchedValues.speaker,
+      needsTV: watchedValues.needsTV,
+      needsWhiteboard: watchedValues.needsWhiteboard,
+    });
   };
 
   const navigateHistory = (direction: "prev" | "next") => {
@@ -542,6 +560,7 @@ export function useTalkForm({
     permissionMessage,
     ocrError,
     isProcessingImage: processImageMutation.isPending,
+    fieldsToReview,
     startCamera,
     captureImage,
     deleteImage,

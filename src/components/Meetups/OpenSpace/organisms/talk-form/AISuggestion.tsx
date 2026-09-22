@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight, Info, Repeat2, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 import { Button } from "components/shared/ui/button";
@@ -61,21 +61,6 @@ export function AISuggestion({
               </div>
             </div>
           </div>
-
-          {current?.swapSuggestion?.shouldSwap && (
-            <div className="rounded-md border border-primary/30 bg-primary/[0.06] p-3">
-              <div className="flex items-start gap-2">
-                <Repeat2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-foreground">Sugerencia de intercambio</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Considerá intercambiar con &quot;{current.swapSuggestion?.talkToSwap}&quot;.{" "}
-                    {current.swapSuggestion?.swapReasoning}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {current?.alternatives && current.alternatives.length > 0 && (
             <div className="space-y-2">

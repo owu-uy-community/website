@@ -12,11 +12,23 @@ import type { StickyNote } from "lib/orpc";
 import { AISuggestion } from "./AISuggestion";
 import { ResourceRequirements } from "./ResourceRequirements";
 import { ScheduleFields } from "./ScheduleFields";
-import type { RoomWithResources } from "./types";
+import type { ReviewableField, RoomWithResources } from "./types";
 import type { TalkFormController } from "./use-talk-form";
 
 /** The submit button lives in the modal footer, associated via this id. */
 export const TALK_FORM_ID = "talk-form";
+
+/** Shown under a field the OCR was unsure about, so the staffer checks that one and not all. */
+function ReviewHint({ show }: { show: boolean }) {
+  if (!show) return null;
+
+  return (
+    <p className="flex items-center gap-1.5 text-xs text-amber-500">
+      <AlertTriangle className="h-3.5 w-3.5" />
+      La AI no leyó esto con claridad — revisalo contra la tarjeta.
+    </p>
+  );
+}
 
 interface TalkFormProps {
   controller: TalkFormController;
@@ -49,19 +61,36 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
     navigateHistory,
     applyAlternative,
     handleResetToOriginal,
+    fieldsToReview,
   } = controller;
+
+  const needsReview = (field: ReviewableField) => fieldsToReview.includes(field);
+  const reviewRing = "border-amber-500/70 focus-visible:ring-amber-500/50";
 
   return (
     <form className="space-y-4" id={TALK_FORM_ID} onSubmit={submitForm}>
       <div className="space-y-2">
         <Label htmlFor="title">Título</Label>
-        <Input autoFocus id="title" {...register("title")} placeholder="¿De qué va la charla?" />
+        <Input
+          autoFocus
+          id="title"
+          {...register("title")}
+          className={cn(needsReview("title") && reviewRing)}
+          placeholder="¿De qué va la charla?"
+        />
+        <ReviewHint show={needsReview("title")} />
         {formErrors.title && <p className="text-sm text-destructive">{formErrors.title.message}</p>}
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="speaker">Orador (opcional)</Label>
-        <Input id="speaker" {...register("speaker")} placeholder="Nombre de quien la da" />
+        <Input
+          id="speaker"
+          {...register("speaker")}
+          className={cn(needsReview("speaker") && reviewRing)}
+          placeholder="Nombre de quien la da"
+        />
+        <ReviewHint show={needsReview("speaker")} />
       </div>
 
       <div className="space-y-3">
@@ -130,6 +159,8 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
         <ScheduleFields control={control} note={note} rooms={rooms} timeSlots={timeSlots} />
 
         <ResourceRequirements control={control} roomsData={roomsData} watchedValues={watchedValues} />
+
+        <ReviewHint show={needsReview("requisito")} />
 
         <AISuggestion
           aiReasoning={aiReasoning}

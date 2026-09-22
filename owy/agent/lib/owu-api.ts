@@ -270,10 +270,13 @@ export interface OcrSuggestionResponse {
   speaker: string;
   needsTV: boolean;
   needsWhiteboard: boolean;
+  /** Raw REQUISITOS answer, including the "NO" checkbox and an unreadable strip. */
+  requisito?: "tv" | "pizarra" | "ambos" | "ninguno" | "ilegible";
+  /** Fields whose handwriting was unclear — confirm these with the staffer first. */
+  revisar?: ("speaker" | "title" | "requisito")[];
   suggestedRoom: string;
   suggestedTimeSlot: string;
   reasoning: string;
-  swapSuggestion?: { shouldSwap: boolean; talkToSwap?: string; swapReasoning?: string };
   alternatives?: { room: string; timeSlot: string; reasoning: string }[];
 }
 

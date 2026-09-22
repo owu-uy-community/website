@@ -21,7 +21,7 @@ function mediaTypeFor(path: string): string {
 
 export default defineTool({
   description:
-    "SOLO STAFF: digitaliza la foto de una card física del open space (post-it/pizarra). Lee la imagen adjunta al mensaje (queda en /workspace/attachments/...), extrae título/speaker/requisitos con el OCR del sitio y sugiere sala+horario libre según la grilla actual. NO crea la card: mostrale el resultado al staff, confirmá, y recién ahí usá create_track (o swap_tracks si sugiere intercambio).",
+    "SOLO STAFF: digitaliza la foto de una card física del open space (post-it/pizarra). Lee la imagen adjunta al mensaje (queda en /workspace/attachments/...), extrae título/speaker/requisitos con el OCR del sitio y sugiere sala+horario libre según la grilla actual. NO crea la card: mostrale el resultado al staff, confirmá, y recién ahí usá create_track.",
   inputSchema: z.object({
     imagePath: z
       .string()
@@ -76,16 +76,18 @@ export default defineTool({
         speaker: result.speaker,
         needsTV: result.needsTV,
         needsWhiteboard: result.needsWhiteboard,
+        requisito: result.requisito ?? null,
       },
+      /** Campos que el OCR leyó con dudas: preguntá por estos, no por todos. */
+      revisar: result.revisar ?? [],
       suggestion: {
         room: result.suggestedRoom,
         timeSlot: result.suggestedTimeSlot,
         reasoning: result.reasoning,
       },
-      swapSuggestion: result.swapSuggestion ?? null,
       alternatives: result.alternatives ?? [],
       nextStep:
-        "Confirmá con el staff los datos extraídos y la ubicación; después creá la card con create_track (la sala y el horario sugeridos van como room/timeSlot).",
+        "Confirmá con el staff los datos extraídos (empezando por los de `revisar`) y la ubicación; después creá la card con create_track (la sala y el horario sugeridos van como room/timeSlot).",
     };
   },
 });
