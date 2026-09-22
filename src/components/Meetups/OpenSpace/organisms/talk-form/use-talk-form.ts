@@ -26,6 +26,30 @@ import type {
 const MAX_IMAGE_EDGE = 1600;
 const JPEG_QUALITY = 0.85;
 
+/**
+ * Blocks that have already finished are useless as a suggestion — at 15:10 nobody wants the 11:00
+ * slot. Read off the label ("HH:MM - HH:MM") against the local clock, which is the venue's clock
+ * on the day. If that leaves nothing (someone prepping the board the night before) we hand back
+ * the whole day rather than claim the grid is full.
+ *
+ * ponytail: time-of-day only, no date. Thread the schedule dates through if the board ever needs
+ * to suggest across days.
+ */
+function upcomingSlots(timeSlots: string[]): string[] {
+  const now = new Date();
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+
+  const upcoming = timeSlots.filter((slot) => {
+    const endsAt = slot.split("-")[1]?.trim().match(/^(\d{1,2}):(\d{2})$/);
+
+    if (!endsAt) return true;
+
+    return Number(endsAt[1]) * 60 + Number(endsAt[2]) >= minutesNow;
+  });
+
+  return upcoming.length > 0 ? upcoming : timeSlots;
+}
+
 interface UseTalkFormParams {
   open: boolean;
   openSpaceId: string;
@@ -120,7 +144,7 @@ export function useTalkForm({
         roomsWithResources,
         existingNotes: notes,
         availableRooms: rooms,
-        availableTimeSlots: timeSlots,
+        availableTimeSlots: upcomingSlots(timeSlots),
       });
 
       setSuggestionHistory((prev) => [
