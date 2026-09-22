@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 import { Button } from "components/shared/ui/button";
@@ -32,6 +32,15 @@ export function AISuggestion({
 
   return (
     <div className="space-y-2">
+      {current?.degraded && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <p className="text-xs text-foreground">
+            La AI no pudo sugerir nada: esto es apenas el primer espacio libre. Elegí sala y horario a mano.
+          </p>
+        </div>
+      )}
+
       <Button
         className="w-full justify-between border border-border bg-muted/30 text-foreground hover:bg-muted/60"
         size="sm"

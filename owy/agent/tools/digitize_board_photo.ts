@@ -84,6 +84,8 @@ export default defineTool({
         room: result.suggestedRoom,
         timeSlot: result.suggestedTimeSlot,
         reasoning: result.reasoning,
+        /** Si es true, no hubo sugerencia: es el primer lugar libre. Avisale al staff. */
+        degraded: result.degraded ?? false,
       },
       alternatives: result.alternatives ?? [],
       nextStep:

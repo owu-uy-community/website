@@ -1,7 +1,8 @@
+import { ORPCError } from "@orpc/server";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import type { ProcessImageInput, ProcessImageResponse } from "../schemas";
-import { AI_TIMEOUT_MS, CARD_OCR_MODEL, gatewayFallbacks } from "../models";
+import { AI_TIMEOUT_MS, CARD_OCR_MODEL, describeAiFailure, gatewayFallbacks } from "../models";
 
 /**
  * The card is a fixed pre-print, so describing it exactly is free accuracy: the model never has
@@ -134,6 +135,9 @@ export async function processImage(
     };
   } catch (error) {
     console.error("Error in processImage:", error);
-    throw new Error("Failed to process image with OCR");
+
+    // An ORPCError reaches the browser with its message intact; a plain Error is flattened to
+    // oRPC's generic "Internal server error", which is how the actionable part used to get lost.
+    throw new ORPCError("OCR_FAILED", { message: describeAiFailure(error) });
   }
 }

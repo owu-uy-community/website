@@ -68,6 +68,10 @@ export const FindFreeSpotResponseSchema = z.object({
   suggestedRoom: z.string().describe("Suggested room"),
   suggestedTimeSlot: z.string().describe("Suggested time slot"),
   reasoning: z.string().describe("Reasoning for the suggestion"),
+  degraded: z
+    .boolean()
+    .optional()
+    .describe("True when the AI call failed and this is just the first free cell, not a suggestion"),
   alternatives: z
     .array(
       z.object({

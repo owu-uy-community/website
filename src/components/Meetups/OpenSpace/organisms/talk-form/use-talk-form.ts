@@ -154,6 +154,7 @@ export function useTalkForm({
           timeSlot: result.suggestedTimeSlot,
           reasoning: result.reasoning,
           alternatives: result.alternatives,
+          degraded: result.degraded,
         },
       ]);
       setCurrentHistoryIndex((prev) => prev + 1);
@@ -198,15 +199,9 @@ export function useTalkForm({
     onError: (error: any) => {
       console.error("Error processing image:", error);
 
-      let errorMessage = "Error al procesar la imagen con OCR.";
-
-      if (error?.message?.includes("Internal server error")) {
-        errorMessage = "Error del servidor. Verifica que la clave de OpenAI esté configurada correctamente.";
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      setOcrError(errorMessage);
+      // The server sends the real reason (a rejected gateway account reads very differently from
+      // an unreadable photo), so show it rather than a guess about which key is missing.
+      setOcrError(error?.message || "Error al procesar la imagen con OCR.");
     },
   });
 

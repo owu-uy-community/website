@@ -277,6 +277,8 @@ export interface OcrSuggestionResponse {
   suggestedRoom: string;
   suggestedTimeSlot: string;
   reasoning: string;
+  /** True when the AI call failed: the "suggestion" is just the first free cell. */
+  degraded?: boolean;
   alternatives?: { room: string; timeSlot: string; reasoning: string }[];
 }
 

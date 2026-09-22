@@ -36,3 +36,21 @@ export const AI_TIMEOUT_MS = 20_000;
 export function gatewayFallbacks(model: { readonly fallbacks: readonly string[] }) {
   return { gateway: { models: [...model.fallbacks] } };
 }
+
+/**
+ * Turn a provider or gateway failure into something a staffer at the table can act on.
+ *
+ * These are not all the same problem: a 403 means someone has to go fix the Vercel account, a 429
+ * means wait, a timeout means try again. Swallowing the upstream text is how "AI Gateway requires a
+ * valid credit card on file" reached the screen as "verificá la clave de OpenAI" — a key that no
+ * longer exists anywhere in this codebase.
+ */
+export function describeAiFailure(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  const status = typeof error === "object" && error !== null ? (error as { statusCode?: number }).statusCode : undefined;
+
+  if (status === 401 || status === 403) return `La AI Gateway rechazó el pedido (${status}): ${detail}`;
+  if (status === 429) return `La AI Gateway está limitando los pedidos: ${detail}`;
+
+  return `Falló la llamada a la AI: ${detail}`;
+}
