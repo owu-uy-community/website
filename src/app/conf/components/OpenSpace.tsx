@@ -105,14 +105,14 @@ const STEPS: Step[] = [
         Bloques de <Hl>25 minutos</Hl> con 5 para cambiarse. Mirás la grilla, elegís, entrás.
       </>,
       <>
-        Quien propuso <Hl>expone su tema</Hl> y a partir de ahí la moderación se autogestiona: no hay nadie
-        asignado para dar la palabra, habla quien quiera.
+        Quien propuso <Hl>se hace cargo del espacio</Hl>: lo abre, cuenta de qué va y lo lleva como quiera. Puede
+        exponer, moderar la conversación o las dos cosas.
       </>,
       <>Algunas salas quedan con seis personas y otras con treinta, y las dos cosas están bien.</>,
     ],
     beats: [
       "25 minutos de conversación + 5 para cambiar de sala",
-      "Quien propuso expone; la moderación se autogestiona",
+      "Quien propone abre el espacio: expone, modera o ambas",
       "Entre bloques hay café y charla de pasillo",
     ],
     tip: "La charla de pasillo entre bloques no es una interrupción del evento: para mucha gente es el evento.",
