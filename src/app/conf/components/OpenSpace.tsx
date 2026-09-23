@@ -49,7 +49,7 @@ const STEPS: Step[] = [
         No hay escenario ni filas de sillas: <Hl>la sala se arma en círculo</Hl>.
       </>,
       <>
-        El facilitador cuenta la mecánica, presenta las salas y señala una grilla enorme que está{" "}
+        El facilitador cuenta la mecánica, presenta los 5 espacios y señala una grilla enorme que está{" "}
         <Hl>completamente vacía</Hl>.
       </>,
       <>
@@ -59,7 +59,7 @@ const STEPS: Step[] = [
     ],
     beats: [
       "La sala se sienta en círculo, sin escenario",
-      "Se presentan las salas y los bloques del día",
+      "Se presentan los 5 espacios y los bloques del día",
       "Se abre el mercado de ideas",
     ],
     tip: "Si llegás tarde no pasa nada: le preguntás a cualquiera del staff y te pone al día en un minuto.",
@@ -276,10 +276,10 @@ export default function OpenSpace() {
             >
               {/* Spine behind the nodes. The steps share the height evenly, so the
                   first and last node centres sit half a step in from each end.
-                  Horizontally: 44px time column + 16px gap + half of the 22px node. */}
+                  Horizontally: 52px time column + 16px gap + half of the 22px node. */}
               <span
                 aria-hidden="true"
-                className="absolute left-[71px] w-px bg-[#FBF5E7]/15"
+                className="absolute left-[79px] w-px bg-[#FBF5E7]/15"
                 style={{ top: `${50 / STEPS.length}%`, bottom: `${50 / STEPS.length}%` }}
               />
 
@@ -305,7 +305,7 @@ export default function OpenSpace() {
                   >
                     <span
                       className={classNames(
-                        "w-[44px] shrink-0 text-right font-display text-sm font-bold tabular-nums transition-colors",
+                        "w-[52px] shrink-0 text-right font-display text-base font-bold tabular-nums transition-colors",
                         isActive ? "text-[#F5BB03]" : "text-[#FBF5E7]/60"
                       )}
                     >
