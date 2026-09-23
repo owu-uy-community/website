@@ -12,8 +12,9 @@ type TeamMember = {
 };
 
 /*
- * OWU CONF 2026 team, alphabetical by first name. Background-removed portraits
- * live in public/images/conf/staff/ (identities validated against the designer mockup).
+ * OWU CONF 2026 team, alphabetical by first name. Portraits live in
+ * public/images/conf/staff/ with the brand shape already composited in, so the
+ * tile renders the image alone.
  */
 const TEAM_2026: TeamMember[] = [
   {
@@ -94,29 +95,6 @@ const TEAM_2026: TeamMember[] = [
   },
 ];
 
-const SHAPE_VARIANTS = ["blue", "yellow", "cream"] as const;
-
-/* Sizes are % of the tile (not fixed px) so the shapes scale with the cell on narrow grids */
-function TileShape({ variant }: { variant: (typeof SHAPE_VARIANTS)[number] }) {
-  if (variant === "blue") {
-    return (
-      <svg aria-hidden="true" className="absolute -left-[2%] top-[22%] w-[86%]" fill="none" viewBox="0 0 190 96">
-        <polygon fill="#0162C8" points="0,0 190,0 95,96" />
-      </svg>
-    );
-  }
-
-  if (variant === "yellow") {
-    return (
-      <svg aria-hidden="true" className="absolute -right-[2%] top-[13%] h-[80%]" fill="none" viewBox="0 0 100 200">
-        <polygon fill="#F5BB03" points="100,0 100,200 0,100" />
-      </svg>
-    );
-  }
-
-  return <div aria-hidden="true" className="absolute -left-[2%] -top-[2%] h-[84%] w-[40%] bg-[#FBF5E7]" />;
-}
-
 export default function Team() {
   return (
     <section className="mx-auto mt-16 w-full max-w-[1440px] scroll-mt-24 px-8 sm:mt-[96px]" id="equipo">
@@ -131,15 +109,13 @@ export default function Team() {
       <ul className="mt-12 grid grid-cols-2 gap-x-6 gap-y-14 sm:grid-cols-3 lg:grid-cols-4">
         {TEAM_2026.map(({ firstname, lastname, picture, jobTitle, linkedin }, i) => {
           const fullName = `${firstname} ${lastname}`;
-          const variant = SHAPE_VARIANTS[i % SHAPE_VARIANTS.length];
 
           const tile = (
             <>
-              <div className="relative mx-auto aspect-[22/25] w-full max-w-[220px]">
-                <TileShape variant={variant} />
+              <div className="relative mx-auto aspect-square w-full max-w-[240px]">
                 <img
                   alt={`Fotografía de ${fullName}`}
-                  className="absolute inset-x-0 bottom-0 mx-auto h-[92%] w-[91%] object-contain object-bottom transition-transform duration-300 group-hover:scale-[1.03]"
+                  className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
                   loading="lazy"
                   src={picture}
                 />
