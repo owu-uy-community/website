@@ -21,7 +21,7 @@ export const TOPICS = [
   {
     id: "ia",
     label: "IA & LLMs",
-    keywords: ["ia", "ai", "llm", "gpt", "machine learning", "rag", "agente", "prompt", "modelo", "red neuronal"],
+    keywords: ["ia", "ai", "llm", "gpt", "machine learning", "rag", "agente", "prompt", "modelo", "red neuronal", "neural", "deep learning", "embedding"],
   },
   {
     id: "datos",

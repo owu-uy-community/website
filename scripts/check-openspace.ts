@@ -151,6 +151,8 @@ assert.equal(wallClockIn(TZ, at("10:20")), "2026-11-07T10:20:00", "wall clock mu
   // Keyword fallback: what runs when the AI gateway is unavailable on event day.
   assert.deepEqual(topicsFromText("Next.js 15: Server Components"), ["frontend"]);
   assert.ok(topicsFromText("RAG: Retrieval Augmented Generation").includes("ia"));
+  // English ML wording too — half the board is written that way.
+  assert.ok(topicsFromText("Neural Networks: Conceptos Básicos").includes("ia"));
   assert.ok(topicsFromText("Introducción al Pentesting").includes("seguridad"));
   // Accent- and case-insensitive, so "Diseño" reaches the "diseno" keyword.
   assert.ok(topicsFromText("Charla sobre DISEÑO de producto").includes("producto"));

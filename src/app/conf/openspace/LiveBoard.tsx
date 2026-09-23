@@ -13,6 +13,7 @@ import ForYou from "./ForYou";
 import InterestSurvey from "./InterestSurvey";
 import LiveGrid from "./LiveGrid";
 import LiveMap from "./LiveMap";
+import PersonaliseCard from "./PersonaliseCard";
 import ProposalFeed from "./ProposalFeed";
 import { buildBoardRooms, trackAt } from "./board";
 import type { Selection } from "./selection";
@@ -60,7 +61,6 @@ export default function LiveBoard({
 
   const [selected, setSelected] = useState<Selection | null>(null);
   const [surveyOpen, setSurveyOpen] = useState(false);
-  const [surveyDismissed, setSurveyDismissed] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   /** The block the page is oriented around: what is on now, else what is next. */
@@ -108,7 +108,8 @@ export default function LiveBoard({
      the block's own end time, so the header is never blank mid-session. */
   const seconds = countdown.isRunning ? countdown.remainingSeconds : nowNext.secondsUntilChange;
 
-  const showSurvey = ready && !interests && !surveyDismissed && tracks.length > 0;
+  /** Nothing to personalise until there is a board to reorder. */
+  const canPersonalise = ready && tracks.length > 0;
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 pb-24 sm:px-8">
@@ -258,24 +259,8 @@ export default function LiveBoard({
           ) : null}
         </section>
 
-        {showSurvey ? (
-          <div className="lg:order-3 lg:col-span-2">
-            <InterestSurvey onDismiss={() => setSurveyDismissed(true)} onSave={save} />
-          </div>
-        ) : null}
-
-        {interests ? (
-          surveyOpen ? (
-            <div className="lg:order-3 lg:col-span-2">
-              <InterestSurvey
-                onDismiss={() => setSurveyOpen(false)}
-                onSave={(next) => {
-                  save(next);
-                  setSurveyOpen(false);
-                }}
-              />
-            </div>
-          ) : (
+        {canPersonalise ? (
+          interests ? (
             <ForYou
               className="lg:order-3"
               current={nowNext.current}
@@ -287,6 +272,8 @@ export default function LiveBoard({
               tags={tags}
               tracks={tracks}
             />
+          ) : (
+            <PersonaliseCard className="lg:order-3" onOpen={() => setSurveyOpen(true)} />
           )
         ) : null}
 
@@ -321,6 +308,16 @@ export default function LiveBoard({
           </button>
         ) : null}
       </section>
+
+      <InterestSurvey
+        initial={interests}
+        open={surveyOpen}
+        onClose={() => setSurveyOpen(false)}
+        onSave={(next) => {
+          save(next);
+          setSurveyOpen(false);
+        }}
+      />
     </div>
   );
 }
