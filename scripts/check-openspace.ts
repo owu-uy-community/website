@@ -78,7 +78,7 @@ const BLOCKS = [slot("b1", "10:15", "10:40"), slot("b2", "10:45", "11:10"), slot
 /** A Date that reads as the given Montevideo (UTC-3) wall clock. */
 const at = (time: string) => new Date(`2026-11-07T${time}:00-03:00`);
 
-assert.equal(wallClockIn(TZ, at("10:20")), "2026-11-07T10:20", "wall clock must be read in the event timezone");
+assert.equal(wallClockIn(TZ, at("10:20")), "2026-11-07T10:20:00", "wall clock must be read in the event timezone");
 
 {
   const before = resolveNowNext(BLOCKS, TZ, at("09:00"));
@@ -86,6 +86,13 @@ assert.equal(wallClockIn(TZ, at("10:20")), "2026-11-07T10:20", "wall clock must 
   assert.equal(before.current, null);
   assert.equal(before.next?.id, "b1");
   assert.equal(before.secondsUntilChange, 75 * 60);
+}
+
+{
+  // Seconds, not just whole minutes: the header counts down every second.
+  const midMinute = new Date("2026-11-07T10:20:37-03:00");
+  const ticking = resolveNowNext(BLOCKS, TZ, midMinute);
+  assert.equal(ticking.secondsUntilChange, 19 * 60 + 23, "must count the seconds left in the minute too");
 }
 
 {

@@ -51,25 +51,26 @@ export function wallClockIn(timezone: string, at: Date): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hourCycle: "h23",
   }).formatToParts(at);
 
   const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "00";
 
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}:${get("second")}`;
 }
 
-/** Minutes between two "YYYY-MM-DDTHH:MM" stamps, treating both as wall clock. */
-function minutesBetween(from: string, to: string): number {
-  const toMinutes = (stamp: string) => {
+/** Seconds between two "YYYY-MM-DDTHH:MM:SS" stamps, treating both as wall clock. */
+function secondsBetween(from: string, to: string): number {
+  const toSeconds = (stamp: string) => {
     const [day, time] = stamp.split("T");
     const [year, month, date] = day.split("-").map(Number);
-    const [hour, minute] = time.split(":").map(Number);
+    const [hour, minute, second = 0] = time.split(":").map(Number);
 
-    return Date.UTC(year, month - 1, date, hour, minute) / 60_000;
+    return Date.UTC(year, month - 1, date, hour, minute, second) / 1_000;
   };
 
-  return toMinutes(to) - toMinutes(from);
+  return toSeconds(to) - toSeconds(from);
 }
 
 export function resolveNowNext<T extends NowNextSlot>(
@@ -83,8 +84,8 @@ export function resolveNowNext<T extends NowNextSlot>(
     .filter((slot) => slot.isActive)
     .map((slot) => ({
       slot,
-      start: `${dayOf(slot.date)}T${normalizeTime(slot.startTime)}`,
-      end: `${dayOf(slot.date)}T${normalizeTime(slot.endTime)}`,
+      start: `${dayOf(slot.date)}T${normalizeTime(slot.startTime)}:00`,
+      end: `${dayOf(slot.date)}T${normalizeTime(slot.endTime)}:00`,
     }))
     .sort((a, b) => a.start.localeCompare(b.start));
 
@@ -101,6 +102,6 @@ export function resolveNowNext<T extends NowNextSlot>(
     phase,
     current: current?.slot ?? null,
     next: next?.slot ?? null,
-    secondsUntilChange: boundary ? Math.max(0, Math.round(minutesBetween(now, boundary) * 60)) : null,
+    secondsUntilChange: boundary ? Math.max(0, Math.round(secondsBetween(now, boundary))) : null,
   };
 }
