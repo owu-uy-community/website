@@ -275,10 +275,11 @@ export default function OpenSpace() {
               onPointerDown={takeOver}
             >
               {/* Spine behind the nodes. The steps share the height evenly, so the
-                  first and last node centres sit half a step in from each end. */}
+                  first and last node centres sit half a step in from each end.
+                  Horizontally: 44px time column + 16px gap + half of the 28px node. */}
               <span
                 aria-hidden="true"
-                className="absolute left-[59px] w-px bg-[#FBF5E7]/15"
+                className="absolute left-[74px] w-px bg-[#FBF5E7]/15"
                 style={{ top: `${50 / STEPS.length}%`, bottom: `${50 / STEPS.length}%` }}
               />
 
@@ -311,14 +312,19 @@ export default function OpenSpace() {
                       {entry.time}
                     </span>
 
-                    {/* Timeline node */}
+                    {/*
+                     * Timeline node, sized so the rotated square stands as tall as
+                     * the label and duration beside it (28px × √2 ≈ 40px against a 38px
+                     * text block). Same size on every step; only the colour marks the
+                     * active one. bg-black masks the spine running behind it.
+                     */}
                     <span
                       aria-hidden="true"
                       className={classNames(
-                        "relative z-10 block shrink-0 rotate-45 bg-black transition-all",
+                        "relative z-10 block h-7 w-7 shrink-0 rotate-45 bg-black outline outline-2 transition-colors",
                         isActive
-                          ? "h-3 w-3 shadow-[0_0_0_4px_black] outline outline-2 outline-[#F5BB03]"
-                          : "h-2 w-2 shadow-[0_0_0_4px_black] outline outline-2 outline-[#FBF5E7]/35 group-hover:outline-[#FBF5E7]/70"
+                          ? "outline-[#F5BB03]"
+                          : "outline-[#FBF5E7]/30 group-hover:outline-[#FBF5E7]/60"
                       )}
                     />
 
@@ -407,11 +413,10 @@ export default function OpenSpace() {
                     </div>
 
                     {/*
-                     * Three columns with hairline rules rather than three floating
-                     * bullets: the entries are different lengths, and equal cells
-                     * with a divider make an uneven rag read as deliberate. The
-                     * marker sits above the text on wide screens so nothing hangs
-                     * into a narrow measure; on a phone it is a plain stacked list.
+                     * Three columns separated by hairline rules. The entries are
+                     * different lengths, and equal cells with a divider make an
+                     * uneven rag read as deliberate without needing a marker on
+                     * each one. On a phone it is a plain stacked list.
                      */}
                     <m.ul
                       animate={{ opacity: isActive ? 1 : 0 }}
@@ -422,13 +427,9 @@ export default function OpenSpace() {
                       {entry.beats.map((beat) => (
                         <li
                           key={beat}
-                          className="flex items-start gap-2.5 sm:block sm:px-5 sm:first:pl-0 sm:last:pr-0"
+                          className="text-balance text-sm leading-snug text-[#FBF5E7]/80 sm:px-5 sm:first:pl-0 sm:last:pr-0"
                         >
-                          <span
-                            aria-hidden="true"
-                            className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03] sm:mb-3 sm:mt-0 sm:block"
-                          />
-                          <span className="block text-balance text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
+                          {beat}
                         </li>
                       ))}
                     </m.ul>
