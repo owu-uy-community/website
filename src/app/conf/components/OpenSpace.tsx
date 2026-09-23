@@ -376,8 +376,9 @@ export default function OpenSpace() {
                     La ley de los dos pies
                   </p>
                   <p className="mt-2.5 text-sm leading-relaxed text-[#FBF5E7]/75">
-                    Si donde estás no estás aportando ni aprendiendo, usá los dos pies y andá a otra sala. Se entra y se
-                    sale en el medio de una sesión sin pedir permiso: no es mala educación, es el sistema funcionando.
+                    Si donde estás no estás aportando ni aprendiendo, usá los dos pies y andá a otro espacio. Se entra
+                    y se sale en el medio de una sesión sin pedir permiso: no es mala educación, es el sistema
+                    funcionando.
                   </p>
                 </div>
               </div>
