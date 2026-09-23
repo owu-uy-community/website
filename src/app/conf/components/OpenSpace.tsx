@@ -13,17 +13,23 @@ import OpenSpaceScene, { type OpenSpaceSceneName } from "./OpenSpaceScenes";
 import Reveal, { EASE_OUT } from "./Reveal";
 import SectionHeader from "./SectionHeader";
 
+/* Key phrase highlight, same device the About section uses for skim-reading. */
+function Hl({ children }: { children: React.ReactNode }) {
+  return <strong className="font-semibold text-[#FBF5E7]">{children}</strong>;
+}
+
 type Step = {
   scene: OpenSpaceSceneName;
   label: string;
-  /** Tentative times — enough to convey the shape of the morning. */
+  /** Tentative times, enough to convey the shape of the morning. */
   time: string;
   duration: string;
   headline: string;
-  body: string;
+  /** One entry per paragraph: these are read standing up, in short bursts. */
+  body: React.ReactNode[];
   /** The concrete mechanics, so nobody has to infer them from prose. */
   beats: string[];
-  tip: string;
+  tip: React.ReactNode;
 };
 
 /*
@@ -38,7 +44,19 @@ const STEPS: Step[] = [
     time: "10:15",
     duration: "15 min",
     headline: "Todos en ronda, y una grilla vacía",
-    body: "No hay escenario ni filas de sillas: la sala se arma en círculo. El facilitador cuenta la mecánica, presenta las salas y señala una grilla enorme que está completamente vacía. Ese vacío es a propósito — es el único momento del día en el que todavía no pasó nada, y el único en el que estamos todos juntos.",
+    body: [
+      <>
+        No hay escenario ni filas de sillas: <Hl>la sala se arma en círculo</Hl>.
+      </>,
+      <>
+        El facilitador cuenta la mecánica, presenta las salas y señala una grilla enorme que está{" "}
+        <Hl>completamente vacía</Hl>.
+      </>,
+      <>
+        Ese vacío es a propósito. Es el único momento del día en el que todavía no pasó nada, y el único en el que
+        estamos todos juntos.
+      </>,
+    ],
     beats: [
       "La sala se sienta en círculo, sin escenario",
       "Se presentan las salas y los bloques del día",
@@ -52,13 +70,29 @@ const STEPS: Step[] = [
     time: "10:30",
     duration: "20 min",
     headline: "Se hace fila para proponer",
-    body: "Uno por uno agarran el micrófono: nombre, tema, treinta segundos. Después caminan hasta la grilla y cuelgan su card en la sala y el horario que quieran. En veinte minutos esa pared vacía queda cubierta de papeles. Nadie curó nada ni revisó propuestas: lo que quedó colgado es, literalmente, lo que la sala quiso hablar.",
+    body: [
+      <>
+        Se hace una fila. Uno por uno agarran el micrófono: <Hl>nombre, tema, treinta segundos</Hl>.
+      </>,
+      <>
+        Después caminan hasta la grilla y cuelgan su card en la sala y el horario que quieran. En veinte minutos esa
+        pared vacía <Hl>queda cubierta de papeles</Hl>.
+      </>,
+      <>
+        Nadie curó nada ni revisó propuestas: lo que quedó colgado es, literalmente, lo que la sala quiso hablar.
+      </>,
+    ],
     beats: [
       "Escribís título y tu nombre en una card",
       "Treinta segundos de micrófono para contarlo",
       "Elegís vos la sala y el bloque",
     ],
-    tip: "No hace falta ser experto. “Quiero aprender sobre X, ¿alguien me cuenta?” es una propuesta perfectamente válida — de hecho son de las que mejor funcionan.",
+    tip: (
+      <span>
+        No hace falta ser experto. “Quiero aprender sobre X, ¿alguien me cuenta?” es una propuesta perfectamente
+        válida. De hecho son de las que mejor funcionan.
+      </span>
+    ),
   },
   {
     scene: "sesiones",
@@ -66,7 +100,16 @@ const STEPS: Step[] = [
     time: "11:00",
     duration: "4 bloques",
     headline: "Cinco salas, todas a la vez",
-    body: "Bloques de 25 minutos con 5 para cambiarse. Mirás la grilla, elegís, entrás. Y ojo: no son charlas. Quien propuso abre el tema en dos minutos y después habla el que quiera — son conversaciones. Algunas salas quedan con seis personas y otras con treinta, y las dos cosas están bien.",
+    body: [
+      <>
+        Bloques de <Hl>25 minutos</Hl> con 5 para cambiarse. Mirás la grilla, elegís, entrás.
+      </>,
+      <>
+        Y ojo: <Hl>no son charlas</Hl>. Quien propuso abre el tema en dos minutos y después habla el que quiera. Son
+        conversaciones.
+      </>,
+      <>Algunas salas quedan con seis personas y otras con treinta, y las dos cosas están bien.</>,
+    ],
     beats: [
       "25 minutos de conversación + 5 para cambiar de sala",
       "Quien propuso modera, no expone",
@@ -80,7 +123,16 @@ const STEPS: Step[] = [
     time: "13:00",
     duration: "15 min",
     headline: "Vuelta a la ronda",
-    body: "Todos al círculo otra vez. Se pasa el micrófono y cada uno dice en una frase qué se lleva de la sala en la que estuvo. Es la parte donde te enterás de las tres conversaciones que te perdiste, y donde aparecen los “esto sigamos en el Slack” que después duran meses.",
+    body: [
+      <>
+        Todos al círculo otra vez. Se pasa el micrófono y <Hl>cada uno dice en una frase</Hl> qué se lleva de la sala
+        en la que estuvo.
+      </>,
+      <>
+        Es la parte donde te enterás de las tres conversaciones que te perdiste, y donde aparecen los “esto sigamos en
+        el Slack” que después duran meses.
+      </>,
+    ],
     beats: [
       "Una frase por persona: qué te llevás",
       "Te enterás de lo que pasó en las otras salas",
@@ -189,7 +241,7 @@ export default function OpenSpace() {
             Media jornada de OWU CONF no tiene agenda hasta que llegás. Se llama{" "}
             <strong className="font-semibold text-[#FBF5E7]">open space</strong> y funciona así: las charlas las
             proponen las personas que están en la sala, el mismo día, y la grilla se arma en vivo. Suena a caos y es lo
-            contrario — tiene una mecánica muy simple. Estas son las cuatro etapas:
+            contrario: tiene una mecánica muy simple. Estas son las cuatro etapas:
           </p>
         </Reveal>
 
@@ -302,7 +354,14 @@ export default function OpenSpace() {
                   <p className="font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] sm:text-[28px]">
                     {active.headline}
                   </p>
-                  <p className="mt-3.5 text-pretty text-base leading-relaxed text-[#FBF5E7]/90">{active.body}</p>
+                  {active.body.map((paragraph, index) => (
+                    <p
+                      key={index}
+                      className="mt-3.5 text-pretty text-base leading-relaxed text-[#FBF5E7]/90"
+                    >
+                      {paragraph}
+                    </p>
+                  ))}
                 </m.div>
               </div>
 
@@ -315,7 +374,7 @@ export default function OpenSpace() {
                 {active.beats.map((beat) => (
                   <li key={beat} className="flex items-start gap-2.5">
                     <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03]" />
-                    <span className="text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
+                    <span className="text-balance text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
                   </li>
                 ))}
               </m.ul>
