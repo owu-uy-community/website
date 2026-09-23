@@ -276,10 +276,10 @@ export default function OpenSpace() {
             >
               {/* Spine behind the nodes. The steps share the height evenly, so the
                   first and last node centres sit half a step in from each end.
-                  Horizontally: 44px time column + 16px gap + half of the 28px node. */}
+                  Horizontally: 44px time column + 16px gap + half of the 22px node. */}
               <span
                 aria-hidden="true"
-                className="absolute left-[74px] w-px bg-[#FBF5E7]/15"
+                className="absolute left-[71px] w-px bg-[#FBF5E7]/15"
                 style={{ top: `${50 / STEPS.length}%`, bottom: `${50 / STEPS.length}%` }}
               />
 
@@ -305,7 +305,7 @@ export default function OpenSpace() {
                   >
                     <span
                       className={classNames(
-                        "w-[44px] shrink-0 text-right font-display text-xs font-bold tabular-nums transition-colors",
+                        "w-[44px] shrink-0 text-right font-display text-sm font-bold tabular-nums transition-colors",
                         isActive ? "text-[#F5BB03]" : "text-[#FBF5E7]/60"
                       )}
                     >
@@ -313,15 +313,17 @@ export default function OpenSpace() {
                     </span>
 
                     {/*
-                     * Timeline node, sized so the rotated square stands as tall as
-                     * the label and duration beside it (28px × √2 ≈ 40px against a 38px
-                     * text block). Same size on every step; only the colour marks the
-                     * active one. bg-black masks the spine running behind it.
+                     * Timeline node, sized against the *ink* of the label and
+                     * duration beside it, not their line boxes: the two spans
+                     * measure 38px of layout but only 30.4px of actual glyph, and
+                     * matching the box made the square overshoot the visible text.
+                     * 22px × √2 ≈ 31px. Same size on every step; only the colour
+                     * marks the active one. bg-black masks the spine behind it.
                      */}
                     <span
                       aria-hidden="true"
                       className={classNames(
-                        "relative z-10 block h-7 w-7 shrink-0 rotate-45 bg-black outline outline-2 transition-colors",
+                        "relative z-10 block h-[22px] w-[22px] shrink-0 rotate-45 bg-black outline outline-2 transition-colors",
                         isActive
                           ? "outline-[#F5BB03]"
                           : "outline-[#FBF5E7]/30 group-hover:outline-[#FBF5E7]/60"
