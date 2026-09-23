@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 /**
  * Dev-only sample data seed. NON-destructive: refuses to run in production or
- * when real data exists (communities present) unless --force, and even then it
- * only recreates its own "demo" community (cascade removes its events/rooms/
+ * when communities it does not own exist, unless --force — and even then it
+ * only recreates the communities in SEEDED (cascade removes their events/rooms/
  * schedules/tracks — nothing else is touched).
  */
 import "dotenv/config";
@@ -23,10 +23,40 @@ if (process.env.NODE_ENV === "production") {
 }
 
 const FORCE = process.argv.includes("--force");
-const DEMO_SLUG = "demo";
+
+/**
+ * Communities this script owns and may recreate. `owu`/`owu-conf-2026` mirrors
+ * what CONF_EVENT points at, so conf.owu.uy/openspace resolves in local dev
+ * without hand-building a board first.
+ */
+const SEEDED = [
+  {
+    slug: "demo",
+    name: "Comunidad Demo",
+    description: "Datos de ejemplo para desarrollo",
+    eventSlug: "open-space-demo",
+    eventName: "Open Space Demo",
+    eventDescription: "Un open space de ejemplo para desarrollo",
+  },
+  {
+    slug: "owu",
+    name: "OWU — Open Web Uruguay",
+    description: "La comunidad de tecnologías abiertas de Uruguay",
+    eventSlug: "owu-conf-2026",
+    eventName: "OWU CONF 2026",
+    eventDescription: "La conferencia de la comunidad tecnológica de Uruguay",
+  },
+] as const;
+
+const SEEDED_SLUGS = SEEDED.map((entry) => entry.slug) as readonly string[];
 
 const pool = new Pool({ connectionString });
 const db = drizzle({ client: pool });
+
+/** Local calendar day as "YYYY-MM-DD" (not toISOString, which is UTC). */
+function toLocalDay(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 function dateAt(time: string): Date {
   const [hours, minutes] = time.split(":").map(Number);
@@ -36,31 +66,43 @@ function dateAt(time: string): Date {
 }
 
 async function main() {
-  console.log("🌱 Seeding database (demo community)...");
+  console.log(`🌱 Seeding database (${SEEDED_SLUGS.join(" + ")})...`);
 
   const existingCommunities = await db.select({ id: communities.id, slug: communities.slug }).from(communities);
-  const demo = existingCommunities.find((community) => community.slug === DEMO_SLUG);
-  const others = existingCommunities.filter((community) => community.slug !== DEMO_SLUG);
+  const mine = existingCommunities.filter((community) => SEEDED_SLUGS.includes(community.slug));
+  const others = existingCommunities.filter((community) => !SEEDED_SLUGS.includes(community.slug));
 
   if (others.length > 0 && !FORCE) {
     throw new Error(
-      `Refusing to seed: ${others.length} non-demo communities exist. Re-run with --force to (re)create only the demo community.`
+      `Refusing to seed: ${others.length} community(ies) this script does not own exist. Re-run with --force to (re)create only ${SEEDED_SLUGS.join(" + ")}.`
     );
   }
-  if (demo) {
+  if (mine.length > 0) {
     if (!FORCE) {
-      throw new Error('The "demo" community already exists. Re-run with --force to recreate it.');
+      throw new Error(`Already seeded (${mine.map((c) => c.slug).join(", ")}). Re-run with --force to recreate.`);
     }
-    await db.delete(communities).where(eq(communities.id, demo.id)); // cascades to its events/rooms/schedules/tracks
-    console.log('  ♻️  Removed previous "demo" community');
+    for (const stale of mine) {
+      // events.communityId is ON DELETE RESTRICT, so the events go first; each
+      // one cascades to its own rooms/schedules/tracks. Members cascade with
+      // the community itself.
+      await db.delete(events).where(eq(events.communityId, stale.id));
+      await db.delete(communities).where(eq(communities.id, stale.id));
+      console.log(`  ♻️  Removed previous "${stale.slug}" community`);
+    }
   }
 
+  for (const entry of SEEDED) await seedCommunity(entry);
+
+  console.log("✅ Database seeded successfully!");
+}
+
+async function seedCommunity(entry: (typeof SEEDED)[number]) {
   const [community] = await db
     .insert(communities)
-    .values({ slug: DEMO_SLUG, name: "Comunidad Demo", description: "Datos de ejemplo para desarrollo" })
+    .values({ slug: entry.slug, name: entry.name, description: entry.description })
     .returning();
 
-  // Site admins become owners of the demo community (handy in dev)
+  // Site admins become owners of the seeded communities (handy in dev)
   const admins = await db.select({ id: user.id }).from(user).where(eq(user.role, "admin"));
   for (const admin of admins) {
     await db
@@ -73,9 +115,9 @@ async function main() {
   const [event] = await db
     .insert(events)
     .values({
-      name: "Open Space Demo",
-      description: "Un open space de ejemplo para desarrollo",
-      slug: "open-space-demo",
+      name: entry.eventName,
+      description: entry.eventDescription,
+      slug: entry.eventSlug,
       communityId: community.id,
       startDate: dateAt("09:00"),
       endDate: dateAt("18:00"),
@@ -83,16 +125,30 @@ async function main() {
     })
     .returning();
 
-  // Schedules span the current time so the dashboard shows a live/next block in dev
+  /*
+   * Blocks are laid out around "now" so a dev board always has a live block and
+   * a next one, whatever time the seed runs. Clamped to the day so the last
+   * block can never wrap past midnight into a slot that sorts before the first.
+   */
+  const nowMinutes = today.getHours() * 60 + today.getMinutes();
+  const firstBlock = Math.min(Math.max(Math.floor(nowMinutes / 30) * 30 - 60, 0), 24 * 60 - 150);
+  const hhmm = (minutes: number) =>
+    `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+  // Date is a day marker at UTC midnight — the same shape the admin UI writes.
+  const dayMarker = new Date(`${toLocalDay(today)}T00:00:00.000Z`);
+
   const scheduleRows = await db
     .insert(schedules)
-    .values([
-      { name: "Bloque 1", startTime: "11:00", endTime: "11:30", date: today, openSpaceId: event.id },
-      { name: "Bloque 2", startTime: "11:30", endTime: "12:00", date: today, openSpaceId: event.id },
-      { name: "Bloque 3", startTime: "12:00", endTime: "12:30", date: today, openSpaceId: event.id },
-      { name: "Bloque 4", startTime: "12:30", endTime: "13:00", date: today, openSpaceId: event.id },
-      { name: "Bloque 5", startTime: "13:00", endTime: "13:30", date: today, openSpaceId: event.id },
-    ])
+    .values(
+      Array.from({ length: 5 }, (_, index) => ({
+        name: `Bloque ${index + 1}`,
+        startTime: hhmm(firstBlock + index * 30),
+        endTime: hhmm(firstBlock + index * 30 + 30),
+        date: dayMarker,
+        openSpaceId: event.id,
+      }))
+    )
     .returning();
 
   const roomRows = await db
@@ -104,6 +160,7 @@ async function main() {
         capacity: 50,
         hasTV: true,
         hasWhiteboard: false,
+        sortOrder: 0,
         openSpaceId: event.id,
       },
       {
@@ -112,6 +169,7 @@ async function main() {
         capacity: 30,
         hasTV: false,
         hasWhiteboard: true,
+        sortOrder: 1,
         openSpaceId: event.id,
       },
       {
@@ -120,6 +178,7 @@ async function main() {
         capacity: 20,
         hasTV: true,
         hasWhiteboard: false,
+        sortOrder: 3,
         openSpaceId: event.id,
       },
       {
@@ -128,6 +187,7 @@ async function main() {
         capacity: 25,
         hasTV: false,
         hasWhiteboard: true,
+        sortOrder: 2,
         openSpaceId: event.id,
       },
       {
@@ -136,6 +196,7 @@ async function main() {
         capacity: 15,
         hasTV: true,
         hasWhiteboard: false,
+        sortOrder: 4,
         openSpaceId: event.id,
       },
     ])
@@ -183,9 +244,9 @@ async function main() {
     }))
   );
 
-  console.log("✅ Database seeded successfully!");
-  console.log(`Created community: ${community.slug} → event: ${event.slug}`);
-  console.log(`Created ${scheduleRows.length} schedules, ${roomRows.length} rooms, ${sampleTracks.length} tracks`);
+  console.log(
+    `  ✓ ${community.slug} → ${event.slug} (${scheduleRows.length} bloques, ${roomRows.length} salas, ${sampleTracks.length} charlas)`
+  );
 }
 
 main()

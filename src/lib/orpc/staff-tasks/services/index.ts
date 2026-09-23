@@ -21,8 +21,10 @@ import type {
   CreateStaffTaskSchema,
   DeleteStaffTaskSchema,
   JoinStaffTaskSchema,
+  ListPublicAnnouncementsSchema,
   ListStaffAnnouncementsSchema,
   ListStaffTasksSchema,
+  PublicAnnouncement,
   SetStaffTaskStatusSchema,
   ShiftStaffTasksSchema,
   StaffAnnouncement,
@@ -39,6 +41,7 @@ type JoinInput = z.infer<typeof JoinStaffTaskSchema>;
 type AssignInput = z.infer<typeof AssignStaffTaskSchema>;
 type ShiftInput = z.infer<typeof ShiftStaffTasksSchema>;
 type ListAnnouncementsInput = z.infer<typeof ListStaffAnnouncementsSchema>;
+type ListPublicAnnouncementsInput = z.infer<typeof ListPublicAnnouncementsSchema>;
 type CreateAnnouncementInput = z.infer<typeof CreateStaffAnnouncementSchema>;
 type AckInput = z.infer<typeof AckStaffAnnouncementSchema>;
 
@@ -318,15 +321,18 @@ export const listStaffAnnouncements = async (
         ackedAt: ack.createdAt.toISOString(),
       }));
 
-    // Task announcements only concern that task's assignees.
+    // Task announcements only concern that task's assignees; attendee-facing
+    // ones are a broadcast, so nobody on the roster is expected to ack them.
     const recipients =
-      row.audience === "task" && row.task
-        ? row.task.assignments.map((assignment) => ({
-            userId: assignment.user.id,
-            name: assignment.user.name,
-            image: assignment.user.image,
-          }))
-        : members;
+      row.audience === "attendees"
+        ? []
+        : row.audience === "task" && row.task
+          ? row.task.assignments.map((assignment) => ({
+              userId: assignment.user.id,
+              name: assignment.user.name,
+              image: assignment.user.image,
+            }))
+          : members;
 
     const ackedIds = new Set(acks.map((ack) => ack.userId));
     const pending = recipients.filter(
@@ -350,6 +356,31 @@ export const listStaffAnnouncements = async (
       pending,
     };
   });
+};
+
+/**
+ * Announcements staff explicitly addressed to attendees, for the public live
+ * page. Filtered to `audience = "attendees"` in the query — internal staff
+ * coordination ("all") and per-task notes never reach this list — and the
+ * select names only the four public columns, so a future column cannot leak by
+ * being added to the table.
+ */
+export const listPublicAnnouncements = async ({ eventId }: ListPublicAnnouncementsInput): Promise<
+  PublicAnnouncement[]
+> => {
+  const rows = await db
+    .select({
+      id: staffAnnouncements.id,
+      body: staffAnnouncements.body,
+      urgent: staffAnnouncements.urgent,
+      createdAt: staffAnnouncements.createdAt,
+    })
+    .from(staffAnnouncements)
+    .where(and(eq(staffAnnouncements.openSpaceId, eventId), eq(staffAnnouncements.audience, "attendees")))
+    .orderBy(desc(staffAnnouncements.createdAt))
+    .limit(20);
+
+  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
 };
 
 export const createStaffAnnouncement = async (
