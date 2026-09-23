@@ -2,7 +2,7 @@
 
 import classNames from "classnames";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { INTERNAL_ROUTES } from "app/lib/constants";
 
@@ -74,7 +74,7 @@ function StepNumber({ index, active }: { index: number; active: boolean }) {
       aria-hidden="true"
       className={classNames(
         "font-display text-sm font-bold leading-none tabular-nums transition-colors",
-        active ? "text-[#F5BB03]" : "text-[#FBF5E7]/40"
+        active ? "text-[#F5BB03]" : "text-[#FBF5E7]/65"
       )}
     >
       0{index + 1}
@@ -85,8 +85,20 @@ function StepNumber({ index, active }: { index: number; active: boolean }) {
 export default function OpenSpace() {
   const [step, setStep] = useState(0);
   const [photo, setPhoto] = useState<number | null>(null);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const active = STEPS[step];
+
+  /** Arrow keys walk the steps and carry focus with them, per the tabs pattern. */
+  const moveTab = useCallback((event: React.KeyboardEvent, index: number) => {
+    const delta = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+    const target = delta ? (index + delta + STEPS.length) % STEPS.length : event.key === "Home" ? 0 : event.key === "End" ? STEPS.length - 1 : null;
+    if (target === null) return;
+
+    event.preventDefault();
+    setStep(target);
+    tabs.current[target]?.focus();
+  }, []);
 
   const openLightbox = useCallback((index: number, thumb: HTMLImageElement | null) => {
     openWithMorph(thumb, () => setPhoto(index));
@@ -125,109 +137,123 @@ export default function OpenSpace() {
         {/* Steps: pick one on the left, read it on the right. */}
         <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-14">
           <Reveal y={24}>
-            <ol className="flex flex-col">
+            {/* Tablist rather than a plain button stack: it announces "3 de 4" and
+                takes arrow keys, which is how anyone on a keyboard expects to move. */}
+            <div aria-label="Etapas del open space" aria-orientation="vertical" className="flex flex-col" role="tablist">
               {STEPS.map((entry, index) => {
                 const isActive = index === step;
 
                 return (
-                  <li key={entry.scene}>
-                    <button
-                      aria-current={isActive || undefined}
+                  <button
+                    key={entry.scene}
+                    ref={(node) => {
+                      tabs.current[index] = node;
+                    }}
+                    aria-controls={`open-space-panel-${index}`}
+                    aria-selected={isActive}
+                    className={classNames(
+                      "group flex w-full items-center gap-4 border-l-2 py-4 pl-5 pr-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03]",
+                      isActive ? "border-[#F5BB03] bg-[#FBF5E7]/[0.06]" : "border-[#FBF5E7]/15 hover:bg-[#FBF5E7]/[0.03]"
+                    )}
+                    id={`open-space-tab-${index}`}
+                    role="tab"
+                    // Roving tabindex: Tab reaches the list once, arrows move within it.
+                    tabIndex={isActive ? 0 : -1}
+                    type="button"
+                    onClick={() => setStep(index)}
+                    onKeyDown={(event) => moveTab(event, index)}
+                  >
+                    <StepNumber active={isActive} index={index} />
+                    <OpenSpaceScene
                       className={classNames(
-                        "group flex w-full items-center gap-4 border-l-2 py-4 pl-5 pr-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03]",
-                        isActive ? "border-[#F5BB03] bg-[#FBF5E7]/[0.04]" : "border-[#FBF5E7]/15 hover:bg-[#FBF5E7]/[0.02]"
+                        "h-11 w-14 shrink-0 transition-opacity",
+                        isActive ? "opacity-100" : "opacity-70 group-hover:opacity-90"
                       )}
-                      type="button"
-                      onClick={() => setStep(index)}
+                      name={entry.scene}
+                    />
+                    <span
+                      className={classNames(
+                        "font-display text-lg font-extrabold uppercase leading-none tracking-[-0.01em] transition-colors",
+                        isActive ? "text-[#FBF5E7]" : "text-[#FBF5E7]/75 group-hover:text-[#FBF5E7]"
+                      )}
                     >
-                      <StepNumber active={isActive} index={index} />
-                      <OpenSpaceScene
-                        className={classNames(
-                          "h-11 w-14 shrink-0 transition-opacity",
-                          isActive ? "opacity-100" : "opacity-45 group-hover:opacity-75"
-                        )}
-                        name={entry.scene}
-                      />
-                      <span
-                        className={classNames(
-                          "font-display text-lg font-extrabold uppercase leading-none tracking-[-0.01em] transition-colors",
-                          isActive ? "text-[#FBF5E7]" : "text-[#FBF5E7]/55 group-hover:text-[#FBF5E7]/80"
-                        )}
-                      >
-                        {entry.label}
-                      </span>
-                    </button>
-                  </li>
+                      {entry.label}
+                    </span>
+                  </button>
                 );
               })}
-            </ol>
+            </div>
           </Reveal>
 
           <Reveal delay={0.1} y={24}>
             {/* key restarts the fade whenever the selected step changes */}
             <div
               key={active.scene}
-              className="flex h-full animate-[fade-up_0.35s_cubic-bezier(0.2,0.7,0.2,1)_forwards] flex-col justify-center gap-6 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.03] p-8 sm:flex-row sm:items-center sm:gap-10 sm:p-10"
+              aria-labelledby={`open-space-tab-${step}`}
+              className="flex h-full animate-[fade-up_0.35s_cubic-bezier(0.2,0.7,0.2,1)_forwards] flex-col justify-center gap-6 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.03] p-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03] sm:flex-row sm:items-center sm:gap-10 sm:p-10"
+              id={`open-space-panel-${step}`}
+              role="tabpanel"
+              tabIndex={0}
             >
               <OpenSpaceScene className="h-36 w-44 shrink-0 self-center sm:h-44 sm:w-56" name={active.scene} />
               <div>
                 <p className="font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] sm:text-3xl">
                   {active.headline}
                 </p>
-                <p className="mt-4 text-pretty text-base leading-relaxed text-[#FBF5E7]/85 sm:text-lg">{active.body}</p>
+                <p className="mt-4 text-pretty text-base leading-relaxed text-[#FBF5E7]/90 sm:text-lg">{active.body}</p>
               </div>
             </div>
           </Reveal>
         </div>
 
-        {/* The two-feet law gets its own block: it is the rule newcomers never expect. */}
-        <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-14">
+        {/* One eyebrow over the whole row — the two-feet law is a golden rule too,
+            it just gets the emphasis. Both columns stretch so the cards match height. */}
+        <div className="mt-12">
           <Reveal y={24}>
             <p className="font-display text-sm font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/70">
-              LAS REGLAS DE ORO
+              Las reglas de oro
             </p>
-            <ul className="mt-6 grid gap-px bg-[#FBF5E7]/12 sm:grid-cols-3">
-              {RULES.map(({ title, body }) => (
-                <li key={title} className="bg-black p-5">
-                  <p className="font-display text-base font-extrabold uppercase leading-tight tracking-[-0.01em] text-[#FBF5E7]">
-                    {title}
-                  </p>
-                  <p className="mt-2.5 text-sm leading-relaxed text-[#FBF5E7]/70">{body}</p>
-                </li>
-              ))}
-            </ul>
           </Reveal>
 
-          <Reveal delay={0.1} y={24}>
-            <div className="flex h-full items-center gap-6 bg-[#F5BB03] p-6 sm:p-8">
-              <OpenSpaceScene className="h-24 w-28 shrink-0" name="dosPies" />
-              <div>
-                <p className="font-display text-xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-black sm:text-2xl">
-                  La ley de los dos pies
-                </p>
-                <p className="mt-2.5 text-sm leading-relaxed text-black/75 sm:text-base">
-                  Si donde estás no estás aportando ni aprendiendo, usá los dos pies y andá a otra sala. No es mala
-                  educación: es el sistema funcionando.
-                </p>
+          <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_minmax(0,420px)] lg:gap-14">
+            <Reveal className="h-full" y={24}>
+              <ul className="grid h-full gap-px bg-[#FBF5E7]/12 sm:grid-cols-3">
+                {RULES.map(({ title, body }) => (
+                  <li key={title} className="flex flex-col bg-black p-5">
+                    <p className="font-display text-base font-extrabold uppercase leading-tight tracking-[-0.01em] text-[#FBF5E7]">
+                      {title}
+                    </p>
+                    <p className="mt-2.5 text-sm leading-relaxed text-[#FBF5E7]/75">{body}</p>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+
+            {/*
+             * Emphasised with a yellow edge and heading rather than a yellow fill:
+             * on a solid #F5BB03 the cream illustration sits at ~1.6:1 and the body
+             * copy had to be black, which read as a different design system.
+             */}
+            <Reveal className="h-full" delay={0.1} y={24}>
+              {/* Side by side from sm up; stacked on a phone, where a 140px text
+                  column next to the illustration left the copy badly ragged. */}
+              <div className="flex h-full flex-col items-start gap-4 border border-[#FBF5E7]/12 border-l-4 border-l-[#F5BB03] bg-[#F5BB03]/[0.07] p-5 sm:flex-row sm:gap-6">
+                <OpenSpaceScene className="mt-0.5 h-20 w-24 shrink-0 sm:h-24 sm:w-28" name="dosPies" />
+                <div>
+                  {/* Same type as the three rules beside it — the yellow carries the emphasis. */}
+                  <p className="font-display text-base font-extrabold uppercase leading-tight tracking-[-0.01em] text-[#F5BB03]">
+                    La ley de los dos pies
+                  </p>
+                  <p className="mt-2.5 text-sm leading-relaxed text-[#FBF5E7]/75">
+                    Si donde estás no estás aportando ni aprendiendo, usá los dos pies y andá a otra sala. No es mala
+                    educación: es el sistema funcionando.
+                  </p>
+                </div>
               </div>
-            </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </div>
 
-        <Reveal delay={0.15} y={20}>
-          <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
-            <Link
-              className="inline-flex items-center gap-2 bg-[#FBF5E7] px-6 py-3.5 font-display text-sm font-bold uppercase leading-none text-black transition-colors hover:bg-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-              href={INTERNAL_ROUTES.conf.openspace}
-            >
-              Ver la grilla en vivo
-              <span aria-hidden="true">→</span>
-            </Link>
-            <p className="max-w-[420px] text-sm leading-relaxed text-[#FBF5E7]/60">
-              El día del evento esta misma página muestra qué se está hablando en cada sala, en tiempo real.
-            </p>
-          </div>
-        </Reveal>
       </div>
 
       {/* Proof: this is what it actually looks like. */}
@@ -253,6 +279,21 @@ export default function OpenSpace() {
               />
             </button>
           ))}
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.1} y={20}>
+        <div className="mx-auto mt-10 flex w-full max-w-[1440px] flex-col items-center gap-4 px-8 text-center">
+          <p className="max-w-[460px] text-balance text-sm leading-relaxed text-[#FBF5E7]/75">
+            El día del evento esta misma página muestra qué se está hablando en cada sala, en tiempo real.
+          </p>
+          <Link
+            className="inline-flex items-center gap-2 bg-[#FBF5E7] px-7 py-3.5 font-display text-sm font-bold uppercase leading-none text-black transition-colors hover:bg-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+            href={INTERNAL_ROUTES.conf.openspace}
+          >
+            Ver la grilla en vivo
+            <span aria-hidden="true">→</span>
+          </Link>
         </div>
       </Reveal>
 

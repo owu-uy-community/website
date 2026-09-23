@@ -13,8 +13,6 @@ const YELLOW_FOLD = "#C79A03";
 const CREAM = "#FBF5E7";
 const CREAM_FOLD = "#DDD2B8";
 const BLUE = "#0162C8";
-/** For the scene that sits on the yellow card, where yellow reads as nothing. */
-const INK = "#171717";
 
 type Paper = "cream" | "yellow" | "blue";
 
@@ -190,11 +188,7 @@ const SCENES: Record<OpenSpaceSceneName, React.ReactNode> = {
     </>
   ),
 
-  /*
-   * La ley de los dos pies — if you are not learning or contributing, walk.
-   * This one sits on the yellow card, so it is cream paper with ink folds:
-   * yellow-on-yellow would vanish.
-   */
+  /* La ley de los dos pies — if you are not learning or contributing, walk. */
   dosPies: (
     <>
       {/* Planted foot — forefoot tapering into a smaller heel, so it reads as a print */}
@@ -221,8 +215,8 @@ const SCENES: Record<OpenSpaceSceneName, React.ReactNode> = {
       </g>
 
       {/* Off you go */}
-      <polygon fill={INK} points="100,40 112,50 100,60" />
-      <polygon fill={INK} opacity=".45" points="92,42 102,50 92,58" />
+      <polygon fill={YELLOW} points="100,40 112,50 100,60" />
+      <polygon fill={YELLOW} opacity=".45" points="92,42 102,50 92,58" />
     </>
   ),
 };
