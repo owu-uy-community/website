@@ -365,16 +365,29 @@ export default function OpenSpace() {
                 </m.div>
               </div>
 
+              {/*
+               * Three columns with hairline rules rather than three floating
+               * bullets: the entries are different lengths, and equal cells
+               * with a divider make an uneven rag read as deliberate. The
+               * marker sits above the text on wide screens so nothing hangs
+               * into a narrow measure; on a phone it is a plain stacked list.
+               */}
               <m.ul
                 animate={{ opacity: 1 }}
-                className="grid gap-2.5 border-t border-[#FBF5E7]/12 pt-5 sm:grid-cols-3 sm:gap-4"
+                className="grid gap-3 border-t border-[#FBF5E7]/12 pt-5 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#FBF5E7]/12"
                 initial={{ opacity: 0 }}
                 transition={{ duration: 0.4, delay: 0.35 }}
               >
                 {active.beats.map((beat) => (
-                  <li key={beat} className="flex items-start gap-2.5">
-                    <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03]" />
-                    <span className="text-balance text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
+                  <li
+                    key={beat}
+                    className="flex items-start gap-2.5 sm:block sm:px-5 sm:first:pl-0 sm:last:pr-0"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03] sm:mb-3 sm:mt-0 sm:block"
+                    />
+                    <span className="block text-balance text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
                   </li>
                 ))}
               </m.ul>
