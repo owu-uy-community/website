@@ -10,6 +10,7 @@ import Meetups from "./components/Meetups";
 import Moments from "./components/Moments";
 import MotionRoot from "./components/MotionRoot";
 import Navbar from "./components/Navbar";
+import Program from "./components/Program";
 import Reveal from "./components/Reveal";
 import Speakers from "./components/Speakers";
 import Sponsors from "./components/Sponsors";
@@ -47,8 +48,8 @@ const EVENT_JSON_LD = {
   name: "OWU CONF 2026",
   description: DESCRIPTION,
   url: "https://conf.owu.uy",
-  startDate: "2026-11-07",
-  endDate: "2026-11-07",
+  startDate: "2026-11-07T14:30:00-03:00",
+  endDate: "2026-11-07T20:40:00-03:00",
   eventStatus: "https://schema.org/EventScheduled",
   eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   image: [OG_IMAGE],
@@ -89,10 +90,7 @@ export default async function ConfPage() {
           <About />
           {/* Yellow divider band between sections */}
           <Reveal grow="x" amount={0.9} className="mt-16 h-10 w-full bg-[#F5BB03]" duration={0.9} />
-          {/*
-           * PROGRAMACIÓN section is hidden while the schedule is tentative. To bring it
-           * back, mount <Program /> here and uncomment the PROGRAMA link in the Navbar.
-           */}
+          <Program />
           <Speakers />
           <Moments />
           <Sponsors />

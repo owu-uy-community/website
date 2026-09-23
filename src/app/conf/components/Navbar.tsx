@@ -12,7 +12,7 @@ import { EASE_OUT } from "./Reveal";
 
 const NAV_LINKS = [
   { label: "SOBRE OWU CONF", href: "#sobre-owu" },
-  // { label: "PROGRAMA", href: "#programa" }, // restore together with the hidden PROGRAMACIÓN section
+  { label: "PROGRAMA", href: "#programa" },
   { label: "SPEAKERS", href: "#speakers" },
   { label: "SPONSORS", href: "#sponsors" },
   { label: "EQUIPO", href: "#equipo" },
