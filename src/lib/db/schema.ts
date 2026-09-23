@@ -283,6 +283,14 @@ export const tracks = pgTable(
     description: text("description"),
     needsTV: boolean("needsTV").notNull().default(false),
     needsWhiteboard: boolean("needsWhiteboard").notNull().default(false),
+    /**
+     * Interest tags, written once when the card is created or edited so the
+     * public "Para vos" ranking is a plain read with no model in the path.
+     * Null on rows created before tagging existed; readers fall back to
+     * keyword matching for those.
+     */
+    topics: text("topics").array(),
+    format: text("format"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()

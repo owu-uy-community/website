@@ -6,7 +6,7 @@ import { getRoomsByOpenSpace } from "lib/orpc/rooms/services/get-by-open-space";
 import { getSchedulesByOpenSpace } from "lib/orpc/schedules/services/get-by-open-space";
 import { getTracksForEvent } from "lib/orpc/sticky-notes/services/get-all-tracks";
 import { resolveNowNext } from "lib/openspace/now-next";
-import { tagTracks } from "lib/openspace/tag-tracks";
+import { isFormatId, isTopicId, topicsFromText, type TrackTags } from "lib/openspace/topics";
 import { getEventBySlugs } from "lib/tenant-server";
 
 import Footer from "../components/Footer";
@@ -78,10 +78,20 @@ export default async function ConfOpenSpacePage() {
       ])
     : [[], [], []];
 
-  /* Tagged here rather than on the client: one gateway call per revalidation
-     window for the whole board, cached by content, and it degrades to keyword
-     tagging on its own if the gateway is down. */
-  const tags = await tagTracks(tracks.map(({ id, title, description }) => ({ id, title, description })));
+  /*
+   * Tags are written when the card is created, so this is a plain read with no
+   * model in the path. Rows created before tagging existed fall back to keyword
+   * matching, which is a pure function — still no gateway on a page visit.
+   */
+  const tags: Record<string, TrackTags> = Object.fromEntries(
+    tracks.map((track) => [
+      track.id,
+      {
+        topics: (track.topics ?? topicsFromText(`${track.title} ${track.description ?? ""}`)).filter(isTopicId),
+        format: track.format && isFormatId(track.format) ? track.format : null,
+      },
+    ])
+  );
 
   return (
     <MotionRoot>
