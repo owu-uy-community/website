@@ -247,7 +247,7 @@ export default function OpenSpace() {
           eyebrow="EL CORAZÓN DE LA CONF"
           title={
             <>
-              LA AGENDA <span className="text-[#F5BB03]">LA HACÉS VOS</span>
+              LA AGENDA <span className="text-[#F5BB03]">LA ARMÁS VOS</span>
             </>
           }
         />
