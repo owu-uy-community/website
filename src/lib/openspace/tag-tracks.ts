@@ -3,7 +3,7 @@ import "server-only";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 
-import { AI_TIMEOUT_MS, gatewayFallbacks, SLOT_PICK_MODEL } from "../orpc/ocr/models";
+import { AI_TIMEOUT_MS, describeAiFailure, gatewayFallbacks, SLOT_PICK_MODEL } from "../orpc/ocr/models";
 import { FORMATS, isFormatId, isTopicId, TOPIC_IDS, topicsFromText, type TrackTags } from "./topics";
 
 /**
@@ -94,8 +94,13 @@ export async function tagTracks(tracks: readonly Taggable[]): Promise<TrackTopic
 
     return tagged;
   } catch (error) {
-    // Deliberately not rethrown: the page must render without the gateway.
-    console.error("[OpenSpace] Topic tagging fell back to keywords:", error);
+    /*
+     * Not rethrown, and warn rather than error: the keyword tagger below is a
+     * real answer, so nothing is broken — the ranking is just coarser. Without
+     * AI_GATEWAY_API_KEY this is the normal local path, and logging it as an
+     * error put a red overlay over a page that had rendered fine.
+     */
+    console.warn(`[OpenSpace] Topic tagging fell back to keywords. ${describeAiFailure(error)}`);
 
     return fallback;
   }
