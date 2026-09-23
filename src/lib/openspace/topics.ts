@@ -144,7 +144,7 @@ export function formatLabel(id: FormatId): string {
 export const GOALS = [
   { id: "aprender", label: "Aprender algo nuevo", formats: ["charla", "demo"] },
   { id: "debatir", label: "Debatir un problema real", formats: ["debate", "pregunta"] },
-  { id: "conocer", label: "Conocer gente del palo", formats: ["pregunta", "debate"] },
+  { id: "conocer", label: "Conocer gente del área", formats: ["pregunta", "debate"] },
   { id: "todo", label: "Lo que venga", formats: [] },
 ] as const;
 
