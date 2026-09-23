@@ -1,11 +1,14 @@
 "use client";
 
+import classNames from "classnames";
+
 import type { BoardRoom } from "./board";
 import type { FeedEntry } from "./use-live-board";
 
 type ProposalFeedProps = {
   entries: FeedEntry[];
   rooms: BoardRoom[];
+  className?: string;
 };
 
 /**
@@ -14,11 +17,14 @@ type ProposalFeedProps = {
  * on purpose: this answers "what just happened", not "what happened today"
  * (the grid already answers that).
  */
-export default function ProposalFeed({ entries, rooms }: ProposalFeedProps) {
+export default function ProposalFeed({ entries, rooms, className }: ProposalFeedProps) {
   if (entries.length === 0) return null;
 
   return (
-    <section aria-label="Propuestas recién agregadas" className="border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.02]">
+    <section
+      aria-label="Propuestas recién agregadas"
+      className={classNames("border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.02]", className)}
+    >
       <p className="border-b border-[#FBF5E7]/12 px-5 py-3.5 font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
         Recién propuesto
       </p>

@@ -14,7 +14,15 @@ import { eventChannel } from "lib/realtime/channels";
  * ping only triggers a refetch — the text itself always comes from the public
  * read, which filters to audience = "attendees".
  */
-export default function Announcements({ eventId, timezone }: { eventId: string; timezone: string }) {
+export default function Announcements({
+  eventId,
+  timezone,
+  className,
+}: {
+  eventId: string;
+  timezone: string;
+  className?: string;
+}) {
   const { data = [], refetch } = useQuery({
     queryKey: ["announcements", "public", eventId],
     queryFn: () => client.staffTasks.announcements.listPublic({ eventId }),
@@ -41,7 +49,10 @@ export default function Announcements({ eventId, timezone }: { eventId: string; 
   });
 
   return (
-    <section aria-label="Anuncios de la organización" className="border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.02]">
+    <section
+      aria-label="Anuncios de la organización"
+      className={classNames("border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.02]", className)}
+    >
       <p className="border-b border-[#FBF5E7]/12 px-5 py-3.5 font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
         Avisos
       </p>

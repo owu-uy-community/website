@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 
 import { resolveNowNext, wallClockIn } from "../src/lib/openspace/now-next";
+import { matchTrack, topicsFromText } from "../src/lib/openspace/topics";
 import { assignMapZones, MAP_ZONES } from "../src/lib/rooms/map-zones";
 
 // --- map zones -------------------------------------------------------------
@@ -135,6 +136,58 @@ assert.equal(wallClockIn(TZ, at("10:20")), "2026-11-07T10:20", "wall clock must 
   // Unpadded times from a hand-edited board still sort and compare correctly.
   const sloppy = [slot("x", "9:5", "9:30")];
   assert.equal(resolveNowNext(sloppy, TZ, at("09:10")).current?.id, "x");
+}
+
+// --- interest matching ------------------------------------------------------
+
+{
+  // Keyword fallback: what runs when the AI gateway is unavailable on event day.
+  assert.deepEqual(topicsFromText("Next.js 15: Server Components"), ["frontend"]);
+  assert.ok(topicsFromText("RAG: Retrieval Augmented Generation").includes("ia"));
+  assert.ok(topicsFromText("Introducción al Pentesting").includes("seguridad"));
+  // Accent- and case-insensitive, so "Diseño" reaches the "diseno" keyword.
+  assert.ok(topicsFromText("Charla sobre DISEÑO de producto").includes("producto"));
+  assert.deepEqual(topicsFromText("Una charla sobre nada en particular"), []);
+  // Whole words only: the two-letter keywords ("ci", "cd", "ia", "ui") used to
+  // match inside longer words and mis-tag half the board.
+  assert.deepEqual(
+    topicsFromText("Metodología Forense Digital: análisis forense en ciberseguridad"),
+    ["seguridad"],
+    "'ci' inside 'ciberseguridad' must not tag the talk as DevOps"
+  );
+  assert.ok(topicsFromText("CI/CD moderno con GitHub Actions").includes("devops"), "but 'CI/CD' as a word must");
+  // Longer keywords still match their own stems.
+  assert.ok(topicsFromText("Introducción al Pentesting").includes("seguridad"), "pentest → Pentesting");
+  assert.ok(topicsFromText("Diseñando APIs que duren").includes("backend"), "api → APIs");
+  assert.deepEqual(topicsFromText("Guía de Uruguay"), [], "'ia' inside 'Guía' is not the IA topic");
+}
+
+{
+  // Topic overlap dominates; session shape only breaks ties.
+  const twoTopics = matchTrack({ topics: ["ia", "datos"], format: "charla" }, ["ia", "datos"], "debatir");
+  const oneTopicRightShape = matchTrack({ topics: ["ia"], format: "debate" }, ["ia", "datos"], "debatir");
+  assert.ok(twoTopics.score > oneTopicRightShape.score, "two topic hits must outrank a single hit in the right format");
+  assert.deepEqual(twoTopics.matched, ["ia", "datos"]);
+  assert.equal(twoTopics.suitsGoal, false);
+  assert.equal(oneTopicRightShape.suitsGoal, true);
+}
+
+{
+  // Same topics, different shape: the goal decides.
+  const debate = matchTrack({ topics: ["ia"], format: "debate" }, ["ia"], "debatir");
+  const charla = matchTrack({ topics: ["ia"], format: "charla" }, ["ia"], "debatir");
+  assert.ok(debate.score > charla.score);
+  // "Lo que venga" never penalises a format.
+  assert.equal(matchTrack({ topics: ["ia"], format: "charla" }, ["ia"], "todo").suitsGoal, false);
+}
+
+{
+  // No topic overlap scores zero EVEN IF the format is what they came for —
+  // otherwise every "charla" on the board would be suggested to everyone who
+  // picked "aprender", whatever it was about.
+  assert.equal(matchTrack({ topics: ["mobile"], format: "charla" }, ["ia"], "aprender").score, 0);
+  // An untagged track must not throw.
+  assert.equal(matchTrack(undefined, ["ia"], "aprender").score, 0);
 }
 
 console.log("✅ open space checks passed");

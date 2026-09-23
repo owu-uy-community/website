@@ -6,6 +6,7 @@ import { getRoomsByOpenSpace } from "lib/orpc/rooms/services/get-by-open-space";
 import { getSchedulesByOpenSpace } from "lib/orpc/schedules/services/get-by-open-space";
 import { getTracksForEvent } from "lib/orpc/sticky-notes/services/get-all-tracks";
 import { resolveNowNext } from "lib/openspace/now-next";
+import { tagTracks } from "lib/openspace/tag-tracks";
 import { getEventBySlugs } from "lib/tenant-server";
 
 import Footer from "../components/Footer";
@@ -77,6 +78,11 @@ export default async function ConfOpenSpacePage() {
       ])
     : [[], [], []];
 
+  /* Tagged here rather than on the client: one gateway call per revalidation
+     window for the whole board, cached by content, and it degrades to keyword
+     tagging on its own if the gateway is down. */
+  const tags = await tagTracks(tracks.map(({ id, title, description }) => ({ id, title, description })));
+
   return (
     <MotionRoot>
       <div className="min-h-[100dvh] w-full overflow-x-clip bg-black">
@@ -103,6 +109,7 @@ export default async function ConfOpenSpacePage() {
                 initialNowNext={resolveNowNext(schedules, resolved.event.timezone)}
                 rooms={rooms}
                 schedules={schedules}
+                tags={tags}
                 timezone={resolved.event.timezone}
                 tracks={tracks}
               />

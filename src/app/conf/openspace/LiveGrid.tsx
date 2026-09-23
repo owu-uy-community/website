@@ -1,12 +1,13 @@
 "use client";
 
 import classNames from "classnames";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 
 import type { Schedule, StickyNote } from "lib/orpc";
 
 import type { BoardRoom } from "./board";
 import { trackAt } from "./board";
+import type { Selection } from "./selection";
 
 type LiveGridProps = {
   rooms: BoardRoom[];
@@ -14,16 +15,40 @@ type LiveGridProps = {
   tracks: StickyNote[];
   currentScheduleId: string | null;
   nextScheduleId: string | null;
+  selected: Selection | null;
+  onSelect: (selection: Selection) => void;
 };
+
+const cellKey = (scheduleId: string, roomId: string) => `${scheduleId}:${roomId}`;
 
 /**
  * The whole board: every room against every block. Server-rendered and
  * refreshed in place, so it is shareable and indexable — but unlike the kiosk
- * wall it marks the block you are standing in, which is the only thing you
- * actually want from it while the open space runs.
+ * wall it marks the block you are standing in, and every cell is a control:
+ * tapping one selects that room and block everywhere else on the page.
  */
-export default function LiveGrid({ rooms, schedules, tracks, currentScheduleId, nextScheduleId }: LiveGridProps) {
+export default function LiveGrid({
+  rooms,
+  schedules,
+  tracks,
+  currentScheduleId,
+  nextScheduleId,
+  selected,
+  onSelect,
+}: LiveGridProps) {
+  const scroller = useRef<HTMLDivElement>(null);
   const blocks = schedules.filter((schedule) => schedule.isActive);
+
+  /* A selection made on the map has to be findable here — on a phone the
+     matching column is usually off-screen. */
+  useEffect(() => {
+    if (!selected || !scroller.current) return;
+
+    const cell = scroller.current.querySelector<HTMLElement>(
+      `[data-cell="${CSS.escape(cellKey(selected.scheduleId, selected.roomId))}"]`
+    );
+    cell?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [selected]);
 
   if (rooms.length === 0 || blocks.length === 0) {
     return (
@@ -39,7 +64,7 @@ export default function LiveGrid({ rooms, schedules, tracks, currentScheduleId, 
   }
 
   return (
-    <div className="overflow-x-auto border border-[#FBF5E7]/12 [scrollbar-width:thin]">
+    <div ref={scroller} className="overflow-x-auto border border-[#FBF5E7]/12 [scrollbar-width:thin]">
       {/* Columns have a floor, not a fixed width: the grid fills a desktop
           container and overflows into a horizontal scroll on a phone. */}
       <div
@@ -51,7 +76,10 @@ export default function LiveGrid({ rooms, schedules, tracks, currentScheduleId, 
         {rooms.map((room) => (
           <div
             key={room.id}
-            className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-r border-[#FBF5E7]/12 bg-black px-3"
+            className={classNames(
+              "sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-r border-[#FBF5E7]/12 bg-black px-3 transition-opacity",
+              selected && selected.roomId !== room.id && "opacity-45"
+            )}
           >
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rotate-45" style={{ backgroundColor: room.color }} />
             <span
@@ -98,33 +126,46 @@ export default function LiveGrid({ rooms, schedules, tracks, currentScheduleId, 
 
               {rooms.map((room) => {
                 const track = trackAt(tracks, room.id, block.id);
+                const isSelected = selected?.roomId === room.id && selected?.scheduleId === block.id;
 
                 return (
-                  <div
+                  <button
                     key={`${block.id}-${room.id}`}
+                    aria-label={
+                      track
+                        ? `${track.title}, ${room.name}, ${block.startTime}`
+                        : `${room.name} libre a las ${block.startTime}`
+                    }
+                    aria-pressed={isSelected}
                     className={classNames(
-                      "min-h-24 border-b border-r border-[#FBF5E7]/12 p-2.5",
-                      isCurrent ? "bg-[#FBF5E7]/[0.05]" : "bg-transparent"
+                      "min-h-24 border-b border-r border-[#FBF5E7]/12 p-2.5 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#F5BB03]",
+                      isCurrent ? "bg-[#FBF5E7]/[0.05]" : "bg-transparent",
+                      isSelected && "!bg-[#F5BB03]/[0.12]",
+                      "hover:bg-[#FBF5E7]/[0.08]"
                     )}
+                    data-cell={cellKey(block.id, room.id)}
+                    type="button"
+                    onClick={() => onSelect({ roomId: room.id, scheduleId: block.id })}
                   >
                     {track ? (
-                      <div
-                        className="flex h-full flex-col border-l-2 bg-[#FBF5E7]/[0.04] px-2.5 py-2"
+                      <span
+                        className={classNames(
+                          "flex h-full flex-col border-l-2 px-2.5 py-2 transition-colors",
+                          isSelected ? "bg-[#FBF5E7]/[0.1]" : "bg-[#FBF5E7]/[0.04]"
+                        )}
                         style={{ borderColor: room.color }}
                       >
-                        <p className="text-[13px] font-medium leading-snug text-[#FBF5E7]">
-                          {track.title}
-                        </p>
+                        <span className="text-[13px] font-medium leading-snug text-[#FBF5E7]">{track.title}</span>
                         {track.speaker ? (
-                          <p className="mt-auto truncate pt-1 text-[11px] text-[#FBF5E7]/50">{track.speaker}</p>
+                          <span className="mt-auto truncate pt-1 text-[11px] text-[#FBF5E7]/50">{track.speaker}</span>
                         ) : null}
-                      </div>
+                      </span>
                     ) : (
-                      <div className="flex h-full items-center justify-center">
+                      <span className="flex h-full items-center justify-center">
                         <span className="text-[11px] uppercase tracking-[0.1em] text-[#FBF5E7]/20">Libre</span>
-                      </div>
+                      </span>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </Fragment>

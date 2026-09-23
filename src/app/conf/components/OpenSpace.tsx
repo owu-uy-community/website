@@ -2,51 +2,95 @@
 
 import classNames from "classnames";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { m } from "motion/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DoorOpen, Footprints, Lightbulb } from "lucide-react";
 
 import { INTERNAL_ROUTES } from "app/lib/constants";
 
 import Lightbox, { openWithMorph, withViewTransition, type LightboxPhoto } from "./Lightbox";
 import OpenSpaceScene, { type OpenSpaceSceneName } from "./OpenSpaceScenes";
-import Reveal from "./Reveal";
+import Reveal, { EASE_OUT } from "./Reveal";
 import SectionHeader from "./SectionHeader";
 
 type Step = {
   scene: OpenSpaceSceneName;
   label: string;
+  /** Tentative times — enough to convey the shape of the morning. */
+  time: string;
+  duration: string;
   headline: string;
   body: string;
+  /** The concrete mechanics, so nobody has to infer them from prose. */
+  beats: string[];
+  tip: string;
 };
 
-/* The four stages, as OWU has run them since 2023. */
+/*
+ * The four stages as OWU has actually run them since 2023. The copy leans on
+ * what the room looks and sounds like, because the mechanics are easy and the
+ * unfamiliar part is the vibe.
+ */
 const STEPS: Step[] = [
   {
     scene: "apertura",
     label: "Apertura",
-    headline: "Se explica cómo funciona",
-    body: "Nadie llega sabiendo la mecánica, así que se arranca por ahí: se cuenta la dinámica, se presentan las salas y se abre el mercado de ideas. Diez minutos y ya estás adentro.",
+    time: "10:15",
+    duration: "15 min",
+    headline: "Todos en ronda, y una grilla vacía",
+    body: "No hay escenario ni filas de sillas: la sala se arma en círculo. El facilitador cuenta la mecánica, presenta las salas y señala una grilla enorme que está completamente vacía. Ese vacío es a propósito — es el único momento del día en el que todavía no pasó nada, y el único en el que estamos todos juntos.",
+    beats: [
+      "La sala se sienta en círculo, sin escenario",
+      "Se presentan las salas y los bloques del día",
+      "Se abre el mercado de ideas",
+    ],
+    tip: "Si llegás tarde no pasa nada: le preguntás a cualquiera del staff y te pone al día en un minuto.",
   },
   {
     scene: "mercado",
     label: "Mercado de ideas",
-    headline: "Proponés tu tema en una card",
-    body: "Lo escribís, lo contás en 30 segundos y colgás la card en la grilla eligiendo sala y horario. No hace falta ser experto: puede ser una charla, una pregunta abierta, un debate, una demo o un “quiero aprender sobre X, ¿alguien me cuenta?”.",
+    time: "10:30",
+    duration: "20 min",
+    headline: "Se hace fila para proponer",
+    body: "Uno por uno agarran el micrófono: nombre, tema, treinta segundos. Después caminan hasta la grilla y cuelgan su card en la sala y el horario que quieran. En veinte minutos esa pared vacía queda cubierta de papeles. Nadie curó nada ni revisó propuestas: lo que quedó colgado es, literalmente, lo que la sala quiso hablar.",
+    beats: [
+      "Escribís título y tu nombre en una card",
+      "Treinta segundos de micrófono para contarlo",
+      "Elegís vos la sala y el bloque",
+    ],
+    tip: "No hace falta ser experto. “Quiero aprender sobre X, ¿alguien me cuenta?” es una propuesta perfectamente válida — de hecho son de las que mejor funcionan.",
   },
   {
     scene: "sesiones",
     label: "Sesiones",
-    headline: "Varias salas, todas a la vez",
-    body: "Bloques de ~25 minutos de conversación y 5 para cambiar de sala. Elegís a dónde entrar mirando la grilla, que va cambiando durante todo el día. Entre bloques hay coffee break para seguir la charla de pasillo.",
+    time: "11:00",
+    duration: "4 bloques",
+    headline: "Cinco salas, todas a la vez",
+    body: "Bloques de 25 minutos con 5 para cambiarse. Mirás la grilla, elegís, entrás. Y ojo: no son charlas. Quien propuso abre el tema en dos minutos y después habla el que quiera — son conversaciones. Algunas salas quedan con seis personas y otras con treinta, y las dos cosas están bien.",
+    beats: [
+      "25 minutos de conversación + 5 para cambiar de sala",
+      "Quien propuso modera, no expone",
+      "Entre bloques hay café y charla de pasillo",
+    ],
+    tip: "La charla de pasillo entre bloques no es una interrupción del evento: para mucha gente es el evento.",
   },
   {
     scene: "clausura",
     label: "Clausura",
-    headline: "Se cierra entre todos",
-    body: "Cuando terminan las sesiones el grupo se vuelve a juntar. Se comparte lo que pasó en cada sala y se cierra el espacio con la misma gente que lo armó.",
+    time: "13:00",
+    duration: "15 min",
+    headline: "Vuelta a la ronda",
+    body: "Todos al círculo otra vez. Se pasa el micrófono y cada uno dice en una frase qué se lleva de la sala en la que estuvo. Es la parte donde te enterás de las tres conversaciones que te perdiste, y donde aparecen los “esto sigamos en el Slack” que después duran meses.",
+    beats: [
+      "Una frase por persona: qué te llevás",
+      "Te enterás de lo que pasó en las otras salas",
+      "De acá salen los hilos que siguen después",
+    ],
+    tip: "Quedate hasta el final aunque estés cansado: la clausura es donde el open space se cierra de verdad.",
   },
 ];
 
-/* The four principles of Open Space, in the words the facilitator actually uses. */
+/* The three principles, in the words the facilitator actually uses. */
 const RULES = [
   { title: "Quienes están son las personas correctas", body: "No falta nadie. La conversación se arma con quien apareció." },
   { title: "Lo que pase es lo único que podía pasar", body: "No hay una versión ideal de la sesión que te estés perdiendo." },
@@ -68,37 +112,51 @@ const PHOTOS: LightboxPhoto[] = [
   { src: `${PHOTO_BASE}/6/image.webp`, alt: "La apertura del open space, con la sala de pie escuchando la consigna" },
 ];
 
-function StepNumber({ index, active }: { index: number; active: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={classNames(
-        "font-display text-sm font-bold leading-none tabular-nums transition-colors",
-        active ? "text-[#F5BB03]" : "text-[#FBF5E7]/65"
-      )}
-    >
-      0{index + 1}
-    </span>
-  );
-}
+/** Seconds a step stays up before the walkthrough moves on by itself. */
+const AUTOPLAY_MS = 9000;
 
 export default function OpenSpace() {
   const [step, setStep] = useState(0);
   const [photo, setPhoto] = useState<number | null>(null);
+  /** Autoplay is a hint, not a carousel: the first deliberate interaction ends it. */
+  const [autoplay, setAutoplay] = useState(true);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const active = STEPS[step];
 
-  /** Arrow keys walk the steps and carry focus with them, per the tabs pattern. */
-  const moveTab = useCallback((event: React.KeyboardEvent, index: number) => {
-    const delta = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
-    const target = delta ? (index + delta + STEPS.length) % STEPS.length : event.key === "Home" ? 0 : event.key === "End" ? STEPS.length - 1 : null;
-    if (target === null) return;
+  useEffect(() => {
+    if (!autoplay) return;
+    // Anyone who asked for less motion gets no self-advancing anything.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    event.preventDefault();
-    setStep(target);
-    tabs.current[target]?.focus();
-  }, []);
+    const timer = setTimeout(() => setStep((current) => (current + 1) % STEPS.length), AUTOPLAY_MS);
+
+    return () => clearTimeout(timer);
+  }, [autoplay, step]);
+
+  const takeOver = useCallback(() => setAutoplay(false), []);
+
+  /** Arrow keys walk the steps and carry focus with them, per the tabs pattern. */
+  const moveTab = useCallback(
+    (event: React.KeyboardEvent, index: number) => {
+      const delta = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+      const target =
+        delta !== undefined
+          ? (index + delta + STEPS.length) % STEPS.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? STEPS.length - 1
+              : null;
+      if (target === null) return;
+
+      event.preventDefault();
+      takeOver();
+      setStep(target);
+      tabs.current[target]?.focus();
+    },
+    [takeOver]
+  );
 
   const openLightbox = useCallback((index: number, thumb: HTMLImageElement | null) => {
     openWithMorph(thumb, () => setPhoto(index));
@@ -127,19 +185,30 @@ export default function OpenSpace() {
         />
 
         <Reveal delay={0.12} y={22}>
-          <p className="mt-6 max-w-[660px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
+          <p className="mt-6 max-w-[680px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
             Media jornada de OWU CONF no tiene agenda hasta que llegás. Se llama{" "}
             <strong className="font-semibold text-[#FBF5E7]">open space</strong> y funciona así: las charlas las
-            proponen las personas que están en la sala, el mismo día, y la grilla se arma en vivo.
+            proponen las personas que están en la sala, el mismo día, y la grilla se arma en vivo. Suena a caos y es lo
+            contrario — tiene una mecánica muy simple. Estas son las cuatro etapas:
           </p>
         </Reveal>
 
-        {/* Steps: pick one on the left, read it on the right. */}
-        <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-14">
+        {/* Steps: a timeline you can walk on the left, the detail on the right. */}
+        <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-14">
           <Reveal y={24}>
-            {/* Tablist rather than a plain button stack: it announces "3 de 4" and
+            {/* Tablist rather than a stack of buttons: it announces "3 de 4" and
                 takes arrow keys, which is how anyone on a keyboard expects to move. */}
-            <div aria-label="Etapas del open space" aria-orientation="vertical" className="flex flex-col" role="tablist">
+            <div
+              aria-label="Etapas del open space"
+              aria-orientation="vertical"
+              className="relative flex flex-col"
+              role="tablist"
+              onFocusCapture={takeOver}
+              onPointerDown={takeOver}
+            >
+              {/* Timeline spine behind the nodes */}
+              <span aria-hidden="true" className="absolute bottom-8 left-[59px] top-8 w-px bg-[#FBF5E7]/15" />
+
               {STEPS.map((entry, index) => {
                 const isActive = index === step;
 
@@ -151,10 +220,7 @@ export default function OpenSpace() {
                     }}
                     aria-controls={`open-space-panel-${index}`}
                     aria-selected={isActive}
-                    className={classNames(
-                      "group flex w-full items-center gap-4 border-l-2 py-4 pl-5 pr-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03]",
-                      isActive ? "border-[#F5BB03] bg-[#FBF5E7]/[0.06]" : "border-[#FBF5E7]/15 hover:bg-[#FBF5E7]/[0.03]"
-                    )}
+                    className="group relative flex w-full items-center gap-4 py-3.5 pr-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03]"
                     id={`open-space-tab-${index}`}
                     role="tab"
                     // Roving tabindex: Tab reaches the list once, arrows move within it.
@@ -163,21 +229,48 @@ export default function OpenSpace() {
                     onClick={() => setStep(index)}
                     onKeyDown={(event) => moveTab(event, index)}
                   >
-                    <StepNumber active={isActive} index={index} />
-                    <OpenSpaceScene
-                      className={classNames(
-                        "h-11 w-14 shrink-0 transition-opacity",
-                        isActive ? "opacity-100" : "opacity-70 group-hover:opacity-90"
-                      )}
-                      name={entry.scene}
-                    />
                     <span
                       className={classNames(
-                        "font-display text-lg font-extrabold uppercase leading-none tracking-[-0.01em] transition-colors",
-                        isActive ? "text-[#FBF5E7]" : "text-[#FBF5E7]/75 group-hover:text-[#FBF5E7]"
+                        "w-[44px] shrink-0 text-right font-display text-xs font-bold tabular-nums transition-colors",
+                        isActive ? "text-[#F5BB03]" : "text-[#FBF5E7]/60"
                       )}
                     >
-                      {entry.label}
+                      {entry.time}
+                    </span>
+
+                    {/* Timeline node */}
+                    <span
+                      aria-hidden="true"
+                      className={classNames(
+                        "relative z-10 block shrink-0 rotate-45 bg-black transition-all",
+                        isActive
+                          ? "h-3 w-3 shadow-[0_0_0_4px_black] outline outline-2 outline-[#F5BB03]"
+                          : "h-2 w-2 shadow-[0_0_0_4px_black] outline outline-2 outline-[#FBF5E7]/35 group-hover:outline-[#FBF5E7]/70"
+                      )}
+                    />
+
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={classNames(
+                          "block font-display text-base font-extrabold uppercase leading-none tracking-[-0.01em] transition-colors",
+                          isActive ? "text-[#FBF5E7]" : "text-[#FBF5E7]/75 group-hover:text-[#FBF5E7]"
+                        )}
+                      >
+                        {entry.label}
+                      </span>
+                      <span className="mt-1.5 block text-xs text-[#FBF5E7]/60">{entry.duration}</span>
+
+                      {/* Autoplay progress — also the only thing that hints it advances */}
+                      {isActive && autoplay ? (
+                        <m.span
+                          animate={{ scaleX: 1 }}
+                          aria-hidden="true"
+                          className="mt-2 block h-px origin-left bg-[#F5BB03]/70"
+                          initial={{ scaleX: 0 }}
+                          key={step}
+                          transition={{ duration: AUTOPLAY_MS / 1000, ease: "linear" }}
+                        />
+                      ) : null}
                     </span>
                   </button>
                 );
@@ -186,22 +279,56 @@ export default function OpenSpace() {
           </Reveal>
 
           <Reveal delay={0.1} y={24}>
-            {/* key restarts the fade whenever the selected step changes */}
+            {/* key remounts the panel, which replays the scene's stagger */}
             <div
               key={active.scene}
               aria-labelledby={`open-space-tab-${step}`}
-              className="flex h-full animate-[fade-up_0.35s_cubic-bezier(0.2,0.7,0.2,1)_forwards] flex-col justify-center gap-6 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.03] p-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03] sm:flex-row sm:items-center sm:gap-10 sm:p-10"
+              className="flex h-full flex-col gap-6 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.03] p-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03] sm:p-8"
               id={`open-space-panel-${step}`}
               role="tabpanel"
               tabIndex={0}
             >
-              <OpenSpaceScene className="h-36 w-44 shrink-0 self-center sm:h-44 sm:w-56" name={active.scene} />
-              <div>
-                <p className="font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] sm:text-3xl">
-                  {active.headline}
-                </p>
-                <p className="mt-4 text-pretty text-base leading-relaxed text-[#FBF5E7]/90 sm:text-lg">{active.body}</p>
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+                <OpenSpaceScene
+                  animate
+                  className="h-32 w-40 shrink-0 self-center sm:h-36 sm:w-44 sm:self-start"
+                  name={active.scene}
+                />
+                <m.div
+                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.1 }}
+                >
+                  <p className="font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] sm:text-[28px]">
+                    {active.headline}
+                  </p>
+                  <p className="mt-3.5 text-pretty text-base leading-relaxed text-[#FBF5E7]/90">{active.body}</p>
+                </m.div>
               </div>
+
+              <m.ul
+                animate={{ opacity: 1 }}
+                className="grid gap-2.5 border-t border-[#FBF5E7]/12 pt-5 sm:grid-cols-3 sm:gap-4"
+                initial={{ opacity: 0 }}
+                transition={{ duration: 0.4, delay: 0.35 }}
+              >
+                {active.beats.map((beat) => (
+                  <li key={beat} className="flex items-start gap-2.5">
+                    <span aria-hidden="true" className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03]" />
+                    <span className="text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
+                  </li>
+                ))}
+              </m.ul>
+
+              <m.p
+                animate={{ opacity: 1 }}
+                className="flex items-start gap-2.5 text-sm leading-relaxed text-[#FBF5E7]/70"
+                initial={{ opacity: 0 }}
+                transition={{ duration: 0.4, delay: 0.45 }}
+              >
+                <Lightbulb aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#F5BB03]" strokeWidth={2} />
+                {active.tip}
+              </m.p>
             </div>
           </Reveal>
         </div>
@@ -231,29 +358,32 @@ export default function OpenSpace() {
 
             {/*
              * Emphasised with a yellow edge and heading rather than a yellow fill:
-             * on a solid #F5BB03 the cream illustration sits at ~1.6:1 and the body
+             * on a solid #F5BB03 a cream illustration sits at ~1.6:1 and the body
              * copy had to be black, which read as a different design system.
              */}
             <Reveal className="h-full" delay={0.1} y={24}>
-              {/* Side by side from sm up; stacked on a phone, where a 140px text
-                  column next to the illustration left the copy badly ragged. */}
-              <div className="flex h-full flex-col items-start gap-4 border border-[#FBF5E7]/12 border-l-4 border-l-[#F5BB03] bg-[#F5BB03]/[0.07] p-5 sm:flex-row sm:gap-6">
-                <OpenSpaceScene className="mt-0.5 h-20 w-24 shrink-0 sm:h-24 sm:w-28" name="dosPies" />
+              <div className="flex h-full flex-col items-start gap-4 border border-[#FBF5E7]/12 border-l-4 border-l-[#F5BB03] bg-[#F5BB03]/[0.07] p-5 sm:flex-row sm:gap-5">
+                <span
+                  aria-hidden="true"
+                  className="flex shrink-0 items-center gap-1.5 text-[#F5BB03] [&>svg]:shrink-0"
+                >
+                  <Footprints className="h-9 w-9" strokeWidth={1.6} />
+                  <DoorOpen className="h-6 w-6 opacity-60" strokeWidth={1.6} />
+                </span>
                 <div>
                   {/* Same type as the three rules beside it — the yellow carries the emphasis. */}
                   <p className="font-display text-base font-extrabold uppercase leading-tight tracking-[-0.01em] text-[#F5BB03]">
                     La ley de los dos pies
                   </p>
                   <p className="mt-2.5 text-sm leading-relaxed text-[#FBF5E7]/75">
-                    Si donde estás no estás aportando ni aprendiendo, usá los dos pies y andá a otra sala. No es mala
-                    educación: es el sistema funcionando.
+                    Si donde estás no estás aportando ni aprendiendo, usá los dos pies y andá a otra sala. Se entra y se
+                    sale en el medio de una sesión sin pedir permiso: no es mala educación, es el sistema funcionando.
                   </p>
                 </div>
               </div>
             </Reveal>
           </div>
         </div>
-
       </div>
 
       {/* Proof: this is what it actually looks like. */}

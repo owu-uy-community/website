@@ -50,14 +50,29 @@ export function useLiveBoard({
    * The interval below corrects it on the next tick.
    */
   initialNowNext: NowNext<Schedule>;
-}): { nowNext: NowNext<Schedule>; feed: FeedEntry[]; isConnected: boolean } {
+}): { nowNext: NowNext<Schedule>; feed: FeedEntry[]; isConnected: boolean; clock: string | null } {
   const router = useRouter();
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [feed, setFeed] = useState<FeedEntry[]>([]);
   const [nowNext, setNowNext] = useState<NowNext<Schedule>>(initialNowNext);
+  /* Wall clock with seconds. Null until mounted: the server has no idea what
+     time it is where the visitor is standing, and rendering a guess would tear
+     hydration a second later. */
+  const [clock, setClock] = useState<string | null>(null);
 
   useEffect(() => {
-    const tick = () => setNowNext(resolveNowNext(schedules, timezone));
+    const format = new Intl.DateTimeFormat("es-UY", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+      timeZone: timezone,
+    });
+
+    const tick = () => {
+      setNowNext(resolveNowNext(schedules, timezone));
+      setClock(format.format(new Date()));
+    };
 
     tick();
     const interval = setInterval(tick, 1_000);
@@ -94,5 +109,5 @@ export function useLiveBoard({
     };
   }, []);
 
-  return { nowNext, feed, isConnected };
+  return { nowNext, feed, isConnected, clock };
 }
