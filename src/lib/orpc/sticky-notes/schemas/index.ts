@@ -124,5 +124,8 @@ export type StickyNote = Track & {
   timeSlot: string;
   /** Explicit room color (rooms.color); UI falls back to a palette by roomId. */
   roomColor?: string;
+  /** Interest tags written at creation; null on rows predating tagging. */
+  topics?: string[] | null;
+  format?: string | null;
   skipResourceValidation?: boolean; // Optional flag to skip validation during updates
 };

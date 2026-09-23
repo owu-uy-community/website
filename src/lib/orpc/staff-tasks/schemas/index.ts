@@ -7,7 +7,7 @@ const dayString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido (YY
 
 export const StaffTaskTypeSchema = z.enum(["task", "ongoing", "milestone"]);
 export const StaffTaskStatusSchema = z.enum(["pending", "in_progress", "done", "blocked"]);
-export const AnnouncementAudienceSchema = z.enum(["all", "task"]);
+export const AnnouncementAudienceSchema = z.enum(["all", "task", "attendees"]);
 
 export const StaffTaskAssigneeSchema = z.object({
   userId: z.string(),
@@ -143,3 +143,19 @@ export const AckStaffAnnouncementSchema = z.object({
   eventId: z.string().min(1),
   announcementId: z.string().min(1),
 });
+
+/**
+ * The attendee-facing slice of an announcement: body, urgency and time only.
+ * Deliberately carries no author, no acks and no recipients — this one is read
+ * by anyone with the public live page open.
+ */
+export const PublicAnnouncementSchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  urgent: z.boolean(),
+  createdAt: z.string(),
+});
+
+export type PublicAnnouncement = z.infer<typeof PublicAnnouncementSchema>;
+
+export const ListPublicAnnouncementsSchema = z.object({ eventId: z.string().min(1) });

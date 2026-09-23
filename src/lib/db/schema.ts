@@ -17,7 +17,12 @@ export const communityRole = pgEnum("CommunityRole", ["owner", "admin", "editor"
 // Staff coordination (spreadsheet vocabulary: Tarea / Continuo / Agenda)
 export const staffTaskType = pgEnum("StaffTaskType", ["task", "ongoing", "milestone"]);
 export const staffTaskStatus = pgEnum("StaffTaskStatus", ["pending", "in_progress", "done", "blocked"]);
-export const announcementAudience = pgEnum("AnnouncementAudience", ["all", "task"]);
+/**
+ * "all" and "task" are internal: all staff, or one task's assignees. "attendees"
+ * is the only value that leaves the staff panel — it is read by the public live
+ * page, so nothing sensitive may be posted under it.
+ */
+export const announcementAudience = pgEnum("AnnouncementAudience", ["all", "task", "attendees"]);
 
 // ---------------------------------------------------------------------------
 // Auth tables (managed by Better Auth — timestamps are set by the library,
@@ -278,6 +283,14 @@ export const tracks = pgTable(
     description: text("description"),
     needsTV: boolean("needsTV").notNull().default(false),
     needsWhiteboard: boolean("needsWhiteboard").notNull().default(false),
+    /**
+     * Interest tags, written once when the card is created or edited so the
+     * public "Para vos" ranking is a plain read with no model in the path.
+     * Null on rows created before tagging existed; readers fall back to
+     * keyword matching for those.
+     */
+    topics: text("topics").array(),
+    format: text("format"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()

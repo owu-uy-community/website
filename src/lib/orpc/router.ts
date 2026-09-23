@@ -42,6 +42,7 @@ import {
   CreateStaffTaskSchema,
   DeleteStaffTaskSchema,
   JoinStaffTaskSchema,
+  ListPublicAnnouncementsSchema,
   ListStaffAnnouncementsSchema,
   ListStaffTasksSchema,
   SetStaffTaskStatusSchema,
@@ -55,6 +56,7 @@ import {
   deleteStaffTask,
   joinStaffTask,
   leaveStaffTask,
+  listPublicAnnouncements,
   listStaffAnnouncements,
   listStaffTasks,
   setStaffTaskStatus,
@@ -475,6 +477,10 @@ export const listStaffAnnouncementsHandler = os
     )
   );
 
+export const listPublicAnnouncementsHandler = os
+  .input(ListPublicAnnouncementsSchema)
+  .handler(withErrorHandling(async ({ input }) => listPublicAnnouncements(input), "list public announcements"));
+
 export const createStaffAnnouncementHandler = os
   .input(CreateStaffAnnouncementSchema)
   .use(requireCommunityRole("editor"))
@@ -604,6 +610,8 @@ export const router = {
     roster: staffRosterHandler,
     announcements: {
       list: listStaffAnnouncementsHandler,
+      /** Public: only audience="attendees", body/urgent/createdAt. */
+      listPublic: listPublicAnnouncementsHandler,
       create: createStaffAnnouncementHandler,
       ack: ackStaffAnnouncementHandler,
     },
