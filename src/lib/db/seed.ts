@@ -25,6 +25,25 @@ if (process.env.NODE_ENV === "production") {
 const FORCE = process.argv.includes("--force");
 
 /**
+ * `--at=HH:MM` lays the blocks out around that time instead of around "now".
+ * For demos: seeding at 18:20 for a 19:00 walkthrough otherwise leaves the
+ * board finished by the time anyone is watching.
+ */
+const AT = process.argv.find((arg) => arg.startsWith("--at="))?.slice("--at=".length);
+
+function anchorMinutes(now: Date): number {
+  if (!AT) return now.getHours() * 60 + now.getMinutes();
+
+  const match = /^(\d{1,2}):(\d{2})$/.exec(AT);
+  if (!match) throw new Error(`--at must look like HH:MM, got "${AT}"`);
+
+  const [hours, minutes] = [Number(match[1]), Number(match[2])];
+  if (hours > 23 || minutes > 59) throw new Error(`--at is not a valid time: "${AT}"`);
+
+  return hours * 60 + minutes;
+}
+
+/**
  * Communities this script owns and may recreate. `owu`/`owu-conf-2026` mirrors
  * what CONF_EVENT points at, so conf.owu.uy/openspace resolves in local dev
  * without hand-building a board first.
@@ -126,12 +145,12 @@ async function seedCommunity(entry: (typeof SEEDED)[number]) {
     .returning();
 
   /*
-   * Blocks are laid out around "now" so a dev board always has a live block and
-   * a next one, whatever time the seed runs. Clamped to the day so the last
+   * Blocks are laid out around the anchor (`--at`, else "now") so a dev board
+   * always has a live block and a next one. Clamped to the day so the last
    * block can never wrap past midnight into a slot that sorts before the first.
    */
-  const nowMinutes = today.getHours() * 60 + today.getMinutes();
-  const firstBlock = Math.min(Math.max(Math.floor(nowMinutes / 30) * 30 - 60, 0), 24 * 60 - 150);
+  const anchor = anchorMinutes(today);
+  const firstBlock = Math.min(Math.max(Math.floor(anchor / 30) * 30 - 60, 0), 24 * 60 - 150);
   const hhmm = (minutes: number) =>
     `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 
