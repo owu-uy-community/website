@@ -99,7 +99,7 @@ const STEPS: Step[] = [
     label: "Sesiones",
     time: "11:00",
     duration: "4 bloques",
-    headline: "Cinco salas, todas a la vez",
+    headline: "Cinco espacios, todos a la vez",
     body: [
       <>
         Bloques de <Hl>25 minutos</Hl> con 5 para cambiarse. Mirás la grilla, elegís, entrás.
