@@ -62,7 +62,7 @@ const STEPS: Step[] = [
       "Se presentan los 5 espacios y los bloques del día",
       "Se abre el mercado de ideas",
     ],
-    tip: "Si llegás tarde no pasa nada: le preguntás a cualquiera del staff y te pone al día en un minuto.",
+    tip: "Si llegás tarde no pasa nada: le preguntás a un miembro del staff y te pone al día en un minuto.",
   },
   {
     scene: "mercado",
@@ -105,14 +105,14 @@ const STEPS: Step[] = [
         Bloques de <Hl>25 minutos</Hl> con 5 para cambiarse. Mirás la grilla, elegís, entrás.
       </>,
       <>
-        Y ojo: <Hl>no son charlas</Hl>. Quien propuso abre el tema en dos minutos y después habla el que quiera. Son
-        conversaciones.
+        Quien propuso <Hl>expone su tema</Hl> y a partir de ahí la moderación se autogestiona: no hay nadie
+        asignado para dar la palabra, habla quien quiera.
       </>,
       <>Algunas salas quedan con seis personas y otras con treinta, y las dos cosas están bien.</>,
     ],
     beats: [
       "25 minutos de conversación + 5 para cambiar de sala",
-      "Quien propuso modera, no expone",
+      "Quien propuso expone; la moderación se autogestiona",
       "Entre bloques hay café y charla de pasillo",
     ],
     tip: "La charla de pasillo entre bloques no es una interrupción del evento: para mucha gente es el evento.",
