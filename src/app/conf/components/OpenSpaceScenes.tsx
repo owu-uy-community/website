@@ -282,9 +282,15 @@ type OpenSpaceSceneProps = {
   className?: string;
   /** Stagger the parts in. Off for the small thumbnails, on for the open panel. */
   animate?: boolean;
+  /**
+   * Which variant to sit in. Driven as a prop rather than replayed by
+   * remounting, so the panels can all stay mounted (they share a grid cell to
+   * keep the card a constant height) and still animate when one becomes active.
+   */
+  show?: boolean;
 };
 
-export default function OpenSpaceScene({ name, className, animate = false }: OpenSpaceSceneProps) {
+export default function OpenSpaceScene({ name, className, animate = false, show = true }: OpenSpaceSceneProps) {
   const parts = SCENES[name];
 
   if (!animate) {
@@ -297,7 +303,7 @@ export default function OpenSpaceScene({ name, className, animate = false }: Ope
 
   return (
     <m.svg
-      animate="show"
+      animate={show ? "show" : "hidden"}
       aria-hidden="true"
       className={className}
       fill="none"

@@ -4,9 +4,9 @@ import classNames from "classnames";
 import Link from "next/link";
 import { m } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DoorOpen, Footprints, Lightbulb } from "lucide-react";
+import { DoorOpen, Footprints, Lightbulb, Lock } from "lucide-react";
 
-import { INTERNAL_ROUTES } from "app/lib/constants";
+import { CONF_DATES, INTERNAL_ROUTES } from "app/lib/constants";
 
 import Lightbox, { openWithMorph, withViewTransition, type LightboxPhoto } from "./Lightbox";
 import OpenSpaceScene, { type OpenSpaceSceneName } from "./OpenSpaceScenes";
@@ -164,6 +164,14 @@ const PHOTOS: LightboxPhoto[] = [
   { src: `${PHOTO_BASE}/6/image.webp`, alt: "La apertura del open space, con la sala de pie escuchando la consigna" },
 ];
 
+/** The day the live board opens, spelled out for the disabled CTA. */
+const OPENS_LABEL = new Intl.DateTimeFormat("es-UY", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "America/Montevideo",
+}).format(new Date(CONF_DATES.liveBoardOpens));
+
 /** Seconds a step stays up before the walkthrough moves on by itself. */
 const AUTOPLAY_MS = 9000;
 
@@ -172,9 +180,17 @@ export default function OpenSpace() {
   const [photo, setPhoto] = useState<number | null>(null);
   /** Autoplay is a hint, not a carousel: the first deliberate interaction ends it. */
   const [autoplay, setAutoplay] = useState(true);
-  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  /*
+   * /conf is prerendered, so this cannot be decided at build time or the answer
+   * would be frozen at whatever it was when the page was built. Starts closed
+   * (the safe default, and what the server renders) and opens after mount.
+   */
+  const [liveBoardOpen, setLiveBoardOpen] = useState(false);
 
-  const active = STEPS[step];
+  useEffect(() => {
+    setLiveBoardOpen(Date.now() >= new Date(CONF_DATES.liveBoardOpens).getTime());
+  }, []);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     if (!autoplay) return;
@@ -247,19 +263,24 @@ export default function OpenSpace() {
 
         {/* Steps: a timeline you can walk on the left, the detail on the right. */}
         <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,340px)_1fr] lg:gap-14">
-          <Reveal y={24}>
+          <Reveal className="h-full" y={24}>
             {/* Tablist rather than a stack of buttons: it announces "3 de 4" and
                 takes arrow keys, which is how anyone on a keyboard expects to move. */}
             <div
               aria-label="Etapas del open space"
               aria-orientation="vertical"
-              className="relative flex flex-col"
+              className="relative flex h-full flex-col"
               role="tablist"
               onFocusCapture={takeOver}
               onPointerDown={takeOver}
             >
-              {/* Timeline spine behind the nodes */}
-              <span aria-hidden="true" className="absolute bottom-8 left-[59px] top-8 w-px bg-[#FBF5E7]/15" />
+              {/* Spine behind the nodes. The steps share the height evenly, so the
+                  first and last node centres sit half a step in from each end. */}
+              <span
+                aria-hidden="true"
+                className="absolute left-[59px] w-px bg-[#FBF5E7]/15"
+                style={{ top: `${50 / STEPS.length}%`, bottom: `${50 / STEPS.length}%` }}
+              />
 
               {STEPS.map((entry, index) => {
                 const isActive = index === step;
@@ -272,7 +293,7 @@ export default function OpenSpace() {
                     }}
                     aria-controls={`open-space-panel-${index}`}
                     aria-selected={isActive}
-                    className="group relative flex w-full items-center gap-4 py-3.5 pr-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03]"
+                    className="group relative flex w-full items-center gap-4 py-3.5 pr-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03] lg:flex-1"
                     id={`open-space-tab-${index}`}
                     role="tab"
                     // Roving tabindex: Tab reaches the list once, arrows move within it.
@@ -330,77 +351,100 @@ export default function OpenSpace() {
             </div>
           </Reveal>
 
-          <Reveal delay={0.1} y={24}>
-            {/* key remounts the panel, which replays the scene's stagger */}
-            <div
-              key={active.scene}
-              aria-labelledby={`open-space-tab-${step}`}
-              className="flex h-full flex-col gap-6 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.03] p-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03] sm:p-8"
-              id={`open-space-panel-${step}`}
-              role="tabpanel"
-              tabIndex={0}
-            >
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-                <OpenSpaceScene
-                  animate
-                  className="h-32 w-40 shrink-0 self-center sm:h-36 sm:w-44 sm:self-start"
-                  name={active.scene}
-                />
-                <m.div
-                  animate={{ opacity: 1, y: 0 }}
-                  initial={{ opacity: 0, y: 12 }}
-                  transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.1 }}
-                >
-                  <p className="font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] sm:text-[28px]">
-                    {active.headline}
-                  </p>
-                  {active.body.map((paragraph, index) => (
-                    <p
-                      key={index}
-                      className="mt-3.5 text-pretty text-base leading-relaxed text-[#FBF5E7]/90"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                </m.div>
-              </div>
+          <Reveal className="h-full" delay={0.1} y={24}>
+            {/*
+             * All four panels share one grid cell, so the card is always as tall
+             * as the longest step and never jumps when you switch. A min-height
+             * cannot do this: the content reflows with width, so the tallest
+             * step is ~490px at 1280 but ~692px at 1024, and any single floor
+             * either still jumps or strands 200px of empty card.
+             *
+             * Only the active one is visible; the rest reserve height. They stay
+             * mounted, which is why the scene animates off a variant instead of
+             * a remount.
+             */}
+            <div className="grid h-full">
+              {STEPS.map((entry, index) => {
+                const isActive = index === step;
 
-              {/*
-               * Three columns with hairline rules rather than three floating
-               * bullets: the entries are different lengths, and equal cells
-               * with a divider make an uneven rag read as deliberate. The
-               * marker sits above the text on wide screens so nothing hangs
-               * into a narrow measure; on a phone it is a plain stacked list.
-               */}
-              <m.ul
-                animate={{ opacity: 1 }}
-                className="grid gap-3 border-t border-[#FBF5E7]/12 pt-5 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#FBF5E7]/12"
-                initial={{ opacity: 0 }}
-                transition={{ duration: 0.4, delay: 0.35 }}
-              >
-                {active.beats.map((beat) => (
-                  <li
-                    key={beat}
-                    className="flex items-start gap-2.5 sm:block sm:px-5 sm:first:pl-0 sm:last:pr-0"
+                return (
+                  <div
+                    key={entry.scene}
+                    aria-hidden={isActive ? undefined : true}
+                    aria-labelledby={`open-space-tab-${index}`}
+                    className={classNames(
+                      "flex flex-col gap-6 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.03] p-6 [grid-area:1/1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5BB03] sm:p-8",
+                      !isActive && "pointer-events-none invisible"
+                    )}
+                    id={`open-space-panel-${index}`}
+                    role="tabpanel"
+                    tabIndex={isActive ? 0 : -1}
                   >
-                    <span
-                      aria-hidden="true"
-                      className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03] sm:mb-3 sm:mt-0 sm:block"
-                    />
-                    <span className="block text-balance text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
-                  </li>
-                ))}
-              </m.ul>
+                    <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+                      <OpenSpaceScene
+                        animate
+                        className="h-32 w-40 shrink-0 self-center sm:h-36 sm:w-44 sm:self-start"
+                        name={entry.scene}
+                        show={isActive}
+                      />
+                      <m.div
+                        animate={isActive ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+                        initial={false}
+                        transition={{ duration: 0.45, ease: EASE_OUT, delay: isActive ? 0.1 : 0 }}
+                      >
+                        <p className="font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] sm:text-[28px]">
+                          {entry.headline}
+                        </p>
+                        {entry.body.map((paragraph, paragraphIndex) => (
+                          <p
+                            key={paragraphIndex}
+                            className="mt-3.5 text-pretty text-base leading-relaxed text-[#FBF5E7]/90"
+                          >
+                            {paragraph}
+                          </p>
+                        ))}
+                      </m.div>
+                    </div>
 
-              <m.p
-                animate={{ opacity: 1 }}
-                className="flex items-start gap-2.5 text-sm leading-relaxed text-[#FBF5E7]/70"
-                initial={{ opacity: 0 }}
-                transition={{ duration: 0.4, delay: 0.45 }}
-              >
-                <Lightbulb aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#F5BB03]" strokeWidth={2} />
-                {active.tip}
-              </m.p>
+                    {/*
+                     * Three columns with hairline rules rather than three floating
+                     * bullets: the entries are different lengths, and equal cells
+                     * with a divider make an uneven rag read as deliberate. The
+                     * marker sits above the text on wide screens so nothing hangs
+                     * into a narrow measure; on a phone it is a plain stacked list.
+                     */}
+                    <m.ul
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      className="grid gap-3 border-t border-[#FBF5E7]/12 pt-5 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#FBF5E7]/12"
+                      initial={false}
+                      transition={{ duration: 0.4, delay: isActive ? 0.35 : 0 }}
+                    >
+                      {entry.beats.map((beat) => (
+                        <li
+                          key={beat}
+                          className="flex items-start gap-2.5 sm:block sm:px-5 sm:first:pl-0 sm:last:pr-0"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-[#F5BB03] sm:mb-3 sm:mt-0 sm:block"
+                          />
+                          <span className="block text-balance text-sm leading-snug text-[#FBF5E7]/80">{beat}</span>
+                        </li>
+                      ))}
+                    </m.ul>
+
+                    <m.p
+                      animate={{ opacity: isActive ? 1 : 0 }}
+                      className="flex items-start gap-2.5 text-sm leading-relaxed text-[#FBF5E7]/70"
+                      initial={false}
+                      transition={{ duration: 0.4, delay: isActive ? 0.45 : 0 }}
+                    >
+                      <Lightbulb aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-[#F5BB03]" strokeWidth={2} />
+                      {entry.tip}
+                    </m.p>
+                  </div>
+                );
+              })}
             </div>
           </Reveal>
         </div>
@@ -488,15 +532,28 @@ export default function OpenSpace() {
       <Reveal delay={0.1} y={20}>
         <div className="mx-auto mt-10 flex w-full max-w-[1440px] flex-col items-center gap-4 px-8 text-center">
           <p className="max-w-[460px] text-balance text-sm leading-relaxed text-[#FBF5E7]/75">
-            El día del evento esta misma página muestra qué se está hablando en cada sala, en tiempo real.
+            {liveBoardOpen
+              ? "Esta misma página muestra qué se está hablando en cada sala, en tiempo real."
+              : `La grilla en vivo se activa el ${OPENS_LABEL}. Ese día vas a ver acá qué se está hablando en cada sala, en tiempo real.`}
           </p>
-          <Link
-            className="inline-flex items-center gap-2 bg-[#FBF5E7] px-7 py-3.5 font-display text-sm font-bold uppercase leading-none text-black transition-colors hover:bg-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-            href={INTERNAL_ROUTES.conf.openspace}
-          >
-            Ver la grilla en vivo
-            <span aria-hidden="true">→</span>
-          </Link>
+          {liveBoardOpen ? (
+            <Link
+              className="inline-flex items-center gap-2 bg-[#FBF5E7] px-7 py-3.5 font-display text-sm font-bold uppercase leading-none text-black transition-colors hover:bg-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+              href={INTERNAL_ROUTES.conf.openspace}
+            >
+              Ver la grilla en vivo
+              <span aria-hidden="true">→</span>
+            </Link>
+          ) : (
+            <button
+              className="inline-flex cursor-not-allowed items-center gap-2 border border-[#FBF5E7]/20 px-7 py-3.5 font-display text-sm font-bold uppercase leading-none text-[#FBF5E7]/35"
+              disabled
+              type="button"
+            >
+              <Lock aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2.4} />
+              Ver la grilla en vivo
+            </button>
+          )}
         </div>
       </Reveal>
 

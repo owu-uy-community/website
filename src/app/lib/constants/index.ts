@@ -31,6 +31,11 @@ export const CONF_DATES = {
   cfpDeadline: "2026-09-15T23:59:59-03:00",
   sponsorsDeadline: "2026-09-15T23:59:59-03:00",
   event: "2026-11-07T14:30:00-03:00",
+  /**
+   * When conf.owu.uy/openspace stops being a teaser and starts being useful.
+   * Midnight of event day, so anyone arriving early already has the board.
+   */
+  liveBoardOpens: "2026-11-07T00:00:00-03:00",
 } as const;
 
 /**
