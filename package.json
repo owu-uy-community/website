@@ -80,7 +80,7 @@
     "@vercel/analytics": "2.0.1",
     "@vercel/functions": "3.9.3",
     "@vercel/speed-insights": "2.0.0",
-    "ai": "7.0.31",
+    "ai": "7.0.105",
     "atropos": "2.0.2",
     "better-auth": "1.6.22",
     "class-variance-authority": "0.7.1",
