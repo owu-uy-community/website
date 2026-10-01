@@ -17,12 +17,12 @@ interface ResourceRequirementsProps {
 
 function Availability({ available }: { available: boolean }) {
   return available ? (
-    <span className="flex items-center gap-1.5 text-xs text-emerald-500">
+    <span className="flex shrink-0 items-center gap-1.5 text-xs text-emerald-500">
       <CheckCircle2 className="h-3.5 w-3.5" />
       Disponible
     </span>
   ) : (
-    <span className="flex items-center gap-1.5 text-xs text-destructive">
+    <span className="text-destructive flex shrink-0 items-center gap-1.5 text-xs">
       <XCircle className="h-3.5 w-3.5" />
       No disponible
     </span>
@@ -33,10 +33,10 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
   const selectedRoomData = roomsData.find((r) => r.name === watchedValues.room);
 
   return (
-    <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+    <div className="border-border bg-muted/30 space-y-3 rounded-md border p-3">
       <Label className="text-sm font-medium">Recursos necesarios</Label>
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 sm:min-h-0">
           <div className="flex items-center gap-2">
             <Controller
               control={control}
@@ -44,7 +44,7 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
               render={({ field }) => <Checkbox checked={field.value} id="needsTV" onCheckedChange={field.onChange} />}
             />
             <Label
-              className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm font-normal"
               htmlFor="needsTV"
             >
               <Tv className="h-4 w-4" />
@@ -53,7 +53,7 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
           </div>
           {watchedValues.needsTV && <Availability available={selectedRoomData?.hasTV || false} />}
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 sm:min-h-0">
           <div className="flex items-center gap-2">
             <Controller
               control={control}
@@ -63,7 +63,7 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
               )}
             />
             <Label
-              className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm font-normal"
               htmlFor="needsWhiteboard"
             >
               <Presentation className="h-4 w-4" />

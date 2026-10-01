@@ -118,7 +118,7 @@ const StickyNoteCardComponent = ({
       ref={setRefs}
       data-note-id={note.id}
       className={cn(
-        "group/card absolute inset-1.5 touch-none select-none",
+        "group/card absolute inset-1.5 touch-auto select-none",
         hidden ? "pointer-events-none z-[4] opacity-0" : "z-[5]",
         isSwapPreview && "z-[6]"
       )}
@@ -132,10 +132,11 @@ const StickyNoteCardComponent = ({
     >
       <StickyNoteSurface
         className={cn(
-          "duration-200 animate-in fade-in",
+          "animate-in fade-in duration-200",
+          onCast && "pt-8 md:pt-3",
           !hidden && "cursor-grab active:cursor-grabbing",
-          isCast && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-          wasJustUpdated && !isCast && "ring-2 ring-primary/60"
+          isCast && "ring-primary ring-offset-background ring-2 ring-offset-2",
+          wasJustUpdated && !isCast && "ring-primary/60 ring-2"
         )}
         color={color}
         noteId={note.id}
@@ -144,7 +145,7 @@ const StickyNoteCardComponent = ({
         title={note.title}
       >
         {isSwapPreview && (
-          <span className="absolute -left-1.5 -top-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+          <span className="bg-primary text-primary-foreground absolute -top-1.5 -left-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full shadow-md">
             <ArrowLeftRight className="h-3.5 w-3.5" />
           </span>
         )}
@@ -152,14 +153,15 @@ const StickyNoteCardComponent = ({
         {onCast && !hidden && (
           <div
             className={cn(
-              "absolute right-1 top-1 z-20 transition-opacity",
-              isCast ? "opacity-100" : "opacity-0 focus-within:opacity-100 group-hover/card:opacity-100"
+              "absolute top-1 right-1 z-20 transition-opacity",
+              isCast ? "opacity-100" : "opacity-100 group-hover/card:opacity-100 focus-within:opacity-100 md:opacity-0"
             )}
             onMouseDown={stopDragActivation}
             onTouchStart={stopDragActivation}
           >
             <Button
-              className="h-7 w-7 shadow-md"
+              className="h-8 w-8 shadow-md md:h-7 md:w-7"
+              aria-label={isCast ? "Quitar de la pantalla (en vivo)" : "Enviar a la pantalla"}
               size="icon"
               title={isCast ? "Quitar de la pantalla (en vivo)" : "Enviar a la pantalla"}
               variant={isCast ? "destructive" : "secondary"}
@@ -185,6 +187,7 @@ export function StickyNoteGhost({ note, color }: { note: StickyNote; color: stri
   return (
     <div className="h-full w-full cursor-grabbing" style={{ transform: "rotate(-2deg) scale(1.04)" }}>
       <StickyNoteSurface
+        className="pt-8 md:pt-3"
         color={color}
         noteId={note.id}
         speaker={note.speaker}

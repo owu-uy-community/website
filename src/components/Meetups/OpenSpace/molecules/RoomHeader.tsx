@@ -21,20 +21,20 @@ export function RoomHeader({ room, color, icon, onEdit }: RoomHeaderProps) {
   const content = (
     <>
       {Shape ? <Shape aria-hidden className="h-3.5 w-3.5 shrink-0" style={{ color: color, fill: color }} /> : null}
-      <span className="truncate font-display text-xs font-semibold uppercase tracking-wide text-foreground md:text-sm">
+      <span className="font-display text-foreground truncate text-xs font-semibold tracking-wide uppercase md:text-sm">
         {room}
       </span>
     </>
   );
 
   const className =
-    "sticky top-0 z-20 flex h-14 w-full items-center justify-center gap-2 border-b border-r border-border/60 bg-card px-2";
+    "sticky top-0 z-20 flex h-14 w-full min-w-0 items-center justify-center gap-2 border-b border-r border-border/60 bg-card px-2";
 
   if (!onEdit) return <div className={className}>{content}</div>;
 
   return (
     <button
-      className={cn(className, "transition-colors hover:bg-muted/60")}
+      className={cn(className, "hover:bg-muted/60 transition-colors")}
       title={`Editar "${room}"`}
       type="button"
       onClick={onEdit}

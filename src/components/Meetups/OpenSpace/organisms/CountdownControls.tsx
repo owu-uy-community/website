@@ -123,16 +123,16 @@ export function CountdownControls({ eventId }: { eventId: string }) {
           Temporizador
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-md sm:p-0">
+        <DialogHeader className="border-border shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:pr-14">
           <DialogTitle>Temporizador</DialogTitle>
           <DialogDescription>Controla la cuenta regresiva de la pantalla del evento.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
           {/* Current Timer Display */}
-          <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
-            <div className="font-terminal text-5xl font-bold tabular-nums text-primary">
+          <div className="border-border bg-muted/40 rounded-lg border p-6 text-center">
+            <div className="font-terminal text-primary text-5xl font-bold tabular-nums">
               {formatTime(state.remainingSeconds)}
             </div>
           </div>
@@ -167,14 +167,15 @@ export function CountdownControls({ eventId }: { eventId: string }) {
           </div>
 
           {/* Set Timer */}
-          <div className="space-y-4 rounded-lg border border-border p-4">
+          <div className="border-border space-y-4 rounded-lg border p-4">
             <div className="space-y-3">
-              <Label className="text-xs text-muted-foreground" htmlFor="countdown-minutes">
+              <Label className="text-muted-foreground text-xs" htmlFor="countdown-minutes">
                 Por duración
               </Label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Input
                   className="flex-1 tabular-nums"
+                  aria-label="Minutos"
                   id="countdown-minutes"
                   min="0"
                   placeholder="Min"
@@ -184,6 +185,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
                 />
                 <Input
                   className="flex-1 tabular-nums"
+                  aria-label="Segundos"
                   id="countdown-seconds"
                   max="59"
                   min="0"
@@ -200,13 +202,13 @@ export function CountdownControls({ eventId }: { eventId: string }) {
 
             <div className="relative">
               <Separator />
-              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-popover px-2 text-xs uppercase text-muted-foreground">
+              <span className="bg-popover text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase">
                 o
               </span>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs text-muted-foreground" htmlFor="countdown-target">
+              <Label className="text-muted-foreground text-xs" htmlFor="countdown-target">
                 Hasta una hora específica
               </Label>
               <Input
