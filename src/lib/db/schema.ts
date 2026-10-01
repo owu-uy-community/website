@@ -494,6 +494,11 @@ export const owyStageState = pgTable("owy_stage_state", {
   round: text("round").notNull().default(""),
   /** Spotify link for the "now-playing" scene (refresh token never leaves the server). */
   spotify: jsonb("spotify").$type<{ refreshToken: string; account: string; connectedAt: string }>(),
+  /** The operator's rundown (ordered steps + seconds on air); see RundownSchema. */
+  rundown: jsonb("rundown")
+    .$type<{ id: string; scene: string; sec: number; params: Record<string, unknown> }[]>()
+    .notNull()
+    .default([]),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()
