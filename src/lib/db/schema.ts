@@ -320,12 +320,90 @@ export const obsInstances = pgTable("obs_instances", {
   directMode: boolean("directMode").notNull().default(false),
   currentPresetId: text("currentPresetId"),
   version: integer("version").notNull().default(1),
+  // Live OBS status as reported by the executor tab (see src/lib/orpc/obs-control):
+  // the server's only view of what OBS is doing, read by Companion/Stream Deck
+  // feedback and by every other admin tab.
+  connected: boolean("connected").notNull().default(false),
+  programScene: text("programScene"),
+  previewScene: text("previewScene"),
+  studioMode: boolean("studioMode").notNull().default(false),
+  transitionName: text("transitionName"),
+  transitionMs: integer("transitionMs"),
+  streaming: boolean("streaming").notNull().default(false),
+  recording: boolean("recording").notNull().default(false),
+  /** Scene names and audio inputs as OBS lists them, so tabs without a socket can act as remotes. */
+  scenes: jsonb("scenes").$type<string[]>().notNull().default([]),
+  audioInputs: jsonb("audioInputs").$type<{ name: string; muted: boolean }[]>().notNull().default([]),
+  /** The one browser tab that executes commands against OBS (heartbeat-elected). */
+  executorId: text("executorId"),
+  executorSeenAt: ts("executorSeenAt"),
+  lastError: text("lastError"),
+  statusAt: ts("statusAt"),
+  /** Rundown pointer: the cue fired last. */
+  currentCueId: text("currentCueId"),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
   createdAt: ts("createdAt").notNull().defaultNow(),
 });
+
+/**
+ * Commands for the executor tab (from other admin devices, Companion/Stream
+ * Deck via /api/obs, the Owy bot). Persisted so a press that lands while the
+ * executor's realtime socket is recycling still runs on reconnect, and as the
+ * day-of audit trail ("who took what when").
+ */
+export const obsCommands = pgTable(
+  "obs_commands",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    instanceId: integer("instanceId")
+      .notNull()
+      .references(() => obsInstances.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    /** `admin:<userId>` | `api-key:<userId>` | `cue:<cueId>` … informational. */
+    source: text("source").notNull().default(""),
+    status: text("status").$type<"pending" | "done" | "failed" | "skipped">().notNull().default("pending"),
+    error: text("error"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    doneAt: ts("doneAt"),
+  },
+  (t) => [index("obs_commands_instanceId_status_createdAt_idx").on(t.instanceId, t.status, t.createdAt)]
+);
+
+/** A rundown entry: one press = OBS scene + wall scene + launchpad sound. */
+export const obsCues = pgTable(
+  "obs_cues",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    instanceId: integer("instanceId")
+      .notNull()
+      .references(() => obsInstances.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    color: text("color"),
+    obsScene: text("obsScene"),
+    transition: text("transition"),
+    transitionMs: integer("transitionMs"),
+    stageScene: text("stageScene"),
+    stageParams: jsonb("stageParams").$type<Record<string, unknown>>(),
+    sound: text("sound"),
+    notes: text("notes"),
+    hotkey: text("hotkey"),
+    position: integer("position").notNull().default(0),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("obs_cues_instanceId_position_idx").on(t.instanceId, t.position)]
+);
 
 export const obsQueueItems = pgTable(
   "obs_queue_items",
