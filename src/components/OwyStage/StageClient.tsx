@@ -16,6 +16,8 @@ import {
 
 import { Effects, useEffectQueue } from "./effects";
 import { SCENE_COMPONENTS } from "./scenes";
+import { type StageCanvas } from "lib/owy-stage/canvas";
+
 import { Stage, WIPE_MID_MS, Wipe, type StageBackground } from "./Stage";
 
 type Props = {
@@ -24,9 +26,11 @@ type Props = {
   fixed?: SceneId;
   /** Thumbnail mode: no realtime, no effects, lower frame rate. */
   preview?: boolean;
+  /** Logical canvas (`?canvas=3584x960`, `ucu`, `fit`). Defaults to 1920×1080. */
+  canvas?: StageCanvas | "fit";
 };
 
-export default function StageClient({ bg, fixed, preview = false }: Props) {
+export default function StageClient({ bg, fixed, preview = false, canvas }: Props) {
   const [shown, setShown] = useState<StageState | null>(null);
   const shownRef = useRef<StageState | null>(null);
   shownRef.current = shown;
@@ -78,7 +82,7 @@ export default function StageClient({ bg, fixed, preview = false }: Props) {
     : null;
 
   return (
-    <Stage bg={bg} preview={preview}>
+    <Stage bg={bg} canvas={canvas} preview={preview}>
       {Scene && shown && (
         <Scene
           // Interactive scenes restart (timers, inputs) on every take; the rest keep running through param edits.
