@@ -11,7 +11,7 @@ import { publishServer } from "./publish";
  * happened to make the change.
  *
  * Payloads match what the client hooks already emit and apply
- * (`src/hooks/useSupabaseSync.ts`, `src/hooks/useOBSQueueStateHybrid.ts`), so
+ * (`src/hooks/useSupabaseSync.ts`, `src/hooks/useObsQueue.ts`), so
  * client- and server-sent events are interchangeable. Applying an event twice
  * is harmless: the sync handlers are idempotent.
  *
