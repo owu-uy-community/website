@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { tracks } from "../../../db/schema";
@@ -18,7 +19,7 @@ export const getTrackById = async ({ id }: GetTrackInput): Promise<StickyNote> =
   });
 
   if (!track) {
-    throw new Error("Track not found");
+    throw new ORPCError("NOT_FOUND", { message: "Track not found" });
   }
 
   return transformTrackForStickyNote(track);

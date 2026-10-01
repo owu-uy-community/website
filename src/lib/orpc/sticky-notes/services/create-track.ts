@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { openSpaces, rooms, schedules, tracks } from "../../../db/schema";
@@ -18,22 +19,22 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
   ]);
 
   if (!openSpace) {
-    throw new Error("OpenSpace not found");
+    throw new ORPCError("NOT_FOUND", { message: "OpenSpace not found" });
   }
   if (!schedule) {
-    throw new Error("Schedule not found");
+    throw new ORPCError("NOT_FOUND", { message: "Schedule not found" });
   }
   if (!room) {
-    throw new Error("Room not found");
+    throw new ORPCError("NOT_FOUND", { message: "Room not found" });
   }
 
   // Validate room has required resources (unless validation is skipped)
   if (!input.skipResourceValidation) {
     if (input.needsTV && !room.hasTV) {
-      throw new Error(`Room "${room.name}" does not have a TV/projector`);
+      throw new ORPCError("BAD_REQUEST", { message: `Room "${room.name}" does not have a TV/projector` });
     }
     if (input.needsWhiteboard && !room.hasWhiteboard) {
-      throw new Error(`Room "${room.name}" does not have a whiteboard`);
+      throw new ORPCError("BAD_REQUEST", { message: `Room "${room.name}" does not have a whiteboard` });
     }
   }
 
@@ -45,7 +46,7 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
     .limit(1);
 
   if (existingTrack) {
-    throw new Error(`Slot is already occupied by "${existingTrack.title}"`);
+    throw new ORPCError("CONFLICT", { message: `Slot is already occupied by "${existingTrack.title}"` });
   }
 
   const [track] = await db

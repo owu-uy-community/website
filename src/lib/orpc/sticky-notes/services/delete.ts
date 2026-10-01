@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { tracks } from "../../../db/schema";
@@ -19,7 +20,7 @@ export const deleteTrack = async ({ id }: DeleteTrackInput): Promise<StickyNote>
   });
 
   if (!track) {
-    throw new Error("Track not found");
+    throw new ORPCError("NOT_FOUND", { message: "Track not found" });
   }
 
   await db.delete(tracks).where(eq(tracks.id, id));
