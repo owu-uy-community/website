@@ -13,6 +13,7 @@ import { EASE_OUT } from "./Reveal";
 const NAV_LINKS = [
   { label: "SOBRE OWU CONF", href: "#sobre-owu" },
   { label: "PROGRAMA", href: "#programa" },
+  { label: "OPEN SPACE", href: "#open-space" },
   { label: "SPEAKERS", href: "#speakers" },
   { label: "SPONSORS", href: "#sponsors" },
   { label: "EQUIPO", href: "#equipo" },

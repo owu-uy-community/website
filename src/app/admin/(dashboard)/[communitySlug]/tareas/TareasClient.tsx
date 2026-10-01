@@ -354,12 +354,17 @@ export default function TareasClient({
     await shiftMutation.mutateAsync({ eventId, dayDate: selectedDay, fromTime, deltaMinutes });
   };
 
-  const handleSend = async (values: { body: string; urgent: boolean; taskId: string | null }) => {
+  const handleSend = async (values: {
+    body: string;
+    urgent: boolean;
+    audience: "all" | "task" | "attendees";
+    taskId: string | null;
+  }) => {
     await announceMutation.mutateAsync({
       eventId,
       body: values.body,
       urgent: values.urgent,
-      audience: values.taskId ? "task" : "all",
+      audience: values.audience,
       taskId: values.taskId ?? undefined,
     });
   };

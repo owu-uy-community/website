@@ -34,6 +34,8 @@ export const transformTrackForStickyNote = (
   // Convert foreign keys to readable strings for UI display
   room: track.room?.name || track.roomId,
   roomColor: track.room?.color ?? undefined,
+  topics: track.topics ?? null,
+  format: track.format ?? null,
   timeSlot: track.schedule ? `${track.schedule.startTime} - ${track.schedule.endTime}` : track.scheduleId,
   createdAt: track.createdAt.toISOString(),
   updatedAt: track.updatedAt.toISOString(),

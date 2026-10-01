@@ -2,6 +2,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { db } from "../../../db";
 import { rooms, schedules, tracks } from "../../../db/schema";
 import { broadcastCardChange } from "../../../realtime/broadcast";
+import { tagTrack } from "../../../openspace/tag-tracks";
 import type { UpdateTrackInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -66,8 +67,17 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
     }
   }
 
+  /* Only the title and description feed the tags, so only re-tag when one of
+     them actually changed — moving a card between rooms should not cost a
+     model call. */
+  const retag = data.title !== undefined || data.description !== undefined;
+  const tags = retag
+    ? await tagTrack(data.title ?? currentTrack.title, data.description ?? currentTrack.description)
+    : null;
+
   const updateData: Partial<typeof tracks.$inferInsert> = {
     updatedAt: new Date(),
+    ...(tags && { topics: tags.topics, format: tags.format }),
     ...(data.title !== undefined && { title: data.title }),
     ...(data.speaker !== undefined && { speaker: data.speaker || null }),
     ...(data.description !== undefined && { description: data.description || null }),

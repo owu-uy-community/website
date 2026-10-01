@@ -31,6 +31,22 @@ export const CONF_DATES = {
   cfpDeadline: "2026-09-15T23:59:59-03:00",
   sponsorsDeadline: "2026-09-15T23:59:59-03:00",
   event: "2026-11-07T14:30:00-03:00",
+  /**
+   * When conf.owu.uy/openspace stops being a teaser and starts being useful.
+   * Midnight of event day, so anyone arriving early already has the board.
+   */
+  liveBoardOpens: "2026-11-07T00:00:00-03:00",
+} as const;
+
+/**
+ * The event whose live open-space board backs conf.owu.uy/openspace. The row
+ * has to exist under this community/slug pair for the live view to render;
+ * until it does, the page falls back to its pre-event state (never 404s).
+ * `pnpm db:seed` creates a matching board locally.
+ */
+export const CONF_EVENT = {
+  communitySlug: "owu",
+  eventSlug: "owu-conf-2026",
 } as const;
 
 // OpenSpace Room Colors
@@ -128,6 +144,7 @@ export const INTERNAL_ROUTES = {
     current: "/conf",
     callForProposals: "/conf/call-for-proposals",
     sponsors: "/conf/sponsors",
+    openspace: "/conf/openspace",
   },
 } as const;
 

@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { openSpaces, rooms, schedules, tracks } from "../../../db/schema";
 import { broadcastCardChange } from "../../../realtime/broadcast";
+import { tagTrack } from "../../../openspace/tag-tracks";
 import type { CreateTrackInput, StickyNote } from "../schemas";
 import { transformTrackForStickyNote } from "./transforms";
 
@@ -48,6 +49,8 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
     throw new Error(`Slot is already occupied by "${existingTrack.title}"`);
   }
 
+  const tags = await tagTrack(input.title, input.description);
+
   const [track] = await db
     .insert(tracks)
     .values({
@@ -59,6 +62,9 @@ export const createTrack = async (input: CreateTrackInput): Promise<StickyNote> 
       openSpaceId: input.openSpaceId,
       scheduleId: input.scheduleId,
       roomId: input.roomId,
+      // Tagged once, here, so the public ranking never needs a model.
+      topics: tags.topics,
+      format: tags.format,
     })
     .returning();
 
