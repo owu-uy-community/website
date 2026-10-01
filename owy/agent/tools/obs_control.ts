@@ -6,9 +6,27 @@ import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
-    "SOLO STAFF: controla remotamente la rotación de escenas de OBS de las pantallas del evento. Acciones: play (reanudar rotación), pause, next_scene, prev_scene, set_scene_queue (reemplaza la cola con sceneNames), activate_preset (carga un preset guardado por nombre), set_direct_mode (on = la escena no rota sola). Mirá primero el estado con get_obs_state.",
+    "SOLO STAFF: controla OBS de las pantallas del evento a través del puesto de control (una pestaña conectada a OBS ejecuta los comandos). Acciones en vivo: scene (escena al aire), preview (a preview, modo estudio), take (preview → aire), cut, fire_cue (dispara un cue del guion por nombre: escena OBS + pantalla Owy + sonido), next_cue, prev_cue, mute (silencia/activa una fuente de audio), stream/record (start|stop). Rotación automática: play, pause, next_scene, prev_scene, set_scene_queue, activate_preset, set_direct_mode. Mirá primero el estado con get_obs_state.",
   inputSchema: z.object({
-    action: z.enum(["play", "pause", "next_scene", "prev_scene", "set_scene_queue", "activate_preset", "set_direct_mode"]),
+    action: z.enum([
+      "scene",
+      "preview",
+      "take",
+      "cut",
+      "fire_cue",
+      "next_cue",
+      "prev_cue",
+      "mute",
+      "stream",
+      "record",
+      "play",
+      "pause",
+      "next_scene",
+      "prev_scene",
+      "set_scene_queue",
+      "activate_preset",
+      "set_direct_mode",
+    ]),
     instanceId: z.number().int().min(1).max(2).default(1).describe("1 = pantalla admin (default), 2 = app standalone"),
     sceneNames: z
       .array(z.string().min(1))
@@ -23,11 +41,21 @@ export default defineTool({
       .describe("Para set_scene_queue: segundos entre escenas (default 5)"),
     presetName: z.string().optional().describe("Para activate_preset: nombre del preset guardado"),
     directMode: z.boolean().optional().describe("Para set_direct_mode: true = fijar escena, false = rotación normal"),
+    sceneName: z.string().optional().describe("Para scene/preview: nombre EXACTO de la escena de OBS"),
+    cueName: z.string().optional().describe("Para fire_cue: nombre del cue del guion"),
+    inputName: z.string().optional().describe("Para mute: nombre de la fuente de audio en OBS"),
+    muted: z.boolean().optional().describe("Para mute: true = silenciar, false = activar; sin valor = alternar"),
+    outputAction: z.enum(["start", "stop"]).optional().describe("Para stream/record"),
   }),
   approval: staffOnly(),
   async execute(input, ctx) {
     requireStaff(ctx);
     const api = owuApi();
+
+    // Live commands go through the command bus; the connected control tab runs them.
+    const live = await liveCommand(input, api);
+    if (live) return live;
+
     const current = await api.obsQueue.getState({ instanceId: input.instanceId });
 
     let data: OBSUpdateData;
@@ -86,6 +114,8 @@ export default defineTool({
         data = { directMode: input.directMode };
         break;
       }
+      default:
+        throw new Error(`Acción desconocida: ${input.action}`);
     }
 
     const updated = await api.obsQueue.updateState({ instanceId: input.instanceId, data });
@@ -101,3 +131,87 @@ export default defineTool({
     };
   },
 });
+
+type Api = ReturnType<typeof owuApi>;
+type Input = {
+  action: string;
+  instanceId: number;
+  sceneName?: string;
+  cueName?: string;
+  inputName?: string;
+  muted?: boolean;
+  outputAction?: "start" | "stop";
+};
+
+async function liveCommand(input: Input, api: Api) {
+  const { instanceId } = input;
+  const done = async (sent: { id: string; executorOnline: boolean }, what: string) => ({
+    ok: sent.executorOnline,
+    action: input.action,
+    instanceId,
+    what,
+    commandId: sent.id,
+    note: sent.executorOnline
+      ? "Enviado al puesto de control; OBS lo aplica en segundos."
+      : "Quedó encolado pero NO hay ninguna pestaña conectada a OBS ahora mismo: avisale al staff que abra /admin/screen.",
+  });
+
+  switch (input.action) {
+    case "scene": {
+      if (!input.sceneName) throw new Error("scene necesita sceneName.");
+      return done(
+        await api.obsControl.send({ instanceId, type: "scene", payload: { sceneName: input.sceneName } }),
+        `${input.sceneName} al aire`
+      );
+    }
+    case "preview": {
+      if (!input.sceneName) throw new Error("preview necesita sceneName.");
+      return done(
+        await api.obsControl.send({ instanceId, type: "preview", payload: { sceneName: input.sceneName } }),
+        `${input.sceneName} a preview`
+      );
+    }
+    case "take":
+      return done(await api.obsControl.send({ instanceId, type: "take", payload: {} }), "TAKE");
+    case "cut":
+      return done(await api.obsControl.send({ instanceId, type: "cut", payload: {} }), "CUT");
+    case "mute": {
+      if (!input.inputName) throw new Error("mute necesita inputName.");
+      return done(
+        await api.obsControl.send({
+          instanceId,
+          type: "mute",
+          payload: { inputName: input.inputName, ...(input.muted === undefined ? {} : { muted: input.muted }) },
+        }),
+        `mute ${input.inputName}`
+      );
+    }
+    case "stream":
+    case "record": {
+      if (!input.outputAction) throw new Error(`${input.action} necesita outputAction start|stop.`);
+      return done(
+        await api.obsControl.send({ instanceId, type: input.action, payload: { action: input.outputAction } }),
+        `${input.action} ${input.outputAction}`
+      );
+    }
+    case "fire_cue": {
+      if (!input.cueName) throw new Error("fire_cue necesita cueName.");
+      const cues = await api.obsCue.list({ instanceId });
+      const cue = cues.find((candidate) => candidate.name.toLowerCase() === input.cueName!.toLowerCase());
+      if (!cue) {
+        const names = cues.map((candidate) => candidate.name).join(", ") || "(no hay cues)";
+        throw new Error(`No existe el cue "${input.cueName}". Cues del guion: ${names}.`);
+      }
+      const fired = await api.obsCue.fire({ id: cue.id });
+      return { ok: true, action: input.action, instanceId, cue: fired.cue.name, commandId: fired.commandId };
+    }
+    case "next_cue":
+    case "prev_cue": {
+      const fired = await api.obsCue.step({ instanceId, direction: input.action === "next_cue" ? "next" : "prev" });
+      if (!fired) throw new Error("El guion está vacío.");
+      return { ok: true, action: input.action, instanceId, cue: fired.cue.name, commandId: fired.commandId };
+    }
+    default:
+      return null;
+  }
+}
