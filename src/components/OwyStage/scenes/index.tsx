@@ -121,6 +121,19 @@ import {
 import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
+import {
+  AgilesBreak,
+  AgilesClosing,
+  AgilesCover,
+  AgilesMessage,
+  AgilesNow,
+  AgilesProgram,
+  AgilesSocial,
+  AgilesSpeaker,
+  AgilesSponsors,
+  AgilesWelcome,
+} from "./agiles";
+import { OsBoard, OsClosing, OsIntro, OsMarketplace, OsPrinciples, OsRoom, OsRounds } from "./agiles-openspace";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
 
 // ---------------------------------------------------------------------------
@@ -342,6 +355,24 @@ function CountdownScene({ params, eventId }: SceneProps<"countdown">) {
 }
 
 export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } = {
+  // Ágiles Uruguay 2026
+  "agiles-logo": AgilesCover,
+  "agiles-welcome": AgilesWelcome,
+  "agiles-program": AgilesProgram,
+  "agiles-now": AgilesNow,
+  "agiles-speaker": AgilesSpeaker,
+  "agiles-break": AgilesBreak,
+  "agiles-message": AgilesMessage,
+  "agiles-sponsors": AgilesSponsors,
+  "agiles-social": AgilesSocial,
+  "agiles-closing": AgilesClosing,
+  "agiles-os-intro": OsIntro,
+  "agiles-os-principles": OsPrinciples,
+  "agiles-os-marketplace": OsMarketplace,
+  "agiles-os-board": OsBoard,
+  "agiles-os-room": OsRoom,
+  "agiles-os-rounds": OsRounds,
+  "agiles-os-closing": OsClosing,
   "owy-face": OwyFace,
   logo: Logo,
   opening: Opening,

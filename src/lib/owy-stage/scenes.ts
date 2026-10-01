@@ -15,7 +15,38 @@ const DEFAULT_PROGRAM =
 const DEPARTMENTS =
   "Montevideo | Canelones | Maldonado | Colonia | San José | Salto | Paysandú | Rivera | Tacuarembó | Cerro Largo | Rocha | Florida | Lavalleja | Durazno | Soriano | Río Negro | Artigas | Treinta y Tres | Flores | Otro país";
 
+/**
+ * Ágiles Uruguay 2026 (01 OCT 2026) — the scenes below run on the host's own
+ * brand (lineamientos de diseño: #0B192C, Poppins + Open Sans, #EVOLUCIONANDO),
+ * so they never borrow OWU's geometry. Everything here is a default an operator
+ * can edit from the admin on the day.
+ */
+const AGILES_DATE = "01 de octubre · 17:00 h";
+const AGILES_HASHTAG = "#EVOLUCIONANDO";
+/** The real agenda: `HH:MM[-HH:MM] Título :: Descripción`, separated by `|`. */
+const AGILES_PROGRAM = [
+  "17:00-17:30 Bienvenida y apertura :: ¡Comenzamos el evento conectando como Comunidad!",
+  "17:45-20:00 Open Space :: Espacio colaborativo cocreado por todas las personas asistentes.",
+  "20:00-20:15 Break :: ¡Recarguemos energías!",
+  "20:15-20:45 Charla · Federico Toledo :: ¿Cómo evoluciona la Agilidad en la era de la IA?",
+  "20:45-21:15 Charla · Dioselinda Roa :: Error como motor: entre lo que controlas, lo que sueltas y lo que evolucionas.",
+  "21:15-22:00 Sorteo, cosecha y cierre :: Sorteo entre asistentes, reflexiones y agradecimientos.",
+  "22:00 ¡After! :: La seguimos en Cantina Bombín, a 4 cuadras, ¡para seguir conectando y conversando!",
+].join(" | ");
+const AGILES_SPONSORS =
+  "UCU | Uruguay Technology | OWU | Búsquedas IT | Roderichs | Reimpulso | Mimiquate | Kleer | Life Cinemas | Henka | Pia | Manzanares";
+const AGILES_OS_PRINCIPLES =
+  "Quienes vienen son las personas indicadas | Lo que pase es lo único que podía pasar | Empieza cuando empieza | Cuando se termina, se terminó";
+const AGILES_OS_STEPS =
+  "Escribí tu tema en una hoja: título y tu nombre | Presentalo en voz alta al grupo, en 30 segundos | Pegalo en la grilla: elegí sala y horario";
+/** Open space 17:45–20:00: marketplace primero, después tres rondas. */
+const AGILES_OS_ROUNDS = "18:15-18:45 | 18:50-19:20 | 19:25-19:55";
+const AGILES_OS_CLOSING =
+  "¿Qué te llevás de hoy? | ¿Qué conversación querés continuar? | ¿Con quién querés seguir en contacto? | ¿Qué vas a probar el lunes?";
+
 export const SCENE_CATEGORIES = {
+  agiles: { title: "Ágiles Uruguay 2026" },
+  agilesOpenSpace: { title: "Ágiles · Open space" },
   opening: { title: "Apertura y cierre" },
   programme: { title: "Programa y horarios" },
   talks: { title: "Charlas y escenario" },
@@ -1771,6 +1802,172 @@ export const SCENES = {
     description: "Pantalla vacía.",
     params: z.object({}),
   },
+
+  // --- Ágiles Uruguay 2026 (01 OCT 2026, #EVOLUCIONANDO) ---
+  "agiles-logo": {
+    category: "agiles",
+    title: "Portada Ágiles",
+    description: "La marca sobre la rambla: logo, fecha y hashtag. La pantalla de espera del día.",
+    params: z.object({
+      date: z.string().trim().max(40).default(AGILES_DATE),
+      hashtag: z.string().trim().max(30).default(AGILES_HASHTAG),
+      photo: z.boolean().default(true),
+    }),
+  },
+  "agiles-welcome": {
+    category: "agiles",
+    title: "Bienvenida",
+    description: "Título grande con sede, wifi y hashtag para la apertura de puertas.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Bienvenidas y bienvenidos"),
+      subtitle: z.string().trim().max(120).default("Un día para evolucionar juntas y juntos"),
+      venue: z.string().trim().max(80).default("Auditorio San José · UCU"),
+      wifi: z.string().trim().max(80).default(""),
+      hashtag: z.string().trim().max(30).default(AGILES_HASHTAG),
+    }),
+  },
+  "agiles-program": {
+    category: "agiles",
+    title: "Programa del día",
+    description: "La agenda completa con el bloque actual resaltado según la hora.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Programa"),
+      items: z.string().trim().max(1400).default(AGILES_PROGRAM),
+    }),
+  },
+  "agiles-now": {
+    category: "agiles",
+    title: "Ahora y a continuación",
+    description: "Pantalla grande con el bloque en curso y el que sigue, calculados del programa.",
+    params: z.object({ items: z.string().trim().max(1400).default(AGILES_PROGRAM) }),
+  },
+  "agiles-speaker": {
+    category: "agiles",
+    title: "Quién habla",
+    description: "Ficha de la charla: nombre, rol, título, hora y sala. También sirve de zócalo.",
+    params: z.object({
+      name: z.string().trim().max(60).default("Federico Toledo"),
+      role: z.string().trim().max(80).default(""),
+      talk: z.string().trim().max(140).default("¿Cómo evoluciona la Agilidad en la era de la IA?"),
+      time: z.string().trim().max(20).default("20:15 – 20:45"),
+      room: z.string().trim().max(40).default(""),
+    }),
+  },
+  "agiles-break": {
+    category: "agiles",
+    title: "Pausa",
+    description: "Cuenta regresiva hasta la hora de volver, con el reloj gigante.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Volvemos en"),
+      until: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/)
+        .default("20:15"),
+      note: z.string().trim().max(120).default("¡Recarguemos energías!"),
+    }),
+  },
+  "agiles-message": {
+    category: "agiles",
+    title: "Aviso",
+    description: "Un mensaje grande sobre la marca, para lo que haya que anunciar.",
+    params: z.object({
+      eyebrow: z.string().trim().max(30).default("Aviso"),
+      title: z.string().trim().max(80).default("Nos vemos en la sala principal"),
+      text: z.string().trim().max(200).default(""),
+    }),
+  },
+  "agiles-sponsors": {
+    category: "agiles",
+    title: "Aliados y sponsors",
+    description: "Las organizaciones que hacen posible el evento, en tarjetas de marca.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Aliados y sponsors"),
+      items: z.string().trim().max(600).default(AGILES_SPONSORS),
+    }),
+  },
+  "agiles-social": {
+    category: "agiles",
+    title: "Hashtag y redes",
+    description: "El hashtag a pantalla completa con las cuentas y un QR opcional.",
+    params: z.object({
+      hashtag: z.string().trim().max(30).default(AGILES_HASHTAG),
+      accounts: z.string().trim().max(200).default("@agilesuy | Ágiles Uruguay | agiles.uy"),
+      url: z.string().trim().max(200).default(""),
+    }),
+  },
+  "agiles-closing": {
+    category: "agiles",
+    title: "Cierre",
+    description: "Gracias, hashtag y la invitación a seguir en contacto.",
+    params: z.object({
+      title: z.string().trim().max(40).default("¡Gracias!"),
+      text: z
+        .string()
+        .trim()
+        .max(160)
+        .default("La seguimos en Cantina Bombín, a 4 cuadras: ¡para seguir conectando y conversando!"),
+      hashtag: z.string().trim().max(30).default(AGILES_HASHTAG),
+    }),
+  },
+
+  // --- Ágiles · Open space ---
+  "agiles-os-intro": {
+    category: "agilesOpenSpace",
+    title: "Qué es un Open Space",
+    description: "La explicación corta antes del marketplace, con la ley de los dos pies.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Open Space"),
+      text: z
+        .string()
+        .trim()
+        .max(300)
+        .default("La agenda la armamos entre todas y todos: quien propone, facilita; quien participa, elige."),
+      law: z.string().trim().max(160).default("Ley de los dos pies: si no aprendés ni aportás, movete a otra sesión."),
+    }),
+  },
+  "agiles-os-principles": {
+    category: "agilesOpenSpace",
+    title: "Principios",
+    description: "Los cuatro principios del open space en tarjetas numeradas.",
+    params: z.object({ items: z.string().trim().max(600).default(AGILES_OS_PRINCIPLES) }),
+  },
+  "agiles-os-marketplace": {
+    category: "agilesOpenSpace",
+    title: "Marketplace",
+    description: "Los pasos para proponer una sesión, mientras la gente arma la grilla.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Proponé tu sesión"),
+      items: z.string().trim().max(600).default(AGILES_OS_STEPS),
+    }),
+  },
+  "agiles-os-board": {
+    category: "agilesOpenSpace",
+    title: "Grilla en vivo",
+    description: "La grilla del evento (salas × bloques) en vivo desde el admin, con la marca de Ágiles.",
+    params: z.object({ title: z.string().trim().max(40).default("Grilla") }),
+  },
+  "agiles-os-room": {
+    category: "agilesOpenSpace",
+    title: "Sala",
+    description: "El programa de una sala, para la pantalla o el cartel de la puerta.",
+    params: z.object({ room: z.string().trim().max(40).default("Sala 1") }),
+  },
+  "agiles-os-rounds": {
+    category: "agilesOpenSpace",
+    title: "Rondas",
+    description: "Las rondas del open space con el reloj marcando la que corre y lo que falta.",
+    params: z.object({ rounds: z.string().trim().max(300).default(AGILES_OS_ROUNDS) }),
+  },
+  "agiles-os-closing": {
+    category: "agilesOpenSpace",
+    title: "Cierre del open space",
+    description: "Las preguntas de la ronda de cierre, para la última media hora.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Ronda de cierre"),
+      items: z.string().trim().max(400).default(AGILES_OS_CLOSING),
+    }),
+  },
 } as const satisfies Record<
   string,
   { title: string; description: string; category: SceneCategory; params: z.ZodTypeAny }
@@ -1816,6 +2013,20 @@ export const StageStateSchema = z.object({
 export type StageState = z.infer<typeof StageStateSchema>;
 
 export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null, round: "", takenAt: "" };
+
+/**
+ * The rundown: the order the wall walks through on the day. One row per take,
+ * with the seconds it stays on air — `0` means "hold here until I say next".
+ * Stored on the stage row so any admin device edits the same list.
+ */
+export const RundownStepSchema = z.object({
+  id: z.string().min(1).max(40),
+  scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
+  sec: z.number().int().min(0).max(7200).default(20),
+  params: z.record(z.string(), z.unknown()).default({}),
+});
+export const RundownSchema = z.array(RundownStepSchema).max(80);
+export type RundownStep = z.infer<typeof RundownStepSchema>;
 
 /** Scenes that take input from phones at /owy/play. */
 export const INTERACTIVE_SCENES = [

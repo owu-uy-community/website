@@ -14,6 +14,12 @@ export function SceneThumb({ id, title }: { id: string; title: string }) {
   const [missing, setMissing] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // A 404 that lands before hydration never fires onError, which used to leave
+  // a broken-image icon forever; catch it when the element mounts instead.
+  const check = (img: HTMLImageElement | null) => {
+    if (img?.complete && img.naturalWidth === 0) setMissing(true);
+  };
+
   const enter = () => {
     timer.current = setTimeout(() => setLive(true), 350);
   };
@@ -34,6 +40,7 @@ export function SceneThumb({ id, title }: { id: string; title: string }) {
             decoding="async"
             loading="lazy"
             onError={() => setMissing(true)}
+            ref={check}
             src={`/owy-stage/thumbs/${id}.jpg`}
           />
         </div>
