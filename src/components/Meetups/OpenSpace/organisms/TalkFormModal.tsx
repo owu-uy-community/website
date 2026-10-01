@@ -58,11 +58,11 @@ export function TalkFormModal({
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
-          className="flex max-h-[85dvh] flex-col gap-0 p-0 sm:max-w-lg"
+          className="top-[var(--admin-viewport-top,0px)] left-0 flex h-[var(--admin-viewport-height,100dvh)] max-h-[var(--admin-viewport-height,100dvh)] w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none p-0 sm:top-[calc(var(--admin-viewport-top,0px)+var(--admin-viewport-height,100dvh)/2)] sm:left-1/2 sm:h-auto sm:max-h-[calc(var(--admin-viewport-height,100dvh)*0.85)] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:p-0"
           onEscapeKeyDown={(e) => busy && e.preventDefault()}
           onInteractOutside={(e) => busy && e.preventDefault()}
         >
-          <DialogHeader className="border-b border-border px-6 py-4">
+          <DialogHeader className="border-border shrink-0 border-b px-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 pb-4 sm:px-6 sm:pr-14">
             <DialogTitle>{note?.id ? "Editar charla" : "Nueva charla"}</DialogTitle>
             <DialogDescription>
               {note?.id
@@ -71,7 +71,7 @@ export function TalkFormModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
             <Tabs className="w-full" value={controller.activeTab} onValueChange={controller.setActiveTab}>
               {!note?.id && (
                 <TabsList className="mb-4 grid w-full grid-cols-2">
@@ -117,7 +117,7 @@ export function TalkFormModal({
             </Tabs>
           </div>
 
-          <DialogFooter className="border-t border-border px-6 py-4 sm:justify-between">
+          <DialogFooter className="border-border shrink-0 flex-row flex-wrap items-center border-t px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:justify-between sm:px-6">
             <div>
               {onDelete && note?.id && (
                 <Button
@@ -131,7 +131,7 @@ export function TalkFormModal({
                 </Button>
               )}
             </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            <div className="ml-auto flex gap-2 [&>button]:h-11 sm:[&>button]:h-10">
               <Button disabled={busy} type="button" variant="ghost" onClick={() => handleOpenChange(false)}>
                 Cancelar
               </Button>

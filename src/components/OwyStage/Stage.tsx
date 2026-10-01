@@ -13,6 +13,7 @@ import {
 import { LazyMotion, MotionConfig, domAnimation, m, useAnimationFrame } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
+import { DEFAULT_CANVAS, type StageCanvas } from "lib/owy-stage/canvas";
 import "components/displays/countdown/countdown.css";
 
 /**
@@ -24,6 +25,9 @@ import "components/displays/countdown/countdown.css";
 export const W = 1920;
 export const H = 1080;
 
+export type { StageCanvas };
+export { DEFAULT_CANVAS };
+
 export const BRAND = {
   black: "#000000",
   cream: "#FBF5E7",
@@ -33,21 +37,62 @@ export const BRAND = {
 
 export type StageBackground = "black" | "transparent";
 
-export const StageContext = createContext<{ preview: boolean; bg: StageBackground }>({ preview: false, bg: "black" });
+export const StageContext = createContext<{ preview: boolean; bg: StageBackground; canvas: StageCanvas }>({
+  preview: false,
+  bg: "black",
+  canvas: DEFAULT_CANVAS,
+});
 
-const FONTS = ["800 10px Poppins", "700 10px Poppins", "500 10px Inter", "10px 'Organic Stencil'"];
+/** Canvas plus the two numbers every scene needs: type scale and "is it a strip?". */
+export function useCanvas() {
+  const { canvas } = useContext(StageContext);
 
-export function Stage({ bg, preview, children }: { bg: StageBackground; preview: boolean; children: ReactNode }) {
+  return { ...canvas, u: canvas.h / H, wide: canvas.w / canvas.h > 2.4 };
+}
+
+const FONTS = [
+  "800 10px Poppins",
+  "700 10px Poppins",
+  "500 10px Inter",
+  "600 10px 'Open Sans'",
+  "10px 'Organic Stencil'",
+];
+
+export function Stage({
+  bg,
+  preview,
+  canvas = DEFAULT_CANVAS,
+  children,
+}: {
+  bg: StageBackground;
+  preview: boolean;
+  canvas?: StageCanvas | "fit";
+  children: ReactNode;
+}) {
   const [scale, setScale] = useState(1);
   const [ready, setReady] = useState(false);
+  // "fit" keeps the height and takes the width from the screen, so any wall
+  // fills edge to edge without anybody typing its resolution.
+  const [fitted, setFitted] = useState<StageCanvas>(canvas === "fit" ? DEFAULT_CANVAS : canvas);
+  const size = canvas === "fit" ? fitted : canvas;
 
   // JS, not CSS calc(100vw / 1920): OBS 30 ships Chromium 103.
   useLayoutEffect(() => {
-    const fit = () => setScale(Math.min(window.innerWidth / W, window.innerHeight / H));
+    const fit = () => {
+      const { innerWidth: vw, innerHeight: vh } = window;
+      if (canvas === "fit") {
+        const width = Math.round(H * (vw / Math.max(vh, 1)));
+        setFitted((current) => (current.w === width ? current : { w: width, h: H }));
+        setScale(vh / H);
+
+        return;
+      }
+      setScale(Math.min(vw / canvas.w, vh / canvas.h));
+    };
     fit();
     window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
-  }, []);
+  }, [canvas]);
 
   // Fonts before first paint: a canvas never triggers a font load by itself and
   // a swap mid-reveal looks broken on a wall. Bounded so an offline rig still paints.
@@ -64,7 +109,7 @@ export function Stage({ bg, preview, children }: { bg: StageBackground; preview:
   }, []);
 
   return (
-    <StageContext.Provider value={{ preview, bg }}>
+    <StageContext.Provider value={{ preview, bg, canvas: size }}>
       {/* Unlayered, so it beats the `@layer base` body background while a stage is mounted */}
       <style>{`html,body{background:transparent!important;margin:0;overflow:hidden}`}</style>
       <MotionConfig reducedMotion="never">
@@ -74,8 +119,8 @@ export function Stage({ bg, preview, children }: { bg: StageBackground; preview:
             style={{ background: bg === "black" ? BRAND.black : "transparent" }}
           >
             <div
-              className="font-display absolute top-1/2 left-1/2 h-[1080px] w-[1920px] overflow-hidden text-[#FBF5E7]"
-              style={{ transform: `translate(-50%, -50%) scale(${scale})` }}
+              className="font-display absolute top-1/2 left-1/2 overflow-hidden text-[#FBF5E7]"
+              style={{ height: size.h, width: size.w, transform: `translate(-50%, -50%) scale(${scale})` }}
             >
               {ready && children}
             </div>

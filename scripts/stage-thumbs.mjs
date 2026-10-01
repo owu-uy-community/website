@@ -16,7 +16,10 @@ await mkdir(out, { recursive: true });
 
 // Scene ids from the registry, without importing TS: the ids are the keys of SCENES.
 const source = await (await import("node:fs/promises")).readFile("src/lib/owy-stage/scenes.ts", "utf8");
-const body = source.slice(source.indexOf("export const SCENES = {"), source.indexOf("} as const;"));
+// Search for the registry's own closing brace, not the first `as const` in the
+// file: SCENE_CATEGORIES sits above SCENES and used to swallow the whole slice.
+const registryStart = source.indexOf("export const SCENES = {");
+const body = source.slice(registryStart, source.indexOf("} as const", registryStart));
 const ids = [...body.matchAll(/^  (?:"([a-z0-9-]+)"|([a-z0-9-]+)): \{/gm)].map((m) => m[1] ?? m[2]);
 const targets = only.length ? ids.filter((id) => only.includes(id)) : ids;
 

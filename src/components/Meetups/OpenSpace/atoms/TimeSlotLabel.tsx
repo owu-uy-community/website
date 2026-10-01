@@ -11,43 +11,44 @@ interface TimeSlotLabelProps {
   timeSlot: string;
   /** Row starred to highlight in the kiosk. */
   isHighlighted?: boolean;
-  onDoubleClick: () => void;
+  onEdit: () => void;
   onToggleHighlight?: () => void;
 }
 
-export function TimeSlotLabel({
-  timeSlot,
-  isHighlighted = false,
-  onDoubleClick,
-  onToggleHighlight,
-}: TimeSlotLabelProps) {
+export function TimeSlotLabel({ timeSlot, isHighlighted = false, onEdit, onToggleHighlight }: TimeSlotLabelProps) {
   const [start, end] = timeSlot.split(" - ");
 
   return (
-    <div
-      className="group/time sticky left-0 z-10 flex h-28 cursor-pointer flex-col items-center justify-center border-b border-r border-border/60 bg-card px-1 md:h-32"
-      title="Doble click para editar el horario"
-      onDoubleClick={onDoubleClick}
-    >
+    <div className="group/time border-border/60 bg-card sticky left-0 z-10 h-32 border-r border-b">
       {/* Star tint as an overlay so the sticky background stays opaque. */}
-      {isHighlighted && <div aria-hidden className="pointer-events-none absolute inset-0 bg-primary/[0.08]" />}
+      {isHighlighted && <div aria-hidden className="bg-primary/[0.08] pointer-events-none absolute inset-0" />}
 
-      <span className="relative font-terminal text-xs font-medium tabular-nums text-foreground md:text-sm">
-        {start}
-      </span>
-      {end && (
-        <span className="relative font-terminal text-[10px] tabular-nums text-muted-foreground md:text-xs">{end}</span>
-      )}
+      <button
+        aria-label={`Editar horario ${timeSlot}`}
+        className="hover:bg-muted/40 flex h-full w-full flex-col items-center justify-center px-1 pt-6 transition-colors md:pt-0"
+        type="button"
+        onClick={onEdit}
+      >
+        <span className="font-terminal text-foreground relative text-xs font-medium tabular-nums md:text-sm">
+          {start}
+        </span>
+        {end && (
+          <span className="font-terminal text-muted-foreground relative text-[10px] tabular-nums md:text-xs">
+            {end}
+          </span>
+        )}
+      </button>
 
       {onToggleHighlight && (
         <Button
           className={cn(
-            "absolute right-0.5 top-0.5 h-6 w-6 transition-opacity",
+            "absolute top-0.5 right-0.5 h-8 w-8 transition-opacity md:h-6 md:w-6",
             isHighlighted
-              ? "text-primary opacity-100 hover:text-primary"
-              : "text-muted-foreground opacity-0 focus-visible:opacity-100 group-hover/time:opacity-100"
+              ? "text-primary hover:text-primary opacity-100"
+              : "text-muted-foreground opacity-100 group-hover/time:opacity-100 focus-visible:opacity-100 md:opacity-0"
           )}
           size="icon"
+          aria-label={isHighlighted ? "Quitar del kiosco" : "Resaltar en el kiosco"}
           title={isHighlighted ? "Quitar del kiosco" : "Resaltar en el kiosco"}
           variant="ghost"
           onClick={(e) => {

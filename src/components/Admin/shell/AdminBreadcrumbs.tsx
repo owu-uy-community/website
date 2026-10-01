@@ -24,18 +24,18 @@ export function AdminBreadcrumbs() {
   const segments = (pathname ?? "/admin").split("/").filter(Boolean);
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
+    <Breadcrumb className="min-w-0">
+      <BreadcrumbList className="flex-nowrap">
         {segments.map((segment, index) => {
           const href = `/${segments.slice(0, index + 1).join("/")}`;
           const isLast = index === segments.length - 1;
 
           return (
             <React.Fragment key={href}>
-              {index > 0 ? <BreadcrumbSeparator /> : null}
-              <BreadcrumbItem>
+              {index > 0 ? <BreadcrumbSeparator className="hidden md:block" /> : null}
+              <BreadcrumbItem className={isLast ? "min-w-0" : "hidden shrink-0 md:inline-flex"}>
                 {isLast ? (
-                  <BreadcrumbPage>{labelFor(segment)}</BreadcrumbPage>
+                  <BreadcrumbPage className="truncate">{labelFor(segment)}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
                     <Link href={href}>{labelFor(segment)}</Link>

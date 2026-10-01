@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, Copy, ListPlus, Play, Search, Smartphone, Star, X } from "lucide-react";
+import { Copy, ListPlus, Search, Smartphone, Star, X } from "lucide-react";
 
 import { SceneThumb } from "components/Admin/stage/SceneThumb";
 import { Badge } from "components/shared/ui/badge";
@@ -47,18 +47,20 @@ export function SceneLibrary({
   liveScene,
   pending,
   take,
+  queue,
   copyUrl,
 }: {
   liveScene: SceneId;
   pending: boolean;
   take: (id: SceneId) => void;
+  /** Append to the guion (the player above owns the order and the timing). */
+  queue: (id: SceneId) => void;
   copyUrl: (id: SceneId) => void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [favorites, setFavorites] = useStoredIds("owy-stage-favorites");
   const [recent, setRecent] = useStoredIds("owy-stage-recent");
-  const [rundown, setRundown] = useStoredIds("owy-stage-rundown");
 
   // `/` jumps to the search box, Escape clears it.
   useEffect(() => {
@@ -82,17 +84,6 @@ export function SceneLibrary({
   };
   const toggleFavorite = (id: SceneId) =>
     setFavorites((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]));
-  const queue = (id: SceneId) => setRundown((prev) => [...prev, id]);
-  const move = (index: number, dir: -1 | 1) =>
-    setRundown((prev) => {
-      const next = [...prev];
-      const [item] = next.splice(index, 1);
-      next.splice(index + dir, 0, item);
-      return next;
-    });
-  const cue = rundown.indexOf(liveScene);
-  const next = rundown[cue + 1] ?? rundown[0];
-
   const q = fold(query.trim());
   const matches = (id: SceneId) => !q || fold(`${id} ${SCENES[id].title} ${SCENES[id].description}`).includes(q);
   const groups = useMemo(() => {
@@ -157,70 +148,6 @@ export function SceneLibrary({
           </Button>
         ))}
       </div>
-
-      <Card>
-        <CardContent className="p-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold">Guion</span>
-            <span className="text-muted-foreground text-xs">
-              Armá el orden del día con «+» en cada escena y avanzá con Siguiente.
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              {rundown.length > 0 && (
-                <Button size="sm" variant="ghost" onClick={() => setRundown([])}>
-                  Vaciar
-                </Button>
-              )}
-              <Button disabled={!next || pending} size="sm" onClick={() => next && put(next)}>
-                <Play className="mr-1 h-4 w-4" /> Siguiente{next ? `: ${SCENES[next].title}` : ""}
-              </Button>
-            </div>
-          </div>
-          {rundown.length > 0 && (
-            <ol className="mt-3 flex flex-wrap gap-2">
-              {rundown.map((id, i) => (
-                <li
-                  key={`${id}-${i}`}
-                  className={`flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${
-                    i === cue ? "border-[#F5BB03] bg-[#F5BB03]/15" : i === cue + 1 ? "border-[#0162C8]" : ""
-                  }`}
-                >
-                  <span className="text-muted-foreground text-xs tabular-nums">{i + 1}.</span>
-                  <button className="font-medium hover:underline" onClick={() => put(id)} type="button">
-                    {SCENES[id].title}
-                  </button>
-                  <button
-                    aria-label="Subir"
-                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                    disabled={i === 0}
-                    onClick={() => move(i, -1)}
-                    type="button"
-                  >
-                    <ChevronUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    aria-label="Bajar"
-                    className="text-muted-foreground hover:text-foreground disabled:opacity-30"
-                    disabled={i === rundown.length - 1}
-                    onClick={() => move(i, 1)}
-                    type="button"
-                  >
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    aria-label="Quitar"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => setRundown(rundown.filter((_, k) => k !== i))}
-                    type="button"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </li>
-              ))}
-            </ol>
-          )}
-        </CardContent>
-      </Card>
 
       {groups.length === 0 && (
         <p className="text-muted-foreground py-10 text-center text-sm">

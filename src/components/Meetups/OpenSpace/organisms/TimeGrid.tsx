@@ -42,7 +42,7 @@ interface TimeGridProps {
   onOpenNote: (note: StickyNote) => void;
   onCastNote?: (note: StickyNote) => void;
   onEmptyCellClick: (room: string, timeSlot: string) => void;
-  onTimeDoubleClick: (timeIndex: number) => void;
+  onEditSchedule: (timeIndex: number) => void;
   onToggleScheduleHighlight?: (timeIndex: number) => void;
   /** Click on a room header to edit that column's room. */
   onEditRoom?: (room: string) => void;
@@ -101,10 +101,10 @@ function BoardCell({
       ref={setNodeRef}
       data-board-cell=""
       className={cn(
-        "group/cell relative h-28 border-b border-r border-border/60 transition-colors duration-150 md:h-32",
+        "group/cell border-border/60 relative h-32 border-r border-b transition-colors duration-150",
         isRowHighlighted && "bg-primary/[0.06]",
         isDropTarget && "bg-primary/[0.07]",
-        isEmpty && isIdle && "cursor-pointer hover:bg-muted/40"
+        isEmpty && isIdle && "hover:bg-muted/40 cursor-pointer"
       )}
       onClick={() => {
         if (isEmpty && isIdle) onEmptyCellClick(room, timeSlot);
@@ -120,9 +120,13 @@ function BoardCell({
       )}
 
       {isEmpty && isIdle && (
-        <div className="pointer-events-none absolute inset-1.5 flex items-center justify-center rounded-md border border-dashed border-border opacity-0 transition-opacity duration-150 group-hover/cell:opacity-100">
-          <Plus className="h-4 w-4 text-muted-foreground" />
-        </div>
+        <button
+          aria-label={`Agregar charla en ${room}, ${timeSlot}`}
+          className="border-border absolute inset-1.5 flex items-center justify-center rounded-md border border-dashed opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover/cell:opacity-100 md:focus-visible:opacity-100"
+          type="button"
+        >
+          <Plus className="text-muted-foreground h-4 w-4" />
+        </button>
       )}
 
       {notes.map((note) => (
@@ -164,18 +168,25 @@ export function TimeGrid({
   onOpenNote,
   onCastNote,
   onEmptyCellClick,
-  onTimeDoubleClick,
+  onEditSchedule,
   onToggleScheduleHighlight,
   onEditRoom,
 }: TimeGridProps) {
   return (
     <div
-      className="grid select-none"
-      style={{ gridTemplateColumns: `88px repeat(${rooms.length}, minmax(170px, 1fr))` }}
+      className="grid w-full min-w-[var(--board-min-width-mobile)] [grid-template-columns:var(--board-columns-mobile)] select-none md:min-w-[var(--board-min-width)] md:[grid-template-columns:var(--board-columns)]"
+      style={
+        {
+          "--board-min-width-mobile": `${72 + rooms.length * 220}px`,
+          "--board-min-width": `${88 + rooms.length * 170}px`,
+          "--board-columns-mobile": `72px repeat(${rooms.length}, minmax(220px, 1fr))`,
+          "--board-columns": `88px repeat(${rooms.length}, minmax(170px, 1fr))`,
+        } as React.CSSProperties
+      }
     >
       {/* Corner cell — sticky on both axes */}
-      <div className="sticky left-0 top-0 z-30 flex h-14 items-center justify-center border-b border-r border-border/60 bg-card">
-        <span className="font-terminal text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Hora</span>
+      <div className="border-border/60 bg-card sticky top-0 left-0 z-30 flex h-14 items-center justify-center border-r border-b">
+        <span className="font-terminal text-muted-foreground text-[10px] tracking-[0.18em] uppercase">Hora</span>
       </div>
 
       {rooms.map((room) => (
@@ -196,7 +207,7 @@ export function TimeGrid({
             <TimeSlotLabel
               isHighlighted={isRowHighlighted}
               timeSlot={timeSlot}
-              onDoubleClick={() => onTimeDoubleClick(timeIndex)}
+              onEdit={() => onEditSchedule(timeIndex)}
               onToggleHighlight={onToggleScheduleHighlight ? () => onToggleScheduleHighlight(timeIndex) : undefined}
             />
 

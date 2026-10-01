@@ -1,5 +1,5 @@
 import { createId } from "@paralleldrive/cuid2";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 
 import { EVENTBRITE_API_KEY, EVENTBRITE_API_URL, EVENTBRITE_EVENT_ID, EXTERNAL_SERVICES } from "app/lib/constants";
 import type { EventbriteAttendeesResponse } from "lib/eventbrite/types";
@@ -9,9 +9,11 @@ import { owyStageInputs, owyStageState, rooms, tracks } from "../../../db/schema
 import {
   DEFAULT_STAGE_STATE,
   OWY_STAGE_CHANNEL,
+  RundownStepSchema,
   isSceneId,
   parseSceneParams,
   type InputEvent,
+  type RundownStep,
   type StageInput,
   type StageState,
   type SubmitInput,
@@ -38,12 +40,20 @@ export async function getStageState(): Promise<StageState> {
   };
 }
 
-/** Persist the active scene (params validated against the scene's schema) and tell every stage. */
+/**
+ * Persist the active scene (params validated against the scene's schema) and
+ * tell every stage. The `round` marks a scene *going on air*: editing the params
+ * of what is already up keeps it, so phone answers and running timers survive a
+ * live edit; `restart` (what the library's take sends) mints a new one.
+ */
 export async function setScene(input: SetSceneInput): Promise<StageState> {
+  const current = await getStageState();
   const params = parseSceneParams(input.scene, input.params) as Record<string, unknown>;
-  const eventId = input.eventId === undefined ? (await getStageState()).eventId : input.eventId;
-  const takenAt = new Date();
-  const state: StageState = { scene: input.scene, params, eventId, round: createId(), takenAt: takenAt.toISOString() };
+  const eventId = input.eventId === undefined ? current.eventId : input.eventId;
+  const keep = !input.restart && input.scene === current.scene && Boolean(current.round);
+  const round = keep ? current.round : createId();
+  const takenAt = keep && current.takenAt ? new Date(current.takenAt) : new Date();
+  const state: StageState = { scene: input.scene, params, eventId, round, takenAt: takenAt.toISOString() };
 
   await db
     .insert(owyStageState)
@@ -56,6 +66,41 @@ export async function setScene(input: SetSceneInput): Promise<StageState> {
   await publishServer(OWY_STAGE_CHANNEL, "scene", state);
 
   return state;
+}
+
+/** The operator's rundown, dropping any step whose scene no longer exists. */
+export async function getRundown(): Promise<RundownStep[]> {
+  const [row] = await db
+    .select({ rundown: owyStageState.rundown })
+    .from(owyStageState)
+    .where(eq(owyStageState.id, ROW_ID))
+    .limit(1);
+  const steps: unknown[] = Array.isArray(row?.rundown) ? row.rundown : [];
+
+  return steps.flatMap((step) => {
+    const parsed = RundownStepSchema.safeParse(step);
+
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+/**
+ * Replace the rundown and tell the other admin devices (the wall ignores it).
+ * Step params are stored as captured — empty means "whatever the scene
+ * defaults to when it goes on air", so editing a default still shows through.
+ */
+export async function saveRundown(steps: RundownStep[]): Promise<RundownStep[]> {
+  await db
+    .insert(owyStageState)
+    .values({ id: ROW_ID, rundown: steps })
+    // Editing the rundown is not a take: keep `updatedAt` (phones time their rounds off it).
+    .onConflictDoUpdate({
+      target: owyStageState.id,
+      set: { rundown: steps, updatedAt: sql`${owyStageState.updatedAt}` },
+    });
+  await publishServer(OWY_STAGE_CHANNEL, "rundown", { steps });
+
+  return steps;
 }
 
 /**

@@ -17,7 +17,7 @@ import {
   type DragStartEvent,
   type DropAnimation,
 } from "@dnd-kit/core";
-import { ArrowUpRight, CalendarX2, Plus, SearchX, Tv } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, CalendarX2, Plus, SearchX, Tv } from "lucide-react";
 
 import { TimeGrid } from "components/Meetups/OpenSpace/organisms/TimeGrid";
 import { StickyNoteGhost } from "components/Meetups/OpenSpace/molecules/StickyNoteCard";
@@ -364,7 +364,7 @@ export default function OpenSpaceClient({
 
   // ============ Schedule handlers ============
 
-  const handleTimeDoubleClick = useCallback(
+  const handleEditSchedule = useCallback(
     (timeIndex: number) => {
       const schedule = schedulesData[timeIndex];
       if (!schedule) return;
@@ -464,13 +464,17 @@ export default function OpenSpaceClient({
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-6">
+    <div className="min-w-0 space-y-4 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Open Space</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {eventName} — arrastrá las tarjetas para organizar la grilla
+        <div className="min-w-0">
+          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Open Space</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {eventName}
+            <span className="hidden md:inline"> — arrastrá las tarjetas para organizar la grilla</span>
+            <span className="mt-1 block md:hidden">
+              Tocá una tarjeta para editarla o mantenela presionada para moverla.
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -488,35 +492,44 @@ export default function OpenSpaceClient({
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <SearchInput value={searchTerm} onChange={setSearchTerm} />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex h-9 items-center gap-2 rounded-md border border-border px-3">
+        <div className="flex flex-wrap items-center gap-2 [&>button]:h-11 md:[&>button]:h-9">
+          <div className="border-border flex h-11 flex-1 items-center gap-2 rounded-md border px-3 md:h-9 md:flex-none">
             <Switch
               checked={autoHighlightEnabled}
               disabled={openSpaceLoading || updateOpenSpaceMutation.isPending}
               id="auto-highlight"
               onCheckedChange={() => handleToggleAutoHighlight()}
             />
-            <Label className="cursor-pointer text-xs text-muted-foreground" htmlFor="auto-highlight">
+            <Label className="text-muted-foreground cursor-pointer text-xs" htmlFor="auto-highlight">
               Resaltado automático
             </Label>
           </div>
           <CountdownControls eventId={eventId} />
-          <Button size="sm" variant="outline" onClick={handleAddRoomClick}>
-            <Plus />
-            Sala
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleAddScheduleClick}>
-            <Plus />
-            Slot
-          </Button>
-          <Button disabled={!isGridReady} size="sm" onClick={() => addNewNote()}>
-            <Plus />
-            Charla
-          </Button>
+          <div className="flex w-full gap-2 md:w-auto [&>button]:h-11 [&>button]:flex-1 md:[&>button]:h-9 md:[&>button]:flex-none">
+            <Button size="sm" variant="outline" onClick={handleAddRoomClick}>
+              <Plus />
+              Sala
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleAddScheduleClick}>
+              <Plus />
+              Slot
+            </Button>
+            <Button disabled={!isGridReady} size="sm" onClick={() => addNewNote()}>
+              <Plus />
+              Charla
+            </Button>
+          </div>
         </div>
       </div>
+
+      {rooms.length > 1 && (
+        <p className="text-muted-foreground flex items-center gap-2 text-xs md:hidden" id="board-scroll-hint">
+          <ArrowLeftRight aria-hidden className="h-4 w-4 shrink-0" />
+          Deslizá la grilla para ver todas las salas.
+        </p>
+      )}
 
       {/* Board. The grid renders as soon as there is one room — an event being
           set up shows its columns right away, and the missing piece is asked
@@ -557,7 +570,13 @@ export default function OpenSpaceClient({
           onDragOver={handleDragOver}
           onDragStart={handleDragStart}
         >
-          <div className="openspace-surface max-h-[calc(100dvh-13.5rem)] overflow-auto rounded-lg border border-border bg-card">
+          <div
+            aria-label="Grilla de charlas"
+            aria-describedby={rooms.length > 1 ? "board-scroll-hint" : undefined}
+            className="openspace-surface border-border bg-card max-h-[65dvh] min-w-0 overflow-auto rounded-lg border md:max-h-[calc(100dvh-13.5rem)]"
+            role="region"
+            tabIndex={0}
+          >
             <TimeGrid
               activeNote={activeNote}
               getNotesForCell={getNotesForCell}
@@ -576,7 +595,7 @@ export default function OpenSpaceClient({
               onCastNote={handleCastToScreen}
               onEmptyCellClick={(room, timeSlot) => addNewNote({ room, timeSlot })}
               onOpenNote={openNote}
-              onTimeDoubleClick={handleTimeDoubleClick}
+              onEditSchedule={handleEditSchedule}
               onEditRoom={handleEditRoomClick}
               onToggleScheduleHighlight={handleToggleScheduleHighlightWrapper}
             />
@@ -584,8 +603,8 @@ export default function OpenSpaceClient({
             {/* Rooms but no slots yet: the columns are already visible above,
                 so ask for the missing rows right where they would appear. */}
             {timeSlots.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 border-t border-border/60 px-4 py-12 text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="border-border/60 flex flex-col items-center gap-3 border-t px-4 py-12 text-center">
+                <p className="text-muted-foreground text-sm">
                   Falta el horario: los slots son las filas donde se ubican las charlas.
                 </p>
                 <Button size="sm" onClick={handleAddScheduleClick}>

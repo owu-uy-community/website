@@ -1,12 +1,17 @@
 import { z } from "zod";
 
-import { EffectEventSchema, FaceEventSchema, SCENE_IDS, type SceneId } from "../../owy-stage/scenes";
+import { EffectEventSchema, FaceEventSchema, RundownSchema, SCENE_IDS, type SceneId } from "../../owy-stage/scenes";
 
 export const SetSceneSchema = z.object({
   scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
   params: z.record(z.string(), z.unknown()).optional(),
   eventId: z.string().nullable().optional(),
+  /** Put the scene on air from scratch: new round, phone answers start over. */
+  restart: z.boolean().optional(),
 });
+
+/** The whole rundown travels on every edit: it is tiny and conflict-free. */
+export const SaveRundownSchema = z.object({ steps: RundownSchema });
 
 export const FireEffectSchema = EffectEventSchema;
 export const SetFaceSchema = FaceEventSchema;

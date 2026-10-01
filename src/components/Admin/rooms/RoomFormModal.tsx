@@ -61,7 +61,7 @@ function ColorPicker({
         <button
           aria-label="Color automático"
           className={cn(
-            "flex h-8 items-center rounded-md border px-2 text-xs",
+            "flex h-11 items-center rounded-md border px-2 text-xs sm:h-8",
             value === null ? "border-primary text-foreground" : "border-border text-muted-foreground"
           )}
           type="button"
@@ -75,7 +75,7 @@ function ColorPicker({
             key={hex}
             aria-label={`Color ${hex}`}
             className={cn(
-              "h-8 w-8 rounded-md border-2 transition-transform hover:scale-105",
+              "h-11 w-11 rounded-md border-2 transition-transform hover:scale-105 sm:h-8 sm:w-8",
               value === hex ? "border-foreground" : "border-transparent"
             )}
             style={{ backgroundColor: hex }}
@@ -85,7 +85,7 @@ function ColorPicker({
         ))}
         <Input
           aria-label="Color personalizado (hex)"
-          className="h-8 w-24 font-terminal text-xs"
+          className="font-terminal h-11 w-28 text-base sm:h-8 sm:w-24 sm:text-xs"
           placeholder="#a1ff00"
           value={value ?? ""}
           onChange={(event) => {
@@ -115,7 +115,7 @@ function IconPicker({
       <div className="flex flex-wrap items-center gap-2">
         <button
           className={cn(
-            "flex h-8 items-center rounded-md border px-2 text-xs",
+            "flex h-11 items-center rounded-md border px-2 text-xs sm:h-8",
             value === null ? "border-primary text-foreground" : "border-border text-muted-foreground"
           )}
           type="button"
@@ -132,8 +132,8 @@ function IconPicker({
               aria-label={`Ícono ${key}`}
               aria-pressed={value === key}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-md border-2 transition-transform hover:scale-105",
-                value === key ? "border-foreground bg-muted" : "border-transparent bg-muted/40"
+                "flex h-11 w-11 items-center justify-center rounded-md border-2 transition-transform hover:scale-105 sm:h-8 sm:w-8",
+                value === key ? "border-foreground bg-muted" : "bg-muted/40 border-transparent"
               )}
               type="button"
               onClick={() => onChange(key)}
@@ -201,22 +201,22 @@ function RoomFormFields({
         onChange={(icon) => setForm((previous) => ({ ...previous, icon }))}
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-          <span className="flex items-center gap-2 text-foreground">
-            <Monitor aria-hidden className="h-4 w-4 text-muted-foreground" /> TV
+        <label className="border-border flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+          <span className="text-foreground flex items-center gap-2">
+            <Monitor aria-hidden className="text-muted-foreground h-4 w-4" /> TV
           </span>
           <Switch checked={form.hasTV} onCheckedChange={(hasTV) => setForm((previous) => ({ ...previous, hasTV }))} />
         </label>
-        <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-          <span className="flex items-center gap-2 text-foreground">
-            <Presentation aria-hidden className="h-4 w-4 text-muted-foreground" /> Pizarra
+        <label className="border-border flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+          <span className="text-foreground flex items-center gap-2">
+            <Presentation aria-hidden className="text-muted-foreground h-4 w-4" /> Pizarra
           </span>
           <Switch
             checked={form.hasWhiteboard}
             onCheckedChange={(hasWhiteboard) => setForm((previous) => ({ ...previous, hasWhiteboard }))}
           />
         </label>
-        <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+        <label className="border-border flex items-center justify-between rounded-md border px-3 py-2 text-sm">
           <span className="text-foreground">Activa</span>
           <Switch
             checked={form.isActive}
@@ -327,21 +327,23 @@ export function RoomFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-w-lg flex-col gap-0 overflow-hidden p-0 sm:p-0">
+        <DialogHeader className="border-border shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:pr-14">
           <DialogTitle>{room ? `Editar "${room.name}"` : "Nueva sala"}</DialogTitle>
           <DialogDescription>
             {room ? "Los cambios se reflejan al instante en la grilla." : "Se agrega al final de la grilla."}
           </DialogDescription>
         </DialogHeader>
 
-        <RoomFormFields
-          fallbackColor={room ? roomColorFor(room.id, null) : ROOM_PALETTE[0]}
-          form={form}
-          setForm={setForm}
-        />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
+          <RoomFormFields
+            fallbackColor={room ? roomColorFor(room.id, null) : ROOM_PALETTE[0]}
+            form={form}
+            setForm={setForm}
+          />
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-border shrink-0 border-t px-4 py-3 sm:px-6 [&>button]:h-11 sm:[&>button]:h-10">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

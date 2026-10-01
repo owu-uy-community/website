@@ -141,6 +141,7 @@ import {
   FireEffectSchema,
   GetInputsSchema,
   GetPulseSchema,
+  SaveRundownSchema,
   SetFaceSchema,
   SetNowPlayingSchema,
   SetSceneSchema,
@@ -149,6 +150,7 @@ import { SubmitInputSchema } from "../owy-stage/scenes";
 import { disconnectSpotify, getSpotifyNowPlaying, spotifyStatus } from "../owy-stage/spotify";
 import {
   fireEffect,
+  getRundown,
   getStageMeetups,
   getStagePulse,
   getInputs,
@@ -156,6 +158,7 @@ import {
   getStageSpeakers,
   getStageWeather,
   setFace,
+  saveRundown,
   setNowPlaying,
   setScene,
   submitInput,
@@ -521,6 +524,12 @@ export const setSceneHandler = adminOs
   .input(SetSceneSchema)
   .handler(withErrorHandling(async ({ input }) => setScene(input), "set stage scene"));
 
+export const getRundownHandler = adminOs.handler(withErrorHandling(async () => getRundown(), "get stage rundown"));
+
+export const saveRundownHandler = adminOs
+  .input(SaveRundownSchema)
+  .handler(withErrorHandling(async ({ input }) => saveRundown(input.steps), "save stage rundown"));
+
 export const fireEffectHandler = adminOs
   .input(FireEffectSchema)
   .handler(withErrorHandling(async ({ input }) => fireEffect(input), "fire stage effect"));
@@ -789,6 +798,8 @@ export const router = {
   owyStage: {
     getState: getStageStateHandler,
     setScene: setSceneHandler,
+    getRundown: getRundownHandler,
+    saveRundown: saveRundownHandler,
     fireEffect: fireEffectHandler,
     setFace: setFaceHandler,
     getPulse: getStagePulseHandler,
