@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "../../../db";
 import { rooms, schedules, tracks } from "../../../db/schema";
@@ -15,7 +16,7 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
 
   if (!currentTrack) {
     console.error("❌ Track not found:", id);
-    throw new Error("Track not found");
+    throw new ORPCError("NOT_FOUND", { message: "Track not found" });
   }
 
   // Determine if validation is needed for schedule/room changes
@@ -35,10 +36,10 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
     ]);
 
     if (!schedule) {
-      throw new Error("Schedule not found");
+      throw new ORPCError("NOT_FOUND", { message: "Schedule not found" });
     }
     if (!room) {
-      throw new Error("Room not found");
+      throw new ORPCError("NOT_FOUND", { message: "Room not found" });
     }
 
     // Validate room has required resources (unless validation is skipped)
@@ -47,10 +48,10 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
 
     if (!data.skipResourceValidation) {
       if (needsTV && !room.hasTV) {
-        throw new Error(`Room "${room.name}" does not have a TV/projector`);
+        throw new ORPCError("BAD_REQUEST", { message: `Room "${room.name}" does not have a TV/projector` });
       }
       if (needsWhiteboard && !room.hasWhiteboard) {
-        throw new Error(`Room "${room.name}" does not have a whiteboard`);
+        throw new ORPCError("BAD_REQUEST", { message: `Room "${room.name}" does not have a whiteboard` });
       }
     }
 
@@ -62,7 +63,7 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
       .limit(1);
 
     if (existingTrack) {
-      throw new Error(`Slot is already occupied by "${existingTrack.title}"`);
+      throw new ORPCError("CONFLICT", { message: `Slot is already occupied by "${existingTrack.title}"` });
     }
   }
 
@@ -89,7 +90,7 @@ export const updateTrack = async ({ id, data }: { id: string; data: UpdateTrackI
     });
 
     if (!track) {
-      throw new Error("Track not found");
+      throw new ORPCError("NOT_FOUND", { message: "Track not found" });
     }
 
     const stickyNote = transformTrackForStickyNote(track);

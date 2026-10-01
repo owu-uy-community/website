@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { schedules, tracks } from "../../../db/schema";
@@ -17,7 +18,7 @@ export const bulkUpdateTracksBySchedule = async (input: BulkUpdateTracksBySchedu
   const [schedule] = await db.select().from(schedules).where(eq(schedules.id, scheduleId)).limit(1);
 
   if (!schedule) {
-    throw new Error("Schedule not found");
+    throw new ORPCError("NOT_FOUND", { message: "Schedule not found" });
   }
 
   // If a new schedule ID is provided, verify it exists
@@ -25,7 +26,7 @@ export const bulkUpdateTracksBySchedule = async (input: BulkUpdateTracksBySchedu
     const [newSchedule] = await db.select().from(schedules).where(eq(schedules.id, newScheduleId)).limit(1);
 
     if (!newSchedule) {
-      throw new Error("New schedule not found");
+      throw new ORPCError("NOT_FOUND", { message: "New schedule not found" });
     }
   }
 

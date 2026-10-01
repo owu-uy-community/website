@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "../../../db";
 import { schedules, tracks } from "../../../db/schema";
@@ -11,7 +12,7 @@ import { transformTrackForStickyNote } from "./transforms";
  */
 export const swapTracks = async ({ trackAId, trackBId }: SwapTracksInput): Promise<StickyNote[]> => {
   if (trackAId === trackBId) {
-    throw new Error("Cannot swap a track with itself");
+    throw new ORPCError("BAD_REQUEST", { message: "Cannot swap a track with itself" });
   }
 
   // Fetch both tracks with their relations in a single round-trip to avoid duplicate fetches
@@ -22,7 +23,7 @@ export const swapTracks = async ({ trackAId, trackBId }: SwapTracksInput): Promi
 
   if (!trackA || !trackB) {
     const missingTrack = !trackA ? trackAId : trackBId;
-    throw new Error(`Track with id ${missingTrack} not found`);
+    throw new ORPCError("NOT_FOUND", { message: `Track with id ${missingTrack} not found` });
   }
 
   // Use single timestamp for all updates to maintain consistency
