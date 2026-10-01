@@ -1,6 +1,7 @@
 import {
   Building2,
   CalendarClock,
+  Clapperboard,
   ClipboardList,
   Home,
   LayoutGrid,
@@ -53,7 +54,18 @@ export const ADMIN_NAV: AdminNavGroup[] = [
     items: [
       { title: "Pantalla", href: "/admin/screen", icon: Monitor, keywords: ["obs", "escenas", "stream"] },
       { title: "Launchpad", href: "/admin/launchpad", icon: Music2, keywords: ["sonidos", "soundboard"] },
-      { title: "Companion lab", href: "/admin/companion", icon: Bot, keywords: ["owy", "emulador", "device", "debug"] },
+      {
+        title: "Owy Companion",
+        href: "/admin/companion",
+        icon: Bot,
+        keywords: ["owy", "emulador", "device", "debug", "voz"],
+      },
+      {
+        title: "Escenas Owy",
+        href: "/admin/owy/scenes",
+        icon: Clapperboard,
+        keywords: ["owy", "stage", "video wall", "obs", "browser source"],
+      },
     ],
   },
   {
@@ -79,7 +91,13 @@ export function adminTools(event: { communitySlug: string; slug: string } | null
     icon: PenLine,
     keywords: ["cms", "landing", "sponsors"],
   };
-  if (!event) return [cms];
+  const stage: AdminTool = {
+    title: "Pantalla · Owy stage",
+    href: "/owy/stage",
+    icon: Clapperboard,
+    keywords: ["owy", "video wall", "obs"],
+  };
+  if (!event) return [stage, cms];
 
   const base = `/comunidad/${event.communitySlug}/events/${event.slug}`;
 
@@ -88,6 +106,7 @@ export function adminTools(event: { communitySlug: string; slug: string } | null
     { title: "Kiosk · Mapa", href: `${base}/kiosk/map`, icon: Map, keywords: ["mapa", "salas"] },
     { title: "Pantalla · Sticky note", href: `${base}/stickynote`, icon: StickyNote, keywords: ["cast", "nota"] },
     { title: "Pantalla · Countdown", href: `${base}/countdown`, icon: Timer, keywords: ["cuenta regresiva"] },
+    stage,
     cms,
   ];
 }
@@ -107,7 +126,9 @@ export const BREADCRUMB_LABELS: Record<string, string> = {
   attendees: "Asistentes",
   screen: "Pantalla",
   launchpad: "Launchpad",
-  companion: "Companion lab",
+  companion: "Owy Companion",
+  owy: "Owy",
+  scenes: "Escenas",
   settings: "Ajustes",
   communities: "Comunidades",
   events: "Eventos",

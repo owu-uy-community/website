@@ -22,7 +22,7 @@ type TangramPiece = {
   from: { x: number; y: number; rotate: number };
 };
 
-const TANGRAM_PIECES: TangramPiece[] = [
+export const TANGRAM_PIECES: TangramPiece[] = [
   {
     clip: "polygon(0% 0%, 100% 0%, 50% 50%)",
     photo: "/images/conf/gallery/tangram-1.webp",

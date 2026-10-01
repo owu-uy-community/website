@@ -226,6 +226,16 @@ por defecto; `gateway:openai/gpt-realtime-2` como plan B con `AI_GATEWAY_API_KEY
 `COMPANION_STAFF_MODE` (fallbacks cuando no hay dispositivo, p. ej. en el REPL),
 `COMPANION_LOG_LEVEL`.
 
+### Espejo en la pantalla grande (Owy Stage)
+
+Con `OWY_API_KEY` configurada, cada Owy (gadget o voz del workbench) refleja su cara y
+la transcripción de cada turno en el video wall: `bridge/src/stage.ts` manda
+`owyStage.setFace` al sitio (estados `listening/thinking/speaking/idle/happy…` y el
+texto acumulado, como mucho 4 veces por segundo), el sitio lo difunde por realtime y la
+escena **Owy** de `/owy/stage` (se elige en `/admin/owy/scenes`, se embebe en OBS como
+browser source 1920×1080) reacciona con los mismos ojos, boca y subtítulos. Sin la key el
+espejo queda apagado y el bridge lo avisa una vez al arrancar.
+
 ### Cómo funciona un turno
 
 1. Tap (o wake word) → el dispositivo manda `VoiceAssistantRequest{start}`; el bridge
@@ -315,3 +325,13 @@ un long press abre ajustes sin iniciar una conversación al soltar.
 - Half-duplex: el mic se apaga mientras Owy habla (así funciona `voice_assistant`); interrumpir = tap.
 - Wake word en español ("Che Owy"): entrenar con microWakeWord + voces Piper `es_AR` (pendiente).
 - Anuncios ambientales (bloques, cast) y `ask_owy` (delegar al Owy durable con `eve/client`): fase siguiente.
+
+## Qué está sonando, con Shazam y sin API key (Owy Stage)
+
+La escena **Sonando** (`now-playing`) de la pantalla grande se puede alimentar sola con lo que escucha el micrófono de una Mac, usando el reconocedor de música que trae macOS (Shazam) desde la app Atajos: no hay API key, ni cuota, ni cuenta.
+
+1. En **Atajos**, creá un atajo llamado `OWU Now Playing` con: *Reconocer música* → *Obtener detalles de Shazam Media* (Título) → *Obtener detalles…* (Artista) → un *Texto* con el título en la primera línea y el artista en la segunda. Ejecutalo una vez para darle permiso al micrófono.
+2. En la Mac que está cerca de los parlantes: `OWU_API_KEY=… OWU_API_URL=https://owu.uy ./scripts/now-playing-mac.sh`
+3. Poné la escena *Sonando* en la pantalla. Cada ~25 s el script escucha y, si el tema cambió, actualiza título y artista (`owyStage.nowPlaying`, autenticado con la misma key del bridge). Con cualquier otra escena al aire el sitio lo ignora, así que puede quedar corriendo todo el día.
+
+Alternativas gratis: en Linux, [SongRec](https://github.com/marin-m/SongRec) (`songrec listen --json`, cliente open-source de Shazam) y el mismo `curl`; 100 % offline, [Olaf](https://github.com/JorenSix/Olaf) (`olaf store` con la playlist y `olaf microphone`).

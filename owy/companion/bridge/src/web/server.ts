@@ -1,8 +1,10 @@
 import { createServer, type IncomingMessage } from "node:http";
 import { randomBytes, createHash } from "node:crypto";
 import { WebSocketServer, WebSocket } from "ws";
+import { owuApi } from "../../../../agent/lib/owu-api";
 import { DeviceSession, type SharedRuntime } from "../index";
 import type { Logger } from "../log";
+import { createStageMirror } from "../stage";
 import { BrowserDevice } from "./device";
 import { matchesSecret, toolDenial, WebTickets, WEB_SESSION_MS, type WebGrant } from "./tickets";
 
@@ -195,17 +197,27 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
           ownsSession = true;
           const authority = grant;
           const id = `web-${createHash("sha256").update(grant.identity).digest("hex").slice(0, 16)}`;
+          // The browser voice mirrors onto the video wall exactly like a gadget does.
+          const mirror = createStageMirror({
+            api: shared.config.OWY_API_KEY ? owuApi() : null,
+            logger: shared.logger.child(id),
+            source: id,
+          });
           session = new DeviceSession(
             { id, host: "virtual", port: 1, psk: null },
             { ...shared, logger: silent },
             {
               connectDevice: async (_spec, handlers) =>
-                (device = new BrowserDevice(handlers, authority, send, () => ws.close())),
+                (device = mirror.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),
+              onFace: mirror.face,
               isStaff: () => authority.staff,
               isMarketplaceOpen: () => authority.marketplace,
               proposalHistory: proposals,
               authorizeTool: (name) => toolDenial(authority, name),
-              onTranscript: (who, text) => device?.emit({ type: "transcript", who, text: text.slice(0, 2000) }),
+              onTranscript: (who, text) => {
+                device?.emit({ type: "transcript", who, text: text.slice(0, 2000) });
+                mirror.transcript(who, text);
+              },
               onTool: (event) => device?.emit({ type: "tool", ...event }),
             }
           );

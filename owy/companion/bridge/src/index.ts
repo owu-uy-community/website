@@ -21,6 +21,7 @@ import type { DeviceHandlers } from "./device/esphome";
 import type { DeviceTransport } from "./device/transport";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { VoiceTurn } from "./device/pipeline";
+import { faceForPhase } from "./face";
 import { createLogger, type Logger } from "./log";
 import { resolveRealtimeProvider, type RealtimeProvider } from "./realtime/models";
 import { loadPromptBundle } from "./realtime/prompt";
@@ -30,6 +31,7 @@ import {
   executeToolByName,
   loadOwyToolDefinitions,
   resolveGridUrl,
+  type FaceState,
   type OwyToolDefinition,
   type ScreenCommand,
   type ToolRuntime,
@@ -96,6 +98,8 @@ export interface DeviceSessionOptions {
   proposalHistory?: Map<string, number>;
   authorizeTool?: (name: string) => string | null;
   onTranscript?: (who: "input" | "output", text: string) => void;
+  /** Turn-phase face changes (listening/thinking/speaking/idle) — what the firmware derives on its own. */
+  onFace?: (state: FaceState) => void;
   onTool?: (event: {
     name: string;
     status: "running" | "done" | "denied" | "error";
@@ -258,6 +262,7 @@ export class DeviceSession {
       logger: this.log,
       conversationId: this.conversationId,
       onPhase: (phase) => {
+        this.options.onFace?.(faceForPhase(phase));
         if (phase === "finished") {
           this.pacer?.stop();
           this.pacer = null;

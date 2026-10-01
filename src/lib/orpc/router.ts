@@ -104,10 +104,62 @@ import {
 } from "./ocr";
 
 import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./obs-queue";
+import {
+  AckCommandSchema,
+  ClaimExecutorSchema,
+  CreateCueSchema,
+  CueIdSchema,
+  InstanceSchema,
+  ListCommandsSchema,
+  ReleaseExecutorSchema,
+  ReorderCuesSchema,
+  ReportStatusSchema,
+  SendCommandSchema,
+  StepCueSchema,
+  UpdateCueSchema,
+  ackCommand,
+  claimExecutor,
+  createCue,
+  fireCue,
+  getObsStatus,
+  listCommands,
+  listCues,
+  pendingCommands,
+  releaseExecutor,
+  removeCue,
+  reorderCues,
+  reportStatus,
+  sendCommand,
+  stepCue,
+  updateCue,
+} from "./obs-control";
 
 import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
 import { getCastState, setHighlightedNote } from "./cast/services";
+import {
+  FireEffectSchema,
+  GetInputsSchema,
+  GetPulseSchema,
+  SetFaceSchema,
+  SetNowPlayingSchema,
+  SetSceneSchema,
+} from "./owy-stage/schemas";
+import { SubmitInputSchema } from "../owy-stage/scenes";
+import { disconnectSpotify, getSpotifyNowPlaying, spotifyStatus } from "../owy-stage/spotify";
+import {
+  fireEffect,
+  getStageMeetups,
+  getStagePulse,
+  getInputs,
+  getStageState,
+  getStageSpeakers,
+  getStageWeather,
+  setFace,
+  setNowPlaying,
+  setScene,
+  submitInput,
+} from "./owy-stage/services";
 import {
   AddCommunityMemberSchema,
   CreateCommunitySchema,
@@ -290,6 +342,85 @@ export const updateOBSState = adminOs
   .input(UpdateStateSchema)
   .handler(withErrorHandling(async ({ input }) => updateState(input), "update OBS queue state"));
 
+/** Who queued a command, for the history tab. */
+function commandSource(context: Context): string {
+  const user = context.user;
+  if (!user) return "anon";
+
+  return user.id === "owy-bot" ? "bot" : `admin:${user.name || user.id}`;
+}
+
+// OBS control bus (commands for the executor tab + the status it reports back)
+export const sendObsCommand = adminOs
+  .input(SendCommandSchema)
+  .handler(
+    withErrorHandling(
+      async ({ input, context }) => sendCommand(input, commandSource(context as Context)),
+      "queue OBS command"
+    )
+  );
+
+export const pendingObsCommands = adminOs
+  .input(InstanceSchema)
+  .handler(withErrorHandling(async ({ input }) => pendingCommands(input), "list pending OBS commands"));
+
+export const ackObsCommand = adminOs
+  .input(AckCommandSchema)
+  .handler(withErrorHandling(async ({ input }) => ackCommand(input), "ack OBS command"));
+
+export const claimObsExecutor = adminOs
+  .input(ClaimExecutorSchema)
+  .handler(withErrorHandling(async ({ input }) => claimExecutor(input), "claim OBS executor"));
+
+export const releaseObsExecutor = adminOs
+  .input(ReleaseExecutorSchema)
+  .handler(withErrorHandling(async ({ input }) => releaseExecutor(input), "release OBS executor"));
+
+export const reportObsStatus = adminOs
+  .input(ReportStatusSchema)
+  .handler(withErrorHandling(async ({ input }) => reportStatus(input), "report OBS status"));
+
+export const getObsStatusHandler = adminOs
+  .input(InstanceSchema)
+  .handler(withErrorHandling(async ({ input }) => getObsStatus(input), "get OBS status"));
+
+export const listObsCommands = adminOs
+  .input(ListCommandsSchema)
+  .handler(withErrorHandling(async ({ input }) => listCommands(input), "list OBS commands"));
+
+// Cues (rundown)
+export const listObsCues = adminOs
+  .input(InstanceSchema)
+  .handler(withErrorHandling(async ({ input }) => listCues(input), "list OBS cues"));
+
+export const createObsCue = adminOs
+  .input(CreateCueSchema)
+  .handler(withErrorHandling(async ({ input }) => createCue(input), "create OBS cue"));
+
+export const updateObsCue = adminOs
+  .input(UpdateCueSchema)
+  .handler(withErrorHandling(async ({ input }) => updateCue(input), "update OBS cue"));
+
+export const removeObsCue = adminOs
+  .input(CueIdSchema)
+  .handler(withErrorHandling(async ({ input }) => removeCue(input), "remove OBS cue"));
+
+export const reorderObsCues = adminOs
+  .input(ReorderCuesSchema)
+  .handler(withErrorHandling(async ({ input }) => reorderCues(input), "reorder OBS cues"));
+
+export const fireObsCue = adminOs
+  .input(CueIdSchema)
+  .handler(
+    withErrorHandling(async ({ input, context }) => fireCue(input, commandSource(context as Context)), "fire OBS cue")
+  );
+
+export const stepObsCue = adminOs
+  .input(StepCueSchema)
+  .handler(
+    withErrorHandling(async ({ input, context }) => stepCue(input, commandSource(context as Context)), "step OBS cue")
+  );
+
 // Countdown procedures (public read, admin write)
 export const getCountdownStateHandler = os
   .input(GetCountdownStateSchema)
@@ -381,6 +512,55 @@ export const getCastStateHandler = os
 export const setHighlightedNoteHandler = adminOs
   .input(SetHighlightedNoteSchema)
   .handler(withErrorHandling(async ({ input }) => setHighlightedNote(input), "set highlighted note"));
+
+// Owy Stage procedures (public read for the OBS pages, admin write — the
+// companion bridge writes through its x-api-key admin session)
+export const getStageStateHandler = os.handler(withErrorHandling(async () => getStageState(), "get stage state"));
+
+export const setSceneHandler = adminOs
+  .input(SetSceneSchema)
+  .handler(withErrorHandling(async ({ input }) => setScene(input), "set stage scene"));
+
+export const fireEffectHandler = adminOs
+  .input(FireEffectSchema)
+  .handler(withErrorHandling(async ({ input }) => fireEffect(input), "fire stage effect"));
+
+export const setFaceHandler = adminOs
+  .input(SetFaceSchema)
+  .handler(withErrorHandling(async ({ input }) => setFace(input), "set owy face"));
+
+// Aggregates only (counts), safe for the public wall pages
+export const getStagePulseHandler = os
+  .input(GetPulseSchema)
+  .handler(withErrorHandling(async ({ input }) => getStagePulse(input?.eventId), "get stage pulse"));
+
+export const getStageMeetupsHandler = os.handler(
+  withErrorHandling(async () => getStageMeetups(), "get community meetups")
+);
+
+export const getStageWeatherHandler = os.handler(withErrorHandling(async () => getStageWeather(), "get stage weather"));
+export const getStageSpeakersHandler = os.handler(
+  withErrorHandling(async () => getStageSpeakers(), "get stage speakers")
+);
+export const getStageSpotifyHandler = os.handler(
+  withErrorHandling(async () => getSpotifyNowPlaying(), "get spotify now playing")
+);
+export const spotifyStatusHandler = adminOs.handler(withErrorHandling(async () => spotifyStatus(), "spotify status"));
+export const disconnectSpotifyHandler = adminOs.handler(
+  withErrorHandling(async () => {
+    await disconnectSpotify();
+    return { ok: true };
+  }, "disconnect spotify")
+);
+export const setNowPlayingHandler = adminOs
+  .input(SetNowPlayingSchema)
+  .handler(withErrorHandling(async ({ input }) => setNowPlaying(input), "set now playing"));
+export const submitStageInputHandler = os
+  .input(SubmitInputSchema)
+  .handler(withErrorHandling(async ({ input }) => submitInput(input), "submit stage input"));
+export const getStageInputsHandler = os
+  .input(GetInputsSchema)
+  .handler(withErrorHandling(async ({ input }) => getInputs(input.round), "get stage inputs"));
 
 // Dashboard procedures (admin only)
 export const getDashboardStatsHandler = adminOs
@@ -557,6 +737,27 @@ export const router = {
     updateState: updateOBSState,
   },
 
+  // OBS control bus + cues (see src/lib/orpc/obs-control)
+  obsControl: {
+    send: sendObsCommand,
+    pending: pendingObsCommands,
+    ack: ackObsCommand,
+    claim: claimObsExecutor,
+    release: releaseObsExecutor,
+    report: reportObsStatus,
+    status: getObsStatusHandler,
+    history: listObsCommands,
+  },
+  obsCue: {
+    list: listObsCues,
+    create: createObsCue,
+    update: updateObsCue,
+    remove: removeObsCue,
+    reorder: reorderObsCues,
+    fire: fireObsCue,
+    step: stepObsCue,
+  },
+
   // Countdown Timer Management
   countdown: {
     getState: getCountdownStateHandler,
@@ -582,6 +783,24 @@ export const router = {
   cast: {
     getState: getCastStateHandler,
     setHighlightedNote: setHighlightedNoteHandler,
+  },
+
+  // Owy Stage (video wall scenes)
+  owyStage: {
+    getState: getStageStateHandler,
+    setScene: setSceneHandler,
+    fireEffect: fireEffectHandler,
+    setFace: setFaceHandler,
+    getPulse: getStagePulseHandler,
+    getMeetups: getStageMeetupsHandler,
+    getWeather: getStageWeatherHandler,
+    getSpeakers: getStageSpeakersHandler,
+    submit: submitStageInputHandler,
+    inputs: getStageInputsHandler,
+    nowPlaying: setNowPlayingHandler,
+    getSpotify: getStageSpotifyHandler,
+    spotifyStatus: spotifyStatusHandler,
+    disconnectSpotify: disconnectSpotifyHandler,
   },
 
   // Dashboard Statistics

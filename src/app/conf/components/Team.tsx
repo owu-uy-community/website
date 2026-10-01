@@ -16,7 +16,7 @@ type TeamMember = {
  * public/images/conf/staff/ with the brand shape already composited in, so the
  * tile renders the image alone.
  */
-const TEAM_2026: TeamMember[] = [
+export const TEAM_2026: TeamMember[] = [
   {
     firstname: "Agustín",
     lastname: "Tornielli",

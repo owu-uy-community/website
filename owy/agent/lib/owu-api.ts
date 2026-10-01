@@ -131,6 +131,50 @@ export interface OBSUpdateData {
   currentPreset?: string;
 }
 
+/** Live OBS status as reported by the executor tab (obsControl.status). */
+export interface OBSStatus {
+  instanceId: number;
+  connected: boolean;
+  programScene: string | null;
+  previewScene: string | null;
+  studioMode: boolean;
+  transitionName: string | null;
+  transitionMs: number | null;
+  streaming: boolean;
+  recording: boolean;
+  lastError: string | null;
+  scenes: string[];
+  audioInputs: { name: string; muted: boolean }[];
+  executorId: string | null;
+  executorOnline: boolean;
+  statusAt: string | null;
+  currentCueId: string | null;
+}
+
+/** A command for the executor tab (obsControl.send); see the site's obs-control schemas. */
+export type OBSCommand =
+  | { type: "scene"; payload: { sceneName: string; transition?: string; transitionMs?: number } }
+  | { type: "preview"; payload: { sceneName: string } }
+  | { type: "take"; payload: Record<string, never> }
+  | { type: "cut"; payload: Record<string, never> }
+  | { type: "studio"; payload: { enabled: boolean } }
+  | { type: "mute"; payload: { inputName: string; muted?: boolean } }
+  | { type: "stream"; payload: { action: "start" | "stop" | "toggle" } }
+  | { type: "record"; payload: { action: "start" | "stop" | "toggle" } };
+
+export interface OBSCue {
+  id: string;
+  instanceId: number;
+  name: string;
+  color: string | null;
+  obsScene: string | null;
+  stageScene: string | null;
+  sound: string | null;
+  notes: string | null;
+  hotkey: string | null;
+  position: number;
+}
+
 export interface CountdownState {
   isRunning: boolean;
   remainingSeconds: number;
@@ -305,6 +349,18 @@ export interface OwuApi {
     getState: (input: { instanceId: number }) => Promise<OBSQueueState>;
     updateState: (input: { instanceId: number; data: OBSUpdateData }) => Promise<OBSQueueState>;
   };
+  obsControl: {
+    status: (input: { instanceId: number }) => Promise<OBSStatus>;
+    send: (input: { instanceId: number } & OBSCommand) => Promise<{ id: string; executorOnline: boolean }>;
+  };
+  obsCue: {
+    list: (input: { instanceId: number }) => Promise<OBSCue[]>;
+    fire: (input: { id: string }) => Promise<{ cue: OBSCue; commandId: string | null }>;
+    step: (input: {
+      instanceId: number;
+      direction: "next" | "prev";
+    }) => Promise<{ cue: OBSCue; commandId: string | null } | null>;
+  };
   countdown: {
     getState: (input?: { eventId?: string }) => Promise<CountdownState>;
     updateState: (input: CountdownUpdateInput) => Promise<CountdownState>;
@@ -350,6 +406,19 @@ export interface OwuApi {
   eventbrite: {
     getSummary: () => Promise<unknown>;
   };
+  /** Owy Stage: the video wall (site: src/lib/owy-stage/scenes.ts). */
+  owyStage: {
+    /** Mirrors a companion's face + running transcript onto the wall's Owy. */
+    setFace: (input: StageFaceInput) => Promise<unknown>;
+  };
+}
+
+export type StageFaceState = "idle" | "listening" | "thinking" | "speaking" | "happy" | "error" | "offline";
+
+export interface StageFaceInput {
+  state: StageFaceState;
+  transcript?: { who: "input" | "output"; text: string };
+  source?: string;
 }
 
 // ---------------------------------------------------------------------------
