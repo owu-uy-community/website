@@ -104,6 +104,35 @@ import {
 } from "./ocr";
 
 import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./obs-queue";
+import {
+  AckCommandSchema,
+  ClaimExecutorSchema,
+  CreateCueSchema,
+  CueIdSchema,
+  InstanceSchema,
+  ListCommandsSchema,
+  ReleaseExecutorSchema,
+  ReorderCuesSchema,
+  ReportStatusSchema,
+  SendCommandSchema,
+  StepCueSchema,
+  UpdateCueSchema,
+  ackCommand,
+  claimExecutor,
+  createCue,
+  fireCue,
+  getObsStatus,
+  listCommands,
+  listCues,
+  pendingCommands,
+  releaseExecutor,
+  removeCue,
+  reorderCues,
+  reportStatus,
+  sendCommand,
+  stepCue,
+  updateCue,
+} from "./obs-control";
 
 import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
 import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
@@ -312,6 +341,85 @@ export const getOBSState = os
 export const updateOBSState = adminOs
   .input(UpdateStateSchema)
   .handler(withErrorHandling(async ({ input }) => updateState(input), "update OBS queue state"));
+
+/** Who queued a command, for the history tab. */
+function commandSource(context: Context): string {
+  const user = context.user;
+  if (!user) return "anon";
+
+  return user.id === "owy-bot" ? "bot" : `admin:${user.name || user.id}`;
+}
+
+// OBS control bus (commands for the executor tab + the status it reports back)
+export const sendObsCommand = adminOs
+  .input(SendCommandSchema)
+  .handler(
+    withErrorHandling(
+      async ({ input, context }) => sendCommand(input, commandSource(context as Context)),
+      "queue OBS command"
+    )
+  );
+
+export const pendingObsCommands = adminOs
+  .input(InstanceSchema)
+  .handler(withErrorHandling(async ({ input }) => pendingCommands(input), "list pending OBS commands"));
+
+export const ackObsCommand = adminOs
+  .input(AckCommandSchema)
+  .handler(withErrorHandling(async ({ input }) => ackCommand(input), "ack OBS command"));
+
+export const claimObsExecutor = adminOs
+  .input(ClaimExecutorSchema)
+  .handler(withErrorHandling(async ({ input }) => claimExecutor(input), "claim OBS executor"));
+
+export const releaseObsExecutor = adminOs
+  .input(ReleaseExecutorSchema)
+  .handler(withErrorHandling(async ({ input }) => releaseExecutor(input), "release OBS executor"));
+
+export const reportObsStatus = adminOs
+  .input(ReportStatusSchema)
+  .handler(withErrorHandling(async ({ input }) => reportStatus(input), "report OBS status"));
+
+export const getObsStatusHandler = adminOs
+  .input(InstanceSchema)
+  .handler(withErrorHandling(async ({ input }) => getObsStatus(input), "get OBS status"));
+
+export const listObsCommands = adminOs
+  .input(ListCommandsSchema)
+  .handler(withErrorHandling(async ({ input }) => listCommands(input), "list OBS commands"));
+
+// Cues (rundown)
+export const listObsCues = adminOs
+  .input(InstanceSchema)
+  .handler(withErrorHandling(async ({ input }) => listCues(input), "list OBS cues"));
+
+export const createObsCue = adminOs
+  .input(CreateCueSchema)
+  .handler(withErrorHandling(async ({ input }) => createCue(input), "create OBS cue"));
+
+export const updateObsCue = adminOs
+  .input(UpdateCueSchema)
+  .handler(withErrorHandling(async ({ input }) => updateCue(input), "update OBS cue"));
+
+export const removeObsCue = adminOs
+  .input(CueIdSchema)
+  .handler(withErrorHandling(async ({ input }) => removeCue(input), "remove OBS cue"));
+
+export const reorderObsCues = adminOs
+  .input(ReorderCuesSchema)
+  .handler(withErrorHandling(async ({ input }) => reorderCues(input), "reorder OBS cues"));
+
+export const fireObsCue = adminOs
+  .input(CueIdSchema)
+  .handler(
+    withErrorHandling(async ({ input, context }) => fireCue(input, commandSource(context as Context)), "fire OBS cue")
+  );
+
+export const stepObsCue = adminOs
+  .input(StepCueSchema)
+  .handler(
+    withErrorHandling(async ({ input, context }) => stepCue(input, commandSource(context as Context)), "step OBS cue")
+  );
 
 // Countdown procedures (public read, admin write)
 export const getCountdownStateHandler = os
@@ -627,6 +735,27 @@ export const router = {
   obsQueue: {
     getState: getOBSState,
     updateState: updateOBSState,
+  },
+
+  // OBS control bus + cues (see src/lib/orpc/obs-control)
+  obsControl: {
+    send: sendObsCommand,
+    pending: pendingObsCommands,
+    ack: ackObsCommand,
+    claim: claimObsExecutor,
+    release: releaseObsExecutor,
+    report: reportObsStatus,
+    status: getObsStatusHandler,
+    history: listObsCommands,
+  },
+  obsCue: {
+    list: listObsCues,
+    create: createObsCue,
+    update: updateObsCue,
+    remove: removeObsCue,
+    reorder: reorderObsCues,
+    fire: fireObsCue,
+    step: stepObsCue,
   },
 
   // Countdown Timer Management

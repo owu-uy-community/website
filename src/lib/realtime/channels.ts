@@ -24,3 +24,12 @@ export const GLOBAL_CHANNELS = {
 export function obsQueueChannel(instanceId: number): string {
   return `obs_queue_listener_${instanceId}`;
 }
+
+/**
+ * OBS control bus per rig: commands for the executor tab and the status it
+ * reports back (see src/lib/orpc/obs-control). `private:` — admin sessions
+ * only, since anyone on it could take the stream down.
+ */
+export function obsControlChannel(instanceId: number): string {
+  return `private:obs:${instanceId}`;
+}
