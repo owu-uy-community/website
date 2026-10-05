@@ -10,6 +10,7 @@ import Meetups from "./components/Meetups";
 import Moments from "./components/Moments";
 import MotionRoot from "./components/MotionRoot";
 import Navbar from "./components/Navbar";
+import OpenSpace from "./components/OpenSpace";
 import Program from "./components/Program";
 import Reveal from "./components/Reveal";
 import Speakers from "./components/Speakers";
@@ -91,6 +92,8 @@ export default async function ConfPage() {
           {/* Yellow divider band between sections */}
           <Reveal grow="x" amount={0.9} className="mt-16 h-10 w-full bg-[#F5BB03]" duration={0.9} />
           <Program />
+          {/* The agenda names the open space; this explains what it actually is. */}
+          <OpenSpace />
           <Speakers />
           <Moments />
           <Sponsors />

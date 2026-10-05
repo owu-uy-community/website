@@ -22,7 +22,12 @@ interface AnnouncementsPanelProps {
   tasks: StaffTask[];
   canEdit: boolean;
   isSending: boolean;
-  onSend: (values: { body: string; urgent: boolean; taskId: string | null }) => Promise<void>;
+  onSend: (values: {
+    body: string;
+    urgent: boolean;
+    audience: "all" | "task" | "attendees";
+    taskId: string | null;
+  }) => Promise<void>;
   onAck: (announcementId: string) => void;
 }
 
@@ -36,16 +41,24 @@ export function AnnouncementsPanel({
 }: AnnouncementsPanelProps) {
   const [body, setBody] = useState("");
   const [urgent, setUrgent] = useState(false);
-  const [taskId, setTaskId] = useState<string>("all");
+  /** "all" = staff, "attendees" = the public live page, anything else = a task id. */
+  const [target, setTarget] = useState<string>("all");
+  const toAttendees = target === "attendees";
 
   const assignableTasks = tasks.filter((task) => task.type !== "milestone" && task.assignees.length > 0);
 
   const handleSend = async () => {
     if (!body.trim()) return;
-    await onSend({ body: body.trim(), urgent, taskId: taskId === "all" ? null : taskId });
+    const isTask = target !== "all" && target !== "attendees";
+    await onSend({
+      body: body.trim(),
+      urgent,
+      audience: isTask ? "task" : toAttendees ? "attendees" : "all",
+      taskId: isTask ? target : null,
+    });
     setBody("");
     setUrgent(false);
-    setTaskId("all");
+    setTarget("all");
   };
 
   return (
@@ -54,7 +67,7 @@ export function AnnouncementsPanel({
         <div className="space-y-3 rounded-lg border border-border bg-card p-3">
           <Textarea
             className="min-h-[72px] resize-none text-base sm:text-sm"
-            placeholder="Anuncio para el staff…"
+            placeholder={toAttendees ? "Anuncio para los asistentes…" : "Anuncio para el staff…"}
             rows={2}
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -63,12 +76,13 @@ export function AnnouncementsPanel({
             }}
           />
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={taskId} onValueChange={setTaskId}>
+            <Select value={target} onValueChange={setTarget}>
               <SelectTrigger className="h-11 flex-1 text-xs sm:h-9">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todo el staff</SelectItem>
+                <SelectItem value="attendees">Asistentes (público)</SelectItem>
                 {assignableTasks.map((task) => (
                   <SelectItem key={task.id} value={task.id}>
                     Asignados: {task.title.slice(0, 30)}
@@ -94,6 +108,13 @@ export function AnnouncementsPanel({
               {isSending ? "Enviando…" : "Enviar"}
             </Button>
           </div>
+
+          {/* Everything else here stays inside the staff panel; this one does not. */}
+          {toAttendees && (
+            <p className="text-xs text-amber-500">
+              Se publica en la grilla en vivo: lo ve cualquiera que abra la página.
+            </p>
+          )}
         </div>
       )}
 
