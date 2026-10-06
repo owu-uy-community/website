@@ -1,6 +1,8 @@
 import { createId } from "@paralleldrive/cuid2";
+import type { InferRouterInputs } from "@orpc/server";
 
 import type { Context } from "lib/orpc/middleware";
+import type { router } from "lib/orpc/router";
 
 import type { UserRow } from "./factories";
 
@@ -29,3 +31,6 @@ export function by(actor: UserRow | null): { context: Context } {
 
   return { context: { session: session as unknown as Context["session"], user: actor as unknown as Context["user"] } };
 }
+
+/** Input type of any procedure: `RouterInputs["tracks"]["create"]`. */
+export type RouterInputs = InferRouterInputs<typeof router>;

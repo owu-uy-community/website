@@ -20,6 +20,8 @@ export const alias = [
 /** Values server modules read at import time; nothing here reaches a real service. */
 export const testEnv = {
   NODE_ENV: "test" as const,
+  // Production runs in UTC (Vercel); tests do too, so time-of-day bugs show up here.
+  TZ: "UTC",
   SKIP_ENV_VALIDATION: "true",
   BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters-long",
   NEXT_PUBLIC_BASE_URL: "http://localhost:3000",

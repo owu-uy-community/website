@@ -239,6 +239,9 @@ export default defineConfig({
       rules: {
         ...override.rules,
         "vitest/consistent-test-it": TEST_NOT_IT,
+        // `toBe(true)` pins the boolean; `toBeTruthy()` would also pass for "yes" or 1.
+        "vitest/prefer-to-be-truthy": "off" as const,
+        "vitest/prefer-to-be-falsy": "off" as const,
       },
     })),
     {
