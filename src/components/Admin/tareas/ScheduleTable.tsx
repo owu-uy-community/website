@@ -170,7 +170,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
     <div className="space-y-3">
       <div className="flex items-center gap-3">
         <Progress className="h-1.5 flex-1" value={progress} />
-        <span className="font-terminal text-xs tabular-nums text-muted-foreground">
+        <span className="font-terminal text-xs text-muted-foreground tabular-nums">
           {doneCount}/{workTasks.length} listas
         </span>
       </div>
@@ -188,7 +188,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
                 className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2"
               >
                 <Flag className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <span className="font-terminal text-xs font-semibold tabular-nums text-primary">
+                <span className="font-terminal text-xs font-semibold text-primary tabular-nums">
                   {task.startTime ?? "—"}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{task.title}</span>
@@ -205,7 +205,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-terminal text-xs font-semibold tabular-nums text-foreground">
+                    <span className="font-terminal text-xs font-semibold text-foreground tabular-nums">
                       <TimeLabel task={task} />
                     </span>
                     <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
@@ -246,7 +246,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
                 </button>
               )}
               {expanded && task.notes && (
-                <p className="mt-1 whitespace-pre-line rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                <p className="mt-1 rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed whitespace-pre-line text-muted-foreground">
                   {task.notes}
                 </p>
               )}
@@ -279,7 +279,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
               if (task.type === "milestone") {
                 return (
                   <TableRow key={task.id} className="bg-muted/30 hover:bg-muted/40">
-                    <TableCell className="whitespace-nowrap font-terminal text-xs font-semibold tabular-nums text-primary">
+                    <TableCell className="font-terminal text-xs font-semibold whitespace-nowrap text-primary tabular-nums">
                       {task.startTime ?? "—"}
                     </TableCell>
                     <TableCell colSpan={3}>
@@ -299,7 +299,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
               return (
                 <React.Fragment key={task.id}>
                   <TableRow className={cn(task.status === "done" && "opacity-60")}>
-                    <TableCell className="whitespace-nowrap font-terminal text-xs tabular-nums text-foreground">
+                    <TableCell className="font-terminal text-xs whitespace-nowrap text-foreground tabular-nums">
                       <TimeLabel task={task} />
                     </TableCell>
                     <TableCell>
@@ -360,7 +360,7 @@ export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, i
                       <TableCell colSpan={5}>
                         <div className="space-y-2 py-1">
                           {task.notes && (
-                            <p className="whitespace-pre-line rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                            <p className="rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed whitespace-pre-line text-muted-foreground">
                               {task.notes}
                             </p>
                           )}

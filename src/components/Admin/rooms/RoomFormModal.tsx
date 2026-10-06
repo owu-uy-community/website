@@ -85,7 +85,7 @@ function ColorPicker({
         ))}
         <Input
           aria-label="Color personalizado (hex)"
-          className="font-terminal h-11 w-28 text-base sm:h-8 sm:w-24 sm:text-xs"
+          className="h-11 w-28 font-terminal text-base sm:h-8 sm:w-24 sm:text-xs"
           placeholder="#a1ff00"
           value={value ?? ""}
           onChange={(event) => {
@@ -133,7 +133,7 @@ function IconPicker({
               aria-pressed={value === key}
               className={cn(
                 "flex h-11 w-11 items-center justify-center rounded-md border-2 transition-transform hover:scale-105 sm:h-8 sm:w-8",
-                value === key ? "border-foreground bg-muted" : "bg-muted/40 border-transparent"
+                value === key ? "border-foreground bg-muted" : "border-transparent bg-muted/40"
               )}
               type="button"
               onClick={() => onChange(key)}
@@ -201,22 +201,22 @@ function RoomFormFields({
         onChange={(icon) => setForm((previous) => ({ ...previous, icon }))}
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <label className="border-border flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-          <span className="text-foreground flex items-center gap-2">
-            <Monitor aria-hidden className="text-muted-foreground h-4 w-4" /> TV
+        <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+          <span className="flex items-center gap-2 text-foreground">
+            <Monitor aria-hidden className="h-4 w-4 text-muted-foreground" /> TV
           </span>
           <Switch checked={form.hasTV} onCheckedChange={(hasTV) => setForm((previous) => ({ ...previous, hasTV }))} />
         </label>
-        <label className="border-border flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-          <span className="text-foreground flex items-center gap-2">
-            <Presentation aria-hidden className="text-muted-foreground h-4 w-4" /> Pizarra
+        <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
+          <span className="flex items-center gap-2 text-foreground">
+            <Presentation aria-hidden className="h-4 w-4 text-muted-foreground" /> Pizarra
           </span>
           <Switch
             checked={form.hasWhiteboard}
             onCheckedChange={(hasWhiteboard) => setForm((previous) => ({ ...previous, hasWhiteboard }))}
           />
         </label>
-        <label className="border-border flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+        <label className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
           <span className="text-foreground">Activa</span>
           <Switch
             checked={form.isActive}
@@ -328,7 +328,7 @@ export function RoomFormModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-w-lg flex-col gap-0 overflow-hidden p-0 sm:p-0">
-        <DialogHeader className="border-border shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:pr-14">
+        <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-14 sm:px-6 sm:pr-14">
           <DialogTitle>{room ? `Editar "${room.name}"` : "Nueva sala"}</DialogTitle>
           <DialogDescription>
             {room ? "Los cambios se reflejan al instante en la grilla." : "Se agrega al final de la grilla."}
@@ -343,7 +343,7 @@ export function RoomFormModal({
           />
         </div>
 
-        <DialogFooter className="border-border shrink-0 border-t px-4 py-3 sm:px-6 [&>button]:h-11 sm:[&>button]:h-10">
+        <DialogFooter className="shrink-0 border-t border-border px-4 py-3 sm:px-6 [&>button]:h-11 sm:[&>button]:h-10">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>

@@ -86,7 +86,7 @@ export default function Lightbox({ photos, index, downloadPrefix, onClose, onSte
     <div
       aria-label={photo.alt}
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xs animate-[lightbox-fade-in_250ms_ease-out]"
+      className="fixed inset-0 z-[100] flex animate-[lightbox-fade-in_250ms_ease-out] flex-col items-center justify-center bg-black/90 backdrop-blur-xs"
       role="dialog"
       onClick={onClose}
     >
@@ -96,19 +96,19 @@ export default function Lightbox({ photos, index, downloadPrefix, onClose, onSte
       >
         <img
           alt={photo.alt}
-          className="max-h-[74dvh] w-auto max-w-full select-none object-contain"
+          className="max-h-[74dvh] w-auto max-w-full object-contain select-none"
           src={photo.src}
           style={{ viewTransitionName: VT_NAME }}
         />
         <figcaption className="flex w-full flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
           <span className="max-w-[560px] text-sm leading-relaxed text-[#FBF5E7]/85 sm:text-base">
             {photo.alt}
-            <span className="mt-1 block font-display text-xs font-semibold uppercase tracking-[0.18em] text-[#FBF5E7]/50">
+            <span className="mt-1 block font-display text-xs font-semibold tracking-[0.18em] text-[#FBF5E7]/50 uppercase">
               La Meetup III · {String(index + 1).padStart(2, "0")} / {photos.length}
             </span>
           </span>
           <a
-            className="inline-flex h-11 shrink-0 items-center gap-2.5 rounded-full bg-[#F5BB03] px-6 font-display text-sm font-bold uppercase leading-none text-black transition-colors hover:bg-[#FBF5E7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+            className="inline-flex h-11 shrink-0 items-center gap-2.5 rounded-full bg-[#F5BB03] px-6 font-display text-sm leading-none font-bold text-black uppercase transition-colors hover:bg-[#FBF5E7] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
             download={`${downloadPrefix}-${String(index + 1).padStart(2, "0")}.webp`}
             href={photo.src}
           >
@@ -120,21 +120,28 @@ export default function Lightbox({ photos, index, downloadPrefix, onClose, onSte
 
       <button
         aria-label="Cerrar foto"
-        className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-[#FBF5E7]/25 text-[#FBF5E7] transition-colors hover:border-[#F5BB03] hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:right-6 sm:top-6"
+        className="absolute top-4 right-4 flex h-11 w-11 items-center justify-center rounded-full border border-[#FBF5E7]/25 text-[#FBF5E7] transition-colors hover:border-[#F5BB03] hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:top-6 sm:right-6"
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           onClose();
         }}
       >
-        <svg aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+        <svg
+          aria-hidden="true"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          viewBox="0 0 24 24"
+        >
           <path d="m6 6 12 12M18 6 6 18" strokeLinecap="round" />
         </svg>
       </button>
 
       <button
         aria-label="Foto anterior"
-        className="absolute left-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center transition-transform hover:-translate-x-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:left-5"
+        className="absolute top-1/2 left-2 flex h-12 w-12 -translate-y-1/2 items-center justify-center transition-transform hover:-translate-x-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:left-5"
         type="button"
         onClick={(event) => {
           event.stopPropagation();
@@ -147,7 +154,7 @@ export default function Lightbox({ photos, index, downloadPrefix, onClose, onSte
       </button>
       <button
         aria-label="Foto siguiente"
-        className="absolute right-2 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center transition-transform hover:translate-x-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:right-5"
+        className="absolute top-1/2 right-2 flex h-12 w-12 -translate-y-1/2 items-center justify-center transition-transform hover:translate-x-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:right-5"
         type="button"
         onClick={(event) => {
           event.stopPropagation();

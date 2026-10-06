@@ -40,7 +40,10 @@ function upcomingSlots(timeSlots: string[]): string[] {
   const minutesNow = now.getHours() * 60 + now.getMinutes();
 
   const upcoming = timeSlots.filter((slot) => {
-    const endsAt = slot.split("-")[1]?.trim().match(/^(\d{1,2}):(\d{2})$/);
+    const endsAt = slot
+      .split("-")[1]
+      ?.trim()
+      .match(/^(\d{1,2}):(\d{2})$/);
 
     if (!endsAt) return true;
 

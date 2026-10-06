@@ -304,7 +304,7 @@ export default function IntroSection() {
                 e.stopPropagation();
                 goToPreviousImage();
               }}
-              className="absolute left-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
+              className="absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
@@ -315,7 +315,7 @@ export default function IntroSection() {
                 e.stopPropagation();
                 goToNextImage();
               }}
-              className="absolute right-4 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
+              className="absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full bg-black/50 p-3 text-white transition-colors hover:bg-black/70"
             >
               <ChevronRight className="h-6 w-6" />
             </button>

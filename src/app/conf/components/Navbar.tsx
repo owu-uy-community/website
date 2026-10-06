@@ -33,7 +33,7 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-8 min-[1440px]:gap-10">
-          <nav aria-label="Secciones" className="hidden items-center gap-7 lg:flex min-[1440px]:gap-10">
+          <nav aria-label="Secciones" className="hidden items-center gap-7 min-[1440px]:gap-10 lg:flex">
             {NAV_LINKS.map(({ label, href }) => (
               <a
                 key={href}

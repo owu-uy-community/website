@@ -364,7 +364,7 @@ export function Automaton({ params }: SceneProps<"automaton">) {
   return (
     <>
       <canvas ref={canvas} className="absolute inset-0 bg-black" height={H} width={W} />
-      <p className="font-terminal absolute top-[40px] right-[60px] text-[28px] text-[#FBF5E7]/60">
+      <p className="absolute top-[40px] right-[60px] font-terminal text-[28px] text-[#FBF5E7]/60">
         regla {params.rule}
       </p>
     </>

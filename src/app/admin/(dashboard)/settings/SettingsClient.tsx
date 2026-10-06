@@ -88,7 +88,11 @@ export default function SettingsClient() {
             />
             <Row
               label="Transporte"
-              value={<span className="font-terminal text-xs">{process.env.NODE_ENV === "development" ? "sidecar :3199" : "/api/realtime"}</span>}
+              value={
+                <span className="font-terminal text-xs">
+                  {process.env.NODE_ENV === "development" ? "sidecar :3199" : "/api/realtime"}
+                </span>
+              }
             />
           </CardContent>
         </Card>

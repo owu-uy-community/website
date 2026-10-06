@@ -63,7 +63,7 @@ export function Meetups() {
                 <p className="text-[38px] leading-none font-extrabold text-[#F5BB03] uppercase">
                   {clean(MEETUP_DAY.format(date))}
                 </p>
-                <p className="font-terminal mt-2 text-[24px] text-[#FBF5E7]/60">
+                <p className="mt-2 font-terminal text-[24px] text-[#FBF5E7]/60">
                   {clean(MEETUP_WEEKDAY.format(date))} · {MEETUP_TIME.format(date)}
                 </p>
               </div>

@@ -23,7 +23,7 @@ function NavItems() {
         return (
           <li
             key={link}
-            className="p-medium-16 flex w-full flex-row items-center whitespace-nowrap text-base font-semibold text-white"
+            className="p-medium-16 flex w-full flex-row items-center text-base font-semibold whitespace-nowrap text-white"
           >
             <div
               className={classNames("border-t-6 border-b-6 border-l-12 h-4 w-1.5 border-l-yellow-400", {

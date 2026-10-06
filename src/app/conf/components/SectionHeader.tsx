@@ -21,7 +21,12 @@ export default function SectionHeader({
   return (
     <div>
       <Reveal y={18} duration={0.55}>
-        <p className={classNames("font-display text-sm font-semibold uppercase leading-none tracking-[0.18em]", eyebrowClassName)}>
+        <p
+          className={classNames(
+            "font-display text-sm font-semibold uppercase leading-none tracking-[0.18em]",
+            eyebrowClassName
+          )}
+        >
           {eyebrow}
         </p>
       </Reveal>

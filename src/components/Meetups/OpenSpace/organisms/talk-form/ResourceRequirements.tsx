@@ -22,7 +22,7 @@ function Availability({ available }: { available: boolean }) {
       Disponible
     </span>
   ) : (
-    <span className="text-destructive flex shrink-0 items-center gap-1.5 text-xs">
+    <span className="flex shrink-0 items-center gap-1.5 text-xs text-destructive">
       <XCircle className="h-3.5 w-3.5" />
       No disponible
     </span>
@@ -33,7 +33,7 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
   const selectedRoomData = roomsData.find((r) => r.name === watchedValues.room);
 
   return (
-    <div className="border-border bg-muted/30 space-y-3 rounded-md border p-3">
+    <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
       <Label className="text-sm font-medium">Recursos necesarios</Label>
       <div className="space-y-2">
         <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 sm:min-h-0">
@@ -44,7 +44,7 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
               render={({ field }) => <Checkbox checked={field.value} id="needsTV" onCheckedChange={field.onChange} />}
             />
             <Label
-              className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm font-normal"
+              className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground hover:text-foreground"
               htmlFor="needsTV"
             >
               <Tv className="h-4 w-4" />
@@ -63,7 +63,7 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
               )}
             />
             <Label
-              className="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1.5 text-sm font-normal"
+              className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground hover:text-foreground"
               htmlFor="needsWhiteboard"
             >
               <Presentation className="h-4 w-4" />

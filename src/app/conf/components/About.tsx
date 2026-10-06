@@ -27,8 +27,8 @@ function Hl({ children, yellow = false }: { children: React.ReactNode; yellow?: 
 const PARAGRAPHS: React.ReactNode[] = [
   <>
     OWU CONF es <Hl>la conferencia de tecnología de la comunidad uruguaya</Hl>: una jornada en Montevideo con{" "}
-    <Hl>charlas técnicas, open space y networking</Hl>. Nace de <Hl>La Meetup</Hl>, el encuentro que desde 2023
-    reúne a las comunidades tech de Uruguay.
+    <Hl>charlas técnicas, open space y networking</Hl>. Nace de <Hl>La Meetup</Hl>, el encuentro que desde 2023 reúne a
+    las comunidades tech de Uruguay.
   </>,
   <>
     La organiza <Hl>OWU</Hl>, la comunidad que desde 2011 promueve{" "}
@@ -57,13 +57,15 @@ export default function About() {
           />
           {PARAGRAPHS.map((paragraph, i) => (
             <Reveal key={i} delay={0.12 + i * 0.1} y={24}>
-              <p className={`text-pretty text-lg leading-relaxed text-[#FBF5E7]/90 ${i === 0 ? "mt-8" : "mt-5"}`}>{paragraph}</p>
+              <p className={`text-lg leading-relaxed text-pretty text-[#FBF5E7]/90 ${i === 0 ? "mt-8" : "mt-5"}`}>
+                {paragraph}
+              </p>
             </Reveal>
           ))}
 
           <Reveal delay={0.45} y={18}>
             <Link
-              className="mt-6 inline-block font-display text-sm font-bold uppercase leading-none text-[#0162C8] transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] min-[1440px]:text-base"
+              className="mt-6 inline-block font-display text-sm leading-none font-bold text-[#0162C8] uppercase transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] min-[1440px]:text-base"
               href="/"
             >
               CONOCÉ MÁS →
@@ -72,7 +74,7 @@ export default function About() {
 
           {/* mt-auto pins it to the column bottom (the grid row stretches to the tangram height), right above the timeline */}
           <Reveal className="mt-auto" delay={0.15} y={30}>
-            <p className="mt-6 font-display text-3xl font-extrabold uppercase leading-[1.05] tracking-[-0.02em] text-[#FBF5E7] min-[1440px]:text-4xl">
+            <p className="mt-6 font-display text-3xl leading-[1.05] font-extrabold tracking-[-0.02em] text-[#FBF5E7] uppercase min-[1440px]:text-4xl">
               DE MEETUP
               <br />A CONFERENCIA.
             </p>
@@ -84,14 +86,14 @@ export default function About() {
 
       <div className="relative mt-10">
         {/* Desktop track: final segment turns yellow approaching 2026 */}
-        <div aria-hidden="true" className="absolute left-[2px] right-1/4 top-[7px] hidden sm:block">
+        <div aria-hidden="true" className="absolute top-[7px] right-1/4 left-[2px] hidden sm:block">
           <Reveal grow="x" amount={1} className="h-[2px] bg-[#FBF5E7]/15" duration={1} />
         </div>
-        <div aria-hidden="true" className="absolute left-1/2 right-1/4 top-[7px] hidden sm:block">
+        <div aria-hidden="true" className="absolute top-[7px] right-1/4 left-1/2 hidden sm:block">
           <Reveal grow="x" amount={1} className="h-[2px] bg-[#F5BB03]" delay={0.55} duration={0.7} />
         </div>
         {/* Mobile vertical track */}
-        <div aria-hidden="true" className="absolute bottom-6 left-[7px] top-1 w-[2px] bg-[#FBF5E7]/15 sm:hidden" />
+        <div aria-hidden="true" className="absolute top-1 bottom-6 left-[7px] w-[2px] bg-[#FBF5E7]/15 sm:hidden" />
 
         <ol className="grid gap-y-10 sm:grid-cols-4">
           {EDITIONS.map(({ year, name, href }, i) => {
@@ -102,23 +104,23 @@ export default function About() {
                 aria-hidden="true"
                 className={`absolute block rotate-45 ${
                   isConf
-                    ? "left-0 top-0 h-4 w-4 bg-[#F5BB03]"
-                    : "left-[2px] top-[2px] h-3 w-3 border-2 border-[#FBF5E7]/40 bg-black transition-colors group-hover:border-[#F5BB03]"
+                    ? "top-0 left-0 h-4 w-4 bg-[#F5BB03]"
+                    : "top-[2px] left-[2px] h-3 w-3 border-2 border-[#FBF5E7]/40 bg-black transition-colors group-hover:border-[#F5BB03]"
                 }`}
               />
             );
 
             const text = (
-              <span className="block pl-8 sm:pl-0 sm:pt-8">
+              <span className="block pl-8 sm:pt-8 sm:pl-0">
                 <span
-                  className={`block font-display text-sm font-bold leading-none ${
+                  className={`block font-display text-sm leading-none font-bold ${
                     isConf ? "text-[#F5BB03]" : "text-[#FBF5E7]/60"
                   }`}
                 >
                   {year}
                 </span>
                 <span
-                  className={`mt-2 block font-display text-lg font-semibold uppercase leading-none ${
+                  className={`mt-2 block font-display text-lg leading-none font-semibold uppercase ${
                     isConf ? "text-[#F5BB03]" : "text-[#FBF5E7] transition-colors group-hover:text-[#F5BB03]"
                   }`}
                 >

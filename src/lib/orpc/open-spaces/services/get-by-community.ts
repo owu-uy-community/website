@@ -17,7 +17,11 @@ const transformOpenSpace = (event: EventRow): OpenSpace => ({
  * List a community's events, newest first.
  */
 export const getOpenSpacesByCommunity = async (communityId: string): Promise<OpenSpace[]> => {
-  const rows = await db.select().from(events).where(eq(events.communityId, communityId)).orderBy(desc(events.startDate));
+  const rows = await db
+    .select()
+    .from(events)
+    .where(eq(events.communityId, communityId))
+    .orderBy(desc(events.startDate));
 
   return rows.map(transformOpenSpace);
 };

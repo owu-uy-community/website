@@ -21,7 +21,7 @@ export function RoomHeader({ room, color, icon, onEdit }: RoomHeaderProps) {
   const content = (
     <>
       {Shape ? <Shape aria-hidden className="h-3.5 w-3.5 shrink-0" style={{ color: color, fill: color }} /> : null}
-      <span className="font-display text-foreground truncate text-xs font-semibold tracking-wide uppercase md:text-sm">
+      <span className="truncate font-display text-xs font-semibold tracking-wide text-foreground uppercase md:text-sm">
         {room}
       </span>
     </>
@@ -34,7 +34,7 @@ export function RoomHeader({ room, color, icon, onEdit }: RoomHeaderProps) {
 
   return (
     <button
-      className={cn(className, "hover:bg-muted/60 transition-colors")}
+      className={cn(className, "transition-colors hover:bg-muted/60")}
       title={`Editar "${room}"`}
       type="button"
       onClick={onEdit}

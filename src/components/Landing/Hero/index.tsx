@@ -74,12 +74,12 @@ function Hero({
   return (
     <div
       ref={sectionsRefs[SectionKey.Hero]}
-      className="relative mx-auto flex min-h-[calc(100dvh-56px)] w-full flex-col items-center justify-center px-4 pb-24 pt-12 text-primary sm:pt-16 lg:pb-28"
+      className="relative mx-auto flex min-h-[calc(100dvh-56px)] w-full flex-col items-center justify-center px-4 pt-12 pb-24 text-primary sm:pt-16 lg:pb-28"
       id={SectionKey.Hero}
     >
       <div className="z-10 flex w-full max-w-3xl flex-col items-center text-center">
         <div className="flex flex-col items-center">
-          <p className="font-title text-[2.5rem] font-extrabold leading-[1.05] tracking-tight sm:text-6xl md:text-7xl xl:text-8xl">
+          <p className="font-title text-[2.5rem] leading-[1.05] font-extrabold tracking-tight sm:text-6xl md:text-7xl xl:text-8xl">
             <motion.span
               key={title}
               animate={{ opacity: 1, y: 0 }}
@@ -95,20 +95,15 @@ function Hero({
             </motion.span>
           </p>
           {subtitle ? (
-            <span className="font-title text-[2.5rem] font-extrabold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl xl:text-8xl">
+            <span className="font-title text-[2.5rem] leading-[1.05] font-extrabold tracking-tight text-white sm:text-6xl md:text-7xl xl:text-8xl">
               {subtitle}
             </span>
           ) : null}
-          <p className="mx-auto mt-5 max-w-[600px] text-balance text-base font-medium leading-relaxed text-zinc-300 sm:text-lg md:text-xl">
+          <p className="mx-auto mt-5 max-w-[600px] text-base leading-relaxed font-medium text-balance text-zinc-300 sm:text-lg md:text-xl">
             {description}
           </p>
         </div>
-        <Link
-          className="mt-10"
-          href={addUtmParams(slackButtonUrl ?? "#")}
-          rel="noreferrer"
-          target="_blank"
-        >
+        <Link className="mt-10" href={addUtmParams(slackButtonUrl ?? "#")} rel="noreferrer" target="_blank">
           <button
             className="inline-flex min-w-[220px] items-center justify-center rounded-lg bg-white px-8 py-3 text-base font-semibold text-black shadow-lg shadow-black/30 transition-all duration-200 hover:-translate-y-0.5 hover:bg-yellow-400 hover:shadow-yellow-400/20 active:translate-y-0"
             type="button"

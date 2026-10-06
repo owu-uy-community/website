@@ -47,13 +47,13 @@ export function HistoryPanel({ instanceId }: { instanceId: number }) {
     orpc.obsControl.history.queryOptions({ input: { instanceId, limit: 50 }, refetchInterval: 5_000 })
   );
 
-  if (!data?.length) return <p className="text-muted-foreground text-xs">Todavía no hay comandos.</p>;
+  if (!data?.length) return <p className="text-xs text-muted-foreground">Todavía no hay comandos.</p>;
 
   return (
-    <ul className="divide-border divide-y text-sm">
+    <ul className="divide-y divide-border text-sm">
       {data.map((command) => (
         <li key={command.id} className="flex items-center gap-3 py-1.5">
-          <span className="font-terminal text-muted-foreground w-16 shrink-0 text-xs">
+          <span className="w-16 shrink-0 font-terminal text-xs text-muted-foreground">
             {new Date(command.createdAt).toLocaleTimeString("es-UY", {
               hour: "2-digit",
               minute: "2-digit",
@@ -65,7 +65,7 @@ export function HistoryPanel({ instanceId }: { instanceId: number }) {
             {describe(command)}
             {command.error && <span className="ml-2 text-xs text-red-300">{command.error}</span>}
           </span>
-          <span className="text-muted-foreground hidden shrink-0 text-xs sm:inline">{command.source}</span>
+          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{command.source}</span>
           <Badge className={cn("shrink-0", STATUS[command.status])} variant="outline">
             {command.status}
           </Badge>

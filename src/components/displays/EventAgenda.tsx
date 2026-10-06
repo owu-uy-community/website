@@ -48,8 +48,8 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
       >
         {/* Corner cell — sticky on both axes. Opaque backgrounds on the sticky
             rails so post-its scroll cleanly underneath. */}
-        <div className="sticky left-0 top-0 z-30 flex h-14 items-center justify-center border-b border-r border-white/10 bg-zinc-800">
-          <span className="font-terminal text-[10px] uppercase tracking-[0.18em] text-zinc-400">Hora</span>
+        <div className="sticky top-0 left-0 z-30 flex h-14 items-center justify-center border-r border-b border-white/10 bg-zinc-800">
+          <span className="font-terminal text-[10px] tracking-[0.18em] text-zinc-400 uppercase">Hora</span>
         </div>
 
         {activeRooms.map((room) => {
@@ -59,11 +59,11 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
           return (
             <div
               key={room.id}
-              className="sticky top-0 z-20 flex h-14 items-center justify-center gap-1.5 border-b border-r border-white/10 bg-zinc-800 px-2"
+              className="sticky top-0 z-20 flex h-14 items-center justify-center gap-1.5 border-r border-b border-white/10 bg-zinc-800 px-2"
             >
               {Shape ? <Shape aria-hidden className="h-3.5 w-3.5 shrink-0" style={{ color, fill: color }} /> : null}
               <span
-                className="truncate font-display text-xs font-semibold uppercase tracking-wide md:text-sm"
+                className="truncate font-display text-xs font-semibold tracking-wide uppercase md:text-sm"
                 style={{ color }}
               >
                 {room.name}
@@ -77,11 +77,11 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
 
           return (
             <Fragment key={schedule.id}>
-              <div className="sticky left-0 z-10 flex h-28 flex-col items-center justify-center border-b border-r border-white/10 bg-zinc-900 px-1 md:h-32">
-                <span className="font-terminal text-xs font-medium tabular-nums text-white md:text-sm">
+              <div className="sticky left-0 z-10 flex h-28 flex-col items-center justify-center border-r border-b border-white/10 bg-zinc-900 px-1 md:h-32">
+                <span className="font-terminal text-xs font-medium text-white tabular-nums md:text-sm">
                   {schedule.startTime}
                 </span>
-                <span className="font-terminal text-[10px] tabular-nums text-zinc-500 md:text-xs">
+                <span className="font-terminal text-[10px] text-zinc-500 tabular-nums md:text-xs">
                   {schedule.endTime}
                 </span>
               </div>
@@ -90,7 +90,7 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
                 const cellNotes = notesAt(room.id, slot);
 
                 return (
-                  <div key={room.id} className="relative h-28 border-b border-r border-white/10 md:h-32">
+                  <div key={room.id} className="relative h-28 border-r border-b border-white/10 md:h-32">
                     {cellNotes.length === 0 ? (
                       <div className="flex h-full items-center justify-center">
                         <span aria-hidden className="h-1 w-1 rounded-full bg-white/15" />

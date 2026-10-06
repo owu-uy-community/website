@@ -73,7 +73,7 @@ function QueueCard({
           </Badge>
         </div>
         {active && (
-          <span className="bg-primary absolute top-1 left-1 rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-black uppercase">
+          <span className="absolute top-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-black uppercase">
             {remaining !== null ? `${remaining}s` : "▶"}
           </span>
         )}
@@ -84,7 +84,7 @@ function QueueCard({
         </span>
         <button
           aria-label="Quitar del loop"
-          className="text-muted-foreground rounded p-0.5 hover:bg-red-500/20 hover:text-red-200"
+          className="rounded p-0.5 text-muted-foreground hover:bg-red-500/20 hover:text-red-200"
           type="button"
           onClick={onRemove}
         >
@@ -189,7 +189,7 @@ export function LoopPanel({
         <Button className="h-10" disabled={!isPlaying && currentItemIndex === 0} variant="outline" onClick={stop}>
           <Square className="h-4 w-4" /> Detener
         </Button>
-        <label className="border-border flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+        <label className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
           <Switch
             checked={directMode}
             onCheckedChange={(direct) => queue.update({ directMode: direct, ...(direct ? { isPlaying: false } : {}) })}
@@ -227,7 +227,7 @@ export function LoopPanel({
       </div>
 
       {(isPlaying || queueItems.length > 0) && (
-        <div className="border-border bg-card flex items-center gap-4 rounded-lg border px-3 py-2 text-sm">
+        <div className="flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">
           {isPlaying && current ? (
             <>
               <span className="flex items-center gap-2">
@@ -242,9 +242,9 @@ export function LoopPanel({
                 <span className="text-muted-foreground">rotando en el puesto de control</span>
               )}
               {progress !== null && (
-                <span className="bg-muted h-1.5 min-w-16 flex-1 overflow-hidden rounded-full">
+                <span className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-muted">
                   <span
-                    className="bg-primary block h-full"
+                    className="block h-full bg-primary"
                     style={{ width: `${Math.round(progress * 100)}%`, transition: "width .3s linear" }}
                   />
                 </span>
@@ -260,12 +260,12 @@ export function LoopPanel({
               OBS muestra otra escena
             </Badge>
           )}
-          <span className="text-muted-foreground ml-auto text-xs">{queueItems.length} escenas en el loop</span>
+          <span className="ml-auto text-xs text-muted-foreground">{queueItems.length} escenas en el loop</span>
         </div>
       )}
 
       {queueItems.length === 0 ? (
-        <p className="border-border text-muted-foreground rounded-lg border border-dashed p-4 text-center text-xs">
+        <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
           Agregá escenas con el + de cada tarjeta (o el selector) para armar una rotación automática: sponsors, avisos…
         </p>
       ) : (
@@ -290,9 +290,9 @@ export function LoopPanel({
           ))}
         </Reorder.Group>
       )}
-      <div className="border-border/60 flex flex-wrap items-center gap-2 border-t pt-3">
-        <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Presets</span>
-        {presets.length === 0 && <span className="text-muted-foreground text-xs">ninguno guardado</span>}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Presets</span>
+        {presets.length === 0 && <span className="text-xs text-muted-foreground">ninguno guardado</span>}
         {presets.map((preset) => (
           <span key={preset.id} className="flex items-center">
             <Button
@@ -310,7 +310,7 @@ export function LoopPanel({
               }
             >
               {preset.name}
-              <span className="text-muted-foreground text-xs">{preset.items.length}</span>
+              <span className="text-xs text-muted-foreground">{preset.items.length}</span>
             </Button>
             <Button
               className="h-8 w-8 rounded-l-none border-l-0"

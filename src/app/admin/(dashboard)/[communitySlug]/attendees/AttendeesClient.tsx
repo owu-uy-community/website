@@ -218,7 +218,7 @@ function AttendeesContent() {
       {/* Search and Filters */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400" />
           <Input
             placeholder="Buscar por nombre, email o tipo de ticket..."
             value={searchTerm}

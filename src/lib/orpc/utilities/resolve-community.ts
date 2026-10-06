@@ -46,7 +46,10 @@ export async function resolveCommunityScope(rawInput: unknown): Promise<Communit
 
   const communitySlug = asString(input.communitySlug);
   if (communitySlug) {
-    const [community] = await db.select({ id: communities.id }).from(communities).where(eq(communities.slug, communitySlug));
+    const [community] = await db
+      .select({ id: communities.id })
+      .from(communities)
+      .where(eq(communities.slug, communitySlug));
 
     return community ? { communityId: community.id } : null;
   }

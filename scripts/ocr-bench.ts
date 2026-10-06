@@ -67,7 +67,9 @@ function similarity(a: string, b: string): number {
 
 const mean = (values: number[]) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0);
 const percentile = (values: number[], p: number) =>
-  values.length ? [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor((values.length - 1) * p))] : 0;
+  values.length
+    ? [...values].sort((a, b) => a - b)[Math.min(values.length - 1, Math.floor((values.length - 1) * p))]
+    : 0;
 const pct = (value: number) => `${(value * 100).toFixed(1)}%`;
 
 async function main() {

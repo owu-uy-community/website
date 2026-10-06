@@ -89,7 +89,7 @@ function TimeUnitCircle({ label, value, max }: TimeUnitCircleType) {
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="relative h-24 w-24">
-        <svg className="absolute left-0 top-0 h-full w-full">
+        <svg className="absolute top-0 left-0 h-full w-full">
           <circle
             className="text-gray-700"
             cx="50%"

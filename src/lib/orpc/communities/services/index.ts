@@ -70,11 +70,7 @@ export async function createCommunity(input: CreateCommunityInput, creatorUserId
 }
 
 export async function updateCommunity(input: UpdateCommunityInput): Promise<Community> {
-  const [row] = await db
-    .update(communities)
-    .set(input.data)
-    .where(eq(communities.id, input.communityId))
-    .returning();
+  const [row] = await db.update(communities).set(input.data).where(eq(communities.id, input.communityId)).returning();
 
   if (!row) throw new Error("Comunidad no encontrada");
 
@@ -130,8 +126,14 @@ async function requesterIsOwner(communityId: string, userId: string, isSiteStaff
   return membership?.role === "owner";
 }
 
-export async function addCommunityMember(input: AddCommunityMemberInput, requester: { userId: string; isSiteStaff: boolean }) {
-  const [targetUser] = await db.select({ id: user.id }).from(user).where(eq(user.email, input.email.toLowerCase().trim()));
+export async function addCommunityMember(
+  input: AddCommunityMemberInput,
+  requester: { userId: string; isSiteStaff: boolean }
+) {
+  const [targetUser] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, input.email.toLowerCase().trim()));
   if (!targetUser) {
     throw new ORPCError("BAD_REQUEST", {
       message: "No existe un usuario con ese email (debe iniciar sesión al menos una vez)",

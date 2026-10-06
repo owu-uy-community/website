@@ -339,9 +339,7 @@ async function main() {
 
   const pad = Math.max(...runs.map((r) => r.label.length));
 
-  console.log(
-    `${"policy".padEnd(pad)}   mean    max   spread  first-pick  issues\n${"-".repeat(pad + 40)}`
-  );
+  console.log(`${"policy".padEnd(pad)}   mean    max   spread  first-pick  issues\n${"-".repeat(pad + 40)}`);
 
   for (const run of runs) {
     const result = score(run.placed, timeSlots, similarity);

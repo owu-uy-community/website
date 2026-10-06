@@ -35,8 +35,7 @@ class RealtimeHub {
   readonly instanceId = createId();
 
   private channels = new Map<string, Set<Connection>>();
-  private redisReady: Promise<{ pub: { publish: (ch: string, msg: string) => Promise<unknown> } } | null> | null =
-    null;
+  private redisReady: Promise<{ pub: { publish: (ch: string, msg: string) => Promise<unknown> } } | null> | null = null;
   private warnedNoBackplane = false;
 
   attach(ws: WebSocket, options: { canPublish: boolean }): void {
@@ -121,7 +120,13 @@ class RealtimeHub {
 
     const redis = await this.ensureRedis();
     if (redis) {
-      const envelope: BackplaneEnvelope = { ch: channel, ev: event, pl: payload, sid: senderId, origin: this.instanceId };
+      const envelope: BackplaneEnvelope = {
+        ch: channel,
+        ev: event,
+        pl: payload,
+        sid: senderId,
+        origin: this.instanceId,
+      };
       await redis.pub.publish(REDIS_CHANNEL, JSON.stringify(envelope)).catch(() => undefined);
     } else if (!this.warnedNoBackplane && process.env.NODE_ENV === "production") {
       this.warnedNoBackplane = true;

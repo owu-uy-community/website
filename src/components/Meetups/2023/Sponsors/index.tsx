@@ -22,7 +22,7 @@ export default function Sponsors({ title, subtitle, sponsors }: SponsorsProps) {
     >
       <span>
         <h2 className="text-center text-5xl font-bold text-yellow-400">{title}</h2>
-        <p className="mb-2 mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
+        <p className="mt-2 mb-2 text-center text-lg font-[400] text-white">{subtitle}</p>
       </span>
       <div className="grid w-full max-w-[800px] grid-cols-1 justify-items-center gap-5 md:grid-cols-3 lg:grid-cols-4">
         {alphabeticalSort(sponsors).map(({ name, logo, url }) => (

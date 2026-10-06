@@ -57,7 +57,7 @@ export default function ConfTicket() {
     >
       {/* Desktop 3D version */}
       <div className="hidden sm:block">
-        <div className="flex-0 mx-auto flex max-w-[550px] items-center justify-center">
+        <div className="mx-auto flex max-w-[550px] flex-0 items-center justify-center">
           <Container3D>
             <TicketContent isLoading={isLoading} size="desktop" />
           </Container3D>
@@ -95,7 +95,7 @@ function ConfGeometry({ mobile }: { mobile: boolean }) {
           mobile ? "-right-6 h-20 w-20" : "-right-9 h-32 w-32"
         )}
       >
-        <span className="block h-full w-full motion-safe:animate-assemble motion-reduce:animate-none [animation-delay:220ms]">
+        <span className="block h-full w-full [animation-delay:220ms] motion-safe:animate-assemble motion-reduce:animate-none">
           <span className="block h-full w-full motion-safe:animate-float">
             <Tri fill={BLUE} points={TRI_RIGHT} className="h-full w-full" />
           </span>

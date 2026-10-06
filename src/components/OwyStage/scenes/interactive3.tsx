@@ -497,7 +497,7 @@ export function Typing({ params, round }: SceneProps<"typing">) {
         title="Tipeá esto sin errores"
       />
       <JoinCard label="Tipeá" />
-      <p className="font-terminal absolute top-[380px] left-[340px] w-[1060px] bg-[#FBF5E7]/[0.07] px-8 py-6 text-[44px] leading-[1.3] break-all text-[#F5BB03]">
+      <p className="absolute top-[380px] left-[340px] w-[1060px] bg-[#FBF5E7]/[0.07] px-8 py-6 font-terminal text-[44px] leading-[1.3] break-all text-[#F5BB03]">
         {params.phrase}
       </p>
       <ol className="absolute top-[560px] left-[340px] grid w-[1060px] grid-cols-2 gap-x-[30px] gap-y-[10px]">
@@ -512,7 +512,7 @@ export function Typing({ params, round }: SceneProps<"typing">) {
             <span className="truncate text-[30px] font-bold">
               {i + 1}. {r.name || "Anónimo"}
             </span>
-            <span className="font-terminal ml-4 text-[28px] tabular-nums">{(r.ms / 1000).toFixed(2)} s</span>
+            <span className="ml-4 font-terminal text-[28px] tabular-nums">{(r.ms / 1000).toFixed(2)} s</span>
           </m.li>
         ))}
       </ol>

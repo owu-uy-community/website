@@ -47,7 +47,8 @@ export function gatewayFallbacks(model: { readonly fallbacks: readonly string[] 
  */
 export function describeAiFailure(error: unknown): string {
   const detail = error instanceof Error ? error.message : String(error);
-  const status = typeof error === "object" && error !== null ? (error as { statusCode?: number }).statusCode : undefined;
+  const status =
+    typeof error === "object" && error !== null ? (error as { statusCode?: number }).statusCode : undefined;
 
   if (status === 401 || status === 403) return `La AI Gateway rechazó el pedido (${status}): ${detail}`;
   if (status === 429) return `La AI Gateway está limitando los pedidos: ${detail}`;

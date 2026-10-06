@@ -40,9 +40,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset className="bg-background min-w-0">
-        <header className="border-border/50 sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b bg-black/40 px-4 backdrop-blur-lg">
-          <SidebarTrigger className="text-muted-foreground hover:text-foreground -ml-1 shrink-0" />
+      <SidebarInset className="min-w-0 bg-background">
+        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-black/40 px-4 backdrop-blur-lg">
+          <SidebarTrigger className="-ml-1 shrink-0 text-muted-foreground hover:text-foreground" />
           <Separator className="mr-2 h-4 shrink-0" orientation="vertical" />
           <AdminBreadcrumbs />
           <div className="ml-auto flex shrink-0 items-center gap-3">

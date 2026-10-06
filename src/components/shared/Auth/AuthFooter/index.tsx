@@ -10,7 +10,7 @@ export default function AuthFooter({ actionText }: AuthFooterProps) {
     actionText === "login" ? "Al iniciar sesión, aceptas nuestros" : "Al crear una cuenta, aceptas nuestros";
 
   return (
-    <div className="mt-8 text-balance text-center text-sm text-zinc-400">
+    <div className="mt-8 text-center text-sm text-balance text-zinc-400">
       {footerText}{" "}
       <Link href={INTERNAL_ROUTES.legal.terms} className="text-yellow-400 hover:underline">
         Términos de Servicio

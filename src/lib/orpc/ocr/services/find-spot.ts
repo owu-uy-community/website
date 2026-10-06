@@ -98,9 +98,7 @@ export function buildCandidates({
 
   // Nobody can be in two rooms at once. This is arithmetic, so it is a hard constraint here rather
   // than a line in the prompt the model may or may not honour.
-  const busyFor = new Set(
-    existingNotes.filter((note) => sameName(speaker, note.speaker)).map((note) => note.timeSlot)
-  );
+  const busyFor = new Set(existingNotes.filter((note) => sameName(speaker, note.speaker)).map((note) => note.timeSlot));
 
   const collect = (avoidSpeakerClash: boolean) => {
     const slots = availableTimeSlots

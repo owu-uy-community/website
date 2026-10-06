@@ -21,7 +21,11 @@ import {
 type Filter = "all" | "favorites" | "recent" | SceneCategory;
 
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
-const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const fold = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
 
 /** A list of scene ids kept in localStorage (favorites, recents, the rundown). */
 function useStoredIds(key: string) {
@@ -102,12 +106,12 @@ export function SceneLibrary({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <h2 className="font-display text-lg font-semibold">
           Escenas{" "}
-          <span className="text-muted-foreground text-sm font-normal">
+          <span className="text-sm font-normal text-muted-foreground">
             · {shown} de {Object.keys(SCENES).length}
           </span>
         </h2>
         <div className="relative w-full lg:w-[360px]">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="pr-9 pl-9"
             id="scene-search"
@@ -118,7 +122,7 @@ export function SceneLibrary({
           {query && (
             <button
               aria-label="Limpiar"
-              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               onClick={() => setQuery("")}
               type="button"
             >
@@ -150,7 +154,7 @@ export function SceneLibrary({
       </div>
 
       {groups.length === 0 && (
-        <p className="text-muted-foreground py-10 text-center text-sm">
+        <p className="py-10 text-center text-sm text-muted-foreground">
           {filter === "favorites"
             ? "Marcá escenas con ★ para tenerlas acá."
             : filter === "recent"
@@ -161,7 +165,7 @@ export function SceneLibrary({
       {groups.map((group) => (
         <section key={group.category}>
           {(filter === "all" || groups.length > 1) && (
-            <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-[0.2em] uppercase">
+            <h3 className="mb-2 text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
               {group.title} · {group.scenes.length}
             </h3>
           )}
@@ -190,7 +194,7 @@ export function SceneLibrary({
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium">{SCENES[id].title}</p>
-                        <p className="text-muted-foreground line-clamp-2 text-xs" title={SCENES[id].description}>
+                        <p className="line-clamp-2 text-xs text-muted-foreground" title={SCENES[id].description}>
                           {SCENES[id].description}
                         </p>
                       </div>
@@ -233,7 +237,7 @@ export function SceneLibrary({
         </section>
       ))}
       {filter !== "all" && (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-muted-foreground">
           Categoría: {filter in SCENE_CATEGORIES ? SCENE_CATEGORIES[filter as SceneCategory].title : filter}.
         </p>
       )}

@@ -56,15 +56,14 @@ export default function Speakers() {
       <div className="mt-10 flex flex-col items-start gap-12 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-[640px]">
           <Reveal delay={0.1} y={26}>
-            <p className="text-balance font-display text-2xl font-extrabold uppercase leading-[1.15] tracking-[-0.02em] text-[#FBF5E7] sm:text-3xl min-[1440px]:text-4xl">
+            <p className="font-display text-2xl leading-[1.15] font-extrabold tracking-[-0.02em] text-balance text-[#FBF5E7] uppercase min-[1440px]:text-4xl sm:text-3xl">
               La grilla se anuncia <span className="text-[#F5BB03]">muy pronto.</span>
             </p>
           </Reveal>
           <Reveal delay={0.22} y={24}>
-            <p className="mt-5 text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
-              El escenario de OWU CONF es de la comunidad. Si tenés una historia de tecnología, comunidad u open
-              source para contar, este es tu lugar: no importa si nunca diste una charla, te acompañamos a
-              prepararla.
+            <p className="mt-5 text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
+              El escenario de OWU CONF es de la comunidad. Si tenés una historia de tecnología, comunidad u open source
+              para contar, este es tu lugar: no importa si nunca diste una charla, te acompañamos a prepararla.
             </p>
           </Reveal>
           <Reveal className="max-sm:text-center" delay={0.34} y={20}>
@@ -92,7 +91,7 @@ export default function Speakers() {
         </div>
 
         <Reveal amount={0.3} className="hidden w-full max-w-[480px] shrink-0 md:block" delay={0.15} x={48} y={0}>
-          <div className="flex h-[460px] gap-2 min-[1440px]:h-[520px] [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)]">
+          <div className="flex h-[460px] gap-2 [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_88%,transparent)] min-[1440px]:h-[520px]">
             {GALLERY_COLUMNS.map(({ indexes, className }, col) => (
               <div key={col} className="flex-1 overflow-hidden">
                 <div

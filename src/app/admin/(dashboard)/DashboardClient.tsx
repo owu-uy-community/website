@@ -76,7 +76,7 @@ function Stat({
   return (
     <div className="flex flex-col gap-1 px-5 py-4">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <span className="font-terminal text-3xl font-semibold tabular-nums leading-none text-foreground">{value}</span>
+      <span className="font-terminal text-3xl leading-none font-semibold text-foreground tabular-nums">{value}</span>
       {detail ? <span className="mt-0.5 text-xs text-muted-foreground">{detail}</span> : null}
       {children}
     </div>
@@ -162,7 +162,7 @@ export default function DashboardClient() {
           </div>
         </div>
         {event?.startDate ? (
-          <p className="font-terminal text-xs tabular-nums text-muted-foreground">
+          <p className="font-terminal text-xs text-muted-foreground tabular-nums">
             {format(event.startDate, "d MMM yyyy", { locale: es })}
             {event.endDate && event.endDate.toDateString() !== event.startDate.toDateString()
               ? ` — ${format(event.endDate, "d MMM yyyy", { locale: es })}`
@@ -272,7 +272,7 @@ export default function DashboardClient() {
               <CardContent className="flex h-[calc(100%-5.5rem)] flex-col justify-between gap-4">
                 {nowBlock ? (
                   <div className="space-y-2">
-                    <p className="font-terminal text-2xl tabular-nums text-foreground">
+                    <p className="font-terminal text-2xl text-foreground tabular-nums">
                       {nowBlock.startTime} – {nowBlock.endTime}
                     </p>
                     <p className="text-sm text-muted-foreground">{nowBlock.name}</p>

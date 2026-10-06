@@ -130,7 +130,7 @@ export default function ScreenClient() {
       />
 
       {view.source === "remote" && (
-        <p className="border-border bg-card text-muted-foreground rounded-lg border px-3 py-2 text-sm">
+        <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
           Esta pestaña no llega a OBS: ves lo que reporta el puesto de control y cada botón le manda el comando a él.
         </p>
       )}
@@ -140,25 +140,25 @@ export default function ScreenClient() {
           <Monitors view={view} />
           <TransitionBar actions={actions} view={view} />
           <SceneBus actions={actions} queued={queued} toggleQueued={toggleQueued} view={view} />
-          <section className="border-border bg-card/50 space-y-2 rounded-lg border p-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Loop automático</h2>
+          <section className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
+            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Loop automático</h2>
             {queue.isLoading ? (
-              <p className="text-muted-foreground text-xs">Cargando…</p>
+              <p className="text-xs text-muted-foreground">Cargando…</p>
             ) : (
               <LoopPanel isExecutor={isExecutor} queue={queue} remaining={remaining} view={view} />
             )}
           </section>
         </div>
         <div className="min-w-0 space-y-4">
-          <section className="border-border bg-card/50 space-y-2 rounded-lg border p-3">
+          <section className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Guion</h2>
-              <span className="text-muted-foreground text-xs">{cues.length} cues</span>
+              <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Guion</h2>
+              <span className="text-xs text-muted-foreground">{cues.length} cues</span>
             </div>
             <Rundown instanceId={INSTANCE_ID} status={status} view={view} />
           </section>
-          <section className="border-border bg-card/50 space-y-2 rounded-lg border p-3">
-            <h2 className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Audio</h2>
+          <section className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
+            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Audio</h2>
             <AudioStrip actions={actions} view={view} />
           </section>
         </div>
@@ -171,7 +171,7 @@ export default function ScreenClient() {
             <TabsTrigger value="deck">Stream Deck</TabsTrigger>
           </TabsList>
           <Button
-            className="text-muted-foreground hidden sm:inline-flex"
+            className="hidden text-muted-foreground sm:inline-flex"
             size="sm"
             variant="ghost"
             onClick={() => setHelpOpen(true)}
@@ -179,10 +179,10 @@ export default function ScreenClient() {
             <Keyboard className="h-4 w-4" /> Atajos <Kbd>?</Kbd>
           </Button>
         </div>
-        <TabsContent className="border-border bg-card/50 rounded-lg border p-3" value="history">
+        <TabsContent className="rounded-lg border border-border bg-card/50 p-3" value="history">
           <HistoryPanel instanceId={INSTANCE_ID} />
         </TabsContent>
-        <TabsContent className="border-border bg-card/50 rounded-lg border p-3" value="deck">
+        <TabsContent className="rounded-lg border border-border bg-card/50 p-3" value="deck">
           <StreamDeckPanel />
         </TabsContent>
       </Tabs>
@@ -197,11 +197,11 @@ export default function ScreenClient() {
           <table className="w-full text-sm">
             <tbody>
               {SHORTCUTS.map(([keys, description]) => (
-                <tr key={keys} className="border-border/60 border-b">
+                <tr key={keys} className="border-b border-border/60">
                   <td className="py-1.5 pr-3">
                     <Kbd>{keys}</Kbd>
                   </td>
-                  <td className="text-muted-foreground py-1.5">{description}</td>
+                  <td className="py-1.5 text-muted-foreground">{description}</td>
                 </tr>
               ))}
             </tbody>

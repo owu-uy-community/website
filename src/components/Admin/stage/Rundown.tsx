@@ -244,7 +244,7 @@ function Step({
   return (
     <Reorder.Item
       className={cn(
-        "bg-card relative flex items-center gap-2 overflow-hidden rounded-lg border px-2 py-1.5",
+        "relative flex items-center gap-2 overflow-hidden rounded-lg border bg-card px-2 py-1.5",
         active ? "border-[#F5BB03] bg-[#F5BB03]/10" : "hover:border-muted-foreground/40"
       )}
       dragControls={controls}
@@ -255,17 +255,17 @@ function Step({
     >
       <button
         aria-label="Arrastrar para reordenar"
-        className="text-muted-foreground hover:text-foreground cursor-grab touch-none active:cursor-grabbing"
+        className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
         type="button"
         onPointerDown={(event) => controls.start(event)}
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <span className="text-muted-foreground w-5 text-right text-xs tabular-nums">{index + 1}</span>
+      <span className="w-5 text-right text-xs text-muted-foreground tabular-nums">{index + 1}</span>
       <Thumb className="w-14" scene={step.scene} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{SCENES[step.scene].title}</p>
-        <p className="text-muted-foreground truncate text-xs">
+        <p className="truncate text-xs text-muted-foreground">
           {pinned ? "parámetros propios" : SCENES[step.scene].description}
         </p>
       </div>
@@ -285,7 +285,7 @@ function Step({
             rundown.patch(step.id, { sec: clampValue(Math.round(Number(event.target.value) || 0), 0, 7200) })
           }
         />
-        <span className="text-muted-foreground text-xs">{step.sec === 0 ? "manual" : "s"}</span>
+        <span className="text-xs text-muted-foreground">{step.sec === 0 ? "manual" : "s"}</span>
       </div>
       <Button
         className={cn("h-7 w-7", pinned && "text-[#F5BB03]")}
@@ -311,7 +311,7 @@ function Step({
         <Play className="h-3.5 w-3.5" />
       </Button>
       <Button
-        className="text-muted-foreground hover:text-destructive h-7 w-7"
+        className="h-7 w-7 text-muted-foreground hover:text-destructive"
         size="icon"
         title="Quitar del guion"
         variant="ghost"
@@ -370,16 +370,16 @@ export function RundownCard({
         <div className="flex flex-wrap items-center gap-2">
           <ListVideo className="h-5 w-5" />
           <h2 className="font-display text-lg font-semibold">Guion</h2>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-xs text-muted-foreground">
             {steps.length} paso{steps.length === 1 ? "" : "s"}
             {total > 0 && ` · ${mmss(total)} de vuelta`}
             {endsAt &&
               ` · termina ${endsAt.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit", hour12: false })}`}
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-muted-foreground hidden text-xs xl:inline">Espacio: play/pausa · ← →: pasos</span>
+            <span className="hidden text-xs text-muted-foreground xl:inline">Espacio: play/pausa · ← →: pasos</span>
             <label
-              className="text-muted-foreground flex items-center gap-1.5 text-xs"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
               title="Volver al primer paso al terminar"
             >
               <Repeat className="h-3.5 w-3.5" /> Loop
@@ -447,7 +447,7 @@ export function RundownCard({
                     <span className="text-muted-foreground"> · se queda hasta que pases</span>
                   )}
                 </p>
-                {next && <p className="text-muted-foreground truncate text-xs">Sigue: {SCENES[next.scene].title}</p>}
+                {next && <p className="truncate text-xs text-muted-foreground">Sigue: {SCENES[next.scene].title}</p>}
               </>
             ) : (
               <p className="text-muted-foreground">

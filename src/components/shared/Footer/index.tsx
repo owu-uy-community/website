@@ -52,7 +52,7 @@ export default function Footer() {
           ))}
         </ul>
 
-        <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-end gap-4">
+        <div className="flex flex-col items-center justify-center gap-4 lg:flex-row lg:justify-end">
           <div className="flex items-center justify-center gap-4">
             <Link
               key="instagram-link"
@@ -97,6 +97,6 @@ export default function Footer() {
           </Link>
         </div>
       </div>
-    </footer >
+    </footer>
   );
 }

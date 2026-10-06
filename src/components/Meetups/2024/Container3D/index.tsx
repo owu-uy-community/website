@@ -7,7 +7,7 @@ export function Container3D({ children }: { children: React.ReactNode }) {
       <div className="isolate h-full opacity-100 md:aspect-[2/1]">
         <div className="h-full">
           <Atropos
-            className="mx-auto block h-auto w-full shadow-2xl [box-sizing:border-box] md:aspect-[2/1]"
+            className="mx-auto [box-sizing:border-box] block h-auto w-full shadow-2xl md:aspect-[2/1]"
             highlight={false}
             innerClassName="backdrop-blur-xl rounded-[30px]"
           >

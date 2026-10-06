@@ -13,8 +13,8 @@ export const handleServiceError = (error: unknown, operation: string): never => 
   }
 
   console.error(`❌ Failed to ${operation}:`);
-  console.error('Error object:', error);
-  console.error('Error stack:', error instanceof Error ? error.stack : 'N/A');
+  console.error("Error object:", error);
+  console.error("Error stack:", error instanceof Error ? error.stack : "N/A");
 
   if (error instanceof Error) {
     throw new Error(error.message);

@@ -338,7 +338,7 @@ export function Dvd() {
           <div className="absolute inset-0 mix-blend-multiply" style={{ background: TINTS[tint], ...LOGO_MASK }} />
         )}
       </div>
-      <p className="font-terminal absolute bottom-[40px] left-[60px] text-[26px] text-[#FBF5E7]/40">
+      <p className="absolute bottom-[40px] left-[60px] font-terminal text-[26px] text-[#FBF5E7]/40">
         esquinas: {corners}
       </p>
       <div className="pointer-events-none absolute inset-0">
@@ -435,7 +435,7 @@ export function TestCard() {
       <div className="absolute top-[300px] left-1/2 flex h-[520px] w-[520px] -translate-x-1/2 items-center justify-center rounded-full border-[14px] border-[#FBF5E7] bg-black">
         <img alt="OWU CONF" className="w-[380px]" src="/images/logos/conf.webp" />
       </div>
-      <div className="font-terminal absolute bottom-[90px] left-[120px] text-[34px] text-[#FBF5E7]">
+      <div className="absolute bottom-[90px] left-[120px] font-terminal text-[34px] text-[#FBF5E7]">
         <p className="text-[#F5BB03]">OWU CONF 2026 · PRUEBA DE SEÑAL</p>
         <p className="mt-2 text-[#FBF5E7]/70">1920 × 1080 · 16:9 · {now}</p>
       </div>

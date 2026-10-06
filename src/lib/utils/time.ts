@@ -2,7 +2,7 @@
  * Format seconds into MM:SS format
  * @param totalSeconds - Total number of seconds to format
  * @returns Formatted time string (MM:SS)
- * 
+ *
  * @example
  * formatTime(125) // "02:05"
  * formatTime(5)   // "00:05"
@@ -18,7 +18,7 @@ export function formatTime(totalSeconds: number): string {
  * Format seconds into HH:MM:SS format
  * @param totalSeconds - Total number of seconds to format
  * @returns Formatted time string (HH:MM:SS)
- * 
+ *
  * @example
  * formatTimeWithHours(3661) // "01:01:01"
  * formatTimeWithHours(125)  // "00:02:05"
@@ -27,7 +27,7 @@ export function formatTimeWithHours(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
   const mins = Math.floor((totalSeconds % 3600) / 60);
   const secs = totalSeconds % 60;
-  
+
   return `${hours.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
@@ -35,14 +35,14 @@ export function formatTimeWithHours(totalSeconds: number): string {
  * Parse a time string (MM:SS or HH:MM:SS) into total seconds
  * @param timeString - Time string to parse
  * @returns Total seconds
- * 
+ *
  * @example
  * parseTimeString("02:05")    // 125
  * parseTimeString("01:01:01") // 3661
  */
 export function parseTimeString(timeString: string): number {
   const parts = timeString.split(":").map(Number);
-  
+
   if (parts.length === 2) {
     // MM:SS format
     const [mins, secs] = parts;
@@ -52,7 +52,6 @@ export function parseTimeString(timeString: string): number {
     const [hours, mins, secs] = parts;
     return hours * 3600 + mins * 60 + secs;
   }
-  
+
   return 0;
 }
-

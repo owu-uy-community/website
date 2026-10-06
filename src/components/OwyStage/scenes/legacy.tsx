@@ -257,7 +257,7 @@ export function Qr({ params }: SceneProps<"qr">) {
             {params.caption}
           </Rise>
         )}
-        <Rise className="font-terminal mt-10 text-[36px] text-[#FBF5E7]/60" delay={0.5}>
+        <Rise className="mt-10 font-terminal text-[36px] text-[#FBF5E7]/60" delay={0.5}>
           {params.url}
         </Rise>
       </div>

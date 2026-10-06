@@ -90,7 +90,13 @@ const clipToPoints = (clip: string) =>
   clip
     .replace(/^polygon\(|\)$/g, "")
     .split(",")
-    .map((pair) => pair.trim().split(/\s+/).map((v) => parseFloat(v)).join(","))
+    .map((pair) =>
+      pair
+        .trim()
+        .split(/\s+/)
+        .map((v) => parseFloat(v))
+        .join(",")
+    )
     .join(" ");
 
 export default function TangramGallery() {
@@ -108,71 +114,71 @@ export default function TangramGallery() {
 
   return (
     <>
-    <m.div
-      aria-label="Fotos de La Meetup dentro de un tangram"
-      className="relative mx-auto aspect-square w-full max-w-[620px] self-start lg:mx-0 lg:ml-auto"
-      initial="scattered"
-      role="group"
-      viewport={{ amount: 0.35, once: true }}
-      whileInView="assembled"
-    >
-      {TANGRAM_PIECES.map(({ clip, photo, alt, box, focus, from }, i) => (
-        <m.div
-          key={i}
-          className="group absolute inset-0"
-          style={{ clipPath: clip }}
-          transition={{ type: "spring", stiffness: 90, damping: 17, mass: 0.9, delay: i * 0.09 }}
-          variants={{
-            scattered: { opacity: 0, scale: 0.82, x: from.x, y: from.y, rotate: from.rotate },
-            assembled: { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 },
-          }}
-        >
-          <img
-            alt=""
-            className="absolute object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            loading="lazy"
-            src={photo}
-            style={{ ...box, objectPosition: focus }}
-          />
-          {/* The parent clip-path also clips hit-testing: clicks only count inside the piece */}
-          <button
-            aria-label={`Ampliar foto: ${alt}`}
-            className="absolute inset-0 cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-[#F5BB03]"
-            type="button"
-            onClick={(event) => {
-              const thumb = event.currentTarget.parentElement?.querySelector("img") ?? null;
-
-              openWithMorph(thumb, () => setActive(i));
-            }}
-          />
-        </m.div>
-      ))}
-
-      {/* Tangram seams: fade in once the pieces have settled */}
-      <m.svg
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 h-full w-full"
-        preserveAspectRatio="none"
-        transition={{ duration: 0.5, delay: 0.85 }}
-        variants={{ scattered: { opacity: 0 }, assembled: { opacity: 1 } }}
-        viewBox="0 0 100 100"
+      <m.div
+        aria-label="Fotos de La Meetup dentro de un tangram"
+        className="relative mx-auto aspect-square w-full max-w-[620px] self-start lg:mx-0 lg:ml-auto"
+        initial="scattered"
+        role="group"
+        viewport={{ amount: 0.35, once: true }}
+        whileInView="assembled"
       >
-        {TANGRAM_PIECES.map(({ clip }, i) => (
-          <polygon
+        {TANGRAM_PIECES.map(({ clip, photo, alt, box, focus, from }, i) => (
+          <m.div
             key={i}
-            fill="none"
-            points={clipToPoints(clip)}
-            stroke="#0B0B0B"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            vectorEffect="non-scaling-stroke"
-          />
-        ))}
-      </m.svg>
-    </m.div>
+            className="group absolute inset-0"
+            style={{ clipPath: clip }}
+            transition={{ type: "spring", stiffness: 90, damping: 17, mass: 0.9, delay: i * 0.09 }}
+            variants={{
+              scattered: { opacity: 0, scale: 0.82, x: from.x, y: from.y, rotate: from.rotate },
+              assembled: { opacity: 1, scale: 1, x: 0, y: 0, rotate: 0 },
+            }}
+          >
+            <img
+              alt=""
+              className="absolute object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              loading="lazy"
+              src={photo}
+              style={{ ...box, objectPosition: focus }}
+            />
+            {/* The parent clip-path also clips hit-testing: clicks only count inside the piece */}
+            <button
+              aria-label={`Ampliar foto: ${alt}`}
+              className="absolute inset-0 cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-[#F5BB03]"
+              type="button"
+              onClick={(event) => {
+                const thumb = event.currentTarget.parentElement?.querySelector("img") ?? null;
 
-    {/* Outside the animated container: a transformed ancestor would break the dialog's position:fixed */}
-    <Lightbox downloadPrefix="la-meetup-iii" index={active} photos={PHOTOS} onClose={closeLightbox} onStep={step} />
+                openWithMorph(thumb, () => setActive(i));
+              }}
+            />
+          </m.div>
+        ))}
+
+        {/* Tangram seams: fade in once the pieces have settled */}
+        <m.svg
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          preserveAspectRatio="none"
+          transition={{ duration: 0.5, delay: 0.85 }}
+          variants={{ scattered: { opacity: 0 }, assembled: { opacity: 1 } }}
+          viewBox="0 0 100 100"
+        >
+          {TANGRAM_PIECES.map(({ clip }, i) => (
+            <polygon
+              key={i}
+              fill="none"
+              points={clipToPoints(clip)}
+              stroke="#0B0B0B"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </m.svg>
+      </m.div>
+
+      {/* Outside the animated container: a transformed ancestor would break the dialog's position:fixed */}
+      <Lightbox downloadPrefix="la-meetup-iii" index={active} photos={PHOTOS} onClose={closeLightbox} onStep={step} />
     </>
   );
 }

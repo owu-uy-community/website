@@ -35,7 +35,7 @@ const TOOL_STATUS: Record<string, string> = {
 /** Mic / speaker level bars fed by the voice envelope (~25 fps). */
 export function LevelMeter({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="text-muted-foreground flex items-center gap-3 text-xs">
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
       <span className="w-8 shrink-0 tracking-[0.15em] uppercase">{label}</span>
       <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
         <div
@@ -175,7 +175,7 @@ export default function LiveVoicePanel({
             <span className={`inline-block h-2.5 w-2.5 rounded-full ${stage.dot}`} />
             {stage.label}
           </div>
-          <p aria-live="polite" className="text-muted-foreground mt-1 text-sm" role="status">
+          <p aria-live="polite" className="mt-1 text-sm text-muted-foreground" role="status">
             {!active && unavailable ? unavailable : status.message}
           </p>
           {active && (
@@ -198,7 +198,7 @@ export default function LiveVoicePanel({
             <Collapsible>
               <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium">
                 Permisos de la conversación
-                <span className="text-muted-foreground flex items-center gap-2 text-xs">
+                <span className="flex items-center gap-2 text-xs text-muted-foreground">
                   {writes || staff || marketplace ? "personalizados" : "solo lectura"}
                   <ChevronDown className="h-4 w-4" />
                 </span>
@@ -216,7 +216,7 @@ export default function LiveVoicePanel({
                     <Switch checked={value} onCheckedChange={set} />
                   </label>
                 ))}
-                <p className="text-muted-foreground text-xs">
+                <p className="text-xs text-muted-foreground">
                   Fijos durante la sesión. El PIN del simulador nunca otorga permisos de producción.
                 </p>
               </CollapsibleContent>
@@ -255,8 +255,8 @@ export default function LiveVoicePanel({
 
         <div className="grid gap-3 rounded-md border p-3">
           <div className="flex items-center gap-3">
-            <Volume2 className="text-muted-foreground h-4 w-4" />
-            <Label className="text-muted-foreground w-20 text-xs tracking-[0.15em] uppercase">Volumen</Label>
+            <Volume2 className="h-4 w-4 text-muted-foreground" />
+            <Label className="w-20 text-xs tracking-[0.15em] text-muted-foreground uppercase">Volumen</Label>
             <Slider
               max={80}
               min={0}
@@ -266,7 +266,7 @@ export default function LiveVoicePanel({
                 onSetting("volume", value);
               }}
             />
-            <span className="font-terminal w-10 text-right text-xs tabular-nums">{volume}%</span>
+            <span className="w-10 text-right font-terminal text-xs tabular-nums">{volume}%</span>
           </div>
           <label className="flex items-center justify-between text-sm">
             <span>Seguir escuchando después de cada respuesta</span>
@@ -283,7 +283,7 @@ export default function LiveVoicePanel({
         {(status.input || status.output) && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-muted-foreground text-xs font-semibold tracking-[0.15em] uppercase">Conversación</p>
+              <p className="text-xs font-semibold tracking-[0.15em] text-muted-foreground uppercase">Conversación</p>
               <Button
                 size="sm"
                 variant="ghost"
@@ -309,7 +309,7 @@ export default function LiveVoicePanel({
                 {status.output}
               </div>
             )}
-            <p className="text-muted-foreground text-[11px]">Solo en pantalla; no se guarda.</p>
+            <p className="text-[11px] text-muted-foreground">Solo en pantalla; no se guarda.</p>
           </div>
         )}
 
@@ -317,12 +317,12 @@ export default function LiveVoicePanel({
           <Collapsible defaultOpen={false}>
             <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium">
               <span className="flex items-center gap-2">
-                <Wrench className="text-muted-foreground h-4 w-4" />
+                <Wrench className="h-4 w-4 text-muted-foreground" />
                 Bridge · {status.bridge.tools.length} tools
               </span>
-              <ChevronDown className="text-muted-foreground h-4 w-4" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="text-muted-foreground mt-3 space-y-2 text-xs">
+            <CollapsibleContent className="mt-3 space-y-2 text-xs text-muted-foreground">
               <p className="font-terminal">
                 {status.bridge.model} · {status.bridge.voice} · prompt {status.bridge.promptHash}
               </p>
@@ -354,13 +354,13 @@ export default function LiveVoicePanel({
                 </Badge>
                 <code className="font-terminal">{tool.name}</code>
                 {tool.ms !== undefined && <span className="text-muted-foreground">{tool.ms} ms</span>}
-                {tool.detail && <span className="text-muted-foreground truncate">— {tool.detail}</span>}
+                {tool.detail && <span className="truncate text-muted-foreground">— {tool.detail}</span>}
               </li>
             ))}
           </ol>
         ) : null}
 
-        <p className="text-muted-foreground mt-auto text-[11px] leading-relaxed">
+        <p className="mt-auto text-[11px] leading-relaxed text-muted-foreground">
           Ocho segundos de silencio arrancan una conversación nueva, como en el gadget. Las sesiones duran cinco
           minutos. Con auriculares anda mejor. Pantalla y volumen afectan solo a este dispositivo virtual.
         </p>

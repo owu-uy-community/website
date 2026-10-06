@@ -71,7 +71,7 @@ export function ConnectionSheet({ open, onOpenChange }: { open: boolean; onOpenC
               onChange={(event) => setSettings({ ...settings, password: event.target.value })}
             />
           </div>
-          <p className="font-terminal text-muted-foreground text-xs">{url}</p>
+          <p className="font-terminal text-xs text-muted-foreground">{url}</p>
           {mixed && (
             <p className="rounded-md border border-amber-400/40 bg-amber-400/10 p-2 text-xs text-amber-100">
               Esta página es https y el navegador bloquea <code>ws://</code> hacia la LAN. Abrí el panel en la misma
@@ -90,7 +90,7 @@ export function ConnectionSheet({ open, onOpenChange }: { open: boolean; onOpenC
               </Button>
             )}
           </div>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-muted-foreground">
             Las escenas cuyo nombre empieza con <code>(hidden)</code> no aparecen en el bus.
           </p>
         </form>

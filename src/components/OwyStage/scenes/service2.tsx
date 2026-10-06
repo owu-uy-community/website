@@ -266,7 +266,7 @@ export function Live({ params }: SceneProps<"live">) {
         <p className="mt-10 text-[42px] leading-[1.25] font-semibold text-balance text-[#FBF5E7]/80">
           {params.subtitle}
         </p>
-        <p className="font-terminal mt-8 inline-block bg-[#F5BB03] px-6 py-3 text-[36px] text-black">
+        <p className="mt-8 inline-block bg-[#F5BB03] px-6 py-3 font-terminal text-[36px] text-black">
           {params.url.replace(/^https?:\/\//, "")}
         </p>
       </div>

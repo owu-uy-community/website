@@ -91,13 +91,13 @@ const linkClassName =
 const components = {
   h1: (props: HeadingProps) => (
     <h1
-      className="mb-2 mt-4 font-title text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl"
+      className="mt-4 mb-2 font-title text-3xl leading-tight font-bold tracking-tight text-white sm:text-4xl"
       {...props}
     />
   ),
   h2: ({ children, ...props }: HeadingProps) => (
     <h2
-      className="mb-3 mt-10 scroll-mt-24 font-title text-xl font-bold tracking-tight text-white sm:text-2xl"
+      className="mt-10 mb-3 scroll-mt-24 font-title text-xl font-bold tracking-tight text-white sm:text-2xl"
       id={headingId(children)}
       {...props}
     >
@@ -106,14 +106,14 @@ const components = {
   ),
   h3: ({ children, ...props }: HeadingProps) => (
     <h3
-      className="mb-3 mt-8 scroll-mt-24 font-title text-lg font-bold tracking-tight text-white sm:text-xl"
+      className="mt-8 mb-3 scroll-mt-24 font-title text-lg font-bold tracking-tight text-white sm:text-xl"
       id={headingId(children)}
       {...props}
     >
       {children}
     </h3>
   ),
-  h4: (props: HeadingProps) => <h4 className="mb-2 mt-6 font-title font-bold text-white" {...props} />,
+  h4: (props: HeadingProps) => <h4 className="mt-6 mb-2 font-title font-bold text-white" {...props} />,
   p: (props: ParagraphProps) => <p className="my-4 leading-relaxed text-zinc-300" {...props} />,
   ol: (props: ListProps) => <ol className="my-4 list-decimal space-y-2 pl-5 text-zinc-300" {...props} />,
   ul: (props: ListProps) => <ul className="my-4 list-disc space-y-2 pl-5 text-zinc-300" {...props} />,
@@ -157,7 +157,7 @@ const components = {
     />
   ),
   blockquote: (props: BlockquoteProps) => (
-    <blockquote className="my-6 border-l-2 border-yellow-400/60 pl-4 italic text-zinc-400" {...props} />
+    <blockquote className="my-6 border-l-2 border-yellow-400/60 pl-4 text-zinc-400 italic" {...props} />
   ),
   hr: (props: ComponentPropsWithoutRef<"hr">) => <hr className="my-8 border-white/10" {...props} />,
   table: ({ children, ...props }: ComponentPropsWithoutRef<"table">) => (
@@ -187,7 +187,7 @@ const components = {
 
     return (
       <>
-        <div className="mb-10 mt-2 flex flex-col gap-3">
+        <div className="mt-2 mb-10 flex flex-col gap-3">
           <p className="font-terminal text-sm text-zinc-500">
             <time dateTime={post.date}>{formatPostDate(post.date)}</time>
             <span> · {author}</span>

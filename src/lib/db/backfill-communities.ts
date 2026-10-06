@@ -97,7 +97,9 @@ async function main() {
             countdownSoundEnabled: globalCountdown?.soundEnabled ?? false,
           })
           .onConflictDoNothing({ target: eventLiveState.eventId });
-        console.log(`  ✓ event_live_state seeded for ${legacyEvent.id} (countdown ${globalCountdown ? "copied" : "defaulted"})`);
+        console.log(
+          `  ✓ event_live_state seeded for ${legacyEvent.id} (countdown ${globalCountdown ? "copied" : "defaulted"})`
+        );
 
         // 4. Out-of-band highlighted_note (may not exist as a table) ----------
         const reg = await tx.execute(sql`SELECT to_regclass('public.highlighted_note') AS reg`);
@@ -105,8 +107,7 @@ async function main() {
         if (hasTable) {
           const noteResult = await tx.execute(sql`SELECT * FROM highlighted_note WHERE id = 1 LIMIT 1`);
           const note = noteResult.rows[0] as Record<string, unknown> | undefined;
-          const trackId =
-            (note?.trackId as string | undefined) ?? (note?.track_id as string | undefined) ?? undefined;
+          const trackId = (note?.trackId as string | undefined) ?? (note?.track_id as string | undefined) ?? undefined;
           if (trackId) {
             const [track] = await tx.select({ id: tracks.id }).from(tracks).where(eq(tracks.id, trackId));
             if (track) {
@@ -161,12 +162,10 @@ async function main() {
       const [{ orphanCount }] = (
         await tx.execute(sql`SELECT count(*)::int AS "orphanCount" FROM open_spaces WHERE "communityId" IS NULL`)
       ).rows as [{ orphanCount: number }];
-      const [{ communityCount }] = (
-        await tx.execute(sql`SELECT count(*)::int AS "communityCount" FROM communities`)
-      ).rows as [{ communityCount: number }];
-      const [{ memberCount }] = (
-        await tx.execute(sql`SELECT count(*)::int AS "memberCount" FROM community_members`)
-      ).rows as [{ memberCount: number }];
+      const [{ communityCount }] = (await tx.execute(sql`SELECT count(*)::int AS "communityCount" FROM communities`))
+        .rows as [{ communityCount: number }];
+      const [{ memberCount }] = (await tx.execute(sql`SELECT count(*)::int AS "memberCount" FROM community_members`))
+        .rows as [{ memberCount: number }];
 
       console.log(`\n  Verification: communities=${communityCount} members=${memberCount} orphanEvents=${orphanCount}`);
       if (orphanCount > 0) throw new Error(`Backfill incomplete: ${orphanCount} open_spaces rows still orphaned`);

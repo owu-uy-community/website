@@ -48,9 +48,8 @@ export default function Sponsors() {
 
       <div className="mt-8 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
         <Reveal delay={0.12} y={22}>
-          <p className="max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
-            OWU CONF es posible gracias a las empresas que impulsan los eventos de la comunidad. ¿Querés sumar la
-            tuya?
+          <p className="max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
+            OWU CONF es posible gracias a las empresas que impulsan los eventos de la comunidad. ¿Querés sumar la tuya?
           </p>
         </Reveal>
         <Reveal className="shrink-0 max-sm:text-center" delay={0.25} y={18}>
@@ -61,10 +60,10 @@ export default function Sponsors() {
       <Reveal delay={0.15} y={20}>
         <div className="mt-12 flex flex-col gap-8 border-2 border-[#FBF5E7]/15 p-5 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
+            <p className="font-display text-xs leading-none font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
               Aceptamos postulaciones
             </p>
-            <p className="mt-3 text-balance font-display text-2xl font-extrabold uppercase leading-none tracking-[-0.02em] text-[#F5BB03] sm:text-3xl">
+            <p className="mt-3 font-display text-2xl leading-none font-extrabold tracking-[-0.02em] text-balance text-[#F5BB03] uppercase sm:text-3xl">
               Hasta el 15 de septiembre
             </p>
           </div>
@@ -78,7 +77,7 @@ export default function Sponsors() {
       </Reveal>
 
       <Reveal delay={0.1} y={16}>
-        <p className="mt-14 font-display text-xs font-semibold uppercase tracking-[0.18em] text-[#FBF5E7]/60">
+        <p className="mt-14 font-display text-xs font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
           Nos acompañan en 2026
         </p>
       </Reveal>

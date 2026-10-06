@@ -37,17 +37,17 @@ export default function Stat({ title, count, subtitle, play = false, index = 0 }
 
   return (
     <div className="flex flex-col items-center gap-1 text-center text-white">
-      <p className="font-title text-4xl font-extrabold tabular-nums text-yellow-400 sm:text-5xl">
+      <p className="font-title text-4xl font-extrabold text-yellow-400 tabular-nums sm:text-5xl">
         {/* The invisible ghost reserves the final width so the box never resizes (no layout shift);
             the animated value overlays it left-anchored so the "+" stays pinned (no digit-jump jitter). */}
         <span className="relative inline-block text-left">
           <span aria-hidden className="invisible">
             +{target}
           </span>
-          <motion.span className="absolute left-0 top-0">{display}</motion.span>
+          <motion.span className="absolute top-0 left-0">{display}</motion.span>
         </span>
       </p>
-      <p className="text-lg font-semibold leading-tight sm:text-xl">{title}</p>
+      <p className="text-lg leading-tight font-semibold sm:text-xl">{title}</p>
       <p className="text-sm text-zinc-400">{subtitle}</p>
     </div>
   );

@@ -25,7 +25,7 @@ export default function OpenSpace({ content, primaryButtonName, primaryButtonUrl
     <section className="w-full max-w-[1280px] pt-16">
       <div className="mb-10 text-center">
         <h2 className="mb-4 text-center text-4xl font-bold text-white md:text-5xl">Open Space</h2>
-        <p className="mx-auto mt-2 max-w-3xl text-balance text-center text-base leading-relaxed text-gray-300 lg:text-lg">
+        <p className="mx-auto mt-2 max-w-3xl text-center text-base leading-relaxed text-balance text-gray-300 lg:text-lg">
           ¡Un espacio para compartir y aprender de manera colaborativa!
         </p>
       </div>

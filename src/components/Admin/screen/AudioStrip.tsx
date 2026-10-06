@@ -42,7 +42,7 @@ function Fader({ name, db, onCommit }: { name: string; db: number; onCommit: (db
         onValueChange={([v]) => setValue(v ?? value)}
         onValueCommit={([v]) => onCommit(v ?? value)}
       />
-      <span className="font-terminal text-muted-foreground w-14 text-right text-xs">
+      <span className="w-14 text-right font-terminal text-xs text-muted-foreground">
         {value <= -60 ? "-inf" : `${value.toFixed(1)} dB`}
       </span>
     </div>
@@ -54,8 +54,8 @@ export function AudioStrip({ view, actions }: { view: ObsView; actions: ObsActio
   const levels = useObsLevels();
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
-  if (!view.connected) return <p className="text-muted-foreground text-xs">Sin conexión a OBS.</p>;
-  if (view.inputs.length === 0) return <p className="text-muted-foreground text-xs">OBS no tiene fuentes de audio.</p>;
+  if (!view.connected) return <p className="text-xs text-muted-foreground">Sin conexión a OBS.</p>;
+  if (view.inputs.length === 0) return <p className="text-xs text-muted-foreground">OBS no tiene fuentes de audio.</p>;
 
   return (
     <div className="space-y-2">

@@ -38,7 +38,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
   return (
     <NuqsAdapter>
       <div className="container flex min-h-[calc(100dvh-56px)] w-full flex-col items-center">
-        <main className="w-full max-w-5xl grow pb-16 pt-10 sm:pt-14">{children}</main>
+        <main className="w-full max-w-5xl grow pt-10 pb-16 sm:pt-14">{children}</main>
         <Footer />
       </div>
     </NuqsAdapter>

@@ -94,12 +94,12 @@ export function TimeGridKiosk({
         }}
       >
         {/* Corner: a real clock, seconds included so the room trusts it's live */}
-        <div className="flex h-full items-center justify-center gap-2 border-b border-r border-white/10 bg-white/[0.06] px-2">
+        <div className="flex h-full items-center justify-center gap-2 border-r border-b border-white/10 bg-white/[0.06] px-2">
           <Clock
             aria-hidden
             className="h-[clamp(1rem,1.3vw,2.25rem)] w-[clamp(1rem,1.3vw,2.25rem)] shrink-0 text-primary"
           />
-          <span className="font-terminal text-[clamp(0.95rem,1.5vw,2.25rem)] font-semibold tabular-nums text-white">
+          <span className="font-terminal text-[clamp(0.95rem,1.5vw,2.25rem)] font-semibold text-white tabular-nums">
             {clock}
           </span>
         </div>
@@ -111,7 +111,7 @@ export function TimeGridKiosk({
           return (
             <div
               key={room}
-              className="flex h-full items-center justify-center gap-2 border-b border-r border-white/10 bg-white/[0.06] px-2 last:border-r-0 lg:px-3"
+              className="flex h-full items-center justify-center gap-2 border-r border-b border-white/10 bg-white/[0.06] px-2 last:border-r-0 lg:px-3"
             >
               {Shape ? (
                 <Shape
@@ -121,7 +121,7 @@ export function TimeGridKiosk({
                 />
               ) : null}
               <span
-                className="truncate text-center font-display text-[clamp(1rem,1.6vw,2.5rem)] font-bold uppercase tracking-wide"
+                className="truncate text-center font-display text-[clamp(1rem,1.6vw,2.5rem)] font-bold tracking-wide uppercase"
                 style={{ color }}
               >
                 {room}
@@ -142,21 +142,21 @@ export function TimeGridKiosk({
               {/* Time Label */}
               <div
                 className={cn(
-                  "relative flex h-full flex-col items-center justify-center gap-1 border-b border-r border-white/10 bg-white/[0.04] px-2",
+                  "relative flex h-full flex-col items-center justify-center gap-1 border-r border-b border-white/10 bg-white/[0.04] px-2",
                   isStarred && "bg-primary/[0.12]"
                 )}
               >
                 {isStarred && (
                   <Star
                     aria-hidden
-                    className="absolute right-1.5 top-1.5 h-[clamp(1rem,1.1vw,1.75rem)] w-[clamp(1rem,1.1vw,1.75rem)] fill-primary text-primary"
+                    className="absolute top-1.5 right-1.5 h-[clamp(1rem,1.1vw,1.75rem)] w-[clamp(1rem,1.1vw,1.75rem)] fill-primary text-primary"
                   />
                 )}
                 {timeSlot.split(" - ").map((time, idx) => (
                   <span
                     key={idx}
                     className={cn(
-                      "text-center font-terminal font-semibold tabular-nums leading-tight",
+                      "text-center font-terminal leading-tight font-semibold tabular-nums",
                       idx === 0
                         ? "text-[clamp(1rem,1.4vw,2.25rem)] text-white"
                         : "text-[clamp(0.85rem,1.1vw,1.6rem)] text-white/50"
@@ -166,7 +166,7 @@ export function TimeGridKiosk({
                   </span>
                 ))}
                 {isNow && (
-                  <span className="mt-1 rounded bg-primary px-1.5 py-0.5 font-terminal text-[clamp(0.625rem,0.7vw,1.125rem)] font-bold uppercase tracking-widest text-black">
+                  <span className="mt-1 rounded bg-primary px-1.5 py-0.5 font-terminal text-[clamp(0.625rem,0.7vw,1.125rem)] font-bold tracking-widest text-black uppercase">
                     Ahora
                   </span>
                 )}
@@ -180,7 +180,7 @@ export function TimeGridKiosk({
                   <div
                     key={`${room}-${timeSlot}`}
                     className={cn(
-                      "relative h-full border-b border-r border-white/10 bg-white/[0.02] transition-colors duration-300 last:border-r-0",
+                      "relative h-full border-r border-b border-white/10 bg-white/[0.02] transition-colors duration-300 last:border-r-0",
                       // Size containment, so the post-it inside can scale its type off the cell.
                       "[container-type:size]",
                       rowTint
@@ -238,7 +238,7 @@ export function TimeGridKiosk({
                 onClick={() => toggleSlot(timeSlot)}
               >
                 <div className="flex-1">
-                  <p className="font-terminal text-xs font-medium uppercase tracking-[0.18em] text-primary">
+                  <p className="font-terminal text-xs font-medium tracking-[0.18em] text-primary uppercase">
                     {trackLabel} track
                   </p>
                   <h3 className="font-display text-2xl font-bold text-white sm:text-3xl">

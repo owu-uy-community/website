@@ -198,7 +198,7 @@ const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<ty
     return (
       <Button
         ref={ref}
-        className={cn("absolute -bottom-16 right-0 h-12 w-12 rounded-full text-black", className)}
+        className={cn("absolute right-0 -bottom-16 h-12 w-12 rounded-full text-black", className)}
         disabled={!canScrollNext}
         size={size}
         variant={variant}
