@@ -232,6 +232,8 @@ export default defineConfig({
   ],
   rules: {
     ...BASELINE,
+    // Misreads `Effect.forEach(items, fn, { discard: true })` as an array method with a thisArg.
+    "unicorn/no-array-method-this-argument": "off",
     // Effect code is anonymous generators all the way down: `Effect.gen(function* () { … })`.
     "func-names": ["error", "always", { generators: "never" }] as ["error", "always", { generators: "never" }],
   },

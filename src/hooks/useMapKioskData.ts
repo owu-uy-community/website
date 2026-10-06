@@ -5,7 +5,7 @@ import { useRealtimeBroadcast } from "hooks/useRealtimeBroadcast";
 import { MAP_KIOSK_CONFIG } from "components/Meetups/OpenSpace/utils/constants";
 import { eventChannel } from "lib/realtime/channels";
 import { roomColorFor } from "lib/rooms/palette";
-import type { TrackWithRelations } from "lib/orpc/sticky-notes/services/get-by-open-space";
+import type { TrackWithRelations } from "lib/orpc/tracks/schemas";
 
 export interface LocationConfig {
   name: string;

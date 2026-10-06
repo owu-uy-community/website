@@ -17,6 +17,9 @@ export const caller = createRouterClient(router, {
   context: cache(async () => requestContext(await headers())),
 });
 
+/** The same for route handlers, which have the request's headers at hand. */
+export const callerFor = (headers: Headers) => createRouterClient(router, { context: requestContext(headers) });
+
 /** For pages that 404 on a missing row: NOT_FOUND becomes `null`, anything else still throws. */
 export async function orNull<T>(promise: Promise<T>): Promise<T | null> {
   try {

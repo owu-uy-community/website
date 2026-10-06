@@ -5,6 +5,7 @@ import type { RouterClient } from "@orpc/server";
 import { describe, expect, test } from "vitest";
 
 import { POST as rpc } from "app/api/orpc/[[...rest]]/route";
+import { GET as epg } from "app/api/openspace/epg/route";
 import { GET as restGet, POST as restPost } from "app/api/v1/[[...rest]]/route";
 import { auth } from "app/lib/auth";
 import type { AppRouter } from "lib/orpc/router";
@@ -133,6 +134,23 @@ describe("/api/orpc", () => {
     const response = await rpc(new Request(`${ORIGIN}/api/orpc/communities/list`, { method: "GET" }));
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe("/api/openspace/epg", () => {
+  test("lists an event's talks as programme entries in local time, in order", async () => {
+    const { event, rooms, slots } = await makeBoard();
+    await makeTrack({ eventId: event.id, scheduleId: slots.late.id, roomId: rooms.tv.id }, { title: "Tarde" });
+    await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id }, { title: "Temprano" });
+
+    const response = await epg(new Request(`${ORIGIN}/api/openspace/epg?eventId=${event.id}`));
+    const entries = (await response.json()) as { since: string; till: string; title: string; location: string }[];
+
+    expect(entries.map((entry) => [entry.title, entry.since, entry.till])).toStrictEqual([
+      ["Temprano", "2026-11-07T15:00", "2026-11-07T15:45"],
+      ["Tarde", "2026-11-07T16:00", "2026-11-07T16:45"],
+    ]);
+    expect(entries[1]?.location).toBe(rooms.tv.name.toUpperCase());
   });
 });
 

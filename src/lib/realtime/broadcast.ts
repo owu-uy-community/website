@@ -1,7 +1,6 @@
 import "server-only";
 
-import type { StickyNote } from "../orpc/sticky-notes/schemas";
-import { eventChannel, obsQueueChannel } from "./channels";
+import { obsQueueChannel } from "./channels";
 import { publishServer } from "./publish";
 
 /**
@@ -17,34 +16,6 @@ import { publishServer } from "./publish";
  *
  * Best-effort — a failed broadcast never fails the mutation.
  */
-
-/** Marks server-originated events; clients skip echoes by their own sender id. */
-const SESSION_ID = "owu-server";
-
-export type CardChangeType = "CARD_UPDATE" | "CARD_SWAP" | "CARD_CREATE" | "CARD_DELETE";
-
-/** Notify an event's board screens (grid admin, kiosk) about a card change. */
-export async function broadcastCardChange(options: {
-  type: CardChangeType;
-  openSpaceId: string;
-  cardId?: string;
-  cardIds?: [string, string];
-  updatedCard?: StickyNote;
-}): Promise<void> {
-  await publishServer(eventChannel(options.openSpaceId, "sync"), "card_change", {
-    type: options.type,
-    payload: {
-      openSpaceId: options.openSpaceId,
-      ...(options.cardId ? { cardId: options.cardId } : {}),
-      ...(options.cardIds ? { cardIds: options.cardIds } : {}),
-      ...(options.updatedCard ? { updatedCard: options.updatedCard } : {}),
-      timestamp: new Date().toISOString(),
-      sessionId: SESSION_ID,
-    },
-  }).catch((error) => {
-    console.error("❌ [Realtime] Failed to broadcast card change:", error);
-  });
-}
 
 /** Notify the OBS control screens that a rig's queue state changed. */
 export async function broadcastOBSStateChange(instanceId: number, version: number): Promise<void> {

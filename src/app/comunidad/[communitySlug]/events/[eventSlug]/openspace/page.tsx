@@ -7,7 +7,6 @@ import { AgendaSurface } from "components/displays/AgendaSurface";
 import { EventAgenda } from "components/displays/EventAgenda";
 import { LiveAgenda } from "components/displays/LiveAgenda";
 import { caller } from "lib/orpc/server";
-import { getTracksForEvent } from "lib/orpc/sticky-notes/services/get-all-tracks";
 import { getEventBySlugs } from "lib/tenant-server";
 
 type Params = Promise<{ communitySlug: string; eventSlug: string }>;
@@ -60,7 +59,7 @@ export default async function EventOpenSpacePage({ params }: { params: Params })
   const [rooms, schedules, tracks] = await Promise.all([
     caller.rooms.getByOpenSpace({ openSpaceId: event.id }),
     caller.schedules.getByOpenSpace({ openSpaceId: event.id }),
-    getTracksForEvent(event.id),
+    caller.tracks.list({ openSpaceId: event.id }),
   ]);
 
   const status = eventStatus(event.startDate, event.endDate);

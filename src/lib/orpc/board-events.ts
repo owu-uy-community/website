@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import { eventChannel } from "../realtime/channels";
 import { Realtime } from "./services";
-import type { StickyNote } from "./sticky-notes/schemas";
+import type { StickyNote } from "./tracks/schemas";
 
 export type CardChangeType = "CARD_UPDATE" | "CARD_SWAP" | "CARD_CREATE" | "CARD_DELETE";
 

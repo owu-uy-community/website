@@ -1,24 +1,3 @@
-// Import all feature modules
-import {
-  // Tracks API
-  CreateTrackSchema,
-  GetTrackSchema,
-  UpdateTrackInputSchema,
-  DeleteTrackSchema,
-  SwapTracksSchema,
-  GetTracksByOpenSpaceSchema,
-  ListTracksByEventSchema,
-  BulkUpdateTracksByScheduleSchema,
-  getTracksForEvent,
-  getTrackById,
-  getTracksByOpenSpace,
-  createTrack,
-  updateTrack,
-  deleteTrack,
-  swapTracks,
-  bulkUpdateTracksBySchedule,
-} from "./sticky-notes";
-
 import {
   AckStaffAnnouncementSchema,
   AssignStaffTaskSchema,
@@ -129,31 +108,9 @@ import { communitiesRouter } from "./communities/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { roomsRouter } from "./rooms/router";
 import { schedulesRouter } from "./schedules/router";
+import { tracksRouter } from "./tracks/router";
 import { listCommunityMembers } from "./communities/service";
 import type { Actor } from "./services";
-
-// Track procedures (public read, admin write)
-export const listTracks = pub
-  .input(ListTracksByEventSchema)
-  .handler(async ({ input }) => getTracksForEvent(input.openSpaceId));
-
-export const getTracksByOpenSpaceHandler = pub
-  .input(GetTracksByOpenSpaceSchema)
-  .handler(async ({ input }) => getTracksByOpenSpace(input));
-
-export const getTrack = pub.input(GetTrackSchema).handler(async ({ input }) => getTrackById(input));
-
-export const createTrackHandler = staff.input(CreateTrackSchema).handler(async ({ input }) => createTrack(input));
-
-export const updateTrackHandler = staff.input(UpdateTrackInputSchema).handler(async ({ input }) => updateTrack(input));
-
-export const deleteTrackHandler = staff.input(DeleteTrackSchema).handler(async ({ input }) => deleteTrack(input));
-
-export const swapTracksHandler = staff.input(SwapTracksSchema).handler(async ({ input }) => swapTracks(input));
-
-export const bulkUpdateTracksByScheduleHandler = staff
-  .input(BulkUpdateTracksByScheduleSchema)
-  .handler(async ({ input }) => bulkUpdateTracksBySchedule(input));
 
 /**
  * Eventbrite handlers (admin only)
@@ -363,17 +320,7 @@ export const router = {
   schedules: schedulesRouter,
   rooms: roomsRouter,
 
-  // Track management
-  tracks: {
-    list: listTracks,
-    get: getTrack,
-    getByOpenSpace: getTracksByOpenSpaceHandler,
-    create: createTrackHandler,
-    update: updateTrackHandler,
-    delete: deleteTrackHandler,
-    swap: swapTracksHandler,
-    bulkUpdateBySchedule: bulkUpdateTracksByScheduleHandler,
-  },
+  tracks: tracksRouter,
 
   // Eventbrite integration
   eventbrite: {

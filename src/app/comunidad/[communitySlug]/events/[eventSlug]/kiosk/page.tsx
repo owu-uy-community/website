@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 
 import OpenSpaceKioskClient from "components/displays/OpenSpaceKioskClient";
 import { caller } from "lib/orpc/server";
-import { getTracksForEvent } from "lib/orpc/sticky-notes/services/get-all-tracks";
 import { getEventBySlugs } from "lib/tenant-server";
 
 export default async function EventKioskPage({
@@ -19,7 +18,7 @@ export default async function EventKioskPage({
   const [rooms, schedules, tracks] = await Promise.all([
     caller.rooms.getByOpenSpace({ openSpaceId: resolved.event.id }),
     caller.schedules.getByOpenSpace({ openSpaceId: resolved.event.id }),
-    getTracksForEvent(resolved.event.id),
+    caller.tracks.list({ openSpaceId: resolved.event.id }),
   ]);
 
   return (

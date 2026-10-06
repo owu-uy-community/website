@@ -99,7 +99,7 @@ describe("tracks.create", () => {
 
     await expect(
       call(router.tracks.create, { ...newTalk, title: "Segunda", ...place(slots.early, rooms.plain) }, by(staff))
-    ).rejects.toMatchObject({ code: "CONFLICT", message: 'Slot is already occupied by "Primera"' });
+    ).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "slot_taken", occupiedBy: "Primera" } });
   });
 
   test("a talk that needs a TV is refused in a room without one, unless the staffer insists", async () => {
@@ -136,7 +136,7 @@ describe("tracks.create", () => {
     expect(codes.filter((code) => code !== "OK")).toStrictEqual(Array.from({ length: 7 }, () => "CONFLICT"));
   });
 
-  test.fails("#6 a room from another event is a BAD_REQUEST", async () => {
+  test("#6 a room from another event is a BAD_REQUEST", async () => {
     const { slots, staff, place } = await setup();
     const elsewhere = await makeBoard();
 
@@ -171,10 +171,10 @@ describe("tracks.update", () => {
 
     await expect(
       call(router.tracks.update, { id: mover.id, data: { scheduleId: slots.late.id } }, by(staff))
-    ).rejects.toMatchObject({ code: "CONFLICT", message: 'Slot is already occupied by "Ocupante"' });
+    ).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "slot_taken", occupiedBy: "Ocupante" } });
   });
 
-  test.fails("#6 moving a talk into another event's slot is a BAD_REQUEST", async () => {
+  test("#6 moving a talk into another event's slot is a BAD_REQUEST", async () => {
     const { event, rooms, slots, staff } = await setup();
     const talk = await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id });
     const elsewhere = await makeBoard();
@@ -225,7 +225,7 @@ describe("tracks.swap", () => {
     });
   });
 
-  test.fails("#6 swapping talks from different events is a BAD_REQUEST", async () => {
+  test("#6 swapping talks from different events is a BAD_REQUEST", async () => {
     const { event, rooms, slots, staff } = await setup();
     const elsewhere = await makeBoard();
     const mine = await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id });

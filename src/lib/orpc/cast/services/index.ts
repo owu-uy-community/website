@@ -4,8 +4,8 @@ import { db } from "../../../db";
 import { eventLiveState, tracks } from "../../../db/schema";
 import { eventChannel } from "../../../realtime/channels";
 import { publishServer } from "../../../realtime/publish";
-import type { StickyNote } from "../../sticky-notes/schemas";
-import { transformTrackForStickyNote } from "../../sticky-notes/services/transforms";
+import type { StickyNote } from "../../tracks/schemas";
+import { toStickyNote as transformTrackForStickyNote } from "../../tracks/service";
 import type { SetHighlightedNoteInput } from "../schemas";
 
 // TODO(multi-tenant): becomes a required eventId input once the frontend threads event ids.

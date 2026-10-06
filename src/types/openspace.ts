@@ -4,7 +4,7 @@
  */
 
 import type { StickyNote } from "../lib/orpc";
-import type { TrackWithRelations } from "../lib/orpc/sticky-notes/services/get-by-open-space";
+import type { TrackWithRelations } from "../lib/orpc/tracks/schemas";
 
 /**
  * Facilitator information

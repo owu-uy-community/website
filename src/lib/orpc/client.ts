@@ -32,5 +32,5 @@ export const orpc = createTanstackQueryUtils(client);
 export type { AppRouter };
 
 // Re-export types from features for external usage
-export type { StickyNote } from "./sticky-notes";
+export type { StickyNote } from "./tracks/schemas";
 export type { CountdownState, UpdateCountdownStateInput } from "./countdown/schemas";
