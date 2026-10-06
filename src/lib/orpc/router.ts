@@ -20,20 +20,6 @@ import {
 } from "./sticky-notes";
 
 import {
-  CreateOpenSpaceSchema,
-  GetOpenSpaceSchema,
-  ListOpenSpacesByCommunitySchema,
-  UpdateOpenSpaceInputSchema,
-  DeleteOpenSpaceSchema,
-  getOpenSpaceById,
-  getOpenSpacesByCommunity,
-  listEventsForOperator,
-  createOpenSpace,
-  updateOpenSpace,
-  deleteOpenSpace,
-} from "./open-spaces";
-
-import {
   AckStaffAnnouncementSchema,
   AssignStaffTaskSchema,
   CreateStaffAnnouncementSchema,
@@ -60,35 +46,6 @@ import {
   unassignStaffTask,
   updateStaffTask,
 } from "./staff-tasks";
-
-import {
-  CreateScheduleSchema,
-  GetScheduleSchema,
-  UpdateScheduleInputSchema,
-  DeleteScheduleSchema,
-  GetSchedulesByOpenSpaceSchema,
-  getAllSchedules,
-  getScheduleById,
-  getSchedulesByOpenSpace,
-  createSchedule,
-  updateSchedule,
-  deleteSchedule,
-} from "./schedules";
-
-import {
-  CreateRoomSchema,
-  GetRoomSchema,
-  UpdateRoomInputSchema,
-  DeleteRoomSchema,
-  GetRoomsByOpenSpaceSchema,
-  ReorderRoomsSchema,
-  getRoomById,
-  getRoomsByOpenSpace,
-  createRoom,
-  updateRoom,
-  deleteRoom,
-  reorderRooms,
-} from "./rooms";
 
 import { GetAttendeesSchema, GetSummarySchema, getAttendees, getSummary } from "./eventbrite";
 
@@ -169,70 +126,11 @@ import { getDashboardStats, GetDashboardStatsSchema } from "./dashboard";
 
 import { authed, inCommunity, pub, staff } from "./base";
 import { communitiesRouter } from "./communities/router";
+import { openSpacesRouter } from "./open-spaces/router";
+import { roomsRouter } from "./rooms/router";
+import { schedulesRouter } from "./schedules/router";
 import { listCommunityMembers } from "./communities/service";
 import type { Actor } from "./services";
-
-// OpenSpace procedures (public read, admin write)
-export const listOpenSpacesByCommunity = pub
-  .input(ListOpenSpacesByCommunitySchema)
-  .handler(async ({ input }) => getOpenSpacesByCommunity(input.communityId));
-
-/**
- * Event list for the switcher and the staff "Tareas" page. Site staff sees
- * every event; community members see the events of their communities.
- */
-export const listEventsForAdminHandler = authed.handler(async ({ context }) => {
-  const user = context.user;
-  return listEventsForOperator(user.role === "admin" ? null : user.id);
-});
-
-export const getOpenSpace = pub.input(GetOpenSpaceSchema).handler(async ({ input }) => getOpenSpaceById(input));
-
-export const createOpenSpaceHandler = staff
-  .input(CreateOpenSpaceSchema)
-  .handler(async ({ input }) => createOpenSpace(input));
-
-export const updateOpenSpaceHandler = staff
-  .input(UpdateOpenSpaceInputSchema)
-  .handler(async ({ input }) => updateOpenSpace(input));
-
-export const deleteOpenSpaceHandler = staff
-  .input(DeleteOpenSpaceSchema)
-  .handler(async ({ input }) => deleteOpenSpace(input));
-
-// Schedule procedures (public read, admin write)
-export const getSchedulesByOpenSpaceHandler = pub
-  .input(GetSchedulesByOpenSpaceSchema)
-  .handler(async ({ input }) => getSchedulesByOpenSpace(input));
-
-export const getSchedule = pub.input(GetScheduleSchema).handler(async ({ input }) => getScheduleById(input));
-
-export const createScheduleHandler = staff
-  .input(CreateScheduleSchema)
-  .handler(async ({ input }) => createSchedule(input));
-
-export const updateScheduleHandler = staff
-  .input(UpdateScheduleInputSchema)
-  .handler(async ({ input }) => updateSchedule(input));
-
-export const deleteScheduleHandler = staff
-  .input(DeleteScheduleSchema)
-  .handler(async ({ input }) => deleteSchedule(input));
-
-// Room procedures (public read, admin write)
-export const getRoomsByOpenSpaceHandler = pub
-  .input(GetRoomsByOpenSpaceSchema)
-  .handler(async ({ input }) => getRoomsByOpenSpace(input));
-
-export const getRoom = pub.input(GetRoomSchema).handler(async ({ input }) => getRoomById(input));
-
-export const createRoomHandler = staff.input(CreateRoomSchema).handler(async ({ input }) => createRoom(input));
-
-export const updateRoomHandler = staff.input(UpdateRoomInputSchema).handler(async ({ input }) => updateRoom(input));
-
-export const deleteRoomHandler = staff.input(DeleteRoomSchema).handler(async ({ input }) => deleteRoom(input));
-
-export const reorderRoomsHandler = staff.input(ReorderRoomsSchema).handler(async ({ input }) => reorderRooms(input));
 
 // Track procedures (public read, admin write)
 export const listTracks = pub
@@ -461,34 +359,9 @@ export const ackStaffAnnouncementHandler = authed
 
 // Main router
 export const router = {
-  // OpenSpace management
-  openSpaces: {
-    listByCommunity: listOpenSpacesByCommunity,
-    listForAdmin: listEventsForAdminHandler,
-    get: getOpenSpace,
-    create: createOpenSpaceHandler,
-    update: updateOpenSpaceHandler,
-    delete: deleteOpenSpaceHandler,
-  },
-
-  // Schedule management
-  schedules: {
-    get: getSchedule,
-    getByOpenSpace: getSchedulesByOpenSpaceHandler,
-    create: createScheduleHandler,
-    update: updateScheduleHandler,
-    delete: deleteScheduleHandler,
-  },
-
-  // Room management
-  rooms: {
-    get: getRoom,
-    getByOpenSpace: getRoomsByOpenSpaceHandler,
-    create: createRoomHandler,
-    update: updateRoomHandler,
-    delete: deleteRoomHandler,
-    reorder: reorderRoomsHandler,
-  },
+  openSpaces: openSpacesRouter,
+  schedules: schedulesRouter,
+  rooms: roomsRouter,
 
   // Track management
   tracks: {

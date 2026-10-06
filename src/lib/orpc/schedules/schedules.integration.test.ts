@@ -28,7 +28,7 @@ describe("schedules reads", () => {
     });
   });
 
-  test.fails("#12 an unknown slot is NOT_FOUND", async () => {
+  test("#12 an unknown slot is NOT_FOUND", async () => {
     await expect(call(router.schedules.get, { id: "no-existe" }, by(null))).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
@@ -49,7 +49,7 @@ describe("schedules writes", () => {
     expect(slot).toMatchObject({ name: "Cierre", startTime: "19:00", openSpaceId: event.id, isActive: true });
   });
 
-  test.fails("#P3 create keeps highlightInKiosk", async () => {
+  test("#P3 create keeps highlightInKiosk", async () => {
     const { event } = await makeBoard();
     const staff = await makeSiteAdmin();
 
@@ -81,7 +81,7 @@ describe("schedules writes", () => {
     });
   });
 
-  test.fails("#2 moving a slot's times keeps it highlighted on the kiosk", async () => {
+  test("#2 moving a slot's times keeps it highlighted on the kiosk", async () => {
     const { event } = await makeBoard();
     const highlighted = await makeSlot(event.id, { highlightInKiosk: true });
     const staff = await makeSiteAdmin();

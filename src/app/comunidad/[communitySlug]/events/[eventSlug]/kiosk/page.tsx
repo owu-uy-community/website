@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 
 import OpenSpaceKioskClient from "components/displays/OpenSpaceKioskClient";
-import { getRoomsByOpenSpace } from "lib/orpc/rooms/services/get-by-open-space";
-import { getSchedulesByOpenSpace } from "lib/orpc/schedules/services/get-by-open-space";
+import { caller } from "lib/orpc/server";
 import { getTracksForEvent } from "lib/orpc/sticky-notes/services/get-all-tracks";
 import { getEventBySlugs } from "lib/tenant-server";
 
@@ -18,8 +17,8 @@ export default async function EventKioskPage({
   // Server-fetched initial data: the wall paints the real grid on first
   // render instead of flashing a generic skeleton.
   const [rooms, schedules, tracks] = await Promise.all([
-    getRoomsByOpenSpace({ openSpaceId: resolved.event.id }),
-    getSchedulesByOpenSpace({ openSpaceId: resolved.event.id }),
+    caller.rooms.getByOpenSpace({ openSpaceId: resolved.event.id }),
+    caller.schedules.getByOpenSpace({ openSpaceId: resolved.event.id }),
     getTracksForEvent(resolved.event.id),
   ]);
 

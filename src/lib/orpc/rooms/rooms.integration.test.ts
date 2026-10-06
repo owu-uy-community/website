@@ -1,9 +1,10 @@
 import { call } from "@orpc/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { router } from "lib/orpc/router";
+import { hub } from "lib/realtime/hub";
 import { by } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeUser } from "test/factories";
+import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 
 describe("rooms reads", () => {
   test("anyone lists an event's rooms in board order", async () => {
@@ -57,7 +58,7 @@ describe("rooms writes", () => {
     });
   });
 
-  test.fails("#12 a duplicate room name in the same event is a CONFLICT", async () => {
+  test("#12 a duplicate room name in the same event is a CONFLICT", async () => {
     const { event, rooms } = await makeBoard();
     const staff = await makeSiteAdmin();
 
@@ -70,7 +71,7 @@ describe("rooms writes", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
 
-  test.fails("#2 renaming a room keeps its TV and whiteboard", async () => {
+  test("#2 renaming a room keeps its TV and whiteboard", async () => {
     const { rooms } = await makeBoard();
     const staff = await makeSiteAdmin();
 
@@ -97,6 +98,53 @@ describe("rooms writes", () => {
       [other.rooms.plain.id, 0],
       [other.rooms.tv.id, 1],
     ]);
+  });
+
+  test("rooms left out of a reorder keep their relative order after the listed ones", async () => {
+    const { event, rooms } = await makeBoard();
+    const third = await makeRoom(event.id, { name: "Tercera", sortOrder: 2 });
+    const staff = await makeSiteAdmin();
+
+    await call(router.rooms.reorder, { openSpaceId: event.id, orderedIds: [third.id] }, by(staff));
+
+    const list = await call(router.rooms.getByOpenSpace, { openSpaceId: event.id }, by(null));
+    expect(list.map((room) => [room.id, room.sortOrder])).toStrictEqual([
+      [third.id, 0],
+      [rooms.plain.id, 1],
+      [rooms.tv.id, 2],
+    ]);
+  });
+
+  test("two staffers adding the same room name at once get one room and one CONFLICT", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+    const add = () =>
+      call(
+        router.rooms.create,
+        { name: "Auditorio", openSpaceId: event.id, hasTV: false, hasWhiteboard: false, isActive: true },
+        by(staff)
+      );
+
+    const results = await Promise.allSettled([add(), add()]);
+
+    expect(
+      results.map((r) => (r.status === "fulfilled" ? "created" : (r.reason as { code: string }).code)).toSorted()
+    ).toStrictEqual(["CONFLICT", "created"]);
+  });
+
+  test("deleting a room tells the boards which talks went with it", async () => {
+    const { event, rooms, slots } = await makeBoard();
+    const talk = await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id });
+    const staff = await makeSiteAdmin();
+    const publish = vi.spyOn(hub, "publish");
+
+    await call(router.rooms.delete, { id: rooms.plain.id }, by(staff));
+
+    expect(publish).toHaveBeenCalledWith(
+      `event:${event.id}:sync`,
+      "card_change",
+      expect.objectContaining({ type: "CARD_DELETE", payload: expect.objectContaining({ cardId: talk.id }) })
+    );
   });
 
   test("deleting a room removes it from the board", async () => {

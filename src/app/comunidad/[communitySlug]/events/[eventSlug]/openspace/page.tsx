@@ -6,8 +6,7 @@ import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import { AgendaSurface } from "components/displays/AgendaSurface";
 import { EventAgenda } from "components/displays/EventAgenda";
 import { LiveAgenda } from "components/displays/LiveAgenda";
-import { getRoomsByOpenSpace } from "lib/orpc/rooms/services/get-by-open-space";
-import { getSchedulesByOpenSpace } from "lib/orpc/schedules/services/get-by-open-space";
+import { caller } from "lib/orpc/server";
 import { getTracksForEvent } from "lib/orpc/sticky-notes/services/get-all-tracks";
 import { getEventBySlugs } from "lib/tenant-server";
 
@@ -59,8 +58,8 @@ export default async function EventOpenSpacePage({ params }: { params: Params })
 
   const { community, event } = resolved;
   const [rooms, schedules, tracks] = await Promise.all([
-    getRoomsByOpenSpace({ openSpaceId: event.id }),
-    getSchedulesByOpenSpace({ openSpaceId: event.id }),
+    caller.rooms.getByOpenSpace({ openSpaceId: event.id }),
+    caller.schedules.getByOpenSpace({ openSpaceId: event.id }),
     getTracksForEvent(event.id),
   ]);
 

@@ -2,7 +2,8 @@ import { and, eq } from "drizzle-orm";
 
 import { db } from "lib/db";
 import { communities, communityMembers } from "lib/db/schema";
-import { listEventsForOperator, type AdminEventOption } from "lib/orpc/open-spaces/services/get-all";
+import type { AdminEventOption } from "lib/orpc/open-spaces/schemas";
+import { caller } from "lib/orpc/server";
 
 export type AdminCommunityScope = {
   community: { id: string; name: string; slug: string };
@@ -40,7 +41,7 @@ export async function resolveAdminCommunityScope(
   const community = rows[0];
   if (!community) return null;
 
-  const events = (await listEventsForOperator(userId)).filter((event) => event.communityId === community.id);
+  const events = (await caller.openSpaces.listForAdmin()).filter((event) => event.communityId === community.id);
   const selected = (eventSlug ? events.find((event) => event.slug === eventSlug) : events[0]) ?? events[0] ?? null;
 
   return { community, events, selected };

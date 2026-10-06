@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requireAdmin } from "app/lib/auth-helpers";
-import { listEventsForOperator } from "lib/orpc/open-spaces/services/get-all";
+import { caller } from "lib/orpc/server";
 
 /**
  * Legacy URL: the board now lives under /admin/<communitySlug>/openspace.
@@ -12,7 +12,7 @@ export default async function OpenSpaceLegacyPage({ searchParams }: { searchPara
   await requireAdmin();
 
   const { event: eventSlug } = await searchParams;
-  const events = await listEventsForOperator(null);
+  const events = await caller.openSpaces.listForAdmin();
   const selected = (eventSlug ? events.find((event) => event.slug === eventSlug) : events[0]) ?? events[0];
   if (!selected) redirect("/admin/communities");
 

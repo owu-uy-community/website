@@ -22,7 +22,7 @@ describe("openSpaces.listByCommunity", () => {
     expect(list.map((event) => event.id)).toStrictEqual([newer.id, older.id]);
   });
 
-  test.fails("#21 anonymous callers cannot list a community's events", async () => {
+  test("#21 anonymous callers cannot list a community's events", async () => {
     const community = await makeCommunity();
 
     await expect(
@@ -63,7 +63,7 @@ describe("openSpaces.get", () => {
     });
   });
 
-  test.fails("#12 an unknown id is NOT_FOUND", async () => {
+  test("#12 an unknown id is NOT_FOUND", async () => {
     await expect(call(router.openSpaces.get, { id: "no-existe" }, by(null))).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
@@ -92,7 +92,7 @@ describe("openSpaces.create", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test.fails("#12 an end before the start is a BAD_REQUEST and an unknown community a NOT_FOUND", async () => {
+  test("#12 an end before the start is a BAD_REQUEST and an unknown community a NOT_FOUND", async () => {
     const community = await makeCommunity();
     const staff = await makeSiteAdmin();
     const reversed = { startDate: EVENT_DATES.endDate, endDate: EVENT_DATES.startDate };
@@ -117,7 +117,7 @@ describe("openSpaces.update", () => {
     expect(updated).toMatchObject({ id: event.id, name: "Renombrado" });
   });
 
-  test.fails("#2 a partial update leaves the fields it did not send alone", async () => {
+  test("#2 a partial update leaves the fields it did not send alone", async () => {
     const community = await makeCommunity();
     const event = await makeEvent(community.id, { isActive: false, autoHighlightEnabled: true });
     const staff = await makeSiteAdmin();
@@ -127,7 +127,7 @@ describe("openSpaces.update", () => {
     expect(updated).toMatchObject({ isActive: false, autoHighlightEnabled: true });
   });
 
-  test.fails("#3 timezone, Eventbrite id, venue map and slug are saved", async () => {
+  test("#3 timezone, Eventbrite id, venue map and slug are saved", async () => {
     const community = await makeCommunity();
     const event = await makeEvent(community.id);
     const staff = await makeSiteAdmin();

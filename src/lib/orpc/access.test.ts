@@ -48,7 +48,7 @@ const EXPECTED: Record<string, Access> = {
   "openSpaces.create": "staff",
   "openSpaces.delete": "staff",
   "openSpaces.get": "public",
-  "openSpaces.listByCommunity": "public",
+  "openSpaces.listByCommunity": "community:member",
   "openSpaces.listForAdmin": "authed",
   "openSpaces.update": "staff",
   "owyStage.disconnectSpotify": "staff",
