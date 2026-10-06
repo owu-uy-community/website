@@ -9,7 +9,9 @@ export type VoiceStage =
   | "speaking"
   | "idle"
   | "muted"
-  | "error";
+  | "error"
+  /** Attached as a physical device's laptop audio: mic + speakers follow that device's turns. */
+  | "standby";
 export type BridgeInfo = {
   model: string;
   voice: string;
@@ -27,6 +29,8 @@ export type VoiceStatus = {
   bridge?: BridgeInfo;
   tools?: ToolActivity[];
   blocked?: boolean;
+  /** Device id this browser is attached to as laptop audio (mic + speakers). */
+  attached?: string;
 };
 export type VoiceVisual = { phase: number; mic: number; speaker: number };
 export type VoiceScopes = { writes: boolean; staff: boolean; marketplace: boolean };
@@ -105,6 +109,8 @@ export class WebVoice {
   private run = 0;
   private bridgeReady = false;
   private deviceBlocked = false;
+  private attachTo: string | null = null;
+  private sessionTimer?: ReturnType<typeof setTimeout>;
   private messageChain: Promise<void> = Promise.resolve();
   constructor(
     private changed: (state: VoiceStatus) => void,
@@ -141,9 +147,15 @@ export class WebVoice {
   setContinuous(value: boolean) {
     this.continuous = value;
   }
-  async start(scopes: VoiceScopes = { writes: false, staff: false, marketplace: false }) {
+  /**
+   * `attachTo`: instead of running its own conversation, this browser becomes
+   * that physical device's microphone and speakers (laptop mode). The device
+   * keeps the trigger, the face and the captions; turns arrive as `accepted`.
+   */
+  async start(scopes: VoiceScopes = { writes: false, staff: false, marketplace: false }, attachTo?: string) {
     this.stop();
     this.stopped = false;
+    this.attachTo = attachTo ?? null;
     const epoch = ++this.epoch;
     this.status = { stage: "requesting", message: "Permití el micrófono para hablar con Owy.", input: "", output: "" };
     this.changed(this.status);
@@ -185,7 +197,7 @@ export class WebVoice {
       const socket = (this.socket = this.deps.socket(url.href));
       socket.binaryType = "arraybuffer";
       this.watchdog = this.later(() => this.fail("El bridge no respondió a tiempo. Probá de nuevo."), 20000);
-      this.later(
+      this.sessionTimer = this.later(
         () => this.stop("Terminaron los cinco minutos de sesión. Empezá otra cuando quieras."),
         Math.max(0, Math.min(300000, ticket.expiresAt - Date.now()))
       );
@@ -198,7 +210,7 @@ export class WebVoice {
             if (epoch !== this.epoch) return;
             if ((typeof data === "string" ? data.length : data.byteLength) > 64 * 1024)
               throw Error("Voice message exceeded its limit.");
-            if (typeof data === "string") this.receive(JSON.parse(data));
+            if (typeof data === "string") await this.receive(JSON.parse(data));
             else if (data instanceof ArrayBuffer) this.play(data);
             else throw Error("Invalid bridge audio");
           })
@@ -290,10 +302,12 @@ export class WebVoice {
       return;
     }
     if (this.socket?.readyState === 1) this.socket.send(packet);
-    if (this.speech && now - this.speechAt > 700) this.finishTurn();
+    // Attached: the device's pipeline (server VAD) ends the capture, so keep
+    // streaming the trailing silence it needs instead of committing locally.
+    if (!this.attachTo && this.speech && now - this.speechAt > 700) this.finishTurn();
   }
   finishTurn() {
-    if (this.status.stage !== "listening") return;
+    if (this.status.stage !== "listening" || this.attachTo) return;
     this.clear(this.idleTimer);
     this.gate(false);
     this.send({ type: "commit", run: this.run });
@@ -389,7 +403,7 @@ export class WebVoice {
       this.update("muted", "Micrófono apagado. El dispositivo está listo; seguí cuando quieras.");
     }
   }
-  private receive(message: any) {
+  private async receive(message: any) {
     if (!message || typeof message.type !== "string") throw Error("Invalid bridge message");
     if (message.type === "ready") {
       if (message.protocol !== 1 || message.sampleRate !== 16000 || !Array.isArray(message.tools))
@@ -398,15 +412,46 @@ export class WebVoice {
       this.status.bridge = message;
       this.setVolume(this.volume * 100);
       this.clear(this.watchdog);
-      void this.resume();
+      if (this.attachTo) {
+        this.update("connecting", `Conectando este navegador como el audio de ${this.attachTo}…`);
+        this.send({ type: "attach", deviceId: this.attachTo });
+        this.watchdog = this.later(() => this.fail("El bridge no aceptó la conexión."), 10000);
+      } else void this.resume();
+      return;
+    }
+    if (message.type === "attached") {
+      this.clear(this.watchdog);
+      this.clear(this.sessionTimer); // the bridge keeps attached peers for the whole open space
+      await this.acquire(this.epoch); // ask for the microphone now, not on the first turn
+      this.status.attached = String(message.deviceId);
+      this.update(
+        "standby",
+        `Este navegador es el micrófono y los parlantes de ${message.deviceId}. Esperando un turno…`
+      );
+      return;
+    }
+    if (message.type === "detached") {
+      this.status.attached = undefined;
+      this.gate(false);
+      this.update("idle", "Desconectado. El dispositivo vuelve a su propio audio.");
       return;
     }
     if (message.type === "accepted") {
-      if (this.status.stage !== "connecting" || !Number.isSafeInteger(message.run) || message.run <= this.run) return;
+      if (
+        !["connecting", "standby"].includes(this.status.stage) ||
+        !Number.isSafeInteger(message.run) ||
+        message.run <= this.run
+      )
+        return;
       this.run = message.run;
       this.discard = false;
       this.clear(this.watchdog);
-      this.update("listening", "Te escucho a través del bridge del gadget.");
+      this.update(
+        "listening",
+        this.attachTo
+          ? `Te escucho para ${this.attachTo} con este micrófono.`
+          : "Te escucho a través del bridge del gadget."
+      );
       this.cue();
       this.later(() => {
         if (this.status.stage === "listening" && this.run === message.run) this.gate(true);
@@ -448,13 +493,22 @@ export class WebVoice {
           this.watchdog = this.later(() => this.fail("La respuesta del bridge tardó demasiado. Reconectá."), 35000);
           break;
         case "ERROR":
-          this.fail("El bridge reportó un error en el turno de voz. Reconectá.");
+          if (this.attachTo) {
+            // The device recovers on its own; this browser just goes back to standby.
+            this.clear(this.watchdog);
+            this.gate(false);
+            this.stopPlayback();
+            this.update("standby", `El turno terminó con un error en ${this.attachTo}. Esperando el próximo…`);
+          } else this.fail("El bridge reportó un error en el turno de voz. Reconectá.");
           break;
         case "RUN_END":
           this.clear(this.watchdog);
           if (this.status.stage === "speaking") {
             this.complete = true;
             this.afterPlayback();
+          } else if (this.attachTo && ["listening", "thinking"].includes(this.status.stage)) {
+            this.gate(false);
+            this.update("standby", `Esperando el próximo turno en ${this.attachTo}…`);
           } else if (["listening", "thinking"].includes(this.status.stage)) {
             this.releaseInput();
             this.update("idle", "El bridge cerró la ventana de escucha. Tocá Seguir para una conversación nueva.");
@@ -498,7 +552,11 @@ export class WebVoice {
     if (!this.complete || this.queue.size || this.stopped || this.discard || this.status.stage !== "speaking") return;
     this.complete = false;
     this.nextAudio = 0;
-    if (this.continuous) void this.resume();
+    if (this.attachTo) {
+      // The device decides whether a follow-up window opens; it will send `accepted` again.
+      this.gate(false);
+      this.update("standby", `Respuesta reproducida. Esperando el próximo turno en ${this.attachTo}…`);
+    } else if (this.continuous) void this.resume();
     else {
       this.releaseInput();
       this.update("idle", "Respuesta terminada. Tocá Seguir para hablar otra vez.");
@@ -520,6 +578,8 @@ export class WebVoice {
     this.stopped = true;
     this.bridgeReady = false;
     this.run = 0;
+    this.attachTo = null;
+    this.status.attached = undefined;
     ++this.captureEpoch;
     this.resuming = false;
     ++this.epoch;

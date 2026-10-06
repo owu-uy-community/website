@@ -1,5 +1,6 @@
 import { castRouter } from "./cast/router";
 import { communitiesRouter } from "./communities/router";
+import { companionRouter } from "./companion/router";
 import { countdownRouter } from "./countdown/router";
 import { dashboardRouter } from "./dashboard/router";
 import { eventbriteRouter } from "./eventbrite/router";
@@ -34,6 +35,9 @@ export const router = {
   countdown: countdownRouter,
   cast: castRouter,
   owyStage: owyStageRouter,
+
+  // Physical Owy companions: where each device's mic / audio output live (device or venue laptop)
+  companion: companionRouter,
 
   // OBS desk: the scene loop, the command bus and the rundown
   obsQueue: obsQueueRouter,

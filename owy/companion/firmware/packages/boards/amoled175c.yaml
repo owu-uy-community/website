@@ -1,0 +1,259 @@
+# Waveshare ESP32-S3-Touch-AMOLED-1.75C hardware: I2C bus, BOOT key, CO5300
+# AMOLED + CST9217 touch, ES7210/ES8311 audio on one I2S bus, QMI8658 IMU,
+# AXP2101 power telemetry. Shared ids the rest of the firmware binds to:
+# bus_a · boot_button · amoled · touch · screen_light · mic · va_speaker · power_status.
+
+i2c:
+  - id: bus_a
+    sda: GPIO15
+    scl: GPIO14
+    frequency: 400kHz
+    # Expected: 0x18 ES8311, 0x34 AXP2101, 0x40 ES7210,
+    # 0x5A CST9217, 0x6B QMI8658. A 0x51 (PCF85063 RTC) means a plain 1.75.
+    scan: true
+
+# The TCA9554 IO expander (0x20, power button on P4) does not answer on the
+# 1.75C (I2C I/O error at boot), so it is left out. Plain 1.75 boards can add:
+#   pca9554: [{ id: io_expander, i2c_id: bus_a, address: 0x20 }]
+#   binary_sensor: - platform: gpio, pin: { pca9554: io_expander, number: 4 }
+
+binary_sensor:
+  - platform: gpio
+    id: boot_button
+    name: Botón BOOT
+    internal: true
+    pin:
+      number: GPIO0
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_multi_click:
+      # Single press: same as tapping the face (talk / interrupt).
+      - timing:
+          - ON for at most 0.6s
+          - OFF for at least 0.3s
+        then:
+          - script.execute: tap_to_talk
+      # Long press: accessible quick controls. Staff still requires its PIN.
+      - timing:
+          - ON for at least 0.8s
+        then:
+          - script.execute: open_quick_controls
+
+# ── 1.75" 466x466 AMOLED (CO5300 over QSPI) + CST9217 capacitive touch ──────
+
+spi:
+  - id: display_qspi
+    type: quad
+    clk_pin: GPIO38
+    data_pins:
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+
+display:
+  - platform: mipi_spi
+    id: amoled
+    # ESPHome's preset for this board (CO5300, 466x466, offset_width 6). The
+    # preset bakes in reset_pin 39 for the plain 1.75; the 1.75C uses GPIO1.
+    model: WAVESHARE-ESP32-S3-TOUCH-AMOLED-1.75
+    spi_id: display_qspi
+    cs_pin: GPIO12
+    reset_pin: ${lcd_reset_pin}
+    data_rate: 40MHz
+    # LVGL owns the framebuffer.
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  - platform: cst9220
+    id: touch
+    i2c_id: bus_a
+    display: amoled
+    interrupt_pin: GPIO11
+    reset_pin: ${touch_reset_pin}
+    transform:
+      mirror_x: true
+      mirror_y: true
+
+# AMOLED brightness is a panel command, exposed as a light for the settings page.
+output:
+  - platform: template
+    id: amoled_brightness
+    type: float
+    write_action:
+      - lambda: id(amoled).set_brightness(static_cast<uint8_t>(state * 255));
+
+light:
+  - platform: monochromatic
+    id: screen_light
+    name: Pantalla
+    output: amoled_brightness
+    default_transition_length: 0s
+    restore_mode: ALWAYS_ON
+    initial_state:
+      brightness: 80%
+
+# ── Audio: ES7210 ADC (dual MEMS mics) in, ES8311 DAC + NS4150B amp out ─────
+#
+# ONE I2S bus that carries MCLK, time-shared by mic and speaker. ESPHome's I2S
+# bus is a mutex (mic and speaker never run at once) and voice is half-duplex
+# anyway, so a single bus is exactly what every working ES7210+ES8311 config
+# uses (ESP32-S3-BOX-3, the community AMOLED-1.75 voice satellites).
+#
+# Do NOT split this into two buses sharing pins (the devices.esphome.io
+# example does): the ES7210 is an I2S slave that needs MCLK on its pin, and
+# with two buses only the speaker port drives MCLK — the mic then streams
+# pure silence except right after the speaker played (seen on hardware).
+# Do NOT set `timeout: never` on the speaker either: it would hold the bus
+# forever and the mic could never take it ("Parent bus is busy").
+
+i2s_audio:
+  - id: i2s_bus
+    i2s_lrclk_pin:
+      number: GPIO45
+      ignore_strapping_warning: true
+    i2s_bclk_pin: GPIO9
+    i2s_mclk_pin: ${i2s_mclk_pin}
+
+audio_adc:
+  - platform: es7210
+    id: mic_adc
+    i2c_id: bus_a
+    address: 0x40
+    bits_per_sample: 16bit
+    sample_rate: ${audio_sample_rate}
+    mic_gain: 30db
+
+microphone:
+  - platform: i2s_audio
+    id: mic
+    i2s_audio_id: i2s_bus
+    adc_type: external
+    i2s_din_pin: GPIO10
+    sample_rate: ${audio_sample_rate}
+    bits_per_sample: 16bit
+    # Both MEMS mics come interleaved on SDOUT1; voice_assistant and
+    # micro_wake_word take channel 0 (their default).
+    channel: stereo
+    pdm: false
+    on_data:
+      - lambda: id(companion).audio(x.data(), x.size(), millis());
+
+audio_dac:
+  - platform: es8311
+    id: speaker_dac
+    i2c_id: bus_a
+    address: 0x18
+    bits_per_sample: 16bit
+    sample_rate: ${audio_sample_rate}
+
+speaker:
+  - platform: i2s_audio
+    id: va_speaker
+    i2s_audio_id: i2s_bus
+    dac_type: external
+    i2s_dout_pin: GPIO8
+    audio_dac: speaker_dac
+    sample_rate: ${audio_sample_rate}
+    bits_per_sample: 16bit
+    channel: left
+    # Jitter headroom is in the PSRAM voice receive buffer, not this shared-bus
+    # driver ring. Keep the low-latency ring and original release behavior.
+    buffer_duration: 100ms
+    # timeout left at its default (500ms) on purpose: the speaker must release
+    # the shared bus after playback so the mic can start.
+
+switch:
+  - platform: gpio
+    id: amp_enable
+    name: Amplificador
+    internal: true
+    pin: GPIO46
+    restore_mode: RESTORE_DEFAULT_ON
+
+# ── QMI8658 IMU (face follows tilt, shake reaction) ─────────────────────────
+
+motion:
+  - platform: qmi8658
+    id: companion_imu
+    i2c_id: bus_a
+    address: 0x6B
+    accelerometer_range: 8G
+    gyroscope_range: 512DPS
+    # Enum 125HZ is ~112.1Hz in QST's 6DOF table. Actual host dt drives fusion.
+    accelerometer_odr: 125HZ
+    gyroscope_odr: 125HZ
+    update_interval: 10ms
+
+esphome:
+  on_boot:
+    - priority: -90
+      then:
+        - lambda: |-
+            const auto &saved=id(saved_motion_calibration);
+            if (saved[0]==1) id(companion).tracker.restore_calibration(
+                {saved[1],saved[2],saved[3]}, {saved[4],saved[5],saved[6]});
+            id(companion_imu).add_listener([](esphome::motion::MotionData &data) {
+              id(companion).motion(data.acceleration[0], data.acceleration[1], data.acceleration[2],
+                  data.angular_rate[0], data.angular_rate[1], data.angular_rate[2], millis(),
+                  id(motion_follow).state && !id(reduced_motion).state && !id(mic_privacy).state &&
+                  !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) &&
+                  !id(ui).is_paused() && lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj);
+              if (id(companion).take_shake()) {
+                id(last_gesture).publish_state("shake");
+                id(play_companion_feedback).execute();
+              }
+            });
+            id(companion_imu).add_temperature_listener([](float value) {
+              id(companion).chip_temperature=value;
+            });
+
+sensor:
+  - platform: template
+    name: IMU Chip Temperature
+    entity_category: diagnostic
+    device_class: temperature
+    unit_of_measurement: °C
+    accuracy_decimals: 1
+    update_interval: 30s
+    lambda: |-
+      return id(companion).motion_ok(millis()) ? id(companion).chip_temperature : NAN;
+  - platform: template
+    name: Battery Level
+    id: companion_battery
+    device_class: battery
+    unit_of_measurement: "%"
+    accuracy_decimals: 0
+    update_interval: never
+
+# ── AXP2101 power telemetry (read-only; no charge/power register writes) ────
+
+i2c_device:
+  - id: companion_pmic
+    i2c_id: bus_a
+    address: 0x34
+
+text_sensor:
+  - platform: template
+    id: power_status
+    name: Power Status
+    update_interval: 5s
+    lambda: |-
+      uint8_t status[2], percent = 255;
+      if (!id(companion_pmic).read_bytes(0x00, status, 2)) {
+        id(companion).power.unavailable();
+        id(companion_battery).publish_state(NAN);
+        return {"energía: sin datos"};
+      }
+      if (status[0] & 0x08) id(companion_pmic).read_byte(0xA4, &percent);
+      auto &power = id(companion).power;
+      power.decode(status[0], status[1], percent);
+      id(companion_battery).publish_state(power.percent >= 0 ? float(power.percent) : NAN);
+      char buf[64];
+      if (!power.battery) return power.usb ? std::string("USB · sin batería") : std::string("sin batería detectada");
+      if (power.percent < 0) return {"batería: sin porcentaje"};
+      snprintf(buf, sizeof(buf), "%s%d%% %s", power.usb ? "USB · " : "", power.percent, power.charging ? "cargando" : "");
+      return std::string(buf);

@@ -9,6 +9,8 @@ import { BrowserDevice } from "./device";
 import { matchesSecret, toolDenial, WebTickets, WEB_SESSION_MS, type WebGrant } from "./tickets";
 
 export type WebBridgeOptions = { port: number; origins: string[]; secret?: string; publicUrl?: string };
+/** A browser attached as a device's laptop audio stays for the whole open space, not five minutes. */
+export const ATTACHED_SESSION_MS = 6 * 60 * 60_000;
 const silent: Logger = {
   debug() {},
   info() {},
@@ -145,7 +147,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
       ws.send(Buffer.isBuffer(message) ? message : JSON.stringify(message));
     };
     const authTimer = setTimeout(() => ws.close(1008, "Authentication timed out"), 5000);
-    const lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
+    let lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
     const rate = setInterval(() => {
       controls = 0;
       pcmBytes = 0;
@@ -165,9 +167,17 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
       alive = true;
     });
     ws.on("error", () => ws.terminate());
+    let attached: DeviceSession | null = null;
+    const detach = () => {
+      if (!attached || !device) return;
+      attached.detachPeer(device);
+      device.detach();
+      attached = null;
+    };
     ws.on("close", () => {
       closed = true;
       clients.delete(ws);
+      detach();
       if (grant && ownsSession) active.delete(grant.identity);
       clearTimeout(authTimer);
       clearTimeout(lifetime);
@@ -205,7 +215,9 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
           });
           session = new DeviceSession(
             { id, host: "virtual", port: 1, psk: null },
-            { ...shared, logger: silent },
+            // Browser sessions are quiet by default (visitors' words stay out of the
+            // venue log); COMPANION_WEB_DEBUG=1 traces them like a physical Owy.
+            { ...shared, logger: process.env.COMPANION_WEB_DEBUG === "1" ? shared.logger.child("web") : silent },
             {
               connectDevice: async (_spec, handlers) =>
                 (device = mirror.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),
@@ -242,7 +254,27 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
         }
         if (!initialized || !device) throw Error("Bridge is not ready");
         switch (m.type) {
+          case "attach": {
+            // This browser becomes a physical device's laptop audio (mic + speakers)
+            // for as long as the tab lives: the knob keeps trigger, face, captions.
+            if (typeof m.deviceId !== "string") throw Error("Invalid device");
+            const target = shared.sessions?.get(m.deviceId);
+            if (!target) throw Error("Unknown device");
+            if (target.hasPeer && attached !== target) throw Error("Device already has a browser attached");
+            detach();
+            target.attachPeer(device);
+            attached = target;
+            clearTimeout(lifetime);
+            lifetime = setTimeout(() => ws.close(1000, "Attached session ended"), ATTACHED_SESSION_MS);
+            break;
+          }
+          case "detach":
+            detach();
+            clearTimeout(lifetime);
+            lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
+            break;
           case "start":
+            if (attached) throw Error("Attached as laptop audio; the device starts the turns");
             if (++starts > 30) throw Error("Too many turns");
             await device.request();
             break;

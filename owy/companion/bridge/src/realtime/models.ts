@@ -5,9 +5,15 @@ import { createGateway, type Experimental_RealtimeModel, type Experimental_Realt
  * Provider selection for the realtime session.
  *
  * Spec format: `<provider>:<modelId>` —
- *   - `google:gemini-3.1-flash-live-preview` (default; needs GOOGLE_GENERATIVE_AI_API_KEY —
- *     the AI Gateway does not route Gemini Live).
- *   - `gateway:openai/gpt-realtime-2` (needs AI_GATEWAY_API_KEY; plan B provider).
+ *   - `gateway:<vendor>/<model>` (default `gateway:google/gemini-3.8-live`; needs
+ *     AI_GATEWAY_API_KEY): `google/gemini-3.8-live`, `google/gemini-3.8-live-extended-thinking`,
+ *     `openai/gpt-realtime-2`, `openai/gpt-realtime-2.1`, `openai/gpt-realtime-mini`.
+ *     Not `openai/gpt-live-1`: GPT-Live is a different (continuous, server-websocket)
+ *     protocol that this turn-based session does not speak. The gateway rejects
+ *     `turnDetection` and Gemini-native setup keys for Gemini models (see buildSessionConfig).
+ *   - `google:gemini-3.8-live` (needs GOOGLE_GENERATIVE_AI_API_KEY): same model straight
+ *     from Google, with VAD tuning, context compression and session resumption. Also
+ *     `gemini-3.8-live-extended-thinking`; `gemini-3.1-flash-live-preview` is legacy.
  *
  * Both providers expose the same `RealtimeModelV4` codec interface, which is
  * what `NodeRealtimeSession` drives over a plain WebSocket.
@@ -50,7 +56,9 @@ export function resolveRealtimeProvider(spec: string, options: ResolveModelOptio
   if (provider === "google") {
     const apiKey = options.googleApiKey ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
-      throw new Error("Falta GOOGLE_GENERATIVE_AI_API_KEY (Gemini Live no pasa por el AI Gateway).");
+      throw new Error(
+        "Falta GOOGLE_GENERATIVE_AI_API_KEY (o usá gateway:google/gemini-3.8-live con AI_GATEWAY_API_KEY)."
+      );
     }
     const google = createGoogle({ apiKey });
     return {

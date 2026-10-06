@@ -1,17 +1,20 @@
 import { VoiceAssistantEvent as E, type VoiceAssistantEventData, type VoiceAssistantRequest } from "esphome-client";
-import type { DeviceTransport } from "../device/transport";
+import type { AudioPeer, DeviceTransport } from "../device/transport";
 import type { DeviceHandlers } from "../device/esphome";
 import type { FaceState, ScreenCard } from "../realtime/tools";
 import type { WebGrant } from "./tickets";
 
 /** Same 16 kHz frames and pipeline events as ESPHome; only the wire changes. */
-export class BrowserDevice implements DeviceTransport {
+export class BrowserDevice implements DeviceTransport, AudioPeer {
   run = 0;
   private ready = false;
   private active = false;
   private accepted = false;
   private closed = false;
   private volume = 65;
+  /** Attached as another device's laptop audio: mic frames go to that device's turn. */
+  attachedTo: string | null = null;
+  private peerSink: ((pcm16k: Buffer) => void) | null = null;
   constructor(
     private handlers: DeviceHandlers,
     readonly grant: WebGrant,
@@ -35,10 +38,43 @@ export class BrowserDevice implements DeviceTransport {
   microphone(frame: Buffer) {
     if (frame.length !== 644) throw Error("Expected 20 ms PCM16 frame");
     if (frame.readUInt32LE(0) !== this.run || !this.active || !this.accepted) return;
-    this.handlers.onAudio({ data: frame.subarray(4), end: false });
+    if (this.peerSink) this.peerSink(frame.subarray(4));
+    else this.handlers.onAudio({ data: frame.subarray(4), end: false });
   }
   commit(run: number) {
+    // Mirrored turns are closed by the physical device's pipeline, not the browser.
+    if (this.peerSink) return;
     if (run === this.run && this.active && this.accepted) this.handlers.onAudio({ data: Buffer.alloc(0), end: true });
+  }
+
+  // ── AudioPeer: mirror a physical device's turn ─────────────────────────
+  attach(deviceId: string, sink: (pcm16k: Buffer) => void) {
+    this.attachedTo = deviceId;
+    this.peerSink = sink;
+    this.active = false;
+    this.accepted = false;
+    this.emit({ type: "attached", deviceId });
+  }
+  detach() {
+    const was = this.attachedTo;
+    this.attachedTo = null;
+    this.peerSink = null;
+    this.active = false;
+    this.accepted = false;
+    if (was) this.emit({ type: "detached", deviceId: was });
+  }
+  mirrorAccept() {
+    if (this.closed) return;
+    ++this.run;
+    this.active = true;
+    this.accepted = true;
+    this.ready = true;
+    this.emit({ type: "accepted" });
+  }
+  mirrorDecline() {
+    this.active = false;
+    this.accepted = false;
+    this.emit({ type: "declined" });
   }
   playbackReady(run: number) {
     if (run === this.run && this.active) this.ready = true;

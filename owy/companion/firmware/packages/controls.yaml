@@ -32,6 +32,30 @@ select:
                 id: show_face
                 state: !lambda return x;
 
+  # Audio routing, read by the bridge at the start of every turn. `laptop` =
+  # the machine running the bridge captures/plays through its own audio
+  # devices (a stage mic + the room PA) while this device keeps the trigger,
+  # the face and the captions. Persisted; the bridge falls back to
+  # COMPANION_MIC_SOURCE / COMPANION_AUDIO_OUTPUT when a board lacks them.
+  - platform: template
+    id: mic_source
+    name: Mic Source
+    options:
+      - dispositivo
+      - laptop
+    initial_option: dispositivo
+    optimistic: true
+    restore_value: true
+  - platform: template
+    id: audio_output
+    name: Audio Output
+    options:
+      - dispositivo
+      - laptop
+    initial_option: dispositivo
+    optimistic: true
+    restore_value: true
+
 switch:
   # Unlocked from the PIN page; auto-expires so a forgotten kiosk is never staff.
   - platform: template

@@ -3,7 +3,22 @@
 #
 # Expressions are driven by `show_face(state)`; the voice pipeline sets them
 # through `apply_face` (voice.yaml) and the bridge through the `face_state`
-# select (controls.yaml). companion_model.h is the only animated-geometry owner.
+# select (controls.yaml). companion_model.h is the only animated-geometry owner;
+# FaceRenderer scales its 466-space geometry by OWY_FACE_SCALE, so only the static
+# widgets below and the secondary pages need per-board numbers.
+
+# Geometry for the 466 px panel; a smaller board overrides these in its root.
+substitutions:
+  screen_px: "466"      # full-screen tap catchers; larger than the panel = page scrollbars
+  face_dots_y: "168"   # thinking dots row
+  face_badge_y: "174"  # mic capture / privacy badge
+  page_w: "340"        # card and QR caption labels
+  text_w: "360"        # free text body
+  keypad_w: "290"
+  keypad_h: "250"
+  settings_w: "330"
+  settings_h: "400"
+  qr_px: "250"          # public grid QR; ≥7 px per module keeps it scannable
 
 font:
   - file: "../../../public/fonts/organic-stencil.ttf"
@@ -23,6 +38,7 @@ font:
     bpp: 4
     glyphsets:
       - GF_Latin_Core
+    glyphs: ["·"]
   - file: "gfonts://Montserrat@700"
     id: font_40_bold
     size: 40
@@ -35,6 +51,12 @@ globals:
     type: std::string
     restore_value: false
     initial_value: '"offline"'
+  # A board may pin the current page through a voice turn (a mute unit keeps
+  # the reply readable while the follow-up mic is open). Off = classic behavior.
+  - id: page_hold
+    type: bool
+    restore_value: false
+    initial_value: "false"
   - id: pin_entry
     type: std::string
     restore_value: false
@@ -184,7 +206,7 @@ lvgl:
         - obj:
             id: think_dots
             align: CENTER
-            y: 168
+            y: ${face_dots_y}
             width: 70
             height: 14
             bg_opa: TRANSP
@@ -223,7 +245,7 @@ lvgl:
         - obj:
             id: capture_badge
             align: CENTER
-            y: 174
+            y: ${face_badge_y}
             width: 36
             height: 40
             bg_opa: TRANSP
@@ -270,8 +292,8 @@ lvgl:
         - obj:
             id: tap_area
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             pad_all: 0
@@ -321,7 +343,7 @@ lvgl:
             id: card_title
             align: CENTER
             y: -40
-            width: 340
+            width: ${page_w}
             long_mode: WRAP
             text_align: CENTER
             text: ""
@@ -331,7 +353,7 @@ lvgl:
             id: card_speaker
             align: CENTER
             y: 40
-            width: 340
+            width: ${page_w}
             long_mode: DOT
             text_align: CENTER
             text: ""
@@ -340,21 +362,22 @@ lvgl:
             id: card_where
             align: CENTER
             y: 90
-            width: 340
+            width: ${page_w}
             text_align: CENTER
             text: ""
             text_color: 0x0162C8
             text_font: font_28_bold
+        # Montserrat has no ✓ glyph; a word reads better on the round panel anyway.
         - label:
             align: BOTTOM_MID
             y: -60
-            text: "✓"
+            text: "¡listo!"
             text_color: 0xF5BB03
-            text_font: font_40_bold
+            text_font: font_28_bold
         - obj:
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             clickable: true
@@ -369,7 +392,7 @@ lvgl:
             id: grid_qr
             align: CENTER
             y: -20
-            size: 250
+            size: ${qr_px}
             light_color: 0xFBF5E7
             dark_color: 0x000000
             text: "https://owu.uy/conf"
@@ -377,14 +400,14 @@ lvgl:
             id: qr_caption
             align: BOTTOM_MID
             y: -56
-            width: 340
+            width: ${page_w}
             text_align: CENTER
             text: "La grilla, en tu celu"
             text_color: 0xF5BB03
         - obj:
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             clickable: true
@@ -398,7 +421,7 @@ lvgl:
         - label:
             id: text_body
             align: CENTER
-            width: 360
+            width: ${text_w}
             long_mode: WRAP
             text_align: CENTER
             text: ""
@@ -406,8 +429,8 @@ lvgl:
             text_font: font_28_bold
         - obj:
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             clickable: true
@@ -434,8 +457,8 @@ lvgl:
             id: pin_keypad
             align: CENTER
             y: 35
-            width: 290
-            height: 250
+            width: ${keypad_w}
+            height: ${keypad_h}
             bg_color: 0x000000
             border_width: 0
             pad_all: 4
@@ -549,8 +572,8 @@ lvgl:
       widgets:
         - obj:
             align: CENTER
-            width: 330
-            height: 400
+            width: ${settings_w}
+            height: ${settings_h}
             bg_opa: TRANSP
             border_width: 0
             pad_all: 0
@@ -755,7 +778,7 @@ script:
           id(current_face) = state;
       - if:
           condition:
-            lambda: return state == "listening" || state == "thinking" || state == "speaking";
+            lambda: return (state == "listening" || state == "thinking" || state == "speaking") && !id(page_hold);
           then:
             - lvgl.page.show: face_page
       - lvgl.widget.hide: think_dots

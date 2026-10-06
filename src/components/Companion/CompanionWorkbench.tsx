@@ -37,6 +37,7 @@ import { Slider } from "components/shared/ui/slider";
 import { Switch } from "components/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
 
+import AudioRoutingCard from "./AudioRoutingCard";
 import LiveVoicePanel, { LevelMeter } from "./LiveVoicePanel";
 import type { DeviceCommand, VoiceVisual, WebVoice } from "./web-voice";
 
@@ -182,6 +183,14 @@ function SwitchRow({
 
 export default function CompanionWorkbench() {
   const worker = useRef<Worker | null>(null);
+  const [attachDevices, setAttachDevices] = useState<string[]>([]);
+  const onAttachDevices = useCallback(
+    (ids: string[]) =>
+      setAttachDevices((current) =>
+        current.length === ids.length && current.every((v, i) => v === ids[i]) ? current : ids
+      ),
+    []
+  );
   const panel = useRef<HTMLCanvasElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const audio = useRef<AudioContext | null>(null);
@@ -767,25 +776,29 @@ export default function CompanionWorkbench() {
           </CardContent>
         </Card>
 
-        <LiveVoicePanel
-          deviceSettings={state?.settings}
-          disabled={!ready || mode === "replay"}
-          unavailable={
-            state?.settings.privacy
-              ? "Apagá la privacidad del micrófono en los ajustes del dispositivo antes de hablar."
-              : state?.powered === false
-                ? "Encendé el dispositivo virtual antes de hablar."
-                : state && ["settling", "collecting"].includes(state.calibration)
-                  ? "Terminá o cancelá la calibración antes de hablar."
-                  : undefined
-          }
-          onActive={onLive}
-          onClient={onLiveClient}
-          onCue={onLiveCue}
-          onDevice={onLiveDevice}
-          onSetting={onLiveSetting}
-          onVisual={onLiveVisual}
-        />
+        <div className="flex flex-col gap-6">
+          <LiveVoicePanel
+            attachDevices={attachDevices}
+            deviceSettings={state?.settings}
+            disabled={!ready || mode === "replay"}
+            unavailable={
+              state?.settings.privacy
+                ? "Apagá la privacidad del micrófono en los ajustes del dispositivo antes de hablar."
+                : state?.powered === false
+                  ? "Encendé el dispositivo virtual antes de hablar."
+                  : state && ["settling", "collecting"].includes(state.calibration)
+                    ? "Terminá o cancelá la calibración antes de hablar."
+                    : undefined
+            }
+            onActive={onLive}
+            onClient={onLiveClient}
+            onCue={onLiveCue}
+            onDevice={onLiveDevice}
+            onSetting={onLiveSetting}
+            onVisual={onLiveVisual}
+          />
+          <AudioRoutingCard onDevices={onAttachDevices} />
+        </div>
       </div>
 
       <Card>

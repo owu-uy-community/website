@@ -58,8 +58,13 @@ OWY_STAFF_SLACK_IDS=                  # member IDs de Slack (U0123ABC,U0456DEF)
 OWY_STAFF_TELEGRAM_IDS=               # user IDs numéricos de Telegram
 
 # --- Canal HTTP de eve (TUI remota / curl) — cuenta como staff ---
+# También protege el canal del Owy físico (/companion/*); el bridge las manda como
+# COMPANION_EVE_BASIC_USER/PASSWORD.
 ROUTE_AUTH_BASIC_USER=
 ROUTE_AUTH_BASIC_PASSWORD=
+
+# --- Owy físico ---
+COMPANION_PROPOSAL_COOLDOWN_S=60      # segundos entre propuestas de un mismo dispositivo (no staff)
 ```
 
 ### Cómo se autentica Owy
@@ -95,7 +100,15 @@ pnpm dev:realtime       # (otra terminal) para ver los cambios en vivo en las pa
 cd owy
 pnpm install
 OWU_API_URL=http://localhost:3000 OWY_API_KEY=owy... pnpm dev   # TUI de eve
+pnpm exec eve dev --no-ui --port 2000                             # sin TUI (p. ej. como cerebro del Owy físico)
+pnpm exec eve invoke --url http://127.0.0.1:2000 "qué es OWU?"    # un turno desde la terminal
 ```
+
+eve está en **0.63** (`eve build` limpio; evals con `t.judge(...)` y el evaluador
+`typesafe-ai/jev` del gateway — los graders `autoevals` ya no existen). Al subir
+de versión, revisar el CHANGELOG del paquete: los saltos suelen traer breaking
+changes en tools de fondo (`defineWorkflowTool`), entrypoints `eve/tools/*` y
+evals.
 
 En la TUI local sos `local-dev` → contás como staff: podés probar todo (grilla, OBS, countdown, stats). Smoke test sugerido:
 
@@ -167,10 +180,17 @@ Mientras tanto Owy responde igual a demanda en Slack y Telegram.
 
 ## Owy físico (companion)
 
-Hay una versión física de Owy para la mesa del mercado de ideas: una Waveshare
-ESP32-S3-Touch-AMOLED-1.75C con cara animada que escucha y habla, y que usa
-**estas mismas tools** (importadas tal cual, con un shim de contexto) a través de
-un bridge Node con Gemini Live. Firmware ESPHome + bridge + runbook en
+Hay dos Owys físicos para la mesa del mercado de ideas (Waveshare AMOLED 1.75C y
+Knob 1.8B) con cara animada que escuchan y hablan a través de un bridge Node con
+un modelo realtime (Gemini 3.8 Live vía AI Gateway). **El cerebro es este agente**:
+el bridge manda cada turno al canal `agent/channels/companion.ts` (una sesión
+durable de eve por dispositivo) y el modelo de voz sólo pronuncia la respuesta.
+`agent/instructions/companion.ts` agrega el "modo voz" a esos turnos y
+`agent/tools/companion.ts` monta `propose_talk` (mercado de ideas) sólo ahí; el
+turno llega con `authenticator: companion | companion-staff` para el gating de
+staff. Rutas: `POST /companion/:deviceId/turns`, `GET /companion/sessions/:id/stream`,
+`POST /companion/:deviceId/{cancel,reset}`, protegidas con `ROUTE_AUTH_BASIC_*`
+(loopback libre en `eve dev`). Firmware ESPHome + bridge + runbook en
 [`companion/README.md`](companion/README.md); scripts `pnpm companion:*`.
 
 ## Mantener el conocimiento

@@ -1,0 +1,97 @@
+# Owy Companion — ESPHome firmware for the Waveshare ESP32-S3-Knob-Touch-LCD-1.8B
+#
+# Same firmware as owy-companion.yaml (AMOLED 1.75C) with the Knob's hardware
+# package: 360 px ST77916 LCD, CST816 touch, PDM mic, PCM5100A line-out (no
+# speaker on this board), rotary encoder → volume. Served by companion/bridge.
+#
+#   esphome compile owy-knob.yaml && esphome upload owy-knob.yaml --device /dev/cu.usbmodemXXXX
+#   esphome run owy-knob.yaml                                      # OTA afterwards (owy-knob.local)
+#   esphome logs owy-knob.yaml --device /dev/cu.usbmodemXXXX
+#
+# The USB-C reaches the S3 only in one plug orientation (the other reaches the
+# secondary ESP32 as /dev/cu.usbserial*). Requires ESPHome >= 2026.8.
+
+substitutions:
+  name: owy-knob
+  friendly_name: Owy Knob
+  board_variant: knob18b
+
+  # Mic and speaker run at the rate voice_assistant streams in both directions.
+  audio_sample_rate: "16000"
+
+  staff_pin: !secret staff_pin
+
+  # 360 px round panel: animated face geometry scales in C++ (build flag below);
+  # these are the static widgets and secondary pages, ≈ 466-space × 0.7725.
+  screen_px: "360"
+  screenshot_url: "http://192.168.1.225:8787/shot"   # laptop running knob-shots.py
+  face_dots_y: "130"
+  face_badge_y: "134"
+  page_w: "262"
+  text_w: "278"
+  keypad_w: "224"
+  keypad_h: "194"
+  settings_w: "255"
+  settings_h: "300"
+  qr_px: "180"
+  panel_w: "250"
+  quick_h: "176"
+  control_w: "224"
+  half_w: "104"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  comment: Owy físico (${board_variant}) — companion/bridge
+  min_version: 2026.8.0
+  project:
+    name: owu.companion
+    version: "2026.09.19-companion-knob"
+  includes:
+    # System-style includes are emitted before generated global declarations;
+    # file-style entries also copy these headers into the build's src directory.
+    - <companion_model.h>
+    - <companion_lvgl.h>
+    - <companion_sound.h>
+    - <knob_ring.h>
+    - companion_model.h
+    - companion_motion.h
+    - companion_lvgl.h
+    - companion_sound.h
+    - knob_shot.h
+    - knob_ring.h
+  platformio_options:
+    build_flags:
+      # 360 / 466: FaceRenderer::box() and the touch-follow center scale by this.
+      - -DOWY_FACE_SCALE=0.7725f
+      # `Captura de pantalla` button: LVGL renders the active screen into PSRAM and
+      # the board POSTs the raw RGB565 to ${screenshot_url} (companion/scripts/knob-shots.py).
+      - -DLV_USE_SNAPSHOT=1
+  # Keep PlatformIO build output out of the eve app root: `eve dev` snapshots
+  # everything under owy/ except .eve/ (which is gitignored).
+  build_path: ../../.eve/esphome-build/${name}
+  on_boot:
+    - priority: -100
+      then:
+        - lvgl.page.show: face_page
+        - script.execute:
+            id: show_face
+            state: offline
+
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [i2s_audio, voice_assistant]
+
+packages:
+  mcu: !include packages/mcu.yaml
+  audio: !include packages/audio.yaml
+  voice: !include packages/voice.yaml
+  face: !include packages/face.yaml
+  controls: !include packages/controls.yaml
+  connectivity: !include packages/connectivity.yaml
+  companion: !include packages/companion.yaml
+  # Last on purpose: this package appends LVGL pages, and ESPHome boots into the
+  # first page of the merged list — that must stay face.yaml's face_page.
+  hardware: !include packages/boards/knob18.yaml

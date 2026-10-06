@@ -1,0 +1,677 @@
+# Waveshare ESP32-S3-Knob-Touch-LCD-1.8 / 1.8B (black case) hardware.
+# Pins from the vendor schematic + ESP-IDF demos (2026-09). Shared ids the rest
+# of the firmware binds to: bus_a · amoled · touch · screen_light · mic ·
+# va_speaker · power_status. No IMU, no PMIC, no BOOT input on this board.
+#
+# Dual-MCU board: the USB-C reaches EITHER the ESP32-S3 (native USB-Serial/JTAG,
+# /dev/cu.usbmodem*) OR the secondary ESP32-U4WDH (CH340 UART, /dev/cu.usbserial*)
+# depending on plug orientation. Flip the plug until the usbmodem port appears.
+
+# ponytail: measured on hardware — speech at arm's length ≈ 100–250 RMS raw;
+# ×8 puts normal speech around 50–70 % of the ring. Tune here, not in C++.
+substitutions:
+  mic_vu_gain: "8.0f"
+
+i2c:
+  - id: bus_a
+    sda: GPIO11
+    scl: GPIO12
+    frequency: 400kHz
+    # Expected: 0x15 CST816 touch, 0x5A DRV2605 haptics (unused).
+    scan: true
+
+# ── 1.8" 360x360 IPS LCD (ST77916 over QSPI) + CST816 capacitive touch ──────
+
+spi:
+  - id: display_qspi
+    type: quad
+    clk_pin: GPIO13
+    data_pins:
+      - GPIO15
+      - GPIO16
+      - GPIO17
+      - GPIO18
+
+display:
+  - platform: mipi_spi
+    # Shared id: face.yaml binds LVGL to it. This panel is an LCD, not AMOLED.
+    id: amoled
+    # ESPHome's ST77916 model; its init table is byte-identical to Waveshare's
+    # demo for this panel. Pins differ from the VoCat, so they are set here.
+    model: ESP-VOCAT
+    spi_id: display_qspi
+    cs_pin: GPIO14
+    reset_pin: GPIO21
+    data_rate: 40MHz
+    # LVGL owns the framebuffer.
+    update_interval: never
+    auto_clear_enabled: false
+
+touchscreen:
+  - platform: cst816
+    id: touch
+    i2c_id: bus_a
+    display: amoled
+    interrupt_pin: GPIO9
+    reset_pin: GPIO10
+
+# Backlight: GPIO47 → N-MOSFET → LED string. PWM above audio range.
+output:
+  - platform: ledc
+    id: backlight_pwm
+    pin: GPIO47
+    frequency: 20000Hz
+
+light:
+  - platform: monochromatic
+    id: screen_light
+    name: Pantalla
+    output: backlight_pwm
+    default_transition_length: 0s
+    restore_mode: ALWAYS_ON
+    initial_state:
+      brightness: 80%
+
+# ── Audio: PDM MEMS mic in (own I2S port 0); PCM5100A DAC → 3.5 mm jack out ─
+#
+# Two buses because the mic is PDM (needs I2S0) and the DAC is standard I2S on
+# other pins. The shared voice scripts still serialize mic/speaker; that is
+# merely unnecessary here, not harmful. There is NO speaker or amp on this
+# board: playback goes to the line-out jack (unused on the mute unit).
+# GPIO0 selects which MCU drives the DAC through a CH445P mux; its 10K pull-up
+# already selects the S3, so it is left untouched (it is also the S3's BOOT strap).
+# The DAC's soft-mute pin (XSMT) is wired to the secondary ESP32 (IO32), i.e. the
+# factory firmware over there must keep it high for anything to be audible.
+
+i2s_audio:
+  - id: i2s_mic_bus
+    # PDM mode: the "LRCLK" pin is the PDM clock.
+    i2s_lrclk_pin:
+      number: GPIO45
+      ignore_strapping_warning: true
+  - id: i2s_dac_bus
+    i2s_lrclk_pin: GPIO40
+    i2s_bclk_pin: GPIO39
+
+microphone:
+  - platform: i2s_audio
+    id: mic
+    i2s_audio_id: i2s_mic_bus
+    adc_type: external
+    i2s_din_pin:
+      number: GPIO46
+      ignore_strapping_warning: true
+    sample_rate: ${audio_sample_rate}
+    bits_per_sample: 16bit
+    # L/R pin is grounded on the MSM261D4030 → left slot.
+    channel: left
+    pdm: true
+    # The MEMS mic sits ~1160 LSB above zero; strip it before the wake word / VAD.
+    correct_dc_offset: true
+    # ponytail: DSR 16 keeps the PDM clock at 16 kHz × 128 = 2.048 MHz; DSR 8
+    # (1.024 MHz) sits at the mic's low-power edge. Flip to 8 if capture is poor.
+    pdm_dsr: 16
+    on_data:
+      # Raw PDM levels are ~8× below the AMOLED's amplified ES7210: scale the
+      # envelope that drives the mouth and the listening ring (see mic_vu_gain).
+      - lambda: id(companion).audio(x.data(), x.size(), millis(), ${mic_vu_gain});
+
+speaker:
+  - platform: i2s_audio
+    id: va_speaker
+    i2s_audio_id: i2s_dac_bus
+    dac_type: external
+    i2s_dout_pin: GPIO41
+    sample_rate: ${audio_sample_rate}
+    bits_per_sample: 16bit
+    # No audio_dac component: volume is applied in software. Mono is duplicated
+    # to both DAC channels by the driver.
+    channel: mono
+    buffer_duration: 100ms
+
+# ── The knob: a bidirectional detent SWITCH, not a quadrature encoder ─────────
+#
+# Waveshare's own driver (bidi_switch_knob.c) treats the two lines as two
+# momentary contacts: one detent clockwise pulses A (GPIO8), one detent
+# anticlockwise pulses B (GPIO7). A quadrature decoder never sees a full cycle
+# here, so the knob is read as two debounced buttons. Turning adjusts screen
+# brightness (this unit is mute), shows a ring overlay and ticks the haptics.
+
+binary_sensor:
+  - platform: gpio
+    id: knob_cw
+    internal: true
+    pin:
+      number: GPIO8
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 5ms
+      - delayed_off: 10ms
+    on_press:
+      - script.execute:
+          id: knob_turn
+          delta: 1
+  - platform: gpio
+    id: knob_ccw
+    internal: true
+    pin:
+      number: GPIO7
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    filters:
+      - delayed_on: 5ms
+      - delayed_off: 10ms
+    on_press:
+      - script.execute:
+          id: knob_turn
+          delta: -1
+
+script:
+  - id: knob_turn
+    mode: queued
+    parameters:
+      delta: int
+    then:
+      # The switch lines can read "pressed" while the inputs settle at boot.
+      - if:
+          condition:
+            lambda: return millis() < 3000;
+          then:
+            - script.stop: knob_turn
+      - script.execute: wake_display
+      # On the quick-controls page the knob scrolls the list instead.
+      - if:
+          condition:
+            lambda: return lv_display_get_screen_active(id(ui).get_disp()) == id(quick_page)->obj;
+          then:
+            - lambda: lv_obj_scroll_by(id(quick_list), 0, -62 * delta, LV_ANIM_ON);
+            - script.execute:
+                id: haptic
+                effect: 24
+            - script.stop: knob_turn
+      - number.set:
+          id: screen_brightness
+          value: !lambda |-
+            const float v = id(screen_brightness).state + 5.0f * delta;
+            return v < 10 ? 10 : v > 100 ? 100 : v;
+      - script.execute: show_knob_overlay
+      - script.execute:
+          id: haptic
+          effect: !lambda |-
+            const float v = id(screen_brightness).state;
+            return (v <= 10 || v >= 100) ? 47 : 24;  // buzz at the ends, tick per detent
+
+  # Ring around the rim + value at the top while the knob turns; auto-hides.
+  - id: show_knob_overlay
+    mode: restart
+    then:
+      - lvgl.arc.update:
+          id: knob_arc
+          value: !lambda return int(id(screen_brightness).state);
+      - lvgl.label.update:
+          id: knob_label
+          text: !lambda |-
+            char text[24];
+            snprintf(text, sizeof(text), "brillo %d%%", int(id(screen_brightness).state));
+            return std::string(text);
+      - lvgl.widget.show: knob_arc
+      - lvgl.widget.show: knob_label
+      - delay: 1200ms
+      - lvgl.widget.hide: knob_arc
+      - lvgl.widget.hide: knob_label
+
+  # DRV2605 playback: waveform slot 1 = effect, slot 2 = end, GO. Coin ERM in
+  # open loop: single ticks are barely perceptible, so the hooks use buzzes.
+  - id: haptic
+    mode: queued
+    parameters:
+      effect: int
+    then:
+      - lambda: |-
+          if (!id(haptics_ok)) return;
+          // Two cues within 150 ms blur into one long rumble: keep the first.
+          static uint32_t last = 0;
+          const uint32_t now = millis();
+          if (last && now - last < 150) return;
+          last = now;
+          id(haptics).write_byte(0x04, uint8_t(effect));
+          id(haptics).write_byte(0x05, 0);
+          id(haptics).write_byte(0x0C, 1);
+
+  - id: haptic_init
+    mode: single
+    then:
+        - lambda: |-
+            uint8_t status = 0;
+            if (!id(haptics).read_byte(0x00, &status)) {
+              ESP_LOGW("owy.haptics", "DRV2605 no responde en 0x5A; sin vibración");
+              return;
+            }
+            auto *drv = id(haptics);  // ESPHome rewrites `id(x).` → `x->`; keep the pointer explicit
+            drv->write_byte(0x01, 0x00);  // MODE: out of standby, internal (I2C) trigger
+            drv->write_byte(0x02, 0x00);  // no real-time playback
+            drv->write_byte(0x0D, 0x00);  // overdrive / sustain / brake offsets
+            drv->write_byte(0x0E, 0x00);
+            drv->write_byte(0x0F, 0x00);
+            drv->write_byte(0x10, 0x00);
+            drv->write_byte(0x13, 0x64);  // audio-to-vibe max (vendor default)
+            uint8_t reg = 0;
+            drv->read_byte(0x1A, &reg);
+            drv->write_byte(0x1A, reg & 0x7F);  // FEEDBACK: ERM
+            drv->read_byte(0x1D, &reg);
+            drv->write_byte(0x1D, reg | 0x20);  // CONTROL3: ERM open loop
+            drv->write_byte(0x03, 5);           // waveform library 5
+            id(haptics_ok) = true;
+            ESP_LOGI("owy.haptics", "DRV2605 listo (status 0x%02X, chip id %u)", status, status >> 5);
+
+# Tuning without reflashing: pick an effect id (DRV2605 ROM library, 1–123),
+# press the test button, feel. Then bake the winners into the hooks below.
+
+lvgl:
+  pages:
+    - id: !extend face_page
+      widgets:
+        - arc:
+            id: knob_arc
+            align: CENTER
+            width: 348
+            height: 348
+            min_value: 10
+            max_value: 100
+            value: 80
+            start_angle: 0
+            end_angle: 360
+            rotation: 270
+            arc_width: 6
+            arc_color: 0x1F1F1F
+            adjustable: false
+            clickable: false
+            hidden: true
+            indicator:
+              arc_color: 0xF5BB03
+              arc_width: 6
+            knob:
+              bg_opa: TRANSP
+              pad_all: 0
+        - label:
+            id: knob_label
+            align: TOP_MID
+            y: 26
+            text: "brillo 80%"
+            text_color: 0xF5BB03
+            clickable: false
+            hidden: true
+        # What a visitor should do; only while idle and connected.
+        - label:
+            id: idle_hint
+            align: BOTTOM_MID
+            y: -34
+            text: "tocame y hablame"
+            text_color: 0x8A8A8A
+            clickable: false
+            hidden: true
+
+# ── Answer view (this unit has no speaker) ─────────────────────────────────────
+#
+# The face stays up while there is no answer (listening/thinking happen on it).
+# The first caption of a reply brings this page up and pins it (`page_hold`),
+# so it survives the follow-up window; it is released when the conversation
+# ends and the face returns 12 s later. Mini eyes, what Owy heard, the reply
+# (bottom-anchored so long answers keep their newest lines) and one rim ring:
+# breathing yellow while the (silent) reply plays, blue following the mic when
+# the follow-up mic is open, dim yellow while thinking. Tap = talk again.
+    - id: convo_page
+      bg_color: 0x000000
+      widgets:
+        - obj:
+            id: convo_eye_l
+            align: TOP_MID
+            x: -22
+            y: 30
+            width: 26
+            height: 30
+            radius: 11
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            clickable: false
+        - obj:
+            id: convo_eye_r
+            align: TOP_MID
+            x: 22
+            y: 30
+            width: 26
+            height: 30
+            radius: 11
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            clickable: false
+        # What Owy understood (STT_END text): mis-hearings become visible on a mute unit.
+        - label:
+            id: caption_heard
+            align: TOP_MID
+            y: 78
+            width: 262
+            long_mode: DOT
+            text_align: CENTER
+            text: ""
+            text_color: 0x8A8A8A
+            clickable: false
+        - obj:
+            id: caption_box
+            align: CENTER
+            y: 34
+            width: 262
+            height: 196
+            bg_opa: TRANSP
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            clickable: false
+            widgets:
+              - label:
+                  id: caption_body
+                  align: BOTTOM_MID
+                  width: 262
+                  long_mode: WRAP
+                  text_align: CENTER
+                  text: ""
+                  text_color: 0xFBF5E7
+        - obj:
+            align: CENTER
+            width: ${screen_px}
+            height: ${screen_px}
+            bg_opa: TRANSP
+            border_width: 0
+            clickable: true
+            on_click:
+              - script.execute: tap_to_talk
+
+voice_assistant:
+  on_stt_end:
+    - lvgl.label.update:
+        id: caption_heard
+        text: !lambda |-
+          if (x.empty()) return std::string("");
+          return std::string("« ") + x + " »";
+
+api:
+  actions:
+    - action: show_caption
+      variables:
+        body: string
+      then:
+        - lvgl.label.update:
+            id: caption_body
+            text: !lambda return body;
+        - lambda: id(page_hold) = true;
+        - script.stop: return_to_face_later
+        - if:
+            condition:
+              lambda: return lv_display_get_screen_active(id(ui).get_disp()) != id(convo_page)->obj;
+            then:
+              - script.execute: wake_display
+              - lvgl.page.show: convo_page
+
+# ── Screenshots over Wi-Fi: review the real pixels instead of guessing ───────
+# `button.captura_de_pantalla` renders the active LVGL screen (LV_USE_SNAPSHOT,
+# see the root build_flags) and streams raw little-endian RGB565 to
+# ${screenshot_url} (knob_shot.h); `owy/companion/scripts/knob-shots.py` → PNGs.
+
+# Only here so ESP-IDF's esp_http_client is compiled in for knob_shot.h.
+http_request:
+  id: shot_http
+  verify_ssl: false
+
+# ── DRV2605 haptics (vendor recipe: ERM open loop, library 5, I2C trigger) ─────
+
+i2c_device:
+  - id: haptics
+    i2c_id: bus_a
+    address: 0x5A
+
+globals:
+  - id: haptics_ok
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: ring_face
+    type: owy::Ring
+    restore_value: false
+  - id: ring_convo
+    type: owy::Ring
+    restore_value: false
+
+esphome:
+  on_boot:
+    - priority: 600
+      then:
+        - script.execute: haptic_init
+    # After LVGL built the pages: 24 dots on a 166 px circle, hidden until used.
+    - priority: -100
+      then:
+        - lambda: |-
+            id(ring_face).create(id(face_page)->obj, 166, 12);
+            id(ring_convo).create(id(convo_page)->obj, 166, 12);
+
+interval:
+  - interval: 33ms
+    then:
+      - lambda: |-
+          // ── Rim halo: colour/opacity encode the voice state ─────────────
+          // Quantized (12 steps) and deduplicated in Ring::set, so a stable
+          // level costs nothing and a change recolours 24 small dots only.
+          static float level = 0;
+          const uint32_t now = millis();
+          auto *screen = lv_display_get_screen_active(id(ui).get_disp());
+          owy::Ring *ring = screen == id(face_page)->obj ? &id(ring_face) :
+                            screen == id(convo_page)->obj ? &id(ring_convo) : nullptr;
+          if (ring != &id(ring_face)) id(ring_face).hide();
+          if (ring != &id(ring_convo)) id(ring_convo).hide();
+          const bool running = id(va).is_running() && !id(mic_privacy).state;
+          const int phase = running ? id(va_phase) : 0;   // 2 listening · 3 thinking · 4 speaking
+          if (ring && phase == 2 && id(mic).is_running()) {
+            const float mic = id(companion).mic_level(now);
+            level = mic > level ? level + (mic - level) * 0.45f : level * 0.92f;
+            const int step = int(level * 11.f + 0.5f);                        // 0..11
+            ring->set(lv_color_mix(lv_color_hex(0x5FB0FF), lv_color_hex(0x0B3D8C), uint8_t(step * 23)),
+                      uint8_t(90 + step * 15));                                // soft navy → hard bright blue
+          } else if (ring && phase == 3) {
+            level = 0;
+            ring->set(lv_color_hex(0xF5BB03), 110);                            // dim steady yellow
+          } else if (ring && phase == 4) {
+            level = 0;
+            const float breath = 0.5f + 0.5f * std::sin(float(now % 2600) / 2600.f * 6.2831853f);
+            ring->set(lv_color_hex(0xF5BB03), uint8_t(70 + int(breath * 11.f + 0.5f) * 16));
+          } else {
+            level = 0;
+            if (ring) ring->hide();
+          }
+          // ── Mini eyes on the answer view: an irregular blink ─────────────
+          static uint32_t blink_at = 0, blink_gap = 3200, seed = 0x4F5759; static bool shut = false;
+          if (screen != id(convo_page)->obj) return;
+          if (blink_at == 0) blink_at = now;
+          const uint32_t age = now - blink_at;
+          const bool closing = age >= blink_gap && age < blink_gap + 120;
+          if (closing != shut) {
+            shut = closing;
+            lv_obj_set_height(id(convo_eye_l), shut ? 6 : 30);
+            lv_obj_set_height(id(convo_eye_r), shut ? 6 : 30);
+          }
+          if (age >= blink_gap + 120) {
+            seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+            blink_at = now; blink_gap = 2800 + seed % 2600;
+          }
+  - interval: 250ms
+    then:
+      - lambda: |-
+          // Idle hint: connected, nothing in flight, on the face.
+          const bool idle = id(va_phase) == 1 && !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) &&
+              !id(mic_privacy).state && !id(ui).is_paused() &&
+              lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj;
+          const char *text = "tocame y hablame";
+          if (strcmp(lv_label_get_text(id(idle_hint)), text) != 0) lv_label_set_text(id(idle_hint), text);
+          const bool hidden = lv_obj_has_flag(id(idle_hint), LV_OBJ_FLAG_HIDDEN);
+          if (idle && hidden) lv_obj_remove_flag(id(idle_hint), LV_OBJ_FLAG_HIDDEN);
+          else if (!idle && !hidden) lv_obj_add_flag(id(idle_hint), LV_OBJ_FLAG_HIDDEN);
+  # A driver that missed its init (bus busy at boot) gets another chance.
+  - interval: 10s
+    then:
+      - if:
+          condition:
+            lambda: return !id(haptics_ok);
+          then:
+            - script.execute: haptic_init
+
+number:
+  - platform: template
+    id: haptic_test_effect
+    name: Efecto háptico de prueba
+    entity_category: diagnostic
+    min_value: 1
+    max_value: 123
+    step: 1
+    initial_value: 47
+    optimistic: true
+
+button:
+  - platform: template
+    name: Vibración de prueba
+    entity_category: diagnostic
+    on_press:
+      - script.execute:
+          id: haptic
+          effect: !lambda return int(id(haptic_test_effect).state);
+
+# Haptic feedback rides on the shared diagnostics sensors: no shared file knows
+# about the motor. Gestures come from the face classifier, states from voice.yaml.
+  - platform: template
+    name: Captura de pantalla
+    entity_category: diagnostic
+    on_press:
+      - lambda: owy::post_snapshot("${screenshot_url}");
+
+text_sensor:
+  # DRV2605 STATUS (0x00): id[7:5], diag_result[3], over_temp[1], oc_detect[0].
+  - platform: template
+    name: Vibración
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      uint8_t status = 0;
+      if (!id(haptics).read_byte(0x00, &status)) return {"DRV2605 sin respuesta"};
+      char text[64];
+      snprintf(text, sizeof(text), "%s · chip %u%s%s", id(haptics_ok) ? "listo" : "sin init", status >> 5,
+               (status & 0x02) ? " · SOBRETEMPERATURA" : "", (status & 0x01) ? " · sobrecorriente" : "");
+      return std::string(text);
+  - id: !extend last_gesture
+    on_value:
+      - lambda: |-
+          // Published once per classified contact (update_interval: never).
+          int effect = 0;
+          // A tap that opens the mic is confirmed by the listening cue that
+          // follows; only a tap that cancels something gets its own buzz.
+          if (x == "tap") effect = id(va).is_running() ? 47 : 0;
+          else if (x == "pet") effect = 52;                   // pulsing strong 1 100%
+          else if (x == "hold" || x == "up") effect = 12;     // triple click 100%
+          else if (x == "left" || x == "right") effect = 47;  // single clicks are too subtle here
+          if (effect) id(haptic).execute(effect);
+  - id: !extend audio_state
+    on_value:
+      # Template text sensors publish every 250 ms even when unchanged: react
+      # to transitions only, or the motor buzzes for the whole state.
+      - lambda: |-
+          static std::string previous;
+          if (x == previous) return;
+          const std::string before = previous;
+          previous = x;
+          int effect = 0;
+          // The motor shares the enclosure with the mic: cue while the mic is
+          // still closed (`preparing` precedes capture by ~250 ms) and never
+          // right before the wake word re-arms (that buzz read as "Okay Nabu").
+          if (x == "preparing") effect = 10;                        // double click: "te escucho"
+          else if (x == "speaking") effect = 14;                    // strong buzz: the reply is on screen
+          else if (x == "error") effect = 15;                       // 750 ms alert
+          (void) before;
+          if (effect) id(haptic).execute(effect);
+          // Conversation lifecycle on the mute unit: a fresh conversation
+          // clears the previous exchange; when it ends, the face returns
+          // after the usual 12 s so the last reply can still be read.
+          static bool in_conversation = false;
+          const bool active = x == "listening" || x == "follow_up" || x == "thinking" || x == "speaking" ||
+                              x == "preparing" || x == "draining";
+          if (active && !in_conversation) {
+            in_conversation = true;
+            lv_label_set_text(id(caption_body), "");
+            lv_label_set_text(id(caption_heard), "");
+          }
+          // First mic of a conversation: say so; on a follow-up keep the question readable (the halo shows the mic).
+          if (x == "listening" && lv_label_get_text(id(caption_heard))[0] == 0) lv_label_set_text(id(caption_heard), "escuchando…");
+          if (!active && in_conversation && (x == "idle" || x == "wake_word" || x == "error" || x == "offline")) {
+            in_conversation = false;
+            id(page_hold) = false;
+            if (lv_display_get_screen_active(id(ui).get_disp()) == id(convo_page)->obj) id(return_to_face_later).execute();
+          }
+  - id: !extend interface_page
+    on_value:
+      - lambda: |-
+          static std::string previous;
+          if (x == previous) return;
+          previous = x;
+          if (x == "card") id(haptic).execute(52);   // a proposal landed on the grid
+
+  - platform: template
+    id: power_status
+    name: Power Status
+    update_interval: 5s
+    lambda: |-
+      const float v = id(bus_voltage).state;
+      if (std::isnan(v)) return {"energía: sin datos"};
+      char buf[32];
+      snprintf(buf, sizeof(buf), "%s%.2f V", v >= 4.6f ? "USB · " : "batería · ", v);
+      return std::string(buf);
+
+# Mute unit: sounds only add latency (the listening chime waits for the speaker
+# to play and drain before the mic opens). Preferences still restore if changed.
+switch:
+  - id: !extend listening_chime
+    restore_mode: RESTORE_DEFAULT_OFF
+  - id: !extend interaction_sounds
+    restore_mode: RESTORE_DEFAULT_OFF
+  - id: !extend mic_privacy
+    on_turn_on:
+      - script.execute:
+          id: haptic
+          effect: 12
+    on_turn_off:
+      - script.execute:
+          id: haptic
+          effect: 10
+  - id: !extend staff_mode
+    on_turn_on:
+      - script.execute:
+          id: haptic
+          effect: 52
+
+sensor:
+  # BATT_ADC = the 5 V rail through a 10K/10K divider (no fuel gauge on board).
+  - platform: adc
+    id: bus_voltage
+    name: Voltaje
+    entity_category: diagnostic
+    pin: GPIO1
+    attenuation: 12db
+    update_interval: 5s
+    accuracy_decimals: 2
+    unit_of_measurement: V
+    filters:
+      - multiply: 2.0
+

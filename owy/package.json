@@ -28,13 +28,14 @@
     "companion:interaction-test": "node companion/firmware/tests/companion.mjs"
   },
   "dependencies": {
-    "@ai-sdk/google": "^4.0.63",
+    "@ai-sdk/google": "^4.0.76",
     "@orpc/client": "2.0.0-beta.42",
-    "ai": "^7.0.66",
+    "@orpc/server": "2.0.0-beta.42",
+    "ai": "^7.0.107",
     "esphome-client": "2.0.0",
-    "eve": "^0.38.3",
+    "eve": "^0.63.0",
     "ws": "^8.21.3",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "24.x",

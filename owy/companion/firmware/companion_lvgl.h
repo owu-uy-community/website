@@ -5,6 +5,7 @@
 namespace owy {
 // Tiny integer geometry updates only; no rotation, alpha layers or frame buffers.
 // Voice state owns labels/colors; this is the sole writer of animated geometry.
+// Inputs are 466-space; box() applies FACE_SCALE so one layout fits every panel.
 class FaceRenderer {
  public:
   void render(const Frame &f, lv_obj_t *left, lv_obj_t *right, lv_obj_t *lp, lv_obj_t *rp,
@@ -27,6 +28,8 @@ class FaceRenderer {
     // The black cutout makes a simple friendly U-shaped smile without a canvas.
     box(5, cutout, 0, -8, f.mouth_w - 20, f.mouth_h - 4);
     hidden(cutout, !f.smile);
+    box(8, cheek_l, -151, 84, 30, 14);
+    box(9, cheek_r, 151, 84, 30, 14);
     hidden(cheek_l, !f.cheeks); hidden(cheek_r, !f.cheeks);
     box(6, brow_l, -94, -150 + f.brow_y, 48, 12);
     box(7, brow_r, 94, -150 - f.brow_y, 48, 12);
@@ -38,7 +41,7 @@ class FaceRenderer {
     }
   }
  private:
-  struct Geometry { int x{-999}, y{-999}, w{-999}, h{-999}; } geometry_[8];
+  struct Geometry { int x{-999}, y{-999}, w{-999}, h{-999}; } geometry_[10];
   int last_dot_{-1};
   bool prepared_{false};
   static void hidden(lv_obj_t *o, bool hide) {
@@ -47,7 +50,7 @@ class FaceRenderer {
   }
   void box(int n, lv_obj_t *o, int x, int y, int w, int h) {
     auto &g = geometry_[n];
-    h = std::max(1, h);
+    x = scaled(x); y = scaled(y); w = scaled(w); h = std::max(1, scaled(h));
     if (g.x != x) { lv_obj_set_x(o, x); g.x = x; }
     if (g.y != y) { lv_obj_set_y(o, y); g.y = y; }
     if (g.w != w) { lv_obj_set_width(o, w); g.w = w; }

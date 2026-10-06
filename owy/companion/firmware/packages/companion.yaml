@@ -1,5 +1,13 @@
-# Local personality, deliberate input, read-only power telemetry. No new audio
-# owner, no PMIC configuration writes and no undocumented C-board peripherals.
+# Local personality, deliberate input, quick controls. No new audio owner.
+# Board hardware (IMU, PMIC/battery → power_status) lives in packages/boards/*.
+
+# Page geometry for the 466 px panel; a smaller board overrides these in its root.
+substitutions:
+  panel_w: "320"     # settings/quick/help containers
+  quick_h: "258"     # quick controls scroll area (must clear the bottom button)
+  control_w: "290"   # companion_control buttons and rows
+  half_w: "136"      # Vol −/+ pair inside a control row
+
 globals:
   - id: saved_motion_calibration
     type: std::array<float, 7>
@@ -16,45 +24,10 @@ globals:
     restore_value: false
     initial_value: "false"
 
-motion:
-  - platform: qmi8658
-    id: companion_imu
-    i2c_id: bus_a
-    address: 0x6B
-    accelerometer_range: 8G
-    gyroscope_range: 512DPS
-    # Enum 125HZ is ~112.1Hz in QST's 6DOF table. Actual host dt drives fusion.
-    accelerometer_odr: 125HZ
-    gyroscope_odr: 125HZ
-    update_interval: 10ms
-
-i2c_device:
-  - id: companion_pmic
-    i2c_id: bus_a
-    address: 0x34
-
 esphome:
   on_boot:
     - priority: -90
       then:
-        - lambda: |-
-            const auto &saved=id(saved_motion_calibration);
-            if (saved[0]==1) id(companion).tracker.restore_calibration(
-                {saved[1],saved[2],saved[3]}, {saved[4],saved[5],saved[6]});
-            id(companion_imu).add_listener([](esphome::motion::MotionData &data) {
-              id(companion).motion(data.acceleration[0], data.acceleration[1], data.acceleration[2],
-                  data.angular_rate[0], data.angular_rate[1], data.angular_rate[2], millis(),
-                  id(motion_follow).state && !id(reduced_motion).state && !id(mic_privacy).state &&
-                  !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) &&
-                  !id(ui).is_paused() && lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj);
-              if (id(companion).take_shake()) {
-                id(last_gesture).publish_state("shake");
-                id(play_companion_feedback).execute();
-              }
-            });
-            id(companion_imu).add_temperature_listener([](float value) {
-              id(companion).chip_temperature=value;
-            });
         - script.execute: wake_display
 
 switch:
@@ -177,22 +150,6 @@ sensor:
     accuracy_decimals: 1
     update_interval: 5s
     lambda: return id(companion).animation_cadence.read(millis());
-  - platform: template
-    name: IMU Chip Temperature
-    entity_category: diagnostic
-    device_class: temperature
-    unit_of_measurement: °C
-    accuracy_decimals: 1
-    update_interval: 30s
-    lambda: |-
-      return id(companion).motion_ok(millis()) ? id(companion).chip_temperature : NAN;
-  - platform: template
-    name: Battery Level
-    id: companion_battery
-    device_class: battery
-    unit_of_measurement: "%"
-    accuracy_decimals: 0
-    update_interval: never
   - platform: wifi_signal
     name: WiFi Signal
     id: companion_wifi
@@ -233,6 +190,7 @@ text_sensor:
     entity_category: diagnostic
     update_interval: never
   - platform: template
+    id: interface_page
     name: Interface Page
     entity_category: diagnostic
     update_interval: 1s
@@ -248,26 +206,6 @@ text_sensor:
       if (page == id(card_page)->obj) return {"card"};
       if (page == id(text_page)->obj) return {"text"};
       return {"unknown"};
-  - platform: template
-    id: power_status
-    name: Power Status
-    update_interval: 5s
-    lambda: |-
-      uint8_t status[2], percent = 255;
-      if (!id(companion_pmic).read_bytes(0x00, status, 2)) {
-        id(companion).power.unavailable();
-        id(companion_battery).publish_state(NAN);
-        return {"energía: sin datos"};
-      }
-      if (status[0] & 0x08) id(companion_pmic).read_byte(0xA4, &percent);
-      auto &power = id(companion).power;
-      power.decode(status[0], status[1], percent);
-      id(companion_battery).publish_state(power.percent >= 0 ? float(power.percent) : NAN);
-      char buf[64];
-      if (!power.battery) return power.usb ? std::string("USB · sin batería") : std::string("sin batería detectada");
-      if (power.percent < 0) return {"batería: sin porcentaje"};
-      snprintf(buf, sizeof(buf), "%s%d%% %s", power.usb ? "USB · " : "", power.percent, power.charging ? "cargando" : "");
-      return std::string(buf);
 
 script:
   - id: wake_display
@@ -373,6 +311,8 @@ script:
           text(id(quick_continue), id(continuous_conversation).state ? "Charla continua: sí" : "Charla continua: no");
           text(id(quick_chime), id(listening_chime).state ? "Tono al escuchar: sí" : "Tono al escuchar: no");
           text(id(quick_sounds), id(interaction_sounds).state ? "Sonidos al jugar: sí" : "Sonidos al jugar: no");
+          text(id(quick_mic_source), id(mic_source).current_option() == "laptop" ? "Mic: laptop" : "Mic: dispositivo");
+          text(id(quick_audio_output), id(audio_output).current_option() == "laptop" ? "Audio: laptop" : "Audio: dispositivo");
           char volume_text[32];
           snprintf(volume_text, sizeof(volume_text), "Volumen: %d%%", int(id(volume).state));
           text(id(quick_volume), volume_text);
@@ -436,7 +376,7 @@ interval:
 lvgl:
   style_definitions:
     - id: companion_control
-      width: 290
+      width: ${control_w}
       height: 52
       radius: 16
       bg_color: 0x1F1F1F
@@ -461,10 +401,11 @@ lvgl:
             text: "energía: sin datos"
             text_color: 0xFBF5E7
         - obj:
+            id: quick_list
             align: CENTER
             y: 14
-            width: 320
-            height: 258
+            width: ${panel_w}
+            height: ${quick_h}
             bg_opa: TRANSP
             border_width: 0
             pad_all: 8
@@ -477,7 +418,7 @@ lvgl:
             widgets:
               - label:
                   id: face_hint
-                  width: 290
+                  width: ${control_w}
                   long_mode: WRAP
                   text_align: CENTER
                   text: "tocame y hablame"
@@ -487,7 +428,7 @@ lvgl:
                   text: "Volumen: 80%"
                   text_color: 0xFBF5E7
               - obj:
-                  width: 290
+                  width: ${control_w}
                   height: 58
                   bg_opa: TRANSP
                   border_width: 0
@@ -497,7 +438,7 @@ lvgl:
                     - button:
                         id: vol_down_btn
                         align: LEFT_MID
-                        width: 136
+                        width: ${half_w}
                         height: 52
                         bg_color: 0x1F1F1F
                         radius: 16
@@ -513,7 +454,7 @@ lvgl:
                     - button:
                         id: vol_up_btn
                         align: RIGHT_MID
-                        width: 136
+                        width: ${half_w}
                         height: 52
                         bg_color: 0x1F1F1F
                         radius: 16
@@ -566,6 +507,26 @@ lvgl:
                         text: "Sonidos al jugar: sí"
                   on_click:
                     - switch.toggle: interaction_sounds
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_mic_source
+                        align: CENTER
+                        text: "Mic: dispositivo"
+                  on_click:
+                    - select.next: mic_source
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_control
+                  widgets:
+                    - label:
+                        id: quick_audio_output
+                        align: CENTER
+                        text: "Audio: dispositivo"
+                  on_click:
+                    - select.next: audio_output
                     - script.execute: sync_quick_controls
               - button:
                   styles: companion_control
@@ -736,7 +697,7 @@ lvgl:
             text_color: 0xF5BB03
         - obj:
             align: CENTER
-            width: 324
+            width: ${panel_w}
             height: 276
             bg_opa: TRANSP
             border_width: 0

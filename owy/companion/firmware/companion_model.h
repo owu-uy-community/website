@@ -9,7 +9,15 @@
 #include <cstdint>
 #include "companion_motion.h"
 
+// Geometry is authored for the 466 px AMOLED. A smaller round panel builds with
+// -DOWY_FACE_SCALE=<panel/466> and FaceRenderer/touch mapping scale at the edges.
+#ifndef OWY_FACE_SCALE
+#define OWY_FACE_SCALE 1.0f
+#endif
+
 namespace owy {
+constexpr float FACE_SCALE = OWY_FACE_SCALE;
+inline int scaled(int v) { return int(std::lround(v * FACE_SCALE)); }
 inline float bound(float v, float lo, float hi) { return std::max(lo, std::min(hi, v)); }
 inline bool recent(uint32_t now, uint32_t then, uint32_t ms) { return uint32_t(now - then) < ms; }
 enum class Gesture { NONE, TAP, PET, HOLD, UP, DOWN, LEFT, RIGHT };
@@ -104,7 +112,9 @@ class Companion {
   bool motion_ok(uint32_t now) const { return tracker.ok(now); }
   void center() { tracker.center(); }
   void delight(uint32_t now) { reaction_at_ = now; has_reaction_ = true; }
-  void audio(const uint8_t *data, size_t size, uint32_t now) {
+  // `gain` scales the envelope for quieter front-ends (a raw PDM mic vs the
+  // ES7210's 30 dB analog stage); 1 keeps the original 466 calibration.
+  void audio(const uint8_t *data, size_t size, uint32_t now, float gain = 1.f) {
     // Existing stereo16-bit stream, first mic only; <=48 samples, no allocation.
     // Observe data, never start a microphone consumer or touch LVGL here.
     if (size < 4) return;
@@ -116,8 +126,12 @@ class Companion {
       const int sample = int16_t(uint16_t(data[p]) | (uint16_t(data[p + 1]) << 8));
       sum += std::abs(sample);
     }
-    mic_level_.store(bound(float(sum) / std::max(uint32_t(1), n) / 3000.f - .025f, 0.f, 1.f), std::memory_order_relaxed);
+    mic_level_.store(bound(gain * float(sum) / std::max(uint32_t(1), n) / 3000.f - .025f, 0.f, 1.f), std::memory_order_relaxed);
     mic_at_.store(now, std::memory_order_relaxed);
+  }
+  /** Latest mic envelope (0..1); 0 once the stream is >200 ms stale. Observe-only, like the mouth. */
+  float mic_level(uint32_t now) const {
+    return recent(now, mic_at_.load(std::memory_order_relaxed), 200) ? mic_level_.load(std::memory_order_relaxed) : 0.f;
   }
   Frame frame(uint32_t now, Mood mood, bool motion_on, bool reduced, bool invert_x,
               bool invert_y, float speaking) {
@@ -139,8 +153,8 @@ class Companion {
         if (invert_y) ty = -ty;
       }
       if (!voice && contact.active) {
-        tx = (contact.last_x - 233) * .17f;
-        ty = (contact.last_y - 210) * .16f;
+        tx = (contact.last_x - scaled(233)) / FACE_SCALE * .17f;
+        ty = (contact.last_y - scaled(210)) / FACE_SCALE * .16f;
       } else if (!voice) {
         // Slow bounded glances; blinking is independently irregular.
         const unsigned slot = (now / 4200) % 5;

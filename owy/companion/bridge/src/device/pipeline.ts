@@ -177,6 +177,11 @@ export class VoiceTurn {
     }
   }
 
+  /** Audio is flowing somewhere other than the device (laptop output): keep the stall watchdog fed. */
+  heartbeat(): void {
+    if (this._phase === "speaking") this.armStallTimer();
+  }
+
   /** Streams 16 kHz / 16-bit / mono PCM to the device speaker. */
   pushAudio(pcm16k: Buffer): void {
     if (pcm16k.length === 0) return;

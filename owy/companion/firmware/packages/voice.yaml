@@ -153,7 +153,11 @@ script:
             - lambda: id(turn_pending) = true;
             - micro_wake_word.stop:
             - script.execute: wake_display
-            - lvgl.page.show: face_page
+            - if:
+                condition:
+                  lambda: return !id(page_hold);
+                then:
+                  - lvgl.page.show: face_page
             - wait_until:
                 condition:
                   lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();

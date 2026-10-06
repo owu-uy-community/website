@@ -28,11 +28,28 @@ export const DeviceSpecSchema = z.object({
 export type DeviceSpec = z.infer<typeof DeviceSpecSchema>;
 
 const EnvSchema = z.object({
-  // --- Realtime model ---
-  COMPANION_REALTIME_MODEL: z.string().default("google:gemini-3.1-flash-live-preview"),
+  // --- Realtime model (ears + mouth) ---
+  COMPANION_REALTIME_MODEL: z.string().default("gateway:google/gemini-3.8-live"),
   COMPANION_VOICE: z.string().default("Kore"),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
   AI_GATEWAY_API_KEY: z.string().optional(),
+
+  // --- Brain ---
+  /**
+   * `eve`: every turn goes to the eve Owy (agent/channels/companion.ts) — same
+   * memory, tools and staff gating as Slack/Telegram; the realtime model only
+   * transcribes and speaks. `local`: the realtime model is the brain, with the
+   * agent's tools run in-process (the original mode; no eve deployment needed).
+   * Defaults to `eve` when COMPANION_EVE_URL is set.
+   */
+  COMPANION_BRAIN: z.enum(["eve", "local"]).optional(),
+  COMPANION_EVE_URL: z.string().url().optional(),
+  COMPANION_EVE_BASIC_USER: z.string().optional(),
+  COMPANION_EVE_BASIC_PASSWORD: z.string().optional(),
+  /** Seconds of silence after which the device's eve conversation is retired (next visitor starts fresh). */
+  COMPANION_EVE_IDLE_RESET_S: z.coerce.number().int().min(10).default(180),
+  /** Shown to the agent as where the device stands. */
+  COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
 
   // --- Devices ---
   /**
@@ -60,6 +77,10 @@ const EnvSchema = z.object({
   /** Seconds a person must wait between two proposals from the same device (staff exempt). */
   COMPANION_PROPOSAL_COOLDOWN_S: z.coerce.number().int().nonnegative().default(60),
   /** Directory for opt-in JSONL transcripts; unset = no transcript persisted. */
+  // --- Audio routing defaults (a board's mic_source / audio_output selects win) ---
+  COMPANION_MIC_SOURCE: z.enum(["device", "laptop"]).default("device"),
+  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
+  COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
   COMPANION_LOG_DIR: z.string().optional(),
   COMPANION_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });

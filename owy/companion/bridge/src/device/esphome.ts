@@ -8,6 +8,7 @@ import {
   type VoiceAssistantEventData,
   type VoiceAssistantRequest,
 } from "esphome-client";
+import { audioRoute, type AudioRoute } from "../audio/route";
 import type { DeviceSpec } from "../config";
 import type { Logger } from "../log";
 import type { FaceState, ScreenCard } from "../realtime/tools";
@@ -21,7 +22,8 @@ import type { VoiceLink } from "./pipeline";
  *   - select  `face_state`        options: idle|listening|thinking|speaking|happy|error|offline
  *   - switch  `staff_mode`, `marketplace_open`, `quiet_mode`   (set from the on-device PIN page)
  *   - number  `speak_level`       0..100, drives the mouth animation
- *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`
+ *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`,
+ *     optional `show_caption(body)` (boards without a speaker show the reply as text)
  *     (positional string arguments; variable names avoid ESPHome component namespaces)
  *   - voice_assistant (speaker path) subscribed with API audio
  */
@@ -45,6 +47,8 @@ const ENTITY = {
   volume: entityId("number", "volumen"),
   playbackReady: entityId("binary_sensor", "playback_ready"),
   audioState: entityId("text_sensor", "audio_state"),
+  micSource: entityId("select", "mic_source"),
+  audioOutput: entityId("select", "audio_output"),
 } as const;
 
 export class CompanionDevice implements VoiceLink {
@@ -60,10 +64,12 @@ export class CompanionDevice implements VoiceLink {
   ) {}
 
   /**
-   * Connects, retrying for up to `options.retryForMs` (default 5 min): at the
-   * venue the device may still be booting or dozing (ARP misses show up as
-   * EHOSTUNREACH) when the bridge starts. Once connected, esphome-client's own
-   * auto-reconnect takes over.
+   * Connects, retrying for up to `options.retryForMs` (default: forever, 10 s
+   * apart): at the venue the device may still be booting, dozing (ARP misses
+   * show up as EHOSTUNREACH/EHOSTDOWN) or simply switched off when the bridge
+   * starts, and one dark Owy must not take the bridge down with it. Once
+   * connected, esphome-client's own auto-reconnect takes over. Wrong
+   * credentials still fail fast.
    */
   static async connect(
     spec: DeviceSpec,
@@ -72,7 +78,7 @@ export class CompanionDevice implements VoiceLink {
     options: { retryForMs?: number } = {}
   ): Promise<CompanionDevice> {
     const log = logger.child(spec.id);
-    const deadline = Date.now() + (options.retryForMs ?? 5 * 60_000);
+    const deadline = Date.now() + (options.retryForMs ?? Infinity);
     let attempt = 0;
 
     for (;;) {
@@ -104,9 +110,18 @@ export class CompanionDevice implements VoiceLink {
     }
   }
 
+  /** Set when the firmware exposes `show_caption`; DeviceSession streams the reply transcript through it. */
+  showCaption?: (text: string) => void;
+  /** The listening haptic plays as the mic opens and the motor shares the enclosure with the mic. */
+  readonly micSettleMs = 250;
+
   private attach(): void {
     const info = this.client.deviceInfo();
     this.log.info(`connected to ${info?.name ?? this.spec.host} (esphome ${info?.esphomeVersion ?? "?"})`);
+    if (this.client.services.list().some((service) => service.name === "show_caption")) {
+      this.showCaption = (text) => this.callService("show_caption", [{ stringValue: text }]);
+      this.log.info("captions: the device shows replies as text");
+    }
     let lastAudioState: unknown;
     this.client.on("telemetry", () => {
       const state = this.client.latest(ENTITY.audioState)?.state;
@@ -242,6 +257,24 @@ export class CompanionDevice implements VoiceLink {
 
   isStaffMode(): boolean {
     return this.readSwitch(ENTITY.staffMode);
+  }
+
+  /** `null` when the firmware has no routing selects (older boards). */
+  getMicSource(): AudioRoute | null {
+    return this.readRoute(ENTITY.micSource);
+  }
+
+  getAudioOutput(): AudioRoute | null {
+    return this.readRoute(ENTITY.audioOutput);
+  }
+
+  setAudioRoute(which: "mic" | "output", route: AudioRoute): void {
+    this.client.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, { state: route === "laptop" ? "laptop" : "dispositivo" });
+  }
+
+  private readRoute(id: typeof ENTITY.micSource): AudioRoute | null {
+    const state = this.client.latest(id)?.state;
+    return typeof state === "string" ? audioRoute(state) : null;
   }
 
   isMarketplaceOpen(): boolean {

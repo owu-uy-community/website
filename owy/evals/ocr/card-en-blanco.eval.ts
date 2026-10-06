@@ -22,10 +22,8 @@ export default defineEval({
     t.succeeded();
     t.calledTool("digitize_board_photo");
     t.notCalledTool("create_track");
-    t.judge.autoevals
-      .closedQA(
-        "La tarjeta está vacía. La respuesta NO afirma un nombre de orador ni un título de charla concretos: avisa que no pudo leerlos, o se los pide al staff. Sugerir una sala u horario está bien; inventar datos de la tarjeta, no."
-      )
-      .atLeast(0.7);
+    t.judge(
+      "La tarjeta está vacía. La respuesta NO afirma un nombre de orador ni un título de charla concretos: avisa que no pudo leerlos, o se los pide al staff. Sugerir una sala u horario está bien; inventar datos de la tarjeta, no."
+    ).atLeast(0.7);
   },
 });

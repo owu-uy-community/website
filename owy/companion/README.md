@@ -9,7 +9,7 @@ de Slack/Telegram**.
 ```
 [dispositivo ESPHome]  ──native API (:6053, Noise)──►  [bridge Node en una laptop del venue]
   mics 16 kHz ─┐ voice_assistant                          │  device/esphome.ts  (esphome-client)
-  parlante    ─┘ + micro_wake_word                        │  realtime/session.ts ◄── Gemini Live (AI SDK realtime, codec sobre ws)
+  parlante    ─┘ + micro_wake_word                        │  realtime/session.ts ◄── Gemini 3.8 Live vía AI Gateway (AI SDK realtime, codec sobre ws)
   cara LVGL + touch + IMU (tap = hablar, hold = ajustes)  │  realtime/tools.ts   ──► agent/tools/* (ctx shim, gate de staff)
                                                           └─ owu-api.ts (x-api-key) ──► owu.uy → broadcast → grilla / kiosk / OBS
 ```
@@ -34,7 +34,8 @@ aplican al emulador; las acciones del evento requieren permisos explícitos y
 
 - Node ≥ 24 y `pnpm install` en `owy/` (ya incluye `esphome-client`, `@ai-sdk/google`, `ws`, `tsx`, `vitest`).
 - ESPHome 2026.8.2 para esta versión. Revalidar el parche I2S antes de actualizar.
-- Una API key de Gemini (`GOOGLE_GENERATIVE_AI_API_KEY`): Gemini Live **no** pasa por el AI Gateway.
+- `AI_GATEWAY_API_KEY` (Vercel AI Gateway): el modelo por defecto es `gateway:google/gemini-3.8-live`.
+  Sólo hace falta `GOOGLE_GENERATIVE_AI_API_KEY` si elegís el proveedor directo (`google:…`).
 - La key de la API del sitio: `pnpm owy:key -- --name companion` en la raíz del repo (una key propia, revocable aparte).
 
 ## Firmware
@@ -109,6 +110,50 @@ no asumir que cambiar tres pines valida todos los periféricos de otra variante.
 Síntomas de pines equivocados: pantalla negra (`lcd_reset_pin`), touch mudo
 (`touch_reset_pin`), audio en silencio o ruido (`i2s_mclk_pin`).
 
+El hardware vive en `packages/boards/<placa>.yaml`; el resto de `packages/` es común
+a todas las placas (voz, controles, cara, conectividad). Una placa nueva = un archivo
+de hardware con los ids compartidos (`bus_a`, `amoled`, `touch`, `screen_light`,
+`mic`, `va_speaker`, `power_status`) + un root `owy-<placa>.yaml`.
+
+### Variante Knob 1.8B (`owy-knob.yaml`)
+
+Waveshare **ESP32-S3-Knob-Touch-LCD-1.8B** (la B es la caja negra; misma placa que la 1.8).
+Mismo firmware y mismo bridge (`COMPANION_DEVICES=...,owy-knob@owy-knob.local#secrets`),
+con `packages/boards/knob18.yaml`:
+
+| | Knob 1.8B |
+| --- | --- |
+| Pantalla | ST77916 360×360 QSPI (CLK 13, D0-3 15/16/17/18, CS 14, RST 21), backlight PWM GPIO47. Modelo `ESP-VOCAT` de ESPHome (misma tabla de init que el demo de Waveshare) |
+| Touch | CST816 @0x15 (INT 9, RST 10), I²C SDA 11 / SCL 12 |
+| Mic | PDM MEMS (CLK 45, DATA 46) en su propio bus I2S (puerto 0) |
+| Audio out | **no hay parlante ni amplificador**: PCM5100A → jack 3.5 mm (BCLK 39, WS 40, DOUT 41). Se configura igual como `va_speaker` para no tocar la máquina de voz; sin nada enchufado la unidad es muda (cara + mic). Un parlante activo en el jack la hace hablar sin reflashear |
+| Perilla | **no es un encoder de cuadratura**: es un switch de detentes bidireccional (A=GPIO8 pulsa al girar en sentido horario, B=GPIO7 antihorario; el driver de Waveshare `bidi_switch_knob.c` los lee como dos botones). Se leen como dos `binary_sensor` con debounce → **brillo ±5%** con un anillo en el borde de la cara y `brillo N%` arriba (1.2 s), más un tick háptico. Sin pulsador: el "botón" es el touch |
+| Háptica | DRV2605 @0x5A con la receta del demo de Waveshare (ERM lazo abierto, librería 5, disparo por I²C). Efectos: tap 4 (click), acariciar 7 (bump), mantener/arriba 10 (doble click), swipe 24, escuchando 24, respondiendo 7, detente 26. `button.vibración_de_prueba` para probar desde la web |
+| Mudo | `listening_chime` e `interaction_sounds` arrancan apagados en esta placa (sólo agregan latencia sin parlante); el tick háptico avisa que Owy escucha |
+| Experiencia | **La cara queda siempre que no hay respuesta**: escuchando (halo de 24 puntos azul cuyo color/opacidad sigue el mic, con `mic_vu_gain`) y pensando (halo amarillo tenue) pasan en la cara. La **primera caption de una respuesta** abre la *vista de respuesta* (ojitos, « lo que entendió », el texto anclado abajo, halo amarillo respirando) y la fija con el global `page_hold` (face.yaml) para que sobreviva la ventana de follow-up; al terminar la conversación se libera y la cara vuelve a los 12 s. Tocar la respuesta = hablar de nuevo. El bridge manda la transcripción por la acción `show_caption` cuando la placa la anuncia |
+| Revisión | `button.captura_de_pantalla` (LV_USE_SNAPSHOT + `knob_shot.h`) postea la pantalla real en RGB565 a `${screenshot_url}`; correr `/usr/bin/python3 owy/companion/scripts/knob-shots.py` en la laptop (Apple python: el firewall de macOS deja pasar sus conexiones LAN) y mirar los PNG en `/tmp/knob-shots`. Una captura frena el loop ~0.5 s: no sacarla en medio de audio. Para un turno sin hablar: `say -v "Flo (Spanish (Spain))" "..."` con la perilla al lado de la Mac |
+| Sin | IMU, PMIC, botón BOOT (GPIO0 es el mux del DAC), micro-SD (no se usa) |
+| Cara | la geometría animada escala en C++ con `-DOWY_FACE_SCALE=0.7725` (360/466); páginas secundarias vía las substitutions `page_w`, `panel_w`, `quick_h`, etc. (defaults 466 en `face.yaml`/`companion.yaml`, overrides en `owy-knob.yaml`) |
+
+**USB**: la placa tiene dos MCUs y el USB-C llega **al ESP32-S3 o al ESP32 secundario según
+la orientación del conector**. Si aparece `/dev/cu.usbserial-*` (CH340) estás del lado del
+ESP32: dá vuelta el conector hasta ver `/dev/cu.usbmodem*`. No reflashear el ESP32
+secundario: su firmware de fábrica maneja el pin de mute (XSMT) del DAC.
+
+```bash
+cd owy/companion/firmware
+esphome config owy-knob.yaml
+/opt/homebrew/Cellar/esphome/2026.8.2/libexec/bin/python -m esptool --port /dev/cu.usbmodemXXXX \
+  --chip esp32s3 read-flash 0 0x1000000 ~/owy-knob-factory.bin          # backup de fábrica (16MB)
+esphome compile owy-knob.yaml && esphome upload owy-knob.yaml --device /dev/cu.usbmodemXXXX
+esphome logs owy-knob.yaml --device /dev/cu.usbmodemXXXX
+```
+
+Si el mic no capta: probar `channel: right` o `pdm_dsr: 8` en `knob18.yaml`. Si el touch
+no responde: `skip_probe: true` en `cst816`. Si la perilla va al revés: intercambiá los pines
+de `knob_cw`/`knob_ccw`. Para que maneje volumen en vez de brillo: cambiá el `number.set`
+de `knob_turn` a `volume` (mismo overlay).
+
 ### Qué expone el firmware (contrato con el bridge)
 
 | Entidad / acción | Uso |
@@ -141,7 +186,9 @@ Síntomas de pines equivocados: pantalla negra (`lcd_reset_pin`), touch mudo
 | `number.speak_level` | 0–100, mueve la boca |
 | `number.volumen` | volumen del parlante |
 | `button.tono_de_prueba` | tono suave de prueba de 1 kHz / 80 ms |
+| `select.mic_source` / `select.audio_output` | `dispositivo · laptop`: el bridge los lee al empezar cada turno (ver *Modos de audio*) |
 | acciones `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)` | páginas de pantalla |
+| acción `show_caption(body)` (sólo Knob) | el bridge manda la transcripción de la respuesta a las placas que la anuncian |
 
 ### Interacción cotidiana
 
@@ -190,6 +237,39 @@ Un mic azul indica captura de conversación; el mic tachado amarillo indica
 privacidad. En reposo el wake word sigue usando captura local si está habilitado.
 No hay cámara, sensor de presencia/luz ni motor háptico establecido en este modelo.
 
+## Modos de audio (dispositivo o laptop)
+
+Cada dispositivo elige dónde viven su micrófono y su salida: `select.mic_source` y
+`select.audio_output` (`dispositivo` | `laptop`, persistentes), desde sus ajustes rápidos
+("Mic: …", "Audio: …"), desde la página del bridge (`http://127.0.0.1:3313/`) o desde la
+tarjeta **Audio** de `/admin/companion`. El bridge expone su API de control como un
+**router oRPC** (`bridge/src/web/rpc.ts`, servido en `http://127.0.0.1:3313/rpc`; el
+contrato zod vive en `bridge/src/web/contract.ts`); el sitio lo consume con un cliente oRPC
+tipado (`RouterClient<BridgeRouter>`) detrás de `companion.getAudioRouting` /
+`setAudioRouting` (admin). Sólo alcanza al bridge cuando el sitio corre en la misma laptop;
+`COMPANION_BRIDGE_SETTINGS_URL` (por defecto `http://127.0.0.1:3313/rpc`) para otro host.
+`/api/settings` es un espejo JSON plano de las mismas procedures para la página del bridge.
+
+- **dispositivo**: como siempre (mic del gadget; parlante/jack del gadget).
+- **laptop**: la máquina que corre el bridge pone su micrófono (el mic de escenario
+  enchufado a la compu) y sus parlantes (la PA del evento). El gadget sigue siendo el
+  disparador, la cara y los subtítulos. El audio lo aporta **un navegador con el
+  workbench abierto**: `/admin/companion` → *Talk to Owy* → *Laptop audio for a physical
+  device* → elegir el dispositivo. Ese navegador queda "enchufado" (`attach`) hasta que se
+  desenchufa o se cierra: recibe los mismos `accepted`/eventos/PCM que el gadget, abre su
+  mic en cada turno y reproduce la respuesta. Sin navegador enchufado, el bridge avisa y
+  vuelve al audio del dispositivo en ese turno. Mic y salida se eligen por separado
+  (mic del gadget + PA de la sala también sirve).
+
+Requiere `COMPANION_WEB_BRIDGE=1` (transporte web en `:3312`); en macOS el navegador pide
+permiso de micrófono una vez. La pestaña puede quedar en segundo plano (no se corta al
+ocultarse, a diferencia de una conversación propia). Los turnos enchufados no vencen a los
+5 minutos (6 h). Prueba sin hablar: `companion/scripts/knob-peer.mts` (cliente WS que hace de
+navegador y manda un WAV de 16 kHz generado con `say -o q.wav --data-format=LEI16@16000`).
+
+El bridge no puede correr dentro del sitio en Vercel (necesita la LAN del venue, el
+audio de la laptop y sockets persistentes); el sitio sólo lo controla.
+
 ## Bridge
 
 Las variables se leen del entorno o de `owy/.env.local` (el mismo archivo que usa `eve dev`;
@@ -197,9 +277,13 @@ gitignoreado). Mínimo para hablar con el dispositivo:
 
 ```bash
 # owy/.env.local
-GOOGLE_GENERATIVE_AI_API_KEY=...
+AI_GATEWAY_API_KEY=...                                 # voz: gateway:google/gemini-3.8-live (o GOOGLE_GENERATIVE_AI_API_KEY con google:…)
 COMPANION_DEVICES=owy-1@owy-companion.local#secrets   # id@host[:port][#psk]; "#secrets" lee api_key de firmware/secrets.yaml
-# para las tools de la grilla:
+# cerebro eve (recomendado): el mismo Owy de Slack/Telegram contesta
+COMPANION_EVE_URL=https://<owy>.vercel.app             # o http://127.0.0.1:2000 con `eve dev`
+COMPANION_EVE_BASIC_USER=...                           # = ROUTE_AUTH_BASIC_USER/PASSWORD del deploy de eve (no hace falta contra eve dev)
+COMPANION_EVE_BASIC_PASSWORD=...
+# cerebro local (sin eve): las tools de la grilla corren en el bridge
 OWU_API_URL=https://owu.uy                             # o http://localhost:3000 con el sitio local
 OWY_API_KEY=owy...
 OWY_EVENT_ID=owu-conf-2026                             # id o slug; sin esto usa el evento más reciente
@@ -219,12 +303,73 @@ pnpm companion:driver-test # regresión C++ del driver con notificación RTOS de
 pnpm companion:interaction-test # modelo C++ real de gestos/movimiento/cara/potencia con sanitizers
 ```
 
-Variables opcionales: `COMPANION_REALTIME_MODEL` (`google:gemini-3.1-flash-live-preview`
-por defecto; `gateway:openai/gpt-realtime-2` como plan B con `AI_GATEWAY_API_KEY`),
-`COMPANION_VOICE` (`Kore`), `COMPANION_PUBLIC_SITE_URL` (para el QR),
-`COMPANION_PROPOSAL_COOLDOWN_S` (60), `COMPANION_MARKETPLACE_OPEN` /
-`COMPANION_STAFF_MODE` (fallbacks cuando no hay dispositivo, p. ej. en el REPL),
-`COMPANION_LOG_LEVEL`.
+Variables opcionales: `COMPANION_REALTIME_MODEL` (ver [Modelo realtime](#modelo-realtime);
+`gateway:google/gemini-3.8-live` por defecto), `COMPANION_VOICE` (`Kore`; con OpenAI usá una
+voz suya, p. ej. `marin`), `COMPANION_BRAIN` (`eve` | `local`; ver [Cerebro](#cerebro-eve-o-local)),
+`COMPANION_EVE_IDLE_RESET_S` (180), `COMPANION_EVENT_NAME` (`OWU Conf 2026`),
+`COMPANION_PUBLIC_SITE_URL` (para el QR), `COMPANION_PROPOSAL_COOLDOWN_S` (60),
+`COMPANION_MARKETPLACE_OPEN` / `COMPANION_STAFF_MODE` (fallbacks cuando no hay dispositivo,
+p. ej. en el REPL), `COMPANION_LOG_LEVEL`, `COMPANION_WEB_DEBUG=1` (loguea también las sesiones
+del navegador, que por defecto son mudas).
+
+### Cerebro: eve o local
+
+El modelo realtime siempre es **oídos y boca**. Quién *piensa* lo decide `COMPANION_BRAIN`
+(por defecto `eve` si hay `COMPANION_EVE_URL`, si no `local`):
+
+| | `eve` (recomendado) | `local` |
+| --- | --- | --- |
+| Quién contesta | **El Owy de eve** (`agent/`): mismas instrucciones, knowledge, tools, skills, gating de staff y memoria que Slack/Telegram | El modelo realtime con `agent/instructions.md` + knowledge inline + las tools de `agent/tools/*` corridas en el bridge con un shim |
+| Sesión | Una **sesión durable de eve por dispositivo** (`from(deviceId)`): follow-ups con contexto; se retira tras `COMPANION_EVE_IDLE_RESET_S` sin hablar (próximo visitante arranca de cero) | Sólo el contexto de la sesión realtime |
+| Tools en el modelo de voz | `hablar_con_owy` (la conversación), `set_volume`, `show_on_screen` | Todas las de Owy + `propose_talk`, `event_now`, `set_volume`, `show_on_screen` |
+| Necesita | `COMPANION_EVE_URL` (+ Basic auth fuera de `eve dev`) | `OWU_API_URL` + `OWY_API_KEY` en el bridge |
+
+Cómo funciona en modo `eve`: el prompt del modelo de voz es `bridge/prompts/voice-of-owy.md`
+("sos la voz; todo se lo pasás a `hablar_con_owy` y decís la `respuesta` textual"). Cada turno el
+bridge hace `POST /companion/:deviceId/turns` en el canal `agent/channels/companion.ts` con el
+texto, `staff` (modo staff del dispositivo) y `marketplaceOpen` (switch del dispositivo), y lee
+el stream NDJSON de la sesión: los deltas de eve se muestran como **subtítulos** en el knob mientras
+piensa y el texto final es lo que el modelo lee en voz alta (y el subtítulo definitivo). Un tap
+cancela también el turno en eve (`/cancel`); tras el silencio, `/reset`. En eve, el turno llega
+con `authenticator: companion | companion-staff` (lo que `agent/lib/staff.ts` ya entiende),
+`agent/instructions/companion.ts` agrega las reglas de voz (frases cortas, sin markdown, flujo del
+mercado de ideas) y `agent/tools/companion.ts` monta `propose_talk` sólo en ese canal (mercado
+abierto o staff + cooldown por dispositivo); `event_now` quedó como tool común a todos los canales.
+En una sesión web de solo lectura del laboratorio, eve ve un visitante común con el mercado cerrado.
+
+Probar sin hardware: `eve dev --no-ui --port 2000` en `owy/` (con `OWU_API_URL`/`OWY_API_KEY` para
+la grilla), el bridge con `COMPANION_EVE_URL=http://127.0.0.1:2000`, y
+`scripts/web-turn.mts` (o directo al canal: `curl -X POST localhost:2000/companion/owy-knob/turns
+-H 'content-type: application/json' -d '{"text":"qué hay ahora?","marketplaceOpen":true}'` y
+`curl -N localhost:2000/companion/sessions/<sessionId>/stream?startIndex=<streamIndex>`; el stream
+queda abierto después de `session.waiting`, cortalo vos).
+
+### Modelo realtime
+
+El bridge habla con el modelo por el **AI SDK realtime** (`ai` ≥ 7.0.107): el modelo es un
+codec (`serializeClientEvent` / `parseServerEvent`) que `realtime/session.ts` maneja sobre un
+`ws` propio, con el token efímero de `experimental_realtime.getToken()`. Es speech-to-speech:
+no hay STT/TTS/VAD locales, sólo remuestreo, ritmo y ruteo (`audio/pcm.ts`). Especificación
+`COMPANION_REALTIME_MODEL = <proveedor>:<modelo>`:
+
+| Spec | Key | Notas |
+| --- | --- | --- |
+| `gateway:google/gemini-3.8-live` (default) | `AI_GATEWAY_API_KEY` | Gemini 3.8 Live vía AI Gateway. Audio USD 3 / 12 por M tokens (in/out). El gateway rechaza `turnDetection` y las claves nativas de Gemini (VAD, compresión de contexto): aplican los defaults de Gemini. Sesiones ≤ 25 min, idle 5 min (el bridge reconecta en el próximo tap), 1er mensaje < 30 s. |
+| `gateway:google/gemini-3.8-live-extended-thinking` | idem | Razonamiento en paralelo con la voz; sólo tools `NON_BLOCKING` (el provider manda `thinkingLevel: low`). Más latencia; no probado en el evento. |
+| `gateway:openai/gpt-realtime-2` · `gpt-realtime-2.1` · `gpt-realtime-mini` | idem | Plan B. `voice` de OpenAI (`marin`, `alloy`…). Audio USD 32 / 64 por M tokens (mini: 10 / 20). `turnDetection: server-vad 600 ms`. `gpt-live-1` **no**: GPT-Live es otro protocolo (continuo, server-websocket). |
+| `google:gemini-3.8-live` | `GOOGLE_GENERATIVE_AI_API_KEY` | Directo a Google: mismo modelo, sin límite de 25 min, con `automaticActivityDetection` (600 ms), `contextWindowCompression` y `sessionResumption` (`goAway` manejado). `gemini-3.1-flash-live-preview` quedó *legacy*. |
+
+Gemini 3.8 Live sólo responde audio (`outputModalities: ["text"]` es rechazado): el REPL
+`companion:text` abre la sesión en audio y muestra la transcripción. Las tools de 3.8 son
+asíncronas por defecto (`NON_BLOCKING`); el bridge fija `providerOptions.google.defaultToolBehavior =
+"BLOCKING"` en `gemini-3.8-live` para conservar el flujo llamada → resultado → respuesta hablada
+en un solo turno (probado vía gateway y directo en `buildSessionConfig`). Con OpenAI y con la
+mayoría de las voces de Gemini alcanza `COMPANION_VOICE`; el mic va a 16 kHz al proveedor directo
+y a 24 kHz al gateway (`sessionInputRate`), la voz vuelve a 24 kHz y se baja a 16 kHz.
+
+Prueba sin hardware ni navegador: `WEB_TURN_OUT=/tmp/reply.wav node_modules/.bin/tsx
+companion/scripts/web-turn.mts /tmp/q.wav` (un turno completo por el transporte web:
+transcripciones, tools y el PCM de la respuesta guardado como WAV).
 
 ### Espejo en la pantalla grande (Owy Stage)
 
@@ -240,15 +385,15 @@ espejo queda apagado y el bridge lo avisa una vez al arrancar.
 
 1. Tap (o wake word) → el dispositivo manda `VoiceAssistantRequest{start}`; el bridge
    acepta con `port 0` (audio por la API), manda `RUN_START` + `STT_START` y la cara pasa a *listening*.
-2. El micrófono llega en PCM 16 kHz y se reenvía a Gemini Live (`input-audio-append`).
+2. El micrófono llega en PCM 16 kHz y se reenvía al modelo (`input-audio-append`; a 24 kHz si va por el gateway).
 3. La primera transcripción cancela el timeout de silencio para no cortar frases largas.
-   Cuando Gemini empieza una tool o respuesta de audio, el bridge
+   Cuando el modelo empieza una tool o respuesta de audio, el bridge
    manda `STT_VAD_END` + `STT_END{text}` (el mic se apaga) y ejecuta las tools localmente.
 4. El bridge espera `playback_ready=true`, luego manda `TTS_START` con texto no
    vacío y `TTS_END` con una URL de protocolo (`api://owy/response`, no se descarga).
    **TTS_END es necesario incluso con audio por la API**: pone a ESPHome en
    `STREAMING_RESPONSE`, donde puede detectar el fin de reproducción.
-5. El audio de Gemini (24 kHz) se remuestrea a 16 kHz y se envía a ritmo real con
+5. El audio del modelo (24 kHz) se remuestrea a 16 kHz y se envía a ritmo real con
    `TTS_STREAM_START` → `VoiceAssistantAudio` → `TTS_STREAM_END` → `RUN_END`.
    La cola no empieza a contar tiempo hasta que el dispositivo está listo.
 6. El firmware espera a que terminen la voz y el parlante, reproduce una señal
