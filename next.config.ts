@@ -1,10 +1,11 @@
-require("dotenv").config();
+import "dotenv/config";
 
-const createMDX = require("@next/mdx");
+import createMDX from "@next/mdx";
+import type { NextConfig } from "next";
 
 const withMDX = createMDX({});
 
-module.exports = withMDX({
+const nextConfig: NextConfig = {
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
   reactStrictMode: true,
   // Allow hitting the dev server via 127.0.0.1 (separate cookie jar from localhost)
@@ -24,4 +25,6 @@ module.exports = withMDX({
   experimental: {
     mdxRs: { mdxType: "gfm" },
   },
-});
+};
+
+export default withMDX(nextConfig);

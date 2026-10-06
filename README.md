@@ -67,7 +67,7 @@ owu/
 ├── content/               # Contenido gestionado por Keystatic (CMS)
 ├── .github/               # Configuración de GitHub Actions
 ├── tailwind.config.ts     # Configuración de Tailwind CSS
-├── next.config.js         # Configuración de Next.js
+├── next.config.ts         # Configuración de Next.js
 └── package.json           # Dependencias y scripts
 ```
 
@@ -76,8 +76,9 @@ owu/
 - `pnpm dev`: Inicia el servidor de desarrollo
 - `pnpm build`: Construye la aplicación para producción
 - `pnpm start`: Inicia la aplicación en modo producción
-- `pnpm lint`: Ejecuta el linter
-- `pnpm lint:fix`: Corrige automáticamente problemas de linting
+- `pnpm check`: Lint (oxlint, con tipos) y formato (oxfmt)
+- `pnpm fix`: Corrige lo que el linter y el formateador pueden arreglar solos
+- `pnpm typecheck`: Chequeo de tipos con `tsc`
 - `pnpm remotion`: Inicia el studio de Remotion
 - `pnpm render`: Renderiza videos con Remotion
 

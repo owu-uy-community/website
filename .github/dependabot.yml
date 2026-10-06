@@ -38,7 +38,6 @@ updates:
         patterns:
           - "next"
           - "@next/*"
-          - "eslint-config-next"
           - "react"
           - "react-dom"
         update-types:
@@ -92,16 +91,16 @@ updates:
       tooling:
         dependency-type: "development"
         patterns:
-          - "eslint*"
-          - "prettier*"
-          - "@typescript-eslint/*"
-          - "@vercel/style-guide"
+          - "oxlint*"
+          - "oxfmt"
+          - "ultracite"
+          - "husky"
+          - "lint-staged"
+          - "knip"
           - "typescript"
           - "tsx"
           - "cross-env"
           - "@svgr/webpack"
-        exclude-patterns:
-          - "eslint-config-next"
       types:
         patterns:
           - "@types/*"
