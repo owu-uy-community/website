@@ -1,31 +1,3 @@
-import {
-  AckStaffAnnouncementSchema,
-  AssignStaffTaskSchema,
-  CreateStaffAnnouncementSchema,
-  CreateStaffTaskSchema,
-  DeleteStaffTaskSchema,
-  JoinStaffTaskSchema,
-  ListStaffAnnouncementsSchema,
-  ListStaffTasksSchema,
-  SetStaffTaskStatusSchema,
-  ShiftStaffTasksSchema,
-  StaffRosterSchema,
-  UpdateStaffTaskSchema,
-  ackStaffAnnouncement,
-  assignStaffTask,
-  createStaffAnnouncement,
-  createStaffTask,
-  deleteStaffTask,
-  joinStaffTask,
-  leaveStaffTask,
-  listStaffAnnouncements,
-  listStaffTasks,
-  setStaffTaskStatus,
-  shiftStaffTasks,
-  unassignStaffTask,
-  updateStaffTask,
-} from "./staff-tasks";
-
 import { GetAttendeesSchema, GetSummarySchema, getAttendees, getSummary } from "./eventbrite";
 
 import {
@@ -103,13 +75,13 @@ import { getCountdownEndtime } from "./countdown/services/get-endtime";
 
 import { getDashboardStats, GetDashboardStatsSchema } from "./dashboard";
 
-import { authed, inCommunity, pub, staff } from "./base";
+import { pub, staff } from "./base";
 import { communitiesRouter } from "./communities/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { roomsRouter } from "./rooms/router";
 import { schedulesRouter } from "./schedules/router";
+import { staffTasksRouter } from "./staff-tasks/router";
 import { tracksRouter } from "./tracks/router";
-import { listCommunityMembers } from "./communities/service";
 import type { Actor } from "./services";
 
 /**
@@ -240,80 +212,6 @@ export const getDashboardStatsHandler = staff
   .input(GetDashboardStatsSchema)
   .handler(async ({ input }) => getDashboardStats(input?.eventId));
 
-// Staff coordination (event-day tasks + announcements).
-// Reads and self-service actions: any community member. Editing: editor+.
-export const listStaffTasksHandler = authed
-  .input(ListStaffTasksSchema)
-  .use(inCommunity("member"))
-  .handler(async ({ input }) => listStaffTasks(input));
-
-export const createStaffTaskHandler = authed
-  .input(CreateStaffTaskSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input }) => createStaffTask(input));
-
-export const updateStaffTaskHandler = authed
-  .input(UpdateStaffTaskSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input }) => updateStaffTask(input));
-
-export const deleteStaffTaskHandler = authed
-  .input(DeleteStaffTaskSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input }) => deleteStaffTask(input));
-
-export const setStaffTaskStatusHandler = authed
-  .input(SetStaffTaskStatusSchema)
-  .use(inCommunity("member"))
-  .handler(async ({ input, context }) => setStaffTaskStatus(input, context.user.id));
-
-export const joinStaffTaskHandler = authed
-  .input(JoinStaffTaskSchema)
-  .use(inCommunity("member"))
-  .handler(async ({ input, context }) => joinStaffTask(input, context.user.id));
-
-export const leaveStaffTaskHandler = authed
-  .input(JoinStaffTaskSchema)
-  .use(inCommunity("member"))
-  .handler(async ({ input, context }) => leaveStaffTask(input, context.user.id));
-
-export const assignStaffTaskHandler = authed
-  .input(AssignStaffTaskSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input }) => assignStaffTask(input));
-
-export const unassignStaffTaskHandler = authed
-  .input(AssignStaffTaskSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input }) => unassignStaffTask(input));
-
-export const shiftStaffTasksHandler = authed
-  .input(ShiftStaffTasksSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input }) => shiftStaffTasks(input));
-
-export const staffRosterHandler = authed
-  .input(StaffRosterSchema)
-  .use(inCommunity("member"))
-  .effect(function* ({ context }) {
-    return yield* listCommunityMembers(context.scope.communityId);
-  });
-
-export const listStaffAnnouncementsHandler = authed
-  .input(ListStaffAnnouncementsSchema)
-  .use(inCommunity("member"))
-  .handler(async ({ input, context }) => listStaffAnnouncements(input, context.user.id, context.scope.communityId));
-
-export const createStaffAnnouncementHandler = authed
-  .input(CreateStaffAnnouncementSchema)
-  .use(inCommunity("editor"))
-  .handler(async ({ input, context }) => createStaffAnnouncement(input, context.user.id));
-
-export const ackStaffAnnouncementHandler = authed
-  .input(AckStaffAnnouncementSchema)
-  .use(inCommunity("member"))
-  .handler(async ({ input, context }) => ackStaffAnnouncement(input, context.user.id));
-
 // Main router
 export const router = {
   openSpaces: openSpacesRouter,
@@ -404,24 +302,7 @@ export const router = {
   },
 
   // Staff coordination (event-day tasks + announcements)
-  staffTasks: {
-    list: listStaffTasksHandler,
-    create: createStaffTaskHandler,
-    update: updateStaffTaskHandler,
-    delete: deleteStaffTaskHandler,
-    setStatus: setStaffTaskStatusHandler,
-    join: joinStaffTaskHandler,
-    leave: leaveStaffTaskHandler,
-    assign: assignStaffTaskHandler,
-    unassign: unassignStaffTaskHandler,
-    shiftFrom: shiftStaffTasksHandler,
-    roster: staffRosterHandler,
-    announcements: {
-      list: listStaffAnnouncementsHandler,
-      create: createStaffAnnouncementHandler,
-      ack: ackStaffAnnouncementHandler,
-    },
-  },
+  staffTasks: staffTasksRouter,
 };
 
 export type AppRouter = typeof router;

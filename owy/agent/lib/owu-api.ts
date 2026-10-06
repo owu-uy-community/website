@@ -271,14 +271,13 @@ export interface UpdateStaffTaskData {
   assigneeIds?: string[];
 }
 
-/** A community member; the roster Owy assigns tasks from. */
+/** A community member; the roster Owy assigns tasks from (no contact details). */
 export interface CommunityMember {
   id: string;
   communityId: string;
   userId: string;
   role: "member" | "editor" | "admin" | "owner";
   name: string;
-  email: string;
   image: string | null;
   createdAt: string;
 }

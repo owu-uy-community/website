@@ -131,13 +131,30 @@ export type StaffAnnouncement = z.infer<typeof StaffAnnouncementSchema>;
 
 export const ListStaffAnnouncementsSchema = z.object({ eventId: z.string().min(1) });
 
-export const CreateStaffAnnouncementSchema = z.object({
-  eventId: z.string().min(1),
-  body: z.string().min(1, "El mensaje es requerido").max(2000),
-  urgent: z.boolean().default(false),
-  audience: AnnouncementAudienceSchema.default("all"),
-  taskId: z.string().optional(),
+export const CreateStaffAnnouncementSchema = z
+  .object({
+    eventId: z.string().min(1),
+    body: z.string().min(1, "El mensaje es requerido").max(2000),
+    urgent: z.boolean().default(false),
+    audience: AnnouncementAudienceSchema.default("all"),
+    taskId: z.string().optional(),
+  })
+  .refine((input) => input.audience !== "task" || input.taskId, {
+    message: "Un aviso para una tarea necesita la tarea",
+    path: ["taskId"],
+  });
+
+/** Someone on an event's staff, as every staff member sees them (no contact details). */
+export const StaffMemberSchema = z.object({
+  id: z.string(),
+  communityId: z.string(),
+  userId: z.string(),
+  role: z.enum(["owner", "admin", "editor", "member"]),
+  name: z.string(),
+  image: z.string().nullable(),
+  createdAt: z.string(),
 });
+export type StaffMember = z.infer<typeof StaffMemberSchema>;
 
 export const AckStaffAnnouncementSchema = z.object({
   eventId: z.string().min(1),

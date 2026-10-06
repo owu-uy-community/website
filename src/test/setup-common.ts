@@ -8,6 +8,7 @@ beforeAll(() => {
 
 afterEach(() => {
   server.resetHandlers();
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 

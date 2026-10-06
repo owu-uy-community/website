@@ -1,12 +1,14 @@
 import { call } from "@orpc/server";
 import { eq } from "drizzle-orm";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { db } from "lib/db";
 import { staffTasks } from "lib/db/schema";
 import { router } from "lib/orpc/router";
+import { eventChannel } from "lib/realtime/channels";
+import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeBoard, makeMember, makeUser } from "test/factories";
+import { makeBoard, makeMember, makeSiteAdmin, makeUser } from "test/factories";
 
 const DAY = "2026-11-07";
 
@@ -62,7 +64,7 @@ describe("staff tasks", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test.fails("#9 an unknown assignee rejects the whole create, leaving no task behind", async () => {
+  test("#9 #13 an unknown assignee rejects the whole create, leaving no task behind", async () => {
     const { eventId, createTask } = await setup();
 
     await expect(createTask({ title: "Fantasma", assigneeIds: ["no-existe"] })).rejects.toMatchObject({
@@ -71,13 +73,34 @@ describe("staff tasks", () => {
     await expect(db.select().from(staffTasks).where(eq(staffTasks.openSpaceId, eventId))).resolves.toStrictEqual([]);
   });
 
-  test.fails("#10 only community members can be assigned", async () => {
+  test("#10 only community members can be assigned", async () => {
     const { eventId, editor, outsider, createTask } = await setup();
     const task = await createTask();
 
     await expect(
       call(router.staffTasks.assign, { eventId, taskId: task.id, userId: outsider.id }, by(editor))
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(createTask({ assigneeIds: [outsider.id] })).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      call(router.staffTasks.update, { eventId, taskId: task.id, data: { assigneeIds: [outsider.id] } }, by(editor))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  test("editing a task keeps people who joined it without being on the roster", async () => {
+    const { eventId, editor, colleague, createTask } = await setup();
+    const siteStaff = await makeSiteAdmin();
+    const task = await createTask();
+    await call(router.staffTasks.join, { eventId, taskId: task.id }, by(siteStaff));
+
+    const updated = await call(
+      router.staffTasks.update,
+      { eventId, taskId: task.id, data: { assigneeIds: [siteStaff.id, colleague.id] } },
+      by(editor)
+    );
+
+    expect(updated.assignees.map((person) => person.userId).toSorted()).toStrictEqual(
+      [siteStaff.id, colleague.id].toSorted()
+    );
   });
 
   test("editors update a task and replace its assignees", async () => {
@@ -161,7 +184,28 @@ describe("staff tasks", () => {
     ]);
   });
 
-  test.fails("#16 the roster shows members to members without their emails", async () => {
+  test("#11 two shifts at once add up instead of overwriting each other", async () => {
+    const { eventId, editor, member, createTask } = await setup();
+    await createTask({ title: "Desde", startTime: "15:00", endTime: "15:30" });
+    const shift = () =>
+      call(router.staffTasks.shiftFrom, { eventId, dayDate: DAY, fromTime: "15:00", deltaMinutes: 15 }, by(editor));
+
+    await Promise.all([shift(), shift()]);
+
+    const [task] = await call(router.staffTasks.list, { eventId }, by(member));
+    expect([task.startTime, task.endTime]).toStrictEqual(["15:30", "16:00"]);
+  });
+
+  test("changes ping the staff channel without their content", async () => {
+    const { eventId, createTask } = await setup();
+    const publish = vi.spyOn(hub, "publish");
+
+    await createTask({ title: "Secreta" });
+
+    expect(publish).toHaveBeenCalledWith(eventChannel(eventId, "staff"), "tasks_changed", {});
+  });
+
+  test("#16 the roster shows members to members without their emails", async () => {
     const { eventId, member } = await setup();
 
     const roster = await call(router.staffTasks.roster, { eventId }, by(member));
@@ -198,7 +242,7 @@ describe("staff announcements", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test.fails("#P3 a task announcement without a task is a BAD_REQUEST", async () => {
+  test("#P3 a task announcement without a task is a BAD_REQUEST", async () => {
     const { eventId, editor } = await setup();
 
     await expect(

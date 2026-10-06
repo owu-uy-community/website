@@ -31,7 +31,6 @@ import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group"
 import { toast } from "components/shared/ui/toast-utils";
 import { eventChannel } from "lib/realtime/channels";
 import { orpc } from "lib/orpc";
-import type { CommunityMember } from "lib/orpc/communities/schemas";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 
 /** Live clock, ticking twice a minute. */
@@ -52,7 +51,7 @@ interface TareasClientProps {
   canEdit: boolean;
   initialTasks: StaffTask[];
   initialAnnouncements: StaffAnnouncement[];
-  initialRoster: CommunityMember[];
+  initialRoster: RosterMember[];
 }
 
 export default function TareasClient({
@@ -642,7 +641,7 @@ export default function TareasClient({
         defaultDay={selectedDay}
         isSaving={createMutation.isPending || updateMutation.isPending}
         open={formOpen}
-        roster={roster as RosterMember[]}
+        roster={roster}
         task={editingTask}
         onOpenChange={(open) => {
           setFormOpen(open);
