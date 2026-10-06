@@ -23,7 +23,6 @@
     "dev": "next dev --turbo",
     "dev:realtime": "node scripts/dev-realtime.mjs",
     "ocr:bench": "tsx scripts/ocr-bench.ts",
-    "ocr:check": "tsx scripts/ocr-checks.ts",
     "slot:replay": "tsx scripts/slot-replay.ts",
     "remotion": "remotion studio src/app/lib/videos/remotion/index.ts",
     "render": "remotion render",
@@ -31,7 +30,13 @@
     "check": "oxlint --type-aware && oxfmt --check",
     "fix": "oxlint --type-aware --fix && oxfmt",
     "typecheck": "tsc --noEmit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "vitest",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@better-auth/api-key": "1.6.22",
@@ -127,9 +132,14 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "16.2.12",
+    "@playwright/test": "1.63.0",
     "@remotion/tailwind-v4": "4.0.507",
     "@svgr/webpack": "8.1.0",
     "@tailwindcss/postcss": "4.3.3",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "14.6.7",
     "@types/dotenv": "8.2.3",
     "@types/mdx": "2.0.14",
     "@types/node": "25.9.1",
@@ -137,12 +147,15 @@
     "@types/react-dom": "19.2.4",
     "@types/uuid": "11.0.0",
     "@types/ws": "8.18.1",
+    "@vitest/coverage-v8": "5.0.3",
     "cross-env": "10.1.0",
     "drizzle-kit": "^0.31.10",
     "esbuild": "0.28.1",
+    "happy-dom": "20.14.5",
     "husky": "9.1.7",
     "knip": "6.40.0",
     "lint-staged": "17.6.0",
+    "msw": "2.15.0",
     "oxfmt": "0.72.0",
     "oxlint": "1.87.0",
     "oxlint-tsgolint": "7.0.2003",
@@ -150,7 +163,9 @@
     "tailwindcss": "4.3.3",
     "tsx": "4.23.12",
     "typescript": "6.0.3",
-    "ultracite": "7.12.4"
+    "ultracite": "7.12.4",
+    "vite": "8.3.3",
+    "vitest": "5.0.3"
   },
   "lint-staged": {
     "*.{js,jsx,mjs,ts,tsx}": [

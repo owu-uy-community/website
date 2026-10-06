@@ -13,6 +13,12 @@ import vitest from "ultracite/oxlint/vitest";
  * delete its line together with the fixes. Never add a line here to silence new
  * code — new code meets the preset.
  */
+// House style: `test()` everywhere, never `it()` (CONTRIBUTING.md).
+const TEST_NOT_IT: ["error", { fn: "test"; withinDescribe: "test" }] = [
+  "error",
+  { fn: "test", withinDescribe: "test" },
+];
+
 const BASELINE = {
   "arrow-body-style": "off", // 40
   "class-methods-use-this": "off", // 1
@@ -211,7 +217,7 @@ const BASELINE = {
 } as const;
 
 export default defineConfig({
-  extends: [core, react, next, vitest],
+  extends: [core, react, next],
   ignorePatterns: [
     ...(core.ignorePatterns ?? []),
     // Separate app with its own deps, tsconfig and conventions — see owy/README.md
@@ -225,4 +231,21 @@ export default defineConfig({
     "coverage/**",
   ],
   rules: BASELINE,
+  overrides: [
+    // The vitest preset is spliced in rather than extended: our own overrides
+    // lose to an extended preset's overrides for the same files.
+    ...(vitest.overrides ?? []).map((override) => ({
+      ...override,
+      rules: {
+        ...override.rules,
+        "vitest/consistent-test-it": TEST_NOT_IT,
+      },
+    })),
+    {
+      // Playwright fixtures must destructure their first argument (`async ({}, use)`),
+      // and their `use` callback is not a React hook.
+      files: ["e2e/**"],
+      rules: { "no-empty-pattern": "off", "react/rules-of-hooks": "off" },
+    },
+  ],
 });

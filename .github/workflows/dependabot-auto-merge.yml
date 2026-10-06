@@ -2,7 +2,7 @@ name: Dependabot Auto-Merge
 
 on:
   workflow_run:
-    workflows: ["Create vercel preview URL on pull request"]
+    workflows: ["CI"]
     types: [completed]
 
 concurrency:
