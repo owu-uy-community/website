@@ -161,26 +161,6 @@ import {
   setScene,
   submitInput,
 } from "./owy-stage/services";
-import {
-  AddCommunityMemberSchema,
-  CreateCommunitySchema,
-  GetCommunityBySlugSchema,
-  ListCommunitiesSchema,
-  ListCommunityMembersSchema,
-  RemoveCommunityMemberSchema,
-  UpdateCommunityMemberRoleSchema,
-  UpdateCommunitySchema,
-} from "./communities/schemas";
-import {
-  addCommunityMember,
-  createCommunity,
-  getCommunityBySlug,
-  listCommunities,
-  listCommunityMembers,
-  removeCommunityMember,
-  updateCommunity,
-  updateCommunityMemberRole,
-} from "./communities/services";
 import { getCountdownState } from "./countdown/services/get-state";
 import { updateCountdownState } from "./countdown/services/update-state";
 import { getCountdownEndtime } from "./countdown/services/get-endtime";
@@ -188,6 +168,8 @@ import { getCountdownEndtime } from "./countdown/services/get-endtime";
 import { getDashboardStats, GetDashboardStatsSchema } from "./dashboard";
 
 import { authed, inCommunity, pub, staff } from "./base";
+import { communitiesRouter } from "./communities/router";
+import { listCommunityMembers } from "./communities/service";
 import type { Actor } from "./services";
 
 // OpenSpace procedures (public read, admin write)
@@ -356,59 +338,6 @@ export const updateCountdownStateHandler = staff
   .input(UpdateCountdownStateSchema)
   .handler(async ({ input }) => updateCountdownState(input));
 
-// Community procedures (public read; per-community roles for management)
-export const listCommunitiesHandler = pub
-  .input(ListCommunitiesSchema)
-  .handler(async ({ input }) => listCommunities(input?.includeInactive));
-
-export const getCommunityBySlugHandler = pub
-  .input(GetCommunityBySlugSchema)
-  .handler(async ({ input }) => getCommunityBySlug(input.communitySlug));
-
-export const createCommunityHandler = staff
-  .input(CreateCommunitySchema)
-  .handler(async ({ input, context }) => createCommunity(input, context.user.id));
-
-export const updateCommunityHandler = authed
-  .input(UpdateCommunitySchema)
-  .use(inCommunity("admin"))
-  .handler(async ({ input }) => updateCommunity(input));
-
-export const listCommunityMembersHandler = authed
-  .input(ListCommunityMembersSchema)
-  .use(inCommunity("admin"))
-  .handler(async ({ input }) => listCommunityMembers(input));
-
-export const addCommunityMemberHandler = authed
-  .input(AddCommunityMemberSchema)
-  .use(inCommunity("admin"))
-  .handler(async ({ input, context }) =>
-    addCommunityMember(input, {
-      userId: context.user.id,
-      isSiteStaff: context.user.role === "admin",
-    })
-  );
-
-export const updateCommunityMemberRoleHandler = authed
-  .input(UpdateCommunityMemberRoleSchema)
-  .use(inCommunity("admin"))
-  .handler(async ({ input, context }) =>
-    updateCommunityMemberRole(input, {
-      userId: context.user.id,
-      isSiteStaff: context.user.role === "admin",
-    })
-  );
-
-export const removeCommunityMemberHandler = authed
-  .input(RemoveCommunityMemberSchema)
-  .use(inCommunity("admin"))
-  .handler(async ({ input, context }) =>
-    removeCommunityMember(input, {
-      userId: context.user.id,
-      isSiteStaff: context.user.role === "admin",
-    })
-  );
-
 // Cast-to-screen procedures (public read for displays, admin write)
 export const getCastStateHandler = pub
   .input(GetCastStateSchema)
@@ -511,7 +440,9 @@ export const shiftStaffTasksHandler = authed
 export const staffRosterHandler = authed
   .input(StaffRosterSchema)
   .use(inCommunity("member"))
-  .handler(async ({ context }) => listCommunityMembers({ communityId: context.scope.communityId }));
+  .effect(function* ({ context }) {
+    return yield* listCommunityMembers(context.scope.communityId);
+  });
 
 export const listStaffAnnouncementsHandler = authed
   .input(ListStaffAnnouncementsSchema)
@@ -619,18 +550,7 @@ export const router = {
   },
 
   // Communities (tenants)
-  communities: {
-    list: listCommunitiesHandler,
-    getBySlug: getCommunityBySlugHandler,
-    create: createCommunityHandler,
-    update: updateCommunityHandler,
-    members: {
-      list: listCommunityMembersHandler,
-      add: addCommunityMemberHandler,
-      updateRole: updateCommunityMemberRoleHandler,
-      remove: removeCommunityMemberHandler,
-    },
-  },
+  communities: communitiesRouter,
 
   // Cast to screen (sticky note display)
   cast: {

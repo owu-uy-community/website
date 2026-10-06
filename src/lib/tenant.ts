@@ -35,6 +35,8 @@ export const RESERVED_SLUGS = new Set([
   "launchpad",
   "tareas",
   "attendees",
+  "owy",
+  "companion",
 ]);
 
 export const COMMUNITY_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,46})[a-z0-9]$/;

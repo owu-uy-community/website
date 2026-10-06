@@ -8,8 +8,7 @@ import { Button } from "components/shared/ui/button";
 import { Empty } from "components/shared/ui/empty";
 import { db } from "lib/db";
 import { communityMembers } from "lib/db/schema";
-import { listCommunityMembers } from "lib/orpc/communities/services";
-import { listStaffAnnouncements, listStaffTasks } from "lib/orpc/staff-tasks/services";
+import { caller } from "lib/orpc/server";
 
 import { resolveAdminCommunityScope } from "../scope";
 import TareasClient from "./TareasClient";
@@ -58,9 +57,9 @@ export default async function TareasPage({
   const selected = scope.selected;
 
   const [tasks, announcements, roster, membership] = await Promise.all([
-    listStaffTasks({ eventId: selected.id }),
-    listStaffAnnouncements({ eventId: selected.id }, session.user.id, selected.communityId),
-    listCommunityMembers({ communityId: selected.communityId }),
+    caller.staffTasks.list({ eventId: selected.id }),
+    caller.staffTasks.announcements.list({ eventId: selected.id }),
+    caller.staffTasks.roster({ eventId: selected.id }),
     admin
       ? Promise.resolve(null)
       : db

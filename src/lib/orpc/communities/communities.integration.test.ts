@@ -38,7 +38,7 @@ describe("communities.list", () => {
     expect(ids).not.toContain(inactive.id);
   });
 
-  test.fails("#21 an anonymous caller cannot list inactive communities", async () => {
+  test("#21 an anonymous caller cannot list inactive communities", async () => {
     const inactive = await makeCommunity({ isActive: false });
 
     const ids = (await call(router.communities.list, { includeInactive: true }, by(null))).map((c) => c.id);
@@ -86,7 +86,7 @@ describe("communities.create", () => {
     });
   });
 
-  test.fails("#12 a slug already in use is a CONFLICT", async () => {
+  test("#12 a slug already in use is a CONFLICT", async () => {
     const staff = await makeSiteAdmin();
     const existing = await makeCommunity();
 
@@ -120,7 +120,7 @@ describe("communities.update", () => {
     });
   });
 
-  test.fails("#12 an empty patch is a BAD_REQUEST, not a crash", async () => {
+  test("#12 an empty patch is a BAD_REQUEST, not a crash", async () => {
     const { community, admin } = await setup();
 
     await expect(
@@ -181,7 +181,7 @@ describe("communities.members", () => {
     expect((await membershipOf(stranger.id))?.role).toBe("owner");
   });
 
-  test.fails("#4 re-adding an owner by email cannot demote them", async () => {
+  test("#4 re-adding an owner by email cannot demote them", async () => {
     const { community, owner, admin, membershipOf } = await setup();
 
     await expect(
@@ -210,7 +210,7 @@ describe("communities.members", () => {
     await expect(membershipOf(member.id)).resolves.toBeUndefined();
   });
 
-  test.fails("#12 demoting or removing the last owner is a CONFLICT", async () => {
+  test("#12 demoting or removing the last owner is a CONFLICT", async () => {
     const { community, owner, membershipOf } = await setup();
     const ownerMembership = await membershipOf(owner.id);
 
@@ -226,7 +226,7 @@ describe("communities.members", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
 
-  test.fails("#12 an admin touching an owner is FORBIDDEN and an unknown member is NOT_FOUND", async () => {
+  test("#12 an admin touching an owner is FORBIDDEN and an unknown member is NOT_FOUND", async () => {
     const { community, owner, admin, membershipOf } = await setup();
     const ownerMembership = await membershipOf(owner.id);
 
@@ -236,6 +236,27 @@ describe("communities.members", () => {
     await expect(
       call(router.communities.members.remove, { communityId: community.id, memberId: "no-existe" }, by(admin))
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("two owners removing each other at once leaves exactly one owner", async () => {
+    const { community, owner, membershipOf } = await setup();
+    const secondOwner = await makeMember(community.id, "owner");
+    const [first, second] = await Promise.all([membershipOf(owner.id), membershipOf(secondOwner.id)]);
+
+    const results = await Promise.allSettled([
+      call(router.communities.members.remove, { communityId: community.id, memberId: second.id }, by(owner)),
+      call(router.communities.members.remove, { communityId: community.id, memberId: first.id }, by(secondOwner)),
+    ]);
+
+    const owners = await call(
+      router.communities.members.list,
+      { communityId: community.id },
+      by(await makeSiteAdmin())
+    );
+
+    // Whoever went second was no longer an owner — or no longer a member — by the time it ran.
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(owners.filter((member) => member.role === "owner")).toHaveLength(1);
   });
 
   test("site staff manages any community without a membership", async () => {
