@@ -53,6 +53,9 @@ jobs:
           elif echo "$COMMITS" | grep -q 'version-update:semver-major'; then
             echo "Contains a major version bump — leaving for manual review."
             echo "mergeable=false" >> "$GITHUB_OUTPUT"
+          elif echo "$COMMITS" | grep -qE 'dependency-name: (@orpc/|effect$|evlog$)'; then
+            echo "oRPC / Effect / evlog are pinned prereleases — leaving for manual review."
+            echo "mergeable=false" >> "$GITHUB_OUTPUT"
           else
             echo "mergeable=true" >> "$GITHUB_OUTPUT"
           fi

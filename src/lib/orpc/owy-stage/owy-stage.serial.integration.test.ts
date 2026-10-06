@@ -65,7 +65,7 @@ describe("the wall", () => {
     });
   });
 
-  test.fails("#14 scene params that don't fit the scene are a BAD_REQUEST", async () => {
+  test("#14 scene params that don't fit the scene are a BAD_REQUEST", async () => {
     const { putOnAir } = await setup();
 
     await expect(putOnAir({ scene: "now-playing", params: { song: "x".repeat(200) } })).rejects.toMatchObject({

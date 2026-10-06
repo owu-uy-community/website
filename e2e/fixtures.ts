@@ -1,46 +1,18 @@
-import { createHmac } from "node:crypto";
-
-import { createId } from "@paralleldrive/cuid2";
 import { test as base, expect, type BrowserContext, type Cookie, type Page } from "@playwright/test";
-
-import { db } from "lib/db";
-import { session } from "lib/db/schema";
 
 import { baseURL, E2E_AUTH_SECRET } from "../playwright.config";
 import { makeBoard, makeMember, makeSiteAdmin, makeUser, type UserRow } from "../src/test/factories";
+import { mintSession } from "../src/test/session";
 
 export type Role = "admin" | "editor" | "member" | "outsider";
 
 type Tenant = Awaited<ReturnType<typeof makeBoard>> & { users: Record<Role, UserRow> };
 
-/**
- * Slack is the only sign-in method, so tests mint sessions the way Better Auth
- * would: a `session` row plus the signed `better-auth.session_token` cookie
- * (`<token>.<base64 HMAC-SHA256(secret, token)>`).
- */
+/** Slack is the only sign-in method, so tests mint sessions straight into the database. */
 async function sessionCookie(user: UserRow): Promise<Cookie> {
-  const token = createId();
-  const now = new Date();
-  await db.insert(session).values({
-    id: createId(),
-    token,
-    userId: user.id,
-    createdAt: now,
-    updatedAt: now,
-    expiresAt: new Date(now.getTime() + 86_400_000),
-  });
-  const signature = createHmac("sha256", E2E_AUTH_SECRET).update(token).digest("base64");
+  const { name, value } = await mintSession(user.id, E2E_AUTH_SECRET);
 
-  return {
-    name: "better-auth.session_token",
-    value: encodeURIComponent(`${token}.${signature}`),
-    domain: "127.0.0.1",
-    path: "/",
-    expires: -1,
-    httpOnly: true,
-    secure: false,
-    sameSite: "Lax",
-  };
+  return { name, value, domain: "127.0.0.1", path: "/", expires: -1, httpOnly: true, secure: false, sameSite: "Lax" };
 }
 
 // Contexts created inside a test inherit the project's `use` options, storageState

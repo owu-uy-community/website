@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.63",
-    "@orpc/client": "1.14.4",
+    "@orpc/client": "2.0.0-beta.42",
     "ai": "^7.0.66",
     "esphome-client": "2.0.0",
     "eve": "^0.38.3",

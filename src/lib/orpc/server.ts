@@ -1,39 +1,28 @@
-import { getTracksForEvent } from "./sticky-notes/services/get-all-tracks";
-import { getTracksByOpenSpace } from "./sticky-notes/services/get-by-open-space";
-import { getRoomsByOpenSpace } from "./rooms/services/get-by-open-space";
-import { getSchedulesByOpenSpace } from "./schedules/services/get-by-open-space";
-import type { StickyNote } from "./sticky-notes/schemas";
-import type { Room } from "./rooms/schemas";
-import type { Schedule } from "./schedules/schemas";
-import type { TrackWithRelations } from "./sticky-notes/services/get-by-open-space";
+import "server-only";
+
+import { createRouterClient, ORPCError } from "@orpc/server";
+import { headers } from "next/headers";
+import { cache } from "react";
+
+import { requestContext } from "./handlers";
+import { router } from "./router";
 
 /**
- * Server-side OpenSpace data fetcher
- * Fetches all necessary data for the OpenSpace page in one call
- * Note: Countdown state is NOT included - it's always fetched client-side for live updates
+ * Procedures called from server components and route handlers, in-process:
+ * the same auth, scoping and errors as over HTTP, without the HTTP. The
+ * context (and its one session lookup) is shared by every call while a
+ * request renders.
  */
-export async function fetchOpenSpaceData(openSpaceId: string) {
-  try {
-    // Fetch all data in parallel for better performance
-    // Countdown is excluded - it needs to be fresh/live on client
-    const [notes, rooms, schedules, highlightedTracks] = await Promise.all([
-      getTracksForEvent(openSpaceId),
-      getRoomsByOpenSpace({ openSpaceId }),
-      getSchedulesByOpenSpace({ openSpaceId }),
-      getTracksByOpenSpace({ openSpaceId, highlightedOnly: true }),
-    ]);
+export const caller = createRouterClient(router, {
+  context: cache(async () => requestContext(await headers())),
+});
 
-    return {
-      notes,
-      rooms,
-      schedules,
-      highlightedTracks,
-    };
+/** For pages that 404 on a missing row: NOT_FOUND becomes `null`, anything else still throws. */
+export async function orNull<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise;
   } catch (error) {
-    console.error("Error fetching OpenSpace data on server:", error);
+    if (error instanceof ORPCError && error.code === "NOT_FOUND") return null;
     throw error;
   }
 }
-
-// Export types
-export type { StickyNote, Room, Schedule, TrackWithRelations };

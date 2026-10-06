@@ -230,7 +230,11 @@ export default defineConfig({
     "test-results/**",
     "coverage/**",
   ],
-  rules: BASELINE,
+  rules: {
+    ...BASELINE,
+    // Effect code is anonymous generators all the way down: `Effect.gen(function* () { … })`.
+    "func-names": ["error", "always", { generators: "never" }] as ["error", "always", { generators: "never" }],
+  },
   overrides: [
     // The vitest preset is spliced in rather than extended: our own overrides
     // lose to an extended preset's overrides for the same files.

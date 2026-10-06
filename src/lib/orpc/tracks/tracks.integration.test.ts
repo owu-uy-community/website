@@ -121,7 +121,7 @@ describe("tracks.create", () => {
     await expect(call(router.tracks.create, input, by(editor))).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test.fails("#5 two staffers grabbing the same slot at once: one wins, the rest get CONFLICT", async () => {
+  test("#5 two staffers grabbing the same slot at once: one wins, the rest get CONFLICT", async () => {
     const { rooms, slots, staff, place } = await setup();
     const attempts = Array.from({ length: 8 }, (_, index) =>
       call(router.tracks.create, { ...newTalk, title: `Charla ${index}`, ...place(slots.late, rooms.plain) }, by(staff))
@@ -259,7 +259,7 @@ describe("tracks.bulkUpdateBySchedule", () => {
     ]);
   });
 
-  test.fails("#5 moving a slot's talks onto a slot with a talk in the same room is a CONFLICT", async () => {
+  test("#5 moving a slot's talks onto a slot with a talk in the same room is a CONFLICT", async () => {
     const { event, rooms, slots, staff } = await setup();
     await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id });
     await makeTrack({ eventId: event.id, scheduleId: slots.late.id, roomId: rooms.plain.id });

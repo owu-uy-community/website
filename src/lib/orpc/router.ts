@@ -1,5 +1,3 @@
-import { os } from "@orpc/server";
-
 // Import all feature modules
 import {
   // Tracks API
@@ -189,500 +187,346 @@ import { getCountdownEndtime } from "./countdown/services/get-endtime";
 
 import { getDashboardStats, GetDashboardStatsSchema } from "./dashboard";
 
-import { withErrorHandling } from "./utilities";
-import { isSiteStaff, requireAdmin, requireAuth, requireCommunityRole, type Context } from "./middleware";
-
-// Create admin-protected base with middleware
-const adminOs = os.use(requireAdmin);
+import { authed, inCommunity, pub, staff } from "./base";
+import type { Actor } from "./services";
 
 // OpenSpace procedures (public read, admin write)
-export const listOpenSpacesByCommunity = os
+export const listOpenSpacesByCommunity = pub
   .input(ListOpenSpacesByCommunitySchema)
-  .handler(
-    withErrorHandling(async ({ input }) => getOpenSpacesByCommunity(input.communityId), "fetch community events")
-  );
+  .handler(async ({ input }) => getOpenSpacesByCommunity(input.communityId));
 
 /**
  * Event list for the switcher and the staff "Tareas" page. Site staff sees
  * every event; community members see the events of their communities.
  */
-export const listEventsForAdminHandler = os.use(requireAuth).handler(
-  withErrorHandling(async ({ context }) => {
-    const user = (context as Context).user!;
-    return listEventsForOperator(isSiteStaff(user) ? null : user.id);
-  }, "list events for operator")
-);
+export const listEventsForAdminHandler = authed.handler(async ({ context }) => {
+  const user = context.user;
+  return listEventsForOperator(user.role === "admin" ? null : user.id);
+});
 
-export const getOpenSpace = os
-  .input(GetOpenSpaceSchema)
-  .handler(withErrorHandling(async ({ input }) => getOpenSpaceById(input), "fetch open space"));
+export const getOpenSpace = pub.input(GetOpenSpaceSchema).handler(async ({ input }) => getOpenSpaceById(input));
 
-export const createOpenSpaceHandler = adminOs
+export const createOpenSpaceHandler = staff
   .input(CreateOpenSpaceSchema)
-  .handler(withErrorHandling(async ({ input }) => createOpenSpace(input), "create open space"));
+  .handler(async ({ input }) => createOpenSpace(input));
 
-export const updateOpenSpaceHandler = adminOs
+export const updateOpenSpaceHandler = staff
   .input(UpdateOpenSpaceInputSchema)
-  .handler(withErrorHandling(async ({ input }) => updateOpenSpace(input), "update open space"));
+  .handler(async ({ input }) => updateOpenSpace(input));
 
-export const deleteOpenSpaceHandler = adminOs
+export const deleteOpenSpaceHandler = staff
   .input(DeleteOpenSpaceSchema)
-  .handler(withErrorHandling(async ({ input }) => deleteOpenSpace(input), "delete open space"));
+  .handler(async ({ input }) => deleteOpenSpace(input));
 
 // Schedule procedures (public read, admin write)
-export const getSchedulesByOpenSpaceHandler = os
+export const getSchedulesByOpenSpaceHandler = pub
   .input(GetSchedulesByOpenSpaceSchema)
-  .handler(withErrorHandling(async ({ input }) => getSchedulesByOpenSpace(input), "fetch schedules by open space"));
+  .handler(async ({ input }) => getSchedulesByOpenSpace(input));
 
-export const getSchedule = os
-  .input(GetScheduleSchema)
-  .handler(withErrorHandling(async ({ input }) => getScheduleById(input), "fetch schedule"));
+export const getSchedule = pub.input(GetScheduleSchema).handler(async ({ input }) => getScheduleById(input));
 
-export const createScheduleHandler = adminOs
+export const createScheduleHandler = staff
   .input(CreateScheduleSchema)
-  .handler(withErrorHandling(async ({ input }) => createSchedule(input), "create schedule"));
+  .handler(async ({ input }) => createSchedule(input));
 
-export const updateScheduleHandler = adminOs
+export const updateScheduleHandler = staff
   .input(UpdateScheduleInputSchema)
-  .handler(withErrorHandling(async ({ input }) => updateSchedule(input), "update schedule"));
+  .handler(async ({ input }) => updateSchedule(input));
 
-export const deleteScheduleHandler = adminOs
+export const deleteScheduleHandler = staff
   .input(DeleteScheduleSchema)
-  .handler(withErrorHandling(async ({ input }) => deleteSchedule(input), "delete schedule"));
+  .handler(async ({ input }) => deleteSchedule(input));
 
 // Room procedures (public read, admin write)
-export const getRoomsByOpenSpaceHandler = os
+export const getRoomsByOpenSpaceHandler = pub
   .input(GetRoomsByOpenSpaceSchema)
-  .handler(withErrorHandling(async ({ input }) => getRoomsByOpenSpace(input), "fetch rooms by open space"));
+  .handler(async ({ input }) => getRoomsByOpenSpace(input));
 
-export const getRoom = os
-  .input(GetRoomSchema)
-  .handler(withErrorHandling(async ({ input }) => getRoomById(input), "fetch room"));
+export const getRoom = pub.input(GetRoomSchema).handler(async ({ input }) => getRoomById(input));
 
-export const createRoomHandler = adminOs
-  .input(CreateRoomSchema)
-  .handler(withErrorHandling(async ({ input }) => createRoom(input), "create room"));
+export const createRoomHandler = staff.input(CreateRoomSchema).handler(async ({ input }) => createRoom(input));
 
-export const updateRoomHandler = adminOs
-  .input(UpdateRoomInputSchema)
-  .handler(withErrorHandling(async ({ input }) => updateRoom(input), "update room"));
+export const updateRoomHandler = staff.input(UpdateRoomInputSchema).handler(async ({ input }) => updateRoom(input));
 
-export const deleteRoomHandler = adminOs
-  .input(DeleteRoomSchema)
-  .handler(withErrorHandling(async ({ input }) => deleteRoom(input), "delete room"));
+export const deleteRoomHandler = staff.input(DeleteRoomSchema).handler(async ({ input }) => deleteRoom(input));
 
-export const reorderRoomsHandler = adminOs
-  .input(ReorderRoomsSchema)
-  .handler(withErrorHandling(async ({ input }) => reorderRooms(input), "reorder rooms"));
+export const reorderRoomsHandler = staff.input(ReorderRoomsSchema).handler(async ({ input }) => reorderRooms(input));
 
 // Track procedures (public read, admin write)
-export const listTracks = os
+export const listTracks = pub
   .input(ListTracksByEventSchema)
-  .handler(withErrorHandling(async ({ input }) => getTracksForEvent(input.openSpaceId), "fetch event tracks"));
+  .handler(async ({ input }) => getTracksForEvent(input.openSpaceId));
 
-export const getTracksByOpenSpaceHandler = os
+export const getTracksByOpenSpaceHandler = pub
   .input(GetTracksByOpenSpaceSchema)
-  .handler(withErrorHandling(async ({ input }) => getTracksByOpenSpace(input), "fetch tracks by open space"));
+  .handler(async ({ input }) => getTracksByOpenSpace(input));
 
-export const getTrack = os
-  .input(GetTrackSchema)
-  .handler(withErrorHandling(async ({ input }) => getTrackById(input), "fetch track"));
+export const getTrack = pub.input(GetTrackSchema).handler(async ({ input }) => getTrackById(input));
 
-export const createTrackHandler = adminOs
-  .input(CreateTrackSchema)
-  .handler(withErrorHandling(async ({ input }) => createTrack(input), "create track"));
+export const createTrackHandler = staff.input(CreateTrackSchema).handler(async ({ input }) => createTrack(input));
 
-export const updateTrackHandler = adminOs
-  .input(UpdateTrackInputSchema)
-  .handler(withErrorHandling(async ({ input }) => updateTrack(input), "update track"));
+export const updateTrackHandler = staff.input(UpdateTrackInputSchema).handler(async ({ input }) => updateTrack(input));
 
-export const deleteTrackHandler = adminOs
-  .input(DeleteTrackSchema)
-  .handler(withErrorHandling(async ({ input }) => deleteTrack(input), "delete track"));
+export const deleteTrackHandler = staff.input(DeleteTrackSchema).handler(async ({ input }) => deleteTrack(input));
 
-export const swapTracksHandler = adminOs
-  .input(SwapTracksSchema)
-  .handler(withErrorHandling(async ({ input }) => swapTracks(input), "swap tracks"));
+export const swapTracksHandler = staff.input(SwapTracksSchema).handler(async ({ input }) => swapTracks(input));
 
-export const bulkUpdateTracksByScheduleHandler = adminOs
+export const bulkUpdateTracksByScheduleHandler = staff
   .input(BulkUpdateTracksByScheduleSchema)
-  .handler(withErrorHandling(async ({ input }) => bulkUpdateTracksBySchedule(input), "bulk update tracks by schedule"));
+  .handler(async ({ input }) => bulkUpdateTracksBySchedule(input));
 
 /**
  * Eventbrite handlers (admin only)
  */
-export const getAttendeesHandler = adminOs
-  .input(GetAttendeesSchema)
-  .handler(withErrorHandling(async ({ input }) => getAttendees(input), "fetch Eventbrite attendees"));
+export const getAttendeesHandler = staff.input(GetAttendeesSchema).handler(async ({ input }) => getAttendees(input));
 
-export const getSummaryHandler = adminOs.handler(
-  withErrorHandling(async () => getSummary(), "fetch Eventbrite summary")
-);
+export const getSummaryHandler = staff.handler(async () => getSummary());
 
 /**
  * OCR handlers (admin only)
  */
-export const processImageHandler = adminOs
-  .input(ProcessImageSchema)
-  .handler(withErrorHandling(async ({ input }) => processImage(input), "process image with OCR"));
+export const processImageHandler = staff.input(ProcessImageSchema).handler(async ({ input }) => processImage(input));
 
-export const findFreeSpotHandler = adminOs
-  .input(FindFreeSpotSchema)
-  .handler(withErrorHandling(async ({ input }) => findFreeSpot(input), "find free spot with AI"));
+export const findFreeSpotHandler = staff.input(FindFreeSpotSchema).handler(async ({ input }) => findFreeSpot(input));
 
-export const processImageWithSuggestionHandler = adminOs
+export const processImageWithSuggestionHandler = staff
   .input(ProcessImageWithSuggestionSchema)
-  .handler(
-    withErrorHandling(async ({ input }) => processImageWithSuggestion(input), "process image with OCR and suggest spot")
-  );
+  .handler(async ({ input }) => processImageWithSuggestion(input));
 
 // OBS Queue procedures (public read, admin write)
-export const getOBSState = os
-  .input(GetInstanceSchema)
-  .handler(withErrorHandling(async ({ input }) => getState(input), "get OBS queue state"));
+export const getOBSState = pub.input(GetInstanceSchema).handler(async ({ input }) => getState(input));
 
-export const updateOBSState = adminOs
-  .input(UpdateStateSchema)
-  .handler(withErrorHandling(async ({ input }) => updateState(input), "update OBS queue state"));
+export const updateOBSState = staff.input(UpdateStateSchema).handler(async ({ input }) => updateState(input));
 
 /** Who queued a command, for the history tab. */
-function commandSource(context: Context): string {
-  const user = context.user;
-  if (!user) return "anon";
-
+function commandSource(user: Actor): string {
   return user.id === "owy-bot" ? "bot" : `admin:${user.name || user.id}`;
 }
 
 // OBS control bus (commands for the executor tab + the status it reports back)
-export const sendObsCommand = adminOs
+export const sendObsCommand = staff
   .input(SendCommandSchema)
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => sendCommand(input, commandSource(context as Context)),
-      "queue OBS command"
-    )
-  );
+  .handler(async ({ input, context }) => sendCommand(input, commandSource(context.user)));
 
-export const pendingObsCommands = adminOs
-  .input(InstanceSchema)
-  .handler(withErrorHandling(async ({ input }) => pendingCommands(input), "list pending OBS commands"));
+export const pendingObsCommands = staff.input(InstanceSchema).handler(async ({ input }) => pendingCommands(input));
 
-export const ackObsCommand = adminOs
-  .input(AckCommandSchema)
-  .handler(withErrorHandling(async ({ input }) => ackCommand(input), "ack OBS command"));
+export const ackObsCommand = staff.input(AckCommandSchema).handler(async ({ input }) => ackCommand(input));
 
-export const claimObsExecutor = adminOs
-  .input(ClaimExecutorSchema)
-  .handler(withErrorHandling(async ({ input }) => claimExecutor(input), "claim OBS executor"));
+export const claimObsExecutor = staff.input(ClaimExecutorSchema).handler(async ({ input }) => claimExecutor(input));
 
-export const releaseObsExecutor = adminOs
+export const releaseObsExecutor = staff
   .input(ReleaseExecutorSchema)
-  .handler(withErrorHandling(async ({ input }) => releaseExecutor(input), "release OBS executor"));
+  .handler(async ({ input }) => releaseExecutor(input));
 
-export const reportObsStatus = adminOs
-  .input(ReportStatusSchema)
-  .handler(withErrorHandling(async ({ input }) => reportStatus(input), "report OBS status"));
+export const reportObsStatus = staff.input(ReportStatusSchema).handler(async ({ input }) => reportStatus(input));
 
-export const getObsStatusHandler = adminOs
-  .input(InstanceSchema)
-  .handler(withErrorHandling(async ({ input }) => getObsStatus(input), "get OBS status"));
+export const getObsStatusHandler = staff.input(InstanceSchema).handler(async ({ input }) => getObsStatus(input));
 
-export const listObsCommands = adminOs
-  .input(ListCommandsSchema)
-  .handler(withErrorHandling(async ({ input }) => listCommands(input), "list OBS commands"));
+export const listObsCommands = staff.input(ListCommandsSchema).handler(async ({ input }) => listCommands(input));
 
 // Cues (rundown)
-export const listObsCues = adminOs
-  .input(InstanceSchema)
-  .handler(withErrorHandling(async ({ input }) => listCues(input), "list OBS cues"));
+export const listObsCues = staff.input(InstanceSchema).handler(async ({ input }) => listCues(input));
 
-export const createObsCue = adminOs
-  .input(CreateCueSchema)
-  .handler(withErrorHandling(async ({ input }) => createCue(input), "create OBS cue"));
+export const createObsCue = staff.input(CreateCueSchema).handler(async ({ input }) => createCue(input));
 
-export const updateObsCue = adminOs
-  .input(UpdateCueSchema)
-  .handler(withErrorHandling(async ({ input }) => updateCue(input), "update OBS cue"));
+export const updateObsCue = staff.input(UpdateCueSchema).handler(async ({ input }) => updateCue(input));
 
-export const removeObsCue = adminOs
+export const removeObsCue = staff.input(CueIdSchema).handler(async ({ input }) => removeCue(input));
+
+export const reorderObsCues = staff.input(ReorderCuesSchema).handler(async ({ input }) => reorderCues(input));
+
+export const fireObsCue = staff
   .input(CueIdSchema)
-  .handler(withErrorHandling(async ({ input }) => removeCue(input), "remove OBS cue"));
+  .handler(async ({ input, context }) => fireCue(input, commandSource(context.user)));
 
-export const reorderObsCues = adminOs
-  .input(ReorderCuesSchema)
-  .handler(withErrorHandling(async ({ input }) => reorderCues(input), "reorder OBS cues"));
-
-export const fireObsCue = adminOs
-  .input(CueIdSchema)
-  .handler(
-    withErrorHandling(async ({ input, context }) => fireCue(input, commandSource(context as Context)), "fire OBS cue")
-  );
-
-export const stepObsCue = adminOs
+export const stepObsCue = staff
   .input(StepCueSchema)
-  .handler(
-    withErrorHandling(async ({ input, context }) => stepCue(input, commandSource(context as Context)), "step OBS cue")
-  );
+  .handler(async ({ input, context }) => stepCue(input, commandSource(context.user)));
 
 // Countdown procedures (public read, admin write)
-export const getCountdownStateHandler = os
+export const getCountdownStateHandler = pub
   .input(GetCountdownStateSchema)
-  .handler(withErrorHandling(async ({ input }) => getCountdownState(input?.eventId), "get countdown state"));
+  .handler(async ({ input }) => getCountdownState(input?.eventId));
 
-export const getCountdownEndtimeHandler = os
+export const getCountdownEndtimeHandler = pub
   .input(GetCountdownStateSchema)
-  .handler(withErrorHandling(async ({ input }) => getCountdownEndtime(input?.eventId), "get countdown endtime"));
+  .handler(async ({ input }) => getCountdownEndtime(input?.eventId));
 
-export const updateCountdownStateHandler = adminOs
+export const updateCountdownStateHandler = staff
   .input(UpdateCountdownStateSchema)
-  .handler(withErrorHandling(async ({ input }) => updateCountdownState(input), "update countdown state"));
+  .handler(async ({ input }) => updateCountdownState(input));
 
 // Community procedures (public read; per-community roles for management)
-export const listCommunitiesHandler = os
+export const listCommunitiesHandler = pub
   .input(ListCommunitiesSchema)
-  .handler(withErrorHandling(async ({ input }) => listCommunities(input?.includeInactive), "list communities"));
+  .handler(async ({ input }) => listCommunities(input?.includeInactive));
 
-export const getCommunityBySlugHandler = os
+export const getCommunityBySlugHandler = pub
   .input(GetCommunityBySlugSchema)
-  .handler(withErrorHandling(async ({ input }) => getCommunityBySlug(input.communitySlug), "get community by slug"));
+  .handler(async ({ input }) => getCommunityBySlug(input.communitySlug));
 
-export const createCommunityHandler = adminOs
+export const createCommunityHandler = staff
   .input(CreateCommunitySchema)
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => createCommunity(input, (context as Context).user!.id),
-      "create community"
-    )
-  );
+  .handler(async ({ input, context }) => createCommunity(input, context.user.id));
 
-export const updateCommunityHandler = os
+export const updateCommunityHandler = authed
   .input(UpdateCommunitySchema)
-  .use(requireCommunityRole("admin"))
-  .handler(withErrorHandling(async ({ input }) => updateCommunity(input), "update community"));
+  .use(inCommunity("admin"))
+  .handler(async ({ input }) => updateCommunity(input));
 
-export const listCommunityMembersHandler = os
+export const listCommunityMembersHandler = authed
   .input(ListCommunityMembersSchema)
-  .use(requireCommunityRole("admin"))
-  .handler(withErrorHandling(async ({ input }) => listCommunityMembers(input), "list community members"));
+  .use(inCommunity("admin"))
+  .handler(async ({ input }) => listCommunityMembers(input));
 
-export const addCommunityMemberHandler = os
+export const addCommunityMemberHandler = authed
   .input(AddCommunityMemberSchema)
-  .use(requireCommunityRole("admin"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) =>
-        addCommunityMember(input, {
-          userId: (context as Context).user!.id,
-          isSiteStaff: isSiteStaff((context as Context).user!),
-        }),
-      "add community member"
-    )
+  .use(inCommunity("admin"))
+  .handler(async ({ input, context }) =>
+    addCommunityMember(input, {
+      userId: context.user.id,
+      isSiteStaff: context.user.role === "admin",
+    })
   );
 
-export const updateCommunityMemberRoleHandler = os
+export const updateCommunityMemberRoleHandler = authed
   .input(UpdateCommunityMemberRoleSchema)
-  .use(requireCommunityRole("admin"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) =>
-        updateCommunityMemberRole(input, {
-          userId: (context as Context).user!.id,
-          isSiteStaff: isSiteStaff((context as Context).user!),
-        }),
-      "update community member role"
-    )
+  .use(inCommunity("admin"))
+  .handler(async ({ input, context }) =>
+    updateCommunityMemberRole(input, {
+      userId: context.user.id,
+      isSiteStaff: context.user.role === "admin",
+    })
   );
 
-export const removeCommunityMemberHandler = os
+export const removeCommunityMemberHandler = authed
   .input(RemoveCommunityMemberSchema)
-  .use(requireCommunityRole("admin"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) =>
-        removeCommunityMember(input, {
-          userId: (context as Context).user!.id,
-          isSiteStaff: isSiteStaff((context as Context).user!),
-        }),
-      "remove community member"
-    )
+  .use(inCommunity("admin"))
+  .handler(async ({ input, context }) =>
+    removeCommunityMember(input, {
+      userId: context.user.id,
+      isSiteStaff: context.user.role === "admin",
+    })
   );
 
 // Cast-to-screen procedures (public read for displays, admin write)
-export const getCastStateHandler = os
+export const getCastStateHandler = pub
   .input(GetCastStateSchema)
-  .handler(withErrorHandling(async ({ input }) => getCastState(input?.eventId), "get cast state"));
+  .handler(async ({ input }) => getCastState(input?.eventId));
 
-export const setHighlightedNoteHandler = adminOs
+export const setHighlightedNoteHandler = staff
   .input(SetHighlightedNoteSchema)
-  .handler(withErrorHandling(async ({ input }) => setHighlightedNote(input), "set highlighted note"));
+  .handler(async ({ input }) => setHighlightedNote(input));
 
 // Owy Stage procedures (public read for the OBS pages, admin write — the
 // companion bridge writes through its x-api-key admin session)
-export const getStageStateHandler = os.handler(withErrorHandling(async () => getStageState(), "get stage state"));
+export const getStageStateHandler = pub.handler(async () => getStageState());
 
-export const setSceneHandler = adminOs
-  .input(SetSceneSchema)
-  .handler(withErrorHandling(async ({ input }) => setScene(input), "set stage scene"));
+export const setSceneHandler = staff.input(SetSceneSchema).handler(async ({ input }) => setScene(input));
 
-export const getRundownHandler = adminOs.handler(withErrorHandling(async () => getRundown(), "get stage rundown"));
+export const getRundownHandler = staff.handler(async () => getRundown());
 
-export const saveRundownHandler = adminOs
-  .input(SaveRundownSchema)
-  .handler(withErrorHandling(async ({ input }) => saveRundown(input.steps), "save stage rundown"));
+export const saveRundownHandler = staff.input(SaveRundownSchema).handler(async ({ input }) => saveRundown(input.steps));
 
-export const fireEffectHandler = adminOs
-  .input(FireEffectSchema)
-  .handler(withErrorHandling(async ({ input }) => fireEffect(input), "fire stage effect"));
+export const fireEffectHandler = staff.input(FireEffectSchema).handler(async ({ input }) => fireEffect(input));
 
-export const setFaceHandler = adminOs
-  .input(SetFaceSchema)
-  .handler(withErrorHandling(async ({ input }) => setFace(input), "set owy face"));
+export const setFaceHandler = staff.input(SetFaceSchema).handler(async ({ input }) => setFace(input));
 
 // Aggregates only (counts), safe for the public wall pages
-export const getStagePulseHandler = os
+export const getStagePulseHandler = pub
   .input(GetPulseSchema)
-  .handler(withErrorHandling(async ({ input }) => getStagePulse(input?.eventId), "get stage pulse"));
+  .handler(async ({ input }) => getStagePulse(input?.eventId));
 
-export const getStageMeetupsHandler = os.handler(
-  withErrorHandling(async () => getStageMeetups(), "get community meetups")
-);
+export const getStageMeetupsHandler = pub.handler(async () => getStageMeetups());
 
-export const getStageWeatherHandler = os.handler(withErrorHandling(async () => getStageWeather(), "get stage weather"));
-export const getStageSpeakersHandler = os.handler(
-  withErrorHandling(async () => getStageSpeakers(), "get stage speakers")
-);
-export const getStageSpotifyHandler = os.handler(
-  withErrorHandling(async () => getSpotifyNowPlaying(), "get spotify now playing")
-);
-export const spotifyStatusHandler = adminOs.handler(withErrorHandling(async () => spotifyStatus(), "spotify status"));
-export const disconnectSpotifyHandler = adminOs.handler(
-  withErrorHandling(async () => {
-    await disconnectSpotify();
-    return { ok: true };
-  }, "disconnect spotify")
-);
-export const setNowPlayingHandler = adminOs
-  .input(SetNowPlayingSchema)
-  .handler(withErrorHandling(async ({ input }) => setNowPlaying(input), "set now playing"));
-export const submitStageInputHandler = os
-  .input(SubmitInputSchema)
-  .handler(withErrorHandling(async ({ input }) => submitInput(input), "submit stage input"));
-export const getStageInputsHandler = os
-  .input(GetInputsSchema)
-  .handler(withErrorHandling(async ({ input }) => getInputs(input.round), "get stage inputs"));
+export const getStageWeatherHandler = pub.handler(async () => getStageWeather());
+export const getStageSpeakersHandler = pub.handler(async () => getStageSpeakers());
+export const getStageSpotifyHandler = pub.handler(async () => getSpotifyNowPlaying());
+export const spotifyStatusHandler = staff.handler(async () => spotifyStatus());
+export const disconnectSpotifyHandler = staff.handler(async () => {
+  await disconnectSpotify();
+  return { ok: true };
+});
+export const setNowPlayingHandler = staff.input(SetNowPlayingSchema).handler(async ({ input }) => setNowPlaying(input));
+export const submitStageInputHandler = pub.input(SubmitInputSchema).handler(async ({ input }) => submitInput(input));
+export const getStageInputsHandler = pub.input(GetInputsSchema).handler(async ({ input }) => getInputs(input.round));
 
 // Dashboard procedures (admin only)
-export const getDashboardStatsHandler = adminOs
+export const getDashboardStatsHandler = staff
   .input(GetDashboardStatsSchema)
-  .handler(withErrorHandling(async ({ input }) => getDashboardStats(input?.eventId), "get dashboard statistics"));
+  .handler(async ({ input }) => getDashboardStats(input?.eventId));
 
 // Staff coordination (event-day tasks + announcements).
 // Reads and self-service actions: any community member. Editing: editor+.
-export const listStaffTasksHandler = os
+export const listStaffTasksHandler = authed
   .input(ListStaffTasksSchema)
-  .use(requireCommunityRole("member"))
-  .handler(withErrorHandling(async ({ input }) => listStaffTasks(input), "list staff tasks"));
+  .use(inCommunity("member"))
+  .handler(async ({ input }) => listStaffTasks(input));
 
-export const createStaffTaskHandler = os
+export const createStaffTaskHandler = authed
   .input(CreateStaffTaskSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(withErrorHandling(async ({ input }) => createStaffTask(input), "create staff task"));
+  .use(inCommunity("editor"))
+  .handler(async ({ input }) => createStaffTask(input));
 
-export const updateStaffTaskHandler = os
+export const updateStaffTaskHandler = authed
   .input(UpdateStaffTaskSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(withErrorHandling(async ({ input }) => updateStaffTask(input), "update staff task"));
+  .use(inCommunity("editor"))
+  .handler(async ({ input }) => updateStaffTask(input));
 
-export const deleteStaffTaskHandler = os
+export const deleteStaffTaskHandler = authed
   .input(DeleteStaffTaskSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(withErrorHandling(async ({ input }) => deleteStaffTask(input), "delete staff task"));
+  .use(inCommunity("editor"))
+  .handler(async ({ input }) => deleteStaffTask(input));
 
-export const setStaffTaskStatusHandler = os
+export const setStaffTaskStatusHandler = authed
   .input(SetStaffTaskStatusSchema)
-  .use(requireCommunityRole("member"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => setStaffTaskStatus(input, (context as Context).user!.id),
-      "set staff task status"
-    )
-  );
+  .use(inCommunity("member"))
+  .handler(async ({ input, context }) => setStaffTaskStatus(input, context.user.id));
 
-export const joinStaffTaskHandler = os
+export const joinStaffTaskHandler = authed
   .input(JoinStaffTaskSchema)
-  .use(requireCommunityRole("member"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => joinStaffTask(input, (context as Context).user!.id),
-      "join staff task"
-    )
-  );
+  .use(inCommunity("member"))
+  .handler(async ({ input, context }) => joinStaffTask(input, context.user.id));
 
-export const leaveStaffTaskHandler = os
+export const leaveStaffTaskHandler = authed
   .input(JoinStaffTaskSchema)
-  .use(requireCommunityRole("member"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => leaveStaffTask(input, (context as Context).user!.id),
-      "leave staff task"
-    )
-  );
+  .use(inCommunity("member"))
+  .handler(async ({ input, context }) => leaveStaffTask(input, context.user.id));
 
-export const assignStaffTaskHandler = os
+export const assignStaffTaskHandler = authed
   .input(AssignStaffTaskSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(withErrorHandling(async ({ input }) => assignStaffTask(input), "assign staff task"));
+  .use(inCommunity("editor"))
+  .handler(async ({ input }) => assignStaffTask(input));
 
-export const unassignStaffTaskHandler = os
+export const unassignStaffTaskHandler = authed
   .input(AssignStaffTaskSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(withErrorHandling(async ({ input }) => unassignStaffTask(input), "unassign staff task"));
+  .use(inCommunity("editor"))
+  .handler(async ({ input }) => unassignStaffTask(input));
 
-export const shiftStaffTasksHandler = os
+export const shiftStaffTasksHandler = authed
   .input(ShiftStaffTasksSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(withErrorHandling(async ({ input }) => shiftStaffTasks(input), "shift staff tasks"));
+  .use(inCommunity("editor"))
+  .handler(async ({ input }) => shiftStaffTasks(input));
 
-export const staffRosterHandler = os
+export const staffRosterHandler = authed
   .input(StaffRosterSchema)
-  .use(requireCommunityRole("member"))
-  .handler(
-    withErrorHandling(
-      async ({ context }) => listCommunityMembers({ communityId: (context as Context).scope!.communityId }),
-      "list staff roster"
-    )
-  );
+  .use(inCommunity("member"))
+  .handler(async ({ context }) => listCommunityMembers({ communityId: context.scope.communityId }));
 
-export const listStaffAnnouncementsHandler = os
+export const listStaffAnnouncementsHandler = authed
   .input(ListStaffAnnouncementsSchema)
-  .use(requireCommunityRole("member"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) =>
-        listStaffAnnouncements(input, (context as Context).user!.id, (context as Context).scope!.communityId),
-      "list staff announcements"
-    )
-  );
+  .use(inCommunity("member"))
+  .handler(async ({ input, context }) => listStaffAnnouncements(input, context.user.id, context.scope.communityId));
 
-export const createStaffAnnouncementHandler = os
+export const createStaffAnnouncementHandler = authed
   .input(CreateStaffAnnouncementSchema)
-  .use(requireCommunityRole("editor"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => createStaffAnnouncement(input, (context as Context).user!.id),
-      "create staff announcement"
-    )
-  );
+  .use(inCommunity("editor"))
+  .handler(async ({ input, context }) => createStaffAnnouncement(input, context.user.id));
 
-export const ackStaffAnnouncementHandler = os
+export const ackStaffAnnouncementHandler = authed
   .input(AckStaffAnnouncementSchema)
-  .use(requireCommunityRole("member"))
-  .handler(
-    withErrorHandling(
-      async ({ input, context }) => ackStaffAnnouncement(input, (context as Context).user!.id),
-      "ack staff announcement"
-    )
-  );
+  .use(inCommunity("member"))
+  .handler(async ({ input, context }) => ackStaffAnnouncement(input, context.user.id));
 
 // Main router
 export const router = {

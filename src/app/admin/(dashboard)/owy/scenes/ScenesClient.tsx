@@ -408,7 +408,7 @@ export default function ScenesClient() {
               {spotify.data?.account ? (
                 <>
                   <Badge variant="secondary">Conectado · {spotify.data.account}</Badge>
-                  <Button size="sm" variant="outline" onClick={() => disconnectSpotify.mutate({})}>
+                  <Button size="sm" variant="outline" onClick={() => disconnectSpotify.mutate()}>
                     Desconectar
                   </Button>
                 </>

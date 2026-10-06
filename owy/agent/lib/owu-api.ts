@@ -442,8 +442,11 @@ let cachedClient: OwuApi | null = null;
 export function owuApi(): OwuApi {
   if (cachedClient) return cachedClient;
 
+  // oRPC v2: `origin` is the site, `url` the path (the site must be on v2 too —
+  // v1 and v2 clients and servers cannot talk to each other).
   const link = new RPCLink({
-    url: `${owuApiUrl()}/api/orpc`,
+    origin: owuApiUrl(),
+    url: "/api/orpc",
     headers: () => ({
       "x-api-key": requireApiKey(),
     }),
