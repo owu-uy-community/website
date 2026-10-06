@@ -20,7 +20,7 @@ OWU.uy es una aplicación web construida con Next.js 16, TypeScript y una rica c
 
 ### Prerrequisitos
 
-- Node.js (versión recomendada: 18.x o superior)
+- Node.js 22 o superior (CI usa 24)
 - pnpm (recomendado) o npm
 - Git
 
@@ -54,6 +54,16 @@ pnpm dev
 ```
 
 La aplicación estará disponible en `http://localhost:3000`
+
+### Monitoreo de errores (opcional)
+
+Los errores van a Sentry solo si están configuradas estas variables; sin ellas no se reporta nada (desarrollo local, tests):
+
+| Variable                                            | Para qué                                              |
+| --------------------------------------------------- | ----------------------------------------------------- |
+| `NEXT_PUBLIC_SENTRY_DSN`                            | DSN del proyecto: errores del navegador               |
+| `SENTRY_DSN`                                        | Mismo DSN para el servidor (si falta, usa el público) |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | Subir source maps en el build de Vercel               |
 
 ## 📁 Estructura del Proyecto
 
