@@ -44,7 +44,6 @@ export async function GET() {
   let canPublish = false;
   try {
     const session = await auth.api.getSession({ headers: requestHeaders });
-    // @ts-expect-error - role comes from Better Auth additionalFields; its types don't carry it
     canPublish = session?.user?.role === "admin";
   } catch {
     canPublish = false;

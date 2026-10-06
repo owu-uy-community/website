@@ -38,7 +38,6 @@ export async function requireAdmin({ context, next }: { context: Context; next: 
     });
   }
 
-  // @ts-expect-error - user.role is a string but better-auth type definitions are broken for this use case
   if (context.user.role !== "admin") {
     throw new ORPCError("FORBIDDEN", {
       message: "Admin access required",
@@ -56,7 +55,6 @@ const ROLE_RANK: Record<CommunityRoleValue, number> = {
 };
 
 export function isSiteStaff(user: NonNullable<Context["user"]>): boolean {
-  // @ts-expect-error - user.role comes from Better Auth additionalFields; its types don't carry it
   return user.role === "admin";
 }
 

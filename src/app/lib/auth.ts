@@ -4,15 +4,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { eq } from "drizzle-orm";
 import { db } from "../../lib/db";
 import * as schema from "../../lib/db/schema";
-import {
-  ALLOWED_EMAILS,
-  BASE_URL,
-  DOMAIN,
-  IS_PRODUCTION,
-  SLACK_CLIENT_ID,
-  SLACK_CLIENT_SECRET,
-  USE_SECURE_COOKIES,
-} from "./constants";
+import { ALLOWED_EMAILS, BASE_URL, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET } from "./constants";
 import { oAuthProxy } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
 
@@ -36,12 +28,12 @@ export const auth = betterAuth({
   user: {
     additionalFields: {
       role: {
-        type: "string",
+        type: ["user", "admin"],
         defaultValue: "user",
         input: false, // Prevent users from setting this themselves
       },
       status: {
-        type: "string",
+        type: ["active", "inactive"],
         defaultValue: "inactive",
         input: false, // Prevent users from setting this themselves
       },
@@ -94,23 +86,11 @@ export const auth = betterAuth({
       }
     }),
   },
-  // @ts-expect-error: 'crossSubDomainCookies' is supported by runtime but not in current types
-  crossSubDomainCookies: {
-    enabled: true,
-    domain: DOMAIN,
-  },
   account: {
     accountLinking: {
       enabled: true,
     },
   },
-  defaultCookieAttributes: {
-    secure: IS_PRODUCTION,
-    httpOnly: true,
-    sameSite: IS_PRODUCTION ? "none" : "lax",
-    partitioned: IS_PRODUCTION,
-  },
-  useSecureCookies: USE_SECURE_COOKIES,
   socialProviders: {
     slack: {
       clientId: SLACK_CLIENT_ID,

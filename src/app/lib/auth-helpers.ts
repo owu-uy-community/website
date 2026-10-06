@@ -20,8 +20,6 @@ export async function requireAdmin() {
   }
 
   // Check if user has admin role
-  // @ts-expect-error - role is defined in auth config additionalFields,
-  // better-auth type definitions are broken for this use case
   if (session.user.role !== "admin") {
     redirect("/");
   }
@@ -49,6 +47,5 @@ export async function requireStaffSession() {
 
 /** True when the user is site staff (full admin). */
 export function isSiteAdmin(session: NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>): boolean {
-  // @ts-expect-error - role comes from Better Auth additionalFields
   return session.user.role === "admin";
 }
