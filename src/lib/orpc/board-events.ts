@@ -44,3 +44,14 @@ export const cardChanged = (change: {
 /** Cards that vanished with a deleted room or slot: one CARD_DELETE each. */
 export const cardsDeleted = (openSpaceId: string, cardIds: readonly string[]) =>
   Effect.forEach(cardIds, (cardId) => cardChanged({ type: "CARD_DELETE", openSpaceId, cardId }), { discard: true });
+
+/**
+ * An event's rooms or slots changed (created, edited, deleted, reordered).
+ * Screens re-read the grid's axes — and the talks, whose room and slot labels
+ * come from them. The payload is a ping on purpose: the channel is public.
+ */
+export const structureChanged = (openSpaceId: string) =>
+  Effect.gen(function* () {
+    const realtime = yield* Realtime;
+    yield* realtime.publish(eventChannel(openSpaceId, "sync"), "structure_change", { openSpaceId });
+  });

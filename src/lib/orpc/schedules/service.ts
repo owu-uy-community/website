@@ -3,7 +3,7 @@ import { Effect } from "effect";
 
 import { events, schedules, tracks, type ScheduleRow } from "../../db/schema";
 import { wallClock } from "../../slot-day";
-import { cardsDeleted } from "../board-events";
+import { cardsDeleted, structureChanged } from "../board-events";
 import { query } from "../db";
 import { NotFound } from "../errors";
 import type { CreateScheduleInput, Schedule } from "./schemas";
@@ -25,6 +25,9 @@ const scheduleNotFound = new NotFound({ entity: "schedule", message: "Ese bloque
 const eventNotFound = new NotFound({ entity: "event", message: "Ese evento no existe" });
 
 const found = ([row]: ScheduleRow[]) => (row ? Effect.succeed(toSchedule(row)) : Effect.fail(scheduleNotFound));
+
+/** Tell the boards the grid's rows changed. */
+const announce = (slot: Schedule) => structureChanged(slot.openSpaceId).pipe(Effect.as(slot));
 
 export const getSchedule = (id: string) =>
   query((db) => db.select().from(schedules).where(eq(schedules.id, id))).pipe(Effect.flatMap(found));
@@ -61,7 +64,8 @@ export const createSchedule = (input: CreateScheduleInput) =>
         .returning()
     ).pipe(
       Effect.catchTag("ForeignKeyViolation", () => Effect.fail(eventNotFound)),
-      Effect.flatMap(found)
+      Effect.flatMap(found),
+      Effect.flatMap(announce)
     );
   });
 
@@ -73,7 +77,7 @@ export const updateSchedule = (id: string, { date, ...data }: Partial<Omit<Creat
       .set({ ...data, ...(date === undefined ? {} : { date: new Date(date) }) })
       .where(eq(schedules.id, id))
       .returning()
-  ).pipe(Effect.flatMap(found));
+  ).pipe(Effect.flatMap(found), Effect.flatMap(announce));
 
 /** Delete a slot and its talks; the boards are told which cards went away. */
 export const deleteSchedule = (id: string) =>
@@ -87,5 +91,5 @@ export const deleteSchedule = (id: string) =>
       talks.map((talk) => talk.id)
     );
 
-    return deleted;
+    return yield* announce(deleted);
   });

@@ -121,7 +121,7 @@ export const listNotes = (openSpaceId: string) =>
 
 export const getNote = loadNote;
 
-/** Talks with their room and slot, in programme order; optionally only the kiosk-highlighted slots. */
+/** Talks in active rooms with their room and slot, in programme order; optionally only the kiosk-highlighted slots. */
 export const listWithPlaces = (openSpaceId: string, highlightedOnly: boolean) =>
   query((db) =>
     db
@@ -130,7 +130,12 @@ export const listWithPlaces = (openSpaceId: string, highlightedOnly: boolean) =>
       .innerJoin(rooms, eq(tracks.roomId, rooms.id))
       .innerJoin(schedules, eq(tracks.scheduleId, schedules.id))
       .where(
-        and(eq(tracks.openSpaceId, openSpaceId), highlightedOnly ? eq(schedules.highlightInKiosk, true) : undefined)
+        and(
+          eq(tracks.openSpaceId, openSpaceId),
+          // Public feed (EPG, map kiosk): a room switched off takes its talks off screens.
+          eq(rooms.isActive, true),
+          highlightedOnly ? eq(schedules.highlightInKiosk, true) : undefined
+        )
       )
       .orderBy(asc(schedules.date), asc(schedules.startTime))
   ).pipe(

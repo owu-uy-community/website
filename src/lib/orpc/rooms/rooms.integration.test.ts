@@ -147,6 +147,29 @@ describe("rooms writes", () => {
     );
   });
 
+  test("every room change tells the boards to re-read the grid", async () => {
+    const { event, rooms } = await makeBoard();
+    const staff = await makeSiteAdmin();
+    const publish = vi.spyOn(hub, "publish");
+    const pinged = () =>
+      publish.mock.calls.filter(
+        ([channel, name]) => channel === `event:${event.id}:sync` && name === "structure_change"
+      ).length;
+
+    const patio = await call(
+      router.rooms.create,
+      { name: "Patio", openSpaceId: event.id, hasTV: false, hasWhiteboard: false, isActive: true },
+      by(staff)
+    );
+    expect(pinged()).toBe(1);
+    await call(router.rooms.update, { id: patio.id, data: { isActive: false } }, by(staff));
+    expect(pinged()).toBe(2);
+    await call(router.rooms.reorder, { openSpaceId: event.id, orderedIds: [patio.id, rooms.plain.id] }, by(staff));
+    expect(pinged()).toBe(3);
+    await call(router.rooms.delete, { id: patio.id }, by(staff));
+    expect(pinged()).toBe(4);
+  });
+
   test("deleting a room removes it from the board", async () => {
     const { event, rooms } = await makeBoard();
     const staff = await makeSiteAdmin();
