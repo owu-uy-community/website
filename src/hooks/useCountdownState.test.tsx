@@ -58,6 +58,39 @@ describe(useCountdownState, () => {
     await waitFor(() => expect(result.current.state.remainingSeconds).toBeLessThan(first), { timeout: 2_500 });
   });
 
+  test("a read that was on its way when the admin acted doesn't undo the change", async () => {
+    let answer = () => undefined as unknown;
+    server.use(
+      api.countdown.getState.handler(
+        () =>
+          new Promise<CountdownState>((resolve) => {
+            answer = () => resolve(stopped);
+          })
+      )
+    );
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useCountdownState({ eventId: "evento-1" }), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      ),
+    });
+    await waitFor(() => expect(listeners.has("event:evento-1:countdown")).toBe(true));
+
+    act(() => {
+      listeners.get("event:evento-1:countdown")?.("countdown_state_change", {
+        ...stopped,
+        remainingSeconds: 300,
+        totalSeconds: 300,
+        lastUpdated: "2026-11-07T18:00:05.000Z",
+      });
+    });
+    await waitFor(() => expect(result.current.state.totalSeconds).toBe(300));
+    answer();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    expect(result.current.state).toMatchObject({ remainingSeconds: 300, totalSeconds: 300 });
+  });
+
   test("a countdown whose time is up reads as stopped at zero", async () => {
     const { result } = setup({
       ...stopped,

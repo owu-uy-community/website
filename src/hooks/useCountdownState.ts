@@ -14,6 +14,16 @@ const IDLE: CountdownState = {
   soundEnabled: false,
 };
 
+/**
+ * Keep the newer of two states. A read that was already on its way when an
+ * admin acted lands after the change it predates, and must not undo it.
+ */
+const newer = (current: unknown, next: unknown) => {
+  const [a, b] = [current as CountdownState | undefined, next as CountdownState];
+
+  return a && a.lastUpdated > b.lastUpdated ? a : b;
+};
+
 /** A running countdown at `now`: the remaining time comes from its target, never from a ticker. */
 function at(state: CountdownState, now: number): CountdownState {
   if (!state.targetTime) return state;
@@ -38,6 +48,7 @@ export function useCountdownState({ eventId, enableRealtime = true }: { eventId:
       input: { eventId },
       staleTime: Infinity, // changes arrive over realtime
       refetchOnWindowFocus: "always", // a screen that slept may have missed some
+      structuralSharing: newer,
     })
   );
 
