@@ -281,7 +281,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
           case "start":
             if (attached) throw Error("Attached as laptop audio; the device starts the turns");
             if (++starts > 30) throw Error("Too many turns");
-            await device.request();
+            await device.request(m.mode === "pitch" ? { mode: "pitch" } : {});
             break;
           case "stop":
             await device.cancel();

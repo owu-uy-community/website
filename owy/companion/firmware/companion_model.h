@@ -89,8 +89,12 @@ struct Power {
 };
 
 
-// FOLLOWUP and SLEEP are appended so existing numeric mood ids stay stable.
-enum class Mood { IDLE, LISTENING, THINKING, SPEAKING, HAPPY, ERROR, OFFLINE, PRIVACY, FOLLOWUP, SLEEP };
+// FOLLOWUP, SLEEP, RECORD and INVITE are appended so existing numeric mood ids
+// stay stable. RECORD = modo pitch, recording (a listening pose with a REC rim);
+// INVITE = Owy asked who speaks and the rim invites one more tap.
+enum class Mood { IDLE, LISTENING, THINKING, SPEAKING, HAPPY, ERROR, OFFLINE, PRIVACY, FOLLOWUP, SLEEP, RECORD, INVITE };
+/** Moods whose eyes and rim follow the microphone. */
+inline bool hears(Mood m) { return m == Mood::LISTENING || m == Mood::FOLLOWUP || m == Mood::RECORD; }
 
 // Damped spring on the host clock. Semi-implicit Euler in <=8 ms steps, so a
 // stalled loop (dt clamps at 150 ms) cannot blow up the stiff lip springs.
@@ -222,7 +226,7 @@ inline bool expression_from_name(const char *name, size_t n, Expression &out) {
 // changes is its own small render+flush on the panel (they are too far apart to
 // merge), so modes are shaped to touch few dots per frame: levels grow an arc
 // from 12 o'clock (only its ends change), comets step a whole dot at a time.
-enum class RingMode { NONE, LISTEN, COUNTDOWN, COMET, BREATHE, ALERT, SEARCH, LEVEL };
+enum class RingMode { NONE, LISTEN, COUNTDOWN, COMET, BREATHE, ALERT, SEARCH, LEVEL, RECORD, PULSE };
 struct RingFrame {
   static constexpr int N = 24;
   uint32_t color{0x0162C8};
@@ -234,11 +238,15 @@ inline RingFrame ring_frame(RingMode mode, uint32_t now, float level, float prog
   for (int i = 0; i < RingFrame::N; ++i) {
     float a = 0;
     switch (mode) {
-      case RingMode::LISTEN: case RingMode::BREATHE: {
+      case RingMode::LISTEN: case RingMode::BREATHE: case RingMode::RECORD: case RingMode::PULSE: {
         // Blue = you, yellow = Owy: a symmetric arc grows from the top with the level.
-        const int half = int(std::lround(bound(level, 0, 1) * RingFrame::N / 2));
+        // PULSE has no level: the arc breathes on its own (1.4 s), inviting a tap.
+        const float fill = mode == RingMode::PULSE ? .55f + .45f * std::sin(age * 6.2831853f / 1400.f) : bound(level, 0, 1);
+        const int half = int(std::lround(fill * RingFrame::N / 2));
         a = std::min(i, RingFrame::N - i) < half ? 1.f : .16f;
-        if (mode == RingMode::LISTEN && age < 420) a = std::max(a, 1.f - age / 420.f);  // the tap flash
+        if ((mode == RingMode::LISTEN || mode == RingMode::RECORD) && age < 420) a = std::max(a, 1.f - age / 420.f);  // the tap flash
+        // REC: the 6 o'clock dot blinks once a second (one dot per step).
+        if (mode == RingMode::RECORD && i == RingFrame::N / 2) a = (age / 500) % 2 ? .16f : 1.f;
         if (mode == RingMode::BREATHE) f.color = 0xF5BB03;
         break;
       }
@@ -357,7 +365,7 @@ class Companion {
     frame_at_ = now; has_frame_ = true;
     animation_cadence.tick(now);
     const float dt = bound(float(elapsed), 1.f, 150.f);
-    const bool listening = mood == Mood::LISTENING || mood == Mood::FOLLOWUP;
+    const bool listening = hears(mood);
     const bool voice = listening || mood == Mood::THINKING || mood == Mood::SPEAKING;
     const bool alive = mood != Mood::ERROR && mood != Mood::OFFLINE && mood != Mood::PRIVACY && mood != Mood::SLEEP;
     const bool happy = mood == Mood::HAPPY || (alive && !voice && !reduced && has_reaction_ && recent(now, reaction_at_, 1600));
@@ -367,9 +375,9 @@ class Companion {
       if (!reduced && shown != Mood::SLEEP && mood_ != Mood::SLEEP && uint32_t(now - blink_at_) > 400) {
         blink_at_ = now; blink_delay_ = 0;
       }
-      if (listening && mood_ != Mood::LISTENING && mood_ != Mood::FOLLOWUP) mood_at_ = now;
+      if (listening && !hears(mood_)) mood_at_ = now;
       // A new listening window or the end of the turn: the last reply's cues are history.
-      if ((listening && mood_ != Mood::LISTENING && mood_ != Mood::FOLLOWUP) || !voice)
+      if ((listening && !hears(mood_)) || !voice)
         for (auto &cue : cues_) cue.set = false;
       if (shown == Mood::ERROR) mood_at_ = now;
     }
@@ -532,6 +540,8 @@ class Companion {
     switch (mood) {
       case Mood::LISTENING: t.eye_h = 168; t.pupil = 1.12f; t.brow_y = -10; t.mouth = mouth::LISTEN; t.ring = RingMode::LISTEN; break;
       case Mood::FOLLOWUP: t.eye_h = 164; t.pupil = 1.08f; t.brow_y = -7; t.mouth = mouth::LISTEN; t.ring = RingMode::COUNTDOWN; break;
+      case Mood::RECORD: t.eye_h = 168; t.pupil = 1.12f; t.brow_y = -10; t.mouth = mouth::LISTEN; t.ring = RingMode::RECORD; break;
+      case Mood::INVITE: t.eye_h = 160; t.brow_y = -12; t.ring = RingMode::PULSE; break;
       case Mood::THINKING:
         t.eye_h = 146; t.pupil = .95f; t.lid_r = .2f; t.brow_y = -4;
         t.brow_in_l = -10; t.brow_out_l = -4; t.brow_in_r = 6; t.brow_out_r = 2;

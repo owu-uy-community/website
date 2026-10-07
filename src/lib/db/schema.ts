@@ -499,6 +499,8 @@ export const owyStageState = pgTable("owy_stage_state", {
     .$type<{ id: string; scene: string; sec: number; params: Record<string, unknown> }[]>()
     .notNull()
     .default([]),
+  /** Owy's last face and the card it announced (never the transcript); see StoredFaceSchema. */
+  face: jsonb("face").$type<{ state: string; at: string } & Record<string, unknown>>(),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()

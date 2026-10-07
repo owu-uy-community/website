@@ -21,13 +21,17 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
     private send: (message: object | Buffer) => void,
     private disconnect: () => void
   ) {}
-  async request() {
+  async request(options: { mode?: "pitch" } = {}) {
     if (this.closed || this.active) return;
     ++this.run;
     this.active = true;
     this.accepted = false;
     this.ready = false;
-    await this.handlers.onRequestStart({ start: true } as VoiceAssistantRequest);
+    // A pitch run is tagged the way the firmware tags it (`wake_word: "pitch"`).
+    await this.handlers.onRequestStart({
+      start: true,
+      ...(options.mode === "pitch" ? { wakeWordPhrase: "pitch" } : {}),
+    } as VoiceAssistantRequest);
   }
   async cancel() {
     this.active = false;
@@ -118,6 +122,14 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   }
   /** The browser schedules playback a little ahead of the pacer. */
   readonly expressionLeadMs = 250;
+  /** A pre-rendered cue the browser plays from /companion-audio/clips/<id>.wav, whatever its stage. */
+  playClip(id: string) {
+    this.emit({ type: "screen", command: { kind: "clip", id } });
+  }
+  /** Modo pitch: invite a tap to say one's name ("name") or clear the invitation ("idle"). */
+  pitchPrompt(kind: "name" | "idle") {
+    this.emit({ type: "screen", command: { kind: "pitchPrompt", prompt: kind } });
+  }
   showCard(card: ScreenCard) {
     this.emit({ type: "screen", command: { kind: "card", card } });
   }

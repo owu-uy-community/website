@@ -25,7 +25,9 @@
     "companion:probe": "tsx companion/bridge/src/cli/probe.ts",
     "companion:audio-check": "tsx companion/bridge/src/cli/audio-check.ts",
     "companion:driver-test": "node companion/firmware/tests/speaker-startup.mjs && node companion/firmware/tests/voice-buffer.mjs",
-    "companion:interaction-test": "node companion/firmware/tests/companion.mjs"
+    "companion:interaction-test": "node companion/firmware/tests/companion.mjs",
+    "companion:pitch": "tsx companion/bridge/src/cli/pitch.ts",
+    "companion:clips": "tsx companion/bridge/src/cli/clips.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.76",

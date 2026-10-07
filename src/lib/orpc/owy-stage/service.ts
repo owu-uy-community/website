@@ -10,13 +10,16 @@ import {
   DEFAULT_STAGE_STATE,
   OWY_STAGE_CHANNEL,
   RundownStepSchema,
+  StoredFaceSchema,
   isSceneId,
   parseSceneParams,
+  type FaceEvent,
   type InputEvent,
   type RundownStep,
   type SceneId,
   type StageInput,
   type StageState,
+  type StoredFace,
   type SubmitInput,
 } from "../../owy-stage/scenes";
 import { query, transaction } from "../db";
@@ -35,11 +38,19 @@ const onAir = {
   eventId: owyStageState.eventId,
   round: owyStageState.round,
   updatedAt: owyStageState.updatedAt,
+  face: owyStageState.face,
 };
 
 const toStageState = (
   row:
-    | { scene: string; params: Record<string, unknown>; eventId: string | null; round: string; updatedAt: Date }
+    | {
+        scene: string;
+        params: Record<string, unknown>;
+        eventId: string | null;
+        round: string;
+        updatedAt: Date;
+        face: unknown;
+      }
     | undefined
 ): StageState =>
   row && isSceneId(row.scene)
@@ -49,6 +60,7 @@ const toStageState = (
         eventId: row.eventId,
         round: row.round,
         takenAt: row.updatedAt.toISOString(),
+        face: StoredFaceSchema.safeParse(row.face).data ?? null,
       }
     : DEFAULT_STAGE_STATE;
 
@@ -110,7 +122,14 @@ export const setScene = (input: SetSceneInput) =>
           )
         );
 
-        return { scene: input.scene, params, eventId, round, takenAt: takenAt.toISOString() } satisfies StageState;
+        return {
+          scene: input.scene,
+          params,
+          eventId,
+          round,
+          takenAt: takenAt.toISOString(),
+          face: current.face,
+        } satisfies StageState;
       })
     );
     yield* broadcast("scene", state);
@@ -179,8 +198,35 @@ export const setNowPlaying = (input: SetNowPlayingInput) =>
     return { applied: true };
   });
 
-/** One-shot overlays (confetti, flash, caption…) and Owy's face: broadcast as they are, nothing to persist. */
-export const echo = <T>(event: "effect" | "face", payload: T) => broadcast(event, payload).pipe(Effect.as(payload));
+/** One-shot overlays (confetti, flash, caption…): broadcast as they are, nothing to persist. */
+export const echo = <T>(event: "effect", payload: T) => broadcast(event, payload).pipe(Effect.as(payload));
+
+/**
+ * Owy's face, mirrored from a companion: broadcast as it is. The state, the
+ * feeling and the card it announced are kept on the row — never the
+ * transcript, a running total posted several times a second — so a wall that
+ * connects mid-pitch catches up through getState.
+ */
+export const setFace = (face: FaceEvent) =>
+  Effect.gen(function* () {
+    if (!face.transcript || face.card || face.expression) {
+      const { transcript: _transcript, ...kept } = face;
+      const stored: StoredFace = { ...kept, at: new Date().toISOString() };
+      yield* query((db) =>
+        db
+          .insert(owyStageState)
+          .values({ id: ROW_ID, face: stored })
+          // Not a take: keep `updatedAt` (phones time their rounds off it), like the rundown.
+          .onConflictDoUpdate({
+            target: owyStageState.id,
+            set: { face: stored, updatedAt: sql`${owyStageState.updatedAt}` },
+          })
+      );
+    }
+    yield* broadcast("face", face);
+
+    return face;
+  });
 
 // ---------------------------------------------------------------------------
 // Phone inputs (/owy/play)

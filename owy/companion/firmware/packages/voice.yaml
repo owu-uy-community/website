@@ -1,6 +1,16 @@
 # One shared I2S bus: wake word -> capture -> playback -> wake word.
 # Every entry/exit path uses these scripts: touch, errors, cancellation,
 # connection loss and the hardware-test tone.
+#
+# Modo pitch (controls.yaml `pitch_mode`): tap → record, tap → send. The run
+# starts with `wake_word: "pitch"` and no device end-of-speech; the bridge
+# records, ends it on `pitch_submit` (or its own silence/cap), and answers
+# through the normal speaking path. `pitch_state` drives a board's haptics.
+
+substitutions:
+  # The start buzz settles before the mic opens; boards with a motor override this.
+  pitch_arm_ms: "0ms"
+
 globals:
   - id: va_phase
     type: int
@@ -23,6 +33,20 @@ globals:
     type: bool
     restore_value: false
     initial_value: "false"
+  # Modo pitch: this run records a pitch; the name step answers Owy's question.
+  - id: pitch_active
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: pitch_name_step
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Until when the rim invites a tap to say one's name (pitch_prompt "name").
+  - id: pitch_prompt_until
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
 
 binary_sensor:
   # The bridge waits for this acknowledgment before TTS_START/audio.
@@ -59,6 +83,13 @@ text_sensor:
       if (!id(va_speaker).is_stopped()) return {"draining"};
       if (id(mww).is_running() && id(mic).is_running()) return {"wake_word"};
       return {"idle"};
+  # Modo pitch, one step at a time (a board's haptics ride on it):
+  # arming · recording · sent · invite · idle.
+  - platform: template
+    id: pitch_state
+    name: Pitch State
+    entity_category: diagnostic
+    update_interval: never
 
 micro_wake_word:
   id: mww
@@ -73,7 +104,7 @@ micro_wake_word:
   on_wake_word_detected:
     - if:
         condition:
-          lambda: return !id(mic_privacy).state && !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) && !id(play_companion_feedback).is_running() && !id(play_test_tone).is_running();
+          lambda: return !id(mic_privacy).state && !id(pitch_mode).state && !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) && !id(play_companion_feedback).is_running() && !id(play_test_tone).is_running();
         then:
           - logger.log: "Wake word accepted"
           - script.execute: start_listening
@@ -122,7 +153,7 @@ voice_assistant:
     - script.stop: turn_watchdog
     - if:
         condition:
-          lambda: return !id(mic_privacy).state && id(continuous_conversation).state && !id(audio_recovering) && id(va_phase) == 4;
+          lambda: return !id(mic_privacy).state && !id(pitch_mode).state && id(continuous_conversation).state && !id(audio_recovering) && id(va_phase) == 4;
         then:
           - lambda: |-
               id(turn_pending) = true;
@@ -149,11 +180,72 @@ script:
           else:
             - if:
                 condition:
-                  lambda: return id(va).is_running() || id(turn_pending) || !id(va_speaker).is_stopped() || id(play_companion_feedback).is_running() || id(play_test_tone).is_running();
+                  lambda: return id(pitch_mode).state;
                 then:
-                  - script.execute: cancel_turn
+                  - script.execute: tap_pitch
                 else:
+                  - if:
+                      condition:
+                        lambda: return id(va).is_running() || id(turn_pending) || !id(va_speaker).is_stopped() || id(play_companion_feedback).is_running() || id(play_test_tone).is_running();
+                      then:
+                        - script.execute: cancel_turn
+                      else:
+                        - script.execute: start_listening
+
+  # Modo pitch: tap → record, tap → send. A tap while Owy thinks or talks is
+  # ignored (turning the mode off cancels); this never calls cancel_turn.
+  - id: tap_pitch
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: return id(pitch_active) && id(va).is_running() && id(va_phase) == 2;
+          then:
+            - script.execute: stop_pitch
+          else:
+            - if:
+                condition:
+                  lambda: return !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) && id(va_speaker).is_stopped() && !id(play_companion_feedback).is_running() && !id(play_test_tone).is_running();
+                then:
+                  - lambda: |-
+                      id(pitch_active) = true;
+                      // Owy asked who speaks and the rim still invites: this tap answers.
+                      id(pitch_name_step) = int32_t(millis() - id(pitch_prompt_until)) < 0;
+                      id(pitch_prompt_until) = 0;
+                  - script.stop: pitch_prompt_guard
                   - script.execute: start_listening
+
+  # The second tap. The bridge sees `pitch_submit` rise and closes the run with
+  # STT_END (its own silence/cap fallbacks cover a missed edge). The face thinks
+  # right away; the "sent" cue waits for the mic to close so it is not recorded.
+  - id: stop_pitch
+    mode: single
+    then:
+      - script.stop: idle_listening_guard
+      - lambda: |-
+          id(va_phase) = 3;
+          id(companion).nod(millis());
+      - script.execute: apply_face
+      - binary_sensor.template.publish:
+          id: pitch_submit
+          state: ON
+      - delay: 300ms
+      - binary_sensor.template.publish:
+          id: pitch_submit
+          state: OFF
+      - wait_until:
+          condition:
+            lambda: return id(mic).is_stopped();
+          timeout: 1500ms
+      - lambda: id(pitch_state).publish_state("sent");
+
+  # Backstop for pitch_prompt("name"): the invitation never outlives the bridge's 20 s.
+  - id: pitch_prompt_guard
+    mode: restart
+    then:
+      - delay: 25s
+      - lambda: id(pitch_prompt_until) = 0;
+      - script.execute: apply_face
 
   - id: start_listening
     mode: single
@@ -165,6 +257,13 @@ script:
             - script.stop: resume_wake_word
             - lambda: id(turn_pending) = true;
             - micro_wake_word.stop:
+            - if:
+                condition:
+                  lambda: return id(pitch_active);
+                then:
+                  # A board's start buzz must be over before the mic opens.
+                  - lambda: id(pitch_state).publish_state("arming");
+                  - delay: ${pitch_arm_ms}
             - script.execute: wake_display
             - if:
                 condition:
@@ -193,12 +292,28 @@ script:
                       id(turn_pending) = false;
                       id(va_phase) = 2;
                   - script.execute: apply_face
-                  - voice_assistant.start:
-                      silence_detection: true
+                  - if:
+                      condition:
+                        lambda: return id(pitch_active);
+                      then:
+                        # A pitch has pauses: no end-of-speech on the device; the person
+                        # (or the bridge's silence/cap fallback) ends it. The tag tells the
+                        # bridge what this run is; "pitch-name" answers its question.
+                        - voice_assistant.start:
+                            silence_detection: false
+                            wake_word: !lambda |-
+                              return std::string(id(pitch_name_step) ? "pitch-name" : "pitch");
+                        - lambda: id(pitch_state).publish_state("recording");
+                      else:
+                        # The tag persists on the component: a conversation clears it.
+                        - voice_assistant.start:
+                            silence_detection: true
+                            wake_word: !lambda return std::string();
                   - script.execute: turn_watchdog
                 else:
                   - script.execute: recover_audio
           else:
+            - lambda: id(pitch_active) = false;
             - if:
                 condition:
                   not:
@@ -243,11 +358,12 @@ script:
             - script.stop: turn_watchdog
             - lambda: |-
                 id(follow_up_active) = false;
+                id(pitch_active) = false;
                 id(va_phase) = (id(va).get_api_connection() != nullptr) ? 1 : 10;
             - script.execute: apply_face
             - if:
                 condition:
-                  lambda: return !id(mic_privacy).state && (id(va).get_api_connection() != nullptr) && id(wake_word_enabled).state && !id(mww).is_running();
+                  lambda: return !id(mic_privacy).state && !id(pitch_mode).state && (id(va).get_api_connection() != nullptr) && id(wake_word_enabled).state && !id(mww).is_running();
                 then:
                   - micro_wake_word.start:
                   - logger.log: "Wake word re-armed"
@@ -291,6 +407,7 @@ script:
       - lambda: |-
           id(turn_pending) = false;
           id(follow_up_active) = false;
+          id(pitch_active) = false;
           id(audio_recovering) = true;
           id(va_phase) = 11;
       - script.execute: apply_face
@@ -321,13 +438,14 @@ script:
   # Local backup for the bridge's normal 8 s silent completion. Never leave
   # the mic open for 90 s if a stop message or the connection stalls. A speech
   # acknowledgment cancels this guard, so a spoken turn may continue normally.
+  # A pitch is silent by design (people think): the bridge owns its limits.
   - id: idle_listening_guard
     mode: restart
     then:
       - delay: 9s
       - if:
           condition:
-            lambda: return id(va).is_running() && id(va_phase) == 2;
+            lambda: return id(va).is_running() && id(va_phase) == 2 && !id(pitch_active);
           then:
             - logger.log:
                 level: WARN
@@ -335,10 +453,12 @@ script:
             - script.execute: cancel_turn
 
   # Also covers a bridge that stays connected but hangs after speech starts.
+  # A pitch may record for two minutes and then think: give it three.
   - id: turn_watchdog
     mode: restart
     then:
-      - delay: 90s
+      - delay: !lambda |-
+          return id(pitch_active) ? 180000 : 90000;
       - logger.log:
           level: WARN
           format: "Voice turn timed out; recovering audio"
@@ -352,7 +472,7 @@ interval:
       - if:
           condition:
             lambda: |-
-              return !id(mic_privacy).state && (id(va).get_api_connection() != nullptr) && id(wake_word_enabled).state &&
+              return !id(mic_privacy).state && !id(pitch_mode).state && (id(va).get_api_connection() != nullptr) && id(wake_word_enabled).state &&
                      !id(va).is_running() && !id(mww).is_running() &&
                      id(va_speaker).is_stopped() && !id(turn_pending) &&
                      !id(companion).tracker.calibrating() && !id(audio_recovering) && !id(resume_wake_word).is_running() &&

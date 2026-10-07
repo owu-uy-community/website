@@ -56,6 +56,19 @@ const EnvSchema = z.object({
   /** Shown to the agent as where the device stands. */
   COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
 
+  // --- Modo pitch (the open space's marketplace: tap, pitch a talk, tap → a card on the board) ---
+  /** Fallbacks for boards without `switch.pitch_mode` / `switch.pitch_reacts` (web lab, text REPL). */
+  COMPANION_PITCH_MODE: boolFromEnv,
+  COMPANION_PITCH_REACTS: boolFromEnv,
+  /** Audio → card, one multimodal call through the gateway. */
+  COMPANION_PITCH_MODEL: z.string().default("google/gemini-3.8-flash"),
+  /** Seconds of silence after speech that end a pitch on their own, and the hard cap. */
+  COMPANION_PITCH_SILENCE_S: z.coerce.number().min(3).max(60).default(10),
+  COMPANION_PITCH_MAX_S: z.coerce.number().min(20).max(300).default(120),
+  /** RMS a 20 ms mic frame must exceed (three in a row) to count as speech. */
+  // ponytail: the knob's mic has AGC; calibrate on the device if the ring never lights, or lights on room noise.
+  COMPANION_PITCH_VAD_RMS: z.coerce.number().min(0.001).max(0.2).default(0.012),
+
   // --- Devices ---
   /**
    * JSON array of DeviceSpec, or shorthand `id@host[:port][#psk]` entries separated by commas.

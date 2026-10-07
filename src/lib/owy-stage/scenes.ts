@@ -475,7 +475,8 @@ export const SCENES = {
   "owy-face": {
     category: "owy",
     title: "Owy",
-    description: "La cara de Owy reaccionando a las conversaciones (bridge del companion).",
+    description:
+      "La cara de Owy reaccionando a las conversaciones (bridge del companion); en el mercado de ideas, el pitch que escucha y la charla que acaba de ubicar.",
     params: z.object({ captions: z.boolean().default(true) }),
   },
   "owy-says": {
@@ -2001,6 +2002,53 @@ export type EffectId = (typeof EFFECTS)[number];
 export const FACE_STATES = ["idle", "listening", "thinking", "speaking", "happy", "error", "offline"] as const;
 export type FaceState = (typeof FACE_STATES)[number];
 
+/** Owy's per-sentence feelings (owy/companion/firmware/companion_model.h), hinted over the face state. */
+export const EXPRESSIONS = [
+  "neutral",
+  "happy",
+  "excited",
+  "curious",
+  "thinking",
+  "empathetic",
+  "playful",
+  "surprised",
+] as const;
+export type Expression = (typeof EXPRESSIONS)[number];
+
+/** A talk that just landed on the board, as the companion announces it. */
+export const FaceCardSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  speaker: z.string().trim().max(200).optional(),
+  room: z.string().trim().max(80).optional(),
+  timeSlot: z.string().trim().max(40).optional(),
+  reasoning: z.string().trim().max(500).optional(),
+});
+export type FaceCard = z.infer<typeof FaceCardSchema>;
+
+export const FaceEventSchema = z.object({
+  state: z.enum(FACE_STATES),
+  transcript: z
+    .object({
+      who: z.enum(["input", "output"]),
+      /** A running total per speaker; a spoken pitch runs to ~1500 characters. */
+      text: z.string().trim().max(2000),
+    })
+    .optional(),
+  /** A feeling over the state, what the device's face does per sentence; it fades on the wall. */
+  expression: z
+    .object({ name: z.enum(EXPRESSIONS), strength: z.number().int().min(0).max(100).default(100) })
+    .optional(),
+  /** "The card landed": the wall shows it with its place. */
+  card: FaceCardSchema.optional(),
+  /** Which Owy produced it (device id / web session); informational. */
+  source: z.string().max(80).optional(),
+});
+export type FaceEvent = z.infer<typeof FaceEventSchema>;
+
+/** The face as kept on the stage row: the last state, feeling and card — never the transcript. */
+export const StoredFaceSchema = FaceEventSchema.omit({ transcript: true }).extend({ at: z.string() });
+export type StoredFace = z.infer<typeof StoredFaceSchema>;
+
 export const StageStateSchema = z.object({
   scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
   params: z.record(z.string(), z.unknown()).default({}),
@@ -2009,10 +2057,19 @@ export const StageStateSchema = z.object({
   round: z.string().default(""),
   /** ISO time of the take, so wall and phones agree on timers. */
   takenAt: z.string().default(""),
+  /** Owy's last face, so a wall that connects mid-conversation catches up. */
+  face: StoredFaceSchema.nullable().default(null),
 });
 export type StageState = z.infer<typeof StageStateSchema>;
 
-export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null, round: "", takenAt: "" };
+export const DEFAULT_STAGE_STATE: StageState = {
+  scene: "black",
+  params: {},
+  eventId: null,
+  round: "",
+  takenAt: "",
+  face: null,
+};
 
 /**
  * The rundown: the order the wall walks through on the day. One row per take,
@@ -2079,19 +2136,6 @@ export const EffectEventSchema = z.object({
     .optional(),
 });
 export type EffectEvent = z.infer<typeof EffectEventSchema>;
-
-export const FaceEventSchema = z.object({
-  state: z.enum(FACE_STATES),
-  transcript: z
-    .object({
-      who: z.enum(["input", "output"]),
-      text: z.string().trim().max(400),
-    })
-    .optional(),
-  /** Which Owy produced it (device id / web session); informational. */
-  source: z.string().max(80).optional(),
-});
-export type FaceEvent = z.infer<typeof FaceEventSchema>;
 
 /** Parse scene params against the scene's schema, applying defaults. */
 export function parseSceneParams<K extends SceneId>(scene: K, params: unknown): SceneParams<K> {

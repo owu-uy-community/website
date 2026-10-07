@@ -115,4 +115,22 @@ describe("stage mirror", () => {
     off.transcript("input", "nada");
     expect(posts).toHaveLength(1);
   });
+
+  it("mirrors the card a transport shows and the feeling per sentence", () => {
+    const { mirror, posts } = setup();
+    const shown: unknown[] = [];
+    const transport = {
+      setFace: () => {},
+      showCard: (card: unknown) => shown.push(card),
+    } as unknown as DeviceTransport;
+    const card = { title: "Effect", speaker: "Ana", room: "Cueva", timeSlot: "15:00 - 15:45" };
+    mirror.face("thinking");
+    mirror.wrap(transport).showCard(card);
+    mirror.expression("surprised", 70);
+    expect(shown).toEqual([card]);
+    expect(posts.slice(-2)).toEqual([
+      { state: "thinking", card, source: "owy-1" },
+      { state: "thinking", expression: { name: "surprised", strength: 70 }, source: "owy-1" },
+    ]);
+  });
 });

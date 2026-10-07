@@ -4,9 +4,11 @@ import * as z from "zod";
 import { pub, staff } from "../base";
 import {
   BulkUpdateTracksByScheduleSchema,
+  CreatePlacedTrackSchema,
   CreateTrackSchema,
   GetTracksByOpenSpaceSchema,
   ListTracksSchema,
+  PlacedTrackSchema,
   StickyNoteSchema,
   SwapTracksSchema,
   TrackIdSchema,
@@ -48,6 +50,18 @@ export const tracksRouter = {
     .output(StickyNoteSchema)
     .effect(function* ({ input }) {
       return yield* Tracks.createNote(input);
+    }),
+
+  createPlaced: staff
+    .meta(
+      docs(
+        "Put a talk on the board wherever it fits best, in one call (the companion's spoken pitch); CONFLICT board_full when nothing is free"
+      )
+    )
+    .input(CreatePlacedTrackSchema)
+    .output(PlacedTrackSchema)
+    .effect(function* ({ input }) {
+      return yield* Tracks.createPlaced(input);
     }),
 
   update: staff

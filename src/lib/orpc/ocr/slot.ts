@@ -37,6 +37,8 @@ export interface Board {
 export interface Talk {
   title: string;
   speaker?: string;
+  /** What the talk is about when the title alone is thin (a spoken pitch); the topic questions see it. */
+  description?: string;
   needsTV?: boolean;
   needsWhiteboard?: boolean;
   additionalContext?: string;
@@ -235,7 +237,7 @@ function explain(
  * grid gets. Asking it to pick a cell outright was measurably worse: it mostly took the first one.
  */
 export async function findFreeSpot(
-  { title, speaker, needsTV = false, needsWhiteboard = false, additionalContext }: Talk,
+  { title, speaker, description, needsTV = false, needsWhiteboard = false, additionalContext }: Talk,
   { existingNotes, roomsWithResources, availableRooms, availableTimeSlots }: Board,
   model: Experimental_DecisionModel = SLOT_DECISION_MODEL.primary
 ): Promise<FindFreeSpotResponse> {
@@ -315,7 +317,11 @@ export async function findFreeSpot(
   }
 
   const state = {
-    charlaNueva: { titulo: title, ...(speaker ? { orador: speaker } : {}) },
+    charlaNueva: {
+      titulo: title,
+      ...(speaker ? { orador: speaker } : {}),
+      ...(description ? { descripcion: description } : {}),
+    },
     // With a request, the whole day and every room, so "la última hora" can be judged block by block.
     ...(request ? { pedidoDelStaff: request, bloquesDelDia: availableTimeSlots, salas: availableRooms } : {}),
   };

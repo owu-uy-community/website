@@ -953,6 +953,66 @@ lvgl:
                                 - switch.turn_on: marketplace_open
                               else:
                                 - switch.turn_off: marketplace_open
+              - obj:
+                  width: 100%
+                  height: 40
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: flex
+                    flex_flow: row
+                    flex_align_main: space_between
+                    flex_align_cross: center
+                  widgets:
+                    - label:
+                        text: "Modo pitch"
+                        text_color: 0xFBF5E7
+                    - switch:
+                        id: sw_pitch
+                        width: 56
+                        height: 30
+                        indicator:
+                          checked:
+                            bg_color: 0x0162C8
+                        on_value:
+                          - if:
+                              condition:
+                                lambda: return x;
+                              then:
+                                - switch.turn_on: pitch_mode
+                              else:
+                                - switch.turn_off: pitch_mode
+              - obj:
+                  width: 100%
+                  height: 40
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  layout:
+                    type: flex
+                    flex_flow: row
+                    flex_align_main: space_between
+                    flex_align_cross: center
+                  widgets:
+                    - label:
+                        text: "Owy reacciona"
+                        text_color: 0xFBF5E7
+                    - switch:
+                        id: sw_pitch_reacts
+                        width: 56
+                        height: 30
+                        indicator:
+                          checked:
+                            bg_color: 0x0162C8
+                        on_value:
+                          - if:
+                              condition:
+                                lambda: return x;
+                              then:
+                                - switch.turn_on: pitch_reacts
+                              else:
+                                - switch.turn_off: pitch_reacts
               - label:
                   text: "AUDIO"
                   text_font: font_small
@@ -1129,10 +1189,12 @@ script:
       state: string
     then:
       - lambda: |-
-          id(current_face) = state;
+          // Modo pitch: while the rim invites a name, "idle" (ours or the bridge's) is the invitation.
+          const bool inviting = int32_t(millis() - id(pitch_prompt_until)) < 0;
+          id(current_face) = state == "idle" && inviting ? std::string("invite") : state;
       - if:
           condition:
-            lambda: return (state == "listening" || state == "followup" || state == "thinking" || state == "speaking") && !id(page_hold);
+            lambda: return (state == "listening" || state == "followup" || state == "record" || state == "thinking" || state == "speaking") && !id(page_hold);
           then:
             - lvgl.page.show: face_page
       - script.execute: animate_companion
@@ -1144,7 +1206,7 @@ script:
       - lambda: |-
           std::string face = "idle";
           switch (id(va_phase)) {
-            case 2: face = id(follow_up_active) && !id(vad_heard) ? "followup" : "listening"; break;
+            case 2: face = id(pitch_active) ? "record" : id(follow_up_active) && !id(vad_heard) ? "followup" : "listening"; break;
             case 3: face = "thinking"; break;
             case 4: face = "speaking"; break;
             case 10: face = "offline"; break;
@@ -1244,6 +1306,14 @@ script:
           id: sw_marketplace
           state:
             checked: !lambda return id(marketplace_open).state;
+      - lvgl.widget.update:
+          id: sw_pitch
+          state:
+            checked: !lambda return id(pitch_mode).state;
+      - lvgl.widget.update:
+          id: sw_pitch_reacts
+          state:
+            checked: !lambda return id(pitch_reacts).state;
       - lvgl.widget.update:
           id: sw_quiet
           state:

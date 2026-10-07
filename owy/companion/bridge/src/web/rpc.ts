@@ -8,7 +8,13 @@
  */
 import { ORPCError, os } from "@orpc/server";
 import { audioRoute, type AudioRoute } from "../audio/route";
-import { SetAudioRoutingSchema, SettingsSnapshotSchema, type SettingsSnapshot } from "./contract";
+import {
+  SetAudioRoutingSchema,
+  SetPitchSchema,
+  SettingsSnapshotSchema,
+  type PitchSettings,
+  type SettingsSnapshot,
+} from "./contract";
 
 export * from "./contract";
 
@@ -19,6 +25,8 @@ export interface RoutableSession {
   readonly hasPeer: boolean;
   audioRouting(): { mic: AudioRoute; output: AudioRoute; source: "device" | "override" | "env" };
   setAudioRouting(which: "mic" | "output", route: AudioRoute): void;
+  pitchSettings(): PitchSettings;
+  setPitchSetting(which: "mode" | "reacts", on: boolean): void;
 }
 
 export interface BridgeRpcContext {
@@ -33,6 +41,7 @@ export function settingsSnapshot(sessions: readonly RoutableSession[]): Settings
       connected: session.connected,
       ...session.audioRouting(),
       peer: session.hasPeer,
+      pitch: session.pitchSettings(),
     })),
   };
 }
@@ -59,6 +68,24 @@ export const bridgeRouter = {
         for (let waited = 0; waited < 800; waited += 50) {
           const now = session.audioRouting();
           if ((!wanted.mic || now.mic === wanted.mic) && (!wanted.output || now.output === wanted.output)) break;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        return settingsSnapshot(context.sessions);
+      }),
+    /** Modo pitch on/off and whether Owy reacts to a pitch (the device's switches when the board has them). */
+    setPitch: base
+      .input(SetPitchSchema)
+      .output(SettingsSnapshotSchema)
+      .handler(async ({ input, context }) => {
+        const session = context.sessions.find((s) => s.id === input.deviceId);
+        if (!session) throw new ORPCError("NOT_FOUND", { message: `unknown device ${input.deviceId}` });
+        if (input.mode !== undefined) session.setPitchSetting("mode", input.mode);
+        if (input.reacts !== undefined) session.setPitchSetting("reacts", input.reacts);
+        context.log?.(`settings: ${session.id} pitch mode=${input.mode ?? "-"} reacts=${input.reacts ?? "-"}`);
+        for (let waited = 0; waited < 800; waited += 50) {
+          const now = session.pitchSettings();
+          if ((input.mode === undefined || now.mode === input.mode) && (input.reacts === undefined || now.reacts === input.reacts))
+            break;
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
         return settingsSnapshot(context.sessions);

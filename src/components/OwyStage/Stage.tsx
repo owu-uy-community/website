@@ -233,14 +233,16 @@ export function Flag({ fill, className }: { fill: string; className?: string }) 
 // Caption (lower third) — used by the face scene transcripts and the caption effect
 // ---------------------------------------------------------------------------
 
-function useTyped(text: string) {
+export function useTyped(text: string) {
   const [count, setCount] = useState(0);
   const previous = useRef("");
   useEffect(() => {
     // A transcript that keeps growing continues typing; a different text restarts.
     if (!text.startsWith(previous.current)) setCount(0);
     previous.current = text;
-    const id = setInterval(() => setCount((n) => (n >= text.length ? n : n + 2)), 16);
+    // A whole pitch arrives at once: type it faster than a caption so it does not drag for 12 s.
+    const step = text.length > 400 ? 5 : 2;
+    const id = setInterval(() => setCount((n) => (n >= text.length ? n : n + step)), 16);
     return () => clearInterval(id);
   }, [text]);
 

@@ -469,7 +469,10 @@ api:
         - script.stop: return_to_face_later
         - if:
             condition:
-              lambda: return lv_display_get_screen_active(id(ui).get_disp()) != id(convo_page)->obj;
+              lambda: |-
+                auto *page = lv_display_get_screen_active(id(ui).get_disp());
+                // A pitch's announcement keeps the card it just made on screen.
+                return page != id(convo_page)->obj && !(id(pitch_active) && page == id(card_page)->obj);
             then:
               - script.execute: wake_display
               - lvgl.page.show: convo_page
@@ -590,8 +593,9 @@ text_sensor:
           // Published once per classified contact (update_interval: never).
           int effect = 0;
           // A tap that opens the mic is confirmed by the listening cue that
-          // follows; only a tap that cancels something gets its own buzz.
-          if (x == "tap") effect = id(va).is_running() ? 47 : 0;
+          // follows; only a tap that cancels something gets its own buzz (a
+          // pitch's second tap sends, and `pitch_state` cues that).
+          if (x == "tap") effect = id(va).is_running() && !id(pitch_active) ? 47 : 0;
           else if (x == "pet") effect = 52;                   // pulsing strong 1 100%
           else if (x == "hold" || x == "up") effect = 12;     // triple click 100%
           else if (x == "left" || x == "right") effect = 47;  // single clicks are too subtle here
@@ -609,7 +613,7 @@ text_sensor:
           // The motor shares the enclosure with the mic: cue while the mic is
           // still closed (`preparing` precedes capture by ~250 ms) and never
           // right before the wake word re-arms (that buzz read as "Okay Nabu").
-          if (x == "preparing") effect = 10;                        // double click: "te escucho"
+          if (x == "preparing") effect = id(pitch_active) ? 0 : 10; // double click: "te escucho" (a pitch has its own arming buzz)
           else if (x == "speaking") effect = 14;                    // strong buzz: the reply is on screen
           else if (x == "error") effect = 15;                       // 750 ms alert
           (void) before;
@@ -632,6 +636,17 @@ text_sensor:
             id(page_hold) = false;
             if (lv_display_get_screen_active(id(ui).get_disp()) == id(convo_page)->obj) id(return_to_face_later).execute();
           }
+  - id: !extend pitch_state
+    on_value:
+      - lambda: |-
+          // Modo pitch (voice.yaml), one cue per step: `arming` buzzes before the
+          // mic opens, `sent` after it closes, `invite` when Owy asks for a name.
+          // ponytail: DRV2605 ROM effect ids; tune with "Vibración de prueba".
+          int effect = 0;
+          if (x == "arming") effect = 1;        // strong click 100%
+          else if (x == "sent") effect = 10;    // double click
+          else if (x == "invite") effect = 12;  // triple click
+          if (effect) id(haptic).execute(effect);
   - id: !extend interface_page
     on_value:
       - lambda: |-

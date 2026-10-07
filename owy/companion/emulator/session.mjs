@@ -18,6 +18,8 @@ const settings = new Set([
   "volume",
   "brightness",
   "marketplace",
+  "pitch",
+  "pitch_reacts",
 ]);
 const pages = new Set(["face", "quick", "help", "qr", "pin", "calibration"]); // staff only through fixture PIN
 const kinds = {
@@ -152,6 +154,10 @@ export class Session {
     if (this.mode === "live")
       for (const e of events) {
         if (e.event === "voice.request") this.commands.push("start");
+        // Modo pitch: a tap records a pitch (the name step re-tags it), the second tap sends it.
+        if (e.event === "voice.request.pitch") this.commands.push("start:pitch");
+        if (e.event === "voice.request.pitch_name") this.commands.push("start:pitch-name");
+        if (e.event === "pitch.submit") this.commands.push("commit");
         if (["voice.cancelled", "calibration.started", "power.off", "fixture.reboot"].includes(e.event))
           this.commands.push("stop");
       }
@@ -307,6 +313,9 @@ export class Session {
     } else if (command.kind === "face") {
       const moods = { idle: 0, happy: 4, error: 5, offline: 6 };
       if (Object.hasOwn(moods, command.state)) this.raw(18, [moods[command.state]]);
+    } else if (command.kind === "pitchPrompt") {
+      // The bridge asks who speaks: the rim invites one more tap for 20 s ("name"), or stops ("idle").
+      this.raw(38, [command.prompt === "name" ? 1 : 0]);
     }
     this.observe();
   }

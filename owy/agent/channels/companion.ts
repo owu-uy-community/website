@@ -23,11 +23,25 @@ import { z } from "zod";
  * `companion-staff` authenticators.
  */
 
+/** What the bridge already made of a spoken pitch (modo pitch); the card is on the board when this arrives. */
+const PitchContext = z.object({
+  title: z.string().max(200),
+  speaker: z.string().max(200).nullable(),
+  needsTV: z.boolean(),
+  needsWhiteboard: z.boolean(),
+  description: z.string().max(2000).nullable(),
+  topics: z.array(z.string().max(60)).max(8),
+});
+export type PitchContext = z.infer<typeof PitchContext>;
+
 const TurnBody = z.object({
   text: z.string().trim().min(1).max(4000),
   staff: z.boolean().default(false),
   marketplaceOpen: z.boolean().default(false),
   eventName: z.string().max(120).optional(),
+  /** `pitch`: `text` is the transcript of a pitch whose card already exists; Owy only reacts. */
+  kind: z.enum(["chat", "pitch"]).default("chat"),
+  pitch: PitchContext.optional(),
 });
 
 export interface CompanionState {
@@ -35,6 +49,8 @@ export interface CompanionState {
   eventName: string | null;
   /** Epoch ms of the last accepted proposal from this device (kiosk cooldown). */
   lastProposalAt: number | null;
+  kind: "chat" | "pitch";
+  pitch: PitchContext | null;
 }
 
 const username = process.env.ROUTE_AUTH_BASIC_USER?.trim();
@@ -62,7 +78,7 @@ function ndjson(events: ReadableStream<unknown>): ReadableStream<Uint8Array> {
   );
 }
 
-const initialState: CompanionState = { deviceId: "", eventName: null, lastProposalAt: null };
+const initialState: CompanionState = { deviceId: "", eventName: null, lastProposalAt: null, kind: "chat", pitch: null };
 
 export default defineChannel({
   turnPolicy: "steer",
@@ -80,6 +96,8 @@ export default defineChannel({
       deviceId: state.deviceId,
       eventName: state.eventName,
       lastProposalAt: state.lastProposalAt,
+      kind: state.kind,
+      pitch: state.pitch,
     };
   },
 
@@ -105,7 +123,13 @@ export default defineChannel({
             marketplace_open: body.marketplaceOpen ? "true" : "false",
           },
         },
-        state: { deviceId, eventName: body.eventName ?? null, lastProposalAt: null },
+        state: {
+          deviceId,
+          eventName: body.eventName ?? null,
+          lastProposalAt: null,
+          kind: body.kind,
+          pitch: body.kind === "pitch" ? (body.pitch ?? null) : null,
+        },
         title: `Owy físico · ${deviceId}`,
       });
       return Response.json({ sessionId: session.id, streamIndex: session.id === current?.id ? streamIndex : 0 });

@@ -99,6 +99,30 @@ export interface UpdateTrackData {
   skipResourceValidation?: boolean;
 }
 
+/** A talk with no place yet: the site picks it (`tracks.createPlaced`, the companion's spoken pitch). */
+export interface CreatePlacedTrackInput {
+  openSpaceId: string;
+  title: string;
+  speaker?: string;
+  description?: string;
+  needsTV?: boolean;
+  needsWhiteboard?: boolean;
+  additionalContext?: string;
+  source?: string;
+}
+
+export interface PlacedTrackResponse {
+  note: StickyNote;
+  placement: {
+    room: string;
+    timeSlot: string;
+    reasoning: string;
+    degraded: boolean;
+    missing: ("tv" | "whiteboard")[];
+    skipped: { room: string; timeSlot: string; occupiedBy?: string }[];
+  };
+}
+
 export interface OBSQueueItem {
   id: string;
   sceneName: string;
@@ -331,6 +355,8 @@ export interface OwuApi {
   tracks: {
     list: (input: { openSpaceId: string }) => Promise<StickyNote[]>;
     create: (input: CreateTrackInput) => Promise<StickyNote>;
+    /** Place and create in one call; CONFLICT board_full when nothing is free. */
+    createPlaced: (input: CreatePlacedTrackInput) => Promise<PlacedTrackResponse>;
     update: (input: { id: string; data: UpdateTrackData }) => Promise<StickyNote>;
     delete: (input: { id: string }) => Promise<unknown>;
     swap: (input: { trackAId: string; trackBId: string }) => Promise<unknown>;
@@ -408,6 +434,10 @@ export type StageFaceState = "idle" | "listening" | "thinking" | "speaking" | "h
 export interface StageFaceInput {
   state: StageFaceState;
   transcript?: { who: "input" | "output"; text: string };
+  /** The feeling the device shows for the sentence being spoken (companion_model.h expressions). */
+  expression?: { name: string; strength: number };
+  /** A talk that just landed on the board, as the companion announces it. */
+  card?: { title: string; speaker?: string; room?: string; timeSlot?: string; reasoning?: string };
   source?: string;
 }
 

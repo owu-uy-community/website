@@ -124,6 +124,33 @@ describe("EveLink", () => {
     expect(eve.requests.map((r) => `${r.method} ${r.url}`)).toContain("POST /companion/owy-knob/cancel");
   });
 
+  it("a pitch turn carries the card the bridge made and keeps to its own time budget", async () => {
+    eve = await fakeEve([
+      { type: "turn.started", data: {} },
+      { type: "message.completed", data: { finishReason: "stop", message: "Qué lindo tema, Ana." } },
+      { type: "session.waiting", data: {} },
+    ]);
+    const link = new EveLink({ url: eve.url, logger });
+    const pitch = { title: "Effect", speaker: "Ana", needsTV: false, needsWhiteboard: false, description: null, topics: ["effect"] };
+
+    const result = await link.turn("owy-knob", "soy Ana y quiero hablar de Effect", {
+      staff: false,
+      marketplaceOpen: false,
+      kind: "pitch",
+      pitch,
+      timeoutMs: 5000,
+    });
+
+    expect(result.text).toBe("Qué lindo tema, Ana.");
+    expect(eve.requests[0].body).toMatchObject({ kind: "pitch", pitch });
+
+    // A stream that never ends is cut by the per-call budget, not the link's 90 s default.
+    await eve.close();
+    eve = await fakeEve([{ type: "turn.started", data: {} }]);
+    const slow = new EveLink({ url: eve.url, logger });
+    await expect(slow.turn("owy-knob", "hola", { staff: false, marketplaceOpen: false, timeoutMs: 50 })).rejects.toThrow();
+  });
+
   it("surfaces a failed turn as an error and honours an external abort", async () => {
     eve = await fakeEve([{ type: "turn.failed", data: { code: "model_error", message: "boom" } }]);
     const link = new EveLink({ url: eve.url, logger });
