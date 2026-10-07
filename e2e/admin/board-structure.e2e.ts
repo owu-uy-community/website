@@ -74,8 +74,8 @@ test("a room switched off leaves the kiosk but stays, dimmed, on the board", asy
 test("a room added on one screen shows up on the others without a reload", async ({ page, pageAs, board }) => {
   const other = await pageAs("admin");
   await Promise.all([page.goto(board.url), other.goto(board.url)]);
-  // Listening: the board's live channel is open.
-  await expect(other.getByText("En vivo")).toBeVisible();
+  // Listening: the board's live channel is open (the sidebar has an "En vivo" section too).
+  await expect(other.getByRole("main").getByText("En vivo", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Salas y horarios" }).click();
   await page.getByRole("button", { name: "Nueva sala" }).click();
