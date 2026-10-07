@@ -53,7 +53,7 @@ export interface TalkFormModalProps {
   roomsData: RoomWithResources[];
   timeSlots: string[];
   onSave: (noteData: Partial<StickyNote> & { skipResourceValidation?: boolean }) => void;
+  /** Deletes at once; the toast that follows offers to undo it. */
   onDelete?: () => void;
   isSaving?: boolean;
-  isDeleting?: boolean;
 }

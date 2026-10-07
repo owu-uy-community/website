@@ -17,7 +17,7 @@ import {
   type DragStartEvent,
   type DropAnimation,
 } from "@dnd-kit/core";
-import { ArrowLeftRight, ArrowUpRight, CalendarX2, Plus, SearchX, Tv } from "lucide-react";
+import { ArrowLeftRight, ArrowUpRight, CalendarX2, LayoutGrid, Plus, SearchX, Tv } from "lucide-react";
 
 import { TimeGrid } from "components/Meetups/OpenSpace/organisms/TimeGrid";
 import { StickyNoteGhost } from "components/Meetups/OpenSpace/molecules/StickyNoteCard";
@@ -28,6 +28,8 @@ import { SearchInput } from "components/Meetups/OpenSpace/atoms/SearchInput";
 import { RealtimeIndicator } from "components/Meetups/OpenSpace/atoms/RealtimeIndicator";
 import { OpenSpaceSkeleton } from "components/Meetups/OpenSpace/organisms/OpenSpaceSkeleton";
 import { CountdownControls } from "components/Meetups/OpenSpace/organisms/CountdownControls";
+import { StructurePanel } from "components/Meetups/OpenSpace/organisms/StructurePanel";
+import { ConfirmDialog } from "components/Admin/panel";
 import { RoomFormModal } from "components/Admin/rooms/RoomFormModal";
 import { Button } from "components/shared/ui/button";
 import { Empty } from "components/shared/ui/empty";
@@ -46,7 +48,12 @@ import { orpc } from "lib/orpc";
 import { useRealtimeBroadcastWithInvalidation } from "hooks/useRealtimeBroadcast";
 import { useScheduleManagement } from "hooks/useScheduleManagement";
 import { useNoteManagement } from "hooks/useNoteManagement";
+import { useRoomManagement } from "hooks/useRoomManagement";
 import { useAutoHighlight } from "hooks/useAutoHighlight";
+
+const slotLabel = (schedule: Schedule) => `${schedule.startTime} - ${schedule.endTime}`;
+
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 const DROP_ANIMATION: DropAnimation = {
   duration: 200,
@@ -81,7 +88,6 @@ export default function OpenSpaceClient({
     swapNotes,
     isCreating,
     isUpdating,
-    isDeleting,
     isConnected,
     recentlyUpdatedIds,
   } = useOpenSpaceNotesORPC({ openSpaceId: eventId, enableRealtime: true });
@@ -154,6 +160,11 @@ export default function OpenSpaceClient({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [isRoomFormOpen, setIsRoomFormOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [isStructureOpen, setIsStructureOpen] = useState(false);
+  // A room or slot that holds talks: deleting it waits for this confirmation.
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: "room"; room: Room; talks: number } | { kind: "slot"; schedule: Schedule; talks: number } | null
+  >(null);
 
   // ============ Custom Hooks ============
 
@@ -181,6 +192,8 @@ export default function OpenSpaceClient({
       updateScheduleMutation,
       broadcastScheduleChange,
     });
+
+  const { deleteRoom, reorderRooms, setRoomActive, isDeletingRoom } = useRoomManagement(eventId);
 
   // Note management
   const {
@@ -335,11 +348,12 @@ export default function OpenSpaceClient({
     [handleSaveNoteBase, editingNote, rooms, timeSlots, eventId]
   );
 
+  // Gone at once; the toast that follows offers "Deshacer" (errors roll back and toast in the hook).
   const handleDeleteNoteWrapper = useCallback(
-    async (noteId: string) => {
-      await handleDeleteNote(noteId);
-      setEditingNote(null);
+    (noteId: string) => {
       setIsFormOpen(false);
+      setEditingNote(null);
+      void handleDeleteNote(noteId).catch(() => undefined);
     },
     [handleDeleteNote]
   );
@@ -364,49 +378,97 @@ export default function OpenSpaceClient({
 
   // ============ Schedule handlers ============
 
-  const handleEditSchedule = useCallback(
-    (timeIndex: number) => {
-      const schedule = schedulesData[timeIndex];
-      if (!schedule) return;
-      setEditingSchedule(schedule);
-      setIsScheduleFormOpen(true);
-    },
-    [schedulesData]
-  );
+  const openRoomEditor = useCallback((room: Room | null) => {
+    setEditingRoom(room);
+    setIsRoomFormOpen(true);
+  }, []);
 
-  const handleAddScheduleClick = useCallback(() => {
-    setEditingSchedule(null);
+  const openSlotEditor = useCallback((schedule: Schedule | null) => {
+    setEditingSchedule(schedule);
     setIsScheduleFormOpen(true);
   }, []);
 
-  const handleAddRoomClick = useCallback(() => {
-    setEditingRoom(null);
-    setIsRoomFormOpen(true);
-  }, []);
+  const handleEditSchedule = useCallback(
+    (timeIndex: number) => {
+      const schedule = schedulesData[timeIndex];
+      if (schedule) openSlotEditor(schedule);
+    },
+    [schedulesData, openSlotEditor]
+  );
+
+  const handleAddScheduleClick = useCallback(() => openSlotEditor(null), [openSlotEditor]);
+
+  const handleAddRoomClick = useCallback(() => openRoomEditor(null), [openRoomEditor]);
 
   // Room headers are the natural place to fix a room: click the column.
   const handleEditRoomClick = useCallback(
     (roomName: string) => {
       const room = roomsData.find((candidate) => candidate.name === roomName);
-      if (!room) return;
-
-      setEditingRoom(room);
-      setIsRoomFormOpen(true);
+      if (room) openRoomEditor(room);
     },
+    [roomsData, openRoomEditor]
+  );
+
+  const inactiveRooms = useMemo(
+    () => new Set(roomsData.filter((room) => !room.isActive).map((room) => room.name)),
     [roomsData]
   );
 
-  const handleDeleteScheduleFromModal = useCallback(async () => {
-    if (!editingSchedule) return;
-    const timeSlot = `${editingSchedule.startTime} - ${editingSchedule.endTime}`;
-    await handleDeleteSchedule(editingSchedule.id, timeSlot);
-  }, [editingSchedule, handleDeleteSchedule]);
+  // ============ Deletes ============
+  // An empty room or slot goes at once; one holding talks asks first, naming how many go with it.
+
+  const requestDeleteRoom = useCallback(
+    (room: Room) => {
+      setIsRoomFormOpen(false);
+      const talks = notes.filter((note) => note.roomId === room.id).length;
+      if (talks > 0) setPendingDelete({ kind: "room", room, talks });
+      else void deleteRoom(room).catch(() => undefined);
+    },
+    [notes, deleteRoom]
+  );
+
+  const requestDeleteSlot = useCallback(
+    (schedule: Schedule) => {
+      setIsScheduleFormOpen(false);
+      const talks = notes.filter((note) => note.scheduleId === schedule.id).length;
+      if (talks > 0) setPendingDelete({ kind: "slot", schedule, talks });
+      else void handleDeleteSchedule(schedule.id, slotLabel(schedule)).catch(() => undefined);
+    },
+    [notes, handleDeleteSchedule]
+  );
+
+  const confirmPendingDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    try {
+      if (pendingDelete.kind === "room") await deleteRoom(pendingDelete.room);
+      else await handleDeleteSchedule(pendingDelete.schedule.id, slotLabel(pendingDelete.schedule));
+    } catch {
+      // Rolled back and toasted by the mutation.
+    } finally {
+      setPendingDelete(null);
+    }
+  }, [pendingDelete, deleteRoom, handleDeleteSchedule]);
+
+  /** Times through the usual save; the kiosk star (one row at a time) through its own toggle. */
+  const handleSaveScheduleForm = useCallback(
+    async (data: { startTime: string; endTime: string; scheduleId?: string; highlightInKiosk: boolean }) => {
+      const current = data.scheduleId ? schedulesData.find((schedule) => schedule.id === data.scheduleId) : null;
+      if (!current || current.startTime !== data.startTime || current.endTime !== data.endTime) {
+        await handleSaveSchedule(data);
+      }
+      if (current && current.highlightInKiosk !== data.highlightInKiosk) {
+        await handleToggleScheduleHighlight(current.id);
+      }
+    },
+    [schedulesData, handleSaveSchedule, handleToggleScheduleHighlight]
+  );
 
   const handleToggleScheduleHighlightWrapper = useCallback(
     (timeIndex: number) => {
-      void handleToggleScheduleHighlight(timeIndex, timeSlots);
+      const schedule = schedulesData[timeIndex];
+      if (schedule) void handleToggleScheduleHighlight(schedule.id);
     },
-    [handleToggleScheduleHighlight, timeSlots]
+    [handleToggleScheduleHighlight, schedulesData]
   );
 
   // Cast to screen functionality (persisted server-side + broadcast over WebSockets)
@@ -508,13 +570,9 @@ export default function OpenSpaceClient({
           </div>
           <CountdownControls eventId={eventId} />
           <div className="flex w-full gap-2 md:w-auto [&>button]:h-11 [&>button]:flex-1 md:[&>button]:h-9 md:[&>button]:flex-none">
-            <Button size="sm" variant="outline" onClick={handleAddRoomClick}>
-              <Plus />
-              Sala
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleAddScheduleClick}>
-              <Plus />
-              Slot
+            <Button size="sm" variant="outline" onClick={() => setIsStructureOpen(true)}>
+              <LayoutGrid />
+              Salas y horarios
             </Button>
             <Button disabled={!isGridReady} size="sm" onClick={() => addNewNote()}>
               <Plus />
@@ -596,6 +654,7 @@ export default function OpenSpaceClient({
               onEmptyCellClick={(room, timeSlot) => addNewNote({ room, timeSlot })}
               onOpenNote={openNote}
               onEditSchedule={handleEditSchedule}
+              inactiveRooms={inactiveRooms}
               onEditRoom={handleEditRoomClick}
               onToggleScheduleHighlight={handleToggleScheduleHighlightWrapper}
             />
@@ -625,7 +684,6 @@ export default function OpenSpaceClient({
 
       {/* Talk form */}
       <TalkFormModal
-        isDeleting={isDeleting}
         isSaving={editingNote?.id ? isUpdating : isCreating}
         note={editingNote}
         notes={notes}
@@ -649,31 +707,65 @@ export default function OpenSpaceClient({
         onConfirm={() => void confirmResourceMove()}
       />
 
-      {/* Schedule Form Modal */}
+      {/* Slot editor */}
       <ScheduleFormModal
-        hasTracksInSlot={
-          editingSchedule
-            ? notes.some((note) => note.timeSlot === `${editingSchedule.startTime} - ${editingSchedule.endTime}`)
-            : false
-        }
-        isDeleting={deleteScheduleMutation.isPending}
         isSaving={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+        open={isScheduleFormOpen}
         schedule={editingSchedule}
         schedules={schedulesData}
-        talksInSlot={
-          editingSchedule
-            ? notes.filter((note) => note.timeSlot === `${editingSchedule.startTime} - ${editingSchedule.endTime}`)
-                .length
-            : 0
-        }
-        open={isScheduleFormOpen}
-        onDelete={editingSchedule ? handleDeleteScheduleFromModal : undefined}
+        talksInSlot={editingSchedule ? notes.filter((note) => note.scheduleId === editingSchedule.id).length : 0}
+        onDelete={editingSchedule ? () => requestDeleteSlot(editingSchedule) : undefined}
         onOpenChange={setIsScheduleFormOpen}
-        onSave={handleSaveSchedule}
+        onSave={handleSaveScheduleForm}
       />
 
-      {/* Room Form Modal — same dialog the event settings page uses */}
-      <RoomFormModal open={isRoomFormOpen} openSpaceId={eventId} room={editingRoom} onOpenChange={setIsRoomFormOpen} />
+      {/* Room editor — same one the event settings page uses */}
+      <RoomFormModal
+        open={isRoomFormOpen}
+        openSpaceId={eventId}
+        room={editingRoom}
+        onDelete={requestDeleteRoom}
+        onOpenChange={setIsRoomFormOpen}
+      />
+
+      <StructurePanel
+        notes={notes}
+        open={isStructureOpen}
+        rooms={roomsData}
+        schedules={schedulesData}
+        onAddRoom={handleAddRoomClick}
+        onAddSlot={handleAddScheduleClick}
+        onDeleteRoom={requestDeleteRoom}
+        onDeleteSlot={requestDeleteSlot}
+        onEditRoom={openRoomEditor}
+        onEditSlot={openSlotEditor}
+        onOpenChange={setIsStructureOpen}
+        onReorderRooms={reorderRooms}
+        onSetRoomActive={setRoomActive}
+        onToggleSlotHighlight={(schedule) => void handleToggleScheduleHighlight(schedule.id)}
+      />
+
+      <ConfirmDialog
+        confirmLabel={pendingDelete?.kind === "slot" ? "Eliminar horario" : "Eliminar sala"}
+        description={
+          pendingDelete
+            ? `${pendingDelete.talks === 1 ? "La charla" : `Las ${plural(pendingDelete.talks, "charla", "charlas")}`} de ${
+                pendingDelete.kind === "room" ? "esta sala" : "este bloque"
+              } también se ${pendingDelete.talks === 1 ? "elimina" : "eliminan"}. Esta acción no se puede deshacer.`
+            : ""
+        }
+        open={Boolean(pendingDelete)}
+        pending={isDeletingRoom || deleteScheduleMutation.isPending}
+        title={
+          pendingDelete?.kind === "room"
+            ? `¿Eliminar la sala “${pendingDelete.room.name}”?`
+            : pendingDelete?.kind === "slot"
+              ? `¿Eliminar el horario ${slotLabel(pendingDelete.schedule)}?`
+              : ""
+        }
+        onConfirm={() => void confirmPendingDelete()}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      />
     </div>
   );
 }

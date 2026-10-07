@@ -261,7 +261,16 @@ export function useTalkForm({
     setActiveTab("form");
   }, [rooms, timeSlots, stopCamera, stopReading, reset]);
 
+  // Load the form each time the panel opens (or switches talk) — not when rooms or slots change:
+  // any screen can change those mid-edit (they arrive live) and that must not wipe the typing.
+  const axesRef = useRef({ rooms, timeSlots });
   useEffect(() => {
+    axesRef.current = { rooms, timeSlots };
+  }, [rooms, timeSlots]);
+
+  useEffect(() => {
+    if (!open) return;
+    const { rooms, timeSlots } = axesRef.current;
     if (note && note.id) {
       reset({
         title: note.title || "",
@@ -290,7 +299,7 @@ export function useTalkForm({
         needsWhiteboard: false,
       });
     }
-  }, [note, rooms, timeSlots, reset]);
+  }, [open, note, reset]);
 
   // Changing room/slot/resources invalidates any warning shown for the previous
   // combination. The messages must NOT be dependencies: they are what this

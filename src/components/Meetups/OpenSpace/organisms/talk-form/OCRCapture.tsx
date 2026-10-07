@@ -1,9 +1,10 @@
 "use client";
 
 import type { RefObject } from "react";
-import { AlertTriangle, Camera, Check, Loader2, RefreshCw, RotateCcw } from "lucide-react";
+import { Camera, Check, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import Image from "next/image";
 
+import { Notice } from "components/Admin/panel";
 import { Button } from "components/shared/ui/button";
 
 interface OCRCaptureProps {
@@ -36,7 +37,7 @@ export function OCRCapture({
   onRetakeImage,
 }: OCRCaptureProps) {
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4">
+    <div className="rounded-xl border border-border bg-muted/20 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-foreground">Capturar la tarjeta (OCR)</h3>
         {capturedImage && (
@@ -107,18 +108,14 @@ export function OCRCapture({
         )}
       </div>
 
-      {isProcessingImage && (
-        <div className="mt-3 rounded-md border border-primary/30 bg-primary/[0.06] p-3 text-center text-sm text-foreground">
+      <div className="mt-3 space-y-2 empty:hidden">
+        <Notice show={isProcessingImage} tone="info">
           Leyendo la tarjeta…
-        </div>
-      )}
-
-      {ocrError && (
-        <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <p className="text-sm text-foreground">{ocrError}</p>
-        </div>
-      )}
+        </Notice>
+        <Notice show={Boolean(ocrError)} tone="danger">
+          {ocrError}
+        </Notice>
+      </div>
     </div>
   );
 }

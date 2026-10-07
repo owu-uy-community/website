@@ -14,7 +14,7 @@ import { Skeleton } from "components/shared/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "components/shared/ui/tooltip";
 
 // Custom hook for mobile detection
-function useIsMobile() {
+export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
