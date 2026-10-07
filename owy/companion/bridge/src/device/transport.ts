@@ -17,6 +17,8 @@ export interface AudioPeer {
   sendAudio(audio: Buffer, end?: boolean): void;
   /** A peer with a face of its own mirrors Owy's per-sentence expressions. */
   sendExpression?(expression: string, leadMs: number, strength: number): void;
+  /** Plays a pre-rendered cue (public/companion-audio/clips/<id>.wav) through the peer's speakers. */
+  playClip?(id: string): void;
 }
 
 /** The gadget and web virtual device implement this same bridge-side contract. */
@@ -43,6 +45,14 @@ export interface DeviceTransport extends VoiceLink {
   getMicSource?: () => AudioRoute | null;
   getAudioOutput?: () => AudioRoute | null;
   setAudioRoute?: (which: "mic" | "output", route: AudioRoute) => void;
+  /** Modo pitch switches (`switch.pitch_mode`, `switch.pitch_reacts`); `null` when the board has none. */
+  isPitchMode?: () => boolean | null;
+  isPitchReacts?: () => boolean | null;
+  setSwitch?: (id: "pitch_mode" | "pitch_reacts", on: boolean) => void;
+  /** Present when the firmware exposes `pitch_prompt`: "name" invites a tap to say one's name, "idle" clears it. */
+  pitchPrompt?: (kind: "name" | "idle") => void;
+  /** Plays a pre-rendered cue when the device has speakers of its own that can take a file (the browser). */
+  playClip?: (id: string) => void;
   getVolume(): number | null;
   setVolume(pct: number): void;
   close(): void;

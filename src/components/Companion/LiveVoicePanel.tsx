@@ -293,7 +293,7 @@ export default function LiveVoicePanel({
             )}
             {status.stage === "listening" && (
               <Button variant="secondary" onClick={() => client.current?.finishTurn()}>
-                <Send className="mr-2 h-4 w-4" /> Listo, respondé
+                <Send className="mr-2 h-4 w-4" /> {status.pitch ? "Terminé el pitch" : "Listo, respondé"}
               </Button>
             )}
             {["listening", "thinking", "speaking"].includes(status.stage) && (

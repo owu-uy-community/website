@@ -21,17 +21,20 @@ import type { VoiceLink } from "./pipeline";
  * Firmware contract (see `companion/firmware/packages/controls.yaml`):
  *   - select  `face_state`        options: idle|listening|thinking|speaking|happy|error|offline
  *   - switch  `staff_mode`, `marketplace_open`, `quiet_mode`   (set from the on-device PIN page)
- *   - number  `speak_level`       0..100, drives the mouth animation
+ *   - switch  `pitch_mode`, `pitch_reacts`  (modo pitch; optional), binary_sensor `pitch_submit` (the second tap)
  *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`,
- *     optional `show_caption(body)` (boards without a speaker show the reply as text)
+ *     optional `show_caption(body)` (boards without a speaker show the reply as text),
+ *     `express(feeling, lead_ms, strength)`, `mouth_track(frames, lead_ms)`, `pitch_prompt(kind)`
  *     (positional string arguments; variable names avoid ESPHome component namespaces)
- *   - voice_assistant (speaker path) subscribed with API audio
+ *   - voice_assistant (speaker path) subscribed with API audio; a pitch run starts with `wake_word: "pitch"`
  */
 
 export interface DeviceHandlers {
   onRequestStart(request: VoiceAssistantRequest): void | Promise<void>;
   onRequestStop(): void | Promise<void>;
   onAudio(chunk: VoiceAssistantAudioData): void;
+  /** Modo pitch: the second tap — the recording is complete, not cancelled. */
+  onPitchSubmit?(): void;
   onConnected?(): void;
   onDisconnected?(): void;
 }
@@ -48,6 +51,9 @@ const ENTITY = {
   audioState: entityId("text_sensor", "audio_state"),
   micSource: entityId("select", "mic_source"),
   audioOutput: entityId("select", "audio_output"),
+  pitchMode: entityId("switch", "pitch_mode"),
+  pitchReacts: entityId("switch", "pitch_reacts"),
+  pitchSubmit: entityId("binary_sensor", "pitch_submit"),
 } as const;
 
 export class CompanionDevice implements VoiceLink {
@@ -116,6 +122,8 @@ export class CompanionDevice implements VoiceLink {
   sendMouthTrack?: (frames: string, leadMs: number) => void;
   /** Set when the firmware exposes `show_caption`; DeviceSession streams the reply transcript through it. */
   showCaption?: (text: string) => void;
+  /** Set when the firmware exposes `pitch_prompt`: the rim invites a tap to say one's name. */
+  pitchPrompt?: (kind: "name" | "idle") => void;
   /** The listening haptic plays as the mic opens and the motor shares the enclosure with the mic. */
   readonly micSettleMs = 250;
 
@@ -134,13 +142,24 @@ export class CompanionDevice implements VoiceLink {
       this.sendMouthTrack = (frames, leadMs) =>
         this.callService("mouth_track", [{ stringValue: frames }, { intValue: leadMs }]);
     }
+    if (this.client.services.list().some((service) => service.name === "pitch_prompt")) {
+      this.pitchPrompt = (kind) => this.callService("pitch_prompt", [{ stringValue: kind }]);
+    }
     let lastAudioState: unknown;
+    let lastSubmit = false;
     this.client.on("telemetry", () => {
       const state = this.client.latest(ENTITY.audioState)?.state;
       if (typeof state === "string" && state !== lastAudioState) {
         lastAudioState = state;
         this.log.info(`device audio: ${state}`);
       }
+      // The second tap of a pitch is a momentary sensor: act on its rising edge.
+      const submit = this.client.latest(ENTITY.pitchSubmit)?.state === true;
+      if (submit && !lastSubmit) {
+        this.log.info("pitch submitted by device");
+        this.handlers.onPitchSubmit?.();
+      }
+      lastSubmit = submit;
     });
 
     this.client.on("lifecycle", (event) => {
@@ -277,6 +296,24 @@ export class CompanionDevice implements VoiceLink {
 
   isMarketplaceOpen(): boolean {
     return this.readSwitch(ENTITY.marketplaceOpen);
+  }
+
+  /** `null` when the firmware has no pitch switches (older boards). */
+  isPitchMode(): boolean | null {
+    return this.readOptionalSwitch(ENTITY.pitchMode);
+  }
+
+  isPitchReacts(): boolean | null {
+    return this.readOptionalSwitch(ENTITY.pitchReacts);
+  }
+
+  setSwitch(id: "pitch_mode" | "pitch_reacts", on: boolean): void {
+    this.client.command(id === "pitch_mode" ? ENTITY.pitchMode : ENTITY.pitchReacts, { state: on });
+  }
+
+  private readOptionalSwitch(id: typeof ENTITY.pitchMode): boolean | null {
+    const state = this.client.latest(id)?.state;
+    return typeof state === "boolean" ? state : null;
   }
 
   isQuietMode(): boolean {

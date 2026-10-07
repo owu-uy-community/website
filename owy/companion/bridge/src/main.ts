@@ -52,6 +52,7 @@ async function main(): Promise<void> {
       connectDevice: async (...args) => mirror.wrap(await CompanionDevice.connect(...args)),
       onFace: mirror.face,
       onTranscript: mirror.transcript,
+      onExpression: mirror.expression,
     });
   });
   for (const session of sessions) shared.sessions.set(session.id, session);

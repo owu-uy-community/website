@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Experimental_RealtimeServerEvent } from "ai";
-import { VoiceAssistantEvent as E, type VoiceAssistantRequest } from "esphome-client";
+import { VoiceAssistantEvent as E, type VoiceAssistantAudioData, type VoiceAssistantRequest } from "esphome-client";
 import { DeviceSession, type SharedRuntime } from "../src/index";
 import { VoiceTurn, type VoiceLink } from "../src/device/pipeline";
 import type { CompanionDevice } from "../src/device/esphome";
@@ -206,4 +206,247 @@ it("a new device run supersedes the old turn without ending the new one on the d
   expect(events).not.toContain(E.RUN_END);
   expect(events[0]).toBe(E.RUN_START);
   wired.turn.finish();
+});
+
+// ── Modo pitch ──────────────────────────────────────────────────────────────
+
+/** One 20 ms frame of 16 kHz PCM16 with a voice-like tone in it. */
+function loudFrame(): Buffer {
+  const pcm = Buffer.alloc(640);
+  for (let i = 0; i < 320; i++) pcm.writeInt16LE(Math.round(Math.sin(i / 3) * 6000), i * 2);
+  return pcm;
+}
+
+const heardCard = {
+  transcript: "Soy Ana y quiero hablar de Effect en producción",
+  isPitch: true,
+  title: "Effect en producción",
+  speaker: "Ana" as string | null,
+  needsTV: false,
+  needsWhiteboard: false,
+  description: "Un año de Effect",
+  topics: ["effect"],
+};
+
+function pitchHarness(options: { clips?: Record<string, number>; reacts?: boolean; eve?: unknown } = {}) {
+  const events: number[] = [];
+  const eventData: unknown[] = [];
+  const spoken: string[] = [];
+  const shown: unknown[] = [];
+  const texts: string[] = [];
+  const prompts: string[] = [];
+  const clips: string[] = [];
+  const provider = {
+    status: "connected",
+    isConnected: true,
+    goAwayPending: false,
+    resetConversation: vi.fn(),
+    commitAudio: vi.fn(),
+    sendAudio: vi.fn(),
+    sendText: vi.fn((text: string) => spoken.push(text)),
+  };
+  const device = {
+    isPlaybackReady: () => true,
+    sendEvent: (type: number, data?: unknown) => {
+      events.push(type);
+      eventData.push(data);
+    },
+    sendAudio: () => {},
+    acceptRequest: vi.fn(),
+    setFace: vi.fn(),
+    showCard: (card: unknown) => shown.push(card),
+    showText: (text: string) => texts.push(text),
+    pitchPrompt: (kind: string) => prompts.push(kind),
+    playClip: (id: string) => clips.push(id),
+    isStaffMode: () => false,
+  };
+  const extract = { card: vi.fn(async () => heardCard), name: vi.fn(async () => ({ name: "Ana" })) };
+  const api = {
+    tracks: {
+      createPlaced: vi.fn(async (input: { title: string; speaker?: string }) => ({
+        note: { id: "t1", title: input.title, speaker: input.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" },
+        placement: { room: "Cueva", timeSlot: "15:00 - 15:45", reasoning: "El bloque está vacío.", degraded: false, missing: [], skipped: [] },
+      })),
+      update: vi.fn(async () => ({})),
+    },
+  };
+  const session = new DeviceSession({ id: "test", host: "unused", port: 6053, psk: null }, {
+    logger: createLogger("test", "error"),
+    config: { COMPANION_PITCH_REACTS: options.reacts ?? false },
+    brain: options.eve ? "eve" : "local",
+    eve: options.eve,
+    pitch: { extract, api, openSpaceId: async () => "e1", clips: options.clips ?? {} },
+  } as unknown as SharedRuntime);
+  const wired = session as unknown as {
+    device: unknown;
+    session: unknown;
+    turn: VoiceTurn;
+    pitch: unknown;
+    onRequestStart(request: VoiceAssistantRequest): Promise<void>;
+    onRequestStop(): Promise<void>;
+    onDeviceAudio(chunk: VoiceAssistantAudioData): void;
+    onModelEvent(event: Experimental_RealtimeServerEvent): void;
+    submitPitch(reason: "submit" | "silence" | "cap"): void;
+  };
+  wired.device = device;
+  wired.session = provider;
+  const speak = (ms: number) => {
+    for (let elapsed = 0; elapsed < ms; elapsed += 20) {
+      wired.onDeviceAudio({ data: loudFrame(), end: false });
+      vi.advanceTimersByTime(20);
+    }
+  };
+  const answer = () => {
+    wired.onModelEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+    wired.onModelEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+    vi.advanceTimersByTime(2000);
+  };
+  return { wired, provider, device, events, eventData, spoken, shown, texts, prompts, clips, extract, api, speak, answer };
+}
+
+it("modo pitch: records the pitch itself, places it on the board and announces where it landed", async () => {
+  const h = pitchHarness();
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  expect(h.events).toEqual([E.RUN_START, E.STT_START]);
+  h.speak(3000);
+  expect(h.events).toContain(E.STT_VAD_START);
+  expect(h.provider.sendAudio).not.toHaveBeenCalled(); // nothing goes to the model while recording
+  h.wired.submitPitch("submit"); // the second tap
+  expect(h.events.slice(-2)).toEqual([E.STT_VAD_END, E.STT_END]);
+  expect(h.wired.turn.phase).toBe("thinking");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).toHaveBeenCalledOnce();
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledWith(
+    expect.objectContaining({ openSpaceId: "e1", title: "Effect en producción", speaker: "Ana", source: "companion" })
+  );
+  expect(h.shown).toEqual([{ title: "Effect en producción", speaker: "Ana", room: "Cueva", timeSlot: "15:00 - 15:45" }]);
+  expect(h.spoken).toEqual(["[GUION] ¡Listo, Ana! Tu charla «Effect en producción» queda en Cueva a las 15:00."]);
+  // The knob's pill shows what it heard.
+  expect(h.eventData).toContainEqual([{ name: "text", value: heardCard.transcript }]);
+  h.answer();
+  expect(h.events).toContain(E.TTS_START);
+  expect(h.events.at(-1)).toBe(E.RUN_END);
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.prompts).toEqual([]); // the speaker introduced herself: nothing to ask
+  expect(h.wired.pitch).toBeNull();
+});
+
+it("modo pitch: a long silence ends the recording; a pitch without a name asks for it with the next tap", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null });
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(3000);
+  vi.advanceTimersByTime(10_000); // nobody taps; the silence ends it
+  expect(h.wired.turn.phase).toBe("thinking");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.spoken[0]).toContain("¿Cómo te llamás? Tocá, decime tu nombre y tocá de nuevo.");
+  h.answer();
+  expect(h.prompts).toEqual(["name"]); // the invitation starts when the announcement is over
+  // The next tap is the name.
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch-name" } as VoiceAssistantRequest);
+  h.speak(800);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.name).toHaveBeenCalledOnce();
+  expect(h.extract.card).toHaveBeenCalledOnce(); // not a new pitch
+  expect(h.api.tracks.update).toHaveBeenCalledWith({ id: "t1", data: { speaker: "Ana" } });
+  expect(h.shown.at(-1)).toMatchObject({ speaker: "Ana" });
+  expect(h.spoken.at(-1)).toBe("[GUION] Listo, Ana. Gracias.");
+  expect(h.prompts).toEqual(["name", "idle"]);
+  h.answer();
+  expect(h.wired.turn.finished).toBe(true);
+});
+
+it("modo pitch: nobody takes the name within 20 s and the card stays as it is", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null });
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(3000);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  h.answer();
+  expect(h.prompts).toEqual(["name"]);
+  vi.advanceTimersByTime(20_000);
+  expect(h.prompts).toEqual(["name", "idle"]);
+  expect(h.api.tracks.update).not.toHaveBeenCalled();
+  // The next tap is a fresh pitch again.
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(3000);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).toHaveBeenCalledTimes(2);
+  expect(h.extract.name).not.toHaveBeenCalled();
+});
+
+it("modo pitch: too short a pitch creates nothing and the laptop plays the cue instead of the model", async () => {
+  const h = pitchHarness({ clips: { "pitch-listen": 2500, "pitch-empty": 2000 } });
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  expect(h.clips).toEqual(["pitch-listen"]);
+  vi.advanceTimersByTime(3000); // the cue's echo is over
+  h.speak(600);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).not.toHaveBeenCalled();
+  expect(h.api.tracks.createPlaced).not.toHaveBeenCalled();
+  expect(h.clips).toEqual(["pitch-listen", "pitch-empty"]);
+  expect(h.spoken).toEqual([]);
+  expect(h.events.at(-1)).toBe(E.RUN_END);
+});
+
+it("modo pitch: a full board is said, not crashed; a tap while recording cancels without a card", async () => {
+  const h = pitchHarness();
+  h.api.tracks.createPlaced.mockRejectedValueOnce(Object.assign(new Error("full"), { code: "CONFLICT" }));
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(3000);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.shown).toEqual([]);
+  expect(h.spoken).toEqual(["[GUION] Justo ahora no queda lugar libre en la grilla; hablá con el staff."]);
+  h.answer();
+
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(2000);
+  await h.wired.onRequestStop();
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.wired.pitch).toBeNull();
+  expect(h.extract.card).toHaveBeenCalledOnce();
+});
+
+it("modo pitch: with «Owy reacciona» on, the eve brain adds a sentence; its failure costs nothing", async () => {
+  const eve = {
+    turn: vi.fn(async () => ({ sessionId: "s", text: "Qué lindo tema, Ana.", interim: [] })),
+    cancel: vi.fn(),
+    reset: vi.fn(),
+  };
+  const h = pitchHarness({ reacts: true, eve });
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(3000);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(eve.turn).toHaveBeenCalledWith(
+    "test",
+    heardCard.transcript,
+    expect.objectContaining({ kind: "pitch", pitch: expect.objectContaining({ title: "Effect en producción" }), timeoutMs: 8000 })
+  );
+  expect(h.spoken).toEqual([
+    "[GUION] ¡Listo, Ana! Tu charla «Effect en producción» queda en Cueva a las 15:00. Qué lindo tema, Ana.",
+  ]);
+  h.answer();
+
+  eve.turn.mockRejectedValueOnce(new Error("eve down"));
+  await h.wired.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as VoiceAssistantRequest);
+  h.speak(3000);
+  h.wired.submitPitch("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.spoken.at(-1)).toBe("[GUION] ¡Listo, Ana! Tu charla «Effect en producción» queda en Cueva a las 15:00.");
+});
+
+it("a normal run still streams the microphone to the model", async () => {
+  const h = pitchHarness();
+  await h.wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  h.speak(200);
+  expect(h.provider.sendAudio).toHaveBeenCalled();
+  expect(h.wired.pitch).toBeNull();
+  h.wired.turn.finish();
 });

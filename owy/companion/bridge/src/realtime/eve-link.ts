@@ -23,10 +23,25 @@ export interface EveLinkOptions {
   turnTimeoutMs?: number;
 }
 
+/** What the bridge already made of a pitch, so eve reacts to it instead of re-doing it. */
+export interface PitchContext {
+  title: string;
+  speaker: string | null;
+  needsTV: boolean;
+  needsWhiteboard: boolean;
+  description: string | null;
+  topics: string[];
+}
+
 export interface EveTurnOptions {
   staff: boolean;
   marketplaceOpen: boolean;
   eventName?: string;
+  /** `pitch`: `text` is the transcript of a pitch whose card already exists; eve answers with a short reaction only. */
+  kind?: "chat" | "pitch";
+  pitch?: PitchContext;
+  /** Cap for this turn instead of the link's default. */
+  timeoutMs?: number;
   /** Running text of the assistant message being written (captions). */
   onDelta?: (text: string) => void;
   /** A tool the agent is running (UI hint). */
@@ -73,12 +88,14 @@ export class EveLink {
       staff: options.staff,
       marketplaceOpen: options.marketplaceOpen,
       eventName: options.eventName,
+      ...(options.kind ? { kind: options.kind } : {}),
+      ...(options.pitch ? { pitch: options.pitch } : {}),
     })) as { sessionId: string; streamIndex: number };
 
     const controller = new AbortController();
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort, { once: true });
-    const deadline = setTimeout(() => controller.abort(), this.turnTimeoutMs);
+    const deadline = setTimeout(() => controller.abort(), options.timeoutMs ?? this.turnTimeoutMs);
 
     try {
       const response = await this.fetchImpl(

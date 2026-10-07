@@ -536,3 +536,21 @@ cejas y cachetes cambian; los labios siguen haciendo lip-sync.
   "Expresión al hablar" las prueba con *Hablando* o *Pensando*.
 - Privacidad: las frases y lo que dijo la persona van a TypeSafe con
   zero-data-retention del gateway. `COMPANION_EXPRESSIONS=guess` no manda nada.
+
+## Modo pitch (mercado de ideas)
+
+En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: página de ajustes del dispositivo detrás del PIN, tile de la página rápida para staff, o la UI del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación:
+
+1. **Toque** → vibra, el aro parpadea como un REC y la laptop dice «Te escucho. Contame tu charla y tocá de nuevo cuando termines» (un clip pregrabado con la voz de Owy, `public/companion-audio/clips/`). La grabación arranca cuando termina el aviso.
+2. La persona cuenta la charla (20–60 s, con pausas). **El audio no pasa por el modelo de voz**: su detección de fin de habla cortaría el pitch en la primera pausa. El bridge lo graba (`PitchRecorder`, `bridge/src/pitch.ts`) y detecta voz con energía (`COMPANION_PITCH_VAD_RMS`).
+3. **Toque** (`binary_sensor.pitch_submit`) → doble vibración, cara pensando. Si nadie toca, 10 s de silencio después de hablar (`COMPANION_PITCH_SILENCE_S`) o 2 minutos (`COMPANION_PITCH_MAX_S`) terminan la grabación solos.
+4. Una llamada multimodal al gateway (`COMPANION_PITCH_MODEL`, default `google/gemini-3.8-flash`) devuelve transcripción + card (título, speaker si se presentó, tele/pizarra, descripción, temas). Menos de 2 s de habla o algo que no es una propuesta → «No escuché una propuesta» y no se crea nada.
+5. `tracks.createPlaced` en el sitio ubica la charla con los mismos modelos de decisión que «Sugerir con AI» y la crea; una celda ocupada entre medio pasa a la siguiente. Owy anuncia dónde quedó («¡Listo, Ana! Tu charla «X» queda en Cueva a las 15:00») con su voz de siempre: el bridge le manda el texto al modelo realtime como `[GUION] …` (regla en los prompts). El knob muestra la card, la pared (`owy-face`) la hace aterrizar.
+6. Si el pitch no dijo quién la da: Owy pregunta «¿Cómo te llamás? Tocá, decime tu nombre y tocá de nuevo», el aro respira invitando (`pitch_prompt("name")`) durante 20 s; toque → nombre → toque → `tracks.update`. Sin respuesta, la card queda sin speaker.
+7. **Owy reacciona** (`pitch_reacts`, apagado por defecto): el cerebro eve agrega una o dos frases cálidas sobre la propuesta (turno `kind: "pitch"` con la card ya creada; 8 s de presupuesto, si falla no cuesta nada).
+
+Nada se persiste del audio; las llamadas al gateway van con `zeroDataRetention`. El modo pitch no aplica el gate del mercado ni el cooldown de `propose_talk`: el interruptor es la decisión del staff.
+
+- Variables: `COMPANION_PITCH_MODE` / `COMPANION_PITCH_REACTS` (fallbacks para placas sin interruptores: lab web, REPL), `COMPANION_PITCH_MODEL`, `COMPANION_PITCH_SILENCE_S`, `COMPANION_PITCH_MAX_S`, `COMPANION_PITCH_VAD_RMS`. Necesita `AI_GATEWAY_API_KEY` y `OWY_API_KEY`.
+- `pnpm companion:clips` regenera los avisos pregrabados (una vez por cambio de voz o de texto); `pnpm companion:pitch grabacion.wav [--name]` prueba el extractor con un WAV.
+- Contrato con el firmware: `switch.pitch_mode`, `switch.pitch_reacts`, `binary_sensor.pitch_submit` (pulso en el segundo toque), acción `pitch_prompt(kind)` (`name` | `idle`), y el run del pipeline arranca con `wake_word: "pitch"` (`"pitch-name"` en el paso del nombre). En el lab web: `start { mode: "pitch" }` y `commit` como segundo toque.

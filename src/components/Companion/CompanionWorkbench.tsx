@@ -348,6 +348,9 @@ export default function CompanionWorkbench() {
         );
         for (const command of data.commands ?? []) {
           if (command === "start") void liveClient.current?.resume();
+          // Modo pitch on the virtual Owy: a tap records a pitch, the second tap sends it.
+          if (command === "start:pitch" || command === "start:pitch-name") void liveClient.current?.resume("pitch");
+          if (command === "commit") liveClient.current?.finishTurn();
           if (command === "stop") liveClient.current?.mute();
         }
       }

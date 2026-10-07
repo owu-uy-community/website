@@ -26,9 +26,11 @@ h1{font-size:20px;color:#F5BB03;margin:0 0 4px}small{color:#8A8A8A}.card{backgro
 <div class="card"><b>laptop</b> = un navegador con el Companion lab abierto pone su micrófono y sus parlantes al servicio del dispositivo: <i>http://127.0.0.1:3311</i> (<code>COMPANION_WEB_VOICE=1 pnpm companion:emulator:preview</code>, bridge con <code>COMPANION_WEB_BRIDGE=1</code>) o <i>/admin/companion</i> en el sitio → <i>Hablá con Owy</i> → activá el permiso → <i>Audio de laptop para un dispositivo físico</i> → <i>Usar este navegador como audio de …</i>. Sin navegador enchufado, el bridge vuelve al audio del dispositivo.</div><div id="devices"></div>
 <script>
 const seg=(id,which,cur)=>['device','laptop'].map(v=>'<button class="'+(cur===v?'on':'')+'" onclick="set(\\''+id+'\\',\\''+which+'\\',\\''+v+'\\')">'+(v==='device'?'dispositivo':'laptop')+'</button>').join('');
+const tog=(id,which,on)=>[false,true].map(v=>'<button class="'+(on===v?'on':'')+'" onclick="pitch(\\''+id+'\\',\\''+which+'\\','+v+')">'+(v?'sí':'no')+'</button>').join('');
 async function load(){const s=await (await fetch('/api/settings')).json();
-document.getElementById('devices').innerHTML=s.devices.map(d=>'<div class="card"><div class="row"><b><span class="dot '+(d.connected?'on':'')+'"></span>'+d.id+'</b><small>'+(d.source==='device'?'guardado en el dispositivo':d.source==='override'?'elegido acá':'por defecto (env)')+'</small></div><div class="row"><span>Navegador enchufado</span><span class="'+(d.peer?'':'off')+'">'+(d.peer?'sí':'no')+'</span></div><div class="row"><span>Micrófono</span><div class="seg">'+seg(d.id,'mic',d.mic)+'</div></div><div class="row"><span>Salida de audio</span><div class="seg">'+seg(d.id,'output',d.output)+'</div></div></div>').join('')||'<div class="card off">Sin dispositivos (COMPANION_DEVICES vacío).</div>';}
+document.getElementById('devices').innerHTML=s.devices.map(d=>'<div class="card"><div class="row"><b><span class="dot '+(d.connected?'on':'')+'"></span>'+d.id+'</b><small>'+(d.source==='device'?'guardado en el dispositivo':d.source==='override'?'elegido acá':'por defecto (env)')+'</small></div><div class="row"><span>Navegador enchufado</span><span class="'+(d.peer?'':'off')+'">'+(d.peer?'sí':'no')+'</span></div><div class="row"><span>Micrófono</span><div class="seg">'+seg(d.id,'mic',d.mic)+'</div></div><div class="row"><span>Salida de audio</span><div class="seg">'+seg(d.id,'output',d.output)+'</div></div><div class="row"><span>Modo pitch <small>(tocar, contar la charla, tocar)</small></span><div class="seg">'+tog(d.id,'mode',d.pitch.mode)+'</div></div><div class="row"><span>Owy reacciona al pitch</span><div class="seg">'+tog(d.id,'reacts',d.pitch.reacts)+'</div></div></div>').join('')||'<div class="card off">Sin dispositivos (COMPANION_DEVICES vacío).</div>';}
 async function set(id,which,route){await fetch('/api/settings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({deviceId:id,[which]:route})});setTimeout(load,400);}
+async function pitch(id,which,on){await fetch('/api/settings/pitch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({deviceId:id,[which]:on})});setTimeout(load,400);}
 load();setInterval(load,5000);
 </script>`;
 
@@ -43,18 +45,30 @@ export function startSettingsServer(
     res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
     res.end(JSON.stringify(body));
   };
+  // Loopback and unauthenticated by design, so the one thing to refuse is a
+  // cross-site form POST from a page the operator happens to have open.
+  const own = new Set(["127.0.0.1", "localhost"].map((host) => `http://${host}:${config.COMPANION_SETTINGS_PORT}`));
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     try {
+      if (req.method !== "GET" && req.method !== "HEAD" && req.headers.origin && !own.has(req.headers.origin)) {
+        json(res, 403, { error: "cross-origin writes are not allowed" });
+        return;
+      }
       const { matched } = await rpc.handle(req, res, { prefix: "/rpc", context });
       if (matched) return;
       if (req.method === "GET" && req.url === "/api/settings") {
         json(res, 200, await call(bridgeRouter.settings.get, undefined, { context }));
         return;
       }
-      if (req.method === "POST" && req.url === "/api/settings") {
+      if (req.method === "POST" && (req.url === "/api/settings" || req.url === "/api/settings/pitch")) {
         const chunks: Buffer[] = [];
         for await (const chunk of req) chunks.push(chunk as Buffer);
-        json(res, 200, await call(bridgeRouter.settings.set, JSON.parse(Buffer.concat(chunks).toString() || "{}"), { context }));
+        const body = JSON.parse(Buffer.concat(chunks).toString() || "{}");
+        const snapshot =
+          req.url === "/api/settings/pitch"
+            ? await call(bridgeRouter.settings.setPitch, body, { context })
+            : await call(bridgeRouter.settings.set, body, { context });
+        json(res, 200, snapshot);
         return;
       }
       if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
