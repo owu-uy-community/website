@@ -2,6 +2,10 @@ export type Speaker = {
   name: string;
   /** Cutout composited over its brand shape, like the team portraits */
   picture: string;
+  /** The person alone in a bottom-anchored square, for Owy Stage to animate apart from the shape */
+  cutout: string;
+  /** The brand shape baked into `picture` */
+  shape: "flag" | "circle" | "triangle";
   role: string;
   linkedin: string;
 };
@@ -28,12 +32,16 @@ export const TALKS: Talk[] = [
       {
         name: "Juan Pais",
         picture: "/images/conf/speakers/juan-pais.webp",
+        cutout: "/images/conf/speakers/juan-pais-cutout.webp",
+        shape: "flag",
         role: "Producer, Ironhide Game Studio",
         linkedin: "https://www.linkedin.com/in/juan-pais/",
       },
       {
         name: "Ciro Mondueri",
         picture: "/images/conf/speakers/ciro-mondueri.webp",
+        cutout: "/images/conf/speakers/ciro-mondueri-cutout.webp",
+        shape: "circle",
         role: "Game Programmer, Ironhide Game Studio",
         linkedin: "https://uy.linkedin.com/in/ciro-mondueri-465624256",
       },
@@ -51,6 +59,8 @@ export const TALKS: Talk[] = [
       {
         name: "Sebastián Passaro",
         picture: "/images/conf/speakers/sebastian-passaro.webp",
+        cutout: "/images/conf/speakers/sebastian-passaro-cutout.webp",
+        shape: "triangle",
         role: "Chapter Leader, OWASP Uruguay",
         linkedin: "https://www.linkedin.com/in/sebastian-passaro/",
       },
