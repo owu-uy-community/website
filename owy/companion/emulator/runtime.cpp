@@ -30,6 +30,8 @@ bool sleeping=false, boot_logo_visible=true;
 int cue_kind=0, phase=0, reply_ms=1200, replies=0, mood_override=-1;
 int audio_buffered=0,audio_received=0;uint32_t audio_empty_at=0;bool bridge_enabled=false,stream_ended=false;
 bool external_voice=false;
+// Modo pitch (voice.yaml): this run records a pitch; the rim invites a name until prompt_until.
+bool pitch_active=false,pitch_name_step=false; uint32_t prompt_until=0;
 int px=233,py=233; bool pressed=false,initialized=false,dimmed=false,powered=true,connected=true,follow_up=false;
 bool imu_available=true,stall_driver=false,stuck_drain=false,hung_bridge=false,had_feedback=false;
 Vec3 acceleration{0,0,1}, angular_rate{};
@@ -37,7 +39,7 @@ float mic_level=0, speaking_level=0;
 std::string page="face",last_event="boot",pin;
 struct TraceEvent { uint32_t time; std::string name, page; int phase; };
 std::vector<TraceEvent> trace_events;
-struct Settings { bool privacy=false,motion=true,reduced=false,invert_x=false,invert_y=false,continuous=true,chime=true,sounds=true,wake=true,quiet=false,staff=false,marketplace=false; int volume=80,brightness=80; } settings;
+struct Settings { bool privacy=false,motion=true,reduced=false,invert_x=false,invert_y=false,continuous=true,chime=true,sounds=true,wake=true,quiet=false,staff=false,marketplace=false,pitch=false,pitch_reacts=false; int volume=80,brightness=80; } settings;
 std::array<float,7> saved_cal{0,0,0,0,0,0,1};
 bool calibration_saved=false;
 void reboot_model() {
@@ -45,6 +47,7 @@ void reboot_model() {
   companion=std::make_unique<Companion>();companion->power=power;renderer=FaceRenderer{};companion->wake_at(now+1600);
   if(saved_cal[0]==1)companion->tracker.restore_calibration({saved_cal[1],saved_cal[2],saved_cal[3]},{saved_cal[4],saved_cal[5],saved_cal[6]});
   settings.staff=settings.quiet=settings.marketplace=false;staff_until=0;had_feedback=false;
+  pitch_active=pitch_name_step=false;prompt_until=0;  // pitch mode itself persists, like the firmware's switch
 }
 void event(const char *value) {last_event=value;++event_serial;if(trace_events.size()<256)trace_events.push_back({now,value,page,phase});}
 bool busy() {return phase!=0;}
@@ -53,7 +56,7 @@ const char *voice_name() {
   if(external_voice&&phase==0)return "mic_off";
   if(companion->tracker.calibrating()) return "calibrating";
   if(!connected) return "offline";
-  switch(phase) {case 1:return "handoff";case 2:return follow_up?"follow_up":"listening";case 3:return "thinking";case 4:return "speaking";case 5:return "draining";case 6:return "recovering";case 7:return "feedback";default:return settings.wake?"wake_word":"idle";}
+  switch(phase) {case 1:return "handoff";case 2:return pitch_active?"recording":follow_up?"follow_up":"listening";case 3:return "thinking";case 4:return "speaking";case 5:return "draining";case 6:return "recovering";case 7:return "feedback";default:return settings.wake&&!settings.pitch?"wake_word":"idle";}
 }
 void hide(lv_obj_t *obj,bool hidden) {if(hidden)lv_obj_add_flag(obj,LV_OBJ_FLAG_HIDDEN);else lv_obj_remove_flag(obj,LV_OBJ_FLAG_HIDDEN);}
 void label(lv_obj_t *obj,const char *text) {if(strcmp(lv_label_get_text(obj),text))lv_label_set_text(obj,text);}
@@ -72,10 +75,20 @@ void navigate(const char *name) {
   if(page=="help")lv_obj_scroll_to_x(scene->help_cards,0,LV_ANIM_OFF);
   companion->contact.cancel(); lv_screen_load(target); activity=now; wake();
 }
-void cancel() {phase=0;follow_up=false;replies=0;follow_deadline=0;speaking_level=0;audio_buffered=0;stream_ended=false;event("voice.cancelled");}
+void cancel() {phase=0;follow_up=false;pitch_active=false;replies=0;follow_deadline=0;speaking_level=0;audio_buffered=0;stream_ended=false;event("voice.cancelled");}
 void cue(int kind) {if(settings.volume==0||settings.quiet||(kind==0&&!settings.chime))return;cue_kind=kind;++cue_serial;}
+void submit() {phase=3;phase_at=now;companion->nod(now);event("pitch.submit");}
 void talk(bool follow=false) {
   if(!powered||!connected||settings.privacy||companion->tracker.calibrating()) {event("voice.blocked");return;}
+  if(settings.pitch) {
+    // Modo pitch: tap → record, tap → send; while Owy thinks or talks a tap does nothing.
+    if(pitch_active&&phase==2) {submit();return;}
+    if(busy()) return;
+    pitch_active=true;pitch_name_step=int32_t(prompt_until-now)>0;prompt_until=0;
+    navigate("face");follow_up=false;
+    if(!external_voice) {phase=1;phase_at=now;}
+    event(pitch_name_step?"voice.request.pitch_name":"voice.request.pitch");return;
+  }
   if(busy()) {cancel();return;}
   if(external_voice) {navigate("face");event("voice.request");return;}
   navigate("face");follow_up=follow;phase=1;phase_at=now;event(follow?"voice.follow_up.request":"voice.request");
@@ -115,7 +128,7 @@ void sync() {
   if(page=="staff") {
     lv_slider_set_value(scene->volume_slider,settings.volume,LV_ANIM_OFF);
     lv_slider_set_value(scene->brightness_slider,settings.brightness,LV_ANIM_OFF);
-    for(auto pair:{std::make_pair(scene->sw_marketplace,settings.marketplace),{scene->sw_quiet,settings.quiet},{scene->sw_wake_word,settings.wake}})
+    for(auto pair:{std::make_pair(scene->sw_marketplace,settings.marketplace),{scene->sw_quiet,settings.quiet},{scene->sw_wake_word,settings.wake},{scene->sw_pitch,settings.pitch},{scene->sw_pitch_reacts,settings.pitch_reacts}})
       if(pair.second)lv_obj_add_state(pair.first,LV_STATE_CHECKED);else lv_obj_remove_state(pair.first,LV_STATE_CHECKED);
   }
   auto &t=companion->tracker;
@@ -134,9 +147,15 @@ void hint() {
   if(settings.privacy)text="micrófono apagado · mantené: ajustes";
   else if(!connected||forced==int(Mood::OFFLINE))text="buscando a owy...";
   else if(phase==6||forced==int(Mood::ERROR))text="ups, me trabé · probá de nuevo";
+  else if((phase==2&&pitch_active)||forced==int(Mood::RECORD))text=pitch_name_step?"decime tu nombre · tocá al terminar":"contá tu charla · tocá al terminar";
+  else if((phase==0&&int32_t(prompt_until-now)>0)||forced==int(Mood::INVITE))text="¿cómo te llamás? · tocá y decime";
+  else if(phase==3&&pitch_active)text="armando tu tarjeta...";
   else if(phase==0&&forced<=0&&!sleeping&&!companion->tracker.calibrating()){
-    const char *hints[]={settings.wake?"decí okay nabu o tocame":"tocame y hablame","¿buscás una charla?","proponé tu tema"};
-    text=hints[(now/4200)%(settings.marketplace?3:2)];
+    if(settings.pitch)text="modo pitch · tocá y contá tu charla";
+    else {
+      const char *hints[]={settings.wake?"decí okay nabu o tocame":"tocame y hablame","¿buscás una charla?","proponé tu tema"};
+      text=hints[(now/4200)%(settings.marketplace?3:2)];
+    }
   }
   if(text)label(scene->face_hint,text);
   hide(scene->face_hint,!(on_face&&text&&!overlay));hide(scene->overlay_label,!(on_face&&overlay));
@@ -152,6 +171,8 @@ void setting(const char *name,float value) {
   else if(!strcmp(name,"volume")){settings.volume=std::lround(bound(value,0,80));
     overlay_level=settings.volume/80.f;overlay_until=now+1400;char text[16];snprintf(text,sizeof(text),"vol %d",settings.volume);label(scene->overlay_label,text);}
   else if(!strcmp(name,"brightness"))settings.brightness=std::lround(bound(value,10,100));
+  else if(!strcmp(name,"pitch")){settings.pitch=on;if(!on){prompt_until=0;if(pitch_active)cancel();}}
+  else if(!strcmp(name,"pitch_reacts"))settings.pitch_reacts=on;
   else if(!strcmp(name,"marketplace")&&settings.staff)settings.marketplace=on;
   sync();event("settings.changed");
 }
@@ -171,7 +192,7 @@ void button_event(lv_event_t *e) {
   if(!strcmp(key,"keypad")){const auto i=lv_buttonmatrix_get_selected_button(obj);const char *s=lv_buttonmatrix_get_button_text(obj,i);if(s)pin_key(s);return;}
   if(!strcmp(key,"volume")){setting(key,lv_slider_get_value(obj));return;}
   if(!strcmp(key,"brightness_slider")){setting("brightness",lv_slider_get_value(obj));return;}
-  if(!strcmp(key,"marketplace")||!strcmp(key,"quiet")||!strcmp(key,"wake")){setting(key,lv_obj_has_state(obj,LV_STATE_CHECKED));return;}
+  if(!strcmp(key,"marketplace")||!strcmp(key,"quiet")||!strcmp(key,"wake")||!strcmp(key,"pitch")||!strcmp(key,"pitch_reacts")){setting(key,lv_obj_has_state(obj,LV_STATE_CHECKED));return;}
   if(!strcmp(key,"home"))navigate("face");else if(!strcmp(key,"quick")){pin.clear();navigate("quick");}
   else if(!strcmp(key,"privacy"))setting(key,!settings.privacy);else if(!strcmp(key,"continuous"))setting(key,!settings.continuous);
   else if(!strcmp(key,"chime"))setting(key,!settings.chime);else if(!strcmp(key,"sounds"))setting(key,!settings.sounds);
@@ -202,7 +223,7 @@ void bind_buttons(lv_obj_t *root) {
 }
 void paint() {
   if(!powered||dimmed)return;
-  Mood mood=!connected?Mood::OFFLINE:phase==2?(follow_up?Mood::FOLLOWUP:Mood::LISTENING):phase==3?Mood::THINKING:(phase==4||phase==5)?Mood::SPEAKING:phase==6?Mood::ERROR:sleeping?Mood::SLEEP:Mood::IDLE;
+  Mood mood=!connected?Mood::OFFLINE:phase==2?(pitch_active?Mood::RECORD:follow_up?Mood::FOLLOWUP:Mood::LISTENING):phase==3?Mood::THINKING:(phase==4||phase==5)?Mood::SPEAKING:phase==6?Mood::ERROR:sleeping?Mood::SLEEP:int32_t(prompt_until-now)>0?Mood::INVITE:Mood::IDLE;
   if(mood_override>=0&&!busy())mood=static_cast<Mood>(mood_override);
   if(settings.privacy)mood=Mood::PRIVACY;
   last_frame=companion->frame(now,mood,settings.motion,settings.reduced||phase==6,settings.invert_x,settings.invert_y,speaking_level);
@@ -233,18 +254,20 @@ void tick() {
   if(!external_voice) {
   if(phase==1&&now-phase_at>=580&&!stall_driver){cue(0);phase=2;phase_at=now;follow_deadline=now+8000;if(follow_up)companion->countdown(now,8000);event("microphone.started");}
   else if(phase==1&&now-phase_at>=2000&&stall_driver){phase=6;phase_at=now;event("fault.driver_start_timeout");}
-  else if(phase==2&&now-phase_at>=(bridge_enabled?9000u:hung_bridge?9000u:8000u)){cancel();event(bridge_enabled||hung_bridge?"guard.local_silence":"conversation.silent_idle");}
+  else if(phase==2&&pitch_active&&now-phase_at>=120000){submit();event("pitch.cap");}  // the bridge's two-minute cap
+  else if(phase==2&&!pitch_active&&now-phase_at>=(bridge_enabled?9000u:hung_bridge?9000u:8000u)){cancel();event(bridge_enabled||hung_bridge?"guard.local_silence":"conversation.silent_idle");}
   else if(!bridge_enabled&&phase==3&&replies>0&&now-phase_at>=450){phase=4;phase_at=now;speaking_level=55;--replies;event("tts.started");}
   else if(!bridge_enabled&&phase==4&&now-phase_at>=static_cast<uint32_t>(reply_ms)){phase=5;phase_at=now;speaking_level=0;event("tts.run_end");}
-  else if(phase==5&&!stuck_drain&&now-(bridge_enabled?audio_empty_at:phase_at)>=500&&audio_buffered==0){phase=0;event("speaker.stopped");if(settings.continuous)talk(true);}
+  else if(phase==5&&!stuck_drain&&now-(bridge_enabled?audio_empty_at:phase_at)>=500&&audio_buffered==0){phase=0;pitch_active=false;event("speaker.stopped");if(settings.continuous&&!settings.pitch)talk(true);}
   else if(phase==6&&now-phase_at>=1000){phase=0;event("audio.recovered");}
   else if(phase==7&&now-phase_at>=580){phase=0;event("interaction.speaker_stopped");}
   if(!bridge_enabled&&phase==2&&follow_up&&replies>0&&now-phase_at>=800){phase=3;phase_at=now;companion->nod(now);event("fixture.speech");}
   if(bridge_enabled&&(phase==4||phase==5)&&audio_buffered>0){audio_buffered=std::max(0,audio_buffered-32);if(!audio_buffered)audio_empty_at=now;}
-  if((phase==3||phase==4||phase==5)&&now-phase_at>=90000){cancel();event("guard.turn_timeout");}
+  if((phase==3||phase==4||phase==5)&&now-phase_at>=(pitch_active?180000u:90000u)){cancel();event("guard.turn_timeout");}
   }
   if(external_voice&&phase==7&&now-phase_at>=580){phase=0;event("interaction.speaker_stopped");}
   if(page_until&&now>=page_until)navigate("face");
+  if(prompt_until&&int32_t(prompt_until-now)<=0){prompt_until=0;event("pitch.prompt.expired");}
   if(settings.staff&&now>=staff_until){settings.staff=false;if(page=="staff")navigate("quick");event("staff.expired");}
   if(pin_error_until&&now>=pin_error_until){pin_error_until=0;label(scene->pin_entry_label,"_ _ _ _");}
   if(boot_logo_visible&&now>=1400){boot_logo_visible=false;hide(scene->boot_logo,true);}
@@ -263,7 +286,7 @@ EMSCRIPTEN_KEEPALIVE void owy_init(int seed) {
   now=activity=phase_at=page_until=staff_until=feedback_at=pin_error_until=cue_serial=event_serial=follow_deadline=0;
   phase=replies=0;reply_ms=1200;mood_override=-1;overlay_until=sleep_at=0;overlay_level=0;sleeping=false;boot_logo_visible=true;pressed=dimmed=follow_up=stall_driver=stuck_drain=hung_bridge=had_feedback=calibration_saved=false;
   audio_buffered=audio_received=0;audio_empty_at=0;bridge_enabled=stream_ended=false;
-  external_voice=false;
+  external_voice=false;pitch_active=pitch_name_step=false;prompt_until=0;
   trace_events.clear();trace_events.push_back({0,"boot","face",0});
   powered=connected=imu_available=true;settings=Settings{};acceleration={0,0,1};angular_rate={};mic_level=speaking_level=0;pin.clear();page="face";last_event="boot";saved_cal={0,0,0,0,0,0,1};
   memset(pixels,0,sizeof(pixels));esphome_lv_default_font=font_20;lv_init();lv_tick_set_cb([]{return now;});
@@ -277,6 +300,7 @@ EMSCRIPTEN_KEEPALIVE void owy_init(int seed) {
   for(auto pair:{std::make_pair(scene->quick_mic,"privacy"),{scene->quick_continue,"continuous"},{scene->quick_chime,"chime"},{scene->quick_sounds,"sounds"},{scene->quick_motion,"motion"},{scene->quick_reduce,"reduced"},{scene->quick_brightness,"brightness"},{scene->quick_volume,"volume_cycle"}})bind(lv_obj_get_parent(pair.first),pair.second);
   bind(scene->pin_keypad,"keypad",LV_EVENT_VALUE_CHANGED);bind(scene->volume_slider,"volume",LV_EVENT_VALUE_CHANGED);bind(scene->brightness_slider,"brightness_slider",LV_EVENT_VALUE_CHANGED);
   bind(scene->sw_marketplace,"marketplace",LV_EVENT_VALUE_CHANGED);bind(scene->sw_quiet,"quiet",LV_EVENT_VALUE_CHANGED);bind(scene->sw_wake_word,"wake",LV_EVENT_VALUE_CHANGED);
+  bind(scene->sw_pitch,"pitch",LV_EVENT_VALUE_CHANGED);bind(scene->sw_pitch_reacts,"pitch_reacts",LV_EVENT_VALUE_CHANGED);
   lv_obj_add_event_cb(scene->tap_area,[](lv_event_t *e){
     lv_point_t p;lv_indev_get_point(lv_indev_active(),&p);auto code=lv_event_get_code(e);
     if(code==LV_EVENT_PRESSED)companion->contact.begin(p.x,p.y,now);
@@ -310,7 +334,7 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
     case 15:cue(std::clamp(int(a),0,2));break;
     case 16:pin_key(text);break;
     case 17:powered=a!=0;cancel();if(powered){reboot_model();activity=now;dimmed=false;navigate("face");}else{companion->tracker.cancel_calibration();pressed=false;}event(powered?"power.on":"power.off");break;
-    case 18:mood_override=std::clamp(int(a),-1,9);break;
+    case 18:mood_override=std::clamp(int(a),-1,11);break;
     // Bridge expression cue (or a workbench preview): owy::Expression, ms until heard, strength 0..100.
     case 37:companion->express(static_cast<Expression>(std::clamp(int(a),0,7)),now+uint32_t(int32_t(std::lround(b))),bound(c,0,100)/100.f);break;
     case 19:label(scene->text_body,text);navigate("text");break;
@@ -321,7 +345,7 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
         case 4:if(phase==2){phase=3;phase_at=now;companion->nod(now);event("stt.end");}break;
         case 7:if(phase==3){phase=4;phase_at=now;audio_buffered=audio_received=0;stream_ended=false;event("tts.started");}break;
         case 99:stream_ended=true;event("tts.stream_end");break;
-        case 2:if(phase==4&&stream_ended){phase=5;phase_at=now;if(!audio_buffered)audio_empty_at=now;event("tts.run_end");}else if(phase==2||phase==3){phase=0;follow_up=false;event("conversation.silent_idle");}break;
+        case 2:if(phase==4&&stream_ended){phase=5;phase_at=now;if(!audio_buffered)audio_empty_at=now;event("tts.run_end");}else if(phase==2||phase==3){phase=0;follow_up=false;pitch_active=false;event("conversation.silent_idle");}break;
         case 0:cancel();phase=6;phase_at=now;event("bridge.error");break;
         default:break;
       }break;
@@ -330,6 +354,7 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
         else{audio_buffered+=int(a);audio_received+=int(a);}}break;
     case 32:bridge_enabled=true;break;
     case 33:if(external_voice&&!settings.privacy&&powered&&!companion->tracker.calibrating()){
+      if(a==0&&phase!=0&&phase!=7)pitch_active=false;  // the live turn ended
       if(a!=0||phase!=7)phase=(a==2||a==3||a==4)?int(a):0;
       mic_level=bound(b,0,1);speaking_level=bound(c,0,100);if(phase){activity=now;wake();}
     }break;
@@ -338,6 +363,8 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
       if(a==0)label(scene->card_title,text);else if(a==1)label(scene->card_speaker,text);
       else if(a==2)label(scene->card_where,text);else if(a==3)navigate("card");
     }break;
+    // Modo pitch prompt from the bridge: 1 = invite a tap to say one's name (20 s), 0 = clear.
+    case 38:prompt_until=a!=0?now+20000:0;event(a!=0?"pitch.prompt":"pitch.prompt.cleared");break;
     case 36:if(external_voice){
       if(a==0)lv_qrcode_update(scene->grid_qr,text,strlen(text));
       else {label(scene->qr_caption,text);navigate("qr");}
@@ -348,9 +375,9 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
 }
 EMSCRIPTEN_KEEPALIVE const char *owy_snapshot(){
   static char out[4096];auto g=companion->tracker.gravity(),b=companion->tracker.bias(),n=companion->tracker.neutral();
-  const char *why=settings.privacy?"Microphone privacy is enabled":!powered?"Device is powered off":companion->tracker.calibrating()?"Calibration owns the stillness window":!connected?"No bridge connection":phase==5?"RUN_END received; waiting for physical speaker STOPPED":phase==2?"Listening window is open":phase==1?"Waiting for exclusive speaker handoff and cue":phase==0?"Idle: waiting for touch or injected wake word":"Voice turn is active";
-  snprintf(out,sizeof(out),"{\"time\":%u,\"page\":\"%s\",\"voice\":\"%s\",\"phase\":%d,\"why\":\"%s\",\"event\":\"%s\",\"eventSerial\":%u,\"cueSerial\":%u,\"cueKind\":%d,\"powered\":%s,\"dimmed\":%s,\"imuReady\":%s,\"gravity\":[%.6f,%.6f,%.6f],\"bias\":[%.6f,%.6f,%.6f],\"neutral\":[%.6f,%.6f,%.6f],\"gaze\":[%d,%d],\"calibration\":\"%s\",\"calibrationProgress\":%d,\"settings\":{\"privacy\":%d,\"motion\":%d,\"reduced\":%d,\"invert_x\":%d,\"invert_y\":%d,\"continuous\":%d,\"chime\":%d,\"sounds\":%d,\"wake\":%d,\"quiet\":%d,\"staff\":%d,\"marketplace\":%d,\"volume\":%d,\"brightness\":%d},\"followDeadline\":%u,\"staffDeadline\":%u}",
-    now,page.c_str(),voice_name(),phase,why,last_event.c_str(),event_serial,cue_serial,cue_kind,powered?"true":"false",dimmed?"true":"false",companion->motion_ok(now)?"true":"false",g.x,g.y,g.z,b.x,b.y,b.z,n.x,n.y,n.z,last_frame.gaze_x,last_frame.gaze_y,companion->tracker.calibration_name(),companion->tracker.calibration_progress(now),settings.privacy,settings.motion,settings.reduced,settings.invert_x,settings.invert_y,settings.continuous,settings.chime,settings.sounds,settings.wake,settings.quiet,settings.staff,settings.marketplace,settings.volume,settings.brightness,follow_deadline,staff_until);
+  const char *why=settings.privacy?"Microphone privacy is enabled":!powered?"Device is powered off":companion->tracker.calibrating()?"Calibration owns the stillness window":!connected?"No bridge connection":phase==5?"RUN_END received; waiting for physical speaker STOPPED":phase==2&&pitch_active?"Recording a pitch: the next tap sends it":phase==2?"Listening window is open":phase==1?"Waiting for exclusive speaker handoff and cue":phase==0?"Idle: waiting for touch or injected wake word":"Voice turn is active";
+  snprintf(out,sizeof(out),"{\"time\":%u,\"page\":\"%s\",\"voice\":\"%s\",\"phase\":%d,\"why\":\"%s\",\"event\":\"%s\",\"eventSerial\":%u,\"cueSerial\":%u,\"cueKind\":%d,\"powered\":%s,\"dimmed\":%s,\"imuReady\":%s,\"gravity\":[%.6f,%.6f,%.6f],\"bias\":[%.6f,%.6f,%.6f],\"neutral\":[%.6f,%.6f,%.6f],\"gaze\":[%d,%d],\"calibration\":\"%s\",\"calibrationProgress\":%d,\"settings\":{\"privacy\":%d,\"motion\":%d,\"reduced\":%d,\"invert_x\":%d,\"invert_y\":%d,\"continuous\":%d,\"chime\":%d,\"sounds\":%d,\"wake\":%d,\"quiet\":%d,\"staff\":%d,\"marketplace\":%d,\"pitch\":%d,\"pitch_reacts\":%d,\"volume\":%d,\"brightness\":%d},\"followDeadline\":%u,\"staffDeadline\":%u,\"pitchActive\":%s,\"promptDeadline\":%u}",
+    now,page.c_str(),voice_name(),phase,why,last_event.c_str(),event_serial,cue_serial,cue_kind,powered?"true":"false",dimmed?"true":"false",companion->motion_ok(now)?"true":"false",g.x,g.y,g.z,b.x,b.y,b.z,n.x,n.y,n.z,last_frame.gaze_x,last_frame.gaze_y,companion->tracker.calibration_name(),companion->tracker.calibration_progress(now),settings.privacy,settings.motion,settings.reduced,settings.invert_x,settings.invert_y,settings.continuous,settings.chime,settings.sounds,settings.wake,settings.quiet,settings.staff,settings.marketplace,settings.pitch,settings.pitch_reacts,settings.volume,settings.brightness,follow_deadline,staff_until,pitch_active?"true":"false",prompt_until);
   // Append the input levels without duplicating the shared envelope calculation.
   static char with_levels[4224];
   out[strlen(out)-1]='\0';

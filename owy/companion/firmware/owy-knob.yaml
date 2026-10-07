@@ -18,6 +18,9 @@ substitutions:
 
   # Mic and speaker run at the rate voice_assistant streams in both directions.
   audio_sample_rate: "16000"
+  # Modo pitch: the motor shares the enclosure with the mic — let the start
+  # buzz (DRV2605 effect 1, ~300 ms) die before capture opens.
+  pitch_arm_ms: "320ms"
 
   staff_pin: !secret staff_pin
 

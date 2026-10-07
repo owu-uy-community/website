@@ -299,6 +299,30 @@ int main() {
   assert(!expression_from_name("happ",4,parsed) && !expression_from_name("happyy",6,parsed));
   std::cout << "PASS face: springs, blink-on-change, lids, happy cut, sleep/boot/nod, mouth ignores your voice, speaker-tap visemes, mouth track, analyzer, rim, expressions\\n";
 
+  // Modo pitch: RECORD listens (the mic widens the eyes, never the mouth) under a REC rim; INVITE breathes "tocá".
+  static_assert(int(Mood::RECORD)==10 && int(Mood::INVITE)==11, "appended mood ids are the emulator/workbench contract");
+  assert(hears(Mood::RECORD) && hears(Mood::FOLLOWUP) && !hears(Mood::INVITE) && !hears(Mood::THINKING));
+  Companion pitch;
+  Frame still=settle(pitch,Mood::RECORD,0,600);
+  for(uint32_t t=616;t<760;t+=16){ pitch.audio(loud,sizeof(loud),t); f=pitch.frame(t,Mood::RECORD,false,false,false,false,0); }
+  assert(f.ring==RingMode::RECORD && f.level>.1f && f.eye_h>still.eye_h && f.mouth_h==still.mouth_h);
+  r=pitch.ring(f,700); assert(r.color==0x0162C8 && r.opa[0]>=200);
+  // REC blink: the 6 o'clock dot alternates once a second and is the only dot that changes.
+  RingFrame rec0=ring_frame(RingMode::RECORD,1000,0,0,0), rec1=ring_frame(RingMode::RECORD,1040,0,0,0), rec2=ring_frame(RingMode::RECORD,1500,0,0,0);
+  changed=0; for(int i=0;i<RingFrame::N;++i) changed+=rec0.opa[i]!=rec1.opa[i]; assert(changed==0);
+  assert(rec0.opa[12]==255 && rec2.opa[12]<60);
+  changed=0; for(int i=0;i<RingFrame::N;++i) changed+=rec0.opa[i]!=rec2.opa[i]; assert(changed==1);
+  f=settle(pitch,Mood::INVITE,800,2000); assert(f.ring==RingMode::PULSE && f.brow_y<-5 && f.smile && !f.grey);
+  // PULSE breathes an arc from the top on its own clock: at most the two arc ends move per 40 ms step.
+  int smallest=RingFrame::N, largest=0;
+  for(uint32_t t=0;t<1400;t+=40) {
+    RingFrame p0=ring_frame(RingMode::PULSE,t,0,0,0), p1=ring_frame(RingMode::PULSE,t+40,0,0,0);
+    changed=0; lit=0; for(int i=0;i<RingFrame::N;++i){ changed+=p0.opa[i]!=p1.opa[i]; lit+=p0.opa[i]>=200; }
+    assert(changed<=2); smallest=std::min(smallest,lit); largest=std::max(largest,lit);
+  }
+  assert(smallest<=4 && largest>=22);
+  std::cout << "PASS pitch: RECORD listens under a REC rim, INVITE breathes, bounded repaints\\n";
+
   Power p; assert(!p.known && p.percent==-1);
   p.decode(0x20,0,100); assert(p.usb && !p.battery && p.percent==-1);
   p.decode(0x28,0x20,67); assert(p.battery && p.charging && p.percent==67);
@@ -333,6 +357,14 @@ try {
   assert((voice.match(/!id\(mic_privacy\)\.state/g) ?? []).length >= 7, "Privacy must guard every voice entry/re-arm path");
   assert(voice.includes("script.stop: play_companion_feedback") && voice.includes("script.stop: play_soft_cue"));
   assert((voice.match(/!id\(play_companion_feedback\)\.is_running\(\)/g) ?? []).length >= 4, "Voice entry and re-arm respect exclusive feedback ownership");
+  // Modo pitch: the second tap sends (never cancels), the run has no device end-of-speech and tags itself.
+  assert(voice.includes("- id: tap_pitch") && voice.includes("- id: stop_pitch") && voice.includes("- id: pitch_prompt_guard"));
+  const tapPitch = voice.slice(voice.indexOf("- id: tap_pitch"), voice.indexOf("- id: stop_pitch"));
+  assert(!tapPitch.includes("cancel_turn"), "A pitch tap never cancels: the second tap sends");
+  assert(voice.includes("silence_detection: false") && voice.includes("wake_word: !lambda"), "A pitch run keeps the mic open and tags itself for the bridge");
+  assert(voice.includes("id(pitch_active) ? 180000 : 90000"), "A pitch may record two minutes and then think");
+  assert((voice.match(/!id\(pitch_mode\)\.state/g) ?? []).length >= 4, "Wake word, follow-up and re-arm stay off in modo pitch");
+  assert(controls.includes("id: pitch_mode") && controls.includes("id: pitch_submit") && controls.includes("action: pitch_prompt"));
   console.log("PASS YAML integration: one input owner, no full-screen spinner, privacy guards");
 } finally {
   rmSync(dir, { recursive: true, force: true });

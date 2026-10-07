@@ -4,6 +4,7 @@
 # (companion/bridge/src/device/esphome.ts):
 #   select  face_state · switch staff_mode / marketplace_open / quiet_mode / wake_word_enabled
 #   number  volume · actions show_card / show_qr / show_text / set_volume / mouth_track / express
+#   modo pitch: switch pitch_mode / pitch_reacts · binary_sensor pitch_submit · action pitch_prompt
 #
 # The mouth follows the audio this device plays (speaker PCM tap); when the
 # bridge plays a turn on the laptop instead, it sends `mouth_track` frames.
@@ -89,6 +90,39 @@ switch:
     optimistic: true
     restore_mode: ALWAYS_OFF
 
+  # Modo pitch (mercado de ideas): every tap records a talk proposal for the
+  # board instead of starting a conversation; wake word and follow-ups stay off
+  # while it is on. Persisted: a reboot mid-marketplace keeps the mode.
+  - platform: template
+    id: pitch_mode
+    name: Pitch Mode
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - if:
+          condition:
+            lambda: return id(va).is_running() || id(turn_pending);
+          then:
+            - script.execute: cancel_turn
+      - micro_wake_word.stop:
+      - script.execute: apply_face
+    on_turn_off:
+      - if:
+          condition:
+            lambda: return id(pitch_active);
+          then:
+            - script.execute: cancel_turn
+      - lambda: id(pitch_prompt_until) = 0;
+      - script.stop: pitch_prompt_guard
+      - script.execute: resume_wake_word
+
+  # Owy adds a warm sentence about each pitch (the bridge asks its brain).
+  - platform: template
+    id: pitch_reacts
+    name: Pitch Reacts
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+
   # No ambient announcements (talks block, after party).
   - platform: template
     id: quiet_mode
@@ -124,6 +158,14 @@ switch:
     name: Listening Chime
     optimistic: true
     restore_mode: RESTORE_DEFAULT_ON
+
+binary_sensor:
+  # Modo pitch: pulses on the second tap (voice.yaml stop_pitch). The bridge
+  # acts on the rising edge and closes the run; a cancel never touches this.
+  - platform: template
+    id: pitch_submit
+    name: Pitch Submit
+    entity_category: diagnostic
 
 number:
   - platform: template
@@ -225,6 +267,25 @@ api:
             owy::Expression e;
             if (owy::expression_from_name(feeling.c_str(), feeling.size(), e))
               id(companion).express(e, millis() + uint32_t(int32_t(lead_ms)), strength / 100.0f);
+
+    # Modo pitch: after a pitch without a name, "name" makes the rim invite one
+    # more tap for 20 s (that run is tagged "pitch-name"); "idle" clears it.
+    - action: pitch_prompt
+      variables:
+        kind: string
+      then:
+        - lambda: |-
+            const bool name = kind == "name";
+            id(pitch_prompt_until) = name ? millis() + 20000 : 0;
+            id(pitch_state).publish_state(name ? "invite" : "idle");
+        - script.execute: apply_face
+        - if:
+            condition:
+              lambda: return kind == "name";
+            then:
+              - script.execute: pitch_prompt_guard
+            else:
+              - script.stop: pitch_prompt_guard
 
     - action: show_text
       variables:

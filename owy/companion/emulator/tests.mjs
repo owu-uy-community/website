@@ -169,12 +169,54 @@ test("modeled power cycle retains explicit calibration and persistent preference
   const neutral = s.snapshot().neutral;
   input("setting", [35], "volume");
   input("setting", [1], "quiet");
+  input("setting", [1], "pitch");
   input("power", [0]);
   input("power", [1]);
   assert.deepEqual(s.snapshot().neutral, neutral);
   assert.equal(s.snapshot().settings.volume, 35);
   assert.equal(s.snapshot().settings.quiet, 0);
   assert.equal(s.snapshot().settings.staff, 0);
+  assert.equal(s.snapshot().settings.pitch, 1); // like the firmware's persisted switch
+  assert.equal(s.snapshot().pitchActive, false);
+});
+test("modo pitch: a tap records past the silent-window guard, the second tap sends it, nothing follows up", () => {
+  s.reset();
+  s.schedule(scenarios.find((x) => x.id === "pitch").events);
+  s.advance(12000);
+  assert.equal(s.snapshot().voice, "recording");
+  assert.equal(s.snapshot().pitchActive, true);
+  s.advance(8000);
+  const events = s.trace.map((x) => x.event);
+  assert(events.includes("pitch.submit") && events.includes("bridge.pitch_submit"));
+  assert.equal(events.filter((x) => x === "tts.started").length, 1);
+  for (const absent of ["guard.local_silence", "conversation.silent_idle", "voice.cancelled", "voice.follow_up.request"])
+    assert(!events.includes(absent), absent);
+  assert.equal(s.snapshot().voice, "idle"); // no wake word in modo pitch
+  assert.equal(s.snapshot().pitchActive, false);
+});
+test("modo pitch live: taps become start:pitch / commit, the bridge's prompt re-tags the next tap and expires", () => {
+  s.reset();
+  s.beginLive();
+  s.liveInput({ type: "setting", values: [1], text: "pitch" });
+  s.liveInput({ type: "boot", values: [100] });
+  assert.deepEqual(s.commands.splice(0), ["start:pitch"]);
+  s.liveVisual(2, 0.4, 0);
+  assert.equal(s.snapshot().voice, "recording");
+  s.liveInput({ type: "boot", values: [100] });
+  assert.deepEqual(s.commands.splice(0), ["commit"]);
+  s.liveVisual(4, 0, 60);
+  s.liveVisual(0, 0, 0);
+  assert.equal(s.snapshot().pitchActive, false);
+  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
+  assert(s.snapshot().promptDeadline > 0);
+  s.liveInput({ type: "boot", values: [100] });
+  assert.deepEqual(s.commands.splice(0), ["start:pitch-name"]);
+  assert.equal(s.snapshot().promptDeadline, 0);
+  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
+  s.advance(21000);
+  assert.equal(s.snapshot().promptDeadline, 0);
+  assert.equal(s.events.length, 0);
+  s.reset();
 });
 test("continuous fixture has three replies and then closes for silence", () => {
   s.reset();

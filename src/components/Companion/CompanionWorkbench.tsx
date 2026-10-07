@@ -95,6 +95,8 @@ const TOGGLES: [string, string][] = [
   ["invert_y", "Invertir vertical"],
   ["wake", "Wake word"],
   ["quiet", "Modo silencioso"],
+  ["pitch", "Modo pitch"],
+  ["pitch_reacts", "Owy reacciona al pitch"],
 ];
 /** Label → owy::Mood value (companion_model.h); FOLLOWUP and SLEEP were appended. */
 const MOODS: [string, number][] = [
@@ -107,6 +109,8 @@ const MOODS: [string, number][] = [
   ["Error", 5],
   ["Offline", 6],
   ["Dormido", 9],
+  ["Grabando", 10],
+  ["Tocá (pitch)", 11],
 ];
 /** owy::Expression order (companion_model.h): the face while a sentence plays (bridge expression.ts). */
 const EXPRESSIONS = [

@@ -332,6 +332,8 @@ script:
           else if (state == "offline") mood = owy::Mood::OFFLINE;
           else if (state == "error") mood = owy::Mood::ERROR;
           else if (state == "sleep") mood = owy::Mood::SLEEP;
+          else if (state == "record") mood = owy::Mood::RECORD;
+          else if (state == "invite") mood = owy::Mood::INVITE;
           if (id(mic_privacy).state) mood = owy::Mood::PRIVACY;
           // Every page shares one frame (the knob's answer view mirrors it).
           auto &frame = id(face_frame);
@@ -359,7 +361,8 @@ script:
           id(face_renderer).render(frame, objects);
 
   # What the face says under the mouth: rotating idle hints (attract mode),
-  # or what went wrong. Hidden while a turn runs: the rim carries that.
+  # or what went wrong. Hidden while a turn runs: the rim carries that —
+  # except a pitch, where the hint is the instruction ("tocá al terminar").
   - id: sync_face_hint
     mode: single
     then:
@@ -373,10 +376,16 @@ script:
           if (id(mic_privacy).state) text = "micrófono apagado · mantené: ajustes";
           else if (state == "offline") text = "buscando a owy...";
           else if (state == "error") text = "ups, me trabé · probá de nuevo";
+          else if (state == "record") text = id(pitch_name_step) ? "decime tu nombre · tocá al terminar" : "contá tu charla · tocá al terminar";
+          else if (state == "invite") text = "¿cómo te llamás? · tocá y decime";
+          else if (state == "thinking" && id(pitch_active)) text = "armando tu tarjeta...";
           else if (state == "idle" && id(va_phase) == 1 && !id(turn_pending)) {
-            const char *hints[] = {id(wake_word_enabled).state ? "decí okay nabu o tocame" : "tocame y hablame",
-                                   "¿buscás una charla?", "proponé tu tema"};
-            text = hints[(now / 4200) % (id(marketplace_open).state ? 3 : 2)];
+            if (id(pitch_mode).state) text = "modo pitch · tocá y contá tu charla";
+            else {
+              const char *hints[] = {id(wake_word_enabled).state ? "decí okay nabu o tocame" : "tocame y hablame",
+                                     "¿buscás una charla?", "proponé tu tema"};
+              text = hints[(now / 4200) % (id(marketplace_open).state ? 3 : 2)];
+            }
           }
           if (text && strcmp(lv_label_get_text(id(face_hint)), text)) lv_label_set_text(id(face_hint), text);
           auto show = [](lv_obj_t *o, bool on) {

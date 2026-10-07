@@ -190,6 +190,9 @@ de `knob_turn` a `volume` (mismo overlay).
 | `select.mic_source` / `select.audio_output` | `dispositivo · laptop`: el bridge los lee al empezar cada turno (ver *Modos de audio*) |
 | acciones `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)` | páginas de pantalla |
 | acción `show_caption(body)` (sólo Knob) | el bridge manda la transcripción de la respuesta a las placas que la anuncian |
+| `switch.pitch_mode` / `switch.pitch_reacts` | **Modo pitch** (ver abajo): cada toque graba una propuesta en vez de conversar; wake word y follow-ups quedan apagados. `pitch_reacts`: Owy agrega una frase sobre el pitch. Persisten tras reiniciar |
+| `binary_sensor.pitch_submit` / `text_sensor.pitch_state` | pulso en el segundo toque (el bridge cierra el run en el flanco de subida); `arming · recording · sent · invite · idle` para la háptica de la placa |
+| acción `pitch_prompt(kind)` | `name`: el aro invita 20 s a tocar y decir el nombre (ese run sale como `pitch-name`); `idle`: lo apaga |
 
 ### Interacción cotidiana
 
@@ -539,7 +542,7 @@ cejas y cachetes cambian; los labios siguen haciendo lip-sync.
 
 ## Modo pitch (mercado de ideas)
 
-En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: página de ajustes del dispositivo detrás del PIN, tile de la página rápida para staff, o la UI del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación:
+En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, o la UI del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación:
 
 1. **Toque** → vibra, el aro parpadea como un REC y la laptop dice «Te escucho. Contame tu charla y tocá de nuevo cuando termines» (un clip pregrabado con la voz de Owy, `public/companion-audio/clips/`). La grabación arranca cuando termina el aviso.
 2. La persona cuenta la charla (20–60 s, con pausas). **El audio no pasa por el modelo de voz**: su detección de fin de habla cortaría el pitch en la primera pausa. El bridge lo graba (`PitchRecorder`, `bridge/src/pitch.ts`) y detecta voz con energía (`COMPANION_PITCH_VAD_RMS`).
@@ -554,3 +557,4 @@ Nada se persiste del audio; las llamadas al gateway van con `zeroDataRetention`.
 - Variables: `COMPANION_PITCH_MODE` / `COMPANION_PITCH_REACTS` (fallbacks para placas sin interruptores: lab web, REPL), `COMPANION_PITCH_MODEL`, `COMPANION_PITCH_SILENCE_S`, `COMPANION_PITCH_MAX_S`, `COMPANION_PITCH_VAD_RMS`. Necesita `AI_GATEWAY_API_KEY` y `OWY_API_KEY`.
 - `pnpm companion:clips` regenera los avisos pregrabados (una vez por cambio de voz o de texto); `pnpm companion:pitch grabacion.wav [--name]` prueba el extractor con un WAV.
 - Contrato con el firmware: `switch.pitch_mode`, `switch.pitch_reacts`, `binary_sensor.pitch_submit` (pulso en el segundo toque), acción `pitch_prompt(kind)` (`name` | `idle`), y el run del pipeline arranca con `wake_word: "pitch"` (`"pitch-name"` en el paso del nombre). En el lab web: `start { mode: "pitch" }` y `commit` como segundo toque.
+- Firmware (`voice.yaml` / `controls.yaml`): en modo pitch `tap_to_talk` va a `tap_pitch` (grabando → `stop_pitch`; libre → `start_listening` con `pitch_active`), que arranca el run con `silence_detection: false` y `wake_word: "pitch"` (`"pitch-name"` si Owy acaba de preguntar el nombre); el guard local de 9 s no corre y el watchdog del turno pasa a 180 s. Caras `record` (aro REC: el arco azul del mic más el punto de las 6 parpadeando) e `invite` (aro que respira); hints «contá tu charla · tocá al terminar», «armando tu tarjeta...», «¿cómo te llamás? · tocá y decime». En el Knob la háptica sigue a `pitch_state` (`arming` 1, `sent` 10, `invite` 12; `pitch_arm_ms: 320ms` deja morir el buzz antes de abrir el mic) y la card queda en pantalla durante el anuncio. Emulador: fixture «Un pitch en el mercado», toggles «Modo pitch» / «Owy reacciona al pitch» y caras «Grabando» / «Tocá (pitch)» en el lab.

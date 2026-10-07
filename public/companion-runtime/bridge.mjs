@@ -486,7 +486,8 @@ var FixtureBridge = class {
         clock: this.clock,
         logger: this.log,
         conversationId: "fixture",
-        timers: { noSpeechMs: this.hung ? 0 : 8e3 },
+        // A pitch (modo pitch) has pauses: the bridge's recorder owns its limits, not the silent window.
+        timers: { noSpeechMs: this.hung || state.settings.pitch ? 0 : 8e3 },
         link: {
           isPlaybackReady: () => this.state.phase === 3 && !this.readyFault,
           sendEvent: (kind, data) => {
@@ -503,6 +504,10 @@ var FixtureBridge = class {
       this.turn.start();
       if (this.replies > 0)
         this.outputTimer = this.clock.setTimeout(() => this.speech(this.replies, this.replyMs), 800);
+    }
+    if (state.phase === 3 && this.turn && !this.turn.finished && this.turn.phase === "listening") {
+      this.trace("bridge.pitch_submit");
+      this.speech(1, this.replyMs);
     }
     if ((state.phase === 0 || state.phase === 6 || state.voice === "privacy" || state.voice === "offline" || state.voice === "off" || state.voice === "calibrating") && this.turn && !this.turn.finished) {
       this.stop();
