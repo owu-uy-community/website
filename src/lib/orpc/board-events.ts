@@ -13,7 +13,9 @@ const SESSION_ID = "owu-server";
  * Tell an event's board screens (grid admin, kiosk) that cards changed. The
  * payload is what the client hooks already emit and apply
  * (src/hooks/useSupabaseSync.ts), so server- and client-sent events are
- * interchangeable; applying one twice is harmless.
+ * interchangeable; applying one twice is harmless. That is why a swap carries
+ * both cards where they ended up: "trade places" applied twice — the screen
+ * that made the swap hears it back — trades them straight back.
  */
 export const cardChanged = (change: {
   type: CardChangeType;
@@ -21,6 +23,7 @@ export const cardChanged = (change: {
   cardId?: string;
   cardIds?: [string, string];
   updatedCard?: StickyNote;
+  updatedCards?: StickyNote[];
 }) =>
   Effect.gen(function* () {
     const realtime = yield* Realtime;
@@ -31,6 +34,7 @@ export const cardChanged = (change: {
         ...(change.cardId ? { cardId: change.cardId } : {}),
         ...(change.cardIds ? { cardIds: change.cardIds } : {}),
         ...(change.updatedCard ? { updatedCard: change.updatedCard } : {}),
+        ...(change.updatedCards ? { updatedCards: change.updatedCards } : {}),
         timestamp: new Date().toISOString(),
         sessionId: SESSION_ID,
       },

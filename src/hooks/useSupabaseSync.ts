@@ -20,6 +20,7 @@ interface OpenSpaceRealtimeEvent {
     cardId?: string;
     cardIds?: [string, string]; // For swaps
     updatedCard?: StickyNote;
+    updatedCards?: StickyNote[]; // Swaps: both cards where they ended up
     timestamp: string;
     sessionId: string; // To prevent echo from same session
   };
@@ -131,24 +132,21 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
             break;
 
           case "CARD_SWAP":
-            if (event.payload.cardIds) {
-              const [aId, bId] = event.payload.cardIds;
-              let patched = false;
-              queryClient.setQueryData<StickyNote[]>(listKey, (oldNotes = []) => {
-                const a = oldNotes.find((n) => n.id === aId);
-                const b = oldNotes.find((n) => n.id === bId);
-                if (!a || !b) return oldNotes;
-                patched = true;
-                return oldNotes.map((note) =>
-                  note.id === aId
-                    ? { ...note, room: b.room, timeSlot: b.timeSlot }
-                    : note.id === bId
-                      ? { ...note, room: a.room, timeSlot: a.timeSlot }
-                      : note
-                );
-              });
+            // Both cards where they ended up, never "trade places": the screen
+            // that made the swap already moved them and hears this back too.
+            if (event.payload.updatedCards) {
+              const swapped = new Map(event.payload.updatedCards.map((card) => [card.id, card]));
+              let patched = 0;
+              queryClient.setQueryData<StickyNote[]>(listKey, (oldNotes = []) =>
+                oldNotes.map((note) => {
+                  const card = swapped.get(note.id);
+                  if (!card) return note;
+                  patched++;
+                  return card;
+                })
+              );
               // Unknown cards (e.g. this client missed a create) → resync.
-              if (!patched) {
+              if (patched < swapped.size) {
                 queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
               }
               invalidateHighlighted();
@@ -236,20 +234,6 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
     [broadcast, openSpaceId]
   );
 
-  const broadcastCardSwap = useCallback(
-    (cardAId: string, cardBId: string) =>
-      broadcast({
-        type: "CARD_SWAP",
-        payload: {
-          openSpaceId,
-          cardIds: [cardAId, cardBId],
-          timestamp: new Date().toISOString(),
-          sessionId: sessionIdRef.current,
-        },
-      }),
-    [broadcast, openSpaceId]
-  );
-
   const broadcastCardCreate = useCallback(
     (card: StickyNote) =>
       broadcast({
@@ -281,7 +265,6 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
 
   return {
     broadcastCardUpdate,
-    broadcastCardSwap,
     broadcastCardCreate,
     broadcastCardDelete,
     isConnected,
