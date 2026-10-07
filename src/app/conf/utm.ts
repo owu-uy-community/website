@@ -27,6 +27,7 @@ export type ConfLinkPlacement =
   | "sponsors-grid"
   | "institutional-support"
   | "team-linkedin"
+  | "speakers-linkedin"
   | "meetups-agenda"
   | "footer-social";
 
