@@ -35,17 +35,11 @@ export const useOpenSpaceNotesORPC = ({
   const queryClient = useQueryClient();
 
   // Realtime sync (multi-device) over the WebSocket transport
-  const {
-    broadcastCardUpdate,
-    broadcastCardSwap,
-    broadcastCardCreate,
-    broadcastCardDelete,
-    isConnected,
-    recentlyUpdatedIds,
-  } = useSupabaseSync({
-    openSpaceId,
-    enabled: enableRealtime,
-  });
+  const { broadcastCardUpdate, broadcastCardCreate, broadcastCardDelete, isConnected, recentlyUpdatedIds } =
+    useSupabaseSync({
+      openSpaceId,
+      enabled: enableRealtime,
+    });
 
   // Query for fetching all sticky notes
   const {
@@ -227,9 +221,6 @@ export const useOpenSpaceNotesORPC = ({
       onError: (error, _variables, context) => {
         rollbackAndResync(context?.previousNotes);
         showErrorToast("No se pudo intercambiar las charlas", error);
-      },
-      onSuccess: async (_swappedNotes, variables) => {
-        await broadcastCardSwap(variables.trackAId, variables.trackBId);
       },
     })
   );

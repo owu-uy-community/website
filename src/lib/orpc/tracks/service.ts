@@ -292,7 +292,7 @@ export const swapNotes = (trackAId: string, trackBId: string) =>
       yield* query((db) => db.delete(schedules).where(eq(schedules.id, parking.id)));
 
       const notes = [yield* loadNote(a.id), yield* loadNote(b.id)];
-      yield* cardChanged({ type: "CARD_SWAP", openSpaceId: a.openSpaceId, cardIds: [a.id, b.id] });
+      yield* cardChanged({ type: "CARD_SWAP", openSpaceId: a.openSpaceId, cardIds: [a.id, b.id], updatedCards: notes });
 
       return notes;
     })
