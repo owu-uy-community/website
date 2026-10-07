@@ -20,6 +20,8 @@ type BackplaneEnvelope = {
 };
 
 const REDIS_CHANNEL = "owu:realtime";
+/** After a failed connection, how long until the next publish tries Redis again. */
+const REDIS_RETRY_MS = 30_000;
 
 function redisUrl(): string | undefined {
   return process.env.REDIS_URL ?? process.env.KV_URL;
@@ -156,10 +158,10 @@ class RealtimeHub {
       const url = redisUrl();
       if (!url) return null;
 
+      const { default: Redis } = await import("ioredis");
+      const pub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
+      const sub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
       try {
-        const { default: Redis } = await import("ioredis");
-        const pub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
-        const sub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
         await Promise.all([pub.connect(), sub.connect()]);
 
         await sub.subscribe(REDIS_CHANNEL);
@@ -176,7 +178,13 @@ class RealtimeHub {
 
         return { pub };
       } catch (error) {
-        console.error("[realtime] Redis backplane unavailable:", error);
+        console.error("[realtime] Redis backplane unavailable, trying again later:", error);
+        pub.disconnect();
+        sub.disconnect();
+        // Local-only until then, not for the rest of this instance's life.
+        setTimeout(() => {
+          this.redisReady = null;
+        }, REDIS_RETRY_MS).unref();
 
         return null;
       }
