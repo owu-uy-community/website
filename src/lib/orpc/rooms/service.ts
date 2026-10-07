@@ -3,7 +3,7 @@ import { Effect } from "effect";
 
 import { events, rooms, tracks, type RoomRow } from "../../db/schema";
 import { ROOM_PALETTE } from "../../rooms/palette";
-import { cardsDeleted } from "../board-events";
+import { cardsDeleted, structureChanged } from "../board-events";
 import { query, transaction } from "../db";
 import { Conflict, NotFound } from "../errors";
 import type { CreateRoomInput, Room } from "./schemas";
@@ -64,6 +64,9 @@ export const listRooms = (openSpaceId: string) =>
     db.select().from(rooms).where(eq(rooms.openSpaceId, openSpaceId)).orderBy(asc(rooms.sortOrder), asc(rooms.name))
   ).pipe(Effect.map((rows) => rows.map(toRoom)));
 
+/** Tell the boards once the change is committed, so their re-read sees it. */
+const announce = (room: Room) => structureChanged(room.openSpaceId).pipe(Effect.as(room));
+
 /** New rooms go to the end of the board with a palette color unless told otherwise. */
 export const createRoom = (input: CreateRoomInput) =>
   transaction(
@@ -89,7 +92,7 @@ export const createRoom = (input: CreateRoomInput) =>
           .returning()
       ).pipe(Effect.flatMap(found));
     })
-  );
+  ).pipe(Effect.flatMap(announce));
 
 /** Change only the fields that were sent; a rename still has to be unique within the event. */
 export const updateRoom = (id: string, data: Partial<Omit<CreateRoomInput, "openSpaceId">>) =>
@@ -113,7 +116,7 @@ export const updateRoom = (id: string, data: Partial<Omit<CreateRoomInput, "open
           .returning()
       ).pipe(Effect.flatMap(found));
     })
-  );
+  ).pipe(Effect.flatMap(announce));
 
 /** Delete a room and its talks; the boards are told which cards went away. */
 export const deleteRoom = (id: string) =>
@@ -127,7 +130,7 @@ export const deleteRoom = (id: string) =>
       talks.map((talk) => talk.id)
     );
 
-    return deleted;
+    return yield* announce(deleted);
   });
 
 /**
@@ -153,6 +156,7 @@ export const reorderRooms = (openSpaceId: string, orderedIds: readonly string[])
         .set({ sortOrder: sql`(case ${rooms.id} ${position} end)::int` })
         .where(eq(rooms.openSpaceId, openSpaceId))
     );
+    yield* structureChanged(openSpaceId);
 
     return { success: true as const };
   });

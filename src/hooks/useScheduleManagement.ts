@@ -97,8 +97,8 @@ export function useScheduleManagement({
    * Uses optimistic updates for instant UI feedback
    */
   const handleToggleScheduleHighlight = useCallback(
-    async (timeIndex: number, timeSlots: string[]) => {
-      const schedule = schedulesData[timeIndex];
+    async (scheduleId: string) => {
+      const schedule = schedulesData.find((candidate) => candidate.id === scheduleId);
       if (!schedule) return;
 
       const willBeHighlighted = !schedule.highlightInKiosk;
@@ -157,7 +157,7 @@ export function useScheduleManagement({
           queryClient.setQueryData(schedulesKey, previousSchedules);
         }
 
-        toast.error("Error", `No se pudo resaltar el horario "${timeSlots[timeIndex]}".`);
+        toast.error("Error", `No se pudo resaltar el horario "${schedule.startTime} - ${schedule.endTime}".`);
       }
     },
     [schedulesData, updateScheduleMutation, queryClient, broadcastScheduleChange, openSpaceId, schedulesKey]

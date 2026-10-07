@@ -182,7 +182,7 @@ export function useBoard(eventId: string | null, preview: boolean) {
     load();
   }, [load]);
   useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change") load();
+    if (event === "card_change" || event === "structure_change") load();
   });
   return data;
 }

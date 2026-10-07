@@ -425,6 +425,10 @@ export default function EventDetailClient({ communitySlug, eventSlug }: { commun
         open={roomDialog.open}
         openSpaceId={event.id}
         room={roomDialog.editing}
+        onDelete={(room) => {
+          setRoomDialog((previous) => ({ ...previous, open: false }));
+          setDeleteTarget(room);
+        }}
         onOpenChange={(open) => setRoomDialog((previous) => ({ ...previous, open }))}
       />
 

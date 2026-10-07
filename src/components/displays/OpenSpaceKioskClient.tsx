@@ -75,6 +75,7 @@ export default function OpenSpaceKioskClient({
     initialRooms,
     initialSchedules,
     refetchInterval: 60_000,
+    hideInactiveRooms: true,
   });
 
   // Star/slot changes broadcast on the highlights channel — pick them up live.

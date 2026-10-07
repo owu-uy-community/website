@@ -7,7 +7,7 @@ import { tracks } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by } from "test/context";
-import { makeBoard, makeMember, makeSiteAdmin, makeSlot, makeTrack } from "test/factories";
+import { makeBoard, makeMember, makeRoom, makeSiteAdmin, makeSlot, makeTrack } from "test/factories";
 
 async function setup() {
   const board = await makeBoard();
@@ -58,6 +58,17 @@ describe("tracks reads", () => {
 
     expect(all.map((track) => track.title)).toStrictEqual(["Normal", "Destacada"]);
     expect(onlyHighlighted.map((track) => track.title)).toStrictEqual(["Destacada"]);
+  });
+
+  test("getByOpenSpace leaves out talks in rooms switched off", async () => {
+    const { event, rooms, slots } = await setup();
+    const hidden = await makeRoom(event.id, { isActive: false });
+    await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id }, { title: "Visible" });
+    await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: hidden.id }, { title: "Oculta" });
+
+    const feed = await call(router.tracks.getByOpenSpace, { openSpaceId: event.id }, by(null));
+
+    expect(feed.map((track) => track.title)).toStrictEqual(["Visible"]);
   });
 
   test("get returns one note; an unknown id is NOT_FOUND", async () => {

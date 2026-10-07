@@ -1,10 +1,11 @@
 import { call } from "@orpc/server";
 import { eq } from "drizzle-orm";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { db } from "lib/db";
 import { tracks } from "lib/db/schema";
 import { router } from "lib/orpc/router";
+import { hub } from "lib/realtime/hub";
 import { by } from "test/context";
 import { makeBoard, makeEvent, makeSiteAdmin, makeSlot, makeTrack, makeUser } from "test/factories";
 
@@ -111,6 +112,27 @@ describe("schedules writes", () => {
     );
 
     expect(updated).toMatchObject({ startTime: "17:00", highlightInKiosk: true });
+  });
+
+  test("every slot change tells the boards to re-read the grid", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+    const publish = vi.spyOn(hub, "publish");
+    const pinged = () =>
+      publish.mock.calls.filter(
+        ([channel, name]) => channel === `event:${event.id}:sync` && name === "structure_change"
+      ).length;
+
+    const slot = await call(
+      router.schedules.create,
+      { name: "Bloque", startTime: "18:00", endTime: "18:45", openSpaceId: event.id },
+      by(staff)
+    );
+    expect(pinged()).toBe(1);
+    await call(router.schedules.update, { id: slot.id, data: { endTime: "19:00" } }, by(staff));
+    expect(pinged()).toBe(2);
+    await call(router.schedules.delete, { id: slot.id }, by(staff));
+    expect(pinged()).toBe(3);
   });
 
   test("deleting a slot deletes its talks", async () => {

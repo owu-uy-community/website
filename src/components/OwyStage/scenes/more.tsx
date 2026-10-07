@@ -45,7 +45,7 @@ export function Agenda({ params, eventId }: SceneProps<"agenda">) {
 
   // Any board change (admin, kiosk, Owy) re-reads the grid.
   useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change") load();
+    if (event === "card_change" || event === "structure_change") load();
   });
 
   const view = useMemo(() => {

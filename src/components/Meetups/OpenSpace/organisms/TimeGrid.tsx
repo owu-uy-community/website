@@ -46,6 +46,8 @@ interface TimeGridProps {
   onToggleScheduleHighlight?: (timeIndex: number) => void;
   /** Click on a room header to edit that column's room. */
   onEditRoom?: (room: string) => void;
+  /** Rooms switched off: their column is dimmed. */
+  inactiveRooms?: ReadonlySet<string>;
 }
 
 interface BoardCellProps {
@@ -54,6 +56,7 @@ interface BoardCellProps {
   color: string;
   notes: StickyNote[];
   isRowHighlighted: boolean;
+  isInactive: boolean;
   activeNote: StickyNote | null;
   settlingId: string | null;
   swapPreviewId: string | null;
@@ -74,6 +77,7 @@ function BoardCell({
   color,
   notes,
   isRowHighlighted,
+  isInactive,
   activeNote,
   settlingId,
   swapPreviewId,
@@ -102,6 +106,7 @@ function BoardCell({
       data-board-cell=""
       className={cn(
         "group/cell relative h-32 border-r border-b border-border/60 transition-colors duration-150",
+        isInactive && "bg-muted/30",
         isRowHighlighted && "bg-primary/[0.06]",
         isDropTarget && "bg-primary/[0.07]",
         isEmpty && isIdle && "cursor-pointer hover:bg-muted/40"
@@ -171,6 +176,7 @@ export function TimeGrid({
   onEditSchedule,
   onToggleScheduleHighlight,
   onEditRoom,
+  inactiveRooms,
 }: TimeGridProps) {
   return (
     <div
@@ -194,6 +200,7 @@ export function TimeGrid({
           key={room}
           color={roomColors?.[room] ?? "#a1a1aa"}
           icon={roomIcons?.[room]}
+          inactive={inactiveRooms?.has(room) ?? false}
           room={room}
           onEdit={onEditRoom ? () => onEditRoom(room) : undefined}
         />
@@ -217,6 +224,7 @@ export function TimeGrid({
                 activeNote={activeNote}
                 color={roomColors?.[room] ?? "#a1a1aa"}
                 highlightedNoteId={highlightedNoteId}
+                isInactive={inactiveRooms?.has(room) ?? false}
                 isRowHighlighted={isRowHighlighted}
                 flipRects={flipRects}
                 lastDragEndAt={lastDragEndAt}

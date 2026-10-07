@@ -1,11 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
 import { orpc } from "../lib/orpc/client";
+import { eventChannel } from "../lib/realtime/channels";
 import { roomColorFor } from "../lib/rooms/palette";
 import { toast } from "../components/shared/ui/toast-utils";
+import { useRealtimeChannel } from "./useRealtimeChannel";
 
 /**
- * Hook to fetch and manage rooms/schedules data with ID lookup utilities
+ * Hook to fetch and manage rooms/schedules data with ID lookup utilities.
+ * Re-reads rooms, slots and talks whenever the server says the grid's
+ * structure changed (a room or slot created, edited, deleted or reordered on
+ * any screen) — talks too, since their room and slot labels come from it.
  */
 export const useOpenSpaceSetup = (
   openSpaceId: string,
@@ -14,10 +19,20 @@ export const useOpenSpaceSetup = (
     initialSchedules?: any[];
     /** For always-on screens that never refire window focus (kiosks). */
     refetchInterval?: number;
+    /** Public screens leave out rooms switched off; the admin board shows them dimmed. */
+    hideInactiveRooms?: boolean;
   }
 ) => {
+  const queryClient = useQueryClient();
+  useRealtimeChannel(eventChannel(openSpaceId, "sync"), (event) => {
+    if (event !== "structure_change") return;
+    void queryClient.invalidateQueries({ queryKey: orpc.rooms.getByOpenSpace.key({ input: { openSpaceId } }) });
+    void queryClient.invalidateQueries({ queryKey: orpc.schedules.getByOpenSpace.key({ input: { openSpaceId } }) });
+    void queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
+  });
+
   // Fetch rooms and schedules
-  const { data: roomsData = [], isLoading: roomsLoading } = useQuery(
+  const { data: allRooms = [], isLoading: roomsLoading } = useQuery(
     orpc.rooms.getByOpenSpace.queryOptions({
       input: { openSpaceId },
       // Use server-side data as initial data for instant first render
@@ -26,6 +41,12 @@ export const useOpenSpaceSetup = (
       refetchOnWindowFocus: true, // Refetch when user returns to tab
       refetchInterval: options?.refetchInterval,
     })
+  );
+
+  const hideInactiveRooms = options?.hideInactiveRooms ?? false;
+  const roomsData = useMemo(
+    () => (hideInactiveRooms ? allRooms.filter((room) => room.isActive) : allRooms),
+    [allRooms, hideInactiveRooms]
   );
 
   const { data: schedulesData = [], isLoading: schedulesLoading } = useQuery(

@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Info, Sparkles } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { Collapse, Notice } from "components/Admin/panel";
 import { Button } from "components/shared/ui/button";
 
 import type { SuggestionAlternative, SuggestionEntry } from "./types";
@@ -32,17 +33,13 @@ export function AISuggestion({
 
   return (
     <div className="space-y-2">
-      {current?.degraded && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-          <p className="text-xs text-foreground">
-            La AI no pudo sugerir nada: esto es apenas el primer espacio libre. Elegí sala y horario a mano.
-          </p>
-        </div>
-      )}
+      <Notice show={Boolean(current?.degraded)} tone="warning">
+        La AI no pudo sugerir nada: esto es apenas el primer espacio libre. Elegí sala y horario a mano.
+      </Notice>
 
       <Button
-        className="w-full justify-between border border-border bg-muted/30 text-foreground hover:bg-muted/60"
+        aria-expanded={showAiReasoning}
+        className="w-full justify-between rounded-lg border border-border bg-muted/30 text-foreground hover:bg-muted/60"
         size="sm"
         type="button"
         variant="ghost"
@@ -53,49 +50,50 @@ export function AISuggestion({
           <span className="text-sm font-medium">Razonamiento de la AI</span>
         </span>
         <ChevronDown
-          className={cn("h-4 w-4 text-muted-foreground transition-transform", showAiReasoning && "rotate-180")}
+          className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+            showAiReasoning && "rotate-180"
+          )}
         />
       </Button>
 
-      {showAiReasoning && (
-        <div className="space-y-3">
-          <div className="rounded-md border border-border bg-muted/30 p-4">
-            <div className="flex items-start gap-3">
-              <div className="rounded-full bg-primary/10 p-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex-1 space-y-1">
-                <p className="text-sm font-medium text-foreground">¿Por qué este horario?</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">{aiReasoning}</p>
-              </div>
+      <Collapse className="space-y-3" show={showAiReasoning}>
+        <div className="rounded-md border border-border bg-muted/30 p-4">
+          <div className="flex items-start gap-3">
+            <div className="rounded-full bg-primary/10 p-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-medium text-foreground">¿Por qué este horario?</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">{aiReasoning}</p>
             </div>
           </div>
-
-          {current?.alternatives && current.alternatives.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Alternativas sugeridas</p>
-              {current.alternatives.map((alt, idx) => (
-                <button
-                  key={idx}
-                  className="w-full rounded-md border border-border bg-muted/20 p-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/50"
-                  type="button"
-                  onClick={() => onApplyAlternative(alt)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-terminal text-xs font-medium text-foreground">
-                        {alt.room} · {alt.timeSlot}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{alt.reasoning}</p>
-                    </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
-      )}
+
+        {current?.alternatives && current.alternatives.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Alternativas sugeridas</p>
+            {current.alternatives.map((alt, idx) => (
+              <button
+                key={idx}
+                className="w-full rounded-md border border-border bg-muted/20 p-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/50"
+                type="button"
+                onClick={() => onApplyAlternative(alt)}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="font-terminal text-xs font-medium text-foreground">
+                      {alt.room} · {alt.timeSlot}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{alt.reasoning}</p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </Collapse>
 
       {suggestionHistory.length > 1 && (
         <div className="flex items-center justify-between border-t border-border pt-2">
