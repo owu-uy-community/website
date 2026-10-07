@@ -12,7 +12,7 @@ import { toast } from "components/shared/ui/toast-utils";
 import { findSound } from "lib/launchpad/sounds";
 import type { ObsView } from "lib/obs/actions";
 import { orpc } from "lib/orpc/client";
-import type { Cue, ObsStatus } from "lib/orpc/obs-control/services";
+import type { Cue, ObsStatus } from "lib/orpc/obs-control/schemas";
 import { SCENES, isSceneId } from "lib/owy-stage/scenes";
 
 import { CUE_COLOR_CLASS, CueEditor, type CueDraft } from "./CueEditor";

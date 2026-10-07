@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { toast } from "components/shared/ui/toast-utils";
 import type { ObsActions, ObsView } from "lib/obs/actions";
 import { client as rpc } from "lib/orpc/client";
-import type { Cue } from "lib/orpc/obs-control/services";
+import type { Cue } from "lib/orpc/obs-control/schemas";
 
 import { selectScene } from "./SceneBus";
 

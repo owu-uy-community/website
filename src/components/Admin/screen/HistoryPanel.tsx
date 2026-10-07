@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "app/lib/utils";
 import { Badge } from "components/shared/ui/badge";
 import { orpc } from "lib/orpc/client";
-import type { SerializedCommand } from "lib/orpc/obs-control/services";
+import type { SerializedCommand } from "lib/orpc/obs-control/schemas";
 
 const STATUS: Record<SerializedCommand["status"], string> = {
   pending: "border-amber-400/50 bg-amber-400/15 text-amber-100",

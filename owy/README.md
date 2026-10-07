@@ -14,7 +14,7 @@ Slack / Telegram / HTTP (eve TUI)
    owu.uy  /api/orpc  (openSpaces · schedules · rooms · tracks · obsQueue · countdown · ocr · dashboard · eventbrite)
         │
         └─ el SITIO emite broadcasts server-side tras cada escritura
-           (src/lib/realtime/broadcast.ts, sobre su WebSocket propio) → grilla
+           (servicio Realtime de src/lib/orpc, sobre su WebSocket propio) → grilla
            admin / kiosk / pantalla OBS se actualizan en vivo, venga el cambio
            de donde venga
 ```
@@ -181,4 +181,4 @@ un bridge Node con Gemini Live. Firmware ESPHome + bridge + runbook en
 
 ## Realtime
 
-Owy no habla con el transporte de realtime: desde que el sitio emite los broadcasts **server-side** en sus services de escritura (`src/lib/realtime/broadcast.ts`, sobre el WebSocket propio del sitio), cualquier escritura por API — del admin, de Owy o de un script — notifica sola a la grilla admin, el kiosk y las pantallas de OBS. No requiere configuración extra en owy; del lado del sitio aplica lo de siempre (`REDIS_URL` para el backplane en producción, sidecar `pnpm dev:realtime` en local).
+Owy no habla con el transporte de realtime: desde que el sitio emite los broadcasts **server-side** en sus services de escritura (el servicio `Realtime` de `src/lib/orpc/services.ts`, sobre el WebSocket propio del sitio), cualquier escritura por API — del admin, de Owy o de un script — notifica sola a la grilla admin, el kiosk y las pantallas de OBS. No requiere configuración extra en owy; del lado del sitio aplica lo de siempre (`REDIS_URL` para el backplane en producción, sidecar `pnpm dev:realtime` en local).

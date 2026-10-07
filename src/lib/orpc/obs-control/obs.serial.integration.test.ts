@@ -73,7 +73,7 @@ describe("obsQueue", () => {
     expect(results.map((result) => result.status)).toStrictEqual(Array.from({ length: 6 }, () => "fulfilled"));
   });
 
-  test.fails("#22 both rigs can queue an item that happens to share a client id", async () => {
+  test("#22 both rigs can queue an item that happens to share a client id", async () => {
     const { staff } = await setup();
     const item = { id: "q1", sceneName: "Sponsors", delay: 10, position: 0 };
 
@@ -81,6 +81,71 @@ describe("obsQueue", () => {
     const second = await call(router.obsQueue.updateState, { instanceId: 2, data: { queueItems: [item] } }, by(staff));
 
     expect(second.queueItems.map((queued) => queued.sceneName)).toStrictEqual(["Sponsors"]);
+  });
+
+  test("#22 two presets saved from the same queue keep their own items", async () => {
+    const { staff } = await setup();
+    const items = [
+      { id: "q1", sceneName: "Sponsors", delay: 10, position: 0 },
+      { id: "q2", sceneName: "Agenda", delay: 20, position: 1 },
+    ];
+    const save = (presets: { id: string; name: string; items: typeof items }[]) =>
+      call(router.obsQueue.updateState, { instanceId: 1, data: { presets } }, by(staff));
+
+    await save([{ id: "p1", name: "Mañana", items }]);
+    const state = await save([
+      { id: "p1", name: "Mañana", items },
+      { id: "p2", name: "Tarde", items },
+    ]);
+
+    expect(state.presets.map((preset) => [preset.name, preset.items.map((item) => item.sceneName)])).toStrictEqual([
+      ["Mañana", ["Sponsors", "Agenda"]],
+      ["Tarde", ["Sponsors", "Agenda"]],
+    ]);
+  });
+
+  test("loop buttons play, step around the queue and stop back at the start", async () => {
+    const { staff } = await setup();
+    const loop = (action: "play" | "pause" | "stop" | "next" | "prev") =>
+      call(router.obsQueue.loop, { instanceId: 1, action }, by(staff));
+    await call(
+      router.obsQueue.updateState,
+      {
+        instanceId: 1,
+        data: {
+          queueItems: ["A", "B", "C"].map((sceneName, position) => ({ id: sceneName, sceneName, delay: 5, position })),
+        },
+      },
+      by(staff)
+    );
+
+    const steps = [await loop("play"), await loop("prev"), await loop("next"), await loop("next"), await loop("stop")];
+
+    expect(steps.map((state) => [state.isPlaying, state.currentItemIndex])).toStrictEqual([
+      [true, 0],
+      [true, 2],
+      [true, 0],
+      [true, 1],
+      [false, 0],
+    ]);
+  });
+
+  test("#11 NEXT presses on the loop at once each step once", async () => {
+    const { staff } = await setup();
+    const scenes = Array.from({ length: 10 }, (_, position) => ({
+      id: `s${position}`,
+      sceneName: `S${position}`,
+      delay: 5,
+      position,
+    }));
+    await call(router.obsQueue.updateState, { instanceId: 1, data: { queueItems: scenes } }, by(staff));
+    const next = () => call(router.obsQueue.loop, { instanceId: 1, action: "next" }, by(staff));
+
+    await Promise.all(Array.from({ length: 6 }, next));
+
+    await expect(call(router.obsQueue.getState, { instanceId: 1 }, by(null))).resolves.toMatchObject({
+      currentItemIndex: 6,
+    });
   });
 });
 
@@ -111,6 +176,26 @@ describe("obsControl bus", () => {
     const second = await call(router.obsControl.send, { instanceId: 1, type: "take", payload: {} }, by(staff));
 
     expect(second.id).toBe(first.id);
+  });
+
+  test("#11 TAKEs at the same moment are still one press", async () => {
+    const { staff } = await setup();
+    const take = () => call(router.obsControl.send, { instanceId: 1, type: "take", payload: {} }, by(staff));
+    // A rig in use, and a connection ready for each press, so the presses really overlap.
+    await Promise.all(Array.from({ length: 6 }, () => call(router.obsControl.status, { instanceId: 1 }, by(staff))));
+
+    const sent = await Promise.all(Array.from({ length: 6 }, take));
+
+    expect(new Set(sent.map((command) => command.id)).size).toBe(1);
+  });
+
+  test("commands from an API key are told apart from the admin screen in the history", async () => {
+    const { staff } = await setup();
+
+    await call(router.obsControl.send, { instanceId: 1, type: "cut", payload: {} }, by(staff, { apiKey: true }));
+
+    const [history] = await call(router.obsControl.history, { instanceId: 1 }, by(staff));
+    expect(history.source).toBe(`api-key:${staff.name}`);
   });
 
   test("a command nobody ran within 30 s is skipped, never replayed late", async () => {
@@ -203,7 +288,7 @@ describe("obsCue rundown", () => {
     expect(landed.map((result) => result?.cue.id)).toStrictEqual([a.id, b.id, a.id, b.id]);
   });
 
-  test.fails("#12 an unknown cue is NOT_FOUND", async () => {
+  test("#12 an unknown cue is NOT_FOUND", async () => {
     const { staff } = await setup();
 
     await expect(call(router.obsCue.fire, { id: "no-existe" }, by(staff))).rejects.toMatchObject({
@@ -214,7 +299,7 @@ describe("obsCue rundown", () => {
     });
   });
 
-  test.fails("#11 two NEXT presses at once advance the rundown twice", async () => {
+  test("#11 two NEXT presses at once advance the rundown twice", async () => {
     const { staff } = await setup();
     const cues = [];
     for (const name of ["A", "B", "C"]) cues.push(await call(router.obsCue.create, cue(name), by(staff)));

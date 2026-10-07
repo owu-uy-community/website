@@ -25,7 +25,7 @@ import { SOUNDS } from "lib/launchpad/sounds";
 import type { ObsView } from "lib/obs/actions";
 import { orpc } from "lib/orpc/client";
 import { CUE_COLORS, type CreateCueInput, type CueColor } from "lib/orpc/obs-control/schemas";
-import type { Cue } from "lib/orpc/obs-control/services";
+import type { Cue } from "lib/orpc/obs-control/schemas";
 import { SCENES, SCENE_GROUPS, isSceneId, parseSceneParams, type SceneId } from "lib/owy-stage/scenes";
 
 const NONE = "__none__";

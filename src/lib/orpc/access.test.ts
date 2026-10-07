@@ -41,6 +41,7 @@ const EXPECTED: Record<string, Access> = {
   "obsCue.step": "staff",
   "obsCue.update": "staff",
   "obsQueue.getState": "public",
+  "obsQueue.loop": "staff",
   "obsQueue.updateState": "staff",
   "ocr.findFreeSpot": "staff",
   "ocr.processImage": "staff",

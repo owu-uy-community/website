@@ -9,7 +9,7 @@ import { Kbd } from "components/shared/ui/kbd";
 import { Switch } from "components/shared/ui/switch";
 import type { ObsActions, ObsView } from "lib/obs/actions";
 import type { ObsState } from "lib/obs/client";
-import type { ObsStatus } from "lib/orpc/obs-control/services";
+import type { ObsStatus } from "lib/orpc/obs-control/schemas";
 
 import { HoldButton } from "./HoldButton";
 import { formatDuration } from "./tally";

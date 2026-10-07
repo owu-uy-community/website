@@ -7,37 +7,6 @@ import {
   processImageWithSuggestion,
 } from "./ocr";
 
-import { GetInstanceSchema, UpdateStateSchema, getState, updateState } from "./obs-queue";
-import {
-  AckCommandSchema,
-  ClaimExecutorSchema,
-  CreateCueSchema,
-  CueIdSchema,
-  InstanceSchema,
-  ListCommandsSchema,
-  ReleaseExecutorSchema,
-  ReorderCuesSchema,
-  ReportStatusSchema,
-  SendCommandSchema,
-  StepCueSchema,
-  UpdateCueSchema,
-  ackCommand,
-  claimExecutor,
-  createCue,
-  fireCue,
-  getObsStatus,
-  listCommands,
-  listCues,
-  pendingCommands,
-  releaseExecutor,
-  removeCue,
-  reorderCues,
-  reportStatus,
-  sendCommand,
-  stepCue,
-  updateCue,
-} from "./obs-control";
-
 import {
   FireEffectSchema,
   GetInputsSchema,
@@ -71,12 +40,13 @@ import { communitiesRouter } from "./communities/router";
 import { countdownRouter } from "./countdown/router";
 import { dashboardRouter } from "./dashboard/router";
 import { eventbriteRouter } from "./eventbrite/router";
+import { obsControlRouter, obsCueRouter } from "./obs-control/router";
+import { obsQueueRouter } from "./obs-queue/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { roomsRouter } from "./rooms/router";
 import { schedulesRouter } from "./schedules/router";
 import { staffTasksRouter } from "./staff-tasks/router";
 import { tracksRouter } from "./tracks/router";
-import type { Actor } from "./services";
 
 /**
  * OCR handlers (admin only)
@@ -88,56 +58,6 @@ export const findFreeSpotHandler = staff.input(FindFreeSpotSchema).handler(async
 export const processImageWithSuggestionHandler = staff
   .input(ProcessImageWithSuggestionSchema)
   .handler(async ({ input }) => processImageWithSuggestion(input));
-
-// OBS Queue procedures (public read, admin write)
-export const getOBSState = pub.input(GetInstanceSchema).handler(async ({ input }) => getState(input));
-
-export const updateOBSState = staff.input(UpdateStateSchema).handler(async ({ input }) => updateState(input));
-
-/** Who queued a command, for the history tab. */
-function commandSource(user: Actor): string {
-  return user.id === "owy-bot" ? "bot" : `admin:${user.name || user.id}`;
-}
-
-// OBS control bus (commands for the executor tab + the status it reports back)
-export const sendObsCommand = staff
-  .input(SendCommandSchema)
-  .handler(async ({ input, context }) => sendCommand(input, commandSource(context.user)));
-
-export const pendingObsCommands = staff.input(InstanceSchema).handler(async ({ input }) => pendingCommands(input));
-
-export const ackObsCommand = staff.input(AckCommandSchema).handler(async ({ input }) => ackCommand(input));
-
-export const claimObsExecutor = staff.input(ClaimExecutorSchema).handler(async ({ input }) => claimExecutor(input));
-
-export const releaseObsExecutor = staff
-  .input(ReleaseExecutorSchema)
-  .handler(async ({ input }) => releaseExecutor(input));
-
-export const reportObsStatus = staff.input(ReportStatusSchema).handler(async ({ input }) => reportStatus(input));
-
-export const getObsStatusHandler = staff.input(InstanceSchema).handler(async ({ input }) => getObsStatus(input));
-
-export const listObsCommands = staff.input(ListCommandsSchema).handler(async ({ input }) => listCommands(input));
-
-// Cues (rundown)
-export const listObsCues = staff.input(InstanceSchema).handler(async ({ input }) => listCues(input));
-
-export const createObsCue = staff.input(CreateCueSchema).handler(async ({ input }) => createCue(input));
-
-export const updateObsCue = staff.input(UpdateCueSchema).handler(async ({ input }) => updateCue(input));
-
-export const removeObsCue = staff.input(CueIdSchema).handler(async ({ input }) => removeCue(input));
-
-export const reorderObsCues = staff.input(ReorderCuesSchema).handler(async ({ input }) => reorderCues(input));
-
-export const fireObsCue = staff
-  .input(CueIdSchema)
-  .handler(async ({ input, context }) => fireCue(input, commandSource(context.user)));
-
-export const stepObsCue = staff
-  .input(StepCueSchema)
-  .handler(async ({ input, context }) => stepCue(input, commandSource(context.user)));
 
 // Owy Stage procedures (public read for the OBS pages, admin write — the
 // companion bridge writes through its x-api-key admin session)
@@ -190,32 +110,10 @@ export const router = {
     processImageWithSuggestion: processImageWithSuggestionHandler,
   },
 
-  // OBS Queue State Management
-  obsQueue: {
-    getState: getOBSState,
-    updateState: updateOBSState,
-  },
-
-  // OBS control bus + cues (see src/lib/orpc/obs-control)
-  obsControl: {
-    send: sendObsCommand,
-    pending: pendingObsCommands,
-    ack: ackObsCommand,
-    claim: claimObsExecutor,
-    release: releaseObsExecutor,
-    report: reportObsStatus,
-    status: getObsStatusHandler,
-    history: listObsCommands,
-  },
-  obsCue: {
-    list: listObsCues,
-    create: createObsCue,
-    update: updateObsCue,
-    remove: removeObsCue,
-    reorder: reorderObsCues,
-    fire: fireObsCue,
-    step: stepObsCue,
-  },
+  // OBS desk: the scene loop, the command bus and the rundown
+  obsQueue: obsQueueRouter,
+  obsControl: obsControlRouter,
+  obsCue: obsCueRouter,
 
   // Countdown Timer Management
   countdown: countdownRouter,

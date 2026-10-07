@@ -1,8 +1,7 @@
-import { z } from "zod";
+import * as z from "zod";
 
 import { SCENE_IDS, type SceneId } from "../../owy-stage/scenes";
-
-const instanceId = z.number().int().min(1).max(2);
+import { InstanceIdSchema as instanceId } from "../obs-queue/schemas";
 const sceneName = z.string().trim().min(1).max(200);
 
 /**
@@ -104,6 +103,30 @@ export const ListCommandsSchema = z.object({
   limit: z.number().int().min(1).max(200).default(50),
 });
 
+export const ObsStatusSchema = ObsReportSchema.extend({
+  instanceId: z.number(),
+  /** The tab executing commands, while it keeps reporting in. */
+  executorId: z.string().nullable(),
+  executorOnline: z.boolean(),
+  statusAt: z.string().nullable(),
+  /** The rundown pointer: the cue fired last. */
+  currentCueId: z.string().nullable(),
+});
+export type ObsStatus = z.infer<typeof ObsStatusSchema>;
+
+export const SerializedCommandSchema = z.object({
+  id: z.string(),
+  instanceId: z.number(),
+  type: z.enum(CommandSchema.options.map((option) => option.shape.type.value) as [CommandType, ...CommandType[]]),
+  payload: z.record(z.string(), z.unknown()),
+  source: z.string(),
+  status: z.enum(["pending", "done", "failed", "skipped"]),
+  error: z.string().nullable(),
+  createdAt: z.string(),
+  doneAt: z.string().nullable(),
+});
+export type SerializedCommand = z.infer<typeof SerializedCommandSchema>;
+
 // ---------------------------------------------------------------------------
 // Cues
 // ---------------------------------------------------------------------------
@@ -137,6 +160,26 @@ export const UpdateCueSchema = z.object({ id: z.string(), ...cueFields });
 export const CueIdSchema = z.object({ id: z.string() });
 export const ReorderCuesSchema = z.object({ instanceId: instanceId.default(1), ids: z.array(z.string()).max(500) });
 export const StepCueSchema = z.object({ instanceId: instanceId.default(1), direction: z.enum(["next", "prev"]) });
+
+export const CueSchema = z.object({
+  id: z.string(),
+  instanceId: z.number(),
+  name: z.string(),
+  color: z.enum(CUE_COLORS).nullable(),
+  obsScene: z.string().nullable(),
+  transition: z.string().nullable(),
+  transitionMs: z.number().nullable(),
+  stageScene: z.string().nullable(),
+  stageParams: z.record(z.string(), z.unknown()).nullable(),
+  sound: z.string().nullable(),
+  notes: z.string().nullable(),
+  hotkey: z.string().nullable(),
+  position: z.number(),
+});
+export type Cue = z.infer<typeof CueSchema>;
+
+/** What a cue press did: the cue, and the OBS command it queued (if it has an OBS scene). */
+export const FiredCueSchema = z.object({ cue: CueSchema, commandId: z.string().nullable() });
 
 export type CreateCueInput = z.infer<typeof CreateCueSchema>;
 export type UpdateCueInput = z.infer<typeof UpdateCueSchema>;
