@@ -43,7 +43,7 @@ const toDayString = (date: Date): string => date.toISOString().slice(0, 10);
 const fromDayString = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
 
 /** Move an "HH:MM" by some minutes, clamped to the same day rather than wrapping into the next. */
-export const shiftTime = (time: string, deltaMinutes: number): string => {
+const shiftTime = (time: string, deltaMinutes: number): string => {
   const [h, m] = time.split(":").map(Number);
   const total = Math.min(23 * 60 + 59, Math.max(0, h * 60 + m + deltaMinutes));
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;

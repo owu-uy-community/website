@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createRouterClient, ORPCError } from "@orpc/server";
+import { createRouterClient } from "@orpc/server";
 import { headers } from "next/headers";
 import { cache } from "react";
 
@@ -19,13 +19,3 @@ export const caller = createRouterClient(router, {
 
 /** The same for route handlers, which have the request's headers at hand. */
 export const callerFor = (headers: Headers) => createRouterClient(router, { context: requestContext(headers) });
-
-/** For pages that 404 on a missing row: NOT_FOUND becomes `null`, anything else still throws. */
-export async function orNull<T>(promise: Promise<T>): Promise<T | null> {
-  try {
-    return await promise;
-  } catch (error) {
-    if (error instanceof ORPCError && error.code === "NOT_FOUND") return null;
-    throw error;
-  }
-}

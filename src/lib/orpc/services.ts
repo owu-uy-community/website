@@ -48,7 +48,7 @@ export class CommunityScope extends Context.Service<
 /** Services every request starts with. */
 export type AppServices = Database | Realtime | Ai;
 
-export const realtimeLive = {
+const realtimeLive = {
   publish: (channel: string, event: string, payload: unknown) =>
     Effect.promise(() => publishServer(channel, event, payload).catch(() => undefined)),
 };

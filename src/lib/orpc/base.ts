@@ -35,7 +35,8 @@ export type AuthedContext = Omit<BaseContext, "effect/context"> & {
 /** Who may call a procedure. Every procedure declares one; a test pins the whole map. */
 export type Access = "public" | "authed" | "staff" | `community:${CommunityRoleValue}`;
 
-export const [accessMeta, getAccess] = defineMeta("access", (incoming: Access) => incoming);
+const [accessMeta, getAccess] = defineMeta("access", (incoming: Access) => incoming);
+export { getAccess };
 
 /**
  * Outermost middleware: whatever a procedure throws leaves as a typed error

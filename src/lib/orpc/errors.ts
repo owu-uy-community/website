@@ -51,14 +51,7 @@ export class ForeignKeyViolation extends Data.TaggedError("ForeignKeyViolation")
   cause: unknown;
 }> {}
 
-export type DomainError =
-  | NotFound
-  | Conflict
-  | Invalid
-  | Forbidden
-  | UpstreamFailed
-  | UniqueViolation
-  | ForeignKeyViolation;
+type DomainError = NotFound | Conflict | Invalid | Forbidden | UpstreamFailed | UniqueViolation | ForeignKeyViolation;
 
 // ---------------------------------------------------------------------------
 // Wire errors (what clients can rely on)

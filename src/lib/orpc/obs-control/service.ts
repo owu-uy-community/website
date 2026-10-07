@@ -22,7 +22,7 @@ import {
 } from "./schemas";
 
 /** An executor that has not reported for this long has lost the room. */
-export const EXECUTOR_STALE_MS = 30_000;
+const EXECUTOR_STALE_MS = 30_000;
 /** A command nobody executed within this window is dropped, never replayed late. */
 const COMMAND_STALE_MS = 30_000;
 /** Two TAKEs closer than this are one press (Stream Deck bounce, double tap). */
@@ -87,7 +87,7 @@ const publishStatus = (instanceId: number) =>
 // Command bus
 // ---------------------------------------------------------------------------
 
-export const serializeCommand = (row: CommandRow): SerializedCommand => ({
+const serializeCommand = (row: CommandRow): SerializedCommand => ({
   id: row.id,
   instanceId: row.instanceId,
   type: row.type as Command["type"],
@@ -279,7 +279,7 @@ export const reportStatus = ({
 // Cues (the rundown)
 // ---------------------------------------------------------------------------
 
-export const serializeCue = (row: CueRow): Cue => ({
+const serializeCue = (row: CueRow): Cue => ({
   id: row.id,
   instanceId: row.instanceId,
   name: row.name,

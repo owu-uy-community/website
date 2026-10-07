@@ -19,7 +19,7 @@ const label = (slot: { startTime: string; endTime: string }) => `${slot.startTim
  * nobody wants the 11:00 slot) — by time of day on the event's clock — unless
  * that leaves none, e.g. someone preparing the board the night before.
  */
-export const loadBoard = (eventId: string) =>
+const loadBoard = (eventId: string) =>
   Effect.gen(function* () {
     const [event] = yield* query((db) =>
       db.select({ timezone: events.timezone }).from(events).where(eq(events.id, eventId))

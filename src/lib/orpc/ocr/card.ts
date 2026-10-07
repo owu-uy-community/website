@@ -74,7 +74,7 @@ function mediaTypeOf(dataUrl: string): string {
 type Card = z.infer<typeof CardSchema>;
 
 /** What the staffer gets: the model's reading, plus every field worth a human check. */
-export function toCardResult(card: Card): ProcessImageResponse {
+function toCardResult(card: Card): ProcessImageResponse {
   return {
     title: card.title ?? "",
     speaker: card.speaker ?? "",

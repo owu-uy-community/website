@@ -9,8 +9,8 @@ export const slotDay = (date: string) => date.slice(0, 10);
 const pad = (value: number) => String(value).padStart(2, "0");
 
 /** "YYYY-MM-DD" and "HH:MM" of a local Date — on a screen at the venue, the venue's clock. */
-export const localDay = (now: Date) => `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-export const localTime = (now: Date) => `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+const localDay = (now: Date) => `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+const localTime = (now: Date) => `${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
 /** Whether a slot is on at `now`, read on the venue's clock. */
 export const slotIsOn = (slot: { date: string; startTime: string; endTime: string }, now: Date) =>
