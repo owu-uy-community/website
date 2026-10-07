@@ -1,17 +1,16 @@
 import { redirect } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 
-import { isSiteAdmin, requireStaffSession } from "app/lib/auth-helpers";
+import { requireStaffSession } from "app/lib/auth-helpers";
 import { Empty } from "components/shared/ui/empty";
-import { listEventsForOperator } from "lib/orpc/open-spaces/services/get-all";
+import { caller } from "lib/orpc/server";
 
 /** Legacy URL: tareas now live under /admin/<communitySlug>/tareas. */
 export default async function TareasLegacyPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
-  const session = await requireStaffSession();
-  const admin = isSiteAdmin(session);
+  await requireStaffSession();
 
   const { event: eventSlug } = await searchParams;
-  const events = await listEventsForOperator(admin ? null : session.user.id);
+  const events = await caller.openSpaces.listForAdmin();
   const selected = (eventSlug ? events.find((event) => event.slug === eventSlug) : events[0]) ?? events[0];
 
   if (!selected) {

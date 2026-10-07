@@ -12,7 +12,7 @@ import { toast } from "components/shared/ui/toast-utils";
 import { findSound } from "lib/launchpad/sounds";
 import type { ObsView } from "lib/obs/actions";
 import { orpc } from "lib/orpc/client";
-import type { Cue, ObsStatus } from "lib/orpc/obs-control/services";
+import type { Cue, ObsStatus } from "lib/orpc/obs-control/schemas";
 import { SCENES, isSceneId } from "lib/owy-stage/scenes";
 
 import { CUE_COLOR_CLASS, CueEditor, type CueDraft } from "./CueEditor";
@@ -35,7 +35,7 @@ function CueRow({
   return (
     <Reorder.Item
       className={cn(
-        "bg-card flex items-center gap-2 rounded-lg border p-2",
+        "flex items-center gap-2 rounded-lg border bg-card p-2",
         active ? "border-primary bg-primary/10" : "border-border"
       )}
       dragControls={controls}
@@ -44,7 +44,7 @@ function CueRow({
     >
       <button
         aria-label="Reordenar"
-        className="text-muted-foreground hover:text-foreground cursor-grab touch-none active:cursor-grabbing"
+        className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
         type="button"
         onPointerDown={(event) => controls.start(event)}
       >
@@ -56,7 +56,7 @@ function CueRow({
           <span className={cn("truncate text-sm font-semibold", active && "text-primary")}>{cue.name}</span>
           {cue.hotkey && <Kbd>{cue.hotkey}</Kbd>}
         </span>
-        <span className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
           {cue.obsScene && (
             <span className="inline-flex items-center gap-1">
               <Monitor className="h-3 w-3" /> {cue.obsScene}
@@ -148,7 +148,7 @@ export function Rundown({ instanceId, status, view }: { instanceId: number; stat
       </div>
 
       {order.length === 0 ? (
-        <div className="border-border text-muted-foreground rounded-lg border border-dashed p-4 text-center text-xs">
+        <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
           Sin cues todavía. Armá el guion del día: cada cue puede cambiar la escena de OBS, la pantalla Owy y disparar
           un sonido.
         </div>

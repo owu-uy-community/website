@@ -319,10 +319,10 @@ export default function ShapeGame({ onClose }: { onClose: () => void }) {
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/55 px-6 text-center backdrop-blur-[2px]">
             {phase === "ready" ? (
               <>
-                <span className="font-display text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-[#F5BB03]">
+                <span className="font-display text-[0.65rem] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase">
                   Easter egg
                 </span>
-                <h3 className="font-display text-2xl font-extrabold uppercase leading-none tracking-tight sm:text-3xl">
+                <h3 className="font-display text-2xl leading-none font-extrabold tracking-tight uppercase sm:text-3xl">
                   Lluvia de <span className="text-[#F5BB03]">formas</span>
                 </h3>
                 <p className="max-w-sm text-sm text-white/65">
@@ -331,17 +331,17 @@ export default function ShapeGame({ onClose }: { onClose: () => void }) {
               </>
             ) : (
               <>
-                <span className="font-display text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-[#0162C8]">
+                <span className="font-display text-[0.65rem] font-semibold tracking-[0.3em] text-[#0162C8] uppercase">
                   Game over
                 </span>
                 <div className="flex items-end gap-6">
                   <div>
-                    <p className="font-display text-[0.6rem] uppercase tracking-[0.2em] text-white/45">Puntos</p>
-                    <p className="font-display text-4xl font-extrabold leading-none text-[#F5BB03]">{score}</p>
+                    <p className="font-display text-[0.6rem] tracking-[0.2em] text-white/45 uppercase">Puntos</p>
+                    <p className="font-display text-4xl leading-none font-extrabold text-[#F5BB03]">{score}</p>
                   </div>
                   <div>
-                    <p className="font-display text-[0.6rem] uppercase tracking-[0.2em] text-white/45">Récord</p>
-                    <p className="font-display text-2xl font-bold leading-none text-white/80">{best}</p>
+                    <p className="font-display text-[0.6rem] tracking-[0.2em] text-white/45 uppercase">Récord</p>
+                    <p className="font-display text-2xl leading-none font-bold text-white/80">{best}</p>
                   </div>
                 </div>
               </>
@@ -349,12 +349,12 @@ export default function ShapeGame({ onClose }: { onClose: () => void }) {
             <button
               type="button"
               onClick={() => startRef.current()}
-              className="mt-1 rounded-full bg-[#F5BB03] px-7 py-2.5 font-display text-sm font-extrabold uppercase tracking-wide text-black transition-transform duration-150 ease-out hover:-translate-y-0.5"
+              className="mt-1 rounded-full bg-[#F5BB03] px-7 py-2.5 font-display text-sm font-extrabold tracking-wide text-black uppercase transition-transform duration-150 ease-out hover:-translate-y-0.5"
             >
               {phase === "ready" ? "Jugar" : "Jugar de nuevo"}
             </button>
             {phase === "ready" && best > 0 && (
-              <p className="font-display text-xs uppercase tracking-[0.2em] text-white/40">Récord: {best}</p>
+              <p className="font-display text-xs tracking-[0.2em] text-white/40 uppercase">Récord: {best}</p>
             )}
           </div>
         )}

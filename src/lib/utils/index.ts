@@ -4,4 +4,3 @@
 
 export { formatTime, formatTimeWithHours, parseTimeString } from "./time";
 export { getRoomIcon, getRoomIconName } from "./room-icons";
-

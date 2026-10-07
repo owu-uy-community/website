@@ -32,10 +32,10 @@ export function OpenSpaceSkeleton() {
       </div>
 
       {/* Board */}
-      <div className="border-border bg-card overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="grid" style={{ gridTemplateColumns: `88px repeat(${skeletonRooms}, minmax(170px, 1fr))` }}>
           {/* Corner */}
-          <div className="border-border/60 flex h-14 items-center justify-center border-r border-b">
+          <div className="flex h-14 items-center justify-center border-r border-b border-border/60">
             <Skeleton className="h-3 w-10" />
           </div>
 
@@ -43,7 +43,7 @@ export function OpenSpaceSkeleton() {
           {Array.from({ length: skeletonRooms }).map((_, index) => (
             <div
               key={`skeleton-room-${index}`}
-              className="border-border/60 flex h-14 items-center justify-center border-r border-b"
+              className="flex h-14 items-center justify-center border-r border-b border-border/60"
             >
               <Skeleton className="h-4 w-20" />
             </div>
@@ -52,7 +52,7 @@ export function OpenSpaceSkeleton() {
           {/* Time slots and cells */}
           {Array.from({ length: skeletonTimeSlots }).map((_, timeIndex) => (
             <React.Fragment key={`skeleton-timeslot-${timeIndex}`}>
-              <div className="border-border/60 flex h-32 flex-col items-center justify-center gap-1.5 border-r border-b">
+              <div className="flex h-32 flex-col items-center justify-center gap-1.5 border-r border-b border-border/60">
                 <Skeleton className="h-3.5 w-12" />
                 <Skeleton className="h-3 w-10" />
               </div>
@@ -60,7 +60,7 @@ export function OpenSpaceSkeleton() {
               {Array.from({ length: skeletonRooms }).map((_, roomIndex) => (
                 <div
                   key={`skeleton-cell-${timeIndex}-${roomIndex}`}
-                  className="border-border/60 relative h-32 border-r border-b p-1.5"
+                  className="relative h-32 border-r border-b border-border/60 p-1.5"
                 >
                   {(timeIndex + roomIndex) % 3 === 0 && <Skeleton className="h-full w-full rounded-lg" />}
                 </div>

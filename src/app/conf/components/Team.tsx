@@ -101,7 +101,7 @@ export default function Team() {
       <SectionHeader eyebrow="¿QUIÉNES ESTÁN DETRÁS?" title="EQUIPO" />
 
       <Reveal delay={0.12} y={22}>
-        <p className="mt-6 max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
+        <p className="mt-6 max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
           El equipo de voluntarios de la comunidad que organiza La Meetup desde 2023.
         </p>
       </Reveal>
@@ -120,7 +120,7 @@ export default function Team() {
                   src={picture}
                 />
               </div>
-              <p className="mt-5 text-center font-display text-base font-bold uppercase leading-none text-[#F5BB03]">
+              <p className="mt-5 text-center font-display text-base leading-none font-bold text-[#F5BB03] uppercase">
                 {fullName}
               </p>
               <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{jobTitle}</p>

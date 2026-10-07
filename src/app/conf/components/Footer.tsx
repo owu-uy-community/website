@@ -17,7 +17,11 @@ const SOCIALS = [
 export default function Footer() {
   return (
     <footer className="mt-12 w-full border-t border-white/5 sm:mt-[64px]">
-      <Reveal amount={0.5} className="mx-auto flex min-h-[140px] w-full max-w-[1440px] flex-col items-center justify-between gap-6 px-8 py-8 min-[1440px]:flex-row min-[1440px]:gap-0 min-[1440px]:py-0" y={24}>
+      <Reveal
+        amount={0.5}
+        className="mx-auto flex min-h-[140px] w-full max-w-[1440px] flex-col items-center justify-between gap-6 px-8 py-8 min-[1440px]:flex-row min-[1440px]:gap-0 min-[1440px]:py-0"
+        y={24}
+      >
         <img alt="OWU CONF" className="h-11 w-auto" src="/images/conf/logo.png" />
 
         <p className="text-center text-sm leading-6 text-[#FBF5E7] min-[1440px]:text-base">

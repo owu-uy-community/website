@@ -24,7 +24,7 @@ export default function Events({ events }: EventsProps) {
   return (
     <section
       ref={sectionsRefs[SectionKey.Events]}
-      className="relative flex min-h-[500px] w-full flex-col items-center gap-12 self-center pb-12 pt-24 text-white sm:pt-28 lg:pt-32"
+      className="relative flex min-h-[500px] w-full flex-col items-center gap-12 self-center pt-24 pb-12 text-white sm:pt-28 lg:pt-32"
       id={SectionKey.Events}
     >
       <SectionHeading subtitle="¡Listado de próximos eventos!" title="Eventos de la comunidad" />

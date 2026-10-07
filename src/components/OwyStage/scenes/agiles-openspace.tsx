@@ -388,7 +388,7 @@ export function OsRoom({ params, eventId }: SceneProps<"agiles-os-room">) {
                   transition={{ duration: 0.5, delay: 0.2 + i * 0.05, ease: EASE_OUT }}
                 >
                   <span
-                    className="font-display shrink-0 font-extrabold tabular-nums"
+                    className="shrink-0 font-display font-extrabold tabular-nums"
                     style={{
                       width: Math.round(250 * u),
                       fontSize: Math.round(36 * u),

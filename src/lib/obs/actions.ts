@@ -6,7 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "components/shared/ui/toast-utils";
 import { orpc } from "lib/orpc/client";
 import type { Command } from "lib/orpc/obs-control/schemas";
-import type { ObsStatus } from "lib/orpc/obs-control/services";
+import type { ObsStatus } from "lib/orpc/obs-control/schemas";
 
 import { getObsClient, useObs, type ObsState, type TransitionOptions } from "./client";
 

@@ -38,7 +38,7 @@ export default function Hero({ sponsors }: HeroProps) {
     >
       <div className="flex w-full flex-row flex-wrap-reverse items-center justify-center gap-8 xl:flex-nowrap">
         <div className="flex w-full max-w-[650px] flex-col items-center justify-center lg:min-h-[calc(100dvh-165px)]">
-          <h1 className="mb-12 text-center text-7xl font-black uppercase italic leading-none text-primary text-yellow-400 xl:mb-2 xl:text-[80px]">
+          <h1 className="mb-12 text-center text-7xl leading-none font-black text-primary text-yellow-400 uppercase italic xl:mb-2 xl:text-[80px]">
             LA
             <span className="block text-7xl uppercase lg:text-8xl xl:text-9xl">MEETUP</span>
           </h1>

@@ -9,7 +9,7 @@ import { Kbd } from "components/shared/ui/kbd";
 import { Switch } from "components/shared/ui/switch";
 import type { ObsActions, ObsView } from "lib/obs/actions";
 import type { ObsState } from "lib/obs/client";
-import type { ObsStatus } from "lib/orpc/obs-control/services";
+import type { ObsStatus } from "lib/orpc/obs-control/schemas";
 
 import { HoldButton } from "./HoldButton";
 import { formatDuration } from "./tally";
@@ -56,7 +56,7 @@ export function ScreenHeader({
   return (
     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="font-display text-foreground mr-2 text-2xl font-bold tracking-tight">Pantalla OBS</h1>
+        <h1 className="mr-2 font-display text-2xl font-bold tracking-tight text-foreground">Pantalla OBS</h1>
         {connected ? (
           <Pill tone="ok">
             <PlugZap className="h-3 w-3" /> {obs.address}
@@ -94,7 +94,7 @@ export function ScreenHeader({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="border-border bg-card flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm">
+        <label className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 text-sm">
           <span className={cn(view.pending.studio !== undefined && "animate-pulse text-amber-200")}>Estudio</span>
           <Switch
             checked={view.studioMode}

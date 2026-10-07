@@ -259,15 +259,11 @@ export function useScheduleManagement({
               void queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
             });
         } else {
-          // Create new schedule
-          const now = new Date();
-          const currentDate = now.toISOString().split("T")[0];
-
+          // Create new schedule (the server dates it on the event's day)
           const newScheduleData = {
             name: `Time Slot ${schedulesData.length + 1}`,
             startTime: data.startTime,
             endTime: data.endTime,
-            date: `${currentDate}T00:00:00.000Z`,
             isActive: true,
             highlightInKiosk: false,
             openSpaceId,
@@ -279,7 +275,7 @@ export function useScheduleManagement({
             name: newScheduleData.name,
             startTime: newScheduleData.startTime,
             endTime: newScheduleData.endTime,
-            date: newScheduleData.date,
+            date: schedulesData[0]?.date ?? "",
             isActive: newScheduleData.isActive,
             highlightInKiosk: newScheduleData.highlightInKiosk,
             createdAt: new Date().toISOString(),

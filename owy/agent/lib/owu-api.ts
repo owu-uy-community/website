@@ -188,25 +188,16 @@ export interface CountdownUpdateInput {
   action: "start" | "pause" | "reset" | "setDuration" | "toggleSound" | "setTargetTime";
   durationSeconds?: number;
   targetTime?: string;
-  /** Event whose countdown to drive; the API falls back to the legacy event. */
-  eventId?: string;
+  /** Event whose countdown to drive. */
+  eventId: string;
 }
 
 /** Input for the website's OCR + AI spot suggestion (mirrors ProcessImageWithSuggestionSchema). */
 export interface OcrSuggestionInput {
+  /** The event whose board the suggestion is for; the site loads the board. */
+  eventId: string;
+  /** The photo as a data URL, at most ~4 MB. */
   imageData: string;
-  existingNotes: {
-    id?: string;
-    title: string;
-    speaker?: string;
-    room: string;
-    timeSlot: string;
-    needsTV?: boolean;
-    needsWhiteboard?: boolean;
-  }[];
-  roomsWithResources: { name: string; hasTV: boolean; hasWhiteboard: boolean }[];
-  availableRooms: string[];
-  availableTimeSlots: string[];
   additionalContext?: string;
 }
 
@@ -271,14 +262,13 @@ export interface UpdateStaffTaskData {
   assigneeIds?: string[];
 }
 
-/** A community member; the roster Owy assigns tasks from. */
+/** A community member; the roster Owy assigns tasks from (no contact details). */
 export interface CommunityMember {
   id: string;
   communityId: string;
   userId: string;
   role: "member" | "editor" | "admin" | "owner";
   name: string;
-  email: string;
   image: string | null;
   createdAt: string;
 }
@@ -362,15 +352,15 @@ export interface OwuApi {
     }) => Promise<{ cue: OBSCue; commandId: string | null } | null>;
   };
   countdown: {
-    getState: (input?: { eventId?: string }) => Promise<CountdownState>;
+    getState: (input: { eventId: string }) => Promise<CountdownState>;
     updateState: (input: CountdownUpdateInput) => Promise<CountdownState>;
   };
   ocr: {
     processImageWithSuggestion: (input: OcrSuggestionInput) => Promise<OcrSuggestionResponse>;
   };
   cast: {
-    getState: (input?: { eventId?: string }) => Promise<CastState>;
-    setHighlightedNote: (input: { eventId?: string; trackId: string | null }) => Promise<CastState>;
+    getState: (input: { eventId: string }) => Promise<CastState>;
+    setHighlightedNote: (input: { eventId: string; trackId: string | null }) => Promise<CastState>;
   };
   staffTasks: {
     list: (input: { eventId: string }) => Promise<StaffTask[]>;
@@ -401,7 +391,7 @@ export interface OwuApi {
     };
   };
   dashboard: {
-    getStats: (input?: { eventId?: string }) => Promise<unknown>;
+    getStats: (input: { eventId: string }) => Promise<unknown>;
   };
   eventbrite: {
     getSummary: () => Promise<unknown>;
@@ -442,8 +432,11 @@ let cachedClient: OwuApi | null = null;
 export function owuApi(): OwuApi {
   if (cachedClient) return cachedClient;
 
+  // oRPC v2: `origin` is the site, `url` the path (the site must be on v2 too —
+  // v1 and v2 clients and servers cannot talk to each other).
   const link = new RPCLink({
-    url: `${owuApiUrl()}/api/orpc`,
+    origin: owuApiUrl(),
+    url: "/api/orpc",
     headers: () => ({
       "x-api-key": requireApiKey(),
     }),

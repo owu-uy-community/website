@@ -153,7 +153,7 @@ export function Terminal({ eventId }: SceneProps<"terminal">) {
   const finished = shown >= total;
 
   return (
-    <div className="font-terminal absolute inset-0 bg-[#050505] px-[140px] py-[110px] text-[40px] leading-[1.6] text-[#FBF5E7]">
+    <div className="absolute inset-0 bg-[#050505] px-[140px] py-[110px] font-terminal text-[40px] leading-[1.6] text-[#FBF5E7]">
       <div className="mb-10 flex items-center gap-4 text-[24px] text-[#FBF5E7]/40">
         <span className="h-[18px] w-[18px] rounded-full bg-[#F5BB03]" />
         <span className="h-[18px] w-[18px] rounded-full bg-[#0162C8]" />

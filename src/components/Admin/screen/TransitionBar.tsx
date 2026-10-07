@@ -16,7 +16,7 @@ export function TransitionBar({ view, actions }: { view: ObsView; actions: ObsAc
   const local = view.source === "local";
 
   return (
-    <div className="border-border bg-card flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center">
       <div className="flex flex-1 items-center gap-2">
         <Select disabled={!local} value={view.transition} onValueChange={(name) => void actions.setTransition(name)}>
           <SelectTrigger className="h-11 w-full sm:w-44">
@@ -46,7 +46,7 @@ export function TransitionBar({ view, actions }: { view: ObsView; actions: ObsAc
             }}
             onKeyDown={(event) => event.key === "Enter" && (event.target as HTMLInputElement).blur()}
           />
-          <span className="text-muted-foreground text-xs">ms</span>
+          <span className="text-xs text-muted-foreground">ms</span>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ export function TransitionBar({ view, actions }: { view: ObsView; actions: ObsAc
         </Button>
       </div>
       {!view.studioMode && view.connected && (
-        <p className="text-muted-foreground text-xs sm:hidden">Activá Estudio para preview, CUT y TAKE.</p>
+        <p className="text-xs text-muted-foreground sm:hidden">Activá Estudio para preview, CUT y TAKE.</p>
       )}
     </div>
   );

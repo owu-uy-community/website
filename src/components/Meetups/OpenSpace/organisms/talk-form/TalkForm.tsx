@@ -79,7 +79,7 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
           placeholder="¿De qué va la charla?"
         />
         <ReviewHint show={needsReview("title")} />
-        {formErrors.title && <p className="text-destructive text-sm">{formErrors.title.message}</p>}
+        {formErrors.title && <p className="text-sm text-destructive">{formErrors.title.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -99,7 +99,7 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
           <div className="flex flex-wrap gap-2">
             {originalSchedule && (
               <Button
-                className="text-muted-foreground hover:text-foreground h-11 w-11 sm:h-8 sm:w-8"
+                className="h-11 w-11 text-muted-foreground hover:text-foreground sm:h-8 sm:w-8"
                 aria-label="Restaurar horario original"
                 size="icon"
                 title="Restaurar horario original"
@@ -135,7 +135,7 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
               {aiSuggesting ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Sparkles className="text-primary h-3.5 w-3.5" />
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
               )}
               {aiSuggesting ? "Sugiriendo…" : "Sugerir con AI"}
             </Button>
@@ -143,7 +143,7 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
         </div>
 
         {showAdvanced && (
-          <div className="border-border bg-muted/30 space-y-2 rounded-md border p-3">
+          <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
             <Label className="text-sm" htmlFor="additionalContext">
               Contexto adicional para la AI (opcional)
             </Label>
@@ -155,7 +155,7 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
               value={additionalContext}
               onChange={(e) => setAdditionalContext(e.target.value)}
             />
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-muted-foreground">
               Ayuda a la AI a elegir el mejor horario y lugar para la charla.
             </p>
           </div>
@@ -179,9 +179,9 @@ export function TalkForm({ controller, note, rooms, roomsData, timeSlots }: Talk
       </div>
 
       {validationError && (
-        <div className="border-destructive/40 bg-destructive/10 flex items-start gap-2 rounded-md border px-3 py-2">
-          <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
-          <p className="text-foreground text-sm">{validationError}</p>
+        <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          <p className="text-sm text-foreground">{validationError}</p>
         </div>
       )}
     </form>

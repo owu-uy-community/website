@@ -150,7 +150,7 @@ export function TaskCard({ task, meId, overdue = false, onSetStatus, onJoin, onL
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {task.startTime && (
-              <span className="font-terminal text-xs font-semibold tabular-nums text-foreground">
+              <span className="font-terminal text-xs font-semibold text-foreground tabular-nums">
                 {task.startTime}
                 {task.endTime ? `–${task.endTime}` : ""}
               </span>
@@ -226,7 +226,7 @@ export function TaskCard({ task, meId, overdue = false, onSetStatus, onJoin, onL
             Instrucciones
           </button>
           {notesOpen && (
-            <p className="mt-1.5 whitespace-pre-line rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-1.5 rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed whitespace-pre-line text-muted-foreground">
               {task.notes}
             </p>
           )}

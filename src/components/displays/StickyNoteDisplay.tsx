@@ -210,9 +210,9 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
         {/* Animated Sparkles - Only when waiting */}
         {!selectedNote && (
           <>
-            <Sparkles className="absolute left-20 top-20 h-8 w-8 animate-pulse text-yellow-300" />
+            <Sparkles className="absolute top-20 left-20 h-8 w-8 animate-pulse text-yellow-300" />
             <Sparkles
-              className="absolute right-32 top-32 h-6 w-6 animate-bounce text-yellow-200"
+              className="absolute top-32 right-32 h-6 w-6 animate-bounce text-yellow-200"
               style={{ animationDelay: "0.5s" }}
             />
             <Sparkles
@@ -220,19 +220,19 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
               style={{ animationDelay: "1s" }}
             />
             <Sparkles
-              className="absolute bottom-20 right-20 h-5 w-5 animate-bounce text-yellow-300"
+              className="absolute right-20 bottom-20 h-5 w-5 animate-bounce text-yellow-300"
               style={{ animationDelay: "1.5s" }}
             />
             <Sparkles
-              className="absolute left-20 top-1/2 h-6 w-6 animate-pulse text-yellow-200"
+              className="absolute top-1/2 left-20 h-6 w-6 animate-pulse text-yellow-200"
               style={{ animationDelay: "2s" }}
             />
             <Sparkles
-              className="absolute right-20 top-1/2 h-8 w-8 animate-bounce text-yellow-400"
+              className="absolute top-1/2 right-20 h-8 w-8 animate-bounce text-yellow-400"
               style={{ animationDelay: "2.5s" }}
             />
             <Sparkles
-              className="absolute left-1/2 top-16 h-5 w-5 animate-pulse text-yellow-300"
+              className="absolute top-16 left-1/2 h-5 w-5 animate-pulse text-yellow-300"
               style={{ animationDelay: "0.8s" }}
             />
             <Sparkles
@@ -267,7 +267,7 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
           >
             {/* Dog ear fold */}
             <div
-              className="absolute bottom-0 right-0 h-32 w-32"
+              className="absolute right-0 bottom-0 h-32 w-32"
               style={{
                 background: "linear-gradient(135deg, transparent 50%, rgba(180, 150, 50, 0.3) 50%)",
                 clipPath: "polygon(100% 0, 100% 100%, 0 100%)",
@@ -276,7 +276,7 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
 
             {/* Real-time Update Indicator */}
             {isUpdating && (
-              <div className="absolute right-8 top-8 animate-pulse rounded-full bg-blue-500 px-6 py-4 text-white shadow-lg">
+              <div className="absolute top-8 right-8 animate-pulse rounded-full bg-blue-500 px-6 py-4 text-white shadow-lg">
                 <span className="text-xl font-bold">Actualizando...</span>
               </div>
             )}
@@ -286,7 +286,7 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
               {selectedNote ? (
                 <>
                   <h2
-                    className={`mb-2 text-6xl font-bold leading-tight text-gray-900 transition-all duration-300 ${
+                    className={`mb-2 text-6xl leading-tight font-bold text-gray-900 transition-all duration-300 ${
                       isUpdating ? "text-blue-900" : ""
                     } ${isCasting ? "text-green-900" : ""}`}
                   >
@@ -324,7 +324,7 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
 
             {/* Motivational Phrase - Only when waiting */}
             {!selectedNote && (
-              <div className="absolute bottom-2 left-0 right-0 px-4">
+              <div className="absolute right-0 bottom-2 left-0 px-4">
                 {/* Keyed so every phrase re-runs the entrance animation
                     (animate-fade-in never existed in the Tailwind config) */}
                 <p

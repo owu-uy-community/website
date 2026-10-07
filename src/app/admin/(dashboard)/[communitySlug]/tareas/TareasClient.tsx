@@ -31,7 +31,6 @@ import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group"
 import { toast } from "components/shared/ui/toast-utils";
 import { eventChannel } from "lib/realtime/channels";
 import { orpc } from "lib/orpc";
-import type { CommunityMember } from "lib/orpc/communities/schemas";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 
 /** Live clock, ticking twice a minute. */
@@ -52,7 +51,7 @@ interface TareasClientProps {
   canEdit: boolean;
   initialTasks: StaffTask[];
   initialAnnouncements: StaffAnnouncement[];
-  initialRoster: CommunityMember[];
+  initialRoster: RosterMember[];
 }
 
 export default function TareasClient({
@@ -393,7 +392,7 @@ export default function TareasClient({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <span className="font-terminal text-sm font-semibold tabular-nums text-foreground">{formatClock(now)}</span>
+          <span className="font-terminal text-sm font-semibold text-foreground tabular-nums">{formatClock(now)}</span>
           <RealtimeIndicator isConnected={isConnected} />
         </div>
       </div>
@@ -517,7 +516,7 @@ export default function TareasClient({
               {/* My next task */}
               {myNext && (
                 <div className="rounded-lg border border-primary/40 bg-primary/[0.05] p-3">
-                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-primary">
+                  <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-primary uppercase">
                     <UserRound className="h-3.5 w-3.5" />
                     Tu próxima tarea
                   </p>
@@ -563,7 +562,7 @@ export default function TareasClient({
                       key={lane.key}
                       className={cn("space-y-2", lane.span, lane.items.length === 0 && "hidden md:block")}
                     >
-                      <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                      <h3 className="text-xs font-medium tracking-widest text-muted-foreground uppercase">
                         {lane.title}
                       </h3>
                       {lane.items.length === 0 ? (
@@ -629,7 +628,7 @@ export default function TareasClient({
 
           {/* Announcements rail (desktop) */}
           <aside className="hidden lg:block">
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium tracking-widest text-muted-foreground uppercase">
               <Megaphone className="h-3.5 w-3.5" />
               Anuncios
             </h3>
@@ -642,7 +641,7 @@ export default function TareasClient({
         defaultDay={selectedDay}
         isSaving={createMutation.isPending || updateMutation.isPending}
         open={formOpen}
-        roster={roster as RosterMember[]}
+        roster={roster}
         task={editingTask}
         onOpenChange={(open) => {
           setFormOpen(open);

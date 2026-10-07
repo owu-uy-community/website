@@ -28,7 +28,12 @@ export const metadata: Metadata = {
     type: "website",
     images: [{ url: OG_IMAGE, width: 1800, height: 945, alt: "OWU CONF — 07.11.2026, Sinergia Faro, Montevideo" }],
   },
-  twitter: { card: "summary_large_image", title: "Quiero ser Sponsor | OWU CONF", description: DESCRIPTION, images: [OG_IMAGE] },
+  twitter: {
+    card: "summary_large_image",
+    title: "Quiero ser Sponsor | OWU CONF",
+    description: DESCRIPTION,
+    images: [OG_IMAGE],
+  },
 };
 
 const REASONS = [
@@ -54,7 +59,7 @@ export default function SponsorsFormPage() {
         <main className="mx-auto w-full max-w-[1440px] px-8 pt-16">
           <Reveal y={16}>
             <Link
-              className="font-display text-sm font-bold uppercase leading-none text-[#FBF5E7]/60 transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+              className="font-display text-sm leading-none font-bold text-[#FBF5E7]/60 uppercase transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
               href={INTERNAL_ROUTES.conf.current}
             >
               ← VOLVER A OWU CONF
@@ -74,13 +79,13 @@ export default function SponsorsFormPage() {
 
               <Reveal delay={0.12} y={24}>
                 <p className="mt-8 text-lg leading-relaxed text-[#FBF5E7]/90">
-                  OWU CONF es posible gracias a las empresas que impulsan los eventos de la comunidad. ¿Querés sumar
-                  la tuya?
+                  OWU CONF es posible gracias a las empresas que impulsan los eventos de la comunidad. ¿Querés sumar la
+                  tuya?
                 </p>
               </Reveal>
 
               <Reveal delay={0.24} y={20}>
-                <h2 className="mt-10 font-display text-xl font-bold uppercase leading-none text-[#FBF5E7] min-[1440px]:text-2xl">
+                <h2 className="mt-10 font-display text-xl leading-none font-bold text-[#FBF5E7] uppercase min-[1440px]:text-2xl">
                   ¿Por qué ser sponsor?
                 </h2>
               </Reveal>
@@ -103,15 +108,13 @@ export default function SponsorsFormPage() {
 
               <Reveal delay={0.42} y={20}>
                 <p className="mt-10 border-l-2 border-[#F5BB03] pl-5 text-base leading-7 text-[#FBF5E7]/70">
-                  Dejanos tus datos y te enviamos el brochure de sponsorship con los beneficios y todos los
-                  detalles.
+                  Dejanos tus datos y te enviamos el brochure de sponsorship con los beneficios y todos los detalles.
                 </p>
               </Reveal>
 
               <Reveal delay={0.48} y={18}>
-                <p className="mt-10 font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
-                  Aceptamos postulaciones hasta el{" "}
-                  <strong className="text-[#F5BB03]">15 de septiembre</strong>
+                <p className="mt-10 font-display text-xs leading-none font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
+                  Aceptamos postulaciones hasta el <strong className="text-[#F5BB03]">15 de septiembre</strong>
                 </p>
                 <Countdown className="mt-4" expiredLabel="CONVOCATORIA CERRADA" target={CONF_DATES.sponsorsDeadline} />
               </Reveal>

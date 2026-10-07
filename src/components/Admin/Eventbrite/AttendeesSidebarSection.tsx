@@ -64,7 +64,7 @@ export function AttendeesSidebarSection() {
                 <row.icon className="text-sidebar-foreground/60" size={14} />
                 <span className="text-sidebar-foreground/80">{row.label}</span>
               </div>
-              <Badge className="bg-transparent font-terminal tabular-nums text-foreground" variant="secondary">
+              <Badge className="bg-transparent font-terminal text-foreground tabular-nums" variant="secondary">
                 {displayData[row.key]}
               </Badge>
             </Link>

@@ -1,28 +1,18 @@
+import { COMMON_ERROR_STATUS_MAP, ORPCError } from "@orpc/server";
 import { NextResponse } from "next/server";
 
-import { auth } from "app/lib/auth";
-import { isSiteAdmin } from "app/lib/auth-helpers";
-import {
-  CommandSchema,
-  fireCue,
-  getObsStatus,
-  listCues,
-  loopAction,
-  releaseExecutor,
-  sendCommand,
-  stepCue,
-  type Command,
-} from "lib/orpc/obs-control";
+import type { Command } from "lib/orpc/obs-control/schemas";
+import { callerFor } from "lib/orpc/server";
 
 export const runtime = "nodejs";
 
 /**
  * Plain HTTP for things that cannot speak oRPC: Bitfocus Companion / Stream
- * Deck (Generic HTTP module), curl, shortcuts. Auth is the same session or
- * `x-api-key` header the API uses — never a query parameter: the key is a full
- * admin credential and URLs end up in access logs. Commands are queued for
- * the executor tab (202), the status endpoint is what Companion polls for
- * button feedback.
+ * Deck (Generic HTTP module), curl, shortcuts. Every path calls the same
+ * procedures as the site, with the same auth: a session or an `x-api-key`
+ * header — never a query parameter: the key is a full admin credential and
+ * URLs end up in access logs. Commands are queued for the executor tab (202),
+ * the status endpoint is what Companion polls for button feedback.
  *
  *   POST /api/obs/scene/{name}            program (studio off) / preview+take (studio on)
  *   POST /api/obs/preview/{name}
@@ -36,18 +26,13 @@ export const runtime = "nodejs";
  *   POST /api/obs/release/{executorId}    executor tab giving the seat up on pagehide (keepalive fetch)
  *   GET  /api/obs/status | /cues
  *
- * GET works for every command too (Companion's "Image from URL"/simple
- * triggers), `?instance=2` targets the second rig.
+ * Commands also work as GET with an `x-api-key` (Companion's simple
+ * triggers), but never with just a session cookie: a browser sends its
+ * cookies along with any link it follows. `?instance=2` targets the second rig.
  */
-async function resolveSession(request: Request) {
-  try {
-    return await auth.api.getSession({ headers: request.headers });
-  } catch (error) {
-    console.warn("[obs-http] Could not resolve a session:", error);
 
-    return null;
-  }
-}
+const READS = new Set(["status", "cues"]);
+const LOOP_ACTIONS = new Set(["play", "pause", "stop", "next", "prev"] as const);
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: { "cache-control": "no-store" } });
@@ -55,6 +40,7 @@ function json(body: unknown, status = 200) {
 
 const seg = (path: string[], index: number) => (path[index] ? decodeURIComponent(path[index]) : undefined);
 
+/** The command a path names: null for an unknown path, "bad" for a known one missing its argument. */
 function buildCommand(path: string[]): Command | null | "bad" {
   const [head] = path;
   const a = seg(path, 1);
@@ -86,19 +72,12 @@ function buildCommand(path: string[]): Command | null | "bad" {
   }
 }
 
-async function handle(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  const session = await resolveSession(request);
-  if (!session) return json({ ok: false, error: "unauthorized" }, 401);
-  if (!isSiteAdmin(session)) return json({ ok: false, error: "forbidden" }, 403);
-
-  const { path } = await params;
-  const url = new URL(request.url);
-  const instanceId = url.searchParams.get("instance") === "2" ? 2 : 1;
-  const source = `http:${session.user.name || session.user.id}`;
+async function run(path: string[], headers: Headers, instanceId: number) {
+  const api = callerFor(headers);
   const [head] = path;
 
   if (head === "status") {
-    const [status, cues] = await Promise.all([getObsStatus({ instanceId }), listCues({ instanceId })]);
+    const [status, cues] = await Promise.all([api.obsControl.status({ instanceId }), api.obsCue.list({ instanceId })]);
     const current = cues.find((cue) => cue.id === status.currentCueId) ?? null;
 
     return json({
@@ -108,48 +87,59 @@ async function handle(request: Request, { params }: { params: Promise<{ path: st
       cues: cues.map((cue) => ({ id: cue.id, name: cue.name, active: cue.id === status.currentCueId })),
     });
   }
-  if (head === "cues") return json({ ok: true, cues: await listCues({ instanceId }) });
+  if (head === "cues") return json({ ok: true, cues: await api.obsCue.list({ instanceId }) });
   if (head === "release") {
-    const executorId = seg(path, 1);
-    if (!executorId) return json({ ok: false, error: "missing executor" }, 400);
-
-    return json({ ok: true, status: await releaseExecutor({ instanceId, executorId }) });
+    return json({ ok: true, status: await api.obsControl.release({ instanceId, executorId: seg(path, 1) ?? "" }) });
   }
 
   if (head === "cue") {
-    const target = seg(path, 1);
-    if (!target) return json({ ok: false, error: "missing cue" }, 400);
+    const target = seg(path, 1) ?? "";
     const result =
       target === "next" || target === "prev"
-        ? await stepCue({ instanceId, direction: target }, source)
-        : await fireCue({ id: target }, source).catch(() => null);
-    if (!result) return json({ ok: false, error: "cue not found" }, 404);
+        ? await api.obsCue.step({ instanceId, direction: target })
+        : await api.obsCue.fire({ id: target });
+    if (!result) return json({ ok: false, error: "El guion está vacío" }, 404);
 
     return json({ ok: true, cue: { id: result.cue.id, name: result.cue.name }, id: result.commandId }, 202);
   }
 
   if (head === "loop") {
     const action = seg(path, 1);
-    if (!(action === "play" || action === "pause" || action === "stop" || action === "next" || action === "prev"))
-      return json({ ok: false, error: "unknown loop action" }, 400);
-    const state = await loopAction({ instanceId, action });
+    if (!LOOP_ACTIONS.has(action as never)) return json({ ok: false, error: "Acción de loop desconocida" }, 400);
+    const state = await api.obsQueue.loop({ instanceId, action: action as "play" });
 
     return json({ ok: true, isPlaying: state.isPlaying, currentItemIndex: state.currentItemIndex });
   }
 
   const command = buildCommand(path);
-  if (command === null) return json({ ok: false, error: "unknown command" }, 404);
-  if (command === "bad") return json({ ok: false, error: "bad command" }, 400);
-  const parsed = CommandSchema.safeParse(command);
-  if (!parsed.success) return json({ ok: false, error: "bad command" }, 400);
-
-  const sent = await sendCommand({ instanceId, ...parsed.data }, source);
+  if (command === null) return json({ ok: false, error: "Comando desconocido" }, 404);
+  if (command === "bad") return json({ ok: false, error: "Al comando le falta un dato" }, 400);
+  const sent = await api.obsControl.send({ instanceId, ...command });
 
   // 409 lets a Companion feedback turn the button red when nobody can execute.
   return json(
     { ok: sent.executorOnline, id: sent.id, executorOnline: sent.executorOnline },
     sent.executorOnline ? 202 : 409
   );
+}
+
+async function handle(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path } = await params;
+  if (request.method === "GET" && !READS.has(path[0]) && !request.headers.has("x-api-key")) {
+    return json({ ok: false, error: "Los comandos van por POST (o por GET con x-api-key)" }, 405);
+  }
+
+  try {
+    return await run(path, request.headers, new URL(request.url).searchParams.get("instance") === "2" ? 2 : 1);
+  } catch (error) {
+    // Procedures only throw typed errors (crashes are already reported and sanitized).
+    if (error instanceof ORPCError) {
+      const status = COMMON_ERROR_STATUS_MAP[error.code as keyof typeof COMMON_ERROR_STATUS_MAP] ?? 500;
+
+      return json({ ok: false, code: error.code, error: error.message }, status);
+    }
+    throw error;
+  }
 }
 
 export const GET = handle;

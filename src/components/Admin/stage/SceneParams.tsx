@@ -83,7 +83,7 @@ function ListField({
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <Label className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">
+        <Label className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
           {label} <span className="font-normal">· {rows.length}</span>
         </Label>
         <Button className="h-6 px-2 text-xs" size="sm" variant="ghost" onClick={() => insert(rows.length)}>
@@ -111,7 +111,7 @@ function ListField({
         ))}
       </Reorder.Group>
       {rows.length === 0 && (
-        <p className="text-muted-foreground border-border rounded-md border border-dashed p-2 text-center text-xs">
+        <p className="rounded-md border border-dashed border-border p-2 text-center text-xs text-muted-foreground">
           Sin ítems. «Agregar» suma el primero.
         </p>
       )}
@@ -142,7 +142,7 @@ function ItemRow({
 
   return (
     <Reorder.Item
-      className="bg-muted/40 hover:bg-muted/70 flex flex-wrap items-center gap-1 rounded-md border px-1 py-1 transition-colors"
+      className="flex flex-wrap items-center gap-1 rounded-md border bg-muted/40 px-1 py-1 transition-colors hover:bg-muted/70"
       dragControls={controls}
       dragListener={false}
       value={row}
@@ -151,7 +151,7 @@ function ItemRow({
     >
       <button
         aria-label="Arrastrar para reordenar"
-        className="text-muted-foreground hover:text-foreground cursor-grab touch-none px-0.5 active:cursor-grabbing"
+        className="cursor-grab touch-none px-0.5 text-muted-foreground hover:text-foreground active:cursor-grabbing"
         type="button"
         onPointerDown={(event) => controls.start(event)}
       >
@@ -179,7 +179,7 @@ function ItemRow({
       />
       <button
         aria-label="Quitar ítem"
-        className="text-muted-foreground hover:text-destructive px-0.5"
+        className="px-0.5 text-muted-foreground hover:text-destructive"
         type="button"
         onClick={onRemove}
       >
@@ -187,7 +187,7 @@ function ItemRow({
       </button>
       {detailed && (
         <Input
-          className="text-muted-foreground h-7 w-full text-xs"
+          className="h-7 w-full text-xs text-muted-foreground"
           placeholder="Detalle (segunda línea)"
           value={row.detail}
           onChange={(event) => onChange("detail", event.target.value)}
@@ -283,7 +283,7 @@ export function SceneParams({
     <div className="flex h-[22rem] flex-col">
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
         {keys.length === 0 && (
-          <p className="text-muted-foreground flex h-full items-center justify-center text-center text-sm">
+          <p className="flex h-full items-center justify-center text-center text-sm text-muted-foreground">
             Esta escena no tiene parámetros.
           </p>
         )}
@@ -295,7 +295,7 @@ export function SceneParams({
 
           if (typeof fallback === "boolean")
             return (
-              <label key={key} className="bg-muted/40 flex items-center gap-3 rounded-md px-2 py-1.5 text-sm">
+              <label key={key} className="flex items-center gap-3 rounded-md bg-muted/40 px-2 py-1.5 text-sm">
                 <Switch checked={Boolean(value)} onCheckedChange={(next) => set(key, next, true)} />
                 {label}
               </label>
@@ -317,7 +317,7 @@ export function SceneParams({
           return (
             <div key={key} className="space-y-1">
               <Label
-                className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase"
+                className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
                 htmlFor={`param-${key}`}
               >
                 {label}
@@ -340,13 +340,13 @@ export function SceneParams({
                   }
                 />
               )}
-              {error && <p className="text-destructive text-xs">{error}</p>}
+              {error && <p className="text-xs text-destructive">{error}</p>}
             </div>
           );
         })}
       </div>
 
-      <div className="text-muted-foreground mt-2 flex items-center gap-2 border-t pt-2 text-xs">
+      <div className="mt-2 flex items-center gap-2 border-t pt-2 text-xs text-muted-foreground">
         {pending ? (
           <>
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Aplicando…

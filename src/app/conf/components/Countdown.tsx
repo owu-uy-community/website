@@ -58,13 +58,7 @@ type CountdownProps = {
  * client: zeros on the server pass, real values from the mount effect onwards. The
  * surrounding <Reveal> fade masks the swap.
  */
-export default function Countdown({
-  target,
-  expiredLabel,
-  size = "sm",
-  fullWidth = false,
-  className,
-}: CountdownProps) {
+export default function Countdown({ target, expiredLabel, size = "sm", fullWidth = false, className }: CountdownProps) {
   const [remaining, setRemaining] = useState<Remaining | null>(null);
   const sizes = SIZES[size];
 
@@ -81,11 +75,7 @@ export default function Countdown({
   if (remaining?.expired) {
     return (
       <p
-        className={classNames(
-          "font-display font-bold uppercase leading-none text-[#F5BB03]",
-          sizes.expired,
-          className
-        )}
+        className={classNames("font-display font-bold uppercase leading-none text-[#F5BB03]", sizes.expired, className)}
       >
         {expiredLabel}
       </p>

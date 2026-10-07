@@ -29,7 +29,7 @@ function PersonRow({
       <span className={cn("min-w-0 flex-1 truncate text-xs", muted ? "text-muted-foreground" : "text-foreground")}>
         {name}
       </span>
-      {meta && <span className="shrink-0 font-terminal text-[10px] tabular-nums text-muted-foreground">{meta}</span>}
+      {meta && <span className="shrink-0 font-terminal text-[10px] text-muted-foreground tabular-nums">{meta}</span>}
     </li>
   );
 }
@@ -80,7 +80,7 @@ export function AckList({ announcement }: { announcement: StaffAnnouncement }) {
       {open && (
         <div className="mt-1.5 space-y-3 rounded-md border border-border bg-muted/30 px-3 py-2">
           <div>
-            <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-emerald-500">
+            <p className="flex items-center gap-1.5 text-[10px] font-medium tracking-wide text-emerald-500 uppercase">
               <Check className="h-3 w-3" />
               Recibieron ({acks.length})
             </p>
@@ -97,7 +97,7 @@ export function AckList({ announcement }: { announcement: StaffAnnouncement }) {
 
           {pending.length > 0 && (
             <div>
-              <p className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <p className="flex items-center gap-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
                 <Clock className="h-3 w-3" />
                 Faltan ({pending.length})
               </p>

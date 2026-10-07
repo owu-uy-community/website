@@ -62,7 +62,7 @@ export function TalkFormModal({
           onEscapeKeyDown={(e) => busy && e.preventDefault()}
           onInteractOutside={(e) => busy && e.preventDefault()}
         >
-          <DialogHeader className="border-border shrink-0 border-b px-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 pb-4 sm:px-6 sm:pr-14">
+          <DialogHeader className="shrink-0 border-b border-border px-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 pb-4 sm:px-6 sm:pr-14">
             <DialogTitle>{note?.id ? "Editar charla" : "Nueva charla"}</DialogTitle>
             <DialogDescription>
               {note?.id
@@ -117,7 +117,7 @@ export function TalkFormModal({
             </Tabs>
           </div>
 
-          <DialogFooter className="border-border shrink-0 flex-row flex-wrap items-center border-t px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:justify-between sm:px-6">
+          <DialogFooter className="shrink-0 flex-row flex-wrap items-center border-t border-border px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:justify-between sm:px-6">
             <div>
               {onDelete && note?.id && (
                 <Button

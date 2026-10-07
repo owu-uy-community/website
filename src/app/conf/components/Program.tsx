@@ -108,7 +108,7 @@ function OrigamiConfetti({ burst }: { burst: number }) {
       {CONFETTI.map((piece, i) => (
         <span
           key={i}
-          className={`animate-agenda-confetti absolute block ${piece.cls}`}
+          className={`absolute block animate-agenda-confetti ${piece.cls}`}
           style={
             {
               "--dx": `${piece.dx}px`,
@@ -152,12 +152,12 @@ function TopicNote() {
       type="button"
       onClick={() => setI((n) => (n + 1) % TOPICS.length)}
     >
-      <span className="font-display block text-[10px] font-bold tracking-[0.12em] text-black/45 uppercase">
+      <span className="block font-display text-[10px] font-bold tracking-[0.12em] text-black/45 uppercase">
         Se propusieron en la edición pasada
       </span>
       <span
         key={i}
-        className="animate-agenda-note font-display mt-1.5 block min-h-[2.75rem] text-[15px] leading-snug font-semibold text-black motion-reduce:animate-none"
+        className="mt-1.5 block min-h-[2.75rem] animate-agenda-note font-display text-[15px] leading-snug font-semibold text-black motion-reduce:animate-none"
       >
         {TOPICS[i]}
       </span>
@@ -382,7 +382,7 @@ export default function Program() {
                   {!end && <OrigamiConfetti burst={burst} />}
                 </span>
 
-                <span className="font-display col-start-2 row-start-1 text-[13px] leading-none font-bold text-[#F5BB03] tabular-nums min-[1440px]:text-lg sm:text-base">
+                <span className="col-start-2 row-start-1 font-display text-[13px] leading-none font-bold text-[#F5BB03] tabular-nums min-[1440px]:text-lg sm:text-base">
                   {start}
                   {end ? (
                     <>
@@ -406,8 +406,8 @@ export default function Program() {
                   >
                     {title}
                     {isLive && (
-                      <span className="font-display ml-2.5 inline-flex items-center gap-1.5 align-middle text-[11px] font-bold tracking-[0.12em] text-[#F5BB03] uppercase">
-                        <span className="animate-agenda-now block h-1.5 w-1.5 rounded-full bg-[#F5BB03] motion-reduce:animate-none" />
+                      <span className="ml-2.5 inline-flex items-center gap-1.5 align-middle font-display text-[11px] font-bold tracking-[0.12em] text-[#F5BB03] uppercase">
+                        <span className="block h-1.5 w-1.5 animate-agenda-now rounded-full bg-[#F5BB03] motion-reduce:animate-none" />
                         Ahora
                       </span>
                     )}

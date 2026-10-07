@@ -15,7 +15,7 @@ import { asc, desc, eq } from "drizzle-orm";
 
 import { db, pool } from "../src/lib/db";
 import { events, rooms as roomsTable, schedules as schedulesTable, tracks as tracksTable } from "../src/lib/db/schema";
-import { buildCandidates, findFreeSpot, type Candidate } from "../src/lib/orpc/ocr/services/find-spot";
+import { buildCandidates, findFreeSpot, type Candidate } from "../src/lib/orpc/ocr/slot";
 
 interface Talk {
   title: string;
@@ -312,16 +312,20 @@ async function main() {
 
   if (flag("llm")) {
     const llm: Policy = async (candidates, talk, placed) => {
-      const result = await findFreeSpot({
-        title: talk.title,
-        speaker: talk.speaker ?? "",
-        needsTV: talk.needsTV,
-        needsWhiteboard: talk.needsWhiteboard,
-        existingNotes: placed,
-        roomsWithResources: rooms,
-        availableRooms: rooms.map((r) => r.name),
-        availableTimeSlots: timeSlots,
-      });
+      const result = await findFreeSpot(
+        {
+          title: talk.title,
+          speaker: talk.speaker ?? "",
+          needsTV: talk.needsTV,
+          needsWhiteboard: talk.needsWhiteboard,
+        },
+        {
+          existingNotes: placed,
+          roomsWithResources: rooms,
+          availableRooms: rooms.map((r) => r.name),
+          availableTimeSlots: timeSlots,
+        }
+      );
 
       return (
         candidates.find((c) => c.room === result.suggestedRoom && c.timeSlot === result.suggestedTimeSlot) ??
@@ -339,9 +343,7 @@ async function main() {
 
   const pad = Math.max(...runs.map((r) => r.label.length));
 
-  console.log(
-    `${"policy".padEnd(pad)}   mean    max   spread  first-pick  issues\n${"-".repeat(pad + 40)}`
-  );
+  console.log(`${"policy".padEnd(pad)}   mean    max   spread  first-pick  issues\n${"-".repeat(pad + 40)}`);
 
   for (const run of runs) {
     const result = score(run.placed, timeSlots, similarity);

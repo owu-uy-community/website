@@ -1,10 +1,11 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { getBoard } from "../lib/board";
+import { resolveActiveEvent } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
 import { requireStaff } from "../lib/staff";
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+/** Base64 adds a third: this keeps the photo under the 4 MB the site accepts in one request. */
+const MAX_IMAGE_BYTES = 2_900_000;
 
 const MEDIA_TYPES: Record<string, string> = {
   jpg: "image/jpeg",
@@ -43,30 +44,16 @@ export default defineTool({
       );
     }
     if (bytes.byteLength > MAX_IMAGE_BYTES) {
-      throw new Error("La foto pesa más de 8MB; pedí que la manden más liviana.");
+      throw new Error("La foto pesa más de 2,9 MB; pedí que la manden más liviana.");
     }
 
-    const board = await getBoard();
+    const event = await resolveActiveEvent();
     const imageData = `data:${mediaTypeFor(imagePath)};base64,${Buffer.from(bytes).toString("base64")}`;
 
+    // The site reads the event's board itself.
     const result = await owuApi().ocr.processImageWithSuggestion({
+      eventId: event.id,
       imageData,
-      existingNotes: board.cards.map((card) => ({
-        id: card.id,
-        title: card.title,
-        speaker: card.speaker,
-        room: card.room ?? card.roomId,
-        timeSlot: card.timeSlot ?? card.scheduleId,
-        needsTV: card.needsTV,
-        needsWhiteboard: card.needsWhiteboard,
-      })),
-      roomsWithResources: board.rooms.map((room) => ({
-        name: room.name,
-        hasTV: room.hasTV ?? false,
-        hasWhiteboard: room.hasWhiteboard ?? false,
-      })),
-      availableRooms: board.rooms.map((room) => room.name),
-      availableTimeSlots: board.schedules.map((schedule) => `${schedule.startTime} - ${schedule.endTime}`),
       ...(additionalContext ? { additionalContext } : {}),
     });
 

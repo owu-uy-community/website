@@ -125,9 +125,12 @@ export const useOpenSpaceNotesORPC = ({
         // No toast here: the talk form surfaces create errors inline.
       },
       onSuccess: async (createdNote, _variables, context) => {
-        // Swap the temp id for the real row so the card doesn't remount.
+        // Swap the temp id for the real row so the card doesn't remount. The server's own
+        // CARD_CREATE may have landed first: never keep the real row twice.
         queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) =>
-          oldNotes.map((note) => (note.id === context?.optimisticId ? createdNote : note))
+          oldNotes
+            .filter((note) => note.id !== createdNote.id)
+            .map((note) => (note.id === context?.optimisticId ? createdNote : note))
         );
         toast.success("Charla creada", `"${createdNote.title}" ya está en la grilla.`);
         await broadcastCardCreate(createdNote);

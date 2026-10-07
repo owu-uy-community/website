@@ -137,10 +137,10 @@ export default function OpenSpaceClient({
   // Restore the persisted cast state so the toggle reflects reality after reloads
   useEffect(() => {
     client.cast
-      .getState({})
+      .getState({ eventId })
       .then((state) => setHighlightedNoteId(state.trackId))
       .catch(() => undefined);
-  }, []);
+  }, [eventId]);
 
   // Resource warning for drag-and-drop (the move is NOT applied until confirmed)
   const [resourceWarning, setResourceWarning] = useState<{
@@ -415,11 +415,11 @@ export default function OpenSpaceClient({
       try {
         // Toggle: if already highlighted, clear it
         if (highlightedNoteId === note.id) {
-          await client.cast.setHighlightedNote({ trackId: null });
+          await client.cast.setHighlightedNote({ eventId, trackId: null });
           setHighlightedNoteId(null);
           toast.info("Pantalla limpiada", "La pantalla de notas quedó libre.");
         } else {
-          await client.cast.setHighlightedNote({ trackId: note.id });
+          await client.cast.setHighlightedNote({ eventId, trackId: note.id });
           setHighlightedNoteId(note.id);
           toast.success("Enviado a pantalla", `"${note.title}" se está mostrando en la pantalla de notas.`);
         }
@@ -428,7 +428,7 @@ export default function OpenSpaceClient({
         toast.error("No se pudo enviar", "Probá nuevamente en unos segundos.");
       }
     },
-    [highlightedNoteId]
+    [eventId, highlightedNoteId]
   );
 
   const filteredNotes = useMemo(() => filterNotes(notes, searchTerm), [notes, searchTerm]);
@@ -468,8 +468,8 @@ export default function OpenSpaceClient({
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Open Space</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Open Space</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             {eventName}
             <span className="hidden md:inline"> — arrastrá las tarjetas para organizar la grilla</span>
             <span className="mt-1 block md:hidden">
@@ -495,14 +495,14 @@ export default function OpenSpaceClient({
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <SearchInput value={searchTerm} onChange={setSearchTerm} />
         <div className="flex flex-wrap items-center gap-2 [&>button]:h-11 md:[&>button]:h-9">
-          <div className="border-border flex h-11 flex-1 items-center gap-2 rounded-md border px-3 md:h-9 md:flex-none">
+          <div className="flex h-11 flex-1 items-center gap-2 rounded-md border border-border px-3 md:h-9 md:flex-none">
             <Switch
               checked={autoHighlightEnabled}
               disabled={openSpaceLoading || updateOpenSpaceMutation.isPending}
               id="auto-highlight"
               onCheckedChange={() => handleToggleAutoHighlight()}
             />
-            <Label className="text-muted-foreground cursor-pointer text-xs" htmlFor="auto-highlight">
+            <Label className="cursor-pointer text-xs text-muted-foreground" htmlFor="auto-highlight">
               Resaltado automático
             </Label>
           </div>
@@ -525,7 +525,7 @@ export default function OpenSpaceClient({
       </div>
 
       {rooms.length > 1 && (
-        <p className="text-muted-foreground flex items-center gap-2 text-xs md:hidden" id="board-scroll-hint">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground md:hidden" id="board-scroll-hint">
           <ArrowLeftRight aria-hidden className="h-4 w-4 shrink-0" />
           Deslizá la grilla para ver todas las salas.
         </p>
@@ -573,7 +573,7 @@ export default function OpenSpaceClient({
           <div
             aria-label="Grilla de charlas"
             aria-describedby={rooms.length > 1 ? "board-scroll-hint" : undefined}
-            className="openspace-surface border-border bg-card max-h-[65dvh] min-w-0 overflow-auto rounded-lg border md:max-h-[calc(100dvh-13.5rem)]"
+            className="openspace-surface max-h-[65dvh] min-w-0 overflow-auto rounded-lg border border-border bg-card md:max-h-[calc(100dvh-13.5rem)]"
             role="region"
             tabIndex={0}
           >
@@ -603,8 +603,8 @@ export default function OpenSpaceClient({
             {/* Rooms but no slots yet: the columns are already visible above,
                 so ask for the missing rows right where they would appear. */}
             {timeSlots.length === 0 ? (
-              <div className="border-border/60 flex flex-col items-center gap-3 border-t px-4 py-12 text-center">
-                <p className="text-muted-foreground text-sm">
+              <div className="flex flex-col items-center gap-3 border-t border-border/60 px-4 py-12 text-center">
+                <p className="text-sm text-muted-foreground">
                   Falta el horario: los slots son las filas donde se ubican las charlas.
                 </p>
                 <Button size="sm" onClick={handleAddScheduleClick}>

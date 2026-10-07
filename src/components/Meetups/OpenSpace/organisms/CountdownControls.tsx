@@ -35,10 +35,10 @@ export function CountdownControls({ eventId }: { eventId: string }) {
   const handlePlayPause = async () => {
     try {
       if (state.isRunning) {
-        await updateState("pause");
+        await updateState({ action: "pause" });
         toast.info("Temporizador pausado");
       } else {
-        await updateState("start");
+        await updateState({ action: "start" });
         toast.info("Temporizador iniciado");
       }
     } catch {
@@ -48,7 +48,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
 
   const handleReset = async () => {
     try {
-      await updateState("reset");
+      await updateState({ action: "reset" });
       toast.info("Temporizador reiniciado");
     } catch {
       toast.error("Error", "No se pudo reiniciar el temporizador");
@@ -64,7 +64,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
         return;
       }
 
-      await updateState("setDuration", totalSeconds);
+      await updateState({ action: "setDuration", durationSeconds: totalSeconds });
       toast.success("Duración establecida", `Temporizador configurado a ${formatTime(totalSeconds)}`);
     } catch {
       toast.error("Error", "No se pudo establecer la duración");
@@ -89,7 +89,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
         target.setDate(target.getDate() + 1);
       }
 
-      await updateState("setTargetTime", undefined, target.toISOString());
+      await updateState({ action: "setTargetTime", targetTime: target.toISOString() });
 
       const secondsUntil = Math.floor((target.getTime() - now.getTime()) / 1000);
       toast.success(
@@ -105,7 +105,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
     // Read the target state BEFORE the update so the toast can't lie.
     const willBeEnabled = !state.soundEnabled;
     try {
-      await updateState("toggleSound");
+      await updateState({ action: "toggleSound" });
       toast.info(
         willBeEnabled ? "Sonido activado" : "Sonido desactivado",
         willBeEnabled ? "El temporizador va a sonar al terminar" : "El temporizador termina en silencio"
@@ -124,15 +124,15 @@ export function CountdownControls({ eventId }: { eventId: string }) {
         </Button>
       </DialogTrigger>
       <DialogContent className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-md sm:p-0">
-        <DialogHeader className="border-border shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:pr-14">
+        <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-14 sm:px-6 sm:pr-14">
           <DialogTitle>Temporizador</DialogTitle>
           <DialogDescription>Controla la cuenta regresiva de la pantalla del evento.</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
           {/* Current Timer Display */}
-          <div className="border-border bg-muted/40 rounded-lg border p-6 text-center">
-            <div className="font-terminal text-primary text-5xl font-bold tabular-nums">
+          <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
+            <div className="font-terminal text-5xl font-bold text-primary tabular-nums">
               {formatTime(state.remainingSeconds)}
             </div>
           </div>
@@ -167,9 +167,9 @@ export function CountdownControls({ eventId }: { eventId: string }) {
           </div>
 
           {/* Set Timer */}
-          <div className="border-border space-y-4 rounded-lg border p-4">
+          <div className="space-y-4 rounded-lg border border-border p-4">
             <div className="space-y-3">
-              <Label className="text-muted-foreground text-xs" htmlFor="countdown-minutes">
+              <Label className="text-xs text-muted-foreground" htmlFor="countdown-minutes">
                 Por duración
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -202,13 +202,13 @@ export function CountdownControls({ eventId }: { eventId: string }) {
 
             <div className="relative">
               <Separator />
-              <span className="bg-popover text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-2 text-xs uppercase">
+              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-popover px-2 text-xs text-muted-foreground uppercase">
                 o
               </span>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-muted-foreground text-xs" htmlFor="countdown-target">
+              <Label className="text-xs text-muted-foreground" htmlFor="countdown-target">
                 Hasta una hora específica
               </Label>
               <Input

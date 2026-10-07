@@ -23,16 +23,16 @@ export default function CallForProposalsBanner() {
             <div className="min-w-0 flex-1">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h3 className="text-balance text-sm font-bold text-black md:text-base">
+                  <h3 className="text-sm font-bold text-balance text-black md:text-base">
                     ¡Call for Proposals Abierto!
                   </h3>
-                  <p className="text-balance text-xs text-black/80 md:text-sm">
+                  <p className="text-xs text-balance text-black/80 md:text-sm">
                     Enviá tu propuesta y compartí lo que sabés con la comunidad.{" "}
                     <strong>Fecha límite: 31 de Julio</strong>
                   </p>
                 </div>
                 <Link href={INTERNAL_ROUTES.meetups.callForProposals} className="hidden lg:block">
-                  <Button size="sm" className="whitespace-nowrap bg-black font-semibold text-white hover:bg-gray-800">
+                  <Button size="sm" className="bg-black font-semibold whitespace-nowrap text-white hover:bg-gray-800">
                     <Search className="mr-1.5 h-4 w-4" strokeWidth={2} />
                     Quiero saber más
                   </Button>

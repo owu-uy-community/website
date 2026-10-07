@@ -49,16 +49,7 @@ async function main() {
     console.log(`ℹ️  Bot user ${BOT.id} already exists`);
   }
 
-  // `auth.api` loses the apiKey plugin's endpoint types (the config object
-  // carries a runtime-only option behind @ts-expect-error, which widens the
-  // plugin generics). The endpoint exists — name it explicitly.
-  type CreateApiKey = (opts: {
-    body: { userId: string; name?: string; prefix?: string };
-  }) => Promise<{ id: string; key: string }>;
-
-  const createApiKey = (auth.api as unknown as { createApiKey: CreateApiKey }).createApiKey;
-
-  const result = await createApiKey({
+  const result = await auth.api.createApiKey({
     body: {
       userId: BOT.id,
       name: argValue("--name") ?? "owy",

@@ -29,7 +29,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
         />
         <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         {post.tags.length > 0 ? (
-          <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
             {post.tags.slice(0, 2).map((tag) => (
               <span
                 key={tag}
@@ -46,7 +46,7 @@ export default function PostCard({ post }: { post: BlogPost }) {
           <time dateTime={post.date}>{formatDate(post.date)}</time>
           <span> · {post.readingMinutes} min de lectura</span>
         </p>
-        <h3 className="font-title text-lg font-bold leading-snug tracking-tight text-white transition-colors group-hover:text-yellow-400">
+        <h3 className="font-title text-lg leading-snug font-bold tracking-tight text-white transition-colors group-hover:text-yellow-400">
           {post.title}
         </h3>
         {post.description ? (

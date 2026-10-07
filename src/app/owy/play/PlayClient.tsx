@@ -69,7 +69,7 @@ export default function PlayClient() {
   const interactive = state && (INTERACTIVE_SCENES as readonly string[]).includes(state.scene);
 
   return (
-    <main className="font-display min-h-dvh bg-black px-5 pt-6 pb-16 text-[#FBF5E7]">
+    <main className="min-h-dvh bg-black px-5 pt-6 pb-16 font-display text-[#FBF5E7]">
       <header className="flex items-center justify-between">
         <img alt="OWU CONF" className="h-8" src="/images/logos/conf.webp" />
         <span className="text-xs font-semibold tracking-[0.3em] text-[#F5BB03] uppercase">Participá</span>
@@ -1191,7 +1191,7 @@ function TypeRace({ phrase, send }: { phrase: string; send: (v: string) => Promi
   return (
     <>
       <Prompt>Tipeá esto sin errores</Prompt>
-      <p className="font-terminal mt-4 rounded-2xl bg-[#FBF5E7]/10 p-4 text-lg break-all text-[#F5BB03]">{phrase}</p>
+      <p className="mt-4 rounded-2xl bg-[#FBF5E7]/10 p-4 font-terminal text-lg break-all text-[#F5BB03]">{phrase}</p>
       <input
         className={`${field} mt-3`}
         maxLength={24}
@@ -1203,7 +1203,7 @@ function TypeRace({ phrase, send }: { phrase: string; send: (v: string) => Promi
         autoCapitalize="off"
         autoComplete="off"
         autoCorrect="off"
-        className={`${field} font-terminal mt-3 ${text && !phrase.startsWith(text) ? "border-red-500" : ""}`}
+        className={`${field} mt-3 font-terminal ${text && !phrase.startsWith(text) ? "border-red-500" : ""}`}
         disabled={ms !== null}
         onChange={(e) => change(e.target.value)}
         placeholder="El cronómetro arranca con la primera tecla"

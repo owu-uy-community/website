@@ -31,7 +31,7 @@ export function SceneThumbnail({ name, className }: { name: string; className?: 
       {src ? (
         <img alt="" className="h-full w-full object-cover" draggable={false} src={src} />
       ) : (
-        <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
           <Monitor className="h-6 w-6 opacity-40" />
         </div>
       )}
@@ -90,7 +90,7 @@ export function SceneBus({
 
   if (!view.connected) {
     return (
-      <div className="border-border text-muted-foreground flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed text-sm">
+      <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-sm text-muted-foreground">
         <MonitorOff className="h-6 w-6 opacity-50" />
         Sin conexión a OBS: conectate desde esta pestaña o abrí el panel en la máquina de OBS.
       </div>
@@ -99,7 +99,7 @@ export function SceneBus({
 
   return (
     <div className="space-y-2">
-      <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
         <span>
           {view.studioMode ? (
             <>
@@ -174,7 +174,7 @@ export function SceneBus({
                     "flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold",
                     position
                       ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                      : "text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent focus-visible:opacity-100"
                   )}
                   title={position ? `#${position} en el loop · click para quitar` : "Agregar al loop"}
                   type="button"

@@ -25,7 +25,7 @@ import { SOUNDS } from "lib/launchpad/sounds";
 import type { ObsView } from "lib/obs/actions";
 import { orpc } from "lib/orpc/client";
 import { CUE_COLORS, type CreateCueInput, type CueColor } from "lib/orpc/obs-control/schemas";
-import type { Cue } from "lib/orpc/obs-control/services";
+import type { Cue } from "lib/orpc/obs-control/schemas";
 import { SCENES, SCENE_GROUPS, isSceneId, parseSceneParams, type SceneId } from "lib/owy-stage/scenes";
 
 const NONE = "__none__";
@@ -166,9 +166,9 @@ export function CueEditor({
                   key={option}
                   aria-label={option}
                   className={cn(
-                    "ring-offset-background h-7 w-7 rounded-full transition-transform",
+                    "h-7 w-7 rounded-full ring-offset-background transition-transform",
                     CUE_COLOR_CLASS[option],
-                    color === option ? "ring-foreground scale-110 ring-2 ring-offset-2" : "opacity-60 hover:opacity-100"
+                    color === option ? "scale-110 ring-2 ring-foreground ring-offset-2" : "opacity-60 hover:opacity-100"
                   )}
                   type="button"
                   onClick={() => setColor(color === option ? null : option)}
@@ -177,8 +177,8 @@ export function CueEditor({
             </div>
           </div>
 
-          <fieldset className="border-border space-y-3 rounded-lg border p-3">
-            <legend className="text-muted-foreground px-1 text-xs font-semibold tracking-wider uppercase">OBS</legend>
+          <fieldset className="space-y-3 rounded-lg border border-border p-3">
+            <legend className="px-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">OBS</legend>
             <div className="space-y-1.5">
               <Label>Escena</Label>
               <Select value={obsScene || NONE} onValueChange={(value) => setObsScene(value === NONE ? "" : value)}>
@@ -195,7 +195,7 @@ export function CueEditor({
                 </SelectContent>
               </Select>
               {!view.connected && (
-                <p className="text-muted-foreground text-xs">Conectate a OBS para elegir de la lista.</p>
+                <p className="text-xs text-muted-foreground">Conectate a OBS para elegir de la lista.</p>
               )}
             </div>
             <div className="grid grid-cols-[1fr_7rem] gap-3">
@@ -235,8 +235,8 @@ export function CueEditor({
             </div>
           </fieldset>
 
-          <fieldset className="border-border space-y-3 rounded-lg border p-3">
-            <legend className="text-muted-foreground px-1 text-xs font-semibold tracking-wider uppercase">
+          <fieldset className="space-y-3 rounded-lg border border-border p-3">
+            <legend className="px-1 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
               Pantalla Owy
             </legend>
             <Select
@@ -264,10 +264,10 @@ export function CueEditor({
               <div className="flex items-start gap-3">
                 <img
                   alt=""
-                  className="border-border w-32 shrink-0 rounded border bg-black object-cover"
+                  className="w-32 shrink-0 rounded border border-border bg-black object-cover"
                   src={`/owy-stage/thumbs/${stageScene}.jpg`}
                 />
-                <p className="text-muted-foreground text-xs">{SCENES[stageScene].description}</p>
+                <p className="text-xs text-muted-foreground">{SCENES[stageScene].description}</p>
               </div>
             )}
             {paramKeys.map((key) => (

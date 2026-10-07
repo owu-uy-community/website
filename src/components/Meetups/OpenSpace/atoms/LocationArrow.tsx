@@ -31,7 +31,7 @@ export const LocationArrow = React.memo(({ color, locationName }: LocationArrowP
       >
         <span
           key={locationName}
-          className="font-display text-3xl font-bold uppercase tracking-tight text-white duration-300 animate-in fade-in sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]"
+          className="font-display text-3xl font-bold tracking-tight text-white uppercase duration-300 animate-in fade-in sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]"
         >
           {locationName}
         </span>

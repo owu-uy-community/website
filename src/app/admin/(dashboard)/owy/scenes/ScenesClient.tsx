@@ -200,8 +200,8 @@ export default function ScenesClient() {
     <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-display text-foreground text-2xl font-bold tracking-tight">Escenas Owy</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Escenas Owy</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Lo que muestra la pantalla grande. Cada escena es una página que OBS embebe como browser source (1920×1080).
           </p>
         </div>
@@ -251,7 +251,7 @@ export default function ScenesClient() {
           </CardHeader>
           <CardContent className="space-y-3">
             <ScaledFrame src="/owy/stage" title="Al aire" />
-            <div className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
               <label className="flex items-center gap-2">
                 <Switch checked={transparent} onCheckedChange={setTransparent} />
                 Fondo transparente en las URLs (overlay sobre cámara)
@@ -408,7 +408,7 @@ export default function ScenesClient() {
               {spotify.data?.account ? (
                 <>
                   <Badge variant="secondary">Conectado · {spotify.data.account}</Badge>
-                  <Button size="sm" variant="outline" onClick={() => disconnectSpotify.mutate({})}>
+                  <Button size="sm" variant="outline" onClick={() => disconnectSpotify.mutate()}>
                     Desconectar
                   </Button>
                 </>
@@ -418,7 +418,7 @@ export default function ScenesClient() {
                 </Button>
               ) : null}
               {spotify.data && !spotify.data.configured && (
-                <span className="text-muted-foreground text-xs">
+                <span className="text-xs text-muted-foreground">
                   Falta SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET en el env (redirect URI: {origin}
                   /api/spotify/callback).
                 </span>

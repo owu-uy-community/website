@@ -365,7 +365,7 @@ export function Equalizer({ params }: SceneProps<"equalizer">) {
   return (
     <>
       <canvas ref={canvas} className="absolute inset-0 bg-black" height={H} width={W} />
-      <p className="font-terminal absolute top-[50px] left-[80px] text-[30px] tracking-[0.3em] text-[#FBF5E7]/70 uppercase">
+      <p className="absolute top-[50px] left-[80px] font-terminal text-[30px] tracking-[0.3em] text-[#FBF5E7]/70 uppercase">
         ♪ {params.title}
       </p>
     </>
@@ -444,7 +444,7 @@ export function HelloWorld() {
           {index + 1} / {HELLOS.length}
         </span>
       </div>
-      <pre className="font-terminal absolute top-[240px] right-[140px] left-[140px] text-[52px] leading-[1.35] break-all whitespace-pre-wrap text-[#FBF5E7]">
+      <pre className="absolute top-[240px] right-[140px] left-[140px] font-terminal text-[52px] leading-[1.35] break-all whitespace-pre-wrap text-[#FBF5E7]">
         {parts.map((part, i) => (
           <span key={i} className={part.startsWith("Hello") ? "text-[#F5BB03]" : undefined}>
             {part}
@@ -481,7 +481,7 @@ export function Bsod({ params }: SceneProps<"bsod">) {
         </div>
         <div className="text-[30px] leading-[1.5] text-[#FBF5E7]/85">
           <p>Para más información sobre este problema, escaneá el código o preguntale a Owy.</p>
-          <p className="font-terminal mt-6">Código de detención: {params.code}</p>
+          <p className="mt-6 font-terminal">Código de detención: {params.code}</p>
         </div>
       </div>
     </div>

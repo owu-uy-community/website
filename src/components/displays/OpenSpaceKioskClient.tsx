@@ -128,7 +128,7 @@ export default function OpenSpaceKioskClient({
     <div ref={screenRef} className="relative h-screen w-full overflow-hidden bg-black">
       {fullscreenSupported ? (
         <FullscreenButton
-          className={`absolute bottom-3 right-3 z-20 bg-black/60 backdrop-blur transition-opacity duration-500 focus-visible:opacity-100 ${
+          className={`absolute right-3 bottom-3 z-20 bg-black/60 backdrop-blur transition-opacity duration-500 focus-visible:opacity-100 ${
             pointerIdle ? "opacity-0" : "opacity-100"
           }`}
           isFullscreen={isFullscreen}

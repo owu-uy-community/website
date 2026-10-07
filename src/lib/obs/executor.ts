@@ -7,7 +7,7 @@ import { toast } from "components/shared/ui/toast-utils";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client as rpc, orpc } from "lib/orpc/client";
 import type { Command } from "lib/orpc/obs-control/schemas";
-import type { Cue, ObsStatus, SerializedCommand } from "lib/orpc/obs-control/services";
+import type { Cue, ObsStatus, SerializedCommand } from "lib/orpc/obs-control/schemas";
 import { obsControlChannel } from "lib/realtime/channels";
 
 import { getObsClient, useObs } from "./client";

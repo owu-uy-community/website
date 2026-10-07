@@ -119,7 +119,7 @@ export function Stage({
             style={{ background: bg === "black" ? BRAND.black : "transparent" }}
           >
             <div
-              className="font-display absolute top-1/2 left-1/2 overflow-hidden text-[#FBF5E7]"
+              className="absolute top-1/2 left-1/2 overflow-hidden font-display text-[#FBF5E7]"
               style={{ height: size.h, width: size.w, transform: `translate(-50%, -50%) scale(${scale})` }}
             >
               {ready && children}
@@ -181,7 +181,7 @@ function HalfCircle({ fill }: { fill: string }) {
 function Shape({ wrap, delay, drift, children }: { wrap: string; delay: number; drift: boolean; children: ReactNode }) {
   return (
     <span className={`absolute ${wrap}`}>
-      <span className="animate-assemble block h-full w-full" style={{ animationDelay: `${delay}s` }}>
+      <span className="block h-full w-full animate-assemble" style={{ animationDelay: `${delay}s` }}>
         <span
           className={`block h-full w-full ${drift ? "animate-drift" : ""}`}
           style={{ animationDelay: `${delay + 0.3}s` }}

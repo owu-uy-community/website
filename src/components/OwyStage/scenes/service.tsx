@@ -423,7 +423,7 @@ export function Feedback({ params }: SceneProps<"feedback">) {
         <p className="mt-10 text-[48px] leading-[1.2] font-semibold text-balance text-[#FBF5E7]/85">
           {params.subtitle}
         </p>
-        <p className="font-terminal mt-8 text-[32px] text-[#F5BB03]">{params.url.replace(/^https?:\/\//, "")}</p>
+        <p className="mt-8 font-terminal text-[32px] text-[#F5BB03]">{params.url.replace(/^https?:\/\//, "")}</p>
       </div>
       <div className="absolute top-[340px] right-[140px]">
         <QrCode size={440} value={params.url} />

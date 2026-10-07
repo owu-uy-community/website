@@ -36,9 +36,9 @@ export function OCRCapture({
   onRetakeImage,
 }: OCRCaptureProps) {
   return (
-    <div className="border-border bg-muted/30 rounded-lg border p-4">
+    <div className="rounded-lg border border-border bg-muted/30 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-foreground text-sm font-semibold">Capturar la tarjeta (OCR)</h3>
+        <h3 className="text-sm font-semibold text-foreground">Capturar la tarjeta (OCR)</h3>
         {capturedImage && (
           <Button size="sm" type="button" variant="outline" onClick={onResetOCR}>
             <RotateCcw className="h-3.5 w-3.5" />
@@ -47,7 +47,7 @@ export function OCRCapture({
         )}
       </div>
 
-      <div className="bg-muted/60 relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md">
+      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md bg-muted/60">
         {cameraActive ? (
           <>
             <video ref={videoRef} autoPlay className="absolute inset-0 h-full w-full object-cover" playsInline />
@@ -61,7 +61,7 @@ export function OCRCapture({
               Encuadrá la tarjeta dentro del marco
             </p>
             {permissionMessage && (
-              <div className="text-foreground absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-sm">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-sm text-foreground">
                 <p>{permissionMessage}</p>
               </div>
             )}
@@ -70,8 +70,8 @@ export function OCRCapture({
           <Image fill alt="Tarjeta capturada" className="object-cover" src={capturedImage} />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2">
-            <Camera className="text-muted-foreground/60 h-10 w-10" />
-            <p className="text-muted-foreground text-sm">Capturá la tarjeta de la charla</p>
+            <Camera className="h-10 w-10 text-muted-foreground/60" />
+            <p className="text-sm text-muted-foreground">Capturá la tarjeta de la charla</p>
           </div>
         )}
       </div>
@@ -108,15 +108,15 @@ export function OCRCapture({
       </div>
 
       {isProcessingImage && (
-        <div className="border-primary/30 bg-primary/[0.06] text-foreground mt-3 rounded-md border p-3 text-center text-sm">
+        <div className="mt-3 rounded-md border border-primary/30 bg-primary/[0.06] p-3 text-center text-sm text-foreground">
           Leyendo la tarjeta…
         </div>
       )}
 
       {ocrError && (
-        <div className="border-destructive/40 bg-destructive/10 mt-3 flex items-start gap-2 rounded-md border px-3 py-2">
-          <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
-          <p className="text-foreground text-sm">{ocrError}</p>
+        <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+          <p className="text-sm text-foreground">{ocrError}</p>
         </div>
       )}
     </div>

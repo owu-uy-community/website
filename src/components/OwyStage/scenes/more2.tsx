@@ -5,7 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { client } from "lib/orpc";
-import type { StageSpeaker } from "lib/orpc/owy-stage/services";
+import type { StageSpeaker } from "lib/orpc/owy-stage/schemas";
 import type { SpotifyTrack } from "lib/owy-stage/spotify";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { roomIconFor } from "lib/rooms/icons";
@@ -197,7 +197,7 @@ export function Links({ params }: SceneProps<"links">) {
           >
             <QrCode size={300} value={link.url} />
             <p className="mt-5 text-[34px] font-extrabold uppercase">{link.label}</p>
-            <p className="font-terminal mt-1 max-w-[300px] truncate text-[20px] text-[#FBF5E7]/55">
+            <p className="mt-1 max-w-[300px] truncate font-terminal text-[20px] text-[#FBF5E7]/55">
               {link.url.replace(/^https?:\/\/(www\.)?/, "")}
             </p>
           </m.div>
@@ -557,7 +557,7 @@ export function NowPlaying({ params }: SceneProps<"now-playing">) {
           )}
         </div>
         {track && (
-          <div className="font-terminal mt-3 flex justify-between text-[24px] text-[#FBF5E7]/50 tabular-nums">
+          <div className="mt-3 flex justify-between font-terminal text-[24px] text-[#FBF5E7]/50 tabular-nums">
             <span>{formatTime(Math.floor((progress * track.durationMs) / 1000))}</span>
             <span>{formatTime(Math.floor(track.durationMs / 1000))}</span>
           </div>
@@ -620,7 +620,7 @@ function Flap({
       {shown.split("").map((ch, i) => (
         <span
           key={i}
-          className={`font-terminal relative flex h-[76px] w-[42px] items-center justify-center text-[42px] font-bold ${FLAP_TONE[tone]}`}
+          className={`relative flex h-[76px] w-[42px] items-center justify-center font-terminal text-[42px] font-bold ${FLAP_TONE[tone]}`}
         >
           {ch}
           <span className="pointer-events-none absolute inset-x-0 top-1/2 h-[2px] bg-black" />

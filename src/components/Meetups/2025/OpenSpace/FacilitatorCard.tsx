@@ -46,7 +46,7 @@ export default function FacilitatorCard({
 
         {/* Facilitator Name */}
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
-          <h4 className="text-center font-black uppercase tracking-wide text-yellow-400">
+          <h4 className="text-center font-black tracking-wide text-yellow-400 uppercase">
             <div className="text-sm">
               {firstname} {lastname}
             </div>
@@ -75,7 +75,7 @@ export default function FacilitatorCard({
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`Perfil de LinkedIn de ${fullName}`}
-        className="block w-full min-w-[230px] max-w-[300px] lg:max-w-[240px]"
+        className="block w-full max-w-[300px] min-w-[230px] lg:max-w-[240px]"
       >
         {cardContent}
       </a>

@@ -19,21 +19,21 @@ export function TimeSlotLabel({ timeSlot, isHighlighted = false, onEdit, onToggl
   const [start, end] = timeSlot.split(" - ");
 
   return (
-    <div className="group/time border-border/60 bg-card sticky left-0 z-10 h-32 border-r border-b">
+    <div className="group/time sticky left-0 z-10 h-32 border-r border-b border-border/60 bg-card">
       {/* Star tint as an overlay so the sticky background stays opaque. */}
-      {isHighlighted && <div aria-hidden className="bg-primary/[0.08] pointer-events-none absolute inset-0" />}
+      {isHighlighted && <div aria-hidden className="pointer-events-none absolute inset-0 bg-primary/[0.08]" />}
 
       <button
         aria-label={`Editar horario ${timeSlot}`}
-        className="hover:bg-muted/40 flex h-full w-full flex-col items-center justify-center px-1 pt-6 transition-colors md:pt-0"
+        className="flex h-full w-full flex-col items-center justify-center px-1 pt-6 transition-colors hover:bg-muted/40 md:pt-0"
         type="button"
         onClick={onEdit}
       >
-        <span className="font-terminal text-foreground relative text-xs font-medium tabular-nums md:text-sm">
+        <span className="relative font-terminal text-xs font-medium text-foreground tabular-nums md:text-sm">
           {start}
         </span>
         {end && (
-          <span className="font-terminal text-muted-foreground relative text-[10px] tabular-nums md:text-xs">
+          <span className="relative font-terminal text-[10px] text-muted-foreground tabular-nums md:text-xs">
             {end}
           </span>
         )}
@@ -44,7 +44,7 @@ export function TimeSlotLabel({ timeSlot, isHighlighted = false, onEdit, onToggl
           className={cn(
             "absolute top-0.5 right-0.5 h-8 w-8 transition-opacity md:h-6 md:w-6",
             isHighlighted
-              ? "text-primary hover:text-primary opacity-100"
+              ? "text-primary opacity-100 hover:text-primary"
               : "text-muted-foreground opacity-100 group-hover/time:opacity-100 focus-visible:opacity-100 md:opacity-0"
           )}
           size="icon"

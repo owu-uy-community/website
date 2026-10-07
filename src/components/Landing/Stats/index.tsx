@@ -31,7 +31,7 @@ export default function Stats({ stats }: StatsProps) {
       <div className="grid w-full place-items-center gap-10 xl:grid-cols-[1fr_550px] xl:gap-8">
         <img
           alt="Ilustración de un carpincho"
-          className="w-full min-w-[280px] max-w-[600px] self-center object-contain"
+          className="w-full max-w-[600px] min-w-[280px] self-center object-contain"
           src="/icons/community.svg"
         />
         {stats ? (

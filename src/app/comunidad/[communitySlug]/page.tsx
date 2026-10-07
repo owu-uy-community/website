@@ -37,7 +37,7 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
         </header>
 
         <section className="mt-12">
-          <h2 className="flex items-center gap-2 text-sm font-medium uppercase tracking-widest text-zinc-500">
+          <h2 className="flex items-center gap-2 text-sm font-medium tracking-widest text-zinc-500 uppercase">
             <CalendarDays aria-hidden className="h-4 w-4" />
             Eventos
           </h2>

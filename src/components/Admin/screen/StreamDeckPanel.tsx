@@ -43,7 +43,7 @@ export function StreamDeckPanel() {
         <ol className="list-decimal space-y-2 pl-5">
           <li>
             En el servidor:{" "}
-            <code className="bg-muted font-terminal rounded px-1 text-xs">
+            <code className="rounded bg-muted px-1 font-terminal text-xs">
               pnpm owy:key -- --name &quot;stream deck&quot;
             </code>{" "}
             imprime la clave una sola vez.
@@ -51,7 +51,7 @@ export function StreamDeckPanel() {
           <li>
             En Companion: <b>Connections → Generic: HTTP</b>, Base URL{" "}
             <button
-              className="bg-muted font-terminal hover:text-primary rounded px-1 text-xs"
+              className="rounded bg-muted px-1 font-terminal text-xs hover:text-primary"
               type="button"
               onClick={() => copy(base)}
             >
@@ -62,20 +62,20 @@ export function StreamDeckPanel() {
           <li>
             En cada botón: acción <b>POST</b>, URL = la ruta de la tabla, Headers{" "}
             <button
-              className="bg-muted font-terminal hover:text-primary rounded px-1 text-xs"
+              className="rounded bg-muted px-1 font-terminal text-xs hover:text-primary"
               type="button"
               onClick={() => copy('{"x-api-key":"TU_CLAVE"}')}
             >
               {'{"x-api-key":"TU_CLAVE"}'}
             </button>
-            , Body <code className="bg-muted font-terminal rounded px-1 text-xs">{"{}"}</code>. La clave va siempre en
+            , Body <code className="rounded bg-muted px-1 font-terminal text-xs">{"{}"}</code>. La clave va siempre en
             el header, nunca en la URL (quedaría en los logs).
           </li>
           <li>
             Feedback: un botón con <b>GET status</b> cada 2 s, &quot;JSON response → variable&quot;, y feedbacks por{" "}
-            <code className="bg-muted font-terminal rounded px-1 text-xs">$(obs:programScene)</code>,{" "}
-            <code className="bg-muted font-terminal rounded px-1 text-xs">streaming</code>,{" "}
-            <code className="bg-muted font-terminal rounded px-1 text-xs">currentCue.name</code>.
+            <code className="rounded bg-muted px-1 font-terminal text-xs">$(obs:programScene)</code>,{" "}
+            <code className="rounded bg-muted px-1 font-terminal text-xs">streaming</code>,{" "}
+            <code className="rounded bg-muted px-1 font-terminal text-xs">currentCue.name</code>.
           </li>
           <li>
             Los comandos responden <b>202</b> cuando esta pestaña (el ejecutor) los va a correr y <b>409</b> si no hay
@@ -100,7 +100,7 @@ export function StreamDeckPanel() {
           </Button>
         </div>
         {probe && (
-          <pre className="border-border font-terminal max-h-64 overflow-auto rounded-lg border bg-black/40 p-3 text-xs">
+          <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-black/40 p-3 font-terminal text-xs">
             {probe}
           </pre>
         )}
@@ -108,9 +108,9 @@ export function StreamDeckPanel() {
       <table className="w-full text-sm">
         <tbody>
           {ENDPOINTS.map(([path, description]) => (
-            <tr key={path} className="border-border/60 border-b">
-              <td className="font-terminal py-1.5 pr-3 align-top text-xs">{path}</td>
-              <td className="text-muted-foreground py-1.5">{description}</td>
+            <tr key={path} className="border-b border-border/60">
+              <td className="py-1.5 pr-3 align-top font-terminal text-xs">{path}</td>
+              <td className="py-1.5 text-muted-foreground">{description}</td>
             </tr>
           ))}
         </tbody>

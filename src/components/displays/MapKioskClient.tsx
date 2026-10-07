@@ -61,7 +61,7 @@ export default function MapKioskClient({ eventId }: { eventId: string }) {
       />
 
       {/* Map Container */}
-      <div className="absolute bottom-0 left-0 right-0 top-[120px] z-10 flex flex-col items-center justify-start p-4 sm:top-[150px] sm:p-6 md:p-8">
+      <div className="absolute top-[120px] right-0 bottom-0 left-0 z-10 flex flex-col items-center justify-start p-4 sm:top-[150px] sm:p-6 md:p-8">
         <MemoizedMap event={eventProp} events={events} scene={MAP_KIOSK_CONFIG.SCENE} />
       </div>
 

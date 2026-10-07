@@ -1,11 +1,7 @@
-"use server";
-
-import { fetchEpgServer } from "components/Meetups/2024/OpenSpace/helpers/common";
+import epg from "components/Meetups/2024/OpenSpace/helpers/epg_server";
 
 import OpenSpaceClient from "./component";
 
 export default async function OpenSpaceAgendaServer() {
-  const epg = await fetchEpgServer();
-
-  return <OpenSpaceClient initialEpg={epg} />;
+  return <OpenSpaceClient initialEpg={await epg()} />;
 }

@@ -110,7 +110,7 @@ export function AISuggestion({
             <ChevronLeft className="h-4 w-4" />
             Anterior
           </Button>
-          <span className="font-terminal text-xs tabular-nums text-muted-foreground">
+          <span className="font-terminal text-xs text-muted-foreground tabular-nums">
             {currentHistoryIndex + 1} / {suggestionHistory.length}
           </span>
           <Button

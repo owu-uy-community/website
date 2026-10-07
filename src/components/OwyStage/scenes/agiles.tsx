@@ -635,7 +635,7 @@ export function AgilesProgram({ params }: SceneProps<"agiles-program">) {
               transition={{ duration: 0.5, delay: 0.2 + i * 0.05, ease: EASE_OUT }}
             >
               <span
-                className="font-display shrink-0 text-center font-extrabold tabular-nums"
+                className="shrink-0 text-center font-display font-extrabold tabular-nums"
                 style={{
                   width: Math.round((wide ? 320 : 290) * u * fit),
                   padding: `${Math.round(11 * u * fit)}px 0`,
@@ -648,7 +648,7 @@ export function AgilesProgram({ params }: SceneProps<"agiles-program">) {
                 {item.end ? `${item.start} - ${item.end}` : item.start}
               </span>
               <span
-                className="font-display shrink-0 truncate leading-tight font-extrabold uppercase"
+                className="shrink-0 truncate font-display leading-tight font-extrabold uppercase"
                 style={{ width: Math.round((wide ? 880 : 540) * u * fit), fontSize: hero(36 * fit, 0.045 * fit) }}
               >
                 {item.title}
@@ -664,7 +664,7 @@ export function AgilesProgram({ params }: SceneProps<"agiles-program">) {
               </span>
               {isNow && (
                 <span
-                  className="font-display shrink-0 rounded-full font-extrabold tracking-[0.2em] uppercase"
+                  className="shrink-0 rounded-full font-display font-extrabold tracking-[0.2em] uppercase"
                   style={{
                     background: AGILES.yellow,
                     color: AGILES.navy,

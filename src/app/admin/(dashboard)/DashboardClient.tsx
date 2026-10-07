@@ -3,7 +3,7 @@
 import type React from "react";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -76,7 +76,7 @@ function Stat({
   return (
     <div className="flex flex-col gap-1 px-5 py-4">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <span className="font-terminal text-3xl font-semibold tabular-nums leading-none text-foreground">{value}</span>
+      <span className="font-terminal text-3xl leading-none font-semibold text-foreground tabular-nums">{value}</span>
       {detail ? <span className="mt-0.5 text-xs text-muted-foreground">{detail}</span> : null}
       {children}
     </div>
@@ -110,7 +110,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardClient() {
-  const { selected } = useSelectedEvent();
+  const { selected, isLoading: eventsLoading } = useSelectedEvent();
   const boardHref = selected
     ? scopedAdminHref(selected.communitySlug, "/admin/openspace", selected.slug)
     : "/admin/openspace";
@@ -123,7 +123,7 @@ export default function DashboardClient() {
     isRefetching,
   } = useQuery(
     orpc.dashboard.getStats.queryOptions({
-      input: {},
+      input: selected ? { eventId: selected.id } : skipToken,
       staleTime: 30_000,
       refetchInterval: 60_000,
     })
@@ -154,7 +154,7 @@ export default function DashboardClient() {
                   {status.text}
                 </Badge>
               </>
-            ) : isLoading ? (
+            ) : isLoading || eventsLoading ? (
               <Skeleton className="h-4 w-48" />
             ) : (
               <span>Sin evento configurado</span>
@@ -162,7 +162,7 @@ export default function DashboardClient() {
           </div>
         </div>
         {event?.startDate ? (
-          <p className="font-terminal text-xs tabular-nums text-muted-foreground">
+          <p className="font-terminal text-xs text-muted-foreground tabular-nums">
             {format(event.startDate, "d MMM yyyy", { locale: es })}
             {event.endDate && event.endDate.toDateString() !== event.startDate.toDateString()
               ? ` — ${format(event.endDate, "d MMM yyyy", { locale: es })}`
@@ -184,8 +184,10 @@ export default function DashboardClient() {
             </Button>
           </CardContent>
         </Card>
-      ) : isLoading || !stats ? (
-        <DashboardSkeleton />
+      ) : !stats ? (
+        selected || eventsLoading ? (
+          <DashboardSkeleton />
+        ) : null
       ) : (
         <>
           <Card>
@@ -272,7 +274,7 @@ export default function DashboardClient() {
               <CardContent className="flex h-[calc(100%-5.5rem)] flex-col justify-between gap-4">
                 {nowBlock ? (
                   <div className="space-y-2">
-                    <p className="font-terminal text-2xl tabular-nums text-foreground">
+                    <p className="font-terminal text-2xl text-foreground tabular-nums">
                       {nowBlock.startTime} – {nowBlock.endTime}
                     </p>
                     <p className="text-sm text-muted-foreground">{nowBlock.name}</p>

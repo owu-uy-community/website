@@ -463,7 +463,7 @@ export default function LaunchpadClient() {
               value={[volume]}
               onValueChange={(value) => setVolume(value[0])}
             />
-            <span className="min-w-[3ch] font-terminal text-sm tabular-nums text-muted-foreground">{volume}%</span>
+            <span className="min-w-[3ch] font-terminal text-sm text-muted-foreground tabular-nums">{volume}%</span>
           </div>
           <Button size="sm" variant={isMuted ? "destructive" : "outline"} onClick={toggleMute}>
             {isMuted ? <VolumeX /> : <Volume2 />}
@@ -481,7 +481,7 @@ export default function LaunchpadClient() {
           return (
             <Card
               key={button.id}
-              className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-accent focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-95 ${
+              className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden active:scale-95 ${
                 isPlaying
                   ? "border-primary bg-accent shadow-lg shadow-primary/20"
                   : "border-border hover:border-muted-foreground/40"
@@ -518,8 +518,8 @@ export default function LaunchpadClient() {
                 {/* Playing Indicator */}
                 {isPlaying && (
                   <>
-                    <div className="absolute right-2 top-2 h-2 w-2 animate-ping rounded-full bg-primary" />
-                    <div className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
+                    <div className="absolute top-2 right-2 h-2 w-2 animate-ping rounded-full bg-primary" />
+                    <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />
                     {!isOutputDevice && (
                       <div className="pointer-events-none absolute inset-0 animate-pulse rounded-lg border-2 border-primary" />
                     )}
@@ -528,7 +528,7 @@ export default function LaunchpadClient() {
 
                 {/* Controller Mode Indicator */}
                 {!isOutputDevice && !isPlaying && (
-                  <div className="absolute right-1.5 top-1.5 rounded-full bg-muted p-0.5 sm:right-2 sm:top-2 sm:p-1">
+                  <div className="absolute top-1.5 right-1.5 rounded-full bg-muted p-0.5 sm:top-2 sm:right-2 sm:p-1">
                     <Radio className="h-2.5 w-2.5 text-muted-foreground sm:h-3 sm:w-3" />
                   </div>
                 )}

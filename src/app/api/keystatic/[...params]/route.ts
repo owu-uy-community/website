@@ -19,8 +19,6 @@ async function rejectUnauthorized(): Promise<Response | null> {
 
   const session = await auth.api.getSession({ headers: await headers() });
 
-  // @ts-expect-error - role is defined in auth config additionalFields,
-  // better-auth type definitions are broken for this use case
   if (!session || session.user.role !== "admin") {
     return new Response("Unauthorized", { status: 401 });
   }

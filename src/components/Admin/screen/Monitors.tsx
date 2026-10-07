@@ -37,7 +37,7 @@ function Monitor({
       {image ? (
         <img alt={scene} className="h-full w-full object-contain" src={image} />
       ) : (
-        <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+        <div className="flex h-full w-full items-center justify-center text-muted-foreground">
           {scene ? (
             <span className="line-clamp-2 px-4 pt-4 text-center text-lg font-bold text-white/80">{scene}</span>
           ) : (

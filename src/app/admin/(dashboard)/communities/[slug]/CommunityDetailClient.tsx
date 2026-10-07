@@ -423,7 +423,7 @@ export default function CommunityDetailClient({ slug }: { slug: string }) {
                               <p className="font-terminal text-xs text-muted-foreground">{event.slug}</p>
                             </Link>
                           </TableCell>
-                          <TableCell className="font-terminal text-xs tabular-nums text-muted-foreground">
+                          <TableCell className="font-terminal text-xs text-muted-foreground tabular-nums">
                             {format(new Date(event.startDate), "d MMM yyyy", { locale: es })}
                           </TableCell>
                           <TableCell>

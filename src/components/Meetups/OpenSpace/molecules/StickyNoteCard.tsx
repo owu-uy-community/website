@@ -132,11 +132,11 @@ const StickyNoteCardComponent = ({
     >
       <StickyNoteSurface
         className={cn(
-          "animate-in fade-in duration-200",
+          "duration-200 animate-in fade-in",
           onCast && "pt-8 md:pt-3",
           !hidden && "cursor-grab active:cursor-grabbing",
-          isCast && "ring-primary ring-offset-background ring-2 ring-offset-2",
-          wasJustUpdated && !isCast && "ring-primary/60 ring-2"
+          isCast && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+          wasJustUpdated && !isCast && "ring-2 ring-primary/60"
         )}
         color={color}
         noteId={note.id}
@@ -145,7 +145,7 @@ const StickyNoteCardComponent = ({
         title={note.title}
       >
         {isSwapPreview && (
-          <span className="bg-primary text-primary-foreground absolute -top-1.5 -left-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full shadow-md">
+          <span className="absolute -top-1.5 -left-1.5 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
             <ArrowLeftRight className="h-3.5 w-3.5" />
           </span>
         )}

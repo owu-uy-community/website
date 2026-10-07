@@ -234,9 +234,9 @@ export function ScheduleFormModal({
     <>
       <Dialog open={open} onOpenChange={handleModalClose}>
         <DialogContent className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-md sm:p-0">
-          <DialogHeader className="border-border shrink-0 border-b px-4 py-4 pr-14 sm:px-6 sm:pr-14">
+          <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-14 sm:px-6 sm:pr-14">
             <DialogTitle className="flex items-center gap-2">
-              <Clock className="text-muted-foreground h-4 w-4" />
+              <Clock className="h-4 w-4 text-muted-foreground" />
               {title}
             </DialogTitle>
             <DialogDescription>{description}</DialogDescription>
@@ -254,7 +254,7 @@ export function ScheduleFormModal({
                     {...register("startTime")}
                     className="font-terminal tabular-nums [&::-webkit-calendar-picker-indicator]:invert"
                   />
-                  {formErrors.startTime && <p className="text-destructive text-sm">{formErrors.startTime.message}</p>}
+                  {formErrors.startTime && <p className="text-sm text-destructive">{formErrors.startTime.message}</p>}
                 </div>
 
                 <div className="min-w-0 space-y-2">
@@ -265,15 +265,15 @@ export function ScheduleFormModal({
                     {...register("endTime")}
                     className="font-terminal tabular-nums [&::-webkit-calendar-picker-indicator]:invert"
                   />
-                  {formErrors.endTime && <p className="text-destructive text-sm">{formErrors.endTime.message}</p>}
+                  {formErrors.endTime && <p className="text-sm text-destructive">{formErrors.endTime.message}</p>}
                 </div>
               </div>
 
               {/* Warning about tracks in edit mode */}
               {isEditMode && hasTracksInSlot && (
-                <div className="border-primary/30 bg-primary/[0.06] flex items-start gap-2 rounded-md border px-3 py-2">
-                  <AlertTriangle className="text-primary mt-0.5 h-4 w-4 shrink-0" />
-                  <p className="text-foreground text-sm">
+                <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/[0.06] px-3 py-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  <p className="text-sm text-foreground">
                     Este bloque tiene charlas asignadas: al cambiar el horario se mueven todas al nuevo bloque.
                   </p>
                 </div>
@@ -281,13 +281,13 @@ export function ScheduleFormModal({
 
               {/* Error message */}
               {formErrors.root && (
-                <div className="border-destructive/40 bg-destructive/10 flex items-start gap-2 rounded-md border px-3 py-2">
-                  <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
-                  <p className="text-foreground text-sm">{formErrors.root.message}</p>
+                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <p className="text-sm text-foreground">{formErrors.root.message}</p>
                 </div>
               )}
             </div>
-            <DialogFooter className="border-border shrink-0 flex-row flex-wrap items-center border-t px-4 py-3 sm:justify-between sm:px-6">
+            <DialogFooter className="shrink-0 flex-row flex-wrap items-center border-t border-border px-4 py-3 sm:justify-between sm:px-6">
               <div>
                 {isEditMode && onDelete && (
                   <Button

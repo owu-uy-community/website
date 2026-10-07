@@ -173,10 +173,13 @@ class RealtimeClient {
 
     const delay = Math.min(RECONNECT_BASE_MS * 2 ** this.reconnectAttempt, RECONNECT_MAX_MS);
     this.reconnectAttempt += 1;
-    this.reconnectTimer = setTimeout(() => {
-      this.reconnectTimer = null;
-      this.ensureConnected();
-    }, delay + Math.random() * 250);
+    this.reconnectTimer = setTimeout(
+      () => {
+        this.reconnectTimer = null;
+        this.ensureConnected();
+      },
+      delay + Math.random() * 250
+    );
   }
 
   private startHeartbeat(): void {

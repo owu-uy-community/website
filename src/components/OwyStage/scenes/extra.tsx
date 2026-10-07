@@ -93,7 +93,7 @@ export function RoomsNow({ eventId }: SceneProps<"rooms-now">) {
         <Rise className="text-[64px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
           {current ? "Ahora en cada sala" : next ? "Próximo bloque" : "Así cerró el open space"}
         </Rise>
-        <p className="font-terminal pb-2 text-[36px] text-[#FBF5E7]/60 tabular-nums">{now}</p>
+        <p className="pb-2 font-terminal text-[36px] text-[#FBF5E7]/60 tabular-nums">{now}</p>
       </div>
       <div
         className="absolute inset-x-[80px] top-[200px] grid gap-[20px]"
@@ -234,7 +234,7 @@ export function Quote({ params }: SceneProps<"quote">) {
       <div key={params.text} className="absolute inset-x-[220px] top-1/2 -translate-y-1/2">
         <m.span
           animate={{ opacity: 1, y: 0 }}
-          className="font-display block text-[260px] leading-[0.6] text-[#F5BB03]"
+          className="block font-display text-[260px] leading-[0.6] text-[#F5BB03]"
           initial={{ opacity: 0, y: -30 }}
           transition={{ duration: 0.6, ease: EASE_OUT }}
         >

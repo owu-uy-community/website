@@ -26,10 +26,10 @@ export default function Event({ name, title, datetime, end_datetime, event_url }
             className="hidden shrink-0 flex-col items-center justify-center rounded-lg border border-zinc-600 px-2 py-1.5 text-center capitalize sm:flex sm:min-h-[56px] sm:min-w-[56px]"
             dateTime={datetime}
           >
-            <span className="text-xs font-medium uppercase tracking-wide text-yellow-400">
+            <span className="text-xs font-medium tracking-wide text-yellow-400 uppercase">
               {format(parseISO(datetime), "MMM", { locale: es })}
             </span>
-            <span className="text-lg font-bold leading-none">{format(parseISO(datetime), "dd", { locale: es })}</span>
+            <span className="text-lg leading-none font-bold">{format(parseISO(datetime), "dd", { locale: es })}</span>
           </time>
         </div>
       </Link>

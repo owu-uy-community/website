@@ -20,7 +20,7 @@ export function ScheduleFields({ control, note, rooms, timeSlots }: ScheduleFiel
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <div className="min-w-0 space-y-2">
-        <Label className="text-muted-foreground text-sm" htmlFor="room">
+        <Label className="text-sm text-muted-foreground" htmlFor="room">
           Lugar
         </Label>
         <Controller
@@ -44,7 +44,7 @@ export function ScheduleFields({ control, note, rooms, timeSlots }: ScheduleFiel
       </div>
 
       <div className="min-w-0 space-y-2">
-        <Label className="text-muted-foreground text-sm" htmlFor="timeSlot">
+        <Label className="text-sm text-muted-foreground" htmlFor="timeSlot">
           Horario
         </Label>
         <Controller
@@ -56,12 +56,12 @@ export function ScheduleFields({ control, note, rooms, timeSlots }: ScheduleFiel
               value={field.value}
               onValueChange={field.onChange}
             >
-              <SelectTrigger className="font-terminal h-11 min-w-0 tabular-nums sm:h-10" id="timeSlot">
+              <SelectTrigger className="h-11 min-w-0 font-terminal tabular-nums sm:h-10" id="timeSlot">
                 <SelectValue placeholder="Seleccioná el horario" />
               </SelectTrigger>
               <SelectContent>
                 {timeSlots.map((slot) => (
-                  <SelectItem key={slot} className="font-terminal min-h-11 tabular-nums sm:min-h-0" value={slot}>
+                  <SelectItem key={slot} className="min-h-11 font-terminal tabular-nums sm:min-h-0" value={slot}>
                     {slot}
                   </SelectItem>
                 ))}

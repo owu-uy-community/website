@@ -356,7 +356,7 @@ export function Wifi({ params }: SceneProps<"wifi">) {
         <Rise className="mt-10 text-[34px] font-semibold tracking-[0.2em] text-[#FBF5E7]/60 uppercase" delay={0.35}>
           Contraseña
         </Rise>
-        <Rise className="font-terminal mt-1 text-[110px] leading-none tracking-[0.08em] text-[#F5BB03]" delay={0.45}>
+        <Rise className="mt-1 font-terminal text-[110px] leading-none tracking-[0.08em] text-[#F5BB03]" delay={0.45}>
           {params.password}
         </Rise>
       </div>

@@ -1,21 +1,11 @@
-// Client-safe helpers for the staff tasks page. Types come from the schemas
-// module directly — the staff-tasks barrel also exports services, which pull
-// `server-only` through publishServer.
-import type { StaffAnnouncement, StaffTask } from "lib/orpc/staff-tasks/schemas";
+// Client-safe helpers for the staff tasks page.
+import type { StaffAnnouncement, StaffMember, StaffTask } from "lib/orpc/staff-tasks/schemas";
 
 export type { StaffAnnouncement, StaffTask };
+export type RosterMember = StaffMember;
 
 export type StaffTaskStatus = StaffTask["status"];
 export type StaffTaskType = StaffTask["type"];
-
-export interface RosterMember {
-  id: string;
-  userId: string;
-  role: string;
-  name: string;
-  email: string;
-  image: string | null;
-}
 
 export const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(":").map(Number);

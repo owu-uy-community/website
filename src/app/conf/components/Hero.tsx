@@ -26,11 +26,11 @@ const contentEntrance = (order: number) => ({
 export default function Hero() {
   return (
     <section className="relative w-full min-[1440px]:min-h-[620px]" id="inicio">
-      <div className="relative mx-auto w-full max-w-[1440px] px-8 pb-16 pt-16 text-center sm:text-left min-[1440px]:pb-[33px]">
+      <div className="relative mx-auto w-full max-w-[1440px] px-8 pt-16 pb-16 text-center min-[1440px]:pb-[33px] sm:text-left">
         {/* Fluid clamp on mobile: "TECNOLOGÍA" measures 6.35px per font-px and must fit (100vw - 79px) */}
-        <h1 className="font-display text-[length:clamp(34px,11.6vw,54px)] font-extrabold leading-[0.95] tracking-[-0.02em] sm:text-[68px] min-[1440px]:text-[84px]">
+        <h1 className="font-display text-[length:clamp(34px,11.6vw,54px)] leading-[0.95] font-extrabold tracking-[-0.02em] min-[1440px]:text-[84px] sm:text-[68px]">
           {HEADLINE.map(({ text, className }, i) => (
-            <span key={text} className="block overflow-hidden pb-[0.08em] pt-[0.04em]">
+            <span key={text} className="block overflow-hidden pt-[0.04em] pb-[0.08em]">
               <m.span
                 animate={{ y: 0, rotate: 0 }}
                 className={`block origin-bottom-left ${className}`}
@@ -44,7 +44,7 @@ export default function Hero() {
         </h1>
 
         <m.p
-          className="mx-auto mt-7 max-w-[560px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90 sm:mx-0 min-[1440px]:text-xl"
+          className="mx-auto mt-7 max-w-[560px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90 min-[1440px]:text-xl sm:mx-0"
           {...contentEntrance(0)}
         >
           Una jornada de charlas, open space y encuentro.
@@ -53,7 +53,7 @@ export default function Hero() {
         </m.p>
 
         <m.div className="mt-8" {...contentEntrance(1)}>
-          <p className="font-display text-xl font-extrabold uppercase leading-none tracking-[-0.01em] text-[#F5BB03] sm:text-2xl min-[1440px]:text-[28px]">
+          <p className="font-display text-xl leading-none font-extrabold tracking-[-0.01em] text-[#F5BB03] uppercase min-[1440px]:text-[28px] sm:text-2xl">
             Sábado 07 de noviembre de 2026
           </p>
           <a
@@ -62,7 +62,14 @@ export default function Hero() {
             rel="noopener"
             target="_blank"
           >
-            <svg aria-hidden="true" className="h-[18px] w-[18px] shrink-0" fill="none" stroke="#F5BB03" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              aria-hidden="true"
+              className="h-[18px] w-[18px] shrink-0"
+              fill="none"
+              stroke="#F5BB03"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <path d="M12 21s-7-5.2-7-11a7 7 0 1 1 14 0c0 5.8-7 11-7 11Z" strokeLinejoin="round" />
               <circle cx="12" cy="10" r="2.6" />
             </svg>
@@ -96,7 +103,7 @@ export default function Hero() {
         <m.img
           alt="La comunidad OWU reunida en La Meetup"
           animate={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", scale: 1, opacity: 1 }}
-          className="absolute right-8 top-[140px] hidden h-[419px] w-[674px] max-w-none object-cover min-[1440px]:block"
+          className="absolute top-[140px] right-8 hidden h-[419px] w-[674px] max-w-none object-cover min-[1440px]:block"
           fetchPriority="high"
           initial={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 62%)", scale: 1.06, opacity: 0 }}
           src="/images/conf/hero-crowd.webp"

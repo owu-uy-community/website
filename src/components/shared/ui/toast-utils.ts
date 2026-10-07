@@ -1,6 +1,6 @@
 /**
  * Centralized toast utility using Sonner
- * 
+ *
  * This provides a clean, reusable API for showing toast notifications
  * throughout the application with consistent styling.
  */
@@ -148,4 +148,3 @@ export const toast = {
    */
   custom: sonnerToast,
 };
-

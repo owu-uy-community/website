@@ -101,10 +101,10 @@ function BoardCell({
       ref={setNodeRef}
       data-board-cell=""
       className={cn(
-        "group/cell border-border/60 relative h-32 border-r border-b transition-colors duration-150",
+        "group/cell relative h-32 border-r border-b border-border/60 transition-colors duration-150",
         isRowHighlighted && "bg-primary/[0.06]",
         isDropTarget && "bg-primary/[0.07]",
-        isEmpty && isIdle && "hover:bg-muted/40 cursor-pointer"
+        isEmpty && isIdle && "cursor-pointer hover:bg-muted/40"
       )}
       onClick={() => {
         if (isEmpty && isIdle) onEmptyCellClick(room, timeSlot);
@@ -122,10 +122,10 @@ function BoardCell({
       {isEmpty && isIdle && (
         <button
           aria-label={`Agregar charla en ${room}, ${timeSlot}`}
-          className="border-border absolute inset-1.5 flex items-center justify-center rounded-md border border-dashed opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover/cell:opacity-100 md:focus-visible:opacity-100"
+          className="absolute inset-1.5 flex items-center justify-center rounded-md border border-dashed border-border opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover/cell:opacity-100 md:focus-visible:opacity-100"
           type="button"
         >
-          <Plus className="text-muted-foreground h-4 w-4" />
+          <Plus className="h-4 w-4 text-muted-foreground" />
         </button>
       )}
 
@@ -185,8 +185,8 @@ export function TimeGrid({
       }
     >
       {/* Corner cell — sticky on both axes */}
-      <div className="border-border/60 bg-card sticky top-0 left-0 z-30 flex h-14 items-center justify-center border-r border-b">
-        <span className="font-terminal text-muted-foreground text-[10px] tracking-[0.18em] uppercase">Hora</span>
+      <div className="sticky top-0 left-0 z-30 flex h-14 items-center justify-center border-r border-b border-border/60 bg-card">
+        <span className="font-terminal text-[10px] tracking-[0.18em] text-muted-foreground uppercase">Hora</span>
       </div>
 
       {rooms.map((room) => (

@@ -14,7 +14,7 @@ type TicketHomeProps = {
 export default function TicketHome({ sponsors }: TicketHomeProps) {
   return (
     <div className="hidden h-full w-full xl:block">
-      <div className="flex-0 mx-auto flex max-w-[550px] items-center justify-center">
+      <div className="mx-auto flex max-w-[550px] flex-0 items-center justify-center">
         <Container3D>
           <Ticket sponsors={sponsors} releaseDate="2025-10-13T13:10:00" />
         </Container3D>

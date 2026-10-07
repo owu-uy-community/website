@@ -506,7 +506,7 @@ export function Pipeline({ params }: SceneProps<"pipeline">) {
 
   return (
     <div className="absolute inset-0 bg-black">
-      <div className="font-terminal absolute top-[80px] left-[120px] text-[30px] text-[#FBF5E7]/60">
+      <div className="absolute top-[80px] left-[120px] font-terminal text-[30px] text-[#FBF5E7]/60">
         <span className="text-[#F5BB03]">owu-conf-2026</span> · pipeline #2026 · rama{" "}
         <span className="text-[#0162C8]">main</span> · {now}
       </div>
@@ -542,7 +542,7 @@ export function Pipeline({ params }: SceneProps<"pipeline">) {
                 )}
               </div>
               <p
-                className={`font-terminal mt-6 text-[26px] ${status === "pending" ? "text-[#FBF5E7]/40" : "text-[#F5BB03]"}`}
+                className={`mt-6 font-terminal text-[26px] ${status === "pending" ? "text-[#FBF5E7]/40" : "text-[#F5BB03]"}`}
               >
                 {stage.time}
               </p>
@@ -557,7 +557,7 @@ export function Pipeline({ params }: SceneProps<"pipeline">) {
           );
         })}
       </div>
-      <div className="font-terminal absolute right-[120px] bottom-[110px] left-[120px] border-l-[8px] border-[#0162C8] bg-[#FBF5E7]/[0.05] px-10 py-8 text-[34px] leading-[1.6] text-[#FBF5E7]/85">
+      <div className="absolute right-[120px] bottom-[110px] left-[120px] border-l-[8px] border-[#0162C8] bg-[#FBF5E7]/[0.05] px-10 py-8 font-terminal text-[34px] leading-[1.6] text-[#FBF5E7]/85">
         {running < 0 ? (
           <p>$ esperando al primer job… ({stages[0]?.time ?? "--:--"})</p>
         ) : (

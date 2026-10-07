@@ -1,7 +1,15 @@
 import { pcmLevel } from "../../../public/companion-audio/pcm.mjs";
 
 export type VoiceStage =
-  "off" | "requesting" | "connecting" | "listening" | "thinking" | "speaking" | "idle" | "muted" | "error";
+  | "off"
+  | "requesting"
+  | "connecting"
+  | "listening"
+  | "thinking"
+  | "speaking"
+  | "idle"
+  | "muted"
+  | "error";
 export type BridgeInfo = {
   model: string;
   voice: string;

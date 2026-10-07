@@ -27,7 +27,7 @@ export function Program({ program, ...rest }: ProgramItem) {
           <ProgramStack>
             <p className="text-[10px] text-white">{title}</p>
             <p className="absolute bottom-2.5 left-2.5 mt-1 text-[10px] text-gray-400">Agustín Tornielli</p>
-            <p className="absolute bottom-2.5 right-2.5 mt-1.5 text-[10px] text-gray-400">
+            <p className="absolute right-2.5 bottom-2.5 mt-1.5 text-[10px] text-gray-400">
               {sinceTime} - {tillTime}
             </p>
           </ProgramStack>

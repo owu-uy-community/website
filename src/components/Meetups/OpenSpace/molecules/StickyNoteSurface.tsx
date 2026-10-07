@@ -62,7 +62,7 @@ export function StickyNoteSurface({
       <div className="relative z-10 w-full space-y-0.5">
         <h3
           className={cn(
-            "line-clamp-3 hyphens-auto break-words font-semibold leading-snug",
+            "line-clamp-3 leading-snug font-semibold break-words hyphens-auto",
             wall ? "text-[clamp(0.75rem,min(19cqh,5cqw),2.5rem)]" : "text-xs md:text-sm"
           )}
         >
@@ -71,7 +71,7 @@ export function StickyNoteSurface({
         {speaker && (
           <p
             className={cn(
-              "line-clamp-1 font-medium leading-tight opacity-80",
+              "line-clamp-1 leading-tight font-medium opacity-80",
               wall ? "text-[clamp(0.625rem,min(11cqh,3cqw),1.5rem)]" : "text-[10px] md:text-xs"
             )}
           >

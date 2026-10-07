@@ -124,7 +124,7 @@ export function AnnouncementsPanel({
                 <span className="truncate text-xs font-medium text-foreground">
                   {announcement.author?.name ?? "Staff"}
                 </span>
-                <span className="shrink-0 font-terminal text-[10px] tabular-nums text-muted-foreground">
+                <span className="shrink-0 font-terminal text-[10px] text-muted-foreground tabular-nums">
                   {relativeTime(announcement.createdAt)}
                 </span>
                 {announcement.urgent && (
@@ -134,7 +134,7 @@ export function AnnouncementsPanel({
                 )}
               </div>
 
-              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground">{announcement.body}</p>
+              <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-foreground">{announcement.body}</p>
               {announcement.taskTitle && (
                 <p className="mt-1 text-xs text-muted-foreground">Para asignados de: {announcement.taskTitle}</p>
               )}
