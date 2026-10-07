@@ -26,7 +26,6 @@ export const appEnv = {
   REALTIME_SIDECAR_URL: `http://127.0.0.1:${REALTIME_PORT}`,
   SLACK_CLIENT_ID: "e2e",
   SLACK_CLIENT_SECRET: "e2e",
-  SKIP_ENV_VALIDATION: "true",
 };
 
 export default defineConfig({
