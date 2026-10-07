@@ -3,10 +3,29 @@
 
 # Page geometry for the 466 px panel; a smaller board overrides these in its root.
 substitutions:
-  panel_w: "320"     # settings/quick/help containers
-  quick_h: "258"     # quick controls scroll area (must clear the bottom button)
-  control_w: "290"   # companion_control buttons and rows
-  half_w: "136"      # Vol −/+ pair inside a control row
+  tile_w: "136"        # quick-settings tiles, two per row
+  tile_h: "112"
+  tile_gap: "12"
+  tile_radius: "30"
+  grid_w: "290"        # 2 × tile_w + tile_gap + a little scroll slack
+  quick_h: "236"       # exactly two rows: the knob/finger scrolls a row at a time
+  quick_y: "4"
+  row_step: "124"      # tile_h + tile_gap
+  pill_w: "148"
+  pill_h: "44"
+  level_px: "150"      # calibration bubble level
+  level_inner: "80"
+  level_y: "-40"        # bubble level centre
+  bubble_px: "30"
+  calib_status_y: "76"
+  calib_bar_y: "118"
+  calib_btn_w: "100"
+  calib_btn_x: "54"
+  help_w: "340"
+  help_h: "290"
+  # Speaker chunks reach the ear one DMA queue later (5 × 10 ms) plus the
+  # chunk itself: stamp lip shapes that far ahead. Tune by eye on hardware.
+  speaker_latency_ms: "60"
 
 globals:
   - id: saved_motion_calibration
@@ -19,16 +38,61 @@ globals:
   - id: face_renderer
     type: owy::FaceRenderer
     restore_value: false
+  - id: face_ring
+    type: owy::FaceRing
+    restore_value: false
+  # Latest frame: the knob's answer view mirrors it on its mini face.
+  - id: face_frame
+    type: owy::Frame
+    restore_value: false
   - id: display_dimmed
     type: bool
     restore_value: false
     initial_value: "false"
+  - id: render_us_sum
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: render_us_max
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: render_count
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: render_max_ms
+    type: float
+    restore_value: false
+    initial_value: "0"
 
 esphome:
   on_boot:
     - priority: -90
       then:
         - script.execute: wake_display
+    # After LVGL built the pages: the rim, render timing, the speaker tap and
+    # the boot wordmark (the eyes stay shut until it leaves, then open).
+    - priority: -100
+      then:
+        - lambda: |-
+            id(face_ring).create(id(face_page)->obj, ${ring_r}, ${ring_dot});
+            static uint32_t render_started = 0;
+            lv_display_add_event_cb(id(ui).get_disp(), [](lv_event_t *) { render_started = micros(); },
+                                    LV_EVENT_RENDER_START, nullptr);
+            lv_display_add_event_cb(id(ui).get_disp(), [](lv_event_t *) {
+              const uint32_t us = micros() - render_started;
+              id(render_us_sum) += us; ++id(render_count);
+              if (us > id(render_us_max)) id(render_us_max) = us;
+            }, LV_EVENT_RENDER_READY, nullptr);
+            // Lips follow the audio actually leaving the speaker (see components/README.md).
+            esphome::i2s_audio::I2SAudioSpeakerBase::set_pcm_tap(+[](const uint8_t *data, size_t bytes, uint8_t channels) {
+              static owy::SpeechAnalyzer analyzer;
+              analyzer.feed(data, bytes, channels, millis() + ${speaker_latency_ms}, id(companion).speech_tap);
+            });
+            id(companion).wake_at(millis() + 1600);
+        - delay: 1400ms
+        - lvgl.widget.hide: boot_logo
 
 switch:
   - platform: template
@@ -150,6 +214,27 @@ sensor:
     accuracy_decimals: 1
     update_interval: 5s
     lambda: return id(companion).animation_cadence.read(millis());
+  # LVGL render time per refresh (RENDER_START → RENDER_READY on the main loop
+  # that also feeds the speaker): mean and worst over the last 5 s.
+  - platform: template
+    name: Render Time
+    id: render_time
+    entity_category: diagnostic
+    unit_of_measurement: ms
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: |-
+      const float mean = id(render_count) ? id(render_us_sum) / 1000.0f / id(render_count) : 0;
+      id(render_max_ms) = id(render_us_max) / 1000.0f;
+      id(render_us_sum) = 0; id(render_count) = 0; id(render_us_max) = 0;
+      return mean;
+  - platform: template
+    name: Render Time Max
+    entity_category: diagnostic
+    unit_of_measurement: ms
+    accuracy_decimals: 1
+    update_interval: 5s
+    lambda: return id(render_max_ms);
   - platform: wifi_signal
     name: WiFi Signal
     id: companion_wifi
@@ -220,38 +305,87 @@ script:
                 id: screen_light
                 brightness: !lambda return id(screen_brightness).state / 100.0f;
       - lambda: id(display_dimmed) = false;
+      # Asleep: the lids stay shut a beat, then spring open (a stretch).
+      - if:
+          condition:
+            lambda: return id(face_sleeping);
+          then:
+            - script.stop: fall_asleep
+            - lambda: |-
+                id(face_sleeping) = false;
+                id(companion).wake_at(millis() + 250);
+            - script.execute: apply_face
 
   - id: animate_companion
     mode: single
     then:
       - lambda: |-
-          if (id(ui).is_paused() || lv_display_get_screen_active(id(ui).get_disp()) != id(face_page)->obj) return;
+          if (id(ui).is_paused()) return;
+          const uint32_t now = millis();
           owy::Mood mood = owy::Mood::IDLE;
           const auto &state = id(current_face);
           if (state == "listening") mood = owy::Mood::LISTENING;
+          else if (state == "followup") mood = owy::Mood::FOLLOWUP;
           else if (state == "thinking") mood = owy::Mood::THINKING;
           else if (state == "speaking") mood = owy::Mood::SPEAKING;
           else if (state == "happy") mood = owy::Mood::HAPPY;
           else if (state == "offline") mood = owy::Mood::OFFLINE;
           else if (state == "error") mood = owy::Mood::ERROR;
+          else if (state == "sleep") mood = owy::Mood::SLEEP;
           if (id(mic_privacy).state) mood = owy::Mood::PRIVACY;
-          const int badge=id(mic_privacy).state ? 2 :
-              (id(va).is_running() && id(va_phase)==2 && id(mic).is_running() ? 1 : 0);
-          static int previous_badge=-1;
-          if (badge!=previous_badge) {
-            previous_badge=badge;
-            if (badge) lv_obj_remove_flag(id(capture_badge),LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_add_flag(id(capture_badge),LV_OBJ_FLAG_HIDDEN);
-            if (badge==2) lv_obj_remove_flag(id(privacy_slash)->obj,LV_OBJ_FLAG_HIDDEN);
-            else lv_obj_add_flag(id(privacy_slash)->obj,LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_bg_color(id(capture_capsule),lv_color_hex(badge==2 ? 0xF5BB03 : 0x0162C8),0);
-          }
-          auto frame = id(companion).frame(millis(), mood, id(motion_follow).state,
+          // Every page shares one frame (the knob's answer view mirrors it).
+          auto &frame = id(face_frame);
+          frame = id(companion).frame(now, mood, id(motion_follow).state,
               id(reduced_motion).state || id(audio_recovering), id(motion_invert_x).state,
-              id(motion_invert_y).state, id(speak_level).state);
-          id(face_renderer).render(frame, id(eye_left), id(eye_right), id(pupil_left), id(pupil_right),
-              id(mouth), id(smile_cutout), id(cheek_left), id(cheek_right), id(brow_left), id(brow_right),
-              id(think_dot_0), id(think_dot_1), id(think_dot_2));
+              id(motion_invert_y).state, 0);
+          const bool on_face = lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj;
+          const bool overlay = int32_t(id(overlay_until) - now) > 0;
+          id(face_ring).apply(overlay ? owy::ring_frame(owy::RingMode::LEVEL, now, id(overlay_level), 0, 0)
+                                      : id(companion).ring(frame, now),
+                              on_face && (overlay || frame.ring != owy::RingMode::NONE));
+          if (!on_face) return;
+          static int previous_badge = -1;
+          const int badge = id(mic_privacy).state;
+          if (badge != previous_badge) {
+            previous_badge = badge;
+            if (badge) lv_obj_remove_flag(id(capture_badge), LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_add_flag(id(capture_badge), LV_OBJ_FLAG_HIDDEN);
+          }
+          static const owy::FaceObjects objects{
+              id(eye_left), id(eye_right), id(pupil_left), id(pupil_right), id(glint_left), id(glint_right),
+              id(happy_left), id(happy_right), id(lid_left), id(lid_right), id(brow_left)->obj, id(brow_right)->obj,
+              id(cheek_left), id(cheek_right), id(mouth), id(mouth_cavity), id(mouth_tongue), id(smile_cutout),
+              id(mouth_bowl), {id(zzz_0), id(zzz_1), id(zzz_2)}};
+          id(face_renderer).render(frame, objects);
+
+  # What the face says under the mouth: rotating idle hints (attract mode),
+  # or what went wrong. Hidden while a turn runs: the rim carries that.
+  - id: sync_face_hint
+    mode: single
+    then:
+      - lambda: |-
+          if (id(ui).is_paused()) return;
+          const uint32_t now = millis();
+          const bool on_face = lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj;
+          const bool overlay = int32_t(id(overlay_until) - now) > 0;
+          const auto &state = id(current_face);
+          const char *text = nullptr;
+          if (id(mic_privacy).state) text = "micrófono apagado · mantené: ajustes";
+          else if (state == "offline") text = "buscando a owy...";
+          else if (state == "error") text = "ups, me trabé · probá de nuevo";
+          else if (state == "idle" && id(va_phase) == 1 && !id(turn_pending)) {
+            const char *hints[] = {id(wake_word_enabled).state ? "decí okay nabu o tocame" : "tocame y hablame",
+                                   "¿buscás una charla?", "proponé tu tema"};
+            text = hints[(now / 4200) % (id(marketplace_open).state ? 3 : 2)];
+          }
+          if (text && strcmp(lv_label_get_text(id(face_hint)), text)) lv_label_set_text(id(face_hint), text);
+          auto show = [](lv_obj_t *o, bool on) {
+            if (lv_obj_has_flag(o, LV_OBJ_FLAG_HIDDEN) != !on) {
+              if (on) lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
+            }
+          };
+          show(id(face_hint), on_face && text && !overlay);
+          show(id(overlay_label), on_face && overlay);
 
   - id: open_quick_controls
     mode: restart
@@ -262,6 +396,7 @@ script:
           id(companion).contact.cancel();
           id(companion).tracker.cancel_calibration();
       - script.execute: resume_wake_word
+      - lambda: lv_obj_scroll_to_y(id(quick_list), 0, LV_ANIM_OFF);
       - lvgl.page.show: quick_page
       - script.execute: sync_quick_controls
 
@@ -270,6 +405,7 @@ script:
     then:
       - script.execute: wake_display
       - script.stop: return_to_face_later
+      - lambda: lv_obj_scroll_to_x(id(help_cards), 0, LV_ANIM_OFF);
       - lvgl.page.show: help_page
 
   - id: open_public_qr
@@ -296,30 +432,37 @@ script:
       - lvgl.page.show: face_page
       - script.execute: apply_face
 
+  # Tile values, plus blue = on for the toggles.
   - id: sync_quick_controls
     mode: single
     then:
       - lambda: |-
           if (lv_display_get_screen_active(id(ui).get_disp()) != id(quick_page)->obj) return;
-          auto text = [](lv_obj_t *label, const char *value) {
-            if (strcmp(lv_label_get_text(label), value) != 0) lv_label_set_text(label, value);
+          auto tile = [](lv_obj_t *value, const char *text, int on) {
+            if (strcmp(lv_label_get_text(value), text) != 0) lv_label_set_text(value, text);
+            if (on < 0) return;
+            auto *button = lv_obj_get_parent(value);
+            const lv_color_t color = lv_color_hex(on ? 0x0162C8 : 0x1F1F1F);
+            if (!lv_color_eq(lv_obj_get_style_bg_color(button, LV_PART_MAIN), color))
+              lv_obj_set_style_bg_color(button, color, LV_PART_MAIN);
           };
-          text(id(quick_power), id(power_status).state.c_str());
-          text(id(quick_mic), id(mic_privacy).state ? "Mic: apagado · activar" : "Mic: encendido · apagar");
-          text(id(quick_motion), id(motion_follow).state ? "Seguir movimiento: sí" : "Seguir movimiento: no");
-          text(id(quick_reduce), id(reduced_motion).state ? "Animaciones: mínimas" : "Animaciones: completas");
-          text(id(quick_continue), id(continuous_conversation).state ? "Charla continua: sí" : "Charla continua: no");
-          text(id(quick_chime), id(listening_chime).state ? "Tono al escuchar: sí" : "Tono al escuchar: no");
-          text(id(quick_sounds), id(interaction_sounds).state ? "Sonidos al jugar: sí" : "Sonidos al jugar: no");
-          text(id(quick_mic_source), id(mic_source).current_option() == "laptop" ? "Mic: laptop" : "Mic: dispositivo");
-          text(id(quick_audio_output), id(audio_output).current_option() == "laptop" ? "Audio: laptop" : "Audio: dispositivo");
-          char volume_text[32];
-          snprintf(volume_text, sizeof(volume_text), "Volumen: %d%%", int(id(volume).state));
-          text(id(quick_volume), volume_text);
-          char brightness[32];
-          snprintf(brightness, sizeof(brightness), "Brillo: %d%%", int(id(screen_brightness).state));
-          text(id(quick_brightness), brightness);
-          text(id(quick_sensor), id(companion).motion_ok(millis()) ? "Movimiento conectado" : "Movimiento no disponible");
+          const bool connected = id(va).get_api_connection() != nullptr;
+          std::string status = std::string(connected ? "owy conectado · " : "sin bridge · ") + id(power_status).state;
+          if (strcmp(lv_label_get_text(id(quick_power)), status.c_str())) lv_label_set_text(id(quick_power), status.c_str());
+          tile(id(quick_mic), id(mic_privacy).state ? "apagado" : "encendido", !id(mic_privacy).state);
+          tile(id(quick_continue), id(continuous_conversation).state ? "continua" : "una vez", id(continuous_conversation).state);
+          tile(id(quick_chime), id(listening_chime).state ? "al escuchar" : "apagado", id(listening_chime).state);
+          tile(id(quick_sounds), id(interaction_sounds).state ? "al jugar" : "apagados", id(interaction_sounds).state);
+          tile(id(quick_mic_source), id(mic_source).current_option() == "laptop" ? "laptop" : "dispositivo", -1);
+          tile(id(quick_audio_output), id(audio_output).current_option() == "laptop" ? "laptop" : "dispositivo", -1);
+          tile(id(quick_motion), !id(companion).motion_ok(millis()) ? "sin sensor" : id(motion_follow).state ? "me sigue" : "quieto",
+               id(motion_follow).state && id(companion).motion_ok(millis()));
+          tile(id(quick_reduce), id(reduced_motion).state ? "mínimas" : "completas", !id(reduced_motion).state);
+          char text[16];
+          snprintf(text, sizeof(text), "%d%%", int(id(volume).state));
+          tile(id(quick_volume), text, -1);
+          snprintf(text, sizeof(text), "%d%%", int(id(screen_brightness).state));
+          tile(id(quick_brightness), text, -1);
 
   - id: start_motion_calibration
     mode: restart
@@ -356,6 +499,11 @@ script:
           const char *message=tracker.calibration_message();
           if (strcmp(lv_label_get_text(id(calibration_status)),message)) lv_label_set_text(id(calibration_status),message);
           lv_bar_set_value(id(calibration_progress),tracker.calibration_progress(millis()),LV_ANIM_OFF);
+          // The bubble level: the real tilt, so "stay still" is something you can see.
+          const auto tilt = tracker.offset();
+          const int reach = (${level_px} - ${bubble_px}) / 2;
+          lv_obj_set_pos(id(calib_bubble), int(owy::bound(tilt.x * 4 * reach, -reach, reach)),
+                         int(owy::bound(-tilt.y * 4 * reach, -reach, reach)) + (${level_y}));
 
 interval:
   - interval: 100ms
@@ -369,357 +517,789 @@ interval:
           voice_frame = !voice_frame;
           if (id(va).is_running() && !voice_frame) return;
           id(animate_companion).execute();
+  - interval: 250ms
+    then:
+      - script.execute: sync_face_hint
   - interval: 1s
     then:
       - script.execute: sync_quick_controls
 
 lvgl:
   style_definitions:
+    # Kept as the first style: the emulator's scene export anchors on it.
     - id: companion_control
-      width: ${control_w}
-      height: 52
-      radius: 16
+      width: ${pill_w}
+      height: ${pill_h}
+      radius: 22
       bg_color: 0x1F1F1F
       text_color: 0xFBF5E7
       shadow_width: 0
       border_width: 0
       pad_all: 8
+    - id: companion_tile
+      width: ${tile_w}
+      height: ${tile_h}
+      radius: ${tile_radius}
+      bg_color: 0x1F1F1F
+      text_color: 0xFBF5E7
+      shadow_width: 0
+      border_width: 0
+      pad_all: 4
   pages:
+    # ── Ajustes: big tiles, two per row, scrolled a row at a time ─────────
     - id: quick_page
       bg_color: 0x000000
       widgets:
         - label:
             align: TOP_MID
-            y: 32
-            text: "a tu manera"
-            text_font: font_28_bold
+            y: 26
+            text: "ajustes"
+            text_font: font_brand
             text_color: 0xF5BB03
         - label:
             id: quick_power
             align: TOP_MID
-            y: 76
+            y: 66
             text: "energía: sin datos"
-            text_color: 0xFBF5E7
+            text_font: font_small
+            text_color: 0xCFC8B8
         - obj:
             id: quick_list
             align: CENTER
-            y: 14
-            width: ${panel_w}
+            y: ${quick_y}
+            width: ${grid_w}
             height: ${quick_h}
             bg_opa: TRANSP
             border_width: 0
-            pad_all: 8
-            scrollbar_mode: AUTO
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            scroll_dir: VER
+            scroll_snap_y: START
             layout:
               type: flex
-              flex_flow: COLUMN
-              flex_align_cross: CENTER
-              pad_row: 10
+              flex_flow: ROW_WRAP
+              flex_align_main: SPACE_BETWEEN
+              pad_row: ${tile_gap}
+              pad_column: ${tile_gap}
             widgets:
-              - label:
-                  id: face_hint
-                  width: ${control_w}
-                  long_mode: WRAP
-                  text_align: CENTER
-                  text: "tocame y hablame"
-                  text_color: 0xF5BB03
-              - label:
-                  id: quick_volume
-                  text: "Volumen: 80%"
-                  text_color: 0xFBF5E7
-              - obj:
-                  width: ${control_w}
-                  height: 58
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  scrollable: false
-                  widgets:
-                    - button:
-                        id: vol_down_btn
-                        align: LEFT_MID
-                        width: ${half_w}
-                        height: 52
-                        bg_color: 0x1F1F1F
-                        radius: 16
-                        shadow_width: 0
-                        widgets:
-                          - label:
-                              align: CENTER
-                              text: "Vol −"
-                        on_click:
-                          - script.execute:
-                              id: adjust_volume
-                              delta: -10
-                    - button:
-                        id: vol_up_btn
-                        align: RIGHT_MID
-                        width: ${half_w}
-                        height: 52
-                        bg_color: 0x1F1F1F
-                        radius: 16
-                        shadow_width: 0
-                        widgets:
-                          - label:
-                              align: CENTER
-                              text: "Vol +"
-                        on_click:
-                          - script.execute:
-                              id: adjust_volume
-                              delta: 10
               - button:
-                  styles: companion_control
-                  bg_color: 0x0162C8
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
+                        text: "\U0000E31D"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "micrófono"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
                         id: quick_mic
-                        align: CENTER
-                        text: "Mic: encendido · apagar"
+                        text: "encendido"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - switch.toggle: mic_privacy
                     - script.execute: sync_quick_controls
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        id: quick_continue
-                        align: CENTER
-                        text: "Charla continua: sí"
+                        text: "\U0000E050"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "volumen"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_volume
+                        text: "80%"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
-                    - switch.toggle: continuous_conversation
-                    - script.execute: sync_quick_controls
+                    - number.set:
+                        id: volume
+                        value: !lambda |-
+                          const float v = id(volume).state;
+                          return v >= 80 ? 0.0f : std::min(80.0f, std::floor(v / 20 + 1) * 20);
+                    - script.execute: show_volume
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        id: quick_chime
-                        align: CENTER
-                        text: "Tono al escuchar: sí"
-                  on_click:
-                    - switch.toggle: listening_chime
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_control
-                  widgets:
+                        text: "\U0000E518"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
                     - label:
-                        id: quick_sounds
-                        align: CENTER
-                        text: "Sonidos al jugar: sí"
-                  on_click:
-                    - switch.toggle: interaction_sounds
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_control
-                  widgets:
-                    - label:
-                        id: quick_mic_source
-                        align: CENTER
-                        text: "Mic: dispositivo"
-                  on_click:
-                    - select.next: mic_source
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_control
-                  widgets:
-                    - label:
-                        id: quick_audio_output
-                        align: CENTER
-                        text: "Audio: dispositivo"
-                  on_click:
-                    - select.next: audio_output
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_control
-                  widgets:
-                    - label:
-                        id: quick_motion
-                        align: CENTER
-                        text: "Seguir movimiento: sí"
-                  on_click:
-                    - switch.toggle: motion_follow
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_control
-                  widgets:
-                    - label:
-                        id: quick_reduce
-                        align: CENTER
-                        text: "Animaciones: completas"
-                  on_click:
-                    - switch.toggle: reduced_motion
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_control
-                  widgets:
+                        text: "brillo"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
                     - label:
                         id: quick_brightness
-                        align: CENTER
-                        text: "Brillo: 80%"
+                        text: "80%"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - number.set:
                         id: screen_brightness
                         value: !lambda |-
-                          return id(screen_brightness).state < 45 ? 55 : id(screen_brightness).state < 70 ? 80 : 30;
+                          const float v = id(screen_brightness).state;
+                          return v < 45 ? 55 : v < 70 ? 80 : v < 95 ? 100 : 30;
                     - script.execute: sync_quick_controls
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        align: CENTER
-                        text: "Calibrar movimiento"
+                        text: "\U0000E8AF"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "charla"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_continue
+                        text: "continua"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - switch.toggle: continuous_conversation
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000E7F5"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "tono"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_chime
+                        text: "al escuchar"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - switch.toggle: listening_chime
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000E405"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "sonidos"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_sounds
+                        text: "al jugar"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - switch.toggle: interaction_sounds
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000E320"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "mic en"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_mic_source
+                        text: "dispositivo"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - select.next: mic_source
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000E32D"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "audio en"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_audio_output
+                        text: "dispositivo"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - select.next: audio_output
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000F2D5"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "movimiento"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_motion
+                        text: "me sigue"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - switch.toggle: motion_follow
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000E71C"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "animaciones"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        id: quick_reduce
+                        text: "completas"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                  on_click:
+                    - switch.toggle: reduced_motion
+                    - script.execute: sync_quick_controls
+              - button:
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
+                  widgets:
+                    - label:
+                        text: "\U0000E3B4"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "calibrar"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "movimiento"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - script.stop: return_to_face_later
                     - lvgl.page.show: calibration_page
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        align: CENTER
-                        text: "Centrar la mirada"
+                        text: "\U0000E3DC"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "centrar"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "la mirada"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - lambda: id(companion).center();
                     - script.execute: companion_home
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        align: CENTER
-                        text: "Haceme sonreír"
+                        text: "\U0000E815"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "sonreí"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "probá"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - lambda: id(companion).delight(millis());
                     - script.execute: companion_home
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        align: CENTER
-                        text: "Cómo jugar / gestos"
+                        text: "\U0000E8FD"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "cómo jugar"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "gestos"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - script.execute: open_companion_help
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        align: CENTER
-                        text: "Grilla de OWU Conf"
+                        text: "\U0000E00A"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "grilla"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "QR"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - script.execute: open_public_qr
               - button:
-                  styles: companion_control
+                  styles: companion_tile
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 2
                   widgets:
                     - label:
-                        align: CENTER
-                        text: "Staff · ingresar PIN"
+                        text: "\U0000E899"
+                        text_font: font_icons
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "staff"
+                        text_font: font_small
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "PIN"
+                        text_font: font_small
+                        text_color: 0xCFC8B8
                   on_click:
                     - lvgl.page.show: pin_page
-              - label:
-                  id: quick_sensor
-                  text: "Movimiento no disponible"
-                  text_color: 0xFBF5E7
         - button:
             align: BOTTOM_MID
-            y: -30
-            width: 148
-            height: 48
-            radius: 24
+            y: -24
+            width: ${pill_w}
+            height: ${pill_h}
+            radius: 22
             bg_color: 0xF5BB03
             shadow_width: 0
             widgets:
               - label:
                   align: CENTER
                   text: "volver a Owy"
+                  text_font: font_small
                   text_color: 0x000000
             on_click:
               - script.execute: companion_home
 
+    # ── Calibrar: a bubble level that really reads the IMU ────────────────
     - id: calibration_page
       bg_color: 0x000000
       widgets:
         - label:
             align: TOP_MID
-            y: 48
-            text: "calibrar movimiento"
-            text_font: font_28_bold
+            y: 30
+            text: "calibrar"
+            text_font: font_brand
             text_color: 0xF5BB03
+        - obj:
+            align: CENTER
+            y: ${level_y}
+            width: ${level_px}
+            height: ${level_px}
+            radius: 999
+            bg_opa: TRANSP
+            border_width: 2
+            border_color: 0x3A3A3A
+        - obj:
+            align: CENTER
+            y: ${level_y}
+            width: ${level_inner}
+            height: ${level_inner}
+            radius: 999
+            bg_opa: TRANSP
+            border_width: 2
+            border_color: 0x555555
+        - obj:
+            id: calib_bubble
+            align: CENTER
+            y: ${level_y}
+            width: ${bubble_px}
+            height: ${bubble_px}
+            radius: 999
+            bg_color: 0xF5BB03
+            border_width: 0
         - label:
             id: calibration_status
             align: CENTER
-            y: -46
-            width: 330
+            y: ${calib_status_y}
+            width: ${help_w}
             text_align: CENTER
             long_mode: WRAP
+            text_font: font_small
             text_color: 0xFBF5E7
             text: "Apoyame en una superficie\nestable, mirando al frente.\nLuego tocá Comenzar."
         - bar:
             id: calibration_progress
             align: CENTER
-            y: 30
-            width: 264
-            height: 10
+            y: ${calib_bar_y}
+            width: ${level_px}
+            height: 8
             value: 0
             bg_color: 0x1F1F1F
             indicator:
-              bg_color: 0xF5BB03
-        - button:
-            align: CENTER
-            y: 90
-            styles: companion_control
-            widgets:
-              - label:
-                  align: CENTER
-                  text: "Comenzar / repetir"
-            on_click:
-              - script.execute: start_motion_calibration
+              bg_color: 0x0162C8
         - button:
             align: BOTTOM_MID
-            y: -36
-            width: 170
-            height: 48
-            radius: 24
-            bg_color: 0xF5BB03
+            x: -${calib_btn_x}
+            y: -26
+            width: ${calib_btn_w}
+            height: ${pill_h}
+            radius: 22
+            bg_color: 0x0162C8
             shadow_width: 0
             widgets:
               - label:
                   align: CENTER
-                  text: "volver / cancelar"
-                  text_color: 0x000000
+                  text: "medir"
+                  text_font: font_small
+                  text_color: 0xFBF5E7
+            on_click:
+              - script.execute: start_motion_calibration
+        - button:
+            align: BOTTOM_MID
+            x: ${calib_btn_x}
+            y: -26
+            width: ${calib_btn_w}
+            height: ${pill_h}
+            radius: 22
+            bg_color: 0x1F1F1F
+            shadow_width: 0
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "volver"
+                  text_font: font_small
+                  text_color: 0xFBF5E7
             on_click:
               - script.execute: open_quick_controls
 
+    # ── Cómo jugar: one gesture per card, swipe sideways ──────────────────
     - id: help_page
       bg_color: 0x000000
       widgets:
-        - label:
-            align: TOP_MID
-            y: 38
-            text: "hola, soy Owy."
-            text_font: font_28_bold
-            text_color: 0xF5BB03
         - obj:
+            id: help_cards
             align: CENTER
-            width: ${panel_w}
-            height: 276
+            y: -14
+            width: ${help_w}
+            height: ${help_h}
             bg_opa: TRANSP
             border_width: 0
-            pad_all: 8
+            pad_all: 0
+            scrollbar_mode: "OFF"
+            scroll_dir: HOR
+            scroll_snap_x: CENTER
+            layout:
+              type: flex
+              flex_flow: ROW
+              pad_column: 0
             widgets:
-              - label:
-                  width: 300
-                  long_mode: WRAP
-                  text_color: 0xFBF5E7
-                  text: "Tocá: hablar o cancelar.\n\nArrastrá: sigo tu dedo.\nAcariciá de lado a lado.\nIncliname: miro con vos.\n\nDeslizá hacia arriba\no mantené: ajustes.\nIzquierda: esta ayuda.\nDerecha: grilla / QR.\n\nBOOT: hablar / cancelar.\nMantené BOOT: ajustes.\nPWR: encendido / apagado.\n\nDespués del tono, seguí\nhablando sin decir\nOkay Nabu otra vez.\n8 segundos de silencio\ny vuelvo a descansar.\n\nEn ajustes podés apagar\nel micrófono o reducir\nlas animaciones."
+              - obj:
+                  width: ${help_w}
+                  height: 100%
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 10
+                  widgets:
+                    - label:
+                        text: "\U0000E913"
+                        text_font: font_icons
+                        text_color: 0xF5BB03
+                    - label:
+                        text: "tocame"
+                        text_font: font_brand
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "y hablame. Si estoy hablando,\notro toque me frena."
+                        text_align: CENTER
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                    - label:
+                        text: "1 / 5"
+                        text_font: font_small
+                        text_color: 0x5D5A52
+              - obj:
+                  width: ${help_w}
+                  height: 100%
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 10
+                  widgets:
+                    - label:
+                        text: "\U0000E764"
+                        text_font: font_icons
+                        text_color: 0xF5BB03
+                    - label:
+                        text: "acariciame"
+                        text_font: font_brand
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "pasá el dedo de lado a lado\ny me pongo contento."
+                        text_align: CENTER
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                    - label:
+                        text: "2 / 5"
+                        text_font: font_small
+                        text_color: 0x5D5A52
+              - obj:
+                  width: ${help_w}
+                  height: 100%
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 10
+                  widgets:
+                    - label:
+                        text: "\U0000E8AF"
+                        text_font: font_icons
+                        text_color: 0xF5BB03
+                    - label:
+                        text: "seguimos?"
+                        text_font: font_brand
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "después de responder te escucho\n8 segundos más: el aro azul\nse vacía mientras espero."
+                        text_align: CENTER
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                    - label:
+                        text: "3 / 5"
+                        text_font: font_small
+                        text_color: 0x5D5A52
+              - obj:
+                  width: ${help_w}
+                  height: 100%
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 10
+                  widgets:
+                    - label:
+                        text: "\U0000EB2E"
+                        text_font: font_icons
+                        text_color: 0xF5BB03
+                    - label:
+                        text: "ajustes"
+                        text_font: font_brand
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "deslizá hacia arriba\no mantené apretado."
+                        text_align: CENTER
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                    - label:
+                        text: "4 / 5"
+                        text_font: font_small
+                        text_color: 0x5D5A52
+              - obj:
+                  width: ${help_w}
+                  height: 100%
+                  bg_opa: TRANSP
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  layout:
+                    type: flex
+                    flex_flow: COLUMN
+                    flex_align_main: CENTER
+                    flex_align_cross: CENTER
+                    flex_align_track: CENTER
+                    pad_row: 10
+                  widgets:
+                    - label:
+                        text: "\U0000EB52"
+                        text_font: font_icons
+                        text_color: 0xF5BB03
+                    - label:
+                        text: "la grilla"
+                        text_font: font_brand
+                        text_color: 0xFBF5E7
+                    - label:
+                        text: "deslizá a la derecha y te\nmuestro el QR de la grilla.\nA la izquierda: esta ayuda."
+                        text_align: CENTER
+                        text_font: font_small
+                        text_color: 0xCFC8B8
+                    - label:
+                        text: "5 / 5"
+                        text_font: font_small
+                        text_color: 0x5D5A52
         - button:
             align: BOTTOM_MID
-            y: -28
-            width: 148
-            height: 48
-            radius: 24
+            y: -24
+            width: ${pill_w}
+            height: ${pill_h}
+            radius: 22
             bg_color: 0xF5BB03
             shadow_width: 0
             widgets:
               - label:
                   align: CENTER
                   text: "¡vamos!"
+                  text_font: font_small
                   text_color: 0x000000
             on_click:
               - script.execute: companion_home

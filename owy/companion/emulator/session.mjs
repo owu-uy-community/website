@@ -43,7 +43,10 @@ const kinds = {
   card: 20,
   pet: 21,
   transport: 22,
+  expression: 37,
 };
+/** owy::EXPRESSION_NAMES order (companion_model.h). */
+const expressions = ["neutral", "happy", "excited", "curious", "thinking", "empathetic", "playful", "surprised"];
 export function validateEvent(event) {
   if (!event || typeof event !== "object" || Array.isArray(event)) throw Error("Invalid input event");
   if (!Number.isSafeInteger(event.t) || event.t < 0 || event.t > MAX_TIME)
@@ -77,6 +80,7 @@ export function validateEvent(event) {
     power: 1,
     mood: 1,
     transport: 2,
+    expression: 3,
   };
   if (values.length !== (lengths[event.type] ?? 0)) throw Error("Wrong number of input values");
   if (
@@ -260,6 +264,7 @@ export class Session {
         "power",
         "mood",
         "pet",
+        "expression",
       ].includes(e.type)
     )
       throw Error("This input is fixture-only");
@@ -290,7 +295,16 @@ export class Session {
       this.raw(36, [0], url);
       this.raw(36, [1], text(command.caption));
     } else if (command.kind === "volume" && Number.isFinite(command.value)) this.raw(3, [command.value], "volume");
-    else if (command.kind === "face") {
+    else if (command.kind === "expression") {
+      // The bridge's per-sentence face (expression.ts): name, ms until heard, strength 0..100.
+      const index = expressions.indexOf(command.expression);
+      if (index >= 0 && Number.isFinite(command.leadMs) && Number.isFinite(command.strength))
+        this.raw(37, [
+          index,
+          Math.max(-2000, Math.min(5000, command.leadMs)),
+          Math.max(0, Math.min(100, command.strength)),
+        ]);
+    } else if (command.kind === "face") {
       const moods = { idle: 0, happy: 4, error: 5, offline: 6 };
       if (Object.hasOwn(moods, command.state)) this.raw(18, [moods[command.state]]);
     }

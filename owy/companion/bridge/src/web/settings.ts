@@ -23,7 +23,7 @@ h1{font-size:20px;color:#F5BB03;margin:0 0 4px}small{color:#8A8A8A}.card{backgro
 .seg button{border:0;padding:8px 14px;background:transparent;color:#FBF5E7;cursor:pointer;font:inherit}.seg button.on{background:#0162C8}
 .off{color:#8A8A8A}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#8A8A8A;margin-right:8px}.dot.on{background:#3FB950}</style>
 <h1>Owy bridge · audio</h1><small>Elegí por dispositivo dónde vive el micrófono y la salida. <b>laptop</b> = esta máquina (mic de escenario + parlantes del evento); el dispositivo sigue siendo el disparador, la cara y los subtítulos.</small>
-<div class="card"><b>laptop</b> = un navegador con el workbench abierto (<i>/admin/companion → Audio de la perilla</i>) pone su micrófono y sus parlantes al servicio del dispositivo. Sin navegador enchufado, el bridge vuelve al audio del dispositivo.</div><div id="devices"></div>
+<div class="card"><b>laptop</b> = un navegador con el Companion lab abierto pone su micrófono y sus parlantes al servicio del dispositivo: <i>http://127.0.0.1:3311</i> (<code>COMPANION_WEB_VOICE=1 pnpm companion:emulator:preview</code>, bridge con <code>COMPANION_WEB_BRIDGE=1</code>) o <i>/admin/companion</i> en el sitio → <i>Hablá con Owy</i> → activá el permiso → <i>Audio de laptop para un dispositivo físico</i> → <i>Usar este navegador como audio de …</i>. Sin navegador enchufado, el bridge vuelve al audio del dispositivo.</div><div id="devices"></div>
 <script>
 const seg=(id,which,cur)=>['device','laptop'].map(v=>'<button class="'+(cur===v?'on':'')+'" onclick="set(\\''+id+'\\',\\''+which+'\\',\\''+v+'\\')">'+(v==='device'?'dispositivo':'laptop')+'</button>').join('');
 async function load(){const s=await (await fetch('/api/settings')).json();

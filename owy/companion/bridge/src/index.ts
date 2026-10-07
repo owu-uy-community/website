@@ -17,6 +17,8 @@ import {
   bytesForMs,
   rmsLevel,
 } from "./audio/pcm";
+import { MouthTrack } from "./audio/mouth";
+import { ExpressionDirector, jevClassifier, type Classifier } from "./expression";
 import { audioRoute, type AudioRoute } from "./audio/route";
 import { loadConfig, type BridgeConfig, type DeviceSpec } from "./config";
 import { CompanionDevice } from "./device/esphome";
@@ -134,6 +136,8 @@ export interface SharedRuntime {
    */
   brain?: "eve" | "local";
   eve?: EveLink;
+  /** Faces while Owy talks (COMPANION_EXPRESSIONS); `classify` absent = local guesses only. */
+  expressions?: { classify?: Classifier };
 }
 
 /**
@@ -169,6 +173,13 @@ export interface DeviceSessionOptions {
   proposalHistory?: Map<string, number>;
   authorizeTool?: (name: string) => string | null;
   onTranscript?: (who: "input" | "output", text: string) => void;
+  /**
+   * Connect the realtime model in the background instead of before start()
+   * resolves. Browsers: a tab attaching as a device's laptop audio never uses
+   * its own model session, and a 10–20 s gateway connect must not hold `ready`;
+   * a browser turn still waits for it (onRequestStart → ensureSession).
+   */
+  lazyRealtime?: boolean;
   /** Turn-phase face changes (listening/thinking/speaking/idle) — what the firmware derives on its own. */
   onFace?: (state: FaceState) => void;
   onTool?: (event: {
@@ -193,6 +204,13 @@ export class DeviceSession {
   private readonly micResampler: Pcm16Resampler;
   private readonly chunker = new FrameChunker(OUTPUT_FRAME_BYTES);
   private pacer: PacedSpeaker | null = null;
+  private mouth: MouthTrack | null = null;
+  /** One per turn: which face each sentence gets, cued as it becomes audible. */
+  private expressions: ExpressionDirector | null = null;
+  private queuedBytes = 0;
+  private playedBytes = 0;
+  /** Transcript of this turn's earlier responses (a tool response, then the spoken one). */
+  private spokenText = "";
   private inputTranscript = "";
   private outputTranscript = "";
   private discardedResponseId: string | null = null;
@@ -301,7 +319,8 @@ export class DeviceSession {
       return;
     }
 
-    await this.ensureSession();
+    if (this.options.lazyRealtime) void this.ensureSession();
+    else await this.ensureSession();
     if (this.stopped) return;
     this.device.setFace("idle");
     this.log.info("ready");
@@ -330,7 +349,8 @@ export class DeviceSession {
     if (!device) return;
     const epoch = ++this.requestEpoch;
 
-    if (this.turn && !this.turn.finished) this.turn.finish();
+    // The device has already moved to a new run: close ours without telling it.
+    if (this.turn && !this.turn.finished) this.turn.finish({ notify: false });
     await this.ensureSession();
     if (epoch !== this.requestEpoch) return;
     if (!this.session?.isConnected) {
@@ -356,6 +376,10 @@ export class DeviceSession {
 
     this.chooseRoutes();
     this.micOpenAt = Date.now();
+    this.queuedBytes = this.playedBytes = 0;
+    this.spokenText = "";
+    this.expressions?.close();
+    this.expressions = this.createExpressions(device);
     const peer = this.peer;
     device.acceptRequest();
     if (peer) peer.mirrorAccept();
@@ -368,7 +392,8 @@ export class DeviceSession {
         if (phase === "finished") {
           this.pacer?.stop();
           this.pacer = null;
-          device.setSpeakLevel(0);
+          this.expressions?.close();
+          this.expressions = null;
           // RUN_END precedes physical playback completion. Firmware owns
           // the return to idle and the wake-word indicator.
         }
@@ -516,6 +541,8 @@ export class DeviceSession {
         if (turn.phase === "listening" && event.transcript.trim()) turn.markSpeechStarted();
         this.inputTranscript += event.transcript;
         this.options.onTranscript?.("input", event.transcript);
+        // With the eve brain the reaction comes from `hablar_con_owy`'s text.
+        if (this.shared.brain !== "eve") this.expressions?.react(this.inputTranscript);
         this.log.info(`escuché: "${this.inputTranscript.trim()}"`);
         return;
 
@@ -532,6 +559,7 @@ export class DeviceSession {
         if (!turn || turn.finished) return;
         this.outputTranscript += event.delta;
         this.options.onTranscript?.("output", event.delta);
+        if (this.shared.brain !== "eve") this.expressions?.write(this.spokenText + this.outputTranscript);
         // With the eve brain the caption is eve's exact text, already on screen.
         if (this.shared.brain !== "eve") this.scheduleCaption();
         return;
@@ -548,6 +576,8 @@ export class DeviceSession {
         if (turn.phase === "thinking") this.startSpeaking(turn);
         const pcm16 = this.resampler.process(Buffer.from(event.delta, "base64"));
         for (const frame of this.chunker.push(pcm16)) this.pacer?.push(frame);
+        this.queuedBytes += pcm16.length;
+        this.expressions?.queued(this.queuedBytes, this.spokenText.length + this.outputTranscript.length);
         return;
       }
 
@@ -564,6 +594,8 @@ export class DeviceSession {
         const tail = this.chunker.flush();
         if (tail) this.pacer?.push(tail);
         const speech = this.outputTranscript.trim();
+        this.spokenText += this.outputTranscript;
+        if (this.shared.brain !== "eve") this.expressions?.write(this.spokenText, true);
         this.outputTranscript = "";
         this.pushCaption(this.eveAnswer ?? speech);
         this.eveAnswer = null;
@@ -575,7 +607,8 @@ export class DeviceSession {
           // Firmware reopens capture after physical playback + its soft cue.
           // ESPHome's immediate continuation would bypass that bus handoff.
           turn.endSpeaking({ continueConversation: false, speech });
-          this.device?.setSpeakLevel(0);
+          this.mouth?.flush();
+          this.mouth = null;
           if (this.pacer === pacer) this.pacer = null;
           if (this.session?.goAwayPending) void this.ensureSession();
         };
@@ -603,6 +636,7 @@ export class DeviceSession {
       inputSchema: z.object({ texto: z.string().min(1).describe("Lo que dijo la persona, completo y textual") }),
       execute: async ({ texto }) => {
         this.clearEveIdleReset();
+        this.expressions?.react(texto);
         this.eveAbort?.abort();
         const abort = new AbortController();
         this.eveAbort = abort;
@@ -616,7 +650,9 @@ export class DeviceSession {
             marketplaceOpen: writes && runtime.isMarketplaceOpen(),
             eventName: this.shared.config.COMPANION_EVENT_NAME,
             onDelta: (text) => {
-              if (this.toolIsCurrent()) this.scheduleEveCaption(text);
+              if (!this.toolIsCurrent()) return;
+              this.scheduleEveCaption(text);
+              this.expressions?.write(text);
             },
             onTool: (name) => this.log.info(`owy (eve) usa ${name}`),
             signal: abort.signal,
@@ -624,6 +660,7 @@ export class DeviceSession {
           if (!this.toolIsCurrent()) return { respuesta: "" };
           this.eveAnswer = result.text;
           this.pushCaption(result.text);
+          this.expressions?.write(result.text, true);
           return { respuesta: result.text };
         } catch (error) {
           if (abort.signal.aborted) return { respuesta: "" };
@@ -692,16 +729,45 @@ export class DeviceSession {
     this.captionTimer = null;
   }
 
+  /** Faces for this turn's sentences, sent to the device that shows the face (whatever plays the audio). */
+  private createExpressions(device: DeviceTransport): ExpressionDirector | null {
+    const config = this.shared.expressions;
+    const send = device.sendExpression?.bind(device);
+    if (!config || !send) return null;
+    // An attached browser shows the face too.
+    const peer = this.peer;
+    return new ExpressionDirector({
+      classify: config.classify,
+      send: (expression, leadMs, strength) => {
+        send(expression, leadMs, strength);
+        peer?.sendExpression?.(expression, leadMs, strength);
+      },
+      leadMs: () =>
+        this.audioOutput === "laptop"
+          ? this.shared.config.COMPANION_MOUTH_LATENCY_MS
+          : (device.expressionLeadMs ?? 200),
+      log: this.log,
+    });
+  }
+
   private startSpeaking(turn: VoiceTurn): void {
     // Multiple Gemini deltas can arrive while firmware is releasing the mic.
     // Keep ONE queue/pacer for the turn; replacing it leaks active pacers that
     // all flush together when readiness arrives and overflow the device.
     if (this.pacer) return;
     turn.beginSpeaking(this.outputTranscript.trim());
+    // The device lip-syncs what its own speaker plays; laptop output needs a track.
+    const send = this.device?.sendMouthTrack;
+    this.mouth =
+      send && this.audioOutput === "laptop"
+        ? new MouthTrack(send, this.shared.config.COMPANION_MOUTH_LATENCY_MS)
+        : null;
     this.pacer = new PacedSpeaker(
       (frame) => {
         turn.pushAudio(frame);
-        this.device?.setSpeakLevel(rmsLevel(frame));
+        this.mouth?.push(frame);
+        this.playedBytes += frame.length;
+        this.expressions?.played(this.playedBytes);
       },
       { bytesPerSecond: DEVICE_SAMPLE_RATE * 2, leadMs: 100, isReady: () => turn.phase === "speaking" }
     );
@@ -778,11 +844,22 @@ export class DeviceSession {
     this.requestEpoch++;
     this.cancelEveTurn();
     this.clearEveIdleReset();
+    this.expressions?.close();
     this.pacer?.stop();
     this.turn?.finish();
     this.session?.close();
     this.device?.close();
   }
+}
+
+function loadExpressions(config: BridgeConfig, logger: Logger): SharedRuntime["expressions"] {
+  if (config.COMPANION_EXPRESSIONS === "off") return undefined;
+  if (config.COMPANION_EXPRESSIONS === "jev" && config.AI_GATEWAY_API_KEY) {
+    logger.info(`expresiones: ${config.COMPANION_EXPRESSION_MODEL} (AI Gateway) + estimación local`);
+    return { classify: jevClassifier({ apiKey: config.AI_GATEWAY_API_KEY, model: config.COMPANION_EXPRESSION_MODEL }) };
+  }
+  if (config.COMPANION_EXPRESSIONS === "jev") logger.warn("expresiones: sin AI_GATEWAY_API_KEY, sólo estimación local");
+  return {};
 }
 
 export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): Promise<SharedRuntime> {
@@ -801,6 +878,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
   }
 
   const brain = config.COMPANION_BRAIN ?? (config.COMPANION_EVE_URL ? "eve" : "local");
+  const expressions = loadExpressions(config, logger);
   if (brain === "eve") {
     if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");
     const eve = new EveLink({
@@ -813,10 +891,31 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     });
     const instructions = await loadVoiceOfOwyPrompt({ eventName: config.COMPANION_EVENT_NAME });
     logger.info(`model ${provider.spec} (voz); cerebro: eve en ${config.COMPANION_EVE_URL}; grid ${gridUrl ?? "-"}`);
-    return { config, provider, createProvider, definitions: new Map(), instructions, gridUrl, logger, brain, eve };
+    return {
+      config,
+      provider,
+      createProvider,
+      definitions: new Map(),
+      instructions,
+      gridUrl,
+      logger,
+      brain,
+      eve,
+      expressions,
+    };
   }
 
   const [definitions, prompt] = await Promise.all([loadOwyToolDefinitions(), loadPromptBundle({ gridUrl })]);
   logger.info(`model ${provider.spec}; cerebro local con ${definitions.size} owy tools; grid ${gridUrl ?? "-"}`);
-  return { config, provider, createProvider, definitions, instructions: prompt.system, gridUrl, logger, brain };
+  return {
+    config,
+    provider,
+    createProvider,
+    definitions,
+    instructions: prompt.system,
+    gridUrl,
+    logger,
+    brain,
+    expressions,
+  };
 }

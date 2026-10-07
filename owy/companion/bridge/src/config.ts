@@ -48,6 +48,11 @@ const EnvSchema = z.object({
   COMPANION_EVE_BASIC_PASSWORD: z.string().optional(),
   /** Seconds of silence after which the device's eve conversation is retired (next visitor starts fresh). */
   COMPANION_EVE_IDLE_RESET_S: z.coerce.number().int().min(10).default(180),
+  /** Laptop audio: ms from a frame leaving the pacer to it being heard in the browser (mouth sync). */
+  COMPANION_MOUTH_LATENCY_MS: z.coerce.number().int().min(0).max(2000).default(250),
+  /** Faces while Owy talks: `jev` (TypeSafe on the AI Gateway, local guess as fallback), `guess` (local only), `off`. */
+  COMPANION_EXPRESSIONS: z.enum(["jev", "guess", "off"]).default("jev"),
+  COMPANION_EXPRESSION_MODEL: z.string().default("typesafe-ai/jev"),
   /** Shown to the agent as where the device stands. */
   COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
 

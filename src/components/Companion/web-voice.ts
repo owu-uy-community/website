@@ -39,6 +39,8 @@ export type DeviceCommand =
   | { kind: "text"; text: string }
   | { kind: "qr"; url: string; caption?: string }
   | { kind: "face"; state: string }
+  /** What Owy's face feels while a sentence plays (bridge expression.ts). */
+  | { kind: "expression"; expression: string; leadMs: number; strength: number }
   | { kind: "volume"; value: number }
   | { kind: "bridgeEvent"; event: string; run: number };
 type Ticket = { token: string; url: string; model: string; expiresAt: number; protocol: number };
@@ -172,7 +174,9 @@ export class WebVoice {
       this.gain.connect(this.analyser).connect(ctx.destination);
       await ctx.audioWorklet.addModule("/companion-audio/capture.worklet.js");
       if (epoch !== this.epoch) return;
-      await this.acquire(epoch);
+      // As a device's laptop audio the browser may only be its speakers (the
+      // device keeps its own mic): never block attaching on the mic prompt.
+      if (!this.attachTo) await this.acquire(epoch);
       if (epoch !== this.epoch) return;
       this.update("connecting", "Conectando con Owy…");
       const ticket = await this.deps.ticket(this.abort.signal, scopes);
@@ -226,7 +230,7 @@ export class WebVoice {
           this.stop(
             event.code === 1000
               ? "La sesión del bridge terminó. Empezá otra cuando quieras."
-              : "El bridge se desconectó. Micrófono apagado; empezá de nuevo para reconectar."
+              : `El bridge se desconectó${event.reason ? ` (${event.reason})` : ""}. Micrófono apagado; empezá de nuevo para reconectar.`
           );
       };
       const samples = new Float32Array(256);
@@ -338,7 +342,9 @@ export class WebVoice {
     this.micLevel = 0;
   }
   async resume() {
-    if (this.resuming || this.deviceBlocked || this.stopped || this.socket?.readyState !== 1) return;
+    // Attached, the physical device starts the turns (`accepted`): a `start` from here (the
+    // virtual Owy's tap or follow-up) makes the bridge close the socket.
+    if (this.attachTo || this.resuming || this.deviceBlocked || this.stopped || this.socket?.readyState !== 1) return;
     this.resuming = true;
     const epoch = this.epoch;
     const captureEpoch = ++this.captureEpoch;
@@ -363,6 +369,8 @@ export class WebVoice {
     }
   }
   mute() {
+    // Attached: the virtual Owy's privacy, power and cancel are not the physical device's.
+    if (this.attachTo) return;
     ++this.captureEpoch;
     this.resuming = false;
     this.discard = true;
@@ -422,12 +430,20 @@ export class WebVoice {
     if (message.type === "attached") {
       this.clear(this.watchdog);
       this.clear(this.sessionTimer); // the bridge keeps attached peers for the whole open space
-      await this.acquire(this.epoch); // ask for the microphone now, not on the first turn
       this.status.attached = String(message.deviceId);
-      this.update(
-        "standby",
-        `Este navegador es el micrófono y los parlantes de ${message.deviceId}. Esperando un turno…`
-      );
+      this.update("standby", `Este navegador es los parlantes de ${message.deviceId}. Esperando un turno…`);
+      // Ask for the microphone now (not on the first turn), but in the background:
+      // it is only needed when the device's Mic is set to "laptop".
+      const epoch = this.epoch;
+      this.acquire(epoch)
+        .then(() => {
+          if (epoch === this.epoch && this.status.stage === "standby" && this.stream)
+            this.update(
+              "standby",
+              `Este navegador es el micrófono y los parlantes de ${message.deviceId}. Esperando un turno…`
+            );
+        })
+        .catch(() => {});
       return;
     }
     if (message.type === "detached") {
@@ -437,12 +453,11 @@ export class WebVoice {
       return;
     }
     if (message.type === "accepted") {
-      if (
-        !["connecting", "standby"].includes(this.status.stage) ||
-        !Number.isSafeInteger(message.run) ||
-        message.run <= this.run
-      )
-        return;
+      // Attached, the device owns the turns: its follow-up can open while the
+      // last words of the previous reply are still playing here.
+      const idle = ["connecting", "standby"].includes(this.status.stage);
+      const live = this.attachTo && ["listening", "thinking", "speaking"].includes(this.status.stage);
+      if ((!idle && !live) || !Number.isSafeInteger(message.run) || message.run <= this.run) return;
       this.run = message.run;
       this.discard = false;
       this.clear(this.watchdog);
@@ -597,6 +612,8 @@ export class WebVoice {
       socket.onerror = null;
       socket.onmessage = null;
       socket.onopen = null;
+      // Tell the bridge why this browser leaves: its log is where a drop at the venue gets debugged.
+      if (socket.readyState === 1) socket.send(JSON.stringify({ type: "detach", reason: message.slice(0, 200) }));
       socket.close();
     }
     void this.ctx?.close().catch(() => {});
@@ -608,7 +625,7 @@ export class WebVoice {
     this.update("off", message);
   }
   private fail(message: string) {
-    this.stop();
+    this.stop(message);
     this.update("error", message);
   }
 }

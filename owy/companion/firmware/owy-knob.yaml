@@ -25,19 +25,49 @@ substitutions:
   # these are the static widgets and secondary pages, ≈ 466-space × 0.7725.
   screen_px: "360"
   screenshot_url: "http://192.168.1.225:8787/shot"   # laptop running knob-shots.py
-  face_dots_y: "130"
   face_badge_y: "134"
+  hint_y: "-30"
+  ring_r: "166"
+  ring_dot: "12"
+  small_px: "13"
+  title_px: "19"
+  icon_px: "28"
   page_w: "262"
   text_w: "278"
-  keypad_w: "224"
-  keypad_h: "194"
-  settings_w: "255"
-  settings_h: "300"
+  note_w: "228"
   qr_px: "180"
-  panel_w: "250"
-  quick_h: "176"
-  control_w: "224"
-  half_w: "104"
+  qr_card: "206"
+  peek_eye_w: "54"
+  peek_eye_h: "58"
+  peek_y: "-114"
+  peek_pupil_y: "-8"
+  keypad_w: "184"
+  keypad_h: "236"
+  key_radius: "27"
+  keypad_y: "-22"
+  pin_label_y: "52"
+  settings_w: "236"
+  settings_h: "262"
+  tile_w: "108"
+  tile_h: "86"
+  tile_gap: "10"
+  tile_radius: "24"
+  grid_w: "228"
+  quick_h: "182"
+  quick_y: "6"
+  row_step: "96"
+  pill_w: "120"
+  pill_h: "36"
+  level_px: "116"
+  level_inner: "62"
+  level_y: "-32"
+  bubble_px: "24"
+  calib_status_y: "52"
+  calib_bar_y: "92"
+  calib_btn_w: "84"
+  calib_btn_x: "44"
+  help_w: "262"
+  help_h: "220"
 
 esphome:
   name: ${name}
@@ -53,13 +83,11 @@ esphome:
     - <companion_model.h>
     - <companion_lvgl.h>
     - <companion_sound.h>
-    - <knob_ring.h>
     - companion_model.h
     - companion_motion.h
     - companion_lvgl.h
     - companion_sound.h
     - knob_shot.h
-    - knob_ring.h
   platformio_options:
     build_flags:
       # 360 / 466: FaceRenderer::box() and the touch-follow center scale by this.

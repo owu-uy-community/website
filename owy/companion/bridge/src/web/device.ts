@@ -113,9 +113,11 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   setFace(state: FaceState) {
     this.emit({ type: "screen", command: { kind: "face", state } });
   }
-  setSpeakLevel(_level: number) {
-    /* Browser meters actual drained playback, not queued audio. */
+  sendExpression(expression: string, leadMs: number, strength: number) {
+    this.emit({ type: "screen", command: { kind: "expression", expression, leadMs, strength } });
   }
+  /** The browser schedules playback a little ahead of the pacer. */
+  readonly expressionLeadMs = 250;
   showCard(card: ScreenCard) {
     this.emit({ type: "screen", command: { kind: "card", card } });
   }

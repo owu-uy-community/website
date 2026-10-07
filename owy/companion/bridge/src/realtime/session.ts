@@ -123,9 +123,15 @@ export class NodeRealtimeSession {
     return this._status === "connected" && this.ws !== null;
   }
 
-  /** Session config for this connection: the base config plus the resumption handle when we have one. */
+  /**
+   * Session config for this connection: the base config plus the resumption handle when we have one.
+   * Only when the base config opted into resumption (direct Google): the gateway also sends handles
+   * but closes 1008 "transform rejected frame" on a setup that carries `sessionResumption`.
+   */
   currentConfig(): RealtimeSessionConfig {
-    if (this._resumptionHandle === null) return this.baseConfig;
+    const resumable = (this.baseConfig.providerOptions as { sessionResumption?: unknown } | undefined)
+      ?.sessionResumption;
+    if (this._resumptionHandle === null || !resumable) return this.baseConfig;
     return {
       ...this.baseConfig,
       providerOptions: {

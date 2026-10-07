@@ -3,7 +3,10 @@
 # Object ids (derived from the names) are part of the bridge contract
 # (companion/bridge/src/device/esphome.ts):
 #   select  face_state · switch staff_mode / marketplace_open / quiet_mode / wake_word_enabled
-#   number  speak_level / volume · actions show_card / show_qr / show_text
+#   number  volume · actions show_card / show_qr / show_text / set_volume / mouth_track / express
+#
+# The mouth follows the audio this device plays (speaker PCM tap); when the
+# bridge plays a turn on the laptop instead, it sends `mouth_track` frames.
 
 select:
   - platform: template
@@ -123,18 +126,6 @@ switch:
     restore_mode: RESTORE_DEFAULT_ON
 
 number:
-  # 0..100, written by the bridge per audio chunk; the mouth follows it.
-  - platform: template
-    id: speak_level
-    name: Speak Level
-    entity_category: diagnostic
-    min_value: 0
-    max_value: 100
-    step: 1
-    initial_value: 0
-    optimistic: true
-    # The local renderer reads this envelope; never fight its blink/mouth timers.
-
   - platform: template
     id: volume
     name: Volumen
@@ -211,6 +202,29 @@ api:
             id: volume
             value: !lambda return level;
         - script.execute: show_volume
+
+    # Lip shapes for audio played elsewhere (laptop output). See Companion::mouth_track.
+    - action: mouth_track
+      variables:
+        frames: string
+        lead_ms: int
+      then:
+        - lambda: id(companion).mouth_track(frames.c_str(), frames.size(), millis(), lead_ms);
+
+    # What Owy feels while saying a sentence (or reacting while it thinks): one of
+    # owy::EXPRESSION_NAMES, applied `lead_ms` from now when that line becomes
+    # audible, at `strength` 0..100. The voice state stays truthful; this only
+    # layers eyes/brows/cheeks over it. Unknown names are ignored.
+    - action: express
+      variables:
+        feeling: string
+        lead_ms: int
+        strength: int
+      then:
+        - lambda: |-
+            owy::Expression e;
+            if (owy::expression_from_name(feeling.c_str(), feeling.size(), e))
+              id(companion).express(e, millis() + uint32_t(int32_t(lead_ms)), strength / 100.0f);
 
     - action: show_text
       variables:

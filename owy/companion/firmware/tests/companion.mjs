@@ -57,7 +57,7 @@ int main() {
   f=m.frame(4100,Mood::IDLE,true,true,false,false,0);
   assert(f.gaze_x==0 && f.gaze_y==0 && f.eye_h==156 && !f.cheeks);
   f=m.frame(4100,Mood::PRIVACY,true,false,false,false,100);
-  assert(f.eye_h==16 && f.mouth_h==8 && f.gaze_x==0 && !f.cheeks);
+  assert(f.gaze_x==0 && !f.cheeks);
   m.center();
   for(uint32_t t=5000;t<6000;t+=50) {
     m.motion(.5f,.4f,.7681146f,0,0,0,t,false);
@@ -68,9 +68,11 @@ int main() {
   assert(f.gaze_x==0 && f.gaze_y==0); // stale motion settles
   m.delight(8000);
   f=m.frame(8100,Mood::IDLE,true,false,false,false,0); assert(f.cheeks);
-  f=m.frame(8100,Mood::SPEAKING,true,false,false,false,80); assert(!f.cheeks);
-  f=m.frame(8100,Mood::IDLE,true,true,false,false,0); assert(!f.cheeks);
-  f=m.frame(9700,Mood::IDLE,true,false,false,false,0); assert(!f.cheeks);
+  for(uint32_t t=8100;t<=8700;t+=33) f=m.frame(t,Mood::SPEAKING,true,false,false,false,80);
+  assert(!f.cheeks); // cheeks spring away once Owy talks
+  m.delight(8800);
+  f=m.frame(8900,Mood::IDLE,true,true,false,false,0); assert(!f.cheeks); // reduced motion: no reaction
+  f=m.frame(10500,Mood::IDLE,true,false,false,false,0); assert(!f.cheeks);
   m.motion(0,0,1,200,200,200,15000);
   assert(!m.take_shake()); // rotation/pickup alone is NOT a deliberate shake
   Companion disabled;
@@ -194,21 +196,108 @@ int main() {
   std::cout << "PASS sounds: three real PCM cues, bounded peak/slope, zero endpoints, complete ring-buffer fit\\n";
 
   const uint8_t loud[]={0xD0,0x07,0,0,0x30,0xF8,0,0};
+  auto settle=[](Companion &c, Mood mood, uint32_t from, uint32_t to, float level=0, bool reduced=false) {
+    Frame out; for(uint32_t t=from;t<=to;t+=16) out=c.frame(t,mood,false,reduced,false,false,level); return out;
+  };
   Companion mic;
-  mic.audio(loud,sizeof(loud),100);
-  f=mic.frame(110,Mood::LISTENING,false,false,false,false,0); assert(f.mouth_h>12);
-  for(uint32_t t=400;t<1800;t+=50) f=mic.frame(t,Mood::LISTENING,false,false,false,false,0);
-  assert(f.mouth_h==14); // stale audio goes quiet
-  f=mic.frame(1800,Mood::SPEAKING,false,false,false,false,100); assert(f.mouth_h>12);
-  f=mic.frame(1800,Mood::SPEAKING,false,true,false,false,100); assert(f.mouth_h==16);
-  f=mic.frame(2000,Mood::SPEAKING,false,false,false,false,NAN); assert(f.mouth_h<=64);
-  mic.audio(loud,1,3000); // undersized data safe
+  Frame quiet=settle(mic,Mood::LISTENING,0,600);
+  for(uint32_t t=616;t<760;t+=16){ mic.audio(loud,sizeof(loud),t); f=mic.frame(t,Mood::LISTENING,false,false,false,false,0); }
+  assert(f.mouth_h==quiet.mouth_h && f.mouth_w==quiet.mouth_w); // your voice never moves Owy's mouth
+  assert(f.pupil_w>quiet.pupil_w && f.eye_h>quiet.eye_h);        // it widens the eyes instead
+  assert(f.ring==RingMode::LISTEN && f.level>.1f);
+  f=settle(mic,Mood::LISTENING,1000,2200); assert(f.level<.05f); // stale audio goes quiet
+  f=settle(mic,Mood::SPEAKING,2300,2900,100); assert(f.mouth_h>40);        // level fallback opens the lips
+  f=settle(mic,Mood::SPEAKING,3000,3300,100,true); assert(f.mouth_h==18);  // reduced: one small fixed shape
+  f=settle(mic,Mood::SPEAKING,3400,3700,NAN); assert(f.mouth_h<=12);       // no signal: lips closed
+  mic.audio(loud,1,3700); // undersized data safe
+
+  // Lips follow the speaker tap: loud = open, then the shape axis.
+  Companion talk;
+  settle(talk,Mood::SPEAKING,0,200);
+  for(uint32_t t=216;t<=400;t+=16){ talk.speech_tap.push(t,1,0); f=talk.frame(t,Mood::SPEAKING,false,false,false,false,0); }
+  assert(f.mouth_h>=56 && f.cavity_h>20 && f.tongue_h>4); // "a": open, cavity, tongue
+  for(uint32_t t=416;t<=600;t+=16){ talk.speech_tap.push(t,.85f,1); f=talk.frame(t,Mood::SPEAKING,false,false,false,false,0); }
+  assert(std::abs(f.mouth_w-f.mouth_h)<=4);                // "o": round
+  for(uint32_t t=616;t<=800;t+=16){ talk.speech_tap.push(t,.6f,-1); f=talk.frame(t,Mood::SPEAKING,false,false,false,false,0); }
+  assert(f.mouth_w>f.mouth_h*2);                           // "e": wide
+  f=settle(talk,Mood::SPEAKING,816,1100); assert(f.mouth_h<=12); // tap went stale: closed
+  // A bridge mouth track: base64url, 40 ms frames, first audible after lead_ms.
+  talk.mouth_track("____",4,1200,100);
+  f=settle(talk,Mood::SPEAKING,1100,1290); assert(f.mouth_h<=14); // not audible yet
+  f=settle(talk,Mood::SPEAKING,1300,1420); assert(f.mouth_h>=50);
+  // The analyzer that feeds the tap: silence closes, a loud vowel opens.
+  SpeechAnalyzer analyzer; SpeechTrack tap; float open=1,shape=0;
+  uint8_t voice[640]={}; analyzer.feed(voice,sizeof(voice),1,10,tap); assert(tap.read(20,open,shape) && open==0);
+  for(int i=0;i<320;++i){ const int16_t v=int16_t(9000*std::sin(i*.12f)); voice[i*2]=uint8_t(v); voice[i*2+1]=uint8_t(uint16_t(v)>>8); }
+  analyzer.feed(voice,sizeof(voice),1,30,tap); assert(tap.read(40,open,shape) && open>.5f);
+  assert(!tap.read(200,open,shape)); // older than 120 ms: gone
+
+  // Moods are springs, and a blink masks every change.
+  Companion moods;
+  f=settle(moods,Mood::IDLE,0,400);
+  assert(f.eye_h==156 && f.lid_l==0 && f.crescent==0 && f.smile && f.cut_h>0);
+  f=moods.frame(420,Mood::THINKING,false,false,false,false,0);
+  f=settle(moods,Mood::THINKING,436,480); assert(f.eye_h<60);   // blinked on the change
+  f=settle(moods,Mood::THINKING,496,1400);
+  assert(f.lid_r>20 && f.lid_l==0 && f.brow_in_l<-5 && f.mouth_x>20 && f.ring==RingMode::COMET);
+  moods.delight(1500);
+  f=settle(moods,Mood::IDLE,1500,2100); assert(f.crescent>40 && f.pupil_h==0 && f.cheeks && f.bowl_h>0);
+  f=settle(moods,Mood::ERROR,2200,3200); assert(f.lid_l>20 && f.brow_in_l<0 && f.brow_out_l>0 && !f.smile && f.cut_y>0);
+  f=settle(moods,Mood::OFFLINE,3300,4300); assert(f.grey && f.ring==RingMode::SEARCH);
+  f=settle(moods,Mood::PRIVACY,4400,5400); assert(f.lid_l>=f.eye_h*45/100 && f.mouth_h<=10 && f.ring==RingMode::NONE);
+  f=settle(moods,Mood::SLEEP,5500,6500); assert(f.lid_l>=f.eye_h*9/10 && f.zzz>=0);
+  f=settle(moods,Mood::IDLE,6600,6700,0,true); assert(f.lid_l==0 && f.eye_h==156 && f.zzz<0); // reduced: snaps
+  Companion boot; boot.wake_at(1000);
+  f=settle(boot,Mood::IDLE,0,900); assert(f.lid_l>=f.eye_h-2);  // eyes shut behind the wordmark
+  f=settle(boot,Mood::IDLE,916,1600); assert(f.lid_l==0);      // then open
+  Companion nod; settle(nod,Mood::THINKING,0,300); nod.nod(310);
+  f=settle(nod,Mood::THINKING,310,470); assert(f.face_y>5);
+  f=settle(nod,Mood::THINKING,486,700); assert(f.face_y==0);
+
   Companion blink;
   blink.frame(100,Mood::IDLE,false,false,false,false,0);
-  assert(blink.frame(3680,Mood::IDLE,false,false,false,false,0).eye_h==12);
-  assert(blink.frame(3680,Mood::IDLE,false,true,false,false,0).eye_h==156);
-  assert(blink.frame(3850,Mood::IDLE,false,false,false,false,0).eye_h==156);
-  std::cout << "PASS face: observed mic envelope, stale audio, speaking level, reduced motion, blink and recovery\\n";
+  assert(blink.frame(3660,Mood::IDLE,false,false,false,false,0).eye_h==12);  // fast close…
+  assert(blink.frame(3660,Mood::IDLE,false,true,false,false,0).eye_h==156);  // never with reduced motion
+  assert(blink.frame(3850,Mood::IDLE,false,false,false,false,0).eye_h==156); // …and open again
+
+  // The rim: flash on listening, a draining countdown, a comet, the level.
+  Companion rim; settle(rim,Mood::IDLE,0,100);
+  f=rim.frame(120,Mood::LISTENING,false,false,false,false,0);
+  RingFrame r=rim.ring(f,130); assert(r.opa[0]>=200 && r.color==0x0162C8);
+  r=rim.ring(f,1000); assert(r.opa[0]<100);
+  rim.countdown(2000,8000);
+  f=settle(rim,Mood::FOLLOWUP,2000,2100); r=rim.ring(f,6000);
+  int lit=0; for(auto o:r.opa) lit+=o>=200; assert(lit==12);
+  f=settle(rim,Mood::THINKING,6100,6300); r=rim.ring(f,6300);
+  lit=0; for(auto o:r.opa) lit+=o>=100; assert(lit>=2 && lit<=5 && r.color==0xF5BB03);
+  r=ring_frame(RingMode::LEVEL,0,.5f,0,0); lit=0; for(auto o:r.opa) lit+=o>=200; assert(lit==12);
+  // Levels grow an arc from 12 o'clock, so a level change only repaints its ends.
+  RingFrame low=ring_frame(RingMode::BREATHE,5000,.25f,0,0), high=ring_frame(RingMode::BREATHE,5000,.33f,0,0);
+  int changed=0; for(int i=0;i<RingFrame::N;++i) changed+=low.opa[i]!=high.opa[i];
+  assert(low.opa[0]==255 && low.opa[12]<60 && changed==2);
+  RingFrame c0=ring_frame(RingMode::COMET,1100,0,0,0), c1=ring_frame(RingMode::COMET,1140,0,0,0);
+  changed=0; for(int i=0;i<RingFrame::N;++i) changed+=c0.opa[i]!=c1.opa[i]; assert(changed==0); // whole-dot steps
+  // Expressions layer over talking/thinking; the lips keep following speech.
+  Companion feel; settle(feel,Mood::SPEAKING,0,300);
+  Frame plain=settle(feel,Mood::SPEAKING,316,600);
+  feel.express(Expression::HAPPY,700,1);
+  f=settle(feel,Mood::SPEAKING,616,690); assert(f.cheek==plain.cheek);             // not audible yet
+  f=settle(feel,Mood::SPEAKING,706,1400); assert(f.cheeks && f.crescent>10 && f.pupil_h>0); // happy squint, pupils visible
+  feel.express(Expression::SURPRISED,1450,1);
+  f=settle(feel,Mood::SPEAKING,1416,2100); assert(f.eye_h>170 && f.pupil_w<40 && f.brow_y<-10 && !f.cheeks);
+  feel.express(Expression::CURIOUS,2150,1);
+  f=settle(feel,Mood::SPEAKING,2116,2800); assert(f.brow_out_r<-10 && f.brow_out_l==0 && f.gaze_x>3);
+  feel.express(Expression::EMPATHETIC,2850,.5f);
+  f=settle(feel,Mood::SPEAKING,2816,3500); assert(f.brow_in_l<-3 && f.brow_in_l>-8 && f.lid_l>5); // half strength
+  feel.express(Expression::PLAYFUL,3550,1);
+  f=settle(feel,Mood::SPEAKING,3516,3800); assert(f.lid_l>f.lid_r+40);              // the wink
+  Companion react; settle(react,Mood::THINKING,0,400); react.express(Expression::EMPATHETIC,410,1);
+  f=settle(react,Mood::THINKING,416,1200); assert(f.brow_in_r<-5 && f.lid_l>20 && f.gaze_x>10); // reacting while thinking
+  settle(feel,Mood::IDLE,3816,4200);                                                 // turn over: cues forgotten
+  f=settle(feel,Mood::SPEAKING,4216,5000); assert(f.lid_l==0 && !f.cheeks);
+  Expression parsed; assert(expression_from_name("happy",5,parsed) && parsed==Expression::HAPPY);
+  assert(!expression_from_name("happ",4,parsed) && !expression_from_name("happyy",6,parsed));
+  std::cout << "PASS face: springs, blink-on-change, lids, happy cut, sleep/boot/nod, mouth ignores your voice, speaker-tap visemes, mouth track, analyzer, rim, expressions\\n";
 
   Power p; assert(!p.known && p.percent==-1);
   p.decode(0x20,0,100); assert(p.usb && !p.battery && p.percent==-1);
@@ -231,7 +320,9 @@ try {
   const yaml = readFileSync(new URL("../packages/face.yaml", import.meta.url), "utf8");
   const main = yaml.slice(yaml.indexOf("- id: face_page"), yaml.indexOf("- id: card_page"));
   const touch = main.slice(main.indexOf("id: tap_area"));
-  assert(!main.includes("- button:") && !main.includes("- label:"), "Face only: controls/text belong in settings");
+  assert(!main.includes("- button:"), "Face only: controls belong in settings");
+  const labels = [...main.matchAll(/- label:\n\s+id: (\w+)/g)].map((m) => m[1]);
+  assert.deepEqual(labels, ["zzz_0", "zzz_1", "zzz_2", "face_hint", "overlay_label"], "Face text is hints/overlay/z's only");
   assert(!/on_(short_click|click|long_press|swipe_)/.test(touch), "Do not add competing gesture actions");
   assert(touch.includes("contact.end") && touch.includes("contact.cancel") && touch.includes("lv_indev_wait_release"));
   assert(!yaml.includes("think_spinner") && !yaml.includes("id: eye_height"), "One small-region renderer owns geometry");

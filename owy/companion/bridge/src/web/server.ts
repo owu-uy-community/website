@@ -222,6 +222,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
               connectDevice: async (_spec, handlers) =>
                 (device = mirror.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),
               onFace: mirror.face,
+              lazyRealtime: true,
               isStaff: () => authority.staff,
               isMarketplaceOpen: () => authority.marketplace,
               proposalHistory: proposals,
@@ -269,6 +270,10 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             break;
           }
           case "detach":
+            if (attached)
+              shared.logger.info(
+                `${attached.id}: browser leaving (${typeof m.reason === "string" ? m.reason.slice(0, 200) : "-"})`
+              );
             detach();
             clearTimeout(lifetime);
             lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
@@ -296,7 +301,10 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
           default:
             throw Error("Unsupported command");
         }
-      })().catch(() => ws.close(1008, "Invalid request or bridge unavailable"));
+      })().catch((error) => {
+        shared.logger.warn(`web client closed: ${error instanceof Error ? error.message : error}`);
+        ws.close(1008, "Invalid request or bridge unavailable");
+      });
     });
   });
   await new Promise<void>((resolve, reject) => {

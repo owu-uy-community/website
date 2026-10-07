@@ -3,6 +3,7 @@ import { loadConfig } from "../config";
 import { CompanionDevice } from "../device/esphome";
 import { createLogger } from "../log";
 import { FACE_STATES } from "../device/esphome";
+import { encodeMouth } from "../audio/mouth";
 
 /**
  * Hardware probe over the native API — no Gemini, no site. Connects to the
@@ -25,7 +26,9 @@ async function main(): Promise<void> {
     spec,
     {
       onRequestStart: (request) => {
-        logger.info(`pipeline start received (wake="${request.wakeWordPhrase ?? ""}") — declining, this is only a probe`);
+        logger.info(
+          `pipeline start received (wake="${request.wakeWordPhrase ?? ""}") — declining, this is only a probe`
+        );
         device.declineRequest();
       },
       onRequestStop: () => logger.info("pipeline stop received"),
@@ -50,14 +53,16 @@ async function main(): Promise<void> {
     entityId("switch", "staff_mode"),
     entityId("switch", "marketplace_open"),
     entityId("switch", "quiet_mode"),
-    entityId("number", "speak_level"),
+    entityId("sensor", "render_time"),
   ];
   const ids = new Set(entities.map((entity) => entity.id));
   for (const id of required) {
     logger[ids.has(id) ? "info" : "error"](`${ids.has(id) ? "ok " : "MISSING"} ${id}`);
   }
 
-  logger.info(`modes: staff=${device.isStaffMode()} marketplace=${device.isMarketplaceOpen()} quiet=${device.isQuietMode()}`);
+  logger.info(
+    `modes: staff=${device.isStaffMode()} marketplace=${device.isMarketplaceOpen()} quiet=${device.isQuietMode()}`
+  );
 
   for (const face of FACE_STATES.filter((f) => f !== "offline")) {
     device.setFace(face);
@@ -65,12 +70,14 @@ async function main(): Promise<void> {
     await sleep(1500);
   }
 
-  logger.info("speak level sweep");
-  for (let i = 0; i <= 10; i++) {
-    device.setSpeakLevel(Math.abs(Math.sin(i / 2)), Date.now() + i * 1000);
-    await sleep(120);
-  }
-  device.setSpeakLevel(0, Date.now() + 20_000);
+  // The mouth only moves while the face is speaking; a synthetic track opens
+  // and closes through every shape (wide → round) for ~1.6 s.
+  logger.info("mouth track sweep");
+  device.setFace("speaking");
+  const sweep = Array.from({ length: 40 }, (_, i) => encodeMouth(Math.abs(Math.sin(i / 3)), Math.sin(i / 7))).join("");
+  device.sendMouthTrack?.(sweep, 0);
+  await sleep(1800);
+  device.setFace("idle");
 
   logger.info("test tone");
   device.client.command(entityId("button", "tono_de_prueba"), {});

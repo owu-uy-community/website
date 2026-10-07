@@ -184,12 +184,21 @@ script:
           then:
             - script.stop: knob_turn
       - script.execute: wake_display
-      # On the quick-controls page the knob scrolls the list instead.
+      # On ajustes the knob scrolls a row of tiles; on help it turns the page.
       - if:
           condition:
             lambda: return lv_display_get_screen_active(id(ui).get_disp()) == id(quick_page)->obj;
           then:
-            - lambda: lv_obj_scroll_by(id(quick_list), 0, -62 * delta, LV_ANIM_ON);
+            - lambda: lv_obj_scroll_by(id(quick_list), 0, -${row_step} * delta, LV_ANIM_ON);
+            - script.execute:
+                id: haptic
+                effect: 24
+            - script.stop: knob_turn
+      - if:
+          condition:
+            lambda: return lv_display_get_screen_active(id(ui).get_disp()) == id(help_page)->obj;
+          then:
+            - lambda: lv_obj_scroll_by(id(help_cards), -${help_w} * delta, 0, LV_ANIM_ON);
             - script.execute:
                 id: haptic
                 effect: 24
@@ -199,31 +208,18 @@ script:
           value: !lambda |-
             const float v = id(screen_brightness).state + 5.0f * delta;
             return v < 10 ? 10 : v > 100 ? 100 : v;
-      - script.execute: show_knob_overlay
+      # Brightness on the rim, the same language as volume and listening.
+      - lambda: |-
+          id(overlay_level) = (id(screen_brightness).state - 10) / 90.0f;
+          id(overlay_until) = millis() + 1200;
+          char text[24];
+          snprintf(text, sizeof(text), "brillo %d%%", int(id(screen_brightness).state));
+          lv_label_set_text(id(overlay_label), text);
       - script.execute:
           id: haptic
           effect: !lambda |-
             const float v = id(screen_brightness).state;
             return (v <= 10 || v >= 100) ? 47 : 24;  // buzz at the ends, tick per detent
-
-  # Ring around the rim + value at the top while the knob turns; auto-hides.
-  - id: show_knob_overlay
-    mode: restart
-    then:
-      - lvgl.arc.update:
-          id: knob_arc
-          value: !lambda return int(id(screen_brightness).state);
-      - lvgl.label.update:
-          id: knob_label
-          text: !lambda |-
-            char text[24];
-            snprintf(text, sizeof(text), "brillo %d%%", int(id(screen_brightness).state));
-            return std::string(text);
-      - lvgl.widget.show: knob_arc
-      - lvgl.widget.show: knob_label
-      - delay: 1200ms
-      - lvgl.widget.hide: knob_arc
-      - lvgl.widget.hide: knob_label
 
   # DRV2605 playback: waveform slot 1 = effect, slot 2 = end, GO. Coin ERM in
   # open loop: single ticks are barely perceptible, so the hooks use buzzes.
@@ -274,103 +270,160 @@ script:
 
 lvgl:
   pages:
-    - id: !extend face_page
-      widgets:
-        - arc:
-            id: knob_arc
-            align: CENTER
-            width: 348
-            height: 348
-            min_value: 10
-            max_value: 100
-            value: 80
-            start_angle: 0
-            end_angle: 360
-            rotation: 270
-            arc_width: 6
-            arc_color: 0x1F1F1F
-            adjustable: false
-            clickable: false
-            hidden: true
-            indicator:
-              arc_color: 0xF5BB03
-              arc_width: 6
-            knob:
-              bg_opa: TRANSP
-              pad_all: 0
-        - label:
-            id: knob_label
-            align: TOP_MID
-            y: 26
-            text: "brillo 80%"
-            text_color: 0xF5BB03
-            clickable: false
-            hidden: true
-        # What a visitor should do; only while idle and connected.
-        - label:
-            id: idle_hint
-            align: BOTTOM_MID
-            y: -34
-            text: "tocame y hablame"
-            text_color: 0x8A8A8A
-            clickable: false
-            hidden: true
-
 # ── Answer view (this unit has no speaker) ─────────────────────────────────────
 #
 # The face stays up while there is no answer (listening/thinking happen on it).
 # The first caption of a reply brings this page up and pins it (`page_hold`),
 # so it survives the follow-up window; it is released when the conversation
-# ends and the face returns 12 s later. Mini eyes, what Owy heard, the reply
-# (bottom-anchored so long answers keep their newest lines) and one rim ring:
-# breathing yellow while the (silent) reply plays, blue following the mic when
-# the follow-up mic is open, dim yellow while thinking. Tap = talk again.
+# ends and the face returns 12 s later. A mini Owy that keeps lip-syncing (the
+# same Frame as the big face, rendered at 96 px), what Owy heard in a grey pill,
+# the reply (bottom-anchored so long answers keep their newest lines) and the
+# shared rim. Tap = talk again.
     - id: convo_page
       bg_color: 0x000000
       widgets:
         - obj:
-            id: convo_eye_l
+            id: mini_face
             align: TOP_MID
-            x: -22
-            y: 30
-            width: 26
-            height: 30
-            radius: 11
-            bg_color: 0xFBF5E7
+            y: 12
+            width: 96
+            height: 96
+            bg_opa: TRANSP
             border_width: 0
             pad_all: 0
             scrollable: false
             clickable: false
-        - obj:
-            id: convo_eye_r
-            align: TOP_MID
-            x: 22
-            y: 30
-            width: 26
-            height: 30
-            radius: 11
-            bg_color: 0xFBF5E7
-            border_width: 0
-            pad_all: 0
-            scrollable: false
-            clickable: false
+            widgets:
+              - obj:
+                  id: mini_eye_l
+                  align: CENTER
+                  x: -18
+                  y: -5
+                  width: 31
+                  height: 32
+                  radius: 12
+                  bg_color: 0xFBF5E7
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  widgets:
+                    - obj:
+                        id: mini_pupil_l
+                        align: CENTER
+                        width: 9
+                        height: 11
+                        radius: 4
+                        bg_color: 0x000000
+                        border_width: 0
+                        pad_all: 0
+                        scrollable: false
+                        widgets:
+                          - obj:
+                              id: mini_glint_l
+                              align: CENTER
+                              width: 3
+                              height: 3
+                              radius: 2
+                              bg_color: 0xFBF5E7
+                              border_width: 0
+              - obj:
+                  id: mini_eye_r
+                  align: CENTER
+                  x: 18
+                  y: -5
+                  width: 31
+                  height: 32
+                  radius: 12
+                  bg_color: 0xFBF5E7
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  widgets:
+                    - obj:
+                        id: mini_pupil_r
+                        align: CENTER
+                        width: 9
+                        height: 11
+                        radius: 4
+                        bg_color: 0x000000
+                        border_width: 0
+                        pad_all: 0
+                        scrollable: false
+                        widgets:
+                          - obj:
+                              id: mini_glint_r
+                              align: CENTER
+                              width: 3
+                              height: 3
+                              radius: 2
+                              bg_color: 0xFBF5E7
+                              border_width: 0
+              - obj:
+                  id: mini_mouth
+                  align: CENTER
+                  y: 24
+                  width: 21
+                  height: 6
+                  radius: 4
+                  bg_color: 0xFBF5E7
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  widgets:
+                    - obj:
+                        id: mini_cavity
+                        align: CENTER
+                        width: 12
+                        height: 2
+                        radius: 1
+                        bg_color: 0x000000
+                        border_width: 0
+                        pad_all: 0
+                        scrollable: false
+                        hidden: true
+                        widgets:
+                          - obj:
+                              id: mini_tongue
+                              align: CENTER
+                              width: 6
+                              height: 2
+                              radius: 4
+                              bg_color: 0xF5BB03
+                              border_width: 0
+                              hidden: true
+                    - obj:
+                        id: mini_cut
+                        align: CENTER
+                        width: 17
+                        height: 5
+                        radius: 3
+                        bg_color: 0x000000
+                        border_width: 0
         # What Owy understood (STT_END text): mis-hearings become visible on a mute unit.
         - label:
             id: caption_heard
             align: TOP_MID
-            y: 78
-            width: 262
+            y: 112
+            width: 240
             long_mode: DOT
             text_align: CENTER
             text: ""
-            text_color: 0x8A8A8A
+            text_font: font_small
+            text_color: 0xBDB6A6
+            bg_color: 0x1F1F1F
+            bg_opa: COVER
+            radius: 14
+            pad_top: 6
+            pad_bottom: 6
+            pad_left: 12
+            pad_right: 12
             clickable: false
         - obj:
             id: caption_box
             align: CENTER
-            y: 34
+            y: 50
             width: 262
-            height: 196
+            height: 160
             bg_opa: TRANSP
             border_width: 0
             pad_all: 0
@@ -443,11 +496,12 @@ globals:
     type: bool
     restore_value: false
     initial_value: "false"
-  - id: ring_face
-    type: owy::Ring
-    restore_value: false
+  # The answer view's rim and mini face (the face page's live in companion.yaml).
   - id: ring_convo
-    type: owy::Ring
+    type: owy::FaceRing
+    restore_value: false
+  - id: mini_renderer
+    type: owy::FaceRenderer
     restore_value: false
 
 esphome:
@@ -455,73 +509,31 @@ esphome:
     - priority: 600
       then:
         - script.execute: haptic_init
-    # After LVGL built the pages: 24 dots on a 166 px circle, hidden until used.
     - priority: -100
       then:
         - lambda: |-
-            id(ring_face).create(id(face_page)->obj, 166, 12);
-            id(ring_convo).create(id(convo_page)->obj, 166, 12);
+            id(ring_convo).create(id(convo_page)->obj, ${ring_r}, ${ring_dot});
+            id(mini_renderer).scale = 96.0f / 466.0f;
 
 interval:
+  # The answer view mirrors the big face's frame: same mood, blinks and lips.
   - interval: 33ms
     then:
       - lambda: |-
-          // ── Rim halo: colour/opacity encode the voice state ─────────────
-          // Quantized (12 steps) and deduplicated in Ring::set, so a stable
-          // level costs nothing and a change recolours 24 small dots only.
-          static float level = 0;
+          if (id(ui).is_paused()) return;
           const uint32_t now = millis();
-          auto *screen = lv_display_get_screen_active(id(ui).get_disp());
-          owy::Ring *ring = screen == id(face_page)->obj ? &id(ring_face) :
-                            screen == id(convo_page)->obj ? &id(ring_convo) : nullptr;
-          if (ring != &id(ring_face)) id(ring_face).hide();
-          if (ring != &id(ring_convo)) id(ring_convo).hide();
-          const bool running = id(va).is_running() && !id(mic_privacy).state;
-          const int phase = running ? id(va_phase) : 0;   // 2 listening · 3 thinking · 4 speaking
-          if (ring && phase == 2 && id(mic).is_running()) {
-            const float mic = id(companion).mic_level(now);
-            level = mic > level ? level + (mic - level) * 0.45f : level * 0.92f;
-            const int step = int(level * 11.f + 0.5f);                        // 0..11
-            ring->set(lv_color_mix(lv_color_hex(0x5FB0FF), lv_color_hex(0x0B3D8C), uint8_t(step * 23)),
-                      uint8_t(90 + step * 15));                                // soft navy → hard bright blue
-          } else if (ring && phase == 3) {
-            level = 0;
-            ring->set(lv_color_hex(0xF5BB03), 110);                            // dim steady yellow
-          } else if (ring && phase == 4) {
-            level = 0;
-            const float breath = 0.5f + 0.5f * std::sin(float(now % 2600) / 2600.f * 6.2831853f);
-            ring->set(lv_color_hex(0xF5BB03), uint8_t(70 + int(breath * 11.f + 0.5f) * 16));
-          } else {
-            level = 0;
-            if (ring) ring->hide();
+          const bool on_convo = lv_display_get_screen_active(id(ui).get_disp()) == id(convo_page)->obj;
+          const auto &frame = id(face_frame);
+          id(ring_convo).apply(id(companion).ring(frame, now), on_convo && frame.ring != owy::RingMode::NONE);
+          if (!on_convo) return;
+          static owy::FaceObjects mini;
+          if (!mini.eye_l) {
+            mini.eye_l = id(mini_eye_l); mini.eye_r = id(mini_eye_r);
+            mini.pupil_l = id(mini_pupil_l); mini.pupil_r = id(mini_pupil_r);
+            mini.glint_l = id(mini_glint_l); mini.glint_r = id(mini_glint_r);
+            mini.mouth = id(mini_mouth); mini.cavity = id(mini_cavity); mini.tongue = id(mini_tongue); mini.cut = id(mini_cut);
           }
-          // ── Mini eyes on the answer view: an irregular blink ─────────────
-          static uint32_t blink_at = 0, blink_gap = 3200, seed = 0x4F5759; static bool shut = false;
-          if (screen != id(convo_page)->obj) return;
-          if (blink_at == 0) blink_at = now;
-          const uint32_t age = now - blink_at;
-          const bool closing = age >= blink_gap && age < blink_gap + 120;
-          if (closing != shut) {
-            shut = closing;
-            lv_obj_set_height(id(convo_eye_l), shut ? 6 : 30);
-            lv_obj_set_height(id(convo_eye_r), shut ? 6 : 30);
-          }
-          if (age >= blink_gap + 120) {
-            seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
-            blink_at = now; blink_gap = 2800 + seed % 2600;
-          }
-  - interval: 250ms
-    then:
-      - lambda: |-
-          // Idle hint: connected, nothing in flight, on the face.
-          const bool idle = id(va_phase) == 1 && !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) &&
-              !id(mic_privacy).state && !id(ui).is_paused() &&
-              lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj;
-          const char *text = "tocame y hablame";
-          if (strcmp(lv_label_get_text(id(idle_hint)), text) != 0) lv_label_set_text(id(idle_hint), text);
-          const bool hidden = lv_obj_has_flag(id(idle_hint), LV_OBJ_FLAG_HIDDEN);
-          if (idle && hidden) lv_obj_remove_flag(id(idle_hint), LV_OBJ_FLAG_HIDDEN);
-          else if (!idle && !hidden) lv_obj_add_flag(id(idle_hint), LV_OBJ_FLAG_HIDDEN);
+          id(mini_renderer).render(frame, mini);
   # A driver that missed its init (bus busy at boot) gets another chance.
   - interval: 10s
     then:

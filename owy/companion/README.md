@@ -130,7 +130,7 @@ con `packages/boards/knob18.yaml`:
 | Perilla | **no es un encoder de cuadratura**: es un switch de detentes bidireccional (A=GPIO8 pulsa al girar en sentido horario, B=GPIO7 antihorario; el driver de Waveshare `bidi_switch_knob.c` los lee como dos botones). Se leen como dos `binary_sensor` con debounce → **brillo ±5%** con un anillo en el borde de la cara y `brillo N%` arriba (1.2 s), más un tick háptico. Sin pulsador: el "botón" es el touch |
 | Háptica | DRV2605 @0x5A con la receta del demo de Waveshare (ERM lazo abierto, librería 5, disparo por I²C). Efectos: tap 4 (click), acariciar 7 (bump), mantener/arriba 10 (doble click), swipe 24, escuchando 24, respondiendo 7, detente 26. `button.vibración_de_prueba` para probar desde la web |
 | Mudo | `listening_chime` e `interaction_sounds` arrancan apagados en esta placa (sólo agregan latencia sin parlante); el tick háptico avisa que Owy escucha |
-| Experiencia | **La cara queda siempre que no hay respuesta**: escuchando (halo de 24 puntos azul cuyo color/opacidad sigue el mic, con `mic_vu_gain`) y pensando (halo amarillo tenue) pasan en la cara. La **primera caption de una respuesta** abre la *vista de respuesta* (ojitos, « lo que entendió », el texto anclado abajo, halo amarillo respirando) y la fija con el global `page_hold` (face.yaml) para que sobreviva la ventana de follow-up; al terminar la conversación se libera y la cara vuelve a los 12 s. Tocar la respuesta = hablar de nuevo. El bridge manda la transcripción por la acción `show_caption` cuando la placa la anuncia |
+| Experiencia | **La cara queda siempre que no hay respuesta**: escuchando (aro de 24 puntos azul cuya opacidad sigue el mic, con `mic_vu_gain`; en el follow-up se vacía en 8 s) y pensando (cometa amarillo) pasan en la cara. La **primera caption de una respuesta** abre la *vista de respuesta* (un Owy mini que sigue moviendo los labios, « lo que entendió » en una píldora gris, el texto anclado abajo, aro amarillo respirando) y la fija con el global `page_hold` (face.yaml) para que sobreviva la ventana de follow-up; al terminar la conversación se libera y la cara vuelve a los 12 s. Tocar la respuesta = hablar de nuevo. El bridge manda la transcripción por la acción `show_caption` cuando la placa la anuncia |
 | Revisión | `button.captura_de_pantalla` (LV_USE_SNAPSHOT + `knob_shot.h`) postea la pantalla real en RGB565 a `${screenshot_url}`; correr `/usr/bin/python3 owy/companion/scripts/knob-shots.py` en la laptop (Apple python: el firewall de macOS deja pasar sus conexiones LAN) y mirar los PNG en `/tmp/knob-shots`. Una captura frena el loop ~0.5 s: no sacarla en medio de audio. Para un turno sin hablar: `say -v "Flo (Spanish (Spain))" "..."` con la perilla al lado de la Mac |
 | Sin | IMU, PMIC, botón BOOT (GPIO0 es el mux del DAC), micro-SD (no se usa) |
 | Cara | la geometría animada escala en C++ con `-DOWY_FACE_SCALE=0.7725` (360/466); páginas secundarias vía las substitutions `page_w`, `panel_w`, `quick_h`, etc. (defaults 466 en `face.yaml`/`companion.yaml`, overrides en `owy-knob.yaml`) |
@@ -183,7 +183,8 @@ de `knob_turn` a `volume` (mismo overlay).
 | `binary_sensor.playback_ready` | confirma que ambos consumidores del mic liberaron el bus antes del audio |
 | `text_sensor.audio_state` | `offline / preparing / listening / follow_up / thinking / speaking / draining / recovering / wake_word / idle / error / muting / privacy / feedback / calibrating` |
 | `button.hablar` | mismo comportamiento que tap: hablar o cancelar |
-| `number.speak_level` | 0–100, mueve la boca |
+| `sensor.render_time` / `sensor.render_time_max` | ms de render LVGL por refresco (media y peor de 5 s), en el mismo loop que alimenta el parlante |
+| acción `mouth_track(frames, lead_ms)` | labios para turnos que suenan en la laptop: 1 char base64url cada 40 ms (`bridge/src/audio/mouth.ts`). Si el audio sale del dispositivo, la boca sigue al propio parlante (tap de PCM en `components/i2s_audio`) |
 | `number.volumen` | volumen del parlante |
 | `button.tono_de_prueba` | tono suave de prueba de 1 kHz / 80 ms |
 | `select.mic_source` / `select.audio_output` | `dispositivo · laptop`: el bridge los lee al empezar cada turno (ver *Modos de audio*) |
@@ -287,6 +288,9 @@ COMPANION_EVE_BASIC_PASSWORD=...
 OWU_API_URL=https://owu.uy                             # o http://localhost:3000 con el sitio local
 OWY_API_KEY=owy...
 OWY_EVENT_ID=owu-conf-2026                             # id o slug; sin esto usa el evento más reciente
+# caras mientras habla (opcional; usa la misma AI_GATEWAY_API_KEY)
+COMPANION_EXPRESSIONS=jev                              # jev (default) · guess (sólo estimación local) · off
+COMPANION_EXPRESSION_MODEL=typesafe-ai/jev
 ```
 
 ```bash
@@ -480,3 +484,55 @@ La escena **Sonando** (`now-playing`) de la pantalla grande se puede alimentar s
 3. Poné la escena *Sonando* en la pantalla. Cada ~25 s el script escucha y, si el tema cambió, actualiza título y artista (`owyStage.nowPlaying`, autenticado con la misma key del bridge). Con cualquier otra escena al aire el sitio lo ignora, así que puede quedar corriendo todo el día.
 
 Alternativas gratis: en Linux, [SongRec](https://github.com/marin-m/SongRec) (`songrec listen --json`, cliente open-source de Shazam) y el mismo `curl`; 100 % offline, [Olaf](https://github.com/JorenSix/Olaf) (`olaf store` con la playlist y `olaf microphone`).
+
+## La cara (rediseño 2026-10)
+
+Un solo modelo (`firmware/companion_model.h`) calcula cada número animado y
+`FaceRenderer` (`companion_lvgl.h`) es el único que escribe geometría LVGL,
+deduplicada: sólo se redibuja lo que cambió.
+
+- **Resortes** en vez de saltos: cada estado tiene una pose (ojos, párpados,
+  cejas inclinables, cachetes, boca) y los resortes la alcanzan con un poquito
+  de rebote. Un parpadeo tapa cada cambio de estado.
+- **Boca**: labios + cavidad + lengua + corte (sonrisa en U / ceño) + banda
+  superior (risa). Hablando, la forma sale de `SpeechAnalyzer`: volumen →
+  apertura, dos cocientes espectrales normalizados a la voz → ancha (e/i) o
+  redonda (o/u). Escuchando, la boca queda quieta en «o»: tu voz mueve las
+  pupilas y el aro, no los labios de Owy.
+- **Aro** (24 puntos, `FaceRing`): azul = vos (escucha, cuenta regresiva del
+  follow-up), amarillo = Owy (cometa pensando, respira hablando, volumen/brillo).
+- **Dormir**: a los 120 s quieto cierra los ojos y flotan las z 10 s; después
+  baja el brillo y LVGL se pausa. Un toque lo despierta.
+- Calibración en pantalla: `speaker_latency_ms` (companion.yaml) adelanta los
+  labios al audio que sale; `COMPANION_MOUTH_LATENCY_MS` (bridge) hace lo mismo
+  para el audio de la laptop. `SpeechAnalyzer::*` tiene los umbrales de vocales.
+
+### Caras mientras habla (jev)
+
+Cada frase de la respuesta lleva una expresión (`neutral · happy · excited ·
+curious · thinking · empathetic · playful · surprised`) que el dispositivo
+aplica sobre la cara de "hablando" cuando esa frase se escucha: ojos, párpados,
+cejas y cachetes cambian; los labios siguen haciendo lip-sync.
+
+- `bridge/src/expression.ts` (`ExpressionDirector`, uno por turno): parte el
+  texto en frases (la respuesta de eve apenas llega; con cerebro local, la
+  transcripción de Gemini a medida que llega) y le pregunta a **jev**
+  (TypeSafe en el AI Gateway, `experimental_evaluate` con una pregunta
+  `choice`) qué cara va. Medido: ~0.4–0.7 s por frase, en paralelo, 12/12 en
+  frases rioplatenses. Una estimación local instantánea (puntuación y palabras
+  como "perdón", "¿…?", "¡…!") cubre cada frase hasta que jev contesta; si jev
+  llega tarde corrige la cara en el momento. Confianza baja = expresión suave.
+- Lo que dijo la persona (`hablar_con_owy` con eve, la transcripción con
+  Gemini) dispara una **reacción** mientras Owy piensa.
+- Sincronía: el bridge anota cuánto texto llevaba la transcripción en cada
+  tramo de audio encolado y, cuando el pacer suelta ese audio, manda la cara de
+  la frase con `lead_ms` (dispositivo 200 ms, navegador 250 ms, audio en la
+  laptop `COMPANION_MOUTH_LATENCY_MS`). Sin transcripción estima ~14 caracteres/s.
+- Firmware: acción `express(feeling, lead_ms, strength)` →
+  `Companion::express`; las señales sólo valen mientras habla o piensa y se
+  borran al terminar el turno. El estado de voz (escuchando/pensando/hablando)
+  sigue siendo el real.
+- Simulador: el mismo comando llega por la conexión en vivo; en el workbench,
+  "Expresión al hablar" las prueba con *Hablando* o *Pensando*.
+- Privacidad: las frases y lo que dijo la persona van a TypeSafe con
+  zero-data-retention del gateway. `COMPANION_EXPRESSIONS=guess` no manda nada.

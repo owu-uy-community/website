@@ -133,3 +133,77 @@ it("preserves delayed input transcripts after commit without reopening the micro
   wired.onModelEvent({ type: "input-transcription-completed", itemId: "stale", transcript: "No agregar", raw: {} });
   expect((wired as unknown as { inputTranscript: string }).inputTranscript).toBe("Hola Owy");
 });
+
+it("cues one face per sentence as the paced audio reaches it (local brain, live transcript)", async () => {
+  const cues: [string, number, number][] = [];
+  const device = {
+    isPlaybackReady: () => true,
+    sendEvent: () => {},
+    sendAudio: () => {},
+    acceptRequest: vi.fn(),
+    expressionLeadMs: 200,
+    sendExpression: (expression: string, leadMs: number, strength: number) => cues.push([expression, leadMs, strength]),
+  };
+  const session = new DeviceSession({ id: "test", host: "unused", port: 6053, psk: null }, {
+    logger: createLogger("test", "error"),
+    config: { COMPANION_MOUTH_LATENCY_MS: 250 },
+    expressions: {}, // local guesses: deterministic, no network
+  } as unknown as SharedRuntime);
+  const wired = session as unknown as {
+    device: unknown;
+    session: unknown;
+    turn: VoiceTurn;
+    onRequestStart(request: VoiceAssistantRequest): Promise<void>;
+    onModelEvent(event: Experimental_RealtimeServerEvent): void;
+  };
+  wired.device = device;
+  wired.session = {
+    status: "connected",
+    isConnected: true,
+    goAwayPending: false,
+    resetConversation: vi.fn(),
+    commitAudio: vi.fn(),
+  };
+  await wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  wired.turn.endListening("hola");
+  // Gemini: transcript and audio interleave; 24 kHz deltas, 1 s per sentence.
+  const say = (text: string) => {
+    wired.onModelEvent({ type: "audio-transcript-delta", responseId: "r1", itemId: "i1", delta: text, raw: {} });
+    wired.onModelEvent({
+      type: "audio-delta",
+      responseId: "r1",
+      itemId: "i1",
+      delta: Buffer.alloc(48_000).toString("base64"),
+      raw: {},
+    });
+  };
+  say("¡Hola, qué bueno verte! ");
+  say("Perdón, esa charla ya se llenó. ");
+  wired.onModelEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  vi.advanceTimersByTime(300);
+  expect(cues).toEqual([["happy", 200, 60]]); // first sentence audible
+  vi.advanceTimersByTime(1000);
+  expect(cues).toEqual([
+    ["happy", 200, 60],
+    ["empathetic", 200, 60],
+  ]); // the second one when its audio leaves the pacer, not when its text arrived
+  vi.advanceTimersByTime(2000);
+  expect(wired.turn.finished).toBe(true);
+});
+
+it("a new device run supersedes the old turn without ending the new one on the device", async () => {
+  // ESPHome events carry no run id: the old run's TTS_STREAM_END/RUN_END, sent
+  // after the device already opened its follow-up, ended that follow-up and
+  // left a stale "stream ended" that cut the next reply.
+  const { wired, events } = conversationHarness();
+  await wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  wired.turn.endListening("hola");
+  wired.turn.beginSpeaking("Hola");
+  expect(events).toContain(E.TTS_STREAM_START);
+  events.length = 0;
+  await wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  expect(events).not.toContain(E.TTS_STREAM_END);
+  expect(events).not.toContain(E.RUN_END);
+  expect(events[0]).toBe(E.RUN_START);
+  wired.turn.finish();
+});

@@ -208,6 +208,10 @@ var VoiceTurn = class {
       this.endSpeaking(end);
     }
   }
+  /** Audio is flowing somewhere other than the device (laptop output): keep the stall watchdog fed. */
+  heartbeat() {
+    if (this._phase === "speaking") this.armStallTimer();
+  }
   /** Streams 16 kHz / 16-bit / mono PCM to the device speaker. */
   pushAudio(pcm16k) {
     if (pcm16k.length === 0) return;
@@ -245,8 +249,12 @@ var VoiceTurn = class {
     this.finish();
     this.onFailure?.();
   }
-  /** Terminates the run unconditionally (tap interrupt, disconnect, late cleanup). Idempotent. */
-  finish() {
+  /**
+   * Terminates the run unconditionally (tap interrupt, disconnect, late cleanup). Idempotent.
+   * `notify: false` = the device already started another run: ESPHome events carry
+   * no run id, so this run's TTS_STREAM_END/RUN_END would end the new one.
+   */
+  finish({ notify = true } = {}) {
     if (this._phase === "finished") return;
     if (this.deferTimer) this.clock.clearTimeout(this.deferTimer);
     this.deferTimer = null;
@@ -254,8 +262,10 @@ var VoiceTurn = class {
     this.clearNoSpeechTimer();
     this.clearStallTimer();
     this.clearThinkingTimer();
-    this.closeStream();
-    this.link.sendEvent(VoiceAssistantEvent.RUN_END);
+    if (notify) {
+      this.closeStream();
+      this.link.sendEvent(VoiceAssistantEvent.RUN_END);
+    } else this.streamOpen = false;
     this.setPhase("finished");
   }
   /** Sends TTS_STREAM_END exactly once per opened stream. */

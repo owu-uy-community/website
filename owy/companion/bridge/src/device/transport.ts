@@ -15,6 +15,8 @@ export interface AudioPeer {
   mirrorDecline(): void;
   sendEvent(eventType: VoiceAssistantEvent, data?: VoiceAssistantEventData[]): void;
   sendAudio(audio: Buffer, end?: boolean): void;
+  /** A peer with a face of its own mirrors Owy's per-sentence expressions. */
+  sendExpression?(expression: string, leadMs: number, strength: number): void;
 }
 
 /** The gadget and web virtual device implement this same bridge-side contract. */
@@ -22,7 +24,12 @@ export interface DeviceTransport extends VoiceLink {
   acceptRequest(): void;
   declineRequest(): void;
   setFace(state: FaceState): void;
-  setSpeakLevel(level: number): void;
+  /** Expression while a sentence plays (see expression.ts); `leadMs` until it is heard, strength 0..100. Absent = no expressions. */
+  sendExpression?: (expression: string, leadMs: number, strength: number) => void;
+  /** ms from a frame leaving the pacer to it being heard on this device's own output. */
+  expressionLeadMs?: number;
+  /** Lip shapes for audio played elsewhere (laptop output); see audio/mouth.ts. Absent = the device lip-syncs itself. */
+  sendMouthTrack?: (frames: string, leadMs: number) => void;
   showCard(card: ScreenCard): void;
   showQr(url: string, caption?: string): void;
   showText(text: string): void;
