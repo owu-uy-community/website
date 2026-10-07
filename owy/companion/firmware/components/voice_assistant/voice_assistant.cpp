@@ -960,6 +960,11 @@ void VoiceAssistant::on_event(const api::VoiceAssistantEventResponse &msg) {
 #ifdef USE_SPEAKER
       if (this->speaker_ != nullptr) {
         this->wait_for_stream_end_ = true;
+        // Owy (local fix): a new stream has not ended. Upstream only clears this
+        // after the speaker drains, so a TTS_STREAM_END that lands outside
+        // STREAMING_RESPONSE (a superseded run, or a reply played on the laptop)
+        // stayed set and ended the NEXT reply ~50 ms after it started.
+        this->stream_ended_ = false;
         ESP_LOGD(TAG, "TTS stream start");
         this->defer([this] { this->tts_stream_start_trigger_.trigger(); });
       }

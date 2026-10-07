@@ -1,19 +1,70 @@
 # The face (LVGL 9). Brand palette: black, cream 0xFBF5E7, yellow 0xF5BB03,
-# blue 0x0162C8. Pages: face / card / qr / text / pin / settings.
+# blue 0x0162C8. Roles: cream = Owy's body, yellow = Owy talking / primary
+# action, blue = you (listening, live mic, "on"). Pages: face / card / qr /
+# text / pin / settings (+ quick / calibration / help in companion.yaml).
 #
 # Expressions are driven by `show_face(state)`; the voice pipeline sets them
 # through `apply_face` (voice.yaml) and the bridge through the `face_state`
-# select (controls.yaml). companion_model.h is the only animated-geometry owner.
+# select (controls.yaml). companion_model.h owns every animated number and
+# FaceRenderer (companion_lvgl.h) is the only writer of animated geometry; it
+# scales 466-space by OWY_FACE_SCALE, so only the static widgets below and the
+# secondary pages need per-board numbers.
+
+# Geometry for the 466 px panel; a smaller board overrides these in its root.
+substitutions:
+  screen_px: "466"      # full-screen tap catchers; larger than the panel = page scrollbars
+  face_badge_y: "174"   # privacy badge (slashed mic)
+  hint_y: "-40"         # face hint / overlay label, from the bottom
+  ring_r: "214"         # rim dots radius
+  ring_dot: "12"
+  small_px: "16"        # Montserrat 600 for captions and tile labels
+  title_px: "24"        # Montserrat 700 for the note title
+  icon_px: "34"
+  page_w: "340"         # card and QR caption labels
+  text_w: "360"         # free text body
+  note_w: "290"         # the sticky note
+  qr_px: "230"          # public grid QR; ≥7 px per module keeps it scannable
+  qr_card: "262"
+  peek_eye_w: "70"
+  peek_eye_h: "74"
+  peek_y: "-146"        # QR page: Owy's eyes peeking over the card
+  peek_pupil_y: "-10"
+  keypad_w: "238"
+  keypad_h: "300"
+  key_radius: "35"
+  keypad_y: "-30"
+  pin_label_y: "62"
+  settings_w: "300"
+  settings_h: "330"
 
 font:
   - file: "../../../public/fonts/organic-stencil.ttf"
     id: font_brand
     size: 32
     bpp: 4
+    # ASCII only: the stencil has no accents, ¡ or ¿ — keep stencil copy plain.
+    glyphs: "abcdefghijklmnopqrstuvwxyz0123456789.!?,% "
+  - file: "../../../public/fonts/organic-stencil.ttf"
+    id: font_brand_xl
+    size: 72
+    bpp: 4
     glyphs: "owy."
   - file: "gfonts://Montserrat"
     id: font_20
     size: 20
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+  - file: "gfonts://Montserrat@600"
+    id: font_small
+    size: ${small_px}
+    bpp: 4
+    glyphsets:
+      - GF_Latin_Core
+    glyphs: ["·", "«", "»"]
+  - file: "gfonts://Montserrat@700"
+    id: font_title
+    size: ${title_px}
     bpp: 4
     glyphsets:
       - GF_Latin_Core
@@ -23,22 +74,72 @@ font:
     bpp: 4
     glyphsets:
       - GF_Latin_Core
+    glyphs: ["·"]
   - file: "gfonts://Montserrat@700"
     id: font_40_bold
     size: 40
     bpp: 4
     glyphsets:
       - GF_Latin_Core
+  # Material Symbols Rounded, only the glyphs the pages use (see the codepoints
+  # in the comments; names from fonts.google.com/icons).
+  - file: "gfonts://Material Symbols Rounded"
+    id: font_icons
+    size: ${icon_px}
+    bpp: 4
+    glyphs:
+      - "\U0000E31D"  # mic
+      - "\U0000E02B"  # mic_off
+      - "\U0000E050"  # volume_up
+      - "\U0000E518"  # light_mode
+      - "\U0000E8AF"  # forum
+      - "\U0000E7F5"  # notifications
+      - "\U0000E405"  # music_note
+      - "\U0000E320"  # laptop_mac
+      - "\U0000E32D"  # speaker
+      - "\U0000F2D5"  # screen_rotation
+      - "\U0000E71C"  # animation
+      - "\U0000E3B4"  # center_focus_strong
+      - "\U0000E3DC"  # filter_center_focus
+      - "\U0000E815"  # sentiment_very_satisfied
+      - "\U0000E8FD"  # help
+      - "\U0000E00A"  # qr_code_2
+      - "\U0000E899"  # lock
+      - "\U0000E913"  # touch_app
+      - "\U0000E764"  # back_hand
+      - "\U0000EB2E"  # swipe_up
+      - "\U0000EB52"  # swipe_right
+      - "\U0000E5C4"  # arrow_back
 
 globals:
   - id: current_face
     type: std::string
     restore_value: false
     initial_value: '"offline"'
+  # A board may pin the current page through a voice turn (a mute unit keeps
+  # the reply readable while the follow-up mic is open). Off = classic behavior.
+  - id: page_hold
+    type: bool
+    restore_value: false
+    initial_value: "false"
   - id: pin_entry
     type: std::string
     restore_value: false
     initial_value: '""'
+  # Idle 120 s: Owy falls asleep on screen for 10 s before the panel dims.
+  - id: face_sleeping
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Volume/brightness on the rim (LEVEL ring) until this time.
+  - id: overlay_until
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: overlay_level
+    type: float
+    restore_value: false
+    initial_value: "0"
 
 lvgl:
   id: ui
@@ -60,39 +161,41 @@ lvgl:
       then:
         - if:
             condition:
-              lambda: return !id(va).is_running() && !id(turn_pending) && id(va_speaker).is_stopped();
+              lambda: return !id(va).is_running() && !id(turn_pending) && id(va_speaker).is_stopped() && !id(face_sleeping);
             then:
-              - lambda: id(display_dimmed) = true;
-              - light.turn_on:
-                  id: screen_light
-                  brightness: 15%
-              - lvgl.pause:
+              - script.execute: fall_asleep
 
   pages:
     # ── Face ──────────────────────────────────────────────────────────────
+    # Draw order matters: brows, eyes, lids above the eyes, mouth, labels, and
+    # the full-screen touch owner last. The rim dots are added at boot.
     - id: face_page
       bg_color: 0x000000
       widgets:
-        - obj:
+        # Brows are 2-point lines so they can tilt (thinking, sad); the
+        # renderer moves the points inside a fixed 64×48 box.
+        - line:
             id: brow_left
             align: CENTER
             x: -94
             y: -150
-            width: 48
-            height: 12
-            radius: 3
-            bg_color: 0xF5BB03
-            border_width: 0
-        - obj:
+            points:
+              - 10, 24
+              - 54, 24
+            line_width: 12
+            line_color: 0xF5BB03
+            line_rounded: true
+        - line:
             id: brow_right
             align: CENTER
             x: 94
             y: -150
-            width: 48
-            height: 12
-            radius: 3
-            bg_color: 0x0162C8
-            border_width: 0
+            points:
+              - 10, 24
+              - 54, 24
+            line_width: 12
+            line_color: 0x0162C8
+            line_rounded: true
         - obj:
             id: eye_left
             align: CENTER
@@ -115,6 +218,29 @@ lvgl:
                   bg_color: 0x000000
                   border_width: 0
                   pad_all: 0
+                  scrollable: false
+                  widgets:
+                    - obj:
+                        id: glint_left
+                        align: CENTER
+                        x: 9
+                        y: -12
+                        width: 13
+                        height: 13
+                        radius: 7
+                        bg_color: 0xFBF5E7
+                        border_width: 0
+              # Happy "∩" eyes: a black disc rising from below.
+              - obj:
+                  id: happy_left
+                  align: CENTER
+                  y: 140
+                  width: 124
+                  height: 124
+                  radius: 62
+                  bg_color: 0x000000
+                  border_width: 0
+                  hidden: true
         - obj:
             id: eye_right
             align: CENTER
@@ -137,12 +263,59 @@ lvgl:
                   bg_color: 0x000000
                   border_width: 0
                   pad_all: 0
+                  scrollable: false
+                  widgets:
+                    - obj:
+                        id: glint_right
+                        align: CENTER
+                        x: 9
+                        y: -12
+                        width: 13
+                        height: 13
+                        radius: 7
+                        bg_color: 0xFBF5E7
+                        border_width: 0
+              - obj:
+                  id: happy_right
+                  align: CENTER
+                  y: 140
+                  width: 124
+                  height: 124
+                  radius: 62
+                  bg_color: 0x000000
+                  border_width: 0
+                  hidden: true
+        # Lids: black, drawn over the eyes from the top (sleepy, thinking, sad).
+        - obj:
+            id: lid_left
+            align: CENTER
+            x: -89
+            y: -102
+            width: 156
+            height: 4
+            radius: 2
+            bg_color: 0x000000
+            border_width: 0
+            hidden: true
+        - obj:
+            id: lid_right
+            align: CENTER
+            x: 89
+            y: -102
+            width: 156
+            height: 4
+            radius: 2
+            bg_color: 0x000000
+            border_width: 0
+            hidden: true
+        # Mouth = lips (cream) + cavity (black) + tongue (yellow) + cut (black,
+        # above for the U smile, below for a frown) + bowl (flattens the grin).
         - obj:
             id: mouth
             align: CENTER
             y: 116
             width: 100
-            height: 28
+            height: 30
             radius: 18
             bg_color: 0xFBF5E7
             border_width: 0
@@ -150,80 +323,95 @@ lvgl:
             scrollable: false
             widgets:
               - obj:
+                  id: mouth_cavity
+                  align: CENTER
+                  width: 60
+                  height: 10
+                  radius: 5
+                  bg_color: 0x000000
+                  border_width: 0
+                  pad_all: 0
+                  scrollable: false
+                  hidden: true
+                  widgets:
+                    - obj:
+                        id: mouth_tongue
+                        align: CENTER
+                        width: 30
+                        height: 10
+                        radius: 18
+                        bg_color: 0xF5BB03
+                        border_width: 0
+                        hidden: true
+              - obj:
                   id: smile_cutout
                   align: CENTER
                   y: -8
-                  width: 58
-                  height: 18
+                  width: 80
+                  height: 26
                   radius: 12
                   bg_color: 0x000000
                   border_width: 0
                   pad_all: 0
+              - obj:
+                  id: mouth_bowl
+                  align: CENTER
+                  width: 104
+                  height: 8
+                  radius: 0
+                  bg_color: 0x000000
+                  border_width: 0
+                  hidden: true
         - obj:
             id: cheek_left
             align: CENTER
-            x: -151
-            y: 84
-            width: 30
-            height: 14
-            radius: 4
+            x: -153
+            y: 85
+            width: 34
+            height: 15
+            radius: 7
             bg_color: 0xF5BB03
             border_width: 0
             hidden: true
         - obj:
             id: cheek_right
             align: CENTER
-            x: 151
-            y: 84
-            width: 30
-            height: 14
-            radius: 4
+            x: 153
+            y: 85
+            width: 34
+            height: 15
+            radius: 7
             bg_color: 0x0162C8
             border_width: 0
             hidden: true
-        - obj:
-            id: think_dots
+        # Asleep: three z's drift up between the brows.
+        - label:
+            id: zzz_0
             align: CENTER
-            y: 168
-            width: 70
-            height: 14
-            bg_opa: TRANSP
-            border_width: 0
-            pad_all: 0
+            text: "z"
+            text_font: font_brand
+            text_color: 0xFBF5E7
             hidden: true
-            widgets:
-              - obj:
-                  id: think_dot_0
-                  align: CENTER
-                  x: -24
-                  width: 10
-                  height: 10
-                  radius: 5
-                  bg_color: 0xF5BB03
-                  border_width: 0
-              - obj:
-                  id: think_dot_1
-                  align: CENTER
-                  width: 10
-                  height: 10
-                  radius: 5
-                  bg_color: 0x343126
-                  border_width: 0
-              - obj:
-                  id: think_dot_2
-                  align: CENTER
-                  x: 24
-                  width: 10
-                  height: 10
-                  radius: 5
-                  bg_color: 0x343126
-                  border_width: 0
-        # Non-text microphone glyph. Blue only during live capture, slashed
-        # yellow for privacy. Standby wake-word detection is explained in settings.
+        - label:
+            id: zzz_1
+            align: CENTER
+            text: "z"
+            text_font: font_brand
+            text_color: 0xF5BB03
+            hidden: true
+        - label:
+            id: zzz_2
+            align: CENTER
+            text: "z"
+            text_font: font_brand
+            text_color: 0xFBF5E7
+            hidden: true
+        # Non-text microphone glyph, slashed yellow: privacy only (the rim
+        # carries listening now). Standby wake-word detection is explained in help.
         - obj:
             id: capture_badge
             align: CENTER
-            y: 174
+            y: ${face_badge_y}
             width: 36
             height: 40
             bg_opa: TRANSP
@@ -239,7 +427,7 @@ lvgl:
                   width: 14
                   height: 24
                   radius: 7
-                  bg_color: 0x0162C8
+                  bg_color: 0xF5BB03
                   border_width: 0
               - obj:
                   align: CENTER
@@ -263,15 +451,52 @@ lvgl:
                     - 33, 33
                   line_color: 0xF5BB03
                   line_width: 5
-                  hidden: true
+        # What a visitor should do (idle hints rotate) or what went wrong.
+        - label:
+            id: face_hint
+            align: BOTTOM_MID
+            y: ${hint_y}
+            text: "tocame y hablame"
+            text_font: font_small
+            text_color: 0x8A8A8A
+            hidden: true
+        # Volume / brightness while the rim shows the level.
+        - label:
+            id: overlay_label
+            align: BOTTOM_MID
+            y: ${hint_y}
+            text: "vol 80"
+            text_font: font_brand
+            text_color: 0xF5BB03
+            hidden: true
+        # Boot: the brand wordmark, then the eyes open.
+        - obj:
+            id: boot_logo
+            align: CENTER
+            width: SIZE_CONTENT
+            height: SIZE_CONTENT
+            radius: 44
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_left: 30
+            pad_right: 30
+            pad_top: 10
+            pad_bottom: 16
+            scrollable: false
+            widgets:
+              - label:
+                  align: CENTER
+                  text: "owy."
+                  text_font: font_brand_xl
+                  text_color: 0x000000
 
         # One classifier owns press/move/release. No competing click/swipe
         # callbacks: slow drags and out-and-back pets can never also start talk.
         - obj:
             id: tap_area
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             pad_all: 0
@@ -308,83 +533,198 @@ lvgl:
             on_press_lost:
               - lambda: id(companion).contact.cancel();
 
-    # ── Card just filed ───────────────────────────────────────────────────
+    # ── Card just filed: the sticky note from the open-space wall ─────────
     - id: card_page
       bg_color: 0x000000
       widgets:
-        - label:
-            align: TOP_MID
-            y: 70
-            text: "quedó en la grilla"
-            text_color: 0xF5BB03
-        - label:
-            id: card_title
-            align: CENTER
-            y: -40
-            width: 340
-            long_mode: WRAP
-            text_align: CENTER
-            text: ""
-            text_color: 0xFBF5E7
-            text_font: font_28_bold
-        - label:
-            id: card_speaker
-            align: CENTER
-            y: 40
-            width: 340
-            long_mode: DOT
-            text_align: CENTER
-            text: ""
-            text_color: 0xFBF5E7
-        - label:
-            id: card_where
-            align: CENTER
-            y: 90
-            width: 340
-            text_align: CENTER
-            text: ""
-            text_color: 0x0162C8
-            text_font: font_28_bold
-        - label:
-            align: BOTTOM_MID
-            y: -60
-            text: "✓"
-            text_color: 0xF5BB03
-            text_font: font_40_bold
         - obj:
             align: CENTER
-            width: 466
-            height: 466
+            x: -120
+            y: -110
+            width: 12
+            height: 12
+            radius: 6
+            bg_color: 0x0162C8
+            border_width: 0
+        - obj:
+            align: CENTER
+            x: 128
+            y: -122
+            width: 12
+            height: 12
+            radius: 6
+            bg_color: 0xF5BB03
+            border_width: 0
+        - obj:
+            align: CENTER
+            x: -150
+            y: 20
+            width: 12
+            height: 12
+            radius: 6
+            bg_color: 0xF5BB03
+            border_width: 0
+        - obj:
+            align: CENTER
+            x: 152
+            y: 40
+            width: 12
+            height: 12
+            radius: 6
+            bg_color: 0x0162C8
+            border_width: 0
+        - obj:
+            align: CENTER
+            x: 90
+            y: 128
+            width: 11
+            height: 11
+            radius: 2
+            bg_color: 0xFBF5E7
+            border_width: 0
+        - label:
+            align: TOP_MID
+            y: 44
+            text: "listo!"
+            text_font: font_brand
+            text_color: 0xFBF5E7
+        - obj:
+            id: card_note
+            align: CENTER
+            y: 6
+            width: ${note_w}
+            height: SIZE_CONTENT
+            radius: 22
+            bg_color: 0xF5BB03
+            border_width: 0
+            pad_all: 16
+            scrollable: false
+            layout:
+              type: flex
+              flex_flow: COLUMN
+              pad_row: 6
+            widgets:
+              - label:
+                  text: "PROPUESTA · OPEN SPACE"
+                  text_font: font_small
+                  text_color: 0x5A4500
+              - label:
+                  id: card_title
+                  width: 100%
+                  long_mode: WRAP
+                  text: ""
+                  text_color: 0x000000
+                  text_font: font_title
+              - label:
+                  id: card_speaker
+                  width: 100%
+                  long_mode: DOT
+                  text: ""
+                  text_font: font_small
+                  text_color: 0x000000
+              - label:
+                  id: card_where
+                  width: 100%
+                  text: ""
+                  text_color: 0x000000
+                  text_font: font_small
+        - label:
+            align: BOTTOM_MID
+            y: -54
+            text: "quedó en la grilla"
+            text_font: font_small
+            text_color: 0xCFC8B8
+        - obj:
+            align: CENTER
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             clickable: true
             on_click:
               - lvgl.page.show: face_page
 
-    # ── QR to the public grid ─────────────────────────────────────────────
+    # ── QR to the public grid: Owy peeks over a cream sticker ─────────────
     - id: qr_page
       bg_color: 0x000000
       widgets:
-        - qrcode:
-            id: grid_qr
+        - obj:
             align: CENTER
-            y: -20
-            size: 250
-            light_color: 0xFBF5E7
-            dark_color: 0x000000
-            text: "https://owu.uy/conf"
+            x: -42
+            y: ${peek_y}
+            width: ${peek_eye_w}
+            height: ${peek_eye_h}
+            radius: 28
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - obj:
+                  align: CENTER
+                  y: ${peek_pupil_y}
+                  width: 22
+                  height: 26
+                  radius: 10
+                  bg_color: 0x000000
+                  border_width: 0
+        - obj:
+            align: CENTER
+            x: 42
+            y: ${peek_y}
+            width: ${peek_eye_w}
+            height: ${peek_eye_h}
+            radius: 28
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - obj:
+                  align: CENTER
+                  y: ${peek_pupil_y}
+                  width: 22
+                  height: 26
+                  radius: 10
+                  bg_color: 0x000000
+                  border_width: 0
+        - obj:
+            align: CENTER
+            y: -6
+            width: ${qr_card}
+            height: ${qr_card}
+            radius: 28
+            bg_color: 0xFBF5E7
+            border_width: 0
+            pad_all: 0
+            scrollable: false
+            widgets:
+              - qrcode:
+                  id: grid_qr
+                  align: CENTER
+                  size: ${qr_px}
+                  light_color: 0xFBF5E7
+                  dark_color: 0x000000
+                  text: "https://owu.uy/conf"
         - label:
             id: qr_caption
             align: BOTTOM_MID
-            y: -56
-            width: 340
+            y: -54
+            width: ${page_w}
             text_align: CENTER
             text: "La grilla, en tu celu"
+            text_font: font_small
             text_color: 0xF5BB03
+        - label:
+            align: BOTTOM_MID
+            y: -32
+            text: "owu.uy/conf"
+            text_font: font_small
+            text_color: 0x8A8A8A
         - obj:
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             clickable: true
@@ -398,7 +738,7 @@ lvgl:
         - label:
             id: text_body
             align: CENTER
-            width: 360
+            width: ${text_w}
             long_mode: WRAP
             text_align: CENTER
             text: ""
@@ -406,44 +746,48 @@ lvgl:
             text_font: font_28_bold
         - obj:
             align: CENTER
-            width: 466
-            height: 466
+            width: ${screen_px}
+            height: ${screen_px}
             bg_opa: TRANSP
             border_width: 0
             clickable: true
             on_click:
               - lvgl.page.show: face_page
 
-    # ── Staff PIN ─────────────────────────────────────────────────────────
+    # ── Staff PIN: round keys inside the circle ───────────────────────────
     - id: pin_page
       bg_color: 0x000000
       widgets:
         - label:
             align: TOP_MID
-            y: 48
-            text: "PIN del staff"
+            y: 26
+            text: "staff"
+            text_font: font_brand
             text_color: 0xF5BB03
         - label:
             id: pin_entry_label
             align: TOP_MID
-            y: 80
+            y: ${pin_label_y}
             text: "_ _ _ _"
             text_color: 0xFBF5E7
             text_font: font_28_bold
         - buttonmatrix:
             id: pin_keypad
-            align: CENTER
-            y: 35
-            width: 290
-            height: 250
-            bg_color: 0x000000
+            align: BOTTOM_MID
+            y: ${keypad_y}
+            width: ${keypad_w}
+            height: ${keypad_h}
+            bg_opa: TRANSP
             border_width: 0
-            pad_all: 4
+            pad_all: 0
+            pad_row: 8
+            pad_column: 14
             items:
               bg_color: 0x1F1F1F
               text_color: 0xFBF5E7
               text_font: font_28_bold
-              radius: 14
+              radius: ${key_radius}
+              shadow_width: 0
               pressed:
                 bg_color: 0x0162C8
             rows:
@@ -523,18 +867,21 @@ lvgl:
                       - script.execute:
                           id: pin_press
                           key: "OK"
+        # Back to ajustes: a small round arrow on the left rim, clear of the keys.
         - button:
-            align: BOTTOM_MID
-            y: -22
-            width: 124
-            height: 40
-            radius: 20
+            align: LEFT_MID
+            x: 14
+            y: 30
+            width: 44
+            height: 44
+            radius: 22
             bg_color: 0x1F1F1F
             shadow_width: 0
             widgets:
               - label:
                   align: CENTER
-                  text: "volver"
+                  text: "\U0000E5C4"
+                  text_font: font_icons
                   text_color: 0xFBF5E7
             on_click:
               - lambda: id(pin_entry).clear();
@@ -549,28 +896,36 @@ lvgl:
       widgets:
         - obj:
             align: CENTER
-            width: 330
-            height: 400
+            y: 8
+            width: ${settings_w}
+            height: ${settings_h}
             bg_opa: TRANSP
             border_width: 0
             pad_all: 0
+            scrollbar_mode: "OFF"
             layout:
               type: flex
               flex_flow: column
               flex_align_cross: center
-              pad_row: 8
+              flex_align_track: center
+              pad_row: 6
             widgets:
               - label:
-                  text: "Configuración"
+                  text: "staff"
                   text_color: 0xF5BB03
-                  text_font: font_28_bold
+                  text_font: font_brand
               - label:
                   id: settings_staff_status
                   text: "Modo staff: OFF"
-                  text_color: 0xFBF5E7
+                  text_font: font_small
+                  text_color: 0x9FD0FF
+              - label:
+                  text: "CONFERENCIA"
+                  text_font: font_small
+                  text_color: 0x8A8A8A
               - obj:
-                  width: 320
-                  height: 44
+                  width: 100%
+                  height: 40
                   bg_opa: TRANSP
                   border_width: 0
                   pad_all: 0
@@ -585,8 +940,8 @@ lvgl:
                         text_color: 0xFBF5E7
                     - switch:
                         id: sw_marketplace
-                        width: 64
-                        height: 32
+                        width: 56
+                        height: 30
                         indicator:
                           checked:
                             bg_color: 0x0162C8
@@ -598,9 +953,13 @@ lvgl:
                                 - switch.turn_on: marketplace_open
                               else:
                                 - switch.turn_off: marketplace_open
+              - label:
+                  text: "AUDIO"
+                  text_font: font_small
+                  text_color: 0x8A8A8A
               - obj:
-                  width: 320
-                  height: 44
+                  width: 100%
+                  height: 40
                   bg_opa: TRANSP
                   border_width: 0
                   pad_all: 0
@@ -615,8 +974,8 @@ lvgl:
                         text_color: 0xFBF5E7
                     - switch:
                         id: sw_quiet
-                        width: 64
-                        height: 32
+                        width: 56
+                        height: 30
                         indicator:
                           checked:
                             bg_color: 0x0162C8
@@ -629,8 +988,8 @@ lvgl:
                               else:
                                 - switch.turn_off: quiet_mode
               - obj:
-                  width: 320
-                  height: 44
+                  width: 100%
+                  height: 40
                   bg_opa: TRANSP
                   border_width: 0
                   pad_all: 0
@@ -645,8 +1004,8 @@ lvgl:
                         text_color: 0xFBF5E7
                     - switch:
                         id: sw_wake_word
-                        width: 64
-                        height: 32
+                        width: 56
+                        height: 30
                         indicator:
                           checked:
                             bg_color: 0x0162C8
@@ -660,14 +1019,16 @@ lvgl:
                                 - switch.turn_off: wake_word_enabled
               - label:
                   text: "Volumen"
+                  text_font: font_small
                   text_color: 0xF5BB03
               - slider:
                   id: volume_slider
-                  width: 280
-                  height: 16
+                  width: 90%
+                  height: 14
                   min_value: 0
                   max_value: 80
                   value: 80
+                  bg_color: 0x333333
                   indicator:
                     bg_color: 0x0162C8
                   knob:
@@ -678,14 +1039,16 @@ lvgl:
                         value: !lambda return x;
               - label:
                   text: "Brillo"
+                  text_font: font_small
                   text_color: 0xF5BB03
               - slider:
                   id: brightness_slider
-                  width: 280
-                  height: 16
+                  width: 90%
+                  height: 14
                   min_value: 10
                   max_value: 100
                   value: 80
+                  bg_color: 0x333333
                   indicator:
                     bg_color: 0x0162C8
                   knob:
@@ -695,12 +1058,17 @@ lvgl:
                         id: screen_brightness
                         value: !lambda return x;
               - label:
+                  text: "SISTEMA"
+                  text_font: font_small
+                  text_color: 0x8A8A8A
+              - label:
                   id: settings_ip
                   text: "sin IP"
+                  text_font: font_small
                   text_color: 0x8A8A8A
               - obj:
-                  width: 320
-                  height: 48
+                  width: 100%
+                  height: 46
                   bg_opa: TRANSP
                   border_width: 0
                   pad_all: 0
@@ -711,35 +1079,44 @@ lvgl:
                     flex_align_cross: center
                   widgets:
                     - button:
-                        width: 90
+                        width: 30%
                         height: 40
+                        radius: 20
                         bg_color: 0x1F1F1F
+                        shadow_width: 0
                         widgets:
                           - label:
                               align: CENTER
                               text: "Tono"
+                              text_font: font_small
                               text_color: 0xFBF5E7
                         on_click:
                           - script.execute: play_test_tone
                     - button:
-                        width: 90
+                        width: 30%
                         height: 40
+                        radius: 20
                         bg_color: 0x1F1F1F
+                        shadow_width: 0
                         widgets:
                           - label:
                               align: CENTER
                               text: "Reiniciar"
+                              text_font: font_small
                               text_color: 0xFBF5E7
                         on_click:
                           - button.press: restart_button
                     - button:
-                        width: 90
+                        width: 30%
                         height: 40
+                        radius: 20
                         bg_color: 0xF5BB03
+                        shadow_width: 0
                         widgets:
                           - label:
                               align: CENTER
                               text: "Volver"
+                              text_font: font_small
                               text_color: 0x000000
                         on_click:
                           - lvgl.page.show: face_page
@@ -755,33 +1132,9 @@ script:
           id(current_face) = state;
       - if:
           condition:
-            lambda: return state == "listening" || state == "thinking" || state == "speaking";
+            lambda: return (state == "listening" || state == "followup" || state == "thinking" || state == "speaking") && !id(page_hold);
           then:
             - lvgl.page.show: face_page
-      - lvgl.widget.hide: think_dots
-      - lvgl.widget.update:
-          id: eye_left
-          bg_color: !lambda |-
-            return lv_color_hex(state == "offline" ? 0x777368 : 0xFBF5E7);
-      - lvgl.widget.update:
-          id: eye_right
-          bg_color: !lambda |-
-            return lv_color_hex(state == "offline" ? 0x777368 : 0xFBF5E7);
-      - if:
-          condition:
-            lambda: return state == "thinking" && !id(mic_privacy).state;
-          then:
-            - lvgl.widget.show: think_dots
-      - lvgl.label.update:
-          id: face_hint
-          text: !lambda |-
-            if (id(mic_privacy).state) return std::string("micrófono apagado");
-            if (state == "offline") return std::string("sin conexión con Owy");
-            if (state == "listening") return std::string(id(follow_up_active) ? "¿algo más? te escucho" : "te escucho");
-            if (state == "thinking") return std::string("dejame pensar");
-            if (state == "speaking") return std::string("tocame para cancelar");
-            if (state == "error") return std::string("ups, probá de nuevo");
-            return std::string(id(wake_word_enabled).state ? "decí Okay Nabu o tocame" : "tocame y hablame");
       - script.execute: animate_companion
 
   # Voice pipeline phase (voice.yaml) → face.
@@ -791,12 +1144,12 @@ script:
       - lambda: |-
           std::string face = "idle";
           switch (id(va_phase)) {
-            case 2: face = "listening"; break;
+            case 2: face = id(follow_up_active) && !id(vad_heard) ? "followup" : "listening"; break;
             case 3: face = "thinking"; break;
             case 4: face = "speaking"; break;
             case 10: face = "offline"; break;
             case 11: face = "error"; break;
-            default: face = "idle";
+            default: face = id(face_sleeping) ? "sleep" : "idle";
           }
           id(show_face).execute(face);
 
@@ -814,16 +1167,41 @@ script:
             return v;
       - script.execute: show_volume
 
+  # Volume on the rim: the face stays up, no page switch mid-sentence.
   - id: show_volume
     mode: restart
     then:
       - script.execute: sync_quick_controls
+      - lambda: |-
+          id(overlay_level) = id(volume).state / 80.0f;
+          id(overlay_until) = millis() + 1400;
+          char text[16];
+          snprintf(text, sizeof(text), "vol %d", int(id(volume).state));
+          lv_label_set_text(id(overlay_label), text);
 
   - id: return_to_face_later
     mode: restart
     then:
       - delay: 12s
       - lvgl.page.show: face_page
+
+  # Idle for 120 s: lids close, z's float for 10 s, then the panel dims and
+  # LVGL pauses. Any touch (wake_display) wakes Owy back up.
+  - id: fall_asleep
+    mode: single
+    then:
+      - lambda: id(face_sleeping) = true;
+      - script.execute: apply_face
+      - delay: 10s
+      - if:
+          condition:
+            lambda: return id(face_sleeping) && !id(va).is_running() && !id(turn_pending) && id(va_speaker).is_stopped();
+          then:
+            - lambda: id(display_dimmed) = true;
+            - light.turn_on:
+                id: screen_light
+                brightness: 15%
+            - lvgl.pause:
 
   - id: pin_press
     mode: queued
@@ -832,7 +1210,7 @@ script:
     then:
       - lambda: |-
           if (key == "C") {
-            id(pin_entry) = "";
+            if (!id(pin_entry).empty()) id(pin_entry).pop_back();
           } else if (key == "OK") {
             if (id(pin_entry) == "${staff_pin}") {
               id(pin_entry) = "";
@@ -849,7 +1227,9 @@ script:
           id: pin_entry_label
           text: !lambda |-
             if (id(pin_entry).empty()) return std::string("_ _ _ _");
-            return std::string(id(pin_entry).size(), '*');
+            std::string dots;
+            for (size_t i = 0; i < id(pin_entry).size(); ++i) dots += i ? " *" : "*";
+            return dots;
 
   - id: pin_ok
     mode: single
@@ -857,6 +1237,9 @@ script:
       - lvgl.slider.update:
           id: volume_slider
           value: !lambda return static_cast<int>(id(volume).state);
+      - lvgl.slider.update:
+          id: brightness_slider
+          value: !lambda return static_cast<int>(id(screen_brightness).state);
       - lvgl.widget.update:
           id: sw_marketplace
           state:

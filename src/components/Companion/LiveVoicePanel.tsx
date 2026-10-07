@@ -8,6 +8,7 @@ import { Button } from "components/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "components/shared/ui/collapsible";
 import { Label } from "components/shared/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Slider } from "components/shared/ui/slider";
 import { Switch } from "components/shared/ui/switch";
 
@@ -23,6 +24,7 @@ const STAGE: Record<VoiceStage, { label: string; dot: string }> = {
   idle: { label: "En pausa", dot: "bg-zinc-400" },
   muted: { label: "Mic apagado", dot: "bg-zinc-400" },
   error: { label: "Error", dot: "bg-red-500" },
+  standby: { label: "Audio de un dispositivo", dot: "bg-[#0162C8]" },
 };
 
 const TOOL_STATUS: Record<string, string> = {
@@ -57,6 +59,7 @@ export default function LiveVoicePanel({
   onSetting,
   deviceSettings,
   unavailable,
+  attachDevices,
 }: {
   disabled: boolean;
   onActive: (active: boolean) => void;
@@ -67,6 +70,8 @@ export default function LiveVoicePanel({
   onSetting: (name: string, value: number) => void;
   deviceSettings?: Record<string, number>;
   unavailable?: string;
+  /** Physical devices this browser may serve as laptop audio (from the bridge settings API). */
+  attachDevices?: string[];
 }) {
   const client = useRef<WebVoice | null>(null);
   const activeRef = useRef(false);
@@ -83,6 +88,9 @@ export default function LiveVoicePanel({
   const [writes, setWrites] = useState(false);
   const [staff, setStaff] = useState(false);
   const [marketplace, setMarketplace] = useState(false);
+  const [attachTarget, setAttachTarget] = useState("");
+  const attachOptions = attachDevices ?? [];
+  const attachId = attachTarget || attachOptions[0] || "";
   const active = !["off", "error"].includes(status.stage);
 
   const visual = useCallback(
@@ -111,7 +119,9 @@ export default function LiveVoicePanel({
     client.current = instance;
     onClient(instance);
     const hide = () => {
-      if (document.hidden && activeRef.current) instance.stop("Micrófono apagado porque la pestaña quedó oculta.");
+      // A browser serving as a device's laptop audio must survive tab switches at the venue.
+      if (document.hidden && activeRef.current && !instance.status.attached)
+        instance.stop("Micrófono apagado porque la pestaña quedó oculta.");
     };
     const leave = () => instance.stop();
     document.addEventListener("visibilitychange", hide);
@@ -224,7 +234,51 @@ export default function LiveVoicePanel({
             <Button className="w-full" disabled={disabled || !consent || !!unavailable} size="lg" onClick={start}>
               <Mic className="mr-2 h-4 w-4" /> Empezar a hablar
             </Button>
+            {attachOptions.length > 0 && (
+              <Collapsible>
+                <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium">
+                  Audio de laptop para un dispositivo físico
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-3 space-y-3">
+                  <p className="text-xs text-muted-foreground">
+                    Este navegador pasa a ser el micrófono y los parlantes del dispositivo (enchufá el mic del escenario
+                    y el PA a esta compu); el dispositivo conserva el toque, la cara y los subtítulos. Poné Mic/Audio en
+                    “laptop” desde sus ajustes rápidos o la tarjeta de audio.
+                  </p>
+                  <Select value={attachId} onValueChange={setAttachTarget}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Dispositivo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {attachOptions.map((id) => (
+                        <SelectItem key={id} value={id}>
+                          {id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    className="w-full"
+                    disabled={disabled || !consent || !!unavailable || !attachId}
+                    variant="secondary"
+                    onClick={() => void client.current?.start({ writes, staff, marketplace }, attachId)}
+                  >
+                    <Mic className="mr-2 h-4 w-4" /> Usar este navegador como audio de {attachId}
+                  </Button>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
           </>
+        ) : status.attached ? (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Conectado a <strong className="text-foreground">{status.attached}</strong> · {stage.label}
+            </span>
+            <Button className="ml-auto" variant="destructive" onClick={() => client.current?.stop()}>
+              <PhoneOff className="mr-2 h-4 w-4" /> Desconectar
+            </Button>
+          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {["idle", "muted"].includes(status.stage) && (

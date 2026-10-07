@@ -8,6 +8,7 @@ import {
   type VoiceAssistantEventData,
   type VoiceAssistantRequest,
 } from "esphome-client";
+import { audioRoute, type AudioRoute } from "../audio/route";
 import type { DeviceSpec } from "../config";
 import type { Logger } from "../log";
 import type { FaceState, ScreenCard } from "../realtime/tools";
@@ -21,7 +22,8 @@ import type { VoiceLink } from "./pipeline";
  *   - select  `face_state`        options: idle|listening|thinking|speaking|happy|error|offline
  *   - switch  `staff_mode`, `marketplace_open`, `quiet_mode`   (set from the on-device PIN page)
  *   - number  `speak_level`       0..100, drives the mouth animation
- *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`
+ *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`,
+ *     optional `show_caption(body)` (boards without a speaker show the reply as text)
  *     (positional string arguments; variable names avoid ESPHome component namespaces)
  *   - voice_assistant (speaker path) subscribed with API audio
  */
@@ -41,16 +43,16 @@ const ENTITY = {
   staffMode: entityId("switch", "staff_mode"),
   marketplaceOpen: entityId("switch", "marketplace_open"),
   quietMode: entityId("switch", "quiet_mode"),
-  speakLevel: entityId("number", "speak_level"),
   volume: entityId("number", "volumen"),
   playbackReady: entityId("binary_sensor", "playback_ready"),
   audioState: entityId("text_sensor", "audio_state"),
+  micSource: entityId("select", "mic_source"),
+  audioOutput: entityId("select", "audio_output"),
 } as const;
 
 export class CompanionDevice implements VoiceLink {
   private readonly abort = new AbortController();
   private lastFace: FaceState | null = null;
-  private lastLevelAt = 0;
 
   private constructor(
     readonly spec: DeviceSpec,
@@ -60,10 +62,12 @@ export class CompanionDevice implements VoiceLink {
   ) {}
 
   /**
-   * Connects, retrying for up to `options.retryForMs` (default 5 min): at the
-   * venue the device may still be booting or dozing (ARP misses show up as
-   * EHOSTUNREACH) when the bridge starts. Once connected, esphome-client's own
-   * auto-reconnect takes over.
+   * Connects, retrying for up to `options.retryForMs` (default: forever, 10 s
+   * apart): at the venue the device may still be booting, dozing (ARP misses
+   * show up as EHOSTUNREACH/EHOSTDOWN) or simply switched off when the bridge
+   * starts, and one dark Owy must not take the bridge down with it. Once
+   * connected, esphome-client's own auto-reconnect takes over. Wrong
+   * credentials still fail fast.
    */
   static async connect(
     spec: DeviceSpec,
@@ -72,7 +76,7 @@ export class CompanionDevice implements VoiceLink {
     options: { retryForMs?: number } = {}
   ): Promise<CompanionDevice> {
     const log = logger.child(spec.id);
-    const deadline = Date.now() + (options.retryForMs ?? 5 * 60_000);
+    const deadline = Date.now() + (options.retryForMs ?? Infinity);
     let attempt = 0;
 
     for (;;) {
@@ -104,9 +108,32 @@ export class CompanionDevice implements VoiceLink {
     }
   }
 
+  /** Set when the firmware exposes `express`: faces while Owy talks. */
+  sendExpression?: (expression: string, leadMs: number, strength: number) => void;
+  /** Pacer lead (100 ms) + the speaker's ring buffer and DMA queue. */
+  readonly expressionLeadMs = 200;
+  /** Set when the firmware exposes `mouth_track`: lip shapes for turns played on the laptop. */
+  sendMouthTrack?: (frames: string, leadMs: number) => void;
+  /** Set when the firmware exposes `show_caption`; DeviceSession streams the reply transcript through it. */
+  showCaption?: (text: string) => void;
+  /** The listening haptic plays as the mic opens and the motor shares the enclosure with the mic. */
+  readonly micSettleMs = 250;
+
   private attach(): void {
     const info = this.client.deviceInfo();
     this.log.info(`connected to ${info?.name ?? this.spec.host} (esphome ${info?.esphomeVersion ?? "?"})`);
+    if (this.client.services.list().some((service) => service.name === "show_caption")) {
+      this.showCaption = (text) => this.callService("show_caption", [{ stringValue: text }]);
+      this.log.info("captions: the device shows replies as text");
+    }
+    if (this.client.services.list().some((service) => service.name === "express")) {
+      this.sendExpression = (expression, leadMs, strength) =>
+        this.callService("express", [{ stringValue: expression }, { intValue: leadMs }, { intValue: strength }]);
+    }
+    if (this.client.services.list().some((service) => service.name === "mouth_track")) {
+      this.sendMouthTrack = (frames, leadMs) =>
+        this.callService("mouth_track", [{ stringValue: frames }, { intValue: leadMs }]);
+    }
     let lastAudioState: unknown;
     this.client.on("telemetry", () => {
       const state = this.client.latest(ENTITY.audioState)?.state;
@@ -145,7 +172,7 @@ export class CompanionDevice implements VoiceLink {
           );
           // Start may await a model connection. Keep consuming stop requests
           // so a cancelled tap cannot be accepted several seconds later.
-          void Promise.resolve(this.handlers.onRequestStart(request)).catch(error => {
+          void Promise.resolve(this.handlers.onRequestStart(request)).catch((error) => {
             this.log.error("pipeline start failed", error);
             this.declineRequest();
           });
@@ -199,22 +226,6 @@ export class CompanionDevice implements VoiceLink {
     this.client.command(ENTITY.face, { state });
   }
 
-  private lastLevelValue = -1;
-
-  /**
-   * 0..1 level → mouth. Throttled AND quantized: every update is an LVGL
-   * redraw on the device's main loop, which also feeds the speaker; too many
-   * redraws starve playback (the 466x466 AMOLED takes ~60 ms per operation).
-   */
-  setSpeakLevel(level: number, now = Date.now()): void {
-    const value = level === 0 ? 0 : Math.max(0, Math.min(100, Math.round((level * 100) / 25) * 25));
-    if (value === this.lastLevelValue) return;
-    if (value !== 0 && now - this.lastLevelAt < 300) return;
-    this.lastLevelAt = now;
-    this.lastLevelValue = value;
-    this.client.command(ENTITY.speakLevel, { state: value });
-  }
-
   showCard(card: ScreenCard): void {
     this.callService("show_card", [
       { stringValue: card.title },
@@ -232,7 +243,7 @@ export class CompanionDevice implements VoiceLink {
     this.callService("show_text", [{ stringValue: text }]);
   }
 
-  private callService(name: string, args: { stringValue: string }[]): void {
+  private callService(name: string, args: ({ stringValue: string } | { intValue: number })[]): void {
     try {
       this.client.services.executeByName(name, args);
     } catch (error) {
@@ -242,6 +253,26 @@ export class CompanionDevice implements VoiceLink {
 
   isStaffMode(): boolean {
     return this.readSwitch(ENTITY.staffMode);
+  }
+
+  /** `null` when the firmware has no routing selects (older boards). */
+  getMicSource(): AudioRoute | null {
+    return this.readRoute(ENTITY.micSource);
+  }
+
+  getAudioOutput(): AudioRoute | null {
+    return this.readRoute(ENTITY.audioOutput);
+  }
+
+  setAudioRoute(which: "mic" | "output", route: AudioRoute): void {
+    this.client.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
+      state: route === "laptop" ? "laptop" : "dispositivo",
+    });
+  }
+
+  private readRoute(id: typeof ENTITY.micSource): AudioRoute | null {
+    const state = this.client.latest(id)?.state;
+    return typeof state === "string" ? audioRoute(state) : null;
   }
 
   isMarketplaceOpen(): boolean {

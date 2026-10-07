@@ -19,6 +19,8 @@
 
 namespace esphome::i2s_audio {
 
+I2SAudioSpeakerBase::PcmTap I2SAudioSpeakerBase::pcm_tap_ = nullptr;
+
 static const char *const TAG = "i2s_audio.speaker";
 
 // Software volume control maps the user-facing [0.0, 1.0] range to a Q31 scale factor.

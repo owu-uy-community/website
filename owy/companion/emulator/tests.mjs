@@ -52,6 +52,32 @@ test("live bridge screen commands use the actual card/text/QR LVGL widgets", () 
   s.reset();
   assert.equal(s.events.length, 0);
 });
+test("bridge expression cues reshape the speaking face when their sentence is heard", () => {
+  // The face never holds still (blinks, springs), so compare against the same
+  // deterministic timeline without the cue: any difference is the cue's.
+  const run = (command) => {
+    s.reset();
+    s.beginLive();
+    s.liveVisual(4, 0, 0);
+    s.advance(1500);
+    if (command) s.liveDevice(command);
+    const frames = [];
+    for (const step of [300, 900, 600]) {
+      s.advance(step);
+      frames.push(digest());
+    }
+    assert.equal(s.events.length, 0); // live cues are never recorded for replay
+    s.reset();
+    return frames;
+  };
+  const plain = run();
+  const surprised = run({ kind: "expression", expression: "surprised", leadMs: 600, strength: 100 });
+  assert.equal(surprised[0], plain[0]); // +300 ms: not audible yet
+  assert.notEqual(surprised[1], plain[1]); // +1200 ms: eyes wide, small pupils, brows up
+  assert.notEqual(surprised[2], plain[2]);
+  assert.deepEqual(run({ kind: "expression", expression: "grumpy", leadMs: 0, strength: 100 }), plain); // unknown: ignored
+  assert.deepEqual(run({ kind: "expression", expression: "neutral", leadMs: 0, strength: 100 }), plain);
+});
 test("live touch/BOOT/privacy/calibration route start and stop without synthetic voice or recording", () => {
   s.reset();
   s.beginLive();

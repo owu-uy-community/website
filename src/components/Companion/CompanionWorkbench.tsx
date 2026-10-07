@@ -37,6 +37,7 @@ import { Slider } from "components/shared/ui/slider";
 import { Switch } from "components/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
 
+import AudioRoutingCard from "./AudioRoutingCard";
 import LiveVoicePanel, { LevelMeter } from "./LiveVoicePanel";
 import type { DeviceCommand, VoiceVisual, WebVoice } from "./web-voice";
 
@@ -95,7 +96,29 @@ const TOGGLES: [string, string][] = [
   ["wake", "Wake word"],
   ["quiet", "Modo silencioso"],
 ];
-const MOODS = ["Idle", "Escuchando", "Pensando", "Hablando", "Feliz", "Error", "Offline"];
+/** Label → owy::Mood value (companion_model.h); FOLLOWUP and SLEEP were appended. */
+const MOODS: [string, number][] = [
+  ["Idle", 0],
+  ["Escuchando", 1],
+  ["¿Algo más?", 8],
+  ["Pensando", 2],
+  ["Hablando", 3],
+  ["Feliz", 4],
+  ["Error", 5],
+  ["Offline", 6],
+  ["Dormido", 9],
+];
+/** owy::Expression order (companion_model.h): the face while a sentence plays (bridge expression.ts). */
+const EXPRESSIONS = [
+  "Neutral",
+  "Contento",
+  "Entusiasmado",
+  "Curioso",
+  "Pensativo",
+  "Empático",
+  "Pícaro",
+  "Sorprendido",
+];
 const FAULTS = [
   "Driver demorado más allá del timeout",
   "El parlante nunca termina de drenar",
@@ -182,6 +205,14 @@ function SwitchRow({
 
 export default function CompanionWorkbench() {
   const worker = useRef<Worker | null>(null);
+  const [attachDevices, setAttachDevices] = useState<string[]>([]);
+  const onAttachDevices = useCallback(
+    (ids: string[]) =>
+      setAttachDevices((current) =>
+        current.length === ids.length && current.every((v, i) => v === ids[i]) ? current : ids
+      ),
+    []
+  );
   const panel = useRef<HTMLCanvasElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const audio = useRef<AudioContext | null>(null);
@@ -740,13 +771,13 @@ export default function CompanionWorkbench() {
                 Cara
               </SectionTitle>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                {MOODS.map((name, i) => (
+                {MOODS.map(([name, mood]) => (
                   <Button
                     key={name}
                     disabled={!ready || locked}
                     size="sm"
                     variant="secondary"
-                    onClick={() => input("mood", [i])}
+                    onClick={() => input("mood", [mood])}
                   >
                     {name}
                   </Button>
@@ -754,6 +785,22 @@ export default function CompanionWorkbench() {
                 <Button disabled={!ready || locked} size="sm" variant="outline" onClick={() => input("mood", [-1])}>
                   Seguir la voz
                 </Button>
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Expresión al hablar (se ve con <em>Hablando</em> o <em>Pensando</em>; en vivo la elige jev por frase)
+              </p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {EXPRESSIONS.map((name, i) => (
+                  <Button
+                    key={name}
+                    disabled={!ready || locked}
+                    size="sm"
+                    variant="outline"
+                    onClick={() => input("expression", [i, 0, 100])}
+                  >
+                    {name}
+                  </Button>
+                ))}
               </div>
             </div>
 
@@ -767,25 +814,29 @@ export default function CompanionWorkbench() {
           </CardContent>
         </Card>
 
-        <LiveVoicePanel
-          deviceSettings={state?.settings}
-          disabled={!ready || mode === "replay"}
-          unavailable={
-            state?.settings.privacy
-              ? "Apagá la privacidad del micrófono en los ajustes del dispositivo antes de hablar."
-              : state?.powered === false
-                ? "Encendé el dispositivo virtual antes de hablar."
-                : state && ["settling", "collecting"].includes(state.calibration)
-                  ? "Terminá o cancelá la calibración antes de hablar."
-                  : undefined
-          }
-          onActive={onLive}
-          onClient={onLiveClient}
-          onCue={onLiveCue}
-          onDevice={onLiveDevice}
-          onSetting={onLiveSetting}
-          onVisual={onLiveVisual}
-        />
+        <div className="flex flex-col gap-6">
+          <LiveVoicePanel
+            attachDevices={attachDevices}
+            deviceSettings={state?.settings}
+            disabled={!ready || mode === "replay"}
+            unavailable={
+              state?.settings.privacy
+                ? "Apagá la privacidad del micrófono en los ajustes del dispositivo antes de hablar."
+                : state?.powered === false
+                  ? "Encendé el dispositivo virtual antes de hablar."
+                  : state && ["settling", "collecting"].includes(state.calibration)
+                    ? "Terminá o cancelá la calibración antes de hablar."
+                    : undefined
+            }
+            onActive={onLive}
+            onClient={onLiveClient}
+            onCue={onLiveCue}
+            onDevice={onLiveDevice}
+            onSetting={onLiveSetting}
+            onVisual={onLiveVisual}
+          />
+          <AudioRoutingCard onDevices={onAttachDevices} />
+        </div>
       </div>
 
       <Card>

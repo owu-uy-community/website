@@ -18,6 +18,11 @@ globals:
     type: bool
     restore_value: false
     initial_value: "false"
+  # Speech heard in this listening window (a follow-up stops counting down).
+  - id: vad_heard
+    type: bool
+    restore_value: false
+    initial_value: "false"
 
 binary_sensor:
   # The bridge waits for this acknowledgment before TTS_START/audio.
@@ -89,17 +94,25 @@ voice_assistant:
   on_client_disconnected:
     - script.execute: recover_audio
   on_listening:
-    - lambda: id(va_phase) = 2;
+    - lambda: |-
+        id(va_phase) = 2;
+        id(vad_heard) = false;
+        // Follow-up window: the rim drains while the bridge waits for speech.
+        if (id(follow_up_active)) id(companion).countdown(millis(), 8000);
     - script.execute: apply_face
     - script.execute: idle_listening_guard
   on_stt_vad_start:
     - script.stop: idle_listening_guard
-    - lambda: id(va_phase) = 2;
+    - lambda: |-
+        id(va_phase) = 2;
+        id(vad_heard) = true;
     - script.execute: apply_face
   on_stt_vad_end:
     - script.stop: idle_listening_guard
     - micro_wake_word.stop:
-    - lambda: id(va_phase) = 3;
+    - lambda: |-
+        id(va_phase) = 3;
+        id(companion).nod(millis());  // "te entendí"
     - script.execute: apply_face
   on_tts_start:
     - lambda: id(va_phase) = 4;
@@ -153,7 +166,11 @@ script:
             - lambda: id(turn_pending) = true;
             - micro_wake_word.stop:
             - script.execute: wake_display
-            - lvgl.page.show: face_page
+            - if:
+                condition:
+                  lambda: return !id(page_hold);
+                then:
+                  - lvgl.page.show: face_page
             - wait_until:
                 condition:
                   lambda: return !id(mww).is_running() && id(mic).is_stopped() && id(va_speaker).is_stopped();

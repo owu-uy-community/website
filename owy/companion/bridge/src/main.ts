@@ -5,6 +5,7 @@ import { DeviceSession, loadSharedRuntime } from "./index";
 import { createLogger } from "./log";
 import { createStageMirror } from "./stage";
 import { startWebBridge } from "./web/server";
+import { startSettingsServer } from "./web/settings";
 import { mkdir, writeFile, chmod } from "node:fs/promises";
 import path from "node:path";
 
@@ -19,6 +20,7 @@ async function main(): Promise<void> {
   }
 
   const shared = await loadSharedRuntime(config, logger);
+  shared.sessions = new Map();
   const web = config.COMPANION_WEB_BRIDGE
     ? await startWebBridge(shared, {
         port: config.COMPANION_WEB_PORT,
@@ -52,6 +54,12 @@ async function main(): Promise<void> {
       onTranscript: mirror.transcript,
     });
   });
+  for (const session of sessions) shared.sessions.set(session.id, session);
+  const settings = await startSettingsServer(sessions, config, logger).catch((error) => {
+    logger.warn(`settings UI not started: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  });
+  if (settings) logger.info(`settings UI at ${settings.url} · oRPC at ${settings.rpcUrl} (audio routing per device)`);
   await Promise.all(sessions.map((session) => session.start()));
 
   let stopping = false;
@@ -60,6 +68,7 @@ async function main(): Promise<void> {
     stopping = true;
     logger.info("shutting down");
     await web?.close();
+    await settings?.close();
     await Promise.all(sessions.map((session) => session.stop()));
     process.exit(0);
   };

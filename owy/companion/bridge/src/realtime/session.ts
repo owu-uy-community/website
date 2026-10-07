@@ -76,6 +76,8 @@ export class NodeRealtimeSession {
   private readonly connectTimeoutMs: number;
 
   private ws: WebSocketLike | null = null;
+  private parseServerEvent: (raw: unknown) => RealtimeServerEvent | RealtimeServerEvent[] = (raw) =>
+    this.provider.model.parseServerEvent(raw);
   private connectionEpoch = 0;
   private sendQueue: Promise<void> = Promise.resolve();
   private _status: SessionStatus = "disconnected";
@@ -121,9 +123,15 @@ export class NodeRealtimeSession {
     return this._status === "connected" && this.ws !== null;
   }
 
-  /** Session config for this connection: the base config plus the resumption handle when we have one. */
+  /**
+   * Session config for this connection: the base config plus the resumption handle when we have one.
+   * Only when the base config opted into resumption (direct Google): the gateway also sends handles
+   * but closes 1008 "transform rejected frame" on a setup that carries `sessionResumption`.
+   */
   currentConfig(): RealtimeSessionConfig {
-    if (this._resumptionHandle === null) return this.baseConfig;
+    const resumable = (this.baseConfig.providerOptions as { sessionResumption?: unknown } | undefined)
+      ?.sessionResumption;
+    if (this._resumptionHandle === null || !resumable) return this.baseConfig;
     return {
       ...this.baseConfig,
       providerOptions: {
@@ -158,9 +166,15 @@ export class NodeRealtimeSession {
     const config = this.currentConfig();
     const token = await this.provider.getToken(config, this.tokenTtlSeconds);
     if (epoch !== this.connectionEpoch) throw new Error("realtime connection cancelled");
-    const wsConfig = this.provider.model.getWebSocketConfig({ token: token.token, url: token.url });
+    // Optional since provider spec v4.0.15 (server-websocket / WebRTC models skip it).
+    const wsConfig = this.provider.model.getWebSocketConfig?.({ token: token.token, url: token.url }) ?? {
+      url: token.url,
+    };
     const ws = this.createWebSocket(wsConfig.url, wsConfig.protocols);
     this.ws = ws;
+    // Per-connection parser when the provider offers one (stateful turn tracking must not leak across reconnects).
+    this.parseServerEvent =
+      this.provider.model.createServerEventParser?.() ?? ((raw) => this.provider.model.parseServerEvent(raw));
 
     await new Promise<void>((resolve, reject) => {
       let settled = false;
@@ -323,7 +337,7 @@ export class NodeRealtimeSession {
 
     let parsed: RealtimeServerEvent | RealtimeServerEvent[];
     try {
-      parsed = this.provider.model.parseServerEvent(raw);
+      parsed = this.parseServerEvent(raw);
     } catch (error) {
       this.log.warn("parseServerEvent failed", error);
       return;

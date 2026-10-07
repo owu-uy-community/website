@@ -1,0 +1,33 @@
+# MCU, memory and logging shared by every board. Pins live in packages/boards/*.
+
+esp32:
+  variant: esp32s3
+  # The 1.75C carries a 32MB chip, but >16MB needs IDF experimental flags for
+  # OTA. 16MB gives two 7.75 MiB app slots, plenty for LVGL + audio + wake word.
+  # The Knob 1.8B really has 16MB (W25Q128).
+  flash_size: 16MB
+  cpu_frequency: 240MHz
+  framework:
+    type: esp-idf
+    advanced:
+      # OTA rollback reverted good flashes when the app took a moment to settle;
+      # we verify health out-of-band (web/API) instead.
+      enable_ota_rollback: false
+    sdkconfig_options:
+      # Voice PE's cache/PSRAM tuning: audio + LVGL out of PSRAM without stalls.
+      CONFIG_ESP32S3_DATA_CACHE_64KB: "y"
+      CONFIG_ESP32S3_DATA_CACHE_LINE_64B: "y"
+      CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB: "y"
+      CONFIG_SPIRAM_RODATA: "y"
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: "y"
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+logger:
+  # DEBUG during bring-up (I2C scan results and voice_assistant state changes
+  # only show at DEBUG/CONFIG); switch to INFO for the event.
+  level: DEBUG
+  # The USB-C port is the S3's native USB-Serial/JTAG controller.
+  hardware_uart: USB_SERIAL_JTAG

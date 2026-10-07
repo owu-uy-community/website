@@ -233,6 +233,35 @@ test("duplicate Resume does not acquire twice; Mute cancels pending reacquisitio
   voice.stop();
 });
 
+test("attached to a physical device, the virtual Owy's start/stop stay local: the bridge closes the socket on a stray start", async () => {
+  const sent = [];
+  const voice = new WebVoice(
+    () => {},
+    () => {},
+    () => {},
+    {
+      context,
+      media: async () => {
+        throw Error("no microphone");
+      },
+      ticket: async () => {},
+      socket: () => {},
+    }
+  );
+  voice.ctx = context();
+  voice.stopped = false;
+  voice.bridgeReady = true;
+  voice.attachTo = "owy-knob";
+  voice.socket = { readyState: 1, bufferedAmount: 0, send: (data) => sent.push(JSON.parse(data)), close() {} };
+  voice.receive({ type: "attached", deviceId: "owy-knob", run: 0 });
+  assert.equal(voice.status.stage, "standby");
+  await voice.resume(); // the virtual Owy was tapped ("start")
+  voice.mute(); // …or its privacy switch flipped ("stop")
+  assert.deepEqual(sent, []);
+  assert.equal(voice.status.stage, "standby");
+  voice.stop();
+});
+
 function playbackHarness() {
   const sent = [],
     nodes = [],

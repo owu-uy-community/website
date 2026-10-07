@@ -19,6 +19,8 @@ const EXPECTED: Record<string, Access> = {
   "communities.members.remove": "community:admin",
   "communities.members.updateRole": "community:admin",
   "communities.update": "community:admin",
+  "companion.getAudioRouting": "staff",
+  "companion.setAudioRouting": "staff",
   "countdown.getEndtime": "public",
   "countdown.getState": "public",
   "countdown.updateState": "staff",

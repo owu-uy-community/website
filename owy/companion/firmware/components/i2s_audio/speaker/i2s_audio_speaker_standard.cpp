@@ -294,6 +294,8 @@ void I2SAudioSpeaker::run_speaker_task() {
             esp_audio_libs::pcm_convert::copy_frames(chunk, chunk, input_bytes_per_sample, channels,
                                                      output_bytes_per_sample, channels, frames_to_write);
           }
+          if (pcm_tap_ != nullptr && output_bytes_per_sample == 2)  // Owy: mouth sync tap (local addition)
+            pcm_tap_(chunk, output_bytes, channels);
           this->swap_esp32_mono_samples_(chunk, output_bytes);
 
           size_t bw = 0;

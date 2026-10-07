@@ -89,6 +89,12 @@ class I2SAudioSpeakerBase : public I2SAudioOut, public speaker::Speaker, public 
   /// @param mute_state true for muting, false for unmuting
   void set_mute_state(bool mute_state) override;
 
+  /// Owy companion (local addition): observe-only PCM tap, called from the speaker task with
+  /// the 16-bit frames about to enter DMA (mouth sync). Must be allocation-free and never block.
+  using PcmTap = void (*)(const uint8_t *data, size_t bytes, uint8_t channels);
+  static void set_pcm_tap(PcmTap tap) { pcm_tap_ = tap; }
+  static PcmTap pcm_tap_;
+
  protected:
   /// @brief FreeRTOS task entry point. Casts params to I2SAudioSpeakerBase and calls run_speaker_task_().
   /// @param params I2SAudioSpeakerBase component pointer

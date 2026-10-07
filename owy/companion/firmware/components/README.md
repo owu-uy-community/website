@@ -43,3 +43,23 @@ inaudible gaps. `tests/voice-buffer.mjs` extracts the actual `on_audio` body,
 checks byte retention/drain and overflow boundaries, and reproduces the old
 failure by changing only capacity back to 16 KiB. Physical regression additionally
 injects the pause after pacing. Re-audit both overrides on every ESPHome upgrade.
+
+## Mouth-sync PCM tap
+
+`speaker/i2s_audio_speaker.{h,cpp}` and `speaker/i2s_audio_speaker_standard.cpp`
+add one observe-only hook: `I2SAudioSpeakerBase::set_pcm_tap(fn)`. The speaker
+task calls it with each 16-bit chunk right before `i2s_channel_write`, i.e.
+what becomes audible one DMA queue (~50 ms) later. The face's
+`SpeechAnalyzer` turns it into lip shapes (`companion_model.h`); with no tap
+installed the speaker behaves exactly as upstream. Keep the callback
+allocation-free and non-blocking: it runs on the audio task.
+
+## Fresh stream state per reply
+
+`voice_assistant/voice_assistant.cpp` (TTS_STREAM_START) also clears
+`stream_ended_`. Upstream resets it only after the speaker drains, so a
+TTS_STREAM_END arriving outside STREAMING_RESPONSE (a superseded run, or a
+reply played on the laptop, where the device speaker never runs) left it set,
+and the next reply "ended" ~50 ms after TTS_STREAM_START: the device closed the
+turn, opened follow-up listening, and the bridge's cleanup of the old run then
+ended that one too, in a loop. Pinned by `tests/voice-buffer.mjs`.
