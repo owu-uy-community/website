@@ -4,22 +4,23 @@ import { Context, Effect } from "effect";
 import { events, rooms, schedules, tracks } from "../../db/schema";
 import { wallClock } from "../../slot-day";
 import { query } from "../db";
-import { NotFound, UpstreamFailed } from "../errors";
+import { Conflict, NotFound, UpstreamFailed } from "../errors";
 import { Ai, type AppServices } from "../services";
 import { readCard, streamCard, type CardModel } from "./card";
 import { CARD_OCR_MODEL, SLOT_DECISION_MODEL } from "./models";
 import type { CardEvent, FindFreeSpotResponse } from "./schemas";
-import { findFreeSpot, type Board, type Talk } from "./slot";
+import { buildCandidates, findFreeSpot, type Board, type Talk } from "./slot";
 
 const label = (slot: { startTime: string; endTime: string }) => `${slot.startTime} - ${slot.endTime}`;
 
 /**
  * An event's board as the slot picker needs it, read from the database rather
- * than taken from the caller. Blocks that already ended are left out (at 15:10
- * nobody wants the 11:00 slot) — by time of day on the event's clock — unless
- * that leaves none, e.g. someone preparing the board the night before.
+ * than taken from the caller, plus the room and slot rows behind its names.
+ * Blocks that already ended are left out (at 15:10 nobody wants the 11:00
+ * slot) — by time of day on the event's clock — unless that leaves none, e.g.
+ * someone preparing the board the night before.
  */
-const loadBoard = (eventId: string) =>
+const loadBoardRows = (eventId: string) =>
   Effect.gen(function* () {
     const [event] = yield* query((db) =>
       db.select({ timezone: events.timezone }).from(events).where(eq(events.id, eventId))
@@ -51,8 +52,9 @@ const loadBoard = (eventId: string) =>
 
     const now = wallClock(new Date(), event.timezone).slice(11);
     const upcoming = slotRows.filter((slot) => slot.endTime >= now);
+    const slots = upcoming.length > 0 ? upcoming : slotRows;
 
-    return {
+    const board = {
       existingNotes: talkRows.flatMap((talk) =>
         talk.room && talk.schedule
           ? [
@@ -71,9 +73,13 @@ const loadBoard = (eventId: string) =>
         hasWhiteboard: room.hasWhiteboard,
       })),
       availableRooms: roomRows.map((room) => room.name),
-      availableTimeSlots: (upcoming.length > 0 ? upcoming : slotRows).map(label),
+      availableTimeSlots: slots.map(label),
     } satisfies Board;
+
+    return { board, rooms: roomRows, slots };
   });
+
+const loadBoard = (eventId: string) => loadBoardRows(eventId).pipe(Effect.map((loaded) => loaded.board));
 
 /** Where a talk could go on the event's board. Never fails on the AI: it degrades to the first free cell. */
 export const suggestSlot = (eventId: string, talk: Talk) =>
@@ -82,6 +88,86 @@ export const suggestSlot = (eventId: string, talk: Talk) =>
     const ai = yield* Ai;
 
     return yield* Effect.promise(() => findFreeSpot(talk, board, ai.decisionModel(SLOT_DECISION_MODEL.primary)));
+  });
+
+/** A free cell as ids, with the names the picker reasoned about. */
+export interface Cell {
+  roomId: string;
+  scheduleId: string;
+  room: string;
+  timeSlot: string;
+  hasTV: boolean;
+  hasWhiteboard: boolean;
+  reasoning?: string;
+}
+
+/**
+ * Where a talk can go, as ids and best first: the model's pick, its
+ * alternatives, then every other free candidate — so a caller that creates
+ * the talk can fall through to the next cell when one is taken meanwhile.
+ * No room with what the talk asked for → any free cell (`relaxed`), rather
+ * than nothing; nothing free at all → CONFLICT board_full.
+ */
+export const suggestCells = (eventId: string, talk: Talk) =>
+  Effect.gen(function* () {
+    const { board, rooms, slots } = yield* loadBoardRows(eventId);
+    const strict = buildCandidates({
+      ...board,
+      speaker: talk.speaker,
+      needsTV: talk.needsTV,
+      needsWhiteboard: talk.needsWhiteboard,
+    });
+    const relaxed = strict.length === 0;
+    const candidates = relaxed ? buildCandidates({ ...board, speaker: talk.speaker }) : strict;
+    if (candidates.length === 0) {
+      return yield* new Conflict({
+        reason: "board_full",
+        message: "La grilla está llena: no queda ningún lugar libre",
+      });
+    }
+
+    const ai = yield* Ai;
+    const wanted = relaxed ? { ...talk, needsTV: false, needsWhiteboard: false } : talk;
+    const suggestion = yield* Effect.promise(() =>
+      findFreeSpot(wanted, board, ai.decisionModel(SLOT_DECISION_MODEL.primary))
+    );
+
+    // A label can name one block per day on a multi-day event: offer them all, earliest day first.
+    // ponytail: labels aren't day-qualified (the admin's selects key on them); qualify them when a real multi-day board needs it.
+    const resolve = (room: string, timeSlot: string, reasoning?: string): Cell[] =>
+      rooms
+        .filter((candidate) => candidate.name === room)
+        .flatMap((candidate) =>
+          slots
+            .filter((slot) => label(slot) === timeSlot)
+            .toSorted((a, b) => a.date.getTime() - b.date.getTime())
+            .map((slot) => ({
+              roomId: candidate.id,
+              scheduleId: slot.id,
+              room,
+              timeSlot,
+              hasTV: candidate.hasTV,
+              hasWhiteboard: candidate.hasWhiteboard,
+              reasoning,
+            }))
+        );
+    const ordered: { room: string; timeSlot: string; reasoning?: string }[] = [
+      { room: suggestion.suggestedRoom, timeSlot: suggestion.suggestedTimeSlot, reasoning: suggestion.reasoning },
+      ...(suggestion.alternatives ?? []),
+      ...candidates.map((candidate) => ({ room: candidate.room, timeSlot: candidate.timeSlot })),
+    ];
+    const seen = new Set<string>();
+    const cells = ordered
+      .flatMap((place) => resolve(place.room, place.timeSlot, place.reasoning))
+      .filter((cell) => {
+        const key = `${cell.roomId}|${cell.scheduleId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+
+        return true;
+      });
+
+    return { suggestion, cells, relaxed };
   });
 
 const cardModel = (ai: Context.Service.Shape<typeof Ai>): CardModel => ({

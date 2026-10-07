@@ -97,6 +97,7 @@ const EXPECTED: Record<string, Access> = {
   "staffTasks.update": "community:editor",
   "tracks.bulkUpdateBySchedule": "staff",
   "tracks.create": "staff",
+  "tracks.createPlaced": "staff",
   "tracks.delete": "staff",
   "tracks.get": "public",
   "tracks.getByOpenSpace": "public",

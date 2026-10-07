@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
@@ -34,10 +34,12 @@ import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc } from "lib/orpc";
 import {
   DEFAULT_STAGE_STATE,
+  EXPRESSIONS,
   FACE_STATES,
   OWY_STAGE_CHANNEL,
   SCENES,
   parseSceneParams,
+  type Expression,
   type FaceState,
   type SceneId,
   type StageState,
@@ -52,6 +54,21 @@ const FACE_LABELS: Record<FaceState, string> = {
   error: "Error",
   offline: "Offline",
 };
+
+const EXPRESSION_LABELS: Record<Expression, string> = {
+  neutral: "Neutral",
+  happy: "Contento",
+  excited: "Entusiasmado",
+  curious: "Curioso",
+  thinking: "Pensativo",
+  empathetic: "Empático",
+  playful: "Juguetón",
+  surprised: "Sorprendido",
+};
+
+/** What the simulator says a visitor pitched, in the bridge's running totals. */
+const SAMPLE_PITCH =
+  "Hola, soy Ana. Quiero proponer una charla sobre Effect en producción: cómo lo adoptamos en el equipo, qué nos costó y qué aprendimos después de un año. Es para gente que ya programa en TypeScript y quiere ver código real, no slides.";
 
 /**
  * A card whose body folds away: the panels you only touch while setting up
@@ -173,6 +190,66 @@ export default function ScenesClient() {
       onError: (error) => toast.error("No se pudo actualizar la cara", error.message),
     })
   );
+  const createPlaced = useMutation(
+    orpc.tracks.createPlaced.mutationOptions({
+      onSuccess: (placed) => toast.success("Charla creada", `${placed.placement.room} · ${placed.placement.timeSlot}`),
+      onError: (error) => toast.error("No se pudo ubicar la charla", error.message),
+    })
+  );
+  // The wall's event, so the sample card names a real room and block (the mini board lights it up).
+  const wallRooms = useQuery(
+    orpc.rooms.getByOpenSpace.queryOptions({
+      input: { openSpaceId: live.eventId ?? "" },
+      enabled: Boolean(live.eventId),
+    })
+  );
+  const wallSlots = useQuery(
+    orpc.schedules.getByOpenSpace.queryOptions({
+      input: { openSpaceId: live.eventId ?? "" },
+      enabled: Boolean(live.eventId),
+    })
+  );
+  const sampleSlot = wallSlots.data?.find((slot) => slot.isActive);
+  const sampleCard = {
+    title: "Effect en producción: lo que aprendimos",
+    speaker: "Ana",
+    room: wallRooms.data?.find((room) => room.isActive)?.name ?? "Cueva",
+    timeSlot: sampleSlot ? `${sampleSlot.startTime} - ${sampleSlot.endTime}` : "15:00 - 15:45",
+    reasoning: "El bloque está vacío.",
+  };
+  // A scripted pitch for the wall, timed like the bridge: listening, the transcript growing, thinking, the card.
+  const simulation = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => simulation.current.forEach(clearTimeout), []);
+  const simulatePitch = () => {
+    simulation.current.forEach(clearTimeout);
+    const source = "admin";
+    const said = (text: string) => ({
+      state: "listening" as const,
+      transcript: { who: "input" as const, text },
+      source,
+    });
+    const steps: [number, Parameters<typeof setFace.mutate>[0]][] = [
+      [0, { state: "listening", source }],
+      [600, said(SAMPLE_PITCH.slice(0, 60))],
+      [1500, said(SAMPLE_PITCH.slice(0, 140))],
+      [2400, said(SAMPLE_PITCH)],
+      [3200, { state: "thinking", source }],
+      [5200, { state: "happy", card: sampleCard, expression: { name: "excited", strength: 90 }, source }],
+      [
+        6000,
+        {
+          state: "speaking",
+          transcript: {
+            who: "output",
+            text: `Tu charla «${sampleCard.title}» queda en ${sampleCard.room} a las ${sampleCard.timeSlot.split(" - ")[0]}.`,
+          },
+          source,
+        },
+      ],
+      [18_000, { state: "idle", source }],
+    ];
+    simulation.current = steps.map(([delay, input]) => setTimeout(() => setFace.mutate(input), delay));
+  };
 
   /** `restart` is for putting a scene on air from scratch; a param edit keeps the round. */
   const take = (scene: SceneId, params?: Record<string, unknown>, restart?: boolean) =>
@@ -391,6 +468,55 @@ export default function ScenesClient() {
                 <Sparkles className="mr-1 h-4 w-4" /> Enviar
               </Button>
             </form>
+            <div className="flex flex-wrap gap-2">
+              {EXPRESSIONS.map((name) => (
+                <Button
+                  key={name}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setFace.mutate({ state: "speaking", expression: { name, strength: 100 }, source: "admin" })
+                  }
+                >
+                  {EXPRESSION_LABELS[name]}
+                </Button>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setFace.mutate({ state: "happy", card: sampleCard, source: "admin" })}
+              >
+                Card de ejemplo
+              </Button>
+              <Button size="sm" variant="secondary" onClick={simulatePitch}>
+                Simular pitch
+              </Button>
+              <Button
+                disabled={!live.eventId || createPlaced.isPending}
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  live.eventId &&
+                  createPlaced.mutate({
+                    openSpaceId: live.eventId,
+                    title: sampleCard.title,
+                    speaker: sampleCard.speaker,
+                    description: "Una charla de prueba creada desde el simulador de la pared.",
+                    needsTV: false,
+                    needsWhiteboard: false,
+                    source: "admin",
+                  })
+                }
+              >
+                Ubicar y crear (de verdad)
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              «Ubicar y crear» pone una charla real en la grilla del evento de la pared, como hace el companion con un
+              pitch; la card y la mini grilla aparecen en la escena Owy.
+            </p>
           </FoldCard>
 
           <FoldCard

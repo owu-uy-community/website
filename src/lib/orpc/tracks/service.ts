@@ -14,8 +14,16 @@ import { eventChannel } from "../../realtime/channels";
 import { cardChanged } from "../board-events";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
+import { suggestCells } from "../ocr/service";
 import { Realtime } from "../services";
-import type { CreateTrackInput, StickyNote, TrackWithRelations, UpdateTrackInput } from "./schemas";
+import type {
+  CreatePlacedTrackInput,
+  CreateTrackInput,
+  PlacedTrack as PlacedTalk,
+  StickyNote,
+  TrackWithRelations,
+  UpdateTrackInput,
+} from "./schemas";
 
 type PlacedTrack = TrackRow & { room?: RoomRow | null; schedule?: ScheduleRow | null };
 
@@ -189,6 +197,56 @@ export const createNote = (input: CreateTrackInput) =>
     yield* cardChanged({ type: "CARD_CREATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
 
     return note;
+  });
+
+/**
+ * Place a talk where it fits best and put it on the board, in one call (the
+ * companion's spoken pitch). The decision models pick the cell; a cell taken
+ * between the pick and the write falls through to the next one, so the only
+ * failure left is a board with nothing free.
+ */
+export const createPlaced = (input: CreatePlacedTrackInput) =>
+  Effect.gen(function* () {
+    const { suggestion, cells, relaxed } = yield* suggestCells(input.openSpaceId, input);
+    const skipped: PlacedTalk["placement"]["skipped"] = [];
+
+    for (const cell of cells) {
+      const outcome = yield* createNote({
+        ...input,
+        scheduleId: cell.scheduleId,
+        roomId: cell.roomId,
+        // Only when no room had what the talk asked for: otherwise checkPlace keeps guarding resources.
+        skipResourceValidation: relaxed,
+      }).pipe(
+        Effect.map((note) => ({ note })),
+        Effect.catchTag("Conflict", (error) =>
+          error.reason === "slot_taken" ? Effect.succeed({ taken: error }) : Effect.fail(error)
+        )
+      );
+      if ("note" in outcome) {
+        return {
+          note: outcome.note,
+          placement: {
+            room: cell.room,
+            timeSlot: cell.timeSlot,
+            reasoning: cell.reasoning ?? suggestion.reasoning,
+            degraded: suggestion.degraded ?? false,
+            missing: [
+              ...(input.needsTV && !cell.hasTV ? (["tv"] as const) : []),
+              ...(input.needsWhiteboard && !cell.hasWhiteboard ? (["whiteboard"] as const) : []),
+            ],
+            skipped,
+          },
+        } satisfies PlacedTalk;
+      }
+      skipped.push({ room: cell.room, timeSlot: cell.timeSlot, occupiedBy: outcome.taken.occupiedBy });
+    }
+
+    return yield* new Conflict({
+      reason: "board_full",
+      message: "La grilla se llenó mientras hablábamos: no queda ningún lugar libre",
+      occupiedBy: skipped.at(-1)?.occupiedBy,
+    });
   });
 
 /** Edit a talk; moving it re-checks the new place. Only the fields sent change. */

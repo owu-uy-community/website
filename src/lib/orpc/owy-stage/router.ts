@@ -85,11 +85,11 @@ export const owyStageRouter = {
     }),
 
   setFace: staff
-    .meta(docs("Owy's face and running transcript, mirrored from a companion"))
+    .meta(docs("Owy's face, running transcript, feeling and the card it just placed, mirrored from a companion"))
     .input(SetFaceSchema)
     .output(FaceEventSchema)
     .effect(function* ({ input }) {
-      return yield* Stage.echo("face", input);
+      return yield* Stage.setFace(input);
     }),
 
   getPulse: pub

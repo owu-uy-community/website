@@ -65,6 +65,34 @@ export const CreateTrackSchema = TalkFields.extend({
   timeSlot: z.string().optional(),
 });
 
+/** A talk with no place yet: the server picks one (the companion's spoken pitch). */
+export const CreatePlacedTrackSchema = z.object({
+  openSpaceId: z.string().min(1),
+  title: z.string().trim().min(1, "El título es obligatorio").max(200),
+  speaker: z.string().trim().max(200).optional(),
+  description: z.string().trim().max(2000).optional(),
+  needsTV: z.boolean().default(false),
+  needsWhiteboard: z.boolean().default(false),
+  /** A request for the placement ("mejor a la tarde"), like the staff's note in the photo flow. */
+  additionalContext: z.string().max(500).optional(),
+  /** Who sent it ("companion"); logged, not stored. */
+  source: z.string().max(40).optional(),
+});
+
+export const PlacementSchema = z.object({
+  room: z.string(),
+  timeSlot: z.string(),
+  reasoning: z.string(),
+  /** The AI did not answer: this is the first free cell, not a judgement. */
+  degraded: z.boolean(),
+  /** What the talk asked for and the room lacks (no room had it). */
+  missing: z.array(z.enum(["tv", "whiteboard"])),
+  /** Cells taken between the suggestion and the write. */
+  skipped: z.array(z.object({ room: z.string(), timeSlot: z.string(), occupiedBy: z.string().optional() })),
+});
+
+export const PlacedTrackSchema = z.object({ note: StickyNoteSchema, placement: PlacementSchema });
+
 export const UpdateTrackInputSchema = z.object({
   id: z.string().min(1),
   data: TalkFields.partial().extend({
@@ -92,4 +120,6 @@ export const BulkUpdateTracksByScheduleSchema = z.object({
 export type StickyNote = z.infer<typeof StickyNoteSchema>;
 export type TrackWithRelations = z.infer<typeof TrackWithRelationsSchema>;
 export type CreateTrackInput = z.infer<typeof CreateTrackSchema>;
+export type CreatePlacedTrackInput = z.infer<typeof CreatePlacedTrackSchema>;
+export type PlacedTrack = z.infer<typeof PlacedTrackSchema>;
 export type UpdateTrackInput = z.infer<typeof UpdateTrackInputSchema>["data"];
