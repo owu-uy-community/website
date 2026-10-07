@@ -1,16 +1,17 @@
 import { call } from "@orpc/server";
 import { describe, expect, test, vi } from "vitest";
 
+import type { CountdownAction } from "lib/orpc/countdown/schemas";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
-import { by, type RouterInputs } from "test/context";
+import { by } from "test/context";
 import { makeBoard, makeSiteAdmin, makeUser } from "test/factories";
 
 async function setup() {
   const { event } = await makeBoard();
   const staff = await makeSiteAdmin();
-  const act = (input: Omit<RouterInputs["countdown"]["updateState"], "eventId">) =>
-    call(router.countdown.updateState, { eventId: event.id, ...input }, by(staff));
+  const act = (action: CountdownAction) =>
+    call(router.countdown.updateState, { ...action, eventId: event.id }, by(staff));
 
   return { eventId: event.id, staff, act };
 }
@@ -86,7 +87,18 @@ describe("countdown", () => {
     });
   });
 
-  test.fails("#12 a duration that isn't positive and a target time that isn't a date are BAD_REQUESTs", async () => {
+  test("#11 two admin actions at once both land", async () => {
+    const { eventId, act } = await setup();
+    await act({ action: "setDuration", durationSeconds: 60 });
+
+    await Promise.all([act({ action: "toggleSound" }), act({ action: "toggleSound" })]);
+
+    await expect(call(router.countdown.getState, { eventId }, by(null))).resolves.toMatchObject({
+      soundEnabled: false,
+    });
+  });
+
+  test("#12 a duration that isn't positive and a target time that isn't a date are BAD_REQUESTs", async () => {
     const { act } = await setup();
 
     await expect(act({ action: "setDuration", durationSeconds: 0 })).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -95,11 +107,25 @@ describe("countdown", () => {
     });
   });
 
-  test.fails("#13 the countdown of an unknown event is NOT_FOUND", async () => {
+  test("#13 the countdown of an unknown event is NOT_FOUND", async () => {
     const staff = await makeSiteAdmin();
 
     await expect(
       call(router.countdown.updateState, { eventId: "no-existe", action: "toggleSound" }, by(staff))
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(call(router.countdown.getState, { eventId: "no-existe" }, by(null))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
+
+  test("counting down to a time starts right away, as every screen sees it", async () => {
+    const { eventId, act } = await setup();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-07T18:00:00.000Z"));
+
+    const set = await act({ action: "setTargetTime", targetTime: "2026-11-07T18:10:00.000Z" });
+
+    expect(set).toMatchObject({ isRunning: true, remainingSeconds: 600, totalSeconds: 600 });
+    await expect(call(router.countdown.getState, { eventId }, by(null))).resolves.toStrictEqual(set);
   });
 });

@@ -1,14 +1,6 @@
-import { z } from "zod";
+import * as z from "zod";
 
-/**
- * Schema for dashboard statistics.
- * eventId is optional until the multi-tenant refactor makes it required.
- */
-export const GetDashboardStatsSchema = z
-  .object({
-    eventId: z.string().optional(),
-  })
-  .optional();
+export const GetDashboardStatsSchema = z.object({ eventId: z.string().min(1) });
 
 const DashboardScheduleSchema = z.object({
   id: z.string(),
@@ -22,15 +14,13 @@ const DashboardScheduleSchema = z.object({
  * Dashboard statistics response type
  */
 export const DashboardStatsSchema = z.object({
-  event: z
-    .object({
-      id: z.string(),
-      name: z.string(),
-      startDate: z.date().nullable(),
-      endDate: z.date().nullable(),
-      status: z.enum(["active", "inactive", "upcoming"]),
-    })
-    .nullable(),
+  event: z.object({
+    id: z.string(),
+    name: z.string(),
+    startDate: z.date(),
+    endDate: z.date(),
+    status: z.enum(["active", "inactive", "upcoming"]),
+  }),
   totalSessions: z.number(),
   activeRooms: z.number(),
   totalSchedules: z.number(),
@@ -39,6 +29,7 @@ export const DashboardStatsSchema = z.object({
   /** 0..1 — filled cells over total cells. */
   gridOccupancy: z.number(),
   sessionsByRoom: z.array(z.object({ roomId: z.string(), room: z.string(), sessions: z.number() })),
+  /** The slot happening now and the next one, on the event's own clock. */
   currentSchedule: DashboardScheduleSchema.nullable(),
   nextSchedule: DashboardScheduleSchema.nullable(),
   highlightedSchedule: DashboardScheduleSchema.nullable(),
@@ -62,7 +53,5 @@ export const DashboardStatsSchema = z.object({
     .nullable(),
 });
 
-// Type exports
-export type GetDashboardStatsInput = z.infer<typeof GetDashboardStatsSchema>;
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
 export type DashboardSchedule = z.infer<typeof DashboardScheduleSchema>;

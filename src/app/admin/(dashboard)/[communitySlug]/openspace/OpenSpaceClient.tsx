@@ -137,10 +137,10 @@ export default function OpenSpaceClient({
   // Restore the persisted cast state so the toggle reflects reality after reloads
   useEffect(() => {
     client.cast
-      .getState({})
+      .getState({ eventId })
       .then((state) => setHighlightedNoteId(state.trackId))
       .catch(() => undefined);
-  }, []);
+  }, [eventId]);
 
   // Resource warning for drag-and-drop (the move is NOT applied until confirmed)
   const [resourceWarning, setResourceWarning] = useState<{
@@ -415,11 +415,11 @@ export default function OpenSpaceClient({
       try {
         // Toggle: if already highlighted, clear it
         if (highlightedNoteId === note.id) {
-          await client.cast.setHighlightedNote({ trackId: null });
+          await client.cast.setHighlightedNote({ eventId, trackId: null });
           setHighlightedNoteId(null);
           toast.info("Pantalla limpiada", "La pantalla de notas quedó libre.");
         } else {
-          await client.cast.setHighlightedNote({ trackId: note.id });
+          await client.cast.setHighlightedNote({ eventId, trackId: note.id });
           setHighlightedNoteId(note.id);
           toast.success("Enviado a pantalla", `"${note.title}" se está mostrando en la pantalla de notas.`);
         }
@@ -428,7 +428,7 @@ export default function OpenSpaceClient({
         toast.error("No se pudo enviar", "Probá nuevamente en unos segundos.");
       }
     },
-    [highlightedNoteId]
+    [eventId, highlightedNoteId]
   );
 
   const filteredNotes = useMemo(() => filterNotes(notes, searchTerm), [notes, searchTerm]);

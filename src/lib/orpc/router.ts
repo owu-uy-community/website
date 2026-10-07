@@ -1,5 +1,3 @@
-import { GetAttendeesSchema, GetSummarySchema, getAttendees, getSummary } from "./eventbrite";
-
 import {
   ProcessImageSchema,
   FindFreeSpotSchema,
@@ -40,9 +38,6 @@ import {
   updateCue,
 } from "./obs-control";
 
-import { GetCountdownStateSchema, UpdateCountdownStateSchema } from "./countdown/schemas";
-import { GetCastStateSchema, SetHighlightedNoteSchema } from "./cast/schemas";
-import { getCastState, setHighlightedNote } from "./cast/services";
 import {
   FireEffectSchema,
   GetInputsSchema,
@@ -69,27 +64,19 @@ import {
   setScene,
   submitInput,
 } from "./owy-stage/services";
-import { getCountdownState } from "./countdown/services/get-state";
-import { updateCountdownState } from "./countdown/services/update-state";
-import { getCountdownEndtime } from "./countdown/services/get-endtime";
-
-import { getDashboardStats, GetDashboardStatsSchema } from "./dashboard";
 
 import { pub, staff } from "./base";
+import { castRouter } from "./cast/router";
 import { communitiesRouter } from "./communities/router";
+import { countdownRouter } from "./countdown/router";
+import { dashboardRouter } from "./dashboard/router";
+import { eventbriteRouter } from "./eventbrite/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { roomsRouter } from "./rooms/router";
 import { schedulesRouter } from "./schedules/router";
 import { staffTasksRouter } from "./staff-tasks/router";
 import { tracksRouter } from "./tracks/router";
 import type { Actor } from "./services";
-
-/**
- * Eventbrite handlers (admin only)
- */
-export const getAttendeesHandler = staff.input(GetAttendeesSchema).handler(async ({ input }) => getAttendees(input));
-
-export const getSummaryHandler = staff.handler(async () => getSummary());
 
 /**
  * OCR handlers (admin only)
@@ -152,28 +139,6 @@ export const stepObsCue = staff
   .input(StepCueSchema)
   .handler(async ({ input, context }) => stepCue(input, commandSource(context.user)));
 
-// Countdown procedures (public read, admin write)
-export const getCountdownStateHandler = pub
-  .input(GetCountdownStateSchema)
-  .handler(async ({ input }) => getCountdownState(input?.eventId));
-
-export const getCountdownEndtimeHandler = pub
-  .input(GetCountdownStateSchema)
-  .handler(async ({ input }) => getCountdownEndtime(input?.eventId));
-
-export const updateCountdownStateHandler = staff
-  .input(UpdateCountdownStateSchema)
-  .handler(async ({ input }) => updateCountdownState(input));
-
-// Cast-to-screen procedures (public read for displays, admin write)
-export const getCastStateHandler = pub
-  .input(GetCastStateSchema)
-  .handler(async ({ input }) => getCastState(input?.eventId));
-
-export const setHighlightedNoteHandler = staff
-  .input(SetHighlightedNoteSchema)
-  .handler(async ({ input }) => setHighlightedNote(input));
-
 // Owy Stage procedures (public read for the OBS pages, admin write — the
 // companion bridge writes through its x-api-key admin session)
 export const getStageStateHandler = pub.handler(async () => getStageState());
@@ -207,11 +172,6 @@ export const setNowPlayingHandler = staff.input(SetNowPlayingSchema).handler(asy
 export const submitStageInputHandler = pub.input(SubmitInputSchema).handler(async ({ input }) => submitInput(input));
 export const getStageInputsHandler = pub.input(GetInputsSchema).handler(async ({ input }) => getInputs(input.round));
 
-// Dashboard procedures (admin only)
-export const getDashboardStatsHandler = staff
-  .input(GetDashboardStatsSchema)
-  .handler(async ({ input }) => getDashboardStats(input?.eventId));
-
 // Main router
 export const router = {
   openSpaces: openSpacesRouter,
@@ -221,10 +181,7 @@ export const router = {
   tracks: tracksRouter,
 
   // Eventbrite integration
-  eventbrite: {
-    getAttendees: getAttendeesHandler,
-    getSummary: getSummaryHandler,
-  },
+  eventbrite: eventbriteRouter,
 
   // OCR for extracting talk information from images
   ocr: {
@@ -261,20 +218,13 @@ export const router = {
   },
 
   // Countdown Timer Management
-  countdown: {
-    getState: getCountdownStateHandler,
-    getEndtime: getCountdownEndtimeHandler,
-    updateState: updateCountdownStateHandler,
-  },
+  countdown: countdownRouter,
 
   // Communities (tenants)
   communities: communitiesRouter,
 
   // Cast to screen (sticky note display)
-  cast: {
-    getState: getCastStateHandler,
-    setHighlightedNote: setHighlightedNoteHandler,
-  },
+  cast: castRouter,
 
   // Owy Stage (video wall scenes)
   owyStage: {
@@ -297,9 +247,7 @@ export const router = {
   },
 
   // Dashboard Statistics
-  dashboard: {
-    getStats: getDashboardStatsHandler,
-  },
+  dashboard: dashboardRouter,
 
   // Staff coordination (event-day tasks + announcements)
   staffTasks: staffTasksRouter,

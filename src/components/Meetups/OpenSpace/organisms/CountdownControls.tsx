@@ -35,10 +35,10 @@ export function CountdownControls({ eventId }: { eventId: string }) {
   const handlePlayPause = async () => {
     try {
       if (state.isRunning) {
-        await updateState("pause");
+        await updateState({ action: "pause" });
         toast.info("Temporizador pausado");
       } else {
-        await updateState("start");
+        await updateState({ action: "start" });
         toast.info("Temporizador iniciado");
       }
     } catch {
@@ -48,7 +48,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
 
   const handleReset = async () => {
     try {
-      await updateState("reset");
+      await updateState({ action: "reset" });
       toast.info("Temporizador reiniciado");
     } catch {
       toast.error("Error", "No se pudo reiniciar el temporizador");
@@ -64,7 +64,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
         return;
       }
 
-      await updateState("setDuration", totalSeconds);
+      await updateState({ action: "setDuration", durationSeconds: totalSeconds });
       toast.success("Duración establecida", `Temporizador configurado a ${formatTime(totalSeconds)}`);
     } catch {
       toast.error("Error", "No se pudo establecer la duración");
@@ -89,7 +89,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
         target.setDate(target.getDate() + 1);
       }
 
-      await updateState("setTargetTime", undefined, target.toISOString());
+      await updateState({ action: "setTargetTime", targetTime: target.toISOString() });
 
       const secondsUntil = Math.floor((target.getTime() - now.getTime()) / 1000);
       toast.success(
@@ -105,7 +105,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
     // Read the target state BEFORE the update so the toast can't lie.
     const willBeEnabled = !state.soundEnabled;
     try {
-      await updateState("toggleSound");
+      await updateState({ action: "toggleSound" });
       toast.info(
         willBeEnabled ? "Sonido activado" : "Sonido desactivado",
         willBeEnabled ? "El temporizador va a sonar al terminar" : "El temporizador termina en silencio"

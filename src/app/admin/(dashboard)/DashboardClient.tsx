@@ -3,7 +3,7 @@
 import type React from "react";
 
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import {
@@ -110,7 +110,7 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardClient() {
-  const { selected } = useSelectedEvent();
+  const { selected, isLoading: eventsLoading } = useSelectedEvent();
   const boardHref = selected
     ? scopedAdminHref(selected.communitySlug, "/admin/openspace", selected.slug)
     : "/admin/openspace";
@@ -123,7 +123,7 @@ export default function DashboardClient() {
     isRefetching,
   } = useQuery(
     orpc.dashboard.getStats.queryOptions({
-      input: {},
+      input: selected ? { eventId: selected.id } : skipToken,
       staleTime: 30_000,
       refetchInterval: 60_000,
     })
@@ -154,7 +154,7 @@ export default function DashboardClient() {
                   {status.text}
                 </Badge>
               </>
-            ) : isLoading ? (
+            ) : isLoading || eventsLoading ? (
               <Skeleton className="h-4 w-48" />
             ) : (
               <span>Sin evento configurado</span>
@@ -184,8 +184,10 @@ export default function DashboardClient() {
             </Button>
           </CardContent>
         </Card>
-      ) : isLoading || !stats ? (
-        <DashboardSkeleton />
+      ) : !stats ? (
+        selected || eventsLoading ? (
+          <DashboardSkeleton />
+        ) : null
       ) : (
         <>
           <Card>

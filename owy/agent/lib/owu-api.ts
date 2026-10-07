@@ -188,8 +188,8 @@ export interface CountdownUpdateInput {
   action: "start" | "pause" | "reset" | "setDuration" | "toggleSound" | "setTargetTime";
   durationSeconds?: number;
   targetTime?: string;
-  /** Event whose countdown to drive; the API falls back to the legacy event. */
-  eventId?: string;
+  /** Event whose countdown to drive. */
+  eventId: string;
 }
 
 /** Input for the website's OCR + AI spot suggestion (mirrors ProcessImageWithSuggestionSchema). */
@@ -361,15 +361,15 @@ export interface OwuApi {
     }) => Promise<{ cue: OBSCue; commandId: string | null } | null>;
   };
   countdown: {
-    getState: (input?: { eventId?: string }) => Promise<CountdownState>;
+    getState: (input: { eventId: string }) => Promise<CountdownState>;
     updateState: (input: CountdownUpdateInput) => Promise<CountdownState>;
   };
   ocr: {
     processImageWithSuggestion: (input: OcrSuggestionInput) => Promise<OcrSuggestionResponse>;
   };
   cast: {
-    getState: (input?: { eventId?: string }) => Promise<CastState>;
-    setHighlightedNote: (input: { eventId?: string; trackId: string | null }) => Promise<CastState>;
+    getState: (input: { eventId: string }) => Promise<CastState>;
+    setHighlightedNote: (input: { eventId: string; trackId: string | null }) => Promise<CastState>;
   };
   staffTasks: {
     list: (input: { eventId: string }) => Promise<StaffTask[]>;
@@ -400,7 +400,7 @@ export interface OwuApi {
     };
   };
   dashboard: {
-    getStats: (input?: { eventId?: string }) => Promise<unknown>;
+    getStats: (input: { eventId: string }) => Promise<unknown>;
   };
   eventbrite: {
     getSummary: () => Promise<unknown>;

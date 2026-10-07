@@ -57,12 +57,27 @@ describe("cast", () => {
     });
   });
 
-  test.fails("#12 casting a talk from another event is NOT_FOUND", async () => {
+  test("#12 casting a talk from another event is NOT_FOUND", async () => {
     const { staff, talk } = await setup();
     const elsewhere = await makeBoard();
 
     await expect(
       call(router.cast.setHighlightedNote, { eventId: elsewhere.event.id, trackId: talk.id }, by(staff))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(call(router.cast.getState, { eventId: elsewhere.event.id }, by(null))).resolves.toStrictEqual({
+      trackId: null,
+      note: null,
+    });
+  });
+
+  test("#13 the screens of an unknown event are NOT_FOUND", async () => {
+    const { staff } = await setup();
+
+    await expect(call(router.cast.getState, { eventId: "no-existe" }, by(null))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(
+      call(router.cast.setHighlightedNote, { eventId: "no-existe", trackId: null }, by(staff))
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });

@@ -11,7 +11,7 @@ import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "components/shared/ui/avatar";
-import type { EventbriteAttendee } from "lib/eventbrite/types";
+import type { Attendee } from "lib/orpc/eventbrite/schemas";
 import { getGravatarUrl } from "lib/gravatar";
 import { cn } from "app/lib/utils";
 
@@ -82,20 +82,20 @@ function AttendeesContent() {
 
   // Filter attendees based on search and status
   const filteredAttendees = useMemo(() => {
-    let filtered = attendees.filter((a: EventbriteAttendee) => !a.cancelled && !a.refunded);
+    let filtered = attendees.filter((a: Attendee) => !a.cancelled && !a.refunded);
 
     // Filter by check-in status
     if (statusFilter === "checked_in") {
-      filtered = filtered.filter((a: EventbriteAttendee) => a.checked_in);
+      filtered = filtered.filter((a: Attendee) => a.checked_in);
     } else if (statusFilter === "not_checked_in") {
-      filtered = filtered.filter((a: EventbriteAttendee) => !a.checked_in);
+      filtered = filtered.filter((a: Attendee) => !a.checked_in);
     }
 
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
-        (a: EventbriteAttendee) =>
+        (a: Attendee) =>
           a.profile.name.toLowerCase().includes(term) ||
           a.profile.email.toLowerCase().includes(term) ||
           a.ticket_class_name.toLowerCase().includes(term)
@@ -228,7 +228,7 @@ function AttendeesContent() {
         </div>
         <div className="text-sm text-zinc-400">
           Mostrando {filteredAttendees.length} de{" "}
-          {attendees.filter((a: EventbriteAttendee) => !a.cancelled && !a.refunded).length} asistentes
+          {attendees.filter((a: Attendee) => !a.cancelled && !a.refunded).length} asistentes
         </div>
       </div>
 
@@ -259,7 +259,7 @@ function AttendeesContent() {
       ) : (
         <>
           <div className="space-y-3">
-            {filteredAttendees.map((attendee: EventbriteAttendee) => (
+            {filteredAttendees.map((attendee: Attendee) => (
               <AttendeeCard key={attendee.id} attendee={attendee} />
             ))}
           </div>
@@ -282,7 +282,7 @@ function AttendeesContent() {
   );
 }
 
-function AttendeeCard({ attendee }: { attendee: EventbriteAttendee }) {
+function AttendeeCard({ attendee }: { attendee: Attendee }) {
   const initials = attendee.profile.name
     .split(" ")
     .map((n) => n[0])

@@ -17,6 +17,8 @@ const API = "https://www.eventbriteapi.com/v3/events/4242";
 
 const attendee = (id: number, checkedIn: boolean) => ({
   id: String(id),
+  created: "2026-10-01T12:00:00Z",
+  ticket_class_name: "General",
   checked_in: checkedIn,
   cancelled: false,
   refunded: false,
@@ -91,7 +93,7 @@ describe("eventbrite", () => {
     });
   });
 
-  test.fails("#8 check-ins are counted across every attendee page", async () => {
+  test("#8 check-ins are counted across every attendee page", async () => {
     mockEventbrite();
     const staff = await makeSiteAdmin();
 
@@ -100,7 +102,7 @@ describe("eventbrite", () => {
     expect(summary?.summary.checked_in).toBe(40);
   });
 
-  test.fails("#12 an Eventbrite outage is a BAD_GATEWAY, not a crash", async () => {
+  test("#12 an Eventbrite outage is a BAD_GATEWAY, not a crash", async () => {
     server.use(http.get(`${API}/attendees/`, () => HttpResponse.json({ error_description: "down" }, { status: 503 })));
     const staff = await makeSiteAdmin();
 

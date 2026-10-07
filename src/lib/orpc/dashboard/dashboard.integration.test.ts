@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeSlot, makeTrack, makeUser } from "test/factories";
+import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 
 describe("dashboard.getStats", () => {
   test("summarises the board: sessions, rooms, occupancy and the busiest rooms", async () => {
@@ -40,22 +40,31 @@ describe("dashboard.getStats", () => {
     });
   });
 
-  test.fails("#18 the current slot is found in the event's own timezone", async () => {
-    const { event } = await makeBoard();
-    // 15:00–15:45 in Montevideo is 18:00–18:45 UTC; the server runs in UTC.
-    const now = await makeSlot(event.id, { startTime: "15:00", endTime: "15:45", name: "Ahora" });
+  test("#18 the slot on now is found on the event's own clock", async () => {
+    // The board's slots are 15:00–15:45 and 16:00–16:45 in Montevideo (UTC-3); the server runs in UTC.
+    const { event, slots } = await makeBoard();
     const staff = await makeSiteAdmin();
+    const statsAt = async (instant: string) => {
+      vi.setSystemTime(new Date(instant));
+      const stats = await call(router.dashboard.getStats, { eventId: event.id }, by(staff));
+
+      return [stats.currentSchedule?.id ?? null, stats.nextSchedule?.id ?? null];
+    };
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-07T18:20:00.000Z"));
 
-    const stats = await call(router.dashboard.getStats, { eventId: event.id }, by(staff));
-
-    expect(stats.currentSchedule?.name).toBe(now.name);
+    await expect(statsAt("2026-11-07T17:59:00.000Z")).resolves.toStrictEqual([null, slots.early.id]);
+    await expect(statsAt("2026-11-07T18:00:00.000Z")).resolves.toStrictEqual([slots.early.id, slots.late.id]);
+    await expect(statsAt("2026-11-07T18:45:00.000Z")).resolves.toStrictEqual([null, slots.late.id]);
+    await expect(statsAt("2026-11-08T18:20:00.000Z")).resolves.toStrictEqual([null, null]);
   });
 
-  test.fails("#13 the event must be named — there is no implicit default event", async () => {
+  test("#13 the event must be named — there is no implicit default event", async () => {
     const staff = await makeSiteAdmin();
 
+    // @ts-expect-error the event is required
     await expect(call(router.dashboard.getStats, {}, by(staff))).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(call(router.dashboard.getStats, { eventId: "no-existe" }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
   });
 });

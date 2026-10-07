@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { orpc, client } from "lib/orpc";
-import type { EventbriteAttendee } from "lib/eventbrite/types";
+import type { Attendee } from "lib/orpc/eventbrite/schemas";
 
 interface UseEventbriteAttendeesOptions {
   page?: number;
@@ -124,8 +124,8 @@ export const useEventbriteAttendees = ({
 
   // Helper to get attendees by check-in status
   const getAttendeesByStatus = useCallback(
-    (checkedIn: boolean): EventbriteAttendee[] => {
-      return allAttendees.filter((a: EventbriteAttendee) => a.checked_in === checkedIn && !a.cancelled && !a.refunded);
+    (checkedIn: boolean): Attendee[] => {
+      return allAttendees.filter((a: Attendee) => a.checked_in === checkedIn && !a.cancelled && !a.refunded);
     },
     [allAttendees]
   );
