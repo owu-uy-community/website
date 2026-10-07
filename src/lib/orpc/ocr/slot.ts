@@ -1,7 +1,8 @@
-import { generateText, Output } from "ai";
-import { z } from "zod";
-import type { FindFreeSpotInput, FindFreeSpotResponse } from "../schemas";
-import { AI_TIMEOUT_MS, describeAiFailure, gatewayFallbacks, SLOT_PICK_MODEL } from "../models";
+import { generateText, Output, type LanguageModel } from "ai";
+import * as z from "zod";
+
+import { AI_TIMEOUT_MS, describeAiFailure, gatewayFallbacks, SLOT_PICK_MODEL } from "./models";
+import type { FindFreeSpotResponse } from "./schemas";
 
 /**
  * How many free cells the model gets to choose from. Small on purpose: the prompt stays short
@@ -25,11 +26,24 @@ export interface Candidate {
   hasWhiteboard: boolean;
 }
 
-type CandidateInput = Pick<
-  FindFreeSpotInput,
-  "existingNotes" | "roomsWithResources" | "availableRooms" | "availableTimeSlots"
-> &
-  Partial<Pick<FindFreeSpotInput, "speaker" | "needsTV" | "needsWhiteboard">>;
+/** The board as the picker sees it: names and labels, not ids. */
+export interface Board {
+  existingNotes: { title: string; speaker?: string; room: string; timeSlot: string }[];
+  roomsWithResources: { name: string; hasTV: boolean; hasWhiteboard: boolean }[];
+  availableRooms: string[];
+  availableTimeSlots: string[];
+}
+
+/** The talk to place. */
+export interface Talk {
+  title: string;
+  speaker?: string;
+  needsTV?: boolean;
+  needsWhiteboard?: boolean;
+  additionalContext?: string;
+}
+
+type CandidateInput = Board & Pick<Talk, "speaker" | "needsTV" | "needsWhiteboard">;
 
 /** Handwritten names arrive with inconsistent case and accents; compare them leniently. */
 function sameName(a: string | undefined, b: string | undefined): boolean {
@@ -168,19 +182,11 @@ Contestá en español rioplatense. La razón son dos oraciones como máximo: por
  * judgement — whether two talks are about the same thing — and it picks from an enumerated list,
  * so an unavailable slot is not a possible answer.
  */
-export async function findFreeSpot(input: FindFreeSpotInput): Promise<FindFreeSpotResponse> {
-  const {
-    title,
-    speaker,
-    needsTV = false,
-    needsWhiteboard = false,
-    additionalContext,
-    existingNotes,
-    roomsWithResources,
-    availableRooms,
-    availableTimeSlots,
-  } = input;
-
+export async function findFreeSpot(
+  { title, speaker, needsTV = false, needsWhiteboard = false, additionalContext }: Talk,
+  { existingNotes, roomsWithResources, availableRooms, availableTimeSlots }: Board,
+  model: LanguageModel = SLOT_PICK_MODEL.primary
+): Promise<FindFreeSpotResponse> {
   const candidates = buildCandidates({
     speaker,
     needsTV,
@@ -221,7 +227,7 @@ ${candidates.map(describe).join("\n")}`;
 
   try {
     const { output } = await generateText({
-      model: SLOT_PICK_MODEL.primary,
+      model,
       providerOptions: gatewayFallbacks(SLOT_PICK_MODEL),
       temperature: 0,
       reasoning: "low",

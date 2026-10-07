@@ -1,8 +1,9 @@
-import { ORPCError } from "@orpc/server";
-import { generateText, Output } from "ai";
-import { z } from "zod";
-import type { ProcessImageInput, ProcessImageResponse } from "../schemas";
-import { AI_TIMEOUT_MS, CARD_OCR_MODEL, describeAiFailure, gatewayFallbacks } from "../models";
+import { Output, streamText, type LanguageModel } from "ai";
+import * as z from "zod";
+
+import { UpstreamFailed } from "../errors";
+import { AI_TIMEOUT_MS, describeAiFailure, gatewayFallbacks } from "./models";
+import type { CardFields, ProcessImageResponse } from "./schemas";
 
 /**
  * The card is a fixed pre-print, so describing it exactly is free accuracy: the model never has
@@ -70,74 +71,115 @@ function mediaTypeOf(dataUrl: string): string {
   return dataUrl.match(/^data:([^;,]+)/)?.[1] ?? "image";
 }
 
+type Card = z.infer<typeof CardSchema>;
+
+/** What the staffer gets: the model's reading, plus every field worth a human check. */
+export function toCardResult(card: Card): ProcessImageResponse {
+  return {
+    title: card.title ?? "",
+    speaker: card.speaker ?? "",
+    needsTV: card.requisito === "tv" || card.requisito === "ambos",
+    needsWhiteboard: card.requisito === "pizarra" || card.requisito === "ambos",
+    requisito: card.requisito,
+    revisar: [
+      ...card.revisar,
+      ...(card.title === null ? (["title"] as const) : []),
+      ...(card.speaker === null ? (["speaker"] as const) : []),
+      ...(card.requisito === "ilegible" ? (["requisito"] as const) : []),
+    ].filter((field, index, all) => all.indexOf(field) === index),
+  };
+}
+
+export type CardModel = { model: LanguageModel; fallbacks: readonly string[] };
+
 /**
- * Extract the talk information from a photo of a physical card.
+ * Read a photo of a physical card as it streams: `fields` yields the name and
+ * title as the model writes them (only when they change), `card` settles with
+ * the whole reading. A failed call fails `card` with an `UpstreamFailed` that
+ * says why — the stream itself just ends.
  *
  * @param imageData - the photo as a data URL (the camera tab produces one; Owy builds one from
  *   the attachment bytes)
  */
-export async function processImage(
-  input: ProcessImageInput,
-  /** Overridden by `scripts/ocr-bench.ts` to score one model at a time. */
-  model: { readonly primary: string; readonly fallbacks: readonly string[] } = CARD_OCR_MODEL
-): Promise<ProcessImageResponse> {
-  try {
-    const { output, providerMetadata } = await generateText({
-      model: model.primary,
-      providerOptions: gatewayFallbacks(model),
-      temperature: 0,
-      // Reading handwriting is perception, not deliberation: extra thinking costs seconds and
-      // buys no accuracy on this task.
-      reasoning: "low",
-      timeout: { totalMs: AI_TIMEOUT_MS },
-      instructions: INSTRUCTIONS,
-      output: Output.object({
-        name: "open_space_card",
-        description: "Fields read off a handwritten open-space talk card",
-        schema: CardSchema,
-      }),
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Read this card." },
-            {
-              type: "file",
-              mediaType: mediaTypeOf(input.imageData),
-              data: input.imageData,
-              providerOptions: { openai: { imageDetail: "high" } },
-            },
-          ],
-        },
-      ],
-    });
+export function streamCard(imageData: string, { model, fallbacks }: CardModel, signal?: AbortSignal) {
+  let failure: unknown;
+  const reading = streamText({
+    model,
+    providerOptions: gatewayFallbacks({ fallbacks }),
+    temperature: 0,
+    // Reading handwriting is perception, not deliberation: extra thinking costs seconds and
+    // buys no accuracy on this task.
+    reasoning: "low",
+    timeout: { totalMs: AI_TIMEOUT_MS },
+    abortSignal: signal,
+    instructions: INSTRUCTIONS,
+    output: Output.object({
+      name: "open_space_card",
+      description: "Fields read off a handwritten open-space talk card",
+      schema: CardSchema,
+    }),
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "Read this card." },
+          {
+            type: "file",
+            mediaType: mediaTypeOf(imageData),
+            data: imageData,
+            providerOptions: { openai: { imageDetail: "high" } },
+          },
+        ],
+      },
+    ],
+    onError: ({ error }) => {
+      failure = error;
+    },
+  });
 
-    const attempts = providerMetadata?.gateway?.modelAttempts;
-
-    if (Array.isArray(attempts) && attempts.length > 1) {
-      // Only interesting when the primary model did not serve it: that is the event-day signal
-      // that a provider is degraded.
-      console.warn("[ocr] gateway fell back to a secondary model:", JSON.stringify(attempts));
+  async function* fields(): AsyncGenerator<CardFields> {
+    let last = "";
+    for await (const partial of reading.partialOutputStream) {
+      const next = { title: partial.title ?? undefined, speaker: partial.speaker ?? undefined };
+      const key = JSON.stringify(next);
+      if (key !== last && (next.title || next.speaker)) {
+        last = key;
+        yield next;
+      }
     }
-
-    return {
-      title: output.title ?? "",
-      speaker: output.speaker ?? "",
-      needsTV: output.requisito === "tv" || output.requisito === "ambos",
-      needsWhiteboard: output.requisito === "pizarra" || output.requisito === "ambos",
-      requisito: output.requisito,
-      revisar: [
-        ...output.revisar,
-        ...(output.title === null ? (["title"] as const) : []),
-        ...(output.speaker === null ? (["speaker"] as const) : []),
-        ...(output.requisito === "ilegible" ? (["requisito"] as const) : []),
-      ].filter((field, index, all) => all.indexOf(field) === index),
-    };
-  } catch (error) {
-    console.error("Error in processImage:", error);
-
-    // An ORPCError reaches the browser with its message intact; a plain Error is flattened to
-    // oRPC's generic "Internal server error", which is how the actionable part used to get lost.
-    throw new ORPCError("OCR_FAILED", { message: describeAiFailure(error) });
   }
+
+  const card = Promise.resolve(reading.output).then(
+    async (output) => {
+      const attempts = (await reading.providerMetadata)?.gateway?.modelAttempts;
+      if (Array.isArray(attempts) && attempts.length > 1) {
+        // Only interesting when the primary model did not serve it: that is the event-day signal
+        // that a provider is degraded.
+        console.warn("[ocr] gateway fell back to a secondary model:", JSON.stringify(attempts));
+      }
+
+      return toCardResult(output);
+    },
+    (error: unknown) => {
+      // The stream only says "no output"; the reason (a rejected account, a rate limit, a
+      // timeout) came through onError, and it is what the staffer at the table needs to read.
+      throw new UpstreamFailed({
+        service: "AI Gateway",
+        message: describeAiFailure(failure ?? error),
+        cause: failure ?? error,
+      });
+    }
+  );
+
+  // Whoever awaits `card` sees the failure; an abandoned stream must not leave it unhandled.
+  void card.catch(() => undefined);
+
+  return { fields, card };
+}
+
+/** The whole reading at once, for callers that can't take a stream (Owy, the OCR bench). */
+export async function readCard(imageData: string, model: CardModel, signal?: AbortSignal) {
+  const { card } = streamCard(imageData, model, signal);
+
+  return card;
 }

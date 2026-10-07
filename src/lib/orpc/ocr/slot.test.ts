@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildCandidates } from "./find-spot";
+import { buildCandidates } from "./slot";
 
 /**
  * The part of "Sugerir con AI" that must never depend on a model: which free

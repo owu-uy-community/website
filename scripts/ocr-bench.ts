@@ -17,7 +17,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { processImage } from "../src/lib/orpc/ocr/services/process-image";
+import { readCard } from "../src/lib/orpc/ocr/card";
 
 const FIXTURES = path.join(process.cwd(), "scripts/ocr-fixtures/data");
 
@@ -102,7 +102,7 @@ async function main() {
 
   for (const primary of models) {
     // No fallbacks: a bake-off has to measure the model named on the tin.
-    const model = { primary, fallbacks: [] as const };
+    const model = { model: primary, fallbacks: [] };
     const titles: number[] = [];
     const speakers: number[] = [];
     const requisitos: number[] = [];
@@ -113,7 +113,7 @@ async function main() {
       const startedAt = Date.now();
 
       try {
-        const result = await processImage({ imageData: images.get(fixture.file)! }, model);
+        const result = await readCard(images.get(fixture.file)!, model);
 
         latencies.push(Date.now() - startedAt);
         titles.push(similarity(result.title, fixture.title));

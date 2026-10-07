@@ -194,19 +194,10 @@ export interface CountdownUpdateInput {
 
 /** Input for the website's OCR + AI spot suggestion (mirrors ProcessImageWithSuggestionSchema). */
 export interface OcrSuggestionInput {
+  /** The event whose board the suggestion is for; the site loads the board. */
+  eventId: string;
+  /** The photo as a data URL, at most ~4 MB. */
   imageData: string;
-  existingNotes: {
-    id?: string;
-    title: string;
-    speaker?: string;
-    room: string;
-    timeSlot: string;
-    needsTV?: boolean;
-    needsWhiteboard?: boolean;
-  }[];
-  roomsWithResources: { name: string; hasTV: boolean; hasWhiteboard: boolean }[];
-  availableRooms: string[];
-  availableTimeSlots: string[];
   additionalContext?: string;
 }
 

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ORPCError } from "@orpc/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -7,6 +8,8 @@ import { client } from "lib/orpc";
 import type { StickyNote } from "lib/orpc";
 import { orpc } from "lib/orpc/client";
 import { toast } from "components/shared/ui/toast-utils";
+
+import type { FindFreeSpotResponse } from "lib/orpc/ocr/schemas";
 
 import { talkFormSchema } from "./types";
 import type {
@@ -26,31 +29,17 @@ import type {
 const MAX_IMAGE_EDGE = 1600;
 const JPEG_QUALITY = 0.85;
 
-/**
- * Blocks that have already finished are useless as a suggestion — at 15:10 nobody wants the 11:00
- * slot. Read off the label ("HH:MM - HH:MM") against the local clock, which is the venue's clock
- * on the day. If that leaves nothing (someone prepping the board the night before) we hand back
- * the whole day rather than claim the grid is full.
- *
- * ponytail: time-of-day only, no date. Thread the schedule dates through if the board ever needs
- * to suggest across days.
- */
-function upcomingSlots(timeSlots: string[]): string[] {
-  const now = new Date();
-  const minutesNow = now.getHours() * 60 + now.getMinutes();
+/** What to tell the staffer when saving fails; a taken place names the talk that has it. */
+function saveErrorMessage(error: unknown): string {
+  if (error instanceof ORPCError && error.code === "CONFLICT") {
+    const { occupiedBy } = (error.data ?? {}) as { occupiedBy?: string };
+    if (occupiedBy) return `Este espacio ya está ocupado por "${occupiedBy}"`;
+  }
+  if (error instanceof ORPCError && error.code === "INTERNAL_SERVER_ERROR") {
+    return "Error del servidor. Por favor intenta con otro espacio.";
+  }
 
-  const upcoming = timeSlots.filter((slot) => {
-    const endsAt = slot
-      .split("-")[1]
-      ?.trim()
-      .match(/^(\d{1,2}):(\d{2})$/);
-
-    if (!endsAt) return true;
-
-    return Number(endsAt[1]) * 60 + Number(endsAt[2]) >= minutesNow;
-  });
-
-  return upcoming.length > 0 ? upcoming : timeSlots;
+  return error instanceof Error && error.message ? error.message : "Error al guardar la charla";
 }
 
 interface UseTalkFormParams {
@@ -125,48 +114,40 @@ export function useTalkForm({
 
   const queryClient = useQueryClient();
 
-  const roomsWithResources = roomsData.map((r) => ({
-    name: r.name,
-    hasTV: r.hasTV || false,
-    hasWhiteboard: r.hasWhiteboard || false,
-  }));
+  const applySuggestion = (result: FindFreeSpotResponse) => {
+    setSuggestionHistory((prev) => [
+      ...prev,
+      {
+        room: result.suggestedRoom,
+        timeSlot: result.suggestedTimeSlot,
+        reasoning: result.reasoning,
+        alternatives: result.alternatives,
+        degraded: result.degraded,
+      },
+    ]);
+    setCurrentHistoryIndex((prev) => prev + 1);
 
-  /**
-   * Ask for a room + time slot. Shared by the "Sugerir con AI" button and the camera tab, which
-   * fires it right after the card is read.
-   */
+    setValue("room", result.suggestedRoom);
+    setValue("timeSlot", result.suggestedTimeSlot);
+
+    setAiReasoning(result.reasoning);
+    setShowAiReasoning(false);
+  };
+
+  /** Ask for a room + time slot ("Sugerir con AI"). The server knows the board, including which blocks already ended. */
   const requestSuggestion = async (talk: Pick<TalkFormData, "title" | "speaker" | "needsTV" | "needsWhiteboard">) => {
     setAiSuggesting(true);
     setAiReasoning(null);
     setValidationError("");
 
     try {
-      const result = await client.ocr.findFreeSpot({
-        ...talk,
-        additionalContext: additionalContext.trim() || undefined,
-        roomsWithResources,
-        existingNotes: notes,
-        availableRooms: rooms,
-        availableTimeSlots: upcomingSlots(timeSlots),
-      });
-
-      setSuggestionHistory((prev) => [
-        ...prev,
-        {
-          room: result.suggestedRoom,
-          timeSlot: result.suggestedTimeSlot,
-          reasoning: result.reasoning,
-          alternatives: result.alternatives,
-          degraded: result.degraded,
-        },
-      ]);
-      setCurrentHistoryIndex((prev) => prev + 1);
-
-      setValue("room", result.suggestedRoom);
-      setValue("timeSlot", result.suggestedTimeSlot);
-
-      setAiReasoning(result.reasoning);
-      setShowAiReasoning(false);
+      applySuggestion(
+        await client.ocr.findFreeSpot({
+          ...talk,
+          eventId: openSpaceId,
+          additionalContext: additionalContext.trim() || undefined,
+        })
+      );
     } catch (error) {
       console.error("Error getting AI suggestion:", error);
       setValidationError("Error al obtener sugerencias de AI. Por favor intenta nuevamente.");
@@ -175,38 +156,66 @@ export function useTalkForm({
     }
   };
 
-  const processImageMutation = useMutation({
-    mutationFn: (imageData: string) => client.ocr.processImage({ imageData }),
-    onSuccess: (data) => {
-      if (data.title) setValue("title", data.title);
-      if (data.speaker) setValue("speaker", data.speaker);
-      // Always set: a card that marked "NO" has to clear whatever was ticked before.
-      setValue("needsTV", data.needsTV);
-      setValue("needsWhiteboard", data.needsWhiteboard);
-      setFieldsToReview(data.revisar ?? []);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  /** The card being read, so closing the dialog or starting over stops paying for it. */
+  const reading = useRef<AbortController | null>(null);
+  const stopReading = useCallback(() => {
+    reading.current?.abort();
+    reading.current = null;
+  }, []);
 
-      setActiveTab("form");
+  /**
+   * Read the card as a stream: the name and title land in the form as the model writes them,
+   * then the whole card, then — for a card with a title — the slot suggestion, so the staffer
+   * can already check the handwriting while the place is being picked.
+   */
+  const readCard = async (imageData: string) => {
+    stopReading();
+    const controller = new AbortController();
+    reading.current = controller;
+    setIsProcessingImage(true);
 
-      // Second, slower call. The staffer can already check the handwriting we just extracted
-      // while the slot suggestion lands, instead of watching one spinner for both. With no title
-      // there is nothing to place by topic, so we leave it to the button once they type one.
-      if (data.title) {
-        void requestSuggestion({
-          title: data.title,
-          speaker: data.speaker,
-          needsTV: data.needsTV,
-          needsWhiteboard: data.needsWhiteboard,
-        });
+    try {
+      const events = await client.ocr.extractCard(
+        { eventId: openSpaceId, imageData, additionalContext: additionalContext.trim() || undefined },
+        { signal: controller.signal }
+      );
+
+      for await (const event of events) {
+        if (event.type === "fields") {
+          setActiveTab("form");
+          if (event.fields.title) setValue("title", event.fields.title);
+          if (event.fields.speaker) setValue("speaker", event.fields.speaker);
+        } else if (event.type === "card") {
+          const { card } = event;
+          if (card.title) setValue("title", card.title);
+          if (card.speaker) setValue("speaker", card.speaker);
+          // Always set: a card that marked "NO" has to clear whatever was ticked before.
+          setValue("needsTV", card.needsTV);
+          setValue("needsWhiteboard", card.needsWhiteboard);
+          setFieldsToReview(card.revisar ?? []);
+          setActiveTab("form");
+          setIsProcessingImage(false);
+          // With no title there is nothing to place by topic: the button does it once they type one.
+          if (card.title) setAiSuggesting(true);
+        } else {
+          applySuggestion(event.suggestion);
+          setAiSuggesting(false);
+        }
       }
-    },
-    onError: (error: any) => {
+    } catch (error) {
+      if (controller.signal.aborted) return;
       console.error("Error processing image:", error);
 
       // The server sends the real reason (a rejected gateway account reads very differently from
       // an unreadable photo), so show it rather than a guess about which key is missing.
-      setOcrError(error?.message || "Error al procesar la imagen con OCR.");
-    },
-  });
+      setOcrError(error instanceof Error && error.message ? error.message : "Error al procesar la imagen con OCR.");
+    } finally {
+      if (reading.current === controller) reading.current = null;
+      setIsProcessingImage(false);
+      setAiSuggesting(false);
+    }
+  };
 
   const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -230,6 +239,7 @@ export function useTalkForm({
     });
 
     stopCamera();
+    stopReading();
     setCapturedImage(null);
     setPermissionMessage(null);
     setOcrError(null);
@@ -249,7 +259,7 @@ export function useTalkForm({
     confirmedProceedRef.current = false;
 
     setActiveTab("form");
-  }, [rooms, timeSlots, stopCamera, reset]);
+  }, [rooms, timeSlots, stopCamera, stopReading, reset]);
 
   useEffect(() => {
     if (note && note.id) {
@@ -294,15 +304,17 @@ export function useTalkForm({
   useEffect(() => {
     if (!open) {
       stopCamera();
+      stopReading();
       setPermissionMessage(null);
     }
-  }, [open, stopCamera]);
+  }, [open, stopCamera, stopReading]);
 
   useEffect(() => {
     return () => {
       stopCamera();
+      stopReading();
     };
-  }, [stopCamera]);
+  }, [stopCamera, stopReading]);
 
   const startCamera = async () => {
     try {
@@ -385,12 +397,13 @@ export function useTalkForm({
   const handleProcessImage = () => {
     if (capturedImage) {
       setOcrError(null);
-      processImageMutation.mutate(capturedImage);
+      void readCard(capturedImage);
     }
   };
 
   const handleResetOCR = () => {
     stopCamera();
+    stopReading();
     setCapturedImage(null);
     setPermissionMessage(null);
     setOcrError(null);
@@ -508,31 +521,9 @@ export function useTalkForm({
         skipResourceValidation: confirmedProceedRef.current,
       });
       resetAll();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error saving talk (in modal):", error);
-
-      let errorMessage = "Error al guardar la charla";
-
-      if (error?.cause?.message) {
-        errorMessage = error.cause.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      }
-
-      if (errorMessage.includes("Slot is already occupied")) {
-        const match = errorMessage.match(/occupied by "(.+)"/);
-        const occupiedBy = match ? match[1] : "otra charla";
-
-        setValidationError(`Este espacio ya está ocupado por "${occupiedBy}"`);
-      } else if (errorMessage.includes("Internal server error")) {
-        setValidationError("Error del servidor. Por favor intenta con otro espacio.");
-      } else {
-        setValidationError(errorMessage);
-      }
+      setValidationError(saveErrorMessage(error));
     }
   };
 
@@ -581,7 +572,7 @@ export function useTalkForm({
     capturedImage,
     permissionMessage,
     ocrError,
-    isProcessingImage: processImageMutation.isPending,
+    isProcessingImage,
     fieldsToReview,
     startCamera,
     captureImage,

@@ -2,13 +2,15 @@ import { createORPCClient, isDefinedError } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { BatchLinkPlugin } from "@orpc/client/plugins";
 import type { RouterClient } from "@orpc/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { POST as rpc } from "app/api/orpc/[[...rest]]/route";
 import { GET as epg } from "app/api/openspace/epg/route";
 import { GET as restGet, POST as restPost } from "app/api/v1/[[...rest]]/route";
 import { auth } from "app/lib/auth";
 import type { AppRouter } from "lib/orpc/router";
+import { aiLive } from "lib/orpc/services";
+import { generatingModel, models, streamingModel } from "test/ai";
 import { makeBoard, makeMember, makeSiteAdmin, makeTrack } from "test/factories";
 import { mintSession } from "test/session";
 
@@ -128,6 +130,39 @@ describe("/api/orpc", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toStrictEqual({ json: { applied: false } });
+  });
+
+  test("a card photo streams its reading to the browser, typed errors included", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+    const client = rpcClient(await cookieFor(staff.id));
+    vi.spyOn(aiLive, "model").mockImplementation(
+      models({
+        card: streamingModel([
+          '{"transcripcion":"Ana","speaker":"Ana","title":"Ef',
+          'fect","requisito":"ninguno","revisar":[]}',
+        ]),
+        pick: generatingModel({ candidato: "c0", razon: "Libre.", alternativas: [] }),
+      }).model
+    );
+
+    const types: string[] = [];
+    for await (const update of await client.ocr.extractCard({
+      eventId: event.id,
+      imageData: "data:image/jpeg;base64,/9j/",
+    })) {
+      types.push(update.type);
+    }
+    const missing = await client.ocr
+      .extractCard({ eventId: "no-existe", imageData: "data:image/jpeg;base64,/9j/" })
+      .then(async (updates) => {
+        for await (const _ of updates);
+      })
+      .catch((caught: unknown) => caught);
+
+    expect(types.at(-2)).toBe("card");
+    expect(types.at(-1)).toBe("suggestion");
+    expect(missing).toMatchObject({ code: "NOT_FOUND" });
   });
 
   test("a GET never runs a procedure", async () => {
