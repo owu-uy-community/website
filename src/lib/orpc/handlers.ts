@@ -2,6 +2,7 @@ import { EvlogHandlerPlugin } from "@orpc/evlog";
 import { OpenAPIGenerator } from "@orpc/openapi";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferenceHandlerPlugin } from "@orpc/openapi/plugins";
+import { RateLimitHandlerPlugin } from "@orpc/ratelimit";
 import { RPCHandler } from "@orpc/server/fetch";
 import { BatchHandlerPlugin } from "@orpc/server/plugins";
 import { ZodToJsonSchemaConverter } from "@orpc/zod";
@@ -31,7 +32,7 @@ export function requestContext(headers: Headers): BaseContext {
 
 /** `/api/orpc`: the RPC protocol the site, the Owy bot and scripts speak. */
 export const rpcHandler = new RPCHandler(router, {
-  plugins: [new BatchHandlerPlugin(), new EvlogHandlerPlugin(evlogOptions)],
+  plugins: [new BatchHandlerPlugin(), new RateLimitHandlerPlugin(), new EvlogHandlerPlugin(evlogOptions)],
 });
 
 const generator = new OpenAPIGenerator({ converters: [new ZodToJsonSchemaConverter()] });
@@ -43,6 +44,7 @@ const generator = new OpenAPIGenerator({ converters: [new ZodToJsonSchemaConvert
  */
 export const openApiHandler = new OpenAPIHandler(router, {
   plugins: [
+    new RateLimitHandlerPlugin(),
     new EvlogHandlerPlugin(evlogOptions),
     new OpenAPIReferenceHandlerPlugin({
       docsPath: "/docs",

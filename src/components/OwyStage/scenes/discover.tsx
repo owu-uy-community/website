@@ -7,7 +7,7 @@ import { EASE_OUT } from "app/conf/components/Reveal";
 import { MAPS_URLS } from "app/lib/constants";
 import { client } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import type { StageMeetup, StagePulse } from "lib/orpc/owy-stage/services";
+import type { StageMeetup, StagePulse } from "lib/orpc/owy-stage/schemas";
 
 import { Confetti } from "../effects";
 import { Ambient, BRAND, StageContext } from "../Stage";

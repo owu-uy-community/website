@@ -70,10 +70,26 @@ describe("the wall", () => {
 
     await expect(putOnAir({ scene: "now-playing", params: { song: "x".repeat(200) } })).rejects.toMatchObject({
       code: "BAD_REQUEST",
+      data: { issues: [expect.objectContaining({ path: ["song"] })] },
     });
   });
 
-  test.fails("#13 pointing the wall at an unknown event is NOT_FOUND", async () => {
+  test("#11 a restart is never undone by an edit landing at the same time", async () => {
+    const { staff, putOnAir } = await setup();
+    const first = await putOnAir({ scene: "now-playing" });
+    // A connection ready for each call, so they really overlap.
+    await Promise.all(Array.from({ length: 6 }, () => call(router.owyStage.getState, undefined, by(staff))));
+
+    await Promise.all([
+      ...Array.from({ length: 5 }, (_, i) => putOnAir({ scene: "now-playing", params: { song: `Tema ${i}` } })),
+      putOnAir({ scene: "now-playing", restart: true }),
+    ]);
+
+    const { round } = await call(router.owyStage.getState, undefined, by(null));
+    expect(round).not.toBe(first.round);
+  });
+
+  test("#13 pointing the wall at an unknown event is NOT_FOUND", async () => {
     const { putOnAir } = await setup();
 
     await expect(putOnAir({ scene: "black", eventId: "no-existe" })).rejects.toMatchObject({ code: "NOT_FOUND" });
@@ -135,12 +151,12 @@ describe("phone inputs", () => {
     expect(inputs.map((input) => [input.voter, input.value])).toStrictEqual([["tel-1", "primera"]]);
   });
 
-  test.fails("#15 one phone can't flood the wall", async () => {
+  test("#15 one phone can't flood the wall", async () => {
     const { putOnAir } = await setup();
     const { round } = await putOnAir({ scene: "now-playing" });
 
     const results = await Promise.allSettled(
-      Array.from({ length: 30 }, (_, i) =>
+      Array.from({ length: 60 }, (_, i) =>
         call(router.owyStage.submit, { round, key: "k", value: `v${i}`, voter: "spam", mode: "multi" }, by(null))
       )
     );

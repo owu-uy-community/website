@@ -13,6 +13,8 @@ import { owyStageState } from "../db/schema";
 
 const ROW_ID = "global";
 const SCOPES = "user-read-currently-playing user-read-playback-state";
+/** The wall polls this; a slow Spotify must not hold requests open. */
+const timeout = () => AbortSignal.timeout(5000);
 
 export type SpotifyTrack = {
   song: string;
@@ -63,6 +65,7 @@ async function tokenRequest(body: Record<string, string>) {
     headers: { Authorization: `Basic ${credentials().basic}`, "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(body),
     cache: "no-store",
+    signal: timeout(),
   });
   if (!response.ok) throw new Error(`Spotify token endpoint: ${response.status}`);
   return (await response.json()) as { access_token: string; refresh_token?: string; expires_in: number };
@@ -75,6 +78,7 @@ export async function connectSpotify(code: string, redirectUri: string): Promise
   const me = await fetch("https://api.spotify.com/v1/me", {
     headers: { Authorization: `Bearer ${token.access_token}` },
     cache: "no-store",
+    signal: timeout(),
   });
   const profile = me.ok ? ((await me.json()) as { display_name?: string; id?: string }) : {};
   const account = profile.display_name || profile.id || "Spotify";
@@ -135,6 +139,7 @@ export async function getSpotifyNowPlaying(): Promise<SpotifyTrack | null> {
   const response = await fetch("https://api.spotify.com/v1/me/player/currently-playing?additional_types=track", {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
+    signal: timeout(),
   });
   let track: SpotifyTrack | null = null;
   if (response.status === 200) {

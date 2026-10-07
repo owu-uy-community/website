@@ -29,8 +29,8 @@ export class Conflict extends Data.TaggedError("Conflict")<{
   occupiedBy?: string;
 }> {}
 
-/** The request is well-formed but asks for something that makes no sense. */
-export class Invalid extends Data.TaggedError("Invalid")<{ message: string }> {}
+/** The request is well-formed but asks for something that makes no sense; `issues` say what, field by field. */
+export class Invalid extends Data.TaggedError("Invalid")<{ message: string; issues?: readonly unknown[] }> {}
 
 /** Authenticated, but not allowed to do this particular thing. */
 export class Forbidden extends Data.TaggedError("Forbidden")<{ message: string }> {}
@@ -41,9 +41,6 @@ export class UpstreamFailed extends Data.TaggedError("UpstreamFailed")<{
   message: string;
   cause?: unknown;
 }> {}
-
-/** The caller is sending too much, too fast. */
-export class RateLimited extends Data.TaggedError("RateLimited")<{ retryAfter: number; message: string }> {}
 
 /** A write hit a unique index. Services catch it to say *what* collided; unhandled it is a CONFLICT. */
 export class UniqueViolation extends Data.TaggedError("UniqueViolation")<{ constraint: string; cause: unknown }> {}
@@ -60,7 +57,6 @@ export type DomainError =
   | Invalid
   | Forbidden
   | UpstreamFailed
-  | RateLimited
   | UniqueViolation
   | ForeignKeyViolation;
 
@@ -75,7 +71,12 @@ export const APP_ERRORS = {
   FORBIDDEN: {},
   NOT_FOUND: { data: z.object({ entity: z.string() }).optional() },
   CONFLICT: { data: z.object({ reason: z.string(), occupiedBy: z.string().optional() }).optional() },
-  TOO_MANY_REQUESTS: { data: z.object({ retryAfter: z.number() }).optional() },
+  /** Thrown by the rate limit middleware; `reset` is when the window starts over (epoch ms). */
+  TOO_MANY_REQUESTS: {
+    data: z
+      .object({ limit: z.number().optional(), remaining: z.number().optional(), reset: z.number().optional() })
+      .optional(),
+  },
   BAD_GATEWAY: { data: z.object({ service: z.string() }).optional() },
   INTERNAL_SERVER_ERROR: { data: z.object({ eventId: z.string().optional() }).optional() },
 };
@@ -114,13 +115,14 @@ function fromDomainError(error: DomainError): ORPCError<string, unknown> {
         data: { reason: error.reason, ...(error.occupiedBy === undefined ? {} : { occupiedBy: error.occupiedBy }) },
       });
     case "Invalid":
-      return new ORPCError("BAD_REQUEST", { message: error.message });
+      return new ORPCError("BAD_REQUEST", {
+        message: error.message,
+        ...(error.issues ? { data: { issues: [...error.issues] } } : {}),
+      });
     case "Forbidden":
       return new ORPCError("FORBIDDEN", { message: error.message });
     case "UpstreamFailed":
       return new ORPCError("BAD_GATEWAY", { message: error.message, data: { service: error.service } });
-    case "RateLimited":
-      return new ORPCError("TOO_MANY_REQUESTS", { message: error.message, data: { retryAfter: error.retryAfter } });
     case "UniqueViolation":
       return new ORPCError("CONFLICT", { message: "Ya existe un registro igual", data: { reason: error.constraint } });
     case "ForeignKeyViolation":
@@ -134,7 +136,6 @@ const DOMAIN_TAGS = new Set([
   "Invalid",
   "Forbidden",
   "UpstreamFailed",
-  "RateLimited",
   "UniqueViolation",
   "ForeignKeyViolation",
 ]);

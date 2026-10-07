@@ -8,13 +8,16 @@ import { fetchJson } from "../http";
 import { AttendeesPageSchema, EventbriteEventSchema, type Attendee, type Summary } from "./schemas";
 
 /** Eventbrite is optional: without a key and an event, there is simply nothing to show. */
-const isConfigured = () => Boolean(EVENTBRITE_API_KEY && EVENTBRITE_EVENT_ID);
+export const isConfigured = () => Boolean(EVENTBRITE_API_KEY && EVENTBRITE_EVENT_ID);
 
 const get = <S extends z.ZodType>(path: string, schema: S, revalidate: number) =>
   fetchJson("Eventbrite", `${EVENTBRITE_API_URL}/events/${EVENTBRITE_EVENT_ID}${path}`, schema, {
     headers: { Authorization: `Bearer ${EVENTBRITE_API_KEY}` },
     next: { revalidate },
   });
+
+/** The ticketed event itself (name, dates, capacity). */
+export const getEvent = () => get("/", EventbriteEventSchema, 300);
 
 const attendeesPage = (page: number, pageSize: number, status?: string) => {
   const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
@@ -43,7 +46,7 @@ export const everyAttendee: Effect.Effect<Attendee[], UpstreamFailed> = Effect.g
 export const getSummary = (): Effect.Effect<Summary | null, UpstreamFailed> =>
   isConfigured()
     ? Effect.gen(function* () {
-        const [event, attendees] = yield* Effect.all([get("/", EventbriteEventSchema, 300), everyAttendee], {
+        const [event, attendees] = yield* Effect.all([getEvent(), everyAttendee], {
           concurrency: "unbounded",
         });
         const active = attendees.filter((attendee) => !attendee.cancelled && !attendee.refunded);

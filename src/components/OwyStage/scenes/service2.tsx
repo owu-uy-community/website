@@ -5,7 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { client } from "lib/orpc";
-import type { StageWeather } from "lib/orpc/owy-stage/services";
+import type { StageWeather } from "lib/orpc/owy-stage/schemas";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";

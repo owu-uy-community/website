@@ -19,6 +19,9 @@ const nextConfig: NextConfig = {
     "/keystatic": ["./content/**/*"],
     "/api/keystatic/[...params]": ["./content/**/*"],
     "/la-meetup": ["./content/**/*"],
+    // owyStage.getSpeakers reads the speakers collection through the API routes
+    "/api/orpc/[[...rest]]": ["./content/**/*"],
+    "/api/v1/[[...rest]]": ["./content/**/*"],
     // Fonts read at runtime by the /blog/og image generator
     "/blog/og": ["./src/app/(web)/(content)/blog/og/*.ttf"],
   },

@@ -5,7 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { client } from "lib/orpc";
-import type { StageSpeaker } from "lib/orpc/owy-stage/services";
+import type { StageSpeaker } from "lib/orpc/owy-stage/schemas";
 import type { SpotifyTrack } from "lib/owy-stage/spotify";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { roomIconFor } from "lib/rooms/icons";

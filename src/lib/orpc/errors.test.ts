@@ -9,7 +9,6 @@ import {
   Forbidden,
   Invalid,
   NotFound,
-  RateLimited,
   toWireError,
   UniqueViolation,
   UpstreamFailed,
@@ -38,7 +37,7 @@ describe(toWireError, () => {
         wire(new Invalid({ message: "Mal" })),
         wire(new Forbidden({ message: "No" })),
         wire(new UpstreamFailed({ service: "Eventbrite", message: "Caído" })),
-        wire(new RateLimited({ retryAfter: 10, message: "Despacio" })),
+        wire(new Invalid({ message: "Revisá", issues: [{ path: ["song"], message: "Muy largo" }] })),
       ].map((error) => [error.code, error.message, error.data])
     ).toStrictEqual([
       ["NOT_FOUND", "No existe", { entity: "track" }],
@@ -46,7 +45,7 @@ describe(toWireError, () => {
       ["BAD_REQUEST", "Mal", undefined],
       ["FORBIDDEN", "No", undefined],
       ["BAD_GATEWAY", "Caído", { service: "Eventbrite" }],
-      ["TOO_MANY_REQUESTS", "Despacio", { retryAfter: 10 }],
+      ["BAD_REQUEST", "Revisá", { issues: [{ path: ["song"], message: "Muy largo" }] }],
     ]);
   });
 

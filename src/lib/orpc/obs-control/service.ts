@@ -7,7 +7,7 @@ import { GLOBAL_CHANNELS, obsControlChannel } from "../../realtime/channels";
 import { query, transaction } from "../db";
 import { NotFound } from "../errors";
 import { ensureInstance, lockInstance } from "../obs-queue/service";
-import { setScene } from "../owy-stage/services";
+import { setScene } from "../owy-stage/service";
 import { Realtime } from "../services";
 import {
   CUE_COLORS,
@@ -392,8 +392,7 @@ const play = (cue: Cue, source: string) =>
         )
       : null;
     if (cue.stageScene) {
-      const scene = { scene: cue.stageScene as never, params: cue.stageParams ?? {} };
-      yield* Effect.tryPromise(() => setScene(scene)).pipe(
+      yield* setScene({ scene: cue.stageScene as never, params: cue.stageParams ?? {} }).pipe(
         Effect.catch((error) => Effect.logWarning("A cue's wall scene failed", error))
       );
     }
