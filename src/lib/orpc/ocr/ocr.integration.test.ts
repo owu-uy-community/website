@@ -2,7 +2,7 @@ import { call } from "@orpc/server";
 import { describe, expect, test, vi } from "vitest";
 
 import { router } from "lib/orpc/router";
-import { downModel, generatingModel, models, streamingModel } from "test/ai";
+import { decidingModel, downDecisionModel, downModel, models, streamingModel } from "test/ai";
 import { by } from "test/context";
 import { makeBoard, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 
@@ -37,7 +37,7 @@ async function drain<T>(events: AsyncIterable<T>) {
 describe("reading a card", () => {
   test("the name and title stream in as they are read, then the card, then a place for it", async () => {
     const { eventId, rooms, staff } = await setup();
-    const pick = generatingModel({ candidato: "c0", razon: "Libre y con TV.", alternativas: [] });
+    const pick = decidingModel(() => 0.1);
 
     const events = await drain(
       await call(
@@ -54,14 +54,20 @@ describe("reading a card", () => {
     expect(events.find((event) => event.type === "card")).toMatchObject({
       card: { title: "Effect", speaker: "Ana", needsTV: true, needsWhiteboard: false },
     });
-    // The only room with a TV, in the emptier block.
+    // The only room with a TV, in the emptier block; nothing on the board is about the same topic.
     expect(events.at(-1)).toStrictEqual({
       type: "suggestion",
       suggestion: {
         suggestedRoom: rooms.tv.name,
         suggestedTimeSlot: "16:00 - 16:45",
-        reasoning: "Libre y con TV.",
-        alternatives: [],
+        reasoning: "No choca con otra charla del mismo tema. El bloque está vacío.",
+        alternatives: [
+          {
+            room: rooms.tv.name,
+            timeSlot: "15:00 - 15:45",
+            reasoning: "No choca con otra charla del mismo tema. El bloque ya tiene 1 charla.",
+          },
+        ],
       },
     });
   });
@@ -114,7 +120,7 @@ describe("reading a card", () => {
 
   test("Owy's one-shot read places the card too", async () => {
     const { eventId, rooms, staff } = await setup();
-    const pick = generatingModel({ candidato: "c0", razon: "Libre y con TV.", alternativas: [] });
+    const pick = decidingModel();
 
     await expect(
       call(
@@ -133,7 +139,7 @@ describe("placing a talk", () => {
     const suggestion = await call(
       router.ocr.findFreeSpot,
       { eventId, title: "Effect", speaker: "Ana" },
-      by(staff, { ai: models({ pick: downModel() }) })
+      by(staff, { ai: models({ pick: downDecisionModel() }) })
     );
 
     expect(suggestion).toMatchObject({
@@ -147,7 +153,7 @@ describe("placing a talk", () => {
     const { eventId, staff } = await setup();
     // 15:50 in Montevideo: the 15:00 block is over.
     vi.setSystemTime(new Date("2026-11-07T18:50:00.000Z"));
-    const pick = generatingModel({ candidato: "c0", razon: "Lo que queda.", alternativas: [] });
+    const pick = decidingModel();
 
     const suggestion = await call(
       router.ocr.findFreeSpot,
@@ -156,7 +162,8 @@ describe("placing a talk", () => {
     );
 
     expect(suggestion.suggestedTimeSlot).toBe("16:00 - 16:45");
-    expect(JSON.stringify(pick.doGenerateCalls[0]?.prompt)).not.toContain("15:00 - 15:45 (");
+    const [asked] = pick.calls;
+    expect(JSON.stringify({ state: asked?.state, questions: asked?.questions })).not.toContain("15:00 - 15:45");
   });
 
   test("card reading and slot picking are staff-only", async () => {

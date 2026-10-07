@@ -10,7 +10,7 @@ import { GET as restGet, POST as restPost } from "app/api/v1/[[...rest]]/route";
 import { auth } from "app/lib/auth";
 import type { AppRouter } from "lib/orpc/router";
 import { aiLive } from "lib/orpc/services";
-import { generatingModel, models, streamingModel } from "test/ai";
+import { models, streamingModel } from "test/ai";
 import { makeBoard, makeMember, makeSiteAdmin, makeTrack } from "test/factories";
 import { mintSession } from "test/session";
 
@@ -136,13 +136,13 @@ describe("/api/orpc", () => {
     const { event } = await makeBoard();
     const staff = await makeSiteAdmin();
     const client = rpcClient(await cookieFor(staff.id));
+    // An empty board places the talk without asking a model, so only the card reader is mocked.
     vi.spyOn(aiLive, "model").mockImplementation(
       models({
         card: streamingModel([
           '{"transcripcion":"Ana","speaker":"Ana","title":"Ef',
           'fect","requisito":"ninguno","revisar":[]}',
         ]),
-        pick: generatingModel({ candidato: "c0", razon: "Libre.", alternativas: [] }),
       }).model
     );
 

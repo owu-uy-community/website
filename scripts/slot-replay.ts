@@ -1,7 +1,11 @@
 /**
  * Replay a real open space card by card and score the grid each placement policy produces.
  *
- *   DATABASE_URL=… pnpm slot:replay [--event=<slug|id>] [--llm] [--embeddings]
+ *   DATABASE_URL=… pnpm slot:replay [--event=<slug|id>] [--llm [--model=<decision model>]] [--embeddings]
+ *
+ * `--llm` replays what "Sugerir con AI" does (jev, Luna when jev is unsure) and prints how long each
+ * placement took; `--model=openai/gpt-6-luna-decisions` (or any gateway decision model) swaps the
+ * primary to compare. Needs AI_GATEWAY_API_KEY.
  *
  * Why this exists: changing how we pick a slot is easy, knowing whether it got better is not. Every
  * number below is on one axis — how much two talks running at the same hour look alike — because
@@ -311,7 +315,10 @@ async function main() {
   runs.push({ label: "this PR: random candidate", ...nextRandom });
 
   if (flag("llm")) {
+    const model = option("model");
+    const timings: number[] = [];
     const llm: Policy = async (candidates, talk, placed) => {
+      const started = performance.now();
       const result = await findFreeSpot(
         {
           title: talk.title,
@@ -324,8 +331,10 @@ async function main() {
           roomsWithResources: rooms,
           availableRooms: rooms.map((r) => r.name),
           availableTimeSlots: timeSlots,
-        }
+        },
+        model
       );
+      timings.push(performance.now() - started);
 
       return (
         candidates.find((c) => c.room === result.suggestedRoom && c.timeSlot === result.suggestedTimeSlot) ??
@@ -333,7 +342,14 @@ async function main() {
       );
     };
 
-    runs.push({ label: "this PR: the model picks", ...(await replay(talks, rooms, timeSlots, llm, current)) });
+    runs.push({
+      label: `decision model (${model ?? "jev → luna"})`,
+      ...(await replay(talks, rooms, timeSlots, llm, current)),
+    });
+
+    const sorted = timings.toSorted((a, b) => a - b);
+    const at = (p: number) => Math.round(sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))] ?? 0);
+    console.log(`decision latency: p50 ${at(0.5)} ms, p90 ${at(0.9)} ms over ${sorted.length} placements\n`);
   }
 
   runs.push({
