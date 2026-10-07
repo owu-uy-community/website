@@ -6,6 +6,7 @@ import { ChevronDown, Clock, Star, User } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 import { roomIconFor } from "../../../../lib/rooms/icons";
+import { slotIsOn } from "../../../../lib/slot-day";
 
 import type { Schedule, StickyNote } from "../../../../lib/orpc";
 import { StickyNoteCardKiosk } from "../molecules/StickyNoteCardKiosk";
@@ -22,22 +23,9 @@ function useNow(intervalMs = 1_000): Date {
   return now;
 }
 
-/** True while `now` falls inside the schedule's local day + time range. */
+/** True while `now` falls inside the schedule's day + time range. */
 function isHappeningNow(schedule: Schedule | undefined, now: Date): boolean {
-  if (!schedule) return false;
-
-  const scheduleDate = new Date(schedule.date);
-  if (
-    scheduleDate.getFullYear() !== now.getFullYear() ||
-    scheduleDate.getMonth() !== now.getMonth() ||
-    scheduleDate.getDate() !== now.getDate()
-  ) {
-    return false;
-  }
-
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-  return currentTime >= schedule.startTime && currentTime < schedule.endTime;
+  return schedule ? slotIsOn(schedule, now) : false;
 }
 
 interface TimeGridKioskProps {

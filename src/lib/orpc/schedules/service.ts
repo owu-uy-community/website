@@ -1,7 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { Effect } from "effect";
 
-import { schedules, tracks, type ScheduleRow } from "../../db/schema";
+import { events, schedules, tracks, type ScheduleRow } from "../../db/schema";
+import { wallClock } from "../../slot-day";
 import { cardsDeleted } from "../board-events";
 import { query } from "../db";
 import { NotFound } from "../errors";
@@ -37,16 +38,32 @@ export const listSchedules = (openSpaceId: string) =>
       .orderBy(asc(schedules.date), asc(schedules.startTime))
   ).pipe(Effect.map((rows) => rows.map(toSchedule)));
 
-export const createSchedule = (input: CreateScheduleInput) =>
+/** The day an event starts on its own clock, as a slot stores days: "2026-11-07T00:00:00.000Z". */
+const eventDay = (eventId: string) =>
   query((db) =>
-    db
-      .insert(schedules)
-      .values({ ...input, date: new Date(input.date) })
-      .returning()
+    db.select({ startDate: events.startDate, timezone: events.timezone }).from(events).where(eq(events.id, eventId))
   ).pipe(
-    Effect.catchTag("ForeignKeyViolation", () => Effect.fail(eventNotFound)),
-    Effect.flatMap(found)
+    Effect.flatMap(([event]) =>
+      event
+        ? Effect.succeed(`${wallClock(event.startDate, event.timezone).slice(0, 10)}T00:00:00.000Z`)
+        : Effect.fail(eventNotFound)
+    )
   );
+
+export const createSchedule = (input: CreateScheduleInput) =>
+  Effect.gen(function* () {
+    const date = input.date ?? (yield* eventDay(input.openSpaceId));
+
+    return yield* query((db) =>
+      db
+        .insert(schedules)
+        .values({ ...input, date: new Date(date) })
+        .returning()
+    ).pipe(
+      Effect.catchTag("ForeignKeyViolation", () => Effect.fail(eventNotFound)),
+      Effect.flatMap(found)
+    );
+  });
 
 /** Change only the fields that were sent. */
 export const updateSchedule = (id: string, { date, ...data }: Partial<Omit<CreateScheduleInput, "openSpaceId">>) =>

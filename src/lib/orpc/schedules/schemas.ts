@@ -29,6 +29,8 @@ export const ScheduleSchema = z.object({
 
 export const CreateScheduleSchema = ScheduleFields.extend({
   openSpaceId: z.string().min(1),
+  /** The slot's day; without it, the day the event starts (on the event's clock). */
+  date: ScheduleFields.shape.date.optional(),
   isActive: z.boolean().default(true),
   highlightInKiosk: z.boolean().default(false),
 });

@@ -2,33 +2,15 @@ import { desc, eq } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { events, rooms, schedules, tracks, type ScheduleRow } from "../../db/schema";
+import { slotDay, wallClock } from "../../slot-day";
 import { query } from "../db";
 import { NotFound } from "../errors";
 import * as Eventbrite from "../eventbrite/service";
 import type { DashboardSchedule, DashboardStats } from "./schemas";
 
-/** "YYYY-MM-DD" and "HH:MM" of an instant on a time zone's wall clock. */
-const wallClock = (at: Date, timeZone: string) => {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-      .formatToParts(at)
-      .map((part) => [part.type, part.value])
-  );
-
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
-};
-
-/** A slot's day is stored as a date-only value (UTC midnight); its times are the event's wall clock. */
-const slotStart = (slot: ScheduleRow) => `${slot.date.toISOString().slice(0, 10)}T${slot.startTime}`;
-const slotEnd = (slot: ScheduleRow) => `${slot.date.toISOString().slice(0, 10)}T${slot.endTime}`;
+/** A slot's start and end on its event's wall clock, comparable with `wallClock`. */
+const slotStart = (slot: ScheduleRow) => `${slotDay(slot.date.toISOString())}T${slot.startTime}`;
+const slotEnd = (slot: ScheduleRow) => `${slotDay(slot.date.toISOString())}T${slot.endTime}`;
 
 const toDashboardSchedule = (row: ScheduleRow | undefined): DashboardSchedule | null =>
   row

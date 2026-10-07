@@ -6,7 +6,7 @@ import { db } from "lib/db";
 import { tracks } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeBoard, makeSiteAdmin, makeSlot, makeTrack, makeUser } from "test/factories";
+import { makeBoard, makeEvent, makeSiteAdmin, makeSlot, makeTrack, makeUser } from "test/factories";
 
 describe("schedules reads", () => {
   test("anyone lists an event's slots by date, then start time", async () => {
@@ -47,6 +47,24 @@ describe("schedules writes", () => {
     );
 
     expect(slot).toMatchObject({ name: "Cierre", startTime: "19:00", openSpaceId: event.id, isActive: true });
+  });
+
+  test("a slot created without a day lands on the day its event starts, on the event's clock", async () => {
+    const { community } = await makeBoard();
+    // 22:30 on the 7th in Montevideo is already the 8th in UTC.
+    const lateEvent = await makeEvent(community.id, {
+      startDate: new Date("2026-11-08T01:30:00.000Z"),
+      endDate: new Date("2026-11-08T03:00:00.000Z"),
+    });
+    const staff = await makeSiteAdmin();
+
+    const slot = await call(
+      router.schedules.create,
+      { name: "Trasnoche", startTime: "22:30", endTime: "23:15", openSpaceId: lateEvent.id },
+      by(staff)
+    );
+
+    expect(slot.date).toBe("2026-11-07T00:00:00.000Z");
   });
 
   test("#P3 create keeps highlightInKiosk", async () => {
