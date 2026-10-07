@@ -26,21 +26,27 @@ the Owy bot — goes through the server's command bus.
    `previewScene`, `studioMode`, `streaming`, `recording`, `executorOnline`,
    `currentCue` and `cues[]`.
 
-| Path                                      | Effect                                |
-| ----------------------------------------- | ------------------------------------- |
-| `POST scene/{name}`                       | Scene to program (current transition) |
-| `POST preview/{name}`                     | Scene to preview (studio mode)        |
-| `POST take` / `POST cut`                  | Preview → program                     |
-| `POST studio/on                           | off`                                  | Studio mode                      |
-| `POST transition/{name}[/{ms}]`           | Transition and duration               |
-| `POST mute/{input}[/on                    | off]`                                 | Mute (toggle without the suffix) |
-| `POST stream/start                        | stop                                  | toggle`, `record/…`              | Outputs |
-| `POST cue/{id}` / `cue/next` / `cue/prev` | Fire a cue                            |
-| `POST loop/play                           | pause                                 | stop                             | next    | prev` | The automatic loop |
-| `GET status` / `GET cues`                 | Feedback                              |
+| Path                                          | Effect                                |
+| --------------------------------------------- | ------------------------------------- |
+| `POST scene/{name}`                           | Scene to program (current transition) |
+| `POST preview/{name}`                         | Scene to preview (studio mode)        |
+| `POST take` / `POST cut`                      | Preview → program                     |
+| `POST studio/on\|off`                         | Studio mode                           |
+| `POST transition/{name}[/{ms}]`               | Transition and duration               |
+| `POST mute/{input}[/on\|off]`                 | Mute (toggle without the suffix)      |
+| `POST stream/start\|stop\|toggle`, `record/…` | Outputs                               |
+| `POST cue/{id}` / `cue/next` / `cue/prev`     | Fire a cue                            |
+| `POST loop/play\|pause\|stop\|next\|prev`     | The automatic loop                    |
+| `GET status` / `GET cues`                     | Feedback                              |
 
 Commands return **202** when an executor tab is online and **409** when nobody
 can run them (they still queue for 30 s). `?instance=2` targets the second rig.
+
+Commands can also be a `GET` with the `x-api-key` header (Companion's simple
+triggers), never with just a session cookie: a browser sends its cookies along
+with any link it follows, so a link must not be able to cut the stream. Errors
+are JSON, `{ "ok": false, "code": "NOT_FOUND", "error": "…" }`, with the
+matching status.
 
 ## Keyboard
 
