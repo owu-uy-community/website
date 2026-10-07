@@ -30,7 +30,9 @@ CI runs all of these on every pull request; run them locally before pushing.
 - Use `test()`, not `it()`. Build each test's state with a local `setup()` function instead of `beforeEach`; hooks are for cleanup only.
 - No snapshots — write the expected value out.
 - Data that repeats across tests comes from the factories in `src/test/factories.ts`.
-- Outbound HTTP is mocked with MSW; a request nothing mocked fails the test.
+- Outbound HTTP is mocked with MSW; a request nothing mocked fails the test. In hook and component tests, mock our own procedures with `api` from `src/test/orpc-msw.ts` (typed, served by a real RPC handler).
+- Procedures are called with `call(router.x.y, input, by(user))` (`src/test/context.ts`), which can also swap the AI models for mocks (`src/test/ai.ts`): no test talks to a real model.
+- A race is only tested if the calls really overlap: start from a row that already exists, and warm a connection per call (see the OBS tests).
 - Playwright never retries. A flaky spec is a race to find, not a timeout to raise.
 
 ### Our Responsibilities
