@@ -16,6 +16,8 @@ export type Talk = {
   title: string;
   /** One entry per paragraph */
   description: string[];
+  /** The talk's parts, as the speakers sent them; shown under the abstract */
+  outline?: { title: string; items: string[] }[];
   speakers: Speaker[];
 };
 
@@ -27,6 +29,28 @@ export const TALKS: Talk[] = [
     title: "Kingdom Rush Battles: del lanzamiento al live ops",
     description: [
       "Cómo Ironhide llevó Kingdom Rush a su primer juego multijugador y de operación continua. Un recorrido por las decisiones de diseño, los desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.",
+    ],
+    outline: [
+      {
+        title: "Diseño y mercado",
+        items: [
+          "El mercado de juegos móviles hoy",
+          "Desafíos, oportunidades y decisiones tomadas",
+          "Kingdom Rush Battles vs free to play",
+        ],
+      },
+      {
+        title: "Backend en llamas",
+        items: ["Supervivencia post-lanzamiento", "Actualizaciones sin downtime", "Realtime y websockets"],
+      },
+      {
+        title: "La IA en videojuegos",
+        items: [
+          "Onboarding vertiginoso en ciclo de releases",
+          "IA vs código de juegos: qué funciona y qué no",
+          "Problemas abiertos: confiar, pero validar",
+        ],
+      },
     ],
     speakers: [
       {
