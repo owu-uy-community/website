@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   // Allow hitting the dev server via 127.0.0.1 (separate cookie jar from localhost)
   allowedDevOrigins: ["127.0.0.1"],
   images: {
-    domains: ["localhost"],
+    remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
   outputFileTracingIncludes: {
     "/keystatic/[[...params]]": ["./content/**/*"],
