@@ -19,6 +19,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { CONF_DATES } from "app/lib/constants";
 
+import { TALKS, type Talk } from "../talks";
+
 import Reveal, { EASE_OUT } from "./Reveal";
 import SectionHeader from "./SectionHeader";
 
@@ -169,6 +171,8 @@ function TopicNote() {
   );
 }
 
+const speakerNames = ({ speakers }: Talk) => speakers.map(({ name }) => name).join(" y ");
+
 /*
  * The 19:40–19:45 speaker changeover is deliberately absent: it is internal
  * logistics, and the gap between the two talks already shows it.
@@ -253,30 +257,30 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-steam",
   },
   {
-    start: "19:00",
-    end: "19:40",
-    title: "Charla 1",
-    blurb: "Speaker y título por anunciar",
+    start: TALKS[0].start,
+    end: TALKS[0].end,
+    title: TALKS[0].title,
+    blurb: speakerNames(TALKS[0]),
     description: (
       <>
-        Arranca el bloque de cierre con <Hl>cuarenta minutos</Hl> de charla sobre tecnología, comunidad y open source.
-        Las dos charlas de la tarde salieron del <Hl>call for speakers abierto a toda la comunidad</Hl>.{" "}
-        <Hl yellow>Speaker y título se anuncian muy pronto.</Hl>
+        Arranca el bloque de cierre con <Hl>Juan Pais y Ciro Mondueri</Hl>, de <Hl>Ironhide Game Studio</Hl>: cómo
+        llevaron Kingdom Rush a su primer juego <Hl yellow>multijugador y de operación continua</Hl>. Cuarenta minutos
+        sobre decisiones de diseño, desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.
       </>
     ),
     Icon: MicVocal,
     iconAnim: "group-hover:animate-agenda-tap",
   },
   {
-    start: "19:45",
-    end: "20:25",
-    title: "Charla 2",
-    blurb: "Speaker y título por anunciar",
+    start: TALKS[1].start,
+    end: TALKS[1].end,
+    title: TALKS[1].title,
+    blurb: speakerNames(TALKS[1]),
     description: (
       <>
-        La última charla de la tarde, también de <Hl>cuarenta minutos</Hl>, para cerrar a pura tecnología. Historias de
-        gente que trabaja <Hl yellow>en el mismo ecosistema que vos</Hl>, con problemas y aprendizajes que vas a
-        reconocer.
+        Cierra la tarde <Hl>Sebastián Passaro</Hl>, de <Hl>OWASP Uruguay</Hl>, con un chatbot RAG que anda bien hasta
+        que <Hl yellow>un solo documento envenenado</Hl> lo da vuelta. Cuarenta minutos de ataques, tests automatizables
+        y defensas en vivo, con el repositorio completo para que sigas investigando.
       </>
     ),
     Icon: MicVocal,

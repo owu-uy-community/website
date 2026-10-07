@@ -118,6 +118,7 @@ import {
   Raycaster,
   Sorting,
 } from "./sims";
+import { Speakers, TalkIntro } from "./speakers";
 import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
 import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
 import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
@@ -377,6 +378,8 @@ export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } 
   logo: Logo,
   opening: Opening,
   message: Message,
+  "talk-intro": TalkIntro,
+  speakers: Speakers,
   "up-next": UpNext,
   sponsors: Sponsors,
   countdown: CountdownScene,

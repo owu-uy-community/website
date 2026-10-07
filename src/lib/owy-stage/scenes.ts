@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TALKS } from "app/conf/talks";
+
 /**
  * Owy Stage — the video-wall scene registry shared by the oRPC layer (what an
  * admin may set), the bridge (what it may push) and the stage pages (what they
@@ -269,6 +271,22 @@ export const SCENES = {
     }),
   },
   // --- Charlas y escenario ---
+  "talk-intro": {
+    category: "talks",
+    title: "Presentación de charla",
+    description:
+      "Las charlas de OWU CONF: los speakers entran sobre sus formas, con título y horario. Con ?bg=transparent es el zócalo.",
+    params: z.object({ talk: z.coerce.number().int().min(1).max(TALKS.length).default(1) }),
+  },
+  speakers: {
+    category: "talks",
+    title: "Speakers",
+    description: "Las charlas del día con las caras de quienes las dan.",
+    params: z.object({
+      eyebrow: z.string().trim().max(60).default("Después del coffee"),
+      title: z.string().trim().max(40).default("Charlas"),
+    }),
+  },
   "up-next": {
     category: "talks",
     title: "A continuación",
