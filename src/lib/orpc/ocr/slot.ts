@@ -1,19 +1,18 @@
-import { generateText, Output, type LanguageModel } from "ai";
-import * as z from "zod";
+import { experimental_decide, type Experimental_DecisionModel } from "ai";
 
-import { AI_TIMEOUT_MS, describeAiFailure, gatewayFallbacks, SLOT_PICK_MODEL } from "./models";
+import { DECISION_TIMEOUT_MS, describeAiFailure, SLOT_DECISION_MODEL } from "./models";
 import type { FindFreeSpotResponse } from "./schemas";
 
 /**
- * How many free cells the model gets to choose from. Small on purpose: the prompt stays short
- * (faster) and every candidate is a cell we already know is free and resource-compatible, so the
- * model cannot suggest something impossible.
+ * How many free cells get scored. Every candidate is a cell we already know is free and
+ * resource-compatible, so nothing impossible can be suggested; fewer cells also means fewer blocks
+ * and rooms to ask the model about.
  */
 const MAX_CANDIDATES = 12;
 
 /**
  * Free rooms offered per time slot: the thriftiest one, and the one that is already becoming a
- * track. Two, so room choice stays alive without bloating the prompt — and picked for *different*
+ * track. Two, so room choice stays alive without asking about every room — and picked for *different*
  * reasons, so the continuity criterion has something to continue.
  */
 const ROOMS_PER_SLOT = 2;
@@ -66,9 +65,8 @@ function sameName(a: string | undefined, b: string | undefined): boolean {
  * talk asked for, whether the speaker is already busy, and how loaded each block is.
  *
  * Order matters and is part of the design. Candidates come out least-loaded block first, one room
- * per block before any block gets a second — models measurably favour the earlier options in a
- * labelled list, so the list is ordered to make that bias agree with the balancing rule instead of
- * fighting it.
+ * per block before any block gets a second, so when the model's answers leave two cells tied, the
+ * earlier one — the emptier block — wins.
  */
 export function buildCandidates({
   speaker,
@@ -111,7 +109,7 @@ export function buildCandidates({
   const load = (timeSlot: string) => existingNotes.filter((note) => note.timeSlot === timeSlot).length;
 
   // Nobody can be in two rooms at once. This is arithmetic, so it is a hard constraint here rather
-  // than a line in the prompt the model may or may not honour.
+  // than something to ask the model about.
   const busyFor = new Set(existingNotes.filter((note) => sameName(speaker, note.speaker)).map((note) => note.timeSlot));
 
   const collect = (avoidSpeakerClash: boolean) => {
@@ -165,27 +163,81 @@ export function buildCandidates({
   }));
 }
 
-const INSTRUCTIONS = `Sos quien arma la grilla de un open space de la comunidad ágil uruguaya. Elegís dónde y cuándo va una charla nueva para que la gente pueda ver lo que le interesa.
+/**
+ * How a candidate is scored from the model's yes/no probabilities. A same-topic clash outweighs
+ * continuing a room's topic; an explicit staff request outweighs both (its probability is averaged
+ * over block and room, so a clear yes vs no moves the score by ~0.5 × FIT); `ORDER` only breaks
+ * ties in favour of the emptier block `buildCandidates` already put first.
+ */
+// ponytail: hand-set weights checked on one labelled board; tune with `pnpm slot:replay --llm`.
+const WEIGHT = { CLASH: 3, AFFINITY: 1, FIT: 6, ORDER: 0.01 } as const;
 
-Criterios, en orden:
-1. Evitar choques temáticos: si en ese horario ya hay una charla del mismo tema, elegí otro horario.
-2. Continuidad por sala: si una sala ya viene con charlas del mismo tema, sumar ahí ayuda a que la gente se quede. No mezcles temas distintos en la misma sala sin motivo.
-3. Repartir la grilla: a igualdad de condiciones, preferí el bloque con menos charlas. Los candidatos ya vienen ordenados del bloque más libre al más cargado, así que ante la duda quedate con el primero que no genere choque.
+/** A yes/no probability at or above this reads as "yes" in the explanation. */
+const YES = 0.5;
 
-Contestá en español rioplatense. La razón son dos oraciones como máximo: por qué ese lugar y qué choque estás evitando. Nada de listas ni de repetir los criterios.`;
+interface Scored {
+  candidate: Candidate;
+  /** P(a talk in this block is about the same topic). */
+  clash: number;
+  /** P(this room already runs talks on a related topic). */
+  affinity: number;
+  /** P(this place satisfies the staff's request); null when there was no request. */
+  fit: number | null;
+  score: number;
+}
+
+const quote = (titles: string[]) => titles.map((title) => `«${title}»`).join(", ");
+const startOf = (timeSlot: string) => timeSlot.split(" - ")[0];
+const listOf = (items: string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(", ")} y ${items.at(-1)}` : (items[0] ?? "");
+
+/** Why this place, in plain words, from the same probabilities that picked it. */
+function explain(
+  scored: Scored,
+  { avoided, slotTalks }: { avoided: string[]; slotTalks: (timeSlot: string) => string[] }
+): string {
+  const { candidate, clash, affinity, fit } = scored;
+  const sentences: string[] = [];
+
+  if (fit !== null) {
+    sentences.push(
+      fit >= YES
+        ? "Respeta el pedido del staff."
+        : "Ningún lugar libre cumple del todo el pedido del staff; este es el que más se acerca."
+    );
+  }
+  if (clash >= YES) {
+    sentences.push("A esa hora ya hay una charla de un tema parecido, pero no quedó un lugar mejor.");
+  } else {
+    const others = avoided.filter((timeSlot) => timeSlot !== candidate.timeSlot).map(startOf);
+    sentences.push(
+      others.length > 0
+        ? `No choca con otra charla del mismo tema (las de las ${listOf(others)} sí lo harían).`
+        : "No choca con otra charla del mismo tema."
+    );
+  }
+  // The model judged the room's talks as a set, so no single talk can be named as the related one.
+  if (affinity >= YES) sentences.push(`Sigue el hilo de ${candidate.room}, que ya tiene charlas de temas afines.`);
+  const load = slotTalks(candidate.timeSlot).length;
+  sentences.push(load === 0 ? "El bloque está vacío." : `El bloque ya tiene ${load} charla${load === 1 ? "" : "s"}.`);
+
+  return sentences.join(" ");
+}
 
 /**
- * Suggest where to put a new talk: the free cells are computed here, the model only ranks them.
+ * Suggest where to put a new talk: the free cells are computed here, a decision model only judges
+ * topics, and the pick is arithmetic over its answers.
  *
  * Everything that can be arithmetic is arithmetic (which cells are free, which rooms have the
- * required resources, which rooms to offer). The model is left with the one genuinely fuzzy
- * judgement — whether two talks are about the same thing — and it picks from an enumerated list,
- * so an unavailable slot is not a possible answer.
+ * required resources, how loaded each block is). The model answers yes/no questions — does a block
+ * already hold a talk on the same topic, does a room already run related talks, does a place meet
+ * the staff's request — one per block or room, so the call stays the same size however full the
+ * grid gets. Asking it to pick a cell outright was measurably worse: it mostly took the first one.
  */
 export async function findFreeSpot(
   { title, speaker, needsTV = false, needsWhiteboard = false, additionalContext }: Talk,
   { existingNotes, roomsWithResources, availableRooms, availableTimeSlots }: Board,
-  model: LanguageModel = SLOT_PICK_MODEL.primary
+  model: Experimental_DecisionModel = SLOT_DECISION_MODEL.primary
 ): Promise<FindFreeSpotResponse> {
   const candidates = buildCandidates({
     speaker,
@@ -205,67 +257,158 @@ export async function findFreeSpot(
     };
   }
 
-  const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
-  const ids = candidates.map((candidate) => candidate.id) as [string, ...string[]];
-  const describe = (candidate: Candidate) =>
-    `${candidate.id} = ${candidate.room} @ ${candidate.timeSlot}` +
-    ` (TV:${candidate.hasTV ? "sí" : "no"} pizarra:${candidate.hasWhiteboard ? "sí" : "no"})`;
+  const request = additionalContext?.trim() || undefined;
+  const slotTalks = (timeSlot: string) =>
+    existingNotes.filter((note) => note.timeSlot === timeSlot).map((n) => n.title);
+  const roomTalks = (room: string) => existingNotes.filter((note) => note.room === room).map((n) => n.title);
+  const unique = (values: string[]) => [...new Set(values)];
+  const slots = unique(candidates.map((candidate) => candidate.timeSlot));
+  const rooms = unique(candidates.map((candidate) => candidate.room));
+  const busySlots = slots.filter((timeSlot) => slotTalks(timeSlot).length > 0);
+  const busyRooms = rooms.filter((room) => roomTalks(room).length > 0);
 
-  const scheduled = existingNotes
-    .map((note) => `${note.timeSlot} · ${note.room}: "${note.title}"`)
-    .sort()
-    .join("\n");
-
-  const prompt = `CHARLA NUEVA: "${title}"${speaker ? ` — ${speaker}` : ""}
-Necesita: ${needsTV || needsWhiteboard ? [needsTV && "TV", needsWhiteboard && "pizarra"].filter(Boolean).join(" + ") : "nada en particular"}
-${additionalContext ? `Pedido del staff: ${additionalContext}\n` : ""}
-GRILLA ACTUAL:
-${scheduled || "(vacía, es la primera charla)"}
-
-CANDIDATOS LIBRES (elegí uno de estos ids):
-${candidates.map(describe).join("\n")}`;
-
-  try {
-    const { output } = await generateText({
-      model,
-      providerOptions: gatewayFallbacks(SLOT_PICK_MODEL),
-      temperature: 0,
-      reasoning: "low",
-      timeout: { totalMs: AI_TIMEOUT_MS },
-      instructions: INSTRUCTIONS,
-      output: Output.object({
-        name: "slot_pick",
-        schema: z.object({
-          candidato: z.enum(ids).describe("Id del candidato elegido"),
-          razon: z.string().describe("Dos oraciones como máximo, en español"),
-          alternativas: z
-            .array(
-              z.object({
-                candidato: z.enum(ids),
-                razon: z.string().describe("Una oración"),
-              })
-            )
-            .max(2)
-            .describe("Hasta dos segundas opciones, de mejor a peor"),
-        }),
-      }),
-      prompt,
-    });
-
-    // The enum makes an unavailable cell unrepresentable, so there is no invalid-answer branch.
-    const picked = byId.get(output.candidato)!;
+  // Nothing to compare against and nothing asked for: the emptiest block wins without a model.
+  if (busySlots.length === 0 && busyRooms.length === 0 && !request) {
+    const [first] = candidates;
 
     return {
-      suggestedRoom: picked.room,
-      suggestedTimeSlot: picked.timeSlot,
-      reasoning: output.razon,
-      alternatives: output.alternativas.flatMap((alternative) => {
-        const candidate = byId.get(alternative.candidato);
+      suggestedRoom: first.room,
+      suggestedTimeSlot: first.timeSlot,
+      reasoning: "Todavía no hay charlas con las que pueda chocar: va al primer lugar libre.",
+    };
+  }
 
-        return candidate && candidate.id !== picked.id
-          ? [{ room: candidate.room, timeSlot: candidate.timeSlot, reasoning: alternative.razon }]
-          : [];
-      }),
+  type Question = { type: "boolean"; instructions: string; criteria?: { true: string; false: string } };
+  const questions: Record<string, Question> = {};
+  busySlots.forEach((timeSlot, index) => {
+    questions[`bloque${index}`] = {
+      type: "boolean",
+      instructions: `¿Alguna de estas charlas, que son a la misma hora, trata el mismo tema que la charla nueva? ${quote(slotTalks(timeSlot))}`,
+      criteria: {
+        true: "Sí: a quien le interesa la nueva también querría ver una de estas, y se le superponen",
+        false: "No: son de otros temas",
+      },
+    };
+  });
+  busyRooms.forEach((room, index) => {
+    questions[`sala${index}`] = {
+      type: "boolean",
+      // Not naming the room: with the rooms in the state, Luna refuses a question it can't check
+      // against it, and the topic doesn't depend on the room anyway.
+      instructions: `¿Alguna de estas charlas, que son de una misma sala, es de un tema afín a la charla nueva? ${quote(roomTalks(room))}`,
+      criteria: { true: "Sí: sumarla ahí le da continuidad al tema", false: "No: son de otros temas" },
+    };
+  });
+  if (request) {
+    slots.forEach((timeSlot, index) => {
+      questions[`pedidoBloque${index}`] = {
+        type: "boolean",
+        instructions: `¿Poner la charla en el bloque ${timeSlot} cumple el pedido del staff?`,
+      };
+    });
+    rooms.forEach((room, index) => {
+      questions[`pedidoSala${index}`] = {
+        type: "boolean",
+        instructions: `¿Poner la charla en la sala ${room} cumple el pedido del staff?`,
+      };
+    });
+  }
+
+  const state = {
+    charlaNueva: { titulo: title, ...(speaker ? { orador: speaker } : {}) },
+    // With a request, the whole day and every room, so "la última hora" can be judged block by block.
+    ...(request ? { pedidoDelStaff: request, bloquesDelDia: availableTimeSlots, salas: availableRooms } : {}),
+  };
+
+  // Only the topic questions decide whether jev was unsure enough to ask Luna: a block or room the
+  // staff's request doesn't mention is legitimately a coin flip.
+  const topicQuestions = Object.keys(questions).filter((id) => id.startsWith("bloque") || id.startsWith("sala"));
+  const fallbacks = {
+    gateway: {
+      models: [
+        ...(topicQuestions.length > 0
+          ? [
+              {
+                model: SLOT_DECISION_MODEL.unsure,
+                when: {
+                  any: topicQuestions.map((question) => ({
+                    question,
+                    probabilityBetween: [...SLOT_DECISION_MODEL.unsureBand],
+                  })),
+                },
+              },
+            ]
+          : []),
+        SLOT_DECISION_MODEL.failover,
+      ],
+    },
+  };
+
+  const decide = (withFallbacks: boolean) =>
+    experimental_decide({
+      model,
+      state,
+      questions,
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(DECISION_TIMEOUT_MS),
+      ...(withFallbacks ? { providerOptions: fallbacks } : {}),
+    });
+
+  try {
+    // A fallback model that is briefly unavailable fails the whole request; asking jev alone once
+    // more is cheaper than handing the staffer an unjudged first cell.
+    const result = await decide(true).catch((error: unknown) => {
+      console.warn("[slot] decision with fallbacks failed, asking the primary alone:", describeAiFailure(error));
+
+      return decide(false);
+    });
+    if (result.response.modelId && result.response.modelId !== SLOT_DECISION_MODEL.primary) {
+      console.info(`[slot] decided by ${result.response.modelId}`);
+    }
+
+    const yes = (id: string) => {
+      const answer = result.answers[id];
+
+      return answer?.type === "boolean" ? answer.probability : 0;
+    };
+    const clashAt = (timeSlot: string) =>
+      busySlots.includes(timeSlot) ? yes(`bloque${busySlots.indexOf(timeSlot)}`) : 0;
+    const affinityOf = (room: string) => (busyRooms.includes(room) ? yes(`sala${busyRooms.indexOf(room)}`) : 0);
+    const fitOf = (candidate: Candidate) =>
+      request
+        ? (yes(`pedidoBloque${slots.indexOf(candidate.timeSlot)}`) +
+            yes(`pedidoSala${rooms.indexOf(candidate.room)}`)) /
+          2
+        : null;
+
+    const ranked: Scored[] = candidates
+      .map((candidate, order) => {
+        const clash = clashAt(candidate.timeSlot);
+        const affinity = affinityOf(candidate.room);
+        const fit = fitOf(candidate);
+        const score =
+          -WEIGHT.CLASH * clash + WEIGHT.AFFINITY * affinity + WEIGHT.FIT * (fit ?? 0) - WEIGHT.ORDER * order;
+
+        return { candidate, clash, affinity, fit, score };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const context = {
+      // In the day's order, not the candidates' (emptiest first).
+      avoided: availableTimeSlots.filter((timeSlot) => busySlots.includes(timeSlot) && clashAt(timeSlot) >= YES),
+      slotTalks,
+    };
+    const [best, ...rest] = ranked;
+
+    return {
+      suggestedRoom: best.candidate.room,
+      suggestedTimeSlot: best.candidate.timeSlot,
+      reasoning: explain(best, context),
+      alternatives: rest.slice(0, 2).map((scored) => ({
+        room: scored.candidate.room,
+        timeSlot: scored.candidate.timeSlot,
+        reasoning: explain(scored, context),
+      })),
     };
   } catch (error) {
     console.error("❌ Error finding free spot with AI:", error);

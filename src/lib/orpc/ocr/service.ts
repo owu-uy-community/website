@@ -7,7 +7,7 @@ import { query } from "../db";
 import { NotFound, UpstreamFailed } from "../errors";
 import { Ai, type AppServices } from "../services";
 import { readCard, streamCard, type CardModel } from "./card";
-import { CARD_OCR_MODEL, SLOT_PICK_MODEL } from "./models";
+import { CARD_OCR_MODEL, SLOT_DECISION_MODEL } from "./models";
 import type { CardEvent, FindFreeSpotResponse } from "./schemas";
 import { findFreeSpot, type Board, type Talk } from "./slot";
 
@@ -81,7 +81,7 @@ export const suggestSlot = (eventId: string, talk: Talk) =>
     const board = yield* loadBoard(eventId);
     const ai = yield* Ai;
 
-    return yield* Effect.promise(() => findFreeSpot(talk, board, ai.model(SLOT_PICK_MODEL.primary)));
+    return yield* Effect.promise(() => findFreeSpot(talk, board, ai.decisionModel(SLOT_DECISION_MODEL.primary)));
   });
 
 const cardModel = (ai: Context.Service.Shape<typeof Ai>): CardModel => ({
@@ -132,7 +132,7 @@ export async function* cardEvents(
     const suggestion: FindFreeSpotResponse = await findFreeSpot(
       { ...card, additionalContext: input.additionalContext },
       board,
-      Context.get(services, Ai).model(SLOT_PICK_MODEL.primary)
+      Context.get(services, Ai).decisionModel(SLOT_DECISION_MODEL.primary)
     );
     yield { type: "suggestion", suggestion };
   }

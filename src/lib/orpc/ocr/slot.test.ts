@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { buildCandidates } from "./slot";
+import { decidingModel, downDecisionModel } from "test/ai";
+
+import { SLOT_DECISION_MODEL } from "./models";
+import { buildCandidates, findFreeSpot, type Board } from "./slot";
 
 /**
  * The part of "Sugerir con AI" that must never depend on a model: which free
@@ -116,5 +119,108 @@ describe("one person, one room at a time", () => {
     });
 
     expect(candidates.map(cell)).toStrictEqual(["Sala B@10:00", "Sala TV@10:00"]);
+  });
+});
+
+/**
+ * The pick itself: the model only says how likely things are to share a topic (or to meet the
+ * staff's request); which cell wins is arithmetic over those answers, so it is tested here with a
+ * model whose answers we choose.
+ */
+describe("placing a talk from the model's yes/no answers", () => {
+  const board = (existingNotes: Board["existingNotes"]): Board => ({
+    existingNotes,
+    roomsWithResources: [
+      { name: "Sala A", hasTV: false, hasWhiteboard: false },
+      { name: "Sala B", hasTV: false, hasWhiteboard: true },
+      { name: "Sala TV", hasTV: true, hasWhiteboard: true },
+    ],
+    availableRooms: ROOMS,
+    availableTimeSlots: SLOTS,
+  });
+  // 10:00 is the emptiest block, and the one already running a Kanban talk.
+  const kanbanBoard = board([
+    { title: "Kanban avanzado", room: "Sala A", timeSlot: "10:00" },
+    { title: "Docker en serio", room: "Sala B", timeSlot: "11:00" },
+    { title: "Testing de contratos", room: "Sala TV", timeSlot: "11:00" },
+    { title: "Liderazgo servicial", room: "Sala B", timeSlot: "12:00" },
+    { title: "Feedback entre pares", room: "Sala TV", timeSlot: "12:00" },
+  ]);
+  const aboutKanban = (instructions: string) => (instructions.includes("Kanban") ? 0.9 : 0.05);
+
+  test("a block running the same topic is avoided, and the room that runs it continues it", async () => {
+    const suggestion = await findFreeSpot(
+      { title: "Kanban para principiantes" },
+      kanbanBoard,
+      decidingModel(aboutKanban)
+    );
+
+    expect(`${suggestion.suggestedRoom}@${suggestion.suggestedTimeSlot}`).toBe("Sala A@11:00");
+    expect(suggestion.reasoning).toBe(
+      "No choca con otra charla del mismo tema (las de las 10:00 sí lo harían). Sigue el hilo de Sala A, que ya tiene charlas de temas afines. El bloque ya tiene 2 charlas."
+    );
+  });
+
+  test("the staff's request outranks the emptiest block", async () => {
+    const model = decidingModel((instructions) =>
+      instructions.includes("pedido")
+        ? instructions.includes("12:00")
+          ? 0.95
+          : instructions.includes("sala")
+            ? 0.5
+            : 0.05
+        : 0.05
+    );
+
+    const suggestion = await findFreeSpot(
+      { title: "Charla nueva", additionalContext: "el orador llega a las 12" },
+      board([{ title: "Otra cosa", room: "Sala A", timeSlot: "12:00" }]),
+      model
+    );
+
+    expect(suggestion.suggestedTimeSlot).toBe("12:00");
+    expect(suggestion.reasoning).toMatch(/^Respeta el pedido del staff\./);
+  });
+
+  test("with nothing on the board and nothing asked, no model is called", async () => {
+    const model = decidingModel();
+
+    const suggestion = await findFreeSpot({ title: "La primera" }, board([]), model);
+
+    expect(model.calls).toHaveLength(0);
+    expect(`${suggestion.suggestedRoom}@${suggestion.suggestedTimeSlot}`).toBe("Sala A@10:00");
+  });
+
+  test("Luna re-decides only when jev is unsure about a topic, never about the staff's request", async () => {
+    const model = decidingModel(aboutKanban);
+
+    await findFreeSpot({ title: "Kanban", additionalContext: "temprano" }, kanbanBoard, model);
+
+    const gateway = model.calls[0]?.providerOptions?.gateway as { models: unknown[] } | undefined;
+    const [conditional, failover] = gateway?.models ?? [];
+    const watched = (conditional as { when: { any: { question: string }[] } }).when.any.map((c) => c.question);
+    expect(conditional).toMatchObject({ model: SLOT_DECISION_MODEL.unsure });
+    expect(watched.length).toBeGreaterThan(0);
+    expect(watched.every((question) => /^(bloque|sala)\d+$/.test(question))).toBe(true);
+    expect(failover).toBe(SLOT_DECISION_MODEL.failover);
+  });
+
+  test("a failed call is asked again without fallbacks; if that fails too, the first free cell comes back flagged", async () => {
+    let attempts = 0;
+    const flaky = decidingModel((instructions) => {
+      if (attempts++ === 0) throw new Error("Model 'openai/gpt-6-luna-decisions' not found");
+
+      return aboutKanban(instructions);
+    });
+
+    const recovered = await findFreeSpot({ title: "Kanban para principiantes" }, kanbanBoard, flaky);
+    const degraded = await findFreeSpot({ title: "Kanban para principiantes" }, kanbanBoard, downDecisionModel());
+
+    expect(flaky.calls).toHaveLength(2);
+    expect(flaky.calls[1]?.providerOptions?.gateway).toBeUndefined();
+    expect(recovered.degraded).toBeUndefined();
+    expect(recovered.suggestedTimeSlot).toBe("11:00");
+    // Sala A is taken at 10:00 by the Kanban talk.
+    expect(degraded).toMatchObject({ degraded: true, suggestedRoom: "Sala B", suggestedTimeSlot: "10:00" });
   });
 });

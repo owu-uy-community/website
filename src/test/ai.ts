@@ -1,4 +1,4 @@
-import type { LanguageModel } from "ai";
+import type { Experimental_DecisionModel, LanguageModel } from "ai";
 import { MockLanguageModelV4, simulateReadableStream } from "ai/test";
 
 import { CARD_OCR_MODEL } from "lib/orpc/ocr/models";
@@ -30,18 +30,6 @@ export function streamingModel(pieces: string[]) {
   });
 }
 
-/** A model that answers `output` as JSON in one go. */
-export function generatingModel(output: unknown) {
-  return new MockLanguageModelV4({
-    doGenerate: async () => ({
-      content: [{ type: "text", text: JSON.stringify(output) }],
-      finishReason: { unified: "stop", raw: undefined },
-      usage,
-      warnings: [],
-    }),
-  });
-}
-
 /** A provider that is down: every call fails at once (and is not retried). */
 export function downModel() {
   const fail = async (): Promise<never> => {
@@ -51,8 +39,47 @@ export function downModel() {
   return new MockLanguageModelV4({ doStream: fail, doGenerate: fail });
 }
 
-/** The `ai` override for `by(...)`: the card reader gets `card`, everything else `pick`. */
-export const models = ({ card, pick }: { card?: LanguageModel; pick?: LanguageModel }) => ({
-  model: (slug: string): LanguageModel =>
-    slug === CARD_OCR_MODEL.primary ? (card ?? downModel()) : (pick ?? downModel()),
+type DecisionModelV4 = Extract<Experimental_DecisionModel, { doDecide: unknown }>;
+type DecideOptions = Parameters<DecisionModelV4["doDecide"]>[0];
+
+/**
+ * A decision model that answers every yes/no question with `probability(instructions)`, and keeps
+ * what it was asked in `calls`.
+ */
+export function decidingModel(probability: (instructions: string) => number = () => 0.1) {
+  const calls: DecideOptions[] = [];
+  const model: DecisionModelV4 = {
+    specificationVersion: "v4",
+    provider: "mock",
+    modelId: "mock-decisions",
+    supportedQuestionTypes: ["boolean", "choice", "score"],
+    doDecide: async (options) => {
+      calls.push(options);
+
+      return {
+        answers: Object.fromEntries(
+          Object.entries(options.questions).map(([id, question]) => [
+            id,
+            { type: "boolean" as const, probability: probability(String(question.instructions)) },
+          ])
+        ),
+        warnings: [],
+      };
+    },
+  };
+
+  return Object.assign(model, { calls });
+}
+
+/** A decision provider that is down: every call fails at once. */
+export function downDecisionModel() {
+  return decidingModel(() => {
+    throw Object.assign(new Error("Service Unavailable"), { statusCode: 503 });
+  });
+}
+
+/** The `ai` override for `by(...)`: the card reader gets `card`, the slot picker `pick`. */
+export const models = ({ card, pick }: { card?: LanguageModel; pick?: Experimental_DecisionModel }) => ({
+  model: (slug: string): LanguageModel => (slug === CARD_OCR_MODEL.primary ? (card ?? downModel()) : downModel()),
+  decisionModel: (): Experimental_DecisionModel => pick ?? downDecisionModel(),
 });

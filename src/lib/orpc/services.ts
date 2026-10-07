@@ -1,4 +1,4 @@
-import type { LanguageModel } from "ai";
+import type { Experimental_DecisionModel, LanguageModel } from "ai";
 import { Context, Effect } from "effect";
 
 import { db, type Db } from "../db";
@@ -22,11 +22,17 @@ export class Realtime extends Context.Service<
 >()("owu/Realtime") {}
 
 /**
- * Resolves an AI Gateway slug (`google/gemini-…`) to the model to call. Live it
- * is the slug itself — `ai` routes plain slugs through the gateway; tests hand
- * back a mock model.
+ * Resolves an AI Gateway slug (`google/gemini-…`, `typesafe-ai/jev`) to the
+ * model to call. Live it is the slug itself — `ai` routes plain slugs through
+ * the gateway; tests hand back a mock model.
  */
-export class Ai extends Context.Service<Ai, { readonly model: (slug: string) => LanguageModel }>()("owu/Ai") {}
+export class Ai extends Context.Service<
+  Ai,
+  {
+    readonly model: (slug: string) => LanguageModel;
+    readonly decisionModel: (slug: string) => Experimental_DecisionModel;
+  }
+>()("owu/Ai") {}
 
 export type Actor = {
   readonly id: string;
@@ -53,7 +59,10 @@ const realtimeLive = {
     Effect.promise(() => publishServer(channel, event, payload).catch(() => undefined)),
 };
 
-export const aiLive = { model: (slug: string): LanguageModel => slug };
+export const aiLive = {
+  model: (slug: string): LanguageModel => slug,
+  decisionModel: (slug: string): Experimental_DecisionModel => slug,
+};
 
 export const liveServices: Context.Context<AppServices> = Context.make(Database, db).pipe(
   Context.add(Realtime, realtimeLive),
