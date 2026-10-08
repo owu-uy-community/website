@@ -360,8 +360,9 @@ export default function Tickets() {
                 !
               </span>
               <span>
-                <strong className="font-semibold">La credencial es un juego para compartir online:</strong> no es una
-                entrada ni da acceso al evento. Para ir a OWU CONF necesitás reservar tu entrada.
+                <strong className="block font-semibold">La credencial es un juego para compartir online:</strong>
+                <span className="block">no es una entrada ni da acceso al evento.</span>
+                <span className="block">Para ir a OWU CONF necesitás reservar tu entrada.</span>
               </span>
             </p>
             <p className="mt-4 text-sm text-[#FBF5E7]/50">
