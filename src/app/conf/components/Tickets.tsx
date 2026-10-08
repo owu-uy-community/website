@@ -224,16 +224,13 @@ export default function Tickets() {
             eyebrow="ENTRADAS"
             title={
               <>
-                TU CREDENCIAL <span className="text-[#F5BB03]">TE ESPERA</span>
+                RESERVÁ <span className="text-[#F5BB03]">TU TICKET</span>
               </>
             }
           />
           <Reveal delay={0.12} y={22}>
             {/* One idea per line; bold and the yellow highlight carry the skim */}
             <div className="mt-6 max-w-[560px] space-y-2 text-lg leading-relaxed text-pretty text-[#FBF5E7]/80 [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-[#F5BB03] [&_strong]:font-semibold [&_strong]:text-[#FBF5E7]">
-              <p>
-                <strong>OWU CONF es un evento gratuito.</strong>
-              </p>
               {url ? (
                 <p>
                   Las entradas <mark>ya están disponibles</mark>: reservá la tuya, toma un minuto.
@@ -241,7 +238,7 @@ export default function Tickets() {
               ) : (
                 <>
                   <p>
-                    Las entradas se liberan el <mark>miércoles 14 de octubre a las 11:00</mark>, hora de Uruguay.
+                    Las entradas se liberan el <mark>miércoles 14 de octubre a las 11:00</mark>.
                   </p>
                   <p>
                     Mientras tanto, <strong>armá tu credencial</strong> y <strong>agendá el recordatorio</strong>.
