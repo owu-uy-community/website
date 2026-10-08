@@ -29,8 +29,10 @@ const SIZES = {
   },
 } as const;
 
-function getRemaining(targetMs: number): Remaining {
-  const diff = targetMs - Date.now();
+const localClock = () => Date.now();
+
+function getRemaining(targetMs: number, now: number): Remaining {
+  const diff = targetMs - now;
   const left = Math.max(0, diff);
 
   return {
@@ -50,6 +52,8 @@ type CountdownProps = {
   size?: keyof typeof SIZES;
   /** Cells stretch to fill the container instead of keeping their fixed square width */
   fullWidth?: boolean;
+  /** Epoch-ms source; defaults to the visitor's clock (the ticket release passes the server's) */
+  clock?: () => number;
   className?: string;
 };
 
@@ -58,19 +62,26 @@ type CountdownProps = {
  * client: zeros on the server pass, real values from the mount effect onwards. The
  * surrounding <Reveal> fade masks the swap.
  */
-export default function Countdown({ target, expiredLabel, size = "sm", fullWidth = false, className }: CountdownProps) {
+export default function Countdown({
+  target,
+  expiredLabel,
+  size = "sm",
+  fullWidth = false,
+  clock = localClock,
+  className,
+}: CountdownProps) {
   const [remaining, setRemaining] = useState<Remaining | null>(null);
   const sizes = SIZES[size];
 
   useEffect(() => {
     const targetMs = new Date(target).getTime();
-    const update = () => setRemaining(getRemaining(targetMs));
+    const update = () => setRemaining(getRemaining(targetMs, clock()));
 
     update();
     const id = setInterval(update, 1000);
 
     return () => clearInterval(id);
-  }, [target]);
+  }, [target, clock]);
 
   if (remaining?.expired) {
     return (
