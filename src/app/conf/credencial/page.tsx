@@ -109,7 +109,7 @@ export default async function SharedBadgePage({ searchParams }: Props) {
               <span aria-hidden="true" className="font-display font-extrabold text-[#F5BB03]">
                 !
               </span>
-              {SHARE_DISCLAIMER} OWU CONF es un evento gratuito: la entrada se reserva en Eventbrite desde conf.owu.uy.
+              {SHARE_DISCLAIMER} OWU CONF es un evento gratuito: la entrada se reserva desde conf.owu.uy.
             </p>
             <div className="mt-10 flex flex-wrap gap-4 max-sm:justify-center">
               <PillLink href={`${INTERNAL_ROUTES.conf.current}#entradas`}>ARMÁ TU CREDENCIAL</PillLink>

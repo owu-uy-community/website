@@ -236,14 +236,12 @@ export default function Tickets() {
               </p>
               {url ? (
                 <p>
-                  Las entradas <mark>ya están disponibles</mark>: reservá la tuya en <strong>Eventbrite</strong>, toma
-                  un minuto.
+                  Las entradas <mark>ya están disponibles</mark>: reservá la tuya, toma un minuto.
                 </p>
               ) : (
                 <>
                   <p>
-                    Las entradas se liberan en <strong>Eventbrite</strong> el{" "}
-                    <mark>miércoles 14 de octubre a las 11:00</mark>, hora de Uruguay.
+                    Las entradas se liberan el <mark>miércoles 14 de octubre a las 11:00</mark>, hora de Uruguay.
                   </p>
                   <p>
                     Mientras tanto, <strong>armá tu credencial</strong> y <strong>agendá el recordatorio</strong>.
@@ -305,8 +303,11 @@ export default function Tickets() {
               <p className="mt-1.5 text-sm text-[#FBF5E7]/60">
                 Hora de Uruguay{localTime && <> · en tu zona: {localTime}</>}
               </p>
+              <p className="mt-6 font-display text-xs font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
+                Las entradas se liberan en
+              </p>
               <Countdown
-                className="mt-6"
+                className="mt-2"
                 clock={release?.clock}
                 expiredLabel="¡SALEN AHORA!"
                 size="lg"
@@ -354,6 +355,15 @@ export default function Tickets() {
                 <Share2 aria-hidden="true" className="h-4 w-4" /> Compartir
               </button>
             </div>
+            <p className="mt-5 flex items-start gap-2 border-l-4 border-[#F5BB03] bg-[#F5BB03]/10 px-3 py-2 text-sm text-[#FBF5E7]">
+              <span aria-hidden="true" className="font-display font-extrabold text-[#F5BB03]">
+                !
+              </span>
+              <span>
+                <strong className="font-semibold">La credencial es un juego para compartir online:</strong> no es una
+                entrada ni da acceso al evento. Para ir a OWU CONF necesitás reservar tu entrada.
+              </span>
+            </p>
             <p className="mt-4 text-sm text-[#FBF5E7]/50">
               Arrastrá la credencial para moverla. Compartila y contale a tu equipo que vas.
             </p>
