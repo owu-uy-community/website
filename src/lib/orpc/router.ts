@@ -1,6 +1,7 @@
 import { castRouter } from "./cast/router";
 import { communitiesRouter } from "./communities/router";
 import { companionRouter } from "./companion/router";
+import { confRouter } from "./conf/router";
 import { countdownRouter } from "./countdown/router";
 import { dashboardRouter } from "./dashboard/router";
 import { eventbriteRouter } from "./eventbrite/router";
@@ -43,6 +44,9 @@ export const router = {
   obsQueue: obsQueueRouter,
   obsControl: obsControlRouter,
   obsCue: obsCueRouter,
+
+  // OWU CONF site: the ticket release
+  conf: confRouter,
 
   // Admin overview and ticketing
   dashboard: dashboardRouter,
