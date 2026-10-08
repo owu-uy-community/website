@@ -224,7 +224,7 @@ export default function Tickets() {
             eyebrow="ENTRADAS"
             title={
               <>
-                RESERVÁ <span className="text-[#F5BB03]">TU TICKET</span>
+                RESERVÁ <span className="text-[#F5BB03]">TU ENTRADA</span>
               </>
             }
           />
