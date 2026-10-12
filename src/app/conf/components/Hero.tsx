@@ -92,7 +92,7 @@ export default function Hero() {
             className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:justify-start"
             {...contentEntrance(3)}
           >
-            <PillLink href={INTERNAL_ROUTES.conf.callForProposals}>¡POSTULAR MI CHARLA!</PillLink>
+            <PillLink href="#entradas">¡QUIERO MI ENTRADA!</PillLink>
             <PillLink href={INTERNAL_ROUTES.conf.sponsors} variant="outline">
               ¡QUIERO SER SPONSOR!
             </PillLink>

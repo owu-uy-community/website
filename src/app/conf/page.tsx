@@ -15,6 +15,7 @@ import Reveal from "./components/Reveal";
 import Speakers from "./components/Speakers";
 import Sponsors from "./components/Sponsors";
 import Team from "./components/Team";
+import Tickets from "./components/Tickets";
 
 const DESCRIPTION =
   "OWU CONF: la conferencia de la comunidad tecnológica de Uruguay. Sábado 07 de noviembre de 2026 en Sinergia Faro, Montevideo. Una jornada de charlas, open space y comunidad.";
@@ -87,6 +88,7 @@ export default async function ConfPage() {
           <Reveal amount={0.3} delay={0.5} duration={0.8} y={28}>
             <Marquee className="mt-[42px]" />
           </Reveal>
+          <Tickets />
           <About />
           {/* Yellow divider band between sections */}
           <Reveal grow="x" amount={0.9} className="mt-16 h-10 w-full bg-[#F5BB03]" duration={0.9} />

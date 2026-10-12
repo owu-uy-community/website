@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
     "/api/v1/[[...rest]]": ["./content/**/*"],
     // Fonts read at runtime by the /blog/og image generator
     "/blog/og": ["./src/app/(web)/(content)/blog/og/*.ttf"],
+    // OWU CONF share images: their own font and strap logo, the blog's Poppins, the badge logo
+    "/api/conf/og": [
+      "./src/app/api/conf/og/*.{ttf,png}",
+      "./src/app/(web)/(content)/blog/og/*.ttf",
+      "./public/images/conf/logo-sticker.svg",
+      "./public/fonts/permanent-marker.ttf",
+    ],
   },
   // Rust MDX compiler (Turbopack-native, GFM enabled); remark/rehype plugins are not available with mdxRs.
   experimental: {

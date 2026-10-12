@@ -30,6 +30,7 @@ export const EVENT_DATES = {
 export const CONF_DATES = {
   cfpDeadline: "2026-09-15T23:59:59-03:00",
   sponsorsDeadline: "2026-09-15T23:59:59-03:00",
+  ticketsRelease: "2026-10-14T11:00:00-03:00",
   event: "2026-11-07T14:30:00-03:00",
 } as const;
 
