@@ -1,0 +1,9 @@
+name: "ConnectIA"
+description: "Comunidad de inteligencia artificial de Uruguay."
+topics:
+  - data-ia
+status: activa
+meetup: https://www.meetup.com/connectia/
+feedNames:
+  - "ConnectIA · Comunidad de Inteligencia Artificial"
+confPartner: false

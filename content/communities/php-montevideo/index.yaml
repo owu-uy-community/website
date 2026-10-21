@@ -1,0 +1,9 @@
+name: "PHP Montevideo"
+picture: /images/communities/php-montevideo/picture.webp
+description: "Comunidad de PHP y su ecosistema."
+topics:
+  - lenguajes
+  - web
+status: activa
+meetup: https://www.meetup.com/phpmvd/
+confPartner: false
