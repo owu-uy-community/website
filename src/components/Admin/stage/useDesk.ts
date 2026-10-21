@@ -15,6 +15,7 @@ import {
   type DeskStep,
   type SceneId,
   type StageState,
+  type StageTransition,
 } from "lib/owy-stage/scenes";
 
 /** Preview param edits reach the other devices after a pause in typing, not per keystroke. */
@@ -37,6 +38,9 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
 
   const deskRef = useRef(desk);
   deskRef.current = desk;
+  /** Until the shared desk arrives, the empty fallback must never be saved over it. */
+  const loaded = useRef(false);
+  loaded.current = data !== undefined;
   const liveRef = useRef(live);
   liveRef.current = live;
   const onAirRef = useRef(onAir);
@@ -52,6 +56,12 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
     orpc.owyStage.saveDesk.mutationOptions({
       onMutate: () => {
         inflight.current += 1;
+      },
+      // The last save in flight is the desk as this device left it: settle on it, in case a read
+      // that was already on its way (the first load, a reconnect) landed on top of the local edit.
+      onSuccess: (saved) => {
+        if (inflight.current === 1 && !editTimer.current)
+          queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), saved);
       },
       onSettled: () => {
         inflight.current -= 1;
@@ -74,8 +84,9 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
     queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), readDesk(payload));
   });
   // The WebSocket recycles every few minutes and drops what was sent meanwhile.
+  // A refetch while an edit is still saving would bring back the desk from before it.
   useEffect(() => {
-    if (isConnected) void refetch();
+    if (isConnected && inflight.current === 0 && !editTimer.current) void refetch();
   }, [isConnected, refetch]);
 
   const actions = useMemo(() => {
@@ -85,8 +96,17 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
       lastSave.current = saveRef.current({ desk: next }).catch(() => undefined);
     };
     /** Local at once; saved now, or after a pause when it's typing. */
-    const write = (next: Desk, typing = false) => {
+    /** A local change wins over any read still on its way (TanStack's optimistic-update rule). */
+    const local = (next: Desk) => {
+      void queryClient.cancelQueries({ queryKey: key, exact: true });
       queryClient.setQueryData(key, next);
+    };
+    const write = (next: Desk, typing = false) => {
+      if (!loaded.current) {
+        toast.error("La cola todavía está cargando", "Probá de nuevo en un segundo.");
+        return;
+      }
+      local(next);
       deskRef.current = next;
       if (editTimer.current) clearTimeout(editTimer.current);
       editTimer.current = null;
@@ -124,6 +144,12 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
         if (preview) write({ ...current(), queue: [...queue, queued(preview.scene, preview.params)] });
       },
       remove: (id: string) => write({ ...current(), queue: current().queue.filter((step) => step.id !== id) }),
+      /** Undo for a removal: the step goes back where it was. */
+      restore: (step: DeskStep, index: number) => {
+        const { queue } = current();
+        if (queue.some((item) => item.id === step.id)) return;
+        write({ ...current(), queue: [...queue.slice(0, index), step, ...queue.slice(index)] });
+      },
       duplicate: (id: string) => {
         const { queue } = current();
         const at = queue.findIndex((step) => step.id === id);
@@ -141,7 +167,7 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
       /** While dragging: local only. `persistOrder` saves what the drag left behind. */
       reorder: (queue: DeskStep[]) => {
         deskRef.current = { ...current(), queue };
-        queryClient.setQueryData(key, deskRef.current);
+        local(deskRef.current);
       },
       persistOrder: () => write(current()),
       clearQueue: () => write({ ...current(), queue: [] }),
@@ -153,11 +179,13 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
         });
       },
       /**
-       * TAKE. The step travels with the request (what goes out is what the
-       * operator sees); a queue edit still saving lands first, or it would
-       * bring the taken step back.
+       * TAKE (or CUT). The step travels with the request (what goes out is
+       * what the operator sees); a queue edit still saving lands first, or it
+       * would bring the taken step back.
        */
-      take: async () => {
+      /** Whether a TAKE would go out now: something in preview, and no TAKE on its way. */
+      canTake: () => Boolean(current().preview) && !taking.current,
+      take: async (transition: StageTransition = "wipe") => {
         const step = current().preview;
         // A double press must not send the next queued scene too.
         if (!step || taking.current) return;
@@ -167,8 +195,8 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
         try {
           await lastSave.current;
           const before = liveRef.current;
-          queryClient.setQueryData(key, afterTake(current(), { scene: before.scene, params: before.params }, stepId()));
-          const result = await takeRef.current({ step });
+          local(afterTake(current(), { scene: before.scene, params: before.params }, stepId()));
+          const result = await takeRef.current({ step, transition });
           queryClient.setQueryData(key, result.desk);
           onAirRef.current(result.state);
         } catch (error) {
