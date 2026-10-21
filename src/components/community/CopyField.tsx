@@ -20,7 +20,7 @@ export default function CopyField({ value, label, className }: { value: string; 
   };
 
   return (
-    <div className={cn("flex min-w-0 items-center rounded-lg border border-line bg-white/[0.02] font-terminal text-[13px]", className)}>
+    <div className={cn("flex min-w-0 items-center rounded-xl border border-white/10 bg-black/30 font-terminal text-[13px]", className)}>
       <span aria-hidden className="pl-3.5 text-zinc-600 select-none">
         $
       </span>
@@ -33,7 +33,7 @@ export default function CopyField({ value, label, className }: { value: string; 
       />
       <button
         aria-label={copied ? "Copiado" : `Copiar ${label}`}
-        className="m-1 flex size-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-zinc-100"
+        className="m-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.08] hover:text-white"
         type="button"
         onClick={copy}
       >

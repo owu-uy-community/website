@@ -1,9 +1,11 @@
 "use client";
 
 import { ArrowUpRight, Search } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
 import { signOut, useSession } from "app/lib/auth-client";
 import { SOCIAL_LINKS } from "app/lib/constants";
@@ -18,6 +20,13 @@ import MobileNav from "./mobileNav";
 export const isActivePath = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
+const SOCIALS = [
+  { label: "Instagram", href: SOCIAL_LINKS.instagram, Icon: FaInstagram },
+  { label: "LinkedIn", href: SOCIAL_LINKS.linkedin, Icon: FaLinkedin },
+  { label: "Slack", href: SOCIAL_LINKS.slack, Icon: FaSlack },
+  { label: "Telegram", href: SOCIAL_LINKS.telegram, Icon: FaTelegram },
+];
+
 function Navbar() {
   const pathname = usePathname();
   const { data: session, isPending } = useSession();
@@ -26,7 +35,7 @@ function Navbar() {
   const [isMac, setIsMac] = useState(true);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
+    const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     setIsMac(/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
@@ -37,43 +46,51 @@ function Navbar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-[60] w-full border-b backdrop-blur-md transition-[background-color,border-color] duration-300",
-        scrolled ? "border-line bg-ink/80" : "border-transparent bg-ink/30"
+        "sticky top-0 z-[60] w-full border-b transition-[background-color,border-color] duration-300",
+        scrolled
+          ? "border-white/[0.07] bg-[#09090b]/75 backdrop-blur-xl"
+          : "border-transparent bg-gradient-to-b from-black/60 to-transparent"
       )}
       id="site-menu"
     >
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-5 sm:px-8">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-6 px-5 sm:px-8 lg:h-[72px]">
         <Link aria-label="OWU Uruguay, inicio" className="flex shrink-0 items-center" href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt="OWU Uruguay"
-            className="h-7 w-auto transition-transform duration-300 hover:scale-105"
-            height={28}
+            className="h-8 w-auto transition-transform duration-300 hover:scale-105 lg:h-9"
+            height={36}
             src="/images/logos/owu.webp"
-            width={66}
+            width={85}
           />
         </Link>
 
-        <nav aria-label="Principal" className="hidden flex-1 lg:block">
-          <ul className="flex items-center gap-1">
+        <nav aria-label="Principal" className="hidden h-full flex-1 lg:block">
+          <ul className="flex h-full items-center justify-center gap-1">
             {NAV_LINKS.map(({ href, label, external }) => {
               const active = !external && isActivePath(pathname, href);
 
               return (
-                <li key={href}>
+                <li key={href} className="h-full">
                   <SmartLink
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "relative inline-flex h-9 items-center gap-1 rounded-md px-3 text-[13.5px] tracking-[-0.005em] transition-colors",
-                      active ? "text-zinc-50" : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
+                      "relative flex h-full items-center gap-1 px-4 text-[15px] font-medium transition-colors",
+                      active ? "text-white" : "text-zinc-300 hover:text-white"
                     )}
                     href={href}
                     utm="navbar"
                   >
                     {label}
-                    {external ? <ArrowUpRight aria-hidden className="size-3 text-zinc-500" /> : null}
+                    {external ? <ArrowUpRight aria-hidden className="size-3.5 text-zinc-500" /> : null}
                     {active ? (
-                      <span aria-hidden className="absolute inset-x-3 -bottom-[11px] h-px bg-yellow-400" />
+                      // OWU's marker: the yellow bar at the top of the current page, sliding between items
+                      <motion.span
+                        aria-hidden
+                        className="absolute inset-x-3 top-0 h-[3px] rounded-b-full bg-yellow-400"
+                        layoutId="nav-active"
+                        transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                      />
                     ) : null}
                   </SmartLink>
                 </li>
@@ -82,25 +99,41 @@ function Navbar() {
           </ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <button
             aria-label="Buscar"
-            className="hidden h-8 items-center gap-2 rounded-md border border-line bg-white/[0.02] pr-1.5 pl-2.5 text-[13px] text-zinc-500 transition-colors hover:border-line-strong hover:text-zinc-300 md:inline-flex"
-            type="button"
-            onClick={open}
-          >
-            <Search aria-hidden className="size-3.5" />
-            <span className="pr-6">Buscar</span>
-            <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
-          </button>
-          <button
-            aria-label="Buscar"
-            className="inline-flex size-9 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-zinc-100 md:hidden"
+            className="hidden h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] pr-1.5 pl-3 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-zinc-200 md:inline-flex"
             type="button"
             onClick={open}
           >
             <Search aria-hidden className="size-4" />
+            <span className="pr-5">Buscar</span>
+            <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
           </button>
+          <button
+            aria-label="Buscar"
+            className="inline-flex size-10 items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white md:hidden"
+            type="button"
+            onClick={open}
+          >
+            <Search aria-hidden className="size-5" />
+          </button>
+
+          <ul className="hidden items-center xl:flex">
+            {SOCIALS.map(({ label, href, Icon }) => (
+              <li key={label}>
+                <SmartLink
+                  aria-label={label}
+                  className="flex size-9 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-yellow-400"
+                  href={href}
+                  utm="navbar"
+                >
+                  <Icon aria-hidden className="size-[18px]" />
+                </SmartLink>
+              </li>
+            ))}
+          </ul>
+
           <ButtonLink className="hidden sm:inline-flex" href={SOCIAL_LINKS.slack} size="sm" utm="navbar">
             Sumate al Slack
           </ButtonLink>
