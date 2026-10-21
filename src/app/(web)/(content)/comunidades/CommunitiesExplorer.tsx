@@ -7,22 +7,22 @@ import { FaSlack } from "react-icons/fa6";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
-import { Badge, buttonClassName, CommunityLogo, outbound } from "components/community/ui";
+import { Badge, buttonClassName, cardClassName, Cells, CommunityLogo, outbound } from "components/community/ui";
 import type { Community } from "lib/community/content";
 import type { CommunityEvent } from "lib/community/events";
 import { issueFormUrl, PAGES } from "lib/community/site";
 import { dateParts } from "lib/community/time";
 import { TOPICS, topicLabel } from "lib/community/topics";
 
-const STATUS_BADGES = {
-  pausa: { tone: "neutral", label: "En pausa" },
-  "busca-organizadores": { tone: "orange", label: "Busca organizadores" },
+const STATUS_LABELS = {
+  pausa: "En pausa",
+  "busca-organizadores": "Busca organizadores",
 } as const;
 
 const normalize = (value: string) =>
   value
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .toLowerCase();
 
 type Props = {
@@ -80,14 +80,14 @@ export default function CommunitiesExplorer({ communities, nextEvents }: Props) 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-4">
-        <label className="relative block w-full sm:max-w-sm">
+        <label className="relative block w-full sm:max-w-md">
           <span className="sr-only">Buscar comunidades</span>
           <Search
             aria-hidden
-            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-zinc-500"
+            className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-500"
           />
           <input
-            className="h-11 w-full rounded-lg border border-line bg-white/[0.02] pr-10 pl-10 text-[15px] text-zinc-100 transition-colors outline-none placeholder:text-zinc-600 focus:border-line-strong focus:bg-white/[0.04]"
+            className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-11 text-[15px] text-white transition-colors outline-none placeholder:text-zinc-500 focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/20"
             placeholder="Buscá por nombre o tema"
             type="search"
             value={query}
@@ -96,7 +96,7 @@ export default function CommunitiesExplorer({ communities, nextEvents }: Props) 
           {query ? (
             <button
               aria-label="Borrar búsqueda"
-              className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-zinc-500 hover:bg-white/[0.06] hover:text-zinc-200"
+              className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.08] hover:text-white"
               type="button"
               onClick={() => setQuery("")}
             >
@@ -106,29 +106,34 @@ export default function CommunitiesExplorer({ communities, nextEvents }: Props) 
         </label>
 
         <div aria-label="Filtrar por tema" className="flex flex-wrap gap-2" role="group">
-          <Chip active={topic === null && !onlyUpcoming} onClick={() => {
+          <Chip
+            active={topic === null && !onlyUpcoming}
+            count={communities.length}
+            onClick={() => {
               setTopic(null);
               setOnlyUpcoming(false);
-            }}>
-            Todas <Count>{communities.length}</Count>
+            }}
+          >
+            Todas
           </Chip>
           {upcomingCount > 0 ? (
-            <Chip active={onlyUpcoming} onClick={() => setOnlyUpcoming((current) => !current)}>
-              <CalendarDays aria-hidden className="size-3.5" /> Con fecha <Count>{upcomingCount}</Count>
+            <Chip active={onlyUpcoming} count={upcomingCount} onClick={() => setOnlyUpcoming((current) => !current)}>
+              <CalendarDays aria-hidden className="size-3.5" /> Con fecha
             </Chip>
           ) : null}
           {topicCounts.map(({ value, label, count }) => (
             <Chip
               key={value}
               active={topic === value}
+              count={count}
               onClick={() => setTopic((current) => (current === value ? null : value))}
             >
-              {label} <Count>{count}</Count>
+              {label}
             </Chip>
           ))}
         </div>
 
-        <p aria-live="polite" className="font-terminal text-[11px] tracking-[0.08em] text-zinc-500 uppercase">
+        <p aria-live="polite" className="text-[13px] text-zinc-500">
           {visible.length === communities.length
             ? `${communities.length} comunidades`
             : `${visible.length} de ${communities.length} comunidades`}
@@ -136,109 +141,118 @@ export default function CommunitiesExplorer({ communities, nextEvents }: Props) 
       </div>
 
       {visible.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-line-strong px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center">
           <p className="text-zinc-300">Ninguna comunidad coincide con esa búsqueda.</p>
           <button className={buttonClassName("secondary", "sm")} type="button" onClick={reset}>
             Ver todas
           </button>
         </div>
       ) : (
-        <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+        <Cells className="sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((community) => (
             <CommunityCard key={community.slug} community={community} next={nextEvents[community.slug]} />
           ))}
-          <JoinCell count={visible.length} />
-        </div>
+          <JoinCard />
+        </Cells>
       )}
     </div>
   );
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function Chip({
+  active,
+  count,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  count: number;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <button
       aria-pressed={active}
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] transition-colors",
+        "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium transition-colors",
         active
-          ? "border-yellow-400/50 bg-yellow-400/[0.08] text-yellow-200"
-          : "border-line text-zinc-400 hover:border-line-strong hover:text-zinc-100"
+          ? "border-yellow-400 bg-yellow-400 text-zinc-950"
+          : "border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08] hover:text-white"
       )}
       type="button"
       onClick={onClick}
     >
       {children}
+      <span className={cn("tabular-nums", active ? "text-zinc-800" : "text-zinc-500")}>{count}</span>
     </button>
   );
 }
 
-function Count({ children }: { children: React.ReactNode }) {
-  return <span className="font-terminal text-[10.5px] text-zinc-500 tabular-nums">{children}</span>;
-}
-
 function CommunityCard({ community, next }: { community: Community; next?: CommunityEvent }) {
-  const status = community.status === "activa" ? null : STATUS_BADGES[community.status];
+  const status = community.status === "activa" ? null : STATUS_LABELS[community.status];
   const when = next ? dateParts(next.start) : null;
 
   return (
     <article
-      className="group relative flex scroll-mt-24 flex-col gap-5 bg-ink p-6 transition-colors target:bg-yellow-400/[0.05] target:ring-1 target:ring-yellow-400/60 target:ring-inset sm:p-7"
+      className={cardClassName(
+        true,
+        "group flex scroll-mt-24 flex-col gap-5 p-6 target:border-yellow-400/60 target:bg-yellow-400/[0.04]"
+      )}
       id={community.slug}
     >
       <div className="flex items-start gap-4">
-        <CommunityLogo logo={community.logo} name={community.name} />
+        <CommunityLogo logo={community.logo} name={community.name} size="lg" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-[17px] leading-snug font-semibold tracking-[-0.02em] text-zinc-50">
-            <a className="hover:text-yellow-200" href={`#${community.slug}`}>
+          <h2 className="font-title text-lg leading-snug font-semibold text-white">
+            <a className="transition-colors hover:text-yellow-200" href={`#${community.slug}`}>
               {community.name}
             </a>
           </h2>
           {status || community.confPartner ? (
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {status ? <Badge tone={status.tone}>{status.label}</Badge> : null}
+              {status ? <Badge>{status}</Badge> : null}
               {community.confPartner ? <Badge tone="accent">Aliada OWU CONF</Badge> : null}
             </div>
           ) : null}
         </div>
       </div>
 
-      <p className="text-sm leading-relaxed text-zinc-400">{community.description}</p>
-
-      {community.topics.length > 0 ? (
-        <p className="flex flex-wrap gap-x-3 gap-y-1 font-terminal text-[11px] text-zinc-500">
-          {community.topics.map((value) => (
-            <span key={value}>#{topicLabel(value).toLowerCase().replace(/\s+/g, "-")}</span>
-          ))}
-        </p>
-      ) : null}
+      <div className="flex flex-col gap-2">
+        <p className="text-sm leading-relaxed text-zinc-400">{community.description}</p>
+        {community.topics.length > 0 ? (
+          <p className="text-xs text-zinc-500">{community.topics.map(topicLabel).join(" · ")}</p>
+        ) : null}
+      </div>
 
       <div className="mt-auto flex flex-col gap-4">
         {next && when ? (
           <a
-            className="group/next block rounded-lg border border-line bg-white/[0.02] px-3.5 py-3 transition-colors hover:border-yellow-400/40 hover:bg-yellow-400/[0.04]"
+            className="group/next block rounded-xl bg-white/[0.04] p-4 transition-colors hover:bg-white/[0.07]"
             href={outbound(next.url, "directorio")}
             rel="noopener"
             target="_blank"
           >
-            <span className="flex items-center justify-between gap-2 font-terminal text-[10.5px] tracking-[0.08em] text-yellow-400 uppercase">
-              Próximo · {when.weekday} {when.day} {when.month} · {when.time}
+            <span className="flex items-center justify-between gap-2 text-[13px] font-semibold text-yellow-400">
+              <span className="capitalize">
+                {when.weekday} {when.day} {when.month} · {when.time} h
+              </span>
               <ArrowUpRight
                 aria-hidden
-                className="size-3.5 shrink-0 text-zinc-600 transition-transform group-hover/next:translate-x-0.5 group-hover/next:-translate-y-0.5 group-hover/next:text-zinc-200"
+                className="size-4 shrink-0 text-zinc-500 transition-[transform,color] group-hover/next:translate-x-0.5 group-hover/next:-translate-y-0.5 group-hover/next:text-white"
               />
             </span>
             <span className="mt-1.5 line-clamp-2 block text-sm leading-snug text-zinc-200">{next.title}</span>
-            <span className="mt-1 flex items-center gap-1 font-terminal text-[11px] text-zinc-500">
+            <span className="mt-1.5 flex items-center gap-1 text-xs text-zinc-500">
               {next.venue ? (
-                <MapPin aria-hidden className="size-3 shrink-0" />
+                <MapPin aria-hidden className="size-3.5 shrink-0" />
               ) : (
-                <Wifi aria-hidden className="size-3 shrink-0" />
+                <Wifi aria-hidden className="size-3.5 shrink-0" />
               )}
               <span className="truncate">{next.venue ?? "Online"}</span>
             </span>
           </a>
         ) : (
-          <p className="font-terminal text-[11px] text-zinc-600">Sin fechas publicadas por ahora</p>
+          <p className="text-xs text-zinc-500">Sin fechas publicadas por ahora</p>
         )}
 
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
@@ -255,7 +269,7 @@ function CommunityCard({ community, next }: { community: Community; next?: Commu
           {community.slackChannel ? (
             <li>
               <a
-                className="inline-flex items-center gap-1.5 font-terminal text-[12px] text-zinc-400 transition-colors hover:text-zinc-100"
+                className="inline-flex items-center gap-1.5 text-zinc-400 transition-colors hover:text-white"
                 href={outbound(SOCIAL_LINKS.slack, "directorio")}
                 rel="noopener"
                 target="_blank"
@@ -274,7 +288,7 @@ function CommunityCard({ community, next }: { community: Community; next?: Commu
 function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <a
-      className="group/link inline-flex items-center gap-1 text-zinc-400 transition-colors hover:text-zinc-100"
+      className="group/link inline-flex items-center gap-1 text-zinc-400 transition-colors hover:text-white"
       href={outbound(href, "directorio")}
       rel="noopener"
       target="_blank"
@@ -288,25 +302,15 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
   );
 }
 
-/* The CTA fills the rest of the last row: an empty cell would show the hairline color */
-const SPAN_SM = ["sm:col-span-2", "sm:col-span-1"];
-const SPAN_LG = ["lg:col-span-3", "lg:col-span-2", "lg:col-span-1"];
-
-function JoinCell({ count }: { count: number }) {
+function JoinCard() {
   return (
-    <div
-      className={cn(
-        "flex flex-col justify-between gap-6 bg-ink p-6 sm:p-7",
-        SPAN_SM[count % 2],
-        SPAN_LG[count % 3]
-      )}
-    >
-      <div className="flex flex-col gap-4">
-        <span className="flex size-12 items-center justify-center rounded-lg border border-dashed border-line-strong text-yellow-400">
+    <div className="flex flex-col justify-between gap-6 rounded-2xl border border-dashed border-white/15 p-6 transition-colors hover:border-yellow-400/50 hover:bg-yellow-400/[0.04]">
+      <div className="flex flex-col gap-5">
+        <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
           <Plus aria-hidden className="size-5" />
         </span>
         <div>
-          <h2 className="text-[17px] font-semibold tracking-[-0.02em] text-zinc-50">¿Tu comunidad no está?</h2>
+          <h2 className="font-title text-lg font-semibold text-white">¿Tu comunidad no está?</h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">
             Contanos cómo se llama, de qué se trata y dónde se juntan. La sumamos al directorio, a la agenda y al ⌘K
             del sitio.

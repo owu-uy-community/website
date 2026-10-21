@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 export default function BlogLayout({ children }: { children: React.ReactNode }) {
   return (
     <NuqsAdapter>
-      <main className="flex min-h-[calc(100dvh-56px)] w-full flex-col">{children}</main>
+      <main className="flex min-h-[calc(100dvh-4rem)] w-full flex-col">{children}</main>
       <Footer />
     </NuqsAdapter>
   );

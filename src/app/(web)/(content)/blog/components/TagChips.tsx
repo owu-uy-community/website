@@ -1,8 +1,9 @@
 import Link from "next/link";
 
-const baseChipClassName = "h-7 rounded-full border px-3 font-terminal text-xs transition-colors inline-flex items-center";
-const inactiveChipClassName = `${baseChipClassName} border-line text-zinc-400 hover:border-line-strong hover:text-zinc-100`;
-const activeChipClassName = `${baseChipClassName} border-yellow-400/40 bg-yellow-400/[0.08] text-yellow-300`;
+const baseChipClassName =
+  "inline-flex h-9 items-center rounded-full border px-3.5 text-[13px] font-medium transition-colors";
+const inactiveChipClassName = `${baseChipClassName} border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08] hover:text-white`;
+const activeChipClassName = `${baseChipClassName} border-yellow-400 bg-yellow-400 text-zinc-950`;
 
 interface TagChipsProps {
   tags: string[];

@@ -2,7 +2,21 @@ import { Gift, Languages, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
-import { ButtonLink, Cell, Cells, Faq, PageHeader, Section, Terminal } from "components/community/ui";
+import { cn } from "app/lib/utils";
+import { Reveal } from "components/community/motion";
+import {
+  ButtonLink,
+  Card,
+  Cell,
+  Cells,
+  Container,
+  Faq,
+  headingClassName,
+  PageHeader,
+  Section,
+  Terminal,
+  TitleBar,
+} from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
 import { pageMetadata } from "lib/community/metadata";
@@ -67,13 +81,15 @@ export default async function FirstTimePage() {
         title="¿Primera vez en OWU?"
       />
 
-      <Section bordered={false} eyebrow="Lo básico" title="Tres cosas para saber">
+      <Section eyebrow="Lo básico" title="Tres cosas para saber">
         <Cells className="md:grid-cols-3">
           {PROMISES.map(({ icon: Icon, title, body }) => (
-            <Cell key={title} className="flex flex-col gap-5">
-              <Icon aria-hidden className="size-5 text-yellow-400" />
+            <Cell key={title} className="gap-6">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                <Icon aria-hidden className="size-5" />
+              </span>
               <div>
-                <h3 className="text-lg font-semibold tracking-[-0.02em] text-zinc-50">{title}</h3>
+                <h3 className={headingClassName.h3}>{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
               </div>
             </Cell>
@@ -86,19 +102,20 @@ export default async function FirstTimePage() {
         eyebrow="Cómo es una meetup"
         title="Una noche típica"
       >
-        <ol className="grid gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-3">
+        <Cells className="md:grid-cols-3">
           {EVENING.map(({ time, title, body }, index) => (
-            <li key={time} className="relative bg-ink p-6 sm:p-8">
-              <div className="flex items-center gap-3">
-                <span className="font-terminal text-sm text-yellow-400 tabular-nums">{time}</span>
-                <span aria-hidden className="h-px flex-1 bg-line" />
-                <span className="font-terminal text-[11px] text-zinc-600">0{index + 1}</span>
+            <Card key={time} className="flex flex-col gap-6">
+              <div className="flex items-start justify-between">
+                <span className="font-title text-3xl font-bold text-yellow-400 tabular-nums">{time}</span>
+                <span className="font-title text-3xl leading-none font-extrabold text-white/[0.08]">0{index + 1}</span>
               </div>
-              <h3 className="mt-5 text-lg font-semibold tracking-[-0.02em] text-zinc-50">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
-            </li>
+              <div>
+                <h3 className={headingClassName.h3}>{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
+              </div>
+            </Card>
           ))}
-        </ol>
+        </Cells>
       </Section>
 
       <Section
@@ -106,7 +123,7 @@ export default async function FirstTimePage() {
         eyebrow="El Slack"
         title="El Slack, en dos minutos"
       >
-        <div className="grid items-start gap-10 lg:grid-cols-[1fr_1.1fr]">
+        <Reveal className="grid items-start gap-10 lg:grid-cols-[1fr_1.1fr]">
           <ol className="flex flex-col gap-6">
             {[
               <>
@@ -134,13 +151,13 @@ export default async function FirstTimePage() {
               </>,
             ].map((step, index) => (
               <li key={index} className="flex gap-4">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-line-strong font-terminal text-[11px] text-zinc-400">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] font-title text-sm font-semibold text-white">
                   {index + 1}
                 </span>
-                <p className="pt-0.5 text-[15px] leading-relaxed text-zinc-300">{step}</p>
+                <p className="pt-1 text-[15px] leading-relaxed text-zinc-300">{step}</p>
               </li>
             ))}
-            <li className="pl-11 font-terminal text-[11px] leading-relaxed text-zinc-600">
+            <li className="pl-12 text-xs leading-relaxed text-zinc-500">
               Los nombres de los canales pueden variar. Si no encontrás uno, preguntá en #{SLACK_CHANNELS.general}.
             </li>
           </ol>
@@ -162,11 +179,11 @@ export default async function FirstTimePage() {
             ]}
             title="~/primera-vez"
           />
-        </div>
+        </Reveal>
       </Section>
 
       <Section eyebrow="Preguntas frecuentes" id="preguntas" title="Lo que todo el mundo pregunta">
-        <div className="max-w-3xl">
+        <Reveal className="max-w-3xl">
           <Faq
             items={[
               {
@@ -222,27 +239,30 @@ export default async function FirstTimePage() {
             ]}
             name="primera-vez"
           />
-        </div>
+        </Reveal>
       </Section>
 
-      <section className="relative overflow-hidden border-t border-line py-20 sm:py-28">
+      <section className="relative overflow-hidden py-20 sm:py-28">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_60%_at_50%_100%,rgba(250,204,21,0.08),transparent_70%)]"
         />
-        <div className="relative mx-auto flex max-w-2xl flex-col items-center px-5 text-center">
-          <h2 className="text-3xl leading-[1.05] font-semibold tracking-[-0.035em] text-balance text-zinc-50 sm:text-5xl">
-            La primera es la más difícil. Después, ya conocés a alguien.
-          </h2>
-          <div className="mt-9 flex flex-wrap justify-center gap-3">
-            <ButtonLink arrow href={PAGES.eventos.href} size="lg">
-              Elegí tu primera meetup
-            </ButtonLink>
-            <ButtonLink href={PAGES.codigo.href} size="lg" variant="secondary">
-              Código de conducta
-            </ButtonLink>
-          </div>
-        </div>
+        <Container className="relative">
+          <Reveal className="mx-auto flex max-w-2xl flex-col items-center text-center">
+            <h2 className={cn(headingClassName.h2, "sm:text-5xl")}>
+              La primera es la más difícil. Después, ya conocés a alguien.
+            </h2>
+            <TitleBar className="mt-7" />
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <ButtonLink arrow href={PAGES.eventos.href} size="lg">
+                Elegí tu primera meetup
+              </ButtonLink>
+              <ButtonLink href={PAGES.codigo.href} size="lg" variant="secondary">
+                Código de conducta
+              </ButtonLink>
+            </div>
+          </Reveal>
+        </Container>
       </section>
 
       <Footer />
@@ -251,5 +271,7 @@ export default async function FirstTimePage() {
 }
 
 function Channel({ name }: { name: string }) {
-  return <code className="rounded bg-white/[0.06] px-1.5 py-0.5 font-terminal text-[13px] text-zinc-100">#{name}</code>;
+  return (
+    <code className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-terminal text-[13px] text-zinc-100">#{name}</code>
+  );
 }

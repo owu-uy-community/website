@@ -5,7 +5,18 @@ import { notFound } from "next/navigation";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { EventList } from "components/community/events";
-import { ButtonLink, Cell, Cells, Freshness, outbound, PageHeader, Section } from "components/community/ui";
+import { Reveal } from "components/community/motion";
+import {
+  Badge,
+  ButtonLink,
+  cardClassName,
+  Cell,
+  Cells,
+  Freshness,
+  outbound,
+  PageHeader,
+  Section,
+} from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { RichText } from "components/shared/RichText";
 import type { CommunityEvent } from "lib/community/events";
@@ -39,6 +50,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
+const navLabel = "block text-xs font-semibold tracking-[0.14em] text-zinc-500 uppercase";
 
 export default async function SemanarioIssuePage({ params }: Props) {
   const number = parseNumber((await params).numero);
@@ -75,10 +88,10 @@ export default async function SemanarioIssuePage({ params }: Props) {
       </PageHeader>
 
       {issue.intro ? (
-        <Section bordered={false} className="py-12 sm:py-16">
-          <div className="max-w-2xl space-y-4 text-[17px] leading-relaxed text-zinc-300 [&_a]:text-zinc-100 [&_a]:underline [&_a]:decoration-white/30 [&_a]:underline-offset-4 [&_a:hover]:decoration-yellow-400 [&_strong]:font-semibold [&_strong]:text-zinc-50 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
+        <Section className="py-12 sm:py-16">
+          <Reveal className="max-w-2xl space-y-4 text-base leading-relaxed text-zinc-300 sm:text-[17px] [&_a]:text-zinc-100 [&_a]:underline [&_a]:decoration-white/30 [&_a]:underline-offset-4 [&_a:hover]:decoration-yellow-400 [&_strong]:font-semibold [&_strong]:text-white [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
             <RichText content={issue.intro} />
-          </div>
+          </Reveal>
         </Section>
       ) : null}
 
@@ -88,36 +101,31 @@ export default async function SemanarioIssuePage({ params }: Props) {
           eyebrow="Hilos destacados"
           title="De qué se habló"
         >
-          <ol className="grid gap-3 md:grid-cols-2">
+          <Cells className="gap-3 md:grid-cols-2">
             {threads.map((thread) => (
-              <li key={thread.permalink}>
-                <a
-                  className="group flex h-full flex-col gap-4 rounded-xl border border-line bg-ink-elev/60 p-5 transition-colors hover:border-line-strong hover:bg-white/[0.03]"
-                  href={thread.permalink}
-                  rel="noopener"
-                  target="_blank"
-                >
-                  <span className="flex items-center justify-between gap-3">
-                    <span className="rounded-md border border-line bg-white/[0.03] px-2 py-0.5 font-terminal text-[11px] text-zinc-300">
-                      #{thread.channel}
-                    </span>
-                    <span className="flex items-center gap-1.5 font-terminal text-[11px] text-zinc-500">
-                      <MessagesSquare aria-hidden className="size-3.5" />
-                      {plural(thread.replies, "respuesta", "respuestas")}
-                    </span>
+              <a
+                key={thread.permalink}
+                className={cardClassName(true, "group flex flex-col gap-5 p-5 sm:p-6")}
+                href={thread.permalink}
+                rel="noopener"
+                target="_blank"
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <Badge>#{thread.channel}</Badge>
+                  <span className="flex items-center gap-1.5 text-[13px] text-zinc-500">
+                    <MessagesSquare aria-hidden className="size-3.5" />
+                    {plural(thread.replies, "respuesta", "respuestas")}
                   </span>
-                  <span className="flex-1 text-[15px] leading-snug font-medium text-zinc-100 group-hover:text-zinc-50">
-                    {thread.title}
-                  </span>
-                  <span className="inline-flex items-center gap-1 text-[13px] text-zinc-500 group-hover:text-yellow-400">
-                    Abrir en Slack
-                    <ArrowUpRight aria-hidden className="size-3.5" />
-                  </span>
-                </a>
-              </li>
+                </span>
+                <span className="flex-1 text-[15px] leading-snug font-semibold text-white">{thread.title}</span>
+                <span className="inline-flex items-center gap-1 text-[13px] text-zinc-500 transition-colors group-hover:text-yellow-400">
+                  Abrir en Slack
+                  <ArrowUpRight aria-hidden className="size-3.5" />
+                </span>
+              </a>
             ))}
-          </ol>
-          <p className="mt-5 text-sm text-zinc-500">
+          </Cells>
+          <p className="mt-6 text-sm text-zinc-500">
             ¿Todavía no estás en el Slack?{" "}
             <a
               className="text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
@@ -142,9 +150,9 @@ export default async function SemanarioIssuePage({ params }: Props) {
           eyebrow="Agenda"
           title="Qué se viene"
         >
-          <div className="overflow-hidden rounded-xl border border-line bg-ink-elev/60">
+          <Reveal className={cardClassName(false, "overflow-hidden")}>
             <EventList events={rows} />
-          </div>
+          </Reveal>
         </Section>
       ) : null}
 
@@ -152,12 +160,14 @@ export default async function SemanarioIssuePage({ params }: Props) {
         <Section eyebrow="Y además" title="Búsquedas y caras nuevas">
           <Cells className={newCommunities.length > 0 && jobs ? "md:grid-cols-2" : undefined}>
             {jobs ? (
-              <Cell className="flex flex-col gap-5">
-                <p className="flex items-baseline gap-3">
-                  <span className="text-5xl font-semibold tracking-[-0.04em] text-zinc-50 tabular-nums">{jobs.count}</span>
+              <Cell className="gap-6">
+                <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="font-title text-5xl font-extrabold tracking-[-0.02em] text-yellow-400 tabular-nums">
+                    {jobs.count}
+                  </span>
                   <span className="text-zinc-400">
                     {jobs.count === 1 ? "búsqueda nueva" : "búsquedas nuevas"} en{" "}
-                    <span className="font-terminal text-zinc-200">#{SLACK_CHANNELS.jobs}</span>
+                    <span className="font-medium text-zinc-200">#{SLACK_CHANNELS.jobs}</span>
                   </span>
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -173,7 +183,7 @@ export default async function SemanarioIssuePage({ params }: Props) {
               </Cell>
             ) : null}
             {newCommunities.length > 0 ? (
-              <Cell className="flex flex-col gap-5">
+              <Cell className="gap-5">
                 <p className="text-zinc-400">
                   {newCommunities.length === 1 ? "Se sumó un grupo" : `Se sumaron ${newCommunities.length} grupos`} al
                   directorio:
@@ -182,7 +192,7 @@ export default async function SemanarioIssuePage({ params }: Props) {
                   {newCommunities.map((community) => (
                     <li key={community.slug}>
                       <Link
-                        className="inline-flex h-8 items-center rounded-full border border-line-strong px-3 text-sm text-zinc-200 transition-colors hover:border-yellow-400/50 hover:text-zinc-50"
+                        className="inline-flex h-9 items-center rounded-full border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
                         href={`/comunidades#${community.slug}`}
                       >
                         {community.name}
@@ -199,14 +209,11 @@ export default async function SemanarioIssuePage({ params }: Props) {
       <Section>
         <nav aria-label="Otros números" className="grid gap-3 sm:grid-cols-2">
           {issue.prev ? (
-            <Link
-              className="group flex items-center gap-3 rounded-xl border border-line p-5 transition-colors hover:border-line-strong hover:bg-white/[0.025]"
-              href={`/semanario/${issue.prev}`}
-            >
+            <Link className={cardClassName(true, "group flex items-center gap-4 p-5")} href={`/semanario/${issue.prev}`}>
               <ArrowLeft aria-hidden className="size-4 text-zinc-500 transition-transform group-hover:-translate-x-0.5" />
               <span>
-                <span className="block font-terminal text-[11px] tracking-[0.1em] text-zinc-500 uppercase">Anterior</span>
-                <span className="text-zinc-100">#{issue.prev}</span>
+                <span className={navLabel}>Anterior</span>
+                <span className="font-title font-semibold text-white">#{issue.prev}</span>
               </span>
             </Link>
           ) : (
@@ -214,25 +221,23 @@ export default async function SemanarioIssuePage({ params }: Props) {
           )}
           {issue.next ? (
             <Link
-              className="group flex items-center justify-end gap-3 rounded-xl border border-line p-5 text-right transition-colors hover:border-line-strong hover:bg-white/[0.025]"
+              className={cardClassName(true, "group flex items-center justify-end gap-4 p-5 text-right")}
               href={`/semanario/${issue.next}`}
             >
               <span>
-                <span className="block font-terminal text-[11px] tracking-[0.1em] text-zinc-500 uppercase">Siguiente</span>
-                <span className="text-zinc-100">#{issue.next}</span>
+                <span className={navLabel}>Siguiente</span>
+                <span className="font-title font-semibold text-white">#{issue.next}</span>
               </span>
               <ArrowRight aria-hidden className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5" />
             </Link>
           ) : (
             <Link
-              className="group flex items-center justify-end gap-3 rounded-xl border border-dashed border-line-strong p-5 text-right transition-colors hover:border-yellow-400/40"
+              className="group flex items-center justify-end gap-4 rounded-2xl border border-dashed border-white/15 p-5 text-right transition-colors hover:border-yellow-400/40"
               href="/semanario#recibilo"
             >
               <span>
-                <span className="block font-terminal text-[11px] tracking-[0.1em] text-zinc-500 uppercase">
-                  El próximo sale el lunes
-                </span>
-                <span className="text-zinc-100">Recibilo por RSS o en Slack</span>
+                <span className={navLabel}>El próximo sale el lunes</span>
+                <span className="font-title font-semibold text-white">Recibilo por RSS o en Slack</span>
               </span>
               <ArrowRight aria-hidden className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5" />
             </Link>
@@ -241,7 +246,10 @@ export default async function SemanarioIssuePage({ params }: Props) {
         <p className="mt-10 text-center text-sm text-zinc-500">
           ¿Viste un hilo que tendría que estar acá? Marcalo con{" "}
           <code className="font-terminal text-[12.5px] text-yellow-300">:{SEMANARIO_EMOJI}:</code> y entra en el próximo.{" "}
-          <Link className="text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400" href="/semanario">
+          <Link
+            className="text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
+            href="/semanario"
+          >
             Todos los números
           </Link>
         </p>
