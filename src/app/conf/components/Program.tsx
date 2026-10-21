@@ -280,7 +280,7 @@ const SESSIONS: Session[] = [
       <>
         Cierra la tarde <Hl>Sebastián Passaro</Hl>, de <Hl>OWASP Uruguay</Hl>, con un chatbot RAG que anda bien hasta
         que <Hl yellow>un solo documento envenenado</Hl> lo da vuelta. Cuarenta minutos de ataques, tests automatizables
-        y defensas en vivo, con el repositorio completo para que sigas investigando.
+        y defensa en profundidad, con el repositorio completo para que sigas investigando.
       </>
     ),
     Icon: MicVocal,

@@ -76,8 +76,8 @@ export const TALKS: Talk[] = [
     end: "20:25",
     title: "Retrieval Augmented Gaslight",
     description: [
-      "Un chatbot de soporte que anda bien, un solo documento envenenado en la base vectorial, y de golpe manda a los usuarios a un link de phishing o defiende una mentira con total seguridad. No se hackea el modelo ni se toca una línea de código: solo se ensucian los datos.",
-      "Sobre un stack RAG real y open source (ChromaDB, FastAPI y Ollama), la charla recorre una escalera de ataques mapeada al OWASP LLM Top 10, cómo probarlos de forma automatizable en un pipeline de CI y cinco capas de defensa que se activan en vivo. Te vas con una metodología replicable y el repositorio con todo el código.",
+      "Usar RAG en producción para que una IA responda con datos internos de la organización o de un dominio específico como fuente de verdad es moneda corriente. Pero investigaciones muestran que alcanza con un solo documento envenenado (un PDF, un e-mail, un ticket) para que la IA se desvíe en sus respuestas o acciones: desde mandar a un usuario a un enlace de phishing hasta afirmar con total seguridad algo falso. Como builder o tester: ¿Lo ves venir?",
+      "Acá estudiamos una base de datos vectorial con su respectiva aplicación (ChromaDB+FastAPI+Ollama), la envenenamos, y mostramos una manera de probar y automatizar: de una aserción simple a un corpus de ataques y defensa en profundidad, todo con herramientas open-source. Te quedás con la visión de estas amenazas, una metodología y un repositorio para investigar (y, según tu caso, aplicar). No es una charla de AI hacking, sino de tomar parte de esa visión para la construcción y automatización de pruebas/defensas. Basado en OWASP LLM Top 10 e investigaciones como PoisonedRAG, PoisonArena y GASLITE.",
     ],
     speakers: [
       {
@@ -85,7 +85,7 @@ export const TALKS: Talk[] = [
         picture: "/images/conf/speakers/sebastian-passaro.webp",
         cutout: "/images/conf/speakers/sebastian-passaro-cutout.webp",
         shape: "triangle",
-        role: "Chapter Leader, OWASP Uruguay",
+        role: "Cybersecurity Specialist, Qubika",
         linkedin: "https://www.linkedin.com/in/sebastian-passaro/",
       },
     ],
