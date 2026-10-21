@@ -222,7 +222,7 @@ function ItemRow({
       </button>
       {timed && (
         <Input
-          className="h-8 w-[112px] px-2 text-xs tabular-nums sm:h-8"
+          className="h-10 w-[112px] px-2 text-base tabular-nums sm:h-8 sm:text-xs"
           placeholder="17:00"
           value={row.time}
           onChange={(event) => onChange("time", event.target.value)}
@@ -230,7 +230,7 @@ function ItemRow({
       )}
       <Input
         autoFocus={autoFocus}
-        className="h-8 min-w-0 flex-1 text-xs sm:h-8"
+        className="h-10 min-w-0 flex-1 text-base sm:h-8 sm:text-xs"
         placeholder="Texto del ítem"
         value={row.title}
         onChange={(event) => onChange("title", event.target.value)}
@@ -250,7 +250,7 @@ function ItemRow({
       </button>
       {detailed && (
         <Input
-          className="h-8 w-full text-xs text-muted-foreground sm:h-8"
+          className="h-10 w-full text-base text-muted-foreground sm:h-8 sm:text-xs"
           placeholder="Detalle (segunda línea)"
           value={row.detail}
           onChange={(event) => onChange("detail", event.target.value)}
@@ -421,7 +421,7 @@ export function SceneParams({
               {long ? (
                 <Textarea
                   aria-invalid={Boolean(error)}
-                  className="min-h-[72px] text-sm"
+                  className="min-h-[72px] text-base sm:text-sm"
                   id={id}
                   value={text}
                   onChange={(event) => set(key, event.target.value)}

@@ -96,11 +96,11 @@ export const owyStageRouter = {
     }),
 
   take: staff
-    .meta(docs("TAKE: the preview goes on air and the queue moves up (or the scene that left comes back)"))
+    .meta(docs("TAKE or CUT: the preview goes on air and the queue moves up (or the scene that left comes back)"))
     .input(TakeSchema)
     .output(TakeResultSchema)
     .effect(function* ({ input }) {
-      return yield* Stage.take(input.step);
+      return yield* Stage.take(input.step, input.transition);
     }),
 
   fireEffect: staff

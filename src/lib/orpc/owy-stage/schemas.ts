@@ -17,6 +17,8 @@ export const SetSceneSchema = z.object({
   eventId: z.string().nullable().optional(),
   /** Put the scene on air from scratch: new round, phone answers start over. */
   restart: z.boolean().optional(),
+  /** The brand wipe (default) or a straight cut. */
+  transition: z.enum(["wipe", "cut"]).optional(),
 });
 
 /** The whole rundown travels on every edit: it is tiny and conflict-free. */
@@ -26,7 +28,7 @@ export const SaveRundownSchema = z.object({ steps: RundownSchema });
 export const SaveDeskSchema = z.object({ desk: DeskSchema });
 
 /** TAKE sends the step the operator is looking at, so what goes out is what they saw. */
-export const TakeSchema = z.object({ step: DeskStepSchema });
+export const TakeSchema = z.object({ step: DeskStepSchema, transition: z.enum(["wipe", "cut"]).optional() });
 export const TakeResultSchema = z.object({ state: StageStateSchema, desk: DeskSchema });
 
 export const FireEffectSchema = EffectEventSchema;

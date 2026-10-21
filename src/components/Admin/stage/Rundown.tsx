@@ -345,7 +345,7 @@ function Step({
       <div className="flex items-center gap-1">
         <Input
           aria-label="Segundos al aire"
-          className="h-8 w-14 [appearance:textfield] px-1.5 text-center text-xs tabular-nums sm:h-8 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-9 w-14 [appearance:textfield] px-1.5 text-center text-base tabular-nums sm:h-8 sm:text-xs [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           max={7200}
           min={0}
           title="Segundos al aire · 0 = se queda hasta que pases de paso"

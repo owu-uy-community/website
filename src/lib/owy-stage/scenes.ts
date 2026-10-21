@@ -2077,8 +2077,11 @@ export const StageStateSchema = z.object({
   takenAt: z.string().default(""),
   /** Owy's last face, so a wall that connects mid-conversation catches up. */
   face: StoredFaceSchema.nullable().default(null),
+  /** How the wall gets there: the brand wipe, or a straight cut. Rides on the broadcast; never stored. */
+  transition: z.enum(["wipe", "cut"]).optional(),
 });
 export type StageState = z.infer<typeof StageStateSchema>;
+export type StageTransition = NonNullable<StageState["transition"]>;
 
 export const DEFAULT_STAGE_STATE: StageState = {
   scene: "black",

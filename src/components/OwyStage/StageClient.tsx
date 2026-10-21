@@ -76,8 +76,15 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
   }, [posted]);
 
   // A scene change plays the band wipe and swaps the scene while the bands
-  // cover the frame; params-only updates apply live.
+  // cover the frame; params-only updates apply live. A cut swaps at once,
+  // and also beats a wipe still on its way.
   const goTo = useCallback((next: StageState) => {
+    if (next.transition === "cut") {
+      if (swapTimer.current) clearTimeout(swapTimer.current);
+      setWipe(0);
+      setShown(next);
+      return;
+    }
     if (next.scene === shownRef.current?.scene) {
       setShown(next);
       return;
