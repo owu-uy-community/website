@@ -1,5 +1,7 @@
 import { SOCIAL_LINKS } from "app/lib/constants";
 
+import { isHiddenPath } from "./flags";
+
 export const SITE_URL = "https://www.owu.uy";
 export const CONF_URL = "https://conf.owu.uy";
 export const REPO_URL = "https://github.com/owu-uy-community/website";
@@ -92,7 +94,7 @@ export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
     title: "Empresas",
     links: [PAGES.empresas, { href: "/empresas#jobs", label: "Reglas de #jobs" }, PAGES.conf],
   },
-];
+].map((column) => ({ ...column, links: column.links.filter((link) => !isHiddenPath(link.href)) }));
 
 export const SOCIALS = [
   { key: "slack", label: "Slack", href: SOCIAL_LINKS.slack },
@@ -104,7 +106,9 @@ export const SOCIALS = [
 ] as const;
 
 /** Public routes for the sitemap and the command palette */
-export const PUBLIC_ROUTES = Object.values(PAGES).filter((page) => !("external" in page && page.external));
+export const PUBLIC_ROUTES = Object.values(PAGES).filter(
+  (page) => !("external" in page && page.external) && !isHiddenPath(page.href)
+);
 
 /**
  * Exact names (as they appear in the meetup-bot feed or a hand-added event's

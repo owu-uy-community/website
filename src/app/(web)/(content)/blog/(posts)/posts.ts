@@ -1,6 +1,8 @@
 import { promises as fs } from "fs";
 import path from "path";
 
+import { isHiddenPost } from "lib/community/flags";
+
 import { DEFAULT_POST_AUTHOR, resolvePostImage, showDrafts, type PostInfo } from "./post-metadata";
 
 export interface BlogPost {
@@ -118,8 +120,10 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
     })
   );
 
-  // Drafts stay out of the index, the feed and the sitemap wherever they can't be read
-  return posts.filter((post) => !post.draft || showDrafts()).sort((a, b) => b.date.localeCompare(a.date));
+  // Drafts stay out of the index, the feed and the sitemap wherever they can't be read; so do guides behind the launch flag
+  return posts
+    .filter((post) => (!post.draft || showDrafts()) && !isHiddenPost(post.tags))
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /** Unique tags across posts, most used first (ties alphabetically) */

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { isHiddenPath } from "./lib/community/flags";
 import { LEGACY_REDIRECTS } from "./lib/tenant";
 
 const CONF_HOST = "conf.owu.uy";
@@ -37,6 +38,12 @@ export async function proxy(request: NextRequest) {
 
   if (MAIN_HOSTS.has(host) && (pathname === "/conf" || pathname.startsWith("/conf/"))) {
     return NextResponse.redirect(new URL(pathname.slice("/conf".length) || "/", CONF_URL), 308);
+  }
+
+  // Features behind the resources launch flag: pages, feeds and downloads answer 404 until it's on.
+  // Rewriting to a path no route matches renders the site's own 404 page with a 404 status.
+  if (isHiddenPath(pathname)) {
+    return NextResponse.rewrite(new URL("/_hidden", request.url));
   }
 
   // Community routes moved from /c to /comunidad; keep the short form alive so

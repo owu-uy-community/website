@@ -46,6 +46,7 @@ import Footer from "components/shared/Footer";
 import { RichText } from "components/shared/RichText";
 import { getCommunities, getLanding, getTalks } from "lib/community/content";
 import { getUpcomingEvents, nextEventByCommunity } from "lib/community/events";
+import { RESOURCES_ON } from "lib/community/flags";
 import { CONF_URL, issueFormUrl, PAGES, SITE_URL, SOCIALS } from "lib/community/site";
 import { dateParts } from "lib/community/time";
 
@@ -223,7 +224,10 @@ export default async function Landing() {
               <strong className="font-semibold text-zinc-200">{events.length}</strong> eventos en agenda
             </span>
             <span aria-hidden>·</span>
-            <Link className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors hover:text-yellow-400 hover:decoration-yellow-400" href={PAGES.primeraVez.href}>
+            <Link
+              className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors hover:text-yellow-400 hover:decoration-yellow-400"
+              href={PAGES.primeraVez.href}
+            >
               ¿Primera vez?
             </Link>
           </p>
@@ -235,7 +239,7 @@ export default async function Landing() {
         <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
           <Reveal className="flex flex-col gap-10">
             {landing?.mainSectionContent ? (
-              <div className="max-w-xl space-y-4 text-base leading-relaxed text-zinc-400 [&_strong]:font-semibold [&_strong]:text-white sm:text-[17px]">
+              <div className="max-w-xl space-y-4 text-base leading-relaxed text-zinc-400 sm:text-[17px] [&_strong]:font-semibold [&_strong]:text-white">
                 <RichText content={landing.mainSectionContent as unknown as string} />
               </div>
             ) : null}
@@ -371,7 +375,9 @@ export default async function Landing() {
                 <ArrowRight aria-hidden className="size-5" />
               </span>
               <span>
-                <span className="block font-title text-[15px] font-semibold text-white">Ver las {communities.length}</span>
+                <span className="block font-title text-[15px] font-semibold text-white">
+                  Ver las {communities.length}
+                </span>
                 <span className="mt-1 block text-[13px] text-zinc-500">y sumá la tuya</span>
               </span>
             </Link>
@@ -431,30 +437,33 @@ export default async function Landing() {
       ) : null}
 
       {/* -------------------------------------------------------------- Recursos */}
-      <Section title="Lo que la comunidad comparte">
-        <Cells className="md:grid-cols-3">
-          {RESOURCES.map(({ icon: Icon, href, label, description, tag }) => (
-            <Link key={href} className={cardClassName(true, "group flex flex-col gap-8 p-6 sm:p-7")} href={href}>
-              <div className="flex items-center justify-between">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300 transition-colors duration-300 group-hover:bg-yellow-400/10 group-hover:text-yellow-400">
-                  <Icon aria-hidden className="size-5" />
-                </span>
-                <Badge>{tag}</Badge>
-              </div>
-              <div>
-                <h3 className={cn(headingClassName.h3, "flex items-center gap-2")}>
-                  {label}
-                  <ArrowRight
-                    aria-hidden
-                    className="size-4 text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-zinc-200"
-                  />
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{description}</p>
-              </div>
-            </Link>
-          ))}
-        </Cells>
-      </Section>
+      {/* Behind the resources launch flag (lib/community/flags) */}
+      {RESOURCES_ON ? (
+        <Section title="Lo que la comunidad comparte">
+          <Cells className="md:grid-cols-3">
+            {RESOURCES.map(({ icon: Icon, href, label, description, tag }) => (
+              <Link key={href} className={cardClassName(true, "group flex flex-col gap-8 p-6 sm:p-7")} href={href}>
+                <div className="flex items-center justify-between">
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-white/[0.05] text-zinc-300 transition-colors duration-300 group-hover:bg-yellow-400/10 group-hover:text-yellow-400">
+                    <Icon aria-hidden className="size-5" />
+                  </span>
+                  <Badge>{tag}</Badge>
+                </div>
+                <div>
+                  <h3 className={cn(headingClassName.h3, "flex items-center gap-2")}>
+                    {label}
+                    <ArrowRight
+                      aria-hidden
+                      className="size-4 text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-zinc-200"
+                    />
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">{description}</p>
+                </div>
+              </Link>
+            ))}
+          </Cells>
+        </Section>
+      ) : null}
 
       {/* -------------------------------------------------------------- Empresas */}
       <Section>
