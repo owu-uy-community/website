@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
@@ -100,7 +101,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
             <AnimatePresence initial={false} mode="wait">
               <motion.div key={tile.slug} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.3 }}>
                 <Link
-                  className="owu-orbit-drift pointer-events-auto flex items-center justify-center rounded-[22%] border border-white/10 bg-white p-2.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-[filter,scale] duration-300 hover:scale-110"
+                  className="owu-orbit-drift pointer-events-auto relative flex items-center justify-center overflow-hidden rounded-[22%] border border-white/10 bg-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-[filter,scale] duration-300 hover:scale-110"
                   href={`/comunidades#${tile.slug}`}
                   style={
                     {
@@ -120,8 +121,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
                   onPointerLeave={() => setHovered(false)}
                 >
                   {tile.logo ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img alt="" className="max-h-full max-w-full object-contain" src={tile.logo} />
+                    <Image alt="" className="object-cover" fill sizes={`${slot.size}px`} src={tile.logo} />
                   ) : (
                     <span className="font-title text-lg font-bold text-zinc-900">{initials(tile.name)}</span>
                   )}

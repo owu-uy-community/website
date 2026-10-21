@@ -1,4 +1,5 @@
 import { ArrowRight, ArrowUpRight, Plus } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 
@@ -338,7 +339,9 @@ export const initials = (name: string) =>
     .map((word) => word[0]?.toUpperCase())
     .join("");
 
-/** A community's logo on a white plate, or its initials when it has none */
+const LOGO_PX = { sm: 36, md: 48, lg: 64 } as const;
+
+/** A community's logo tile, or its initials when it has none */
 export function CommunityLogo({
   name,
   logo,
@@ -368,11 +371,10 @@ export function CommunityLogo({
     );
   }
 
+  // Logo files are square tiles with their own background and breathing room, shown edge to edge
   return (
-    <span className={cn("flex shrink-0 items-center justify-center bg-white p-1.5", box, className)}>
-      {/* Logos are small, pre-optimized webp files in /public */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img alt={`Logo de ${name}`} className="max-h-full max-w-full object-contain" loading="lazy" src={logo} />
+    <span className={cn("relative shrink-0 overflow-hidden bg-white", box, className)}>
+      <Image alt={`Logo de ${name}`} className="object-cover" fill sizes={`${LOGO_PX[size]}px`} src={logo} />
     </span>
   );
 }
