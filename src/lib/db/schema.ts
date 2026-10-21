@@ -165,6 +165,74 @@ export const communityMembers = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Encuesta de sueldos: one survey per year. Answers carry no user id; who
+// already answered lives apart, as a keyed hash, so a person answers once but
+// an answer can't be traced back to them.
+// ---------------------------------------------------------------------------
+export const salarySurveyStatus = pgEnum("SalarySurveyStatus", ["draft", "open", "closed", "published"]);
+
+export const salarySurveys = pgTable("salary_surveys", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  /** The edition, e.g. "2027"; it's in the URLs */
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  status: salarySurveyStatus("status").notNull().default("draft"),
+  opensAt: ts("opensAt"),
+  closesAt: ts("closesAt"),
+  createdAt: ts("createdAt").notNull().defaultNow(),
+  updatedAt: ts("updatedAt")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const salarySurveyResponses = pgTable(
+  "salary_survey_responses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    surveyId: text("surveyId")
+      .notNull()
+      .references(() => salarySurveys.id, { onDelete: "cascade" }),
+    role: text("role").notNull(),
+    seniority: text("seniority").notNull(),
+    experience: text("experience").notNull(),
+    stacks: text("stacks").array().notNull(),
+    employer: text("employer").notNull(),
+    contract: text("contract").notNull(),
+    modality: text("modality").notNull(),
+    department: text("department").notNull(),
+    currency: text("currency").notNull(),
+    /** Monthly nominal salary (or billing), whole units of `currency` */
+    amount: integer("amount").notNull(),
+    hoursPerWeek: integer("hoursPerWeek").notNull(),
+    gender: text("gender"),
+    education: text("education"),
+    /** The day only: a timestamp would let someone line answers up with who logged in when */
+    createdOn: date("createdOn", { mode: "string" }).notNull().defaultNow(),
+  },
+  (t) => [index("salary_survey_responses_surveyId_idx").on(t.surveyId)]
+);
+
+export const salarySurveyParticipants = pgTable(
+  "salary_survey_participants",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    surveyId: text("surveyId")
+      .notNull()
+      .references(() => salarySurveys.id, { onDelete: "cascade" }),
+    /** HMAC-SHA256 of survey + user id with a server secret: answers once, without saying who */
+    participantHash: text("participantHash").notNull(),
+  },
+  (t) => [unique("salary_survey_participants_surveyId_hash_key").on(t.surveyId, t.participantHash)]
+);
+
+// ---------------------------------------------------------------------------
 // Domain tables
 // ---------------------------------------------------------------------------
 // Physical table stays "open_spaces": db:push cannot express a safe rename
@@ -1051,3 +1119,5 @@ export type AttendeeRow = typeof attendees.$inferSelect;
 export type ScreenRow = typeof screens.$inferSelect;
 export type OutboundMessageRow = typeof outboundMessages.$inferSelect;
 export type ActivityRow = typeof activity.$inferSelect;
+export type SalarySurveyRow = typeof salarySurveys.$inferSelect;
+export type SalarySurveyResponseRow = typeof salarySurveyResponses.$inferSelect;
