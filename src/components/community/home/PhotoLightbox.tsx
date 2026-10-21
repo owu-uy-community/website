@@ -212,7 +212,14 @@ export default function PhotoLightbox({
                 type="button"
                 onClick={() => onStep(i - index)}
               >
-                <Image alt="" className="object-cover" fill sizes="64px" src={item.src} />
+                <Image
+                  alt=""
+                  className="object-cover"
+                  fill
+                  sizes="64px"
+                  src={item.src}
+                  style={item.focus ? { objectPosition: item.focus } : undefined}
+                />
               </button>
             ))}
           </div>
