@@ -5,6 +5,7 @@ import { CONF_DATES, SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
 import CalendarSubscribe from "components/community/CalendarSubscribe";
 import { EventList, splitThisWeek } from "components/community/events";
+import CommunityGrid from "components/community/home/CommunityGrid";
 import HeroOrbit from "components/community/home/HeroOrbit";
 import PhotoWall from "components/community/home/PhotoWall";
 import RotatingWord from "components/community/home/RotatingWord";
@@ -18,7 +19,6 @@ import {
   Card,
   cardClassName,
   Cells,
-  CommunityLogo,
   Container,
   delay,
   Eyebrow,
@@ -333,46 +333,34 @@ export default async function Landing() {
         description="Cada grupo organiza sus propias meetups. OWU los conecta con un Slack, una agenda y una conferencia."
         title={`${communities.length} grupos, un mismo Slack`}
       >
-        <Cells className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-          {featured.slice(0, 11).map((community) => {
+        <CommunityGrid
+          communities={featured.map((community) => {
             const next = nextByCommunity.get(community.slug);
             const when = next ? dateParts(next.start) : null;
 
-            return (
-              <Link
-                key={community.slug}
-                className={cardClassName(true, "flex flex-col gap-5 p-5 sm:p-6")}
-                href={`/comunidades#${community.slug}`}
-              >
-                <CommunityLogo logo={community.logo} name={community.name} />
-                <div className="min-w-0">
-                  <p className="truncate font-title text-[15px] font-semibold text-white">{community.name}</p>
-                  <p className="mt-1 truncate text-[13px] text-zinc-500">
-                    {when ? (
-                      <span className="font-medium text-yellow-400">
-                        Próx. {when.weekday} {when.day} {when.month}
-                      </span>
-                    ) : (
-                      community.description.split(/[.:]/)[0]
-                    )}
-                  </p>
-                </div>
-              </Link>
-            );
+            return {
+              slug: community.slug,
+              name: community.name,
+              logo: community.logo ?? null,
+              next: when ? `Próx. ${when.weekday} ${when.day} ${when.month}` : null,
+              blurb: community.description.split(/[.:]/)[0] ?? "",
+            };
           })}
-          <Link
-            className="group flex flex-col justify-between gap-5 rounded-2xl border border-dashed border-white/15 p-5 transition-[border-color,background-color] duration-300 hover:border-yellow-400/50 hover:bg-yellow-400/[0.04] sm:p-6"
-            href={PAGES.comunidades.href}
-          >
-            <span className="flex size-12 items-center justify-center rounded-xl bg-white/[0.05] text-zinc-400 transition-colors duration-300 group-hover:bg-yellow-400 group-hover:text-zinc-950">
-              <ArrowRight aria-hidden className="size-5" />
-            </span>
-            <span>
-              <span className="block font-title text-[15px] font-semibold text-white">Ver las {communities.length}</span>
-              <span className="mt-1 block text-[13px] text-zinc-500">y sumá la tuya</span>
-            </span>
-          </Link>
-        </Cells>
+          cta={
+            <Link
+              className="group flex h-full flex-col justify-between gap-5 rounded-2xl border border-dashed border-white/15 p-5 transition-[border-color,background-color] duration-300 hover:border-yellow-400/50 hover:bg-yellow-400/[0.04] sm:p-6"
+              href={PAGES.comunidades.href}
+            >
+              <span className="flex size-12 items-center justify-center rounded-xl bg-white/[0.05] text-zinc-400 transition-colors duration-300 group-hover:bg-yellow-400 group-hover:text-zinc-950">
+                <ArrowRight aria-hidden className="size-5" />
+              </span>
+              <span>
+                <span className="block font-title text-[15px] font-semibold text-white">Ver las {communities.length}</span>
+                <span className="mt-1 block text-[13px] text-zinc-500">y sumá la tuya</span>
+              </span>
+            </Link>
+          }
+        />
       </Section>
 
       {/* ------------------------------------------------------- Cómo participar */}
