@@ -329,7 +329,7 @@ export function Section({
 
 /* ------------------------------------------------------------- pieces */
 
-const initials = (name: string) =>
+export const initials = (name: string) =>
   name
     .replace(/[^\p{L}\p{N} ]/gu, " ")
     .split(/\s+/)
