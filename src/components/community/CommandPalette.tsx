@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { SearchItem } from "lib/community/search";
+import { scoreItem } from "lib/community/search-score";
 
 import { isExternal, Kbd, outbound } from "./ui";
 
@@ -75,6 +76,7 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
             <Dialog.Title className="sr-only">Buscar en OWU</Dialog.Title>
             <Command
               loop
+              filter={scoreItem}
               className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:font-terminal [&_[cmdk-group-heading]]:text-[10.5px] [&_[cmdk-group-heading]]:tracking-[0.12em] [&_[cmdk-group-heading]]:text-zinc-500 [&_[cmdk-group-heading]]:uppercase"
             >
               <div className="flex items-center gap-3 border-b border-line px-4">
@@ -100,7 +102,7 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
                           key={`${group}-${item.href}-${item.label}`}
                           className="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-zinc-300 data-[selected=true]:bg-white/[0.06] data-[selected=true]:text-zinc-50"
                           keywords={[item.hint ?? "", item.keywords ?? ""]}
-                          value={`${group} ${item.label}`}
+                          value={`${item.label} · ${group}`}
                           onSelect={() => go(item.href)}
                         >
                           <Icon aria-hidden className="size-4 shrink-0 text-zinc-500 group-data-[selected=true]:text-yellow-400" />
