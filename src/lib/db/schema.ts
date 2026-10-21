@@ -209,6 +209,8 @@ export const salarySurveyResponses = pgTable(
     /** Monthly nominal salary (or billing), whole units of `currency` */
     amount: integer("amount").notNull(),
     hoursPerWeek: integer("hoursPerWeek").notNull(),
+    /** How happy with the pay, 1 (not at all) to 5 (very) */
+    satisfaction: integer("satisfaction"),
     gender: text("gender"),
     education: text("education"),
     /** The day only: a timestamp would let someone line answers up with who logged in when */

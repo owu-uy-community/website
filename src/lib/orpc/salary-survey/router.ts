@@ -5,6 +5,7 @@ import * as z from "zod";
 import { authed, pub, staff } from "../base";
 import {
   CurrentSurveySchema,
+  DatasetRowsSchema,
   DatasetSchema,
   ResultsSchema,
   SetStatusSchema,
@@ -17,9 +18,12 @@ import * as SalarySurvey from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Salary survey"], summary });
 
+/** The open-data endpoints answer plain GETs, so a spreadsheet or a script can read them */
+const open = (summary: string, path: `/${string}`) => openapi({ tags: ["Salary survey"], summary, method: "GET", path });
+
 export const salarySurveyRouter = {
   current: pub
-    .meta(docs("The open edition (or the latest one), its response count and whether the caller already answered"))
+    .meta(open("The open edition (or the latest one), its response count and whether the caller already answered", "/salary-survey/current"))
     .output(CurrentSurveySchema)
     .effect(function* ({ context }) {
       const session = yield* Effect.promise(() => context.getSession());
@@ -36,7 +40,7 @@ export const salarySurveyRouter = {
     }),
 
   results: pub
-    .meta(docs("Published results: quartiles per currency and group, small groups hidden"))
+    .meta(open("Published results: quartiles per currency and group, the respondents' profile, satisfaction", "/salary-survey/{slug}/results"))
     .input(SurveyRefSchema)
     .output(ResultsSchema)
     .effect(function* ({ input }) {
@@ -44,11 +48,26 @@ export const salarySurveyRouter = {
     }),
 
   dataset: pub
-    .meta(docs("Published open dataset as CSV, coarsened so no answer stands out"))
+    .meta(open("Published open dataset as CSV, coarsened so no answer stands out", "/salary-survey/{slug}/dataset"))
     .input(SurveyRefSchema)
     .output(DatasetSchema)
     .effect(function* ({ input }) {
       return yield* SalarySurvey.getDataset(input.slug);
+    }),
+
+  datasetRows: pub
+    .meta(open("The same open dataset as JSON rows", "/salary-survey/{slug}/rows"))
+    .input(SurveyRefSchema)
+    .output(DatasetRowsSchema)
+    .effect(function* ({ input }) {
+      return yield* SalarySurvey.getDatasetRows(input.slug);
+    }),
+
+  editions: pub
+    .meta(open("Every published edition, newest first", "/salary-survey/editions"))
+    .output(z.array(SurveySchema))
+    .effect(function* () {
+      return yield* SalarySurvey.listPublished();
     }),
 
   list: staff

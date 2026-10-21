@@ -125,6 +125,15 @@ export const EDUCATION = options([
   { value: "prefiero-no-decir", label: "Prefiero no decir" },
 ]);
 
+/** "¿Qué tan conforme estás con lo que cobrás?", stored as 1–5 */
+export const SATISFACTION = options([
+  { value: "1", label: "Nada conforme" },
+  { value: "2", label: "Poco conforme" },
+  { value: "3", label: "Más o menos" },
+  { value: "4", label: "Bastante conforme" },
+  { value: "5", label: "Muy conforme" },
+]);
+
 /**
  * Monthly nominal amounts we accept, per currency. Wide on purpose: they only
  * catch typos (an extra zero, an annual figure), not "unusual" salaries.

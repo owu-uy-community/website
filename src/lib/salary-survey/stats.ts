@@ -1,4 +1,11 @@
-import type { Breakdown, CurrencyResults, Stat } from "lib/orpc/salary-survey/schemas";
+import type {
+  Breakdown,
+  CurrencyResults,
+  DatasetRow,
+  ProfileDimension,
+  Satisfaction,
+  Stat,
+} from "lib/orpc/salary-survey/schemas";
 
 import {
   CONTRACTS,
@@ -15,6 +22,13 @@ import {
   STACKS,
 } from "./questions";
 
+/*
+ * Pure arithmetic over answers: quartiles, breakdowns, the respondents' profile,
+ * the satisfaction scale and the open dataset. No server imports, so the
+ * explorer on the results page runs the same code in the browser over the
+ * published dataset and gets the same numbers.
+ */
+
 /** What the results and the dataset read from each answer */
 export type ResponseFacts = {
   role: string;
@@ -28,6 +42,7 @@ export type ResponseFacts = {
   currency: string;
   amount: number;
   hoursPerWeek: number;
+  satisfaction: number | null;
   gender: string | null;
   education: string | null;
 };
@@ -54,6 +69,15 @@ export function summarize(amounts: number[], threshold = MIN_GROUP_SIZE): Stat |
     median: Math.round(quantile(sorted, 0.5)),
     p75: Math.round(quantile(sorted, 0.75)),
   };
+}
+
+/** Where a value falls in a group, 0–100: the share of answers at or below it */
+export function percentileOf(amounts: number[], value: number) {
+  if (amounts.length === 0) return null;
+  const below = amounts.filter((amount) => amount < value).length;
+  const equal = amounts.filter((amount) => amount === value).length;
+
+  return Math.round(((below + equal / 2) / amounts.length) * 100);
 }
 
 /** Quartiles per category, in the catalog's order; small groups are counted but not shown */
@@ -90,10 +114,118 @@ export function currencyResults(rows: ResponseFacts[], threshold = MIN_GROUP_SIZ
       threshold
     ),
     bySeniority: breakdown(rows, (row) => [row.seniority], SENIORITIES, threshold),
+    byExperience: breakdown(rows, (row) => [row.experience], EXPERIENCE, threshold),
     byRole: breakdown(rows, (row) => [row.role], ROLES, threshold),
     byStack: breakdown(rows, (row) => row.stacks, STACKS, threshold),
+    byModality: breakdown(rows, (row) => [row.modality], MODALITIES, threshold),
     byContract: breakdown(rows, (row) => [row.contract], CONTRACTS, threshold),
     byMarket: breakdown(rows, (row) => [marketOf(row.employer)], MARKETS, threshold),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Who answered
+// ---------------------------------------------------------------------------
+
+const REGIONS: readonly Option[] = [
+  { value: "montevideo", label: "Montevideo" },
+  { value: "interior", label: "Interior" },
+];
+
+const regionOf = (department: string) => (department === "montevideo" ? "montevideo" : "interior");
+
+/** Counts per option of one question; options under the threshold are summed into `other`, never listed */
+function dimension(
+  key: string,
+  label: string,
+  rows: ResponseFacts[],
+  valueOf: (row: ResponseFacts) => string | null,
+  catalog: readonly Option[],
+  threshold: number
+): ProfileDimension {
+  const counts = new Map<string, number>();
+  let answered = 0;
+  for (const row of rows) {
+    const value = valueOf(row);
+    if (value == null) continue;
+    answered += 1;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+
+  const groups: ProfileDimension["groups"] = [];
+  let other = 0;
+  for (const option of catalog) {
+    const n = counts.get(option.value) ?? 0;
+    if (n === 0) continue;
+    if (n >= threshold) groups.push({ key: option.value, label: option.label, n });
+    else other += n;
+  }
+
+  return { key, label, answered, groups, other };
+}
+
+/** The respondents' profile: one dimension per closed question (the optional ones count only who answered) */
+export function profile(rows: ResponseFacts[], threshold = MIN_GROUP_SIZE): ProfileDimension[] {
+  return [
+    dimension("seniority", "Seniority", rows, (row) => row.seniority, SENIORITIES, threshold),
+    dimension("role", "Rol", rows, (row) => row.role, ROLES, threshold),
+    dimension("experience", "Años de experiencia", rows, (row) => row.experience, EXPERIENCE, threshold),
+    dimension("market", "Para quién", rows, (row) => marketOf(row.employer), MARKETS, threshold),
+    dimension("employer", "Tipo de empleador", rows, (row) => row.employer, EMPLOYERS, threshold),
+    dimension("modality", "Modalidad", rows, (row) => row.modality, MODALITIES, threshold),
+    dimension("contract", "Contratación", rows, (row) => row.contract, CONTRACTS, threshold),
+    dimension("region", "Dónde vive", rows, (row) => regionOf(row.department), REGIONS, threshold),
+    dimension("gender", "Género", rows, (row) => row.gender, GENDERS, threshold),
+    dimension("education", "Nivel educativo", rows, (row) => row.education, EDUCATION, threshold),
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// How people feel about their pay
+// ---------------------------------------------------------------------------
+
+const round1 = (value: number) => Math.round(value * 10) / 10;
+
+function meanGroups(
+  rows: ResponseFacts[],
+  keyOf: (row: ResponseFacts) => string,
+  catalog: readonly Option[],
+  threshold: number
+) {
+  const values = new Map<string, number[]>();
+  for (const row of rows) {
+    if (row.satisfaction == null) continue;
+    const key = keyOf(row);
+    values.set(key, [...(values.get(key) ?? []), row.satisfaction]);
+  }
+
+  return catalog.flatMap(({ value, label }) => {
+    const list = values.get(value);
+    if (!list || list.length < threshold) return [];
+
+    return [{ key: value, label, n: list.length, mean: round1(list.reduce((sum, v) => sum + v, 0) / list.length) }];
+  });
+}
+
+/** The 1–5 satisfaction scale: average, distribution and averages per seniority and market; null under the threshold */
+export function satisfactionStats(rows: ResponseFacts[], threshold = MIN_GROUP_SIZE): Satisfaction | null {
+  const answered = rows.filter((row) => row.satisfaction != null);
+  if (answered.length < threshold) return null;
+
+  const distribution = [0, 0, 0, 0, 0];
+  let total = 0;
+  for (const row of answered) {
+    const step = Math.min(5, Math.max(1, row.satisfaction!));
+    distribution[step - 1] += 1;
+    total += step;
+  }
+
+  return {
+    n: answered.length,
+    mean: round1(total / answered.length),
+    distribution,
+    bySeniority: meanGroups(answered, (row) => row.seniority, SENIORITIES, threshold),
+    byMarket: meanGroups(answered, (row) => marketOf(row.employer), MARKETS, threshold),
   };
 }
 
@@ -103,15 +235,10 @@ export function currencyResults(rows: ResponseFacts[], threshold = MIN_GROUP_SIZ
 
 const roundTo = (value: number, step: number) => Math.round(value / step) * step;
 
-const hoursBucket = (hours: number) => (hours < 30 ? "menos-30" : hours < 40 ? "30-39" : hours < 45 ? "40-44" : "45-o-mas");
+const hoursBucket = (hours: number) =>
+  hours < 30 ? "menos-30" : hours < 40 ? "30-39" : hours < 45 ? "40-44" : "45-o-mas";
 
-const csvCell = (value: string | number) => {
-  const text = String(value);
-
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-};
-
-const DATASET_COLUMNS = [
+export const DATASET_COLUMNS = [
   "rol",
   "seniority",
   "experiencia",
@@ -124,6 +251,19 @@ const DATASET_COLUMNS = [
   "moneda",
   "monto_mensual",
   "horas_semanales",
+  "conformidad",
+  "genero",
+  "educacion",
+] as const;
+
+const CATEGORICAL = [
+  "rol",
+  "seniority",
+  "experiencia",
+  "para_quien",
+  "contratacion",
+  "modalidad",
+  "region",
   "genero",
   "educacion",
 ] as const;
@@ -135,12 +275,14 @@ const DATASET_COLUMNS = [
  * ponytail: per-column suppression, not full k-anonymity on combinations; move
  * to combination checks if the dataset ever gets more columns.
  */
-export function datasetCsv(rows: ResponseFacts[], threshold = MIN_GROUP_SIZE): string {
+export function datasetRows(rows: ResponseFacts[], threshold = MIN_GROUP_SIZE): DatasetRow[] {
   const counts = new Map<string, number>();
-  const count = (column: string, value: string) => counts.set(`${column}:${value}`, (counts.get(`${column}:${value}`) ?? 0) + 1);
-  const coarse = (column: string, value: string) => ((counts.get(`${column}:${value}`) ?? 0) >= threshold ? value : "otro");
+  const count = (column: string, value: string) =>
+    counts.set(`${column}:${value}`, (counts.get(`${column}:${value}`) ?? 0) + 1);
+  const coarse = (column: string, value: string) =>
+    (counts.get(`${column}:${value}`) ?? 0) >= threshold ? value : "otro";
 
-  const shaped = rows.map((row) => ({
+  const shaped: DatasetRow[] = rows.map((row) => ({
     rol: row.role,
     seniority: row.seniority,
     experiencia: row.experience,
@@ -149,34 +291,47 @@ export function datasetCsv(rows: ResponseFacts[], threshold = MIN_GROUP_SIZE): s
     mercado: marketOf(row.employer),
     contratacion: row.contract,
     modalidad: row.modality,
-    region: row.department === "montevideo" ? "montevideo" : "interior",
+    region: regionOf(row.department),
     moneda: row.currency,
     monto_mensual: roundTo(row.amount, row.currency === "USD" ? 50 : 1000),
     horas_semanales: hoursBucket(row.hoursPerWeek),
+    conformidad: row.satisfaction,
     genero: row.gender ?? "sin-dato",
     educacion: row.education ?? "sin-dato",
   }));
 
-  const categorical = ["rol", "seniority", "experiencia", "para_quien", "contratacion", "modalidad", "region", "genero", "educacion"] as const;
   for (const row of shaped) {
-    for (const column of categorical) count(column, row[column]);
+    for (const column of CATEGORICAL) count(column, row[column]);
     for (const stack of row.stacks) count("stacks", stack);
   }
 
-  const lines = shaped.map((row) =>
-    DATASET_COLUMNS.map((column) => {
-      if (column === "stacks") return csvCell([...new Set(row.stacks.map((stack) => coarse("stacks", stack)))].join(";"));
-      if ((categorical as readonly string[]).includes(column)) return csvCell(coarse(column, row[column as (typeof categorical)[number]]));
+  return shaped.map((row) => ({
+    ...row,
+    ...Object.fromEntries(CATEGORICAL.map((column) => [column, coarse(column, row[column])])),
+    stacks: [...new Set(row.stacks.map((stack) => coarse("stacks", stack)))],
+  }));
+}
 
-      return csvCell(row[column]);
-    }).join(",")
+const csvCell = (value: string | number | null) => {
+  const text = value == null ? "" : String(value);
+
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+};
+
+export function datasetCsv(rows: ResponseFacts[], threshold = MIN_GROUP_SIZE): string {
+  const lines = datasetRows(rows, threshold).map((row) =>
+    DATASET_COLUMNS.map((column) => csvCell(column === "stacks" ? row.stacks.join(";") : row[column])).join(",")
   );
 
   return [DATASET_COLUMNS.join(","), ...lines].join("\n") + "\n";
 }
 
 /** The data dictionary shown next to the download */
-export const DATASET_DICTIONARY: { column: (typeof DATASET_COLUMNS)[number]; description: string; options?: readonly Option[] }[] = [
+export const DATASET_DICTIONARY: {
+  column: (typeof DATASET_COLUMNS)[number];
+  description: string;
+  options?: readonly Option[];
+}[] = [
   { column: "rol", description: "Rol principal", options: ROLES },
   { column: "seniority", description: "Seniority declarado", options: SENIORITIES },
   { column: "experiencia", description: "Años de experiencia, en rangos", options: EXPERIENCE },
@@ -187,8 +342,12 @@ export const DATASET_DICTIONARY: { column: (typeof DATASET_COLUMNS)[number]; des
   { column: "modalidad", description: "Remoto, híbrido o presencial", options: MODALITIES },
   { column: "region", description: "montevideo o interior" },
   { column: "moneda", description: "UYU o USD: los montos no se convierten" },
-  { column: "monto_mensual", description: "Nominal mensual (sueldo o facturación), redondeado a 1.000 UYU o 50 USD" },
+  {
+    column: "monto_mensual",
+    description: "Nominal mensual (sueldo o facturación), redondeado a 1.000 UYU o 50 USD",
+  },
   { column: "horas_semanales", description: "Horas por semana, en rangos" },
+  { column: "conformidad", description: "Qué tan conforme con lo que cobra, de 1 (nada) a 5 (muy)" },
   { column: "genero", description: "Opcional; sin-dato si no respondió", options: GENDERS },
   { column: "educacion", description: "Opcional; sin-dato si no respondió", options: EDUCATION },
 ];
