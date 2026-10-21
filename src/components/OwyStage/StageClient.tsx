@@ -20,6 +20,10 @@ import { type StageCanvas } from "lib/owy-stage/canvas";
 
 import { Stage, WIPE_MID_MS, Wipe, type StageBackground } from "./Stage";
 
+/** The admin page posts this into a preview monitor; the monitor says it is ready to receive. */
+export const MONITOR_SHOW = "owy-stage:show";
+export const MONITOR_READY = "owy-stage:ready";
+
 type Props = {
   bg: StageBackground;
   /** Pin one scene (direct OBS embed / admin thumbnail) instead of following the director. */
@@ -28,9 +32,17 @@ type Props = {
   preview?: boolean;
   /** Logical canvas (`?canvas=3584x960`, `ucu`, `fit`). Defaults to 1920×1080. */
   canvas?: StageCanvas | "fit";
+  /**
+   * The admin's monitors. `program` is the wall itself at a lower frame rate;
+   * `preview` never follows the wall: it shows whatever the admin page posts
+   * (a scene that is not on air yet), so it changes as the operator types.
+   */
+  monitor?: "program" | "preview";
 };
 
-export default function StageClient({ bg, fixed, preview = false, canvas }: Props) {
+export default function StageClient({ bg, fixed, preview = false, canvas, monitor }: Props) {
+  const posted = monitor === "preview";
+  const follows = !preview && !posted;
   const [shown, setShown] = useState<StageState | null>(null);
   const shownRef = useRef<StageState | null>(null);
   shownRef.current = shown;
@@ -46,8 +58,22 @@ export default function StageClient({ bg, fixed, preview = false, canvas }: Prop
   }, [fixed]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!posted) load();
+  }, [posted, load]);
+
+  // A preview monitor renders what its (same-origin) parent posts, and asks for it on mount.
+  useEffect(() => {
+    if (!posted) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string; state?: StageState | null } | null;
+      if (data?.type === MONITOR_SHOW) setShown(data.state ?? null);
+    };
+    window.addEventListener("message", onMessage);
+    window.parent.postMessage({ type: MONITOR_READY }, window.location.origin);
+
+    return () => window.removeEventListener("message", onMessage);
+  }, [posted]);
 
   // A scene change plays the band wipe and swaps the scene while the bands
   // cover the frame; params-only updates apply live.
@@ -61,7 +87,7 @@ export default function StageClient({ bg, fixed, preview = false, canvas }: Prop
     swapTimer.current = setTimeout(() => setShown(next), WIPE_MID_MS);
   }, []);
 
-  const { isConnected } = useRealtimeChannel(preview ? null : OWY_STAGE_CHANNEL, (event, payload) => {
+  const { isConnected } = useRealtimeChannel(follows ? OWY_STAGE_CHANNEL : null, (event, payload) => {
     if (event === "scene" && !fixed) goTo(payload as StageState);
     if (event === "effect") pushFx(payload as EffectEvent);
   });
@@ -69,8 +95,8 @@ export default function StageClient({ bg, fixed, preview = false, canvas }: Prop
   // The WebSocket route recycles every few minutes; anything sent during the
   // gap is gone, so resync whenever the connection comes back.
   useEffect(() => {
-    if (isConnected && !preview) load();
-  }, [isConnected, preview, load]);
+    if (isConnected && follows) load();
+  }, [isConnected, follows, load]);
 
   const Scene = shown
     ? (SCENE_COMPONENTS[shown.scene] as React.ComponentType<{
@@ -80,17 +106,16 @@ export default function StageClient({ bg, fixed, preview = false, canvas }: Prop
         takenAt: string;
       }>)
     : null;
+  // Interactive scenes restart (timers, inputs) on every take; the rest keep
+  // running through param edits. A preview monitor restarts on a new round too,
+  // which is how the admin replays a scene that counts down.
+  const restarts = posted || (INTERACTIVE_SCENES as readonly string[]).includes(shown?.scene ?? "");
 
   return (
-    <Stage bg={bg} canvas={canvas} preview={preview}>
+    <Stage bg={bg} canvas={canvas} preview={preview} throttle={preview || Boolean(monitor)}>
       {Scene && shown && (
         <Scene
-          // Interactive scenes restart (timers, inputs) on every take; the rest keep running through param edits.
-          key={
-            (INTERACTIVE_SCENES as readonly string[]).includes(shown.scene)
-              ? `${shown.scene}:${shown.round}`
-              : shown.scene
-          }
+          key={restarts ? `${shown.scene}:${shown.round}` : shown.scene}
           eventId={shown.eventId}
           params={parseSceneParams(shown.scene, shown.params)}
           round={shown.round ?? ""}

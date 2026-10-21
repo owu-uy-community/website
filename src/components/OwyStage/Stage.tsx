@@ -37,10 +37,17 @@ export const BRAND = {
 
 export type StageBackground = "black" | "transparent";
 
-export const StageContext = createContext<{ preview: boolean; bg: StageBackground; canvas: StageCanvas }>({
+export const StageContext = createContext<{
+  preview: boolean;
+  bg: StageBackground;
+  canvas: StageCanvas;
+  /** Fewer frames, same behaviour: the admin's monitors (thumbnails are throttled by `preview`). */
+  throttle: boolean;
+}>({
   preview: false,
   bg: "black",
   canvas: DEFAULT_CANVAS,
+  throttle: false,
 });
 
 /** Canvas plus the two numbers every scene needs: type scale and "is it a strip?". */
@@ -61,11 +68,13 @@ const FONTS = [
 export function Stage({
   bg,
   preview,
+  throttle = preview,
   canvas = DEFAULT_CANVAS,
   children,
 }: {
   bg: StageBackground;
   preview: boolean;
+  throttle?: boolean;
   canvas?: StageCanvas | "fit";
   children: ReactNode;
 }) {
@@ -109,7 +118,7 @@ export function Stage({
   }, []);
 
   return (
-    <StageContext.Provider value={{ preview, bg, canvas: size }}>
+    <StageContext.Provider value={{ preview, bg, canvas: size, throttle }}>
       {/* Unlayered, so it beats the `@layer base` body background while a stage is mounted */}
       <style>{`html,body{background:transparent!important;margin:0;overflow:hidden}`}</style>
       <MotionConfig reducedMotion="never">
@@ -134,10 +143,10 @@ export function Stage({
 /**
  * Per-frame callback on motion's shared frameloop. `dt` is clamped so a
  * throttled tab (CEF, background) catches up instead of teleporting physics;
- * previews run at ~15 fps to keep a grid of thumbnails cheap.
+ * previews and the admin's monitors run at ~15 fps to stay cheap.
  */
 export function useStageFrame(callback: (t: number, dt: number) => void) {
-  const { preview } = useContext(StageContext);
+  const { throttle } = useContext(StageContext);
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
   const last = useRef(0);
@@ -146,11 +155,11 @@ export function useStageFrame(callback: (t: number, dt: number) => void) {
     useCallback(
       (t: number) => {
         const elapsed = t - last.current;
-        if (preview && elapsed < 66) return;
+        if (throttle && elapsed < 66) return;
         callbackRef.current(t, Math.min(last.current ? elapsed : 16, 100));
         last.current = t;
       },
-      [preview]
+      [throttle]
     )
   );
 }

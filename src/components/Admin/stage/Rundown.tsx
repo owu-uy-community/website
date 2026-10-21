@@ -6,12 +6,25 @@ import { Reorder, useDragControls } from "motion/react";
 import { GripVertical, ListVideo, Pause, Pin, Play, Repeat, SkipBack, SkipForward, Square, X } from "lucide-react";
 
 import { clampValue, cn } from "app/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "components/shared/ui/alert-dialog";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Card, CardContent } from "components/shared/ui/card";
+import { ButtonGroup } from "components/shared/ui/button-group";
+import { Empty } from "components/shared/ui/empty";
 import { Input } from "components/shared/ui/input";
 import { Switch } from "components/shared/ui/switch";
 import { toast } from "components/shared/ui/toast-utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "components/shared/ui/tooltip";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc } from "lib/orpc";
 import { OWY_STAGE_CHANNEL, SCENES, type RundownStep, type SceneId } from "lib/owy-stage/scenes";
@@ -26,13 +39,18 @@ const STOPPED: Playhead = { cursor: null, startedAt: 0, pausedAt: null };
 
 /**
  * The rundown player: the ordered list of takes with the seconds each one
- * stays up, and the clock that walks it.
+ * stays up, and the clock that walks it. The clock only crosses boundaries;
+ * the countdown is drawn by `useRundownClock` where it is shown, so the page
+ * around it doesn't re-render four times a second.
  *
  * ponytail: the clock lives in this tab (like the OBS loop), so closing it
  * leaves the wall on the current scene instead of advancing. Move the schedule
  * into the stage state if the wall ever has to run unattended.
  */
-export function useRundown(take: (scene: SceneId, params?: Record<string, unknown>) => void, liveScene: SceneId) {
+export function useRundown(
+  take: (scene: SceneId, params: Record<string, unknown> | undefined, restart: boolean) => void,
+  liveScene: SceneId
+) {
   const queryClient = useQueryClient();
   const key = orpc.owyStage.getRundown.queryKey();
   const { data } = useQuery(orpc.owyStage.getRundown.queryOptions({ staleTime: 60_000 }));
@@ -52,7 +70,6 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
   const takeRef = useRef(take);
   takeRef.current = take;
   const [loop, setLoop] = useState(true);
-  const [now, setNow] = useState(() => Date.now());
   const playing = play.cursor !== null && play.pausedAt === null;
   // Interval callbacks and drag handlers read the live values from here instead
   // of from a closure, so neither needs to be rebuilt on every render.
@@ -69,15 +86,13 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
     reorder(next);
     save.mutate({ steps: next });
   };
-  const add = (scene: SceneId, params: Record<string, unknown> = {}) => {
+  const add = (scene: SceneId, params: Record<string, unknown> = {}) =>
     write([...steps, { id: newId(), scene, sec: DEFAULT_SEC, params }]);
-    toast.success("Al guion", SCENES[scene].title);
-  };
   const patch = (id: string, change: Partial<RundownStep>) =>
     write(steps.map((step) => (step.id === id ? { ...step, ...change } : step)));
   const remove = (id: string) => write(steps.filter((step) => step.id !== id));
+  /** The UI confirms first (AlertDialog). */
   const clear = () => {
-    if (steps.length && !window.confirm(`¿Vaciar el guion? (${steps.length} pasos)`)) return;
     setPlay(STOPPED);
     write([]);
   };
@@ -87,7 +102,8 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
     const step = stateRef.current.steps.find((item) => item.id === id);
     if (!step) return;
     expected.current = step.scene;
-    takeRef.current(step.scene, step.params);
+    // Every step is a fresh take: two polls in a row must not share their votes or timers.
+    takeRef.current(step.scene, step.params, true);
     setPlay({ cursor: id, startedAt: Date.now(), pausedAt: null });
   }, []);
 
@@ -123,7 +139,7 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
   const stop = () => setPlay(STOPPED);
   const toggle = () => (playing ? pause() : start());
 
-  // One interval does both jobs: redraw the countdown and cross the boundary.
+  // Crossing a step's boundary; nothing re-renders between boundaries.
   useEffect(() => {
     if (!playing) return;
     const timer = setInterval(() => {
@@ -131,15 +147,10 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
       const step = list.find((item) => item.id === current.cursor);
       if (!step) return setPlay(STOPPED);
       if (step.sec > 0 && Date.now() - current.startedAt >= step.sec * 1000) skip(1);
-      setNow(Date.now());
     }, 250);
 
     return () => clearInterval(timer);
   }, [playing, skip]);
-
-  // The countdown is drawn from `now`, which only moves while the clock runs:
-  // refresh it on every transition so a resume never paints a stale number.
-  useEffect(() => setNow(Date.now()), [play]);
 
   // The player follows the wall: a take from anywhere else (the library, the
   // params form, another device, the bot) moves the playhead when that scene is
@@ -168,27 +179,18 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
 
   const step = steps.find((item) => item.id === play.cursor) ?? null;
   const at = step ? steps.indexOf(step) : -1;
-  const elapsed = play.cursor ? ((play.pausedAt ?? now) - play.startedAt) / 1000 : 0;
-  const after = at < 0 ? steps : steps.slice(at + 1);
-  const left = step && step.sec > 0 ? Math.max(0, step.sec - elapsed) : null;
-  // Only an all-timed tail has a finish time; a `0` step waits for a human.
-  const tail = (left ?? 0) + after.reduce((sum, item) => sum + item.sec, 0);
-  const timed = after.every((item) => item.sec > 0) && (!step || step.sec > 0);
 
   return {
     steps,
     step,
     at,
     next: steps[at + 1] ?? (loop ? steps[0] : undefined),
-    left,
-    elapsed,
+    play,
     playing,
     stopped: play.cursor === null,
     loop,
     setLoop,
     total: steps.reduce((sum, item) => sum + item.sec, 0),
-    // Only a finite, fully timed run has a finish time (a loop never ends and a `0` step waits for a human).
-    endsAt: playing && !loop && timed ? new Date(Date.now() + tail * 1000) : null,
     add,
     patch,
     remove,
@@ -206,16 +208,89 @@ export function useRundown(take: (scene: SceneId, params?: Record<string, unknow
 
 export type Rundown = ReturnType<typeof useRundown>;
 
-/** 56 px of scene: the pre-rendered thumbnail, no hover preview (a list of iframes is not free). */
+/** The ticking part (seconds left, progress, finish time), only where it is drawn. */
+export function useRundownClock(rundown: Rundown) {
+  const { play, playing, step, steps, at, loop } = rundown;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    setNow(Date.now());
+    if (!playing) return;
+    const timer = setInterval(() => setNow(Date.now()), 250);
+
+    return () => clearInterval(timer);
+  }, [playing, play]);
+
+  const elapsed = play.cursor ? ((play.pausedAt ?? now) - play.startedAt) / 1000 : 0;
+  const left = step && step.sec > 0 ? Math.max(0, step.sec - elapsed) : null;
+  const after = at < 0 ? steps : steps.slice(at + 1);
+  // Only a finite, fully timed run has a finish time (a loop never ends and a `0` step waits for a human).
+  const timed = after.every((item) => item.sec > 0) && (!step || step.sec > 0);
+  const tail = (left ?? 0) + after.reduce((sum, item) => sum + item.sec, 0);
+
+  return {
+    elapsed,
+    left,
+    progress: step && step.sec > 0 ? Math.min(100, (elapsed / step.sec) * 100) : 0,
+    endsAt: playing && !loop && timed ? new Date(now + tail * 1000) : null,
+  };
+}
+
+/** 56 px of scene: the pre-rendered thumbnail, no live iframe (a list of iframes is not free). */
 function Thumb({ scene, className }: { scene: SceneId; className?: string }) {
   return (
     <img
       alt=""
       className={cn("aspect-video shrink-0 rounded bg-black object-cover", className)}
       decoding="async"
+      draggable={false}
       loading="lazy"
       src={`/owy-stage/thumbs/${scene}.jpg`}
     />
+  );
+}
+
+/** The guion's controls in the admin header: always at hand, whatever tab is open below. */
+export function RundownMiniPlayer({ rundown, onOpen }: { rundown: Rundown; onOpen: () => void }) {
+  const { steps, step, at, playing, stopped } = rundown;
+  const { left } = useRundownClock(rundown);
+
+  return (
+    <ButtonGroup className="hidden lg:flex">
+      <Button
+        className="h-9 gap-2 border border-input px-2.5 text-xs font-medium"
+        title="Ver el guion"
+        variant="ghost"
+        onClick={onOpen}
+      >
+        <ListVideo className="h-4 w-4" />
+        <span className="hidden xl:inline">Guion</span>
+        <span className="font-terminal text-muted-foreground tabular-nums">
+          {step ? `${at + 1}/${steps.length}${left !== null ? ` · ${mmss(left)}` : ""}` : `${steps.length} pasos`}
+        </span>
+      </Button>
+      <Button
+        aria-label={playing ? "Pausar el guion" : "Reproducir el guion"}
+        className="h-9 w-9 border border-input"
+        disabled={!steps.length}
+        size="icon"
+        variant="ghost"
+        onClick={rundown.toggle}
+      >
+        {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </Button>
+      {!stopped && (
+        <Button
+          aria-label="Paso siguiente del guion"
+          className="h-9 w-9 border border-input"
+          size="icon"
+          variant="ghost"
+          onClick={() => rundown.skip(1)}
+        >
+          <SkipForward className="h-4 w-4" />
+        </Button>
+      )}
+    </ButtonGroup>
   );
 }
 
@@ -223,8 +298,6 @@ function Step({
   step,
   index,
   active,
-  progress,
-  left,
   live,
   liveParams,
   rundown,
@@ -232,8 +305,6 @@ function Step({
   step: RundownStep;
   index: number;
   active: boolean;
-  progress: number;
-  left: number | null;
   live: boolean;
   liveParams: Record<string, unknown>;
   rundown: Rundown;
@@ -245,7 +316,7 @@ function Step({
     <Reorder.Item
       className={cn(
         "relative flex items-center gap-2 overflow-hidden rounded-lg border bg-card px-2 py-1.5",
-        active ? "border-[#F5BB03] bg-[#F5BB03]/10" : "hover:border-muted-foreground/40"
+        active ? "border-primary bg-primary/10" : "hover:border-muted-foreground/40"
       )}
       dragControls={controls}
       dragListener={false}
@@ -255,7 +326,7 @@ function Step({
     >
       <button
         aria-label="Arrastrar para reordenar"
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        className="cursor-grab touch-none py-2 text-muted-foreground hover:text-foreground active:cursor-grabbing"
         type="button"
         onPointerDown={(event) => controls.start(event)}
       >
@@ -270,12 +341,11 @@ function Step({
         </p>
       </div>
       {live && !active && <Badge className="bg-red-600 text-white hover:bg-red-600">AL AIRE</Badge>}
-      {active && left !== null && (
-        <span className="text-xs font-semibold text-[#F5BB03] tabular-nums">{Math.ceil(left)}s</span>
-      )}
+      {active && <StepCountdown rundown={rundown} />}
       <div className="flex items-center gap-1">
         <Input
-          className="h-7 w-14 text-center text-xs tabular-nums"
+          aria-label="Segundos al aire"
+          className="h-8 w-14 [appearance:textfield] px-1.5 text-center text-xs tabular-nums sm:h-8 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           max={7200}
           min={0}
           title="Segundos al aire · 0 = se queda hasta que pases de paso"
@@ -285,10 +355,11 @@ function Step({
             rundown.patch(step.id, { sec: clampValue(Math.round(Number(event.target.value) || 0), 0, 7200) })
           }
         />
-        <span className="text-xs text-muted-foreground">{step.sec === 0 ? "manual" : "s"}</span>
+        <span className="w-10 text-xs text-muted-foreground">{step.sec === 0 ? "manual" : "s"}</span>
       </div>
       <Button
-        className={cn("h-7 w-7", pinned && "text-[#F5BB03]")}
+        aria-label={pinned ? "Quitar los parámetros propios" : "Fijar los parámetros que están al aire"}
+        className={cn("h-8 w-8", pinned && "text-primary")}
         disabled={!pinned && !live}
         size="icon"
         title={
@@ -302,7 +373,8 @@ function Step({
         <Pin className="h-3.5 w-3.5" fill={pinned ? "currentColor" : "none"} />
       </Button>
       <Button
-        className="h-7 w-7"
+        aria-label="Arrancar desde este paso"
+        className="h-8 w-8"
         size="icon"
         title="Arrancar desde este paso"
         variant="ghost"
@@ -311,7 +383,8 @@ function Step({
         <Play className="h-3.5 w-3.5" />
       </Button>
       <Button
-        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+        aria-label="Quitar del guion"
+        className="h-8 w-8 text-muted-foreground hover:text-destructive"
         size="icon"
         title="Quitar del guion"
         variant="ghost"
@@ -319,13 +392,58 @@ function Step({
       >
         <X className="h-3.5 w-3.5" />
       </Button>
-      {active && (
-        <span
-          className="absolute bottom-0 left-0 h-0.5 bg-[#F5BB03] transition-[width] duration-200"
-          style={{ width: `${progress}%` }}
-        />
-      )}
+      {active && <StepProgress rundown={rundown} />}
     </Reorder.Item>
+  );
+}
+
+function StepCountdown({ rundown }: { rundown: Rundown }) {
+  const { left } = useRundownClock(rundown);
+  if (left === null) return null;
+
+  return <span className="text-xs font-semibold text-primary tabular-nums">{Math.ceil(left)}s</span>;
+}
+
+function StepProgress({ rundown }: { rundown: Rundown }) {
+  const { progress } = useRundownClock(rundown);
+
+  return (
+    <span
+      className="absolute bottom-0 left-0 h-0.5 bg-primary transition-[width] duration-200"
+      style={{ width: `${progress}%` }}
+    />
+  );
+}
+
+function NowPlaying({ rundown }: { rundown: Rundown }) {
+  const { step, next, steps, at, total } = rundown;
+  const { left, endsAt } = useRundownClock(rundown);
+
+  return (
+    <div className="min-w-0 flex-1 text-sm">
+      {step ? (
+        <>
+          <p className="truncate">
+            <span className="text-muted-foreground">Paso {at + 1}: </span>
+            <strong>{SCENES[step.scene].title}</strong>
+            <span className="text-muted-foreground">
+              {left !== null ? ` · ${Math.ceil(left)} s` : " · se queda hasta que pases"}
+            </span>
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {next ? `Sigue: ${SCENES[next.scene].title}` : "Último paso"}
+            {endsAt &&
+              ` · termina ${endsAt.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit", hour12: false })}`}
+          </p>
+        </>
+      ) : (
+        <p className="truncate text-muted-foreground">
+          {steps.length
+            ? `Detenido · ${steps.length} paso${steps.length === 1 ? "" : "s"}${total > 0 ? ` · ${mmss(total)} de vuelta` : ""}`
+            : "Sin pasos todavía"}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -334,7 +452,7 @@ function Step({
  * wall walks it on its own (loop optional). Everything is saved on the server,
  * so any admin device edits the same list.
  */
-export function RundownCard({
+export function RundownPanel({
   rundown,
   liveScene,
   liveParams,
@@ -343,141 +461,112 @@ export function RundownCard({
   liveScene: SceneId;
   liveParams: Record<string, unknown>;
 }) {
-  const { steps, step, playing, stopped, left, next, loop, total, endsAt } = rundown;
-
-  // Space plays/pauses, arrows step. Skipped while typing or with a button
-  // focused, where the browser already gives Space and Enter a meaning.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) return;
-      if (event.key === " " && tag !== "BUTTON") {
-        event.preventDefault();
-        rundown.toggle();
-      }
-      if (event.key === "ArrowRight") rundown.skip(1);
-      if (event.key === "ArrowLeft") rundown.skip(-1);
-    };
-    window.addEventListener("keydown", onKey);
-
-    return () => window.removeEventListener("keydown", onKey);
-  }, [rundown]);
+  const { steps, step, playing, stopped, loop } = rundown;
 
   return (
-    <Card>
-      <CardContent className="space-y-3 p-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <ListVideo className="h-5 w-5" />
-          <h2 className="font-display text-lg font-semibold">Guion</h2>
-          <span className="text-xs text-muted-foreground">
-            {steps.length} paso{steps.length === 1 ? "" : "s"}
-            {total > 0 && ` · ${mmss(total)} de vuelta`}
-            {endsAt &&
-              ` · termina ${endsAt.toLocaleTimeString("es-UY", { hour: "2-digit", minute: "2-digit", hour12: false })}`}
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="hidden text-xs text-muted-foreground xl:inline">Espacio: play/pausa · ← →: pasos</span>
-            <label
-              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-              title="Volver al primer paso al terminar"
-            >
-              <Repeat className="h-3.5 w-3.5" /> Loop
-              <Switch checked={loop} onCheckedChange={rundown.setLoop} />
-            </label>
-            {steps.length > 0 && (
-              <Button size="sm" variant="ghost" onClick={rundown.clear}>
-                Vaciar
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+        <Button
+          className="h-10 min-w-[120px]"
+          disabled={!steps.length}
+          variant={playing ? "secondary" : "default"}
+          onClick={rundown.toggle}
+        >
+          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          {playing ? "Pausa" : stopped ? "Reproducir" : "Seguir"}
+        </Button>
+        <ButtonGroup>
           <Button
-            className="h-11 min-w-[130px] text-base"
-            disabled={!steps.length}
-            size="lg"
-            variant={playing ? "secondary" : "default"}
-            onClick={rundown.toggle}
-          >
-            {playing ? <Pause className="mr-1.5 h-5 w-5" /> : <Play className="mr-1.5 h-5 w-5" />}
-            {playing ? "Pausa" : stopped ? "Reproducir" : "Seguir"}
-          </Button>
-          <Button
-            className="h-11 w-11"
+            aria-label="Paso anterior"
+            className="h-10 w-10"
             disabled={!steps.length}
             size="icon"
-            title="Paso anterior (←)"
             variant="outline"
             onClick={() => rundown.skip(-1)}
           >
-            <SkipBack className="h-5 w-5" />
+            <SkipBack className="h-4 w-4" />
           </Button>
           <Button
-            className="h-11 w-11"
+            aria-label="Paso siguiente"
+            className="h-10 w-10"
             disabled={!steps.length}
             size="icon"
-            title="Paso siguiente (→)"
             variant="outline"
             onClick={() => rundown.skip(1)}
           >
-            <SkipForward className="h-5 w-5" />
+            <SkipForward className="h-4 w-4" />
           </Button>
           <Button
-            className="h-11 w-11"
+            aria-label="Detener (la pantalla se queda en la escena actual)"
+            className="h-10 w-10"
             disabled={stopped}
             size="icon"
-            title="Detener (la pantalla se queda en la escena actual)"
             variant="outline"
             onClick={rundown.stop}
           >
-            <Square className="h-4 w-4" />
+            <Square className="h-3.5 w-3.5" />
           </Button>
-
-          <div className="ml-1 min-w-0 flex-1 text-sm">
-            {step ? (
-              <>
-                <p className="truncate">
-                  <span className="text-muted-foreground">Paso {rundown.at + 1}: </span>
-                  <strong>{SCENES[step.scene].title}</strong>
-                  {left !== null ? (
-                    <span className="text-muted-foreground"> · {Math.ceil(left)} s</span>
-                  ) : (
-                    <span className="text-muted-foreground"> · se queda hasta que pases</span>
-                  )}
-                </p>
-                {next && <p className="truncate text-xs text-muted-foreground">Sigue: {SCENES[next.scene].title}</p>}
-              </>
-            ) : (
-              <p className="text-muted-foreground">
-                {steps.length
-                  ? "Detenido. Reproducir arranca desde el primer paso."
-                  : "Armá el orden del día con «+» en las escenas de abajo."}
-              </p>
-            )}
-          </div>
-          {next && <Thumb className="w-20 opacity-70" scene={next.scene} />}
-        </div>
-
+        </ButtonGroup>
+        <NowPlaying rundown={rundown} />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <label className="flex h-10 items-center gap-1.5 text-xs text-muted-foreground">
+              <Repeat className="h-3.5 w-3.5" /> Loop
+              <Switch checked={loop} onCheckedChange={rundown.setLoop} />
+            </label>
+          </TooltipTrigger>
+          <TooltipContent>Volver al primer paso al terminar</TooltipContent>
+        </Tooltip>
         {steps.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button className="h-10" size="sm" variant="ghost">
+                Vaciar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Vaciar el guion?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Se borran los {steps.length} pasos en todos los dispositivos. La pantalla se queda en la escena
+                  actual.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={rundown.clear}>
+                  Vaciar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        {steps.length === 0 ? (
+          <Empty
+            className="h-full border-0"
+            description="Para pausas y loops desatendidos: cada paso con sus segundos. Agregalos con «⋯ → Al guion» en la biblioteca."
+            icon={ListVideo}
+            title="El guion está vacío"
+          />
+        ) : (
           <Reorder.Group axis="y" className="space-y-1.5" values={steps} onReorder={rundown.reorder}>
             {steps.map((item, index) => (
               <Step
                 key={item.id}
                 active={item.id === step?.id}
                 index={index}
-                left={item.id === step?.id ? left : null}
                 live={item.scene === liveScene}
                 liveParams={liveParams}
-                progress={item.sec > 0 ? Math.min(100, (rundown.elapsed / item.sec) * 100) : 0}
                 rundown={rundown}
                 step={item}
               />
             ))}
           </Reorder.Group>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

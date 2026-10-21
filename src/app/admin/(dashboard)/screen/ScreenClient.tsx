@@ -21,36 +21,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "components/sha
 import { Kbd } from "components/shared/ui/kbd";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
 import { useObsQueue } from "hooks/useObsQueue";
+import { useWakeLock } from "hooks/useWakeLock";
 import { useObsActions, useObsView } from "lib/obs/actions";
 import { getObsClient, loadSettings, saveSettings } from "lib/obs/client";
 import { useObsExecutor, useObsLoop } from "lib/obs/executor";
 import { orpc } from "lib/orpc/client";
 
 const INSTANCE_ID = 1; // 1 = this admin screen, 2 = the standalone app
-
-/** Keeps a tablet awake while it is the desk. */
-function useWakeLock(active: boolean) {
-  useEffect(() => {
-    if (!active || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    const request = () => {
-      if (document.visibilityState !== "visible") return;
-      navigator.wakeLock
-        .request("screen")
-        .then((sentinel) => {
-          lock = sentinel;
-        })
-        .catch(() => undefined);
-    };
-    request();
-    document.addEventListener("visibilitychange", request);
-
-    return () => {
-      document.removeEventListener("visibilitychange", request);
-      void lock?.release();
-    };
-  }, [active]);
-}
 
 export default function ScreenClient() {
   const { obs, status, view } = useObsView(INSTANCE_ID);
