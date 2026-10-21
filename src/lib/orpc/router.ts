@@ -13,6 +13,7 @@ import { incidentsRouter } from "./incidents/router";
 import { obsControlRouter, obsCueRouter } from "./obs-control/router";
 import { obsQueueRouter } from "./obs-queue/router";
 import { ocrRouter } from "./ocr/router";
+import { salarySurveyRouter } from "./salary-survey/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { owyStageRouter } from "./owy-stage/router";
 import { roomsRouter } from "./rooms/router";
@@ -63,6 +64,9 @@ export const router = {
 
   // OWU CONF site: the ticket release
   conf: confRouter,
+
+  // Encuesta de sueldos: one answer per person, stored without the user
+  salarySurvey: salarySurveyRouter,
 
   // Admin overview and ticketing
   dashboard: dashboardRouter,
