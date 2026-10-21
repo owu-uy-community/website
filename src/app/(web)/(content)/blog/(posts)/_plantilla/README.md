@@ -11,6 +11,10 @@
    - `image` (opcional): banner propio en `public/images/blog/`. Sin `image`, se genera
      automáticamente una imagen OG brandeada en `/blog/og` con el título/autor/tag.
    - `updated` (opcional): fecha ISO de la última edición importante.
+   - `draft: true` (opcional): borrador. Se ve en desarrollo con un aviso arriba, pero en
+     producción no aparece en el índice, el feed ni el sitemap, y su URL da 404. Para
+     revisarlo en un preview de Vercel, seteá la variable `SHOW_DRAFTS=1` en ese deploy.
+     Sacalo (o ponelo en `false`) cuando el post esté revisado.
 3. `postMetadata(post)` arma todo el SEO (OpenGraph article, Twitter card, canonical,
    keywords) y `<PostHeader post={post} />` muestra fecha/autor/tags e inyecta el
    JSON-LD (`BlogPosting` + breadcrumbs). El índice `/blog`, el sitemap y el feed

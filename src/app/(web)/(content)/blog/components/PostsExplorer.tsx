@@ -5,7 +5,9 @@ import { parseAsString, useQueryState } from "nuqs";
 
 import type { BlogPost } from "../(posts)/posts";
 
-import EmptyState, { emptyStateActionClassName } from "./EmptyState";
+import { buttonClassName } from "components/community/ui";
+
+import EmptyState from "./EmptyState";
 import PostsGrid from "./PostsGrid";
 import SearchField from "./SearchField";
 import TagChips from "./TagChips";
@@ -42,9 +44,11 @@ export default function PostsExplorer({ posts, tags }: PostsExplorerProps) {
   };
 
   return (
-    <div className="flex w-full flex-col items-center gap-6">
-      <SearchField value={query} onChange={(value) => void setQuery(value || null)} />
-      <TagChips active={tag} tags={tags} onSelect={(value) => void setTag(value)} />
+    <div className="flex w-full flex-col gap-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <SearchField value={query} onChange={(value) => void setQuery(value || null)} />
+        <TagChips active={tag} tags={tags} onSelect={(value) => void setTag(value)} />
+      </div>
       {filtered.length === 0 ? (
         <EmptyState
           description={
@@ -55,14 +59,12 @@ export default function PostsExplorer({ posts, tags }: PostsExplorerProps) {
           icon={SearchX}
           title="No encontramos nada"
         >
-          <button className={emptyStateActionClassName} type="button" onClick={clearFilters}>
+          <button className={buttonClassName("secondary", "sm")} type="button" onClick={clearFilters}>
             Limpiar filtros
           </button>
         </EmptyState>
       ) : (
-        <div className="flex w-full flex-col gap-6 pt-2">
-          <PostsGrid posts={filtered} />
-        </div>
+        <PostsGrid posts={filtered} />
       )}
     </div>
   );
