@@ -1,53 +1,62 @@
-import { CalendarPlus } from "lucide-react";
+import { Apple, CalendarDays, CalendarSync, Mail } from "lucide-react";
 
+import { cn } from "app/lib/utils";
 import { ICS_URL } from "lib/community/site";
 
-import CopyField from "./CopyField";
+import { CopyButton } from "./CopyField";
 import { buttonClassName } from "./ui";
 
 const WEBCAL_URL = ICS_URL.replace(/^https:/, "webcal:");
 
 const PROVIDERS = [
-  { label: "Google Calendar", href: `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(WEBCAL_URL)}` },
-  { label: "Apple / iCal", href: WEBCAL_URL },
+  {
+    label: "Google",
+    app: "Google Calendar",
+    icon: CalendarDays,
+    href: `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(WEBCAL_URL)}`,
+  },
+  { label: "Apple", app: "Apple Calendar", icon: Apple, href: WEBCAL_URL },
   {
     label: "Outlook",
+    app: "Outlook",
+    icon: Mail,
     href: `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(ICS_URL)}&name=${encodeURIComponent("OWU · Eventos")}`,
   },
 ];
 
-/** Subscribe once, get every event: one-click providers plus the raw feed URL. `wide` puts the pitch beside the actions */
-export default function CalendarSubscribe({ compact = false, wide = false }: { compact?: boolean; wide?: boolean }) {
+const button = buttonClassName("secondary", "sm", "w-full");
+
+/** Subscribe once and every new event shows up in your calendar. `wide` puts the title beside the buttons */
+export default function CalendarSubscribe({ wide = false }: { wide?: boolean }) {
   return (
-    <div className={wide ? "grid gap-6 md:grid-cols-[1fr_1.15fr] md:items-center md:gap-10" : "flex flex-col gap-5"}>
-      {compact ? null : (
-        <div className="flex items-start gap-4">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
-            <CalendarPlus aria-hidden className="size-5" />
-          </span>
-          <div>
-            <h3 className="font-title text-[17px] font-semibold text-white">Suscribite al calendario</h3>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-              Una vez. Los eventos nuevos aparecen solos en el tuyo.
-            </p>
-          </div>
+    <div className={cn("flex flex-col gap-5", wide && "lg:flex-row lg:items-center lg:justify-between lg:gap-10")}>
+      <div className="flex items-center gap-3.5">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+          <CalendarSync aria-hidden className="size-5" />
+        </span>
+        <div>
+          <h3 className="font-title text-base leading-snug font-semibold text-white">Suscribite al calendario</h3>
+          <p className="mt-0.5 text-[13px] text-zinc-400">Los eventos nuevos aparecen solos.</p>
         </div>
-      )}
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-wrap gap-2">
-          {PROVIDERS.map(({ label, href }) => (
-            <a
-              key={label}
-              className={buttonClassName("secondary", "sm")}
-              href={href}
-              rel="noopener"
-              target={href.startsWith("http") ? "_blank" : undefined}
-            >
-              {label}
-            </a>
-          ))}
-        </div>
-        <CopyField label="la URL del calendario" value={ICS_URL} />
+      </div>
+      <div className={cn("grid grid-cols-2 gap-2", wide && "sm:grid-cols-4 lg:w-[34rem] lg:shrink-0")}>
+        {PROVIDERS.map(({ label, app, icon: Icon, href }) => (
+          <a
+            key={label}
+            aria-label={`Suscribirse en ${app}`}
+            className={button}
+            href={href}
+            rel="noopener"
+            target={href.startsWith("http") ? "_blank" : undefined}
+            title={app}
+          >
+            <Icon aria-hidden className="size-4 shrink-0 text-zinc-400 transition-colors group-hover/button:text-white" />
+            {label}
+          </a>
+        ))}
+        <CopyButton className={button} value={ICS_URL}>
+          Copiar link
+        </CopyButton>
       </div>
     </div>
   );
