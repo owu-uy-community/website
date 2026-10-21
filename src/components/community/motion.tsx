@@ -19,7 +19,7 @@ export function Reveal({
   children,
   className,
   delay = 0,
-  y = 20,
+  y = 16,
 }: {
   children: ReactNode;
   className?: string;
@@ -42,7 +42,7 @@ export function Reveal({
 }
 
 const staggerItem = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
 };
 
@@ -51,7 +51,7 @@ export function Stagger({
   children,
   className,
   itemClassName,
-  interval = 0.06,
+  interval = 0.07,
 }: {
   children: ReactNode;
   className?: string;
@@ -64,7 +64,7 @@ export function Stagger({
     <motion.div
       className={className}
       initial={reduceMotion ? false : "hidden"}
-      variants={{ hidden: {}, show: { transition: { staggerChildren: interval } } }}
+      variants={{ hidden: {}, show: { transition: { staggerChildren: interval, staggerDirection: 1 } } }}
       viewport={{ once: true, amount: 0.12 }}
       whileInView="show"
     >
