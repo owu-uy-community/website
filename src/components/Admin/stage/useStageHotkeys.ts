@@ -3,7 +3,8 @@
 import { useEffect, useRef, type MouseEvent } from "react";
 
 export const SHORTCUTS: [string, string][] = [
-  ["Espacio / ↵", "TAKE: la preview sale al aire"],
+  ["Espacio / ↵", "TAKE: la preview sale al aire, con el barrido"],
+  ["⌫", "CUT: la preview sale al aire de golpe"],
   ["/", "Buscar una escena"],
   ["Q", "Mandar la preview a la cola"],
   ["1 – 9", "Favorito n a la preview"],
@@ -47,6 +48,7 @@ export const releaseFocus = (event: MouseEvent<HTMLElement>) => {
 
 type Handlers = {
   take: () => void;
+  cut: () => void;
   search: () => void;
   queue: () => void;
   favorite: (index: number, air: boolean) => void;
@@ -79,6 +81,13 @@ export function useStageHotkeys(handlers: Handlers) {
         if (ownsKeys(target)) return;
         event.preventDefault();
         run.take();
+
+        return;
+      }
+      if (key === "Backspace") {
+        if (ownsKeys(target)) return;
+        event.preventDefault();
+        run.cut();
 
         return;
       }

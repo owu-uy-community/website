@@ -20,6 +20,14 @@ async function reset(page: Page, title: string) {
 async function follow(page: Page, path: string, channel: string) {
   // Listen from the socket's first frame on (the ack can beat a later listener). Under
   // `next dev` one socket is HMR's; the realtime one is the other.
+  // `next dev` floats its issue badge over the bottom-left corner, right where a phone's tab bar is.
+  await page.addInitScript(() =>
+    document.addEventListener("DOMContentLoaded", () => {
+      const style = document.createElement("style");
+      style.textContent = "nextjs-portal { display: none !important; }";
+      document.head.append(style);
+    })
+  );
   const subscribed = new Promise<void>((resolve) => {
     page.on("websocket", (ws) => {
       if (ws.url().includes("/_next/")) return;
@@ -79,4 +87,42 @@ test("a second admin device sees the same queue", async ({ page, pageAs }) => {
   await page.getByRole("button", { name: "Agregar Countdown a la cola" }).first().click();
 
   await expect(tablet.getByRole("region", { name: "Cola" }).getByText("Countdown", { exact: true })).toBeVisible();
+});
+
+test.describe("from a phone", () => {
+  test.use({ viewport: { width: 393, height: 760 }, isMobile: true, hasTouch: true });
+
+  test("pick, edit and TAKE a scene from the bottom tabs", async ({ page, pageAs }) => {
+    await reset(page, "Antes");
+    const wall = await follow(await pageAs("anonymous"), "/owy/stage", "owy-stage");
+    await follow(page, DESK, "private:owy-desk");
+
+    await page.getByRole("button", { name: "Escenas", exact: true }).click();
+    await page.getByRole("button", { name: "Mensaje: a la preview" }).first().click();
+    await page.getByRole("button", { name: "Editar", exact: true }).click();
+    await page.locator("#param-preview-title").fill("Desde el celular");
+    await page.getByRole("button", { name: "TAKE: la preview sale al aire" }).click();
+
+    await expect(wall.getByText("Desde el celular")).toBeVisible();
+  });
+
+  test("a queued scene swiped left leaves the queue, and Deshacer brings it back", async ({ page }) => {
+    await reset(page, "Antes");
+    await rpc(page, "saveDesk", {
+      desk: { preview: null, queue: [{ id: "q1", scene: "countdown", params: {}, from: "queue" }], favorites: [] },
+    });
+    await follow(page, DESK, "private:owy-desk");
+    await page.getByRole("button", { name: /^Cola/ }).click();
+    const queue = page.getByRole("region", { name: "Cola" });
+    const box = (await queue.getByText("Countdown", { exact: true }).boundingBox())!;
+
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 160, box.y + box.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await expect(queue.getByText("Nada en espera")).toBeVisible();
+    await page.getByRole("button", { name: "Deshacer" }).click();
+
+    await expect(queue.getByText("Countdown", { exact: true })).toBeVisible();
+  });
 });

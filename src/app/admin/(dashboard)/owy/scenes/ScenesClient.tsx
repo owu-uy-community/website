@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { MotionConfig } from "motion/react";
 import { Search } from "lucide-react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { HeaderActions } from "components/Admin/shell/HeaderActions";
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
+import { haptic } from "components/Admin/stage/haptics";
 import { Inspector } from "components/Admin/stage/Inspector";
-import { Monitors } from "components/Admin/stage/Monitors";
+import { Monitors, TakeControls, type Flight } from "components/Admin/stage/Monitors";
+import { PHONE_TABS, PhoneTabs, type PhoneTab } from "components/Admin/stage/PhoneTabs";
 import { Queue } from "components/Admin/stage/Queue";
 import { RundownPanel, useRundown } from "components/Admin/stage/Rundown";
 import { SceneLibrary, type LibraryActions, type LibraryTally } from "components/Admin/stage/SceneLibrary";
@@ -20,6 +23,7 @@ import {
   type OutputSettings,
 } from "components/Admin/stage/StageSettingsSheet";
 import { StageToolbar } from "components/Admin/stage/StageToolbar";
+import { StatusBar } from "components/Admin/stage/StatusBar";
 import { useDesk } from "components/Admin/stage/useDesk";
 import { SHORTCUTS, releaseFocus, useStageHotkeys } from "components/Admin/stage/useStageHotkeys";
 import { useStoredState } from "components/Admin/stage/useStoredState";
@@ -43,6 +47,7 @@ import {
   type DeskStep,
   type SceneId,
   type StageState,
+  type StageTransition,
 } from "lib/owy-stage/scenes";
 
 type Target = "preview" | "program";
@@ -54,6 +59,10 @@ const isOutput = (value: unknown): value is OutputSettings =>
   ["", "ucu", "fit"].includes((value as OutputSettings).canvas);
 const isSceneList = (value: unknown): value is SceneId[] =>
   Array.isArray(value) && value.every((id) => typeof id === "string" && isSceneId(id));
+const isPhoneTab = (value: unknown): value is PhoneTab => PHONE_TABS.includes(value as PhoneTab);
+
+/** The space under the admin header, which also clears the notch in a home-screen app. */
+const DESK_HEIGHT = "h-[calc(100dvh-3.5rem-env(safe-area-inset-top))]";
 
 const noop = () => () => undefined;
 /** True once on the client: the desk reads localStorage while it renders (layout, filters, settings). */
@@ -65,7 +74,7 @@ const useMounted = () =>
   );
 
 const WIDE = "(min-width: 1024px)";
-/** Landscape tablets and laptops get the desk; anything narrower, stacked tabs. */
+/** Landscape tablets and laptops get the studio; phones and portrait tablets, the compact desk. */
 const useWide = () =>
   useSyncExternalStore(
     (onChange) => {
@@ -83,20 +92,25 @@ export default function ScenesClient() {
 
   if (!mounted)
     return (
-      <div className="h-[calc(100dvh-3.5rem)] p-2">
+      <div className={`${DESK_HEIGHT} p-2`}>
         <Skeleton className="h-full w-full rounded-xl" />
       </div>
     );
 
-  return <Desk />;
+  return (
+    // Animations follow the system's "reduce motion"; taps never flash or zoom.
+    <MotionConfig reducedMotion="user">
+      <Desk />
+    </MotionConfig>
+  );
 }
 
 /**
  * The wall's control desk: PREVIEW → TAKE → AL AIRE, with the queue feeding
  * the preview, the library to pick from, the guion for unattended loops and
  * the params of whatever is being prepared. Shared state lives on the server
- * (the wall, the desk, the guion), so the laptop and the tablet run the same
- * show; layout and filters are per device.
+ * (the wall, the desk, the guion), so the laptop, the tablet and the phone run
+ * the same show; layout and filters are per device.
  */
 function Desk() {
   const queryClient = useQueryClient();
@@ -112,7 +126,9 @@ function Desk() {
 
   const [target, setTarget] = useState<Target>("preview");
   const [tab, setTab] = useState<"library" | "guion">("library");
+  const [phoneTab, setPhoneTab] = useStoredState<PhoneTab>("owy-stage-phone-tab", "library", isPhoneTab);
   const [replay, setReplay] = useState(0);
+  const [flight, setFlight] = useState<Flight | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -199,9 +215,13 @@ function Desk() {
       pick: (id) => {
         actions.pick(id);
         setTarget("preview");
+        haptic(5);
       },
       queue: (id) => actions.enqueue(id),
-      airNow: (id) => put(id, {}, true),
+      airNow: (id) => {
+        put(id, {}, true);
+        haptic(18);
+      },
       guion: (id) => rundownRef.current.add(id),
       toggleFavorite: actions.toggleFavorite,
       copyUrl: (id) => copyText(stageUrlRef.current(`/owy/stage/${id}`)),
@@ -214,10 +234,12 @@ function Desk() {
       cueQueued: (id: string) => {
         actions.cueQueued(id);
         setTarget("preview");
+        haptic(5);
       },
       airNow: (step: DeskStep) => {
         put(step.scene, step.params, true);
         actions.remove(step.id);
+        haptic(18);
       },
     }),
     [actions, put]
@@ -232,7 +254,17 @@ function Desk() {
     return { live: live.scene, preview: desk.preview?.scene ?? null, queued };
   }, [live.scene, desk.preview?.scene, desk.queue]);
 
-  const take = useCallback(() => void actions.take(), [actions]);
+  /** TAKE or CUT, from the button or the keyboard: felt on the phone, drawn on the monitors. */
+  const take = useCallback(
+    (transition: StageTransition) => {
+      const step = deskRef.current.preview;
+      if (!step || !actions.canTake()) return;
+      haptic(transition === "cut" ? [14, 50, 14] : 22);
+      setFlight({ id: Date.now(), scene: step.scene });
+      void actions.take(transition);
+    },
+    [actions]
+  );
   const clearPreview = actions.clearPreview;
   const copyLive = useCallback(() => {
     actions.copyLive();
@@ -241,18 +273,27 @@ function Desk() {
   const openPalette = useCallback(() => setPaletteOpen(true), []);
   const replayPreview = useCallback(() => setReplay((value) => value + 1), []);
   const onLiveParams = useCallback((params: Params) => put(liveRef.current.scene, params, false), [put]);
+  // On a phone, tapping a monitor also opens what edits it.
+  const pickTarget = useCallback(
+    (next: Target) => {
+      setTarget(next);
+      if (!wide) setPhoneTab("edit");
+    },
+    [wide, setPhoneTab]
+  );
   // No success toasts on the desk: they'd sit on the inspector mid-show, and the queue shows the change.
   const choose = useCallback(
     (id: SceneId, intent: "preview" | "queue" | "air") => {
       if (intent === "queue") actions.enqueue(id);
-      else if (intent === "air") put(id, {}, true);
+      else if (intent === "air") libraryActions.airNow(id);
       else libraryActions.pick(id);
     },
-    [actions, put, libraryActions]
+    [actions, libraryActions]
   );
 
   useStageHotkeys({
-    take,
+    take: () => take("wipe"),
+    cut: () => take("cut"),
     search: openPalette,
     queue: actions.enqueuePreview,
     favorite: (index, air) => {
@@ -271,11 +312,23 @@ function Desk() {
   const stageLayout = useDefaultLayout({ id: "owy-desk-stage", storage: localStorage });
   const listsLayout = useDefaultLayout({ id: "owy-desk-lists", storage: localStorage });
 
-  const monitors = (
-    <Monitors
-      canvas={canvas}
+  const takeControls = (layout: "column" | "bar") => (
+    <TakeControls
+      layout={layout}
       live={live}
       next={desk.queue[0] ?? null}
+      preview={desk.preview}
+      taking={taking}
+      onTake={take}
+    />
+  );
+  const monitors = (compact: boolean) => (
+    <Monitors
+      canvas={canvas}
+      center={compact ? undefined : takeControls("column")}
+      compact={compact}
+      flight={flight}
+      live={live}
       preview={desk.preview}
       replay={replay}
       taking={taking}
@@ -284,8 +337,7 @@ function Desk() {
       onCopyLive={copyLive}
       onReplay={replayPreview}
       onSearch={openPalette}
-      onTake={take}
-      onTarget={setTarget}
+      onTarget={pickTarget}
     />
   );
   const inspector = (
@@ -302,11 +354,13 @@ function Desk() {
     />
   );
   const queue = <Queue actions={queueActions} queue={desk.queue} />;
-  const library = <SceneLibrary actions={libraryActions} favorites={desk.favorites} recent={recent} tally={tally} />;
+  const library = (lead?: ReactNode) => (
+    <SceneLibrary actions={libraryActions} favorites={desk.favorites} lead={lead} recent={recent} tally={tally} />
+  );
   const guion = <RundownPanel liveParams={liveParams} liveScene={live.scene} rundown={rundown} />;
   const searchButton = (
     <Button
-      className="ml-auto h-9 w-full max-w-60 justify-start gap-2 px-3 font-normal text-muted-foreground"
+      className="ml-auto h-9 w-full max-w-60 justify-start gap-2 px-3 font-normal text-muted-foreground pointer-coarse:h-10"
       variant="outline"
       onClick={(event) => {
         openPalette();
@@ -320,122 +374,128 @@ function Desk() {
   );
 
   return (
-    <>
+    <div className="[-webkit-tap-highlight-color:transparent]">
       <HeaderActions>
         <StageToolbar
           connected={isConnected}
           rundown={rundown}
-          onGuion={() => setTab("guion")}
+          onGuion={() => (wide ? setTab("guion") : setPhoneTab("guion"))}
           onHelp={() => setHelpOpen(true)}
           onSettings={() => setSettingsOpen(true)}
         />
       </HeaderActions>
 
       {wide ? (
-        <div className="h-[calc(100dvh-3.5rem)] min-h-[540px] p-2">
-          <ResizablePanelGroup
-            defaultLayout={mainLayout.defaultLayout}
-            id="owy-desk"
-            orientation="horizontal"
-            resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
-            onLayoutChanged={mainLayout.onLayoutChanged}
-          >
-            <ResizablePanel id="stage" minSize="50%">
-              <ResizablePanelGroup
-                defaultLayout={stageLayout.defaultLayout}
-                id="owy-desk-stage"
-                orientation="vertical"
-                resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
-                onLayoutChanged={stageLayout.onLayoutChanged}
-              >
-                <ResizablePanel defaultSize="42%" id="monitors" maxSize="72%" minSize="24%">
-                  <div className="h-full overflow-hidden rounded-xl border bg-card">{monitors}</div>
-                </ResizablePanel>
-                <ResizableHandle />
-                <ResizablePanel id="lists" minSize="24%">
-                  <ResizablePanelGroup
-                    defaultLayout={listsLayout.defaultLayout}
-                    id="owy-desk-lists"
-                    orientation="horizontal"
-                    resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
-                    onLayoutChanged={listsLayout.onLayoutChanged}
-                  >
-                    <ResizablePanel defaultSize="32%" id="queue" maxSize="55%" minSize="20%">
-                      <div className="h-full overflow-hidden rounded-xl border bg-card">{queue}</div>
-                    </ResizablePanel>
-                    <ResizableHandle />
-                    <ResizablePanel id="library" minSize="35%">
-                      <Tabs
-                        className="flex h-full flex-col overflow-hidden rounded-xl border bg-card"
-                        value={tab}
-                        onValueChange={(value) => setTab(value as "library" | "guion")}
-                      >
-                        <div className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
-                          <TabsList className="h-9">
-                            <TabsTrigger className="gap-1.5" value="library">
-                              Biblioteca <span className="text-xs text-muted-foreground">{SCENE_IDS.length}</span>
-                            </TabsTrigger>
-                            <TabsTrigger className="gap-1.5" value="guion">
-                              Guion <span className="text-xs text-muted-foreground">{rundown.steps.length}</span>
-                            </TabsTrigger>
-                          </TabsList>
-                          {searchButton}
-                        </div>
-                        <TabsContent className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden" value="library">
-                          {library}
-                        </TabsContent>
-                        <TabsContent className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden" value="guion">
-                          {guion}
-                        </TabsContent>
-                      </Tabs>
-                    </ResizablePanel>
-                  </ResizablePanelGroup>
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </ResizablePanel>
-            <ResizableHandle />
-            <ResizablePanel
-              defaultSize={340}
-              groupResizeBehavior="preserve-pixel-size"
-              id="inspector"
-              maxSize="42%"
-              minSize={290}
+        <div className={`${DESK_HEIGHT} flex min-h-[540px] flex-col gap-2 p-2`}>
+          <div className="min-h-0 flex-1">
+            <ResizablePanelGroup
+              defaultLayout={mainLayout.defaultLayout}
+              id="owy-desk"
+              orientation="horizontal"
+              resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
+              onLayoutChanged={mainLayout.onLayoutChanged}
             >
-              <div className="h-full overflow-hidden rounded-xl border bg-card">{inspector}</div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              <ResizablePanel id="stage" minSize="50%">
+                <ResizablePanelGroup
+                  defaultLayout={stageLayout.defaultLayout}
+                  id="owy-desk-stage"
+                  orientation="vertical"
+                  resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
+                  onLayoutChanged={stageLayout.onLayoutChanged}
+                >
+                  <ResizablePanel defaultSize="42%" id="monitors" maxSize="72%" minSize="24%">
+                    <div className="h-full overflow-hidden rounded-xl border bg-card">{monitors(false)}</div>
+                  </ResizablePanel>
+                  <ResizableHandle />
+                  <ResizablePanel id="lists" minSize="24%">
+                    <ResizablePanelGroup
+                      defaultLayout={listsLayout.defaultLayout}
+                      id="owy-desk-lists"
+                      orientation="horizontal"
+                      resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
+                      onLayoutChanged={listsLayout.onLayoutChanged}
+                    >
+                      <ResizablePanel defaultSize="32%" id="queue" maxSize="55%" minSize="20%">
+                        <div className="h-full overflow-hidden rounded-xl border bg-card">{queue}</div>
+                      </ResizablePanel>
+                      <ResizableHandle />
+                      <ResizablePanel id="library" minSize="35%">
+                        <Tabs
+                          className="flex h-full flex-col overflow-hidden rounded-xl border bg-card"
+                          value={tab}
+                          onValueChange={(value) => setTab(value as "library" | "guion")}
+                        >
+                          <div className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
+                            <TabsList className="h-9">
+                              <TabsTrigger className="gap-1.5" value="library">
+                                Biblioteca <span className="text-xs text-muted-foreground">{SCENE_IDS.length}</span>
+                              </TabsTrigger>
+                              <TabsTrigger className="gap-1.5" value="guion">
+                                Guion <span className="text-xs text-muted-foreground">{rundown.steps.length}</span>
+                              </TabsTrigger>
+                            </TabsList>
+                            {searchButton}
+                          </div>
+                          <TabsContent className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden" value="library">
+                            {library()}
+                          </TabsContent>
+                          <TabsContent className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden" value="guion">
+                            {guion}
+                          </TabsContent>
+                        </Tabs>
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel
+                defaultSize={340}
+                groupResizeBehavior="preserve-pixel-size"
+                id="inspector"
+                maxSize="42%"
+                minSize={290}
+              >
+                <div className="h-full overflow-hidden rounded-xl border bg-card">{inspector}</div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+          <StatusBar connected={isConnected} live={live} queued={desk.queue.length} rundown={rundown} />
         </div>
       ) : (
-        // Phones and portrait tablets: the same pieces, stacked.
-        <div className="space-y-3 p-3">
-          <div className="h-[clamp(200px,31vw,420px)] overflow-hidden rounded-xl border bg-card">{monitors}</div>
-          <Tabs defaultValue="params">
-            <TabsList className="grid h-auto w-full grid-cols-4">
-              <TabsTrigger value="params">Parámetros</TabsTrigger>
-              <TabsTrigger value="queue">Cola · {desk.queue.length}</TabsTrigger>
-              <TabsTrigger value="library">Biblioteca</TabsTrigger>
-              <TabsTrigger value="guion">Guion</TabsTrigger>
-            </TabsList>
-            {(
-              [
-                ["params", inspector],
-                ["queue", queue],
-                ["library", library],
-                ["guion", guion],
-              ] as const
-            ).map(([value, content]) => (
-              <TabsContent key={value} className="h-[70dvh] overflow-hidden rounded-xl border bg-card" value={value}>
-                {value === "library" ? (
-                  <div className="flex h-full flex-col">
-                    <div className="flex h-12 shrink-0 items-center border-b px-2">{searchButton}</div>
-                    <div className="min-h-0 flex-1">{content}</div>
-                  </div>
-                ) : (
-                  content
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
+        // Phones and portrait tablets: monitors and TAKE always in reach, one section at a time below.
+        <div className={`${DESK_HEIGHT} flex flex-col overflow-hidden`}>
+          <div className="shrink-0 space-y-2 pt-2 pr-[max(0.5rem,env(safe-area-inset-right))] pb-2 pl-[max(0.5rem,env(safe-area-inset-left))]">
+            <div className="h-[clamp(124px,33vw,300px)]">{monitors(true)}</div>
+            {takeControls("bar")}
+          </div>
+          <section aria-label="Sección" className="min-h-0 flex-1 overflow-hidden border-t bg-card">
+            {phoneTab === "queue" && queue}
+            {phoneTab === "library" &&
+              library(
+                <Button
+                  aria-label="Buscar escena"
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  size="icon"
+                  variant="outline"
+                  onClick={(event) => {
+                    openPalette();
+                    releaseFocus(event);
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              )}
+            {phoneTab === "edit" && inspector}
+            {phoneTab === "guion" && guion}
+          </section>
+          <PhoneTabs
+            guionPlaying={rundown.playing}
+            preview={Boolean(desk.preview)}
+            queued={desk.queue.length}
+            tab={phoneTab}
+            onTab={setPhoneTab}
+          />
         </div>
       )}
 
@@ -476,6 +536,6 @@ function Desk() {
           </table>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

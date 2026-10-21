@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { motion } from "motion/react";
 import { Copy, Eye, ListPlus, Radio, Smartphone } from "lucide-react";
 
 import { cn } from "app/lib/utils";
@@ -23,13 +24,27 @@ import { SceneParams } from "./SceneParams";
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
 type Params = Record<string, unknown>;
 
+/** The chosen side of the Preview / Al aire switch: one frame that slides between the two. */
+function Highlight({ tone }: { tone: "preview" | "program" }) {
+  return (
+    <motion.span
+      className={cn(
+        "absolute inset-0 rounded-md border",
+        tone === "preview" ? "border-green-500/50 bg-green-500/10" : "border-red-500/50 bg-red-500/10"
+      )}
+      layoutId="inspector-target"
+      transition={{ type: "spring", stiffness: 500, damping: 40 }}
+    />
+  );
+}
+
 function Heading({ scene }: { scene: SceneId }) {
   const { title, description, category } = SCENES[scene];
 
   return (
-    <header className="space-y-1 px-4 pt-3 pb-2">
+    <header className="space-y-1 px-4 pt-2 pb-1.5 sm:pt-3 sm:pb-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="font-display text-lg leading-tight font-bold">{title}</h2>
+        <h2 className="font-display text-base leading-tight font-bold sm:text-lg">{title}</h2>
         <Badge className="font-normal text-muted-foreground" variant="outline">
           {SCENE_CATEGORIES[category].title}
         </Badge>
@@ -39,7 +54,8 @@ function Heading({ scene }: { scene: SceneId }) {
           </Badge>
         )}
       </div>
-      <p className="text-xs text-muted-foreground">{description}</p>
+      {/* On a phone the height goes to the fields: the description waits for a bigger screen. */}
+      <p className="hidden text-xs text-muted-foreground sm:block">{description}</p>
     </header>
   );
 }
@@ -73,30 +89,34 @@ function InspectorView({
     <section aria-label="Parámetros" className="flex h-full min-h-0 flex-col">
       <ToggleGroup
         aria-label="Qué editar"
-        className="grid shrink-0 grid-cols-2 gap-1.5 border-b p-1.5"
+        className="grid shrink-0 grid-cols-2 gap-1 border-b p-1 sm:gap-1.5 sm:p-1.5"
         type="single"
         value={target}
         onValueChange={(value) => value && onTarget(value as "preview" | "program")}
       >
         <ToggleGroupItem
-          className="h-auto min-w-0 flex-col items-start gap-1 border border-transparent px-2.5 py-2 text-left data-[state=on]:border-green-500/50 data-[state=on]:bg-green-500/10"
+          className="relative h-auto min-w-0 flex-col items-start gap-0.5 px-2.5 py-1.5 text-left hover:bg-accent/60 data-[state=on]:bg-transparent sm:gap-1 sm:py-2"
           value="preview"
         >
-          <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-green-400 uppercase">
+          {target === "preview" && <Highlight tone="preview" />}
+          <span className="relative flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-green-400 uppercase">
             <span className="h-2 w-2 rounded-full bg-green-500" /> Preview
           </span>
-          <span className="w-full truncate text-sm font-semibold text-foreground">
+          <span className="relative w-full truncate text-sm font-semibold text-foreground">
             {preview ? SCENES[preview.scene].title : "Vacía"}
           </span>
         </ToggleGroupItem>
         <ToggleGroupItem
-          className="h-auto min-w-0 flex-col items-start gap-1 border border-transparent px-2.5 py-2 text-left data-[state=on]:border-red-500/50 data-[state=on]:bg-red-500/10"
+          className="relative h-auto min-w-0 flex-col items-start gap-0.5 px-2.5 py-1.5 text-left hover:bg-accent/60 data-[state=on]:bg-transparent sm:gap-1 sm:py-2"
           value="program"
         >
-          <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-red-400 uppercase">
+          {target === "program" && <Highlight tone="program" />}
+          <span className="relative flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-red-400 uppercase">
             <span className="h-2 w-2 rounded-full bg-red-500" /> Al aire
           </span>
-          <span className="w-full truncate text-sm font-semibold text-foreground">{SCENES[live.scene].title}</span>
+          <span className="relative w-full truncate text-sm font-semibold text-foreground">
+            {SCENES[live.scene].title}
+          </span>
         </ToggleGroupItem>
       </ToggleGroup>
 
@@ -117,7 +137,7 @@ function InspectorView({
       ) : preview ? (
         <>
           <Heading scene={preview.scene} />
-          <div className="mx-4 mb-1 flex items-center gap-2 rounded-md border border-green-500/25 bg-green-500/10 px-3 py-2 text-xs text-green-200">
+          <div className="mx-4 mb-1 hidden items-center gap-2 rounded-md border border-green-500/25 bg-green-500/10 px-3 py-2 text-xs text-green-200 sm:flex">
             <Eye className="h-3.5 w-3.5 shrink-0" /> Fuera del aire · TAKE para mostrarlo
           </div>
           <div className="min-h-0 flex-1">
@@ -129,7 +149,7 @@ function InspectorView({
               scene={preview.scene}
             />
           </div>
-          <footer className="flex shrink-0 items-center gap-2 border-t p-2">
+          <footer className="flex shrink-0 items-center gap-2 border-t p-1.5 sm:p-2">
             <Button className="h-10 flex-1" variant="outline" onClick={onEnqueuePreview}>
               <ListPlus className="h-4 w-4" /> A la cola
               <Kbd className="ml-1 pointer-coarse:hidden">Q</Kbd>

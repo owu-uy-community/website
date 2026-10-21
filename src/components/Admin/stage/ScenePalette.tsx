@@ -98,7 +98,7 @@ function ScenePaletteView({
           onKeyDown={(event) => event.key === "Enter" && read(event)}
           onPointerDown={read}
         >
-          <CommandInput placeholder="Buscar escena… (encuesta, countdown, sponsors)" />
+          <CommandInput className="text-base sm:text-sm" placeholder="Buscar escena… (encuesta, countdown, sponsors)" />
           <CommandList className="max-h-[min(60vh,520px)]">
             <CommandEmpty>Ninguna escena coincide.</CommandEmpty>
             {favorites.length > 0 && (

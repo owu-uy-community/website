@@ -61,7 +61,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider open={open} onOpenChange={changeOpen}>
       <AdminSidebar />
       <SidebarInset className="min-w-0 bg-background">
-        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2 border-b border-border/50 bg-black/40 px-4 backdrop-blur-lg">
+        {/* Insets are 0 in a browser tab; installed as an app (viewport-fit=cover) they clear the notch. */}
+        <header className="sticky top-0 z-40 flex h-[calc(3.5rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border/50 bg-black/40 pt-[env(safe-area-inset-top)] pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] backdrop-blur-lg">
           <SidebarTrigger className="-ml-1 shrink-0 text-muted-foreground hover:text-foreground" />
           <Separator className="mr-2 h-4 shrink-0" orientation="vertical" />
           <AdminBreadcrumbs />
