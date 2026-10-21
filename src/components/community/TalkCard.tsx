@@ -3,6 +3,7 @@ import { Play, Presentation } from "lucide-react";
 import { cn } from "app/lib/utils";
 import { TALK_EVENTS } from "keystatic/collections/talks";
 import type { Talk } from "lib/community/content";
+import { dateParts } from "lib/community/time";
 import { topicLabel } from "lib/community/topics";
 
 import { outbound } from "./ui";
@@ -20,9 +21,12 @@ const year = (date: string) => date.slice(0, 4);
 export default function TalkCard({ talk, className }: { talk: Talk; className?: string }) {
   const videoId = youtubeId(talk.video);
   const isConf = talk.event.startsWith("owu-conf");
+  // A talk still to be given (CONF agenda) shows its date instead of "no recording"
+  const when = dateParts(`${talk.date}T12:00:00-03:00`);
+  const upcoming = Date.parse(`${talk.date}T23:59:59-03:00`) > Date.now();
 
   return (
-    <article className={cn("group relative flex flex-col gap-3 scroll-mt-24", className)} id={talk.slug}>
+    <article className={cn("group relative flex scroll-mt-24 flex-col gap-3", className)} id={talk.slug}>
       <div
         className={cn(
           "relative aspect-video overflow-hidden rounded-lg border border-line",
@@ -44,11 +48,15 @@ export default function TalkCard({ talk, className }: { talk: Talk; className?: 
             <span aria-hidden className="absolute top-1 left-4 font-serif text-6xl leading-none text-white/20">
               “
             </span>
-            <p className="absolute inset-x-5 top-9 line-clamp-3 text-[13.5px] leading-snug text-white/75">{talk.summary}</p>
+            <p className="absolute inset-x-5 top-9 line-clamp-3 text-[13.5px] leading-snug text-white/75">
+              {talk.summary}
+            </p>
           </>
         )}
         <span className="absolute bottom-3 left-3 rounded bg-black/60 px-1.5 py-0.5 font-terminal text-[10px] tracking-[0.06em] text-zinc-200 uppercase backdrop-blur">
-          {talkEventLabel(talk.event)} · {year(talk.date)}
+          {talkEventLabel(talk.event).includes(year(talk.date))
+            ? talkEventLabel(talk.event)
+            : `${talkEventLabel(talk.event)} · ${year(talk.date)}`}
         </span>
         {talk.video ? (
           <span className="absolute right-3 bottom-3 flex size-9 items-center justify-center rounded-full bg-white text-zinc-950 shadow-lg transition-transform duration-300 group-hover:scale-110">
@@ -86,7 +94,13 @@ export default function TalkCard({ talk, className }: { talk: Talk; className?: 
               <Presentation aria-hidden className="size-3" /> Slides
             </a>
           ) : null}
-          {talk.video ? null : <span className="text-zinc-600">Sin grabación</span>}
+          {talk.video ? null : upcoming ? (
+            <span className="text-yellow-400">
+              Se presenta el {when.weekday} {when.day} {when.month}
+            </span>
+          ) : (
+            <span className="text-zinc-600">Sin grabación</span>
+          )}
         </div>
       </div>
     </article>
