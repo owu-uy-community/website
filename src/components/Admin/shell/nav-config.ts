@@ -14,6 +14,7 @@ import {
   MonitorPlay,
   Newspaper,
   PenLine,
+  PiggyBank,
   Settings,
   Siren,
   StickyNote,
@@ -41,6 +42,7 @@ export type NavKey =
   | "sala"
   | "comunidades"
   | "semanario"
+  | "encuesta"
   | "ajustes";
 
 export type AdminNavItem = {
@@ -231,6 +233,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/semanario",
         icon: Newspaper,
         keywords: ["newsletter", "digest", "owy", "resumen"],
+      },
+      {
+        key: "encuesta",
+        title: "Encuesta de sueldos",
+        href: "/admin/encuesta",
+        icon: PiggyBank,
+        keywords: ["sueldos", "salarios", "survey", "datos abiertos"],
       },
       {
         key: "ajustes",

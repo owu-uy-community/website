@@ -42,23 +42,45 @@ async function edition(status: "draft" | "open" | "closed" | "published" = "open
   return { slug, staff, surveyId: row.id };
 }
 
+/** An edition with 12 senior + 3 junior answers in UYU and 4 in USD, published */
+async function publishedEdition() {
+  const { slug, staff, surveyId } = await edition("closed");
+  const rows = [
+    ...Array.from({ length: 12 }, (_, index) => answers({ amount: 100_000 + index * 1000 })),
+    ...Array.from({ length: 3 }, () => answers({ seniority: "junior", amount: 50_000 })),
+    ...Array.from({ length: 4 }, () => answers({ currency: "USD", amount: 4000, employer: "cliente-exterior" })),
+  ];
+  await db.insert(salarySurveyResponses).values(rows.map((row) => ({ surveyId, ...row })));
+  await call(router.salarySurvey.setStatus, { slug, status: "published" }, by(staff));
+
+  return slug;
+}
+
 describe("salarySurvey.submit", () => {
-  test("one answer per person, stored without who answered", async () => {
-    const { slug, surveyId } = await edition();
+  test("one answer per person", async () => {
+    const { slug } = await edition();
     const user = await makeUser();
 
-    await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(user))).resolves.toEqual({ ok: true });
+    await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(user))).resolves.toStrictEqual({
+      ok: true,
+    });
     await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(user))).rejects.toMatchObject({
       code: "CONFLICT",
       data: { reason: "already_answered" },
     });
+  });
+
+  test("the answer is stored without who answered, dated by day only", async () => {
+    const { slug, surveyId } = await edition();
+    const user = await makeUser();
+    await call(router.salarySurvey.submit, { slug, answers: answers() }, by(user));
 
     const responses = await db.select().from(salarySurveyResponses).where(eq(salarySurveyResponses.surveyId, surveyId));
     const participants = await db.select().from(salarySurveyParticipants).where(eq(salarySurveyParticipants.surveyId, surveyId));
+
     expect(responses).toHaveLength(1);
-    expect(participants).toHaveLength(1);
     expect(JSON.stringify(responses)).not.toContain(user.id);
-    expect(participants[0].participantHash).not.toContain(user.id);
+    expect(participants.map((row) => row.participantHash).join(",")).not.toContain(user.id);
     expect(responses[0].createdOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
@@ -103,46 +125,53 @@ describe("salarySurvey.current", () => {
     const { slug } = await edition();
     const user = await makeUser();
 
-    expect(await call(router.salarySurvey.current, undefined, by(user))).toMatchObject({
+    await expect(call(router.salarySurvey.current, undefined, by(user))).resolves.toMatchObject({
       survey: { slug, status: "open", responseCount: 0 },
       answered: false,
     });
     await call(router.salarySurvey.submit, { slug, answers: answers() }, by(user));
-    expect(await call(router.salarySurvey.current, undefined, by(user))).toMatchObject({
+
+    await expect(call(router.salarySurvey.current, undefined, by(user))).resolves.toMatchObject({
       survey: { slug, responseCount: 1 },
       answered: true,
     });
-    expect(await call(router.salarySurvey.current, undefined, by(null))).toMatchObject({ answered: false });
+    await expect(call(router.salarySurvey.current, undefined, by(null))).resolves.toMatchObject({ answered: false });
   });
 });
 
 describe("salarySurvey.results", () => {
-  test("only published editions, with small groups hidden and currencies apart", async () => {
-    const { slug, staff, surveyId } = await edition("closed");
+  test("only published editions have results", async () => {
+    const { slug } = await edition("closed");
+
     await expect(call(router.salarySurvey.results, { slug }, by(null))).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(call(router.salarySurvey.dataset, { slug }, by(null))).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
 
-    const rows = [
-      ...Array.from({ length: 12 }, (_, index) => ({ ...answers({ amount: 100_000 + index * 1000 }) })),
-      ...Array.from({ length: 3 }, () => answers({ seniority: "junior", amount: 50_000 })),
-      ...Array.from({ length: 4 }, () => answers({ currency: "USD", amount: 4000, employer: "cliente-exterior" })),
-    ];
-    await db.insert(salarySurveyResponses).values(rows.map((row) => ({ surveyId, ...row })));
-    await call(router.salarySurvey.setStatus, { slug, status: "published" }, by(staff));
-
+  test("groups under the threshold are hidden", async () => {
+    const slug = await publishedEdition();
     const results = await call(router.salarySurvey.results, { slug }, by(null));
 
     expect(results.threshold).toBe(10);
     expect(results.survey.responseCount).toBe(19);
-    expect(results.currencies.UYU.n).toBe(15);
-    expect(results.currencies.UYU.overall).toMatchObject({ n: 15 });
-    expect(results.currencies.UYU.bySeniority).toEqual({
+    expect(results.currencies.UYU.bySeniority).toStrictEqual({
       groups: [{ key: "senior", label: "Senior", stat: { n: 12, p25: 102_750, median: 105_500, p75: 108_250 } }],
       hidden: 1,
     });
-    expect(results.currencies.UYU.byStack.groups.map((group) => group.key)).toEqual(["js-ts", "python"]);
-    expect(results.currencies.USD).toMatchObject({ n: 4, overall: null, byMarket: { groups: [], hidden: 1 } });
+    expect(results.currencies.UYU.byStack.groups.map((group) => group.key)).toStrictEqual(["js-ts", "python"]);
+  });
 
+  test("currencies are never mixed", async () => {
+    const slug = await publishedEdition();
+    const results = await call(router.salarySurvey.results, { slug }, by(null));
+
+    expect(results.currencies.UYU).toMatchObject({ n: 15, overall: { n: 15 } });
+    expect(results.currencies.USD).toMatchObject({ n: 4, overall: null, byMarket: { groups: [], hidden: 1 } });
+  });
+
+  test("the dataset has one row per answer", async () => {
+    const slug = await publishedEdition();
     const dataset = await call(router.salarySurvey.dataset, { slug }, by(null));
+
     expect(dataset.filename).toBe(`encuesta-sueldos-owu-${slug}.csv`);
     expect(dataset.csv.trim().split("\n")).toHaveLength(20);
   });
