@@ -3,7 +3,7 @@ import { CalendarPlus } from "lucide-react";
 import { ICS_URL } from "lib/community/site";
 
 import CopyField from "./CopyField";
-import { buttonClassName, Eyebrow } from "./ui";
+import { buttonClassName } from "./ui";
 
 const WEBCAL_URL = ICS_URL.replace(/^https:/, "webcal:");
 
@@ -19,16 +19,16 @@ const PROVIDERS = [
 /** Subscribe once, get every event: one-click providers plus the raw feed URL */
 export default function CalendarSubscribe({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {compact ? null : (
-        <div className="flex items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line bg-white/[0.03] text-yellow-400">
-            <CalendarPlus aria-hidden className="size-4" />
+        <div className="flex items-start gap-4">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+            <CalendarPlus aria-hidden className="size-5" />
           </span>
           <div>
-            <Eyebrow>Calendario</Eyebrow>
-            <p className="mt-1 text-[15px] text-zinc-300">
-              Suscribite una vez: los eventos nuevos aparecen solos en tu calendario.
+            <h3 className="font-title text-[17px] font-semibold text-white">Suscribite al calendario</h3>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-400">
+              Una vez. Los eventos nuevos aparecen solos en el tuyo.
             </p>
           </div>
         </div>

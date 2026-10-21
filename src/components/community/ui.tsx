@@ -1,13 +1,15 @@
-import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Plus } from "lucide-react";
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 
 import { addUtmParams, cn } from "app/lib/utils";
 
+import { CountUp, Reveal, Stagger } from "./motion";
+
 /*
- * The community site's building blocks. Dark ink surfaces, white hairlines and a
- * single accent (yellow-400) used for signals: eyebrow dots, focus, the primary
- * button's hover. Labels, dates and counts are set in mono.
+ * The community site's building blocks. A near-black base, soft translucent
+ * cards, Poppins titles with OWU's yellow bar underneath, Inter for everything
+ * else and mono only where it helps: dates, times, counts, shortcuts.
  */
 
 /** Stagger for .owu-rise / .owu-rise-line, in ms */
@@ -23,25 +25,33 @@ export function Container({ className, ...props }: ComponentPropsWithoutRef<"div
   return <div className={cn("mx-auto w-full max-w-6xl px-5 sm:px-8", className)} {...props} />;
 }
 
-export function Eyebrow({ children, dot = false, className }: { children: ReactNode; dot?: boolean; className?: string }) {
+/* ------------------------------------------------------------------ type */
+
+export const headingClassName = {
+  display:
+    "font-title text-[2.75rem] leading-[0.98] font-extrabold tracking-[-0.03em] text-balance text-white sm:text-6xl md:text-7xl lg:text-[5.25rem]",
+  h1: "font-title text-4xl leading-[1.04] font-extrabold tracking-[-0.025em] text-balance text-white sm:text-5xl md:text-[3.5rem]",
+  h2: "font-title text-3xl leading-[1.1] font-bold tracking-[-0.02em] text-balance text-white sm:text-4xl",
+  h3: "font-title text-xl leading-snug font-semibold tracking-[-0.01em] text-white",
+} as const;
+
+/** Small uppercase label above a title. (`dot` is accepted for older callers and ignored.) */
+export function Eyebrow({ children, className }: { children: ReactNode; dot?: boolean; className?: string }) {
   return (
-    <p
-      className={cn(
-        "inline-flex items-center gap-2 font-terminal text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase",
-        className
-      )}
-    >
-      {dot ? <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-yellow-400" /> : null}
-      {children}
-    </p>
+    <p className={cn("text-xs font-semibold tracking-[0.16em] text-zinc-500 uppercase", className)}>{children}</p>
   );
+}
+
+/** OWU's yellow bar under a title */
+export function TitleBar({ className }: { className?: string }) {
+  return <span aria-hidden className={cn("block h-1 w-10 rounded-full bg-yellow-400", className)} />;
 }
 
 export function Kbd({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <kbd
       className={cn(
-        "inline-flex h-5 min-w-5 items-center justify-center rounded border border-line bg-white/[0.04] px-1.5 font-terminal text-[10px] font-medium text-zinc-400",
+        "inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-white/10 bg-white/[0.05] px-1.5 font-terminal text-[10px] font-medium text-zinc-400",
         className
       )}
     >
@@ -49,6 +59,8 @@ export function Kbd({ children, className }: { children: ReactNode; className?: 
     </kbd>
   );
 }
+
+/* ----------------------------------------------------------------- links */
 
 type SmartLinkProps = Omit<ComponentPropsWithoutRef<"a">, "href"> & { href: string; utm?: string };
 
@@ -70,16 +82,16 @@ export function SmartLink({ href, utm, children, ...props }: SmartLinkProps) {
 }
 
 const BUTTON_VARIANTS = {
-  primary: "bg-zinc-50 text-zinc-950 hover:bg-yellow-400",
-  secondary: "border border-line-strong bg-white/[0.02] text-zinc-100 hover:border-white/25 hover:bg-white/[0.06]",
-  ghost: "text-zinc-300 hover:bg-white/[0.05] hover:text-zinc-50",
-  accent: "bg-yellow-400 text-zinc-950 hover:bg-yellow-300",
+  primary: "bg-white text-zinc-950 shadow-lg shadow-black/30 hover:bg-yellow-400 hover:shadow-yellow-400/20",
+  secondary: "border border-white/10 bg-white/[0.04] text-white hover:border-white/20 hover:bg-white/[0.08]",
+  ghost: "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
+  accent: "bg-yellow-400 text-zinc-950 shadow-lg shadow-yellow-400/10 hover:bg-yellow-300",
 } as const;
 
 const BUTTON_SIZES = {
-  sm: "h-8 gap-1.5 px-3 text-[13px]",
-  md: "h-10 gap-2 px-4 text-sm",
-  lg: "h-12 gap-2 px-5 text-[15px]",
+  sm: "h-9 gap-1.5 px-3.5 text-[13.5px]",
+  md: "h-11 gap-2 px-5 text-[15px]",
+  lg: "h-12 gap-2 px-6 text-base",
 } as const;
 
 export const buttonClassName = (
@@ -88,7 +100,7 @@ export const buttonClassName = (
   className?: string
 ) =>
   cn(
-    "group/button inline-flex shrink-0 items-center justify-center rounded-md font-medium tracking-[-0.01em] whitespace-nowrap transition-[background-color,border-color,color,transform] duration-200 hover:-translate-y-px active:translate-y-0 disabled:pointer-events-none disabled:opacity-50",
+    "group/button inline-flex shrink-0 items-center justify-center rounded-xl font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform,box-shadow] duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50",
     BUTTON_VARIANTS[variant],
     BUTTON_SIZES[size],
     className
@@ -103,7 +115,9 @@ export function LinkArrow({ external }: { external?: boolean }) {
       aria-hidden
       className={cn(
         "size-4 shrink-0 transition-transform duration-200",
-        external ? "group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5" : "group-hover/button:translate-x-0.5"
+        external
+          ? "group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5"
+          : "group-hover/button:translate-x-0.5"
       )}
     />
   );
@@ -131,152 +145,62 @@ export function ButtonLink({
   );
 }
 
-/** Small mono pill with a yellow dot: announcements above a hero */
-export function AnnouncementPill({ href, children, utm }: { href: string; children: ReactNode; utm?: string }) {
+/** A pill above a hero: a yellow label, then the news */
+export function AnnouncementPill({
+  href,
+  label,
+  children,
+  utm,
+}: {
+  href: string;
+  label?: ReactNode;
+  children: ReactNode;
+  utm?: string;
+}) {
   return (
     <SmartLink
-      className="group/button inline-flex max-w-full items-center gap-2 rounded-full border border-line bg-ink/80 py-1 pr-3 pl-2.5 font-terminal text-[11px] text-zinc-400 backdrop-blur transition-colors hover:border-line-strong hover:text-zinc-100 sm:text-xs"
+      className="group/button inline-flex max-w-full items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] py-1.5 pr-4 pl-4 text-[13px] text-zinc-300 backdrop-blur transition-colors hover:border-white/20 hover:bg-white/[0.07] hover:text-white sm:text-sm"
       href={href}
       utm={utm}
     >
-      <span aria-hidden className="relative flex size-1.5 shrink-0">
-        <span className="absolute inline-flex size-full animate-ping rounded-full bg-yellow-400 opacity-60 motion-reduce:hidden" />
-        <span className="relative inline-flex size-1.5 rounded-full bg-yellow-400" />
-      </span>
+      {label ? <span className="font-semibold text-yellow-400">{label}</span> : null}
       <span className="truncate">{children}</span>
-      <span aria-hidden className="transition-transform group-hover/button:translate-x-0.5">
-        →
-      </span>
+      <ArrowRight aria-hidden className="size-3.5 shrink-0 transition-transform group-hover/button:translate-x-0.5" />
     </SmartLink>
   );
 }
 
-/** "+" registration mark for the corners of framed blocks */
-export function Cross({ className }: { className?: string }) {
-  return (
-    <span aria-hidden className={cn("pointer-events-none absolute z-10", className)}>
-      <span className="absolute h-4 w-px -translate-x-1/2 -translate-y-1/2 bg-white/20" />
-      <span className="absolute h-px w-4 -translate-x-1/2 -translate-y-1/2 bg-white/20" />
-    </span>
+/* ------------------------------------------------------------- surfaces */
+
+/** The one card recipe: a translucent slab with a soft top highlight */
+export const cardClassName = (interactive = false, className?: string) =>
+  cn(
+    "relative rounded-2xl border border-white/[0.07] bg-white/[0.03] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]",
+    interactive &&
+      "transition-[border-color,background-color,transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.05] hover:shadow-[0_24px_48px_-28px_rgba(0,0,0,0.9),inset_0_1px_0_0_rgba(255,255,255,0.06)]",
+    className
   );
+
+export function Card({ interactive = false, className, ...props }: ComponentPropsWithoutRef<"div"> & { interactive?: boolean }) {
+  return <div className={cardClassName(interactive, cn("p-6 sm:p-7", className))} {...props} />;
 }
 
-/** Framed page header: guide rails at the content edges, corner marks, a warm light from above */
-export function PageHeader({
-  eyebrow,
-  title,
-  description,
-  actions,
-  children,
-  className,
-}: {
-  eyebrow?: ReactNode;
-  title: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-  children?: ReactNode;
-  className?: string;
-}) {
-  return (
-    <header className={cn("relative overflow-hidden border-b border-line", className)}>
-      <div aria-hidden className="owu-furnace pointer-events-none absolute inset-0" />
-      <div aria-hidden className="owu-grid-fade pointer-events-none absolute inset-0 opacity-60" />
-      <Container className="relative">
-        <div className="relative border-x border-line px-5 pt-16 pb-12 sm:px-10 sm:pt-24 sm:pb-16">
-          <Cross className="top-0 left-0" />
-          <Cross className="top-0 right-0" />
-          <Cross className="bottom-0 left-0" />
-          <Cross className="right-0 bottom-0" />
-          {eyebrow ? (
-            <div className="owu-rise" style={delay(0)}>
-              {typeof eyebrow === "string" ? <Eyebrow dot>{eyebrow}</Eyebrow> : eyebrow}
-            </div>
-          ) : null}
-          <h1
-            className="owu-rise mt-5 max-w-3xl text-4xl leading-[1.02] font-semibold tracking-[-0.035em] text-balance text-zinc-50 sm:text-5xl md:text-6xl"
-            style={delay(80)}
-          >
-            {title}
-          </h1>
-          {description ? (
-            <div
-              className="owu-rise mt-5 max-w-2xl text-base leading-relaxed text-pretty text-zinc-400 sm:text-lg"
-              style={delay(160)}
-            >
-              {description}
-            </div>
-          ) : null}
-          {actions ? (
-            <div className="owu-rise mt-8 flex flex-wrap items-center gap-3" style={delay(240)}>
-              {actions}
-            </div>
-          ) : null}
-          {children}
-        </div>
-      </Container>
-    </header>
-  );
+/** A card grid: four columns at most, every item the same height. The items enter one after another. */
+export function Cells({ className, children }: { className?: string; children: ReactNode }) {
+  return <Stagger className={cn("grid gap-4", className)}>{children}</Stagger>;
 }
 
-/** A page section: hairline on top, a header (eyebrow, title, intro, actions), then content */
-export function Section({
-  id,
-  eyebrow,
-  title,
-  description,
-  actions,
-  children,
-  className,
-  bordered = true,
-}: {
-  id?: string;
-  eyebrow?: ReactNode;
-  title?: ReactNode;
-  description?: ReactNode;
-  actions?: ReactNode;
-  children?: ReactNode;
-  className?: string;
-  bordered?: boolean;
-}) {
-  return (
-    <section className={cn("scroll-mt-20 py-16 sm:py-24", bordered && "border-t border-line", className)} id={id}>
-      <Container>
-        {title || eyebrow ? (
-          <div className="mb-10 flex flex-col gap-6 sm:mb-12 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              {eyebrow ? typeof eyebrow === "string" ? <Eyebrow dot>{eyebrow}</Eyebrow> : eyebrow : null}
-              {title ? (
-                <h2 className="mt-4 text-3xl leading-[1.05] font-semibold tracking-[-0.03em] text-balance text-zinc-50 sm:text-4xl">
-                  {title}
-                </h2>
-              ) : null}
-              {description ? (
-                <div className="mt-4 text-base leading-relaxed text-pretty text-zinc-400 sm:text-[17px]">{description}</div>
-              ) : null}
-            </div>
-            {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-          </div>
-        ) : null}
-        {children}
-      </Container>
-    </section>
-  );
-}
-
-/** Bordered cell grid: the hairlines between cells come from a 1px gap over the line color */
-export function Cells({ className, ...props }: ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("grid gap-px overflow-hidden rounded-xl border border-line bg-line", className)} {...props} />;
-}
 
 export function Cell({ className, ...props }: ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("relative bg-ink p-6 sm:p-8", className)} {...props} />;
+  return <Card className={cn("flex flex-col", className)} {...props} />;
 }
 
 const BADGE_TONES = {
-  neutral: "border-line-strong text-zinc-400",
-  accent: "border-yellow-400/30 bg-yellow-400/[0.08] text-yellow-300",
-  green: "border-emerald-400/25 bg-emerald-400/[0.06] text-emerald-300",
-  orange: "border-orange-400/30 bg-orange-400/[0.07] text-orange-300",
+  neutral: "bg-white/[0.07] text-zinc-300",
+  accent: "bg-yellow-400/15 text-yellow-300",
+  // Kept for older callers; every status now reads the same, in words
+  green: "bg-white/[0.07] text-zinc-300",
+  orange: "bg-white/[0.07] text-zinc-300",
 } as const;
 
 export function Badge({
@@ -291,7 +215,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center gap-1 rounded-full border px-2 font-terminal text-[10px] font-medium tracking-[0.06em] whitespace-nowrap uppercase",
+        "inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-[11.5px] font-medium whitespace-nowrap",
         BADGE_TONES[tone],
         className
       )}
@@ -300,6 +224,113 @@ export function Badge({
     </span>
   );
 }
+
+/* --------------------------------------------------------------- headers */
+
+/** Page header: kicker, Poppins title with the yellow bar, intro and actions, under a warm light */
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+  children,
+  align = "left",
+  className,
+}: {
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+  align?: "left" | "center";
+  className?: string;
+}) {
+  const centered = align === "center";
+
+  return (
+    <header className={cn("relative overflow-hidden", className)}>
+      <div aria-hidden className="owu-furnace pointer-events-none absolute inset-0" />
+      <Container className={cn("relative pt-16 pb-12 sm:pt-24 sm:pb-16", centered && "flex flex-col items-center text-center")}>
+        {eyebrow ? (
+          <div className="owu-rise" style={delay(0)}>
+            {typeof eyebrow === "string" ? <Eyebrow>{eyebrow}</Eyebrow> : eyebrow}
+          </div>
+        ) : null}
+        <h1 className={cn(headingClassName.h1, "owu-rise mt-4 max-w-3xl")} style={delay(80)}>
+          {title}
+        </h1>
+        <TitleBar className={cn("owu-rise mt-6", centered && "mx-auto")} />
+        {description ? (
+          <div
+            className={cn("owu-rise mt-6 max-w-2xl text-base leading-relaxed text-pretty text-zinc-400 sm:text-lg", centered && "mx-auto")}
+            style={delay(160)}
+          >
+            {description}
+          </div>
+        ) : null}
+        {actions ? (
+          <div className={cn("owu-rise mt-8 flex flex-wrap items-center gap-3", centered && "justify-center")} style={delay(240)}>
+            {actions}
+          </div>
+        ) : null}
+        {children}
+      </Container>
+    </header>
+  );
+}
+
+/** A page section: title block (kicker, Poppins title, yellow bar, intro, actions) that rises into view, then content */
+export function Section({
+  id,
+  eyebrow,
+  title,
+  description,
+  actions,
+  children,
+  className,
+  align = "left",
+}: {
+  id?: string;
+  eyebrow?: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children?: ReactNode;
+  className?: string;
+  /** Kept so older callers compile; sections are separated by space, not lines */
+  bordered?: boolean;
+  align?: "left" | "center";
+}) {
+  const centered = align === "center";
+
+  return (
+    <section className={cn("scroll-mt-24 py-16 sm:py-24", className)} id={id}>
+      <Container>
+        {title || eyebrow ? (
+          <Reveal
+            className={cn(
+              "mb-10 flex flex-col gap-6 sm:mb-14",
+              centered ? "items-center text-center" : "md:flex-row md:items-end md:justify-between"
+            )}
+          >
+            <div className={cn("max-w-2xl", centered && "flex flex-col items-center")}>
+              {eyebrow ? typeof eyebrow === "string" ? <Eyebrow className="mb-4">{eyebrow}</Eyebrow> : eyebrow : null}
+              {title ? <h2 className={headingClassName.h2}>{title}</h2> : null}
+              <TitleBar className="mt-5" />
+              {description ? (
+                <div className="mt-5 text-base leading-relaxed text-pretty text-zinc-400 sm:text-[17px]">{description}</div>
+              ) : null}
+            </div>
+            {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+          </Reveal>
+        ) : null}
+        {children}
+      </Container>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------- pieces */
 
 const initials = (name: string) =>
   name
@@ -322,14 +353,14 @@ export function CommunityLogo({
   size?: "sm" | "md" | "lg";
   className?: string;
 }) {
-  const box = { sm: "size-9 rounded-md", md: "size-12 rounded-lg", lg: "size-16 rounded-xl" }[size];
+  const box = { sm: "size-9 rounded-lg", md: "size-12 rounded-xl", lg: "size-16 rounded-2xl" }[size];
 
   if (!logo) {
     return (
       <span
         aria-hidden
         className={cn(
-          "flex shrink-0 items-center justify-center border border-line-strong bg-ink-card font-terminal font-semibold text-yellow-400",
+          "flex shrink-0 items-center justify-center border border-white/10 bg-white/[0.06] font-title font-semibold text-zinc-200",
           box,
           size === "sm" ? "text-[11px]" : "text-sm",
           className
@@ -352,17 +383,15 @@ export function CommunityLogo({
 /** Native disclosure list: one open at a time when they share a `name` */
 export function Faq({ name, items }: { name: string; items: { question: string; answer: ReactNode }[] }) {
   return (
-    <div className="divide-y divide-line border-y border-line">
+    <div className="divide-y divide-white/[0.08]">
       {items.map(({ question, answer }) => (
         <details key={question} className="group" name={name}>
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-base font-medium text-zinc-100 transition-colors hover:text-zinc-50 sm:text-lg [&::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 font-title text-base font-semibold text-zinc-100 transition-colors hover:text-white sm:text-[17px] [&::-webkit-details-marker]:hidden">
             {question}
-            <span
+            <Plus
               aria-hidden
-              className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line-strong text-zinc-400 transition-transform duration-200 group-open:rotate-45 group-open:text-yellow-400 motion-reduce:transition-none"
-            >
-              +
-            </span>
+              className="size-5 shrink-0 text-zinc-500 transition-[transform,color] duration-200 group-open:rotate-45 group-open:text-yellow-400 motion-reduce:transition-none"
+            />
           </summary>
           <div className="pr-10 pb-6 text-[15px] leading-relaxed text-zinc-400 [&_a]:text-zinc-200 [&_a]:underline [&_a]:decoration-white/30 [&_a]:underline-offset-4 [&_a:hover]:decoration-yellow-400">
             {answer}
@@ -384,10 +413,10 @@ export function Terminal({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-line bg-gradient-to-b from-white/[0.02] to-transparent", className)}>
-      <div className="flex items-center gap-1.5 border-b border-line bg-white/[0.02] px-3.5 py-2.5">
-        {[0, 1, 2].map((dot) => (
-          <span key={dot} aria-hidden className="size-2.5 rounded-full bg-[#2a2a30]" />
+    <div className={cardClassName(false, cn("overflow-hidden", className))}>
+      <div className="flex items-center gap-1.5 border-b border-white/[0.07] bg-white/[0.02] px-4 py-3">
+        {["#ff5f57", "#febc2e", "#28c840"].map((color) => (
+          <span key={color} aria-hidden className="size-2.5 rounded-full opacity-80" style={{ backgroundColor: color }} />
         ))}
         <span className="flex-1 pr-10 text-center font-terminal text-[11px] text-zinc-500">{title}</span>
       </div>
@@ -416,21 +445,45 @@ export function Terminal({
   );
 }
 
-/** Bordered strip of figures; tabular numbers so they line up */
-export function StatStrip({ stats, className }: { stats: { value: string; label: string }[]; className?: string }) {
+/** "+5.000" → { prefix: "+", number: 5000, suffix: "" } */
+const splitFigure = (value: string | number) => {
+  if (typeof value === "number") return { prefix: "", number: value, suffix: "" };
+  const digits = value.replace(/[^\d]/g, "");
+
+  return {
+    prefix: value.match(/^[^\d]*/)?.[0] ?? "",
+    number: digits ? Number(digits) : 0,
+    suffix: value.match(/[^\d]*$/)?.[0] ?? "",
+  };
+};
+
+/** Big yellow figures that count up when they scroll into view */
+export function StatStrip({
+  stats,
+  className,
+}: {
+  stats: { value: string | number; label: string }[];
+  className?: string;
+}) {
   return (
-    <dl className={cn("grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-4", className)}>
-      {stats.map(({ value, label }) => (
-        <div key={label} className="bg-ink p-5 sm:p-6">
-          <dt className="font-terminal text-[11px] tracking-[0.08em] text-zinc-500 uppercase">{label}</dt>
-          <dd className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-zinc-50 tabular-nums sm:text-4xl">{value}</dd>
-        </div>
-      ))}
+    <dl className={cn("grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4", className)}>
+      {stats.map(({ value, label }) => {
+        const figure = splitFigure(value);
+
+        return (
+          <div key={label} className="flex flex-col-reverse gap-2">
+            <dt className="text-sm leading-snug text-zinc-400">{label}</dt>
+            <dd className="font-title text-4xl font-extrabold tracking-[-0.02em] text-yellow-400 tabular-nums sm:text-5xl">
+              <CountUp prefix={figure.prefix} suffix={figure.suffix} value={figure.number} />
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
 
-/** Mono "updated on" line: every block fed by hand says how fresh it is */
+/** "updated on" line: every block fed by hand says how fresh it is */
 export function Freshness({ children, className }: { children: ReactNode; className?: string }) {
-  return <p className={cn("font-terminal text-[11px] text-zinc-600", className)}>{children}</p>;
+  return <p className={cn("text-xs text-zinc-500", className)}>{children}</p>;
 }

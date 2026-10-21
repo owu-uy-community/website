@@ -465,7 +465,7 @@ html:has(.owu-site) body {
 }
 
 .owu-site {
-  font-feature-settings: "cv11", "ss01", "ss03";
+  font-feature-settings: "cv11", "ss03";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -493,40 +493,16 @@ html:has(.owu-site) body {
 }
 
 @layer components {
-  /* 48px grid that fades out from the centre of the hero */
-  .owu-grid-fade {
-    background-image:
-      linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 30%, transparent 100%);
-  }
-
-  /* Warm light from above, in the brand yellow, kept under 7% */
+  /* Warm light from above: the brand yellow over OWU's olive glow, never above 8% */
   .owu-furnace {
     background:
-      radial-gradient(ellipse 62% 100% at 50% 0%, rgb(250 204 21 / 0.07), rgb(250 204 21 / 0.015) 45%, transparent 72%),
-      radial-gradient(ellipse 40% 60% at 50% 0%, rgb(62 71 19 / 0.55), transparent 70%);
+      radial-gradient(ellipse 70% 90% at 50% 0%, rgb(250 204 21 / 0.08), rgb(250 204 21 / 0.02) 45%, transparent 72%),
+      radial-gradient(ellipse 45% 55% at 50% 0%, rgb(62 71 19 / 0.6), transparent 70%);
   }
 
   .owu-hairline-accent {
     height: 1px;
     background: linear-gradient(to right, transparent, rgb(250 204 21 / 0.55), transparent);
-  }
-
-  /* Page headers: guide rails at the content edges */
-  .owu-rails {
-    background-image: linear-gradient(
-      to right,
-      transparent calc(50% - var(--rail, 576px)),
-      rgb(255 255 255 / 0.06) calc(50% - var(--rail, 576px)),
-      rgb(255 255 255 / 0.06) calc(50% - var(--rail, 576px) + 1px),
-      transparent calc(50% - var(--rail, 576px) + 1px),
-      transparent calc(50% + var(--rail, 576px) - 1px),
-      rgb(255 255 255 / 0.06) calc(50% + var(--rail, 576px) - 1px),
-      rgb(255 255 255 / 0.06) calc(50% + var(--rail, 576px)),
-      transparent calc(50% + var(--rail, 576px))
-    );
   }
 
   /* Headline lines rise out of a mask on load */

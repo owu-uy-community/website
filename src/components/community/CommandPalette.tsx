@@ -71,15 +71,15 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
           <Dialog.Overlay className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="fixed top-[12vh] left-1/2 z-[95] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl border border-line-strong bg-ink-elev shadow-[0_32px_80px_-24px_rgba(0,0,0,0.9)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98]"
+            className="fixed top-[12vh] left-1/2 z-[95] w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f11] shadow-[0_32px_80px_-24px_rgba(0,0,0,0.9)] data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.98]"
           >
             <Dialog.Title className="sr-only">Buscar en OWU</Dialog.Title>
             <Command
               loop
               filter={scoreItem}
-              className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:font-terminal [&_[cmdk-group-heading]]:text-[10.5px] [&_[cmdk-group-heading]]:tracking-[0.12em] [&_[cmdk-group-heading]]:text-zinc-500 [&_[cmdk-group-heading]]:uppercase"
+              className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:tracking-[0.14em] [&_[cmdk-group-heading]]:text-zinc-500 [&_[cmdk-group-heading]]:uppercase"
             >
-              <div className="flex items-center gap-3 border-b border-line px-4">
+              <div className="flex items-center gap-3 border-b border-white/[0.07] px-4">
                 <Search aria-hidden className="size-4 shrink-0 text-zinc-500" />
                 <Command.Input
                   autoFocus
@@ -100,7 +100,7 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
                       {groupItems.map((item) => (
                         <Command.Item
                           key={`${group}-${item.href}-${item.label}`}
-                          className="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-zinc-300 data-[selected=true]:bg-white/[0.06] data-[selected=true]:text-zinc-50"
+                          className="group flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-zinc-300 data-[selected=true]:bg-white/[0.06] data-[selected=true]:text-white"
                           keywords={[item.hint ?? "", item.keywords ?? ""]}
                           value={`${item.label} · ${group}`}
                           onSelect={() => go(item.href)}
@@ -109,7 +109,7 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{item.label}</span>
                             {item.hint ? (
-                              <span className="block truncate font-terminal text-[11px] text-zinc-500">{item.hint}</span>
+                              <span className="block truncate text-xs text-zinc-500">{item.hint}</span>
                             ) : null}
                           </span>
                           {isExternal(item.href) ? (
@@ -126,7 +126,7 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
                   );
                 })}
               </Command.List>
-              <div className="flex items-center justify-between gap-4 border-t border-line px-4 py-2.5 font-terminal text-[11px] text-zinc-600">
+              <div className="flex items-center justify-between gap-4 border-t border-white/[0.07] px-4 py-2.5 text-xs text-zinc-500">
                 <span className="flex items-center gap-1.5">
                   <Kbd>↑</Kbd>
                   <Kbd>↓</Kbd> para moverte <Kbd>↵</Kbd> para abrir

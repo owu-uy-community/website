@@ -60,7 +60,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
             style={{ left: `${slot.x}%`, top: `${slot.y}%`, "--depth": slot.depth } as CSSProperties}
           >
             <Link
-              className="owu-orbit-drift pointer-events-auto flex items-center justify-center rounded-[26%] border border-white/10 bg-white p-2.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-[filter,scale] duration-300 hover:scale-110"
+              className="owu-orbit-drift pointer-events-auto flex items-center justify-center rounded-[22%] border border-white/10 bg-white p-2.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-[filter,scale] duration-300 hover:scale-110"
               href={`/comunidades#${tile.slug}`}
               style={
                 {

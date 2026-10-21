@@ -16,15 +16,15 @@ const ICONS = {
 
 export default function Footer() {
   return (
-    <footer className="relative w-full overflow-hidden border-t border-line">
-      <Container className="relative py-14 sm:py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
-          <div className="flex max-w-sm flex-col gap-5">
+    <footer className="relative w-full overflow-hidden border-t border-white/[0.07]">
+      <Container className="relative py-16 sm:py-20">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-16">
+          <div className="flex max-w-sm flex-col gap-6">
             <Link aria-label="OWU Uruguay, inicio" className="w-fit" href="/">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt="OWU Uruguay" className="h-8 w-auto" height={32} src="/images/logos/owu.webp" width={75} />
+              <img alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
             </Link>
-            <p className="text-sm leading-relaxed text-zinc-400">
+            <p className="text-[15px] leading-relaxed text-zinc-400">
               La comunidad tech de Uruguay desde 2014. Un Slack, decenas de grupos y una conferencia, hechos por gente que
               se da una mano.
             </p>
@@ -36,11 +36,11 @@ export default function Footer() {
                   <li key={key}>
                     <SmartLink
                       aria-label={label}
-                      className="inline-flex size-9 items-center justify-center rounded-md text-zinc-500 transition-colors hover:bg-white/[0.05] hover:text-zinc-100"
+                      className="inline-flex size-10 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-yellow-400"
                       href={href}
                       utm="footer"
                     >
-                      <Icon aria-hidden className="size-[17px]" />
+                      <Icon aria-hidden className="size-[18px]" />
                     </SmartLink>
                   </li>
                 );
@@ -52,11 +52,11 @@ export default function Footer() {
             {FOOTER_COLUMNS.map(({ title, links }) => (
               <div key={title}>
                 <Eyebrow>{title}</Eyebrow>
-                <ul className="mt-4 flex flex-col gap-2.5">
+                <ul className="mt-5 flex flex-col gap-3">
                   {links.map(({ href, label, external }) => (
                     <li key={href}>
                       <SmartLink
-                        className="group inline-flex items-center gap-1 text-sm text-zinc-400 transition-colors hover:text-zinc-50"
+                        className="group inline-flex items-center gap-1 text-[15px] text-zinc-400 transition-colors hover:text-white"
                         href={href}
                         utm="footer"
                       >
@@ -64,7 +64,7 @@ export default function Footer() {
                         {external ? (
                           <ArrowUpRight
                             aria-hidden
-                            className="size-3 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                            className="size-3.5 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                           />
                         ) : null}
                       </SmartLink>
@@ -76,17 +76,22 @@ export default function Footer() {
           </nav>
         </div>
 
-        <div className="mt-14 flex flex-col gap-3 border-t border-line pt-6 font-terminal text-[11px] text-zinc-600 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[13px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
           <span>© {new Date().getFullYear()} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
-          <a className="inline-flex items-center gap-1 hover:text-zinc-300" href={REPO_URL} rel="noopener" target="_blank">
+          <a
+            className="inline-flex items-center gap-1 transition-colors hover:text-zinc-200"
+            href={REPO_URL}
+            rel="noopener"
+            target="_blank"
+          >
             ¿Ves algo para mejorar? Mandá un PR
-            <ArrowUpRight aria-hidden className="size-3" />
+            <ArrowUpRight aria-hidden className="size-3.5" />
           </a>
         </div>
       </Container>
       <p
         aria-hidden
-        className="pointer-events-none -mb-[0.22em] text-center text-[22vw] leading-none font-semibold tracking-[-0.06em] text-white/[0.025] select-none"
+        className="pointer-events-none -mb-[0.2em] text-center font-title text-[21vw] leading-none font-extrabold tracking-[-0.05em] text-white/[0.025] select-none"
       >
         owu.uy
       </p>
