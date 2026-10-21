@@ -112,3 +112,14 @@ export const PUBLIC_ROUTES = Object.values(PAGES).filter((page) => !("external" 
  * Add each new edition here.
  */
 export const OWU_FEED_NAMES = ["OWU", "OWU Conf 2026", "OWU CONF 2026", "La Meetup"];
+
+/**
+ * Slack channels the pages mention by name. TODO(confirmar con el staff): these
+ * are the conventional names; replace them with the workspace's real channels.
+ */
+export const SLACK_CHANNELS = {
+  general: "general",
+  jobs: "jobs",
+  semanario: "semanario",
+  organizers: "organizadores",
+} as const;
