@@ -415,8 +415,8 @@ export function Terminal({
   return (
     <div className={cardClassName(false, cn("overflow-hidden", className))}>
       <div className="flex items-center gap-1.5 border-b border-white/[0.07] bg-white/[0.02] px-4 py-3">
-        {["#ff5f57", "#febc2e", "#28c840"].map((color) => (
-          <span key={color} aria-hidden className="size-2.5 rounded-full opacity-80" style={{ backgroundColor: color }} />
+        {[0, 1, 2].map((dot) => (
+          <span key={dot} aria-hidden className="size-2.5 rounded-full bg-white/15" />
         ))}
         <span className="flex-1 pr-10 text-center font-terminal text-[11px] text-zinc-500">{title}</span>
       </div>
