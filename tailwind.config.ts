@@ -27,6 +27,16 @@ const config = {
         open: ["var(--font-open-sans)", "sans-serif"],
       },
       colors: {
+        // Community site surfaces (owu.uy public pages): near-black ink and white hairlines
+        ink: {
+          DEFAULT: "#09090b",
+          elev: "#0f0f11",
+          card: "#131316",
+        },
+        line: {
+          DEFAULT: "rgb(255 255 255 / 0.08)",
+          strong: "rgb(255 255 255 / 0.14)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

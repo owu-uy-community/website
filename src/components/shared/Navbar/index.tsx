@@ -1,112 +1,120 @@
 "use client";
 
-import classNames from "classnames";
+import { ArrowUpRight, Search } from "lucide-react";
 import Link from "next/link";
-import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { addUtmParams } from "app/lib/utils";
-import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
+import { signOut, useSession } from "app/lib/auth-client";
+import { SOCIAL_LINKS } from "app/lib/constants";
+import { cn } from "app/lib/utils";
+import { useCommandPalette } from "components/community/CommandPalette";
+import { ButtonLink, Kbd, SmartLink } from "components/community/ui";
+import { UserAvatarMenu } from "components/shared/ui/user-avatar-menu";
+import { NAV_LINKS } from "lib/community/site";
 
 import MobileNav from "./mobileNav";
-import { signOut, useSession } from "app/lib/auth-client";
-import { UserAvatarMenu } from "components/shared/ui/user-avatar-menu";
-import { useNavigationContext } from "./navigationProvider";
-import { navSections, SectionKey } from "./navSections";
 
-export interface NavItemProps {
-  title: string;
-  link: string;
-  isActive?: boolean;
-}
-
-function NavItem({ title, link, isActive }: NavItemProps) {
-  return (
-    <Link
-      className={classNames(
-        "block border-[6px] border-transparent py-4 font-medium transition-colors ease-out hover:bg-yellow-400/5 lg:rounded-b-xl lg:pb-2 lg:pt-3",
-        {
-          "border-l-yellow-400 font-bold lg:border-l-transparent lg:border-t-yellow-400": isActive,
-        }
-      )}
-      href={link}
-    >
-      {title}
-    </Link>
-  );
-}
+export const isActivePath = (pathname: string, href: string) =>
+  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
 function Navbar() {
-  const { activeSection } = useNavigationContext();
+  const pathname = usePathname();
   const { data: session, isPending } = useSession();
+  const { open } = useCommandPalette();
+  const [scrolled, setScrolled] = useState(false);
+  const [isMac, setIsMac] = useState(true);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <nav
-      className="sticky top-[-1px] z-[60] mx-auto flex h-full max-h-[56px] w-full bg-gradient-to-b from-[#1d1e1757] via-transparent to-transparent py-4 backdrop-blur-lg backdrop-filter"
+    <header
+      className={cn(
+        "sticky top-0 z-[60] w-full border-b backdrop-blur-md transition-[background-color,border-color] duration-300",
+        scrolled ? "border-line bg-ink/80" : "border-transparent bg-ink/30"
+      )}
       id="site-menu"
     >
-      <div className="container flex flex-row items-center justify-between">
-        <div className="flex h-full min-w-[140px] items-center">
-          <Link className="flex h-full flex-col justify-center" href={navSections[SectionKey.Hero].link}>
-            <h1 className="hidden">OWU URUGUAY</h1>
-            <img
-              alt="OWU Uruguay"
-              className="max-h-[32px] w-auto object-contain transition-all duration-300 hover:scale-105"
-              src="/images/logos/owu.webp"
-            />
-          </Link>
-        </div>
-        <ul className="hidden w-full max-w-[700px] md:text-base lg:flex lg:justify-center lg:self-center lg:py-0 xl:flex">
-          {Object.values(navSections).map(({ link, title, id }) => {
-            return (
-              <li key={link} className="text-base text-white lg:flex-1 lg:text-center">
-                <NavItem isActive={activeSection === id} link={link} title={title} />
-              </li>
-            );
-          })}
-        </ul>
-        <div className="flex h-full items-center lg:hidden">
-          <MobileNav />
-        </div>
-        <div className="hidden items-center justify-center gap-4 lg:flex">
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.instagram)}
-            rel="noopener"
-            target="_blank"
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-5 sm:px-8">
+        <Link aria-label="OWU Uruguay, inicio" className="flex shrink-0 items-center" href="/">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            alt="OWU Uruguay"
+            className="h-7 w-auto transition-transform duration-300 hover:scale-105"
+            height={28}
+            src="/images/logos/owu.webp"
+            width={66}
+          />
+        </Link>
+
+        <nav aria-label="Principal" className="hidden flex-1 lg:block">
+          <ul className="flex items-center gap-1">
+            {NAV_LINKS.map(({ href, label, external }) => {
+              const active = !external && isActivePath(pathname, href);
+
+              return (
+                <li key={href}>
+                  <SmartLink
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "relative inline-flex h-9 items-center gap-1 rounded-md px-3 text-[13.5px] tracking-[-0.005em] transition-colors",
+                      active ? "text-zinc-50" : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-100"
+                    )}
+                    href={href}
+                    utm="navbar"
+                  >
+                    {label}
+                    {external ? <ArrowUpRight aria-hidden className="size-3 text-zinc-500" /> : null}
+                    {active ? (
+                      <span aria-hidden className="absolute inset-x-3 -bottom-[11px] h-px bg-yellow-400" />
+                    ) : null}
+                  </SmartLink>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            aria-label="Buscar"
+            className="hidden h-8 items-center gap-2 rounded-md border border-line bg-white/[0.02] pr-1.5 pl-2.5 text-[13px] text-zinc-500 transition-colors hover:border-line-strong hover:text-zinc-300 md:inline-flex"
+            type="button"
+            onClick={open}
           >
-            <FaInstagram size={20} />
-          </Link>
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.linkedin)}
-            rel="noopener"
-            target="_blank"
+            <Search aria-hidden className="size-3.5" />
+            <span className="pr-6">Buscar</span>
+            <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
+          </button>
+          <button
+            aria-label="Buscar"
+            className="inline-flex size-9 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-zinc-100 md:hidden"
+            type="button"
+            onClick={open}
           >
-            <FaLinkedin size={20} />
-          </Link>
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.slack)}
-            target="_blank"
-          >
-            <FaSlack size={20} />
-          </Link>
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.telegram)}
-            target="_blank"
-          >
-            <FaTelegram size={20} />
-          </Link>
+            <Search aria-hidden className="size-4" />
+          </button>
+          <ButtonLink className="hidden sm:inline-flex" href={SOCIAL_LINKS.slack} size="sm" utm="navbar">
+            Sumate al Slack
+          </ButtonLink>
           {session?.user && !isPending ? (
             <UserAvatarMenu
+              showAdminSettings={session.user.role === "admin"}
               user={session.user}
               onSignOut={() => signOut()}
-              showAdminSettings={session.user.role === "admin"}
             />
           ) : null}
+          <MobileNav />
         </div>
       </div>
-    </nav>
+    </header>
   );
 }
 
