@@ -19,6 +19,7 @@ import { roomsRouter } from "./rooms/router";
 import { runOfShowRouter } from "./run-of-show/router";
 import { schedulesRouter } from "./schedules/router";
 import { screensRouter } from "./screens/router";
+import { semanarioRouter } from "./semanario/router";
 import { shellRouter } from "./shell/router";
 import { staffTasksRouter } from "./staff-tasks/router";
 import { surveysRouter } from "./surveys/router";
@@ -82,6 +83,9 @@ export const router = {
 
   // What the server has configured, for the settings pages
   system: systemRouter,
+
+  // The weekly digest: Owy drafts it, the staff publishes it
+  semanario: semanarioRouter,
 };
 
 export type AppRouter = typeof router;

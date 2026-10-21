@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   foreignKey,
   index,
   integer,
@@ -314,6 +315,42 @@ export const tracks = pgTable(
     index("tracks_openSpaceId_idx").on(t.openSpaceId),
   ]
 );
+
+// ---------------------------------------------------------------------------
+// Semanario OWU: the weekly digest Owy drafts and the staff publishes
+// ---------------------------------------------------------------------------
+export const semanarioStatus = pgEnum("SemanarioStatus", ["draft", "published"]);
+
+/** What an issue lists; validated by SemanarioSectionsSchema (lib/orpc/semanario/schemas.ts). */
+export type SemanarioSections = {
+  events: { title: string; group: string; start: string; venue: string | null; url: string }[];
+  threads: { channel: string; title: string; permalink: string; replies: number }[];
+  jobs: { count: number; channelUrl: string | null } | null;
+  newCommunities: { name: string; slug: string }[];
+};
+
+export const semanarioIssues = pgTable("semanario_issues", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  /** Given on the first publish and kept on unpublish: the issue lives at /semanario/<number>. */
+  number: integer("number").unique(),
+  /** Monday (Montevideo) of the week the issue covers; one issue per week. */
+  weekStart: date("weekStart", { mode: "string" }).notNull().unique(),
+  title: text("title").notNull(),
+  /** Markdown */
+  intro: text("intro").notNull().default(""),
+  sections: jsonb("sections").$type<SemanarioSections>().notNull(),
+  status: semanarioStatus("status").notNull().default("draft"),
+  publishedAt: ts("publishedAt"),
+  /** Who published it: the issue says so. */
+  reviewedById: text("reviewedById").references(() => user.id, { onDelete: "set null" }),
+  createdAt: ts("createdAt").notNull().defaultNow(),
+  updatedAt: ts("updatedAt")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 // ---------------------------------------------------------------------------
 // OBS queue state (normalized)
@@ -1028,6 +1065,7 @@ export type OpenSpaceRow = EventRow;
 export type ScheduleRow = typeof schedules.$inferSelect;
 export type RoomRow = typeof rooms.$inferSelect;
 export type TrackRow = typeof tracks.$inferSelect;
+export type SemanarioIssueRow = typeof semanarioIssues.$inferSelect;
 export type StaffTaskRow = typeof staffTasks.$inferSelect;
 export type StaffTaskAssignmentRow = typeof staffTaskAssignments.$inferSelect;
 export type StaffAnnouncementRow = typeof staffAnnouncements.$inferSelect;
