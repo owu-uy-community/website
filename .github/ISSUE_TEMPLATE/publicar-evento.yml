@@ -1,0 +1,60 @@
+name: Publicá tu evento
+description: Sumá un evento tech de Uruguay a owu.uy/eventos y al calendario de la comunidad.
+title: "Evento: "
+labels: ["evento"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Si tu grupo está en el [directorio](https://www.owu.uy/comunidades) y publica en Meetup.com, sus eventos ya aparecen solos.
+        Usá este formulario para eventos de otras plataformas o puntuales. Este issue es **público**.
+  - type: input
+    id: titulo
+    attributes:
+      label: Título del evento
+    validations:
+      required: true
+  - type: input
+    id: organiza
+    attributes:
+      label: Organiza
+      description: La comunidad o el grupo. Si está en el directorio, usá el mismo nombre.
+    validations:
+      required: true
+  - type: input
+    id: inicio
+    attributes:
+      label: Empieza
+      description: Fecha y hora de Montevideo.
+      placeholder: 2026-11-20 19:00
+    validations:
+      required: true
+  - type: input
+    id: fin
+    attributes:
+      label: Termina
+      placeholder: 2026-11-20 21:30
+  - type: input
+    id: lugar
+    attributes:
+      label: Lugar
+      description: Nombre del lugar y dirección. Vacío si es online.
+  - type: input
+    id: link
+    attributes:
+      label: Link de inscripción o información
+      placeholder: https://
+    validations:
+      required: true
+  - type: textarea
+    id: notas
+    attributes:
+      label: Algo más que tengamos que saber
+      description: Si es pago, si es en inglés, si tiene cupo limitado…
+  - type: checkboxes
+    id: codigo
+    attributes:
+      label: Código de conducta
+      options:
+        - label: El evento sigue el [código de conducta de OWU](https://www.owu.uy/codigo-de-conducta).
+          required: true
