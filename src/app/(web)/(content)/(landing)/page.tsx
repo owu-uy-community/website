@@ -7,7 +7,6 @@ import CalendarSubscribe from "components/community/CalendarSubscribe";
 import { EventList, splitThisWeek } from "components/community/events";
 import HeroOrbit from "components/community/home/HeroOrbit";
 import PhotoWall from "components/community/home/PhotoWall";
-import Polaroids from "components/community/home/Polaroids";
 import RotatingWord from "components/community/home/RotatingWord";
 import { Reveal } from "components/community/motion";
 import TalkCard from "components/community/TalkCard";
@@ -72,13 +71,6 @@ const STEPS = [
   },
 ];
 
-const PHOTOS = [
-  { src: "/images/conf/gallery/momento-09.webp", alt: "Foto grupal de los asistentes a La Meetup III", caption: "La Meetup III" },
-  { src: "/images/conf/gallery/momento-08.webp", alt: "Facilitación del Mercado de Ideas en el escenario", caption: "Mercado de ideas" },
-  { src: "/images/2025/intro/6.webp", alt: "Owy, la mascota de OWU, flotando sobre el escenario de La Meetup 2024", caption: "La Meetup 2024" },
-  { src: "/images/2025/intro/9.webp", alt: "El equipo organizador abrazado frente al cartel de La Meetup", caption: "el equipo ♥" },
-];
-
 const RESOURCES = [
   { icon: Newspaper, ...PAGES.semanario, tag: "Cada lunes" },
   { icon: PiggyBank, ...PAGES.encuesta, tag: "Datos abiertos" },
@@ -99,6 +91,10 @@ const SITE_JSON_LD = {
       "@id": `${SITE_URL}/#organization`,
       name: "OWU Uruguay",
       alternateName: "OWU — Open Web Uruguay",
+      description:
+        "Comunidad de tecnología de Uruguay: más de 5.000 personas en un Slack abierto, comunidades por tema, meetups gratis y la conferencia OWU CONF.",
+      foundingDate: "2014",
+      areaServed: { "@type": "Country", name: "Uruguay" },
       url: SITE_URL,
       logo: { "@type": "ImageObject", url: PUBLISHER_LOGO },
       sameAs: SOCIALS.map(({ href }) => href),
@@ -219,6 +215,42 @@ export default async function Landing() {
         </Container>
       </section>
 
+      {/* ----------------------------------------------------------- Qué es OWU */}
+      <Section eyebrow="Qué es OWU" id="historia" title="La comunidad tech de Uruguay, desde 2014">
+        <div className="grid items-start gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
+          <Reveal className="flex flex-col gap-10">
+            {landing?.mainSectionContent ? (
+              <div className="max-w-xl space-y-4 text-base leading-relaxed text-zinc-400 [&_strong]:font-semibold [&_strong]:text-white sm:text-[17px]">
+                <RichText content={landing.mainSectionContent as unknown as string} />
+              </div>
+            ) : null}
+            <StatStrip
+              className="gap-y-8 sm:grid-cols-2"
+              stats={stats.map(({ title, subtitle, count }) => ({
+                // The age counts itself; the CMS figure went stale
+                value: title === "Años" ? String(new Date().getFullYear() - 2014) : `+${formatCount(count ?? 0)}`,
+                label: `${title} ${subtitle}`,
+              }))}
+            />
+          </Reveal>
+          <Reveal className="w-full max-w-md lg:ml-auto lg:pt-1" delay={0.1}>
+            <Timeline
+              items={[
+                {
+                  when: "2014",
+                  title: "Nace el Slack de OWU",
+                  body: "Para organizar la JSConfUY. Se quedó para todo lo demás.",
+                },
+                { when: "Nov 2023", title: "La Meetup I", href: "/2023/la-meetup" },
+                { when: "Oct 2024", title: "La Meetup II", href: "/2024/la-meetup" },
+                { when: "Nov 2025", title: "La Meetup III", href: "/la-meetup" },
+                { when: "Nov 2026", title: "OWU CONF 2026", href: CONF_URL, now: confUpcoming },
+              ]}
+            />
+          </Reveal>
+        </div>
+      </Section>
+
       {/* -------------------------------------------------------------- La gente */}
       <PhotoWall />
 
@@ -229,7 +261,7 @@ export default async function Landing() {
             Toda la agenda
           </ButtonLink>
         }
-        description="Meetups, talleres y conferencias de toda la comunidad, en un solo lugar."
+        description="Meetups, talleres y conferencias de la comunidad tech uruguaya, en un solo lugar."
         id="agenda"
         title="Qué se viene"
       >
@@ -392,44 +424,6 @@ export default async function Landing() {
           </Cells>
         </Section>
       ) : null}
-
-      {/* -------------------------------------------------------------- Historia */}
-      <Section title="Desde 2014, juntándonos">
-        <div className="grid items-start gap-14 lg:grid-cols-2 lg:gap-20">
-          <Reveal className="flex flex-col gap-12">
-            {landing?.mainSectionContent ? (
-              <div className="max-w-xl space-y-4 text-base leading-relaxed text-zinc-400 [&_strong]:font-semibold [&_strong]:text-white">
-                <RichText content={landing.mainSectionContent as unknown as string} />
-              </div>
-            ) : null}
-            <StatStrip
-              className="gap-y-8 sm:grid-cols-2"
-              stats={stats.map(({ title, subtitle, count }) => ({
-                value: `${title === "Años" ? "" : "+"}${formatCount(count ?? 0)}`,
-                label: `${title} ${subtitle}`,
-              }))}
-            />
-          </Reveal>
-          <Reveal className="flex flex-col gap-14" delay={0.1}>
-            <Polaroids className="pt-4" photos={PHOTOS} />
-            <div className="mx-auto w-full max-w-md">
-              <Timeline
-                items={[
-                  {
-                    when: "2014",
-                    title: "Nace el Slack de OWU",
-                    body: "Para organizar la JSConfUY. Se quedó para todo lo demás.",
-                  },
-                  { when: "Nov 2023", title: "La Meetup I", href: "/2023/la-meetup" },
-                  { when: "Oct 2024", title: "La Meetup II", href: "/2024/la-meetup" },
-                  { when: "Nov 2025", title: "La Meetup III", href: "/la-meetup" },
-                  { when: "Nov 2026", title: "OWU CONF 2026", href: CONF_URL, now: confUpcoming },
-                ]}
-              />
-            </div>
-          </Reveal>
-        </div>
-      </Section>
 
       {/* -------------------------------------------------------------- Recursos */}
       <Section title="Lo que la comunidad comparte">
