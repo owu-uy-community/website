@@ -387,6 +387,32 @@ export interface OcrSuggestionResponse {
   alternatives?: { room: string; timeSlot: string; reasoning: string }[];
 }
 
+/** Mirror of the site's SemanarioSectionsSchema (src/lib/orpc/semanario/schemas.ts). */
+export interface SemanarioSections {
+  events: { title: string; group: string; start: string; venue: string | null; url: string }[];
+  threads: { channel: string; title: string; permalink: string; replies: number }[];
+  jobs: { count: number; channelUrl: string | null } | null;
+  newCommunities: { name: string; slug: string }[];
+}
+
+export interface SemanarioDraftInput {
+  /** The Monday (YYYY-MM-DD) the issue covers */
+  weekStart: string;
+  title: string;
+  /** Markdown */
+  intro: string;
+  sections: SemanarioSections;
+}
+
+export interface SemanarioIssue extends SemanarioDraftInput {
+  id: string;
+  number: number | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
+  reviewedBy: string | null;
+  updatedAt: string;
+}
+
 export interface OwuApi {
   openSpaces: {
     /** Every event the caller may operate; site-admin (Owy) sees all, newest first. */
@@ -476,6 +502,11 @@ export interface OwuApi {
   };
   eventbrite: {
     getSummary: () => Promise<unknown>;
+  };
+  /** Semanario OWU (site: src/lib/orpc/semanario): Owy saves drafts, a person publishes. */
+  semanario: {
+    /** Creates or rewrites the week's draft; CONFLICT already_published if that week is out. */
+    saveDraft: (input: SemanarioDraftInput) => Promise<SemanarioIssue>;
   };
   /** Owy Stage: the video wall (site: src/lib/owy-stage/scenes.ts). */
   owyStage: {

@@ -65,6 +65,11 @@ export function isStaff(ctx: ToolSessionCtx): boolean {
   }
 }
 
+/** The app principal eve uses for scheduled runs (no person behind the turn). */
+export function isScheduledRun(ctx: ToolSessionCtx): boolean {
+  return ctx.session?.auth?.current?.authenticator === "app";
+}
+
 /** Throws a friendly (Spanish) error when the caller is not staff. */
 export function requireStaff(ctx: ToolSessionCtx): void {
   if (!isStaff(ctx)) {
@@ -103,4 +108,15 @@ export function staffOnly() {
 
     return "not-applicable" as const;
   };
+}
+
+/** Like `staffOnly`, but the weekly schedule (the app principal) may also run the tool. */
+export function staffOrSchedule() {
+  const staffPolicy = staffOnly();
+
+  return (ctx: ApprovalPolicyCtx) => (isScheduledRun(ctx) ? ("not-applicable" as const) : staffPolicy(ctx));
+}
+
+export function requireStaffOrSchedule(ctx: ToolSessionCtx): void {
+  if (!isScheduledRun(ctx)) requireStaff(ctx);
 }
