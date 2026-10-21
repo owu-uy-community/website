@@ -2103,6 +2103,38 @@ export const RundownStepSchema = z.object({
 export const RundownSchema = z.array(RundownStepSchema).max(80);
 export type RundownStep = z.infer<typeof RundownStepSchema>;
 
+/** Admin-only (`private:`): the desk is the operator's notes, not something a wall needs. */
+export const OWY_DESK_CHANNEL = "private:owy-desk";
+
+/**
+ * One scene waiting on the desk. `params` empty means "the scene's defaults".
+ * `from` only matters for the preview: a step pulled out of the queue goes
+ * back to its front when something else replaces it, a `pick` is just
+ * dropped, and a `swap` is the scene that just left the air.
+ */
+export const DeskStepSchema = z.object({
+  id: z.string().min(1).max(40),
+  scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
+  params: z.record(z.string(), z.unknown()).default({}),
+  from: z.enum(["pick", "queue", "swap"]).default("pick"),
+});
+export type DeskStep = z.infer<typeof DeskStepSchema>;
+
+/**
+ * The operator's desk, shared by every admin device: the scene staged in
+ * preview (what TAKE sends next), the queue that feeds it, and the favorites.
+ */
+export const DeskSchema = z.object({
+  preview: DeskStepSchema.nullable().default(null),
+  queue: z.array(DeskStepSchema).max(100).default([]),
+  favorites: z
+    .array(z.enum(SCENE_IDS as [SceneId, ...SceneId[]]))
+    .max(100)
+    .default([]),
+});
+export type Desk = z.infer<typeof DeskSchema>;
+export const EMPTY_DESK: Desk = { preview: null, queue: [], favorites: [] };
+
 /** Scenes that take input from phones at /owy/play. */
 export const INTERACTIVE_SCENES = [
   "live-poll",

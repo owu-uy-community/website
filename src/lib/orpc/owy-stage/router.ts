@@ -4,6 +4,7 @@ import { Effect } from "effect";
 import * as z from "zod";
 
 import {
+  DeskSchema,
   EffectEventSchema,
   FaceEventSchema,
   RundownSchema,
@@ -18,6 +19,7 @@ import {
   FireEffectSchema,
   GetInputsSchema,
   GetPulseSchema,
+  SaveDeskSchema,
   SaveRundownSchema,
   SetFaceSchema,
   SetNowPlayingSchema,
@@ -28,6 +30,8 @@ import {
   StagePulseSchema,
   StageSpeakerSchema,
   StageWeatherSchema,
+  TakeResultSchema,
+  TakeSchema,
 } from "./schemas";
 import * as Stage from "./service";
 
@@ -74,6 +78,29 @@ export const owyStageRouter = {
     .output(RundownSchema)
     .effect(function* ({ input }) {
       return yield* Stage.saveRundown(input.steps);
+    }),
+
+  getDesk: staff
+    .meta(docs("The operator's desk: the preview, the queue behind it and the favorites"))
+    .output(DeskSchema)
+    .effect(function* () {
+      return yield* Stage.getDesk();
+    }),
+
+  saveDesk: staff
+    .meta(docs("Replace the desk"))
+    .input(SaveDeskSchema)
+    .output(DeskSchema)
+    .effect(function* ({ input }) {
+      return yield* Stage.saveDesk(input.desk);
+    }),
+
+  take: staff
+    .meta(docs("TAKE: the preview goes on air and the queue moves up (or the scene that left comes back)"))
+    .input(TakeSchema)
+    .output(TakeResultSchema)
+    .effect(function* ({ input }) {
+      return yield* Stage.take(input.step);
     }),
 
   fireEffect: staff

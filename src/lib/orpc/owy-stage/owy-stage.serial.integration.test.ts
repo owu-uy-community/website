@@ -135,6 +135,97 @@ describe("the wall", () => {
   });
 });
 
+describe("the desk", () => {
+  const step = (id: string, scene: "logo" | "message" | "program", params: Record<string, unknown> = {}) => ({
+    id,
+    scene,
+    params,
+    from: "pick" as const,
+  });
+
+  test("it round-trips and tells the other admin devices on a private channel", async () => {
+    const { staff } = await setup();
+    const publish = vi.spyOn(hub, "publish");
+    const desk = { preview: step("p", "message"), queue: [step("q1", "logo")], favorites: ["logo" as const] };
+
+    await call(router.owyStage.saveDesk, { desk }, by(staff));
+
+    await expect(call(router.owyStage.getDesk, undefined, by(staff))).resolves.toStrictEqual(desk);
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", desk);
+  });
+
+  test("a step whose scene left the registry is dropped on read", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: null, queue: [step("q1", "logo")] } }, by(staff));
+    await db.execute(
+      sql`UPDATE owy_stage_state SET desk = jsonb_set(desk, '{queue}', desk->'queue' || '[{"id":"x","scene":"gone"}]')`
+    );
+
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(desk.queue.map((item) => item.id)).toStrictEqual(["q1"]);
+  });
+
+  test("TAKE puts the preview on air from scratch and moves the queue up", async () => {
+    const { staff, putOnAir } = await setup();
+    const before = await putOnAir({ scene: "message", params: { title: "Hola" } });
+    await call(
+      router.owyStage.saveDesk,
+      {
+        desk: { preview: step("p", "message", { title: "Chau" }), queue: [step("q1", "program"), step("q2", "logo")] },
+      },
+      by(staff)
+    );
+    const publish = vi.spyOn(hub, "publish");
+
+    const { state, desk } = await call(
+      router.owyStage.take,
+      { step: step("p", "message", { title: "Chau" }) },
+      by(staff)
+    );
+    const read = await call(router.owyStage.getState, undefined, by(null));
+
+    expect(state.round).not.toBe(before.round);
+    expect(read).toMatchObject({ scene: "message", params: { title: "Chau" }, round: state.round });
+    expect(desk).toMatchObject({ preview: { id: "q1", scene: "program", from: "queue" }, queue: [{ id: "q2" }] });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ round: state.round }));
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", desk);
+  });
+
+  test("with nothing queued, TAKE brings back what left the air, so TAKE again undoes", async () => {
+    const { staff, putOnAir } = await setup();
+    await putOnAir({ scene: "logo" });
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "message") } }, by(staff));
+
+    const first = await call(router.owyStage.take, { step: step("p", "message") }, by(staff));
+    const back = first.desk.preview;
+    const second = await call(router.owyStage.take, { step: back! }, by(staff));
+
+    expect(back).toMatchObject({ scene: "logo", from: "swap" });
+    expect(second.state.scene).toBe("logo");
+    expect(second.desk.preview).toMatchObject({ scene: "message", from: "swap" });
+  });
+
+  test("a TAKE keeps the favorites", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo"), favorites: ["message"] } }, by(staff));
+
+    const { desk } = await call(router.owyStage.take, { step: step("p", "logo") }, by(staff));
+
+    expect(desk.favorites).toStrictEqual(["message"]);
+  });
+
+  test("only site staff read or write the desk", async () => {
+    await setup();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.getDesk, undefined, by(user))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.owyStage.take, { step: step("p", "logo") }, by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
 describe("phone inputs", () => {
   test("answers count only for the round on air; `once` keeps the first answer", async () => {
     const { putOnAir } = await setup();

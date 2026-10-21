@@ -1,6 +1,15 @@
 import * as z from "zod";
 
-import { EffectEventSchema, FaceEventSchema, RundownSchema, SCENE_IDS, type SceneId } from "../../owy-stage/scenes";
+import {
+  DeskSchema,
+  DeskStepSchema,
+  EffectEventSchema,
+  FaceEventSchema,
+  RundownSchema,
+  SCENE_IDS,
+  StageStateSchema,
+  type SceneId,
+} from "../../owy-stage/scenes";
 
 export const SetSceneSchema = z.object({
   scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
@@ -12,6 +21,13 @@ export const SetSceneSchema = z.object({
 
 /** The whole rundown travels on every edit: it is tiny and conflict-free. */
 export const SaveRundownSchema = z.object({ steps: RundownSchema });
+
+/** The desk travels whole too (preview + queue + favorites: a few KB at most). */
+export const SaveDeskSchema = z.object({ desk: DeskSchema });
+
+/** TAKE sends the step the operator is looking at, so what goes out is what they saw. */
+export const TakeSchema = z.object({ step: DeskStepSchema });
+export const TakeResultSchema = z.object({ state: StageStateSchema, desk: DeskSchema });
 
 export const FireEffectSchema = EffectEventSchema;
 export const SetFaceSchema = FaceEventSchema;

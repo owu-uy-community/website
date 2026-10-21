@@ -501,6 +501,11 @@ export const owyStageState = pgTable("owy_stage_state", {
     .default([]),
   /** Owy's last face and the card it announced (never the transcript); see StoredFaceSchema. */
   face: jsonb("face").$type<{ state: string; at: string } & Record<string, unknown>>(),
+  /** The operator's desk: what is in preview, the queue behind it and the favorites; see DeskSchema. */
+  desk: jsonb("desk")
+    .$type<{ preview: unknown; queue: unknown[]; favorites: string[] }>()
+    .notNull()
+    .default({ preview: null, queue: [], favorites: [] }),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()

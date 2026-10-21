@@ -6,13 +6,17 @@ import * as z from "zod";
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
 import { owyStageInputs, owyStageState, rooms, tracks } from "../../db/schema";
+import { afterTake, readDesk } from "../../owy-stage/desk";
 import {
   DEFAULT_STAGE_STATE,
+  OWY_DESK_CHANNEL,
   OWY_STAGE_CHANNEL,
   RundownStepSchema,
   StoredFaceSchema,
   isSceneId,
   parseSceneParams,
+  type Desk,
+  type DeskStep,
   type FaceEvent,
   type InputEvent,
   type RundownStep,
@@ -64,10 +68,10 @@ const toStageState = (
       }
     : DEFAULT_STAGE_STATE;
 
-const broadcast = (event: string, payload: unknown) =>
+const broadcast = (event: string, payload: unknown, channel = OWY_STAGE_CHANNEL) =>
   Effect.gen(function* () {
     const realtime = yield* Realtime;
-    yield* realtime.publish(OWY_STAGE_CHANNEL, event, payload);
+    yield* realtime.publish(channel, event, payload);
   });
 
 /**
@@ -90,51 +94,110 @@ const sceneParams = (scene: SceneId, params: unknown) =>
   });
 
 /**
+ * The part of a take that runs inside a transaction, with the row locked so a
+ * take and an edit at once can't interleave. Returns what went on air and
+ * what was on air before.
+ */
+const putOnAir = (input: SetSceneInput) =>
+  Effect.gen(function* () {
+    const params = yield* sceneParams(input.scene, input.params);
+    yield* query((db) => db.insert(owyStageState).values({ id: ROW_ID }).onConflictDoNothing());
+    const [row] = yield* query((db) =>
+      db.select(onAir).from(owyStageState).where(eq(owyStageState.id, ROW_ID)).for("update")
+    );
+    const current = toStageState(row);
+    const eventId = input.eventId === undefined ? current.eventId : input.eventId;
+    const keep = !input.restart && input.scene === current.scene && Boolean(current.round);
+    const round = keep ? current.round : createId();
+    const takenAt = keep && current.takenAt ? new Date(current.takenAt) : new Date();
+    yield* query((db) =>
+      db
+        .update(owyStageState)
+        .set({ scene: input.scene, params, eventId, round, updatedAt: takenAt })
+        .where(eq(owyStageState.id, ROW_ID))
+    ).pipe(
+      Effect.catchTag("ForeignKeyViolation", () =>
+        Effect.fail(new NotFound({ entity: "event", message: "Ese evento no existe" }))
+      )
+    );
+    const state = {
+      scene: input.scene,
+      params,
+      eventId,
+      round,
+      takenAt: takenAt.toISOString(),
+      face: current.face,
+    } satisfies StageState;
+
+    return { state, before: current };
+  });
+
+/**
  * Persist the active scene (params validated against the scene's schema) and
  * tell every stage. The `round` marks a scene *going on air*: editing the
  * params of what is already up keeps it, so phone answers and running timers
  * survive a live edit; `restart` (what the library's take sends) mints a new
- * one. The row is locked meanwhile, so a take and an edit at once can't
- * interleave.
+ * one.
  */
 export const setScene = (input: SetSceneInput) =>
   Effect.gen(function* () {
-    const params = yield* sceneParams(input.scene, input.params);
-    const state = yield* transaction(
-      Effect.gen(function* () {
-        yield* query((db) => db.insert(owyStageState).values({ id: ROW_ID }).onConflictDoNothing());
-        const [row] = yield* query((db) =>
-          db.select(onAir).from(owyStageState).where(eq(owyStageState.id, ROW_ID)).for("update")
-        );
-        const current = toStageState(row);
-        const eventId = input.eventId === undefined ? current.eventId : input.eventId;
-        const keep = !input.restart && input.scene === current.scene && Boolean(current.round);
-        const round = keep ? current.round : createId();
-        const takenAt = keep && current.takenAt ? new Date(current.takenAt) : new Date();
-        yield* query((db) =>
-          db
-            .update(owyStageState)
-            .set({ scene: input.scene, params, eventId, round, updatedAt: takenAt })
-            .where(eq(owyStageState.id, ROW_ID))
-        ).pipe(
-          Effect.catchTag("ForeignKeyViolation", () =>
-            Effect.fail(new NotFound({ entity: "event", message: "Ese evento no existe" }))
-          )
-        );
-
-        return {
-          scene: input.scene,
-          params,
-          eventId,
-          round,
-          takenAt: takenAt.toISOString(),
-          face: current.face,
-        } satisfies StageState;
-      })
-    );
+    const { state } = yield* transaction(putOnAir(input));
     yield* broadcast("scene", state);
 
     return state;
+  });
+
+// ---------------------------------------------------------------------------
+// The desk: preview, queue and favorites (admin devices only)
+// ---------------------------------------------------------------------------
+
+const readStoredDesk = () =>
+  query((db) => db.select({ desk: owyStageState.desk }).from(owyStageState).where(eq(owyStageState.id, ROW_ID))).pipe(
+    Effect.map(([row]) => readDesk(row?.desk))
+  );
+
+/** Not a take: `updatedAt` stays (phones time their rounds off it), like the rundown. */
+const writeDesk = (desk: Desk) =>
+  query((db) =>
+    db
+      .insert(owyStageState)
+      .values({ id: ROW_ID, desk })
+      .onConflictDoUpdate({ target: owyStageState.id, set: { desk, updatedAt: sql`${owyStageState.updatedAt}` } })
+  );
+
+export const getDesk = () => readStoredDesk();
+
+/** Replace the desk and tell the other admin devices. */
+export const saveDesk = (desk: Desk) =>
+  Effect.gen(function* () {
+    yield* writeDesk(desk);
+    yield* broadcast("desk", desk, OWY_DESK_CHANNEL);
+
+    return desk;
+  });
+
+/**
+ * TAKE: the step the operator sees in preview goes on air from scratch (new
+ * round), and in the same transaction the queue moves up — or, with nothing
+ * queued, the scene that just left comes back to preview, so TAKE again
+ * undoes. The step travels in the request, so what goes out is exactly what
+ * the operator was looking at, even if its last edit hadn't been saved yet.
+ */
+export const take = (step: DeskStep) =>
+  Effect.gen(function* () {
+    const { state, desk } = yield* transaction(
+      Effect.gen(function* () {
+        const { state, before } = yield* putOnAir({ scene: step.scene, params: step.params, restart: true });
+        const desk = afterTake(yield* readStoredDesk(), before, createId());
+        yield* writeDesk(desk);
+
+        return { state, desk };
+      })
+    );
+    yield* broadcast("scene", state);
+    yield* broadcast("desk", desk, OWY_DESK_CHANNEL);
+
+    return { state, desk };
   });
 
 /** The operator's rundown, dropping any step whose scene no longer exists. */
