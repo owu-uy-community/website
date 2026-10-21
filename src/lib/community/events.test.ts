@@ -79,9 +79,15 @@ describe("mergeEvents", () => {
     expect(merged[1]).toMatchObject({ group: "GDG Montevideo", source: "manual" });
   });
 
-  it("flags OWU's own events", () => {
+  it("flags OWU's own events by exact name only", () => {
     expect(merged.find((event) => event.id === "meetup-264")?.isOwu).toBe(true);
     expect(merged.find((event) => event.id === "meetup-259")?.isOwu).toBe(false);
+    const impostor = mergeEvents([{ ...feed[0], id: 1, name: "OWU Oficial Fans" }], [], communities);
+    expect(impostor[0].isOwu).toBe(false);
+  });
+
+  it("drops hand-added events whose link is not a web page", () => {
+    expect(mergeEvents([], [{ ...manual[0], url: "javascript:alert(1)" }], communities)).toEqual([]);
   });
 
   it("keeps an event until it ends", () => {
