@@ -1,4 +1,18 @@
-import { ArrowRight, BookOpen, Building2, CalendarDays, MessagesSquare, Mic, Newspaper, PiggyBank, Users } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Building2,
+  CalendarDays,
+  Hash,
+  MessagesSquare,
+  Mic,
+  Newspaper,
+  PiggyBank,
+  Rocket,
+  Sprout,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import Link from "next/link";
 
 import { CONF_DATES, SOCIAL_LINKS } from "app/lib/constants";
@@ -234,21 +248,23 @@ export default async function Landing() {
               }))}
             />
           </Reveal>
-          <Reveal className="w-full max-w-md lg:ml-auto lg:pt-1" delay={0.1}>
+          {/* The timeline draws itself in when it scrolls into view */}
+          <div className="w-full max-w-md lg:ml-auto lg:pt-1">
             <Timeline
               items={[
                 {
                   when: "2014",
                   title: "Nace el Slack de OWU",
                   body: "Para organizar la JSConfUY. Se quedó para todo lo demás.",
+                  icon: <Hash />,
                 },
-                { when: "Nov 2023", title: "La Meetup I", href: "/2023/la-meetup" },
-                { when: "Oct 2024", title: "La Meetup II", href: "/2024/la-meetup" },
-                { when: "Nov 2025", title: "La Meetup III", href: "/la-meetup" },
-                { when: "Nov 2026", title: "OWU CONF 2026", href: CONF_URL, now: confUpcoming },
+                { when: "Nov 2023", title: "La Meetup I", href: "/2023/la-meetup", icon: <Sprout /> },
+                { when: "Oct 2024", title: "La Meetup II", href: "/2024/la-meetup", icon: <UsersRound /> },
+                { when: "Nov 2025", title: "La Meetup III", href: "/la-meetup", icon: <Mic /> },
+                { when: "Nov 2026", title: "OWU CONF 2026", href: CONF_URL, now: confUpcoming, icon: <Rocket /> },
               ]}
             />
-          </Reveal>
+          </div>
         </div>
       </Section>
 
