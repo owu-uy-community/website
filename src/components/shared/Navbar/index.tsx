@@ -75,7 +75,7 @@ function Navbar() {
                   <SmartLink
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "relative flex h-full items-center gap-1 px-4 text-[15px] font-medium transition-colors",
+                      "relative flex h-full items-center gap-1 px-3.5 text-[15px] font-medium whitespace-nowrap transition-colors",
                       active ? "text-white" : "text-zinc-300 hover:text-white"
                     )}
                     href={href}
@@ -99,7 +99,7 @@ function Navbar() {
           </ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
           <button
             aria-label="Buscar"
             className="hidden h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] pr-1.5 pl-3 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-zinc-200 md:inline-flex"
@@ -107,7 +107,7 @@ function Navbar() {
             onClick={open}
           >
             <Search aria-hidden className="size-4" />
-            <span className="pr-5">Buscar</span>
+            <span className="hidden pr-5 2xl:inline">Buscar</span>
             <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
           </button>
           <button
@@ -124,7 +124,7 @@ function Navbar() {
               <li key={label}>
                 <SmartLink
                   aria-label={label}
-                  className="flex size-9 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-yellow-400"
+                  className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-yellow-400"
                   href={href}
                   utm="navbar"
                 >
