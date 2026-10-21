@@ -220,18 +220,7 @@ export default async function Landing() {
       </section>
 
       {/* -------------------------------------------------------------- La gente */}
-      <Section
-        actions={
-          <ButtonLink arrow href={`${CONF_URL}#momentos`} size="sm" utm="home-fotos" variant="secondary">
-            Más fotos
-          </ButtonLink>
-        }
-        description="Meetups gratis, charlas, open space, stickers y after. Gente que viene a aprender y se queda por la gente."
-        id="gente"
-        title="Esto pasa cuando nos juntamos"
-      >
-        <PhotoWall />
-      </Section>
+      <PhotoWall />
 
       {/* -------------------------------------------------------------- Agenda */}
       <Section
