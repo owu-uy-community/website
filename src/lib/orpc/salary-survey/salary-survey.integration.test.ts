@@ -23,6 +23,7 @@ const answers = (overrides: Partial<Answers> = {}): Answers => ({
   currency: "UYU",
   amount: 120_000,
   hoursPerWeek: 40,
+  satisfaction: 4,
   gender: null,
   education: null,
   ...overrides,
@@ -166,6 +167,29 @@ describe("salarySurvey.results", () => {
 
     expect(results.currencies.UYU).toMatchObject({ n: 15, overall: { n: 15 } });
     expect(results.currencies.USD).toMatchObject({ n: 4, overall: null, byMarket: { groups: [], hidden: 1 } });
+  });
+
+  test("results carry the respondents' profile and the satisfaction scale, both above the threshold", async () => {
+    const slug = await publishedEdition();
+    const results = await call(router.salarySurvey.results, { slug }, by(null));
+
+    const seniority = results.profile.find((dimension) => dimension.key === "seniority")!;
+    // 12 senior + 3 junior (UYU) + 4 senior (USD): juniors are too few to be listed
+    expect(seniority.groups).toStrictEqual([{ key: "senior", label: "Senior", n: 16 }]);
+    expect(seniority.other).toBe(3);
+    expect(results.satisfaction).toMatchObject({ n: 19, mean: 4, distribution: [0, 0, 0, 19, 0] });
+  });
+
+  test("published editions are public; the JSON rows match the CSV", async () => {
+    const slug = await publishedEdition();
+    const editions = await call(router.salarySurvey.editions, undefined, by(null));
+    expect(editions.map((edition) => edition.slug)).toContain(slug);
+    expect(editions.every((edition) => edition.status === "published")).toBe(true);
+
+    const { rows } = await call(router.salarySurvey.datasetRows, { slug }, by(null));
+    const { csv } = await call(router.salarySurvey.dataset, { slug }, by(null));
+    expect(rows).toHaveLength(csv.trim().split("\n").length - 1);
+    expect(rows[0]).toHaveProperty("conformidad", 4);
   });
 
   test("the dataset has one row per answer", async () => {

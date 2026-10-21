@@ -5,7 +5,7 @@ import { Effect } from "effect";
 
 import { salarySurveyParticipants, salarySurveyResponses, salarySurveys, type SalarySurveyRow } from "../../db/schema";
 import { MIN_GROUP_SIZE } from "../../salary-survey/questions";
-import { currencyResults, datasetCsv, type ResponseFacts } from "../../salary-survey/stats";
+import { currencyResults, datasetCsv, datasetRows, profile, satisfactionStats, type ResponseFacts } from "../../salary-survey/stats";
 import { query, transaction } from "../db";
 import { Conflict, NotFound } from "../errors";
 import { CurrentUser } from "../services";
@@ -117,6 +117,7 @@ const responseFacts = (surveyId: string) =>
         currency: salarySurveyResponses.currency,
         amount: salarySurveyResponses.amount,
         hoursPerWeek: salarySurveyResponses.hoursPerWeek,
+        satisfaction: salarySurveyResponses.satisfaction,
         gender: salarySurveyResponses.gender,
         education: salarySurveyResponses.education,
       })
@@ -145,9 +146,36 @@ export const getResults = (slug: string) =>
         UYU: currencyResults(facts.filter((fact) => fact.currency === "UYU")),
         USD: currencyResults(facts.filter((fact) => fact.currency === "USD")),
       },
+      profile: profile(facts),
+      satisfaction: satisfactionStats(facts),
     };
 
     return results;
+  });
+
+/** The open dataset as rows, for the explorer on the results page and for anyone who prefers JSON */
+export const getDatasetRows = (slug: string) =>
+  Effect.gen(function* () {
+    const row = yield* publishedSurvey(slug);
+    const facts = yield* responseFacts(row.id);
+
+    return { edition: row.slug, threshold: MIN_GROUP_SIZE, rows: datasetRows(facts) };
+  });
+
+/** Every published edition, newest first */
+export const listPublished = () =>
+  Effect.gen(function* () {
+    const rows = yield* query((db) =>
+      db
+        .select({ survey: salarySurveys, responses: count(salarySurveyResponses.id) })
+        .from(salarySurveys)
+        .leftJoin(salarySurveyResponses, eq(salarySurveyResponses.surveyId, salarySurveys.id))
+        .where(eq(salarySurveys.status, "published"))
+        .groupBy(salarySurveys.id)
+        .orderBy(desc(salarySurveys.slug))
+    );
+
+    return rows.map(({ survey, responses }) => toSurvey(survey, responses));
   });
 
 export const getDataset = (slug: string) =>

@@ -128,6 +128,8 @@ const EXPECTED: Record<string, Access> = {
   "runOfShow.update": "staff",
   "salarySurvey.current": "public",
   "salarySurvey.dataset": "public",
+  "salarySurvey.datasetRows": "public",
+  "salarySurvey.editions": "public",
   "salarySurvey.list": "staff",
   "salarySurvey.results": "public",
   "salarySurvey.setStatus": "staff",

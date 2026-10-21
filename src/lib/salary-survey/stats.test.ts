@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { breakdown, datasetCsv, summarize, type ResponseFacts } from "./stats";
+import { breakdown, datasetCsv, percentileOf, profile, satisfactionStats, summarize, type ResponseFacts } from "./stats";
 import { SENIORITIES } from "./questions";
 
 const answer = (overrides: Partial<ResponseFacts> = {}): ResponseFacts => ({
@@ -15,6 +15,7 @@ const answer = (overrides: Partial<ResponseFacts> = {}): ResponseFacts => ({
   currency: "UYU",
   amount: 100_000,
   hoursPerWeek: 40,
+  satisfaction: 4,
   gender: null,
   education: null,
   ...overrides,
@@ -65,5 +66,52 @@ describe(datasetCsv, () => {
     expect(last).not.toContain("interior");
     expect(last).not.toContain("rocha");
     expect(last).not.toContain("mujer");
+  });
+});
+
+describe(percentileOf, () => {
+  test("places a value among the answers, ties counted half", () => {
+    expect(percentileOf([10, 20, 30, 40], 25)).toBe(50);
+    expect(percentileOf([10, 20, 30, 40], 20)).toBe(38);
+    expect(percentileOf([10, 20, 30, 40], 5)).toBe(0);
+    expect(percentileOf([], 5)).toBeNull();
+  });
+});
+
+describe(profile, () => {
+  test("lists groups at or above the threshold and sums the rest into other", () => {
+    const rows = [
+      ...Array.from({ length: 10 }, () => answer({ gender: "varon" })),
+      ...Array.from({ length: 2 }, () => answer({ seniority: "junior", gender: "mujer" })),
+      answer({ gender: null }),
+    ];
+    const byGender = profile(rows).find((dimension) => dimension.key === "gender")!;
+    const bySeniority = profile(rows).find((dimension) => dimension.key === "seniority")!;
+
+    expect(byGender).toMatchObject({ answered: 12, groups: [{ key: "varon", n: 10 }], other: 2 });
+    expect(bySeniority).toMatchObject({ answered: 13, groups: [{ key: "senior", n: 11 }], other: 2 });
+  });
+});
+
+describe(satisfactionStats, () => {
+  test("averages the scale and keeps only groups above the threshold", () => {
+    const rows = [
+      ...Array.from({ length: 10 }, () => answer({ satisfaction: 5 })),
+      ...Array.from({ length: 10 }, () => answer({ satisfaction: 2, employer: "cliente-exterior" })),
+      answer({ seniority: "junior", satisfaction: 1 }),
+      answer({ satisfaction: null }),
+    ];
+    const stats = satisfactionStats(rows)!;
+
+    expect(stats).toMatchObject({ n: 21, mean: 3.4, distribution: [1, 10, 0, 0, 10] });
+    expect(stats.bySeniority).toStrictEqual([{ key: "senior", label: "Senior", n: 20, mean: 3.5 }]);
+    expect(stats.byMarket.map((group) => [group.key, group.mean])).toStrictEqual([
+      ["exterior", 2],
+      ["local", 4.6],
+    ]);
+  });
+
+  test("is null until enough people answered", () => {
+    expect(satisfactionStats(Array.from({ length: 9 }, () => answer()))).toBeNull();
   });
 });

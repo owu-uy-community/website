@@ -58,6 +58,8 @@ export const AnswersSchema = z
     currency: z.enum(values(CURRENCIES)),
     amount: z.number().int("Sin decimales").positive(),
     hoursPerWeek: z.number().int().min(HOURS_RANGE.min).max(HOURS_RANGE.max),
+    /** 1 (not at all) to 5 (very) */
+    satisfaction: z.number().int().min(1).max(5),
     gender: z.enum(values(GENDERS)).nullable(),
     education: z.enum(values(EDUCATION)).nullable(),
   })
@@ -95,25 +97,81 @@ export const CurrencyResultsSchema = z.object({
   n: z.number().int(),
   overall: StatSchema.nullable(),
   bySeniority: BreakdownSchema,
+  byExperience: BreakdownSchema,
   byRole: BreakdownSchema,
   byStack: BreakdownSchema,
+  byModality: BreakdownSchema,
   byContract: BreakdownSchema,
   byMarket: BreakdownSchema,
+});
+
+/** Who answered, one dimension at a time; options under the threshold are summed into `other` */
+export const ProfileDimensionSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  /** Answers counted in this dimension (optional questions count only those who answered) */
+  answered: z.number().int(),
+  groups: z.array(z.object({ key: z.string(), label: z.string(), n: z.number().int() })),
+  other: z.number().int(),
+});
+
+const MeanGroupSchema = z.object({ key: z.string(), label: z.string(), n: z.number().int(), mean: z.number() });
+
+export const SatisfactionSchema = z.object({
+  n: z.number().int(),
+  /** Average on the 1–5 scale, one decimal */
+  mean: z.number(),
+  /** Answers per step, from "nada conforme" (1) to "muy conforme" (5) */
+  distribution: z.array(z.number().int()).length(5),
+  bySeniority: z.array(MeanGroupSchema),
+  byMarket: z.array(MeanGroupSchema),
 });
 
 export const ResultsSchema = z.object({
   survey: SurveySchema,
   threshold: z.number().int(),
   currencies: z.object({ UYU: CurrencyResultsSchema, USD: CurrencyResultsSchema }),
+  profile: z.array(ProfileDimensionSchema),
+  /** Null until enough people answered the satisfaction question */
+  satisfaction: SatisfactionSchema.nullable(),
 });
 
 export type Stat = z.infer<typeof StatSchema>;
 export type Breakdown = z.infer<typeof BreakdownSchema>;
 export type CurrencyResults = z.infer<typeof CurrencyResultsSchema>;
+export type ProfileDimension = z.infer<typeof ProfileDimensionSchema>;
+export type Satisfaction = z.infer<typeof SatisfactionSchema>;
 export type SurveyResults = z.infer<typeof ResultsSchema>;
 export type Survey = z.infer<typeof SurveySchema>;
 
+/** One row of the open dataset: every answer, coarsened so no row stands out */
+export const DatasetRowSchema = z.object({
+  rol: z.string(),
+  seniority: z.string(),
+  experiencia: z.string(),
+  stacks: z.array(z.string()),
+  para_quien: z.string(),
+  mercado: z.string(),
+  contratacion: z.string(),
+  modalidad: z.string(),
+  region: z.string(),
+  moneda: z.string(),
+  monto_mensual: z.number(),
+  horas_semanales: z.string(),
+  conformidad: z.number().int().nullable(),
+  genero: z.string(),
+  educacion: z.string(),
+});
+
+export type DatasetRow = z.infer<typeof DatasetRowSchema>;
+
 export const DatasetSchema = z.object({ filename: z.string(), csv: z.string() });
+
+export const DatasetRowsSchema = z.object({
+  edition: z.string(),
+  threshold: z.number().int(),
+  rows: z.array(DatasetRowSchema),
+});
 
 export const UpsertSurveySchema = z
   .object({
