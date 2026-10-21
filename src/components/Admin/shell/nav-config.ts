@@ -12,6 +12,7 @@ import {
   Map,
   Megaphone,
   MonitorPlay,
+  Newspaper,
   PenLine,
   Settings,
   Siren,
@@ -39,6 +40,7 @@ export type NavKey =
   | "mi-turno"
   | "sala"
   | "comunidades"
+  | "semanario"
   | "ajustes";
 
 export type AdminNavItem = {
@@ -222,6 +224,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/communities",
         icon: Building2,
         keywords: ["organizaciones", "eventos", "miembros"],
+      },
+      {
+        key: "semanario",
+        title: "Semanario",
+        href: "/admin/semanario",
+        icon: Newspaper,
+        keywords: ["newsletter", "digest", "owy", "resumen"],
       },
       {
         key: "ajustes",
