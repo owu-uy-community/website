@@ -8,9 +8,17 @@ import { useState } from "react";
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
 import { ButtonLink, Eyebrow, SmartLink } from "components/community/ui";
+import { isHiddenPath } from "lib/community/flags";
 import { NAV_LINKS, PAGES, SOCIALS } from "lib/community/site";
 
-const SECONDARY = [PAGES.primeraVez, PAGES.darCharla, PAGES.organizar, PAGES.empresas, PAGES.semanario, PAGES.codigo];
+const SECONDARY = [
+  PAGES.primeraVez,
+  PAGES.darCharla,
+  PAGES.organizar,
+  PAGES.empresas,
+  PAGES.semanario,
+  PAGES.codigo,
+].filter((page) => !isHiddenPath(page.href));
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);

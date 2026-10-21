@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { highlight } from "sugar-high";
 
+import { isHiddenPost } from "lib/community/flags";
+
 import {
   BLOG_NAME,
   DEFAULT_POST_AUTHOR,
@@ -176,7 +178,10 @@ const components = {
     return <code {...props} />;
   },
   pre: (props: ComponentPropsWithoutRef<"pre">) => (
-    <pre className="my-6 overflow-x-auto rounded-xl border border-line bg-ink-elev p-4 text-sm leading-relaxed" {...props} />
+    <pre
+      className="my-6 overflow-x-auto rounded-xl border border-line bg-ink-elev p-4 text-sm leading-relaxed"
+      {...props}
+    />
   ),
   blockquote: (props: BlockquoteProps) => (
     <blockquote
@@ -213,8 +218,9 @@ const components = {
   // Renders the byline + tags and injects BlogPosting/BreadcrumbList JSON-LD.
   // Usage in a post: `<PostHeader post={post} />` right below the `# title`.
   PostHeader: ({ post }: { post: PostInfo }) => {
-    // A draft never renders in production; getBlogPosts also keeps it out of the index, feed and sitemap
-    if (post.draft && !showDrafts()) notFound();
+    // A draft never renders in production, nor a guide while the launch flag is off;
+    // getBlogPosts also keeps both out of the index, feed and sitemap
+    if ((post.draft && !showDrafts()) || isHiddenPost(post.tags)) notFound();
 
     const author = post.author ?? DEFAULT_POST_AUTHOR;
 

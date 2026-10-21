@@ -28,6 +28,7 @@ import {
 } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getCommunities, getLanding } from "lib/community/content";
+import { RESOURCES_ON } from "lib/community/flags";
 import { pageMetadata } from "lib/community/metadata";
 import { CONF_URL, issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
 
@@ -69,8 +70,10 @@ const GIVES = [
   {
     icon: Megaphone,
     title: "Difusión",
-    body: "Tus eventos en el Semanario de los lunes y en las redes de OWU.",
-    href: PAGES.semanario.href,
+    body: RESOURCES_ON
+      ? "Tus eventos en el Semanario de los lunes y en las redes de OWU."
+      : "Tus eventos en la agenda de OWU y en sus redes.",
+    href: RESOURCES_ON ? PAGES.semanario.href : PAGES.eventos.href,
   },
 ];
 
@@ -135,7 +138,7 @@ export default async function OrganizarPage() {
                 <h3 className={headingClassName.h3}>
                   {href ? (
                     <Link
-                      className="after:absolute after:inset-0 after:content-[''] group-hover:text-yellow-400"
+                      className="group-hover:text-yellow-400 after:absolute after:inset-0 after:content-['']"
                       href={href}
                     >
                       {title}
@@ -296,7 +299,8 @@ export default async function OrganizarPage() {
                 question: "¿Puedo usar la herramienta de open space en mi evento?",
                 answer: (
                   <>
-                    Sí. Cada comunidad puede tener su espacio en el panel de OWU. Pedilo en #{SLACK_CHANNELS.organizers}.
+                    Sí. Cada comunidad puede tener su espacio en el panel de OWU. Pedilo en #{SLACK_CHANNELS.organizers}
+                    .
                   </>
                 ),
               },
