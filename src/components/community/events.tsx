@@ -42,7 +42,7 @@ export function EventRow({ event, showMonth = true }: { event: CommunityEvent; s
         </a>
         <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-terminal text-[11.5px] text-zinc-500">
           <span className="text-zinc-400 capitalize">
-            {when.weekday} {when.time}
+            {showMonth ? `${when.weekday} ${when.time}` : when.time}
           </span>
           <span aria-hidden>·</span>
           {event.communitySlug ? (
