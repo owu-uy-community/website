@@ -65,7 +65,7 @@ const pluralize = (count: number, one: string, many: string) => `${count} ${coun
 export default async function CharlasPage() {
   const [talks, editions] = await Promise.all([getTalks(), getOpenSpaceSessions()]);
 
-  const upcoming = talks.filter(isUpcoming);
+  // Talks join the archive once their date has passed
   const archive = talks.filter((talk) => !isUpcoming(talk));
   const groups = groupByEvent(archive);
   const withVideo = archive.filter((talk) => talk.video).length;
@@ -84,7 +84,6 @@ export default async function CharlasPage() {
   const topicOptions = TOPICS.filter(({ value }) => archive.some((talk) => talk.topics.includes(value))).map(
     ({ value, label }) => ({ value, label })
   );
-  const conf = upcoming[0] ? dateParts(`${upcoming[0].date}T12:00:00-03:00`) : null;
 
   return (
     <>
@@ -123,20 +122,6 @@ export default async function CharlasPage() {
           ) : null}
         </p>
       </PageHeader>
-
-      {upcoming.length > 0 && conf ? (
-        <Section
-          description="El programa de la próxima conferencia. Después del evento quedan acá, con su grabación."
-          eyebrow={`Próximamente · ${conf.weekday} ${conf.day} ${conf.month}`}
-          title="En OWU CONF 2026"
-        >
-          <Cells className="gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-            {upcoming.map((talk) => (
-              <TalkCard key={talk.slug} talk={talk} />
-            ))}
-          </Cells>
-        </Section>
-      ) : null}
 
       <Section
         description="Buscá por título, speaker o tema. Si te perdiste una, acá la encontrás."
