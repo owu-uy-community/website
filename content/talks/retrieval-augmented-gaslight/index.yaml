@@ -1,0 +1,9 @@
+title: "Retrieval Augmented Gaslight"
+speakers:
+  - "Sebastián Passaro"
+event: owu-conf-2026
+date: 2026-11-07
+summary: "Cómo un solo documento envenenado alcanza para que una IA con RAG mienta, y cómo probarlo y defenderse con herramientas open source."
+topics:
+  - seguridad
+  - data-ia

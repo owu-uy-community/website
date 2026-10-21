@@ -1,0 +1,10 @@
+name: "OWASP Uruguay"
+picture: /images/communities/owasp-uruguay/picture.webp
+description: "Capítulo uruguayo de OWASP: seguridad en aplicaciones."
+topics:
+  - seguridad
+status: activa
+meetup: https://www.meetup.com/owasp-uruguay-chapter/
+feedNames:
+  - "OWASP Uruguay Chapter"
+confPartner: false

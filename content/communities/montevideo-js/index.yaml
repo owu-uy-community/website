@@ -1,0 +1,9 @@
+name: "Montevideo JS"
+picture: /images/communities/montevideo-js/picture.webp
+description: "JavaScript en todas sus formas, del navegador al servidor."
+topics:
+  - web
+  - lenguajes
+status: activa
+meetup: https://www.meetup.com/montevideojs/
+confPartner: false

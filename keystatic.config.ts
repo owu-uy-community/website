@@ -9,6 +9,8 @@ import { sponsors } from "keystatic/collections/sponsors";
 import { speakers } from "keystatic/collections/speakers";
 import { staff } from "keystatic/collections/staff";
 import { communities } from "keystatic/collections/communities";
+import { events } from "keystatic/collections/events";
+import { talks } from "keystatic/collections/talks";
 
 export const markdocConfig = fields.markdoc.createMarkdocConfig({});
 
@@ -33,6 +35,8 @@ export default config({
     speakers,
     staff,
     communities,
+    events,
+    talks,
   },
   ui: {
     brand: { name: "OWU CMS" },
