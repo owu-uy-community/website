@@ -23,6 +23,7 @@ import {
   type SceneId,
   type StageInput,
   type StageState,
+  type StageTransition,
   type StoredFace,
   type SubmitInput,
 } from "../../owy-stage/scenes";
@@ -127,6 +128,7 @@ const putOnAir = (input: SetSceneInput) =>
       round,
       takenAt: takenAt.toISOString(),
       face: current.face,
+      ...(input.transition ? { transition: input.transition } : {}),
     } satisfies StageState;
 
     return { state, before: current };
@@ -177,17 +179,22 @@ export const saveDesk = (desk: Desk) =>
   });
 
 /**
- * TAKE: the step the operator sees in preview goes on air from scratch (new
- * round), and in the same transaction the queue moves up — or, with nothing
+ * TAKE (or CUT, with `transition: "cut"`): the step the operator sees in
+ * preview goes on air from scratch (new round), and in the same transaction the queue moves up — or, with nothing
  * queued, the scene that just left comes back to preview, so TAKE again
  * undoes. The step travels in the request, so what goes out is exactly what
  * the operator was looking at, even if its last edit hadn't been saved yet.
  */
-export const take = (step: DeskStep) =>
+export const take = (step: DeskStep, transition?: StageTransition) =>
   Effect.gen(function* () {
     const { state, desk } = yield* transaction(
       Effect.gen(function* () {
-        const { state, before } = yield* putOnAir({ scene: step.scene, params: step.params, restart: true });
+        const { state, before } = yield* putOnAir({
+          scene: step.scene,
+          params: step.params,
+          restart: true,
+          transition,
+        });
         const desk = afterTake(yield* readStoredDesk(), before, createId());
         yield* writeDesk(desk);
 

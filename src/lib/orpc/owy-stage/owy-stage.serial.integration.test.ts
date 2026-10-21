@@ -206,6 +206,19 @@ describe("the desk", () => {
     expect(second.desk.preview).toMatchObject({ scene: "message", from: "swap" });
   });
 
+  test("a CUT goes out like a TAKE, telling the walls to skip the wipe", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo") } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const { state } = await call(router.owyStage.take, { step: step("p", "logo"), transition: "cut" }, by(staff));
+
+    expect(state).toMatchObject({ scene: "logo", transition: "cut" });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ transition: "cut" }));
+    // The transition only rides on the broadcast: a wall that loads later just shows the scene.
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.not.toHaveProperty("transition");
+  });
+
   test("a TAKE keeps the favorites", async () => {
     const { staff } = await setup();
     await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo"), favorites: ["message"] } }, by(staff));
