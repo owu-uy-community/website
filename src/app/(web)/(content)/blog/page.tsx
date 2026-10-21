@@ -1,13 +1,12 @@
-import { Newspaper } from "lucide-react";
+import { Newspaper, Rss } from "lucide-react";
 import { Suspense } from "react";
 
-import SectionHeading from "components/Landing/SectionHeading";
-import { addUtmParams } from "app/lib/utils";
 import { SOCIAL_LINKS } from "app/lib/constants";
+import { buttonClassName, ButtonLink, Container, PageHeader } from "components/community/ui";
 
 import { BLOG_DESCRIPTION, BLOG_NAME, PUBLISHER_LOGO, SITE_URL, serializeJsonLd } from "./(posts)/post-metadata";
 import { collectTags, getBlogPosts, type BlogPost } from "./(posts)/posts";
-import EmptyState, { emptyStateActionClassName } from "./components/EmptyState";
+import EmptyState from "./components/EmptyState";
 import PostsExplorer from "./components/PostsExplorer";
 import PostsGrid from "./components/PostsGrid";
 import SearchField from "./components/SearchField";
@@ -64,12 +63,12 @@ function blogJsonLd(posts: BlogPost[]) {
 // plain links here so tag URLs stay crawlable and usable without JS.
 function PostsFallback({ posts, tags }: { posts: BlogPost[]; tags: string[] }) {
   return (
-    <div className="flex w-full flex-col items-center gap-6">
-      <SearchField />
-      <TagChips tags={tags} />
-      <div className="flex w-full flex-col gap-6 pt-2">
-        <PostsGrid posts={posts} />
+    <div className="flex w-full flex-col gap-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center">
+        <SearchField />
+        <TagChips tags={tags} />
       </div>
+      <PostsGrid posts={posts} />
     </div>
   );
 }
@@ -79,29 +78,37 @@ export default async function BlogPage() {
   const tags = collectTags(posts);
 
   return (
-    <div className="flex w-full flex-col items-center gap-10 sm:gap-12">
-      <SectionHeading as="h1" subtitle="Historias, aprendizajes y novedades de la comunidad" title="Blog" />
-      {posts.length === 0 ? (
-        <EmptyState
-          description="Muy pronto vas a encontrar recaps de meetups, novedades de OWU CONF e historias de la comunidad."
-          icon={Newspaper}
-          title="Todavía no hay posts"
-        >
-          <a
-            className={emptyStateActionClassName}
-            href={addUtmParams(SOCIAL_LINKS.slack)}
-            rel="noopener"
-            target="_blank"
-          >
-            Mientras tanto, sumate al Slack
+    <>
+      <PageHeader
+        actions={
+          // A route handler, not a page: a plain link so the browser opens the XML
+          <a className={buttonClassName("secondary", "sm")} href="/blog/feed.xml">
+            <Rss aria-hidden className="size-3.5" />
+            RSS
           </a>
-        </EmptyState>
-      ) : (
-        <Suspense fallback={<PostsFallback posts={posts} tags={tags} />}>
-          <PostsExplorer posts={posts} tags={tags} />
-        </Suspense>
-      )}
+        }
+        description="Guías para empezar y para crecer, recaps de meetups y novedades de la comunidad. Escritas por gente de OWU."
+        eyebrow="Blog"
+        title="Lo que aprendemos, por escrito"
+      />
+      <Container className="py-12 sm:py-16">
+        {posts.length === 0 ? (
+          <EmptyState
+            description="Muy pronto vas a encontrar recaps de meetups, novedades de OWU CONF e historias de la comunidad."
+            icon={Newspaper}
+            title="Todavía no hay posts"
+          >
+            <ButtonLink arrow href={SOCIAL_LINKS.slack} size="sm" utm="blog-vacio" variant="secondary">
+              Mientras tanto, sumate al Slack
+            </ButtonLink>
+          </EmptyState>
+        ) : (
+          <Suspense fallback={<PostsFallback posts={posts} tags={tags} />}>
+            <PostsExplorer posts={posts} tags={tags} />
+          </Suspense>
+        )}
+      </Container>
       <script dangerouslySetInnerHTML={{ __html: serializeJsonLd(blogJsonLd(posts)) }} type="application/ld+json" />
-    </div>
+    </>
   );
 }

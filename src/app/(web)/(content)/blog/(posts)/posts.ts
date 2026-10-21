@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-import { DEFAULT_POST_AUTHOR, resolvePostImage, type PostInfo } from "./post-metadata";
+import { DEFAULT_POST_AUTHOR, resolvePostImage, showDrafts, type PostInfo } from "./post-metadata";
 
 export interface BlogPost {
   slug: string;
@@ -14,6 +14,7 @@ export interface BlogPost {
   image: string;
   tags: string[];
   readingMinutes: number;
+  draft: boolean;
 }
 
 interface PostModule {
@@ -75,6 +76,7 @@ function parsePostInfo(slug: string, mod: PostModule): PostInfo {
     author: asString(raw.author) ?? firstString(fromMetadata?.openGraph?.authors),
     image: asString(raw.image) ?? firstImageUrl(fromMetadata?.openGraph?.images),
     tags: tags as string[],
+    draft: raw.draft === true,
   };
 }
 
@@ -111,11 +113,13 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
         image: resolvePostImage(info),
         tags: info.tags ?? [],
         readingMinutes: await estimateReadingMinutes(slug),
+        draft: info.draft === true,
       };
     })
   );
 
-  return posts.sort((a, b) => b.date.localeCompare(a.date));
+  // Drafts stay out of the index, the feed and the sitemap wherever they can't be read
+  return posts.filter((post) => !post.draft || showDrafts()).sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /** Unique tags across posts, most used first (ties alphabetically) */
