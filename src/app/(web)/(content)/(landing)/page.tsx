@@ -25,7 +25,9 @@ import Footer from "components/shared/Footer";
 import { RichText } from "components/shared/RichText";
 import { getCommunities, getLanding, getTalks } from "lib/community/content";
 import { getUpcomingEvents, nextEventByCommunity } from "lib/community/events";
-import { CONF_URL, issueFormUrl, PAGES } from "lib/community/site";
+import { CONF_URL, issueFormUrl, PAGES, SITE_URL, SOCIALS } from "lib/community/site";
+
+import { PUBLISHER_LOGO, serializeJsonLd } from "../blog/(posts)/post-metadata";
 import { dateParts } from "lib/community/time";
 
 // The event feed refreshes hourly; the rest is content that ships with the deploy
@@ -76,6 +78,30 @@ const RESOURCES = [
 ];
 
 const formatCount = (value: number) => new Intl.NumberFormat("es-UY").format(value);
+
+// Who we are, for search engines: the organization (with its social profiles) and the site
+const SITE_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "OWU Uruguay",
+      alternateName: "OWU — Open Web Uruguay",
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: PUBLISHER_LOGO },
+      sameAs: SOCIALS.map(({ href }) => href),
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      name: "OWU Uruguay",
+      url: SITE_URL,
+      inLanguage: "es",
+      publisher: { "@id": `${SITE_URL}/#organization` },
+    },
+  ],
+};
 
 export default async function Landing() {
   const [landing, events, communities, talks] = await Promise.all([
@@ -430,6 +456,7 @@ export default async function Landing() {
       </section>
 
       <Footer />
+      <script dangerouslySetInnerHTML={{ __html: serializeJsonLd(SITE_JSON_LD) }} type="application/ld+json" />
     </>
   );
 }

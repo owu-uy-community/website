@@ -59,4 +59,6 @@ export const LEGACY_REDIRECTS: Record<string, string> = {
   "/openspace/kiosk/map": `${LEGACY_EVENT_BASE}/kiosk/map`,
   "/openspace/stickynote": `${LEGACY_EVENT_BASE}/stickynote`,
   "/openspace/countdown": `${LEGACY_EVENT_BASE}/countdown`,
+  // La Meetup II's "sumá tu comunidad" form (an empty iframe) → the community directory
+  "/2024/la-meetup/comunidades": "/comunidades",
 };
