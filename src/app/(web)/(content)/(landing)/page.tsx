@@ -6,6 +6,7 @@ import { cn } from "app/lib/utils";
 import CalendarSubscribe from "components/community/CalendarSubscribe";
 import { EventList, splitThisWeek } from "components/community/events";
 import HeroOrbit from "components/community/home/HeroOrbit";
+import PhotoWall from "components/community/home/PhotoWall";
 import Polaroids from "components/community/home/Polaroids";
 import RotatingWord from "components/community/home/RotatingWord";
 import { Reveal } from "components/community/motion";
@@ -74,8 +75,8 @@ const STEPS = [
 const PHOTOS = [
   { src: "/images/conf/gallery/momento-09.webp", alt: "Foto grupal de los asistentes a La Meetup III", caption: "La Meetup III" },
   { src: "/images/conf/gallery/momento-08.webp", alt: "Facilitación del Mercado de Ideas en el escenario", caption: "Mercado de ideas" },
-  { src: "/images/conf/gallery/momento-12.webp", alt: "Mesa de acreditación con stickers de la comunidad", caption: "¡stickers!" },
-  { src: "/images/conf/gallery/momento-14.webp", alt: "El equipo organizador celebrando sobre el escenario", caption: "el equipo ♥" },
+  { src: "/images/2025/intro/6.webp", alt: "Owy, la mascota de OWU, flotando sobre el escenario de La Meetup 2024", caption: "La Meetup 2024" },
+  { src: "/images/2025/intro/9.webp", alt: "El equipo organizador abrazado frente al cartel de La Meetup", caption: "el equipo ♥" },
 ];
 
 const RESOURCES = [
@@ -217,6 +218,20 @@ export default async function Landing() {
           </p>
         </Container>
       </section>
+
+      {/* -------------------------------------------------------------- La gente */}
+      <Section
+        actions={
+          <ButtonLink arrow href={`${CONF_URL}#momentos`} size="sm" utm="home-fotos" variant="secondary">
+            Más fotos
+          </ButtonLink>
+        }
+        description="Meetups gratis, charlas, open space, stickers y after. Gente que viene a aprender y se queda por la gente."
+        id="gente"
+        title="Esto pasa cuando nos juntamos"
+      >
+        <PhotoWall />
+      </Section>
 
       {/* -------------------------------------------------------------- Agenda */}
       <Section
