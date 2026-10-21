@@ -580,6 +580,17 @@ html:has(.owu-site) body {
     font-family: "Permanent Marker", "Comic Sans MS", cursive;
   }
 
+  /* A soft ring that keeps leaving a dot: "this one is next" */
+  .owu-pulse {
+    animation: owu-pulse 2.4s ease-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .owu-pulse {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
   /* Community logos drifting around the hero; --depth scales the pointer parallax */
   .owu-orbit-tile {
     transform: translate3d(calc(var(--px, 0) * var(--depth, 1) * 1px), calc(var(--py, 0) * var(--depth, 1) * 1px), 0);
@@ -599,6 +610,18 @@ html:has(.owu-site) body {
     .owu-orbit-drift {
       animation: none;
     }
+  }
+}
+
+@keyframes owu-pulse {
+  0% {
+    opacity: 0.5;
+    scale: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    scale: 1.8;
   }
 }
 
