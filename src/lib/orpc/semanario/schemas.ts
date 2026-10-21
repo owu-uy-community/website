@@ -26,7 +26,7 @@ export const SemanarioSectionsSchema = z.object({
   threads: z
     .array(
       z.object({
-        channel: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,79}$/, "Nombre de canal de Slack, sin #"),
+        channel: z.string().regex(/^[\p{Ll}\p{N}][\p{Ll}\p{N}_-]{0,79}$/u, "Nombre de canal de Slack, sin #"),
         /** One line Owy writes about the thread; never the message itself */
         title: z.string().trim().min(1).max(200),
         permalink: SlackUrl,

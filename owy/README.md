@@ -65,6 +65,10 @@ ROUTE_AUTH_BASIC_PASSWORD=
 
 # --- Owy físico ---
 COMPANION_PROPOSAL_COOLDOWN_S=60      # segundos entre propuestas de un mismo dispositivo (no staff)
+
+# --- Semanario OWU (cron de los lunes) ---
+OWY_SEMANARIO_EMOJI=semanario         # reacción (sin dos puntos) con la que la gente nomina hilos
+OWY_JOBS_CHANNEL_ID=                  # id del canal de búsquedas (C0123ABC); vacío = el número no las cuenta
 ```
 
 ### Cómo se autentica Owy
@@ -132,7 +136,7 @@ Chequeos (desde `owy/`): `pnpm typecheck` · `pnpm build` (eve build) · `pnpm e
 ### Slack (app portable)
 
 1. Crear app en https://api.slack.com/apps → **From scratch**, workspace de OWU.
-2. **OAuth & Permissions → Bot Token Scopes**: `app_mentions:read`, `chat:write`, `im:history` (DMs), `files:read` (fotos para digitalizar cards), y para hilos sin re-mención: `channels:history` (+ `groups:history` si se usa en canales privados).
+2. **OAuth & Permissions → Bot Token Scopes**: `app_mentions:read`, `chat:write`, `im:history` (DMs), `files:read` (fotos para digitalizar cards), y para hilos sin re-mención: `channels:history` (+ `groups:history` si se usa en canales privados). Para el Semanario: `channels:read` (además de `channels:history`).
 3. Instalar la app en el workspace → copiar **Bot User OAuth Token** → `SLACK_BOT_TOKEN`. De **Basic Information** copiar el **Signing Secret** → `SLACK_SIGNING_SECRET`.
 4. **Event Subscriptions** → Request URL: `https://<owy-domain>/eve/v1/slack` → suscribir `app_mention` y `message.im` (+ `message.channels` para hilos).
 5. **Interactivity & Shortcuts** → misma URL. **Necesario**: sin esto los botones de `ask_question` se dibujan pero al tocarlos no pasa nada (Slack no tiene a dónde mandar el click). Mientras no esté, la gente puede igual contestar escribiendo la opción.
@@ -161,9 +165,28 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 - **Slack**: perfil del usuario → ⋯ → *Copy member ID* (`U…`). Cargarlos en `OWY_STAFF_SLACK_IDS`.
 - **Telegram**: cada uno le escribe a [@userinfobot](https://t.me/userinfobot) (o similar) para conocer su ID numérico. Cargarlos en `OWY_STAFF_TELEGRAM_IDS`.
 
+## Semanario OWU (cron de los lunes)
+
+`agent/schedules/semanario.ts` corre los **lunes a las 12:00 UTC** (09:00 en Montevideo; en Hobby puede llegar hasta una hora tarde, da igual para un borrador). Carga la skill `semanario`, junta lo de la semana con `collect_semanario` y deja el borrador en el sitio con `save_semanario_draft`. **Nunca publica**: el sitio rechaza `semanario.publish` desde una API key, y una persona del staff lo revisa y lo publica en `owu.uy/admin/semanario`. El staff también puede pedírselo a mano ("Owy, armá el semanario").
+
+Qué lee y cómo:
+
+- **Hilos**: mensajes de primer nivel de los últimos 7 días, en los **canales públicos donde está Owy** (para sumar o sacar un canal, invitá o sacá a `@Owy`), que tengan la reacción `:semanario:` (o la de `OWY_SEMANARIO_EMOJI`). Se ordenan por cantidad de marcas. Owy ve solo un extracto de 200 caracteres para escribir un título propio de una línea; el mensaje no se guarda ni se publica, y las menciones llegan como "@alguien".
+- **Búsquedas**: cuántos mensajes nuevos hubo en `OWY_JOBS_CHANNEL_ID`.
+- **Agenda**: los eventos de la semana del feed de meetup-bot (la misma fuente que el sitio).
+
+Para activarlo:
+
+1. Scopes extra de la app de Slack: `channels:read` (listar canales públicos) y `channels:history` (ya está si se usan hilos). Reinstalar la app después de agregarlos.
+2. Crear el emoji custom `:semanario:` en el workspace (o poner en `OWY_SEMANARIO_EMOJI` uno que ya exista, como `star`).
+3. Cargar `OWY_JOBS_CHANNEL_ID` y redeployar: el cron aparece en **Settings → Cron Jobs** del proyecto.
+4. En el sitio, la tabla `semanario_issues` tiene que existir en la base (`pnpm db:push`).
+
+Probarlo local sin esperar al lunes: `curl -X POST http://localhost:2000/eve/v1/dev/schedules/semanario`.
+
 ## Anuncios proactivos (pendiente)
 
-Owy **no** tiene crons hoy. Había tres (`apertura`, `bloques`, `cierre` en
+Owy no tiene otros crons hoy (además del Semanario). Había tres (`apertura`, `bloques`, `cierre` en
 `agent/schedules/conf-day/`) pero el plan Hobby de Vercel sólo permite crons
 **una vez por día** y con precisión de **±59 minutos**, así que el anunciador de
 bloques (cada 30') no deploya y los otros dos podrían llegar hasta una hora tarde.
