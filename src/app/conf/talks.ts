@@ -16,8 +16,6 @@ export type Talk = {
   title: string;
   /** One entry per paragraph */
   description: string[];
-  /** The talk's parts, as the speakers sent them; shown under the abstract */
-  outline?: { title: string; items: string[] }[];
   speakers: Speaker[];
 };
 
@@ -29,28 +27,6 @@ export const TALKS: Talk[] = [
     title: "Kingdom Rush Battles: del lanzamiento al live ops",
     description: [
       "Cómo Ironhide llevó Kingdom Rush a su primer juego multijugador y de operación continua. Un recorrido por las decisiones de diseño, los desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.",
-    ],
-    outline: [
-      {
-        title: "Diseño y mercado",
-        items: [
-          "El mercado de juegos móviles hoy",
-          "Desafíos, oportunidades y decisiones tomadas",
-          "Kingdom Rush Battles vs free to play",
-        ],
-      },
-      {
-        title: "Backend en llamas",
-        items: ["Supervivencia post-lanzamiento", "Actualizaciones sin downtime", "Realtime y websockets"],
-      },
-      {
-        title: "La IA en videojuegos",
-        items: [
-          "Onboarding vertiginoso en ciclo de releases",
-          "IA vs código de juegos: qué funciona y qué no",
-          "Problemas abiertos: confiar, pero validar",
-        ],
-      },
     ],
     speakers: [
       {
@@ -76,8 +52,7 @@ export const TALKS: Talk[] = [
     end: "20:25",
     title: "Retrieval Augmented Gaslight",
     description: [
-      "Usar RAG en producción para que una IA responda con datos internos de la organización o de un dominio específico como fuente de verdad es moneda corriente. Pero investigaciones muestran que alcanza con un solo documento envenenado (un PDF, un e-mail, un ticket) para que la IA se desvíe en sus respuestas o acciones: desde mandar a un usuario a un enlace de phishing hasta afirmar con total seguridad algo falso. Como builder o tester: ¿Lo ves venir?",
-      "Acá estudiamos una base de datos vectorial con su respectiva aplicación (ChromaDB+FastAPI+Ollama), la envenenamos, y mostramos una manera de probar y automatizar: de una aserción simple a un corpus de ataques y defensa en profundidad, todo con herramientas open-source. Te quedás con la visión de estas amenazas, una metodología y un repositorio para investigar (y, según tu caso, aplicar). No es una charla de AI hacking, sino de tomar parte de esa visión para la construcción y automatización de pruebas/defensas. Basado en OWASP LLM Top 10 e investigaciones como PoisonedRAG, PoisonArena y GASLITE.",
+      "Cómo un solo documento envenenado alcanza para que una IA con RAG mande a un usuario a un link de phishing o afirme algo falso con total seguridad. Un recorrido por cómo envenenar una base vectorial y cómo probar, automatizar y defenderse con herramientas open source, basado en el OWASP LLM Top 10.",
     ],
     speakers: [
       {
