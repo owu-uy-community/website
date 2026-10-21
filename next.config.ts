@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
   outputFileTracingIncludes: {
+    // Every community page reads Keystatic content when it revalidates (the navbar's
+    // ⌘K index too), so all routes carry the content folder (~400 KB of YAML/Markdown)
+    "/**": ["./content/**/*"],
     "/keystatic/[[...params]]": ["./content/**/*"],
     "/keystatic": ["./content/**/*"],
     "/api/keystatic/[...params]": ["./content/**/*"],

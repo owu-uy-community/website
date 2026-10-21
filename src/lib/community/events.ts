@@ -1,10 +1,12 @@
 import "server-only";
 
 import { cache } from "react";
+import * as z from "zod";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
 import { getCommunities, getManualEvents, type Community, type ManualEvent } from "./content";
+import { OWU_FEED_NAMES } from "./site";
 import { montevideoIso } from "./time";
 
 export type CommunityEvent = {
@@ -25,30 +27,44 @@ export type CommunityEvent = {
   isOwu: boolean;
 };
 
-type FeedMeetup = {
-  id: number;
-  name: string;
-  title: string;
-  datetime: string;
-  end_datetime: string | null;
-  event_url: string;
-  venue?: string | null;
-};
+/** Links we render as hrefs: web pages only, never javascript: or data: */
+const WebUrl = z.url({ protocol: /^https?$/ });
+const WallClock = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/);
+
+const FeedMeetupSchema = z.object({
+  id: z.number(),
+  name: z.string().trim().min(1).max(200),
+  title: z.string().trim().min(1).max(300),
+  datetime: WallClock,
+  end_datetime: WallClock.nullish(),
+  event_url: WebUrl,
+  venue: z.string().max(200).nullish(),
+});
+
+type FeedMeetup = z.infer<typeof FeedMeetupSchema>;
 
 async function fetchFeed(): Promise<FeedMeetup[]> {
   try {
     const response = await fetch(EXTERNAL_SERVICES.meetupBot, { next: { revalidate: 3600 } });
     if (!response.ok) return [];
-    const body = (await response.json()) as { meetups?: FeedMeetup[] };
+    const body = (await response.json()) as { meetups?: unknown };
+    if (!Array.isArray(body.meetups)) return [];
 
-    return Array.isArray(body.meetups) ? body.meetups : [];
+    // A malformed entry is dropped, not allowed to break the page or smuggle in a link
+    return body.meetups.flatMap((entry) => {
+      const parsed = FeedMeetupSchema.safeParse(entry);
+
+      return parsed.success ? [parsed.data] : [];
+    });
   } catch {
     // The feed is a community-run bot: the pages render without it rather than fail
     return [];
   }
 }
 
-const isOwuName = (value: string) => /^owu\b/i.test(value.trim());
+const OWU_NAMES = new Set(OWU_FEED_NAMES.map((name) => name.toLowerCase()));
+/** Only listed names get the "Organiza OWU" badge: anyone can name a Meetup group "OWU …" */
+const isOwuName = (value: string) => OWU_NAMES.has(value.trim().toLowerCase());
 
 export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communities: Community[]) {
   const byFeedName = new Map<string, Community>();
@@ -74,22 +90,25 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
     };
   });
 
-  const fromManual = manual.map((event): CommunityEvent => {
+  const fromManual = manual.flatMap((event): CommunityEvent[] => {
+    if (!WebUrl.safeParse(event.url).success) return [];
     const community = event.communitySlug ? (bySlug.get(event.communitySlug) ?? null) : null;
     const group = community?.name ?? event.organizer ?? "Comunidad";
 
-    return {
-      id: `manual-${event.slug}`,
-      title: event.title,
-      group,
-      communitySlug: community?.slug ?? null,
-      start: montevideoIso(event.start),
-      end: event.end ? montevideoIso(event.end) : null,
-      venue: event.venue,
-      url: event.url,
-      source: "manual",
-      isOwu: isOwuName(group),
-    };
+    return [
+      {
+        id: `manual-${event.slug}`,
+        title: event.title,
+        group,
+        communitySlug: community?.slug ?? null,
+        start: montevideoIso(event.start),
+        end: event.end ? montevideoIso(event.end) : null,
+        venue: event.venue,
+        url: event.url,
+        source: "manual",
+        isOwu: isOwuName(group),
+      },
+    ];
   });
 
   return [...fromFeed, ...fromManual].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));

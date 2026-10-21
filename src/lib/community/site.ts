@@ -26,16 +26,40 @@ export const PAGES = {
     label: "Comunidades",
     description: "Los grupos que hacen OWU, con su próximo evento",
   },
-  eventos: { href: "/eventos", label: "Eventos", description: "La agenda tech de Uruguay, con calendario para suscribirte" },
-  charlas: { href: "/charlas", label: "Charlas", description: "Todo lo que se habló en La Meetup, OWU CONF y los open spaces" },
+  eventos: {
+    href: "/eventos",
+    label: "Eventos",
+    description: "La agenda tech de Uruguay, con calendario para suscribirte",
+  },
+  charlas: {
+    href: "/charlas",
+    label: "Charlas",
+    description: "Todo lo que se habló en La Meetup, OWU CONF y los open spaces",
+  },
   blog: { href: "/blog", label: "Blog", description: "Guías, recaps y novedades" },
   semanario: { href: "/semanario", label: "Semanario", description: "Lo que pasó en el Slack, cada lunes" },
-  primeraVez: { href: "/primera-vez", label: "¿Primera vez?", description: "Qué esperar de tu primera meetup y cómo usar el Slack" },
-  codigo: { href: "/codigo-de-conducta", label: "Código de conducta", description: "Cómo nos tratamos y cómo reportar" },
+  primeraVez: {
+    href: "/primera-vez",
+    label: "¿Primera vez?",
+    description: "Qué esperar de tu primera meetup y cómo usar el Slack",
+  },
+  codigo: {
+    href: "/codigo-de-conducta",
+    label: "Código de conducta",
+    description: "Cómo nos tratamos y cómo reportar",
+  },
   darCharla: { href: "/dar-una-charla", label: "Dá una charla", description: "Dónde proponerla y cómo prepararla" },
   organizar: { href: "/organizar", label: "Organizá con OWU", description: "Qué te da OWU si organizás un grupo" },
-  empresas: { href: "/empresas", label: "Para empresas", description: "Alojá una meetup, patrociná, publicá búsquedas" },
-  encuesta: { href: "/encuesta-sueldos", label: "Encuesta de sueldos", description: "Datos abiertos de sueldos tech en Uruguay" },
+  empresas: {
+    href: "/empresas",
+    label: "Para empresas",
+    description: "Alojá una meetup, patrociná, publicá búsquedas",
+  },
+  encuesta: {
+    href: "/encuesta-sueldos",
+    label: "Encuesta de sueldos",
+    description: "Datos abiertos de sueldos tech en Uruguay",
+  },
   conf: { href: CONF_URL, label: "OWU CONF", description: "La conferencia anual de la comunidad", external: true },
 } satisfies Record<string, SiteLink>;
 
@@ -44,11 +68,21 @@ export const NAV_LINKS: SiteLink[] = [PAGES.comunidades, PAGES.eventos, PAGES.ch
 export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
   {
     title: "Comunidad",
-    links: [PAGES.primeraVez, PAGES.comunidades, PAGES.codigo, { href: "/primera-vez#preguntas", label: "Preguntas frecuentes" }],
+    links: [
+      PAGES.primeraVez,
+      PAGES.comunidades,
+      PAGES.codigo,
+      { href: "/primera-vez#preguntas", label: "Preguntas frecuentes" },
+    ],
   },
   {
     title: "Participar",
-    links: [PAGES.eventos, { href: issueFormUrl("publicar-evento"), label: "Publicá tu evento", external: true }, PAGES.darCharla, PAGES.organizar],
+    links: [
+      PAGES.eventos,
+      { href: issueFormUrl("publicar-evento"), label: "Publicá tu evento", external: true },
+      PAGES.darCharla,
+      PAGES.organizar,
+    ],
   },
   {
     title: "Leer",
@@ -71,3 +105,10 @@ export const SOCIALS = [
 
 /** Public routes for the sitemap and the command palette */
 export const PUBLIC_ROUTES = Object.values(PAGES).filter((page) => !("external" in page && page.external));
+
+/**
+ * Exact names (as they appear in the meetup-bot feed or a hand-added event's
+ * organizer) of events OWU itself organizes; they get the "Organiza OWU" badge.
+ * Add each new edition here.
+ */
+export const OWU_FEED_NAMES = ["OWU", "OWU Conf 2026", "OWU CONF 2026", "La Meetup"];
