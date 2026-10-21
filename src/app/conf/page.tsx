@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import getEvents from "app/(web)/(content)/(meetups)/2024/la-meetup/services/getEvents";
+import { SITE_URL } from "lib/community/site";
 
 import About from "./components/About";
 import Footer from "./components/Footer";
@@ -64,10 +65,13 @@ const EVENT_JSON_LD = {
       addressCountry: "UY",
     },
   },
+  // Same @id as the Organization on www.owu.uy, so search engines tie the event to the community
   organizer: {
     "@type": "Organization",
-    name: "OWU — Open Web Uruguay",
-    url: "https://owu.uy",
+    "@id": `${SITE_URL}/#organization`,
+    name: "OWU Uruguay",
+    alternateName: "OWU — Open Web Uruguay",
+    url: SITE_URL,
   },
 };
 

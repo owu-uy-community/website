@@ -1,6 +1,7 @@
 import { FaGithub, FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
+import { SITE_URL } from "lib/community/site";
 
 import { confUtm } from "../utm";
 
@@ -24,11 +25,20 @@ export default function Footer() {
       >
         <img alt="OWU CONF" className="h-11 w-auto" src="/images/conf/logo.png" />
 
-        <p className="text-center text-sm leading-6 text-[#FBF5E7] min-[1440px]:text-base">
-          Construido por la comunidad
-          <br />
-          para la comunidad.
-        </p>
+        <div className="flex flex-col items-center gap-3">
+          <p className="text-center text-sm leading-6 text-[#FBF5E7] min-[1440px]:text-base">
+            Construido por la comunidad
+            <br />
+            para la comunidad.
+          </p>
+          {/* Back to the main site: same analytics property, so no UTM tags */}
+          <a
+            className="font-display text-xs leading-none font-bold tracking-[0.08em] text-[#FBF5E7]/60 uppercase transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+            href={SITE_URL}
+          >
+            OWU · La comunidad tech de Uruguay →
+          </a>
+        </div>
 
         <div className="flex items-center gap-6">
           {SOCIALS.map(({ href, label, Icon }) => (
