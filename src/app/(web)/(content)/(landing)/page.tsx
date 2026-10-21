@@ -490,8 +490,10 @@ export default async function Landing() {
         />
         <Container className="relative">
           <Reveal className="flex flex-col items-center text-center">
-            <h2 className={cn(headingClassName.display, "max-w-3xl text-4xl sm:text-6xl lg:text-7xl")}>
-              La comunidad es lo que hacemos entre todos.
+            {/* OWU's motto: each sentence keeps its own line */}
+            <h2 className={cn(headingClassName.display, "max-w-4xl text-4xl sm:text-6xl lg:text-7xl")}>
+              <span className="block">La tecnología se construye entre todos.</span>
+              <span className="block text-yellow-400">La comunidad también.</span>
             </h2>
             <TitleBar className="mt-7" />
             <p className="mt-6 max-w-lg text-lg text-zinc-400">Entrá, saludá en #general y contanos en qué andás.</p>
