@@ -1,7 +1,20 @@
 import { Briefcase, Building2, MapPin, Sparkles } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
-import { ButtonLink, Cell, Cells, Eyebrow, Faq, PageHeader, Section, StatStrip } from "components/community/ui";
+import { Reveal } from "components/community/motion";
+import {
+  Badge,
+  ButtonLink,
+  cardClassName,
+  Cell,
+  Cells,
+  Faq,
+  Freshness,
+  headingClassName,
+  PageHeader,
+  Section,
+  StatStrip,
+} from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getCommunities, getLanding } from "lib/community/content";
 import { getUpcomingEvents } from "lib/community/events";
@@ -97,22 +110,26 @@ export default async function EmpresasPage() {
         title="Apoyá a la comunidad que te ayudó a crecer"
       />
 
-      <Section bordered={false} eyebrow="La comunidad" title="A quién llegás">
-        <StatStrip stats={stats} />
-        <p className="mt-4 max-w-3xl font-terminal text-[11px] leading-relaxed text-zinc-600">
-          Cómo medimos: las personas y la actividad diaria salen de las estadísticas del workspace de Slack de OWU y se
-          cargan a mano en este sitio. Comunidades y eventos salen del directorio y de la agenda, que se actualizan
-          solos.
-        </p>
+      <Section eyebrow="La comunidad" title="A quién llegás">
+        <Reveal>
+          <StatStrip stats={stats} />
+          <Freshness className="mt-8 max-w-3xl leading-relaxed">
+            Cómo medimos: las personas y la actividad diaria salen de las estadísticas del workspace de Slack de OWU y
+            se cargan a mano en este sitio. Comunidades y eventos salen del directorio y de la agenda, que se actualizan
+            solos.
+          </Freshness>
+        </Reveal>
       </Section>
 
       <Section eyebrow="Cómo apoyar" title="Tres formas de sumarse">
         <Cells className="md:grid-cols-3">
           {OFFERS.map(({ icon: Icon, title, body, href, cta, primary }) => (
-            <Cell key={title} className="group flex flex-col gap-5">
-              <Icon aria-hidden className="size-5 text-zinc-500 transition-colors group-hover:text-yellow-400" />
+            <Cell key={title} className="gap-6">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                <Icon aria-hidden className="size-5" />
+              </span>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold tracking-[-0.02em] text-zinc-50">{title}</h3>
+                <h3 className={headingClassName.h3}>{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
               </div>
               <ButtonLink
@@ -136,44 +153,49 @@ export default async function EmpresasPage() {
         id="jobs"
         title={`Reglas para publicar en #${SLACK_CHANNELS.jobs}`}
       >
-        <div className="grid items-start gap-10 lg:grid-cols-[1.1fr_1fr]">
-          <ol className="divide-y divide-line border-y border-line">
-            {JOB_RULES.map(({ title, body }, index) => (
-              <li key={title} className="flex gap-4 py-5">
-                <span className="w-6 shrink-0 font-terminal text-[11px] leading-6 text-yellow-400">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <p className="text-[15px] font-medium text-zinc-100">{title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-zinc-400">{body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
+        <div className="grid items-start gap-6 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
+          <Reveal>
+            <ol className={cardClassName(false, "divide-y divide-white/[0.07] overflow-hidden")}>
+              {JOB_RULES.map(({ title, body }, index) => (
+                <li key={title} className="flex gap-5 px-5 py-5 sm:px-7">
+                  <span className="w-7 shrink-0 font-title text-sm leading-6 font-bold text-yellow-400 tabular-nums">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <p className="font-title text-[15px] font-semibold text-white">{title}</p>
+                    <p className="mt-1 text-sm leading-relaxed text-zinc-400">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
 
-          <figure className="overflow-hidden rounded-xl border border-line bg-gradient-to-b from-white/[0.02] to-transparent lg:sticky lg:top-24">
-            <figcaption className="flex items-center justify-between border-b border-line bg-white/[0.02] px-4 py-2.5">
-              <span className="font-terminal text-[11px] text-zinc-500">#{SLACK_CHANNELS.jobs}</span>
-              <span className="font-terminal text-[10px] tracking-[0.12em] text-zinc-600 uppercase">Plantilla</span>
-            </figcaption>
-            <div className="space-y-1.5 px-5 py-5 font-terminal text-[13px] leading-relaxed text-zinc-300 sm:px-6">
-              <p className="text-zinc-50">
-                <span className="text-zinc-500">[Empresa]</span> busca <span className="text-zinc-500">[Puesto]</span> (
-                <span className="text-zinc-500">seniority</span>)
-              </p>
-              <p>
-                Rango: <span className="text-yellow-400">mín – máx</span> USD o UYU, nominal por mes
-              </p>
-              <p>Modalidad: remoto desde Uruguay / híbrido / presencial</p>
-              <p>
-                Equipo en: <span className="text-zinc-500">[ciudad]</span> · Visa:{" "}
-                <span className="text-zinc-500">sí / no</span>
-              </p>
-              <p>Stack: lo principal, sin listas eternas</p>
-              <p>Cómo postularse: link o a quién escribirle</p>
-              <p className="pt-2 text-zinc-600">↳ actualizaciones en este hilo</p>
-            </div>
-          </figure>
+          <Reveal delay={0.1}>
+            <figure className={cardClassName(false, "overflow-hidden lg:sticky lg:top-24")}>
+              <figcaption className="flex items-center justify-between border-b border-white/[0.07] bg-white/[0.02] px-5 py-3">
+                <span className="text-sm font-medium text-zinc-300">#{SLACK_CHANNELS.jobs}</span>
+                <Badge>Plantilla</Badge>
+              </figcaption>
+              {/* Mono on purpose: it is a message to copy into Slack as is */}
+              <div className="space-y-1.5 px-5 py-5 font-terminal text-[13px] leading-relaxed text-zinc-300 sm:px-6">
+                <p className="text-zinc-50">
+                  <span className="text-zinc-500">[Empresa]</span> busca <span className="text-zinc-500">[Puesto]</span>{" "}
+                  (<span className="text-zinc-500">seniority</span>)
+                </p>
+                <p>
+                  Rango: <span className="text-yellow-400">mín – máx</span> USD o UYU, nominal por mes
+                </p>
+                <p>Modalidad: remoto desde Uruguay / híbrido / presencial</p>
+                <p>
+                  Equipo en: <span className="text-zinc-500">[ciudad]</span> · Visa:{" "}
+                  <span className="text-zinc-500">sí / no</span>
+                </p>
+                <p>Stack: lo principal, sin listas eternas</p>
+                <p>Cómo postularse: link o a quién escribirle</p>
+                <p className="pt-2 text-zinc-600">↳ actualizaciones en este hilo</p>
+              </div>
+            </figure>
+          </Reveal>
         </div>
       </Section>
 
@@ -182,68 +204,74 @@ export default async function EmpresasPage() {
         eyebrow="Lugares"
         title="Ya prestaron su espacio"
       >
-        <ul className="flex flex-wrap gap-2">
-          {VENUES.map((venue) => (
-            <li
-              key={venue}
-              className="inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.02] px-4 py-2 text-sm text-zinc-300"
-            >
-              <MapPin aria-hidden className="size-3.5 text-zinc-500" />
-              {venue}
-            </li>
-          ))}
-        </ul>
+        <Reveal>
+          <ul className="flex flex-wrap gap-2">
+            {VENUES.map((venue) => (
+              <li
+                key={venue}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-zinc-300"
+              >
+                <MapPin aria-hidden className="size-3.5 text-zinc-500" />
+                {venue}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
       </Section>
 
       <Section eyebrow="Preguntas" title="Preguntas frecuentes">
-        <Faq
-          items={[
-            {
-              question: "¿Cuánto cuesta alojar una meetup?",
-              answer: "Nada. Ponés el espacio; si querés, algo para tomar o comer. La comunidad organiza el resto.",
-            },
-            {
-              question: "¿Podemos dar una charla de nuestra empresa?",
-              answer: (
-                <>
-                  Sí, si es una charla técnica útil para la comunidad y no una presentación comercial. Proponela en el
-                  grupo donde encaje: <a href={PAGES.darCharla.href}>te contamos cómo</a>.
-                </>
-              ),
-            },
-            {
-              question: `¿Publicar en #${SLACK_CHANNELS.jobs} tiene costo?`,
-              answer: "No. Solo pedimos que sigas las reglas de esta página.",
-            },
-            {
-              question: "¿Cómo patrocinamos OWU CONF?",
-              answer: (
-                <>
-                  Los paquetes están en <a href={`${CONF_URL}/sponsors`}>conf.owu.uy/sponsors</a>.
-                </>
-              ),
-            },
-            {
-              question: "¿Podemos escribirle a toda la comunidad?",
-              answer: (
-                <>
-                  No compartimos datos de las personas de la comunidad. Las formas de llegar son las de esta página.
-                  Para cualquier otra cosa, escribinos en el <a href={SOCIAL_LINKS.slack}>Slack</a>.
-                </>
-              ),
-            },
-          ]}
-          name="empresas-faq"
-        />
-        <div className="mt-14 flex flex-col gap-4 rounded-xl border border-dashed border-line-strong p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Eyebrow>¿Tu equipo quiere organizar algo más grande?</Eyebrow>
-            <p className="mt-2 text-sm text-zinc-400">Un taller, una hackathon, una serie de charlas: lo charlamos.</p>
+        <Reveal>
+          <Faq
+            items={[
+              {
+                question: "¿Cuánto cuesta alojar una meetup?",
+                answer: "Nada. Ponés el espacio; si querés, algo para tomar o comer. La comunidad organiza el resto.",
+              },
+              {
+                question: "¿Podemos dar una charla de nuestra empresa?",
+                answer: (
+                  <>
+                    Sí, si es una charla técnica útil para la comunidad y no una presentación comercial. Proponela en el
+                    grupo donde encaje: <a href={PAGES.darCharla.href}>te contamos cómo</a>.
+                  </>
+                ),
+              },
+              {
+                question: `¿Publicar en #${SLACK_CHANNELS.jobs} tiene costo?`,
+                answer: "No. Solo pedimos que sigas las reglas de esta página.",
+              },
+              {
+                question: "¿Cómo patrocinamos OWU CONF?",
+                answer: (
+                  <>
+                    Los paquetes están en <a href={`${CONF_URL}/sponsors`}>conf.owu.uy/sponsors</a>.
+                  </>
+                ),
+              },
+              {
+                question: "¿Podemos escribirle a toda la comunidad?",
+                answer: (
+                  <>
+                    No compartimos datos de las personas de la comunidad. Las formas de llegar son las de esta página.
+                    Para cualquier otra cosa, escribinos en el <a href={SOCIAL_LINKS.slack}>Slack</a>.
+                  </>
+                ),
+              },
+            ]}
+            name="empresas-faq"
+          />
+          <div className="mt-14 flex flex-col gap-5 rounded-2xl border border-dashed border-white/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+            <div>
+              <h3 className="font-title text-[17px] font-semibold text-white">¿Tu equipo quiere organizar algo más grande?</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+                Un taller, una hackathon, una serie de charlas: lo charlamos.
+              </p>
+            </div>
+            <ButtonLink arrow href={PAGES.organizar.href} size="sm" variant="secondary">
+              Organizá con OWU
+            </ButtonLink>
           </div>
-          <ButtonLink arrow href={PAGES.organizar.href} size="sm" variant="secondary">
-            Organizá con OWU
-          </ButtonLink>
-        </div>
+        </Reveal>
       </Section>
 
       <Footer />

@@ -1,8 +1,18 @@
-import { ArrowUpRight, FilePlus2 } from "lucide-react";
+import { ArrowUpRight, FilePlus2, Plus } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
+import { cn } from "app/lib/utils";
+import { Reveal } from "components/community/motion";
 import TalkCard, { talkEventLabel } from "components/community/TalkCard";
-import { ButtonLink, Cells, Eyebrow, PageHeader, Section, SmartLink } from "components/community/ui";
+import {
+  ButtonLink,
+  cardClassName,
+  Cells,
+  headingClassName,
+  PageHeader,
+  Section,
+  SmartLink,
+} from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { TALK_EVENTS } from "keystatic/collections/talks";
 import { getTalks, type Talk } from "lib/community/content";
@@ -37,7 +47,7 @@ const OUTSIDE = [
 const normalize = (value: string) =>
   value
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .toLowerCase();
 
 const isUpcoming = (talk: Talk) => Date.parse(`${talk.date}T23:59:59-03:00`) > Date.now();
@@ -93,18 +103,22 @@ export default async function CharlasPage() {
         eyebrow="Charlas"
         title="Todo lo que se habló en OWU"
       >
-        <p className="owu-rise mt-10 flex flex-wrap gap-x-3 gap-y-1 font-terminal text-[11px] tracking-[0.08em] text-zinc-500 uppercase">
-          <span>{pluralize(archive.length, "charla", "charlas")}</span>
-          <span aria-hidden className="text-zinc-700">
-            /
+        <p className="owu-rise mt-10 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500">
+          <span>
+            <strong className="font-semibold text-zinc-200">{archive.length}</strong>{" "}
+            {archive.length === 1 ? "charla" : "charlas"}
           </span>
-          <span>{pluralize(withVideo, "con video", "con video")}</span>
+          <span aria-hidden>·</span>
+          <span>
+            <strong className="font-semibold text-zinc-200">{withVideo}</strong> con video
+          </span>
           {sessionCount > 0 ? (
             <>
-              <span aria-hidden className="text-zinc-700">
-                /
+              <span aria-hidden>·</span>
+              <span>
+                <strong className="font-semibold text-zinc-200">{sessionCount}</strong>{" "}
+                {sessionCount === 1 ? "sesión de open space" : "sesiones de open space"}
               </span>
-              <span>{pluralize(sessionCount, "sesión de open space", "sesiones de open space")}</span>
             </>
           ) : null}
         </p>
@@ -112,67 +126,71 @@ export default async function CharlasPage() {
 
       {upcoming.length > 0 && conf ? (
         <Section
-          bordered={false}
           description="El programa de la próxima conferencia. Después del evento quedan acá, con su grabación."
           eyebrow={`Próximamente · ${conf.weekday} ${conf.day} ${conf.month}`}
           title="En OWU CONF 2026"
         >
-          <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+          <Cells className="gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
             {upcoming.map((talk) => (
               <TalkCard key={talk.slug} talk={talk} />
             ))}
-          </div>
+          </Cells>
         </Section>
       ) : null}
 
       <Section
-        bordered={upcoming.length > 0}
         description="Buscá por título, speaker o tema. Si te perdiste una, acá la encontrás."
         eyebrow="Archivo"
         id="archivo"
         title="Charlas de La Meetup y OWU CONF"
       >
         <TalkFilters events={eventOptions} talks={filterable} topics={topicOptions}>
-          <div className="flex flex-col gap-14 [&_article:target]:rounded-lg [&_article:target]:outline [&_article:target]:outline-1 [&_article:target]:outline-offset-8 [&_article:target]:outline-yellow-400/70">
+          <div className="flex flex-col gap-16 [&_article:target]:rounded-2xl [&_article:target]:outline [&_article:target]:outline-2 [&_article:target]:outline-offset-8 [&_article:target]:outline-yellow-400/70">
             {groups.map(([event, eventTalks]) => (
               <FilterGroup key={event} slugs={eventTalks.map((talk) => talk.slug)}>
-                <div className="mb-6 flex items-baseline justify-between gap-4 border-b border-line pb-3">
-                  <h3 className="font-terminal text-xs tracking-[0.12em] text-zinc-300 uppercase">
-                    {talkEventLabel(event)}
-                    <span className="ml-3 text-zinc-600">{eventTalks[0].date.slice(0, 4)}</span>
-                  </h3>
-                  <span className="font-terminal text-[11px] text-zinc-600">
-                    {pluralize(eventTalks.length, "charla", "charlas")}
-                  </span>
-                </div>
-                <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
-                  {eventTalks.map((talk) => (
-                    <FilterItem key={talk.slug} slug={talk.slug}>
-                      <TalkCard talk={talk} />
-                    </FilterItem>
-                  ))}
-                </div>
+                <Reveal>
+                  <div className="mb-6 flex items-baseline justify-between gap-4">
+                    <h3 className={headingClassName.h3}>
+                      {talkEventLabel(event)}
+                      <span className="ml-3 font-normal text-zinc-500">{eventTalks[0].date.slice(0, 4)}</span>
+                    </h3>
+                    <span className="text-[13px] text-zinc-500 tabular-nums">
+                      {pluralize(eventTalks.length, "charla", "charlas")}
+                    </span>
+                  </div>
+                  {/* Plain grid on purpose: the filters hide cards in place and a staggered wrapper would leave gaps */}
+                  <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+                    {eventTalks.map((talk) => (
+                      <FilterItem key={talk.slug} slug={talk.slug}>
+                        <TalkCard talk={talk} />
+                      </FilterItem>
+                    ))}
+                  </div>
+                </Reveal>
               </FilterGroup>
             ))}
           </div>
         </TalkFilters>
 
-        <div className="mt-14 flex flex-col gap-4 rounded-xl border border-dashed border-line-strong p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-          <div className="flex items-start gap-3">
-            <FilePlus2 aria-hidden className="mt-0.5 size-4 shrink-0 text-yellow-400" />
-            <p className="text-sm leading-relaxed text-zinc-400">
-              <span className="text-zinc-200">¿Tenés el video o las slides de una charla?</span> Sumalos en Keystatic
-              (Charlas, elegí la charla, campos Video y Slides) o mandá un PR editando su archivo en{" "}
-              <code className="rounded bg-white/[0.06] px-1 font-terminal text-[12px] text-zinc-300">
-                content/talks
-              </code>
-              .
-            </p>
+        <Reveal className="mt-16">
+          <div className="flex flex-col gap-5 rounded-2xl border border-dashed border-white/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+            <div className="flex items-start gap-4">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                <FilePlus2 aria-hidden className="size-5" />
+              </span>
+              <div>
+                <h3 className="font-title text-[17px] font-semibold text-white">¿Tenés el video o las slides de una charla?</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
+                  Sumalos en Keystatic (Charlas, elegí la charla, campos Video y Slides) o mandá un PR editando su archivo
+                  en <code className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-terminal text-[12px] text-zinc-300">content/talks</code>.
+                </p>
+              </div>
+            </div>
+            <ButtonLink arrow href={sourceUrl("content/talks")} size="sm" utm="charlas-video" variant="secondary">
+              Ver en GitHub
+            </ButtonLink>
           </div>
-          <ButtonLink arrow href={sourceUrl("content/talks")} size="sm" utm="charlas-video" variant="secondary">
-            Ver en GitHub
-          </ButtonLink>
-        </div>
+        </Reveal>
       </Section>
 
       {editions.length > 0 ? (
@@ -182,44 +200,42 @@ export default async function CharlasPage() {
           id="open-space"
           title="Lo que propuso la gente"
         >
-          <div className="flex flex-col divide-y divide-line border-y border-line">
-            {editions.map((edition, index) => {
-              const when = dateParts(edition.startDate);
+          <Reveal>
+            <div className={cardClassName(false, "divide-y divide-white/[0.07] px-5 sm:px-7")}>
+              {editions.map((edition, index) => {
+                const when = dateParts(edition.startDate);
 
-              return (
-                <details key={edition.id} className="group py-2" open={index < 2}>
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 [&::-webkit-details-marker]:hidden">
-                    <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="text-base font-medium text-zinc-100">{edition.name}</span>
-                      <span className="font-terminal text-[11px] tracking-[0.08em] text-zinc-500 uppercase">
-                        {when.day} {when.month} {edition.startDate.slice(0, 4)} ·{" "}
-                        {pluralize(edition.sessions.length, "sesión", "sesiones")}
+                return (
+                  <details key={edition.id} className="group" open={index < 2}>
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 [&::-webkit-details-marker]:hidden">
+                      <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <span className="font-title text-base font-semibold text-white sm:text-[17px]">{edition.name}</span>
+                        <span className="text-[13px] text-zinc-500">
+                          {when.day} {when.month} {edition.startDate.slice(0, 4)} ·{" "}
+                          {pluralize(edition.sessions.length, "sesión", "sesiones")}
+                        </span>
                       </span>
-                    </span>
-                    <span
-                      aria-hidden
-                      className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line-strong text-zinc-400 transition-transform duration-200 group-open:rotate-45 group-open:text-yellow-400 motion-reduce:transition-none"
-                    >
-                      +
-                    </span>
-                  </summary>
-                  <ul className="flex flex-wrap gap-2 pb-5">
-                    {edition.sessions.map((session) => (
-                      <li
-                        key={session.id}
-                        className="inline-flex max-w-full items-baseline gap-2 rounded-md border border-line bg-white/[0.02] px-3 py-1.5 text-[13px] text-zinc-300"
-                      >
-                        <span className="truncate">{session.title}</span>
-                        {session.speaker ? (
-                          <span className="shrink-0 font-terminal text-[11px] text-zinc-600">{session.speaker}</span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              );
-            })}
-          </div>
+                      <Plus
+                        aria-hidden
+                        className="size-5 shrink-0 text-zinc-500 transition-[transform,color] duration-200 group-open:rotate-45 group-open:text-yellow-400 motion-reduce:transition-none"
+                      />
+                    </summary>
+                    <ul className="flex flex-wrap gap-2 pb-6">
+                      {edition.sessions.map((session) => (
+                        <li
+                          key={session.id}
+                          className="inline-flex max-w-full items-baseline gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[13px] text-zinc-200"
+                        >
+                          <span className="truncate">{session.title}</span>
+                          {session.speaker ? <span className="shrink-0 text-zinc-500">{session.speaker}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                );
+              })}
+            </div>
+          </Reveal>
         </Section>
       ) : null}
 
@@ -228,11 +244,11 @@ export default async function CharlasPage() {
           {OUTSIDE.map(({ href, label, body }) => (
             <SmartLink
               key={href}
-              className="group relative flex flex-col gap-3 bg-ink p-6 transition-colors hover:bg-white/[0.03] sm:p-8"
+              className={cardClassName(true, "group flex flex-col gap-3 p-6 sm:p-7")}
               href={href}
               utm="charlas-afuera"
             >
-              <span className="flex items-center gap-2 text-lg font-semibold tracking-[-0.02em] text-zinc-50">
+              <span className={cn(headingClassName.h3, "flex items-center gap-2")}>
                 {label}
                 <ArrowUpRight
                   aria-hidden
@@ -243,19 +259,17 @@ export default async function CharlasPage() {
             </SmartLink>
           ))}
         </Cells>
-        <div>
-          <Eyebrow className="mt-10">¿Querés que tu charla esté acá?</Eyebrow>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-400">
-            Proponela en una meetup de la comunidad o en el open space de OWU CONF.{" "}
-            <SmartLink
-              className="text-zinc-200 underline decoration-white/30 underline-offset-4 hover:decoration-yellow-400"
-              href={PAGES.darCharla.href}
-            >
-              Te contamos cómo
-            </SmartLink>
-            .
-          </p>
-        </div>
+        <p className="mt-10 max-w-xl text-[15px] leading-relaxed text-zinc-400">
+          <strong className="font-semibold text-white">¿Querés que tu charla esté acá?</strong> Proponela en una meetup de
+          la comunidad o en el open space de OWU CONF.{" "}
+          <SmartLink
+            className="text-zinc-200 underline decoration-white/30 underline-offset-4 hover:decoration-yellow-400"
+            href={PAGES.darCharla.href}
+          >
+            Te contamos cómo
+          </SmartLink>
+          .
+        </p>
       </Section>
 
       <Footer />

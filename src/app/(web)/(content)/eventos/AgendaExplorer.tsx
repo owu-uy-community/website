@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 
 import { cn } from "app/lib/utils";
 import { EventList } from "components/community/events";
-import { buttonClassName } from "components/community/ui";
+import { Reveal } from "components/community/motion";
+import { buttonClassName, cardClassName } from "components/community/ui";
 import type { CommunityEvent } from "lib/community/events";
 import { dateParts, monthKey } from "lib/community/time";
 
@@ -16,6 +17,13 @@ const MODES: { value: Mode; label: string }[] = [
   { value: "presencial", label: "Presencial" },
   { value: "online", label: "Online" },
 ];
+
+/** "octubre de 2026" → "Octubre" */
+const monthName = (iso: string) => {
+  const name = dateParts(iso).monthYear.replace(/\s+de\s+\d{4}$/, "");
+
+  return name.charAt(0).toUpperCase() + name.slice(1);
+};
 
 /**
  * The whole agenda, grouped by month, with client-side filters. It renders on the
@@ -57,7 +65,7 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
           <label className="relative">
             <span className="sr-only">Filtrar por comunidad</span>
             <select
-              className="h-9 appearance-none rounded-lg border border-line bg-ink-elev pr-9 pl-3 text-[13px] text-zinc-200 transition-colors outline-none hover:border-line-strong focus:border-line-strong"
+              className="h-11 appearance-none rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-4 text-[15px] text-white transition-colors outline-none focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/20"
               value={group}
               onChange={(event) => setGroup(event.target.value)}
             >
@@ -70,17 +78,17 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
             </select>
             <ChevronDown
               aria-hidden
-              className="pointer-events-none absolute top-1/2 right-3 size-3.5 -translate-y-1/2 text-zinc-500"
+              className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-zinc-500"
             />
           </label>
-          <div aria-label="Modalidad" className="flex rounded-lg border border-line p-0.5" role="group">
+          <div aria-label="Modalidad" className="flex rounded-xl border border-white/10 p-1" role="group">
             {MODES.map(({ value, label }) => (
               <button
                 key={value}
                 aria-pressed={mode === value}
                 className={cn(
-                  "h-8 rounded-md px-3 text-[13px] transition-colors",
-                  mode === value ? "bg-white/[0.08] text-zinc-50" : "text-zinc-400 hover:text-zinc-100"
+                  "h-9 rounded-lg px-3.5 text-[13px] font-medium transition-colors",
+                  mode === value ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white"
                 )}
                 type="button"
                 onClick={() => setMode(value)}
@@ -90,7 +98,7 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
             ))}
           </div>
         </div>
-        <p aria-live="polite" className="font-terminal text-[11px] tracking-[0.08em] text-zinc-500 uppercase">
+        <p aria-live="polite" className="text-[13px] text-zinc-500">
           {visible.length === events.length
             ? `${events.length} eventos`
             : `${visible.length} de ${events.length} eventos`}
@@ -98,7 +106,7 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
       </div>
 
       {months.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-line-strong px-6 py-16 text-center">
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 px-6 py-16 text-center">
           <p className="text-zinc-300">No hay eventos con esos filtros.</p>
           <button
             className={buttonClassName("secondary", "sm")}
@@ -114,19 +122,21 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
       ) : (
         <div className="flex flex-col gap-10">
           {months.map(([key, monthEvents]) => (
-            <section key={key} className="grid gap-3 md:grid-cols-[180px_1fr] md:gap-8">
-              <div className="md:sticky md:top-20 md:self-start md:pt-4">
-                <h2 className="font-terminal text-[11px] tracking-[0.14em] text-zinc-300 uppercase">
-                  {dateParts(monthEvents[0].start).monthYear}
-                </h2>
-                <p className="mt-1 font-terminal text-[11px] text-zinc-600">
-                  {monthEvents.length} {monthEvents.length === 1 ? "evento" : "eventos"}
-                </p>
-              </div>
-              <div className="overflow-hidden rounded-xl border border-line bg-ink-elev/60">
-                <EventList events={monthEvents} showMonth={false} />
-              </div>
-            </section>
+            <Reveal key={key}>
+              <section className="grid gap-3 md:grid-cols-[180px_1fr] md:gap-8">
+                <div className="md:sticky md:top-24 md:self-start md:pt-5">
+                  <h2 className="font-title text-lg font-semibold text-white">
+                    {monthName(monthEvents[0].start)} <span className="text-zinc-500">{key.slice(0, 4)}</span>
+                  </h2>
+                  <p className="mt-1 text-[13px] text-zinc-500">
+                    {monthEvents.length} {monthEvents.length === 1 ? "evento" : "eventos"}
+                  </p>
+                </div>
+                <div className={cardClassName(false, "overflow-hidden")}>
+                  <EventList events={monthEvents} showMonth={false} />
+                </div>
+              </section>
+            </Reveal>
           ))}
         </div>
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { Play, Search, X } from "lucide-react";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { cn } from "app/lib/utils";
@@ -11,13 +11,21 @@ type Option = { value: string; label: string };
 const normalize = (value: string) =>
   value
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .toLowerCase();
 
 const FilterContext = createContext<{ visible: Set<string> | null }>({ visible: null });
 
 type State = { query: string; event: string; topic: string; withVideo: boolean };
 const EMPTY: State = { query: "", event: "", topic: "", withVideo: false };
+
+const chip = (selected: boolean) =>
+  cn(
+    "inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors",
+    selected
+      ? "border-yellow-400 bg-yellow-400 text-zinc-950"
+      : "border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08] hover:text-white"
+  );
 
 /**
  * Filters the server-rendered archive in place: cards stay server components
@@ -57,35 +65,32 @@ export function TalkFilters({
     );
   }, [active, state, talks]);
 
-  const chip = (selected: boolean) =>
-    cn(
-      "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap transition-colors",
-      selected
-        ? "border-yellow-400/40 bg-yellow-400/[0.08] text-yellow-300"
-        : "border-line text-zinc-400 hover:border-line-strong hover:text-zinc-100"
-    );
-
   return (
     <FilterContext.Provider value={{ visible }}>
-      <div className="mb-10 flex flex-col gap-4 rounded-xl border border-line bg-ink-elev/60 p-4 sm:p-5">
-        <label className="flex items-center gap-3 rounded-lg border border-line bg-white/[0.02] px-3.5 focus-within:border-line-strong">
-          <Search aria-hidden className="size-4 shrink-0 text-zinc-500" />
+      <div className="mb-12 flex flex-col gap-4">
+        <label className="relative block w-full max-w-xl">
+          <Search aria-hidden className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-500" />
           <span className="sr-only">Buscar charlas</span>
           <input
-            className="h-11 w-full bg-transparent text-[15px] text-zinc-100 outline-none placeholder:text-zinc-600"
-            placeholder="Buscá por título, speaker o tema…"
+            className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-11 text-[15px] text-white transition-colors outline-none placeholder:text-zinc-500 focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/20"
+            placeholder="Buscá por título, speaker o tema"
             type="search"
             value={state.query}
             onChange={(event) => set({ query: event.target.value })}
           />
+          {state.query ? (
+            <button
+              aria-label="Borrar búsqueda"
+              className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-white/[0.08] hover:text-white"
+              type="button"
+              onClick={() => set({ query: "" })}
+            >
+              <X aria-hidden className="size-3.5" />
+            </button>
+          ) : null}
         </label>
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filtrar por evento">
-          <button
-            aria-pressed={!state.event}
-            className={chip(!state.event)}
-            type="button"
-            onClick={() => set({ event: "" })}
-          >
+          <button aria-pressed={!state.event} className={chip(!state.event)} type="button" onClick={() => set({ event: "" })}>
             Todos los eventos
           </button>
           {events.map(({ value, label }) => (
@@ -104,7 +109,7 @@ export function TalkFilters({
           <label className="relative">
             <span className="sr-only">Tema</span>
             <select
-              className={cn(chip(state.topic !== ""), "appearance-none bg-transparent pr-8")}
+              className={cn(chip(state.topic !== ""), "appearance-none pr-8")}
               value={state.topic}
               onChange={(event) => set({ topic: event.target.value })}
             >
@@ -117,7 +122,10 @@ export function TalkFilters({
             </select>
             <span
               aria-hidden
-              className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[10px] text-zinc-500"
+              className={cn(
+                "pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-[10px]",
+                state.topic ? "text-zinc-800" : "text-zinc-500"
+              )}
             >
               ▾
             </span>
@@ -128,25 +136,25 @@ export function TalkFilters({
             type="button"
             onClick={() => set({ withVideo: !state.withVideo })}
           >
-            ▶ Con video
+            <Play aria-hidden className="size-3 fill-current" /> Con video
           </button>
-          <p aria-live="polite" className="ml-auto font-terminal text-[11px] text-zinc-500">
+          <p aria-live="polite" className="ml-auto text-[13px] text-zinc-500 tabular-nums">
             {visible ? `${visible.size} de ${talks.length} charlas` : `${talks.length} charlas`}
           </p>
           {active ? (
             <button
-              className="inline-flex items-center gap-1 font-terminal text-[11px] text-zinc-400 hover:text-zinc-100"
+              className="inline-flex h-9 items-center gap-1 rounded-full px-3 text-[13px] font-medium text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-white"
               type="button"
               onClick={() => setState(EMPTY)}
             >
-              <X aria-hidden className="size-3" /> Limpiar
+              <X aria-hidden className="size-3.5" /> Limpiar
             </button>
           ) : null}
         </div>
       </div>
       {children}
       {visible?.size === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-strong px-6 py-14 text-center text-sm text-zinc-500">
+        <p className="rounded-2xl border border-dashed border-white/15 px-6 py-14 text-center text-[15px] text-zinc-500">
           Ninguna charla coincide. Probá con otra palabra o limpiá los filtros.
         </p>
       ) : null}

@@ -1,6 +1,19 @@
-import { Mail, MessageCircle, Phone, ShieldCheck } from "lucide-react";
+import { Ban, Check, Mail, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 
-import { ButtonLink, Cell, Cells, Container, Eyebrow, Freshness, PageHeader, Section } from "components/community/ui";
+import { Reveal } from "components/community/motion";
+import {
+  ButtonLink,
+  Card,
+  cardClassName,
+  Cell,
+  Cells,
+  Container,
+  Eyebrow,
+  Freshness,
+  headingClassName,
+  PageHeader,
+  Section,
+} from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
 import { CONDUCT_EMAIL, PAGES, sourceUrl } from "lib/community/site";
@@ -65,17 +78,17 @@ export default function ConductPage() {
         title="Cómo nos tratamos"
       />
 
-      <section className="scroll-mt-20 py-16 sm:py-20" id="el-codigo">
+      <section className="scroll-mt-24 py-16 sm:py-24" id="el-codigo">
         <Container>
           <div className="grid items-start gap-12 lg:grid-cols-[1fr_360px]">
-            <div className="flex max-w-2xl flex-col gap-12">
-              <div className="rounded-r-xl border-l-2 border-yellow-400 bg-yellow-400/[0.05] px-6 py-5">
+            <Reveal className="flex max-w-2xl flex-col gap-12">
+              <Card>
                 <Eyebrow>En corto</Eyebrow>
-                <p className="mt-3 text-lg leading-relaxed text-zinc-100">
+                <p className="mt-3 font-title text-xl leading-relaxed font-semibold text-white">
                   Tratá a todas las personas con respeto. No toleramos acoso de ningún tipo. Si ves o vivís algo,
                   avisanos: lo tomamos en serio y es confidencial.
                 </p>
-              </div>
+              </Card>
 
               <Block title="Nuestro compromiso">
                 <p>
@@ -86,11 +99,11 @@ export default function ConductPage() {
               </Block>
 
               <Block title="Qué esperamos">
-                <List items={EXPECTED} />
+                <List icon={Check} items={EXPECTED} />
               </Block>
 
               <Block title="Qué no aceptamos">
-                <List items={UNACCEPTABLE} />
+                <List icon={Ban} items={UNACCEPTABLE} />
               </Block>
 
               <Block title="Dónde aplica">
@@ -101,41 +114,43 @@ export default function ConductPage() {
                 </p>
                 <p>Al participar en un espacio de OWU, aceptás este código y las decisiones de quienes lo cuidan.</p>
               </Block>
-            </div>
+            </Reveal>
 
-            <aside className="flex flex-col gap-4 lg:sticky lg:top-20" id="reportar">
-              <div className="rounded-xl border border-yellow-400/30 bg-ink-elev/80 p-6">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck aria-hidden className="size-4 text-yellow-400" />
-                  <Eyebrow>Cómo reportar</Eyebrow>
-                </div>
-                <p className="mt-4 text-[15px] leading-relaxed text-zinc-300">
-                  Escribinos a <span className="font-medium text-zinc-50">{CONDUCT_EMAIL}</span>. Contanos qué pasó,
-                  cuándo y dónde; si podés, sumá capturas o nombres de testigos.
-                </p>
-                <ButtonLink className="mt-5 w-full" href={REPORT_HREF}>
-                  <Mail aria-hidden className="size-4" />
-                  Escribir a {CONDUCT_EMAIL}
-                </ButtonLink>
-                <div className="mt-5 flex gap-3 border-t border-line pt-5 text-sm leading-relaxed text-zinc-400">
-                  <MessageCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+            <Reveal className="flex scroll-mt-24 flex-col gap-4 lg:sticky lg:top-24" delay={0.1}>
+              <aside className="flex flex-col gap-4" id="reportar">
+                <Card className="p-6">
+                  <div className="flex items-center gap-4">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                      <ShieldCheck aria-hidden className="size-5" />
+                    </span>
+                    <h2 className={headingClassName.h3}>Cómo reportar</h2>
+                  </div>
+                  <p className="mt-5 text-[15px] leading-relaxed text-zinc-300">
+                    Escribinos a <span className="font-semibold text-white">{CONDUCT_EMAIL}</span>. Contanos qué pasó,
+                    cuándo y dónde; si podés, sumá capturas o nombres de testigos.
+                  </p>
+                  <ButtonLink className="mt-5 w-full" href={REPORT_HREF}>
+                    <Mail aria-hidden className="size-4" />
+                    Escribir a {CONDUCT_EMAIL}
+                  </ButtonLink>
+                  <div className="mt-5 flex gap-3 border-t border-white/[0.07] pt-5 text-sm leading-relaxed text-zinc-400">
+                    <MessageCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+                    <p>
+                      También podés escribirle por DM a alguien del staff en el Slack, o hablar con cualquier
+                      organizador durante un evento.
+                    </p>
+                  </div>
+                  <p className="mt-4 text-xs text-zinc-500">Respondemos en menos de 48 h. Todo reporte es confidencial.</p>
+                </Card>
+                <div className="flex gap-3 rounded-2xl border border-dashed border-white/15 p-5 text-sm leading-relaxed text-zinc-400">
+                  <Phone aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-500" />
                   <p>
-                    También podés escribirle por DM a alguien del staff en el Slack, o hablar con cualquier organizador
-                    durante un evento.
+                    Si estás en peligro o alguien corre riesgo, llamá al{" "}
+                    <span className="font-semibold text-white">911</span> primero. Después avisanos.
                   </p>
                 </div>
-                <p className="mt-4 font-terminal text-[11px] text-zinc-500">
-                  Respondemos en menos de 48 h. Todo reporte es confidencial.
-                </p>
-              </div>
-              <div className="flex gap-3 rounded-xl border border-line p-5 text-sm leading-relaxed text-zinc-400">
-                <Phone aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-500" />
-                <p>
-                  Si estás en peligro o alguien corre riesgo, llamá al <span className="font-medium text-zinc-100">911</span>{" "}
-                  primero. Después avisanos.
-                </p>
-              </div>
-            </aside>
+              </aside>
+            </Reveal>
           </div>
         </Container>
       </section>
@@ -147,10 +162,12 @@ export default function ConductPage() {
       >
         <Cells className="sm:grid-cols-2 lg:grid-cols-4">
           {PROTOCOL.map(({ title, body }, index) => (
-            <Cell key={title} className="flex flex-col gap-4">
-              <span className="font-terminal text-[11px] tracking-[0.12em] text-zinc-600">0{index + 1}</span>
+            <Cell key={title} className="gap-6">
+              <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 font-title text-base font-bold text-yellow-400">
+                {index + 1}
+              </span>
               <div>
-                <h3 className="text-lg font-semibold tracking-[-0.02em] text-zinc-50">{title}</h3>
+                <h3 className={headingClassName.h3}>{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
               </div>
             </Cell>
@@ -163,23 +180,25 @@ export default function ConductPage() {
         eyebrow="Consecuencias"
         title="Qué puede pasar"
       >
-        <ol className="flex max-w-3xl flex-col gap-2">
-          {LADDER.map(({ step, body }, index) => (
-            <li
-              key={step}
-              className="flex flex-col gap-1 rounded-lg border border-yellow-400/20 px-5 py-4 sm:flex-row sm:items-baseline sm:gap-6"
-              style={{
-                marginLeft: `min(${index * 1.5}rem, ${index * 4}vw)`,
-                backgroundColor: `rgb(250 204 21 / ${0.03 + index * 0.035})`,
-              }}
-            >
-              <span className="shrink-0 font-terminal text-[11px] tracking-[0.12em] text-yellow-400/80 uppercase sm:w-44">
-                {index + 1} · {step}
-              </span>
-              <span className="text-sm text-zinc-300">{body}</span>
-            </li>
-          ))}
-        </ol>
+        <Reveal>
+          <ol className="flex max-w-3xl flex-col gap-3">
+            {LADDER.map(({ step, body }, index) => (
+              <li
+                key={step}
+                className={cardClassName(false, "flex items-start gap-5 px-5 py-4 sm:items-center")}
+                style={{ marginLeft: `min(${index * 1.5}rem, ${index * 4}vw)` }}
+              >
+                <span className="w-8 shrink-0 font-title text-2xl font-extrabold text-yellow-400 tabular-nums">
+                  {index + 1}
+                </span>
+                <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-4">
+                  <span className="shrink-0 font-title text-base font-semibold text-white sm:w-44">{step}</span>
+                  <span className="text-sm text-zinc-400">{body}</span>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Reveal>
         <Freshness className="mt-12">
           Última revisión: octubre de 2026 · Basado en el código de La Meetup 2023 ·{" "}
           <a
@@ -201,18 +220,18 @@ export default function ConductPage() {
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-4">
-      <h2 className="text-2xl leading-tight font-semibold tracking-[-0.03em] text-zinc-50">{title}</h2>
+      <h2 className="font-title text-2xl leading-tight font-bold tracking-[-0.02em] text-white">{title}</h2>
       <div className="flex flex-col gap-4 text-[15px] leading-relaxed text-zinc-400">{children}</div>
     </section>
   );
 }
 
-function List({ items }: { items: string[] }) {
+function List({ icon: Icon, items }: { icon: typeof Check; items: string[] }) {
   return (
     <ul className="flex flex-col gap-3">
       {items.map((item) => (
         <li key={item} className="flex gap-3">
-          <span aria-hidden className="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-yellow-400/70" />
+          <Icon aria-hidden className="mt-1 size-4 shrink-0 text-zinc-500" />
           <span>{item}</span>
         </li>
       ))}

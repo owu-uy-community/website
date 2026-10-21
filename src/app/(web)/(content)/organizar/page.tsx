@@ -1,15 +1,27 @@
-import { Building2, CalendarDays, LayoutGrid, Megaphone, MessagesSquare, ShieldCheck } from "lucide-react";
+import {
+  Building2,
+  CalendarCheck,
+  CalendarDays,
+  HeartHandshake,
+  LayoutGrid,
+  Megaphone,
+  MessagesSquare,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
+import { Reveal } from "components/community/motion";
 import {
-  Badge,
   ButtonLink,
+  Card,
+  cardClassName,
   Cell,
   Cells,
   CommunityLogo,
   Eyebrow,
   Faq,
+  headingClassName,
   PageHeader,
   Section,
   SmartLink,
@@ -64,14 +76,17 @@ const GIVES = [
 
 const ASKS = [
   {
+    icon: ShieldCheck,
     title: "Aplicá el código de conducta",
     body: "En tus eventos y en tu canal, con el mismo criterio que el resto de OWU.",
   },
   {
+    icon: CalendarCheck,
     title: "Mantené tu ficha al día",
     body: "Si pasan seis meses sin eventos, marcamos el grupo como “en pausa” hasta que vuelva a arrancar.",
   },
   {
+    icon: HeartHandshake,
     title: "Avisá si dejás de organizar",
     body: "Así buscamos entre todos quién siga, en vez de que el grupo se apague sin que nadie se entere.",
   },
@@ -109,15 +124,20 @@ export default async function OrganizarPage() {
         title="Organizá con OWU"
       />
 
-      <Section bordered={false} eyebrow="Lo que te da OWU" title="Todo lo que no es organizar la charla">
+      <Section eyebrow="Lo que te da OWU" title="Todo lo que no es organizar la charla">
         <Cells className="sm:grid-cols-2 lg:grid-cols-3">
           {GIVES.map(({ icon: Icon, title, body, href }) => (
-            <Cell key={title} className="group flex flex-col gap-4">
-              <Icon aria-hidden className="size-5 text-zinc-500 transition-colors group-hover:text-yellow-400" />
+            <div key={title} className={cardClassName(Boolean(href), "group flex flex-col gap-5 p-6 sm:p-7")}>
+              <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                <Icon aria-hidden className="size-5" />
+              </span>
               <div>
-                <h3 className="text-lg font-semibold tracking-[-0.02em] text-zinc-50">
+                <h3 className={headingClassName.h3}>
                   {href ? (
-                    <Link className="after:absolute after:inset-0 after:content-[''] hover:text-yellow-400" href={href}>
+                    <Link
+                      className="after:absolute after:inset-0 after:content-[''] group-hover:text-yellow-400"
+                      href={href}
+                    >
                       {title}
                     </Link>
                   ) : (
@@ -126,21 +146,28 @@ export default async function OrganizarPage() {
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
               </div>
-            </Cell>
+            </div>
           ))}
         </Cells>
       </Section>
 
       <Section eyebrow="Lo que te pedimos" title="Tres cosas, nada más">
-        <ol className="grid gap-px overflow-hidden rounded-xl border border-line bg-line md:grid-cols-3">
-          {ASKS.map(({ title, body }, index) => (
-            <li key={title} className="flex flex-col gap-3 bg-ink p-6 sm:p-8">
-              <span className="font-terminal text-[11px] tracking-[0.12em] text-yellow-400">0{index + 1}</span>
-              <h3 className="text-lg font-semibold tracking-[-0.02em] text-zinc-50">{title}</h3>
-              <p className="text-sm leading-relaxed text-zinc-400">{body}</p>
-            </li>
+        <Cells className="md:grid-cols-3">
+          {ASKS.map(({ icon: Icon, title, body }, index) => (
+            <Cell key={title} className="gap-7">
+              <div className="flex items-start justify-between">
+                <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                  <Icon aria-hidden className="size-5" />
+                </span>
+                <span className="font-title text-3xl leading-none font-extrabold text-white/[0.08]">0{index + 1}</span>
+              </div>
+              <div>
+                <h3 className={headingClassName.h3}>{title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
+              </div>
+            </Cell>
           ))}
-        </ol>
+        </Cells>
       </Section>
 
       <Section
@@ -154,19 +181,21 @@ export default async function OrganizarPage() {
         id="sumar"
         title="Cómo entrar al directorio"
       >
-        <ol className="relative grid gap-8 md:grid-cols-3 md:gap-6">
-          {JOIN.map(({ title, body }, index) => (
-            <li key={title} className="relative flex gap-4 md:flex-col">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-line-strong bg-ink font-terminal text-xs text-zinc-300">
-                {index + 1}
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-zinc-100">{title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{body}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <Reveal>
+          <ol className="grid gap-8 md:grid-cols-3 md:gap-6">
+            {JOIN.map(({ title, body }, index) => (
+              <li key={title} className="flex gap-4 md:flex-col md:gap-5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] font-title text-sm font-bold text-white">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3 className="font-title text-base font-semibold text-white">{title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Reveal>
       </Section>
 
       <Section
@@ -175,109 +204,111 @@ export default async function OrganizarPage() {
         id="aliadas"
         title="Comunidades aliadas de OWU CONF"
       >
-        <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+        <div className="grid gap-6 lg:grid-cols-2">
           <Cells>
-            <Cell className="flex flex-col gap-4">
-              <Badge tone="accent" className="self-start">
-                Qué reciben
-              </Badge>
-              <ul className="flex list-disc flex-col gap-3 pl-5 text-[15px] leading-relaxed text-zinc-300 marker:text-yellow-400/70">
+            <Cell className="gap-4">
+              <h3 className={headingClassName.h3}>Qué reciben</h3>
+              <ul className="flex list-disc flex-col gap-3 pl-5 text-[15px] leading-relaxed text-zinc-300 marker:text-zinc-500">
                 <li>Su logo en conf.owu.uy y el sello “Aliada OWU CONF” en el directorio.</li>
                 <li>Un espacio breve en la conferencia para presentar la comunidad.</li>
                 <li>Mención en la comunicación de la conferencia.</li>
               </ul>
             </Cell>
-            <Cell className="flex flex-col gap-4">
-              <Badge className="self-start">Qué hacen</Badge>
-              <ul className="flex list-disc flex-col gap-3 pl-5 text-[15px] leading-relaxed text-zinc-300 marker:text-yellow-400/70">
+            <Cell className="gap-4">
+              <h3 className={headingClassName.h3}>Qué hacen</h3>
+              <ul className="flex list-disc flex-col gap-3 pl-5 text-[15px] leading-relaxed text-zinc-300 marker:text-zinc-500">
                 <li>Difunden la conferencia en sus canales: Meetup, redes y su canal del Slack.</li>
                 <li>Invitan a su gente a proponer sesiones en el open space.</li>
               </ul>
             </Cell>
           </Cells>
 
-          <div className="flex flex-col rounded-xl border border-line bg-ink-elev/60 p-6 sm:p-8">
-            <Eyebrow>Aliadas de la próxima edición</Eyebrow>
-            {partners.length > 0 ? (
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                {partners.map((community) => (
-                  <li key={community.slug}>
-                    <Link
-                      className="flex items-center gap-3 rounded-lg border border-line p-3 transition-colors hover:border-line-strong hover:bg-white/[0.03]"
-                      href={`/comunidades#${community.slug}`}
-                    >
-                      <CommunityLogo logo={community.logo} name={community.name} size="sm" />
-                      <span className="text-sm text-zinc-200">{community.name}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="mt-6 flex flex-1 flex-col items-start justify-center gap-4 rounded-lg border border-dashed border-line-strong p-6">
-                <p className="text-lg font-semibold tracking-[-0.02em] text-zinc-100">Todavía no hay aliadas.</p>
-                <p className="text-sm leading-relaxed text-zinc-400">
-                  ¿Tu comunidad quiere ser la primera? Escribinos en #{SLACK_CHANNELS.organizers} y lo charlamos.
-                </p>
-                <ButtonLink arrow href={SOCIAL_LINKS.slack} size="sm" utm="organizar-aliadas" variant="secondary">
-                  Ir al Slack
-                </ButtonLink>
-              </div>
-            )}
-            <p className="mt-6 font-terminal text-[11px] text-zinc-600">
-              Inspirado en el programa de comunidades de{" "}
-              <SmartLink
-                className="underline underline-offset-4 hover:text-zinc-300"
-                href="https://nerdearla.com/communities/"
-                utm="organizar-aliadas"
-              >
-                Nerdearla
-              </SmartLink>
-              . Más sobre la conferencia en{" "}
-              <SmartLink
-                className="underline underline-offset-4 hover:text-zinc-300"
-                href={CONF_URL}
-                utm="organizar-aliadas"
-              >
-                conf.owu.uy
-              </SmartLink>
-              .
-            </p>
-          </div>
+          <Reveal className="flex" delay={0.1}>
+            <Card className="flex w-full flex-col">
+              <Eyebrow>Aliadas de la próxima edición</Eyebrow>
+              {partners.length > 0 ? (
+                <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {partners.map((community) => (
+                    <li key={community.slug}>
+                      <Link
+                        className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.07]"
+                        href={`/comunidades#${community.slug}`}
+                      >
+                        <CommunityLogo logo={community.logo} name={community.name} size="sm" />
+                        <span className="text-sm text-zinc-200">{community.name}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="mt-6 flex flex-1 flex-col items-start justify-center gap-4 rounded-2xl border border-dashed border-white/15 p-6">
+                  <p className="font-title text-[17px] font-semibold text-white">Todavía no hay aliadas.</p>
+                  <p className="text-sm leading-relaxed text-zinc-400">
+                    ¿Tu comunidad quiere ser la primera? Escribinos en #{SLACK_CHANNELS.organizers} y lo charlamos.
+                  </p>
+                  <ButtonLink arrow href={SOCIAL_LINKS.slack} size="sm" utm="organizar-aliadas" variant="secondary">
+                    Ir al Slack
+                  </ButtonLink>
+                </div>
+              )}
+              <p className="mt-6 text-xs leading-relaxed text-zinc-500">
+                Inspirado en el programa de comunidades de{" "}
+                <SmartLink
+                  className="underline underline-offset-4 transition-colors hover:text-zinc-300"
+                  href="https://nerdearla.com/communities/"
+                  utm="organizar-aliadas"
+                >
+                  Nerdearla
+                </SmartLink>
+                . Más sobre la conferencia en{" "}
+                <SmartLink
+                  className="underline underline-offset-4 transition-colors hover:text-zinc-300"
+                  href={CONF_URL}
+                  utm="organizar-aliadas"
+                >
+                  conf.owu.uy
+                </SmartLink>
+                .
+              </p>
+            </Card>
+          </Reveal>
         </div>
       </Section>
 
       <Section eyebrow="Preguntas" title="Preguntas frecuentes">
-        <Faq
-          items={[
-            {
-              question: "¿Sumarse cuesta algo?",
-              answer: "No. Ni para el grupo ni para la gente que va a sus eventos.",
-            },
-            {
-              question: "¿Tengo que cambiar el nombre o la marca de mi grupo?",
-              answer: "No. Tu grupo sigue siendo tuyo, con su nombre, su página y su forma de organizarse.",
-            },
-            {
-              question: "¿Y si mi grupo es chico o recién arranca?",
-              answer:
-                "Mejor: es cuando más sirve tener un canal y un lugar en la agenda. Un grupo puede arrancar con una meetup chica.",
-            },
-            {
-              question: "¿Puedo usar la herramienta de open space en mi evento?",
-              answer: (
-                <>
-                  Sí. Cada comunidad puede tener su espacio en el panel de OWU. Pedilo en #{SLACK_CHANNELS.organizers}.
-                </>
-              ),
-            },
-            {
-              question: "¿Qué pasa si mi grupo deja de hacer eventos?",
-              answer:
-                "Después de seis meses sin eventos lo marcamos como “en pausa” en el directorio. Si vuelve a arrancar, se saca la marca.",
-            },
-          ]}
-          name="organizar-faq"
-        />
+        <Reveal>
+          <Faq
+            items={[
+              {
+                question: "¿Sumarse cuesta algo?",
+                answer: "No. Ni para el grupo ni para la gente que va a sus eventos.",
+              },
+              {
+                question: "¿Tengo que cambiar el nombre o la marca de mi grupo?",
+                answer: "No. Tu grupo sigue siendo tuyo, con su nombre, su página y su forma de organizarse.",
+              },
+              {
+                question: "¿Y si mi grupo es chico o recién arranca?",
+                answer:
+                  "Mejor: es cuando más sirve tener un canal y un lugar en la agenda. Un grupo puede arrancar con una meetup chica.",
+              },
+              {
+                question: "¿Puedo usar la herramienta de open space en mi evento?",
+                answer: (
+                  <>
+                    Sí. Cada comunidad puede tener su espacio en el panel de OWU. Pedilo en #{SLACK_CHANNELS.organizers}.
+                  </>
+                ),
+              },
+              {
+                question: "¿Qué pasa si mi grupo deja de hacer eventos?",
+                answer:
+                  "Después de seis meses sin eventos lo marcamos como “en pausa” en el directorio. Si vuelve a arrancar, se saca la marca.",
+              },
+            ]}
+            name="organizar-faq"
+          />
+        </Reveal>
       </Section>
 
       <Footer />
