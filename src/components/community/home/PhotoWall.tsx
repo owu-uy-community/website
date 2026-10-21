@@ -1,108 +1,55 @@
 "use client";
 
+import { Maximize2, Shuffle } from "lucide-react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "app/lib/utils";
 import { EASE_OUT, Reveal } from "components/community/motion";
+import { buttonClassName, Section } from "components/community/ui";
+
+import PhotoLightbox from "./PhotoLightbox";
+import { EVENTS, PHOTOS, type Photo } from "./photos";
 
 /*
- * The people, before anything else: a wall of photos from the last meetups.
- * The big cell shows the room; the rest show the moments. Every couple of
- * seconds one cell crossfades to the next photo, so the whole archive gets
- * seen without anyone scrolling. It rests while hovered, off screen, or when
- * the visitor asked for reduced motion.
+ * The people, before anything else: a wall of photos that fits one screen.
+ * Four columns that end on the same line, the first one wider and opening with
+ * the room. Every couple of seconds one cell crossfades to a photo nobody is
+ * showing, so the whole archive gets seen; "Mezclar" does the whole wall at
+ * once. Any cell opens the lightbox. The wall rests while hovered, off screen,
+ * behind the lightbox, or when the visitor asked for reduced motion.
  */
 
-type Photo = { src: string; alt: string; caption: string };
+const ROOMS = PHOTOS.filter((photo) => photo.room);
+const MOMENTS = PHOTOS.filter((photo) => !photo.room);
 
-const gallery = (n: string) => `/images/conf/gallery/${n}.webp`;
-const intro = (n: number) => `/images/2025/intro/${n}.webp`;
+type Weight = 3 | 4 | 5 | 7;
 
-/** Full-room shots that hold up at the biggest size */
-const CROWD: Photo[] = [
-  { src: gallery("tangram-1"), alt: "Toda la sala de La Meetup III con los brazos en alto para la foto grupal", caption: "La Meetup III · Nov 2025" },
-  { src: intro(8), alt: "Foto grupal de La Meetup 2024 con toda la sala", caption: "La Meetup 2024" },
-  { src: gallery("momento-02"), alt: "El público colmando la sala principal durante la apertura", caption: "Sala llena en la apertura" },
-  { src: gallery("tangram-2"), alt: "Un grupo de asistentes sacándose una selfie con la sala detrás", caption: "La selfie de rigor" },
-  { src: intro(4), alt: "Una ronda de gente sentada en círculo armando la grilla del open space", caption: "La ronda del open space" },
-  { src: gallery("momento-09"), alt: "Foto grupal de los asistentes a La Meetup III", caption: "Los que se quedaron hasta el final" },
+// Each number is a cell's share of its column; phones show the first two columns
+const COLUMNS: { phone: boolean; cells: Weight[] }[] = [
+  { phone: true, cells: [7, 5] },
+  { phone: true, cells: [4, 5, 3] },
+  { phone: false, cells: [5, 3, 4] },
+  { phone: false, cells: [3, 4, 5] },
 ];
+const WEIGHT: Record<Weight, string> = { 3: "lg:flex-3", 4: "lg:flex-4", 5: "lg:flex-5", 7: "lg:flex-7" };
+const CELL_COUNT = COLUMNS.reduce((count, column) => count + column.cells.length, 0);
 
-/** The moments; the first ones are what the page opens with */
-const MOMENTS: Photo[] = [
-  { src: gallery("momento-15"), alt: "Cuatro asistentes compartiendo una mesa y riéndose durante el after", caption: "El after" },
-  { src: gallery("tangram-4"), alt: "Tres asistentes brindando y riéndose entre charlas", caption: "Entre charlas" },
-  { src: intro(5), alt: "Una mano sosteniendo la credencial de La Meetup en la entrada", caption: "La entrada es gratis" },
-  { src: intro(1), alt: "Asistentes charlando en grupos en la entrada del venue antes de las charlas", caption: "Networking" },
-  { src: gallery("tangram-6"), alt: "La mesa llena de stickers de las comunidades de OWU", caption: "Stickers" },
-  { src: intro(3), alt: "La grilla del open space armada con post-its sobre una pizarra", caption: "La grilla del open space" },
-  { src: gallery("tangram-7"), alt: "El equipo organizador celebrando frente al cartel de La Meetup III", caption: "El equipo que lo hace posible" },
-  { src: gallery("momento-13"), alt: "El público disfrutando del evento al atardecer", caption: "Charlas al atardecer" },
-  { src: gallery("momento-26"), alt: "Asistentes conversando en los sillones durante la pausa", caption: "Charla de pasillo" },
-  { src: gallery("momento-20"), alt: "Dúo de speakers presentando su charla en comunidad", caption: "Charla a dúo" },
-  { src: gallery("tangram-5"), alt: "Una speaker sonriendo frente a la pantalla de su charla", caption: "Speakers de la comunidad" },
-  { src: gallery("momento-12"), alt: "Mesa de acreditación con stickers de la comunidad", caption: "Stickers para todos" },
-  { src: gallery("momento-30"), alt: "Grupos de asistentes charlando de pie en las afueras del venue", caption: "Networking afuera" },
-  { src: gallery("momento-14"), alt: "El equipo organizador celebrando sobre el escenario", caption: "El equipo" },
-  { src: gallery("momento-16"), alt: "El equipo organizador en la foto final del evento", caption: "La foto del equipo" },
-  { src: gallery("momento-18"), alt: "El tablero del open space proyectado en pantalla", caption: "Open space en pantalla" },
-  { src: gallery("momento-28"), alt: "Dos speakers compartiendo el escenario", caption: "Dos speakers, un escenario" },
-  { src: gallery("momento-29"), alt: "El público siguiendo las charlas de la tarde", caption: "Las charlas de la tarde" },
-  { src: gallery("momento-04"), alt: "Asistentes siguiendo una charla con atención", caption: "Público atento" },
-  { src: gallery("momento-19"), alt: "Un speaker a puro micrófono sobre el escenario", caption: "A puro micrófono" },
-  { src: gallery("momento-22"), alt: "Charla sobre bioimplantes con visuales en pantalla", caption: "Charla sobre bioimplantes" },
-  { src: gallery("momento-06"), alt: "Cierre del evento con el logo de OWU en pantalla", caption: "El cierre" },
-  { src: gallery("momento-01"), alt: "Charla de apertura en el escenario principal de La Meetup III", caption: "La apertura" },
-  { src: gallery("momento-07"), alt: "Presentación en el escenario de La Meetup III", caption: "Sobre el escenario" },
-  { src: gallery("momento-08"), alt: "Facilitación del Mercado de Ideas en el escenario", caption: "Mercado de ideas" },
-  { src: gallery("momento-17"), alt: "Una speaker abriendo su charla desde el podio", caption: "Desde el podio" },
-  { src: gallery("momento-21"), alt: "Presentación de una charla desde el podio de speakers", caption: "Presentando" },
-  { src: intro(7), alt: "Un speaker en el escenario de La Meetup 2024 junto al globo de Owy", caption: "Owy en escena" },
-  { src: intro(6), alt: "Owy, la mascota de OWU, flotando sobre el escenario de La Meetup 2024", caption: "Owy, la mascota" },
-  { src: intro(9), alt: "El equipo organizador abrazado frente al cartel de La Meetup", caption: "El equipo de 2024" },
-  { src: gallery("tangram-3"), alt: "Un speaker señalando la pantalla durante su charla", caption: "Desde el escenario" },
-  { src: gallery("momento-05"), alt: "El público participando de una sesión", caption: "Preguntas del público" },
-];
-
-// The container is 1152px wide at most; each cell is a fraction of it on desktop
-const SPAN = {
-  3: { cell: "lg:col-span-3", sizes: "(min-width: 1152px) 288px, (min-width: 1024px) 25vw, 50vw" },
-  4: { cell: "lg:col-span-4", sizes: "(min-width: 1152px) 384px, (min-width: 1024px) 33vw, 100vw" },
-  6: { cell: "lg:col-span-6", sizes: "(min-width: 1152px) 576px, (min-width: 1024px) 50vw, 100vw" },
+// The container is 1152px wide at most; the first column takes a third of it
+const SIZES = {
+  room: "(min-width: 1152px) 384px, (min-width: 1024px) 33vw, 100vw",
+  wide: "(min-width: 1152px) 384px, (min-width: 1024px) 33vw, 50vw",
+  rest: "(min-width: 1152px) 256px, (min-width: 1024px) 22vw, 50vw",
 };
-
-type Cell = { span: keyof typeof SPAN; crowd?: boolean; className?: string };
-
-// Desktop: the room over two rows with four moments beside it, three wide ones, four more.
-// Phones: the room, six moments in pairs, the team across the bottom.
-const CELLS: Cell[] = [
-  { span: 6, crowd: true, className: "col-span-2 aspect-[16/10] lg:row-span-2" },
-  { span: 3 },
-  { span: 3 },
-  { span: 3 },
-  { span: 3 },
-  { span: 4 },
-  { span: 4 },
-  { span: 4, className: "col-span-2 aspect-[16/9]" },
-  { span: 3, className: "hidden lg:block" },
-  { span: 3, className: "hidden lg:block" },
-  { span: 3, className: "hidden lg:block" },
-  { span: 3, className: "hidden lg:block" },
-];
 
 // Cells take their turn in this order, so swaps hop around instead of sweeping
-const ORDER = [2, 7, 0, 5, 10, 3, 8, 1, 11, 6, 4, 9];
+const ORDER = [3, 8, 0, 5, 10, 2, 7, 1, 9, 6, 4];
 const TICK_MS = 2400;
 
-const initial = (): Photo[] => {
-  let next = 0;
+const initial = (): Photo[] => Array.from({ length: CELL_COUNT }, (_, index) => (index === 0 ? ROOMS[0]! : MOMENTS[index - 1]!));
 
-  return CELLS.map((cell) => (cell.crowd ? CROWD[0] : MOMENTS[next++]));
-};
-
-type Layer = Photo & { fade: boolean };
+type Layer = { photo: Photo; fade: boolean };
 
 /** One photo in a cell; a late layer waits until loaded, then fades in over the one below */
 function PhotoLayer({
@@ -131,95 +78,174 @@ function PhotoLayer({
   }, []);
 
   return (
-    <motion.div
+    <motion.span
       animate={{ opacity: ready ? 1 : 0 }}
-      className="absolute inset-0"
+      className="absolute inset-0 block"
       initial={false}
       transition={{ duration: 0.9, ease: EASE_OUT }}
       onAnimationComplete={() => ready && onSettled()}
     >
       <Image
         ref={ref}
-        alt={layer.alt}
+        alt={layer.photo.alt}
         className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] motion-reduce:transition-none"
         fill
         sizes={sizes}
-        src={layer.src}
+        src={layer.photo.src}
         onError={onFailed}
         onLoad={show}
       />
-    </motion.div>
+    </motion.span>
   );
 }
 
-function Tile({ photo, sizes }: { photo: Photo; sizes: string }) {
-  const [layers, setLayers] = useState<Layer[]>([{ ...photo, fade: false }]);
-  const [caption, setCaption] = useState(photo.caption);
+/** A cell: the photo, its title, and on hover the event line and a zoom button */
+function Tile({ photo, sizes, onOpen }: { photo: Photo; sizes: string; onOpen: (photo: Photo) => void }) {
+  const [layers, setLayers] = useState<Layer[]>([{ photo, fade: false }]);
+  // The photo whose title shows: it switches the moment the next one starts to appear
+  const [current, setCurrent] = useState(photo);
 
   useEffect(() => {
-    setLayers((current) => (current[current.length - 1]?.src === photo.src ? current : [...current.slice(-1), { ...photo, fade: true }]));
+    setLayers((stack) => (stack[stack.length - 1]?.photo.src === photo.src ? stack : [...stack.slice(-1), { photo, fade: true }]));
   }, [photo]);
 
   return (
-    <figure className="group relative h-full overflow-hidden rounded-2xl bg-white/[0.04]">
+    <button
+      aria-label={`Ampliar foto: ${current.caption}`}
+      className="group relative block h-full w-full cursor-zoom-in overflow-hidden rounded-2xl bg-white/[0.04] text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-400"
+      type="button"
+      onClick={() => onOpen(current)}
+    >
       {layers.map((layer) => (
         <PhotoLayer
-          key={layer.src}
+          key={layer.photo.src}
           layer={layer}
           sizes={sizes}
-          onFailed={() => setLayers((current) => (current.length > 1 ? current.filter((item) => item.src !== layer.src) : current))}
-          onReady={() => setCaption(layer.caption)}
-          onSettled={() => setLayers((current) => current.slice(-1))}
+          onFailed={() => setLayers((stack) => (stack.length > 1 ? stack.filter((item) => item.photo.src !== layer.photo.src) : stack))}
+          onReady={() => setCurrent(layer.photo)}
+          onSettled={() => setLayers((stack) => stack.slice(-1))}
         />
       ))}
-      <figcaption className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-950/75 via-zinc-950/20 to-transparent px-4 pt-14 pb-3.5 text-[13px] font-medium text-white sm:text-sm">
-        {caption}
-      </figcaption>
-    </figure>
+      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/[0.08] ring-inset" />
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-zinc-950/85 via-zinc-950/30 to-transparent p-3.5 pt-14 sm:p-4">
+        <span className="min-w-0">
+          <span className="line-clamp-2 font-title text-[14px] leading-tight font-semibold text-white sm:text-[15px]">{current.caption}</span>
+          <span className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-hover:grid-rows-[1fr] group-focus-visible:grid-rows-[1fr]">
+            <span className="block min-h-0 overflow-hidden text-[12px] text-zinc-300">
+              <span className="block pt-0.5">{EVENTS[current.event]}</span>
+            </span>
+          </span>
+        </span>
+        <span className="flex size-8 shrink-0 translate-y-1 items-center justify-center rounded-full bg-yellow-400 text-zinc-950 opacity-0 transition-[opacity,transform] duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100">
+          <Maximize2 aria-hidden className="size-3.5" />
+        </span>
+      </span>
+    </button>
   );
 }
 
-export default function PhotoWall({ className }: { className?: string }) {
+export default function PhotoWall() {
   const [shown, setShown] = useState<Photo[]>(initial);
+  const [active, setActive] = useState<number | null>(null);
   const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.15 });
   const reduceMotion = useReducedMotion();
-  const cursors = useRef({ crowd: 1, moments: CELLS.length - 1, turn: 0 });
+  const cursors = useRef({ room: 1, moment: CELL_COUNT - 1, turn: 0 });
+  const timers = useRef<number[]>([]);
+  const opener = useRef<HTMLElement | null>(null);
   const shownRef = useRef(shown);
   shownRef.current = shown;
 
-  useEffect(() => {
-    if (!inView || hovered || reduceMotion) return;
+  /** Gives a cell the next photo in its line that no cell is showing right now */
+  const advance = useCallback((cell: number) => {
+    const state = cursors.current;
+    const pool = cell === 0 ? ROOMS : MOMENTS;
+    const key = cell === 0 ? "room" : "moment";
+    let candidate = pool[state[key]++ % pool.length]!;
 
-    const id = setInterval(() => {
-      const state = cursors.current;
-      const cell = ORDER[state.turn++ % ORDER.length]!;
-      const pool = CELLS[cell]!.crowd ? CROWD : MOMENTS;
-      const key = CELLS[cell]!.crowd ? "crowd" : "moments";
-      // The next photo in line that no cell is showing right now
-      let candidate = pool[state[key]++ % pool.length]!;
-      for (let tries = 0; tries < pool.length && shownRef.current.some((photo) => photo.src === candidate.src); tries++) {
-        candidate = pool[state[key]++ % pool.length]!;
-      }
-      setShown((current) => current.map((photo, index) => (index === cell ? candidate : photo)));
-    }, TICK_MS);
+    for (let tries = 0; tries < pool.length && shownRef.current.some((photo) => photo.src === candidate.src); tries++) {
+      candidate = pool[state[key]++ % pool.length]!;
+    }
+    setShown((current) => current.map((photo, index) => (index === cell ? candidate : photo)));
+  }, []);
+
+  const paused = !inView || hovered || reduceMotion || active !== null;
+
+  useEffect(() => {
+    if (paused) return;
+
+    const id = setInterval(() => advance(ORDER[cursors.current.turn++ % ORDER.length]!), TICK_MS);
 
     return () => clearInterval(id);
-  }, [inView, hovered, reduceMotion]);
+  }, [paused, advance]);
+
+  useEffect(() => () => timers.current.forEach((timer) => clearTimeout(timer)), []);
+
+  const shuffle = () => {
+    timers.current.forEach((timer) => clearTimeout(timer));
+    timers.current = ORDER.map((cell, i) => window.setTimeout(() => advance(cell), i * 70));
+  };
+
+  const openAt = useCallback((photo: Photo) => {
+    opener.current = document.activeElement as HTMLElement | null;
+    setActive(Math.max(0, PHOTOS.indexOf(photo)));
+  }, []);
+  const close = useCallback(() => {
+    setActive(null);
+    requestAnimationFrame(() => opener.current?.focus());
+  }, []);
+  const step = useCallback((delta: number) => {
+    setActive((current) => (current === null ? current : (current + delta + PHOTOS.length) % PHOTOS.length));
+  }, []);
+
+  let cell = 0;
 
   return (
-    <div
-      ref={ref}
-      className={cn("grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-12 lg:auto-rows-[200px] xl:auto-rows-[220px]", className)}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+    <Section
+      actions={
+        <>
+          <button className={buttonClassName("secondary", "sm")} type="button" onClick={shuffle}>
+            <Shuffle aria-hidden className="size-4" />
+            Mezclar
+          </button>
+          <button className={buttonClassName("secondary", "sm")} type="button" onClick={() => openAt(PHOTOS[0]!)}>
+            <Maximize2 aria-hidden className="size-4" />
+            Ver las {PHOTOS.length}
+          </button>
+        </>
+      }
+      description="Meetups gratis, charlas, open space, stickers y after. Gente que viene a aprender y se queda por la gente."
+      id="gente"
+      title="Esto pasa cuando nos juntamos"
     >
-      {CELLS.map(({ span, className: cell }, index) => (
-        <Reveal key={index} className={cn("aspect-[4/3] lg:aspect-auto", SPAN[span].cell, cell)} delay={index * 0.05}>
-          <Tile photo={shown[index]!} sizes={SPAN[span].sizes} />
-        </Reveal>
-      ))}
-    </div>
+      <div
+        ref={ref}
+        className="grid grid-cols-2 gap-2 sm:gap-3 lg:h-[clamp(420px,calc(100svh-22rem),620px)] lg:grid-cols-[1.5fr_1fr_1fr_1fr]"
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      >
+        {COLUMNS.map((column, c) => (
+          <div key={c} className={cn("lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-3", column.phone ? "contents" : "hidden")}>
+            {column.cells.map((weight) => {
+              const index = cell++;
+              const room = index === 0;
+
+              return (
+                <Reveal
+                  key={index}
+                  className={cn("min-h-0", WEIGHT[weight], room ? "col-span-2 aspect-[16/10]" : "aspect-[4/3]", "lg:aspect-auto")}
+                  delay={index * 0.04}
+                >
+                  <Tile photo={shown[index]!} sizes={room ? SIZES.room : c === 0 ? SIZES.wide : SIZES.rest} onOpen={openAt} />
+                </Reveal>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <PhotoLightbox index={active} photos={PHOTOS} onClose={close} onStep={step} />
+    </Section>
   );
 }
