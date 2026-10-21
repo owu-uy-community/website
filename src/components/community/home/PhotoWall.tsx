@@ -92,6 +92,7 @@ function PhotoLayer({
         fill
         sizes={sizes}
         src={layer.photo.src}
+        style={layer.photo.focus ? { objectPosition: layer.photo.focus } : undefined}
         onError={onFailed}
         onLoad={show}
       />
