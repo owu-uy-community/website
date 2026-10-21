@@ -11,7 +11,6 @@ import Sponsors from "components/Meetups/2025/Sponsors";
 import Speakers from "components/Meetups/2025/Speakers";
 import Staff from "components/Meetups/2025/Staff";
 import OpenSpace from "components/Meetups/2025/OpenSpace";
-import { SectionKey } from "components/shared/Navbar/navSections";
 import AgendaSection from "components/Meetups/2025/Agenda";
 
 import {
@@ -34,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LaMeetup2025() {
-  const laMeetup = await reader().collections.laMeetup2025.read(SectionKey.MeetupEvent);
+  const laMeetup = await reader().collections.laMeetup2025.read("la-meetup");
 
   if (!laMeetup) return null;
 

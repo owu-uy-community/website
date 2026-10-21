@@ -1,66 +1,87 @@
 "use client";
 
-import * as React from "react";
-import classNames from "classnames";
-import Image from "next/image";
-import Link from "next/link";
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import * as Dialog from "@radix-ui/react-dialog";
+import { ArrowUpRight, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
-import { Separator } from "components/shared/Separator";
-import { Sheet, SheetContent, SheetTrigger } from "components/shared/Sheet";
-import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
+import { SOCIAL_LINKS } from "app/lib/constants";
+import { cn } from "app/lib/utils";
+import { ButtonLink, Eyebrow, SmartLink } from "components/community/ui";
+import { NAV_LINKS, PAGES, SOCIALS } from "lib/community/site";
 
-import { navSections } from "./navSections";
-
-function NavItems() {
-  const { activeSection } = useNavigationContext();
-
-  return (
-    <ul className="lg:flex-between my-2 flex w-full flex-col items-start gap-5 lg:flex-row">
-      {Object.values(navSections).map(({ link, title, id }) => {
-        const isActive = activeSection === id;
-
-        return (
-          <li
-            key={link}
-            className="p-medium-16 flex w-full flex-row items-center text-base font-semibold whitespace-nowrap text-white"
-          >
-            <div
-              className={classNames("border-t-6 border-b-6 border-l-12 h-4 w-1.5 border-l-yellow-400", {
-                "bg-yellow-400": isActive,
-              })}
-            />
-            <SheetPrimitive.Close asChild>
-              <Link className="ml-3" href={link}>
-                {title}
-              </Link>
-            </SheetPrimitive.Close>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
+const SECONDARY = [PAGES.primeraVez, PAGES.darCharla, PAGES.organizar, PAGES.empresas, PAGES.semanario, PAGES.codigo];
 
 export default function MobileNav() {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
-    <nav className="lg:hidden">
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        {!isOpen && (
-          <SheetTrigger className="align-middle">
-            <Image alt="menu" className="cursor-pointer" height={24} src="/icons/menu.svg" width={24} />
-          </SheetTrigger>
-        )}
-        <SheetContent className="z-[60] flex max-w-[240px] flex-col gap-6 lg:hidden">
-          <div className="flex w-full flex-row items-center justify-start gap-4">
-            <Image alt="logo" height={34} src="/images/speakers/carpincho/picture.png" width={34} />
+    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog.Trigger
+        aria-label="Abrir menú"
+        className="inline-flex size-9 items-center justify-center rounded-md text-zinc-300 transition-colors hover:bg-white/[0.05] lg:hidden"
+      >
+        <Menu aria-hidden className="size-5" />
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Content
+          aria-describedby={undefined}
+          className="owu-site fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-ink data-[state=open]:animate-in data-[state=open]:fade-in-0 lg:hidden"
+        >
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-5">
+            <Dialog.Title className="font-terminal text-xs tracking-[0.14em] text-zinc-500 uppercase">Menú</Dialog.Title>
+            <Dialog.Close
+              aria-label="Cerrar menú"
+              className="inline-flex size-9 items-center justify-center rounded-md text-zinc-300 hover:bg-white/[0.05]"
+            >
+              <X aria-hidden className="size-5" />
+            </Dialog.Close>
           </div>
-          <NavItems />
-          <Separator />
-        </SheetContent>
-      </Sheet>
-    </nav>
+          <nav aria-label="Principal" className="flex flex-col px-5 py-6">
+            <ul className="divide-y divide-line border-y border-line">
+              {NAV_LINKS.map(({ href, label, external }) => (
+                <li key={href}>
+                  <SmartLink
+                    className={cn(
+                      "flex items-center justify-between py-4 text-2xl font-semibold tracking-[-0.03em]",
+                      !external && pathname.startsWith(href) ? "text-yellow-400" : "text-zinc-100"
+                    )}
+                    href={href}
+                    utm="menu"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {label}
+                    {external ? <ArrowUpRight aria-hidden className="size-5 text-zinc-500" /> : null}
+                  </SmartLink>
+                </li>
+              ))}
+            </ul>
+            <Eyebrow className="mt-8">Participá</Eyebrow>
+            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
+              {SECONDARY.map(({ href, label }) => (
+                <li key={href}>
+                  <SmartLink className="text-[15px] text-zinc-400 hover:text-zinc-100" href={href} onClick={() => setIsOpen(false)}>
+                    {label}
+                  </SmartLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="mt-auto flex flex-col gap-4 border-t border-line px-5 py-6">
+            <ButtonLink arrow href={SOCIAL_LINKS.slack} size="lg" utm="menu">
+              Sumate al Slack
+            </ButtonLink>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 font-terminal text-xs text-zinc-500">
+              {SOCIALS.map(({ key, label, href }) => (
+                <SmartLink key={key} className="hover:text-zinc-200" href={href} utm="menu">
+                  {label}
+                </SmartLink>
+              ))}
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
