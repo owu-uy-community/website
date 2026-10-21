@@ -149,7 +149,7 @@ export default async function Landing() {
       <section className="relative isolate overflow-hidden">
         <div aria-hidden className="owu-furnace pointer-events-none absolute inset-0 -z-10" />
         <HeroOrbit tiles={orbit} />
-        <Container className="relative flex min-h-[calc(100svh-4rem)] flex-col items-center justify-center py-20 text-center sm:py-24 lg:min-h-[calc(100svh-4.5rem)]">
+        <Container className="relative flex min-h-[min(calc(100svh-4.5rem),880px)] flex-col items-center justify-center pt-20 pb-24 text-center sm:pt-24 sm:pb-28">
           <div className="owu-rise" style={delay(0)}>
             {confUpcoming ? (
               <AnnouncementPill href={CONF_URL} label="OWU CONF 2026" utm="hero-pill">
@@ -227,7 +227,6 @@ export default async function Landing() {
           </ButtonLink>
         }
         description="Meetups, talleres y conferencias de toda la comunidad, en un solo lugar."
-        eyebrow="Agenda"
         id="agenda"
         title="Qué se viene"
       >
@@ -296,7 +295,6 @@ export default async function Landing() {
           </ButtonLink>
         }
         description="Cada grupo organiza sus propias meetups. OWU los conecta con un Slack, una agenda y una conferencia."
-        eyebrow="Comunidades"
         title={`${communities.length} grupos, un mismo Slack`}
       >
         <Cells className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -344,7 +342,6 @@ export default async function Landing() {
       {/* ------------------------------------------------------- Cómo participar */}
       <Section
         description="No hay una forma correcta de ser parte. Estos son los caminos que más gente recorre."
-        eyebrow="Participá"
         title="De la primera meetup a organizar la próxima"
       >
         <Cells className="sm:grid-cols-2 lg:grid-cols-4">
@@ -383,7 +380,6 @@ export default async function Landing() {
             </ButtonLink>
           }
           description="Lo que se habló en La Meetup y OWU CONF, con video cuando hay grabación."
-          eyebrow="Charlas"
           title="Para ver con un mate"
         >
           <Cells className="gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
@@ -395,7 +391,7 @@ export default async function Landing() {
       ) : null}
 
       {/* -------------------------------------------------------------- Historia */}
-      <Section eyebrow="Historia" title="Desde 2014, juntándonos">
+      <Section title="Desde 2014, juntándonos">
         <div className="grid items-start gap-14 lg:grid-cols-2 lg:gap-20">
           <Reveal className="flex flex-col gap-12">
             {landing?.mainSectionContent ? (
@@ -433,7 +429,7 @@ export default async function Landing() {
       </Section>
 
       {/* -------------------------------------------------------------- Recursos */}
-      <Section eyebrow="Para leer" title="Lo que la comunidad comparte">
+      <Section title="Lo que la comunidad comparte">
         <Cells className="md:grid-cols-3">
           {RESOURCES.map(({ icon: Icon, href, label, description, tag }) => (
             <Link key={href} className={cardClassName(true, "group flex flex-col gap-8 p-6 sm:p-7")} href={href}>

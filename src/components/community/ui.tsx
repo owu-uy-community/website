@@ -29,17 +29,15 @@ export function Container({ className, ...props }: ComponentPropsWithoutRef<"div
 
 export const headingClassName = {
   display:
-    "font-title text-[2.75rem] leading-[0.98] font-extrabold tracking-[-0.03em] text-balance text-white sm:text-6xl md:text-7xl lg:text-[5.25rem]",
-  h1: "font-title text-4xl leading-[1.04] font-extrabold tracking-[-0.025em] text-balance text-white sm:text-5xl md:text-[3.5rem]",
-  h2: "font-title text-3xl leading-[1.1] font-bold tracking-[-0.02em] text-balance text-white sm:text-4xl",
-  h3: "font-title text-xl leading-snug font-semibold tracking-[-0.01em] text-white",
+    "font-title text-[clamp(2.5rem,1.6rem+3.6vw,5rem)] leading-[1.02] font-bold tracking-[-0.03em] text-balance text-zinc-50",
+  h1: "font-title text-[clamp(2rem,1.5rem+2vw,3.5rem)] leading-[1.06] font-bold tracking-[-0.025em] text-balance text-zinc-50",
+  h2: "font-title text-[clamp(1.75rem,1.35rem+1.6vw,2.5rem)] leading-[1.1] font-semibold tracking-[-0.02em] text-balance text-zinc-50",
+  h3: "font-title text-lg leading-snug font-semibold tracking-[-0.01em] text-zinc-50",
 } as const;
 
-/** Small uppercase label above a title. (`dot` is accepted for older callers and ignored.) */
+/** A short label above a title: use it once per page, where the title needs context. (`dot` is accepted for older callers and ignored.) */
 export function Eyebrow({ children, className }: { children: ReactNode; dot?: boolean; className?: string }) {
-  return (
-    <p className={cn("text-xs font-semibold tracking-[0.16em] text-zinc-500 uppercase", className)}>{children}</p>
-  );
+  return <p className={cn("text-[13px] font-medium text-zinc-500", className)}>{children}</p>;
 }
 
 /** OWU's yellow bar under a title */
@@ -82,10 +80,10 @@ export function SmartLink({ href, utm, children, ...props }: SmartLinkProps) {
 }
 
 const BUTTON_VARIANTS = {
-  primary: "bg-white text-zinc-950 shadow-lg shadow-black/30 hover:bg-yellow-400 hover:shadow-yellow-400/20",
-  secondary: "border border-white/10 bg-white/[0.04] text-white hover:border-white/20 hover:bg-white/[0.08]",
+  primary: "bg-zinc-50 text-zinc-950 hover:bg-yellow-400",
+  secondary: "border border-white/[0.09] bg-white/[0.03] text-zinc-100 hover:border-white/[0.16] hover:bg-white/[0.06] hover:text-white",
   ghost: "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
-  accent: "bg-yellow-400 text-zinc-950 shadow-lg shadow-yellow-400/10 hover:bg-yellow-300",
+  accent: "bg-yellow-400 text-zinc-950 hover:bg-yellow-300",
 } as const;
 
 const BUTTON_SIZES = {
@@ -100,7 +98,7 @@ export const buttonClassName = (
   className?: string
 ) =>
   cn(
-    "group/button inline-flex shrink-0 items-center justify-center rounded-xl font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform,box-shadow] duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:pointer-events-none disabled:opacity-50",
+    "group/button inline-flex shrink-0 items-center justify-center rounded-xl font-semibold whitespace-nowrap transition-[background-color,border-color,color,transform] duration-200 hover:-translate-y-px active:translate-y-0 disabled:pointer-events-none disabled:opacity-50",
     BUTTON_VARIANTS[variant],
     BUTTON_SIZES[size],
     className
@@ -175,9 +173,9 @@ export function AnnouncementPill({
 /** The one card recipe: a translucent slab with a soft top highlight */
 export const cardClassName = (interactive = false, className?: string) =>
   cn(
-    "relative rounded-2xl border border-white/[0.07] bg-white/[0.03] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]",
+    "relative rounded-2xl border border-white/[0.08] bg-[linear-gradient(rgba(255,255,255,0.045),rgba(255,255,255,0.015))]",
     interactive &&
-      "transition-[border-color,background-color,transform,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-white/[0.14] hover:bg-white/[0.05] hover:shadow-[0_24px_48px_-28px_rgba(0,0,0,0.9),inset_0_1px_0_0_rgba(255,255,255,0.06)]",
+      "transition-[border-color,background-image,transform] duration-200 hover:-translate-y-px hover:border-white/[0.15] hover:bg-[linear-gradient(rgba(255,255,255,0.07),rgba(255,255,255,0.03))]",
     className
   );
 
@@ -215,7 +213,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-[11.5px] font-medium whitespace-nowrap",
+        "inline-flex h-6 items-center gap-1 rounded-full px-2.5 text-xs font-medium whitespace-nowrap",
         BADGE_TONES[tone],
         className
       )}
@@ -256,7 +254,7 @@ export function PageHeader({
             {typeof eyebrow === "string" ? <Eyebrow>{eyebrow}</Eyebrow> : eyebrow}
           </div>
         ) : null}
-        <h1 className={cn(headingClassName.h1, "owu-rise mt-4 max-w-3xl")} style={delay(80)}>
+        <h1 className={cn(headingClassName.h1, "owu-rise mt-3 max-w-3xl")} style={delay(80)}>
           {title}
         </h1>
         <TitleBar className={cn("owu-rise mt-6", centered && "mx-auto")} />
@@ -314,7 +312,7 @@ export function Section({
             )}
           >
             <div className={cn("max-w-2xl", centered && "flex flex-col items-center")}>
-              {eyebrow ? typeof eyebrow === "string" ? <Eyebrow className="mb-4">{eyebrow}</Eyebrow> : eyebrow : null}
+              {eyebrow ? typeof eyebrow === "string" ? <Eyebrow className="mb-3">{eyebrow}</Eyebrow> : eyebrow : null}
               {title ? <h2 className={headingClassName.h2}>{title}</h2> : null}
               <TitleBar className="mt-5" />
               {description ? (
