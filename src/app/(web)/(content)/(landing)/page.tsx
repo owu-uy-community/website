@@ -147,7 +147,6 @@ export default async function Landing() {
     <>
       {/* ---------------------------------------------------------------- Hero */}
       <section className="relative isolate overflow-hidden">
-        <div aria-hidden className="owu-furnace pointer-events-none absolute inset-0 -z-10" />
         <HeroOrbit tiles={orbit} />
         <Container className="relative flex min-h-[min(calc(100svh-4.5rem),880px)] flex-col items-center justify-center pt-20 pb-24 text-center sm:pt-24 sm:pb-28">
           <div className="owu-rise" style={delay(0)}>

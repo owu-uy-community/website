@@ -246,8 +246,7 @@ export function PageHeader({
   const centered = align === "center";
 
   return (
-    <header className={cn("relative overflow-hidden", className)}>
-      <div aria-hidden className="owu-furnace pointer-events-none absolute inset-0" />
+    <header className={cn("relative", className)}>
       <Container className={cn("relative pt-16 pb-12 sm:pt-24 sm:pb-16", centered && "flex flex-col items-center text-center")}>
         {eyebrow ? (
           <div className="owu-rise" style={delay(0)}>

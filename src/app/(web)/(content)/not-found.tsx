@@ -6,7 +6,6 @@ export default function NotFound() {
   return (
     <>
       <section className="relative isolate overflow-hidden">
-        <div aria-hidden className="owu-furnace pointer-events-none absolute inset-0 -z-10" />
         <Container className="flex min-h-[calc(100svh-4rem)] flex-col items-center justify-center py-24 text-center">
           <p className="font-title text-[7rem] leading-none font-extrabold tracking-[-0.05em] text-white sm:text-[10rem]">
             404
