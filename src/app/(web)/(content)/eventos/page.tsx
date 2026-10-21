@@ -30,11 +30,7 @@ export default async function EventsPage() {
         description="Meetups, talleres y conferencias de las comunidades, en un solo lugar. La lista se actualiza cada hora."
         eyebrow="Agenda"
         title="Eventos tech en Uruguay"
-      >
-        <div className={cardClassName(false, "owu-rise mt-10 max-w-2xl p-6 backdrop-blur sm:p-7")}>
-          <CalendarSubscribe />
-        </div>
-      </PageHeader>
+      />
 
       <section className="py-12 sm:py-16">
         <Container>
@@ -53,7 +49,14 @@ export default async function EventsPage() {
             <AgendaExplorer events={events} />
           )}
 
+          {/* After the list: whoever scrolled this far is the one who wants the next one in their calendar */}
           <Reveal className="mt-16">
+            <div className={cardClassName(false, "p-6 sm:p-8")}>
+              <CalendarSubscribe wide />
+            </div>
+          </Reveal>
+
+          <Reveal className="mt-6">
             <div className={cardClassName(false, "grid gap-8 p-8 md:grid-cols-[1.4fr_1fr] md:items-center sm:p-10")}>
               <div>
                 <Eyebrow>¿Organizás algo?</Eyebrow>

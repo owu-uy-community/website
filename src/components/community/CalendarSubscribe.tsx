@@ -16,10 +16,10 @@ const PROVIDERS = [
   },
 ];
 
-/** Subscribe once, get every event: one-click providers plus the raw feed URL */
-export default function CalendarSubscribe({ compact = false }: { compact?: boolean }) {
+/** Subscribe once, get every event: one-click providers plus the raw feed URL. `wide` puts the pitch beside the actions */
+export default function CalendarSubscribe({ compact = false, wide = false }: { compact?: boolean; wide?: boolean }) {
   return (
-    <div className="flex flex-col gap-5">
+    <div className={wide ? "grid gap-6 md:grid-cols-[1fr_1.15fr] md:items-center md:gap-10" : "flex flex-col gap-5"}>
       {compact ? null : (
         <div className="flex items-start gap-4">
           <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
@@ -33,20 +33,22 @@ export default function CalendarSubscribe({ compact = false }: { compact?: boole
           </div>
         </div>
       )}
-      <div className="flex flex-wrap gap-2">
-        {PROVIDERS.map(({ label, href }) => (
-          <a
-            key={label}
-            className={buttonClassName("secondary", "sm")}
-            href={href}
-            rel="noopener"
-            target={href.startsWith("http") ? "_blank" : undefined}
-          >
-            {label}
-          </a>
-        ))}
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-wrap gap-2">
+          {PROVIDERS.map(({ label, href }) => (
+            <a
+              key={label}
+              className={buttonClassName("secondary", "sm")}
+              href={href}
+              rel="noopener"
+              target={href.startsWith("http") ? "_blank" : undefined}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+        <CopyField label="la URL del calendario" value={ICS_URL} />
       </div>
-      <CopyField label="la URL del calendario" value={ICS_URL} />
     </div>
   );
 }
