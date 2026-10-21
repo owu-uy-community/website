@@ -21,7 +21,7 @@ export const communities = collection({
     }),
     picture: fields.image({
       label: "Logo",
-      description: "Cuadrado o apaisado, sobre fondo transparente o blanco.",
+      description: "Cuadrado, con el fondo del logo (blanco si no tiene) y aire alrededor: se muestra de borde a borde.",
       directory: "public/images/communities",
       publicPath: "/images/communities/",
     }),
