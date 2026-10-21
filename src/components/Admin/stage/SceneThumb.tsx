@@ -1,18 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+
+import { cn } from "app/lib/utils";
 
 import { ScaledFrame } from "./ScaledFrame";
 
 /**
- * A scene card image: the pre-rendered thumbnail (`pnpm stage:thumbs`) by
- * default, the live preview page while the mouse rests on it. Scenes without
- * a thumbnail yet fall back to the live page.
+ * A scene card image: the pre-rendered thumbnail (`pnpm stage:thumbs`). A
+ * scene without one yet falls back to its live page. No hover preview: a
+ * touchscreen fires mouseenter on every tap, and the preview monitor shows
+ * any scene live anyway.
  */
-export function SceneThumb({ id, title }: { id: string; title: string }) {
-  const [live, setLive] = useState(false);
+export function SceneThumb({ id, title, className }: { id: string; title: string; className?: string }) {
   const [missing, setMissing] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A 404 that lands before hydration never fires onError, which used to leave
   // a broken-image icon forever; catch it when the element mounts instead.
@@ -20,31 +21,20 @@ export function SceneThumb({ id, title }: { id: string; title: string }) {
     if (img?.complete && img.naturalWidth === 0) setMissing(true);
   };
 
-  const enter = () => {
-    timer.current = setTimeout(() => setLive(true), 350);
-  };
-  const leave = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setLive(false);
-  };
+  if (missing) return <ScaledFrame className={className} src={`/owy/stage/${id}?preview=1`} title={title} />;
 
   return (
-    <div className="relative" onMouseEnter={enter} onMouseLeave={leave}>
-      {live || missing ? (
-        <ScaledFrame src={`/owy/stage/${id}?preview=1`} title={title} />
-      ) : (
-        <div className="relative aspect-video w-full overflow-hidden rounded-md bg-black">
-          <img
-            alt=""
-            className="h-full w-full object-cover"
-            decoding="async"
-            loading="lazy"
-            onError={() => setMissing(true)}
-            ref={check}
-            src={`/owy-stage/thumbs/${id}.jpg`}
-          />
-        </div>
-      )}
+    <div className={cn("relative aspect-video w-full overflow-hidden rounded-md bg-black", className)}>
+      <img
+        alt=""
+        className="h-full w-full object-cover"
+        decoding="async"
+        draggable={false}
+        loading="lazy"
+        onError={() => setMissing(true)}
+        ref={check}
+        src={`/owy-stage/thumbs/${id}.jpg`}
+      />
     </div>
   );
 }

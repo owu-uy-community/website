@@ -1,0 +1,207 @@
+"use client";
+
+import { useEffect, useMemo, useRef } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { toast } from "components/shared/ui/toast-utils";
+import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { orpc } from "lib/orpc";
+import { afterTake, cue, cueQueued, readDesk, stepId } from "lib/owy-stage/desk";
+import {
+  EMPTY_DESK,
+  OWY_DESK_CHANNEL,
+  isSceneId,
+  type Desk,
+  type DeskStep,
+  type SceneId,
+  type StageState,
+} from "lib/owy-stage/scenes";
+
+/** Preview param edits reach the other devices after a pause in typing, not per keystroke. */
+const EDIT_SAVE_MS = 400;
+/** Where favorites lived before they moved to the server (one device's list seeds the shared one). */
+const LEGACY_FAVORITES = "owy-stage-favorites";
+
+type Params = Record<string, unknown>;
+
+/**
+ * The desk every admin device shares: the scene in preview, the queue behind
+ * it and the favorites. Edits apply locally at once and save in the
+ * background; TAKE goes through the server so the queue moves up in the same
+ * transaction that puts the preview on air.
+ */
+export function useDesk(live: StageState, onAir: (state: StageState) => void) {
+  const queryClient = useQueryClient();
+  const { data, refetch } = useQuery(orpc.owyStage.getDesk.queryOptions({ staleTime: 60_000 }));
+  const desk = data ?? EMPTY_DESK;
+
+  const deskRef = useRef(desk);
+  deskRef.current = desk;
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const onAirRef = useRef(onAir);
+  onAirRef.current = onAir;
+
+  /** Saves in flight and a pending typed edit: meanwhile, echoes of our own older saves are stale. */
+  const inflight = useRef(0);
+  const editTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSave = useRef<Promise<unknown>>(Promise.resolve());
+  const taking = useRef(false);
+
+  const save = useMutation(
+    orpc.owyStage.saveDesk.mutationOptions({
+      onMutate: () => {
+        inflight.current += 1;
+      },
+      onSettled: () => {
+        inflight.current -= 1;
+      },
+      onError: (error) => {
+        toast.error("No se pudo guardar la cola", error.message);
+        void refetch();
+      },
+    })
+  );
+  const takeMutation = useMutation(orpc.owyStage.take.mutationOptions());
+  const saveRef = useRef(save.mutateAsync);
+  saveRef.current = save.mutateAsync;
+  const takeRef = useRef(takeMutation.mutateAsync);
+  takeRef.current = takeMutation.mutateAsync;
+
+  // Another admin device changed the desk (or the server answered a TAKE).
+  const { isConnected } = useRealtimeChannel(OWY_DESK_CHANNEL, (event, payload) => {
+    if (event !== "desk" || inflight.current > 0 || editTimer.current) return;
+    queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), readDesk(payload));
+  });
+  // The WebSocket recycles every few minutes and drops what was sent meanwhile.
+  useEffect(() => {
+    if (isConnected) void refetch();
+  }, [isConnected, refetch]);
+
+  const actions = useMemo(() => {
+    const key = orpc.owyStage.getDesk.queryKey();
+    const current = () => deskRef.current;
+    const send = (next: Desk) => {
+      lastSave.current = saveRef.current({ desk: next }).catch(() => undefined);
+    };
+    /** Local at once; saved now, or after a pause when it's typing. */
+    const write = (next: Desk, typing = false) => {
+      queryClient.setQueryData(key, next);
+      deskRef.current = next;
+      if (editTimer.current) clearTimeout(editTimer.current);
+      editTimer.current = null;
+      if (!typing) return send(next);
+      editTimer.current = setTimeout(() => {
+        editTimer.current = null;
+        send(deskRef.current);
+      }, EDIT_SAVE_MS);
+    };
+    const queued = (scene: SceneId, params: Params = {}): DeskStep => ({ id: stepId(), scene, params, from: "queue" });
+
+    return {
+      /** A scene from the library, the palette or a favorite key: into preview, with its defaults. */
+      pick: (scene: SceneId, params: Params = {}) =>
+        write(cue(current(), { id: stepId(), scene, params, from: "pick" })),
+      /** What is on air, copied into preview to prepare a variant off air. */
+      copyLive: () => {
+        const { scene, params } = liveRef.current;
+        write(cue(current(), { id: stepId(), scene, params, from: "pick" }));
+      },
+      cueQueued: (id: string) => write(cueQueued(current(), id)),
+      editPreview: (params: Params) => {
+        const { preview } = current();
+        if (preview) write({ ...current(), preview: { ...preview, params } }, true);
+      },
+      /** Out of preview; a step that came from the queue goes back to its front. */
+      clearPreview: () => {
+        const { preview, queue } = current();
+        write({ ...current(), preview: null, queue: preview?.from === "queue" ? [preview, ...queue] : queue });
+      },
+      enqueue: (scene: SceneId, params: Params = {}) =>
+        write({ ...current(), queue: [...current().queue, queued(scene, params)] }),
+      enqueuePreview: () => {
+        const { preview, queue } = current();
+        if (preview) write({ ...current(), queue: [...queue, queued(preview.scene, preview.params)] });
+      },
+      remove: (id: string) => write({ ...current(), queue: current().queue.filter((step) => step.id !== id) }),
+      duplicate: (id: string) => {
+        const { queue } = current();
+        const at = queue.findIndex((step) => step.id === id);
+        if (at >= 0)
+          write({
+            ...current(),
+            queue: [...queue.slice(0, at + 1), { ...queue[at], id: stepId() }, ...queue.slice(at + 1)],
+          });
+      },
+      moveToTop: (id: string) => {
+        const { queue } = current();
+        const step = queue.find((item) => item.id === id);
+        if (step) write({ ...current(), queue: [step, ...queue.filter((item) => item.id !== id)] });
+      },
+      /** While dragging: local only. `persistOrder` saves what the drag left behind. */
+      reorder: (queue: DeskStep[]) => {
+        deskRef.current = { ...current(), queue };
+        queryClient.setQueryData(key, deskRef.current);
+      },
+      persistOrder: () => write(current()),
+      clearQueue: () => write({ ...current(), queue: [] }),
+      toggleFavorite: (scene: SceneId) => {
+        const { favorites } = current();
+        write({
+          ...current(),
+          favorites: favorites.includes(scene) ? favorites.filter((id) => id !== scene) : [...favorites, scene],
+        });
+      },
+      /**
+       * TAKE. The step travels with the request (what goes out is what the
+       * operator sees); a queue edit still saving lands first, or it would
+       * bring the taken step back.
+       */
+      take: async () => {
+        const step = current().preview;
+        // A double press must not send the next queued scene too.
+        if (!step || taking.current) return;
+        taking.current = true;
+        if (editTimer.current) clearTimeout(editTimer.current);
+        editTimer.current = null;
+        try {
+          await lastSave.current;
+          const before = liveRef.current;
+          queryClient.setQueryData(key, afterTake(current(), { scene: before.scene, params: before.params }, stepId()));
+          const result = await takeRef.current({ step });
+          queryClient.setQueryData(key, result.desk);
+          onAirRef.current(result.state);
+        } catch (error) {
+          toast.error("No se pudo hacer TAKE", error instanceof Error ? error.message : undefined);
+          void refetch();
+        } finally {
+          taking.current = false;
+        }
+      },
+    };
+  }, [queryClient, refetch]);
+
+  // Favorites used to be per browser: the first device that loads the shared desk seeds it, once.
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!data || seeded.current) return;
+    seeded.current = true;
+    try {
+      const stored = JSON.parse(window.localStorage.getItem(LEGACY_FAVORITES) ?? "[]") as unknown;
+      window.localStorage.removeItem(LEGACY_FAVORITES);
+      const legacy = Array.isArray(stored)
+        ? stored.filter((id): id is SceneId => typeof id === "string" && isSceneId(id))
+        : [];
+      if (legacy.length && !data.favorites.length) {
+        queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), { ...data, favorites: legacy });
+        void saveRef.current({ desk: { ...data, favorites: legacy } }).catch(() => undefined);
+      }
+    } catch {
+      // Corrupt or missing: nothing to carry over.
+    }
+  }, [data, queryClient]);
+
+  return { desk, loading: !data, taking: takeMutation.isPending, actions };
+}
+
+export type DeskActions = ReturnType<typeof useDesk>["actions"];
