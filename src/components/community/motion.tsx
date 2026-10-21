@@ -1,15 +1,23 @@
 "use client";
 
-import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { animate, motion, MotionConfig, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { Children, useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "app/lib/utils";
 
 /*
  * The site's motion vocabulary, in three moves: a block that rises into view,
- * a grid whose items follow one another, and a number that counts up. All of
- * them stay still when the visitor asked for reduced motion.
+ * a grid whose items follow one another, and a number that counts up. Under
+ * MotionRoot, a visitor who asked for reduced motion gets fades without movement.
  */
+
+/**
+ * Wraps the community site. Components start from the same hidden state on the server
+ * and the client (no hydration mismatch); Motion drops the movement for reduced motion.
+ */
+export function MotionRoot({ children }: { children: ReactNode }) {
+  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+}
 
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
@@ -26,12 +34,10 @@ export function Reveal({
   delay?: number;
   y?: number;
 }) {
-  const reduceMotion = useReducedMotion();
-
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : { opacity: 0, y }}
+      initial={{ opacity: 0, y }}
       transition={{ duration: 0.6, ease: EASE_OUT, delay }}
       viewport={VIEWPORT}
       whileInView={{ opacity: 1, y: 0 }}
@@ -58,12 +64,10 @@ export function Stagger({
   itemClassName?: string;
   interval?: number;
 }) {
-  const reduceMotion = useReducedMotion();
-
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? false : "hidden"}
+      initial="hidden"
       variants={{ hidden: {}, show: { transition: { staggerChildren: interval, staggerDirection: 1 } } }}
       viewport={{ once: true, amount: 0.12 }}
       whileInView="show"
