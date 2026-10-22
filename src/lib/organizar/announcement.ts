@@ -13,14 +13,24 @@ export function announcementText(event: {
   url: string;
 }) {
   return [
-    `📣 ${event.community}: ${event.name}`,
-    event.summary ?? "",
+    `📣 ${event.community}: ${unlinked(event.name)}`,
+    unlinked(event.summary ?? ""),
     `🗓 ${shortWhen(event.startDate)} · 📍 ${event.place}`,
     `👉 ${event.url}`,
   ]
     .filter(Boolean)
     .join("\n");
 }
+
+/**
+ * What organizers typed can't turn into a link in OWU's channels: Slack and Telegram link any
+ * domain they see and Telegram any @handle, so a domain's dots become look-alike dots (․) and @
+ * becomes ＠. «Node.js» still reads the same.
+ */
+export const unlinked = (text: string) =>
+  text
+    .replace(/\b(?:https?:\/\/)?((?:[a-z0-9-]+\.)+[a-z]{2,})/gi, (_, host: string) => host.replaceAll(".", "\u2024"))
+    .replace(/@(?=\w)/g, "\uFF20");
 
 /** Slack reads <…> as mentions and links (<!channel>, <@U123>): escaped, the text is only text. */
 export const slackSafe = (text: string) =>
