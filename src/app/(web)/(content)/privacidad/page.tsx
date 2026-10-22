@@ -63,13 +63,14 @@ const PROCESSORS = [
 const RETENTION = [
   "Los emails que te mandamos se borran a los 180 días.",
   "Un año después de cada evento, las inscripciones de OWU pierden nombre, email y respuestas. Queda solo el conteo.",
-  "Si nos pedís borrar tu cuenta, borramos todo lo tuyo: inscripciones, comunidades que seguís y sesiones.",
+  "Si borrás tu cuenta (desde Mis eventos), borramos tu cuenta, tus sesiones y las comunidades que seguís, y tus inscripciones dejan de decir quién eras.",
 ];
 
 const RIGHTS = [
   "Saber qué datos tuyos tenemos, corregirlos o pedir que los borremos (Ley 18.331, artículos 14 a 16).",
   "Dejar de recibir recordatorios o avisos de comunidades con el link «Dejá de recibirlos» de cada email.",
   "Darte de baja de un evento con «No puedo ir», desde la entrada o desde Mis eventos.",
+  "Borrar tu cuenta desde Mis eventos.",
 ];
 
 /** What Organizá keeps about people and why (Ley 18.331 and Decreto 64/020). */

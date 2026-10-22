@@ -11,6 +11,8 @@ import { dateParts, shortWhen } from "lib/community/time";
 import { pageMetadata } from "lib/community/metadata";
 import { callerFor } from "lib/orpc/server";
 
+import { DeleteAccount } from "./DeleteAccount";
+
 export const dynamic = "force-dynamic";
 export const metadata = {
   ...pageMetadata({
@@ -87,6 +89,9 @@ export default async function MyEventsPage() {
               </Link>
             );
           })}
+        </div>
+        <div className="mx-auto mt-16 max-w-3xl">
+          <DeleteAccount />
         </div>
       </Container>
       <Footer />

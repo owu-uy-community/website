@@ -10,7 +10,7 @@ import { liveServices } from "lib/orpc/services";
 import { by } from "test/context";
 import { makeCommunity, makeEvent, makeMember, makeUser, type UserRow } from "test/factories";
 
-import { expireOffers } from "./service";
+import { expireOffers, forget } from "./service";
 
 const DAY_MS = 86_400_000;
 
@@ -234,5 +234,38 @@ describe("more room", () => {
       ])
     );
     await expect(mail(second.email, "rsvp_offered")).resolves.toHaveLength(1);
+  });
+});
+
+describe(forget, () => {
+  test("a deleted account gives its seat to the next in line and its sign-ups stop saying who", async () => {
+    const { event } = await rsvpEvent({ capacity: 1 });
+    const [leaving, next] = await people(2);
+    await join(event.id, leaving, { answers: {} });
+    await join(event.id, next);
+    const past = await makeEvent(event.communityId, {
+      status: "published",
+      startDate: new Date("2025-05-01T22:00:00Z"),
+      endDate: new Date("2025-05-02T01:00:00Z"),
+    });
+    await db.insert(attendees).values({
+      eventId: past.id,
+      source: "owu",
+      userId: leaving.id,
+      name: leaving.name,
+      email: leaving.email,
+      checkedInAt: new Date("2025-05-01T22:10:00Z"),
+    });
+
+    await Effect.runPromiseWith(liveServices)(forget(leaving.id));
+
+    const rows = await db.select().from(attendees).where(eq(attendees.userId, leaving.id));
+    expect(rows.map((row) => [row.eventId, row.status, row.name, row.email])).toStrictEqual(
+      expect.arrayContaining([
+        [event.id, "cancelled", "Anónimo", ""],
+        [past.id, "attending", "Anónimo", ""],
+      ])
+    );
+    await expect(statuses(event.id)).resolves.toContain("offered");
   });
 });

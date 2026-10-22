@@ -50,6 +50,22 @@ export const auth = betterAuth({
     },
   },
   user: {
+    /**
+     * Anyone can delete their account (Ley 18.331) from a session started in the last day; an older
+     * one signs in again first. Their sign-ups lose who they were before the account goes.
+     */
+    deleteUser: {
+      enabled: true,
+      async beforeDelete(user) {
+        // Imported here: the oRPC services import this file
+        const [{ Effect }, { forget }, { liveServices }] = await Promise.all([
+          import("effect"),
+          import("../../lib/orpc/rsvps/service"),
+          import("../../lib/orpc/services"),
+        ]);
+        await Effect.runPromiseWith(liveServices)(forget(user.id));
+      },
+    },
     additionalFields: {
       role: {
         type: ["user", "admin"],

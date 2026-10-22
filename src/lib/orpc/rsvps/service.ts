@@ -783,3 +783,26 @@ export const notifyCancelled = (eventId: string) =>
 
     return people.length;
   });
+
+/**
+ * Before an account is deleted: a seat or place it holds in an upcoming event is given back (the
+ * next in line gets it), and every sign-up keeps counting but no longer says who it was.
+ */
+export const forget = (userId: string) =>
+  Effect.gen(function* () {
+    const held = yield* query((db) =>
+      db
+        .select({ id: attendees.id })
+        .from(attendees)
+        .innerJoin(events, eq(events.id, attendees.eventId))
+        .where(and(eq(attendees.userId, userId), inArray(attendees.status, ACTIVE), gt(events.startDate, new Date())))
+    );
+    // A checked-in person can't leave; their row is still anonymized below
+    for (const row of held) yield* leaveRow(row.id).pipe(Effect.ignore);
+    yield* query((db) =>
+      db
+        .update(attendees)
+        .set({ name: "Anónimo", email: "", answers: {}, showName: false, barcode: null })
+        .where(eq(attendees.userId, userId))
+    );
+  });
