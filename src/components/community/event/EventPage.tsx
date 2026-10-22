@@ -10,6 +10,8 @@ import { topicLabel } from "lib/community/topics";
 import type { PublicEvent } from "lib/orpc/events/schemas";
 import { eventJsonLd, googleCalendarUrl, safeJson } from "lib/organizar/calendar-links";
 
+import { RsvpSheet } from "./RsvpSheet";
+
 const FORMAT = {
   charlas: "Charlas",
   taller: "Taller",
@@ -94,7 +96,8 @@ export function EventPage({
   ) : past ? (
     <p className="text-[15px] text-zinc-400">Este evento ya pasó.</p>
   ) : event.registration === "owu" ? (
-    rsvp
+    // Phones get it in a sheet from the bottom bar
+    <div className="hidden lg:block">{rsvp}</div>
   ) : (event.registration === "external" || event.registration === "eventbrite") && event.registrationUrl ? (
     <ButtonLink arrow className="w-full justify-center" href={event.registrationUrl} size="lg">
       {event.registration === "eventbrite" ? "Inscribirme en Eventbrite" : "Inscribirme"}
@@ -288,6 +291,7 @@ export function EventPage({
           </aside>
         </div>
       </Container>
+      {event.registration === "owu" && rsvp && !cancelled && !past ? <RsvpSheet event={event}>{rsvp}</RsvpSheet> : null}
     </main>
   );
 }
