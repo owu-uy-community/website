@@ -45,6 +45,14 @@ export const link = (eventId: string) =>
     if (!event || event.communityId !== communityId) return yield* expired;
     const expiresAt = expiryOf(event);
     const token = yield* Effect.promise(() => signLink("door", `${event.id}.${event.doorVersion}`, expiresAt));
+    // The dashboard's checklist reads this: a link is out until the next revoke
+    yield* recordActivity({
+      eventId,
+      verb: "door.linked",
+      entityType: "event",
+      entityId: eventId,
+      summary: "creó un link para la puerta",
+    });
 
     return { url: appUrl(`/puerta/${token}`), expiresAt: expiresAt.toISOString() };
   });

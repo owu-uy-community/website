@@ -91,6 +91,13 @@ export const QuestionSchema = z.object({
   required: z.boolean(),
 });
 
+/** A recording, slides or a link, for the public page once the event is over. */
+export const MaterialSchema = z.object({
+  kind: z.enum(["grabacion", "slides", "link"]),
+  title: z.string().trim().min(1).max(120),
+  url: HttpsUrl,
+});
+
 /** Everything the wizard edits, plus where the event lives. */
 export const EditableEventSchema = OrganizerEventSchema.extend({
   communitySlug: z.string(),
@@ -120,6 +127,8 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   announceChannels: z.object({ slack: z.boolean(), telegram: z.boolean() }),
   /** A scheduled publish */
   publishAt: z.string().nullable(),
+  reminderNote: z.string().nullable(),
+  materials: z.array(MaterialSchema),
   /** Other communities organizing it; an invited one shows on its profile once it accepts */
   cohosts: z.array(
     z.object({
@@ -163,6 +172,9 @@ export const DraftPatchSchema = z
     needs: z.array(z.string().min(1).max(30)).max(5),
     talks: z.array(TalkSchema).max(12),
     announcement: AnnouncementSchema,
+    /** In the 48 h and 2 h reminders: how to get in, what to bring */
+    reminderNote: z.string().trim().max(500).nullable(),
+    materials: z.array(MaterialSchema).max(10),
     /** The other communities organizing it (ids), up to 3 */
     cohosts: z.array(z.string().min(1)).max(3),
     /** Published events move their date here (drafts reserve one instead) */
@@ -238,6 +250,8 @@ export const PublicEventSchema = z.object({
   /** Other communities organizing it with this one (those that accepted) */
   cohosts: z.array(z.object({ slug: z.string(), name: z.string() })),
   meetupUrl: z.string().nullable(),
+  /** Recordings, slides, links: the page shows them once the event is over */
+  materials: z.array(MaterialSchema),
   /** «Quiénes van»: the first 12 who chose to show it, as "Ana G." */
   going: z.array(z.string()),
 });
@@ -292,6 +306,15 @@ export const EventStatsSchema = z.object({
   pending: z.number(),
   cancelled: z.number(),
   checkedIn: z.number(),
+  /** Seats taken (with +1s) at the end of each day with sign-ups, Montevideo days, oldest first */
+  series: z.array(z.object({ day: z.string(), total: z.number() })),
+  /** The automatic emails so far, per kind: sent, and still in the queue */
+  emails: z.record(
+    z.enum(["confirmed", "reminder_48h", "reminder_2h", "feedback"]),
+    z.object({ sent: z.number(), queued: z.number() })
+  ),
+  /** A volunteer door link was made and not revoked since */
+  doorLink: z.boolean(),
 });
 
 export const MessageSchema = z.object({
@@ -299,6 +322,8 @@ export const MessageSchema = z.object({
   eventId: z.string().min(1),
   /** Who gets it, by where they stand */
   to: z.array(z.enum(["attending", "waiting", "pending"])).min(1),
+  /** Only these people (a selection in Inscriptos), still within `to` */
+  ids: z.array(z.string().min(1)).min(1).max(500).optional(),
   subject: z.string().trim().min(3).max(120),
   body: z.string().trim().min(10).max(5000),
 });
