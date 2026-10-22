@@ -324,6 +324,10 @@ export const events = pgTable(
     onlineUrl: text("onlineUrl"),
     /** The host space, once one accepted. */
     venueId: text("venueId"),
+    mode: text("mode").$type<EventMode>().notNull().default("presencial"),
+    /** A place outside the spaces directory (a university room, a bar) */
+    placeName: text("placeName"),
+    placeAddress: text("placeAddress"),
     /** How people sign up: not at all (open door), with OWU's RSVP, or on another site. */
     registration: text("registration").$type<EventRegistration>().notNull().default("none"),
     registrationUrl: text("registrationUrl"),
@@ -358,6 +362,7 @@ export const events = pgTable(
 export type EventStatus = "draft" | "published" | "cancelled";
 export type EventFormat = "charlas" | "taller" | "open-space" | "social" | "hackathon" | "otro";
 export type EventRegistration = "none" | "owu" | "external";
+export type EventMode = "presencial" | "online" | "hibrido";
 export type RsvpQuestion = { id: string; label: string; required: boolean };
 
 /** @deprecated transition alias — use `events`. */
