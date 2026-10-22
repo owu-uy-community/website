@@ -22,6 +22,7 @@ import {
   GetCommunityBySlugSchema,
   ListCommunitiesSchema,
   RemoveCommunityMemberSchema,
+  ShowOnProfileSchema,
   UpdateCommunityMemberRoleSchema,
   UpdateCommunitySchema,
 } from "./schemas";
@@ -172,6 +173,15 @@ export const communitiesRouter = {
       .output(MembershipSchema)
       .effect(function* ({ input }) {
         return yield* Communities.updateCommunityMemberRole(input);
+      }),
+
+    showOnProfile: authed
+      .meta(docs("Appear, or not, among the organizers on the community's public page (name and photo)"))
+      .input(ShowOnProfileSchema)
+      .use(inCommunity("editor"))
+      .output(z.object({ showOnProfile: z.boolean() }))
+      .effect(function* ({ input }) {
+        return yield* Communities.setShowOnProfile(input);
       }),
 
     remove: authed

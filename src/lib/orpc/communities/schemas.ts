@@ -109,6 +109,9 @@ export const RemoveCommunityMemberSchema = z.object({
   memberId: z.string().min(1),
 });
 
+/** Appear, or not, in «Organizan» on the community's public page (name and photo only) */
+export const ShowOnProfileSchema = z.object({ communityId: z.string().min(1), show: z.boolean() });
+
 // ---------------------------------------------------------------------------
 // Organizers: the communities I run, and claims on directory communities
 // ---------------------------------------------------------------------------
