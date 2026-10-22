@@ -65,6 +65,16 @@ describe("date holds", () => {
     });
   });
 
+  test("a community keeps at most 8 live holds", async () => {
+    const { community, editor } = await setup();
+    for (let index = 0; index < 8; index++) await hold(community.id, editor, { day: `2029-08-${10 + index}` });
+
+    await expect(hold(community.id, editor, { day: "2029-08-20" })).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "too_many_holds" },
+    });
+  });
+
   test("drafts can be deleted; published events can't", async () => {
     const { community, editor } = await setup();
     const draft = await hold(community.id, editor);
@@ -95,6 +105,7 @@ describe("heads-ups", () => {
 
     const held = await hold(community.id, editor);
     await hold(community.id, editor, { eventId: held.id });
+    await hold(community.id, editor, { title: "Otra reserva el mismo día" });
 
     expect(held.headsUp).toBe(1);
     const told = await mailTo(similarOwner.email, "conflict_heads_up");
