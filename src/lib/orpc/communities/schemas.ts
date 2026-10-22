@@ -16,6 +16,9 @@ export const CommunitySchema = z.object({
   updatedAt: z.string(),
 });
 
+/** A community as the admin's list shows it: with how many people and events it has. */
+export const CommunityOverviewSchema = CommunitySchema.extend({ memberCount: z.number(), eventCount: z.number() });
+
 export const CommunityMemberSchema = z.object({
   id: z.string(),
   communityId: z.string(),
@@ -78,5 +81,6 @@ export const RemoveCommunityMemberSchema = z.object({
 });
 
 export type Community = z.infer<typeof CommunitySchema>;
+export type CommunityOverview = z.infer<typeof CommunityOverviewSchema>;
 export type CommunityMember = z.infer<typeof CommunityMemberSchema>;
 export type CommunityRole = z.infer<typeof CommunityRoleSchema>;

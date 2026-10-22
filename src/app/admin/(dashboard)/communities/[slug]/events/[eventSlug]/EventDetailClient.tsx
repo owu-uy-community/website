@@ -1,459 +1,560 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ORPCError } from "@orpc/client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUpRight, ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from "lucide-react";
-
-import { orpc, type Room } from "lib/orpc";
-import { roomIconFor } from "lib/rooms/icons";
-import { roomColorFor } from "lib/rooms/palette";
-import { RoomFormModal } from "components/Admin/rooms/RoomFormModal";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import * as z from "zod";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "components/shared/ui/alert-dialog";
+  ArrowUpRight,
+  CalendarDays,
+  LayoutGrid,
+  Plug,
+  Settings2,
+  Ticket,
+  Trash2,
+  TriangleAlert,
+  TvMinimal,
+} from "lucide-react";
+
+import { ConfirmDialog } from "components/Admin/panel";
+import { scopedAdminHref } from "components/Admin/shell/use-selected-event";
+import { fromWallClock, toWallClock } from "components/Admin/settings/event-time";
+import { DateTimeInput, TimezoneSelect } from "components/Admin/settings/event-fields";
+import {
+  countDirty,
+  SaveBar,
+  SettingsCard,
+  SettingsLayout,
+  SettingsRow,
+  SettingsSection,
+  UnsavedChangesGuard,
+  type SettingsSectionLink,
+} from "components/Admin/settings/settings";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { StatusDot } from "components/Admin/ui/status";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
-import { Empty } from "components/shared/ui/empty";
-import { DatePicker } from "components/shared/ui/date-picker";
 import { Input } from "components/shared/ui/input";
-import { Label } from "components/shared/ui/label";
-import { Skeleton } from "components/shared/ui/skeleton";
+import { Spinner } from "components/shared/ui/spinner";
 import { Switch } from "components/shared/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
+import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
+import { orpc } from "lib/orpc";
+import type { OpenSpace, UpdateOpenSpaceInput } from "lib/orpc/open-spaces/schemas";
+import { eventChannel } from "lib/realtime/channels";
+import { getRealtimeClient } from "lib/realtime/client";
 
-export default function EventDetailClient({ communitySlug, eventSlug }: { communitySlug: string; eventSlug: string }) {
-  const queryClient = useQueryClient();
+import { IntegrationsSection } from "./IntegrationsSection";
+import { RoomsSection } from "./RoomsSection";
 
-  const communityQuery = useQuery(orpc.communities.getBySlug.queryOptions({ input: { communitySlug } }));
-  const community = communityQuery.data ?? null;
+const SECTIONS: SettingsSectionLink[] = [
+  { id: "general", label: "General", icon: Settings2 },
+  { id: "fecha", label: "Fecha y hora", icon: CalendarDays },
+  { id: "salas", label: "Salas y horarios", icon: LayoutGrid },
+  { id: "entradas", label: "Entradas", icon: Ticket },
+  { id: "kiosco", label: "Kiosco y pantallas", icon: TvMinimal },
+  { id: "integraciones", label: "Integraciones", icon: Plug },
+  { id: "peligro", label: "Zona peligrosa", icon: TriangleAlert },
+];
 
-  const eventsQuery = useQuery(
-    orpc.openSpaces.listByCommunity.queryOptions({
-      input: { communityId: community?.id ?? "" },
-      enabled: Boolean(community),
-    })
-  );
-  const event = useMemo(
-    () => eventsQuery.data?.find((candidate) => candidate.slug === eventSlug) ?? null,
-    [eventsQuery.data, eventSlug]
-  );
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-  const roomsInput = { openSpaceId: event?.id ?? "" };
-  const roomsQuery = useQuery(orpc.rooms.getByOpenSpace.queryOptions({ input: roomsInput, enabled: Boolean(event) }));
-  const rooms = useMemo(() => roomsQuery.data ?? [], [roomsQuery.data]);
+const eventFormSchema = z.object({
+  name: z.string().trim().min(1, "Poné un nombre"),
+  slug: z
+    .string()
+    .min(1, "Poné una dirección")
+    .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
+  description: z.string(),
+  isActive: z.boolean(),
+  startDay: z.string().regex(DAY, "Elegí el día"),
+  startTime: z.string().regex(HHMM, "Poné la hora"),
+  endDay: z.string().regex(DAY, "Elegí el día"),
+  endTime: z.string().regex(HHMM, "Poné la hora"),
+  timezone: z.string().min(1),
+  eventbriteEventId: z.string().trim().regex(/^\d*$/, "Son solo números: los de la dirección del evento en Eventbrite"),
+  autoHighlightEnabled: z.boolean(),
+  venueMapUrl: z.union([z.literal(""), z.url({ protocol: /^https?$/, error: "Pegá el link completo (https://…)" })]),
+});
 
-  const tracksQuery = useQuery(
-    orpc.tracks.list.queryOptions({ input: { openSpaceId: event?.id ?? "" }, enabled: Boolean(event) })
-  );
-  const talksByRoom = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const track of tracksQuery.data ?? []) {
-      map.set(track.roomId, (map.get(track.roomId) ?? 0) + 1);
-    }
+type EventForm = z.infer<typeof eventFormSchema>;
 
-    return map;
-  }, [tracksQuery.data]);
+const toForm = (event: OpenSpace): EventForm => {
+  const start = toWallClock(event.startDate, event.timezone);
+  const end = toWallClock(event.endDate, event.timezone);
 
-  async function invalidateRooms() {
-    if (!event) return;
-    await queryClient.invalidateQueries({
-      queryKey: orpc.rooms.getByOpenSpace.key({ input: { openSpaceId: event.id } }),
-    });
-  }
+  return {
+    name: event.name,
+    slug: event.slug,
+    description: event.description ?? "",
+    isActive: event.isActive,
+    startDay: start.day,
+    startTime: start.time,
+    endDay: end.day,
+    endTime: end.time,
+    timezone: event.timezone,
+    eventbriteEventId: event.eventbriteEventId ?? "",
+    autoHighlightEnabled: event.autoHighlightEnabled,
+    venueMapUrl: event.venueMapUrl ?? "",
+  };
+};
 
-  // ---- Room dialogs state ----
-  const [roomDialog, setRoomDialog] = useState<{ open: boolean; editing: Room | null }>({ open: false, editing: null });
-  const [deleteTarget, setDeleteTarget] = useState<Room | null>(null);
+const reason = (error: unknown) => (error instanceof Error && error.message ? error.message : "Error inesperado");
 
-  function openCreateRoom() {
-    setRoomDialog({ open: true, editing: null });
-  }
+/** The site's host, for the public address ("owu.uy"). */
+const host = (process.env.NEXT_PUBLIC_BASE_URL ?? "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 
-  function openEditRoom(room: Room) {
-    setRoomDialog({ open: true, editing: room });
-  }
-
-  const deleteRoomMutation = useMutation(
-    orpc.rooms.delete.mutationOptions({
-      onSuccess: async () => {
-        toast.success("Sala eliminada", "");
-        setDeleteTarget(null);
-        await invalidateRooms();
-      },
-      onError: (error) =>
-        toast.error("No se pudo eliminar", error instanceof Error ? error.message : "Error inesperado"),
-    })
-  );
-
-  const reorderMutation = useMutation(
-    orpc.rooms.reorder.mutationOptions({
-      onSuccess: invalidateRooms,
-      onError: (error) =>
-        toast.error("No se pudo reordenar", error instanceof Error ? error.message : "Error inesperado"),
-    })
-  );
-
-  function moveRoom(index: number, direction: -1 | 1) {
-    if (!event) return;
-    const target = index + direction;
-    if (target < 0 || target >= rooms.length) return;
-
-    const reordered = [...rooms];
-    const [moved] = reordered.splice(index, 1);
-    reordered.splice(target, 0, moved);
-
-    // Optimistic order in cache, then persist
-    queryClient.setQueryData(orpc.rooms.getByOpenSpace.queryKey({ input: { openSpaceId: event.id } }), reordered);
-    reorderMutation.mutate({ openSpaceId: event.id, orderedIds: reordered.map((room) => room.id) });
-  }
-
-  // ---- Event settings form ----
-  const [settings, setSettings] = useState({
-    name: "",
-    startDate: "",
-    endDate: "",
-    timezone: "",
-    eventbriteEventId: "",
-    venueMapUrl: "",
-    isActive: true,
-    autoHighlightEnabled: false,
-  });
-
+function useSettled<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
   useEffect(() => {
-    if (event) {
-      setSettings({
-        name: event.name,
-        startDate: event.startDate.slice(0, 10),
-        endDate: event.endDate.slice(0, 10),
-        timezone: event.timezone ?? "America/Montevideo",
-        eventbriteEventId: event.eventbriteEventId ?? "",
-        venueMapUrl: event.venueMapUrl ?? "",
-        isActive: event.isActive,
-        autoHighlightEnabled: event.autoHighlightEnabled,
-      });
-    }
-  }, [event]);
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
 
-  const updateEventMutation = useMutation(
-    orpc.openSpaces.update.mutationOptions({
-      onSuccess: async () => {
-        toast.success("Evento actualizado", "Los cambios fueron guardados.");
-        if (community) {
-          await queryClient.invalidateQueries({
-            queryKey: orpc.openSpaces.listByCommunity.key({ input: { communityId: community.id } }),
-          });
-        }
-      },
-      onError: (error) =>
-        toast.error("No se pudo guardar", error instanceof Error ? error.message : "Error inesperado"),
+  return settled;
+}
+
+const count = new Intl.NumberFormat("es-UY");
+
+/** The Eventbrite id, looked up on Eventbrite as it is typed. */
+function EventbriteCheck({ value }: { value: string }) {
+  const id = value.trim();
+  const settled = useSettled(id, 500);
+  const lookable = /^\d{5,20}$/.test(settled);
+  const check = useQuery(
+    orpc.eventbrite.verify.queryOptions({
+      input: { eventbriteEventId: settled },
+      enabled: lookable,
+      retry: false,
+      staleTime: 5 * 60_000,
     })
   );
+  const line = "mt-1.5 flex items-start gap-1.5 text-meta";
 
-  if (communityQuery.isLoading || eventsQuery.isLoading) {
+  if (!id) return <p className={`${line} text-muted-foreground`}>Sin evento, Asistentes no va a tener entradas.</p>;
+  // Anything but digits already shows the field's own error.
+  if (!/^\d+$/.test(id)) return null;
+  if (id !== settled || (lookable && check.isPending)) {
     return (
-      <div className="mx-auto w-full max-w-5xl space-y-4 p-4 md:p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full" />
-      </div>
+      <p className={`${line} text-muted-foreground`}>
+        <Spinner className="mt-px size-3.5" />
+        Buscando en Eventbrite…
+      </p>
     );
   }
-
-  if (!community || !event) {
+  if (!lookable)
+    return <p className={`${line} text-muted-foreground`}>Es muy corto para ser un evento de Eventbrite.</p>;
+  if (check.data) {
     return (
-      <div className="mx-auto w-full max-w-5xl p-4 md:p-6">
-        <Empty description={`No existe el evento "${eventSlug}" en "${communitySlug}".`} title="Evento no encontrado" />
-      </div>
+      <p className={`${line} text-success-foreground`} role="status">
+        <StatusDot className="mt-[5px]" tone="ok" />
+        <span>
+          Encontramos «{check.data.name}» ·{" "}
+          <span className="font-terminal tabular-nums">{count.format(check.data.tickets)}</span> entradas
+        </span>
+      </p>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs text-muted-foreground">
-            <Link className="hover:text-foreground" href={`/admin/communities/${communitySlug}`}>
-              {community.name}
-            </Link>
-          </p>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">{event.name}</h1>
-          <p className="font-terminal text-xs text-muted-foreground">
-            /comunidad/{communitySlug}/events/{event.slug}
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link href={`/admin/${communitySlug}/openspace?event=${event.slug}`}>
-            Abrir grilla
-            <ArrowUpRight />
-          </Link>
-        </Button>
-      </div>
+    <p className={`${line} text-warning-foreground`} role="alert">
+      <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
+      {reason(check.error)}
+    </p>
+  );
+}
 
-      <Tabs defaultValue="rooms">
-        <TabsList>
-          <TabsTrigger value="rooms">Salas</TabsTrigger>
-          <TabsTrigger value="settings">Ajustes</TabsTrigger>
-        </TabsList>
+export default function EventDetailClient({
+  community,
+  initialEvent,
+}: {
+  community: { id: string; name: string; slug: string };
+  initialEvent: OpenSpace;
+}) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const eventKey = orpc.openSpaces.get.queryKey({ input: { id: initialEvent.id } });
+  const { data: event } = useQuery({
+    ...orpc.openSpaces.get.queryOptions({ input: { id: initialEvent.id } }),
+    initialData: initialEvent,
+  });
 
-        <TabsContent value="rooms">
-          <Card>
-            <CardHeader className="flex-row items-center justify-between space-y-0">
-              <div>
-                <CardTitle className="text-base">Salas del evento</CardTitle>
-                <CardDescription>El orden define las columnas de la grilla</CardDescription>
-              </div>
-              <Button onClick={openCreateRoom}>
-                <Plus />
-                Nueva sala
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {roomsQuery.isLoading ? (
-                <Skeleton className="h-40 w-full" />
-              ) : rooms.length === 0 ? (
-                <Empty description="Agregá la primera sala para armar la grilla." title="Sin salas" />
-              ) : (
-                <ul className="divide-y divide-border rounded-lg border border-border">
-                  {rooms.map((room, index) => {
-                    const color = roomColorFor(room.id, room.color);
-                    const talkCount = talksByRoom.get(room.id) ?? 0;
+  // Follows the saved event; what is being typed stays (keepDirtyValues) if it changes underneath.
+  const values = useMemo(() => toForm(event), [event]);
+  const form = useForm<EventForm>({
+    resolver: zodResolver(eventFormSchema),
+    mode: "onChange",
+    values,
+    resetOptions: { keepDirtyValues: true },
+  });
+  const {
+    control,
+    register,
+    watch,
+    formState: { dirtyFields, errors },
+  } = form;
+  const dirtyCount = countDirty(dirtyFields);
 
-                    return (
-                      <li key={room.id} className="flex items-center gap-3 px-3 py-2.5">
-                        <div className="flex flex-col">
-                          <Button
-                            aria-label={`Subir ${room.name}`}
-                            className="h-6 w-6 text-muted-foreground disabled:opacity-30"
-                            disabled={index === 0 || reorderMutation.isPending}
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => moveRoom(index, -1)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            aria-label={`Bajar ${room.name}`}
-                            className="h-6 w-6 text-muted-foreground disabled:opacity-30"
-                            disabled={index === rooms.length - 1 || reorderMutation.isPending}
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => moveRoom(index, 1)}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <span
-                          aria-hidden
-                          className="h-8 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            {(() => {
-                              const Shape = roomIconFor(room.icon);
+  const [startDay, startTime, endDay, endTime] = watch(["startDay", "startTime", "endDay", "endTime"]);
+  // Same zone on both sides, so the wall-clock strings compare as the instants do.
+  const endsAfterStart = `${endDay}T${endTime}` > `${startDay}T${startTime}`;
+  const endError =
+    errors.endDay?.message ??
+    errors.endTime?.message ??
+    (endsAfterStart ? undefined : "Tiene que terminar después de empezar");
 
-                              return Shape ? (
-                                <Shape aria-hidden className="h-3.5 w-3.5 shrink-0" style={{ color, fill: color }} />
-                              ) : null;
-                            })()}
-                            <span className="capitalize">{room.name}</span>
-                            {!room.isActive ? (
-                              <Badge className="font-normal text-muted-foreground" variant="outline">
-                                Inactiva
-                              </Badge>
-                            ) : null}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {[
-                              room.capacity ? `${room.capacity} personas` : null,
-                              room.hasTV ? "TV" : null,
-                              room.hasWhiteboard ? "Pizarra" : null,
-                              `${talkCount} charla${talkCount === 1 ? "" : "s"}`,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        </div>
-                        <Button
-                          aria-label={`Editar ${room.name}`}
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => openEditRoom(room)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          aria-label={`Eliminar ${room.name}`}
-                          className="text-muted-foreground hover:text-destructive"
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setDeleteTarget(room)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+  const update = useMutation(
+    orpc.openSpaces.update.mutationOptions({
+      onSuccess: (updated) => {
+        queryClient.setQueryData(eventKey, updated);
+        form.reset(toForm(updated), { keepDirtyValues: false });
+        for (const key of [
+          orpc.openSpaces.listForAdmin.key(),
+          orpc.openSpaces.listByCommunity.key(),
+          orpc.shell.status.key(),
+          // The board's own read of the event, for auto-highlight.
+          ["openSpace", updated.id],
+        ]) {
+          void queryClient.invalidateQueries({ queryKey: key });
+        }
+        toast.success("Cambios guardados", "Ya se ven en el sitio, los kioscos y las pantallas.");
+        if (updated.slug !== event.slug) router.replace(`/admin/communities/${community.slug}/events/${updated.slug}`);
+      },
+      onError: (error) => {
+        if (error instanceof ORPCError && error.code === "CONFLICT") form.setError("slug", { message: error.message });
+        else toast.error("No se pudo guardar", reason(error));
+      },
+    })
+  );
 
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ajustes del evento</CardTitle>
-              <CardDescription>Fechas, integración con Eventbrite y visibilidad</CardDescription>
-            </CardHeader>
-            <CardContent className="max-w-xl space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="event-name">Nombre</Label>
-                <Input
-                  id="event-name"
-                  value={settings.name}
-                  onChange={(event_) => setSettings((previous) => ({ ...previous, name: event_.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="event-start">Inicio</Label>
-                  <DatePicker
-                    id="event-start"
-                    value={settings.startDate}
-                    onChange={(startDate) => setSettings((previous) => ({ ...previous, startDate }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event-end">Fin</Label>
-                  <DatePicker
-                    id="event-end"
-                    value={settings.endDate}
-                    onChange={(endDate) => setSettings((previous) => ({ ...previous, endDate }))}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-tz">Zona horaria</Label>
-                <Input
-                  id="event-tz"
-                  placeholder="America/Montevideo"
-                  value={settings.timezone}
-                  onChange={(event_) => setSettings((previous) => ({ ...previous, timezone: event_.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-eventbrite">Eventbrite Event ID (opcional)</Label>
-                <Input
-                  className="font-terminal"
-                  id="event-eventbrite"
-                  placeholder="1234567890"
-                  value={settings.eventbriteEventId}
-                  onChange={(event_) =>
-                    setSettings((previous) => ({ ...previous, eventbriteEventId: event_.target.value.trim() }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="event-map">URL del mapa del venue (opcional)</Label>
-                <Input
-                  id="event-map"
-                  placeholder="https://…/plano.png"
-                  value={settings.venueMapUrl}
-                  onChange={(event_) =>
-                    setSettings((previous) => ({ ...previous, venueMapUrl: event_.target.value.trim() }))
-                  }
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Evento activo</p>
-                  <p className="text-xs text-muted-foreground">Visible en las páginas públicas de la comunidad.</p>
-                </div>
-                <Switch
-                  checked={settings.isActive}
-                  onCheckedChange={(isActive) => setSettings((previous) => ({ ...previous, isActive }))}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Auto-highlight en kiosk</p>
-                  <p className="text-xs text-muted-foreground">Resalta el bloque actual automáticamente.</p>
-                </div>
-                <Switch
-                  checked={settings.autoHighlightEnabled}
-                  onCheckedChange={(autoHighlightEnabled) =>
-                    setSettings((previous) => ({ ...previous, autoHighlightEnabled }))
-                  }
-                />
-              </div>
-              <Button
-                disabled={updateEventMutation.isPending || !settings.name.trim()}
-                onClick={() =>
-                  updateEventMutation.mutate({
-                    id: event.id,
-                    data: {
-                      name: settings.name.trim(),
-                      startDate: new Date(`${settings.startDate}T09:00:00`).toISOString(),
-                      endDate: new Date(`${settings.endDate}T19:00:00`).toISOString(),
-                      timezone: settings.timezone.trim() || undefined,
-                      eventbriteEventId: settings.eventbriteEventId || null,
-                      venueMapUrl: settings.venueMapUrl || null,
-                      isActive: settings.isActive,
-                      autoHighlightEnabled: settings.autoHighlightEnabled,
-                    },
-                  })
-                }
+  const save = form.handleSubmit((next) => {
+    if (!endsAfterStart) {
+      document.getElementById("event-end-time")?.focus();
+      return;
+    }
+    // Only what changed: another admin may be editing the rest.
+    const data: UpdateOpenSpaceInput = {};
+    if (dirtyFields.name) data.name = next.name;
+    if (dirtyFields.slug) data.slug = next.slug;
+    if (dirtyFields.description) data.description = next.description.trim();
+    if (dirtyFields.isActive) data.isActive = next.isActive;
+    if (
+      dirtyFields.startDay ||
+      dirtyFields.startTime ||
+      dirtyFields.endDay ||
+      dirtyFields.endTime ||
+      dirtyFields.timezone
+    ) {
+      // Both ends move together: a new zone keeps the times and changes the instants.
+      data.startDate = fromWallClock(next.startDay, next.startTime, next.timezone).toISOString();
+      data.endDate = fromWallClock(next.endDay, next.endTime, next.timezone).toISOString();
+      data.timezone = next.timezone;
+    }
+    if (dirtyFields.eventbriteEventId) data.eventbriteEventId = next.eventbriteEventId || null;
+    if (dirtyFields.venueMapUrl) data.venueMapUrl = next.venueMapUrl || null;
+    if (dirtyFields.autoHighlightEnabled) data.autoHighlightEnabled = next.autoHighlightEnabled;
+
+    update.mutate(
+      { id: event.id, data },
+      {
+        onSuccess: (updated) => {
+          // Open boards drive the highlight: tell them it changed.
+          if (data.autoHighlightEnabled !== undefined) {
+            getRealtimeClient().publish(eventChannel(updated.id, "highlights"), "auto_highlight_changed", {
+              openSpaceId: updated.id,
+              autoHighlightEnabled: updated.autoHighlightEnabled,
+            });
+          }
+        },
+      }
+    );
+  });
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const remove = useMutation(
+    orpc.openSpaces.delete.mutationOptions({
+      onSuccess: () => {
+        toast.success("Evento eliminado", `«${event.name}» y todo lo que tenía ya no están.`);
+        void queryClient.invalidateQueries({ queryKey: orpc.openSpaces.listForAdmin.key() });
+        router.push(`/admin/communities/${community.slug}`);
+      },
+      onError: (error) => {
+        setConfirmDelete(false);
+        toast.error("No se pudo eliminar", reason(error));
+      },
+    })
+  );
+
+  const boardHref = scopedAdminHref(community.slug, "/admin/openspace", event.slug);
+
+  return (
+    <SettingsLayout label="Evento" sections={SECTIONS}>
+      <PageContainer className="pb-6" size="small">
+        <PageHeader
+          description={`${event.name} · se aplica al sitio público, los kioscos, las pantallas y a Owy.`}
+          meta={event.isActive ? null : <Badge variant="secondary">Oculto</Badge>}
+          title="Ajustes del evento"
+        />
+
+        <div className="space-y-7">
+          <SettingsSection id="general" title="General">
+            <SettingsCard>
+              <SettingsRow
+                dirty={Boolean(dirtyFields.name)}
+                error={errors.name?.message}
+                hint="Así aparece en el sitio, los kioscos y los mensajes de Owy."
+                htmlFor="event-name"
+                label="Nombre"
               >
-                {updateEventMutation.isPending ? "Guardando…" : "Guardar cambios"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                <Input aria-invalid={Boolean(errors.name)} autoComplete="off" id="event-name" {...register("name")} />
+              </SettingsRow>
+              <SettingsRow
+                dirty={Boolean(dirtyFields.slug)}
+                error={errors.slug?.message}
+                hint={
+                  dirtyFields.slug
+                    ? "Ojo: los links viejos (kioscos, pantallas, redes) dejan de andar."
+                    : "La dirección del evento en el sitio. Cambiarla rompe los links ya compartidos."
+                }
+                htmlFor="event-slug"
+                label="Dirección pública"
+              >
+                <div className="flex h-10 overflow-hidden rounded-md border border-input bg-background shadow-edge transition-colors focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20 has-[[aria-invalid=true]]:border-live/60 sm:h-8 pointer-coarse:h-11">
+                  <span
+                    className="flex min-w-0 items-center border-r border-input bg-raised px-2.5 font-terminal text-meta text-muted-foreground"
+                    title={`${host}/comunidad/${community.slug}/events/`}
+                  >
+                    <span className="truncate">
+                      {host}/comunidad/{community.slug}/events/
+                    </span>
+                  </span>
+                  <input
+                    aria-invalid={Boolean(errors.slug)}
+                    autoCapitalize="off"
+                    autoComplete="off"
+                    className="w-36 min-w-0 shrink-0 grow bg-transparent px-2.5 font-terminal text-meta text-foreground outline-hidden pointer-coarse:text-base"
+                    id="event-slug"
+                    spellCheck={false}
+                    {...register("slug")}
+                  />
+                </div>
+                {event.isActive ? (
+                  <a
+                    className="touch-target mt-1.5 inline-flex items-center gap-1 text-meta text-muted-foreground transition-colors hover:text-foreground"
+                    href={`/comunidad/${community.slug}/events/${event.slug}`}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    Ver en el sitio
+                    <ArrowUpRight aria-hidden className="size-3.5" />
+                  </a>
+                ) : null}
+              </SettingsRow>
+              <SettingsRow
+                dirty={Boolean(dirtyFields.description)}
+                hint="Opcional: de qué se trata, en una o dos líneas."
+                htmlFor="event-description"
+                label="Descripción"
+              >
+                <Textarea className="min-h-[68px]" id="event-description" rows={2} {...register("description")} />
+              </SettingsRow>
+              <Controller
+                control={control}
+                name="isActive"
+                render={({ field }) => (
+                  <SettingsRow
+                    compact
+                    dirty={Boolean(dirtyFields.isActive)}
+                    hint="Apagado, el sitio, los kioscos y las pantallas del evento dejan de verse. El admin sigue igual."
+                    htmlFor="event-active"
+                    label="Público"
+                  >
+                    <Switch checked={field.value} id="event-active" onCheckedChange={field.onChange} />
+                  </SettingsRow>
+                )}
+              />
+            </SettingsCard>
+          </SettingsSection>
 
-      <RoomFormModal
-        open={roomDialog.open}
-        openSpaceId={event.id}
-        room={roomDialog.editing}
-        onDelete={(room) => {
-          setRoomDialog((previous) => ({ ...previous, open: false }));
-          setDeleteTarget(room);
-        }}
-        onOpenChange={(open) => setRoomDialog((previous) => ({ ...previous, open }))}
+          <SettingsSection id="fecha" title="Fecha y hora">
+            <SettingsCard>
+              <SettingsRow
+                dirty={Boolean(dirtyFields.startDay || dirtyFields.startTime)}
+                error={errors.startDay?.message ?? errors.startTime?.message}
+                hint="La fecha que muestra el sitio, y desde cuándo el admin pasa a en vivo."
+                htmlFor="event-start"
+                label="Empieza"
+              >
+                <Controller
+                  control={control}
+                  name="startDay"
+                  render={({ field: day }) => (
+                    <Controller
+                      control={control}
+                      name="startTime"
+                      render={({ field: time }) => (
+                        <DateTimeInput
+                          day={day.value}
+                          id="event-start"
+                          invalid={Boolean(errors.startTime)}
+                          time={time.value}
+                          timeLabel="Hora de inicio"
+                          onDayChange={day.onChange}
+                          onClockChange={time.onChange}
+                        />
+                      )}
+                    />
+                  )}
+                />
+              </SettingsRow>
+              <SettingsRow
+                dirty={Boolean(dirtyFields.endDay || dirtyFields.endTime)}
+                error={endError}
+                hint="Hasta cuándo dura el día del evento."
+                htmlFor="event-end"
+                label="Termina"
+              >
+                <Controller
+                  control={control}
+                  name="endDay"
+                  render={({ field: day }) => (
+                    <Controller
+                      control={control}
+                      name="endTime"
+                      render={({ field: time }) => (
+                        <DateTimeInput
+                          day={day.value}
+                          id="event-end"
+                          invalid={Boolean(endError)}
+                          time={time.value}
+                          timeLabel="Hora de fin"
+                          onDayChange={day.onChange}
+                          onClockChange={time.onChange}
+                        />
+                      )}
+                    />
+                  )}
+                />
+              </SettingsRow>
+              <Controller
+                control={control}
+                name="timezone"
+                render={({ field }) => (
+                  <SettingsRow
+                    dirty={Boolean(dirtyFields.timezone)}
+                    hint="Todas las horas del evento se leen en esta zona."
+                    htmlFor="event-timezone"
+                    label="Zona horaria"
+                  >
+                    <TimezoneSelect id="event-timezone" value={field.value} onChange={field.onChange} />
+                  </SettingsRow>
+                )}
+              />
+            </SettingsCard>
+          </SettingsSection>
+
+          <RoomsSection boardHref={boardHref} eventId={event.id} />
+
+          <SettingsSection id="entradas" title="Entradas">
+            <SettingsCard>
+              <SettingsRow
+                dirty={Boolean(dirtyFields.eventbriteEventId)}
+                error={errors.eventbriteEventId?.message}
+                hint="El número que aparece en la dirección del evento en Eventbrite."
+                htmlFor="event-eventbrite"
+                label="Evento de Eventbrite"
+              >
+                <Input
+                  aria-invalid={Boolean(errors.eventbriteEventId)}
+                  autoComplete="off"
+                  className="font-terminal tabular-nums"
+                  id="event-eventbrite"
+                  inputMode="numeric"
+                  placeholder="1734092841203"
+                  {...register("eventbriteEventId")}
+                />
+                <EventbriteCheck value={watch("eventbriteEventId")} />
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection id="kiosco" title="Kiosco y pantallas">
+            <SettingsCard>
+              <Controller
+                control={control}
+                name="autoHighlightEnabled"
+                render={({ field }) => (
+                  <SettingsRow
+                    compact
+                    dirty={Boolean(dirtyFields.autoHighlightEnabled)}
+                    hint="Con la agenda abierta en el admin, el kiosco resalta solo el bloque que está ocurriendo."
+                    htmlFor="event-highlight"
+                    label="Resaltado automático"
+                  >
+                    <Switch checked={field.value} id="event-highlight" onCheckedChange={field.onChange} />
+                  </SettingsRow>
+                )}
+              />
+              <SettingsRow
+                dirty={Boolean(dirtyFields.venueMapUrl)}
+                error={errors.venueMapUrl?.message}
+                hint="El link «Cómo llegar» de la página del evento, de Google Maps por ejemplo."
+                htmlFor="event-map"
+                label="Mapa del lugar"
+              >
+                <Input
+                  aria-invalid={Boolean(errors.venueMapUrl)}
+                  autoComplete="off"
+                  id="event-map"
+                  inputMode="url"
+                  placeholder="https://maps.app.goo.gl/…"
+                  type="url"
+                  {...register("venueMapUrl")}
+                />
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
+
+          <IntegrationsSection communicationHref={scopedAdminHref(community.slug, "/admin/comunicacion", event.slug)} />
+
+          <SettingsSection id="peligro" title="Zona peligrosa">
+            <SettingsCard className="border-live/25">
+              <SettingsRow
+                compact
+                hint="Se borran sus salas, horarios, charlas, tareas, asistentes y todo lo del día. No se puede deshacer."
+                label="Eliminar el evento"
+              >
+                <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 />
+                  Eliminar
+                </Button>
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
+        </div>
+
+        <SaveBar
+          count={dirtyCount}
+          saving={update.isPending}
+          onDiscard={() => form.reset(undefined, { keepDirtyValues: false })}
+          onSave={() => void save()}
+        />
+      </PageContainer>
+
+      <UnsavedChangesGuard count={dirtyCount} />
+      <ConfirmDialog
+        confirmLabel="Eliminar el evento"
+        description={`Se borran «${event.name}», sus salas, horarios, charlas, tareas del staff y asistentes. No se puede deshacer.`}
+        open={confirmDelete}
+        pending={remove.isPending}
+        title={`¿Eliminar «${event.name}»?`}
+        onConfirm={() => remove.mutate({ id: event.id })}
+        onOpenChange={setConfirmDelete}
       />
-
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar la sala &quot;{deleteTarget?.name}&quot;?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {(talksByRoom.get(deleteTarget?.id ?? "") ?? 0) > 0
-                ? `También se van a eliminar ${talksByRoom.get(deleteTarget?.id ?? "")} charla(s) asignadas a esta sala. `
-                : ""}
-              Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => deleteTarget && deleteRoomMutation.mutate({ id: deleteTarget.id })}
-            >
-              Eliminar sala
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </SettingsLayout>
   );
 }
