@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeCommunity, makeEvent, makeMember } from "test/factories";
+import { makeBoard, makeCommunity, makeEvent, makeMember, makeRsvp, makeVenue } from "test/factories";
 
 async function setup() {
   const community = await makeCommunity({ name: "Comunidad del asistente" });
@@ -108,5 +108,41 @@ describe("the wizard", () => {
     await expect(
       call(router.events.cancel, { communityId: community.id, eventId: event.id, reason: "Sin lugar" }, by(admin))
     ).resolves.toMatchObject({ status: "cancelled" });
+  });
+});
+
+describe("the public page", () => {
+  test("shows published events only, never the online link, and the address only when the host allows", async () => {
+    const community = await makeCommunity({ name: "Comunidad pública" });
+    const hidden = await makeVenue({ name: "Sala privada", addressVisibility: "attendees" });
+    const event = await makeEvent(community.id, {
+      status: "published",
+      mode: "hibrido",
+      venueId: hidden.id,
+      onlineUrl: "https://meet.example.com/secreto",
+      registration: "owu",
+      capacity: 3,
+    });
+    const draft = await makeEvent(community.id, { status: "draft" });
+    await makeRsvp(event.id, { guests: 1 });
+    const read = (eventSlug: string) =>
+      call(router.events.public, { communitySlug: community.slug, eventSlug }, by(null));
+
+    const page = await read(event.slug);
+
+    expect(page).toMatchObject({
+      place: { name: "Sala privada", address: null, area: "Cordón, Montevideo" },
+      taken: 2,
+    });
+    expect(JSON.stringify(page)).not.toContain("secreto");
+    await expect(read(draft.slug)).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("an open-space event with slots says it has a board", async () => {
+    const { community, event } = await makeBoard();
+
+    await expect(
+      call(router.events.public, { communitySlug: community.slug, eventSlug: event.slug }, by(null))
+    ).resolves.toMatchObject({ hasBoard: true, registration: "none" });
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Accessibility,
@@ -419,16 +419,19 @@ function RequestList({
 
 type OptionDraft = { day: string; startTime: string; durationMin: number };
 
-function RequestComposer({
+/** Ask one space for 1–3 ranked dates; `presetEventId` picks the event (from the wizard). */
+export function RequestComposer({
   community,
   venue,
   today,
+  presetEventId,
   onClose,
   onSent,
 }: {
   community: CalendarCommunity;
   venue: Venue | null;
   today: string;
+  presetEventId?: string;
   onClose: () => void;
   onSent: () => void;
 }) {
@@ -457,6 +460,14 @@ function RequestComposer({
       onError: (error) => toast.error("No se pudo enviar el pedido", error.message),
     })
   );
+
+  // From the wizard: the event is already known, so are its date and time
+  const presetFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!venue || !presetEventId || presetFor.current === venue.id || !own.data) return;
+    presetFor.current = venue.id;
+    pickEvent(presetEventId);
+  });
 
   // The first day far enough ahead that the space hosts on
   let fallback = addDays(today, venue?.leadDays ?? 14);

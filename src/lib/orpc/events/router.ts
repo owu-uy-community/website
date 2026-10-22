@@ -1,16 +1,18 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { authed, inCommunity } from "../base";
+import { authed, inCommunity, pub } from "../base";
 import {
   CancelEventSchema,
   CreateDraftSchema,
   EditableEventSchema,
+  EventBySlugSchema,
   EventRefSchema,
   HoldResultSchema,
   HoldSchema,
   ListEventsSchema,
   OrganizerEventSchema,
+  PublicEventSchema,
   PublishResultSchema,
   SaveEventSchema,
 } from "./schemas";
@@ -90,6 +92,23 @@ export const eventsRouter = {
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.cancel(input);
+    }),
+
+  public: pub
+    .meta(docs("A published event as anyone sees it (no online link; the address as its host allows)"))
+    .input(EventBySlugSchema)
+    .output(PublicEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.publicEvent(input.communitySlug, input.eventSlug);
+    }),
+
+  preview: authed
+    .meta(docs("Any of the community's events as its public page will show it, drafts included"))
+    .input(EventRefSchema)
+    .use(inCommunity("editor"))
+    .output(PublicEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.preview(input.eventId);
     }),
 
   remove: authed

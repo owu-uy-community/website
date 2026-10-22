@@ -137,3 +137,50 @@ export const CancelEventSchema = EventRefSchema.extend({ reason: z.string().trim
 
 export type EditableEvent = z.infer<typeof EditableEventSchema>;
 export type DraftPatch = z.infer<typeof DraftPatchSchema>;
+
+// ---------------------------------------------------------------------------
+// The public page
+// ---------------------------------------------------------------------------
+
+/** An event as anyone sees it: never the online link; the exact address only when its host allows. */
+export const PublicEventSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  summary: z.string().nullable(),
+  description: z.string().nullable(),
+  format: FormatSchema.nullable(),
+  topics: z.array(z.string()),
+  startDate: z.string(),
+  endDate: z.string(),
+  status: EventStatusSchema,
+  mode: ModeSchema,
+  place: z
+    .object({
+      name: z.string(),
+      area: z.string().nullable(),
+      /** Null when the host shows it only to attendees */
+      address: z.string().nullable(),
+      mapUrl: z.string().nullable(),
+    })
+    .nullable(),
+  registration: RegistrationSchema,
+  registrationUrl: z.string().nullable(),
+  capacity: z.number().nullable(),
+  waitlist: z.boolean(),
+  approval: z.boolean(),
+  guestsAllowed: z.number(),
+  rsvpClosesAt: z.string().nullable(),
+  questions: z.array(QuestionSchema),
+  /** Seats taken (with +1s) and people waiting, for "quedan 12" */
+  taken: z.number(),
+  waiting: z.number(),
+  /** It has an open-space board (rooms and slots) */
+  hasBoard: z.boolean(),
+  community: z.object({ slug: z.string(), name: z.string(), logoUrl: z.string().nullable() }),
+  meetupUrl: z.string().nullable(),
+});
+
+export const EventBySlugSchema = z.object({ communitySlug: z.string().min(1), eventSlug: z.string().min(1) });
+
+export type PublicEvent = z.infer<typeof PublicEventSchema>;
