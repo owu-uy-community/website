@@ -65,8 +65,11 @@ export function EditorPanel({
   actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const isMobile = useIsMobile();
   const mounted = useMounted();
+  // The hook answers after its first effect. A panel that mounts already open (remounted per
+  // request, or mounted on first use) reads the window meanwhile: otherwise, on a phone, it
+  // starts from the desktop side and never comes up.
+  const isMobile = useIsMobile() || (mounted && window.innerWidth < 768);
   const dragControls = useDragControls();
   const contentRef = React.useRef<HTMLDivElement>(null);
 
