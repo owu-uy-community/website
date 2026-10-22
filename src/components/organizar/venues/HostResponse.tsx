@@ -37,6 +37,7 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
   const [option, setOption] = useState(0);
   const [note, setNote] = useState("");
   const [share, setShare] = useState(true);
+  const [publicAddress, setPublicAddress] = useState(view.addressVisibility === "public");
   const [mode, setMode] = useState<"accept" | "propose" | "decline">("accept");
 
   const respond = useMutation(
@@ -101,7 +102,14 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
             onSubmit={(event) => {
               event.preventDefault();
               if (mode === "accept") {
-                respond.mutate({ token, decision: "accept", option, hostMessage: note, shareContact: share });
+                respond.mutate({
+                  token,
+                  decision: "accept",
+                  option,
+                  hostMessage: note,
+                  shareContact: share,
+                  addressVisibility: publicAddress ? "public" : "attendees",
+                });
               } else {
                 respond.mutate({ token, decision: "decline", hostMessage: note });
               }
@@ -162,6 +170,21 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
                   Compartir mi contacto con quien organiza
                   <span className="block text-meta text-muted-foreground">
                     Si no, coordinan por la dirección y las notas que dejes.
+                  </span>
+                </span>
+              </label>
+            ) : null}
+            {mode === "accept" ? (
+              <label className="flex items-start gap-2.5 text-ui text-foreground">
+                <Checkbox
+                  checked={publicAddress}
+                  className="mt-0.5"
+                  onCheckedChange={(value) => setPublicAddress(value === true)}
+                />
+                <span>
+                  Mostrar la dirección en la página del evento
+                  <span className="block text-meta text-muted-foreground">
+                    Si no, la ven solo quienes se anotan. Vale también para las próximas meetups acá.
                   </span>
                 </span>
               </label>
