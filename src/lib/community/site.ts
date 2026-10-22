@@ -118,12 +118,24 @@ export const PUBLIC_ROUTES = Object.values(PAGES).filter(
 export const OWU_FEED_NAMES = ["OWU", "OWU Conf 2026", "OWU CONF 2026", "La Meetup"];
 
 /**
- * Slack channels the pages mention by name. TODO(confirmar con el staff): these
- * are the conventional names; replace them with the workspace's real channels.
+ * Slack channels the pages mention by name, as they exist in the OWU workspace (checked
+ * 2026-10-22; the pinned "Listado de canales" in #general is the source of the basics).
+ * `semanario` doesn't exist yet: create it before turning the resources flag on.
  */
 export const SLACK_CHANNELS = {
   general: "general",
+  anuncios: "anuncios",
+  ayuda: "ayuda",
   jobs: "jobs",
+  forHire: "for-hire",
+  autobombo: "autobombo",
+  marketplace: "marketplace",
+  random: "random",
+  organizers: "organizadores-meetups",
+  admin: "owu-slack-administracion",
+  impuestos: "asesoramiento-impositivo",
   semanario: "semanario",
-  organizers: "organizadores",
 } as const;
+
+/** The repo of the bot that posts the meetups every Monday in #anuncios and feeds /eventos */
+export const MEETUP_BOT_REPO = "https://github.com/marpo60/meetup_bot";

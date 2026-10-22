@@ -1,4 +1,14 @@
-import { ArrowRight, ArrowUpRight, Compass, LayoutGrid, Lightbulb, MapPin, MessagesSquare, Mic, Send } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Compass,
+  LayoutGrid,
+  Lightbulb,
+  MapPin,
+  MessagesSquare,
+  Mic,
+  Send,
+} from "lucide-react";
 import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
@@ -49,7 +59,7 @@ const STEPS = [
   {
     icon: MessagesSquare,
     title: "Ensayá con alguien",
-    body: `Pedí en #${SLACK_CHANNELS.general} que alguien te escuche una pasada. Practicar en voz alta una vez cambia todo.`,
+    body: `Pedí en #${SLACK_CHANNELS.ayuda} o en el canal de tu tema que alguien te escuche una pasada. Practicar en voz alta una vez cambia todo.`,
     href: SOCIAL_LINKS.slack,
     cta: "Entrar al Slack",
   },
@@ -62,7 +72,7 @@ const TIPS = [
   "Si hacés una demo en vivo, tené un video o capturas de respaldo.",
   "Llegá temprano y probá el proyector, el audio y el adaptador.",
   "Dejá unos minutos para preguntas. “No sé, lo averiguo” es una respuesta válida.",
-  "Después compartí las slides: sumalas al archivo de charlas.",
+  `Después compartí las slides y el video en #${SLACK_CHANNELS.anuncios}, y sumalos al archivo de charlas.`,
 ];
 
 /* Places that hosted community events, from the meetup feed and past editions */
@@ -221,7 +231,13 @@ export default async function DarUnaCharlaPage() {
                 fácil de hablar en OWU CONF por primera vez.
               </p>
             </div>
-            <ButtonLink arrow className="self-start" href={`${PAGES.charlas.href}#open-space`} size="sm" variant="secondary">
+            <ButtonLink
+              arrow
+              className="self-start"
+              href={`${PAGES.charlas.href}#open-space`}
+              size="sm"
+              variant="secondary"
+            >
               Temas que se propusieron
             </ButtonLink>
           </Cell>

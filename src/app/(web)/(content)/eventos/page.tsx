@@ -3,11 +3,19 @@ import Link from "next/link";
 
 import CalendarSubscribe from "components/community/CalendarSubscribe";
 import { Reveal } from "components/community/motion";
-import { ButtonLink, cardClassName, Container, Eyebrow, Freshness, PageHeader, TitleBar } from "components/community/ui";
+import {
+  ButtonLink,
+  cardClassName,
+  Container,
+  Eyebrow,
+  Freshness,
+  PageHeader,
+  TitleBar,
+} from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
 import { pageMetadata } from "lib/community/metadata";
-import { issueFormUrl, PAGES } from "lib/community/site";
+import { issueFormUrl, MEETUP_BOT_REPO, PAGES, SLACK_CHANNELS } from "lib/community/site";
 
 import AgendaExplorer from "./AgendaExplorer";
 
@@ -65,15 +73,18 @@ export default async function EventsPage() {
                 </h2>
                 <TitleBar className="mt-5" />
                 <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-zinc-400">
-                  Si tu grupo está en el{" "}
-                  <Link
+                  La agenda sale del bot de la comunidad, que cada lunes también publica los próximos meetups en #
+                  {SLACK_CHANNELS.anuncios}. Si tu grupo está en Meetup.com, sumalo con un PR al{" "}
+                  <a
                     className="text-zinc-200 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
-                    href={PAGES.comunidades.href}
+                    href={MEETUP_BOT_REPO}
+                    rel="noopener"
+                    target="_blank"
                   >
-                    directorio
-                  </Link>{" "}
-                  y publica en Meetup.com, sus eventos aparecen solos. Si usás otra plataforma, o es algo puntual,
-                  mandanos los datos y lo sumamos a mano.
+                    repo del bot
+                  </a>{" "}
+                  o pedilo en #{SLACK_CHANNELS.organizers}, y sus eventos aparecen solos. Si usás otra plataforma, o es
+                  algo puntual, mandanos los datos y lo sumamos a mano.
                 </p>
               </div>
               <div className="flex flex-col gap-3">

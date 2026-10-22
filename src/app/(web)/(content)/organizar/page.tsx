@@ -48,7 +48,7 @@ const GIVES = [
   {
     icon: CalendarDays,
     title: "Lugar en la agenda",
-    body: "Tus eventos en /eventos, en el inicio y en el calendario al que la gente se suscribe.",
+    body: "Tus eventos en /eventos, en el inicio, en el calendario al que la gente se suscribe y cada lunes en #anuncios.",
     href: PAGES.eventos.href,
   },
   {
@@ -101,7 +101,10 @@ const JOIN = [
     body: "Nombre, logo, de qué se trata, dónde se juntan y quién organiza. Es un formulario de GitHub, sin código.",
   },
   { title: "Lo revisamos", body: "Alguien del staff sube tu ficha al directorio y te avisa." },
-  { title: "Arrancá", body: "Te creamos el canal y tus eventos empiezan a aparecer en la agenda." },
+  {
+    title: "Arrancá",
+    body: "Si tu grupo está en Meetup.com, lo sumamos al bot de la agenda (o abrís vos un PR a su repo) y tus eventos aparecen solos.",
+  },
 ];
 
 export default async function OrganizarPage() {

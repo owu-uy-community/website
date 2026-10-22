@@ -56,20 +56,24 @@ const OFFERS = [
   },
 ];
 
+/* The channel's own rule is its topic: roles for people working remotely or in Uruguay, candidates in #for-hire */
 const JOB_RULES = [
   {
-    title: "Rango salarial, siempre",
-    body: "Mínimo y máximo, moneda y si es nominal o líquido. Sin rango no se publica.",
+    title: "Remoto o en Uruguay",
+    body: "Es la regla del canal: puestos que se puedan hacer desde Uruguay, sean remotos, híbridos o presenciales.",
   },
-  { title: "Modalidad", body: "Remoto, híbrido o presencial. Si es remoto, desde dónde se puede trabajar." },
-  { title: "Ubicación y visa", body: "Dónde está el equipo y si patrocinan visa o reubicación." },
+  {
+    title: "Rango salarial, si podés",
+    body: "Mínimo y máximo, moneda y si es nominal o líquido. Ayuda a que te escriba la gente indicada.",
+  },
+  { title: "Modalidad y ubicación", body: "Dónde está el equipo y si patrocinan visa o reubicación." },
   {
     title: "Una búsqueda por mensaje",
     body: "Si cambia algo o se cubre el puesto, actualizalo en el hilo en vez de publicar de nuevo.",
   },
   {
-    title: "Búsquedas concretas",
-    body: "Nada de reclutadores sin un puesto real detrás ni “mandame tu CV por las dudas”.",
+    title: `Candidatos, a #${SLACK_CHANNELS.forHire}`,
+    body: `Si buscás trabajo, compartí tu perfil o tu CV en #${SLACK_CHANNELS.forHire}, no en #${SLACK_CHANNELS.jobs}.`,
   },
 ];
 
@@ -83,11 +87,11 @@ export default async function EmpresasPage() {
   const stat = (title: string, subtitle: string) =>
     landing?.stats?.find((entry) => entry.title === title && entry.subtitle === subtitle)?.count ?? null;
   const people = stat("Personas", "conectadas");
-  const daily = stat("Personas", "activas diariamente");
+  const monthly = stat("Personas", "activas cada mes");
 
   const stats = [
     ...(people ? [{ value: `+${formatCount(people)}`, label: "Personas en el Slack" }] : []),
-    ...(daily ? [{ value: `+${formatCount(daily)}`, label: "Activas por día" }] : []),
+    ...(monthly ? [{ value: `+${formatCount(monthly)}`, label: "Activas cada mes" }] : []),
     { value: String(communities.length), label: "Comunidades" },
     { value: String(events.length), label: "Eventos en agenda" },
   ];
@@ -262,7 +266,9 @@ export default async function EmpresasPage() {
           />
           <div className="mt-14 flex flex-col gap-5 rounded-2xl border border-dashed border-white/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
             <div>
-              <h3 className="font-title text-[17px] font-semibold text-white">¿Tu equipo quiere organizar algo más grande?</h3>
+              <h3 className="font-title text-[17px] font-semibold text-white">
+                ¿Tu equipo quiere organizar algo más grande?
+              </h3>
               <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
                 Un taller, una hackathon, una serie de charlas: lo charlamos.
               </p>
