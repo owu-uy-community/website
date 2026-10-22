@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "components/shared/ui/avatar
 import { Button } from "components/shared/ui/button";
 import { INTERNAL_ROUTES } from "app/lib/constants";
 import { ORGANIZAR_ON } from "lib/community/flags";
-import { getGravatarUrl } from "lib/gravatar";
+import { gravatarUrl } from "lib/gravatar";
 
 interface UserAvatarMenuProps {
   user: {
@@ -37,7 +37,15 @@ export function UserAvatarMenu({
   const initials = user.name?.charAt(0) ?? user.email?.charAt(0) ?? "U";
 
   // Use Gravatar if user has email, fallback to provided image or default
-  const avatarUrl = user.email ? getGravatarUrl(user.email, 200, "identicon") : (user.image ?? "");
+  const [avatarUrl, setAvatarUrl] = React.useState(user.email ? "" : (user.image ?? ""));
+
+  React.useEffect(() => {
+    // Web Crypto only exists in secure contexts; elsewhere the initials stay
+    if (user.email)
+      gravatarUrl(user.email)
+        .then(setAvatarUrl)
+        .catch(() => {});
+  }, [user.email]);
 
   return (
     <DropdownMenu>

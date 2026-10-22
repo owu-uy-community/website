@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
-import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
 import { QueryProvider } from "components/providers/QueryProvider";
 import { Toaster } from "components/shared/ui/sonner";
 import { fontVariables } from "./fonts";
@@ -33,7 +32,7 @@ export default function RootLayout({
       <SiteAnalytics />
       <body>
         <QueryProvider>
-          <TicketReleaseProvider>{children}</TicketReleaseProvider>
+          {children}
           <Toaster />
         </QueryProvider>
       </body>

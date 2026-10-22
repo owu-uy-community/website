@@ -1,14 +1,14 @@
 "use client";
 
-import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
 import { buttonClassName, ButtonLink, Container, TitleBar } from "components/community/ui";
+import { loadSentry } from "lib/errors/client";
 
 /** A page of the community site failed to render; the navbar and the rest of the site stay up */
 export default function ContentError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    Sentry.captureException(error);
+    void loadSentry().then((Sentry) => Sentry?.captureException(error));
   }, [error]);
 
   return (

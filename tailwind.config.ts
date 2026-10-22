@@ -20,7 +20,6 @@ const config = {
     },
     extend: {
       fontFamily: {
-        pixel: ["var(--font-press-start)", "monospace"],
         display: ["var(--font-poppins)", "sans-serif"],
         title: ["var(--font-poppins)", "sans-serif"],
         terminal: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],

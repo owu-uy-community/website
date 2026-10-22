@@ -2,6 +2,7 @@ import { createReader } from "@keystatic/core/reader";
 import { cache } from "react";
 import { type Metadata } from "next";
 
+import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
 import Hero from "components/Meetups/2025/Hero";
 import Footer from "components/shared/Footer";
 import Intro from "components/Meetups/2025/Intro";
@@ -68,7 +69,10 @@ export default async function LaMeetup2025() {
     <>
       <CallForProposalBanner />
       <div className="container flex w-full flex-col items-center justify-center gap-2 self-center">
-        <Hero />
+        {/* The only page that reads the ticket release (its own 1s timer, not every route) */}
+        <TicketReleaseProvider>
+          <Hero />
+        </TicketReleaseProvider>
         <Intro />
         {/* <CallForProposals /> */}
         <AgendaSection agenda={transformedAgenda} />

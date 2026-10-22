@@ -20,8 +20,9 @@ export function SiteAnalytics() {
     <>
       <Analytics />
       <SpeedInsights />
-      <Script async src={EXTERNAL_SERVICES.googleTagManager} />
-      <Script id="google-analytics">
+      {/* Google Analytics waits for the browser to go idle, so its ~180 KB never competes with the page */}
+      <Script async src={EXTERNAL_SERVICES.googleTagManager} strategy="lazyOnload" />
+      <Script id="google-analytics" strategy="lazyOnload">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}

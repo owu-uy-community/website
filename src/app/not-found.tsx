@@ -1,11 +1,11 @@
-import Navbar from "components/shared/Navbar";
+import Navbar from "components/shared/Navbar/lazy";
 
 import NotFound from "./(web)/(content)/not-found";
 
 /**
  * Unmatched URLs land here (route-group layouts don't apply), so this wraps the
  * community site's 404 in its chrome by hand. The search box is inert: the ⌘K
- * index only loads inside the content layout.
+ * palette only exists inside the content layout.
  */
 export default function RootNotFound() {
   return (
