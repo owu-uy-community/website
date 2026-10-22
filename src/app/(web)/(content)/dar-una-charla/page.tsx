@@ -1,14 +1,4 @@
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Compass,
-  LayoutGrid,
-  Lightbulb,
-  MapPin,
-  MessagesSquare,
-  Mic,
-  Send,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight, Compass, LayoutGrid, Lightbulb, MessagesSquare, Mic, Send } from "lucide-react";
 import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
@@ -76,7 +66,6 @@ const TIPS = [
 ];
 
 /* Places that hosted community events, from the meetup feed and past editions */
-const VENUES = ["Effectus Software", "Mimiquate", "Sinergia", "ISACA", "LATU", "Cubo Itaú"];
 
 export default async function DarUnaCharlaPage() {
   const communities = await getCommunities();
@@ -276,23 +265,12 @@ export default async function DarUnaCharlaPage() {
       </Section>
 
       <Section
-        description={`Lugares que ya recibieron eventos de la comunidad. Si tu comunidad necesita dónde hacer su próxima meetup, pedí contactos en #${SLACK_CHANNELS.organizers}.`}
+        description={`Si tu comunidad necesita dónde hacer su próxima meetup, pedí contactos en #${SLACK_CHANNELS.organizers}.`}
         eyebrow="Lugares"
-        title="Dónde se hacen las meetups"
+        title="Un lugar para tu meetup"
       >
         <Reveal>
-          <ul className="flex flex-wrap gap-2">
-            {VENUES.map((venue) => (
-              <li
-                key={venue}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-zinc-300"
-              >
-                <MapPin aria-hidden className="size-3.5 text-zinc-500" />
-                {venue}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-12 flex flex-col gap-5 rounded-2xl border border-dashed border-white/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div className="flex flex-col gap-5 rounded-2xl border border-dashed border-white/15 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
             <div>
               <h3 className="font-title text-[17px] font-semibold text-white">¿Tu empresa tiene un espacio?</h3>
               <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">

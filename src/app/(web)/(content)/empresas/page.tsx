@@ -1,4 +1,4 @@
-import { Briefcase, Building2, MapPin, Sparkles } from "lucide-react";
+import { Briefcase, Building2, Sparkles } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { Reveal } from "components/community/motion";
@@ -43,9 +43,9 @@ const OFFERS = [
   {
     icon: Sparkles,
     title: "Patrociná OWU CONF",
-    body: "La conferencia anual de la comunidad. Los paquetes y sus beneficios están en la página de sponsors.",
+    body: "La conferencia anual de la comunidad. En su web podés escribirnos para ser sponsor.",
     href: `${CONF_URL}/sponsors`,
-    cta: "Ver paquetes",
+    cta: "Ir a la web de la conf",
   },
   {
     icon: Briefcase,
@@ -78,7 +78,6 @@ const JOB_RULES = [
 ];
 
 /* Places that hosted community events, from the meetup feed and past editions */
-const VENUES = ["Effectus Software", "Mimiquate", "Sinergia", "ISACA", "LATU", "Cubo Itaú"];
 
 const formatCount = (value: number) => new Intl.NumberFormat("es-UY").format(value);
 
@@ -201,26 +200,6 @@ export default async function EmpresasPage() {
             </figure>
           </Reveal>
         </div>
-      </Section>
-
-      <Section
-        description="Empresas e instituciones que ya recibieron eventos de la comunidad."
-        eyebrow="Lugares"
-        title="Ya prestaron su espacio"
-      >
-        <Reveal>
-          <ul className="flex flex-wrap gap-2">
-            {VENUES.map((venue) => (
-              <li
-                key={venue}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-zinc-300"
-              >
-                <MapPin aria-hidden className="size-3.5 text-zinc-500" />
-                {venue}
-              </li>
-            ))}
-          </ul>
-        </Reveal>
       </Section>
 
       <Section eyebrow="Preguntas" title="Preguntas frecuentes">

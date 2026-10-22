@@ -24,13 +24,12 @@ import {
   headingClassName,
   PageHeader,
   Section,
-  SmartLink,
 } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getCommunities, getLanding } from "lib/community/content";
 import { RESOURCES_ON } from "lib/community/flags";
 import { pageMetadata } from "lib/community/metadata";
-import { CONF_URL, issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
+import { issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
 
 export const metadata = pageMetadata({
   title: "Organizá con OWU",
@@ -60,7 +59,7 @@ const GIVES = [
   {
     icon: Building2,
     title: "Contactos de lugares",
-    body: "Empresas que ya prestaron su espacio para meetups, para que no arranques de cero.",
+    body: `Las empresas que reciben meetups están en el canvas de #${SLACK_CHANNELS.organizers}, para que no arranques de cero.`,
   },
   {
     icon: LayoutGrid,
@@ -215,9 +214,7 @@ export default async function OrganizarPage() {
             <Cell className="gap-4">
               <h3 className={headingClassName.h3}>Qué reciben</h3>
               <ul className="flex list-disc flex-col gap-3 pl-5 text-[15px] leading-relaxed text-zinc-300 marker:text-zinc-500">
-                <li>Su logo en conf.owu.uy y el sello “Aliada OWU CONF” en el directorio.</li>
-                <li>Un espacio breve en la conferencia para presentar la comunidad.</li>
-                <li>Mención en la comunicación de la conferencia.</li>
+                <li>El sello “Aliada OWU CONF” en el directorio de comunidades de owu.uy.</li>
               </ul>
             </Cell>
             <Cell className="gap-4">
@@ -257,25 +254,6 @@ export default async function OrganizarPage() {
                   </ButtonLink>
                 </div>
               )}
-              <p className="mt-6 text-xs leading-relaxed text-zinc-500">
-                Inspirado en el programa de comunidades de{" "}
-                <SmartLink
-                  className="underline underline-offset-4 transition-colors hover:text-zinc-300"
-                  href="https://nerdearla.com/communities/"
-                  utm="organizar-aliadas"
-                >
-                  Nerdearla
-                </SmartLink>
-                . Más sobre la conferencia en{" "}
-                <SmartLink
-                  className="underline underline-offset-4 transition-colors hover:text-zinc-300"
-                  href={CONF_URL}
-                  utm="organizar-aliadas"
-                >
-                  conf.owu.uy
-                </SmartLink>
-                .
-              </p>
             </Card>
           </Reveal>
         </div>
