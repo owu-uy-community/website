@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { dayKey, montevideoIso } from "../../community/time";
@@ -9,7 +9,7 @@ import { ticketCode } from "../../organizar/ticket";
 import { ListAttendeesSchema } from "../attendees/schemas";
 import * as Attendees from "../attendees/service";
 import { query } from "../db";
-import { NotFound } from "../errors";
+import { Conflict, NotFound } from "../errors";
 import { opsPing, recordActivity } from "../ops";
 import { CommunityScope } from "../services";
 import type { ScanInput } from "../attendees/schemas";
@@ -100,24 +100,74 @@ export const counts = (token: string) =>
     Effect.map((all) => ({ totals: all }))
   );
 
-/** Find someone by name or code at the door; emails stay with the organizers. */
+/** Where a door reference ("id:<attendee>") points: a ticket code the volunteer never sees */
+const REFERENCE = "id:";
+/** Walk-ins an event can take from door links: a link can't flood the list */
+const MAX_WALK_INS = 300;
+
+/**
+ * Find someone by name at the door, among the people signed up. Names and tickets only: no
+ * emails, no codes (a match carries an opaque reference the server turns into the ticket).
+ */
 export const search = (token: string, q: string) =>
   Effect.gen(function* () {
     const event = yield* eventOf(token);
-    const { rows } = yield* Attendees.listAttendees(ListAttendeesSchema.parse({ eventId: event.id, q, pageSize: 10 }));
+    const conditions = Attendees.nameMatches(q);
+    if (conditions.length === 0) return { rows: [] };
+    const rows = yield* query((db) =>
+      db
+        .select()
+        .from(attendees)
+        .where(and(eq(attendees.eventId, event.id), eq(attendees.status, "attending"), ...conditions))
+        .orderBy(attendees.name)
+        .limit(10)
+    );
 
-    return { rows: rows.map((row) => ({ ...row, email: "" })) };
+    return {
+      rows: rows.map((row) => ({
+        ...Attendees.toAttendee(row),
+        email: "",
+        eventbriteId: null,
+        barcode: `${REFERENCE}${row.id}`,
+        tags: [],
+      })),
+    };
   });
 
+/** A scan from the door: a QR's ticket code, or a search match's reference resolved here. */
 export const scan = (token: string, input: Omit<ScanInput, "eventId">) =>
-  eventOf(token).pipe(
-    Effect.flatMap((event) => Attendees.scan({ ...input, eventId: event.id, device: input.device || "Puerta (link)" }))
-  );
-
-/** Someone who came without signing up: in, and counted. */
-export const walkIn = (token: string, input: { name: string; email?: string }) =>
   Effect.gen(function* () {
     const event = yield* eventOf(token);
+    let code = input.code;
+    if (code.startsWith(REFERENCE)) {
+      const [row] = yield* query((db) =>
+        db
+          .select({ barcode: attendees.barcode, eventbriteId: attendees.eventbriteId })
+          .from(attendees)
+          .where(and(eq(attendees.id, code.slice(REFERENCE.length)), eq(attendees.eventId, event.id)))
+      );
+      code = row?.barcode ?? row?.eventbriteId ?? code;
+    }
+
+    return yield* Attendees.scan({ ...input, code, eventId: event.id, device: input.device || "Puerta (link)" });
+  });
+
+/** Someone who came without signing up: in, and counted. Name only: nothing gets mailed to them. */
+export const walkIn = (token: string, input: { name: string }) =>
+  Effect.gen(function* () {
+    const event = yield* eventOf(token);
+    const [{ walkIns }] = yield* query((db) =>
+      db
+        .select({ walkIns: sql<number>`count(*)`.mapWith(Number) })
+        .from(attendees)
+        .where(and(eq(attendees.eventId, event.id), eq(attendees.ticketClass, "En la puerta")))
+    );
+    if (walkIns >= MAX_WALK_INS) {
+      return yield* new Conflict({
+        reason: "too_many",
+        message: "Llegaron muchas altas en la puerta: avisale a quien organiza",
+      });
+    }
     const now = new Date();
     const [row] = yield* query((db) =>
       db
@@ -126,7 +176,7 @@ export const walkIn = (token: string, input: { name: string; email?: string }) =
           eventId: event.id,
           source: "owu",
           name: input.name,
-          email: input.email ?? "",
+          email: "",
           ticketClass: "En la puerta",
           barcode: ticketCode(),
           status: "attending",

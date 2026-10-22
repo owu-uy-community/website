@@ -253,6 +253,15 @@ const searchable = sql`translate(lower(${attendees.name} || ' ' || ${attendees.e
 
 const escapeLike = (word: string) => word.replace(/[\\%_]/g, (char) => `\\${char}`);
 
+/** Every word of `q` in the attendee's name, accents and case aside (the door searches only names). */
+export const nameMatches = (q: string) =>
+  fold(q)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(
+      (word) => sql`translate(lower(${attendees.name}), ${ACCENTED}, ${fold(ACCENTED)}) like ${`%${escapeLike(word)}%`}`
+    );
+
 const WAITING: AttendeeStatus[] = ["waitlisted", "offered"];
 const GONE: AttendeeStatus[] = ["cancelled", "refunded", "declined"];
 
