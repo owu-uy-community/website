@@ -14,10 +14,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
-  // The home page answers Markdown to agents that ask for it (src/proxy.ts): caches keep a copy per Accept
-  async headers() {
-    return [{ source: "/", headers: [{ key: "Vary", value: "Accept" }] }];
-  },
   // The English paths people and agents guess, to the Spanish pages that answer them
   async redirects() {
     return [

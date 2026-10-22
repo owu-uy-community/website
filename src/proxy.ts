@@ -113,8 +113,8 @@ function pageType(request: NextRequest) {
 
 /**
  * Pages with a Markdown twin serve it to clients that prefer Markdown, and 406 to those that take
- * neither (their HTML says `Vary: Accept` through next.config.ts). A page without one stays HTML
- * (agents still read it); one that doesn't exist answers 404 in Markdown.
+ * neither. A page without one stays HTML (agents still read it); one that doesn't exist answers 404
+ * in Markdown. This runs before Vercel's cache, so the HTML and the Markdown never share an entry.
  */
 async function negotiate(request: NextRequest) {
   const type = pageType(request);
