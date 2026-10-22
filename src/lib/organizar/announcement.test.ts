@@ -16,6 +16,7 @@ describe(announcementText, () => {
     expect(text).not.toMatch(/evil\.example|phish\.example|https:\/\/phish|@falso/);
     expect(text).toContain("👉 https://www.owu.uy/comunidad/python/events/meetup");
     expect(unlinked("Charlas de Node.js")).toBe("Charlas de Node\u2024js");
+    expect(unlinked("Ver 10.0.0.1, ejemplo.рф o tg://resolve. Fin.")).not.toMatch(/\.\S|:\/\//);
   });
 });
 
