@@ -2,8 +2,10 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { useParams } from "next/navigation";
+import { skipToken, useQuery } from "@tanstack/react-query";
 
 import type { MyCommunity } from "lib/orpc/communities/schemas";
+import { orpc } from "lib/orpc/client";
 
 export type PanelCommunity = Pick<MyCommunity, "id" | "slug" | "name" | "logoUrl" | "role">;
 
@@ -26,4 +28,20 @@ export function usePanel() {
   const current = state.communities.find((community) => community.slug === params.communitySlug) ?? null;
 
   return { ...state, current };
+}
+
+/**
+ * The community at a glance (`panel.summary`), shared by the sidebar, the bell and Inicio. The shell
+ * refreshes it after every change made in the panel and on the next event's sign-up pings.
+ */
+export function usePanelSummary() {
+  const { current } = usePanel();
+
+  return useQuery(
+    orpc.panel.summary.queryOptions({
+      input: current ? { communityId: current.id } : skipToken,
+      staleTime: 30_000,
+      refetchOnWindowFocus: true,
+    })
+  );
 }
