@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
-import { communityMembers, emailDeliveries } from "lib/db/schema";
+import { communityMembers, emailDeliveries, events } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
 import { makeCommunity, makeEvent, makeMember } from "test/factories";
@@ -74,5 +74,32 @@ describe("co-hosts", () => {
       code: "BAD_REQUEST",
     });
     await expect(setCohosts([])).resolves.toMatchObject({ cohosts: [] });
+  });
+
+  test("a draft's invitations wait for publishing; a no stays a no", async () => {
+    const { other, otherEditor, event, setCohosts } = await setup();
+    await db
+      .update(events)
+      .set({ status: "draft", heldUntil: new Date(Date.now() + 86_400_000) })
+      .where(eq(events.id, event.id));
+    const invites = () =>
+      db
+        .select()
+        .from(emailDeliveries)
+        .where(and(eq(emailDeliveries.to, otherEditor.email), eq(emailDeliveries.kind, "cohost_invite")));
+
+    await setCohosts([other.id]);
+    await expect(invites()).resolves.toHaveLength(0);
+    await db.update(events).set({ status: "published" }).where(eq(events.id, event.id));
+    await call(
+      router.events.answerCohost,
+      { communityId: other.id, hostedEventId: event.id, accept: false },
+      by(otherEditor)
+    );
+
+    await expect(setCohosts([other.id])).resolves.toMatchObject({ cohosts: [{ id: other.id, status: "declined" }] });
+    await expect(
+      call(router.events.cohostInvitations, { communityId: other.id }, by(otherEditor))
+    ).resolves.toHaveLength(0);
   });
 });

@@ -17,7 +17,7 @@ import {
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
 import { appUrl, rsvpEmail, type RsvpEmailKind } from "../../email/templates";
-import { readLink, signLink } from "../../links";
+import { readLink, signLink, unsubscribeToken } from "../../links";
 import { ticketCode } from "../../organizar/ticket";
 import { eventPagePath, refreshPage } from "../../revalidate";
 import { query, transaction } from "../db";
@@ -142,7 +142,7 @@ const suppressed = (email: string) =>
     db
       .select({ email: emailSuppressions.email })
       .from(emailSuppressions)
-      .where(eq(emailSuppressions.email, email.toLowerCase()))
+      .where(and(eq(emailSuppressions.email, email.toLowerCase()), eq(emailSuppressions.scope, "reminders")))
       .limit(1)
   ).pipe(Effect.map((rows) => rows.length > 0));
 
@@ -155,7 +155,9 @@ const notify = (row: AttendeeRow, event: EventContext, kind: RsvpEmailKind, dedu
     const optional = OPTIONAL.includes(kind);
     if (optional && (yield* suppressed(row.email))) return;
     const token = yield* Effect.promise(() => signLink("ticket", row.id));
-    const unsubscribe = optional ? yield* Effect.promise(() => signLink("unsubscribe", row.email.toLowerCase())) : null;
+    const unsubscribe = optional
+      ? yield* Effect.promise(() => unsubscribeToken(row.email.toLowerCase(), "reminders"))
+      : null;
     // Seat details (QR, address, online link, the invite) only for someone who has the seat
     const seated = SEATED_KINDS.includes(kind) && row.status === "attending";
     const removed = REMOVES.includes(kind);

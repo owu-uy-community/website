@@ -45,14 +45,16 @@ export default defineTool({
       month: month ?? day?.slice(0, 7) ?? monthOf(1),
       ...(startTime ? { startTime } : {}),
     });
-    // Other communities' holds are for organizers in the panel: neither them nor the reasons they cause
-    const holds = new Set(plan.items.filter((item) => item.kind === "hold").map((item) => item.id));
+    // Other communities' holds are for organizers in the panel. Allow-list: a reason about an item
+    // stays only when that item is a published event of this month (a hold just across the month's
+    // edge isn't in `items`, so a deny-list would let its reason through)
+    const published = new Set(plan.items.filter((item) => item.kind === "event").map((item) => item.id));
     const publicDay = (entry: PlanDay) => ({
       day: entry.day,
       level: entry.level,
       score: entry.score,
       reasons: entry.reasons
-        .filter((reason) => !reason.itemId || !holds.has(reason.itemId))
+        .filter((reason) => !reason.itemId || published.has(reason.itemId))
         .map((reason) => reason.text),
     });
 

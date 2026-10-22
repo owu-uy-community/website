@@ -233,7 +233,7 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
           </div>
         </SettingsRow>
         <SettingsRow
-          hint="Otras comunidades que lo arman con ustedes. Si no la organizás vos, le llega una invitación y aparece en su perfil cuando acepta."
+          hint="Otras comunidades que lo arman con ustedes. Si no la organizás vos, le llega una invitación cuando lo publiques y aparece en su perfil si acepta."
           label="Coorganizan"
         >
           <div className="flex flex-col items-start gap-2">
@@ -246,11 +246,17 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
                   >
                     {cohost.name}
                     {cohost.status === "invited" ? <Badge variant="warning">Invitada</Badge> : null}
+                    {cohost.status === "declined" ? <Badge variant="secondary">Dijo que no</Badge> : null}
                     <button
                       aria-label={`Sacar a ${cohost.name}`}
                       className="grid size-5 place-items-center rounded-sm text-muted-foreground hover:bg-raised hover:text-foreground"
                       type="button"
-                      onClick={() => set({ cohostIds: chosen.filter((id) => id !== cohost.id) })}
+                      onClick={() =>
+                        set({
+                          cohostIds: chosen.filter((id) => id !== cohost.id),
+                          cohosts: draft.cohosts.filter((item) => item.id !== cohost.id),
+                        })
+                      }
                     >
                       <X aria-hidden className="size-3" />
                     </button>
@@ -261,7 +267,17 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
             <Select
               disabled={chosen.length >= 3 || addable.length === 0}
               value=""
-              onValueChange={(id) => set({ cohostIds: [...chosen, id] })}
+              onValueChange={(id) => {
+                const picked = addable.find((item) => item.id === id);
+                // Shown at once (the server then says who joined and who's invited), so a second
+                // pick right after builds on this one
+                set({
+                  cohostIds: [...chosen, id],
+                  cohosts: picked
+                    ? [...draft.cohosts, { id, name: picked.name, slug: picked.slug, status: "invited" }]
+                    : draft.cohosts,
+                });
+              }}
             >
               <SelectTrigger aria-label="Sumar una comunidad" className="w-56">
                 <SelectValue placeholder={chosen.length >= 3 ? "Hasta 3 comunidades" : "Sumar una comunidad"} />

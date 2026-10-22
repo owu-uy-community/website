@@ -72,8 +72,16 @@ describe("date polls", () => {
     ]);
   });
 
-  test("a community that wasn't asked can't see or answer; only the asker picks", async () => {
-    const { outsider, python, outsiderEditor, pythonEditor, days, poll } = await setup();
+  test("a community that wasn't asked can't see or answer; only the asker picks; days must exist", async () => {
+    const { asker, outsider, python, askerEditor, outsiderEditor, pythonEditor, days, poll } = await setup();
+
+    await expect(
+      call(
+        router.polls.create,
+        { communityId: asker.id, title: "Fechas raras", days: ["2027-02-30", "2027-13-01"], invited: [python.id] },
+        by(askerEditor)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
     await expect(call(router.polls.list, { communityId: outsider.id }, by(outsiderEditor))).resolves.toStrictEqual([]);
     await expect(

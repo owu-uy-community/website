@@ -5,7 +5,7 @@ import { shortWhen } from "../../community/time";
 import { communities, communityFollowers, emailSuppressions, user, venues, type EventRow } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
 import { appUrl, followerNewEventEmail } from "../../email/templates";
-import { signLink } from "../../links";
+import { unsubscribeToken } from "../../links";
 import { eventPagePath } from "../../revalidate";
 import { query } from "../db";
 
@@ -60,7 +60,10 @@ export const notifyFollowers = (event: EventRow) =>
         .select({ id: user.id, email: user.email })
         .from(communityFollowers)
         .innerJoin(user, eq(user.id, communityFollowers.userId))
-        .leftJoin(emailSuppressions, eq(emailSuppressions.email, sql`lower(${user.email})`))
+        .leftJoin(
+          emailSuppressions,
+          and(eq(emailSuppressions.email, sql`lower(${user.email})`), eq(emailSuppressions.scope, "followers"))
+        )
         .where(and(eq(communityFollowers.communityId, event.communityId), isNull(emailSuppressions.email)))
     );
     if (followers.length === 0) return 0;
@@ -77,7 +80,7 @@ export const notifyFollowers = (event: EventRow) =>
     const pageUrl = appUrl(eventPagePath(community.slug, event.slug));
 
     for (const follower of followers) {
-      const token = yield* Effect.promise(() => signLink("unsubscribe", follower.email.toLowerCase()));
+      const token = yield* Effect.promise(() => unsubscribeToken(follower.email.toLowerCase(), "followers"));
       yield* enqueueEmail({
         kind: "follower_new_event",
         to: follower.email,

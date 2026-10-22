@@ -1,6 +1,12 @@
 import * as z from "zod";
 
-export const DaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Usá AAAA-MM-DD");
+export const DaySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Usá AAAA-MM-DD")
+  .refine((day) => {
+    const date = new Date(`${day}T00:00:00Z`);
+    return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(day);
+  }, "Esa fecha no existe");
 export const ClockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Usá HH:MM");
 export const DurationSchema = z
   .number()
@@ -89,7 +95,12 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   externalLinks: z.object({ meetup: z.string().optional() }),
   /** Other communities organizing it; an invited one shows on its profile once it accepts */
   cohosts: z.array(
-    z.object({ id: z.string(), name: z.string(), slug: z.string(), status: z.enum(["invited", "accepted"]) })
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      slug: z.string(),
+      status: z.enum(["invited", "accepted", "declined"]),
+    })
   ),
 });
 

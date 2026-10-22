@@ -1289,7 +1289,8 @@ export const emailSuppressions = pgTable(
   "email_suppressions",
   {
     email: text("email").notNull(),
-    scope: text("scope").$type<"reminders">().notNull().default("reminders"),
+    /** What they turned off: event reminders and feedback, or followed communities' new events */
+    scope: text("scope").$type<"reminders" | "followers">().notNull().default("reminders"),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },
   (t) => [unique("email_suppressions_email_scope_key").on(t.email, t.scope)]
@@ -1561,7 +1562,7 @@ export const eventHosts = pgTable(
   {
     eventId: text("eventId").notNull(),
     communityId: text("communityId").notNull(),
-    status: text("status").$type<"invited" | "accepted">().notNull().default("invited"),
+    status: text("status").$type<"invited" | "accepted" | "declined">().notNull().default("invited"),
     invitedById: text("invitedById"),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },

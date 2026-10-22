@@ -53,6 +53,8 @@ export const plan = (input: PlanInput) =>
           and(
             lt(events.startDate, windowEnd),
             gt(events.endDate, windowStart),
+            eq(events.isActive, true),
+            eq(communities.isActive, true),
             or(eq(events.status, "published"), and(eq(events.status, "draft"), gt(events.heldUntil, now)))
           )
         )
