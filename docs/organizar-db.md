@@ -182,6 +182,7 @@ CREATE TABLE "venues" (
 	"notes" text DEFAULT '' NOT NULL,
 	"status" text DEFAULT 'pending' NOT NULL,
 	"requestable" boolean DEFAULT false NOT NULL,
+	"fallback" boolean DEFAULT false NOT NULL,
 	"submittedById" text,
 	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
 	"updatedAt" timestamp (3) DEFAULT now() NOT NULL
@@ -220,12 +221,19 @@ ALTER TABLE "open_spaces" ADD COLUMN "guestsAllowed" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "rsvpClosesAt" timestamp (3);
 ALTER TABLE "open_spaces" ADD COLUMN "questions" jsonb DEFAULT '[]'::jsonb NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "externalLinks" jsonb DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "sizeBucket" text;
+ALTER TABLE "open_spaces" ADD COLUMN "needs" text[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "talks" jsonb DEFAULT '[]'::jsonb NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "announcement" jsonb DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "publishAt" timestamp (3);
+ALTER TABLE "open_spaces" ADD COLUMN "publishById" text;
 ALTER TABLE "open_spaces" ADD COLUMN "reminderNote" text;
 ALTER TABLE "open_spaces" ADD COLUMN "materials" jsonb DEFAULT '[]'::jsonb NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "icsSequence" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "notifiedSequence" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "doorVersion" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "publishedAt" timestamp (3);
+ALTER TABLE "community_members" ADD COLUMN "showOnProfile" boolean DEFAULT false NOT NULL;
 ALTER TABLE "community_claims" ADD CONSTRAINT "community_claims_communityId_fk" FOREIGN KEY ("communityId") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "community_claims" ADD CONSTRAINT "community_claims_userId_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "community_claims" ADD CONSTRAINT "community_claims_reviewedById_fk" FOREIGN KEY ("reviewedById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
@@ -261,6 +269,7 @@ CREATE INDEX "venue_requests_venueId_status_idx" ON "venue_requests" USING btree
 CREATE INDEX "venue_requests_communityId_idx" ON "venue_requests" USING btree ("communityId");
 CREATE INDEX "venues_status_idx" ON "venues" USING btree ("status");
 ALTER TABLE "attendees" ADD CONSTRAINT "attendees_userId_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "open_spaces" ADD CONSTRAINT "open_spaces_publishById_fk" FOREIGN KEY ("publishById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "open_spaces" ADD CONSTRAINT "open_spaces_venueId_fk" FOREIGN KEY ("venueId") REFERENCES "public"."venues"("id") ON DELETE set null ON UPDATE no action;
 CREATE INDEX "open_spaces_status_startDate_idx" ON "open_spaces" USING btree ("status","startDate");
 ALTER TABLE "attendees" ADD CONSTRAINT "attendees_eventId_userId_key" UNIQUE("eventId","userId");
@@ -276,7 +285,7 @@ COMMIT;
 - `survey_responses_one` dropped and created again.
 - `owy_stage_state.desk` default set again.
 - The `'{}'` defaults of `communities.topics`, `communities.feedNames`, `open_spaces.topics`,
-  `date_polls.invited` and `venues.amenities` set again.
+  `open_spaces.needs`, `date_polls.invited` and `venues.amenities` set again.
 
 Anything else means production differs from the schema: stop and compare
 `information_schema.columns` (name, type, `is_nullable`, `column_default`) with a local push.
@@ -295,16 +304,18 @@ It upserts by slug and only fills empty fields, so running it twice is safe. Che
 
 ## 5. Environment
 
-| Variable                                                                | What for                                                                                                    |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `ORGANIZAR_SECRET`                                                      | Signs the links in emails (tickets, host answers, unsubscribe, door)                                        |
-| `INTEGRATIONS_SECRET`                                                   | Encrypts Eventbrite tokens. Set it before anyone connects: rotating it later makes stored tokens unreadable |
-| `RESEND_API_KEY`, `EMAIL_FROM`                                          | Sending email (Resend, through the Vercel Marketplace)                                                      |
-| `EMAIL_DAILY_CAP`                                                       | Optional: the plan's daily limit; past 80 % only urgent email goes out                                      |
-| `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `QSTASH_TOKEN` | The 5-minute tick; then run `pnpm jobs:schedule` once                                                       |
-| `CRON_SECRET`                                                           | The daily Vercel cron (backstop and retention)                                                              |
-| `EVENTBRITE_CLIENT_ID`, `EVENTBRITE_CLIENT_SECRET`                      | The Eventbrite app, with redirect `https://www.owu.uy/api/integrations/eventbrite/callback`                 |
-| `NEXT_PUBLIC_FLAG_ORGANIZAR`                                            | Shows the entry points (the CTA on `/organizar`, Seguir, claims). Leave it off until launch                 |
+| Variable                                                                                                      | What for                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ORGANIZAR_SECRET`                                                                                            | Signs the links in emails (tickets, host answers, unsubscribe, door)                                                                                        |
+| `INTEGRATIONS_SECRET`                                                                                         | Encrypts Eventbrite tokens. Set it before anyone connects: rotating it later makes stored tokens unreadable                                                 |
+| `RESEND_API_KEY`, `EMAIL_FROM`                                                                                | Sending email (Resend, through the Vercel Marketplace)                                                                                                      |
+| `EMAIL_FROM_NEWS`                                                                                             | Optional: the sender for new-event emails to followers, on its own subdomain (`news.owu.uy`), so bulk mail never hurts the reputation sign-in codes rely on |
+| `EMAIL_DAILY_CAP`                                                                                             | Optional: the plan's daily limit; past 80 % only urgent email goes out                                                                                      |
+| `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`, `QSTASH_TOKEN`                                       | The 5-minute tick; then run `pnpm jobs:schedule` once                                                                                                       |
+| `TELEGRAM_BOT_TOKEN`, `OWY_ANNOUNCE_TELEGRAM_CHAT_ID`, `OWY_SLACK_BOT_TOKEN`, `OWY_ANNOUNCE_SLACK_CHANNEL_ID` | Already set for Owy: organizers can have it announce their events there                                                                                     |
+| `CRON_SECRET`                                                                                                 | The daily Vercel cron (backstop and retention)                                                                                                              |
+| `EVENTBRITE_CLIENT_ID`, `EVENTBRITE_CLIENT_SECRET`                                                            | The Eventbrite app, with redirect `https://www.owu.uy/api/integrations/eventbrite/callback`                                                                 |
+| `NEXT_PUBLIC_FLAG_ORGANIZAR`                                                                                  | Shows the entry points (the CTA on `/organizar`, Seguir, claims). Leave it off until launch                                                                 |
 
 Preview deployments need a non-production `DATABASE_URL` (a Neon branch): `/comunidades` now
 reads the database at build time.
