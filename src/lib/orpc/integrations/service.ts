@@ -360,28 +360,35 @@ export const queuePush = (
 
 /** "Reintentar": push again now, with a fresh set of attempts. */
 export const retry = (eventId: string) =>
-  query((db) =>
-    db
-      .update(eventPublications)
-      .set({ status: "pending", attempts: 0, error: null, nextAttemptAt: new Date() })
-      .where(eq(eventPublications.eventId, eventId))
-      .returning({ id: eventPublications.id })
-  ).pipe(
-    Effect.tap(() =>
-      Effect.sync(() => {
-        pushQueued = true;
-      })
-    ),
-    Effect.map((rows) => ({ queued: rows.length > 0 }))
-  );
+  Effect.gen(function* () {
+    // Scoped twice like every procedure here: the middleware checked the event, this the account
+    const { communityId } = yield* CommunityScope;
+    const connection = yield* connectionOf(communityId);
+    if (!connection) return { queued: false };
+    const rows = yield* query((db) =>
+      db
+        .update(eventPublications)
+        .set({ status: "pending", attempts: 0, error: null, nextAttemptAt: new Date() })
+        .where(and(eq(eventPublications.eventId, eventId), eq(eventPublications.connectionId, connection.id)))
+        .returning({ id: eventPublications.id })
+    );
+    if (rows.length > 0) pushQueued = true;
+
+    return { queued: rows.length > 0 };
+  });
 
 export const publicationOf = (eventId: string) =>
   Effect.gen(function* () {
     const { communityId } = yield* CommunityScope;
     const connection = yield* connectionOf(communityId);
-    const [publication] = yield* query((db) =>
-      db.select().from(eventPublications).where(eq(eventPublications.eventId, eventId))
-    );
+    const [publication] = connection
+      ? yield* query((db) =>
+          db
+            .select()
+            .from(eventPublications)
+            .where(and(eq(eventPublications.eventId, eventId), eq(eventPublications.connectionId, connection.id)))
+        )
+      : [];
 
     return {
       connected: connection?.status === "active",
