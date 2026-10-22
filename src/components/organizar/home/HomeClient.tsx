@@ -34,6 +34,17 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
     queries: months.map((month) => orpc.calendar.plan.queryOptions({ input: { communityId: community.id, month } })),
   });
 
+  const invitations = useQuery(orpc.events.cohostInvitations.queryOptions({ input: { communityId: community.id } }));
+  const answer = useMutation(
+    orpc.events.answerCohost.mutationOptions({
+      onSuccess: (result) => {
+        toast.success(result.accepted ? "Ahora lo coorganizan" : "Invitación rechazada");
+        void queryClient.invalidateQueries({ queryKey: orpc.events.cohostInvitations.key() });
+      },
+      onError: (error) => toast.error("No se pudo responder", error.message),
+    })
+  );
+
   const invalidate = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: orpc.events.list.key() }),
@@ -100,6 +111,34 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
     .toSorted((a, b) => a.start.localeCompare(b.start));
 
   const todo: { id: string; text: string; action: React.ReactNode }[] = [
+    ...(invitations.data ?? []).map((invitation) => ({
+      id: `cohost-${invitation.eventId}`,
+      text: `${invitation.host} los invita a coorganizar «${invitation.name}» (${shortWhen(invitation.startDate)})`,
+      action: (
+        <span className="flex gap-1.5">
+          <Button
+            disabled={answer.isPending}
+            size="xs"
+            variant="outline"
+            onClick={() =>
+              answer.mutate({ communityId: community.id, hostedEventId: invitation.eventId, accept: true })
+            }
+          >
+            Aceptar
+          </Button>
+          <Button
+            disabled={answer.isPending}
+            size="xs"
+            variant="ghost"
+            onClick={() =>
+              answer.mutate({ communityId: community.id, hostedEventId: invitation.eventId, accept: false })
+            }
+          >
+            No
+          </Button>
+        </span>
+      ),
+    })),
     ...holds
       .filter((event) => daysBetween(today, dayKey(event.heldUntil ?? event.startDate)) <= 3)
       .map((event) => ({

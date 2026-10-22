@@ -19,6 +19,7 @@ import {
   Sparkles,
   Ticket,
   Trash2,
+  X,
   Users,
   Wrench,
   type LucideIcon,
@@ -49,6 +50,8 @@ import { DatePicker } from "./DatePicker";
 /** A change to the draft; `schedule` (a published event's new date) is sent at once, not kept. */
 export type DraftChange = Partial<EditableEvent> & {
   schedule?: { day: string; startTime: string; durationMin: number };
+  /** The co-organizing communities, saved right away (the server says which joined and which are invited) */
+  cohostIds?: string[];
 };
 
 export type StepProps = {
@@ -124,8 +127,15 @@ export function StepTipo({ draft, set }: StepProps) {
   );
 }
 
-export function StepDatos({ draft, set, errors }: StepProps) {
+export function StepDatos({ draft, set, errors, community }: StepProps) {
   const [preview, setPreview] = useState(false);
+  const others = useQuery({
+    ...orpc.communities.list.queryOptions({ input: {} }),
+    staleTime: 5 * 60_000,
+    select: (all) => all.filter((item) => item.id !== community.id && item.listed),
+  });
+  const chosen = draft.cohosts.map((cohost) => cohost.id);
+  const addable = (others.data ?? []).filter((item) => !chosen.includes(item.id));
 
   return (
     <SettingsSection id="datos" title="Lo que ve la gente">
@@ -220,6 +230,50 @@ export function StepDatos({ draft, set, errors }: StepProps) {
                 </button>
               );
             })}
+          </div>
+        </SettingsRow>
+        <SettingsRow
+          hint="Otras comunidades que lo arman con ustedes. Si no la organizás vos, le llega una invitación y aparece en su perfil cuando acepta."
+          label="Coorganizan"
+        >
+          <div className="flex flex-col items-start gap-2">
+            {draft.cohosts.length > 0 ? (
+              <ul className="flex flex-wrap gap-1.5">
+                {draft.cohosts.map((cohost) => (
+                  <li
+                    key={cohost.id}
+                    className="flex h-7 items-center gap-1.5 rounded-md border border-input pr-1 pl-2 text-meta text-foreground"
+                  >
+                    {cohost.name}
+                    {cohost.status === "invited" ? <Badge variant="warning">Invitada</Badge> : null}
+                    <button
+                      aria-label={`Sacar a ${cohost.name}`}
+                      className="grid size-5 place-items-center rounded-sm text-muted-foreground hover:bg-raised hover:text-foreground"
+                      type="button"
+                      onClick={() => set({ cohostIds: chosen.filter((id) => id !== cohost.id) })}
+                    >
+                      <X aria-hidden className="size-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <Select
+              disabled={chosen.length >= 3 || addable.length === 0}
+              value=""
+              onValueChange={(id) => set({ cohostIds: [...chosen, id] })}
+            >
+              <SelectTrigger aria-label="Sumar una comunidad" className="w-56">
+                <SelectValue placeholder={chosen.length >= 3 ? "Hasta 3 comunidades" : "Sumar una comunidad"} />
+              </SelectTrigger>
+              <SelectContent>
+                {addable.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </SettingsRow>
       </SettingsCard>

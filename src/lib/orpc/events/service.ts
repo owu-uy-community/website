@@ -23,6 +23,7 @@ import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { notifyFollowers } from "../communities/follow";
+import { acceptedCohosts, cohostsOf, setCohosts } from "./cohosts";
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
@@ -341,6 +342,7 @@ const editableOf = (eventId: string) =>
       rsvpClosesAt: event.rsvpClosesAt?.toISOString() ?? null,
       questions: event.questions,
       externalLinks: event.externalLinks,
+      cohosts: yield* cohostsOf(event.id),
     } satisfies EditableEvent;
   });
 
@@ -465,7 +467,8 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
         });
       }
 
-      const { schedule, rsvpClosesAt, ...fields } = input.patch;
+      const { schedule, rsvpClosesAt, cohosts, ...fields } = input.patch;
+      if (cohosts) yield* setCohosts(row, cohosts);
       const moved =
         row.status === "published" && schedule
           ? (() => {
@@ -485,6 +488,8 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
           .update(events)
           .set({
             ...fields,
+            // Always something to set (a save of co-hosts only still moves the version)
+            updatedAt: new Date(),
             ...(rsvpClosesAt !== undefined ? { rsvpClosesAt: rsvpClosesAt ? new Date(rsvpClosesAt) : null } : {}),
             ...moved,
             ...(dateChanged || placeChanged ? { icsSequence: row.icsSequence + 1 } : {}),
@@ -675,6 +680,7 @@ const toPublic = (eventId: string) =>
       waiting: seats?.waiting ?? 0,
       hasBoard: Boolean(board),
       community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
+      cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
     } satisfies PublicEvent;
   });

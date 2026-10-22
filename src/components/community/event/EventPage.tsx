@@ -166,6 +166,22 @@ export function EventPage({
                 <span className="block font-title text-lg font-semibold text-white">{event.community.name}</span>
               </span>
             </Link>
+            {event.cohosts.length > 0 ? (
+              <p className="mt-3 text-[14px] text-zinc-400">
+                Junto con{" "}
+                {event.cohosts.map((cohost, index) => (
+                  <span key={cohost.slug}>
+                    {index > 0 ? (index === event.cohosts.length - 1 ? " y " : ", ") : null}
+                    <Link
+                      className="text-zinc-200 underline-offset-4 hover:underline"
+                      href={`/comunidad/${cohost.slug}`}
+                    >
+                      {cohost.name}
+                    </Link>
+                  </span>
+                ))}
+              </p>
+            ) : null}
           </article>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">

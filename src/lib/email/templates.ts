@@ -408,3 +408,23 @@ ${input.summary ? `<p style="margin:0 0 20px">${esc(input.summary)}</p>` : ""}<p
     text: `${input.community} publicó un evento: ${input.event}\n${input.when} · ${input.place}\n${input.summary ? `\n${input.summary}\n` : ""}\nVer el evento: ${input.pageUrl}\n\nTe llegó porque seguís a ${input.community}. Dejar de seguir: ${input.profileUrl}\nNo recibir más avisos: ${input.unsubscribeUrl}`,
   };
 }
+
+/** A community was asked to co-organize another's event: its organizers accept from the panel. */
+export function cohostInviteEmail(input: {
+  host: string;
+  community: string;
+  event: string;
+  when: string;
+  panelUrl: string;
+}): Omit<Email, "to"> {
+  return {
+    subject: `${input.host} invita a ${input.community} a coorganizar «${input.event}»`,
+    html: layout({
+      preheader: `${input.when}. Aceptalo desde el panel de Organizá.`,
+      body: `<p style="margin:0 0 16px">${esc(input.host)} quiere organizar <strong>${esc(input.event)}</strong> (${esc(input.when)}) junto con ${esc(input.community)}.</p>
+<p style="margin:0 0 20px;color:#52525b">Si aceptan, el evento aparece también en el perfil de ${esc(input.community)} en owu.uy.</p>
+<p style="margin:0">${button(input.panelUrl, "Ver la invitación")}</p>`,
+    }),
+    text: `${input.host} quiere organizar «${input.event}» (${input.when}) junto con ${input.community}.\n\nSi aceptan, el evento aparece también en el perfil de ${input.community} en owu.uy.\n\nVer la invitación: ${input.panelUrl}`,
+  };
+}

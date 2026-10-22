@@ -132,6 +132,7 @@ export function EventWizard({
   const [cancelling, setCancelling] = useState(false);
   const inFlight = useRef(false);
   const again = useRef(false);
+  const queued = useRef<DraftPatch>({});
 
   useEffect(() => {
     if (event.data && !saved.current) {
@@ -146,13 +147,17 @@ export function EventWizard({
       const now = latest.current;
       const last = saved.current;
       if (!now || !last) return false;
+      // A move or co-hosts asked for while a save runs go with the next one
+      const extras = { ...queued.current, ...extra };
       if (inFlight.current) {
+        queued.current = extras;
         again.current = true;
         return false;
       }
+      queued.current = {};
       const { patch, invalid } = diff(now, last);
       setErrors(invalid);
-      const full = { ...patch, ...extra };
+      const full = { ...patch, ...extras };
       if (Object.keys(full).length === 0) return Object.keys(invalid).length === 0;
 
       inFlight.current = true;
@@ -231,8 +236,9 @@ export function EventWizard({
   };
 
   const set = (change: DraftChange) => {
-    const { schedule, ...rest } = change;
+    const { schedule, cohostIds, ...rest } = change;
     setDraft((mine) => (mine ? { ...mine, ...rest } : mine));
+    if (cohostIds) void flush({ cohosts: cohostIds });
     if (schedule)
       void flush({ schedule }).then(
         (ok) => ok && toast.success("Movimos el evento", shortWhen(`${schedule.day}T${schedule.startTime}:00-03:00`))

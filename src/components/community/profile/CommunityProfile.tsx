@@ -63,7 +63,8 @@ export function CommunityProfile({
 }: {
   community: CommunityRow;
   upcoming: CommunityEvent[];
-  past: EventRow[];
+  /** Its own and the ones it co-organized (`hostSlug`: whose page the event is on) */
+  past: (EventRow & { hostSlug: string })[];
   hosts: string[];
   /** "¿Organizás esta comunidad?", once Organizá is open */
   claimHref: string | null;
@@ -166,7 +167,7 @@ export function CommunityProfile({
                 <li key={event.id}>
                   <Link
                     className="flex items-center justify-between gap-4 px-5 py-3.5 text-[15px] text-zinc-300 transition-colors hover:bg-white/[0.03] hover:text-white"
-                    href={`/comunidad/${community.slug}/events/${event.slug}`}
+                    href={`/comunidad/${event.hostSlug}/events/${event.slug}`}
                   >
                     <span className="min-w-0 truncate">{event.name}</span>
                     <span className="shrink-0 text-[14px] text-zinc-500 tabular-nums">
