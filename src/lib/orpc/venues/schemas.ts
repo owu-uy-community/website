@@ -107,6 +107,8 @@ export const HostViewSchema = z.object({
   status: RequestStatusSchema,
   chosenOption: z.number().nullable(),
   expiresAt: z.string(),
+  /** Whether the event page shows the space's street address to anyone, or only to who signs up */
+  addressVisibility: z.enum(["public", "attendees"]),
 });
 
 export const TokenSchema = z.object({ token: z.string().min(10).max(500) });
@@ -118,6 +120,8 @@ export const RespondSchema = z.discriminatedUnion("decision", [
     option: z.number().int().min(0).max(2),
     hostMessage: z.string().trim().max(1000).default(""),
     shareContact: z.boolean().default(false),
+    /** The space's choice, kept for its next meetups too */
+    addressVisibility: z.enum(["public", "attendees"]).optional(),
   }),
   z.object({
     token: z.string().min(10).max(500),

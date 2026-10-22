@@ -380,6 +380,7 @@ export const byToken = (token: string) =>
         .select({
           request: venueRequests,
           venueName: venues.name,
+          addressVisibility: venues.addressVisibility,
           communityName: communities.name,
           organizerName: user.name,
           eventName: events.name,
@@ -404,6 +405,7 @@ export const byToken = (token: string) =>
       status: effectiveStatus(row.request),
       chosenOption: row.request.chosenOption,
       expiresAt: row.request.expiresAt.toISOString(),
+      addressVisibility: row.addressVisibility,
     };
   });
 
@@ -448,6 +450,12 @@ export const respond = (input: RespondInput) =>
             .where(eq(venueRequests.id, id))
             .returning()
         );
+        if (input.decision === "accept" && input.addressVisibility) {
+          const visibility = input.addressVisibility;
+          yield* query((db) =>
+            db.update(venues).set({ addressVisibility: visibility }).where(eq(venues.id, row.venueId))
+          );
+        }
         const [venue] = yield* query((db) => db.select().from(venues).where(eq(venues.id, row.venueId)));
         const [community] = yield* query((db) =>
           db

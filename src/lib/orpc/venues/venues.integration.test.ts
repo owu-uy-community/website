@@ -72,11 +72,19 @@ describe("spaces", () => {
       eventName: "Meetup de septiembre",
       expectedAttendees: 40,
       status: "pending",
+      addressVisibility: "attendees",
     });
 
     await call(
       router.venues.respond,
-      { token, decision: "accept", option: 1, hostMessage: "Timbre 3B", shareContact: true },
+      {
+        token,
+        decision: "accept",
+        option: 1,
+        hostMessage: "Timbre 3B",
+        shareContact: true,
+        addressVisibility: "public",
+      },
       by(null)
     );
 
@@ -93,8 +101,14 @@ describe("spaces", () => {
     await expect(mail(venue.contact?.email ?? "", "venue_answered_host")).resolves.toMatchObject([
       { text: expect.stringContaining(editor.email) },
     ]);
-    await expect(db.select().from(events).where(eq(events.id, draft.id))).resolves.toMatchObject([
-      { venueId: venue.id, startDate: new Date("2029-09-13T21:30:00.000Z") },
+    await expect(
+      db
+        .select({ venueId: events.venueId, startDate: events.startDate, visibility: venues.addressVisibility })
+        .from(events)
+        .innerJoin(venues, eq(venues.id, events.venueId))
+        .where(eq(events.id, draft.id))
+    ).resolves.toMatchObject([
+      { venueId: venue.id, startDate: new Date("2029-09-13T21:30:00.000Z"), visibility: "public" },
     ]);
   });
 
