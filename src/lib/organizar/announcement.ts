@@ -24,12 +24,14 @@ export function announcementText(event: {
 
 /**
  * What organizers typed can't turn into a link in OWU's channels: Slack and Telegram link any
- * domain they see and Telegram any @handle, so a domain's dots become look-alike dots (․) and @
- * becomes ＠. «Node.js» still reads the same.
+ * domain, address or scheme they see and Telegram any @handle, so every dot inside a word becomes
+ * a look-alike dot (․), "://" loses its slashes and @ becomes ＠. «Node.js» still reads the same.
  */
 export const unlinked = (text: string) =>
   text
-    .replace(/\b(?:https?:\/\/)?((?:[a-z0-9-]+\.)+[a-z]{2,})/gi, (_, host: string) => host.replaceAll(".", "\u2024"))
+    // Any dot inside a word (domains, IPs, any alphabet), any scheme, any handle
+    .replace(/\.(?=\S)/g, "\u2024")
+    .replace(/:\/\//g, ":\u2215\u2215")
     .replace(/@(?=\w)/g, "\uFF20");
 
 /** Slack reads <…> as mentions and links (<!channel>, <@U123>): escaped, the text is only text. */
