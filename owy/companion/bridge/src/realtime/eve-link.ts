@@ -15,8 +15,11 @@ import type { Logger } from "../log";
 export interface EveLinkOptions {
   /** Base URL of the eve app (e.g. http://127.0.0.1:2000 or https://owy.vercel.app). */
   url: string;
-  /** Basic auth for the channel routes (required outside `eve dev`). */
-  basic?: { username: string; password: string } | null;
+  /**
+   * The device's OWU API key (OWY_API_KEY), sent to Owy's companion routes: outside `eve dev` they
+   * only take keys the site says may operate Owy (`owy:operate`).
+   */
+  apiKey?: string | null;
   logger: Logger;
   fetch?: typeof fetch;
   /** Hard cap for one turn (model + tools) before the bridge gives up. */
@@ -69,16 +72,14 @@ export class EveLink {
   private readonly log: Logger;
   private readonly turnTimeoutMs: number;
   private readonly base: string;
-  private readonly authHeader: string | null;
+  private readonly apiKey: string | null;
 
   constructor(private readonly options: EveLinkOptions) {
     this.fetchImpl = options.fetch ?? fetch;
     this.log = options.logger;
     this.turnTimeoutMs = options.turnTimeoutMs ?? 90_000;
     this.base = options.url.replace(/\/+$/, "");
-    this.authHeader = options.basic
-      ? `Basic ${Buffer.from(`${options.basic.username}:${options.basic.password}`).toString("base64")}`
-      : null;
+    this.apiKey = options.apiKey ?? null;
   }
 
   async turn(deviceId: string, text: string, options: EveTurnOptions): Promise<EveTurnResult> {
@@ -164,7 +165,7 @@ export class EveLink {
   }
 
   private headers(): Record<string, string> {
-    return this.authHeader ? { authorization: this.authHeader } : {};
+    return this.apiKey ? { "x-api-key": this.apiKey } : {};
   }
 
   private async json(path: string, body: unknown): Promise<unknown> {

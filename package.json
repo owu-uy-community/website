@@ -21,6 +21,7 @@
     "db:seed-venues": "tsx src/lib/db/seed-venues.ts",
     "owy:key": "tsx src/lib/db/create-api-key.ts --owner owy-bot --preset owy",
     "auth:key": "tsx src/lib/db/create-api-key.ts",
+    "auth:migrate-rbac": "tsx src/lib/db/migrate-rbac.ts",
     "db:studio": "drizzle-kit studio",
     "db:triggers": "tsx src/lib/db/apply-triggers.ts",
     "stage:thumbs": "node scripts/stage-thumbs.mjs",

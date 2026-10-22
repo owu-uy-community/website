@@ -232,7 +232,7 @@ describe("community roles", () => {
 
     const refused = await deleteMe();
     expect(refused.status).toBe(400);
-    await expect(refused.text()).resolves.toContain("único owner");
+    await expect(refused.text()).resolves.toContain("único dueño");
     await makeMember(community.id, "owner");
     expect((await deleteMe()).status).toBe(200);
   });
@@ -595,6 +595,47 @@ describe("the waitlist: access requests", () => {
   });
 });
 
+describe("small doors", () => {
+  test("only people who can add someone somewhere may search the OWU Slack's members", async () => {
+    const community = await makeCommunity();
+    const [admin, attendee] = await Promise.all([makeMember(community.id, "admin"), makeSlackUser()]);
+
+    await expect(call(router.access.slackMembers, { q: "ana" }, by(attendee))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    // No Slack token in tests: an empty list, but allowed
+    await expect(call(router.access.slackMembers, { q: "ana" }, by(admin))).resolves.toStrictEqual([]);
+  });
+
+  test("approving site roles for someone not on the OWU Slack leaves them as an invitation", async () => {
+    const [superadmin, asker] = await Promise.all([makePlatformUser("superadmin"), makeUser()]);
+    const { id } = await call(router.access.request, { communityId: null, message: "" }, by(asker));
+
+    await expect(
+      call(
+        router.access.requests.decide,
+        { requestId: id, decision: "approve", grant: { platformRoles: ["staff"] } },
+        by(superadmin)
+      )
+    ).resolves.toMatchObject({ status: "approved", invited: true });
+    await linkSlack(asker.id);
+    await expect(applyInvitations(asker.id)).resolves.toBe(1);
+    await expect(principalOf(asker.id)).resolves.toMatchObject({ roles: ["staff"] });
+  });
+
+  test("a Telegram is unlinked only by its person, never by someone viewing the site as them", async () => {
+    const person = await makeSlackUser();
+    const viewing = by(person);
+    (await viewing.context.getSession())!.session = {
+      ...(await viewing.context.getSession())!.session,
+      impersonatedBy: "someone",
+    } as never;
+
+    await expect(call(router.access.telegram.unlink, undefined, viewing)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.access.telegram.unlink, undefined, by(person))).resolves.toStrictEqual({ success: true });
+  });
+});
+
 describe("API keys and the Owy bot", () => {
   test("P8 nobody mints or lists keys over HTTP; keys only come from the server, for machines", async () => {
     const person = await makeSlackUser();
@@ -700,6 +741,36 @@ describe("API keys and the Owy bot", () => {
     expect(logged).toMatchObject({ via: "delegated", byId: bot.id });
   });
 
+  test("only the old Owy bot's key works before the migration, and it can't act for anyone", async () => {
+    const legacyStaff = await makeSlackUser({ role: "admin" });
+    const [{ key: personal }] = await Promise.all([
+      auth.api.createApiKey({ body: { userId: legacyStaff.id, name: "mine" } }),
+      db
+        .insert(user)
+        .values({
+          id: "owy-bot",
+          name: "Owy",
+          email: "owy@owu.uy",
+          emailVerified: true,
+          role: "admin",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .onConflictDoNothing(),
+    ]);
+    const { key: legacy } = await auth.api.createApiKey({ body: { userId: "owy-bot", name: "owy" } });
+    const staffSlack = (await db.select().from(account).where(eq(account.userId, legacyStaff.id)))[0].accountId;
+
+    await expect(client({ "x-api-key": personal }).communities.mine()).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    const checked = await client({ "x-api-key": legacy, "x-owu-actor": `slack:${staffSlack}` }).access.check({
+      permissions: ["program:manage", "delegation:act-as"],
+    });
+    expect(checked).toMatchObject({
+      actor: { id: "owy-bot", via: "api-key" },
+      allowed: { "program:manage": true, "delegation:act-as": false },
+    });
+  });
+
   test("a key without delegation ignores the actor header", async () => {
     const deck = await makeServiceAccount({ id: "deck-no-delegation" });
     const { key } = await mintServiceKey({
@@ -761,6 +832,22 @@ describe("the audit log", () => {
     expect(entries.map((entry) => entry.action)).toStrictEqual(["staffTasks.create"]);
     expect(entries[0]).toMatchObject({ via: "session", ip: "190.64.1.2", community: { id: community.id } });
     await expect(call(router.access.audit, { limit: 1 }, by(editor))).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a superadmin who lost the OWU Slack can't view the site as someone else", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(OWU_SLACK_REQUIRED_FROM.getTime() + 1000));
+    const [superadmin, person] = await Promise.all([makeUser({ role: "superadmin" }), makeSlackUser()]);
+    const response = await auth.handler(
+      new Request(`${ORIGIN}/api/auth/admin/impersonate-user`, {
+        method: "POST",
+        headers: { cookie: await cookieOf(superadmin.id), "content-type": "application/json", origin: ORIGIN },
+        body: JSON.stringify({ userId: person.id }),
+      })
+    );
+    vi.useRealTimers();
+
+    expect(response.status).toBe(403);
   });
 
   test("impersonation is superadmin-only, never over privileged people, and on the record", async () => {

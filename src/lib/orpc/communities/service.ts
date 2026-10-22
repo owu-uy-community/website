@@ -193,7 +193,7 @@ export const listCommunityMembers = (communityId: string) =>
     Effect.map((rows) => rows.map((row): CommunityMember => ({ ...row, createdAt: row.createdAt.toISOString() })))
   );
 
-const lastOwner = new Conflict({ reason: "last_owner", message: "La comunidad tiene que conservar al menos un owner" });
+const lastOwner = new Conflict({ reason: "last_owner", message: "La comunidad tiene que conservar al menos un dueño" });
 
 /**
  * Membership changes of one community run one at a time: each locks the
@@ -240,6 +240,7 @@ export const addCommunityMember = (input: {
   communityId: string;
   email?: string | undefined;
   slackUserId?: string | undefined;
+  name?: string | undefined;
   role: CommunityRole;
 }) =>
   transaction(
@@ -289,6 +290,7 @@ export const addCommunityMember = (input: {
             role: input.role,
             email,
             slackUserId,
+            name: input.name ?? null,
             invitedById: me.id,
             expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
           })

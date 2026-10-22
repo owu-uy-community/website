@@ -43,11 +43,12 @@ export function StreamDeckPanel() {
       <div className="space-y-3 text-ui">
         <ol className="list-decimal space-y-2 pl-5">
           <li>
-            En el servidor:{" "}
+            En Acceso → Llaves API, una llave nueva con el preset «Stream Deck» (solo dispara presets y maneja OBS); se
+            ve una sola vez. O en el servidor:{" "}
             <code className="rounded-sm bg-raised px-1 font-terminal text-meta">
-              pnpm owy:key -- --name &quot;stream deck&quot;
-            </code>{" "}
-            imprime la clave una sola vez.
+              pnpm auth:key -- --owner stream-deck --preset stream-deck
+            </code>
+            .
           </li>
           <li>
             En Companion: <b>Connections → Generic: HTTP</b>, Base URL{" "}

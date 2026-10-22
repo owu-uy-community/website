@@ -41,8 +41,9 @@ import type { ShellStatus } from "lib/orpc/shell/schemas";
 
 import { openCommandMenu } from "./command-bus";
 import { EventSwitcher } from "./EventSwitcher";
-import { ADMIN_NAV, isNavItemActive, type AdminNavItem, type NavKey } from "./nav-config";
+import { ADMIN_NAV, isNavItemActive, navItemVisible, type AdminNavItem, type NavKey } from "./nav-config";
 import { openShortcutSheet } from "./shortcuts";
+import { useNavViewer } from "./use-access-me";
 import { useShell } from "./use-shell-status";
 import { eventHref, normalizeAdminPath, useSelectedEvent } from "./use-selected-event";
 
@@ -258,17 +259,17 @@ export function AdminSidebar() {
   // Active-state matching works on the canonical href, with the community
   // segment stripped from the current path.
   const normalizedPath = normalizeAdminPath(pathname, communitySlug);
-  const siteAdmin = status?.me.siteAdmin ?? true;
+  // Unknown until access.me answers: the menu holds skeleton rows rather than guess.
+  const viewer = useNavViewer();
   // Community staff get their day first; the planning pages are site staff only.
-  const ordered = siteAdmin
+  const ordered = viewer?.siteAdmin
     ? ADMIN_NAV
     : [...ADMIN_NAV.filter((group) => group.key === "day"), ...ADMIN_NAV.filter((group) => group.key !== "day")];
-  const groups = ordered
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => siteAdmin || item.audience === "staff"),
-    }))
-    .filter((group) => group.items.length > 0);
+  const groups = viewer
+    ? ordered
+        .map((group) => ({ ...group, items: group.items.filter((item) => navItemVisible(item, viewer)) }))
+        .filter((group) => group.items.length > 0)
+    : [];
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -293,6 +294,13 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="scrollbar-thin gap-0 pt-2">
+        {viewer ? null : (
+          <div aria-hidden className="space-y-1.5 px-2 py-1.5">
+            {Array.from({ length: 8 }, (_, index) => (
+              <Skeleton key={index} className="h-[30px] rounded-[7px] pointer-coarse:h-10" />
+            ))}
+          </div>
+        )}
         {groups.map((group) => (
           <SidebarGroup key={group.key} className="py-1.5">
             {group.label ? (

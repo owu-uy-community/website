@@ -44,8 +44,6 @@ const EnvSchema = z.object({
    */
   COMPANION_BRAIN: z.enum(["eve", "local"]).optional(),
   COMPANION_EVE_URL: z.string().url().optional(),
-  COMPANION_EVE_BASIC_USER: z.string().optional(),
-  COMPANION_EVE_BASIC_PASSWORD: z.string().optional(),
   /** Seconds of silence after which the device's eve conversation is retired (next visitor starts fresh). */
   COMPANION_EVE_IDLE_RESET_S: z.coerce.number().int().min(10).default(180),
   /** Laptop audio: ms from a frame leaving the pacer to it being heard in the browser (mouth sync). */

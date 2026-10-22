@@ -26,9 +26,9 @@ export default defineTool({
     includeJobs: z.boolean().default(true).describe("false para no mencionar las búsquedas de la semana"),
   }),
   label: { start: () => "Guardar el borrador del Semanario" },
-  approval: staffOrSchedule(),
+  approval: staffOrSchedule("semanario:write"),
   async execute({ title, intro, threads, includeJobs }, ctx) {
-    requireStaffOrSchedule(ctx);
+    await requireStaffOrSchedule(ctx, "semanario:write");
     const inputs = await collectSemanarioInputs();
     const byPermalink = new Map(inputs.threads.map((thread) => [thread.permalink, thread]));
 
@@ -41,7 +41,7 @@ export default defineTool({
         : [];
     });
 
-    const issue = await owuApi().semanario.saveDraft({
+    const issue = await owuApi(ctx).semanario.saveDraft({
       weekStart: inputs.weekStart,
       title,
       intro,

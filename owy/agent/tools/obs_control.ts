@@ -47,10 +47,10 @@ export default defineTool({
     muted: z.boolean().optional().describe("Para mute: true = silenciar, false = activar; sin valor = alternar"),
     outputAction: z.enum(["start", "stop"]).optional().describe("Para stream/record"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("obs:operate"),
   async execute(input, ctx) {
-    requireStaff(ctx);
-    const api = owuApi();
+    await requireStaff(ctx, "obs:operate");
+    const api = owuApi(ctx);
 
     // Live commands go through the command bus; the connected control tab runs them.
     const live = await liveCommand(input, api);

@@ -14,10 +14,10 @@ export default defineTool({
       .describe("open: sin tomar · in_progress: alguien lo tiene · resolved: cerrados. Omitir = todo lo que sigue sin resolver"),
   }),
   async execute({ status }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "incident:read", (await resolveActiveEvent()).id);
     const event = await resolveActiveEvent();
 
-    const incidents = await owuApi().incidents.list({ eventId: event.id, ...(status ? { status } : {}) });
+    const incidents = await owuApi(ctx).incidents.list({ eventId: event.id, ...(status ? { status } : {}) });
     const shown = status ? incidents : incidents.filter((incident) => incident.status !== "resolved");
     const confidential = shown.filter((incident) => incident.sensitive).length;
 

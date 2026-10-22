@@ -92,6 +92,7 @@ export const InvitationSchema = z.object({
   role: z.string(),
   email: z.string().nullable(),
   slackUserId: z.string().nullable(),
+  name: z.string().nullable(),
   note: z.string(),
   status: z.enum(["pending", "accepted", "revoked"]),
   invitedBy: z.object({ id: z.string(), name: z.string() }).nullable(),
@@ -103,6 +104,7 @@ export const CreatePlatformInvitationSchema = z
   .object({
     email: z.email().optional(),
     slackUserId: SlackUserIdSchema.optional(),
+    name: z.string().trim().max(120).optional(),
     roles: z.array(PlatformRoleSchema).min(1),
     note: z.string().trim().max(300).default(""),
     days: z.number().int().min(1).max(180).default(30),
@@ -187,7 +189,7 @@ export const CreateApiKeySchema = z.object({
     .regex(/^[a-z0-9][a-z0-9-]{1,39}$/, "Un id corto: minúsculas, números y guiones"),
   ownerName: z.string().trim().min(1).max(60).optional(),
   name: z.string().trim().min(1).max(60),
-  preset: z.enum(["owy", "stream-deck", "companion"]).optional(),
+  preset: z.enum(["owy", "owy-operator", "stream-deck", "companion"]).optional(),
   permissions: GrantsSchema.optional(),
   days: z.number().int().min(1).max(730).default(365),
 });
@@ -228,7 +230,10 @@ export const CheckSchema = z.object({
 });
 
 export const LinkTelegramSchema = z.object({
-  code: z.string().min(10).max(400),
+  code: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z0-9]{8}$/, "El código son 8 letras y números"),
   telegramUserId: z.string().regex(/^\d{3,20}$/),
 });
 

@@ -167,7 +167,7 @@ export function toWireError(error: unknown, scope: { path: readonly string[]; us
   // The database's own last-owner rule (src/lib/db/triggers.ts)
   if (pg?.constraint === "community_keeps_owner") {
     return new ORPCError("CONFLICT", {
-      message: "La comunidad tiene que conservar al menos un owner",
+      message: "La comunidad tiene que conservar al menos un dueño",
       data: { reason: "last_owner" },
     });
   }

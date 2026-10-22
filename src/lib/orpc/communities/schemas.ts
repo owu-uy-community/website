@@ -107,6 +107,8 @@ export const AddCommunityMemberSchema = z
       .string()
       .regex(/^[UW][A-Z0-9]{6,}$/, "Usuario de Slack inválido")
       .optional(),
+    /** Their Slack name, from the picker: how the invitation reads until they sign in. */
+    name: z.string().trim().max(120).optional(),
     role: CommunityRoleSchema.default("member"),
   })
   .refine((input) => Boolean(input.email || input.slackUserId), "Indicá un email o un usuario de Slack");

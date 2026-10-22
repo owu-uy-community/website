@@ -14,7 +14,9 @@ import { withPlatformRoles } from "./people";
  */
 export const KEY_PRESETS = {
   /** The Owy bot: acts for the person talking to it, never beyond what that person may do. */
-  owy: PLATFORM_ROLE_GRANTS.service,
+  owy: { ...PLATFORM_ROLE_GRANTS.service, owy: [] },
+  /** Whoever runs Owy's console (its HTTP channel): only that. */
+  "owy-operator": { owy: ["operate"] },
   /** A Stream Deck on the stage: fire presets and drive OBS, nothing else. */
   "stream-deck": { stage: ["fire-preset"], obs: ["read", "operate"] },
   /** A physical Owy companion: talks and board as the bot does, for whoever is in front of it. */
@@ -25,6 +27,8 @@ export const KEY_PRESETS = {
     incident: ["report"],
     stage: ["read", "operate"],
     delegation: ["act-as"],
+    // Its bridge calls Owy's companion routes with this same key
+    owy: ["operate"],
   },
 } as const satisfies Record<string, Grants>;
 

@@ -44,6 +44,7 @@ export default defineConfig({
         "src/lib/db/seed.ts",
         "src/lib/db/create-api-key.ts",
         "src/lib/db/apply-triggers.ts",
+        "src/lib/db/migrate-rbac.ts",
       ],
     },
     projects: [

@@ -121,6 +121,9 @@ function personPrincipal(person: Person, via: Principal["via"], byId: string | n
   };
 }
 
+/** The Owy bot's account from before service accounts (see `pnpm owy:key`). */
+const LEGACY_BOT_ID = "owy-bot";
+
 /** The header the Owy bot names the person it acts for with: "slack:U…", "telegram:123" or "anonymous". */
 export const ACTOR_HEADER = "x-owu-actor";
 
@@ -165,12 +168,15 @@ export async function principalFor(session: Session | null, headers?: Headers): 
     .select({ permissions: apikey.permissions })
     .from(apikey)
     .where(eq(apikey.id, session.session.id));
-  // ponytail: the Owy bot's key predates service accounts (owner role "admin", no permissions) and
-  // must keep working between the deploy and the data migration; `pnpm auth:migrate-rbac` ends it.
-  const legacyBotKey = person.role === "admin" && !row?.permissions;
+  // ponytail: the Owy bot's key predates service accounts (owner `owy-bot` with role "admin", no
+  // permissions) and must keep working between the deploy and the data migration, which ends it.
+  // Only that account, and never acting for someone else: a legacy key can't hide who's behind it.
+  const legacyBotKey = person.id === LEGACY_BOT_ID && person.role === "admin" && !row?.permissions;
   if (person.banned || !(legacyBotKey || platformRolesOf(person.role).includes("service"))) return null;
   const service = personPrincipal({ ...person, role: "service" }, "api-key", null);
-  const ceiling = row?.permissions ? sanitizeGrants(JSON.parse(row.permissions)) : service.platform;
+  const ceiling = row?.permissions
+    ? sanitizeGrants(JSON.parse(row.permissions))
+    : { ...service.platform, delegation: [] };
   const keyed: Principal = { ...service, ceiling: intersectGrants(ceiling, service.platform) };
 
   const actor = headers?.get(ACTOR_HEADER);

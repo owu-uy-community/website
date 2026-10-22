@@ -16,6 +16,7 @@ import {
   PenLine,
   PiggyBank,
   Settings,
+  ShieldCheck,
   Siren,
   StickyNote,
   Timer,
@@ -25,6 +26,8 @@ import {
   type LucideIcon,
   Warehouse,
 } from "lucide-react";
+
+import type { Permission } from "lib/authz/catalog";
 
 export type NavKey =
   | "hoy"
@@ -45,6 +48,7 @@ export type NavKey =
   | "espacios"
   | "semanario"
   | "encuesta"
+  | "acceso"
   | "ajustes";
 
 export type AdminNavItem = {
@@ -59,8 +63,10 @@ export type AdminNavItem = {
   keywords?: string[];
   /** Operates on the selected event: lives under the event's community. */
   scoped?: boolean;
-  /** Site staff only (default), or anyone on the community's staff. */
+  /** Site staff only (default), or anyone on the community's staff. Ignored when `requires` is set. */
   audience?: "site" | "staff";
+  /** Shown to whoever holds any of these platform permissions (access.me), whatever their audience. */
+  requires?: readonly Permission[];
   /** Second key after G ("G A" → Agenda). */
   go?: string;
 };
@@ -251,6 +257,14 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         keywords: ["sueldos", "salarios", "survey", "datos abiertos"],
       },
       {
+        key: "acceso",
+        title: "Acceso",
+        href: "/admin/acceso",
+        icon: ShieldCheck,
+        requires: ["claim:read", "user:list", "apiKey:read", "audit:read"],
+        keywords: ["personas", "roles", "permisos", "pedidos", "invitaciones", "llaves", "api", "auditoría"],
+      },
+      {
         key: "ajustes",
         title: "Ajustes",
         href: "/admin/settings",
@@ -262,6 +276,15 @@ export const ADMIN_NAV: AdminNavGroup[] = [
 ];
 
 export const NAV_ITEMS: AdminNavItem[] = ADMIN_NAV.flatMap((group) => group.items);
+
+/** Who the nav is drawn for: site staff or not, and their platform permissions. */
+export type NavViewer = { siteAdmin: boolean; permissions: readonly string[] };
+
+export function navItemVisible(item: AdminNavItem, viewer: NavViewer): boolean {
+  if (item.requires) return item.requires.some((permission) => viewer.permissions.includes(permission));
+
+  return viewer.siteAdmin || item.audience === "staff";
+}
 
 export type AdminTool = { title: string; href: string; icon: LucideIcon; keywords?: string[] };
 

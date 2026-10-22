@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { db } from "../../lib/db";
 import * as schema from "../../lib/db/schema";
 import { sendEmail } from "../../lib/email/send";
@@ -40,6 +40,7 @@ const SERVER_ONLY_PATHS = [
   "/admin/list-user-sessions",
   "/admin/revoke-user-session",
   "/admin/revoke-user-sessions",
+  "/admin/has-permission",
 ];
 
 /**
@@ -105,7 +106,7 @@ export const auth = betterAuth({
         const orphaned = await soleOwnerOf(user.id);
         if (orphaned.length > 0) {
           throw new APIError("BAD_REQUEST", {
-            message: `Sos el único owner de ${orphaned.join(", ")}: pasale el rol a alguien más antes de borrar tu cuenta.`,
+            message: `Sos el único dueño de ${orphaned.join(", ")}: pasale el rol a alguien más antes de borrar tu cuenta.`,
           });
         }
         await Effect.runPromiseWith(liveServices)(forget(user.id));
@@ -115,6 +116,10 @@ export const auth = betterAuth({
   account: {
     accountLinking: {
       enabled: true,
+      // Linking your Slack from /acceso while signed in with an email code: the Slack account may use
+      // another address (roles need the OWU Slack, whatever email you signed in with). Only the
+      // explicit link flow, by someone already signed in, uses this.
+      allowDifferentEmails: true,
     },
     additionalFields: {
       slackTeamId: { type: "string", required: false, input: false },
@@ -201,6 +206,23 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      // Better Auth checks impersonation against the role on record; ours also applies bans, the
+      // OWU Slack requirement and a fresh read of the role (src/lib/authz/principal.ts)
+      if (ctx.path === "/admin/impersonate-user") {
+        const { principalFor, can } = await import("../../lib/authz/principal");
+        const session = ctx.headers
+          ? await getSessionFromCtx(ctx, { disableCookieCache: true }).catch(() => null)
+          : null;
+        if (
+          !(await can(
+            await principalFor(session as Parameters<typeof principalFor>[0], ctx.headers),
+            "user:impersonate"
+          ))
+        ) {
+          throw new APIError("FORBIDDEN", { message: "No podés ver el sitio como otra persona" });
+        }
+        return;
+      }
       if (!ctx.path || !SENDS_CODE.has(ctx.path)) return;
       const email = String((ctx.body as { email?: unknown } | undefined)?.email ?? "")
         .trim()

@@ -36,7 +36,7 @@ aplican al emulador; las acciones del evento requieren permisos explícitos y
 - ESPHome 2026.8.2 para esta versión. Revalidar el parche I2S antes de actualizar.
 - `AI_GATEWAY_API_KEY` (Vercel AI Gateway): el modelo por defecto es `gateway:google/gemini-3.8-live`.
   Sólo hace falta `GOOGLE_GENERATIVE_AI_API_KEY` si elegís el proveedor directo (`google:…`).
-- La key de la API del sitio: `pnpm owy:key -- --name companion` en la raíz del repo (una key propia, revocable aparte).
+- La llave de la API del sitio, una por dispositivo: `pnpm auth:key -- --owner companion-<lugar> --preset companion --name "Owy <lugar>"` en la raíz del repo (o /admin/acceso → Llaves API). Vale también para hablar con las rutas `/companion/*` de eve; revocable aparte.
 
 ## Firmware
 
@@ -285,11 +285,9 @@ AI_GATEWAY_API_KEY=...                                 # voz: gateway:google/gem
 COMPANION_DEVICES=owy-1@owy-companion.local#secrets   # id@host[:port][#psk]; "#secrets" lee api_key de firmware/secrets.yaml
 # cerebro eve (recomendado): el mismo Owy de Slack/Telegram contesta
 COMPANION_EVE_URL=https://<owy>.vercel.app             # o http://127.0.0.1:2000 con `eve dev`
-COMPANION_EVE_BASIC_USER=...                           # = ROUTE_AUTH_BASIC_USER/PASSWORD del deploy de eve (no hace falta contra eve dev)
-COMPANION_EVE_BASIC_PASSWORD=...
 # cerebro local (sin eve): las tools de la grilla corren en el bridge
 OWU_API_URL=https://owu.uy                             # o http://localhost:3000 con el sitio local
-OWY_API_KEY=owy...
+OWY_API_KEY=companion...                               # la llave del dispositivo (preset companion): API del sitio y rutas de eve
 OWY_EVENT_ID=owu-conf-2026                             # id o slug; sin esto usa el evento más reciente
 # caras mientras habla (opcional; usa la misma AI_GATEWAY_API_KEY)
 COMPANION_EXPRESSIONS=jev                              # jev (default) · guess (sólo estimación local) · off
@@ -329,7 +327,7 @@ El modelo realtime siempre es **oídos y boca**. Quién *piensa* lo decide `COMP
 | Quién contesta | **El Owy de eve** (`agent/`): mismas instrucciones, knowledge, tools, skills, gating de staff y memoria que Slack/Telegram | El modelo realtime con `agent/instructions.md` + knowledge inline + las tools de `agent/tools/*` corridas en el bridge con un shim |
 | Sesión | Una **sesión durable de eve por dispositivo** (`from(deviceId)`): follow-ups con contexto; se retira tras `COMPANION_EVE_IDLE_RESET_S` sin hablar (próximo visitante arranca de cero) | Sólo el contexto de la sesión realtime |
 | Tools en el modelo de voz | `hablar_con_owy` (la conversación), `set_volume`, `show_on_screen` | Todas las de Owy + `propose_talk`, `event_now`, `set_volume`, `show_on_screen` |
-| Necesita | `COMPANION_EVE_URL` (+ Basic auth fuera de `eve dev`) | `OWU_API_URL` + `OWY_API_KEY` en el bridge |
+| Necesita | `COMPANION_EVE_URL` + `OWY_API_KEY` (la llave del dispositivo, fuera de `eve dev`) | `OWU_API_URL` + `OWY_API_KEY` en el bridge |
 
 Cómo funciona en modo `eve`: el prompt del modelo de voz es `bridge/prompts/voice-of-owy.md`
 ("sos la voz; todo se lo pasás a `hablar_con_owy` y decís la `respuesta` textual"). Cada turno el

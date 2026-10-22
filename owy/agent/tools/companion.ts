@@ -4,7 +4,7 @@ import { z } from "zod";
 import companion from "../channels/companion";
 import { findRoom, findSchedule, getBoard } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
-import { isStaff } from "../lib/staff";
+import { isCompanionStaff } from "../lib/staff";
 
 /**
  * Tools that only exist when the turn comes from a physical Owy
@@ -42,7 +42,8 @@ export default defineDynamic({
             description: z.string().optional().describe("Una línea opcional sobre el tema"),
           }),
           async execute(input, toolCtx) {
-            const staff = isStaff(toolCtx);
+            // The device unlocked with its PIN is staff mode; the kiosk is anyone (the marketplace rules)
+            const staff = isCompanionStaff(toolCtx);
             const marketplaceOpen = toolCtx.session.auth.current?.attributes?.marketplace_open === "true";
             if (!staff && !marketplaceOpen) {
               return {

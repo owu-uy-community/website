@@ -28,9 +28,9 @@ export default defineTool({
     pendingOnly: z.boolean().optional().describe("true = ocultar las tareas ya terminadas"),
   }),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "task:read", (await resolveActiveEvent()).id);
     const event = await resolveActiveEvent();
-    const api = owuApi();
+    const api = owuApi(ctx);
 
     const [tasks, roster] = await Promise.all([
       api.staffTasks.list({ eventId: event.id }),

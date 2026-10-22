@@ -217,6 +217,7 @@ export const PLATFORM_ROLE_GRANTS = {
     semanario: ["read", "write"],
     insight: ["read"],
     delegation: ["act-as"],
+    owy: ["operate"],
   },
   user: {},
 } as const satisfies Record<string, Grants>;

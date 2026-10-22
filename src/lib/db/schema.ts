@@ -278,6 +278,8 @@ export const invitations = pgTable(
     role: text("role").notNull(),
     email: text("email"),
     slackUserId: text("slackUserId"),
+    /** How the invitee reads in lists before they sign in (their Slack name). */
+    name: text("name"),
     note: text("note").notNull().default(""),
     status: text("status").$type<"pending" | "accepted" | "revoked">().notNull().default("pending"),
     invitedById: text("invitedById").references(() => user.id, { onDelete: "set null" }),

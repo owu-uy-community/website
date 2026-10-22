@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
+import { signInAgain } from "app/lib/auth-helpers";
 import { TicketView } from "components/community/event/TicketView";
 import { SiteChrome } from "components/community/SiteChrome";
 import { callerFor, publicCaller } from "lib/orpc/server";
@@ -35,7 +36,7 @@ export default async function TicketPage({
       .rsvps.myTicket({ eventId: event.id })
       .catch((error: { code?: string }) => {
         if (error.code === "UNAUTHORIZED")
-          redirect(`/login?next=/comunidad/${communitySlug}/events/${eventSlug}/entrada`);
+          return signInAgain(`/comunidad/${communitySlug}/events/${eventSlug}/entrada`);
         return null;
       });
   }

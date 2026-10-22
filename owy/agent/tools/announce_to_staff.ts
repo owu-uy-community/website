@@ -15,11 +15,11 @@ export default defineTool({
       .optional()
       .describe("Si se indica, el aviso va solo a quienes están en esa tarea (id o parte del título)"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("announcement:manage", { inEvent: true }),
   async execute({ body, urgent, task }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "announcement:manage", (await resolveActiveEvent()).id);
     const event = await resolveActiveEvent();
-    const api = owuApi();
+    const api = owuApi(ctx);
 
     let taskId: string | undefined;
     let taskTitle: string | undefined;

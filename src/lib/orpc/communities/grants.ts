@@ -31,8 +31,12 @@ export const roleGrantsIn = (communityId: string, role: string) =>
     return custom ? communityPart(sanitizeGrants(custom.permission)) : null;
   });
 
-export const ownersOnly = new Forbidden({ message: "Solo un owner de la comunidad puede cambiar a otro owner" });
-export const adminsOnly = new Forbidden({ message: "Solo un owner de la comunidad puede cambiar a un admin" });
+export const ownersOnly = new Forbidden({
+  message: "Solo un dueño de la comunidad puede nombrar o cambiar a otro dueño",
+});
+export const adminsOnly = new Forbidden({
+  message: "Solo un dueño de la comunidad puede nombrar o cambiar a un admin",
+});
 const noEscalation = new Forbidden({ message: "No podés dar un rol con más permisos que los que tenés vos" });
 const notYourself = new Forbidden({ message: "No podés subirte el rol a vos mismo" });
 

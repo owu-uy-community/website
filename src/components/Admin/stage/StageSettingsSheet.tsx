@@ -388,9 +388,9 @@ export function StageSettingsSheet({
               <FieldDescription className="text-xs">
                 Un POST a <code className={CODE}>…/preset/3</code> pone el preset 3 en preview y{" "}
                 <code className={CODE}>…/preset/3/air</code>, al aire. Va con el header{" "}
-                <code className={CODE}>x-api-key</code> (la clave de <code className={CODE}>pnpm owy:key</code>, la
-                misma que en Pantalla OBS). El número cambia si reordenás; la URL de «⋯ → Copiar URL Stream Deck» usa el
-                id del preset, que no cambia.
+                <code className={CODE}>x-api-key</code> (una llave con el preset «Stream Deck» de Acceso → Llaves API,
+                la misma que en Pantalla OBS). El número cambia si reordenás; la URL de «⋯ → Copiar URL Stream Deck» usa
+                el id del preset, que no cambia.
               </FieldDescription>
             </Field>
           </TabsContent>

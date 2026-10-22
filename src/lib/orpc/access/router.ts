@@ -102,7 +102,12 @@ export const accessRouter = {
       .meta(docs("Approve (granting a role) or reject an access request"))
       .input(DecideRequestSchema)
       .output(
-        z.object({ id: z.string(), status: z.enum(["approved", "rejected"]), grantedRole: z.string().nullable() })
+        z.object({
+          id: z.string(),
+          status: z.enum(["approved", "rejected"]),
+          grantedRole: z.string().nullable(),
+          invited: z.boolean(),
+        })
       )
       .effect(function* ({ input }) {
         return yield* Access.decideRequest(input);

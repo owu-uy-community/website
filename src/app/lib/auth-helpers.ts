@@ -1,6 +1,6 @@
 import "server-only";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 
@@ -26,12 +26,22 @@ export const currentPrincipal = cache(async (): Promise<Principal | null> => pri
 /** The session of the page being rendered, fresh (see sessionFor). */
 export const currentSession = cache(async () => sessionFor(await headers()));
 
+/**
+ * Off to sign in, and back to `next` afterwards. A cookie whose session ended on the server
+ * (revoked, suspended) is cleared first: the proxy bounces anyone with that cookie away from /login,
+ * straight back here.
+ */
+export async function signInAgain(next?: string): Promise<never> {
+  const query = next ? `?next=${encodeURIComponent(next)}` : "";
+  const stale = (await cookies()).getAll().some((cookie) => cookie.name.endsWith("better-auth.session_token"));
+
+  redirect(stale ? `/api/session/expired${query}` : `/login${query}`);
+}
+
 /** Signed in, or off to the login page (and back here afterwards, when `next` is given). */
 export async function requireSignedIn(next?: string) {
   const [session, principal] = await Promise.all([currentSession(), currentPrincipal()]);
-  if (!session || !principal || principal.banned) {
-    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
-  }
+  if (!session || !principal || principal.banned) return signInAgain(next);
 
   return { session, principal };
 }

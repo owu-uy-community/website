@@ -3,7 +3,8 @@ import { ratelimit } from "@orpc/ratelimit";
 import { Effect } from "effect";
 import * as z from "zod";
 
-import { authed, inCommunity, platform, pub, type AuthedContext } from "../base";
+import { can } from "../../authz/principal";
+import { authed, inCommunity, platform, principalOf, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
 import {
   AddCommunityMemberSchema,
@@ -63,9 +64,12 @@ export const communitiesRouter = {
     .input(ListCommunitiesSchema)
     .output(z.array(CommunitySchema))
     .effect(function* ({ input, context }) {
-      const session = yield* Effect.promise(() => context.getSession());
+      // Inactive ones only for whoever may list every community (site staff, moderators)
+      const everything =
+        input?.includeInactive === true &&
+        (yield* Effect.promise(async () => can(await principalOf(context), "organization:list")));
 
-      return yield* Communities.listCommunities(input?.includeInactive === true && session?.user.role === "admin");
+      return yield* Communities.listCommunities(everything);
     }),
 
   listForAdmin: platform("organization:list")
@@ -253,7 +257,12 @@ export const communitiesRouter = {
       )
       .use(inCommunity("member:create"))
       .output(
-        z.object({ id: z.string(), status: z.enum(["approved", "rejected"]), grantedRole: z.string().nullable() })
+        z.object({
+          id: z.string(),
+          status: z.enum(["approved", "rejected"]),
+          grantedRole: z.string().nullable(),
+          invited: z.boolean(),
+        })
       )
       .effect(function* ({ input }) {
         return yield* Access.decideRequest({

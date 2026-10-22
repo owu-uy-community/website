@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+
 import { and, count, desc, eq, ilike, isNull, lt, max, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { Effect } from "effect";
@@ -26,10 +28,10 @@ import {
   invitations,
   session,
   user,
+  verification,
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
 import { accessInviteEmail, accessRequestDecidedEmail } from "../../email/templates";
-import { readLink, signLink } from "../../links";
 import { checkGrant, holdsOwuSlack } from "../communities/grants";
 import { query, transaction } from "../db";
 import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
@@ -283,6 +285,8 @@ export const decideRequest = (input: {
       if (request.userId === actor.id) return yield* new Forbidden({ message: "No podés aprobar tu propio pedido" });
 
       let grantedRole: string | null = null;
+      // Approved, but waiting for them to sign in with the OWU Slack
+      let invited = false;
       if (input.decision === "approve") {
         const grant =
           input.grant ?? (request.communityId ? { communityId: request.communityId, role: "member" } : null);
@@ -291,7 +295,26 @@ export const decideRequest = (input: {
           return yield* new Forbidden({ message: "Desde la comunidad solo se dan roles de la comunidad" });
         }
         if ("platformRoles" in grant) {
-          yield* applyPlatformRoles(request.userId, grant.platformRoles, []);
+          if (needsOwuSlack(grant.platformRoles) && !(yield* holdsOwuSlack(request.userId))) {
+            // Not on the OWU Slack yet: the roles wait for them, as an invitation the same checks allow
+            yield* mayGrantPlatformRoles(grant.platformRoles);
+            const [person] = yield* query((db) =>
+              db.select({ email: user.email }).from(user).where(eq(user.id, request.userId))
+            );
+            yield* query((db) =>
+              db.insert(invitations).values({
+                communityId: null,
+                role: grant.platformRoles.join(","),
+                email: person?.email ?? null,
+                invitedById: actor.id,
+                note: "Pedido de acceso aprobado",
+                expiresAt: new Date(Date.now() + 30 * DAY),
+              })
+            );
+            invited = true;
+          } else {
+            yield* applyPlatformRoles(request.userId, grant.platformRoles, []);
+          }
           grantedRole = grant.platformRoles.join(",");
         } else {
           if (input.scopeCommunityId !== undefined && grant.communityId !== input.scopeCommunityId) {
@@ -314,6 +337,7 @@ export const decideRequest = (input: {
                 expiresAt: new Date(Date.now() + 30 * DAY),
               })
             );
+            invited = true;
           }
           grantedRole = grant.role;
         }
@@ -350,6 +374,7 @@ export const decideRequest = (input: {
         id: request.id,
         status: input.decision === "approve" ? ("approved" as const) : ("rejected" as const),
         grantedRole,
+        invited,
       };
     })
   );
@@ -363,17 +388,24 @@ export const decideRequest = (input: {
  * never leaving the site without a superadmin, and privileged roles only for people on the OWU
  * Slack (service accounts excepted: machines aren't on Slack).
  */
+/** Site roles are given only with `user:set-role`, and never one holding more than the giver does. */
+const mayGrantPlatformRoles = (roles: readonly PlatformRole[]) =>
+  Effect.gen(function* () {
+    const actor = yield* CurrentUser;
+    const mine = platformGrants(actor.principal);
+    if (!grantsHold(mine, "user:set-role")) {
+      return yield* new Forbidden({ message: "No tenés permiso para cambiar roles del sitio" });
+    }
+    if (!grantsWithin(platformGrantsOf(roles), mine)) {
+      return yield* new Forbidden({ message: "No podés dar ni sacar un rol con más permisos que los tuyos" });
+    }
+  });
+
 const applyPlatformRoles = (userId: string, add: readonly PlatformRole[], remove: readonly PlatformRole[]) =>
   Effect.gen(function* () {
     const actor = yield* CurrentUser;
     if (userId === actor.id) return yield* new Forbidden({ message: "No podés cambiar tus propios roles" });
-    if (!grantsHold(platformGrants(actor.principal), "user:set-role")) {
-      return yield* new Forbidden({ message: "No tenés permiso para cambiar roles del sitio" });
-    }
-    const mine = platformGrants(actor.principal);
-    if (!grantsWithin(platformGrantsOf([...add, ...remove]), mine)) {
-      return yield* new Forbidden({ message: "No podés dar ni sacar un rol con más permisos que los tuyos" });
-    }
+    yield* mayGrantPlatformRoles([...add, ...remove]);
     const [target] = yield* query((db) =>
       db.select({ role: user.role }).from(user).where(eq(user.id, userId)).for("update")
     );
@@ -465,6 +497,7 @@ export const listInvitations = (input: { communityId?: string | null; status?: I
         role: invitation.role,
         email: invitation.email,
         slackUserId: invitation.slackUserId,
+        name: invitation.name,
         note: invitation.note,
         status: invitation.status,
         invitedBy: inviterId ? { id: inviterId, name: inviterName! } : null,
@@ -478,6 +511,7 @@ export const listInvitations = (input: { communityId?: string | null; status?: I
 export const createPlatformInvitation = (input: {
   email?: string | undefined;
   slackUserId?: string | undefined;
+  name?: string | undefined;
   roles: PlatformRole[];
   note: string;
   days: number;
@@ -499,6 +533,7 @@ export const createPlatformInvitation = (input: {
             role: roles.join(","),
             email,
             slackUserId: input.slackUserId ?? null,
+            name: input.name ?? null,
             note: input.note,
             invitedById: actor.id,
             expiresAt: new Date(Date.now() + input.days * DAY),
@@ -933,18 +968,38 @@ export const telegramCode = () =>
     if (actor.via !== "session")
       return yield* new Forbidden({ message: "Solo una persona puede vincular su Telegram" });
     const expiresAt = new Date(Date.now() + 10 * 60_000);
+    // Short enough to type on a phone (and to fit a t.me start link); kept like Better Auth keeps
+    // its own one-time codes, in its verification table
+    const code = Array.from({ length: 8 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+    yield* query((db) =>
+      db.insert(verification).values({
+        id: crypto.randomUUID(),
+        identifier: `telegram-link:${code}`,
+        value: actor.id,
+        expiresAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+    );
 
-    return {
-      code: yield* Effect.promise(() => signLink("telegram-link", actor.id, expiresAt)),
-      expiresAt: expiresAt.toISOString(),
-    };
+    return { code, expiresAt: expiresAt.toISOString() };
   });
+
+/** No 0/O, 1/I/L: read aloud or typed, nothing to confuse. */
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
 /** The bot links the Telegram account it got the code from to the person who made the code. */
 export const linkTelegram = (input: { code: string; telegramUserId: string }) =>
   transaction(
     Effect.gen(function* () {
-      const userId = yield* Effect.promise(() => readLink("telegram-link", input.code));
+      // One use: the code is gone as soon as it's read
+      const [claimed] = yield* query((db) =>
+        db
+          .delete(verification)
+          .where(eq(verification.identifier, `telegram-link:${input.code.trim().toUpperCase()}`))
+          .returning({ userId: verification.value, expiresAt: verification.expiresAt })
+      );
+      const userId = claimed && claimed.expiresAt.getTime() > Date.now() ? claimed.userId : null;
       if (!userId) return yield* new Invalid({ message: "Ese código no sirve o ya venció: generá otro en owu.uy" });
       const [taken] = yield* query((db) =>
         db
@@ -981,9 +1036,12 @@ export const linkTelegram = (input: { code: string; telegramUserId: string }) =>
 export const unlinkTelegram = () =>
   Effect.gen(function* () {
     const actor = yield* CurrentUser;
+    // Only the person, from their own session: not a bot, not someone viewing the site as them
+    if (actor.via !== "session") return yield* new Forbidden({ message: "Solo vos podés desvincular tu Telegram" });
     yield* query((db) =>
       db.delete(account).where(and(eq(account.userId, actor.id), eq(account.providerId, "telegram")))
     );
+    yield* record({ action: "identity.unlink_telegram", targetType: "user", targetId: actor.id });
 
     return { success: true as const };
   });

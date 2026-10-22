@@ -2,16 +2,29 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Info, Keyboard, LogOut, Radio, RefreshCw, UserRound } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowUpRight,
+  Info,
+  Keyboard,
+  LogOut,
+  MonitorSmartphone,
+  Radio,
+  RefreshCw,
+  Send,
+  UserRound,
+} from "lucide-react";
 
-import { signOut } from "app/lib/auth-client";
+import { authClient, signOut } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
+import { deviceOf } from "components/Admin/access/shared";
+import { useAccessMe } from "components/Admin/shell/use-access-me";
 import { KeyHint, openShortcutSheet } from "components/Admin/shell/shortcuts";
 import {
   SettingsCard,
   SettingsLayout,
   SettingsRow,
+  SettingsRowsSkeleton,
   SettingsSection,
   type SettingsSectionLink,
 } from "components/Admin/settings/settings";
@@ -19,6 +32,7 @@ import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { PersonAvatar } from "components/Admin/ui/person";
 import { ErrorState } from "components/Admin/ui/states";
 import { StatusDot, useRealtimeStatus } from "components/Admin/ui/status";
+import { RelativeTime } from "components/Admin/ui/time";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Kbd } from "components/shared/ui/kbd";
@@ -29,6 +43,8 @@ import { orpc } from "lib/orpc";
 
 const SECTIONS: SettingsSectionLink[] = [
   { id: "cuenta", label: "Cuenta", icon: UserRound },
+  { id: "sesiones", label: "Sesiones", icon: MonitorSmartphone },
+  { id: "telegram", label: "Telegram", icon: Send },
   { id: "tiempo-real", label: "Tiempo real", icon: Radio },
   { id: "atajos", label: "Atajos", icon: Keyboard },
   { id: "acerca", label: "Acerca de", icon: Info },
@@ -180,7 +196,182 @@ const SHORTCUTS = [
   { keys: "mod+s", label: "Guardar, en las páginas de ajustes" },
 ];
 
-export default function SettingsClient({ user }: { user: { name: string; email: string; image: string | null } }) {
+const SESSIONS_KEY = ["auth", "sessions"];
+
+/** My open sessions (Better Auth), this one first; close one or all the others. */
+function SessionRows({ currentId }: { currentId: string }) {
+  const queryClient = useQueryClient();
+  const sessions = useQuery({
+    queryKey: SESSIONS_KEY,
+    queryFn: async () => {
+      const { data, error } = await authClient.listSessions();
+      if (error) throw new Error(error.message ?? "No se pudieron leer las sesiones");
+      return data;
+    },
+  });
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
+  const close = useMutation({
+    mutationFn: async (token: string | null) => {
+      const { error } = token ? await authClient.revokeSession({ token }) : await authClient.revokeOtherSessions();
+      if (error) throw new Error(error.message ?? "Probá de nuevo en un rato.");
+    },
+    onSuccess: (_, token) => {
+      toast.success(token ? "Sesión cerrada" : "Cerraste las demás sesiones");
+      refresh();
+    },
+    onError: (error) => toast.error("No se pudo cerrar", error.message),
+  });
+
+  if (sessions.isError) {
+    return (
+      <ErrorState
+        retrying={sessions.isFetching}
+        title="No se pudieron leer las sesiones"
+        onRetry={() => void sessions.refetch()}
+      />
+    );
+  }
+  if (!sessions.data) return <SettingsRowsSkeleton rows={2} />;
+  const rows = sessions.data.toSorted((a, b) => Number(b.id === currentId) - Number(a.id === currentId));
+
+  return (
+    <SettingsCard>
+      <ul className="divide-y divide-border">
+        {rows.map((session) => (
+          <li key={session.id} className="flex min-h-11 items-center gap-3 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-ui text-foreground">
+                {deviceOf(session.userAgent)}
+                {session.id === currentId ? <span className="text-muted-foreground"> · esta</span> : null}
+              </p>
+              <p className="truncate text-meta text-muted-foreground">
+                {session.ipAddress ?? "IP desconocida"} · desde{" "}
+                <RelativeTime className="text-meta" date={session.createdAt} />
+              </p>
+            </div>
+            {session.id === currentId ? null : (
+              <Button disabled={close.isPending} size="sm" variant="ghost" onClick={() => close.mutate(session.token)}>
+                Cerrar
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
+      {rows.length > 1 ? (
+        <SettingsRow compact hint="Te deja entrado solo en este dispositivo." label="Las demás">
+          <Button disabled={close.isPending} size="sm" variant="outline" onClick={() => close.mutate(null)}>
+            <LogOut />
+            Cerrar las demás
+          </Button>
+        </SettingsRow>
+      ) : null}
+    </SettingsCard>
+  );
+}
+
+/** Link my Telegram so Owy knows who's writing: a one-time code sent to the bot. */
+function TelegramRows() {
+  const queryClient = useQueryClient();
+  const me = useAccessMe();
+  const refreshMe = () => void queryClient.invalidateQueries({ queryKey: orpc.access.me.key() });
+  const code = useMutation(
+    orpc.access.telegram.code.mutationOptions({
+      onError: (error) => toast.error("No se pudo generar el código", error.message),
+    })
+  );
+  const unlink = useMutation(
+    orpc.access.telegram.unlink.mutationOptions({
+      onSuccess: () => {
+        toast.success("Telegram desvinculado");
+        code.reset();
+        refreshMe();
+      },
+      onError: (error) => toast.error("No se pudo desvincular", error.message),
+    })
+  );
+  const [copied, setCopied] = useState(false);
+
+  if (me.isError) {
+    return <ErrorState retrying={me.isFetching} title="No se pudo leer tu cuenta" onRetry={() => void me.refetch()} />;
+  }
+  if (!me.data) return <SettingsRowsSkeleton rows={1} />;
+
+  if (me.data.telegram) {
+    return (
+      <SettingsCard>
+        <SettingsRow compact hint="Owy sabe que sos vos cuando le escribís por Telegram." label="Vinculado">
+          <Button disabled={unlink.isPending} size="sm" variant="outline" onClick={() => unlink.mutate()}>
+            {unlink.isPending ? "Desvinculando…" : "Desvincular"}
+          </Button>
+        </SettingsRow>
+      </SettingsCard>
+    );
+  }
+
+  const command = code.data ? `/vincular ${code.data.code}` : null;
+
+  return (
+    <SettingsCard>
+      <SettingsRow
+        compact
+        hint="Así Owy sabe que sos vos y te deja hacer lo que tu rol permite."
+        label="Vincular Telegram"
+      >
+        <Button disabled={code.isPending} size="sm" variant="outline" onClick={() => code.mutate()}>
+          {code.isPending ? "Generando…" : command ? "Otro código" : "Generar código"}
+        </Button>
+      </SettingsRow>
+      {command && code.data ? (
+        <div className="space-y-2 border-t border-border py-3">
+          <p className="text-ui text-subtle">
+            Mandale esto a{" "}
+            <a
+              className="text-foreground underline-offset-4 hover:underline"
+              href="https://t.me/owy_bot"
+              rel="noreferrer"
+              target="_blank"
+            >
+              @owy_bot
+            </a>
+            . Vence <RelativeTime className="text-ui" date={code.data.expiresAt} />.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-background px-2.5 py-1.5 font-terminal text-meta text-foreground">
+              {command}
+            </code>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                void navigator.clipboard.writeText(command).then(
+                  () => setCopied(true),
+                  () => toast.error("No se pudo copiar", "Seleccioná el texto y copialo a mano.")
+                )
+              }
+            >
+              {copied ? "Copiado" : "Copiar"}
+            </Button>
+          </div>
+          <Button size="sm" variant="ghost" onClick={refreshMe}>
+            Ya se lo mandé
+          </Button>
+        </div>
+      ) : null}
+    </SettingsCard>
+  );
+}
+
+export default function SettingsClient({
+  user,
+  sessionId,
+  roleLabel,
+}: {
+  user: { name: string; email: string; image: string | null };
+  /** This device's session, marked in the list and never offered to close (that's "Cerrar sesión"). */
+  sessionId: string;
+  /** Their site roles, as they read ("Staff de OWU · Moderación"). */
+  roleLabel: string;
+}) {
   const router = useRouter();
   const inBrowser = useInBrowser();
   const integrations = useQuery(orpc.system.integrations.queryOptions({ staleTime: 60_000 }));
@@ -201,7 +392,10 @@ export default function SettingsClient({ user }: { user: { name: string; email: 
   return (
     <SettingsLayout label="Ajustes" sections={SECTIONS}>
       <PageContainer className="pb-10" size="small">
-        <PageHeader description="Tu cuenta, la conexión en tiempo real y la versión del sitio." title="Ajustes" />
+        <PageHeader
+          description="Tu cuenta y tus sesiones, Telegram, la conexión en tiempo real y la versión del sitio."
+          title="Ajustes"
+        />
 
         <div className="space-y-7">
           <SettingsSection id="cuenta" title="Cuenta">
@@ -212,7 +406,7 @@ export default function SettingsClient({ user }: { user: { name: string; email: 
                   <p className="truncate text-ui font-medium text-foreground">{user.name}</p>
                   <p className="truncate font-terminal text-meta text-muted-foreground">{user.email}</p>
                 </div>
-                <Badge variant="secondary">Staff del sitio</Badge>
+                <Badge variant="secondary">{roleLabel}</Badge>
               </div>
               <SettingsRow
                 compact
@@ -225,6 +419,14 @@ export default function SettingsClient({ user }: { user: { name: string; email: 
                 </Button>
               </SettingsRow>
             </SettingsCard>
+          </SettingsSection>
+
+          <SettingsSection id="sesiones" title="Sesiones">
+            <SessionRows currentId={sessionId} />
+          </SettingsSection>
+
+          <SettingsSection id="telegram" title="Telegram">
+            <TelegramRows />
           </SettingsSection>
 
           <SettingsSection id="tiempo-real" title="Tiempo real">

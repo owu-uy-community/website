@@ -18,9 +18,11 @@ import { openCommandMenu } from "./command-bus";
 import { CommandMenu } from "./CommandMenu";
 import { HEADER_ACTIONS_ID } from "./HeaderActions";
 import { guardedPush } from "./navigation-guard";
-import { NAV_ITEMS } from "./nav-config";
+import { AccessBanners } from "./access-banners";
+import { NAV_ITEMS, navItemVisible } from "./nav-config";
 import { PresenceAvatars, PresenceProvider } from "./presence";
 import { ShortcutListener, ShortcutSheet, useShortcuts } from "./shortcuts";
+import { useNavViewer } from "./use-access-me";
 import { ShellStatusProvider, useShell } from "./use-shell-status";
 import { eventHref } from "./use-selected-event";
 
@@ -31,11 +33,11 @@ const isFocusRoute = (pathname: string | null) => FOCUS_ROUTES.some((route) => p
 /** "G" then a letter jumps to a page, from anywhere in the admin. */
 function NavShortcuts() {
   const router = useRouter();
-  const { scope, status } = useShell();
-  const siteAdmin = status?.me.siteAdmin ?? true;
+  const { scope } = useShell();
+  const viewer = useNavViewer();
 
   useShortcuts([
-    ...NAV_ITEMS.filter((item) => item.go && (siteAdmin || item.audience === "staff")).map((item) => ({
+    ...NAV_ITEMS.filter((item) => item.go && viewer && navItemVisible(item, viewer)).map((item) => ({
       id: `nav.${item.key}`,
       keys: `g ${item.go}`,
       label: `Ir a ${item.title}`,
@@ -63,7 +65,7 @@ function Chrome({ children, urgentHint }: { children: React.ReactNode; urgentHin
   return (
     <PresenceProvider enabled={status?.me.siteAdmin ?? false}>
       <AdminSidebar />
-      <SidebarInset className="min-w-0 [--admin-content-h:calc(100dvh-46px-env(safe-area-inset-top)-var(--admin-banner-h,0px)-var(--admin-tabbar-h,0px))] md:[--admin-content-h:calc(100svh-1rem-48px-var(--admin-banner-h,0px))]">
+      <SidebarInset className="min-w-0 [--admin-content-h:calc(100dvh-46px-env(safe-area-inset-top)-var(--admin-banner-h,0px)-var(--admin-access-banner-h,0px)-var(--admin-tabbar-h,0px))] md:[--admin-content-h:calc(100svh-1rem-48px-var(--admin-banner-h,0px)-var(--admin-access-banner-h,0px))]">
         {/* Insets are 0 in a browser tab; installed as an app (viewport-fit=cover) they clear the notch. */}
         <header className="sticky top-0 z-40 flex h-[calc(46px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border bg-background pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]">
           <SidebarTrigger className="-ml-0.5 size-7 shrink-0 text-muted-foreground hover:text-foreground" />
@@ -88,6 +90,7 @@ function Chrome({ children, urgentHint }: { children: React.ReactNode; urgentHin
             </Button>
           </div>
         </header>
+        <AccessBanners />
         <UrgentBanner hint={urgentHint} />
         <div className="flex min-w-0 flex-1 scrollbar-thin flex-col md:min-h-0 md:overflow-y-auto" id="admin-scroll">
           {/* Room for the phone tab bar, whenever it is on screen (the scenes desk brings its own). */}

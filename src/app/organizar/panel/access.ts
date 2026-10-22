@@ -1,10 +1,9 @@
 import "server-only";
 
 import { and, eq, inArray } from "drizzle-orm";
-import { redirect } from "next/navigation";
 import { cache } from "react";
 
-import { currentPrincipal, currentSession } from "app/lib/auth-helpers";
+import { currentPrincipal, currentSession, signInAgain } from "app/lib/auth-helpers";
 import type { PanelCommunity } from "components/organizar/shell/context";
 import { grantsHold, permissionsOf } from "lib/authz/catalog";
 import { roleLabel } from "lib/authz/labels";
@@ -21,7 +20,7 @@ import { caller } from "lib/orpc/server";
  */
 export const panelAccess = cache(async (next = "/organizar/panel") => {
   const [session, principal] = await Promise.all([currentSession(), currentPrincipal()]);
-  if (!session || !principal || principal.banned) redirect(`/login?next=${encodeURIComponent(next)}`);
+  if (!session || !principal || principal.banned) return signInAgain(next);
 
   const isStaff = grantsHold(platformGrants(principal), "event:read");
   const mine = await caller.communities.mine();
