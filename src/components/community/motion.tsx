@@ -21,7 +21,9 @@ export function MotionRoot({ children }: { children: ReactNode }) {
 
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
-const VIEWPORT = { once: true, amount: 0.2, margin: "0px 0px -48px 0px" } as const;
+// Fire once the block's top edge is a little way into the screen. A share of the block's own height
+// ("amount: 0.2") never arrives for blocks taller than the viewport on a phone, which left them invisible.
+const VIEWPORT = { once: true, amount: "some", margin: "0px 0px -12% 0px" } as const;
 
 export function Reveal({
   children,
@@ -69,7 +71,7 @@ export function Stagger({
       className={className}
       initial="hidden"
       variants={{ hidden: {}, show: { transition: { staggerChildren: interval, staggerDirection: 1 } } }}
-      viewport={{ once: true, amount: 0.12 }}
+      viewport={VIEWPORT}
       whileInView="show"
     >
       {Children.map(children, (child, index) =>
