@@ -18,7 +18,7 @@ import { enqueueEmail } from "../../email/outbox";
 import { appUrl, conflictHeadsUpEmail, eventMessageEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { issues, UNTITLED } from "../../organizar/steps";
-import { eventPagePath, refreshPage } from "../../revalidate";
+import { eventPagePath, refreshEvent } from "../../revalidate";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
@@ -530,7 +530,7 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
 
       yield* queuePush(row);
       const saved = yield* editableOf(row.id);
-      if (saved.status !== "draft") refreshPage(eventPagePath(saved.communitySlug, saved.slug));
+      if (saved.status !== "draft") refreshEvent(saved.communitySlug, saved.slug);
 
       return saved;
     })
@@ -596,7 +596,7 @@ export const publish = (eventId: string) =>
       });
       const event = yield* editableOf(eventId);
 
-      refreshPage(eventPagePath(event.communitySlug, slug));
+      refreshEvent(event.communitySlug, slug);
 
       return { event, path: `/comunidad/${event.communitySlug}/events/${slug}` };
     })
@@ -627,7 +627,7 @@ export const cancel = (input: { eventId: string; reason: string }) =>
       yield* notifyCancelled(row.id);
       yield* queuePush(row, { now: true });
       const cancelled = yield* editableOf(row.id);
-      refreshPage(eventPagePath(cancelled.communitySlug, cancelled.slug));
+      refreshEvent(cancelled.communitySlug, cancelled.slug);
 
       return cancelled;
     })

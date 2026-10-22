@@ -14,3 +14,10 @@ export function refreshPage(path: string) {
 
 export const eventPagePath = (communitySlug: string, eventSlug: string) =>
   `/comunidad/${communitySlug}/events/${eventSlug}`;
+
+/** An event was published, edited or cancelled: its page and the lists that show it. */
+export function refreshEvent(communitySlug: string, eventSlug: string) {
+  for (const path of [eventPagePath(communitySlug, eventSlug), `/comunidad/${communitySlug}`, "/eventos", "/"]) {
+    refreshPage(path);
+  }
+}
