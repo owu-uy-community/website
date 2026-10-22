@@ -1154,6 +1154,44 @@ export const activity = pgTable(
 export type CommunityRow = typeof communities.$inferSelect;
 export type CommunityMemberRow = typeof communityMembers.$inferSelect;
 export type CommunityClaimRow = typeof communityClaims.$inferSelect;
+
+/**
+ * The email outbox. A change and the email it causes commit together; the dispatcher sends the
+ * queue. `dedupeKey` makes each email exist once ("claim_decided:<claimId>"), and the row id is the
+ * Resend idempotency key, so a retried send never doubles.
+ */
+export const emailDeliveries = pgTable(
+  "email_deliveries",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    kind: text("kind").notNull(),
+    to: text("to").notNull(),
+    subject: text("subject").notNull(),
+    html: text("html").notNull(),
+    text: text("text").notNull(),
+    headers: jsonb("headers").$type<Record<string, string>>().notNull().default({}),
+    dedupeKey: text("dedupeKey").notNull(),
+    /** Lower goes first: 1 for codes and seat offers, 5 for the rest. */
+    priority: integer("priority").notNull().default(5),
+    status: text("status").$type<"queued" | "sending" | "sent" | "failed">().notNull().default("queued"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: ts("nextAttemptAt").notNull().defaultNow(),
+    claimedAt: ts("claimedAt"),
+    providerId: text("providerId"),
+    error: text("error"),
+    sentAt: ts("sentAt"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("email_deliveries_dedupeKey_key").on(t.dedupeKey),
+    index("email_deliveries_queue_idx").on(t.status, t.nextAttemptAt),
+  ]
+);
+
+export type EmailDeliveryRow = typeof emailDeliveries.$inferSelect;
+
 export type CommunityRoleValue = CommunityMemberRow["role"];
 export type EventRow = typeof events.$inferSelect;
 export type EventLiveStateRow = typeof eventLiveState.$inferSelect;
