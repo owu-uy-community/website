@@ -8,6 +8,8 @@ export type Email = {
   text: string;
   headers?: Record<string, string>;
   attachments?: EmailAttachment[];
+  /** What the email is ("otp", "follower_new_event"…): news goes from its own address */
+  kind?: string;
 };
 
 /** Resend refused the email; `status` tells a bad address (4xx) from a busy service (429, 5xx). */
@@ -28,7 +30,12 @@ export class SendFailed extends Error {
 export const canSendEmail = () => Boolean(process.env.RESEND_API_KEY) || mailboxEnabled();
 
 const RESEND_URL = "https://api.resend.com/emails";
-const from = () => process.env.EMAIL_FROM ?? "OWU <hola@mail.owu.uy>";
+/** News to followers goes from its own subdomain, so its reputation never holds back a sign-in code. */
+const NEWS = new Set(["follower_new_event"]);
+const from = (kind?: string) =>
+  (kind && NEWS.has(kind) ? process.env.EMAIL_FROM_NEWS : undefined) ??
+  process.env.EMAIL_FROM ??
+  "OWU <hola@mail.owu.uy>";
 
 /**
  * Send one email through Resend's REST API; without a key, to the dev mailbox. With neither it
@@ -50,7 +57,7 @@ export async function sendEmail(email: Email, idempotencyKey?: string): Promise<
       ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey.slice(0, 256) } : {}),
     },
     body: JSON.stringify({
-      from: from(),
+      from: from(email.kind),
       to: [email.to],
       subject: email.subject,
       html: email.html,
