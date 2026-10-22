@@ -11,6 +11,8 @@ export type IcsEvent = {
   location: string | null;
   url: string;
   description: string;
+  /** Called off: subscribed calendars take it out. Others carry no STATUS, as they always have */
+  cancelled?: boolean;
 };
 
 const TWO_HOURS = 2 * 3_600_000;
@@ -77,6 +79,7 @@ export function buildIcs(events: IcsEvent[], options: { name: string; descriptio
       `DESCRIPTION:${escapeText(event.description)}`,
       `LOCATION:${escapeText(event.location ?? "Online")}`,
       `URL:${event.url}`,
+      ...(event.cancelled ? ["STATUS:CANCELLED"] : []),
       "END:VEVENT"
     );
   }
