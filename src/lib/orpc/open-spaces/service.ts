@@ -25,7 +25,10 @@ const toOpenSpace = (row: EventRow): OpenSpace => ({
 
 const eventNotFound = new NotFound({ entity: "event", message: "Ese evento no existe" });
 const slugTaken = (slug: string) =>
-  new Conflict({ reason: "slug_taken", message: `La comunidad ya tiene un evento con el slug "${slug}"` });
+  new Conflict({
+    reason: "slug_taken",
+    message: `La comunidad ya tiene un evento en «${slug}»: elegí otra dirección.`,
+  });
 
 const checkDates = (startDate: Date, endDate: Date) =>
   endDate > startDate

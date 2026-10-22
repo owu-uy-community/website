@@ -15,6 +15,7 @@ import { cardChanged } from "../board-events";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { suggestCells } from "../ocr/service";
+import { opsPing, recordActivity } from "../ops";
 import { Realtime } from "../services";
 import type {
   CreatePlacedTrackInput,
@@ -76,6 +77,31 @@ const loadNote = (id: string) =>
   query((db) => db.query.tracks.findFirst({ where: eq(tracks.id, id), with: { room: true, schedule: true } })).pipe(
     Effect.flatMap((track) => (track ? Effect.succeed(toStickyNote(track)) : Effect.fail(trackNotFound)))
   );
+
+/** "Lobby · 16:30": where a talk sits, in the activity log's words. */
+const placeOf = (note: StickyNote) => `${note.room} · ${note.timeSlot.split(" - ")[0]}`;
+
+const logTalk = (note: StickyNote, line: { verb: string; summary: string }) =>
+  recordActivity({ eventId: note.openSpaceId, entityType: "track", entityId: note.id, ...line });
+
+/** What a save did to a talk, for the log; nothing when it changed nothing. */
+const changeLine = (before: TrackRow, after: StickyNote) => {
+  const moved = before.roomId !== after.roomId || before.scheduleId !== after.scheduleId;
+  const edited =
+    before.title !== after.title ||
+    (before.speaker ?? "") !== (after.speaker ?? "") ||
+    (before.description ?? "") !== (after.description ?? "") ||
+    before.needsTV !== after.needsTV ||
+    before.needsWhiteboard !== after.needsWhiteboard;
+
+  if (moved) {
+    return {
+      verb: "track.moved",
+      summary: `${edited ? "editó y movió" : "movió"} «${after.title}» a ${placeOf(after)}`,
+    };
+  }
+  return edited ? { verb: "track.updated", summary: `editó «${after.title}»` } : null;
+};
 
 /**
  * The slot and room a talk is going to: both must exist and belong to the
@@ -177,24 +203,41 @@ export const listWithPlaces = (openSpaceId: string, highlightedOnly: boolean) =>
 export const createNote = (input: CreateTrackInput) =>
   Effect.gen(function* () {
     const { schedule, room } = yield* checkPlace(input);
-    const [track] = yield* query((db) =>
-      db
-        .insert(tracks)
-        .values({
-          title: input.title,
-          speaker: input.speaker || null,
-          description: input.description || null,
-          needsTV: input.needsTV,
-          needsWhiteboard: input.needsWhiteboard,
-          openSpaceId: input.openSpaceId,
-          scheduleId: input.scheduleId,
-          roomId: input.roomId,
-        })
-        .returning()
+    // The log line commits with the talk. A lost race rolls both back first, so naming the
+    // winner runs outside the aborted transaction.
+    const note = yield* transaction(
+      Effect.gen(function* () {
+        const [track] = yield* query((db) =>
+          db
+            .insert(tracks)
+            .values({
+              title: input.title,
+              speaker: input.speaker || null,
+              description: input.description || null,
+              needsTV: input.needsTV,
+              needsWhiteboard: input.needsWhiteboard,
+              openSpaceId: input.openSpaceId,
+              scheduleId: input.scheduleId,
+              roomId: input.roomId,
+            })
+            .returning()
+        );
+        const note = toStickyNote({ ...track, room, schedule });
+        yield* logTalk(
+          note,
+          input.origin === "undo"
+            ? { verb: "track.restored", summary: `restauró «${note.title}» en ${placeOf(note)}` }
+            : {
+                verb: "track.created",
+                summary: `agregó «${note.title}» en ${placeOf(note)}${input.origin === "photo" ? " desde una foto" : ""}`,
+              }
+        );
+        return note;
+      })
     ).pipe(Effect.catchTag("UniqueViolation", lostTheRace(input.scheduleId, input.roomId)));
 
-    const note = toStickyNote({ ...track, room, schedule });
     yield* cardChanged({ type: "CARD_CREATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
+    yield* opsPing(note.openSpaceId, "activity");
 
     return note;
   });
@@ -271,23 +314,31 @@ export const updateNote = (id: string, data: UpdateTrackInput) =>
       });
     }
 
-    yield* query((db) =>
-      db
-        .update(tracks)
-        .set({
-          ...(data.title === undefined ? {} : { title: data.title }),
-          ...(data.speaker === undefined ? {} : { speaker: data.speaker || null }),
-          ...(data.description === undefined ? {} : { description: data.description || null }),
-          ...(data.needsTV === undefined ? {} : { needsTV: data.needsTV }),
-          ...(data.needsWhiteboard === undefined ? {} : { needsWhiteboard: data.needsWhiteboard }),
-          scheduleId,
-          roomId,
-        })
-        .where(eq(tracks.id, id))
+    const { note, logged } = yield* transaction(
+      Effect.gen(function* () {
+        yield* query((db) =>
+          db
+            .update(tracks)
+            .set({
+              ...(data.title === undefined ? {} : { title: data.title }),
+              ...(data.speaker === undefined ? {} : { speaker: data.speaker || null }),
+              ...(data.description === undefined ? {} : { description: data.description || null }),
+              ...(data.needsTV === undefined ? {} : { needsTV: data.needsTV }),
+              ...(data.needsWhiteboard === undefined ? {} : { needsWhiteboard: data.needsWhiteboard }),
+              scheduleId,
+              roomId,
+            })
+            .where(eq(tracks.id, id))
+        );
+        const note = yield* loadNote(id);
+        const line = changeLine(current, note);
+        if (line) yield* logTalk(note, line);
+        return { note, logged: line !== null };
+      })
     ).pipe(Effect.catchTag("UniqueViolation", lostTheRace(scheduleId, roomId)));
 
-    const note = yield* loadNote(id);
     yield* cardChanged({ type: "CARD_UPDATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
+    if (logged) yield* opsPing(note.openSpaceId, "activity");
 
     return note;
   });
@@ -302,13 +353,21 @@ export const deleteNote = (id: string) =>
         .from(eventLiveState)
         .where(eq(eventLiveState.eventId, note.openSpaceId))
     );
-    yield* query((db) => db.delete(tracks).where(eq(tracks.id, id)));
+    yield* transaction(
+      Effect.gen(function* () {
+        // Two screens deleting at once: only the one that removed the row logs it.
+        const [deleted] = yield* query((db) => db.delete(tracks).where(eq(tracks.id, id)).returning({ id: tracks.id }));
+        if (!deleted) return yield* trackNotFound;
+        yield* logTalk(note, { verb: "track.deleted", summary: `borró «${note.title}»` });
+      })
+    );
 
     yield* cardChanged({ type: "CARD_DELETE", openSpaceId: note.openSpaceId, cardId: note.id });
     if (live?.highlightedTrackId === id) {
       const realtime = yield* Realtime;
       yield* realtime.publish(eventChannel(note.openSpaceId, "cast"), "note_highlighted", { note: null });
     }
+    yield* opsPing(note.openSpaceId, "activity");
 
     return note;
   });
@@ -355,11 +414,13 @@ export const swapNotes = (trackAId: string, trackBId: string) =>
       yield* query((db) => db.delete(schedules).where(eq(schedules.id, parking.id)));
 
       const notes = [yield* loadNote(a.id), yield* loadNote(b.id)];
+      // One line for one gesture, filed under the first talk.
+      yield* logTalk(notes[0], { verb: "track.swapped", summary: `intercambió «${a.title}» y «${b.title}»` });
       yield* cardChanged({ type: "CARD_SWAP", openSpaceId: a.openSpaceId, cardIds: [a.id, b.id], updatedCards: notes });
 
       return notes;
     })
-  );
+  ).pipe(Effect.tap((notes) => opsPing(notes[0].openSpaceId, "activity")));
 
 /**
  * A slot's time changed (or its talks move to another slot of the same
@@ -397,6 +458,16 @@ export const moveSlot = (input: { scheduleId: string; newTimeSlot: string; newSc
 
       const notes = yield* Effect.forEach(moved, ({ id }) => loadNote(id));
       const relabelled = notes.map((note) => ({ ...note, timeSlot: input.newTimeSlot }));
+      if (relabelled.length > 0) {
+        // A slot moving is one gesture: one line for the block, not one per talk in it.
+        yield* recordActivity({
+          eventId: schedule.openSpaceId,
+          verb: "schedule.moved",
+          entityType: "schedule",
+          entityId: target,
+          summary: `movió ${relabelled.length === 1 ? "1 charla" : `${relabelled.length} charlas`} a las ${input.newTimeSlot.split(" - ")[0]}`,
+        });
+      }
       yield* Effect.forEach(
         relabelled,
         (note) =>
@@ -404,6 +475,9 @@ export const moveSlot = (input: { scheduleId: string; newTimeSlot: string; newSc
         { discard: true }
       );
 
-      return relabelled;
+      return { eventId: schedule.openSpaceId, relabelled };
     })
+  ).pipe(
+    Effect.tap(({ eventId, relabelled }) => (relabelled.length > 0 ? opsPing(eventId, "activity") : Effect.void)),
+    Effect.map(({ relabelled }) => relabelled)
   );

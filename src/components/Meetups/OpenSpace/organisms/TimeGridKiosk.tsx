@@ -8,7 +8,8 @@ import { cn } from "app/lib/utils";
 import { roomIconFor } from "../../../../lib/rooms/icons";
 import { slotIsOn } from "../../../../lib/slot-day";
 
-import type { Schedule, StickyNote } from "../../../../lib/orpc";
+import type { Room, Schedule, StickyNote } from "../../../../lib/orpc";
+import { RoomStatusBadge } from "../atoms/RoomStatusBadge";
 import { StickyNoteCardKiosk } from "../molecules/StickyNoteCardKiosk";
 
 /** Live wall clock — ticks every second: the corner clock shows seconds. */
@@ -35,6 +36,8 @@ interface TimeGridKioskProps {
   roomColors?: Record<string, string>;
   /** Picked shape key per room name; rooms without one render no icon. */
   roomIcons?: Record<string, string | null>;
+  /** Rooms by name, for the status their host sets on the day ("Llena", "Evacuar"). */
+  roomsByName?: Record<string, Room>;
   /** Full schedules — the kiosk shows the starred (highlightInKiosk) row. */
   schedulesData?: Schedule[];
   recentlyUpdatedIds?: ReadonlySet<string>;
@@ -46,6 +49,7 @@ export function TimeGridKiosk({
   timeSlots,
   roomColors,
   roomIcons,
+  roomsByName,
   schedulesData = [],
   recentlyUpdatedIds,
   getNotesForCell,
@@ -87,7 +91,11 @@ export function TimeGridKiosk({
             aria-hidden
             className="h-[clamp(1rem,1.3vw,2.25rem)] w-[clamp(1rem,1.3vw,2.25rem)] shrink-0 text-primary"
           />
-          <span className="font-terminal text-[clamp(0.95rem,1.5vw,2.25rem)] font-semibold text-white tabular-nums">
+          {/* The server renders its own second; the next tick replaces it. */}
+          <span
+            suppressHydrationWarning
+            className="font-terminal text-[clamp(0.95rem,1.5vw,2.25rem)] font-semibold text-white tabular-nums"
+          >
             {clock}
           </span>
         </div>
@@ -114,6 +122,7 @@ export function TimeGridKiosk({
               >
                 {room}
               </span>
+              {roomsByName?.[room] ? <RoomStatusBadge wall status={roomsByName[room].status} /> : null}
             </div>
           );
         })}
@@ -213,7 +222,7 @@ export function TimeGridKiosk({
             "Noveno",
             "Décimo",
           ];
-          const trackLabel = ordinals[index] || `Track ${index + 1}`;
+          const blockLabel = ordinals[index] ? `${ordinals[index]} bloque` : `Bloque ${index + 1}`;
 
           return (
             <section
@@ -227,7 +236,7 @@ export function TimeGridKiosk({
               >
                 <div className="flex-1">
                   <p className="font-terminal text-xs font-medium tracking-[0.18em] text-primary uppercase">
-                    {trackLabel} track
+                    {blockLabel}
                   </p>
                   <h3 className="font-display text-2xl font-bold text-white sm:text-3xl">
                     {start}
@@ -269,6 +278,7 @@ export function TimeGridKiosk({
                             />
                           ) : null}
                           {room}
+                          {roomsByName?.[room] ? <RoomStatusBadge status={roomsByName[room].status} /> : null}
                         </h4>
 
                         {/* Notes */}

@@ -72,6 +72,6 @@ test("a card photo fills the form as it is read, then a place is suggested", asy
   await expect(page.getByLabel("Orador (opcional)")).toHaveValue("Ana");
   await expect(page.locator("#room")).toHaveText(board.rooms.tv.name);
   await expect(page.locator("#timeSlot")).toHaveText("16:00 - 16:45");
-  await page.getByRole("button", { name: "Razonamiento de la AI" }).click();
+  await page.getByRole("button", { name: "Razonamiento de la IA" }).click();
   await expect(page.getByText("La única sala con TV, en el bloque más libre.")).toBeVisible();
 });

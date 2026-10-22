@@ -32,7 +32,10 @@ export default function CallForProposalsBanner() {
                   </p>
                 </div>
                 <Link href={INTERNAL_ROUTES.meetups.callForProposals} className="hidden lg:block">
-                  <Button size="sm" className="bg-black font-semibold whitespace-nowrap text-white hover:bg-gray-800">
+                  <Button
+                    size="sm"
+                    className="h-9 rounded-md bg-black px-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-gray-800"
+                  >
                     <Search className="mr-1.5 h-4 w-4" strokeWidth={2} />
                     Quiero saber más
                   </Button>

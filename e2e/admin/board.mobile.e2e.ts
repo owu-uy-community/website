@@ -1,9 +1,20 @@
 import { expect, test } from "../fixtures";
 
+test("on a phone the board stops above the tab bar, so its last row can be reached", async ({ page, board }) => {
+  await page.goto(board.url);
+  const grid = page.getByRole("region", { name: "Grilla de charlas" });
+  await expect(grid).toBeVisible();
+
+  const bottom = (await grid.boundingBox())!;
+  const tabs = (await page.getByRole("navigation", { name: "Secciones" }).boundingBox())!;
+  expect(bottom.y + bottom.height).toBeLessThanOrEqual(tabs.y + 1);
+});
+
 test("on a phone the editors are bottom sheets that close with a swipe down", async ({ page, board }) => {
   await page.goto(board.url);
 
-  await page.getByRole("button", { name: "Salas y horarios" }).click();
+  await page.getByRole("button", { name: "Más opciones" }).click();
+  await page.getByRole("menuitem", { name: "Salas y horarios" }).click();
   await page.getByRole("tab", { name: /Horarios/ }).click();
   await page.getByRole("button", { name: "Editar 15:00 - 15:45" }).click();
   const sheet = page.getByRole("dialog", { name: "Editar horario" });

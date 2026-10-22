@@ -66,7 +66,7 @@ export function useRoomManagement(openSpaceId: string) {
       onMutate: ({ id, data }) => {
         const previous = snapshot();
         queryClient.setQueryData<Room[]>(roomsKey, (old = []) =>
-          old.map((room) => (room.id === id ? { ...room, ...data } : room))
+          old.map((room) => (room.id === id ? { ...room, isActive: data.isActive ?? room.isActive } : room))
         );
 
         return previous;

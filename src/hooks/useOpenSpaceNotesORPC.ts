@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { toast } from "../components/shared/ui/toast-utils";
 import { orpc, type StickyNote } from "../lib/orpc";
+import { settleCreatedCard } from "./board-cache";
 import { useSupabaseSync } from "./useSupabaseSync";
 
 interface UseOpenSpaceNotesOptions {
@@ -120,11 +121,9 @@ export const useOpenSpaceNotesORPC = ({
       },
       onSuccess: async (createdNote, _variables, context) => {
         // Swap the temp id for the real row so the card doesn't remount. The server's own
-        // CARD_CREATE may have landed first: never keep the real row twice.
+        // CARD_CREATE may have landed first and taken the temp card's place already.
         queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) =>
-          oldNotes
-            .filter((note) => note.id !== createdNote.id)
-            .map((note) => (note.id === context?.optimisticId ? createdNote : note))
+          settleCreatedCard(oldNotes, createdNote, context?.optimisticId)
         );
         await broadcastCardCreate(createdNote);
       },
@@ -176,6 +175,7 @@ export const useOpenSpaceNotesORPC = ({
         room: note.room,
         timeSlot: note.timeSlot,
         skipResourceValidation: true,
+        origin: "undo",
       });
       toast.success("Charla restaurada", `"${restored.title}" volvió a la grilla.`);
     } catch (error) {
