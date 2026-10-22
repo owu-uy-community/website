@@ -1,11 +1,11 @@
 import { call } from "@orpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Effect } from "effect";
 import { http, HttpResponse } from "msw";
 import { describe, expect, test, vi } from "vitest";
 
 import { db } from "lib/db";
-import { attendees, eventPublications, events, integrationConnections } from "lib/db/schema";
+import { activity, attendees, eventPublications, events, integrationConnections } from "lib/db/schema";
 import { applyWebhook } from "lib/orpc/attendees/service";
 import { router } from "lib/orpc/router";
 import { liveServices } from "lib/orpc/services";
@@ -139,6 +139,17 @@ describe("connecting Eventbrite", () => {
     await expect(run(connect({ communityId: community.id, userId: "nobody", code: "stolen-code" }))).rejects.toThrow(
       /no aceptó la autorización/
     );
+  });
+
+  test("who connected it is in the community's activity", async () => {
+    const { community, admin } = await setup();
+
+    await expect(
+      db
+        .select()
+        .from(activity)
+        .where(and(eq(activity.entityId, community.id), eq(activity.verb, "integration.connected")))
+    ).resolves.toMatchObject([{ actorId: admin.id, summary: expect.stringMatching(/^conectó Eventbrite/) }]);
   });
 });
 
