@@ -4,6 +4,7 @@ import { ClockSchema, DaySchema, DurationSchema } from "../events/schemas";
 
 export const AMENITIES = ["proyector", "microfono", "wifi", "accesible", "comida"] as const;
 export const AmenitySchema = z.enum(AMENITIES);
+export type Amenity = z.infer<typeof AmenitySchema>;
 export const AMENITY_LABEL: Record<z.infer<typeof AmenitySchema>, string> = {
   proyector: "Proyector o pantalla",
   microfono: "Micrófono",

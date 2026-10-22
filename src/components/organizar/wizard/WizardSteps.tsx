@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Building2,
   CircleAlert,
   CircleCheck,
   Coffee,
   Copy,
+  ExternalLink,
   Globe,
   Lightbulb,
   MapPin,
@@ -16,6 +17,7 @@ import {
   Mic,
   Monitor,
   Plus,
+  Smartphone,
   Sparkles,
   Ticket,
   Trash2,
@@ -32,19 +34,25 @@ import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
+import { Skeleton } from "components/shared/ui/skeleton";
 import { Switch } from "components/shared/ui/switch";
 import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
 import { RichText } from "components/shared/RichText";
-import { shortWhen } from "lib/community/time";
+import { MessagePreview } from "components/Admin/comms/MessageFields";
+import { DateTimeInput } from "components/Admin/settings/event-fields";
+import { dayKey, montevideoIso, shortWhen } from "lib/community/time";
 import { TOPICS } from "lib/community/topics";
 import { orpc } from "lib/orpc/client";
-import type { EditableEvent } from "lib/orpc/events/schemas";
+import { SIZE_BUCKETS, type EditableEvent } from "lib/orpc/events/schemas";
+import { AMENITIES, AMENITY_LABEL, type Amenity } from "lib/orpc/venues/schemas";
+import { announcementText } from "lib/organizar/announcement";
 import { UNTITLED, type Issue, type StepKey } from "lib/organizar/steps";
+import { SIZE_LABEL } from "lib/organizar/venue-fit";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
-import { RequestComposer } from "../venues/VenuesClient";
+import { RequestComposer, RequestList, VenueCard } from "../venues/VenuesClient";
 import { DatePicker } from "./DatePicker";
 
 /** A change to the draft; `schedule` (a published event's new date) is sent at once, not kept. */
@@ -119,11 +127,75 @@ function ChoiceCards<T extends string>({
   );
 }
 
-export function StepTipo({ draft, set }: StepProps) {
+/** A toggle chip (topics, needs) */
+function Chip({
+  on,
+  disabled,
+  onClick,
+  children,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <SettingsSection id="tipo" title="¿Qué tipo de evento es?">
-      <ChoiceCards name="Formato" options={FORMAT} value={draft.format} onChange={(format) => set({ format })} />
-    </SettingsSection>
+    <button
+      aria-pressed={on}
+      className={cn(
+        "rounded-md border px-2 py-1 text-meta transition-colors disabled:opacity-50",
+        on
+          ? "border-primary/60 bg-primary-surface text-foreground"
+          : "border-input text-muted-foreground hover:text-foreground"
+      )}
+      disabled={disabled}
+      type="button"
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+const SIZE_HINT: Record<(typeof SIZE_BUCKETS)[number], string> = {
+  "hasta-30": "Una sala chica alcanza",
+  "30-60": "Un meetup de los de siempre",
+  "60-120": "Un auditorio o una oficina grande",
+  "120+": "Algo grande: hay pocos lugares así",
+};
+const SIZES = SIZE_BUCKETS.map((value) => ({ value, title: SIZE_LABEL[value], hint: SIZE_HINT[value], icon: Users }));
+
+export function StepTipo({ draft, set }: StepProps) {
+  const toggle = (need: string) =>
+    set({ needs: draft.needs.includes(need) ? draft.needs.filter((item) => item !== need) : [...draft.needs, need] });
+
+  return (
+    <>
+      <SettingsSection id="tipo" title="¿Qué tipo de evento es?">
+        <ChoiceCards name="Formato" options={FORMAT} value={draft.format} onChange={(format) => set({ format })} />
+      </SettingsSection>
+      <SettingsSection id="tamano" title="¿Cuánta gente esperás?">
+        <ChoiceCards
+          name="Cuánta gente"
+          options={SIZES}
+          value={draft.sizeBucket}
+          onChange={(sizeBucket) => set({ sizeBucket })}
+        />
+      </SettingsSection>
+      <SettingsSection id="necesidades" title="¿Qué necesita el lugar?">
+        <SettingsCard>
+          <SettingsRow hint="Los espacios que lo tienen aparecen primero. Podés saltear este paso." label="Necesidades">
+            <div className="flex flex-wrap gap-1.5">
+              {AMENITIES.map((amenity) => (
+                <Chip key={amenity} on={draft.needs.includes(amenity)} onClick={() => toggle(amenity)}>
+                  {AMENITY_LABEL[amenity]}
+                </Chip>
+              ))}
+            </div>
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+    </>
   );
 }
 
@@ -201,23 +273,70 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
             />
           )}
         </SettingsRow>
+        <SettingsRow error={errors.talks} hint="Título y quién la da: salen en la página del evento." label="Charlas">
+          <div className="flex flex-col gap-2">
+            {draft.talks.map((talk, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <Input
+                  aria-label={`Charla ${index + 1}`}
+                  maxLength={160}
+                  placeholder="Título de la charla"
+                  value={talk.title}
+                  onChange={(event) =>
+                    set({
+                      talks: draft.talks.map((item, at) =>
+                        at === index ? { ...item, title: event.target.value } : item
+                      ),
+                    })
+                  }
+                />
+                <Input
+                  aria-label={`Quién da la charla ${index + 1}`}
+                  className="w-44 shrink-0"
+                  maxLength={120}
+                  placeholder="Quién la da"
+                  value={talk.speaker}
+                  onChange={(event) =>
+                    set({
+                      talks: draft.talks.map((item, at) =>
+                        at === index ? { ...item, speaker: event.target.value } : item
+                      ),
+                    })
+                  }
+                />
+                <Button
+                  aria-label={`Quitar la charla ${index + 1}`}
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => set({ talks: draft.talks.filter((_, at) => at !== index) })}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+            ))}
+            {draft.talks.length < 12 ? (
+              <Button
+                className="self-start"
+                size="xs"
+                variant="outline"
+                onClick={() => set({ talks: [...draft.talks, { title: "", speaker: "" }] })}
+              >
+                <Plus />
+                Charla
+              </Button>
+            ) : null}
+          </div>
+        </SettingsRow>
         <SettingsRow hint="Hasta 5. El calendario los usa para saber con quién chocás." label="Temas">
           <div className="flex flex-wrap gap-1.5">
             {TOPICS.map((topic) => {
               const on = draft.topics.includes(topic.value);
 
               return (
-                <button
+                <Chip
                   key={topic.value}
-                  aria-pressed={on}
-                  className={cn(
-                    "rounded-md border px-2 py-1 text-meta transition-colors",
-                    on
-                      ? "border-primary/60 bg-primary-surface text-foreground"
-                      : "border-input text-muted-foreground hover:text-foreground"
-                  )}
                   disabled={!on && draft.topics.length >= 5}
-                  type="button"
+                  on={on}
                   onClick={() =>
                     set({
                       topics: on
@@ -227,7 +346,7 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
                   }
                 >
                   {topic.label}
-                </button>
+                </Chip>
               );
             })}
           </div>
@@ -322,18 +441,35 @@ const MODES: { value: EditableEvent["mode"]; title: string; hint: string; icon: 
 export function StepLugar({ draft, set, errors, community, today, refresh }: StepProps) {
   const queryClient = useQueryClient();
   const inPerson = draft.mode !== "online";
+  const want = {
+    communityId: community.id,
+    size: draft.sizeBucket,
+    needs: draft.needs.filter((need): need is Amenity => (AMENITIES as readonly string[]).includes(need)),
+    day: draft.dateChosen ? dayKey(draft.startDate) : null,
+  };
   const venues = useQuery({
-    ...orpc.venues.list.queryOptions({ input: { communityId: community.id } }),
+    ...orpc.venues.list.queryOptions({ input: want }),
     enabled: inPerson && !draft.venue,
   });
   const requests = useQuery({
     ...orpc.venues.requests.queryOptions({ input: { communityId: community.id } }),
     enabled: inPerson,
   });
+  const cancelRequest = useMutation(
+    orpc.venues.cancelRequest.mutationOptions({
+      onSuccess: () => void queryClient.invalidateQueries({ queryKey: orpc.venues.requests.key() }),
+      onError: (error) => toast.error("No se pudo cancelar", error.message),
+    })
+  );
   const [asking, setAsking] = useState<string | null>(null);
+  const [all, setAll] = useState(false);
   const mine = (requests.data ?? []).filter((request) => request.eventId === draft.id);
   const open = mine.find((request) => request.status === "pending");
-  const requestable = (venues.data ?? []).filter((venue) => venue.requestable);
+  const pending = new Set(
+    (requests.data ?? []).filter((request) => request.status === "pending").map((request) => request.venue.id)
+  );
+  const ranked = venues.data ?? [];
+  const shown = all ? ranked : ranked.slice(0, 4);
 
   return (
     <SettingsSection id="espacio" title="Dónde">
@@ -354,34 +490,44 @@ export function StepLugar({ draft, set, errors, community, today, refresh }: Ste
             </SettingsRow>
           ) : (
             <>
-              <SettingsRow
-                hint={
-                  open
-                    ? `Esperando la respuesta de ${open.venue.name}.`
-                    : "Le llega un mail con tus fechas y responde desde un link."
-                }
-                label="Pedir lugar"
-              >
-                {open ? (
-                  <Badge variant="warning">Pedido a {open.venue.name}</Badge>
-                ) : (
-                  <Select value="" onValueChange={setAsking}>
-                    <SelectTrigger aria-label="Elegí un espacio">
-                      <SelectValue
-                        placeholder={requestable.length ? "Elegí un espacio…" : "Ningún espacio recibe pedidos todavía"}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {requestable.map((venue) => (
-                        <SelectItem key={venue.id} value={venue.id}>
-                          {venue.name}
-                          {venue.capacity ? ` · hasta ${venue.capacity}` : ""}
-                        </SelectItem>
+              {mine.length > 0 ? (
+                <RequestList
+                  className="m-3"
+                  requests={mine}
+                  title="Pedidos para este evento"
+                  onCancel={(requestId) => cancelRequest.mutate({ communityId: community.id, requestId })}
+                />
+              ) : null}
+              {open ? null : (
+                <div className="flex flex-col gap-2 border-b border-border p-3">
+                  <MicroLabel>
+                    {draft.sizeBucket || draft.needs.length > 0 || draft.dateChosen
+                      ? "Los que mejor encajan con tu evento"
+                      : "Espacios"}
+                  </MicroLabel>
+                  {venues.isPending ? (
+                    <Skeleton className="h-28 rounded-lg" />
+                  ) : ranked.length === 0 ? (
+                    <p className="text-meta text-muted-foreground">Todavía no hay espacios cargados.</p>
+                  ) : (
+                    <ul className="grid gap-2">
+                      {shown.map((venue) => (
+                        <VenueCard
+                          key={venue.id}
+                          pending={pending.has(venue.id)}
+                          venue={venue}
+                          onAsk={() => setAsking(venue.id)}
+                        />
                       ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </SettingsRow>
+                    </ul>
+                  )}
+                  {ranked.length > shown.length || all ? (
+                    <Button className="self-start" size="xs" variant="ghost" onClick={() => setAll(!all)}>
+                      {all ? "Ver menos" : `Ver los ${ranked.length} espacios`}
+                    </Button>
+                  ) : null}
+                </div>
+              )}
               <SettingsRow
                 error={errors.placeName}
                 hint="Si ya lo tenés resuelto por tu cuenta."
@@ -481,7 +627,24 @@ const PRESETS = [
   "¿Necesitás algo para participar?",
 ];
 
+/** "18:30" on Montevideo's clock, for a time input */
+const clockOf = (iso: string) => shortWhen(iso).split(" · ")[1] ?? "19:00";
+
+/** The capacity hint, from how many of this community's people actually come */
+function useShowUpHint(communityId: string) {
+  const showUp = useQuery({ ...orpc.events.showUp.queryOptions({ input: { communityId } }), staleTime: 10 * 60_000 });
+  const rate = showUp.data?.rate;
+  if (rate === null || rate === undefined) {
+    return "A los eventos gratis falta cerca de un tercio de quienes se anotan: si entran 50, abrí unos 70.";
+  }
+  const percent = Math.round(rate * 100);
+
+  return `A tus eventos vino el ${percent} % de los anotados: si entran 50, abrí unos ${Math.round(50 / rate / 5) * 5}.`;
+}
+
 export function StepInscripcion({ draft, set, errors, community }: StepProps) {
+  const showUpHint = useShowUpHint(community.id);
+  const closes = draft.rsvpClosesAt;
   const question = (index: number, change: Partial<EditableEvent["questions"][number]>) =>
     set({ questions: draft.questions.map((item, at) => (at === index ? { ...item, ...change } : item)) });
   const add = (label = "") =>
@@ -540,12 +703,7 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
       ) : null}
       {draft.registration === "owu" ? (
         <SettingsCard className="mt-3">
-          <SettingsRow
-            error={errors.capacity}
-            hint="A los eventos gratis falta cerca de un tercio de quienes se anotan: si entran 50, abrí unos 70."
-            htmlFor="capacity"
-            label="Cupo"
-          >
+          <SettingsRow error={errors.capacity} hint={showUpHint} htmlFor="capacity" label="Cupo">
             <Input
               className="w-28 font-terminal tabular-nums"
               id="capacity"
@@ -565,6 +723,48 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
           >
             <Switch checked={draft.waitlist} id="waitlist" onCheckedChange={(waitlist) => set({ waitlist })} />
           </SettingsRow>
+          <SettingsRow
+            error={errors.rsvpClosesAt}
+            hint={closes ? "Después de esa hora ya no se anota nadie." : "Sin cierre: se anotan hasta que empieza."}
+            htmlFor="rsvp-closes"
+            label="Cierre de inscripción"
+          >
+            {closes ? (
+              <div className="flex items-center gap-2">
+                <DateTimeInput
+                  day={dayKey(closes)}
+                  id="rsvp-closes"
+                  time={clockOf(closes)}
+                  timeLabel="Hora de cierre"
+                  onClockChange={(time) =>
+                    time && set({ rsvpClosesAt: new Date(montevideoIso(`${dayKey(closes)}T${time}`)).toISOString() })
+                  }
+                  onDayChange={(day) =>
+                    set({ rsvpClosesAt: new Date(montevideoIso(`${day}T${clockOf(closes)}`)).toISOString() })
+                  }
+                />
+                <Button
+                  aria-label="Sin cierre"
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => set({ rsvpClosesAt: null })}
+                >
+                  <X />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() =>
+                  set({ rsvpClosesAt: new Date(Date.parse(draft.startDate) - 2 * 3_600_000).toISOString() })
+                }
+              >
+                <Plus />
+                Poner un cierre
+              </Button>
+            )}
+          </SettingsRow>
           <SettingsRow compact hint="Cada inscripción espera tu OK." htmlFor="approval" label="Aprobar a mano">
             <Switch checked={draft.approval} id="approval" onCheckedChange={(approval) => set({ approval })} />
           </SettingsRow>
@@ -573,7 +773,7 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
               value={String(draft.guestsAllowed)}
               onValueChange={(value) => set({ guestsAllowed: Number(value) })}
             >
-              <SelectTrigger aria-label="Acompañantes" className="w-36">
+              <SelectTrigger aria-label="Acompañantes" className="w-44">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -638,7 +838,18 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
   );
 }
 
-function CopyRow({ label, value }: { label: string; value: string }) {
+/** Copy as formatted text when there's HTML (Meetup's editor keeps it), plain otherwise */
+const copyRich = (value: string, html?: string) =>
+  html
+    ? navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([value], { type: "text/plain" }),
+        }),
+      ])
+    : navigator.clipboard.writeText(value);
+
+function CopyRow({ label, value, html }: { label: string; value: string; html?: () => string | undefined }) {
   return (
     <div className="flex items-start gap-2 border-b border-border py-2.5 last:border-0">
       <div className="min-w-0 flex-1">
@@ -650,7 +861,7 @@ function CopyRow({ label, value }: { label: string; value: string }) {
         disabled={!value}
         size="icon-sm"
         variant="ghost"
-        onClick={() => void navigator.clipboard.writeText(value).then(() => toast.success(`${label} copiado`))}
+        onClick={() => void copyRich(value, html?.()).then(() => toast.success(`${label} copiado`))}
       >
         <Copy />
       </Button>
@@ -669,6 +880,21 @@ const placeText = (draft: EditableEvent) =>
         : "Lugar a confirmar";
 
 export function StepDifusion({ draft, set, errors, community }: StepProps) {
+  const rendered = useRef<HTMLDivElement>(null);
+  const profile = useQuery({
+    ...orpc.communities.getBySlug.queryOptions({ input: { communitySlug: community.slug } }),
+    staleTime: 10 * 60_000,
+  });
+  const meetupGroup = profile.data?.links.meetup;
+  const channels = draft.announcement.channels ?? [];
+  const toggleChannel = (channel: "slack" | "telegram", on: boolean) =>
+    set({
+      announcement: {
+        channels: on
+          ? [...channels.filter((item) => item !== channel), channel]
+          : channels.filter((item) => item !== channel),
+      },
+    });
   const when = draft.dateChosen ? shortWhen(draft.startDate) : "Fecha a confirmar";
   const share = [
     `📣 ${draft.name === UNTITLED ? "" : draft.name}`,
@@ -702,14 +928,31 @@ export function StepDifusion({ draft, set, errors, community }: StepProps) {
         >
           <div className="rounded-md border border-border px-3">
             <CopyRow label="Título" value={draft.name === UNTITLED ? "" : draft.name.slice(0, 80)} />
-            <CopyRow label="Descripción" value={[draft.summary, draft.description].filter(Boolean).join("\n\n")} />
+            <CopyRow
+              html={() => rendered.current?.innerHTML}
+              label="Descripción"
+              value={[draft.summary, draft.description].filter(Boolean).join("\n\n")}
+            />
             <CopyRow label="Fecha" value={when} />
             <CopyRow label="Lugar" value={placeText(draft)} />
+          </div>
+          {/* The description as HTML, for pasting into Meetup with its format */}
+          <div ref={rendered} aria-hidden className="hidden">
+            {draft.summary ? <p>{draft.summary}</p> : null}
+            <RichText content={draft.description ?? ""} />
           </div>
           {draft.name.length > 80 ? (
             <p className="mt-1 text-meta text-warning-foreground">
               El nombre tiene más de 80 caracteres: Meetup lo corta.
             </p>
+          ) : null}
+          {meetupGroup ? (
+            <Button asChild className="mt-2" size="xs" variant="outline">
+              <a href={meetupGroup} rel="noreferrer" target="_blank">
+                <ExternalLink />
+                Abrir el grupo en Meetup
+              </a>
+            </Button>
           ) : null}
         </SettingsRow>
         <SettingsRow error={errors.externalLinks} htmlFor="meetup-url" label="Link del evento en Meetup">
@@ -720,6 +963,40 @@ export function StepDifusion({ draft, set, errors, community }: StepProps) {
             value={draft.externalLinks.meetup ?? ""}
             onChange={(event) => set({ externalLinks: event.target.value ? { meetup: event.target.value } : {} })}
           />
+        </SettingsRow>
+        <SettingsRow
+          hint={
+            draft.announceChannels.slack || draft.announceChannels.telegram
+              ? "Owy lo publica cuando el evento sale: el texto se arma con los datos del evento."
+              : "Owy todavía no puede escribir desde el sitio."
+          }
+          label="Que lo anuncie Owy"
+        >
+          <div className="flex flex-col gap-2">
+            {(["slack", "telegram"] as const).map((channel) => (
+              <label key={channel} className="flex items-center gap-2 text-ui text-foreground">
+                <Switch
+                  checked={channels.includes(channel)}
+                  disabled={!draft.announceChannels[channel] || draft.status !== "draft"}
+                  onCheckedChange={(on) => toggleChannel(channel, on)}
+                />
+                {channel === "slack" ? "En el Slack de OWU" : "En el canal de Telegram de OWU"}
+              </label>
+            ))}
+            {channels.length > 0 ? (
+              <MessagePreview
+                body={announcementText({
+                  name: draft.name === UNTITLED ? "Nombre del evento" : draft.name,
+                  summary: draft.summary,
+                  startDate: draft.startDate,
+                  place: placeText(draft),
+                  community: community.name,
+                  url: `owu.uy/comunidad/${community.slug}/events/${draft.slug}`,
+                })}
+                channel={channels[0]}
+              />
+            ) : null}
+          </div>
         </SettingsRow>
         <SettingsRow hint="Para Slack, WhatsApp o LinkedIn." label="Texto para compartir">
           <div className="rounded-md border border-border px-3">
@@ -735,13 +1012,33 @@ export function StepRevisar({
   draft,
   list,
   onGo,
+  community,
+  onScheduled,
 }: {
   draft: EditableEvent;
   list: Issue[];
   onGo: (step: StepKey) => void;
+  community: CalendarCommunity;
+  onScheduled: (event: EditableEvent) => void;
 }) {
   const required = list.filter((issue) => issue.level === "required");
   const suggested = list.filter((issue) => issue.level === "recommended");
+  const [device, setDevice] = useState<"desktop" | "phone">("desktop");
+  const tomorrow = new Date(Date.now() + 86_400_000).toISOString();
+  const [at, setAt] = useState({ day: dayKey(tomorrow), time: "10:00" });
+  const schedule = useMutation(
+    orpc.events.schedulePublish.mutationOptions({
+      onSuccess: (event) => {
+        onScheduled(event);
+        toast.success(
+          event.publishAt ? "Publicación programada" : "Ya no está programada",
+          event.publishAt ? `Se publica sola el ${shortWhen(event.publishAt)}.` : undefined
+        );
+      },
+      onError: (error) => toast.error("No se pudo programar", error.message),
+    })
+  );
+  const ref = { communityId: community.id, eventId: draft.id };
 
   return (
     <SettingsSection id="revisar" title={draft.status === "published" ? "Publicado" : "Antes de publicar"}>
@@ -775,12 +1072,89 @@ export function StepRevisar({
           </ul>
         )}
       </SettingsCard>
-      <p className="mt-3 text-meta text-muted-foreground">
-        ¿Cómo queda?{" "}
-        <Link className="underline underline-offset-2" href={`/organizar/vista-previa/${draft.id}`} target="_blank">
-          Ver la página como la ve la gente
-        </Link>
-      </p>
+      {draft.status === "draft" ? (
+        <SettingsCard className="mt-3">
+          <SettingsRow
+            hint={
+              draft.publishAt
+                ? "Con los mismos chequeos que publicar ahora. La fecha queda reservada hasta entonces."
+                : "O usá «Publicar» abajo para que salga ya."
+            }
+            htmlFor="publish-at"
+            label="Publicar más tarde"
+          >
+            {draft.publishAt ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="info">Se publica el {shortWhen(draft.publishAt)}</Badge>
+                <Button
+                  disabled={schedule.isPending}
+                  size="xs"
+                  variant="ghost"
+                  onClick={() => schedule.mutate({ ...ref, publishAt: null })}
+                >
+                  Quitar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <DateTimeInput
+                  day={at.day}
+                  id="publish-at"
+                  time={at.time}
+                  timeLabel="Hora de publicación"
+                  onClockChange={(time) => time && setAt({ ...at, time })}
+                  onDayChange={(day) => setAt({ ...at, day })}
+                />
+                <Button
+                  disabled={schedule.isPending || required.length > 0}
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    schedule.mutate({
+                      ...ref,
+                      publishAt: new Date(montevideoIso(`${at.day}T${at.time}`)).toISOString(),
+                    })
+                  }
+                >
+                  Programar
+                </Button>
+              </div>
+            )}
+          </SettingsRow>
+        </SettingsCard>
+      ) : null}
+      <div className="mt-4 flex items-center justify-between gap-2">
+        <MicroLabel>Cómo la ve la gente</MicroLabel>
+        <div className="flex items-center gap-1">
+          {(["desktop", "phone"] as const).map((option) => (
+            <Button
+              key={option}
+              aria-pressed={device === option}
+              size="xs"
+              variant={device === option ? "secondary" : "ghost"}
+              onClick={() => setDevice(option)}
+            >
+              {option === "desktop" ? <Monitor /> : <Smartphone />}
+              {option === "desktop" ? "Compu" : "Teléfono"}
+            </Button>
+          ))}
+          <Button asChild size="xs" variant="ghost">
+            <Link href={`/organizar/vista-previa/${draft.id}`} target="_blank">
+              <ExternalLink />
+              Abrir
+            </Link>
+          </Button>
+        </div>
+      </div>
+      <div className="mt-2 overflow-hidden rounded-lg border border-border bg-[#0c0c0f]">
+        <iframe
+          // A save reloads it, so it shows what's saved
+          key={draft.updatedAt}
+          className={cn("mx-auto block h-[640px] border-0", device === "phone" ? "w-[390px] max-w-full" : "w-full")}
+          src={`/organizar/vista-previa/${draft.id}`}
+          title="Vista previa de la página del evento"
+        />
+      </div>
     </SettingsSection>
   );
 }
