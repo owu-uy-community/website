@@ -23,7 +23,11 @@ const contextOptions = { baseURL, locale: "es-UY", timezoneId: "America/Montevid
 type Board = Awaited<ReturnType<typeof makeBoard>> & { url: string };
 
 export const test = base.extend<
-  { pageAs: (role: Role | "anonymous") => Promise<Page>; board: Board },
+  {
+    pageAs: (role: Role | "anonymous") => Promise<Page>;
+    pageFor: (user: UserRow) => Promise<Page>;
+    board: Board;
+  },
   { tenant: Tenant }
 >({
   /** Each worker gets its own community, event, rooms, slots and people — no shared seed. */
@@ -59,6 +63,19 @@ export const test = base.extend<
       const context = await browser.newContext(contextOptions);
       contexts.push(context);
       if (role !== "anonymous") await context.addCookies([await sessionCookie(tenant.users[role])]);
+
+      return context.newPage();
+    });
+    await Promise.all(contexts.map((context) => context.close()));
+  },
+
+  /** A fresh page signed in as someone the test made (an organizer of another community…). */
+  pageFor: async ({ browser }, use) => {
+    const contexts: BrowserContext[] = [];
+    await use(async (user) => {
+      const context = await browser.newContext(contextOptions);
+      contexts.push(context);
+      await context.addCookies([await sessionCookie(user)]);
 
       return context.newPage();
     });
