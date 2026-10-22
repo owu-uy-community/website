@@ -18,7 +18,7 @@ test("one seat: the second person waits, the first frees it, the second confirms
   const first = await pageFor(ana);
   await first.goto(url);
   await first.getByRole("button", { name: "Anotarme" }).click();
-  await expect(first.getByText("Estás anotado")).toBeVisible();
+  await expect(first.getByRole("complementary").getByText("Estás anotado")).toBeVisible();
 
   const second = await pageFor(beto);
   await second.goto(url);
@@ -31,5 +31,5 @@ test("one seat: the second person waits, the first frees it, the second confirms
   await second.reload();
   await expect(second.getByText(/Se liberó un lugar para vos/)).toBeVisible();
   await second.getByRole("button", { name: "Confirmar mi lugar" }).click();
-  await expect(second.getByText("Estás anotado")).toBeVisible();
+  await expect(second.getByRole("complementary").getByText("Estás anotado")).toBeVisible();
 });

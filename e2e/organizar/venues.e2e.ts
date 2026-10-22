@@ -41,6 +41,6 @@ test("an organizer asks a space for a date and its host accepts from the emailed
   await hostPage.close();
 
   await panel.reload();
-  await expect(panel.getByText("Aceptado")).toBeVisible();
+  await expect(panel.getByText("Aceptado", { exact: true })).toBeVisible();
   await expect(panel.getByText("«Timbre 2»")).toBeVisible();
 });
