@@ -474,13 +474,14 @@ export default async function Landing() {
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_80%_at_100%_0%,rgba(250,204,21,0.10),transparent_60%)]"
             />
             <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-xl">
+              <div className="min-w-0 lg:flex-1">
                 <Eyebrow>Para empresas</Eyebrow>
-                <h2 className={cn(headingClassName.h2, "mt-4")}>Apoyá a la comunidad que te ayudó a crecer</h2>
+                <h2 className={cn(headingClassName.h2, "mt-4 max-w-xl")}>Apoyá a la comunidad que te ayudó a crecer</h2>
                 <TitleBar className="mt-5" />
-                <ul className="mt-6 grid gap-3 text-[15px] text-zinc-300 sm:grid-cols-3 sm:gap-6">
+                {/* One line each: the items size to their text instead of sharing equal columns */}
+                <ul className="mt-6 flex flex-col gap-3 text-[15px] text-zinc-300 sm:flex-row sm:flex-wrap sm:gap-x-8">
                   {["Alojá una meetup", "Patrociná OWU CONF", "Publicá búsquedas"].map((item) => (
-                    <li key={item} className="flex items-center gap-2.5">
+                    <li key={item} className="flex items-center gap-2.5 whitespace-nowrap">
                       <Building2 aria-hidden className="size-4 shrink-0 text-yellow-400" />
                       {item}
                     </li>
