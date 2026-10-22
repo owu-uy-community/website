@@ -23,6 +23,8 @@ export const DayScoreSchema = z.object({
   level: z.enum(["libre", "cuidado", "choca", "bloqueado"]),
   blocked: z.boolean(),
   reasons: z.array(ReasonSchema),
+  holiday: z.string().nullable(),
+  period: z.string().nullable(),
 });
 
 export const PlanItemSchema = z.object({

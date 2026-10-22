@@ -42,12 +42,15 @@ describe(scoreDays, () => {
       level: "libre",
       blocked: false,
       reasons: [{ tone: "ok", text: "Nadie con público parecido ese día" }],
+      holiday: null,
+      period: null,
     });
   });
 
   test("a holiday scores below a plain Tuesday", () => {
     const holiday = on("2026-08-25");
     expect(holiday.score).toBe(40);
+    expect(holiday.holiday).toBe("Declaratoria de la Independencia");
     expect(holiday.reasons).toContainEqual({ tone: "bad", text: "Feriado: Declaratoria de la Independencia" });
     expect(on("2026-08-24").reasons).toContainEqual({
       tone: "warn",
