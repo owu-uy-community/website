@@ -66,7 +66,7 @@ export default async function EventsPage() {
                 <TitleBar className="mt-5" />
                 <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-zinc-400">
                   La agenda sale del bot de la comunidad, que cada lunes también publica los próximos meetups en #
-                  {SLACK_CHANNELS.anuncios}. Si tu grupo está en Meetup.com, sumalo con un PR al{" "}
+                  {SLACK_CHANNELS.anuncios}. Si tu comunidad está en Meetup.com, sumala con un PR al{" "}
                   <a
                     className="text-zinc-200 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
                     href={MEETUP_BOT_REPO}

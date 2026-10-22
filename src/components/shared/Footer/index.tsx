@@ -25,7 +25,7 @@ export default function Footer() {
               <img alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
             </Link>
             <p className="text-[15px] leading-relaxed text-zinc-400">
-              La comunidad tech de Uruguay desde 2014. Un Slack, decenas de grupos y una conferencia, hechos por gente que
+              La comunidad tech de Uruguay desde 2014. Un Slack, decenas de comunidades y una conferencia, hechos por gente que
               se da una mano.
             </p>
             <ul className="flex flex-wrap gap-1">

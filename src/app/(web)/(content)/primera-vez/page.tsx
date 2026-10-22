@@ -114,7 +114,7 @@ export default async function FirstTimePage() {
       </Section>
 
       <Section
-        description="Cada grupo tiene su estilo y sus horarios, pero una noche típica se ve más o menos así. El detalle de cada una está en la página del evento."
+        description="Cada comunidad tiene su estilo y sus horarios, pero una noche típica se ve más o menos así. El detalle de cada una está en la página del evento."
         eyebrow="Cómo es una meetup"
         title="Una noche típica"
       >

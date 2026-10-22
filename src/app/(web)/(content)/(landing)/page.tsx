@@ -80,7 +80,7 @@ const STEPS = [
   {
     icon: Users,
     title: "Organizá o dá una mano",
-    body: "Sumá tu comunidad, armá un grupo nuevo o ayudá en OWU CONF.",
+    body: "Sumá tu comunidad, armá una nueva o ayudá en OWU CONF.",
     href: PAGES.organizar.href,
     cta: "Organizar",
   },
@@ -326,7 +326,7 @@ export default async function Landing() {
             <div className="rounded-2xl border border-dashed border-white/15 p-6 sm:p-7">
               <h3 className="font-title text-[17px] font-semibold text-white">¿Organizás algo?</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Si tu grupo está en Meetup.com, sumalo al bot de la agenda y sus eventos aparecen solos, acá y cada
+                Si tu comunidad está en Meetup.com, sumala al bot de la agenda y sus eventos aparecen solos, acá y cada
                 lunes en #anuncios. Si no, mandanos los datos y lo sumamos.
               </p>
               <ButtonLink
@@ -351,8 +351,8 @@ export default async function Landing() {
             Ver el directorio
           </ButtonLink>
         }
-        description="Cada grupo organiza sus propias meetups. OWU los conecta con un Slack, una agenda y una conferencia."
-        title={`${communities.length} grupos, un mismo Slack`}
+        description="Cada comunidad organiza sus propias meetups. OWU las conecta con un Slack, una agenda y una conferencia."
+        title={`${communities.length} comunidades, un mismo Slack`}
       >
         <CommunityGrid
           communities={featured.map((community) => {

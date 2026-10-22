@@ -26,7 +26,7 @@ export const PAGES = {
   comunidades: {
     href: "/comunidades",
     label: "Comunidades",
-    description: "Los grupos que hacen OWU, con su próximo evento",
+    description: "Las comunidades que hacen OWU, con su próximo evento",
   },
   eventos: {
     href: "/eventos",
@@ -51,7 +51,7 @@ export const PAGES = {
     description: "Cómo nos tratamos y cómo reportar",
   },
   darCharla: { href: "/dar-una-charla", label: "Dá una charla", description: "Dónde proponerla y cómo prepararla" },
-  organizar: { href: "/organizar", label: "Organizá con OWU", description: "Qué te da OWU si organizás un grupo" },
+  organizar: { href: "/organizar", label: "Organizá con OWU", description: "Qué te da OWU si organizás una comunidad" },
   empresas: {
     href: "/empresas",
     label: "Para empresas",
