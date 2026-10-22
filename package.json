@@ -12,6 +12,7 @@
     "analyze": "next analyze",
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=6144\" next build",
     "db:backfill-communities": "tsx src/lib/db/backfill-communities.ts",
+    "db:import-communities": "tsx src/lib/db/import-communities.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:pull": "drizzle-kit pull",

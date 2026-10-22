@@ -12,6 +12,9 @@ export const CommunitySchema = z.object({
   logoUrl: z.string().nullable(),
   customDomain: z.string().nullable(),
   isActive: z.boolean(),
+  status: z.enum(["activa", "pausa", "busca-organizadores"]),
+  topics: z.array(z.string()),
+  listed: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -48,13 +51,19 @@ export const CreateCommunitySchema = z.object({
   logoUrl: z.url().optional(),
 });
 
+/** An https URL, or a logo shipped with the site (the directory import stores those paths). */
+export const LogoUrlSchema = z.union([
+  z.url({ protocol: /^https$/ }),
+  z.string().regex(/^\/images\/communities\/[a-z0-9-]+\/[\w.-]+$/, "Usá una URL https"),
+]);
+
 export const UpdateCommunitySchema = z.object({
   communityId: z.string().min(1),
   data: z
     .object({
       name: z.string().min(1),
       description: z.string().nullable(),
-      logoUrl: z.url().nullable(),
+      logoUrl: LogoUrlSchema.nullable(),
       isActive: z.boolean(),
     })
     .partial()
@@ -80,7 +89,63 @@ export const RemoveCommunityMemberSchema = z.object({
   memberId: z.string().min(1),
 });
 
+// ---------------------------------------------------------------------------
+// Organizers: the communities I run, and claims on directory communities
+// ---------------------------------------------------------------------------
+export const ClaimRelationSchema = z.enum(["organizo", "coorganizo", "retomar"]);
+export const ClaimStatusSchema = z.enum(["pending", "approved", "rejected"]);
+
+export const ClaimCommunitySchema = z.object({
+  communityId: z.string().min(1),
+  relation: ClaimRelationSchema,
+  message: z.string().trim().max(1000).default(""),
+  link: z
+    .url({ protocol: /^https?$/ })
+    .nullable()
+    .default(null),
+});
+
+export const MyCommunitySchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  logoUrl: z.string().nullable(),
+  role: CommunityRoleSchema,
+});
+
+export const MyClaimSchema = z.object({
+  id: z.string(),
+  communityId: z.string(),
+  communityName: z.string(),
+  status: ClaimStatusSchema,
+  createdAt: z.string(),
+});
+
+export const MineSchema = z.object({ communities: z.array(MyCommunitySchema), claims: z.array(MyClaimSchema) });
+
+/** A claim as site staff review it: who asks, for what, and whether the community already has an owner. */
+export const ClaimForReviewSchema = z.object({
+  id: z.string(),
+  relation: ClaimRelationSchema,
+  message: z.string(),
+  link: z.string().nullable(),
+  status: ClaimStatusSchema,
+  createdAt: z.string(),
+  community: z.object({ id: z.string(), slug: z.string(), name: z.string(), hasOwner: z.boolean() }),
+  user: z.object({ id: z.string(), name: z.string(), email: z.string(), image: z.string().nullable() }),
+});
+
+export const DecideClaimSchema = z.object({
+  claimId: z.string().min(1),
+  decision: z.enum(["approve", "reject"]),
+  /** Defaults to owner when the community has none yet, editor otherwise. */
+  role: CommunityRoleSchema.optional(),
+});
+
 export type Community = z.infer<typeof CommunitySchema>;
+export type MyCommunity = z.infer<typeof MyCommunitySchema>;
+export type MyClaim = z.infer<typeof MyClaimSchema>;
+export type ClaimForReview = z.infer<typeof ClaimForReviewSchema>;
 export type CommunityOverview = z.infer<typeof CommunityOverviewSchema>;
 export type CommunityMember = z.infer<typeof CommunityMemberSchema>;
 export type CommunityRole = z.infer<typeof CommunityRoleSchema>;
