@@ -40,6 +40,22 @@ export function googleCalendarUrl(event: DescribedEvent, pageUrl: string) {
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
+/** "Add to Outlook" (outlook.com and Microsoft 365 on the web), prefilled */
+export function outlookCalendarUrl(event: DescribedEvent, pageUrl: string) {
+  const params = new URLSearchParams({
+    path: "/calendar/action/compose",
+    rru: "addevent",
+    subject: event.name,
+    startdt: new Date(event.startDate).toISOString(),
+    enddt: new Date(event.endDate).toISOString(),
+    body: [event.summary, pageUrl].filter(Boolean).join("\n\n"),
+    location: placeLine(event),
+  });
+
+  // Outlook shows a "+" as is: spaces go as %20 (a real "+" is already %2B)
+  return `https://outlook.live.com/calendar/0/action/compose?${params.toString().replace(/\+/g, "%20")}`;
+}
+
 const MODE = {
   presencial: "https://schema.org/OfflineEventAttendanceMode",
   online: "https://schema.org/OnlineEventAttendanceMode",

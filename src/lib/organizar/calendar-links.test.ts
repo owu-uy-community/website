@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { eventJsonLd, googleCalendarUrl, safeJson, type DescribedEvent } from "./calendar-links";
+import { eventJsonLd, googleCalendarUrl, outlookCalendarUrl, safeJson, type DescribedEvent } from "./calendar-links";
 
 const event: DescribedEvent = {
   name: "Cierre del año",
@@ -22,6 +22,15 @@ describe("describing an event", () => {
 
     expect(url.searchParams.get("dates")).toBe("20291126T220000Z/20291127T000000Z");
     expect(url.searchParams.get("location")).toBe("Sala, Cordón, Montevideo");
+  });
+
+  test("the Outlook link carries UTC times and encodes spaces so Outlook doesn't show a +", () => {
+    const link = outlookCalendarUrl({ ...event, name: "C++ y café" }, "https://www.owu.uy/x");
+    const url = new URL(link);
+
+    expect(url.searchParams.get("startdt")).toBe("2029-11-26T22:00:00.000Z");
+    expect(url.searchParams.get("subject")).toBe("C++ y café");
+    expect(link).toContain("subject=C%2B%2B%20y%20caf");
   });
 
   test("JSON-LD says sold out when full, cancelled when cancelled, and escapes markup", () => {

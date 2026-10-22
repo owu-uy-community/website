@@ -8,9 +8,10 @@ import { Badge, ButtonLink, cardClassName, CommunityLogo, Container, headingClas
 import { dateParts, shortWhen } from "lib/community/time";
 import { topicLabel } from "lib/community/topics";
 import type { PublicEvent } from "lib/orpc/events/schemas";
-import { eventJsonLd, googleCalendarUrl, safeJson } from "lib/organizar/calendar-links";
+import { eventJsonLd, googleCalendarUrl, outlookCalendarUrl, safeJson } from "lib/organizar/calendar-links";
 
 import { RsvpSheet } from "./RsvpSheet";
+import { ShareButton } from "./ShareButton";
 
 const FORMAT = {
   charlas: "Charlas",
@@ -266,16 +267,42 @@ export function EventPage({
               {signUp}
 
               {!cancelled && !past ? (
-                <a
-                  className="flex items-center gap-2 text-[14px] text-zinc-400 transition-colors hover:text-white"
-                  href={googleCalendarUrl(event, url)}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <CalendarPlus aria-hidden className="size-4" />
-                  Agregar a Google Calendar
-                </a>
+                <div className="flex flex-col gap-1.5 text-[14px] text-zinc-400">
+                  <p className="flex items-center gap-2">
+                    <CalendarPlus aria-hidden className="size-4" />
+                    Agregar al calendario
+                  </p>
+                  <p className="flex flex-wrap gap-x-4 gap-y-1 pl-6">
+                    <a
+                      className="hover:text-white"
+                      href={googleCalendarUrl(event, url)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Google
+                    </a>
+                    <a
+                      className="hover:text-white"
+                      href={outlookCalendarUrl(event, url)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Outlook
+                    </a>
+                    <a
+                      className="hover:text-white"
+                      href={`/comunidad/${event.community.slug}/events/${event.slug}/evento.ics`}
+                    >
+                      Apple y otros (.ics)
+                    </a>
+                  </p>
+                </div>
               ) : null}
+              <ShareButton
+                className="flex items-center gap-2 text-[14px] text-zinc-400 transition-colors hover:text-white"
+                title={event.name}
+                url={url}
+              />
               {event.meetupUrl ? (
                 <a
                   className="text-[14px] text-zinc-500 hover:text-zinc-300"
