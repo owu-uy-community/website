@@ -7,6 +7,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -1499,6 +1500,28 @@ export const eventPublications = pgTable(
       columns: [t.connectionId],
       foreignColumns: [integrationConnections.id],
     }).onDelete("cascade"),
+  ]
+);
+
+/** People who follow a community: they hear about each event it publishes. */
+export const communityFollowers = pgTable(
+  "community_followers",
+  {
+    communityId: text("communityId").notNull(),
+    userId: text("userId").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "community_followers_pkey", columns: [t.communityId, t.userId] }),
+    index("community_followers_userId_idx").on(t.userId),
+    foreignKey({
+      name: "community_followers_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "community_followers_userId_fk", columns: [t.userId], foreignColumns: [user.id] }).onDelete(
+      "cascade"
+    ),
   ]
 );
 

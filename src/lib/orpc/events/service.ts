@@ -22,6 +22,7 @@ import { eventPagePath, refreshPage } from "../../revalidate";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
+import { notifyFollowers } from "../communities/follow";
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
@@ -557,6 +558,7 @@ export const publish = (eventId: string) =>
       );
       yield* queuePush(published, { now: true, required: true });
       yield* headsUp(published);
+      yield* notifyFollowers(published);
       yield* recordActivity({
         eventId,
         verb: "event.published",

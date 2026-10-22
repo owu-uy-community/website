@@ -25,9 +25,12 @@ import {
   UpdateCommunityMemberRoleSchema,
   UpdateCommunitySchema,
 } from "./schemas";
+import * as Follow from "./follow";
 import * as Communities from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Communities"], summary });
+
+const FollowStateSchema = z.object({ followers: z.number(), following: z.boolean() });
 
 /** Three claims a day per person is plenty for a real organizer and stops a script. */
 const claimLimit = ratelimit({
@@ -90,6 +93,31 @@ export const communitiesRouter = {
     .output(MineSchema)
     .effect(function* () {
       return yield* Communities.mine();
+    }),
+
+  followState: pub
+    .meta(docs("How many follow a community, and whether the caller does"))
+    .input(CommunityIdSchema)
+    .output(FollowStateSchema)
+    .effect(function* ({ input, context }) {
+      const session = yield* Effect.promise(() => context.getSession());
+      return yield* Follow.state(input.communityId, session?.user.id ?? null);
+    }),
+
+  follow: authed
+    .meta(docs("Follow a community: an email for each event it publishes"))
+    .input(CommunityIdSchema)
+    .output(FollowStateSchema)
+    .effect(function* ({ input, context }) {
+      return yield* Follow.follow(input.communityId, context.user.id);
+    }),
+
+  unfollow: authed
+    .meta(docs("Stop following a community"))
+    .input(CommunityIdSchema)
+    .output(FollowStateSchema)
+    .effect(function* ({ input, context }) {
+      return yield* Follow.unfollow(input.communityId, context.user.id);
     }),
 
   claim: authed

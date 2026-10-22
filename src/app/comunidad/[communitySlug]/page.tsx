@@ -49,6 +49,7 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
   return (
     <SiteChrome>
       <CommunityProfile
+        canFollow={ORGANIZAR_ON}
         claimHref={ORGANIZAR_ON ? "/organizar/panel/reclamar" : null}
         community={community}
         hosts={hosted.map((row) => row.name).toSorted((a, b) => a.localeCompare(b, "es"))}
