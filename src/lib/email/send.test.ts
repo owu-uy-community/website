@@ -52,6 +52,22 @@ describe(sendEmail, () => {
 
     await expect(sendEmail(email)).rejects.toThrow("Resend answered 429");
   });
+
+  test("news to followers goes from its own address when there's one", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("EMAIL_FROM", "OWU <hola@mail.owu.uy>");
+    vi.stubEnv("EMAIL_FROM_NEWS", "OWU <novedades@news.owu.uy>");
+    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ id: "resend-id" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await sendEmail({ ...email, kind: "follower_new_event" });
+    await sendEmail(email);
+
+    expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(String(init?.body)).from)).toStrictEqual([
+      "OWU <novedades@news.owu.uy>",
+      "OWU <hola@mail.owu.uy>",
+    ]);
+  });
 });
 
 describe(otpEmail, () => {
