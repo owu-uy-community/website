@@ -189,5 +189,6 @@ describe("signing up", () => {
     await expect(decide(pending.id, "approve")).resolves.toMatchObject({ status: "attending" });
     await expect(decide(other.id, "decline")).resolves.toMatchObject({ status: "declined" });
     await expect(decide(other.id, "approve")).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(join(event.id, beto)).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "declined" } });
   });
 });

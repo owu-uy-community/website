@@ -67,4 +67,15 @@ describe(buildInvite, () => {
     expect(cancel).toContain("METHOD:CANCEL");
     expect(cancel).toContain("STATUS:CANCELLED");
   });
+
+  test("a name can't add lines or properties to the invite", () => {
+    const sneaky = buildInvite({
+      ...invite,
+      method: "REQUEST",
+      attendee: { name: 'Ana\r\nATTACH:http://x"', email: "ana@example.com" },
+    });
+
+    expect(sneaky).not.toContain("\r\nATTACH");
+    expect(sneaky.replace(/\r\n /g, "")).toContain('ATTENDEE;CN="Ana  ATTACH:http://x\'"');
+  });
 });
