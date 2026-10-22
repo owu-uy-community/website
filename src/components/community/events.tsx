@@ -40,9 +40,7 @@ export function EventRow({ event, showMonth = true }: { event: CommunityEvent; s
           {event.title}
         </a>
         <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-400">
-          <span className="capitalize tabular-nums">
-            {showMonth ? `${when.weekday} · ${when.time}` : `${when.time}`} h
-          </span>
+          <span className="capitalize tabular-nums">{showMonth ? `${when.weekday} · ${when.time}` : when.time} h</span>
           <span aria-hidden className="text-zinc-600">
             ·
           </span>
