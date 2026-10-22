@@ -202,6 +202,16 @@ const EXPECTED: Record<string, Access> = {
   "tracks.list": "public",
   "tracks.swap": "staff",
   "tracks.update": "staff",
+  "venues.byToken": "public",
+  "venues.cancelRequest": "community:editor",
+  "venues.list": "community:editor",
+  "venues.manage.list": "staff",
+  "venues.manage.remove": "staff",
+  "venues.manage.update": "staff",
+  "venues.request": "community:editor",
+  "venues.requests": "community:member",
+  "venues.respond": "public",
+  "venues.submit": "authed",
 };
 
 function accessMap(node: Record<string, unknown>, path: string[] = []): Record<string, Access | undefined> {

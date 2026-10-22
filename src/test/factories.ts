@@ -11,6 +11,8 @@ import {
   schedules,
   tracks,
   user,
+  venueContacts,
+  venues,
 } from "lib/db/schema";
 
 /**
@@ -182,6 +184,28 @@ export async function makeRsvp(eventId: string, overrides: Partial<typeof attend
     .returning();
 
   return row;
+}
+
+/** An active space taking requests, with one consented contact (pass `contact: null` for none). */
+export async function makeVenue(
+  overrides: Partial<typeof venues.$inferInsert> = {},
+  contact: { name: string; email: string } | null = { name: "Host de prueba", email: `${createId()}@host.test.owu.uy` }
+) {
+  const [row] = await db
+    .insert(venues)
+    .values({
+      name: `Espacio ${createId().slice(0, 6)}`,
+      neighbourhood: "Cordón",
+      address: "Calle Falsa 123",
+      capacity: 60,
+      status: "active",
+      requestable: true,
+      ...overrides,
+    })
+    .returning();
+  if (contact) await db.insert(venueContacts).values({ venueId: row.id, ...contact, consentAt: new Date() });
+
+  return { ...row, contact };
 }
 
 /** A community with one event, two rooms (one with TV) and two time slots. */
