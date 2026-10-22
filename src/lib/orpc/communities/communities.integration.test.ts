@@ -374,6 +374,30 @@ describe("communities.delete", () => {
   });
 });
 
+describe("communities.members.showOnProfile", () => {
+  test("an organizer shows themselves on the public page, and only themselves", async () => {
+    const { community, editor, admin, member, membershipOf } = await setup();
+    const show = { communityId: community.id, show: true };
+
+    await expect(call(router.communities.members.showOnProfile, show, by(editor))).resolves.toStrictEqual({
+      showOnProfile: true,
+    });
+    expect((await membershipOf(editor.id)).showOnProfile).toBe(true);
+    expect((await membershipOf(admin.id)).showOnProfile).toBe(false);
+    await expect(call(router.communities.members.showOnProfile, show, by(member))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  test("site staff outside the team have no membership to show", async () => {
+    const { community, staff } = await setup();
+
+    await expect(
+      call(router.communities.members.showOnProfile, { communityId: community.id, show: true }, by(staff))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
 describe("communities.claim", () => {
   const claimInput = (communityId: string) => ({ communityId, relation: "organizo" as const, message: "", link: null });
 

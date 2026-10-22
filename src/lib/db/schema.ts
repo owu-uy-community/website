@@ -204,6 +204,8 @@ export const communityMembers = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     role: communityRole("role").notNull().default("member"),
+    /** They chose to appear (name and photo, never the email) in «Organizan» on the community's page */
+    showOnProfile: boolean("showOnProfile").notNull().default(false),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()

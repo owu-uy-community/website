@@ -310,6 +310,26 @@ export const removeCommunityMember = (input: { communityId: string; memberId: st
     })
   );
 
+/** Show me, or not, among the organizers on the community's public page. Only my own membership. */
+export const setShowOnProfile = (input: { communityId: string; show: boolean }) =>
+  Effect.gen(function* () {
+    const me = yield* CurrentUser;
+    const [row] = yield* query((db) =>
+      db
+        .update(communityMembers)
+        .set({ showOnProfile: input.show })
+        .where(and(eq(communityMembers.communityId, input.communityId), eq(communityMembers.userId, me.id)))
+        .returning({ showOnProfile: communityMembers.showOnProfile })
+    );
+    if (!row) return yield* new NotFound({ entity: "member", message: "No sos parte del equipo de esta comunidad" });
+    const [community] = yield* query((db) =>
+      db.select({ slug: communities.slug }).from(communities).where(eq(communities.id, input.communityId))
+    );
+    if (community) refreshPage(`/comunidad/${community.slug}`);
+
+    return row;
+  });
+
 // ---------------------------------------------------------------------------
 // Organizers: the communities I run, and claims on directory communities
 // ---------------------------------------------------------------------------

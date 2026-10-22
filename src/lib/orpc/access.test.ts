@@ -54,6 +54,7 @@ const EXPECTED: Record<string, Access> = {
   "communities.members.add": "community:admin",
   "communities.members.list": "community:admin",
   "communities.members.remove": "community:admin",
+  "communities.members.showOnProfile": "community:editor",
   "communities.members.updateRole": "community:admin",
   "communities.mine": "authed",
   "communities.unfollow": "authed",
