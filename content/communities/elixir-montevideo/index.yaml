@@ -7,4 +7,5 @@ status: activa
 meetup: https://www.meetup.com/elixir-montevideo/
 feedNames:
   - "Elixir |> Montevideo"
+slackChannel: elixir
 confPartner: false

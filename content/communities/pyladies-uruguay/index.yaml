@@ -1,0 +1,10 @@
+name: "PyLadies Uruguay"
+description: "Capítulo uruguayo de PyLadies: Python, aprendizaje y networking, con foco (no excluyente) en mujeres y diversidades."
+topics:
+  - lenguajes
+  - diversidad
+status: activa
+meetup: https://www.meetup.com/uruguay-pyladies-meetup-group/
+feedNames:
+  - "Uruguay Pyladies Meetup Group"
+confPartner: false

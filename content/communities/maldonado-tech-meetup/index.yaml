@@ -1,0 +1,10 @@
+name: "Maldonado Tech Meetup"
+description: "Encuentros para quienes trabajan en tecnología en Maldonado, Punta del Este y alrededores."
+topics:
+  - general
+status: activa
+meetup: https://www.meetup.com/maldonado-tech-meetup/
+slackChannel: maldonado-tech-meetup
+feedNames:
+  - "Maldonado Tech Meetup"
+confPartner: false

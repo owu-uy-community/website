@@ -7,4 +7,6 @@ topics:
   - cloud
 status: activa
 meetup: https://gdg.community.dev/gdg-montevideo/
+feedNames:
+  - "GDG"
 confPartner: false
