@@ -891,6 +891,7 @@ const toPublic = (eventId: string) =>
       cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
       materials: event.materials,
+      talks: event.talks.filter((talk) => talk.title.trim()),
       going: (yield* query((db) =>
         db
           .select({ name: attendees.name })

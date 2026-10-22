@@ -262,6 +262,8 @@ export const PublicEventSchema = z.object({
   materials: z.array(MaterialSchema),
   /** «Quiénes van»: the first 12 who chose to show it, as "Ana G." */
   going: z.array(z.string()),
+  /** The talks, those with a title */
+  talks: z.array(TalkSchema),
 });
 
 export const CohostInvitationSchema = z.object({
