@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Menu, Plus } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { openNewEvent } from "components/organizar/events/NewEventDialog";
 import { useSidebar } from "components/shared/ui/sidebar";
 
 import { usePanel } from "./context";
@@ -57,15 +58,16 @@ export function PanelTabBar() {
       <div className="grid grid-cols-5 pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
         {tab(items[0])}
         {tab(items[1])}
-        <Link
+        <button
           aria-label="Nuevo evento"
           className="flex h-14 touch-manipulation items-center justify-center"
-          href={`${panelHref(current.slug, "eventos")}?nuevo=1`}
+          type="button"
+          onClick={openNewEvent}
         >
           <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-edge">
             <Plus aria-hidden className="size-5" />
           </span>
-        </Link>
+        </button>
         {tab(items[2])}
         <button
           className="flex h-14 touch-manipulation flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
