@@ -13,6 +13,8 @@ import {
   CircleX,
   ExternalLink,
   Info,
+  List,
+  PartyPopper,
   Sparkles,
   Star,
   TriangleAlert,
@@ -67,6 +69,14 @@ const DURATIONS = [
 ];
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
+/** What the calendar can hide: holds, holidays, and the big events and periods (CONF, vacations) */
+const LAYERS = [
+  { value: "reservas", label: "Reservas" },
+  { value: "feriados", label: "Feriados" },
+  { value: "grandes", label: "Eventos grandes" },
+] as const;
+type Layer = (typeof LAYERS)[number]["value"];
+
 /** Day keys are calendar days: format them at noon UTC so no timezone moves them. */
 const onDay = (day: string, options: Intl.DateTimeFormatOptions) =>
   new Intl.DateTimeFormat("es-UY", { timeZone: "UTC", ...options }).format(new Date(`${day}T12:00:00Z`));
@@ -103,6 +113,13 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
   const selected = params.get("dia");
   /** Dating an existing draft (from Inicio or Eventos) instead of making a new one */
   const draftId = params.get("evento");
+  // The month grid, or a list of the days with something on them (the default on phones)
+  const view = params.get("vista") === "agenda" || (isMobile && params.get("vista") !== "mes") ? "agenda" : "mes";
+  const layers = new Set<Layer>(
+    params.has("capas")
+      ? LAYERS.map((layer) => layer.value).filter((value) => (params.get("capas") ?? "").split(",").includes(value))
+      : LAYERS.map((layer) => layer.value)
+  );
 
   const setParams = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params.toString());
@@ -153,11 +170,14 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
     const byDay = new Map<string, PlanItem[]>();
     for (const item of plan.data?.items ?? []) {
       if (scope === "audiencia" && !item.related) continue;
+      if (!layers.has("reservas") && item.kind === "hold" && !item.own) continue;
+      if (!layers.has("grandes") && item.isOwu && !item.own) continue;
       for (const day of itemDays(item.start, item.end, dayKey)) byDay.set(day, [...(byDay.get(day) ?? []), item]);
     }
 
     return byDay;
-  }, [plan.data, scope]);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- layers is rebuilt from the URL each render
+  }, [plan.data, scope, params.get("capas")]);
   const holdsById = useMemo(
     () => new Map((own.data ?? []).filter((event) => event.heldUntil).map((event) => [event.id, event])),
     [own.data]
@@ -316,6 +336,35 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
             Mi audiencia
           </ToggleGroupItem>
         </ToggleGroup>
+        <ToggleGroup
+          aria-label="Capas"
+          className="rounded-md border border-input"
+          type="multiple"
+          value={[...layers]}
+          onValueChange={(value) =>
+            setParams({ capas: value.length === LAYERS.length ? null : value.join(",") || "ninguna" })
+          }
+        >
+          {LAYERS.map((layer) => (
+            <ToggleGroupItem key={layer.value} className="h-8 px-2.5 text-ui" value={layer.value}>
+              {layer.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <ToggleGroup
+          aria-label="Vista"
+          className="rounded-md border border-input"
+          type="single"
+          value={view}
+          onValueChange={(value) => value && setParams({ vista: value })}
+        >
+          <ToggleGroupItem aria-label="Mes" className="h-8 px-2.5" value="mes">
+            <CalendarDays aria-hidden className="size-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem aria-label="Agenda" className="h-8 px-2.5" value="agenda">
+            <List aria-hidden className="size-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
         <Legend />
       </div>
 
@@ -323,38 +372,52 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
         <ErrorState onRetry={() => void plan.refetch()} title="No pudimos armar el calendario" />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <Panel className={cn("overflow-hidden", plan.isPlaceholderData && "opacity-70 transition-opacity")}>
-            <div className="grid grid-cols-7 border-b border-border">
-              {WEEKDAYS.map((weekday) => (
-                <div key={weekday} className="px-2 py-2">
-                  <MicroLabel>{weekday}</MicroLabel>
-                </div>
-              ))}
-            </div>
-            <div aria-label={`Días de ${monthTitle(month)}`} className="grid grid-cols-7" role="group">
-              {cells.map((day) => (
-                <DayCell
-                  key={day}
-                  compact={isMobile}
-                  day={day}
-                  inMonth={day >= from && day <= to}
-                  items={itemsByDay.get(day) ?? []}
-                  loading={!plan.data}
-                  refCallback={(node) => {
-                    if (node) cellRefs.current.set(day, node);
-                    else cellRefs.current.delete(day);
-                  }}
-                  score={days.get(day)}
-                  selected={day === selected}
-                  suggested={suggested.has(day)}
-                  tabbable={day === (selected ?? (today.startsWith(month) ? today : from))}
-                  today={day === today}
-                  onKeyDown={onGridKey}
-                  onSelect={() => select(day)}
-                />
-              ))}
-            </div>
-          </Panel>
+          {view === "agenda" ? (
+            <Agenda
+              days={(plan.data?.days ?? []).filter((day) => day.day >= from && day.day <= to)}
+              itemsByDay={itemsByDay}
+              layers={layers}
+              loading={!plan.data}
+              selected={selected}
+              suggested={suggested}
+              today={today}
+              onSelect={(day) => select(day)}
+            />
+          ) : (
+            <Panel className={cn("overflow-hidden", plan.isPlaceholderData && "opacity-70 transition-opacity")}>
+              <div className="grid grid-cols-7 border-b border-border">
+                {WEEKDAYS.map((weekday) => (
+                  <div key={weekday} className="px-2 py-2">
+                    <MicroLabel>{weekday}</MicroLabel>
+                  </div>
+                ))}
+              </div>
+              <div aria-label={`Días de ${monthTitle(month)}`} className="grid grid-cols-7" role="group">
+                {cells.map((day) => (
+                  <DayCell
+                    key={day}
+                    compact={isMobile}
+                    day={day}
+                    layers={layers}
+                    inMonth={day >= from && day <= to}
+                    items={itemsByDay.get(day) ?? []}
+                    loading={!plan.data}
+                    refCallback={(node) => {
+                      if (node) cellRefs.current.set(day, node);
+                      else cellRefs.current.delete(day);
+                    }}
+                    score={days.get(day)}
+                    selected={day === selected}
+                    suggested={suggested.has(day)}
+                    tabbable={day === (selected ?? (today.startsWith(month) ? today : from))}
+                    today={day === today}
+                    onKeyDown={onGridKey}
+                    onSelect={() => select(day)}
+                  />
+                ))}
+              </div>
+            </Panel>
+          )}
 
           <div className="flex flex-col gap-4">
             {!isMobile && dayPanel ? <Panel>{dayPanel}</Panel> : null}
@@ -416,11 +479,13 @@ function DayCell({
   tabbable,
   compact,
   loading,
+  layers,
   refCallback,
   onKeyDown,
   onSelect,
 }: {
   day: string;
+  layers: Set<Layer>;
   score: PlanDay | undefined;
   items: PlanItem[];
   inMonth: boolean;
@@ -495,6 +560,15 @@ function DayCell({
           ) : null}
         </span>
       </span>
+      {!compact && inMonth && layers.has("feriados") && score?.holiday ? (
+        <span className="flex min-w-0 items-center gap-1 px-1 text-2xs text-warning-foreground">
+          <PartyPopper aria-hidden className="size-2.5 shrink-0" />
+          <span className="truncate">{score.holiday}</span>
+        </span>
+      ) : null}
+      {!compact && inMonth && layers.has("grandes") && score?.period && !score.holiday ? (
+        <span className="truncate px-1 text-2xs text-muted-foreground">{score.period}</span>
+      ) : null}
       {compact ? (
         items.length > 0 ? (
           <span aria-hidden className="flex flex-wrap gap-0.5">
@@ -522,6 +596,96 @@ function DayCell({
         </span>
       )}
     </button>
+  );
+}
+
+/** The month as a list: each day with something on it (events, holds, a holiday), or suggested. */
+function Agenda({
+  days,
+  itemsByDay,
+  layers,
+  loading,
+  selected,
+  suggested,
+  today,
+  onSelect,
+}: {
+  days: PlanDay[];
+  itemsByDay: Map<string, PlanItem[]>;
+  layers: Set<Layer>;
+  loading: boolean;
+  selected: string | null;
+  suggested: Set<string>;
+  today: string;
+  onSelect: (day: string) => void;
+}) {
+  const shown = days.filter(
+    (day) =>
+      day.day >= today &&
+      ((itemsByDay.get(day.day)?.length ?? 0) > 0 ||
+        suggested.has(day.day) ||
+        (layers.has("feriados") && day.holiday) ||
+        (layers.has("grandes") && day.period))
+  );
+
+  return (
+    <Panel>
+      {loading ? (
+        <div className="flex flex-col gap-2 p-3">
+          {[0, 1, 2, 3].map((index) => (
+            <Skeleton key={index} className="h-12" />
+          ))}
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="p-4 text-ui text-muted-foreground">Nada este mes todavía: elegí un día en la vista de mes.</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {shown.map((day) => {
+            const level = LEVEL[day.level];
+            const items = itemsByDay.get(day.day) ?? [];
+
+            return (
+              <li key={day.day}>
+                <button
+                  aria-pressed={selected === day.day}
+                  className={cn(
+                    "flex w-full items-start gap-3 px-3.5 py-3 text-left transition-colors hover:bg-raised",
+                    selected === day.day && "bg-raised shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                  )}
+                  type="button"
+                  onClick={() => onSelect(day.day)}
+                >
+                  <span className="w-20 shrink-0 font-terminal text-meta text-subtle tabular-nums first-letter:uppercase">
+                    {shortDay(day.day)}
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    {layers.has("feriados") && day.holiday ? (
+                      <span className="flex items-center gap-1 text-meta text-warning-foreground">
+                        <PartyPopper aria-hidden className="size-3" />
+                        {day.holiday}
+                      </span>
+                    ) : null}
+                    {layers.has("grandes") && day.period ? (
+                      <span className="text-meta text-muted-foreground">{day.period}</span>
+                    ) : null}
+                    {items.map((item) => (
+                      <ItemChip key={item.id} item={item} />
+                    ))}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5 text-meta">
+                    {suggested.has(day.day) ? (
+                      <Star aria-label="Sugerida" className="size-3.5 fill-success text-success" />
+                    ) : null}
+                    <level.icon aria-hidden className={cn("size-3.5", level.tone)} />
+                    <span className="max-sm:sr-only">{level.label}</span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
   );
 }
 

@@ -51,6 +51,10 @@ export type DayScore = {
   level: "libre" | "cuidado" | "choca" | "bloqueado";
   blocked: boolean;
   reasons: Reason[];
+  /** The holiday that day, for the calendar's holiday layer */
+  holiday: string | null;
+  /** A period that weighs on it (vacations, a FIFA window), for the big-events layer */
+  period: string | null;
 };
 
 export const WEIGHTS = {
@@ -277,7 +281,9 @@ export function scoreDays(input: ScoreInput): DayScore[] {
 
     const score = Math.round(Math.min(100, Math.max(0, 100 - total)));
     const level = blocked ? "bloqueado" : score >= 80 ? "libre" : score >= 50 ? "cuidado" : "choca";
-    days.push({ day, score, level, blocked, reasons });
+    const holiday = (holidays.get(day) ?? []).find((item) => item.kind !== "laborable")?.name ?? null;
+    const period = BLOCKERS.find((blocker) => blocker.from <= day && day <= blocker.to)?.name ?? null;
+    days.push({ day, score, level, blocked, reasons, holiday, period });
   }
 
   return days;
