@@ -153,13 +153,14 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
   }
   const bySlug = new Map(communities.map((community) => [community.slug, community]));
 
-  // A meetup made in OWU and copied to Meetup shows once, as OWU's
+  // A meetup made in OWU and copied to Meetup shows once, as OWU's. Only a community's own events
+  // can hide its feed entries: another community pasting the link must not make them disappear.
   const copied = (meetup: FeedMeetup, communitySlug: string | null) =>
+    communitySlug !== null &&
     own.some(
       (event) =>
-        (event.meetupUrl !== null && sameLink(event.meetupUrl, meetup.event_url)) ||
-        (communitySlug !== null &&
-          event.communitySlug === communitySlug &&
+        event.communitySlug === communitySlug &&
+        ((event.meetupUrl !== null && sameLink(event.meetupUrl, meetup.event_url)) ||
           Math.abs(Date.parse(event.start) - Date.parse(montevideoIso(meetup.datetime))) <= SAME_MEETUP_MS)
     );
 

@@ -110,7 +110,12 @@ export const DraftPatchSchema = z
     guestsAllowed: z.number().int().min(0).max(3),
     rsvpClosesAt: z.iso.datetime().nullable(),
     questions: z.array(QuestionSchema).max(5),
-    externalLinks: z.object({ meetup: HttpsUrl.optional() }),
+    externalLinks: z.object({
+      meetup: HttpsUrl.refine(
+        (url) => /^(www\.)?meetup\.com$/.test(new URL(url).hostname),
+        "Pegá el link del evento en meetup.com"
+      ).optional(),
+    }),
     /** Published events move their date here (drafts reserve one instead) */
     schedule: z.object({ day: DaySchema, startTime: ClockSchema, durationMin: DurationSchema }),
   })
