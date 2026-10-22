@@ -47,14 +47,14 @@ const STEPS = [
   {
     icon: Compass,
     title: "Elegí dónde",
-    body: "Cada comunidad tiene su público. Más abajo tenés en qué grupo encaja cada tema.",
+    body: "Cada comunidad tiene su público. Más abajo tenés en qué comunidad encaja cada tema.",
     href: "#donde",
     cta: "Ver dónde encaja",
   },
   {
     icon: Send,
     title: "Mandá tu propuesta",
-    body: "Un título y tres líneas alcanzan. Escribile a quien organiza el grupo: por su página de eventos, su web o su canal en el Slack.",
+    body: "Un título y tres líneas alcanzan. Escribile a quien organiza la comunidad: por su página de eventos, su web o su canal en el Slack.",
   },
   {
     icon: MessagesSquare,
@@ -134,7 +134,7 @@ export default async function DarUnaCharlaPage() {
       </Section>
 
       <Section
-        description="Cada grupo arma su agenda. Elegí el que mejor encaja con tu tema y mirá su ficha para saber cómo proponer."
+        description="Cada comunidad arma su agenda. Elegí la que mejor encaja con tu tema y mirá su ficha para saber cómo proponer."
         eyebrow="Dónde"
         id="donde"
         title="¿Dónde encaja tu charla?"
@@ -186,7 +186,7 @@ export default async function DarUnaCharlaPage() {
           </div>
         </Reveal>
         <p className="mt-5 text-sm text-zinc-500">
-          ¿Tu tema no tiene grupo? Proponelo igual en el Slack: muchas veces así nace una comunidad nueva.{" "}
+          ¿Tu tema no tiene comunidad? Proponelo igual en el Slack: muchas veces así nace una nueva.{" "}
           <Link
             className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400"
             href={PAGES.organizar.href}
@@ -276,7 +276,7 @@ export default async function DarUnaCharlaPage() {
       </Section>
 
       <Section
-        description={`Lugares que ya recibieron eventos de la comunidad. Si tu grupo necesita dónde hacer su próxima meetup, pedí contactos en #${SLACK_CHANNELS.organizers}.`}
+        description={`Lugares que ya recibieron eventos de la comunidad. Si tu comunidad necesita dónde hacer su próxima meetup, pedí contactos en #${SLACK_CHANNELS.organizers}.`}
         eyebrow="Lugares"
         title="Dónde se hacen las meetups"
       >

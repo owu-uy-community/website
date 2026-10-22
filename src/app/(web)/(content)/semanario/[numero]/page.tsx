@@ -185,7 +185,7 @@ export default async function SemanarioIssuePage({ params }: Props) {
             {newCommunities.length > 0 ? (
               <Cell className="gap-5">
                 <p className="text-zinc-400">
-                  {newCommunities.length === 1 ? "Se sumó un grupo" : `Se sumaron ${newCommunities.length} grupos`} al
+                  {newCommunities.length === 1 ? "Se sumó una comunidad" : `Se sumaron ${newCommunities.length} comunidades`} al
                   directorio:
                 </p>
                 <ul className="flex flex-wrap gap-2">

@@ -35,7 +35,7 @@ import { CONF_URL, issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/sit
 export const metadata = pageMetadata({
   title: "Organizá con OWU",
   description:
-    "Qué le da OWU a un grupo que organiza meetups, qué le pide, cómo sumarse al directorio y el programa de comunidades aliadas de OWU CONF.",
+    "Qué le da OWU a una comunidad que organiza meetups, qué le pide, cómo sumarse al directorio y el programa de comunidades aliadas de OWU CONF.",
   path: "/organizar",
 });
 
@@ -86,12 +86,12 @@ const ASKS = [
   {
     icon: CalendarCheck,
     title: "Mantené tu ficha al día",
-    body: "Si pasan seis meses sin eventos, marcamos el grupo como “en pausa” hasta que vuelva a arrancar.",
+    body: "Si pasan seis meses sin eventos, marcamos la comunidad como “en pausa” hasta que vuelva a arrancar.",
   },
   {
     icon: HeartHandshake,
     title: "Avisá si dejás de organizar",
-    body: "Así buscamos entre todos quién siga, en vez de que el grupo se apague sin que nadie se entere.",
+    body: "Así buscamos entre todos quién siga, en vez de que la comunidad se apague sin que nadie se entere.",
   },
 ];
 
@@ -103,7 +103,7 @@ const JOIN = [
   { title: "Lo revisamos", body: "Alguien del staff sube tu ficha al directorio y te avisa." },
   {
     title: "Arrancá",
-    body: "Si tu grupo está en Meetup.com, lo sumamos al bot de la agenda (o abrís vos un PR a su repo) y tus eventos aparecen solos.",
+    body: "Si tu comunidad está en Meetup.com, la sumamos al bot de la agenda (o abrís vos un PR a su repo) y tus eventos aparecen solos.",
   },
 ];
 
@@ -125,7 +125,7 @@ export default async function OrganizarPage() {
             </ButtonLink>
           </>
         }
-        description={`¿Tenés un grupo o querés arrancar uno? OWU no te cobra ni te pide que cambies nada: tu grupo sigue siendo tuyo. Te damos canal, agenda y una comunidad${people ? ` de más de ${new Intl.NumberFormat("es-UY").format(people)} personas` : ""} para que tus meetups se llenen.`}
+        description={`¿Tenés una comunidad o querés arrancar una? OWU no te cobra ni te pide que cambies nada: tu comunidad sigue siendo tuya. Te damos canal, agenda y una comunidad${people ? ` de más de ${new Intl.NumberFormat("es-UY").format(people)} personas` : ""} para que tus meetups se llenen.`}
         eyebrow="Organizá"
         title="Organizá con OWU"
       />
@@ -183,7 +183,7 @@ export default async function OrganizarPage() {
           </ButtonLink>
         }
         description={`¿No usás GitHub? Escribinos en #${SLACK_CHANNELS.organizers} y lo cargamos por vos.`}
-        eyebrow="Sumá tu grupo"
+        eyebrow="Sumá tu comunidad"
         id="sumar"
         title="Cómo entrar al directorio"
       >
@@ -287,16 +287,16 @@ export default async function OrganizarPage() {
             items={[
               {
                 question: "¿Sumarse cuesta algo?",
-                answer: "No. Ni para el grupo ni para la gente que va a sus eventos.",
+                answer: "No. Ni para la comunidad ni para la gente que va a sus eventos.",
               },
               {
-                question: "¿Tengo que cambiar el nombre o la marca de mi grupo?",
-                answer: "No. Tu grupo sigue siendo tuyo, con su nombre, su página y su forma de organizarse.",
+                question: "¿Tengo que cambiar el nombre o la marca de mi comunidad?",
+                answer: "No. Tu comunidad sigue siendo tuya, con su nombre, su página y su forma de organizarse.",
               },
               {
-                question: "¿Y si mi grupo es chico o recién arranca?",
+                question: "¿Y si mi comunidad es chica o recién arranca?",
                 answer:
-                  "Mejor: es cuando más sirve tener un canal y un lugar en la agenda. Un grupo puede arrancar con una meetup chica.",
+                  "Mejor: es cuando más sirve tener un canal y un lugar en la agenda. Una comunidad puede arrancar con una meetup chica.",
               },
               {
                 question: "¿Puedo usar la herramienta de open space en mi evento?",
@@ -308,7 +308,7 @@ export default async function OrganizarPage() {
                 ),
               },
               {
-                question: "¿Qué pasa si mi grupo deja de hacer eventos?",
+                question: "¿Qué pasa si mi comunidad deja de hacer eventos?",
                 answer:
                   "Después de seis meses sin eventos lo marcamos como “en pausa” en el directorio. Si vuelve a arrancar, se saca la marca.",
               },

@@ -1,5 +1,5 @@
 name: Sumá tu comunidad
-description: Pedí que tu grupo aparezca en owu.uy/comunidades, en la agenda y en el buscador del sitio.
+description: Pedí que tu comunidad aparezca en owu.uy/comunidades, en la agenda y en el buscador del sitio.
 title: "Sumar comunidad: "
 labels: ["comunidad"]
 body:
@@ -11,7 +11,7 @@ body:
   - type: input
     id: nombre
     attributes:
-      label: Nombre del grupo
+      label: Nombre de la comunidad
       placeholder: Python Montevideo
     validations:
       required: true
@@ -46,12 +46,12 @@ body:
     attributes:
       label: Página de eventos
       description: Meetup.com, gdg.community.dev, Luma o donde publiquen sus fechas.
-      placeholder: https://www.meetup.com/tu-grupo/
+      placeholder: https://www.meetup.com/tu-comunidad/
   - type: input
     id: nombre-meetup
     attributes:
       label: Nombre exacto en Meetup.com
-      description: Si publican en Meetup.com, cómo aparece el grupo ahí. Así mostramos su próximo evento automáticamente.
+      description: Si publican en Meetup.com, cómo aparece la comunidad ahí. Así mostramos su próximo evento automáticamente.
   - type: input
     id: web
     attributes:
@@ -79,5 +79,5 @@ body:
     attributes:
       label: Código de conducta
       options:
-        - label: Los eventos del grupo siguen el [código de conducta de OWU](https://www.owu.uy/codigo-de-conducta).
+        - label: Los eventos de la comunidad siguen el [código de conducta de OWU](https://www.owu.uy/codigo-de-conducta).
           required: true

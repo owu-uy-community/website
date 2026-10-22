@@ -236,7 +236,7 @@ export default async function EmpresasPage() {
                 answer: (
                   <>
                     Sí, si es una charla técnica útil para la comunidad y no una presentación comercial. Proponela en el
-                    grupo donde encaje: <a href={PAGES.darCharla.href}>te contamos cómo</a>.
+                    comunidad donde encaje: <a href={PAGES.darCharla.href}>te contamos cómo</a>.
                   </>
                 ),
               },

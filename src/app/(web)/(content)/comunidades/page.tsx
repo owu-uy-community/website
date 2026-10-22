@@ -13,7 +13,7 @@ export const revalidate = 3600;
 export const metadata = pageMetadata({
   title: "Comunidades",
   description:
-    "Los grupos tech de Uruguay que forman OWU: de qué se trata cada uno, dónde se juntan y cuándo es su próximo evento.",
+    "Las comunidades tech de Uruguay que forman OWU: de qué se trata cada una, dónde se juntan y cuándo es su próximo evento.",
   path: PAGES.comunidades.href,
 });
 
@@ -43,8 +43,8 @@ export default async function CommunitiesPage() {
         }
         description={
           <>
-            {communities.length} grupos que organizan meetups, charlas y talleres en Uruguay. Cada uno tiene su propia
-            agenda; OWU los conecta con un Slack, un calendario y una conferencia.
+            {communities.length} comunidades que organizan meetups, charlas y talleres en Uruguay. Cada una tiene su propia
+            agenda; OWU las conecta con un Slack, un calendario y una conferencia.
           </>
         }
         eyebrow="Directorio"
