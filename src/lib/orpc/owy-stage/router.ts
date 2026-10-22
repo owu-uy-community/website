@@ -4,7 +4,6 @@ import { Effect } from "effect";
 import * as z from "zod";
 
 import {
-  DeskSchema,
   EffectEventSchema,
   FaceEventSchema,
   RundownSchema,
@@ -16,7 +15,10 @@ import { disconnectSpotify, getSpotifyNowPlaying, spotifyStatus } from "../../ow
 import { pub, staff } from "../base";
 import { limiter } from "../ratelimit";
 import {
+  DeskWireSchema,
   FireEffectSchema,
+  FirePresetResultSchema,
+  FirePresetSchema,
   GetInputsSchema,
   GetPulseSchema,
   ModerateSchema,
@@ -83,8 +85,8 @@ export const owyStageRouter = {
     }),
 
   getDesk: staff
-    .meta(docs("The operator's desk: the preview, the queue behind it and the favorites"))
-    .output(DeskSchema)
+    .meta(docs("The operator's desk: the preview, the queue behind it and the presets"))
+    .output(DeskWireSchema)
     .effect(function* () {
       return yield* Stage.getDesk();
     }),
@@ -92,7 +94,7 @@ export const owyStageRouter = {
   saveDesk: staff
     .meta(docs("Replace the desk"))
     .input(SaveDeskSchema)
-    .output(DeskSchema)
+    .output(DeskWireSchema)
     .effect(function* ({ input }) {
       return yield* Stage.saveDesk(input.desk);
     }),
@@ -103,6 +105,14 @@ export const owyStageRouter = {
     .output(TakeResultSchema)
     .effect(function* ({ input }) {
       return yield* Stage.take(input.step, input.transition);
+    }),
+
+  firePreset: staff
+    .meta(docs("A preset, by its id or its number on the desk: into preview (TAKE sends it) or straight on air"))
+    .input(FirePresetSchema)
+    .output(FirePresetResultSchema)
+    .effect(function* ({ input }) {
+      return yield* Stage.firePreset(input.preset, input.to);
     }),
 
   fireEffect: staff

@@ -91,6 +91,7 @@ const EXPECTED: Record<string, Access> = {
   "openSpaces.update": "staff",
   "owyStage.disconnectSpotify": "staff",
   "owyStage.fireEffect": "staff",
+  "owyStage.firePreset": "staff",
   "owyStage.getDesk": "staff",
   "owyStage.getMeetups": "public",
   "owyStage.getPulse": "public",

@@ -31,6 +31,7 @@ import { orpc } from "lib/orpc";
 import { OWY_STAGE_CHANNEL, SCENES, type RundownStep, type SceneId } from "lib/owy-stage/scenes";
 
 import { ActionsMenuButton } from "./menus";
+import { paramText } from "./Queue";
 
 const DEFAULT_SEC = 20;
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -328,6 +329,8 @@ function Step({
 }) {
   const controls = useDragControls();
   const pinned = Object.keys(step.params).length > 0;
+  // Two steps of one scene (two presets of «Mensaje») tell themselves apart by what they say.
+  const text = pinned ? paramText(step.scene, step.params) : null;
 
   return (
     <Reorder.Item
@@ -357,7 +360,7 @@ function Step({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{SCENES[step.scene].title}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {pinned ? "parámetros propios" : SCENES[step.scene].description}
+          {text ? `«${text}»` : pinned ? "parámetros propios" : SCENES[step.scene].description}
         </p>
       </div>
       {live && !active && <span className={tallyChip("program")}>Al aire</span>}
@@ -587,7 +590,7 @@ function RundownPanelView({
         {steps.length === 0 ? (
           <Empty
             className="h-full border-0"
-            description="Para pausas y loops desatendidos: cada paso con sus segundos. Agregalos con «⋯ → Al guion» en la biblioteca."
+            description="Para pausas y loops desatendidos: cada paso con sus segundos. Agregalos con «⋯ → Agregar al guion» en la biblioteca o en los presets."
             icon={ListVideo}
             title="El guion está vacío"
           />

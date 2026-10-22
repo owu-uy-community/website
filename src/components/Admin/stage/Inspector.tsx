@@ -15,10 +15,12 @@ import {
   SCENES,
   SCENE_CATEGORIES,
   type DeskStep,
+  type Preset,
   type SceneId,
   type StageState,
 } from "lib/owy-stage/scenes";
 
+import { SavePreset, type PresetActions } from "./Presets";
 import { QuestionsPanel } from "./Questions";
 import { SceneParams } from "./SceneParams";
 
@@ -70,6 +72,8 @@ function InspectorView({
   live,
   preview,
   pending,
+  presets,
+  presetActions,
   onTarget,
   onLiveParams,
   onPreviewParams,
@@ -80,6 +84,8 @@ function InspectorView({
   live: StageState;
   preview: DeskStep | null;
   pending: boolean;
+  presets: Preset[];
+  presetActions: PresetActions;
   onTarget: (target: "preview" | "program") => void;
   onLiveParams: (params: Params) => void;
   onPreviewParams: (params: Params) => void;
@@ -136,6 +142,15 @@ function InspectorView({
             <SceneParams apply={onLiveParams} mode="live" params={live.params} pending={pending} scene={live.scene} />
           </div>
           {live.scene === "live-questions" && <QuestionsPanel round={live.round} />}
+          <footer className="flex shrink-0 items-center gap-2 border-t p-1.5 sm:p-2">
+            <SavePreset
+              className="h-10 flex-1"
+              label="Guardar lo que está al aire"
+              presets={presets}
+              step={live}
+              onSave={presetActions.saveFromLive}
+            />
+          </footer>
         </>
       ) : preview ? (
         <>
@@ -157,6 +172,14 @@ function InspectorView({
               <ListPlus className="h-4 w-4" /> A la cola
               <Kbd className="ml-1 pointer-coarse:hidden">Q</Kbd>
             </Button>
+            <SavePreset
+              className="h-10 flex-1"
+              label="Guardar preset"
+              presets={presets}
+              step={preview}
+              onSave={presetActions.saveFromPreview}
+              onUpdate={presetActions.updateFromPreview}
+            />
           </footer>
         </>
       ) : (

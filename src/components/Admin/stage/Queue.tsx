@@ -37,16 +37,23 @@ const SUMMARY_KEYS = ["title", "question", "text", "message", "label", "name", "
 /** How far a row slides before letting go acts (px). */
 const SWIPE = 76;
 
-/** What makes this step different from the scene's defaults, in a few words; else the scene's description. */
-export function stepSummary(scene: SceneId, params: Record<string, unknown>) {
-  if (!Object.keys(params).length) return SCENES[scene].description;
+/** The text that sets this step apart from the scene's defaults (its title, its question…), if any. */
+export function paramText(scene: SceneId, params: Record<string, unknown>) {
+  if (!Object.keys(params).length) return null;
   const parsed = readParams(scene, params);
   const defaults = parseSceneParams(scene, {}) as Record<string, unknown>;
   const changed = Object.keys(parsed).filter((key) => JSON.stringify(parsed[key]) !== JSON.stringify(defaults[key]));
   const key = SUMMARY_KEYS.find((name) => changed.includes(name)) ?? changed[0];
   const value = key ? parsed[key] : undefined;
 
-  return typeof value === "string" && value.trim() ? `«${value.split("|")[0].trim()}»` : SCENES[scene].description;
+  return typeof value === "string" && value.trim() ? value.split("|")[0].trim() : null;
+}
+
+/** What makes this step different from the scene's defaults, in a few words; else the scene's description. */
+export function stepSummary(scene: SceneId, params: Record<string, unknown>) {
+  const text = paramText(scene, params);
+
+  return text ? `«${text}»` : SCENES[scene].description;
 }
 
 /** Out of the queue, with a way back: a swipe is quick to do by accident. */

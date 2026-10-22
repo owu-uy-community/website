@@ -45,6 +45,9 @@ const EXPRESSION_LABELS: Record<Expression, string> = {
 const SAMPLE_PITCH =
   "Hola, soy Ana. Quiero proponer una charla sobre Effect en producción: cómo lo adoptamos en el equipo, qué nos costó y qué aprendimos después de un año. Es para gente que ya programa en TypeScript y quiere ver código real, no slides.";
 
+/** A path or a header inside a hint. */
+const CODE = "rounded-sm bg-raised px-1 font-terminal";
+
 export function copyText(text: string, what = "URL copiada") {
   navigator.clipboard
     .writeText(text)
@@ -288,6 +291,7 @@ export function StageSettingsSheet({
   stageUrl: (path: string) => string;
 }) {
   const url = stageUrl("/owy/stage");
+  const deckUrl = typeof window === "undefined" ? "" : `${window.location.origin}/api/owy-stage/preset/`;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -360,6 +364,33 @@ export function StageSettingsSheet({
                   : output.canvas === "fit"
                     ? "Toma la forma de la pantalla donde se abra (pantalla completa)."
                     : 'OBS: 1920×1080 · 60 fps · "Shutdown source when not visible" OFF · "Refresh when scene becomes active" OFF'}
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="stage-deck-url">Stream Deck: presets</FieldLabel>
+              <InputGroup className="pointer-coarse:h-11">
+                <InputGroupInput
+                  readOnly
+                  className="font-terminal text-xs pointer-coarse:text-base"
+                  id="stage-deck-url"
+                  value={deckUrl}
+                />
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    aria-label="Copiar la URL para Stream Deck"
+                    size="icon-xs"
+                    onClick={() => copyText(deckUrl)}
+                  >
+                    <Copy />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
+              <FieldDescription className="text-xs">
+                Un POST a <code className={CODE}>…/preset/3</code> pone el preset 3 en preview y{" "}
+                <code className={CODE}>…/preset/3/air</code>, al aire. Va con el header{" "}
+                <code className={CODE}>x-api-key</code> (la clave de <code className={CODE}>pnpm owy:key</code>, la
+                misma que en Pantalla OBS). El número cambia si reordenás; la URL de «⋯ → Copiar URL Stream Deck» usa el
+                id del preset, que no cambia.
               </FieldDescription>
             </Field>
           </TabsContent>

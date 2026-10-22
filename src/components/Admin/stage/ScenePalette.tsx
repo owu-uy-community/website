@@ -13,7 +13,7 @@ import {
 } from "components/shared/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "components/shared/ui/dialog";
 import { Kbd } from "components/shared/ui/kbd";
-import { INTERACTIVE_SCENES, SCENES, SCENE_GROUPS, type SceneId } from "lib/owy-stage/scenes";
+import { INTERACTIVE_SCENES, SCENES, SCENE_GROUPS, presetLabel, type Preset, type SceneId } from "lib/owy-stage/scenes";
 
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
 /** Accent- and case-insensitive: "cancion" finds "Canción". */
@@ -28,6 +28,7 @@ type Section = { key: string; heading: string; scenes: readonly SceneId[] };
 
 /** What an item answers to: its group, id and title (a full hit), or its id and description (half). */
 const itemValue = (group: string, id: SceneId) => `${group}:${id} ${SCENES[id].title}`;
+const presetValue = (preset: Preset) => `preset:${preset.id} ${presetLabel(preset)}`;
 const folded = new Map<string, [string, string]>();
 function score(group: string, id: SceneId, query: string) {
   const value = itemValue(group, id);
@@ -58,6 +59,30 @@ function rank(sections: Section[], query: string) {
     .sort((a, b) => b.best - a.best);
 }
 
+/** A preset: its number (keys 1–9), its scene's picture, its name and its scene. */
+function PresetItem({ preset, index, onPick }: { preset: Preset; index: number; onPick: (preset: Preset) => void }) {
+  return (
+    <CommandItem className="gap-3 py-2" value={presetValue(preset)} onSelect={() => onPick(preset)}>
+      <span className="w-4 shrink-0 text-right font-terminal text-xs text-muted-foreground tabular-nums">
+        {index + 1}
+      </span>
+      <img
+        alt=""
+        className="aspect-video w-16 shrink-0 rounded bg-black object-cover"
+        decoding="async"
+        draggable={false}
+        loading="lazy"
+        src={`/owy-stage/thumbs/${preset.scene}.jpg`}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{presetLabel(preset)}</p>
+        <p className="truncate text-xs text-muted-foreground">{SCENES[preset.scene].title}</p>
+      </div>
+      {PHONE.has(preset.scene) && <Smartphone className="h-4 w-4 shrink-0 text-muted-foreground" />}
+    </CommandItem>
+  );
+}
+
 function SceneItem({ id, group, onPick }: { id: SceneId; group: string; onPick: (id: SceneId) => void }) {
   const scene = SCENES[id];
 
@@ -84,16 +109,18 @@ function SceneItem({ id, group, onPick }: { id: SceneId; group: string; onPick: 
  * The palette itself, mounted with the dialog (so every opening starts empty).
  * The field answers each key at once and the list catches up right after, so
  * typing never waits for two hundred items; the whole catalogue also follows
- * a frame after the favorites and recents, which show at once.
+ * a frame after the presets and recents, which show at once.
  */
 function PaletteBody({
-  favorites,
+  presets,
   recent,
   onChoose,
+  onChoosePreset,
 }: {
-  favorites: SceneId[];
+  presets: Preset[];
   recent: SceneId[];
   onChoose: (id: SceneId, intent: Intent) => void;
+  onChoosePreset: (preset: Preset, intent: Intent) => void;
 }) {
   // cmdk's onSelect carries no modifiers: read them off the key or the pointer that triggered it.
   const intent = useRef<Intent>("preview");
@@ -101,23 +128,34 @@ function PaletteBody({
     intent.current = event.metaKey || event.ctrlKey ? "queue" : event.shiftKey ? "air" : "preview";
   };
   const pick = (id: SceneId) => onChoose(id, intent.current);
+  const pickPreset = (preset: Preset) => onChoosePreset(preset, intent.current);
 
   const [search, setSearch] = useState("");
   const query = useDeferredValue(fold(search.trim()));
   const everything = useDeferredValue(true, false);
   const results = useMemo(() => {
     const sections: Section[] = [];
-    if (favorites.length) sections.push({ key: "fav", heading: "Favoritos", scenes: favorites });
     if (recent.length) sections.push({ key: "recent", heading: "Recientes", scenes: recent });
     if (everything)
       for (const group of SCENE_GROUPS)
         sections.push({ key: group.category, heading: group.title, scenes: group.scenes });
+    // A preset answers to its name and to its scene; numbered by its place on the desk, hit or not.
+    const hits = presets
+      .map((preset, index) => ({ preset, index }))
+      .filter(({ preset }) =>
+        fold(`${presetLabel(preset)} ${preset.scene} ${SCENES[preset.scene].title}`).includes(query)
+      );
 
-    return rank(sections, query);
-  }, [favorites, recent, everything, query]);
+    return { presets: hits, sections: rank(sections, query) };
+  }, [presets, recent, everything, query]);
 
-  // Enter takes the first hit, as soon as the list it belongs to shows.
-  const first = results[0] ? itemValue(results[0].key, results[0].scenes[0]) : "";
+  // Enter takes the first hit, as soon as the list it belongs to shows: a preset before a scene.
+  const firstSection = results.sections[0];
+  const first = results.presets[0]
+    ? presetValue(results.presets[0].preset)
+    : firstSection
+      ? itemValue(firstSection.key, firstSection.scenes[0])
+      : "";
   const [selected, setSelected] = useState(first);
   const [selectedFor, setSelectedFor] = useState(results);
   if (selectedFor !== results) {
@@ -142,7 +180,14 @@ function PaletteBody({
       />
       <CommandList className="max-h-[min(60vh,520px)]">
         {everything && <CommandEmpty>Ninguna escena coincide.</CommandEmpty>}
-        {results.map((section) => (
+        {results.presets.length > 0 && (
+          <CommandGroup heading="Presets">
+            {results.presets.map(({ preset, index }) => (
+              <PresetItem key={preset.id} index={index} preset={preset} onPick={pickPreset} />
+            ))}
+          </CommandGroup>
+        )}
+        {results.sections.map((section) => (
           // Out of view, a group of rows costs no style or layout until it scrolls in.
           <CommandGroup
             key={section.key}
@@ -171,21 +216,23 @@ function PaletteBody({
 }
 
 /**
- * Every scene, searchable from the keyboard (`/`): Enter stages it in
+ * Every preset and scene, searchable from the keyboard (`/`): Enter stages it in
  * preview, ⌘↵ queues it, ⇧↵ puts it on air at once. A tap stages it.
  */
 function ScenePaletteView({
   open,
   onOpenChange,
-  favorites,
+  presets,
   recent,
   onChoose,
+  onChoosePreset,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  favorites: SceneId[];
+  presets: Preset[];
   recent: SceneId[];
   onChoose: (id: SceneId, intent: Intent) => void;
+  onChoosePreset: (preset: Preset, intent: Intent) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,10 +242,14 @@ function ScenePaletteView({
           Enter la pone en preview, Comando más Enter la manda a la cola y Mayúsculas más Enter la pone al aire.
         </DialogDescription>
         <PaletteBody
-          favorites={favorites}
+          presets={presets}
           recent={recent}
           onChoose={(id, intent) => {
             onChoose(id, intent);
+            onOpenChange(false);
+          }}
+          onChoosePreset={(preset, intent) => {
+            onChoosePreset(preset, intent);
             onOpenChange(false);
           }}
         />
