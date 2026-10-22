@@ -23,3 +23,11 @@ export async function POST(request: NextRequest) {
     ? NextResponse.redirect(new URL(`/email/baja?listo=${link.scope}`, request.url), 303)
     : new NextResponse(null, { status: 200 });
 }
+
+/** A client without one-click opens the header's URL: show the confirm page, change nothing. */
+export function GET(request: NextRequest) {
+  const url = new URL("/email/baja", request.url);
+  url.searchParams.set("t", request.nextUrl.searchParams.get("t") ?? "");
+
+  return NextResponse.redirect(url, 303);
+}
