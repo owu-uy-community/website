@@ -266,6 +266,9 @@ export const rooms = pgTable(
     icon: text("icon"),
     /** Board column order within the event. */
     sortOrder: integer("sortOrder").notNull().default(0),
+    /** Set by the room's host on the day; kiosks, the agenda and Owy show it. */
+    status: text("status").$type<RoomStatus>().notNull().default("open"),
+    statusUpdatedAt: ts("statusUpdatedAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()
@@ -277,6 +280,8 @@ export const rooms = pgTable(
   },
   (t) => [index("rooms_openSpaceId_idx").on(t.openSpaceId)]
 );
+
+export type RoomStatus = "open" | "full" | "evacuate";
 
 export const tracks = pgTable(
   "tracks",
@@ -526,6 +531,8 @@ export const owyStageInputs = pgTable(
     voter: text("voter").notNull(),
     /** "" for one-per-person keys; a fresh id when the same person may send many. */
     slot: text("slot").notNull().default(""),
+    /** Q&A moderation from the admin: hidden never reaches the wall, pinned leads it. */
+    moderation: text("moderation").$type<"" | "hidden" | "pinned" | "answered">().notNull().default(""),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },
   (t) => [
@@ -583,12 +590,34 @@ export const staffTaskAssignments = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    /** An editor marked them absent for this shift; arrival itself is per event (staff_arrivals). */
+    noShow: boolean("noShow").notNull().default(false),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },
   (t) => [
     unique("staff_task_assignments_taskId_userId_key").on(t.taskId, t.userId),
     index("staff_task_assignments_userId_idx").on(t.userId),
   ]
+);
+
+/** Who is at the venue: one "Llegué" per person and event (from the phone, the admin or Owy). */
+export const staffArrivals = pgTable(
+  "staff_arrivals",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    arrivedAt: ts("arrivedAt").notNull().defaultNow(),
+    /** They went home (or on a long break): no longer counted on shift. */
+    leftAt: ts("leftAt"),
+  },
+  (t) => [unique("staff_arrivals_eventId_userId_key").on(t.eventId, t.userId)]
 );
 
 export const staffAnnouncements = pgTable(
@@ -636,6 +665,332 @@ export const staffAnnouncementAcks = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Event day: incidents, the run of show, attendees and their check-ins
+// ---------------------------------------------------------------------------
+
+export type IncidentSeverity = "low" | "medium" | "high" | "critical";
+export type IncidentCategory = "medical" | "conduct" | "technical" | "venue" | "lost" | "other";
+export type IncidentStatus = "open" | "in_progress" | "resolved";
+
+export const incidents = pgTable(
+  "incidents",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    description: text("description"),
+    severity: text("severity").$type<IncidentSeverity>().notNull().default("medium"),
+    category: text("category").$type<IncidentCategory>().notNull().default("other"),
+    status: text("status").$type<IncidentStatus>().notNull().default("open"),
+    roomId: text("roomId").references(() => rooms.id, { onDelete: "set null" }),
+    /** Free text when it isn't a room: "baños PB", "entrada". */
+    location: text("location"),
+    assigneeId: text("assigneeId").references(() => user.id, { onDelete: "set null" }),
+    reporterId: text("reporterId").references(() => user.id, { onDelete: "set null" }),
+    /** How it arrived: the admin, a staff phone, or Owy (Telegram/Slack). */
+    source: text("source").$type<"admin" | "phone" | "owy">().notNull().default("admin"),
+    /** Code-of-conduct reports: only organizers (community admin+) and the people on it see them. */
+    sensitive: boolean("sensitive").notNull().default(false),
+    /** A compressed JPEG data URL from the reporter's phone. */
+    photo: text("photo"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+    resolvedAt: ts("resolvedAt"),
+  },
+  (t) => [index("incidents_eventId_createdAt_idx").on(t.eventId, t.createdAt)]
+);
+
+/** Append-only log on an incident: notes and every status/assignee change. */
+export const incidentNotes = pgTable(
+  "incident_notes",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    incidentId: text("incidentId")
+      .notNull()
+      .references(() => incidents.id, { onDelete: "cascade" }),
+    authorId: text("authorId").references(() => user.id, { onDelete: "set null" }),
+    body: text("body").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [index("incident_notes_incidentId_idx").on(t.incidentId)]
+);
+
+/**
+ * The run of show ("Guion del día"): every moment of the day, planned and actual kept apart
+ * so the day after it is a record, not a rewritten plan. GO fires the moment's OBS cue (which
+ * already bundles OBS scene, wall scene and sound) and, optionally, an Owy message.
+ */
+export const runOfShowItems = pgTable(
+  "run_of_show_items",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    title: text("title").notNull(),
+    /** "HH:MM" on the event's wall clock. */
+    plannedStart: text("plannedStart").notNull(),
+    durationMin: integer("durationMin").notNull().default(10),
+    /** A start that can't move (a speaker's slot, the venue closing): drift has to fit before it. */
+    fixed: boolean("fixed").notNull().default(false),
+    ownerId: text("ownerId").references(() => user.id, { onDelete: "set null" }),
+    location: text("location"),
+    notes: text("notes"),
+    cueId: text("cueId").references(() => obsCues.id, { onDelete: "set null" }),
+    /** Sent through Owy to the attendee channel when the moment starts. */
+    owyMessage: text("owyMessage"),
+    actualStart: ts("actualStart"),
+    actualEnd: ts("actualEnd"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("run_of_show_items_eventId_position_idx").on(t.eventId, t.position)]
+);
+
+export type AttendeeStatus = "attending" | "cancelled" | "refunded";
+
+/**
+ * Eventbrite attendees, mirrored per event. Eventbrite's API can't record a check-in, so the
+ * door uses the Organizer app and its check-ins arrive here (webhook + `changed_since` poll);
+ * OWU's own scanner writes here directly. One row per attendee: a check-in can't count twice.
+ */
+export const attendees = pgTable(
+  "attendees",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    eventbriteId: text("eventbriteId").notNull(),
+    orderId: text("orderId"),
+    name: text("name").notNull(),
+    email: text("email").notNull().default(""),
+    ticketClass: text("ticketClass").notNull().default(""),
+    status: text("status").$type<AttendeeStatus>().notNull().default("attending"),
+    barcode: text("barcode"),
+    checkedInAt: ts("checkedInAt"),
+    /** Who recorded the check-in: Eventbrite (Organizer at the door) or OWU's scanner. */
+    checkinSource: text("checkinSource").$type<"eventbrite" | "owu">(),
+    /** "Escaneo", "Búsqueda", or the scanner's device name. */
+    checkinDevice: text("checkinDevice"),
+    registeredAt: ts("registeredAt"),
+    /** Eventbrite's `changed`, the cursor for the next `changed_since` read. */
+    changedAt: ts("changedAt"),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("attendees_eventId_eventbriteId_key").on(t.eventId, t.eventbriteId),
+    index("attendees_eventId_checkedInAt_idx").on(t.eventId, t.checkedInAt),
+    index("attendees_barcode_idx").on(t.barcode),
+  ]
+);
+
+/**
+ * Every scan from OWU's scanner, including the ones that didn't let anyone in (a repeat, an
+ * unknown code). The phone's nonce makes an offline queue safe to replay.
+ */
+export const attendeeScans = pgTable(
+  "attendee_scans",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    attendeeId: text("attendeeId").references(() => attendees.id, { onDelete: "set null" }),
+    code: text("code").notNull(),
+    result: text("result").$type<"ok" | "repeat" | "unknown" | "cancelled">().notNull(),
+    device: text("device").notNull().default(""),
+    userId: text("userId").references(() => user.id, { onDelete: "set null" }),
+    nonce: text("nonce").notNull().unique(),
+    scannedAt: ts("scannedAt").notNull().defaultNow(),
+  },
+  (t) => [index("attendee_scans_eventId_scannedAt_idx").on(t.eventId, t.scannedAt)]
+);
+
+/** Where the attendee mirror stands per event. */
+export const attendeeSync = pgTable("attendee_sync", {
+  eventId: text("eventId")
+    .primaryKey()
+    .references(() => events.id, { onDelete: "cascade" }),
+  syncedAt: ts("syncedAt"),
+  /** The newest `changed` seen; the next poll asks for what changed since. */
+  cursor: ts("cursor"),
+  webhookAt: ts("webhookAt"),
+  error: text("error"),
+});
+
+/** Raffles drawn from the people who checked in, reproducible from their seed. */
+export const raffles = pgTable(
+  "raffles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    prize: text("prize").notNull(),
+    seed: text("seed").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [index("raffles_eventId_idx").on(t.eventId)]
+);
+
+export const raffleDraws = pgTable(
+  "raffle_draws",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    raffleId: text("raffleId")
+      .notNull()
+      .references(() => raffles.id, { onDelete: "cascade" }),
+    attendeeId: text("attendeeId")
+      .notNull()
+      .references(() => attendees.id, { onDelete: "cascade" }),
+    /** pending → claimed, or redrawn when nobody comes up. */
+    status: text("status").$type<"pending" | "claimed" | "redrawn">().notNull().default("pending"),
+    /** How many people were in the hat for this draw. */
+    poolSize: integer("poolSize").notNull(),
+    drawnAt: ts("drawnAt").notNull().defaultNow(),
+  },
+  (t) => [unique("raffle_draws_raffleId_attendeeId_key").on(t.raffleId, t.attendeeId)]
+);
+
+/** The post-event survey (≤ 8 questions) and per-room feedback, answered from a public link. */
+export const surveys = pgTable("surveys", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => createId()),
+  eventId: text("eventId")
+    .notNull()
+    .unique()
+    .references(() => events.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  questions: jsonb("questions")
+    .$type<{ id: string; kind: "nps" | "rating" | "choice" | "text"; label: string; options?: string[] }[]>()
+    .notNull()
+    .default([]),
+  isOpen: boolean("isOpen").notNull().default(false),
+  createdAt: ts("createdAt").notNull().defaultNow(),
+  updatedAt: ts("updatedAt")
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const surveyResponses = pgTable(
+  "survey_responses",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    surveyId: text("surveyId")
+      .notNull()
+      .references(() => surveys.id, { onDelete: "cascade" }),
+    /** Set when the answer came from a room's feedback QR. */
+    roomId: text("roomId").references(() => rooms.id, { onDelete: "set null" }),
+    answers: jsonb("answers").$type<Record<string, string | number>>().notNull().default({}),
+    /** Random id the phone keeps; one answer per phone and room. */
+    respondent: text("respondent").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [unique("survey_responses_one").on(t.surveyId, t.respondent, t.roomId).nullsNotDistinct()]
+);
+
+/** Screens at the venue (kiosks, the wall, countdowns): named, and seen through a heartbeat. */
+export const screens = pgTable("screens", {
+  /** The id the display keeps in localStorage. */
+  id: text("id").primaryKey(),
+  name: text("name").notNull().default(""),
+  eventId: text("eventId").references(() => events.id, { onDelete: "set null" }),
+  /** What it is showing: the display route it reported last. */
+  path: text("path").notNull().default(""),
+  userAgent: text("userAgent").notNull().default(""),
+  lastSeenAt: ts("lastSeenAt").notNull().defaultNow(),
+  createdAt: ts("createdAt").notNull().defaultNow(),
+});
+
+/** Messages through Owy and the staff, sent now or when their time comes. */
+export const outboundMessages = pgTable(
+  "outbound_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    /**
+     * Attendees on Owy's Telegram channel, the community Slack channel, or staff DMs. `email` is
+     * never sent from here: it records the Eventbrite email someone sent by hand (T-7).
+     */
+    channel: text("channel").$type<"telegram" | "slack" | "staff_dm" | "email">().notNull(),
+    body: text("body").notNull(),
+    /** For staff DMs: who gets it. */
+    recipientIds: jsonb("recipientIds").$type<string[]>().notNull().default([]),
+    scheduledAt: ts("scheduledAt"),
+    status: text("status").$type<"scheduled" | "sending" | "sent" | "failed">().notNull().default("scheduled"),
+    sentAt: ts("sentAt"),
+    error: text("error"),
+    /** A cadence step this message fulfils ("t-7", "t-1", "morning", "t+1"), if any. */
+    step: text("step"),
+    createdById: text("createdById").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [index("outbound_messages_eventId_status_idx").on(t.eventId, t.status)]
+);
+
+/**
+ * What happened, in order: one row per change, written in the same transaction as the change.
+ * Feeds the activity feed on Hoy, each entity's history, and the post-event report.
+ */
+export const activity = pgTable(
+  "activity",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId").references(() => events.id, { onDelete: "cascade" }),
+    actorId: text("actorId").references(() => user.id, { onDelete: "set null" }),
+    /** "track.created", "incident.resolved", "rundown.go"… */
+    verb: text("verb").notNull(),
+    entityType: text("entityType").notNull(),
+    entityId: text("entityId"),
+    /** One Spanish line, written when it happened: "movió «Testing» a Sala 2 · 16:30". */
+    summary: text("summary").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("activity_eventId_createdAt_idx").on(t.eventId, t.createdAt),
+    index("activity_entity_idx").on(t.entityType, t.entityId),
+  ]
+);
+
+// ---------------------------------------------------------------------------
 // Inferred row types (replace Prisma-generated model types)
 // ---------------------------------------------------------------------------
 export type CommunityRow = typeof communities.$inferSelect;
@@ -652,3 +1007,9 @@ export type StaffTaskRow = typeof staffTasks.$inferSelect;
 export type StaffTaskAssignmentRow = typeof staffTaskAssignments.$inferSelect;
 export type StaffAnnouncementRow = typeof staffAnnouncements.$inferSelect;
 export type StaffAnnouncementAckRow = typeof staffAnnouncementAcks.$inferSelect;
+export type IncidentRow = typeof incidents.$inferSelect;
+export type RunOfShowItemRow = typeof runOfShowItems.$inferSelect;
+export type AttendeeRow = typeof attendees.$inferSelect;
+export type ScreenRow = typeof screens.$inferSelect;
+export type OutboundMessageRow = typeof outboundMessages.$inferSelect;
+export type ActivityRow = typeof activity.$inferSelect;
