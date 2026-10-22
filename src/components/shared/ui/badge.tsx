@@ -3,15 +3,21 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "app/lib/utils";
 
+/** Small status labels: a tinted surface, a readable tint and a hairline in the same hue. */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden",
+  "inline-flex h-5 shrink-0 items-center gap-1 rounded-sm border px-1.5 text-2xs font-medium whitespace-nowrap transition-colors [&_svg]:size-3 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+        default: "border-primary/25 bg-primary-surface text-primary",
+        secondary: "border-input bg-white/[0.04] text-subtle",
+        outline: "border-input text-subtle",
+        destructive: "border-live/30 bg-live-surface text-live-foreground",
+        success: "border-success/25 bg-success-surface text-success-foreground",
+        warning: "border-warning/25 bg-warning-surface text-warning-foreground",
+        info: "border-info/40 bg-info-surface text-info-foreground",
+        /** Solid yellow, for counts that want attention (unread, selected). */
+        solid: "border-transparent bg-primary text-primary-foreground",
       },
     },
     defaultVariants: {

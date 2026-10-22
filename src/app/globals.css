@@ -1,10 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Passion+One:wght@400;700;900&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap");
-
+/* Fonts are self-hosted by next/font (src/app/fonts.ts) and exposed as CSS variables on <html>. */
 @import "tailwindcss";
 
 /* Keep the v3-style JS config as the source of truth for the design system
@@ -65,6 +59,137 @@
     --chart-3: 240 5% 65%; /* zinc-400 */
     --chart-4: 160 84% 39%; /* emerald-500 */
     --chart-5: 0 72% 51%; /* red-600 */
+
+    /* Surfaces and text steps the admin leans on; on public pages they map onto the zinc ramp. */
+    --app: 240 6% 10%;
+    --raised: 240 4% 16%;
+    --subtle: 240 5% 84%; /* zinc-300 */
+    --faint: 240 4% 46%; /* zinc-500 */
+    --primary-surface: 45 89% 7%;
+
+    /* Status. Each has a fill, a text tint readable on dark surfaces and a quiet surface. */
+    --success: 160 84% 39%;
+    --success-foreground: 158 64% 52%;
+    --success-surface: 159 54% 8%;
+    --warning: 36 100% 50%;
+    --warning-foreground: 43.5 100% 50%;
+    --warning-surface: 36 71% 10%;
+    --info: 211 99% 39%; /* OWU blue #0162C8 */
+    --info-foreground: 218 93% 71%;
+    --info-surface: 220 60% 12%;
+    --live: 357 96% 62%; /* on air, critical, errors */
+    --live-foreground: 359 100% 70%;
+    --live-surface: 355 45% 11%;
+  }
+
+  /* OWU Ops: the admin's near-black neutral ramp, one yellow accent. Scoped to pages that mount
+     the admin shell; :root (not the shell element) so Radix portals in <body> get it too. */
+  :root:has([data-admin-shell]) {
+    --app: 0 0% 2.4%; /* #060606 — behind the sidebar */
+    --background: 0 0% 4.3%; /* #0b0b0b — the inset main panel */
+    --foreground: 0 0% 96%;
+    --card: 0 0% 6.7%; /* #111 — background + 3% white */
+    --card-foreground: 0 0% 96%;
+    --raised: 0 0% 8.6%; /* #161616 — hover, selection, buttons */
+    --popover: 0 0% 7.5%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 45.6 98% 48.6%; /* #F5BB03 */
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 8.6%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 8.6%;
+    --muted-foreground: 0 0% 52%; /* #858585 */
+    --accent: 0 0% 9.8%;
+    --accent-foreground: 0 0% 96%;
+    --destructive: 357 96% 62%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 11%; /* #1c1c1c */
+    --input: 0 0% 15%; /* #262626 */
+    --ring: 45.6 98% 48.6%;
+    --subtle: 0 0% 71%; /* #b4b4b4 */
+    --faint: 0 0% 36%; /* #5c5c5c — fails AA: placeholders and decoration only */
+
+    --radius: 0.625rem;
+
+    --sidebar-background: 0 0% 2.4%;
+    --sidebar-foreground: 0 0% 71%;
+    --sidebar-primary: 45.6 98% 48.6%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 0 0% 8.6%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 11%;
+    --sidebar-ring: 45.6 98% 48.6%;
+
+    --chart-1: 45.6 98% 48.6%;
+    --chart-2: 218 93% 71%;
+    --chart-3: 0 0% 52%;
+    --chart-4: 160 84% 39%;
+    --chart-5: 357 96% 62%;
+
+    color-scheme: dark;
+  }
+
+  :root:has([data-admin-shell]) body {
+    background-color: hsl(var(--app));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* The phone tab bar's height while it's on screen (1px hairline + 56px row + the home indicator):
+     the page, its full-height layouts, sticky footers and toasts make room for it. */
+  :root:has([data-admin-tabbar]) {
+    --admin-tabbar-h: calc(57px + env(safe-area-inset-bottom));
+  }
+  /* The settings save bar, while it's up: toasts rise above it instead of covering "Guardar". */
+  :root:has([data-save-bar]) {
+    --admin-savebar-h: 4rem;
+  }
+  /* An editor panel's footer (its Guardar), while one is open: the same for toasts. */
+  :root:has([data-editor-footer]) {
+    --admin-sheet-footer-h: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+
+  /* Touchscreens: no grey flash on a tap (controls show their own pressed state), no double-tap
+     zoom on controls, and a long press on a control neither selects its text nor opens a callout. */
+  :root:has([data-admin-shell]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :root:has([data-admin-shell])
+    :is(
+      a[href],
+      button,
+      input,
+      select,
+      textarea,
+      label,
+      summary,
+      [role="button"],
+      [role="tab"],
+      [role="switch"],
+      [role="checkbox"],
+      [role="radio"],
+      [role="option"],
+      [role^="menuitem"]
+    ) {
+    touch-action: manipulation;
+  }
+  @media (pointer: coarse) {
+    :root:has([data-admin-shell])
+      :is(
+        button,
+        summary,
+        [role="button"],
+        [role="tab"],
+        [role="switch"],
+        [role="checkbox"],
+        [role="radio"],
+        [role="option"],
+        [role^="menuitem"]
+      ) {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
   }
 
   /* Kept identical on purpose: mounting a theme switcher later must not shift colors. */
@@ -142,7 +267,7 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-inter), sans-serif;
   }
   .underline-transition {
     background-image: linear-gradient(transparent, transparent), linear-gradient(#fff 20%, #fff 80%);
@@ -180,7 +305,7 @@
   color: #fff;
   fill: #fff;
   font-size: 22px;
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-inter), sans-serif;
 }
 .map_svg__rincon {
   z-index: 1000 !important;
@@ -233,6 +358,38 @@
   }
 }
 
+/* The admin window's grain: a 256px noise tile at 3.5%, painted once (no animation). */
+@utility bg-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+}
+
+/* A small link or control that keeps its size but gets a 44px target on touchscreens, the way
+   buttons do. Not for stacked rows: their targets would overlap; make the rows taller instead. */
+@utility touch-target {
+  position: relative;
+
+  @media (pointer: coarse) {
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 100%;
+      height: 100%;
+      min-width: 2.75rem;
+      min-height: 2.75rem;
+      translate: -50% -50%;
+    }
+  }
+}
+
+/* Quiet scrollbars for admin panes. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--input)) transparent;
+}
+
 /* OpenSpace admin board: quiet thin scrollbars on the sticky-axes surface */
 @layer components {
   .openspace-surface {
@@ -283,7 +440,7 @@
 
 /* Scoped a .blog-prose para no afectar admin/openspace */
 .blog-prose code {
-  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 .blog-prose :not(pre) > code {

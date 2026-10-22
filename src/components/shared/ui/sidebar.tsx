@@ -9,7 +9,7 @@ import { cn } from "app/lib/utils";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
 import { Separator } from "components/shared/ui/separator";
-import { Sheet, SheetContent } from "components/shared/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "components/shared/ui/sheet";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "components/shared/ui/tooltip";
 
@@ -33,7 +33,7 @@ export function useIsMobile() {
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
-const SIDEBAR_WIDTH = "16rem";
+const SIDEBAR_WIDTH = "15.25rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
@@ -175,14 +175,16 @@ const Sidebar = React.forwardRef<
         <SheetContent
           data-sidebar="sidebar"
           data-mobile="true"
-          className="w-(--sidebar-width) border-0 bg-zinc-900 p-0 text-sidebar-foreground [&>button]:top-[1.125rem] [&>button]:right-4 [&>button]:flex [&>button]:h-6 [&>button]:w-6 [&>button]:items-center [&>button]:justify-center [&>button]:text-white [&>button]:hover:text-yellow-400 [&>button>svg]:h-5 [&>button>svg]:w-5"
+          className="w-(--sidebar-width) border-0 bg-sidebar p-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] text-sidebar-foreground [&>button]:hidden"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
+          aria-describedby={undefined}
         >
+          <SheetTitle className="sr-only">Menú</SheetTitle>
           <div className={cn("flex h-full w-full flex-col", className)}>{children}</div>
         </SheetContent>
       </Sheet>
@@ -198,11 +200,13 @@ const Sidebar = React.forwardRef<
       data-variant={variant}
       data-side={side}
     >
-      {/* This is what handles the sidebar gap on desktop */}
+      {/* This is what handles the sidebar gap on desktop. On a touchscreen (an iPad) a collapsed
+          sidebar hides instead of folding to the icon rail: the rail names its items only in
+          tooltips, which never open for a finger. */}
       <div
         className={cn(
           "relative h-svh w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
+          "group-data-[collapsible=offcanvas]:w-0 pointer-coarse:group-data-[collapsible=icon]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
@@ -211,13 +215,13 @@ const Sidebar = React.forwardRef<
       />
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width,visibility] duration-200 ease-linear md:flex pointer-coarse:group-data-[collapsible=icon]:invisible",
           side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] pointer-coarse:group-data-[collapsible=icon]:left-[calc(var(--sidebar-width)*-1)]"
+            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] pointer-coarse:group-data-[collapsible=icon]:right-[calc(var(--sidebar-width)*-1)]",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
+            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)] pointer-coarse:group-data-[collapsible=icon]:w-(--sidebar-width)"
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className
         )}
@@ -253,7 +257,7 @@ const SidebarTrigger = React.forwardRef<React.ElementRef<typeof Button>, React.C
         {...props}
       >
         <PanelLeft />
-        <span className="sr-only">Toggle Sidebar</span>
+        <span className="sr-only">Mostrar u ocultar el menú</span>
       </Button>
     );
   }
@@ -268,10 +272,10 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
       <button
         ref={ref}
         data-sidebar="rail"
-        aria-label="Toggle Sidebar"
+        aria-label="Mostrar u ocultar el menú"
         tabIndex={-1}
         onClick={toggleSidebar}
-        title="Toggle Sidebar"
+        title="Mostrar u ocultar el menú (⌘B)"
         className={cn(
           "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
           "[[data-side=left]_&]:cursor-w-resize [[data-side=right]_&]:cursor-e-resize",
@@ -288,13 +292,15 @@ const SidebarRail = React.forwardRef<HTMLButtonElement, React.ComponentProps<"bu
 );
 SidebarRail.displayName = "SidebarRail";
 
-const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"main">>(({ className, ...props }, ref) => {
+/** The framed panel beside the sidebar. A plain div: the page inside it brings the one <main>. */
+const SidebarInset = React.forwardRef<HTMLDivElement, React.ComponentProps<"div">>(({ className, ...props }, ref) => {
   return (
-    <main
+    <div
       ref={ref}
       className={cn(
         "relative flex min-h-svh flex-1 flex-col bg-background",
-        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2",
+        // Inset: a framed panel the height of the window, scrolling inside, on the darker app background.
+        "md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:min-h-0 md:peer-data-[variant=inset]:overflow-hidden md:peer-data-[variant=inset]:rounded-[14px] md:peer-data-[variant=inset]:border md:peer-data-[variant=inset]:border-border md:peer-data-[variant=inset]:shadow-[0_0_0_1px_rgb(0_0_0/0.6),0_10px_40px_rgb(0_0_0/0.5)] md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-0 pointer-coarse:md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2",
         className
       )}
       {...props}

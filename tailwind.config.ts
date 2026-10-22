@@ -20,10 +20,11 @@ const config = {
     },
     extend: {
       fontFamily: {
-        pixel: ['"Press Start 2P"', "monospace"],
-        display: ["Poppins", "sans-serif"],
-        title: ["Poppins", "sans-serif"],
-        terminal: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        pixel: ["var(--font-press-start)", "monospace"],
+        display: ["var(--font-poppins)", "sans-serif"],
+        title: ["var(--font-poppins)", "sans-serif"],
+        terminal: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        open: ["var(--font-open-sans)", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -34,6 +35,31 @@ const config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          surface: "hsl(var(--primary-surface))",
+        },
+        app: "hsl(var(--app))",
+        raised: "hsl(var(--raised))",
+        subtle: "hsl(var(--subtle))",
+        faint: "hsl(var(--faint))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          surface: "hsl(var(--success-surface))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          surface: "hsl(var(--warning-surface))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+          surface: "hsl(var(--info-surface))",
+        },
+        live: {
+          DEFAULT: "hsl(var(--live))",
+          foreground: "hsl(var(--live-foreground))",
+          surface: "hsl(var(--live-surface))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -84,6 +110,20 @@ const config = {
       },
       blur: {
         "4xl": "128px",
+      },
+      /* The admin's dense type scale: 13px interface text, 12px meta, then labels. */
+      fontSize: {
+        ui: ["13px", { lineHeight: "20px" }],
+        meta: ["12px", { lineHeight: "16px" }],
+        "2xs": ["11px", { lineHeight: "14px" }],
+        "3xs": ["10px", { lineHeight: "12px" }],
+      },
+      boxShadow: {
+        /* A 1px top highlight: surfaces read as lit from above. */
+        edge: "inset 0 1px 0 rgb(255 255 255 / 0.04)",
+        "edge-primary": "inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4)",
+        overlay:
+          "0 24px 80px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.04)",
       },
       keyframes: {
         "accordion-down": {
@@ -208,6 +248,11 @@ const config = {
           "12%, 88%": { opacity: "1" },
           "100%": { transform: "translateY(130%)", opacity: "0" },
         },
+        /* Admin "needs you" signal: two discrete states, so it never repaints between them. */
+        "blink-step": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -232,6 +277,7 @@ const config = {
         "terminal-pulse": "terminal-pulse 0.55s ease-out",
         sheen: "sheen 6s ease-in-out infinite",
         "barcode-scan": "barcode-scan 2.4s ease-in-out infinite",
+        "blink-step": "blink-step 1.4s steps(1, end) infinite",
       },
     },
   },
