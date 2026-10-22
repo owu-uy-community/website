@@ -107,7 +107,11 @@ export type Invite = {
  * CANCEL removes it. Sent with the confirmation, updates and cancellations.
  */
 export function buildInvite(invite: Invite, now = new Date()) {
-  const cn = (name: string) => `"${name.replace(/"/g, "'")}"`;
+  // Parameter and address values aren't escaped like text: strip what could end a line or a value
+  // oxlint-disable-next-line no-control-regex -- matching control characters is the point
+  const clean = (value: string) => value.replace(/[\u0000-\u001f\u007f]/g, " ");
+  const cn = (name: string) => `"${clean(name).replace(/"/g, "'")}"`;
+  const mailto = (email: string) => `mailto:${clean(email).replace(/[\s;:,]/g, "")}`;
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -123,10 +127,10 @@ export function buildInvite(invite: Invite, now = new Date()) {
     `SUMMARY:${escapeText(invite.title)}`,
     `DESCRIPTION:${escapeText(invite.description)}`,
     `LOCATION:${escapeText(invite.location)}`,
-    `URL:${invite.url}`,
+    `URL:${clean(invite.url)}`,
     `STATUS:${invite.method === "CANCEL" ? "CANCELLED" : "CONFIRMED"}`,
-    `ORGANIZER;CN=${cn(invite.organizer.name)}:mailto:${invite.organizer.email}`,
-    `ATTENDEE;CN=${cn(invite.attendee.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${invite.attendee.email}`,
+    `ORGANIZER;CN=${cn(invite.organizer.name)}:${mailto(invite.organizer.email)}`,
+    `ATTENDEE;CN=${cn(invite.attendee.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:${mailto(invite.attendee.email)}`,
     "END:VEVENT",
     "END:VCALENDAR",
   ];

@@ -258,6 +258,10 @@ export const join = (input: JoinInput) =>
           .where(and(eq(attendees.eventId, event.id), eq(attendees.userId, me.id)))
       );
       if (existing && (ACTIVE as readonly string[]).includes(existing.status)) return yield* toMine(existing, event);
+      // A decline is the organizers' call: only they undo it (leaving yourself, or a lapsed offer, can re-join)
+      if (existing?.status === "declined") {
+        return yield* new Conflict({ reason: "declined", message: "Quienes organizan no confirmaron tu inscripción" });
+      }
 
       const taken = yield* seatsTaken(event.id);
       const fits = event.capacity === null || taken + 1 + input.guests <= event.capacity;
