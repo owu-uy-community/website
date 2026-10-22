@@ -11,7 +11,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Allow hitting the dev server via 127.0.0.1 (separate cookie jar from localhost)
   allowedDevOrigins: ["127.0.0.1"],
+  poweredByHeader: false,
   images: {
+    // AVIF first (~20% smaller than WebP) for browsers that take it
+    formats: ["image/avif", "image/webp"],
+    // Images under /public keep their file names, so an optimized copy can live a month
+    // (replace a photo under a new name to refresh it)
+    minimumCacheTTL: 2_678_400,
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
   // The English paths people and agents guess, to the Spanish pages that answer them

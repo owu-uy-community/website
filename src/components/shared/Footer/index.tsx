@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { FaGithub, FaInstagram, FaLinkedin, FaSlack, FaTelegram, FaYoutube } from "react-icons/fa6";
 
@@ -21,8 +22,7 @@ export default function Footer() {
         <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-16">
           <div className="flex max-w-sm flex-col gap-6">
             <Link aria-label="OWU Uruguay, inicio" className="w-fit" href="/">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
+              <Image alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
             </Link>
             <p className="text-[15px] leading-relaxed text-zinc-400">
               La comunidad tech de Uruguay desde 2014. Un Slack, decenas de comunidades y una conferencia, hechos por

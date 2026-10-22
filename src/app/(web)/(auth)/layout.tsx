@@ -15,7 +15,8 @@ export default function AuthLayout({
           alt="Tech Community"
           fill
           className="object-cover opacity-75"
-          priority
+          preload
+          sizes="50vw"
         />
         <div className="absolute bottom-8 left-8 z-20 text-white">
           <h2 className="mb-2 text-3xl font-bold">
