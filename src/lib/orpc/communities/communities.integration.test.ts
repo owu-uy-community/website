@@ -134,6 +134,27 @@ describe("communities.update", () => {
     expect(updated).toMatchObject({ id: community.id, name: "Renombrada" });
   });
 
+  test("an admin edits the public profile: status, topics, links and the Slack channel", async () => {
+    const { community, admin } = await setup();
+    const data = {
+      status: "busca-organizadores" as const,
+      topics: ["web" as const, "web" as const, "data-ia" as const],
+      links: { meetup: "https://www.meetup.com/montevideojs" },
+      slackChannel: "montevideo-js",
+    };
+
+    await expect(
+      call(router.communities.update, { communityId: community.id, data }, by(admin))
+    ).resolves.toMatchObject({ ...data, topics: ["web", "data-ia"] });
+    await expect(
+      call(
+        router.communities.update,
+        { communityId: community.id, data: { links: { website: "ftp://example.com/montevideojs" } } },
+        by(admin)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
   test("editors and admins of other communities are refused", async () => {
     const { community, editor } = await setup();
     const elsewhere = await setup();
