@@ -8,15 +8,27 @@ import {
   CreateStaffAnnouncementSchema,
   CreateStaffTaskSchema,
   DeleteStaffTaskSchema,
+  ImportResultSchema,
+  ImportStaffTasksSchema,
   JoinStaffTaskSchema,
   ListStaffAnnouncementsSchema,
+  ListStaffArrivalsSchema,
   ListStaffTasksSchema,
+  MoveAssigneeSchema,
+  OnShiftInputSchema,
+  OnShiftSchema,
+  RemindResultSchema,
+  SetNoShowSchema,
   SetStaffTaskStatusSchema,
   ShiftStaffTasksSchema,
   StaffAnnouncementSchema,
+  StaffArrivalInputSchema,
+  StaffArrivalSchema,
   StaffMemberSchema,
   StaffRosterSchema,
   StaffTaskSchema,
+  SwapAssigneesSchema,
+  SwapTimesSchema,
   UpdateStaffTaskSchema,
 } from "./schemas";
 import * as StaffTasks from "./service";
@@ -106,6 +118,33 @@ export const staffTasksRouter = {
       return yield* StaffTasks.unassign(input);
     }),
 
+  swapAssignees: authed
+    .meta(docs("Two people trade places: each takes the other's task (both tasks come back)"))
+    .input(SwapAssigneesSchema)
+    .use(inCommunity("editor"))
+    .output(z.array(StaffTaskSchema))
+    .effect(function* ({ input }) {
+      return yield* StaffTasks.swapAssignees(input);
+    }),
+
+  moveAssignee: authed
+    .meta(docs("Move someone from one task to another (both tasks come back)"))
+    .input(MoveAssigneeSchema)
+    .use(inCommunity("editor"))
+    .output(z.array(StaffTaskSchema))
+    .effect(function* ({ input }) {
+      return yield* StaffTasks.moveAssignee(input);
+    }),
+
+  swapTimes: authed
+    .meta(docs("Two tasks trade their day, start and end (both tasks come back)"))
+    .input(SwapTimesSchema)
+    .use(inCommunity("editor"))
+    .output(z.array(StaffTaskSchema))
+    .effect(function* ({ input }) {
+      return yield* StaffTasks.swapTimes(input);
+    }),
+
   shiftFrom: authed
     .meta(docs('Move every timed task of a day from a time on ("we\'re running 15 late")'))
     .input(ShiftStaffTasksSchema)
@@ -123,6 +162,62 @@ export const staffTasksRouter = {
     .effect(function* () {
       return yield* StaffTasks.roster();
     }),
+
+  setNoShow: authed
+    .meta(docs("Mark someone absent for one task (or take the mark back)"))
+    .input(SetNoShowSchema)
+    .use(inCommunity("editor"))
+    .output(StaffTaskSchema)
+    .effect(function* ({ input }) {
+      return yield* StaffTasks.setNoShow(input);
+    }),
+
+  onShift: authed
+    .meta(docs("Today's staff on the event's clock: on a task, free, late, not here yet or gone"))
+    .input(OnShiftInputSchema)
+    .use(inCommunity("member"))
+    .output(OnShiftSchema)
+    .effect(function* ({ input }) {
+      return yield* StaffTasks.onShift(input.eventId);
+    }),
+
+  import: authed
+    .meta(docs("Tasks from rows pasted from a spreadsheet; a dry run only previews them"))
+    .input(ImportStaffTasksSchema)
+    .use(inCommunity("editor"))
+    .output(ImportResultSchema)
+    .effect(function* ({ input }) {
+      return yield* StaffTasks.importTasks(input);
+    }),
+
+  arrivals: {
+    list: authed
+      .meta(docs("Who has arrived at the venue, and who went home"))
+      .input(ListStaffArrivalsSchema)
+      .use(inCommunity("member"))
+      .output(z.array(StaffArrivalSchema))
+      .effect(function* ({ input }) {
+        return yield* StaffTasks.listArrivals(input.eventId);
+      }),
+
+    arrive: authed
+      .meta(docs('"Llegué": at the venue; editors may mark someone else'))
+      .input(StaffArrivalInputSchema)
+      .use(inCommunity("member"))
+      .output(StaffArrivalSchema)
+      .effect(function* ({ input }) {
+        return yield* StaffTasks.arrive(input);
+      }),
+
+    leave: authed
+      .meta(docs("Gone home: no longer on shift; editors may mark someone else"))
+      .input(StaffArrivalInputSchema)
+      .use(inCommunity("member"))
+      .output(StaffArrivalSchema)
+      .effect(function* ({ input }) {
+        return yield* StaffTasks.leaveShift(input);
+      }),
+  },
 
   announcements: {
     list: authed
@@ -150,6 +245,15 @@ export const staffTasksRouter = {
       .output(z.object({ ok: z.literal(true) }))
       .effect(function* ({ input }) {
         return yield* StaffTasks.ackAnnouncement(input);
+      }),
+
+    remind: authed
+      .meta(docs("Slack DM from Owy to everyone who hasn't read an announcement; says who couldn't get it"))
+      .input(AckStaffAnnouncementSchema)
+      .use(inCommunity("editor"))
+      .output(RemindResultSchema)
+      .effect(function* ({ input }) {
+        return yield* StaffTasks.remind(input);
       }),
   },
 };

@@ -4,10 +4,12 @@ import { and, eq } from "drizzle-orm";
 import { CalendarX2 } from "lucide-react";
 
 import { isSiteAdmin, requireStaffSession } from "app/lib/auth-helpers";
+import { TAREAS_TABS, type TareasTab } from "components/Admin/tareas/helpers";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
-import { Empty } from "components/shared/ui/empty";
 import { db } from "lib/db";
-import { communityMembers } from "lib/db/schema";
+import { communityMembers, events } from "lib/db/schema";
 import { caller } from "lib/orpc/server";
 
 import { resolveAdminCommunityScope } from "../scope";
@@ -23,21 +25,21 @@ export default async function TareasPage({
   searchParams,
 }: {
   params: Promise<{ communitySlug: string }>;
-  searchParams: Promise<{ event?: string }>;
+  searchParams: Promise<{ event?: string; tab?: string }>;
 }) {
   const session = await requireStaffSession();
   const admin = isSiteAdmin(session);
 
   const { communitySlug } = await params;
-  const { event: eventSlug } = await searchParams;
+  const { event: eventSlug, tab } = await searchParams;
   const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, admin ? null : session.user.id);
   if (!scope) notFound();
 
   if (!scope.selected) {
     return (
-      <div className="mx-auto w-full max-w-3xl space-y-4 p-4 md:p-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Tareas</h1>
-        <Empty
+      <PageContainer size="small">
+        <PageHeader title="Staff y tareas" />
+        <EmptyState
           action={
             admin ? (
               <Button asChild size="sm" variant="outline">
@@ -45,21 +47,23 @@ export default async function TareasPage({
               </Button>
             ) : undefined
           }
-          className="py-16"
           description={`${scope.community.name} todavía no tiene eventos.`}
           icon={CalendarX2}
           title="Sin eventos"
         />
-      </div>
+      </PageContainer>
     );
   }
 
   const selected = scope.selected;
-
-  const [tasks, announcements, roster, membership] = await Promise.all([
-    caller.staffTasks.list({ eventId: selected.id }),
-    caller.staffTasks.announcements.list({ eventId: selected.id }),
-    caller.staffTasks.roster({ eventId: selected.id }),
+  const input = { eventId: selected.id };
+  const [tasks, announcements, roster, arrivals, onShift, [event], membership] = await Promise.all([
+    caller.staffTasks.list(input),
+    caller.staffTasks.announcements.list(input),
+    caller.staffTasks.roster(input),
+    caller.staffTasks.arrivals.list(input),
+    caller.staffTasks.onShift(input),
+    db.select({ timezone: events.timezone }).from(events).where(eq(events.id, selected.id)),
     admin
       ? Promise.resolve(null)
       : db
@@ -72,17 +76,24 @@ export default async function TareasPage({
   ]);
 
   const canEdit = admin || (membership != null && ["owner", "admin", "editor"].includes(membership.role));
+  const initialTab = TAREAS_TABS.find((candidate): candidate is TareasTab => candidate === tab) ?? "ahora";
 
   return (
     <TareasClient
       canEdit={canEdit}
+      communitySlug={scope.community.slug}
       eventId={selected.id}
       eventName={selected.name}
+      eventSlug={selected.slug}
       initialAnnouncements={announcements}
+      initialArrivals={arrivals}
+      initialOnShift={onShift}
       initialRoster={roster}
+      initialTab={initialTab}
       initialTasks={tasks}
-      meId={session.user.id}
-      meName={session.user.name}
+      me={{ id: session.user.id, name: session.user.name, image: session.user.image ?? null }}
+      serverNow={Date.now()}
+      timeZone={event?.timezone ?? "America/Montevideo"}
     />
   );
 }
