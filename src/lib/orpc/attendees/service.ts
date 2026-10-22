@@ -657,11 +657,6 @@ const scanTime = (scannedAt?: string) => {
 };
 
 /**
- * OWU's scanner at the door. The first valid scan of a ticket checks the person in (here only:
- * Eventbrite can't be told); later ones are repeats; every scan is kept. Idempotent by nonce,
- * and the attendee row is locked, so two phones reading one ticket at once let one person in.
- */
-/**
  * A check-in that shouldn't have happened (the wrong ticket, a test): the attendee is back to
  * «por llegar». OWU keeps the say over their presence from then on, so a later Eventbrite sync
  * doesn't bring the check-in back; the scan itself stays in the history.
@@ -703,6 +698,11 @@ export const undoCheckin = (input: { eventId: string; attendeeId: string }) =>
     return { ok: true as const };
   });
 
+/**
+ * OWU's scanner at the door. The first valid scan of a ticket checks the person in (here only:
+ * Eventbrite can't be told); later ones are repeats; every scan is kept. Idempotent by nonce,
+ * and the attendee row is locked, so two phones reading one ticket at once let one person in.
+ */
 export const scan = (input: ScanInput) =>
   Effect.gen(function* () {
     if (yield* scanByNonce(input.nonce)) return yield* replay(input.eventId, input.nonce);

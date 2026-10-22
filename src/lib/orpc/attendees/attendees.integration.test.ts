@@ -544,6 +544,23 @@ describe("OWU's scanner", () => {
     });
   });
 
+  test("a community admin takes back a wrong check-in; an editor can't", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const [admin, editor] = await Promise.all([makeMember(community.id, "admin"), makeMember(community.id, "editor")]);
+    const ticket = await makeRsvp(event.id);
+    await call(router.attendees.scan, { eventId: event.id, code: ticket.barcode ?? "", nonce: nonce() }, by(admin));
+    const undo = (actor: UserRow) =>
+      call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: ticket.id }, by(actor));
+
+    await expect(undo(editor)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(undo(admin)).resolves.toStrictEqual({ ok: true });
+    await expect(undo(admin)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      db.select({ checkedInAt: attendees.checkedInAt }).from(attendees).where(eq(attendees.id, ticket.id))
+    ).resolves.toStrictEqual([{ checkedInAt: null }]);
+  });
+
   test("unknown and cancelled tickets let nobody in", async () => {
     const { event, staff } = await mirroredEvent();
     await makeAttendee(event.id, { barcode: "7000001", status: "refunded" });

@@ -26,7 +26,7 @@ const EXPECTED: Record<string, Access> = {
   "attendees.scan": "community:member",
   "attendees.setTags": "community:admin",
   "attendees.sync": "community:admin",
-  "attendees.undoCheckin": "staff",
+  "attendees.undoCheckin": "community:admin",
   "cast.getState": "public",
   "cast.setHighlightedNote": "staff",
   "comms.cadence": "staff",
