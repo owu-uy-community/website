@@ -10,7 +10,8 @@ test("on a phone the calendar opens as a list, and a day opens in a sheet", asyn
   await page.setViewportSize(PHONE);
 
   await page.goto(`/organizar/panel/${community.slug}/calendario?mes=2029-03`);
-  await expect(page.getByLabel("Agenda", { exact: true })).toHaveAttribute("data-state", "on");
+  // Roles skip hidden copies of the page; the toggle that shows is the one that counts
+  await expect(page.getByRole("radio", { name: "Agenda", exact: true })).toHaveAttribute("data-state", "on");
   await page.getByRole("listitem").getByRole("button", { name: /mar/i }).first().click();
 
   await expect(page.getByRole("dialog", { name: /de marzo/ })).toBeVisible();
@@ -37,5 +38,6 @@ test("on a phone, the bar at the bottom of an event opens the sign-up and says w
   const sheet = page.getByRole("dialog", { name: "Meetup desde el teléfono" });
   await sheet.getByRole("button", { name: "Anotarme" }).click();
 
-  await expect(sheet.getByText("Estás anotado")).toBeVisible();
+  // In the sheet, or in the bar once the page refreshes and the sheet closes
+  await expect(page.getByText("Estás anotado").filter({ visible: true }).first()).toBeVisible();
 });
