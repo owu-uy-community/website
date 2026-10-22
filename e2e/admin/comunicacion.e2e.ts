@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 
 import { db } from "../../src/lib/db";
-import { staffAnnouncementAcks, staffAnnouncements, surveys } from "../../src/lib/db/schema";
+import { outboundMessages, staffAnnouncementAcks, staffAnnouncements, surveys } from "../../src/lib/db/schema";
 import { makeMember } from "../../src/test/factories";
 import { expect, test } from "../fixtures";
 
@@ -55,6 +55,30 @@ test("an announcement is edited, asking everyone to read it again, and then dele
 
   await expect(edited).toBeHidden();
   await expect(page.getByText("Todavía no hay anuncios")).toBeVisible();
+});
+
+test("a message Owy sent before the site kept track leaves the history, saying it stays in Telegram", async ({
+  page,
+  board,
+}) => {
+  await db.insert(outboundMessages).values({
+    eventId: board.event.id,
+    channel: "telegram",
+    body: "Mañana abrimos a las 14:30",
+    status: "sent",
+    sentAt: new Date(),
+  });
+  await page.goto(`/admin/${board.community.slug}/comunicacion?event=${board.event.slug}&tab=owy`);
+  const row = panel(page, "Historial").getByRole("listitem").filter({ hasText: "Mañana abrimos" });
+
+  // Nothing to rewrite it with in Telegram: no «Editar», only «Borrar».
+  await expect(row.getByRole("button", { name: "Editar" })).toBeHidden();
+  await row.getByRole("button", { name: "Borrar" }).click();
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toContainText("en Telegram queda");
+  await confirm.getByRole("button", { name: "Borrar mensaje" }).click();
+
+  await expect(row).toBeHidden();
 });
 
 test("someone answers the survey from a room's QR, once, and it shows in the results", async ({

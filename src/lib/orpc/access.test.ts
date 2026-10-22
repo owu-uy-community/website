@@ -33,6 +33,7 @@ const EXPECTED: Record<string, Access> = {
   "comms.list": "staff",
   "comms.markSent": "staff",
   "comms.remind": "staff",
+  "comms.remove": "staff",
   "comms.schedule": "staff",
   "comms.send": "staff",
   "comms.update": "staff",

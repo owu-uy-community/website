@@ -12,6 +12,7 @@ import {
   OutboundMessageSchema,
   RemindResultSchema,
   RemindSchema,
+  RemoveMessageSchema,
   ScheduleMessageSchema,
   SendMessageSchema,
   UpdateMessageSchema,
@@ -60,7 +61,7 @@ export const commsRouter = {
     }),
 
   update: staff
-    .meta(docs("Edit a scheduled message while it waits to go out"))
+    .meta(docs("Edit a message: a scheduled one whole; one that went out, its text, where it landed too"))
     .input(UpdateMessageSchema)
     .output(OutboundMessageSchema)
     .effect(function* ({ input }) {
@@ -73,6 +74,14 @@ export const commsRouter = {
     .output(OutboundMessageSchema)
     .effect(function* ({ input }) {
       return yield* Comms.cancel(input);
+    }),
+
+  remove: staff
+    .meta(docs("Delete a message; one that went out also where it landed (Telegram, Slack), unless onlyHere"))
+    .input(RemoveMessageSchema)
+    .output(OutboundMessageSchema)
+    .effect(function* ({ input }) {
+      return yield* Comms.remove(input);
     }),
 
   markSent: staff

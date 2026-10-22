@@ -26,6 +26,13 @@ export const OutboundMessageSchema = z.object({
   recipients: z.number(),
   createdBy: z.object({ id: z.string(), name: z.string(), image: z.string().nullable() }).nullable(),
   createdAt: z.string(),
+  /** Edited after it went out. */
+  editedAt: z.string().nullable(),
+  /**
+   * How many copies Owy can still edit or delete where they landed (one per staff DM). 0 for what
+   * went out before the site kept track, and for emails: those only leave this list.
+   */
+  remote: z.number(),
 });
 export type OutboundMessage = z.infer<typeof OutboundMessageSchema>;
 
@@ -49,6 +56,9 @@ export const UpdateMessageSchema = z.object({
 });
 
 export const MessageRefSchema = z.object({ eventId: z.string().min(1), messageId: z.string().min(1) });
+
+/** Delete a message: also where it landed, unless `onlyHere` (Telegram said no, or it was deleted there by hand). */
+export const RemoveMessageSchema = MessageRefSchema.extend({ onlyHere: z.boolean().default(false) });
 
 export const MarkSentSchema = z.object({ eventId: z.string().min(1), step: CadenceStepKeySchema, body: Body });
 

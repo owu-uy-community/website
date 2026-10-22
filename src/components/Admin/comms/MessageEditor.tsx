@@ -23,13 +23,13 @@ import {
 
 /** What the panel is asked to do, prefilled. */
 export type EditorRequest = {
-  mode: "schedule" | "send" | "edit" | "send-scheduled";
+  mode: "schedule" | "send" | "edit" | "send-scheduled" | "edit-sent";
   channel: OwyChannel;
   body: string;
   /** ISO: when it goes out (schedule, edit). */
   at?: string;
   step?: CadenceStepKey;
-  /** The scheduled message being edited or sent now. */
+  /** The scheduled message being edited or sent now, or the sent one being rewritten. */
   messageId?: string;
   /** "T-1 · Recordatorio de Owy" */
   title?: string;
@@ -47,6 +47,11 @@ const COPY: Record<EditorRequest["mode"], { title: string; description: string; 
     action: "Guardar cambios",
   },
   send: { title: "Mandar ahora", description: "Sale en cuanto confirmes.", action: "Enviar ahora" },
+  "edit-sent": {
+    title: "Editar mensaje enviado",
+    description: "Cambia donde salió, para todos los que ya lo tienen.",
+    action: "Guardar cambios",
+  },
   "send-scheduled": {
     title: "Mandar ahora",
     description: "Sale ya, sin esperar la hora programada.",
@@ -99,6 +104,10 @@ export function MessageEditor({
           body: text,
           scheduledAt: fromLocalInput(when, timeZone),
         });
+        return "Cambios guardados";
+      }
+      if (mode === "edit-sent" && request?.messageId) {
+        await client.comms.update({ eventId, messageId: request.messageId, body: text });
         return "Cambios guardados";
       }
       if (mode === "send-scheduled" && request?.messageId) {
@@ -157,8 +166,16 @@ export function MessageEditor({
       onOpenChange={onOpenChange}
     >
       <div className="space-y-4">
-        <ChannelPicker channels={channels} name="editor-channel" value={channel} onChange={setChannel} />
-        <UnconfiguredNotice channel={channel} channels={channels} sendNow={sendingNow} />
+        {/* A message that went out stays where it went: only its text changes. */}
+        {mode === "edit-sent" ? null : (
+          <ChannelPicker channels={channels} name="editor-channel" value={channel} onChange={setChannel} />
+        )}
+        <UnconfiguredNotice
+          channel={channel}
+          channels={channels}
+          editingSent={mode === "edit-sent"}
+          sendNow={sendingNow}
+        />
         <BodyField id="editor-body" value={body} onChange={setBody} />
         {timed ? <WhenField id="editor-when" timeZone={timeZone} value={when} onChange={setWhen} /> : null}
         <MessagePreview body={body} channel={channel} />

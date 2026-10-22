@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { CalendarClock, History, Info, Pencil, RotateCcw, Send, X } from "lucide-react";
+import { CalendarClock, History, Info, Pencil, RotateCcw, Send, Trash2, X } from "lucide-react";
 
 import { SwitchRow } from "components/Admin/panel";
 import { Panel, PanelHead } from "components/Admin/ui/page";
@@ -28,6 +28,7 @@ import {
   WhenField,
   type OwyChannel,
 } from "./MessageFields";
+import { useRemoveMessage } from "./RemoveMessage";
 import { owyChannelOf, stepOf, useCancelMessage } from "./useCancelMessage";
 
 export const STEP_LABELS: Record<(typeof CADENCE_STEPS)[number], string> = {
@@ -146,6 +147,7 @@ function MessageRow({
           </span>
           <Badge variant={STATUS[message.status].variant}>{STATUS[message.status].label}</Badge>
           {step ? <Badge variant="outline">{STEP_LABELS[step]}</Badge> : null}
+          {message.editedAt ? <span className="text-meta text-muted-foreground">editado</span> : null}
           {at ? (
             <span className="ml-auto flex items-center gap-2">
               <span className="font-terminal text-meta text-subtle tabular-nums">{formatWhen(at, timeZone)}</span>
@@ -224,6 +226,7 @@ export function OwyMessages({
     .toSorted((a, b) => (b.sentAt ?? b.createdAt).localeCompare(a.sentAt ?? a.createdAt));
 
   const cancel = useCancelMessage(eventId, timeZone);
+  const removal = useRemoveMessage(eventId);
 
   const request = (message: OutboundMessage, mode: EditorRequest["mode"]): EditorRequest => ({
     mode,
@@ -231,7 +234,7 @@ export function OwyMessages({
     body: message.body,
     at: message.scheduledAt ?? undefined,
     step: stepOf(message),
-    messageId: mode === "edit" || mode === "send-scheduled" ? message.id : undefined,
+    messageId: mode === "edit" || mode === "send-scheduled" || mode === "edit-sent" ? message.id : undefined,
   });
 
   return (
@@ -303,12 +306,39 @@ export function OwyMessages({
                 <MessageRow
                   key={message.id}
                   actions={
-                    message.status === "failed" && message.channel !== "staff_dm" ? (
-                      <Button size="xs" variant="outline" onClick={() => onEdit(request(message, "send"))}>
-                        <RotateCcw />
-                        Reintentar
-                      </Button>
-                    ) : undefined
+                    <>
+                      {message.status === "failed" && message.channel !== "staff_dm" ? (
+                        <Button size="xs" variant="outline" onClick={() => onEdit(request(message, "send"))}>
+                          <RotateCcw />
+                          Reintentar
+                        </Button>
+                      ) : null}
+                      {/* Edited where it landed, so only what the site knows the place of. */}
+                      {message.status === "sent" &&
+                      (message.channel === "telegram" || message.channel === "slack") &&
+                      message.remote > 0 ? (
+                        <Button size="xs" variant="outline" onClick={() => onEdit(request(message, "edit-sent"))}>
+                          <Pencil />
+                          Editar
+                        </Button>
+                      ) : null}
+                      {message.channel === "email" ? (
+                        <Button
+                          disabled={cancel.isPending}
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => cancel.mutate({ eventId, messageId: message.id })}
+                        >
+                          <X />
+                          Desmarcar
+                        </Button>
+                      ) : message.status !== "sending" ? (
+                        <Button size="xs" variant="ghost" onClick={() => removal.ask(message)}>
+                          <Trash2 />
+                          Borrar
+                        </Button>
+                      ) : null}
+                    </>
                   }
                   message={message}
                   timeZone={timeZone}
@@ -330,6 +360,7 @@ export function OwyMessages({
           )}
         </Panel>
       </div>
+      {removal.dialog}
     </div>
   );
 }

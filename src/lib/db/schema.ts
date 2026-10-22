@@ -940,6 +940,11 @@ export const screens = pgTable("screens", {
 });
 
 /** Messages through Owy and the staff, sent now or when their time comes. */
+/** Where a sent message landed: Telegram's chat and message id, or Slack's channel and ts. */
+export type RemoteRef =
+  | { service: "telegram"; chatId: string; messageId: number }
+  | { service: "slack"; channel: string; ts: string };
+
 export const outboundMessages = pgTable(
   "outbound_messages",
   {
@@ -965,6 +970,13 @@ export const outboundMessages = pgTable(
     step: text("step"),
     createdById: text("createdById").references(() => user.id, { onDelete: "set null" }),
     createdAt: ts("createdAt").notNull().defaultNow(),
+    /**
+     * Where it landed (Telegram's chat and message id, Slack's channel and ts; one per staff DM), so
+     * editing or deleting it changes it there too. Empty for what went out before this was kept.
+     */
+    remoteRefs: jsonb("remoteRefs").$type<RemoteRef[]>().notNull().default([]),
+    /** The last edit after it went out, shown as «editado». */
+    editedAt: ts("editedAt"),
   },
   (t) => [index("outbound_messages_eventId_status_idx").on(t.eventId, t.status)]
 );
