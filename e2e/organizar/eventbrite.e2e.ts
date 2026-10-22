@@ -32,7 +32,7 @@ test("an admin connects Eventbrite, publishes an event there, and its page sends
   await page.goto(`/organizar/panel/${community.slug}/eventos/${event.id}/editar?paso=inscripcion`);
   await expect(page.getByText(/Al publicar lo creamos en Eventbrite/)).toBeVisible();
   await page.goto(`/organizar/panel/${community.slug}/eventos/${event.id}/editar?paso=revisar`);
-  await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Publicar", exact: true }).click();
   await expect(page.getByText("¡Publicado!")).toBeVisible();
   const path = await page.getByRole("dialog").getByRole("link", { name: "Ver la página" }).getAttribute("href");
 

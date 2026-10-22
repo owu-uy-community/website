@@ -36,7 +36,7 @@ test("an organizer builds an event step by step and publishes it", async ({ page
   // Only suggestions left (description, topics, place): nothing blocks publishing
   await expect(page.getByText("Sugerido").first()).toBeVisible();
   await expect(page.getByText("Falta", { exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Publicar" }).click();
+  await page.getByRole("button", { name: "Publicar", exact: true }).click();
   await expect(page.getByText("¡Publicado!")).toBeVisible();
 
   const link = await page.getByRole("dialog").getByRole("link", { name: "Ver la página" }).getAttribute("href");
