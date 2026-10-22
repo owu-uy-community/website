@@ -1,7 +1,17 @@
 import { createId } from "@paralleldrive/cuid2";
 
 import { db } from "lib/db";
-import { attendees, communities, communityMembers, events, rooms, schedules, tracks, user } from "lib/db/schema";
+import {
+  account,
+  attendees,
+  communities,
+  communityMembers,
+  events,
+  rooms,
+  schedules,
+  tracks,
+  user,
+} from "lib/db/schema";
 
 /**
  * Row factories for integration tests. Every row gets unique ids/slugs, so
@@ -29,6 +39,22 @@ export async function makeUser(overrides: Partial<typeof user.$inferInsert> = {}
       ...overrides,
     })
     .returning();
+
+  return row;
+}
+
+/** Someone who signed in with the OWU Slack (email-code accounts have no `slack` account row). */
+export async function makeSlackUser(overrides: Partial<typeof user.$inferInsert> = {}) {
+  const row = await makeUser(overrides);
+  const now = new Date();
+  await db.insert(account).values({
+    id: createId(),
+    accountId: `U${createId()}`,
+    providerId: "slack",
+    userId: row.id,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return row;
 }

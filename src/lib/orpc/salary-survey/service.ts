@@ -3,7 +3,13 @@ import { createHmac } from "node:crypto";
 import { and, count, desc, eq } from "drizzle-orm";
 import { Effect } from "effect";
 
-import { salarySurveyParticipants, salarySurveyResponses, salarySurveys, type SalarySurveyRow } from "../../db/schema";
+import {
+  account,
+  salarySurveyParticipants,
+  salarySurveyResponses,
+  salarySurveys,
+  type SalarySurveyRow,
+} from "../../db/schema";
 import { MIN_GROUP_SIZE } from "../../salary-survey/questions";
 import {
   currencyResults,
@@ -14,7 +20,7 @@ import {
   type ResponseFacts,
 } from "../../salary-survey/stats";
 import { query, transaction } from "../db";
-import { Conflict, NotFound } from "../errors";
+import { Conflict, Forbidden, NotFound } from "../errors";
 import { CurrentUser } from "../services";
 import type { Answers, Survey, SurveyResults } from "./schemas";
 
@@ -64,7 +70,7 @@ export const getCurrent = (userId: string | null) =>
     const rows = yield* query((db) => db.select().from(salarySurveys).orderBy(desc(salarySurveys.slug)));
     const visible = rows.filter((row) => row.status !== "draft");
     const row = visible.find((candidate) => candidate.status === "open") ?? visible[0];
-    if (!row) return { survey: null, answered: false };
+    if (!row) return { survey: null, answered: false, slack: userId ? yield* hasSlack(userId) : false };
 
     const answered = userId
       ? (yield* query((db) =>
@@ -80,13 +86,33 @@ export const getCurrent = (userId: string | null) =>
         )).length > 0
       : false;
 
-    return { survey: toSurvey(row, yield* countResponses(row.id)), answered };
+    return {
+      survey: toSurvey(row, yield* countResponses(row.id)),
+      answered,
+      slack: userId ? yield* hasSlack(userId) : false,
+    };
   });
+
+/**
+ * Whether the person signed in with the OWU Slack. Anyone can get an email code, so answering
+ * stays tied to a Slack account: one per member, which is what keeps the numbers honest.
+ */
+const hasSlack = (userId: string) =>
+  query((db) =>
+    db
+      .select({ id: account.id })
+      .from(account)
+      .where(and(eq(account.userId, userId), eq(account.providerId, "slack")))
+      .limit(1)
+  ).pipe(Effect.map((rows) => rows.length > 0));
 
 /** Record one answer per person: the participant mark and the answer, both or neither. */
 export const submit = (slug: string, answers: Answers) =>
   Effect.gen(function* () {
     const user = yield* CurrentUser;
+    if (!(yield* hasSlack(user.id))) {
+      return yield* new Forbidden({ message: "La encuesta se responde entrando con el Slack de OWU" });
+    }
 
     return yield* transaction(
       Effect.gen(function* () {

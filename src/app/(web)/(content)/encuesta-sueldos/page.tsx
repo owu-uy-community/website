@@ -1,8 +1,6 @@
 import { Braces, Download, EyeOff, FileCode2, Fingerprint, Lock, Users } from "lucide-react";
-import { headers } from "next/headers";
 import Link from "next/link";
 
-import { auth } from "app/lib/auth";
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
 import CopyField from "components/community/CopyField";
@@ -265,10 +263,9 @@ function OpenData({ slug, datasetHref }: { slug: string; datasetHref: string }) 
 }
 
 export default async function SalarySurveyPage({ searchParams }: { searchParams: Promise<{ edicion?: string }> }) {
-  const [{ survey: current, answered }, editions, session, { edicion }] = await Promise.all([
+  const [{ survey: current, answered, slack }, editions, { edicion }] = await Promise.all([
     caller.salarySurvey.current(),
     caller.salarySurvey.editions(),
-    auth.api.getSession({ headers: await headers() }),
     searchParams,
   ]);
   // A past edition can be read at ?edicion=2027; otherwise the current one
@@ -358,7 +355,7 @@ export default async function SalarySurveyPage({ searchParams }: { searchParams:
           id="formulario"
           title={answered ? "¡Gracias por responder!" : "Tu respuesta"}
         >
-          <SurveyForm answered={answered} signedIn={Boolean(session)} slug={survey.slug} />
+          <SurveyForm answered={answered} signedIn={slack} slug={survey.slug} />
         </Section>
       ) : null}
 

@@ -7,7 +7,7 @@ import { db } from "lib/db";
 import { salarySurveyParticipants, salarySurveyResponses, salarySurveys } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeSiteAdmin, makeUser } from "test/factories";
+import { makeSiteAdmin, makeSlackUser, makeUser } from "test/factories";
 
 import type { Answers } from "./schemas";
 
@@ -60,7 +60,7 @@ async function publishedEdition() {
 describe("salarySurvey.submit", () => {
   test("one answer per person", async () => {
     const { slug } = await edition();
-    const user = await makeUser();
+    const user = await makeSlackUser();
 
     await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(user))).resolves.toStrictEqual({
       ok: true,
@@ -73,7 +73,7 @@ describe("salarySurvey.submit", () => {
 
   test("the answer is stored without who answered, dated by day only", async () => {
     const { slug, surveyId } = await edition();
-    const user = await makeUser();
+    const user = await makeSlackUser();
     await call(router.salarySurvey.submit, { slug, answers: answers() }, by(user));
 
     const responses = await db.select().from(salarySurveyResponses).where(eq(salarySurveyResponses.surveyId, surveyId));
@@ -91,7 +91,7 @@ describe("salarySurvey.submit", () => {
   test("a closed edition, or one past its closing date, takes no answers", async () => {
     const closed = await edition("closed");
     const expired = await edition("open", { closesAt: new Date(Date.now() - 60_000).toISOString() });
-    const user = await makeUser();
+    const user = await makeSlackUser();
 
     for (const { slug } of [closed, expired]) {
       await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(user))).rejects.toMatchObject({
@@ -103,16 +103,27 @@ describe("salarySurvey.submit", () => {
 
   test("answers outside the currency's sane range are rejected", async () => {
     const { slug } = await edition();
-    const user = await makeUser();
+    const user = await makeSlackUser();
 
     await expect(
       call(router.salarySurvey.submit, { slug, answers: answers({ currency: "USD", amount: 120_000 }) }, by(user))
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
-  test("anonymous people sign in first; only staff manage editions", async () => {
+  test("an email-code account without Slack can't answer", async () => {
+    await db.update(salarySurveys).set({ status: "draft" }).where(ne(salarySurveys.status, "draft"));
     const { slug } = await edition();
     const user = await makeUser();
+
+    await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(user))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(call(router.salarySurvey.current, undefined, by(user))).resolves.toMatchObject({ slack: false });
+  });
+
+  test("anonymous people sign in first; only staff manage editions", async () => {
+    const { slug } = await edition();
+    const user = await makeSlackUser();
 
     await expect(call(router.salarySurvey.submit, { slug, answers: answers() }, by(null))).rejects.toMatchObject({
       code: "UNAUTHORIZED",
@@ -127,11 +138,12 @@ describe("salarySurvey.current", () => {
   test("shows the open edition and whether the caller already answered", async () => {
     await db.update(salarySurveys).set({ status: "draft" }).where(ne(salarySurveys.status, "draft"));
     const { slug } = await edition();
-    const user = await makeUser();
+    const user = await makeSlackUser();
 
     await expect(call(router.salarySurvey.current, undefined, by(user))).resolves.toMatchObject({
       survey: { slug, status: "open", responseCount: 0 },
       answered: false,
+      slack: true,
     });
     await call(router.salarySurvey.submit, { slug, answers: answers() }, by(user));
 

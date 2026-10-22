@@ -39,6 +39,8 @@ export const CurrentSurveySchema = z.object({
   survey: SurveySchema.nullable(),
   /** Whether the caller (if signed in) already answered it */
   answered: z.boolean(),
+  /** Whether the caller signed in with the OWU Slack, which answering requires */
+  slack: z.boolean(),
 });
 
 export const AnswersSchema = z
