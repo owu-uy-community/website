@@ -10,7 +10,7 @@
     "companion:voice:test": "node --test owy/companion/emulator/live-tests.mjs",
     "companion:emulator:preview": "node owy/companion/emulator/preview.mjs",
     "analyze": "next analyze",
-    "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
+    "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=6144\" next build",
     "db:backfill-communities": "tsx src/lib/db/backfill-communities.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
