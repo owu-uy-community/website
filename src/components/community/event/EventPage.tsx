@@ -14,6 +14,7 @@ import { RsvpSheet } from "./RsvpSheet";
 import { ShareButton } from "./ShareButton";
 
 import { EventMaterials } from "./EventMaterials";
+import { EventTalks } from "./EventTalks";
 
 const FORMAT = {
   charlas: "Charlas",
@@ -151,6 +152,7 @@ export function EventPage({
                 <Description markdown={event.description} />
               </section>
             ) : null}
+            <EventTalks talks={event.talks} />
             <EventMaterials event={event} />
 
             {event.topics.length > 0 ? (

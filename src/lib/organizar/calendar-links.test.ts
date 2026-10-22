@@ -40,4 +40,14 @@ describe("describing an event", () => {
     );
     expect(safeJson({ name: "</script><script>" })).not.toContain("</script>");
   });
+
+  test("the talks' speakers go in the search snippet as performers", () => {
+    const talks = [
+      { title: "Pandas sin dolor", speaker: "Ana G." },
+      { title: "Bienvenida", speaker: "" },
+    ];
+
+    expect(eventJsonLd({ ...event, talks }, "u", "i").performer).toStrictEqual([{ "@type": "Person", name: "Ana G." }]);
+    expect(eventJsonLd(event, "u", "i").performer).toBeUndefined();
+  });
 });

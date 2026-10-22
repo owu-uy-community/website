@@ -11,6 +11,7 @@ export type DescribedEvent = {
   capacity: number | null;
   taken: number;
   community: { name: string; slug: string };
+  talks?: { title: string; speaker: string }[];
 };
 
 /** 20261126T220000Z, the compact UTC form calendars want */
@@ -65,6 +66,9 @@ const MODE = {
 /** schema.org Event, for search engines; the online link never goes in it */
 export function eventJsonLd(event: DescribedEvent, pageUrl: string, imageUrl: string) {
   const full = event.registration === "owu" && event.capacity !== null && event.taken >= event.capacity;
+  const speakers = (event.talks ?? [])
+    .filter((talk) => talk.speaker.trim())
+    .map((talk) => ({ "@type": "Person", name: talk.speaker.trim() }));
 
   return {
     "@context": "https://schema.org",
@@ -98,6 +102,7 @@ export function eventJsonLd(event: DescribedEvent, pageUrl: string, imageUrl: st
       url: pageUrl,
     },
     isAccessibleForFree: true,
+    performer: speakers.length > 0 ? speakers : undefined,
   };
 }
 

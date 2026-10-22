@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarPlus, Globe, MessageSquare } from "lucide-react";
+import { ArrowRight, CalendarPlus, Globe, MessageSquare, PlayCircle } from "lucide-react";
 import { FaInstagram, FaLinkedin, FaMeetup } from "react-icons/fa";
 
 import { cn } from "app/lib/utils";
@@ -185,6 +185,12 @@ export function CommunityProfile({
                     href={`/comunidad/${event.hostSlug}/events/${event.slug}`}
                   >
                     <span className="min-w-0 truncate">{event.name}</span>
+                    {event.materials.some((material) => material.kind === "grabacion") ? (
+                      <span className="ml-auto flex shrink-0 items-center gap-1 text-[13px] text-yellow-400">
+                        <PlayCircle aria-hidden className="size-4" />
+                        Grabación
+                      </span>
+                    ) : null}
                     <span className="shrink-0 text-[14px] text-zinc-500 tabular-nums">
                       {dateParts(event.startDate.toISOString()).monthYear}
                     </span>
