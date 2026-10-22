@@ -13,6 +13,8 @@ import { eventJsonLd, googleCalendarUrl, outlookCalendarUrl, safeJson } from "li
 import { RsvpSheet } from "./RsvpSheet";
 import { ShareButton } from "./ShareButton";
 
+import { EventMaterials } from "./EventMaterials";
+
 const FORMAT = {
   charlas: "Charlas",
   taller: "Taller",
@@ -149,6 +151,7 @@ export function EventPage({
                 <Description markdown={event.description} />
               </section>
             ) : null}
+            <EventMaterials event={event} />
 
             {event.topics.length > 0 ? (
               <ul aria-label="Temas" className="mt-10 flex flex-wrap gap-2">
