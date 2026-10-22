@@ -256,6 +256,9 @@ describe("publishing later and announcing", () => {
     const body = new Map(queued.map((row) => [row.channel, row.body]));
     expect(queued).toHaveLength(2);
     expect(body.get("slack")).toContain("Meetup &lt;!channel&gt; &amp; más");
+    await expect(call(router.events.get, ref, by(editor))).resolves.toMatchObject({
+      announcements: expect.arrayContaining([{ channel: "slack", status: "scheduled", sentAt: null }]),
+    });
     expect(body.get("telegram")).toMatch(/^📣 Comunidad del asistente: Meetup <!channel> & más\nCharlas cortas\n/);
   });
 });

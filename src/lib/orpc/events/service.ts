@@ -362,6 +362,20 @@ const editableOf = (eventId: string) =>
       announcement: event.announcement,
       announceChannels: { slack: owyChannels().slack, telegram: owyChannels().telegram },
       publishAt: event.publishAt?.toISOString() ?? null,
+      announcements: (yield* query((db) =>
+        db
+          .select({
+            channel: outboundMessages.channel,
+            status: outboundMessages.status,
+            sentAt: outboundMessages.sentAt,
+          })
+          .from(outboundMessages)
+          .where(and(eq(outboundMessages.eventId, event.id), inArray(outboundMessages.channel, ["slack", "telegram"])))
+      )).map((row) => ({
+        channel: row.channel as "slack" | "telegram",
+        status: row.status,
+        sentAt: row.status === "sent" ? (row.sentAt?.toISOString() ?? null) : null,
+      })),
       reminderNote: event.reminderNote,
       materials: event.materials,
       cohosts: yield* cohostsOf(event.id),

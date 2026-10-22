@@ -58,6 +58,44 @@ function Row({ place, children }: { place: Place; children?: React.ReactNode }) 
   );
 }
 
+const CHANNEL = { slack: "Slack", telegram: "Telegram" } as const;
+
+/** Owy's posts on OWU's Slack and Telegram: asked for in Difusión, sent when it was published. */
+function announcementPlace(event: EditableEvent, base: string): Place {
+  const { announcements } = event;
+  const failed = announcements.filter((post) => post.status === "failed");
+  const sent = announcements.filter((post) => post.status === "sent");
+  if (announcements.length === 0) {
+    return {
+      key: "canales",
+      name: "Slack · Telegram",
+      tone: "idle",
+      state: "Sin anunciar",
+      detail: "Owy lo anuncia en los canales de OWU si lo pedís en Difusión antes de publicar.",
+      link: event.status === "draft" ? { href: `${base}/editar?paso=difusion`, label: "Ir a Difusión" } : undefined,
+    };
+  }
+
+  return {
+    key: "canales",
+    name: "Slack · Telegram",
+    tone: failed.length > 0 ? "live" : sent.length === announcements.length ? "ok" : "info",
+    state: failed.length > 0 ? "No salió" : sent.length === announcements.length ? "Anunciado" : "Saliendo",
+    detail: announcements
+      .map(
+        (post) =>
+          `${CHANNEL[post.channel]}: ${
+            post.status === "sent" && post.sentAt
+              ? `el ${shortWhen(post.sentAt)}`
+              : post.status === "failed"
+                ? "no se pudo (avisá en #organizadores-meetups)"
+                : "en camino"
+          }`
+      )
+      .join(" · "),
+  };
+}
+
 /** Where the event is published: owu.uy, Eventbrite, Meetup and OWU's channels. */
 export function PublicationsTab({
   event,
@@ -104,14 +142,7 @@ export function PublicationsTab({
         ? { href: event.externalLinks.meetup, label: "Ver en Meetup", external: true }
         : { href: `${base}/editar?paso=difusion`, label: "Ir a Difusión" },
     },
-    // ponytail: OWU doesn't announce events in its channels yet; give this row its real state when it does
-    {
-      key: "canales",
-      name: "Slack · Telegram",
-      tone: "idle",
-      state: "Sin anunciar",
-      detail: "Todavía no se anuncia en los canales de OWU desde acá.",
-    },
+    announcementPlace(event, base),
   ];
 
   return (
