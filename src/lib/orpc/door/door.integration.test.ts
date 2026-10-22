@@ -44,6 +44,20 @@ describe("the volunteers' door", () => {
     });
   });
 
+  test("door search goes by name only and never hands out a ticket code; its match still checks in", async () => {
+    const { community, event, admin, ana } = await setup();
+    const token = tokenOf(
+      (await call(router.events.doorLink, { communityId: community.id, eventId: event.id }, by(admin))).url
+    );
+
+    await expect(call(router.door.search, { token, q: ana.email }, by(null))).resolves.toStrictEqual({ rows: [] });
+    const [match] = (await call(router.door.search, { token, q: "ana" }, by(null))).rows;
+    expect(match.barcode).not.toBe(ana.barcode);
+    await expect(
+      call(router.door.scan, { token, code: match.barcode ?? "", nonce: createId() }, by(null))
+    ).resolves.toMatchObject({ result: "ok", attendee: { name: "Ana Puerta" } });
+  });
+
   test("revoking stops every link handed out; a forged one never worked", async () => {
     const { community, event, admin } = await setup();
     const ref = { communityId: community.id, eventId: event.id };

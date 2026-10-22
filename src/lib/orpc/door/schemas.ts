@@ -7,11 +7,7 @@ const token = z.string().min(10).max(500);
 export const DoorTokenSchema = z.object({ token });
 export const DoorSearchSchema = z.object({ token, q: z.string().trim().min(2).max(120) });
 export const DoorScanSchema = ScanSchema.omit({ eventId: true }).extend({ token });
-export const WalkInSchema = z.object({
-  token,
-  name: z.string().trim().min(2).max(120),
-  email: z.email().optional(),
-});
+export const WalkInSchema = z.object({ token, name: z.string().trim().min(2).max(120) });
 
 const Totals = z.object({ all: z.number(), in: z.number(), out: z.number() });
 
@@ -25,7 +21,7 @@ export const DoorInfoSchema = z.object({
   totals: Totals,
 });
 
-/** People found at the door: names and tickets, never emails */
+/** People found at the door: names and tickets; never emails or ticket codes */
 export const DoorSearchResultSchema = z.object({ rows: z.array(AttendeeSchema) });
 export const DoorCountsSchema = z.object({ totals: Totals });
 
