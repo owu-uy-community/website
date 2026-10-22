@@ -34,8 +34,9 @@ test("an organizer hands out a door link; a volunteer without an account checks 
   await expect(volunteer.getByText("Ana Puerta").first()).toBeVisible();
   await expect(volunteer.getByText(/Adelante/)).toBeVisible();
 
-  await panel.getByRole("button", { name: "Anular" }).click();
+  await panel.getByRole("button", { name: "Anular", exact: true }).click();
   await panel.getByRole("button", { name: "Anular los links" }).click();
+  await expect(panel.getByRole("button", { name: "Crear el link" })).toBeVisible();
   await volunteer.reload();
   await expect(volunteer.getByText("Este link de la puerta ya no sirve")).toBeVisible();
   await volunteer.close();
