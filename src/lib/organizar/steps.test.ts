@@ -50,12 +50,4 @@ describe(issues, () => {
 
     expect(list.map((issue) => issue.text)).toStrictEqual(["La fecha ya pasó", "Poné el link de inscripción"]);
   });
-
-  test("asking Owy to announce it needs the announcement's text", () => {
-    const empty = issues({ ...ready, announcement: { channels: ["slack"], text: " " } }, NOW);
-    const written = issues({ ...ready, announcement: { channels: ["slack"], text: "¡Nuevo meetup!" } }, NOW);
-
-    expect(stepState("difusion", empty)).toBe("required");
-    expect(written).toStrictEqual([]);
-  });
 });

@@ -1,7 +1,5 @@
 import * as z from "zod";
 
-import { MESSAGE_MAX } from "../comms/schemas";
-
 export const DaySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Usá AAAA-MM-DD")
@@ -77,13 +75,13 @@ export const TalkSchema = z.object({
   speaker: z.string().trim().max(120),
 });
 
-/** Owy's post on OWU's Slack and Telegram when it's published */
+/** Where Owy posts it when it's published; the text is written from the event, never by hand */
 export const AnnouncementSchema = z.object({
   channels: z
     .array(z.enum(["slack", "telegram"]))
-    .max(2)
+    .max(4)
+    .transform((channels) => [...new Set(channels)])
     .optional(),
-  text: z.string().max(MESSAGE_MAX).optional(),
 });
 
 export const QuestionSchema = z.object({

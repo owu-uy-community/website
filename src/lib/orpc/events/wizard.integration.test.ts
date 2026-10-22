@@ -4,7 +4,7 @@ import { Effect } from "effect";
 import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
-import { activity, events, outboundMessages } from "lib/db/schema";
+import { activity, communityMembers, events, outboundMessages } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { liveServices } from "lib/orpc/services";
 import { by } from "test/context";
@@ -219,17 +219,43 @@ describe("publishing later and announcing", () => {
     ).resolves.toHaveLength(1);
   });
 
-  test("Owy's announcement is queued on the channels asked for, once published", async () => {
+  test("a schedule whose author stopped organizing the community doesn't publish", async () => {
+    const { community, editor, ref } = await readyDraft();
+    await call(
+      router.events.schedulePublish,
+      { ...ref, publishAt: new Date(Date.now() + 3_600_000).toISOString() },
+      by(editor)
+    );
+    await db
+      .update(events)
+      .set({ publishAt: new Date(Date.now() - 1000) })
+      .where(eq(events.id, ref.eventId));
+    await db
+      .update(communityMembers)
+      .set({ role: "member" })
+      .where(and(eq(communityMembers.communityId, community.id), eq(communityMembers.userId, editor.id)));
+
+    await Effect.runPromiseWith(liveServices)(publishDue);
+
+    await expect(db.select().from(events).where(eq(events.id, ref.eventId))).resolves.toMatchObject([
+      { status: "draft", publishAt: null },
+    ]);
+  });
+
+  test("Owy's announcement is written from the event, escaped for Slack, on each channel asked for once", async () => {
     const { editor, event, ref } = await readyDraft();
-    const announcement = { channels: ["slack" as const, "telegram" as const], text: "📣 Meetup programado" };
-    await call(router.events.save, { ...ref, expectedUpdatedAt: event.updatedAt, patch: { announcement } }, by(editor));
+    const patch = {
+      name: "Meetup <!channel> & más",
+      announcement: { channels: ["slack", "telegram", "slack"] as ("slack" | "telegram")[] },
+    };
+    await call(router.events.save, { ...ref, expectedUpdatedAt: event.updatedAt, patch }, by(editor));
 
     await call(router.events.publish, ref, by(editor));
 
     const queued = await db.select().from(outboundMessages).where(eq(outboundMessages.eventId, ref.eventId));
-    expect(queued.map((row) => [row.channel, row.body]).toSorted(([a], [b]) => a.localeCompare(b))).toStrictEqual([
-      ["slack", "📣 Meetup programado"],
-      ["telegram", "📣 Meetup programado"],
-    ]);
+    const body = new Map(queued.map((row) => [row.channel, row.body]));
+    expect(queued).toHaveLength(2);
+    expect(body.get("slack")).toContain("Meetup &lt;!channel&gt; &amp; más");
+    expect(body.get("telegram")).toMatch(/^📣 Comunidad del asistente: Meetup <!channel> & más\nCharlas cortas\n/);
   });
 });

@@ -346,10 +346,11 @@ export const events = pgTable(
     needs: text("needs").array().notNull().default([]),
     /** The talks and who gives them, for the page and its search snippet */
     talks: jsonb("talks").$type<EventTalk[]>().notNull().default([]),
-    /** Owy posts it on OWU's Slack and Telegram when it's published, if the organizers asked */
+    /** Where Owy posts it (OWU's Slack, Telegram) when it's published: the text is written from the event */
     announcement: jsonb("announcement").$type<EventAnnouncement>().notNull().default({}),
-    /** A scheduled publish: the tick publishes the draft then */
+    /** A scheduled publish: the tick publishes the draft then, if who scheduled it still organizes it */
     publishAt: ts("publishAt"),
+    publishById: text("publishById"),
     /** Bumped on every change attendees should hear about, so calendar invites update in place. */
     icsSequence: integer("icsSequence").notNull().default(0),
     /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
@@ -367,6 +368,9 @@ export const events = pgTable(
     unique("open_spaces_communityId_slug_key").on(t.communityId, t.slug),
     index("open_spaces_communityId_idx").on(t.communityId),
     index("open_spaces_status_startDate_idx").on(t.status, t.startDate),
+    foreignKey({ name: "open_spaces_publishById_fk", columns: [t.publishById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
     foreignKey({ name: "open_spaces_venueId_fk", columns: [t.venueId], foreignColumns: [venues.id] }).onDelete(
       "set null"
     ),
@@ -379,7 +383,7 @@ export type EventRegistration = "none" | "owu" | "external" | "eventbrite";
 export type EventMode = "presencial" | "online" | "hibrido";
 export type SizeBucket = "hasta-30" | "30-60" | "60-120" | "120+";
 export type EventTalk = { title: string; speaker: string };
-export type EventAnnouncement = { channels?: ("slack" | "telegram")[]; text?: string };
+export type EventAnnouncement = { channels?: ("slack" | "telegram")[] };
 export type RsvpQuestion = { id: string; label: string; required: boolean };
 
 /** @deprecated transition alias — use `events`. */
