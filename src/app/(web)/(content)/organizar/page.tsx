@@ -27,7 +27,7 @@ import {
 } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getCommunities, getLanding } from "lib/community/content";
-import { RESOURCES_ON } from "lib/community/flags";
+import { ORGANIZAR_ON, RESOURCES_ON } from "lib/community/flags";
 import { pageMetadata } from "lib/community/metadata";
 import { issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
 
@@ -116,7 +116,17 @@ export default async function OrganizarPage() {
       <PageHeader
         actions={
           <>
-            <ButtonLink arrow href={issueFormUrl("sumar-comunidad")} utm="organizar-header">
+            {ORGANIZAR_ON ? (
+              <ButtonLink arrow href="/organizar/panel">
+                Abrí el panel
+              </ButtonLink>
+            ) : null}
+            <ButtonLink
+              arrow
+              href={issueFormUrl("sumar-comunidad")}
+              utm="organizar-header"
+              variant={ORGANIZAR_ON ? "secondary" : "primary"}
+            >
               Sumá tu comunidad
             </ButtonLink>
             <ButtonLink href={SOCIAL_LINKS.slack} utm="organizar-header" variant="secondary">
