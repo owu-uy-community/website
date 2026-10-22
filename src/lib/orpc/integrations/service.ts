@@ -26,6 +26,7 @@ import { eventPagePath, refreshPage } from "../../revalidate";
 import { query, transaction } from "../db";
 import { Invalid, UpstreamFailed } from "../errors";
 import { eventbriteTime } from "../eventbrite/service";
+import { recordActivity } from "../ops";
 import { memberRole, ROLE_RANK } from "../scope";
 import { CommunityScope, liveServices } from "../services";
 import type { EventIntegration, Integrations } from "./schemas";
@@ -207,6 +208,14 @@ export const connect = (input: { communityId: string; userId: string; code: stri
         .set({ status: "pending", attempts: 0, error: null, nextAttemptAt: new Date() })
         .where(and(eq(eventPublications.connectionId, connection.id), eq(eventPublications.status, "failed")))
     );
+    yield* recordActivity({
+      eventId: null,
+      verb: "integration.connected",
+      entityType: "community",
+      entityId: input.communityId,
+      summary: `conectó Eventbrite (${organization.name})`,
+      actorId: input.userId,
+    });
     pushQueued = true;
 
     return { accountName: organization.name };
@@ -229,6 +238,13 @@ export const disconnect = Effect.gen(function* () {
   const connection = yield* connectionOf(communityId);
   if (!connection) return { events: 0 };
   if (connection.webhookId) yield* dropWebhook(connection);
+  yield* recordActivity({
+    eventId: null,
+    verb: "integration.disconnected",
+    entityType: "community",
+    entityId: communityId,
+    summary: "desconectó Eventbrite",
+  });
 
   return { events: yield* wipe(connection) };
 });
