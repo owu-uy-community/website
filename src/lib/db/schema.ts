@@ -342,6 +342,8 @@ export const events = pgTable(
     externalLinks: jsonb("externalLinks").$type<{ meetup?: string }>().notNull().default({}),
     /** Bumped on every change attendees should hear about, so calendar invites update in place. */
     icsSequence: integer("icsSequence").notNull().default(0),
+    /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
+    notifiedSequence: integer("notifiedSequence").notNull().default(0),
     publishedAt: ts("publishedAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
@@ -1275,6 +1277,20 @@ export const emailDeliveries = pgTable(
 
 export type EmailDeliveryRow = typeof emailDeliveries.$inferSelect;
 export type EmailAttachment = { filename: string; content: string; contentType: string };
+
+/**
+ * People who asked not to get reminders and feedback emails (one-click unsubscribe). Essential
+ * mail (a confirmation, a cancellation, a sign-in code) still goes out.
+ */
+export const emailSuppressions = pgTable(
+  "email_suppressions",
+  {
+    email: text("email").notNull(),
+    scope: text("scope").$type<"reminders">().notNull().default("reminders"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [unique("email_suppressions_email_scope_key").on(t.email, t.scope)]
+);
 
 // ---------------------------------------------------------------------------
 // Espacios: companies that host meetups, their (private) contacts and the requests

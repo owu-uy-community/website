@@ -5,7 +5,7 @@ import { outboundMessages } from "../db/schema";
 import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
 import { remindExpiringHolds } from "../orpc/events/service";
-import { expireOffers } from "../orpc/rsvps/service";
+import { expireOffers, sendFeedback, sendReminders, sendUpdates } from "../orpc/rsvps/service";
 import { expireRequests } from "../orpc/venues/service";
 import { query } from "../orpc/db";
 import { liveServices, type AppServices } from "../orpc/services";
@@ -38,6 +38,9 @@ const dueComms = Effect.gen(function* () {
 const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknown, AppServices>> = {
   comms: () => dueComms,
   offers: () => expireOffers,
+  updates: () => sendUpdates,
+  reminders: () => sendReminders,
+  feedback: () => sendFeedback,
   holds: () => remindExpiringHolds,
   venues: () => expireRequests,
   // Last, so what the sweeps above queued goes out in the same tick

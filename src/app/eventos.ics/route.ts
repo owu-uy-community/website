@@ -1,11 +1,15 @@
 import { getUpcomingEvents } from "lib/community/events";
 import { buildIcs } from "lib/community/ics";
+import { SITE_URL } from "lib/community/site";
 
 // Calendar apps poll this; it follows the same hourly refresh as /eventos
 export const revalidate = 3600;
 
 export async function GET() {
-  const events = await getUpcomingEvents();
+  const events = (await getUpcomingEvents()).map((event) => ({
+    ...event,
+    url: new URL(event.url, SITE_URL).toString(),
+  }));
   const body = buildIcs(
     events.map((event) => ({
       id: event.id,

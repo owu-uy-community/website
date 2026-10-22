@@ -22,6 +22,7 @@ import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
+import { notifyCancelled } from "../rsvps/service";
 import { CommunityScope } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
 
@@ -573,6 +574,7 @@ export const cancel = (input: { eventId: string; reason: string }) =>
         entityId: row.id,
         summary: input.reason ? `canceló el evento: ${input.reason}` : "canceló el evento",
       });
+      yield* notifyCancelled(row.id);
       const cancelled = yield* editableOf(row.id);
       refreshPage(eventPagePath(cancelled.communitySlug, cancelled.slug));
 
