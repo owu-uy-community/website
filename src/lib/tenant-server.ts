@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 
 import { db } from "./db";
 import { communities, events, type CommunityRow, type EventRow } from "./db/schema";
@@ -24,7 +24,7 @@ export const getEventBySlugs = cache(
     const [event] = await db
       .select()
       .from(events)
-      .where(and(eq(events.communityId, community.id), eq(events.slug, eventSlug)))
+      .where(and(eq(events.communityId, community.id), eq(events.slug, eventSlug), ne(events.status, "draft")))
       .limit(1);
 
     return event ? { community, event } : null;
@@ -35,6 +35,6 @@ export const listCommunityEvents = cache(async (communityId: string): Promise<Ev
   return db
     .select()
     .from(events)
-    .where(and(eq(events.communityId, communityId), eq(events.isActive, true)))
+    .where(and(eq(events.communityId, communityId), eq(events.isActive, true), ne(events.status, "draft")))
     .orderBy(desc(events.startDate));
 });

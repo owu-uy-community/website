@@ -1,12 +1,13 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { Effect, Result } from "effect";
+import { Effect, Option, Result } from "effect";
 
-import { attendeeScans, attendeeSync, attendees, events, type AttendeeRow } from "../../db/schema";
+import { attendeeScans, attendeeSync, attendees, events, type AttendeeRow, type AttendeeStatus } from "../../db/schema";
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
 import type { Attendee as EventbriteAttendee } from "../eventbrite/schemas";
 import * as Eventbrite from "../eventbrite/service";
+import { tokenForEvent } from "../integrations/service";
 import { opsPing, recordActivity } from "../ops";
 import { CurrentUser } from "../services";
 import type {
@@ -22,12 +23,14 @@ import type {
   ScanResult,
   SyncState,
 } from "./schemas";
+import { NOT_ATTENDING_LABEL } from "./schemas";
 
 const iso = (at: Date | null | undefined) => at?.toISOString() ?? null;
 
 export const toAttendee = (row: AttendeeRow, repeatScans = 0): Attendee => ({
   id: row.id,
   eventbriteId: row.eventbriteId,
+  source: row.source,
   name: row.name,
   email: row.email,
   ticketClass: row.ticketClass,
@@ -155,7 +158,9 @@ export const sync = (eventId: string, force: boolean) =>
   Effect.gen(function* () {
     const event = yield* findEvent(eventId);
     const eventbriteEventId = Eventbrite.eventbriteIdOf(event);
-    const missing = !eventbriteEventId ? "event_id" : !Eventbrite.hasApiKey() ? "api_key" : null;
+    // Published through a community's own account: its token; otherwise OWU's key
+    const token = eventbriteEventId ? yield* tokenForEvent(eventId) : null;
+    const missing = !eventbriteEventId ? "event_id" : !token && !Eventbrite.hasApiKey() ? "api_key" : null;
     const state = (outcome: { ran: boolean; changed: number }) =>
       readSync(eventId).pipe(
         Effect.map((row): SyncState => ({
@@ -178,7 +183,9 @@ export const sync = (eventId: string, force: boolean) =>
         const wait = force ? FORCED_MS : THROTTLE_MS;
         if (!row || (row.syncedAt && Date.now() - row.syncedAt.getTime() < wait)) return { ran: false, changed: 0 };
 
-        const read = yield* Effect.result(Eventbrite.attendeesChangedSince(eventbriteEventId, row.cursor));
+        const read = yield* Effect.result(
+          Eventbrite.attendeesChangedSince(eventbriteEventId, row.cursor, token ?? undefined)
+        );
         if (Result.isFailure(read)) {
           yield* query((db) =>
             db.update(attendeeSync).set({ error: read.failure.message }).where(eq(attendeeSync.eventId, eventId))
@@ -208,11 +215,12 @@ export const sync = (eventId: string, force: boolean) =>
 
 /**
  * A webhook from Eventbrite: read what its `api_url` points at and mirror it into every event
- * that mirrors that Eventbrite event. Null when the URL isn't one to follow.
+ * that mirrors that Eventbrite event. Null when the URL isn't one to follow. A community's own
+ * account (`connection`) reads with its token and only reaches that community's events.
  */
-export const applyWebhook = (apiUrl: string) =>
+export const applyWebhook = (apiUrl: string, connection?: { token: string; communityId: string }) =>
   Effect.gen(function* () {
-    const people = yield* Eventbrite.attendeesAt(apiUrl);
+    const people = yield* Eventbrite.attendeesAt(apiUrl, connection?.token);
     if (!people) return null;
 
     const fromUrl = /\/events\/([^/]+)\//.exec(new URL(apiUrl).pathname)?.[1] ?? null;
@@ -221,7 +229,15 @@ export const applyWebhook = (apiUrl: string) =>
     for (const [eventbriteEventId, group] of byEvent) {
       if (!eventbriteEventId) continue;
       const mirrors = yield* query((db) =>
-        db.select({ id: events.id }).from(events).where(eq(events.eventbriteEventId, eventbriteEventId))
+        db
+          .select({ id: events.id })
+          .from(events)
+          .where(
+            and(
+              eq(events.eventbriteEventId, eventbriteEventId),
+              connection ? eq(events.communityId, connection.communityId) : undefined
+            )
+          )
       );
       for (const mirror of mirrors) {
         const written = yield* upsertMirror(mirror.id, group);
@@ -247,15 +263,32 @@ export const applyWebhook = (apiUrl: string) =>
 export const fold = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 const ACCENTED = "áàäâãéèëêíìïîóòöôõúùüûñçÁÀÄÂÃÉÈËÊÍÌÏÎÓÒÖÔÕÚÙÜÛÑÇ";
-const searchable = sql`translate(lower(${attendees.name} || ' ' || ${attendees.email} || ' ' || coalesce(${attendees.barcode}, '') || ' ' || ${attendees.eventbriteId}), ${ACCENTED}, ${fold(ACCENTED)})`;
+const searchable = sql`translate(lower(${attendees.name} || ' ' || ${attendees.email} || ' ' || coalesce(${attendees.barcode}, '') || ' ' || coalesce(${attendees.eventbriteId}, '')), ${ACCENTED}, ${fold(ACCENTED)})`;
 
 const escapeLike = (word: string) => word.replace(/[\\%_]/g, (char) => `\\${char}`);
 
-/** A partition: once someone is in they count as in, whatever happened to their ticket after. */
+/** Every word of `q` in the attendee's name, accents and case aside (the door searches only names). */
+export const nameMatches = (q: string) =>
+  fold(q)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(
+      (word) => sql`translate(lower(${attendees.name}), ${ACCENTED}, ${fold(ACCENTED)}) like ${`%${escapeLike(word)}%`}`
+    );
+
+const WAITING: AttendeeStatus[] = ["waitlisted", "offered"];
+const GONE: AttendeeStatus[] = ["cancelled", "refunded", "declined"];
+
+/**
+ * A partition: once someone is in they count as in, whatever happened to their ticket after. The
+ * waitlist and the approval queue are their own tabs, never mixed with cancellations.
+ */
 const PRESENCE: Record<Exclude<Presence, "all">, SQL> = {
   in: isNotNull(attendees.checkedInAt),
   out: and(isNull(attendees.checkedInAt), eq(attendees.status, "attending")) as SQL,
-  cancelled: and(isNull(attendees.checkedInAt), ne(attendees.status, "attending")) as SQL,
+  waiting: and(isNull(attendees.checkedInAt), inArray(attendees.status, WAITING)) as SQL,
+  pending: and(isNull(attendees.checkedInAt), eq(attendees.status, "pending")) as SQL,
+  cancelled: and(isNull(attendees.checkedInAt), inArray(attendees.status, GONE)) as SQL,
 };
 
 const textArray = (values: readonly string[]) =>
@@ -284,11 +317,13 @@ const presenceCounts = (where: SQL[]) =>
         all: count(),
         in: sql<number>`count(*) filter (where ${PRESENCE.in})`.mapWith(Number),
         out: sql<number>`count(*) filter (where ${PRESENCE.out})`.mapWith(Number),
+        waiting: sql<number>`count(*) filter (where ${PRESENCE.waiting})`.mapWith(Number),
+        pending: sql<number>`count(*) filter (where ${PRESENCE.pending})`.mapWith(Number),
         cancelled: sql<number>`count(*) filter (where ${PRESENCE.cancelled})`.mapWith(Number),
       })
       .from(attendees)
       .where(and(...where))
-  ).pipe(Effect.map(([counts]) => counts ?? { all: 0, in: 0, out: 0, cancelled: 0 }));
+  ).pipe(Effect.map(([counts]) => counts ?? { all: 0, in: 0, out: 0, waiting: 0, pending: 0, cancelled: 0 }));
 
 const byName = sql`lower(${attendees.name})`;
 const SORTS: Record<AttendeeSort, SQL> = {
@@ -395,10 +430,7 @@ export const setTags = (input: { eventId: string; ids: string[]; add: string[]; 
     return { count: touched };
   });
 
-const PRESENCE_WORDS = { in: "Acreditado", out: "Por llegar", cancelled: "Cancelado" } as const;
-
-const presenceOf = (row: Pick<AttendeeRow, "checkedInAt" | "status">) =>
-  row.checkedInAt ? "in" : row.status === "attending" ? "out" : "cancelled";
+const PRESENCE_WORDS = { in: "Acreditado", out: "Por llegar" } as const;
 
 /** One CSV cell: quoted when it has to be, and never read as a formula by a spreadsheet. */
 export function csvCell(value: string) {
@@ -433,7 +465,11 @@ export const exportAttendees = (input: AttendeeFilters & { ids?: string[] }) =>
         row.name,
         row.email,
         row.ticketClass,
-        row.status === "refunded" && !row.checkedInAt ? "Reembolsado" : PRESENCE_WORDS[presenceOf(row)],
+        row.checkedInAt
+          ? PRESENCE_WORDS.in
+          : row.status === "attending"
+            ? PRESENCE_WORDS.out
+            : NOT_ATTENDING_LABEL[row.status],
         row.checkedInAt ? clock.format(row.checkedInAt) : "",
         row.tags.join(", "),
       ]),
@@ -621,11 +657,6 @@ const scanTime = (scannedAt?: string) => {
 };
 
 /**
- * OWU's scanner at the door. The first valid scan of a ticket checks the person in (here only:
- * Eventbrite can't be told); later ones are repeats; every scan is kept. Idempotent by nonce,
- * and the attendee row is locked, so two phones reading one ticket at once let one person in.
- */
-/**
  * A check-in that shouldn't have happened (the wrong ticket, a test): the attendee is back to
  * «por llegar». OWU keeps the say over their presence from then on, so a later Eventbrite sync
  * doesn't bring the check-in back; the scan itself stays in the history.
@@ -658,7 +689,7 @@ export const undoCheckin = (input: { eventId: string; attendeeId: string }) =>
           verb: "attendee.checkin_undone",
           entityType: "attendee",
           entityId: row.id,
-          summary: `deshizo la acreditación de ${row.name}`,
+          summary: "deshizo una acreditación",
         });
       })
     );
@@ -667,10 +698,16 @@ export const undoCheckin = (input: { eventId: string; attendeeId: string }) =>
     return { ok: true as const };
   });
 
+/**
+ * OWU's scanner at the door. The first valid scan of a ticket checks the person in (here only:
+ * Eventbrite can't be told); later ones are repeats; every scan is kept. Idempotent by nonce,
+ * and the attendee row is locked, so two phones reading one ticket at once let one person in.
+ */
 export const scan = (input: ScanInput) =>
   Effect.gen(function* () {
     if (yield* scanByNonce(input.nonce)) return yield* replay(input.eventId, input.nonce);
-    const me = yield* CurrentUser;
+    // Staff and members scan signed in; a volunteer's door link has no account behind it
+    const me = Option.getOrNull(yield* Effect.serviceOption(CurrentUser));
     const scannedAt = scanTime(input.scannedAt);
     const device = input.device || "Escáner OWU";
 
@@ -713,7 +750,7 @@ export const scan = (input: ScanInput) =>
             code: input.code,
             result,
             device,
-            userId: me.id,
+            userId: me?.id ?? null,
             nonce: input.nonce,
             scannedAt,
           })

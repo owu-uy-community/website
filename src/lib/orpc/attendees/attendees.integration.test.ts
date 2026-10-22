@@ -14,6 +14,7 @@ import {
   makeCommunity,
   makeEvent,
   makeMember,
+  makeRsvp,
   makeSiteAdmin,
   makeUser,
   type UserRow,
@@ -284,8 +285,12 @@ describe("the Eventbrite mirror", () => {
     ]);
   });
 
-  test("the attendee API is for site staff only", async () => {
+  test("people's data is for the community's admins; the door, for any member; outsiders get nothing", async () => {
     const { event } = await mirroredEvent();
+    const [admin, member] = await Promise.all([
+      makeMember(event.communityId, "admin"),
+      makeMember(event.communityId, "member"),
+    ]);
 
     await expect(call(router.attendees.sync, { eventId: event.id }, by(await makeUser()))).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -293,6 +298,11 @@ describe("the Eventbrite mirror", () => {
     await expect(call(router.attendees.list, { eventId: event.id }, by(null))).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
+    await expect(call(router.attendees.list, { eventId: event.id }, by(member))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(call(router.attendees.list, { eventId: event.id }, by(admin))).resolves.toMatchObject({ page: 1 });
+    await expect(call(router.attendees.recent, { eventId: event.id }, by(member))).resolves.toStrictEqual([]);
   });
 });
 
@@ -332,7 +342,7 @@ describe("the attendee list", () => {
     const { event, staff } = await crowd();
 
     await expect(call(router.attendees.list, { eventId: event.id }, by(staff))).resolves.toMatchObject({
-      totals: { all: 5, in: 3, out: 1, cancelled: 1 },
+      totals: { all: 5, in: 3, out: 1, waiting: 0, pending: 0, cancelled: 1 },
       facets: {
         tickets: [
           { value: "General", count: 3 },
@@ -432,6 +442,62 @@ describe("the attendee list", () => {
   });
 });
 
+describe("OWU's own RSVPs next to the mirror", () => {
+  async function registrations() {
+    const event = await makeEvent((await makeCommunity()).id, { registration: "owu", capacity: 1 });
+    const staff = await makeSiteAdmin();
+    const people = {
+      carla: await makeRsvp(event.id, { name: "Carla Anotada" }),
+      diego: await makeRsvp(event.id, { name: "Diego Espera", status: "waitlisted" }),
+      eva: await makeRsvp(event.id, { name: "Eva Oferta", status: "offered" }),
+      fede: await makeRsvp(event.id, { name: "Fede Pendiente", status: "pending" }),
+      gabi: await makeRsvp(event.id, { name: "Gabi Rechazada", status: "declined" }),
+    };
+
+    return { event, staff, people };
+  }
+
+  test("the waitlist and the approval queue get their own tabs, apart from cancellations", async () => {
+    const { event, staff, people } = await registrations();
+    const list = (status: "waiting" | "pending" | "cancelled") =>
+      call(router.attendees.list, { eventId: event.id, status }, by(staff));
+
+    await expect(call(router.attendees.list, { eventId: event.id }, by(staff))).resolves.toMatchObject({
+      totals: { all: 5, in: 0, out: 1, waiting: 2, pending: 1, cancelled: 1 },
+    });
+    expect((await list("waiting")).rows.map((row) => row.name)).toStrictEqual(["Diego Espera", "Eva Oferta"]);
+    expect((await list("cancelled")).rows.map((row) => row.name)).toStrictEqual(["Gabi Rechazada"]);
+    // No Eventbrite id: search still finds the ticket code
+    const found = await call(router.attendees.list, { eventId: event.id, q: people.carla.barcode ?? "" }, by(staff));
+    expect(found.rows).toMatchObject([{ name: "Carla Anotada", eventbriteId: null, source: "owu" }]);
+  });
+
+  test("an OWU ticket checks in at the door; one still on the waitlist doesn't", async () => {
+    const { event, staff, people } = await registrations();
+    const scan = (code: string | null) =>
+      call(router.attendees.scan, { eventId: event.id, code: code ?? "", nonce: nonce() }, by(staff));
+
+    await expect(scan(people.carla.barcode)).resolves.toMatchObject({ result: "ok" });
+    await expect(scan(people.diego.barcode)).resolves.toMatchObject({ result: "cancelled" });
+  });
+
+  test("the export names each state", async () => {
+    const { event, staff } = await registrations();
+
+    const { csv } = await call(router.attendees.export, { eventId: event.id }, by(staff));
+
+    for (const word of [
+      "Por llegar",
+      "En lista de espera",
+      "Lugar ofrecido",
+      "Pendiente de aprobación",
+      "No aprobada",
+    ]) {
+      expect(csv).toContain(word);
+    }
+  });
+});
+
 describe("OWU's scanner", () => {
   test("the first scan checks in; the same nonce replays; another scan is a repeat", async () => {
     const { event, staff } = await mirroredEvent();
@@ -476,6 +542,23 @@ describe("OWU's scanner", () => {
       scannedAt,
       attendee: { checkedInAt: scannedAt, checkinDevice: "Escáner OWU" },
     });
+  });
+
+  test("a community admin takes back a wrong check-in; an editor can't", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const [admin, editor] = await Promise.all([makeMember(community.id, "admin"), makeMember(community.id, "editor")]);
+    const ticket = await makeRsvp(event.id);
+    await call(router.attendees.scan, { eventId: event.id, code: ticket.barcode ?? "", nonce: nonce() }, by(admin));
+    const undo = (actor: UserRow) =>
+      call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: ticket.id }, by(actor));
+
+    await expect(undo(editor)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(undo(admin)).resolves.toStrictEqual({ ok: true });
+    await expect(undo(admin)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      db.select({ checkedInAt: attendees.checkedInAt }).from(attendees).where(eq(attendees.id, ticket.id))
+    ).resolves.toStrictEqual([{ checkedInAt: null }]);
   });
 
   test("unknown and cancelled tickets let nobody in", async () => {

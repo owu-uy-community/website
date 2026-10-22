@@ -1,0 +1,10 @@
+name: "Python Montevideo"
+picture: /images/communities/python-montevideo/picture.webp
+description: "Comunidad de Python en Montevideo."
+topics:
+  - lenguajes
+  - data-ia
+status: activa
+meetup: https://www.meetup.com/py-mvd/
+slackChannel: python
+confPartner: false

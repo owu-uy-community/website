@@ -1,0 +1,63 @@
+name: Ofrecé un espacio
+description: Prestá tu oficina o sala para que una comunidad haga su meetup.
+title: "Espacio: "
+labels: ["espacio"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias! Las comunidades buscan lugar todos los meses. Con estos datos te conectamos con quienes organizan.
+        Este issue es **público**: no pongas mails ni teléfonos personales, coordinamos el resto por Slack.
+  - type: input
+    id: empresa
+    attributes:
+      label: Empresa u organización
+    validations:
+      required: true
+  - type: input
+    id: ubicacion
+    attributes:
+      label: Barrio o ciudad
+      placeholder: Cordón, Montevideo
+    validations:
+      required: true
+  - type: dropdown
+    id: capacidad
+    attributes:
+      label: Capacidad aproximada
+      options:
+        - Hasta 30 personas
+        - 30 a 60 personas
+        - 60 a 120 personas
+        - Más de 120 personas
+    validations:
+      required: true
+  - type: dropdown
+    id: equipamiento
+    attributes:
+      label: Equipamiento
+      multiple: true
+      options:
+        - Proyector o pantalla
+        - Micrófono
+        - Wi-Fi para asistentes
+        - Accesible para sillas de ruedas
+        - Se puede comer y tomar algo
+  - type: textarea
+    id: disponibilidad
+    attributes:
+      label: Días y horarios posibles
+      placeholder: Martes a jueves desde las 18:30
+    validations:
+      required: true
+  - type: input
+    id: contacto
+    attributes:
+      label: Contacto
+      description: Tu usuario de Slack o de GitHub.
+    validations:
+      required: true
+  - type: textarea
+    id: notas
+    attributes:
+      label: Comentarios

@@ -32,7 +32,7 @@ import { orpc } from "lib/orpc";
 import type { Community } from "lib/orpc/communities/schemas";
 
 import { EventsSection } from "./EventsSection";
-import { MembersSection } from "./MembersSection";
+import { MembersSection } from "components/Admin/communities/MembersSection";
 
 const SECTIONS: SettingsSectionLink[] = [
   { id: "general", label: "General", icon: Settings2 },

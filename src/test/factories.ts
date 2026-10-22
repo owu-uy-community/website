@@ -1,7 +1,19 @@
 import { createId } from "@paralleldrive/cuid2";
 
 import { db } from "lib/db";
-import { attendees, communities, communityMembers, events, rooms, schedules, tracks, user } from "lib/db/schema";
+import {
+  account,
+  attendees,
+  communities,
+  communityMembers,
+  events,
+  rooms,
+  schedules,
+  tracks,
+  user,
+  venueContacts,
+  venues,
+} from "lib/db/schema";
 
 /**
  * Row factories for integration tests. Every row gets unique ids/slugs, so
@@ -29,6 +41,22 @@ export async function makeUser(overrides: Partial<typeof user.$inferInsert> = {}
       ...overrides,
     })
     .returning();
+
+  return row;
+}
+
+/** Someone who signed in with the OWU Slack (email-code accounts have no `slack` account row). */
+export async function makeSlackUser(overrides: Partial<typeof user.$inferInsert> = {}) {
+  const row = await makeUser(overrides);
+  const now = new Date();
+  await db.insert(account).values({
+    id: createId(),
+    accountId: `U${createId()}`,
+    providerId: "slack",
+    userId: row.id,
+    createdAt: now,
+    updatedAt: now,
+  });
 
   return row;
 }
@@ -116,6 +144,7 @@ export async function makeTrack(
 }
 
 /** An attendee of the event's Eventbrite mirror, not checked in unless told. */
+/** An attendee mirrored from Eventbrite. */
 export async function makeAttendee(eventId: string, overrides: Partial<typeof attendees.$inferInsert> = {}) {
   const eventbriteId = createId();
   const [row] = await db
@@ -132,7 +161,51 @@ export async function makeAttendee(eventId: string, overrides: Partial<typeof at
     })
     .returning();
 
+  return { ...row, eventbriteId: row.eventbriteId ?? eventbriteId };
+}
+
+/** Someone's RSVP through OWU (no Eventbrite id), attending unless `status` says otherwise. */
+export async function makeRsvp(eventId: string, overrides: Partial<typeof attendees.$inferInsert> = {}) {
+  const userId = overrides.userId ?? (await makeUser()).id;
+  const [row] = await db
+    .insert(attendees)
+    .values({
+      eventId,
+      eventbriteId: null,
+      source: "owu",
+      userId,
+      name: "Persona Anotada",
+      email: `${userId}@test.owu.uy`,
+      ticketClass: "General",
+      barcode: createId().slice(0, 10).toUpperCase(),
+      registeredAt: new Date(),
+      ...overrides,
+    })
+    .returning();
+
   return row;
+}
+
+/** An active space taking requests, with one consented contact (pass `contact: null` for none). */
+export async function makeVenue(
+  overrides: Partial<typeof venues.$inferInsert> = {},
+  contact: { name: string; email: string } | null = { name: "Host de prueba", email: `${createId()}@host.test.owu.uy` }
+) {
+  const [row] = await db
+    .insert(venues)
+    .values({
+      name: `Espacio ${createId().slice(0, 6)}`,
+      neighbourhood: "Cordón",
+      address: "Calle Falsa 123",
+      capacity: 60,
+      status: "active",
+      requestable: true,
+      ...overrides,
+    })
+    .returning();
+  if (contact) await db.insert(venueContacts).values({ venueId: row.id, ...contact, consentAt: new Date() });
+
+  return { ...row, contact };
 }
 
 /** A community with one event, two rooms (one with TV) and two time slots. */

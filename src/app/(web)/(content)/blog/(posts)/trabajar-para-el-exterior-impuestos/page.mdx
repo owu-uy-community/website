@@ -1,0 +1,126 @@
+import { postMetadata } from "../post-metadata";
+
+export const post = {
+  title: "Trabajar para el exterior desde Uruguay: lo básico de impuestos",
+  description:
+    "Unipersonal, SAS o monotributo; IRPF o IRAE; la exoneración del software y la exportación de servicios. Un mapa para llegar mejor preparado a hablar con tu contador.",
+  slug: "trabajar-para-el-exterior-impuestos",
+  date: "2026-10-21T12:00:00.000Z",
+  author: "Comunidad OWU",
+  tags: ["guias", "impuestos", "trabajo-remoto"],
+  // Sin publicar hasta que lo revise un contador o contadora (ver la nota de arriba del texto)
+  draft: true,
+};
+
+export const metadata = postMetadata(post);
+
+# Trabajar para el exterior desde Uruguay: lo básico de impuestos
+
+<PostHeader post={post} />
+
+> **Esto no es asesoramiento contable ni legal.** Es un mapa para que llegues mejor preparado a hablar con un contador o una contadora. Las normas y los criterios de la DGI cambian, y cada caso tiene detalles que importan: verificá todo con un profesional antes de decidir.
+>
+> Investigado el 21 de octubre de 2026 con fuentes oficiales (enlazadas al final). Revisado por: **pendiente (contador/a)**.
+
+Facturarle a una empresa de afuera abre cuatro preguntas distintas, y conviene no mezclarlas:
+
+1. **Con qué forma trabajás:** unipersonal, SAS u otra.
+2. **Qué impuesto a la renta pagás:** IRPF o IRAE.
+3. **Si tu servicio cuenta como exportación** para el IVA.
+4. **A qué caja aportás:** BPS o la Caja de Profesionales.
+
+## Las formas más comunes
+
+### Unipersonal
+
+Es la forma más rápida de arrancar: te inscribís en la DGI y en el BPS como titular de una empresa unipersonal. Dos cosas que conviene saber desde el principio:
+
+- **Que sea unipersonal no define si pagás IRPF o IRAE.** Lo que mira la DGI es si combinás capital y trabajo. En la [Consulta N° 6344 de 2020](https://www.impo.com.uy/bases/consultas-tributarias/6344-2020), un desarrollador unipersonal que trabajaba para empresas de Estados Unidos con sus propios equipos quedó en el IRAE, no en el IRPF, porque los activos fijos no los aportaba el cliente.
+- **Una unipersonal no puede usar la exoneración de IRAE del software.** En esa misma consulta, la DGI concluyó que esa exoneración es solo para las entidades del literal A del artículo que define a los contribuyentes de IRAE (las sociedades), y dejó afuera al consultante.
+
+### SAS (sociedad por acciones simplificada)
+
+Las SAS existen desde la [Ley N° 19.820](https://www.impo.com.uy/bases/leyes/19820-2019) de 2019. Según su artículo 11, una SAS **la puede constituir una sola persona física**, así que no necesitás socios. Paga IRAE y, como sociedad, puede acceder a la exoneración del software si cumple las condiciones (ver más abajo). Tiene más costos de armado y de contabilidad que una unipersonal, así que hacé números con tu contador.
+
+### Monotributo
+
+El monotributo es para actividades de **dimensión económica reducida que venden exclusivamente a consumidores finales**, con algunas excepciones, y con topes de ingresos y de activos ([DGI, Monotributo](https://www.gub.uy/direccion-general-impositiva/comunicacion/publicaciones/monotributo)). Una empresa del exterior que te contrata no es un consumidor final, así que para desarrollar software para afuera casi nunca es la opción.
+
+## IRPF o IRAE
+
+Si trabajás de forma independiente y lo que hacés es renta de trabajo, estás en el **IRPF, Categoría II** ([DGI, IRPF para trabajadores independientes](https://www.gub.uy/direccion-general-impositiva/comunicacion/publicaciones/irpf-para-trabajadores-independientes)):
+
+- Sobre lo que facturás se descuenta **un 30% ficto por gastos**, sin necesidad de comprobantes, y después se aplica la escala.
+- Pagás **anticipos cada dos meses** y hacés una **declaración jurada anual** al año siguiente.
+
+Podés **optar por el IRAE**, y quedás **obligado a pasar al IRAE** cuando tus rentas por servicios personales superan las **UI 4.000.000** al cierre del ejercicio: desde el ejercicio siguiente tributás IRAE ([DGI, Servicios personales: opción e inclusión preceptiva en el IRAE](https://www.gub.uy/direccion-general-impositiva/comunicacion/publicaciones/servicios-personales-opcion-inclusion-perceptiva-irae)).
+
+Y como vimos con la Consulta 6344, si trabajás con equipos propios la DGI puede considerar que ya estás en el IRAE aunque factures poco. Este punto es de los que más conviene revisar con tu contador.
+
+## La exoneración del software
+
+Hay dos exoneraciones distintas, una en cada impuesto, y no funcionan igual.
+
+### En el IRAE
+
+Según la presentación de la propia DGI en sus [XIII Jornadas Tributarias (octubre de 2025)](https://www.gub.uy/direccion-general-impositiva/sites/direccion-general-impositiva/files/2025-10/R%C3%A9gimen%20de%20exoneraci%C3%B3n%20del%20Software-%20Luis%20Fabregat.pdf):
+
+- **Qué exonera:** el desarrollo de soportes lógicos y los servicios vinculados (implementación, integración, soporte, mantenimiento, pruebas, migración de datos, seguridad, capacitación, entre otros).
+- **Quién puede usarla:** solo las entidades del literal A del artículo 12 del Título 4 (las sociedades), con excepción de las sociedades de hecho y civiles. Por eso las unipersonales quedan afuera.
+- **Que el trabajo se haga en Uruguay:** los gastos y costos directos incurridos en el país tienen que superar el **50%** de los gastos y costos directos totales del ejercicio.
+- **Gente de verdad:** el [Decreto N° 150/007](https://www.impo.com.uy/bases/decretos/150-2007) pide emplear a tiempo completo recursos humanos en número acorde a los servicios, calificados y remunerados adecuadamente.
+- **Papeles:** presentar una declaración jurada y **dejar constancia del monto exonerado en la documentación** que respalda cada operación. Si una factura sale sin esa constancia, se pierde la exoneración de todas esas rentas del ejercicio, y no se puede corregir hasta el ejercicio siguiente. Además, cada año se informan los datos en el formulario 3011.
+
+Si lo que vendés es **software propio** (licencias, no horas de desarrollo), las reglas son otras. Eso ya es tema para tu contador.
+
+### En el IRPF
+
+El Decreto N° 148/007 (artículo 34, literal K) exonera del IRPF la producción de software y los servicios vinculados, **siempre que se aprovechen íntegramente en el exterior**. Según la misma presentación de la DGI, los servicios que entran acá son más amplios que en el IRAE. Si estás en el IRPF y tu cliente usa tu trabajo afuera, esta es la exoneración que te interesa revisar.
+
+## IVA: ¿cuenta como exportación?
+
+Un servicio que se exporta no lleva IVA en la factura. Pero **no todo servicio a una empresa de afuera es una exportación**. El [Decreto N° 220/998, artículo 34](https://www.impo.com.uy/bases/decretos/220-1998/34) enumera cuáles lo son. Para software, incluye:
+
+- el diseño, desarrollo o implementación de soportes lógicos específicos;
+- la licencia de uso de soportes lógicos;
+- la cesión total de los derechos de uso y explotación;
+- y ciertos servicios de asesoramiento técnico.
+
+En todos los casos, los servicios tienen que ser **aprovechados exclusivamente en el exterior**.
+
+Que la lista importa lo muestra la [Consulta N° 6374 de 2025](https://www.impo.com.uy/bases/consultas-tributarias/6374-2025): un servicio de coaching facturado a una empresa del exterior no se consideró asesoramiento, no entró en la lista y tuvo que llevar IVA a la tasa básica.
+
+## Seguridad social
+
+- **BPS:** la empresa se inscribe antes de empezar la actividad. Hacerlo fuera de plazo genera sanciones ([BPS, inscribir empresas unipersonales](https://www.bps.gub.uy/19828/2022---comunicado-21---instructivo-de-servicio-en-linea---inscribir-empresa-unipersonales.html)).
+- **Caja de Profesionales:** si tenés un título universitario y ejercés esa profesión de forma independiente, aportás a la [Caja de Jubilaciones y Pensiones de Profesionales Universitarios](https://www.cjppu.org.uy/), con una escala de sueldos fictos por categorías. Si no, tus aportes van al BPS.
+
+## Facturar al exterior
+
+La facturación es electrónica (CFE). Para las exportaciones existe la **e-Factura de Exportación**, con sus notas de crédito y débito, y los comprobantes que documentan exportaciones de servicios se envían siempre a la DGI ([DGI, descripción de la e-Factura](https://www.efactura.dgi.gub.uy/files/descripcion-e-factura-archivo-pdf-263-kb?es)).
+
+## Errores comunes
+
+1. **Abrir una unipersonal pensando en la exoneración de IRAE del software.** No aplica a unipersonales (Consulta 6344).
+2. **Asumir que cualquier servicio a una empresa de afuera es exportación.** Depende del tipo de servicio y de dónde se aprovecha (Consulta 6374).
+3. **Olvidar la constancia de exoneración en una factura.** Puede costarte la exoneración de todo el ejercicio.
+4. **No mirar el tope de UI 4.000.000** y seguir en el IRPF cuando ya correspondía el IRAE.
+5. **Inscribirse tarde en el BPS.**
+6. **Elegir monotributo para clientes del exterior.**
+
+## Fuentes
+
+Todas consultadas el 21 de octubre de 2026.
+
+- DGI, [IRPF para trabajadores independientes](https://www.gub.uy/direccion-general-impositiva/comunicacion/publicaciones/irpf-para-trabajadores-independientes).
+- DGI, [Servicios personales: opción e inclusión preceptiva en el IRAE](https://www.gub.uy/direccion-general-impositiva/comunicacion/publicaciones/servicios-personales-opcion-inclusion-perceptiva-irae).
+- DGI, [Monotributo](https://www.gub.uy/direccion-general-impositiva/comunicacion/publicaciones/monotributo).
+- DGI, XIII Jornadas Tributarias, [Régimen de exoneración del Software](https://www.gub.uy/direccion-general-impositiva/sites/direccion-general-impositiva/files/2025-10/R%C3%A9gimen%20de%20exoneraci%C3%B3n%20del%20Software-%20Luis%20Fabregat.pdf) (octubre de 2025).
+- DGI, [Descripción de la e-Factura](https://www.efactura.dgi.gub.uy/files/descripcion-e-factura-archivo-pdf-263-kb?es).
+- IMPO, [Consulta tributaria N° 6344 (2020)](https://www.impo.com.uy/bases/consultas-tributarias/6344-2020).
+- IMPO, [Consulta tributaria N° 6374 (2025)](https://www.impo.com.uy/bases/consultas-tributarias/6374-2025).
+- IMPO, [Decreto N° 220/998, artículo 34](https://www.impo.com.uy/bases/decretos/220-1998/34).
+- IMPO, [Decreto N° 150/007](https://www.impo.com.uy/bases/decretos/150-2007).
+- IMPO, [Ley N° 19.820](https://www.impo.com.uy/bases/leyes/19820-2019).
+- BPS, [Inscribir empresas unipersonales](https://www.bps.gub.uy/19828/2022---comunicado-21---instructivo-de-servicio-en-linea---inscribir-empresa-unipersonales.html).
+- CJPPU, [Caja de Profesionales](https://www.cjppu.org.uy/).

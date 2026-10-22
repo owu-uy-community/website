@@ -1,15 +1,21 @@
 import Link from "next/link";
 
 import { INTERNAL_ROUTES } from "app/lib/constants";
+import { SITE_URL } from "lib/community/site";
 
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
 import TangramGallery from "./TangramGallery";
 
+/*
+ * Links back to the main site are absolute (this page lives on conf.owu.uy) and point at
+ * www.owu.uy directly, skipping the owu.uy redirect. Both sites share one analytics property,
+ * so they carry no UTM tags: tagging would restart the visit and lose how it began.
+ */
 const EDITIONS = [
-  { year: "2023", name: "La Meetup I", href: INTERNAL_ROUTES.meetups.meetup2023 },
-  { year: "2024", name: "La Meetup II", href: INTERNAL_ROUTES.meetups.meetup2024 },
-  { year: "2025", name: "La Meetup III", href: INTERNAL_ROUTES.meetups.meetup2025 },
+  { year: "2023", name: "La Meetup I", href: `${SITE_URL}${INTERNAL_ROUTES.meetups.meetup2023}` },
+  { year: "2024", name: "La Meetup II", href: `${SITE_URL}${INTERNAL_ROUTES.meetups.meetup2024}` },
+  { year: "2025", name: "La Meetup III", href: `${SITE_URL}${INTERNAL_ROUTES.meetups.meetup2025}` },
   { year: "2026", name: "OWU CONF", href: null },
 ];
 
@@ -66,9 +72,9 @@ export default function About() {
           <Reveal delay={0.45} y={18}>
             <Link
               className="mt-6 inline-block font-display text-sm leading-none font-bold text-[#0162C8] uppercase transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] min-[1440px]:text-base"
-              href="/"
+              href={SITE_URL}
             >
-              CONOCÉ MÁS →
+              CONOCÉ LA COMUNIDAD OWU →
             </Link>
           </Reveal>
 

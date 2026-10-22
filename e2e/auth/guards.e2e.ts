@@ -1,11 +1,11 @@
 import { expect, signedOut, test } from "../fixtures";
 
-test("an anonymous visitor is sent to /login from the admin", async ({ pageAs }) => {
+test("an anonymous visitor is sent to /login from the admin, and back after", async ({ pageAs }) => {
   const page = await pageAs("anonymous");
 
   await page.goto("/admin");
 
-  await expect(page).toHaveURL(/\/login$/);
+  await expect(page).toHaveURL(/\/login\?next=%2Fadmin$/);
 });
 
 test("a site admin lands on the newest event's Hoy", async ({ page }) => {

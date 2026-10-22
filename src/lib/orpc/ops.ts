@@ -36,6 +36,8 @@ export type ActivityEntry = {
   entityId?: string | null;
   /** One Spanish line in the actor's voice, without the actor: "movió «Testing» a Sala 2". */
   summary: string;
+  /** Who did it, when the caller isn't the session (an OAuth callback) */
+  actorId?: string;
 };
 
 /**
@@ -52,7 +54,7 @@ export const recordActivity = (entry: ActivityEntry) =>
         entityType: entry.entityType,
         entityId: entry.entityId ?? null,
         summary: entry.summary,
-        actorId: Option.isSome(actor) ? actor.value.id : null,
+        actorId: entry.actorId ?? (Option.isSome(actor) ? actor.value.id : null),
       })
     );
   });

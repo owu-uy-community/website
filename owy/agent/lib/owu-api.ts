@@ -387,7 +387,72 @@ export interface OcrSuggestionResponse {
   alternatives?: { room: string; timeSlot: string; reasoning: string }[];
 }
 
+/** Mirror of the site's SemanarioSectionsSchema (src/lib/orpc/semanario/schemas.ts). */
+export interface SemanarioSections {
+  events: { title: string; group: string; start: string; venue: string | null; url: string }[];
+  threads: { channel: string; title: string; permalink: string; replies: number }[];
+  jobs: { count: number; channelUrl: string | null } | null;
+  newCommunities: { name: string; slug: string }[];
+}
+
+export interface SemanarioDraftInput {
+  /** The Monday (YYYY-MM-DD) the issue covers */
+  weekStart: string;
+  title: string;
+  /** Markdown */
+  intro: string;
+  sections: SemanarioSections;
+}
+
+export interface SemanarioIssue extends SemanarioDraftInput {
+  id: string;
+  number: number | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
+  reviewedBy: string | null;
+  updatedAt: string;
+}
+
+/** One scored day of `calendar.plan` (site: src/lib/orpc/calendar/schemas.ts). */
+export interface PlanDay {
+  day: string;
+  score: number;
+  level: "libre" | "cuidado" | "choca" | "bloqueado";
+  blocked: boolean;
+  reasons: { tone: "ok" | "info" | "warn" | "bad"; text: string; itemId?: string }[];
+}
+
+export interface PlanItem {
+  id: string;
+  communityName: string;
+  /** Null for another community's hold */
+  title: string | null;
+  start: string;
+  kind: "event" | "hold";
+  url?: string | null;
+}
+
+export interface CommunityOption {
+  id: string;
+  slug: string;
+  name: string;
+  listed: boolean;
+}
+
 export interface OwuApi {
+  /** The directory (public). */
+  communities: {
+    list: (input: Record<string, never>) => Promise<CommunityOption[]>;
+  };
+  /** Organizá's shared calendar: every day of a month scored for a community's meetup. */
+  calendar: {
+    plan: (input: {
+      communityId: string;
+      month: string;
+      startTime?: string;
+      durationMin?: number;
+    }) => Promise<{ days: PlanDay[]; suggestions: PlanDay[]; items: PlanItem[] }>;
+  };
   openSpaces: {
     /** Every event the caller may operate; site-admin (Owy) sees all, newest first. */
     listForAdmin: () => Promise<AdminEventOption[]>;
@@ -476,6 +541,11 @@ export interface OwuApi {
   };
   eventbrite: {
     getSummary: () => Promise<unknown>;
+  };
+  /** Semanario OWU (site: src/lib/orpc/semanario): Owy saves drafts, a person publishes. */
+  semanario: {
+    /** Creates or rewrites the week's draft; CONFLICT already_published if that week is out. */
+    saveDraft: (input: SemanarioDraftInput) => Promise<SemanarioIssue>;
   };
   /** Owy Stage: the video wall (site: src/lib/owy-stage/scenes.ts). */
   owyStage: {

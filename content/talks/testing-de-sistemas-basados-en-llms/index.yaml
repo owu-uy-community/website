@@ -1,0 +1,9 @@
+title: "Testing de sistemas basados en LLMs"
+speakers:
+  - "Federico Toledo"
+event: la-meetup-2023
+date: 2023-11-25
+summary: "Por qué y cómo testear sistemas construidos sobre modelos de lenguaje."
+topics:
+  - testing
+  - data-ia

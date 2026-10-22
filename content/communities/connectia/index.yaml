@@ -1,0 +1,13 @@
+name: "ConnectIA"
+picture: /images/communities/connectia/picture.webp
+description: "Comunidad de inteligencia artificial de Uruguay."
+topics:
+  - data-ia
+status: activa
+website: https://connectia.uy/
+linkedin: https://www.linkedin.com/company/connectiauy/
+instagram: https://www.instagram.com/connectiauy/
+meetup: https://www.meetup.com/connectia/
+feedNames:
+  - "ConnectIA · Comunidad de Inteligencia Artificial"
+confPartner: false

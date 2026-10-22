@@ -1,9 +1,9 @@
 import { call } from "@orpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
-import { communityMembers } from "lib/db/schema";
+import { communityMembers, emailDeliveries } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
 import { makeCommunity, makeEvent, makeMember, makeSiteAdmin, makeUser } from "test/factories";
@@ -132,6 +132,27 @@ describe("communities.update", () => {
     );
 
     expect(updated).toMatchObject({ id: community.id, name: "Renombrada" });
+  });
+
+  test("an admin edits the public profile: status, topics, links and the Slack channel", async () => {
+    const { community, admin } = await setup();
+    const data = {
+      status: "busca-organizadores" as const,
+      topics: ["web" as const, "web" as const, "data-ia" as const],
+      links: { meetup: "https://www.meetup.com/montevideojs" },
+      slackChannel: "montevideo-js",
+    };
+
+    await expect(
+      call(router.communities.update, { communityId: community.id, data }, by(admin))
+    ).resolves.toMatchObject({ ...data, topics: ["web", "data-ia"] });
+    await expect(
+      call(
+        router.communities.update,
+        { communityId: community.id, data: { links: { website: "ftp://example.com/montevideojs" } } },
+        by(admin)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
   test("editors and admins of other communities are refused", async () => {
@@ -350,5 +371,136 @@ describe("communities.delete", () => {
     await expect(
       call(router.communities.getBySlug, { communitySlug: community.slug }, by(staff))
     ).resolves.toMatchObject({ id: community.id });
+  });
+});
+
+describe("communities.members.showOnProfile", () => {
+  test("an organizer shows themselves on the public page, and only themselves", async () => {
+    const { community, editor, admin, member, membershipOf } = await setup();
+    const show = { communityId: community.id, show: true };
+
+    await expect(call(router.communities.members.showOnProfile, show, by(editor))).resolves.toStrictEqual({
+      showOnProfile: true,
+    });
+    expect((await membershipOf(editor.id)).showOnProfile).toBe(true);
+    expect((await membershipOf(admin.id)).showOnProfile).toBe(false);
+    await expect(call(router.communities.members.showOnProfile, show, by(member))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  test("site staff outside the team have no membership to show", async () => {
+    const { community, staff } = await setup();
+
+    await expect(
+      call(router.communities.members.showOnProfile, { communityId: community.id, show: true }, by(staff))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+describe("communities.claim", () => {
+  const claimInput = (communityId: string) => ({ communityId, relation: "organizo" as const, message: "", link: null });
+
+  test("a signed-in person asks once; a pending claim can't be sent again", async () => {
+    const community = await makeCommunity({ listed: true });
+    const organizer = await makeUser();
+
+    const claim = await call(router.communities.claim, claimInput(community.id), by(organizer));
+
+    expect(claim).toMatchObject({ communityId: community.id, status: "pending" });
+    await expect(call(router.communities.claim, claimInput(community.id), by(organizer))).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "claim_pending" },
+    });
+    await expect(call(router.communities.claim, claimInput(community.id), by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  test("someone who already organizes the community can't claim it", async () => {
+    const { community, editor } = await setup();
+
+    await expect(call(router.communities.claim, claimInput(community.id), by(editor))).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_member" },
+    });
+  });
+
+  test("only site staff list and decide claims", async () => {
+    const community = await makeCommunity({ listed: true });
+    const [organizer, staff] = await Promise.all([makeUser(), makeSiteAdmin()]);
+    const claim = await call(router.communities.claim, claimInput(community.id), by(organizer));
+
+    const pending = await call(router.communities.claims.list, undefined, by(staff));
+
+    expect(pending.find((item) => item.id === claim.id)).toMatchObject({
+      status: "pending",
+      community: { id: community.id, hasOwner: false },
+      user: { id: organizer.id },
+    });
+    await expect(
+      call(router.communities.claims.decide, { claimId: claim.id, decision: "approve" }, by(organizer))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("approving makes the first organizer owner and the next ones editors; mine lists them", async () => {
+    const community = await makeCommunity({ listed: true });
+    const [first, second, staff] = await Promise.all([makeUser(), makeUser(), makeSiteAdmin()]);
+    const firstClaim = await call(router.communities.claim, claimInput(community.id), by(first));
+    const secondClaim = await call(router.communities.claim, claimInput(community.id), by(second));
+    const decide = (claimId: string, decision: "approve" | "reject") =>
+      call(router.communities.claims.decide, { claimId, decision }, by(staff));
+
+    await expect(decide(firstClaim.id, "approve")).resolves.toMatchObject({ status: "approved", role: "owner" });
+    await expect(decide(secondClaim.id, "approve")).resolves.toMatchObject({ status: "approved", role: "editor" });
+    await expect(decide(secondClaim.id, "reject")).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "claim_decided" },
+    });
+
+    const mine = await call(router.communities.mine, undefined, by(first));
+    expect(mine.communities).toStrictEqual([
+      { id: community.id, slug: community.slug, name: community.name, logoUrl: null, role: "owner" },
+    ]);
+    expect(mine.claims[0]).toMatchObject({ id: firstClaim.id, status: "approved" });
+  });
+
+  test("the organizer hears back by email, approved or not", async () => {
+    const [approved, rejected] = await Promise.all([
+      makeCommunity({ listed: true, name: "Rust Montevideo" }),
+      makeCommunity({ listed: true, name: "Go Uruguay" }),
+    ]);
+    const [organizer, staff] = await Promise.all([makeUser(), makeSiteAdmin()]);
+    const yes = await call(router.communities.claim, claimInput(approved.id), by(organizer));
+    const no = await call(router.communities.claim, claimInput(rejected.id), by(organizer));
+    await call(router.communities.claims.decide, { claimId: yes.id, decision: "approve" }, by(staff));
+    await call(router.communities.claims.decide, { claimId: no.id, decision: "reject" }, by(staff));
+
+    const mail = await db
+      .select()
+      .from(emailDeliveries)
+      .where(and(eq(emailDeliveries.kind, "claim_decided"), eq(emailDeliveries.to, organizer.email)))
+      .orderBy(emailDeliveries.createdAt);
+
+    expect(mail.map((row) => row.subject)).toStrictEqual([
+      "Ya organizás Rust Montevideo en OWU",
+      "Tu pedido para organizar Go Uruguay",
+    ]);
+    expect(mail[0].html).toContain(`/organizar/panel/${approved.slug}`);
+  });
+
+  test("a rejected claim can be sent again", async () => {
+    const community = await makeCommunity({ listed: true });
+    const [organizer, staff] = await Promise.all([makeUser(), makeSiteAdmin()]);
+    const claim = await call(router.communities.claim, claimInput(community.id), by(organizer));
+    await call(router.communities.claims.decide, { claimId: claim.id, decision: "reject" }, by(staff));
+
+    const again = await call(
+      router.communities.claim,
+      { ...claimInput(community.id), message: "Ahora sí organizo" },
+      by(organizer)
+    );
+
+    expect(again).toMatchObject({ id: claim.id, status: "pending" });
   });
 });

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { communities, communityMembers, events, type EventRow } from "../../db/schema";
@@ -24,6 +24,9 @@ const toOpenSpace = (row: EventRow): OpenSpace => ({
 });
 
 const eventNotFound = new NotFound({ entity: "event", message: "Ese evento no existe" });
+
+/** Drafts live in the organizer panel only: the site, the admin and the screens never see them. */
+const notDraft = ne(events.status, "draft");
 const slugTaken = (slug: string) =>
   new Conflict({
     reason: "slug_taken",
@@ -35,7 +38,7 @@ const checkDates = (startDate: Date, endDate: Date) =>
     ? Effect.void
     : Effect.fail(new Invalid({ message: "La fecha de fin tiene que ser posterior a la de inicio" }));
 
-function slugify(value: string): string {
+export function slugify(value: string): string {
   return (
     value
       .toLowerCase()
@@ -48,13 +51,20 @@ function slugify(value: string): string {
 }
 
 export const getEvent = (id: string) =>
-  query((db) => db.select().from(events).where(eq(events.id, id))).pipe(
-    Effect.flatMap(([row]) => (row ? Effect.succeed(toOpenSpace(row)) : Effect.fail(eventNotFound)))
-  );
+  query((db) =>
+    db
+      .select()
+      .from(events)
+      .where(and(eq(events.id, id), notDraft))
+  ).pipe(Effect.flatMap(([row]) => (row ? Effect.succeed(toOpenSpace(row)) : Effect.fail(eventNotFound))));
 
 export const listByCommunity = (communityId: string) =>
   query((db) =>
-    db.select().from(events).where(eq(events.communityId, communityId)).orderBy(desc(events.startDate))
+    db
+      .select()
+      .from(events)
+      .where(and(eq(events.communityId, communityId), notDraft))
+      .orderBy(desc(events.startDate))
   ).pipe(Effect.map((rows) => rows.map(toOpenSpace)));
 
 /**
@@ -82,13 +92,15 @@ export const listEventsForOperator = (userId: string | null) =>
             communityMembers,
             and(eq(communityMembers.communityId, communities.id), eq(communityMembers.userId, userId))
           )
-    ).orderBy(desc(events.startDate));
+    )
+      .where(notDraft)
+      .orderBy(desc(events.startDate));
   }).pipe(
     Effect.map((rows) => rows.map((row): AdminEventOption => ({ ...row, startDate: row.startDate.toISOString() })))
   );
 
 /** The first free slug for `base` in a community: base, base-2, base-3… */
-const freeSlug = (communityId: string, base: string) =>
+export const freeSlug = (communityId: string, base: string) =>
   query((db) => db.select({ slug: events.slug }).from(events).where(eq(events.communityId, communityId))).pipe(
     Effect.map((rows) => {
       const taken = new Set(rows.map((row) => row.slug));

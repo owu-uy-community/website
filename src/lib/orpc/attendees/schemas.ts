@@ -3,7 +3,7 @@ import * as z from "zod";
 const eventId = z.string().min(1);
 
 /** The tabs: who is in, who is still to come, who won't (cancelled or refunded, and not in). */
-export const PresenceSchema = z.enum(["all", "in", "out", "cancelled"]);
+export const PresenceSchema = z.enum(["all", "in", "out", "waiting", "pending", "cancelled"]);
 /** Name A→Z, latest check-in first, newest registration first; a leading "-" reverses. */
 export const AttendeeSortSchema = z.enum(["name", "-name", "checkin", "-checkin", "registered", "-registered"]);
 
@@ -68,12 +68,32 @@ export const ScanSchema = z.object({
   scannedAt: z.iso.datetime().optional(),
 });
 
-export const AttendeeStatusSchema = z.enum(["attending", "cancelled", "refunded"]);
+export const AttendeeStatusSchema = z.enum([
+  "attending",
+  "cancelled",
+  "refunded",
+  "waitlisted",
+  "offered",
+  "pending",
+  "declined",
+]);
+
+/** What a ticket that doesn't get you in is called, in the table and at the door. */
+export const NOT_ATTENDING_LABEL: Record<Exclude<z.infer<typeof AttendeeStatusSchema>, "attending">, string> = {
+  cancelled: "Cancelada",
+  refunded: "Reembolsada",
+  waitlisted: "En lista de espera",
+  offered: "Lugar ofrecido, sin confirmar",
+  pending: "Pendiente de aprobación",
+  declined: "No aprobada",
+};
 export const CheckinSourceSchema = z.enum(["eventbrite", "owu"]);
 
 export const AttendeeSchema = z.object({
   id: z.string(),
-  eventbriteId: z.string(),
+  /** Null for OWU's own RSVPs. */
+  eventbriteId: z.string().nullable(),
+  source: z.enum(["eventbrite", "owu"]),
   name: z.string(),
   email: z.string(),
   ticketClass: z.string(),
@@ -90,7 +110,14 @@ export const AttendeeSchema = z.object({
 });
 
 const Count = z.object({ value: z.string(), count: z.number() });
-const PresenceCounts = z.object({ all: z.number(), in: z.number(), out: z.number(), cancelled: z.number() });
+const PresenceCounts = z.object({
+  all: z.number(),
+  in: z.number(),
+  out: z.number(),
+  waiting: z.number(),
+  pending: z.number(),
+  cancelled: z.number(),
+});
 
 export const AttendeeListSchema = z.object({
   rows: z.array(AttendeeSchema),

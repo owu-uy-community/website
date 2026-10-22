@@ -1,0 +1,83 @@
+name: Sumá tu comunidad
+description: Pedí que tu comunidad aparezca en owu.uy/comunidades, en la agenda y en el buscador del sitio.
+title: "Sumar comunidad: "
+labels: ["comunidad"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias por sumar tu comunidad! Con estos datos creamos su ficha en el directorio ([owu.uy/comunidades](https://www.owu.uy/comunidades)).
+        Este issue es **público**: no pongas mails ni teléfonos personales.
+  - type: input
+    id: nombre
+    attributes:
+      label: Nombre de la comunidad
+      placeholder: Python Montevideo
+    validations:
+      required: true
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción
+      description: Una o dos líneas, hasta 220 caracteres. De qué se trata y para quién es.
+      placeholder: Comunidad de Python en Montevideo. Meetups mensuales para todos los niveles.
+    validations:
+      required: true
+  - type: dropdown
+    id: temas
+    attributes:
+      label: Temas
+      multiple: true
+      options:
+        - Lenguajes
+        - Web y frontend
+        - Mobile
+        - Data e IA
+        - Seguridad
+        - Cloud e infra
+        - Testing y QA
+        - Carrera y equipos
+        - Diversidad
+        - General
+    validations:
+      required: true
+  - type: input
+    id: eventos
+    attributes:
+      label: Página de eventos
+      description: Meetup.com, gdg.community.dev, Luma o donde publiquen sus fechas.
+      placeholder: https://www.meetup.com/tu-comunidad/
+  - type: input
+    id: nombre-meetup
+    attributes:
+      label: Nombre exacto en Meetup.com
+      description: Si publican en Meetup.com, cómo aparece la comunidad ahí. Así mostramos su próximo evento automáticamente.
+  - type: input
+    id: web
+    attributes:
+      label: Sitio web
+      placeholder: https://
+  - type: input
+    id: slack
+    attributes:
+      label: Canal en el Slack de OWU
+      description: Si ya tienen uno, sin el #. Si no, te ayudamos a crearlo.
+  - type: textarea
+    id: logo
+    attributes:
+      label: Logo
+      description: Arrastrá acá el archivo (PNG, SVG o WebP, idealmente cuadrado y sobre fondo transparente o blanco).
+  - type: input
+    id: contacto
+    attributes:
+      label: ¿Quién organiza?
+      description: Tu usuario de Slack o de GitHub, para coordinar los detalles.
+    validations:
+      required: true
+  - type: checkboxes
+    id: codigo
+    attributes:
+      label: Código de conducta
+      options:
+        - label: Los eventos de la comunidad siguen el [código de conducta de OWU](https://www.owu.uy/codigo-de-conducta).
+          required: true

@@ -12,7 +12,9 @@ import {
   Map,
   Megaphone,
   MonitorPlay,
+  Newspaper,
   PenLine,
+  PiggyBank,
   Settings,
   Siren,
   StickyNote,
@@ -21,6 +23,7 @@ import {
   UserRoundCheck,
   Users,
   type LucideIcon,
+  Warehouse,
 } from "lucide-react";
 
 export type NavKey =
@@ -39,6 +42,9 @@ export type NavKey =
   | "mi-turno"
   | "sala"
   | "comunidades"
+  | "espacios"
+  | "semanario"
+  | "encuesta"
   | "ajustes";
 
 export type AdminNavItem = {
@@ -222,6 +228,27 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/communities",
         icon: Building2,
         keywords: ["organizaciones", "eventos", "miembros"],
+      },
+      {
+        key: "espacios",
+        title: "Espacios",
+        href: "/admin/espacios",
+        icon: Warehouse,
+        keywords: ["venues", "empresas", "lugares", "hosts", "sumá tu espacio"],
+      },
+      {
+        key: "semanario",
+        title: "Semanario",
+        href: "/admin/semanario",
+        icon: Newspaper,
+        keywords: ["newsletter", "digest", "owy", "resumen"],
+      },
+      {
+        key: "encuesta",
+        title: "Encuesta de sueldos",
+        href: "/admin/encuesta",
+        icon: PiggyBank,
+        keywords: ["sueldos", "salarios", "survey", "datos abiertos"],
       },
       {
         key: "ajustes",

@@ -1,12 +1,32 @@
-import { and, asc, countDistinct, eq } from "drizzle-orm";
+import { and, asc, countDistinct, desc, eq, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
-import { communities, communityMembers, events, user, type CommunityRow } from "../../db/schema";
+import {
+  communities,
+  communityClaims,
+  communityMembers,
+  events,
+  user,
+  type CommunityClaimRow,
+  type CommunityRow,
+} from "../../db/schema";
+import { enqueueEmail } from "../../email/outbox";
+import { refreshPage } from "../../revalidate";
+import { claimDecidedEmail } from "../../email/templates";
 import { query, transaction } from "../db";
 import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
 import { memberRole } from "../scope";
 import { CurrentUser } from "../services";
-import type { Community, CommunityMember, CommunityOverview, CommunityRole } from "./schemas";
+import { recordActivity } from "../ops";
+import type {
+  ClaimForReview,
+  Community,
+  CommunityMember,
+  CommunityOverview,
+  CommunityRole,
+  MyClaim,
+  MyCommunity,
+} from "./schemas";
 
 const toCommunity = (row: CommunityRow): Community => ({
   id: row.id,
@@ -16,6 +36,11 @@ const toCommunity = (row: CommunityRow): Community => ({
   logoUrl: row.logoUrl,
   customDomain: row.customDomain,
   isActive: row.isActive,
+  status: row.status,
+  topics: row.topics,
+  links: row.links,
+  slackChannel: row.slackChannel,
+  listed: row.listed,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -96,12 +121,20 @@ export const createCommunity = (input: { slug: string; name: string; description
     );
   });
 
+/** Edit a community; its public pages (directory, profile, home, agenda) show it on their next visit. */
 export const updateCommunity = (
   communityId: string,
-  data: Partial<Pick<CommunityRow, "name" | "description" | "logoUrl" | "isActive">>
+  data: Partial<
+    Pick<CommunityRow, "name" | "description" | "logoUrl" | "isActive" | "status" | "topics" | "links" | "slackChannel">
+  >
 ) =>
   query((db) => db.update(communities).set(data).where(eq(communities.id, communityId)).returning()).pipe(
-    Effect.flatMap(([row]) => (row ? Effect.succeed(toCommunity(row)) : Effect.fail(communityNotFound)))
+    Effect.flatMap(([row]) => (row ? Effect.succeed(toCommunity(row)) : Effect.fail(communityNotFound))),
+    Effect.tap((community) =>
+      Effect.sync(() => {
+        for (const path of ["/", "/comunidades", "/eventos", `/comunidad/${community.slug}`]) refreshPage(path);
+      })
+    )
   );
 
 /**
@@ -274,5 +307,235 @@ export const removeCommunityMember = (input: { communityId: string; memberId: st
       yield* query((db) => db.delete(communityMembers).where(eq(communityMembers.id, input.memberId)));
 
       return { success: true as const };
+    })
+  );
+
+/** Show me, or not, among the organizers on the community's public page. Only my own membership. */
+export const setShowOnProfile = (input: { communityId: string; show: boolean }) =>
+  Effect.gen(function* () {
+    const me = yield* CurrentUser;
+    const [row] = yield* query((db) =>
+      db
+        .update(communityMembers)
+        .set({ showOnProfile: input.show })
+        .where(and(eq(communityMembers.communityId, input.communityId), eq(communityMembers.userId, me.id)))
+        .returning({ showOnProfile: communityMembers.showOnProfile })
+    );
+    if (!row) return yield* new NotFound({ entity: "member", message: "No sos parte del equipo de esta comunidad" });
+    const [community] = yield* query((db) =>
+      db.select({ slug: communities.slug }).from(communities).where(eq(communities.id, input.communityId))
+    );
+    if (community) refreshPage(`/comunidad/${community.slug}`);
+
+    return row;
+  });
+
+// ---------------------------------------------------------------------------
+// Organizers: the communities I run, and claims on directory communities
+// ---------------------------------------------------------------------------
+
+/** The communities I organize (any role) and my claims, for the panel's switcher. */
+export const mine = () =>
+  Effect.gen(function* () {
+    const me = yield* CurrentUser;
+    const [memberships, claims] = yield* Effect.all([
+      query((db) =>
+        db
+          .select({
+            id: communities.id,
+            slug: communities.slug,
+            name: communities.name,
+            logoUrl: communities.logoUrl,
+            role: communityMembers.role,
+          })
+          .from(communityMembers)
+          .innerJoin(communities, eq(communities.id, communityMembers.communityId))
+          .where(and(eq(communityMembers.userId, me.id), eq(communities.isActive, true)))
+          .orderBy(asc(communities.name))
+      ),
+      query((db) =>
+        db
+          .select({
+            id: communityClaims.id,
+            communityId: communityClaims.communityId,
+            communityName: communities.name,
+            status: communityClaims.status,
+            createdAt: communityClaims.createdAt,
+          })
+          .from(communityClaims)
+          .innerJoin(communities, eq(communities.id, communityClaims.communityId))
+          .where(eq(communityClaims.userId, me.id))
+          .orderBy(desc(communityClaims.createdAt))
+      ),
+    ]);
+
+    return {
+      communities: memberships satisfies MyCommunity[],
+      claims: claims.map((claim): MyClaim => ({ ...claim, createdAt: claim.createdAt.toISOString() })),
+    };
+  });
+
+/**
+ * Ask to organize a directory community. A rejected claim can be sent again; a pending one or
+ * an existing membership can't.
+ */
+export const claim = (input: {
+  communityId: string;
+  relation: CommunityClaimRow["relation"];
+  message: string;
+  link: string | null;
+}) =>
+  Effect.gen(function* () {
+    const me = yield* CurrentUser;
+    const [community] = yield* query((db) =>
+      db
+        .select({ id: communities.id, name: communities.name, isActive: communities.isActive })
+        .from(communities)
+        .where(eq(communities.id, input.communityId))
+    );
+    if (!community?.isActive) return yield* communityNotFound;
+    if (yield* memberRole(input.communityId, me.id)) {
+      return yield* new Conflict({ reason: "already_member", message: `Ya organizás ${community.name}` });
+    }
+
+    const [row] = yield* query((db) =>
+      db
+        .insert(communityClaims)
+        .values({ ...input, userId: me.id })
+        .onConflictDoUpdate({
+          target: [communityClaims.communityId, communityClaims.userId],
+          set: {
+            relation: input.relation,
+            message: input.message,
+            link: input.link,
+            status: "pending",
+            reviewedById: null,
+            reviewedAt: null,
+            createdAt: new Date(),
+          },
+          // Only a rejected claim is reopened; a pending one stays as it was
+          setWhere: eq(communityClaims.status, "rejected"),
+        })
+        .returning()
+    );
+    if (!row) {
+      return yield* new Conflict({ reason: "claim_pending", message: "Ya pediste organizar esta comunidad" });
+    }
+    yield* recordActivity({
+      eventId: null,
+      verb: "community.claimed",
+      entityType: "community",
+      entityId: input.communityId,
+      summary: `pidió organizar ${community.name}`,
+    });
+
+    return {
+      id: row.id,
+      communityId: row.communityId,
+      communityName: community.name,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+    } satisfies MyClaim;
+  });
+
+/** Pending claims first, then the last decided ones, for site staff. */
+export const listClaims = () =>
+  query((db) =>
+    db
+      .select({
+        claim: communityClaims,
+        community: { id: communities.id, slug: communities.slug, name: communities.name },
+        user: { id: user.id, name: user.name, email: user.email, image: user.image },
+        owners: sql<number>`(select count(*)::int from ${communityMembers} where ${communityMembers.communityId} = ${communities.id} and ${communityMembers.role} = 'owner')`,
+      })
+      .from(communityClaims)
+      .innerJoin(communities, eq(communities.id, communityClaims.communityId))
+      .innerJoin(user, eq(user.id, communityClaims.userId))
+      .orderBy(sql`${communityClaims.status} = 'pending' desc`, desc(communityClaims.createdAt))
+      .limit(100)
+  ).pipe(
+    Effect.map((rows) =>
+      rows.map((row): ClaimForReview => ({
+        id: row.claim.id,
+        relation: row.claim.relation,
+        message: row.claim.message,
+        link: row.claim.link,
+        status: row.claim.status,
+        createdAt: row.claim.createdAt.toISOString(),
+        community: { ...row.community, hasOwner: row.owners > 0 },
+        user: row.user,
+      }))
+    )
+  );
+
+/**
+ * Approve or reject a claim. Approving adds the person to the community: as owner when it has
+ * none yet, as editor otherwise, unless staff pick a role.
+ */
+export const decideClaim = (input: { claimId: string; decision: "approve" | "reject"; role?: CommunityRole }) =>
+  transaction(
+    Effect.gen(function* () {
+      const reviewer = yield* CurrentUser;
+      const [row] = yield* query((db) =>
+        db.select().from(communityClaims).where(eq(communityClaims.id, input.claimId)).for("update")
+      );
+      if (!row) return yield* new NotFound({ entity: "claim", message: "Ese pedido no existe" });
+      if (row.status !== "pending") {
+        return yield* new Conflict({ reason: "claim_decided", message: "Ese pedido ya se resolvió" });
+      }
+      yield* lockCommunity(row.communityId);
+
+      const status: CommunityClaimRow["status"] = input.decision === "approve" ? "approved" : "rejected";
+      const reviewedAt = new Date();
+      yield* query((db) =>
+        db
+          .update(communityClaims)
+          .set({ status, reviewedById: reviewer.id, reviewedAt })
+          .where(eq(communityClaims.id, row.id))
+      );
+
+      let role: CommunityRole | null = null;
+      if (status === "approved") {
+        const granted = input.role ?? ((yield* ownerCount(row.communityId)) === 0 ? "owner" : "editor");
+        yield* query((db) =>
+          db
+            .insert(communityMembers)
+            .values({ communityId: row.communityId, userId: row.userId, role: granted })
+            .onConflictDoUpdate({
+              target: [communityMembers.communityId, communityMembers.userId],
+              set: { role: granted },
+            })
+        );
+        role = granted;
+      }
+      const [person] = yield* query((db) =>
+        db
+          .select({
+            name: user.name,
+            email: user.email,
+            communityName: communities.name,
+            communitySlug: communities.slug,
+          })
+          .from(user)
+          .innerJoin(communities, eq(communities.id, row.communityId))
+          .where(eq(user.id, row.userId))
+      );
+      if (person) {
+        yield* enqueueEmail({
+          kind: "claim_decided",
+          to: person.email,
+          dedupeKey: `claim_decided:${row.id}:${reviewedAt.getTime()}`,
+          ...claimDecidedEmail({ ...person, role }),
+        });
+      }
+      yield* recordActivity({
+        eventId: null,
+        verb: status === "approved" ? "community.claim_approved" : "community.claim_rejected",
+        entityType: "community",
+        entityId: row.communityId,
+        summary: status === "approved" ? `aprobó a un organizador (${role})` : "rechazó un pedido para organizar",
+      });
+
+      return { id: row.id, status, role };
     })
   );

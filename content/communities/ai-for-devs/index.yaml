@@ -1,0 +1,11 @@
+name: "AI for Devs"
+picture: /images/communities/ai-for-devs/picture.webp
+description: "Inteligencia artificial aplicada al desarrollo de software."
+topics:
+  - data-ia
+status: activa
+meetup: https://www.meetup.com/ai-for-devs-montevideo/
+slackChannel: ai-4-devs
+feedNames:
+  - "AI for Devs Montevideo"
+confPartner: false

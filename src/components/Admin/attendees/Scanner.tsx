@@ -29,7 +29,7 @@ import { toast } from "components/shared/ui/toast-utils";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { useWakeLock } from "hooks/useWakeLock";
 import { client, orpc } from "lib/orpc";
-import type { Attendee, ScanResult } from "lib/orpc/attendees/schemas";
+import { NOT_ATTENDING_LABEL, type Attendee, type ScanResult } from "lib/orpc/attendees/schemas";
 import { eventChannel } from "lib/realtime/channels";
 
 import { doorOf } from "./helpers";
@@ -88,7 +88,7 @@ function describe(result: ScanResult, timezone: string): Shown {
     case "cancelled":
       return {
         tone: "bad",
-        label: person?.status === "refunded" ? "Entrada reembolsada" : "Entrada cancelada",
+        label: person && person.status !== "attending" ? NOT_ATTENDING_LABEL[person.status] : "Entrada cancelada",
         title: person?.name ?? "Entrada cancelada",
         detail: "No sirve para entrar: que pase por la mesa de ayuda.",
       };
@@ -211,7 +211,8 @@ function subscribeOnline(listener: () => void) {
   };
 }
 
-const code = (attendee: Pick<Attendee, "barcode" | "eventbriteId">) => attendee.barcode ?? attendee.eventbriteId;
+// OWU's own RSVPs always carry a barcode; mirrored Eventbrite ones may only have the Eventbrite id.
+const code = (attendee: Pick<Attendee, "barcode" | "eventbriteId">) => attendee.barcode ?? attendee.eventbriteId ?? "";
 
 function useDebounced<T>(value: T, ms: number) {
   const [debounced, setDebounced] = useState(value);
@@ -225,12 +226,15 @@ function useDebounced<T>(value: T, ms: number) {
 /** Find someone without their QR (forgot it, phone dead): by name or email, then check them in. */
 function ManualSearch({
   eventId,
+  door,
   timezone,
   online,
   busy,
   onPick,
 }: {
   eventId: string;
+  /** A volunteer's door link: search through it (names, no emails) */
+  door?: string;
   timezone: string;
   online: boolean;
   /** A check-in on its way: one at a time. */
@@ -239,14 +243,23 @@ function ManualSearch({
 }) {
   const [text, setText] = useState("");
   const q = useDebounced(text.trim(), 250);
-  const found = useQuery(
+  const ready = online && q.length >= 2;
+  // The last results stay while the next letter's arrive.
+  const staff = useQuery(
     orpc.attendees.list.queryOptions({
       input: { eventId, q, pageSize: 10 },
-      enabled: online && q.length >= 2,
-      // The last results stay while the next letter's arrive.
+      enabled: ready && !door,
       placeholderData: keepPreviousData,
     })
   );
+  const volunteer = useQuery(
+    orpc.door.search.queryOptions({
+      input: { token: door ?? "", q },
+      enabled: ready && Boolean(door),
+      placeholderData: keepPreviousData,
+    })
+  );
+  const found = door ? volunteer : staff;
 
   return (
     <div className="flex h-full flex-col gap-3 p-4">
@@ -287,7 +300,7 @@ function ManualSearch({
                     {person.checkedInAt
                       ? ` · entró ${formatClock(new Date(person.checkedInAt), timezone)}`
                       : person.status !== "attending"
-                        ? " · cancelada"
+                        ? ` · ${NOT_ATTENDING_LABEL[person.status].toLowerCase()}`
                         : ""}
                   </p>
                 </div>
@@ -352,11 +365,15 @@ export function Scanner({
   eventName,
   timezone,
   backHref,
+  door,
 }: {
   eventId: string;
   eventName: string;
   timezone: string;
-  backHref: string;
+  /** Where "back" goes; volunteers on a door link have nowhere to go back to */
+  backHref?: string;
+  /** A volunteer's door link: every call goes through it instead of a session */
+  door?: string;
 }) {
   const queryClient = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -380,10 +397,20 @@ export function Scanner({
   );
   useWakeLock(true);
 
-  const counts = useQuery(orpc.attendees.list.queryOptions({ input: { eventId, pageSize: 10 } }));
+  const staffCounts = useQuery(orpc.attendees.list.queryOptions({ input: { eventId, pageSize: 10 }, enabled: !door }));
+  const doorCounts = useQuery(orpc.door.counts.queryOptions({ input: { token: door ?? "" }, enabled: Boolean(door) }));
+  const counts = door ? doorCounts : staffCounts;
   useRealtimeChannel(eventChannel(eventId, "ops"), (topic) => {
-    if (topic === "checkins") void queryClient.invalidateQueries({ queryKey: orpc.attendees.list.key() });
+    if (topic !== "checkins") return;
+    void queryClient.invalidateQueries({ queryKey: orpc.attendees.list.key() });
+    void queryClient.invalidateQueries({ queryKey: orpc.door.counts.key() });
   });
+  /** One check-in: through the session, or the volunteer's door link */
+  const sendScan = useCallback(
+    (scan: QueuedScan) =>
+      door ? client.door.scan({ token: door, ...scan }) : client.attendees.scan({ eventId, ...scan }),
+    [door, eventId]
+  );
 
   useEffect(() => {
     setQueue(readQueue(eventId, localStorage));
@@ -449,7 +476,7 @@ export function Scanner({
       busyRef.current = true;
       setSending(true);
       try {
-        show(describe(await client.attendees.scan({ eventId, ...scan }), timezone));
+        show(describe(await sendScan(scan), timezone));
       } catch (error) {
         if (isTransient(error)) keep();
         else
@@ -465,7 +492,7 @@ export function Scanner({
       }
       return true;
     },
-    [device, eventId, show, timezone]
+    [device, eventId, sendScan, show, timezone]
   );
 
   // Scans made without signal go out as soon as it's back (and every 15 s while some wait).
@@ -473,7 +500,7 @@ export function Scanner({
     if (!online || queue.length === 0) return;
     let cancelled = false;
     const send = async () => {
-      const { sent, left } = await flush(eventId, localStorage, (scan) => client.attendees.scan({ eventId, ...scan }));
+      const { sent, left } = await flush(eventId, localStorage, sendScan);
       if (cancelled) return;
       setQueue(left);
       if (sent.length > 0) {
@@ -490,7 +517,7 @@ export function Scanner({
       cancelled = true;
       clearInterval(timer);
     };
-  }, [online, queue.length, eventId]);
+  }, [online, queue.length, eventId, sendScan]);
 
   const stopCamera = () => {
     for (const track of streamRef.current?.getTracks() ?? []) track.stop();
@@ -583,11 +610,13 @@ export function Scanner({
     <div className="mx-auto flex min-h-(--admin-content-h) w-full max-w-md flex-col gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="flex items-start gap-3">
         {/* Phones get the shell's own back link in the header. */}
-        <Button asChild aria-label="Volver a Asistentes" className="-ml-2 max-md:hidden" size="icon" variant="ghost">
-          <Link href={backHref}>
-            <ArrowLeft />
-          </Link>
-        </Button>
+        {backHref ? (
+          <Button asChild aria-label="Volver a Asistentes" className="-ml-2 max-md:hidden" size="icon" variant="ghost">
+            <Link href={backHref}>
+              <ArrowLeft />
+            </Link>
+          </Button>
+        ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h1 className="font-display text-[17px] leading-6 font-semibold text-foreground">Check-in</h1>
@@ -707,6 +736,7 @@ export function Scanner({
             {mode === "search" ? (
               <ManualSearch
                 busy={sending}
+                door={door}
                 eventId={eventId}
                 online={online}
                 timezone={timezone}
@@ -779,9 +809,11 @@ export function Scanner({
         ))}
       </div>
 
-      <p className="text-center text-meta text-muted-foreground">
-        Beta: lo que acredites acá queda en OWU y no llega a Eventbrite. En la puerta, Organizer es lo principal.
-      </p>
+      {door ? null : (
+        <p className="text-center text-meta text-muted-foreground">
+          Beta: lo que acredites acá queda en OWU y no llega a Eventbrite. En la puerta, Organizer es lo principal.
+        </p>
+      )}
     </div>
   );
 }

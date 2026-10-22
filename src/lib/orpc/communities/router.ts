@@ -1,11 +1,20 @@
 import { openapi } from "@orpc/openapi";
+import { ratelimit } from "@orpc/ratelimit";
 import { Effect } from "effect";
 import * as z from "zod";
 
-import { authed, inCommunity, pub, staff } from "../base";
+import { authed, inCommunity, pub, staff, type AuthedContext } from "../base";
+import { limiter } from "../ratelimit";
 import {
   AddCommunityMemberSchema,
+  ClaimCommunitySchema,
+  ClaimForReviewSchema,
+  ClaimStatusSchema,
   CommunityIdSchema,
+  CommunityRoleSchema,
+  DecideClaimSchema,
+  MineSchema,
+  MyClaimSchema,
   CommunityMemberSchema,
   CommunityOverviewSchema,
   CommunitySchema,
@@ -13,12 +22,22 @@ import {
   GetCommunityBySlugSchema,
   ListCommunitiesSchema,
   RemoveCommunityMemberSchema,
+  ShowOnProfileSchema,
   UpdateCommunityMemberRoleSchema,
   UpdateCommunitySchema,
 } from "./schemas";
+import * as Follow from "./follow";
 import * as Communities from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Communities"], summary });
+
+const FollowStateSchema = z.object({ followers: z.number(), following: z.boolean() });
+
+/** Three claims a day per person is plenty for a real organizer and stops a script. */
+const claimLimit = ratelimit({
+  limiter: limiter({ prefix: "claim:", maxRequests: 3, window: 86_400_000 }),
+  key: ({ context }: { context: AuthedContext }) => context.user.id,
+});
 
 const MembershipSchema = z.object({
   id: z.string(),
@@ -78,6 +97,64 @@ export const communitiesRouter = {
       return yield* Communities.updateCommunity(input.communityId, input.data);
     }),
 
+  mine: authed
+    .meta(docs("The communities I organize and my claims (organizer panel)"))
+    .output(MineSchema)
+    .effect(function* () {
+      return yield* Communities.mine();
+    }),
+
+  followState: pub
+    .meta(docs("How many follow a community, and whether the caller does"))
+    .input(CommunityIdSchema)
+    .output(FollowStateSchema)
+    .effect(function* ({ input, context }) {
+      const session = yield* Effect.promise(() => context.getSession());
+      return yield* Follow.state(input.communityId, session?.user.id ?? null);
+    }),
+
+  follow: authed
+    .meta(docs("Follow a community: an email for each event it publishes"))
+    .input(CommunityIdSchema)
+    .output(FollowStateSchema)
+    .effect(function* ({ input, context }) {
+      return yield* Follow.follow(input.communityId, context.user.id);
+    }),
+
+  unfollow: authed
+    .meta(docs("Stop following a community"))
+    .input(CommunityIdSchema)
+    .output(FollowStateSchema)
+    .effect(function* ({ input, context }) {
+      return yield* Follow.unfollow(input.communityId, context.user.id);
+    }),
+
+  claim: authed
+    .meta(docs("Ask to organize a directory community; site staff decide"))
+    .input(ClaimCommunitySchema)
+    .use(claimLimit)
+    .output(MyClaimSchema)
+    .effect(function* ({ input }) {
+      return yield* Communities.claim(input);
+    }),
+
+  claims: {
+    list: staff
+      .meta(docs("Claims to organize a community, pending first (site staff)"))
+      .output(z.array(ClaimForReviewSchema))
+      .effect(function* () {
+        return yield* Communities.listClaims();
+      }),
+
+    decide: staff
+      .meta(docs("Approve or reject a claim; approving adds the person to the community (site staff)"))
+      .input(DecideClaimSchema)
+      .output(z.object({ id: z.string(), status: ClaimStatusSchema, role: CommunityRoleSchema.nullable() }))
+      .effect(function* ({ input }) {
+        return yield* Communities.decideClaim(input);
+      }),
+  },
+
   members: {
     list: authed
       .meta(docs("List a community's members and their roles"))
@@ -104,6 +181,15 @@ export const communitiesRouter = {
       .output(MembershipSchema)
       .effect(function* ({ input }) {
         return yield* Communities.updateCommunityMemberRole(input);
+      }),
+
+    showOnProfile: authed
+      .meta(docs("Appear, or not, among the organizers on the community's public page (name and photo)"))
+      .input(ShowOnProfileSchema)
+      .use(inCommunity("editor"))
+      .output(z.object({ showOnProfile: z.boolean() }))
+      .effect(function* ({ input }) {
+        return yield* Communities.setShowOnProfile(input);
       }),
 
     remove: authed

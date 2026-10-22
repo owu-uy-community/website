@@ -1,0 +1,14 @@
+name: "Ruby Montevideo"
+picture: /images/communities/ruby-montevideo/picture.webp
+description: "Meetups de Ruby y Rails en Montevideo."
+topics:
+  - lenguajes
+  - web
+status: activa
+website: https://ruby.uy
+instagram: https://www.instagram.com/ruby_uruguay/
+meetup: https://www.meetup.com/ruby-montevideo/
+feedNames:
+  - "Ruby Montevideo"
+slackChannel: ruby
+confPartner: false

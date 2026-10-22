@@ -25,7 +25,7 @@ export const hasApiKey = () => Boolean(EVENTBRITE_API_KEY);
  */
 export const eventbriteIdOf = (event: { eventbriteEventId: string | null }) => event.eventbriteEventId || null;
 
-const authorization = () => ({ Authorization: `Bearer ${EVENTBRITE_API_KEY}` });
+const authorization = (token = EVENTBRITE_API_KEY) => ({ Authorization: `Bearer ${token}` });
 
 const get = <S extends z.ZodType>(path: string, schema: S, revalidate: number) =>
   fetchJson("Eventbrite", `${EVENTBRITE_API_URL}/events/${EVENTBRITE_EVENT_ID}${path}`, schema, {
@@ -34,11 +34,13 @@ const get = <S extends z.ZodType>(path: string, schema: S, revalidate: number) =
   });
 
 /** What went wrong, in words the person at the door can act on. */
-function explain(error: UpstreamFailed): UpstreamFailed {
+function explain(error: UpstreamFailed, connected = false): UpstreamFailed {
   const status = Number(/answered (\d{3})/.exec(error.cause instanceof Error ? error.cause.message : "")?.[1]);
   const message =
     status === 401
-      ? "Eventbrite rechazó la clave de la API (EVENTBRITE_API_KEY)"
+      ? connected
+        ? "Eventbrite rechazó la cuenta conectada: reconectala en Integraciones"
+        : "Eventbrite rechazó la clave de la API (EVENTBRITE_API_KEY)"
       : // A valid key whose account isn't in the event's organization: the event reads, its attendees don't.
         status === 403
         ? "La clave de Eventbrite es de una cuenta que no está en la organización del evento: no puede ver sus asistentes"
@@ -53,9 +55,14 @@ function explain(error: UpstreamFailed): UpstreamFailed {
   return new UpstreamFailed({ service: "Eventbrite", message, cause: error.cause });
 }
 
-/** A fresh read, never cached: the mirror and the webhook need what Eventbrite has right now. */
-const live = <S extends z.ZodType>(url: string, schema: S) =>
-  fetchJson("Eventbrite", url, schema, { headers: authorization(), cache: "no-store" }).pipe(Effect.mapError(explain));
+/**
+ * A fresh read, never cached: the mirror and the webhook need what Eventbrite has right now. The
+ * token is a community's connected account, or OWU's own key.
+ */
+const live = <S extends z.ZodType>(url: string, schema: S, token?: string) =>
+  fetchJson("Eventbrite", url, schema, { headers: authorization(token), cache: "no-store" }).pipe(
+    Effect.mapError((error) => explain(error, token !== undefined))
+  );
 
 /** The ticketed event itself (name, dates, capacity). */
 export const getEvent = () => get("/", EventbriteEventSchema, 300);
@@ -108,13 +115,13 @@ export const getSummary = (): Effect.Effect<Summary | null, UpstreamFailed> =>
 const MAX_PAGES = 100;
 
 /** Eventbrite's `changed_since` takes whole seconds in UTC. */
-const eventbriteTime = (at: Date) => at.toISOString().replace(/\.\d{3}Z$/, "Z");
+export const eventbriteTime = (at: Date) => at.toISOString().replace(/\.\d{3}Z$/, "Z");
 
 /**
  * Every attendee of an Eventbrite event that changed on or after `since` (all of them without
  * it), page by page. Pages chain through the continuation token when Eventbrite sends one.
  */
-export const attendeesChangedSince = (eventbriteEventId: string, since: Date | null) =>
+export const attendeesChangedSince = (eventbriteEventId: string, since: Date | null, token?: string) =>
   Effect.gen(function* () {
     const read: Attendee[] = [];
     let next: Record<string, string> = {};
@@ -122,7 +129,8 @@ export const attendeesChangedSince = (eventbriteEventId: string, since: Date | n
       const params = new URLSearchParams({ ...next, ...(since ? { changed_since: eventbriteTime(since) } : {}) });
       const response = yield* live(
         `${EVENTBRITE_API_URL}/events/${encodeURIComponent(eventbriteEventId)}/attendees/?${params}`,
-        AttendeesPageSchema
+        AttendeesPageSchema,
+        token
       );
       read.push(...response.attendees);
       if (!response.pagination.has_more_items) break;
@@ -141,16 +149,16 @@ const API_ORIGIN = new URL(EVENTBRITE_API_URL).origin;
  * Only Eventbrite's own API is ever followed, since our key goes along with the request;
  * anything else is `null`.
  */
-export const attendeesAt = (apiUrl: string): Effect.Effect<Attendee[] | null, UpstreamFailed> => {
+export const attendeesAt = (apiUrl: string, token?: string): Effect.Effect<Attendee[] | null, UpstreamFailed> => {
   const url = URL.canParse(apiUrl) ? new URL(apiUrl) : null;
   if (!url || url.origin !== API_ORIGIN || url.username || url.password) return Effect.succeed(null);
 
   if (/^\/v3\/events\/[^/]+\/attendees\/[^/]+\/?$/.test(url.pathname)) {
-    return live(url.toString(), AttendeeSchema).pipe(Effect.map((attendee) => [attendee]));
+    return live(url.toString(), AttendeeSchema, token).pipe(Effect.map((attendee) => [attendee]));
   }
   if (/^\/v3\/orders\/[^/]+\/?$/.test(url.pathname)) {
     url.searchParams.set("expand", "attendees");
-    return live(url.toString(), OrderSchema).pipe(Effect.map((order) => order.attendees));
+    return live(url.toString(), OrderSchema, token).pipe(Effect.map((order) => order.attendees));
   }
 
   return Effect.succeed(null);

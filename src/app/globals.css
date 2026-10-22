@@ -454,3 +454,192 @@
 .blog-prose :not(pre) > code span {
   color: inherit;
 }
+
+/* ---------------------------------------------------------------------------
+   Community site (owu.uy public pages): ink surfaces, hairlines, one accent.
+   Scoped to .owu-site so the admin, /conf and the displays keep their look.
+   --------------------------------------------------------------------------- */
+html:has(.owu-site),
+html:has(.owu-site) body {
+  background-color: #09090b;
+}
+
+.owu-site {
+  font-feature-settings: "cv11", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.owu-site ::selection {
+  background-color: #facc15;
+  color: #09090b;
+}
+
+.owu-site :focus-visible {
+  outline: 2px solid #facc15;
+  outline-offset: 2px;
+}
+
+/* Film grain over the whole page: texture, never noticeable on its own */
+.owu-site::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.035;
+  background-size: 256px;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@layer components {
+  /* Warm light from above: the brand yellow over OWU's olive glow, never above 8% */
+  .owu-furnace {
+    background:
+      radial-gradient(ellipse 70% 90% at 50% 0%, rgb(250 204 21 / 0.08), rgb(250 204 21 / 0.02) 45%, transparent 72%),
+      radial-gradient(ellipse 45% 55% at 50% 0%, rgb(62 71 19 / 0.6), transparent 70%);
+  }
+
+  .owu-hairline-accent {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgb(250 204 21 / 0.55), transparent);
+  }
+
+  /* Headline lines rise out of a mask on load */
+  .owu-rise-clip {
+    display: inline-block;
+    overflow: hidden;
+    padding-bottom: 0.14em;
+    margin-bottom: -0.14em;
+    vertical-align: bottom;
+  }
+  .owu-rise-line {
+    display: inline-block;
+    animation: owu-rise-line 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+
+  /* Blocks fade up on load, staggered with --d */
+  .owu-rise {
+    animation: owu-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: var(--d, 0ms);
+  }
+
+  .owu-caret {
+    animation: owu-blink 1s steps(2) infinite;
+  }
+
+  .owu-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 60s linear infinite;
+  }
+  .owu-marquee:hover .owu-marquee-track,
+  .owu-marquee:focus-within .owu-marquee-track {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .owu-rise-line,
+    .owu-rise,
+    .owu-caret,
+    .owu-marquee-track {
+      animation: none;
+    }
+  }
+}
+
+@keyframes owu-rise-line {
+  from {
+    transform: translateY(105%);
+  }
+}
+
+@keyframes owu-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes owu-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Handwritten captions on the community photos (same file the share images use) */
+@font-face {
+  font-family: "Permanent Marker";
+  src: url("/fonts/permanent-marker.ttf") format("truetype");
+  font-display: swap;
+}
+
+@layer components {
+  .owu-marker {
+    font-family: "Permanent Marker", "Comic Sans MS", cursive;
+  }
+
+  /* A soft ring that keeps leaving a dot: "this one is next" */
+  .owu-pulse {
+    animation: owu-pulse 2.4s ease-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .owu-pulse {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  /* Community logos drifting around the hero; --depth scales the pointer parallax */
+  .owu-orbit-tile {
+    transform: translate3d(calc(var(--px, 0) * var(--depth, 1) * 1px), calc(var(--py, 0) * var(--depth, 1) * 1px), 0);
+    transition: transform 600ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .owu-orbit-drift {
+    animation:
+      owu-tile-in 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both,
+      owu-drift var(--dur, 9s) ease-in-out var(--delay, 0s) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .owu-orbit-tile {
+      transition: none;
+      transform: none;
+    }
+    .owu-orbit-drift {
+      animation: none;
+    }
+  }
+}
+
+@keyframes owu-pulse {
+  0% {
+    opacity: 0.5;
+    scale: 1;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    scale: 1.8;
+  }
+}
+
+@keyframes owu-tile-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+
+@keyframes owu-drift {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: var(--rot, 0deg);
+  }
+  50% {
+    translate: 3px -10px;
+    rotate: calc(var(--rot, 0deg) + 2.5deg);
+  }
+}
