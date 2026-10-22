@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
+import { randomArraySort } from "app/lib/utils";
 import { initials } from "components/community/ui";
+import { useMounted } from "hooks/useMounted";
 
 type Tile = { slug: string; name: string; logo: string | null };
 
@@ -22,7 +24,7 @@ const SLOTS = [
 ];
 
 // One tile changes at a time, hopping around the ring; the whole ring turns over in SLOTS.length × SWAP_MS
-const SWAP_MS = 15_000;
+const SWAP_MS = 5_000;
 const ORDER = [2, 5, 0, 7, 3, 6, 1, 4];
 
 /**
@@ -30,12 +32,16 @@ const ORDER = [2, 5, 0, 7, 3, 6, 1, 4];
  * and leans toward the pointer (fine pointers only). Eight at a time; every few
  * seconds one gives its place to a community not on screen, so all of them get
  * their turn. It rests while a tile is hovered, off screen, or under reduced
- * motion. Desktop only; decorative for screen readers, but every tile is a real
+ * motion. The order is shuffled on every load (logos still first) so no community
+ * always takes the first spots; tiles render only after hydration for that reason.
+ * Desktop only; decorative for screen readers, but every tile is a real
  * link to the group.
  */
 export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(() => tiles.slice(0, SLOTS.length));
+  const mounted = useMounted();
+  const [deck] = useState(() => randomArraySort(tiles).sort((a, b) => Number(!!b.logo) - Number(!!a.logo)));
+  const [shown, setShown] = useState(() => deck.slice(0, SLOTS.length));
   const [hovered, setHovered] = useState(false);
   const inView = useInView(ref, { amount: 0.2 });
   const reduceMotion = useReducedMotion();
@@ -67,31 +73,31 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
   }, []);
 
   useEffect(() => {
-    if (!inView || hovered || reduceMotion || tiles.length <= SLOTS.length) return;
+    if (!inView || hovered || reduceMotion || deck.length <= SLOTS.length) return;
 
     const id = setInterval(() => {
       const state = cursor.current;
       const slot = ORDER[state.turn++ % ORDER.length]!;
       // The next community in line that no slot is showing right now
-      let candidate = tiles[state.next++ % tiles.length]!;
+      let candidate = deck[state.next++ % deck.length]!;
 
       for (
         let tries = 0;
-        tries < tiles.length && shownRef.current.some((tile) => tile.slug === candidate.slug);
+        tries < deck.length && shownRef.current.some((tile) => tile.slug === candidate.slug);
         tries++
       ) {
-        candidate = tiles[state.next++ % tiles.length]!;
+        candidate = deck[state.next++ % deck.length]!;
       }
       setShown((current) => current.map((tile, index) => (index === slot ? candidate : tile)));
     }, SWAP_MS);
 
     return () => clearInterval(id);
-  }, [inView, hovered, reduceMotion, tiles]);
+  }, [inView, hovered, reduceMotion, deck]);
 
   return (
     <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 hidden xl:block">
       {SLOTS.map((slot, index) => {
-        const tile = shown[index];
+        const tile = mounted ? shown[index] : undefined;
 
         if (!tile) return null;
 
