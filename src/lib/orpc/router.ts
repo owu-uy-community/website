@@ -21,6 +21,7 @@ import { pollsRouter } from "./polls/router";
 import { salarySurveyRouter } from "./salary-survey/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { owyStageRouter } from "./owy-stage/router";
+import { panelRouter } from "./panel/router";
 import { roomsRouter } from "./rooms/router";
 import { rsvpsRouter } from "./rsvps/router";
 import { runOfShowRouter } from "./run-of-show/router";
@@ -51,6 +52,7 @@ export const router = {
   communities: communitiesRouter,
 
   // Organizá: the shared calendar, and events as organizers make them (drafts, date holds)
+  panel: panelRouter,
   calendar: calendarRouter,
   events: eventsRouter,
   venues: venuesRouter,

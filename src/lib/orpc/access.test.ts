@@ -156,6 +156,7 @@ const EXPECTED: Record<string, Access> = {
   "owyStage.spotifyStatus": "staff",
   "owyStage.submit": "public",
   "owyStage.take": "staff",
+  "panel.summary": "community:editor",
   "rooms.create": "staff",
   "rooms.delete": "staff",
   "rooms.get": "public",
