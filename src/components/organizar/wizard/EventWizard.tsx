@@ -187,6 +187,9 @@ export function EventWizard({
         // A dropped connection or a busy server: try again a few times before saying it failed
         if (!reason && isTransient(error) && retries.current < 3) {
           retries.current += 1;
+          // The move or co-hosts this save carried go with the retry
+          queued.current = { ...extras, ...queued.current };
+          setStatus("saving");
           setTimeout(() => void flush(), 1000 * 2 ** retries.current);
           return false;
         }

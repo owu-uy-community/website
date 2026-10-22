@@ -188,11 +188,19 @@ export const hold = (input: HoldInput) =>
 
       let row: EventRow;
       if (input.eventId) {
-        yield* draftOf(communityId, input.eventId);
+        const draft = yield* draftOf(communityId, input.eventId);
+        // A scheduled publish stays only while it comes before the new date, and keeps it held until then
+        const scheduled = draft.publishAt && draft.publishAt < startDate ? draft.publishAt : null;
         [row] = yield* query((db) =>
           db
             .update(events)
-            .set({ startDate, endDate, heldUntil, ...(input.title ? { name: input.title } : {}) })
+            .set({
+              startDate,
+              endDate,
+              heldUntil: scheduled && scheduled > heldUntil ? scheduled : heldUntil,
+              ...(scheduled ? {} : { publishAt: null, publishById: null }),
+              ...(input.title ? { name: input.title } : {}),
+            })
             .where(eq(events.id, input.eventId ?? ""))
             .returning()
         );
@@ -767,18 +775,21 @@ export const publishDue = Effect.gen(function* () {
       Effect.provideService(CommunityScope, { communityId: event.communityId }),
       Effect.as("published" as const),
       Effect.catch((error) =>
-        query((db) => db.update(events).set({ publishAt: null }).where(eq(events.id, event.id))).pipe(
-          Effect.andThen(
-            recordActivity({
-              eventId: event.id,
-              verb: "event.schedule_failed",
-              entityType: "event",
-              entityId: event.id,
-              summary: `no se pudo publicar solo: ${error instanceof Error ? error.message : String(error)}`,
-            })
-          ),
-          Effect.as("failed" as const)
-        )
+        // Another tick published it a moment ago: nothing went wrong
+        error instanceof Conflict && error.reason === "not_draft"
+          ? Effect.succeed("skipped" as const)
+          : query((db) => db.update(events).set({ publishAt: null }).where(eq(events.id, event.id))).pipe(
+              Effect.andThen(
+                recordActivity({
+                  eventId: event.id,
+                  verb: "event.schedule_failed",
+                  entityType: "event",
+                  entityId: event.id,
+                  summary: `no se pudo publicar solo: ${error instanceof Error ? error.message : String(error)}`,
+                })
+              ),
+              Effect.as("failed" as const)
+            )
       )
     );
     if (outcome === "published") published += 1;
@@ -890,7 +901,8 @@ const toPublic = (eventId: string) =>
       community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
       cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
-      materials: event.materials,
+      // Recordings and slides once it's over, like the page shows them
+      materials: event.endDate.getTime() <= Date.now() ? event.materials : [],
       talks: event.talks.filter((talk) => talk.title.trim()),
       going: (yield* query((db) =>
         db

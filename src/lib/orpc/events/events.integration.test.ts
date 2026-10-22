@@ -247,10 +247,14 @@ describe("the event dashboard", () => {
     await expect(call(router.events.stats, input, by(admin))).resolves.toMatchObject({ doorLink: true });
   });
 
-  test("materials save as https links and show on the public page", async () => {
+  test("materials save as https links and show on the public page once the event is over", async () => {
     const community = await makeCommunity();
     const editor = await makeMember(community.id, "editor");
-    const event = await makeEvent(community.id, { status: "published" });
+    const event = await makeEvent(community.id, {
+      status: "published",
+      startDate: new Date("2026-03-04T22:00:00Z"),
+      endDate: new Date("2026-03-05T00:00:00Z"),
+    });
     const input = { communityId: community.id, eventId: event.id };
     const { updatedAt } = await call(router.events.get, input, by(editor));
     const save = (url: string, expectedUpdatedAt: string) =>
