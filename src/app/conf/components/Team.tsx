@@ -43,6 +43,7 @@ export const TEAM_2026: TeamMember[] = [
     lastname: "García",
     picture: "/images/conf/staff/javier-garcia.webp",
     jobTitle: "Product Designer",
+    linkedin: "https://www.linkedin.com/in/javiergarciacedres/",
   },
   {
     firstname: "Javier",
