@@ -24,6 +24,24 @@ export const TALKS: Talk[] = [
   {
     start: "19:00",
     end: "19:40",
+    title: "Retrieval Augmented Gaslight",
+    description: [
+      "Cómo un solo documento envenenado alcanza para que una IA con RAG mande a un usuario a un link de phishing o afirme algo falso con total seguridad. Un recorrido por cómo envenenar una base vectorial y cómo probar, automatizar y defenderse con herramientas open source, basado en el OWASP LLM Top 10.",
+    ],
+    speakers: [
+      {
+        name: "Sebastián Passaro",
+        picture: "/images/conf/speakers/sebastian-passaro.webp",
+        cutout: "/images/conf/speakers/sebastian-passaro-cutout.webp",
+        shape: "triangle",
+        role: "Cybersecurity Specialist, Qubika",
+        linkedin: "https://www.linkedin.com/in/sebastian-passaro/",
+      },
+    ],
+  },
+  {
+    start: "19:45",
+    end: "20:25",
     title: "Kingdom Rush Battles: del lanzamiento al live ops",
     description: [
       "Cómo Ironhide llevó Kingdom Rush a su primer juego multijugador y de operación continua. Un recorrido por las decisiones de diseño, los desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.",
@@ -44,24 +62,6 @@ export const TALKS: Talk[] = [
         shape: "circle",
         role: "Game Programmer, Ironhide Game Studio",
         linkedin: "https://uy.linkedin.com/in/ciro-mondueri-465624256",
-      },
-    ],
-  },
-  {
-    start: "19:45",
-    end: "20:25",
-    title: "Retrieval Augmented Gaslight",
-    description: [
-      "Cómo un solo documento envenenado alcanza para que una IA con RAG mande a un usuario a un link de phishing o afirme algo falso con total seguridad. Un recorrido por cómo envenenar una base vectorial y cómo probar, automatizar y defenderse con herramientas open source, basado en el OWASP LLM Top 10.",
-    ],
-    speakers: [
-      {
-        name: "Sebastián Passaro",
-        picture: "/images/conf/speakers/sebastian-passaro.webp",
-        cutout: "/images/conf/speakers/sebastian-passaro-cutout.webp",
-        shape: "triangle",
-        role: "Cybersecurity Specialist, Qubika",
-        linkedin: "https://www.linkedin.com/in/sebastian-passaro/",
       },
     ],
   },
