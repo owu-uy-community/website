@@ -15,7 +15,7 @@ import {
 import type { CommunityEvent } from "lib/community/events";
 
 import { FollowButton } from "./FollowButton";
-import { dateParts, shortWhen } from "lib/community/time";
+import { dateParts, monthKey, shortWhen } from "lib/community/time";
 import { topicLabel } from "lib/community/topics";
 import type { CommunityRow, EventRow } from "lib/db/schema";
 
@@ -58,6 +58,7 @@ export function CommunityProfile({
   upcoming,
   past,
   hosts,
+  organizers,
   claimHref,
   canFollow = false,
 }: {
@@ -65,7 +66,10 @@ export function CommunityProfile({
   upcoming: CommunityEvent[];
   /** Its own and the ones it co-organized (`hostSlug`: whose page the event is on) */
   past: (EventRow & { hostSlug: string })[];
-  hosts: string[];
+  /** The spaces that hosted its events */
+  hosts: { name: string; logoUrl: string | null }[];
+  /** Organizers who chose to appear: name and photo, nothing else */
+  organizers: { name: string; image: string | null }[];
   /** "¿Organizás esta comunidad?", once Organizá is open */
   claimHref: string | null;
   /** "Seguir", once Organizá is open (its emails come with it) */
@@ -80,6 +84,12 @@ export function CommunityProfile({
     community.links.instagram && { href: community.links.instagram, label: "Instagram", icon: FaInstagram },
   ].filter(Boolean) as { href: string; label: string; icon: typeof Globe }[];
   const calendar = `webcal://owu.uy/comunidad/${community.slug}/eventos.ics`;
+  // "12 eventos · desde 2019": what it did here plus what it has announced in OWU
+  const starts = [
+    ...past.map((event) => event.startDate.toISOString()),
+    ...upcoming.filter((event) => event.source === "owu").map((event) => event.start),
+  ];
+  const since = starts.map((start) => monthKey(start).slice(0, 4)).toSorted()[0];
 
   return (
     <main className="pb-24">
@@ -102,6 +112,11 @@ export function CommunityProfile({
               ))}
             </div>
             <h1 className={cn(headingClassName.h1, "mt-3")}>{community.name}</h1>
+            {since ? (
+              <p className="mt-2 text-[15px] text-zinc-400 tabular-nums">
+                {starts.length === 1 ? "1 evento" : `${starts.length} eventos`} · desde {since}
+              </p>
+            ) : null}
             {community.description ? (
               <p className="mt-4 max-w-2xl text-lg leading-relaxed text-zinc-300">{community.description}</p>
             ) : null}
@@ -180,6 +195,27 @@ export function CommunityProfile({
           </section>
         ) : null}
 
+        {organizers.length > 0 ? (
+          <section aria-labelledby="organizan" className="mt-14">
+            <h2 className={headingClassName.h3} id="organizan">
+              Organizan
+            </h2>
+            <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-4">
+              {organizers.map((person, index) => (
+                <li key={`${person.name}-${index}`} className="flex items-center gap-3 text-[15px] text-zinc-200">
+                  {person.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- avatars come from Slack and other hosts
+                    <img alt="" className="size-10 rounded-full object-cover" src={person.image} />
+                  ) : (
+                    <CommunityLogo className="size-10 rounded-full" logo={null} name={person.name} size="sm" />
+                  )}
+                  {person.name}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
         {hosts.length > 0 ? (
           <section aria-labelledby="nos-recibieron" className="mt-14">
             <h2 className={headingClassName.h3} id="nos-recibieron">
@@ -187,8 +223,15 @@ export function CommunityProfile({
             </h2>
             <ul className="mt-4 flex flex-wrap gap-2">
               {hosts.map((host) => (
-                <li key={host}>
-                  <Badge>{host}</Badge>
+                <li key={host.name}>
+                  {host.logoUrl ? (
+                    <span className="flex h-12 items-center rounded-xl bg-white px-3" title={host.name}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- the spaces' logos live on their own hosts */}
+                      <img alt={host.name} className="max-h-8 w-auto max-w-32 object-contain" src={host.logoUrl} />
+                    </span>
+                  ) : (
+                    <Badge>{host.name}</Badge>
+                  )}
                 </li>
               ))}
             </ul>
