@@ -317,6 +317,9 @@ export const EventStatsSchema = z.object({
   doorLink: z.boolean(),
 });
 
+export type EventStats = z.infer<typeof EventStatsSchema>;
+export type Material = z.infer<typeof MaterialSchema>;
+
 export const MessageSchema = z.object({
   communityId: z.string().min(1),
   eventId: z.string().min(1),
