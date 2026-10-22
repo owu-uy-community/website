@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
 import { emailDeliveries, events } from "lib/db/schema";
+import { openApiHandler, requestContext } from "lib/orpc/handlers";
 import { router } from "lib/orpc/router";
 import { liveServices } from "lib/orpc/services";
 import { by } from "test/context";
@@ -129,5 +130,35 @@ describe("heads-ups", () => {
     const reminders = await mailTo(editor.email, "hold_expiring");
     expect(reminders).toHaveLength(1);
     expect(reminders[0].dedupeKey).toContain(draft.id);
+  });
+});
+
+describe("events.upcoming", () => {
+  test("anyone can GET the published events still ahead, never drafts or past ones", async () => {
+    const community = await makeCommunity();
+    const soon = new Date(Date.now() + 3 * 86_400_000);
+    const [published, draft, past] = await Promise.all([
+      makeEvent(community.id, { status: "published", startDate: soon, endDate: new Date(soon.getTime() + 7_200_000) }),
+      makeEvent(community.id, { status: "draft", startDate: soon, endDate: new Date(soon.getTime() + 7_200_000) }),
+      makeEvent(community.id, {
+        status: "published",
+        startDate: new Date("2025-01-01"),
+        endDate: new Date("2025-01-02"),
+      }),
+    ]);
+
+    const { response = new Response(null, { status: 404 }) } = await openApiHandler.handle(
+      new Request("http://localhost/api/v1/events/upcoming"),
+      {
+        prefix: "/api/v1",
+        context: requestContext(new Headers()),
+      }
+    );
+    const ids = ((await response.json()) as { id: string; url: string }[]).map((event) => event.id);
+
+    expect(response.status).toBe(200);
+    expect(ids).toContain(published.id);
+    expect(ids).not.toContain(draft.id);
+    expect(ids).not.toContain(past.id);
   });
 });
