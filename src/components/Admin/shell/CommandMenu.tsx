@@ -446,10 +446,12 @@ export function CommandMenu() {
         className="top-[calc(var(--admin-viewport-top,0px)+max(0.75rem,env(safe-area-inset-top)))] max-w-[660px] translate-y-0 gap-0 overflow-hidden p-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 sm:top-[max(4rem,12vh)] sm:p-0 [&>button:last-child]:hidden"
       >
         <DialogTitle className="sr-only">Buscar o ejecutar</DialogTitle>
+        {/* No Ctrl+J/K/N/P list moves: cmdk would swallow Ctrl+K, so on Windows and Linux the palette couldn't close or reopen */}
         <CommandPrimitive
           loop
           className="flex flex-col"
           filter={matchEntry}
+          vimBindings={false}
           onKeyDown={(event) => {
             if (answer && (event.key === "Backspace" || event.key === "Escape")) {
               event.preventDefault();
