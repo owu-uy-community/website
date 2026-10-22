@@ -33,6 +33,9 @@ export interface AdminEventOption {
   communitySlug: string;
 }
 
+/** Set by the room's host on the day; kiosks and the agenda show it too. */
+export type RoomStatus = "open" | "full" | "evacuate";
+
 export interface Room {
   id: string;
   name: string;
@@ -44,6 +47,9 @@ export interface Room {
   openSpaceId: string;
   color?: string | null;
   position?: number;
+  status: RoomStatus;
+  /** When the host last changed it (ISO), null if never. */
+  statusUpdatedAt?: string | null;
 }
 
 export interface Schedule {
@@ -315,6 +321,47 @@ export interface StaffAnnouncement {
 }
 
 // ---------------------------------------------------------------------------
+// Incidents (site: src/lib/orpc/incidents/schemas.ts)
+// ---------------------------------------------------------------------------
+
+export type IncidentSeverity = "low" | "medium" | "high" | "critical";
+export type IncidentCategory = "medical" | "conduct" | "technical" | "venue" | "lost" | "other";
+export type IncidentStatus = "open" | "in_progress" | "resolved";
+
+/** As lists return it (no photo). Confidential ones reach Owy too: it's site staff. */
+export interface Incident {
+  id: string;
+  eventId: string;
+  title: string;
+  description: string | null;
+  severity: IncidentSeverity;
+  category: IncidentCategory;
+  status: IncidentStatus;
+  room: { id: string; name: string; color: string | null } | null;
+  location: string | null;
+  assignee: { id: string; name: string; image: string | null } | null;
+  reporter: { id: string; name: string; image: string | null } | null;
+  source: "admin" | "phone" | "owy";
+  sensitive: boolean;
+  hasPhoto: boolean;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt: string | null;
+}
+
+export interface CreateIncidentInput {
+  eventId: string;
+  title: string;
+  description?: string;
+  severity: IncidentSeverity;
+  category: IncidentCategory;
+  roomId?: string;
+  location?: string;
+  /** Code-of-conduct reports: only organizers and the people on it see them. */
+  sensitive?: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Cast to screen
 // ---------------------------------------------------------------------------
 
@@ -351,6 +398,14 @@ export interface OwuApi {
   };
   rooms: {
     getByOpenSpace: (input: { openSpaceId: string }) => Promise<Room[]>;
+    /** Evacuating also posts an urgent announcement to the whole staff (site side). */
+    setStatus: (input: { roomId: string; status: RoomStatus }) => Promise<Room>;
+  };
+  incidents: {
+    /** High and critical ones alert the whole staff (site side); the source is "owy" for the key. */
+    create: (input: CreateIncidentInput) => Promise<Incident>;
+    /** Open first, loudest first. */
+    list: (input: { eventId: string; status?: IncidentStatus }) => Promise<Incident[]>;
   };
   tracks: {
     list: (input: { openSpaceId: string }) => Promise<StickyNote[]>;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Mic, MicOff, PhoneOff, Play, Send, Volume2, Wrench } from "lucide-react";
 
+import { Notice } from "components/Admin/panel";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
@@ -15,31 +16,31 @@ import { Switch } from "components/shared/ui/switch";
 import { WebVoice, type DeviceCommand, type VoiceStage, type VoiceStatus, type VoiceVisual } from "./web-voice";
 
 const STAGE: Record<VoiceStage, { label: string; dot: string }> = {
-  off: { label: "Apagado", dot: "bg-zinc-500" },
-  requesting: { label: "Pidiendo micrófono", dot: "bg-yellow-400 animate-pulse" },
-  connecting: { label: "Conectando", dot: "bg-yellow-400 animate-pulse" },
-  listening: { label: "Escuchando", dot: "bg-[#0162C8] animate-pulse" },
-  thinking: { label: "Pensando", dot: "bg-yellow-400 animate-pulse" },
-  speaking: { label: "Hablando", dot: "bg-[#FBF5E7] animate-pulse" },
-  idle: { label: "En pausa", dot: "bg-zinc-400" },
-  muted: { label: "Mic apagado", dot: "bg-zinc-400" },
-  error: { label: "Error", dot: "bg-red-500" },
-  standby: { label: "Audio de un dispositivo", dot: "bg-[#0162C8]" },
+  off: { label: "Apagado", dot: "bg-faint" },
+  requesting: { label: "Pidiendo micrófono", dot: "bg-warning motion-safe:animate-pulse" },
+  connecting: { label: "Conectando", dot: "bg-warning motion-safe:animate-pulse" },
+  listening: { label: "Escuchando", dot: "bg-info-foreground motion-safe:animate-pulse" },
+  thinking: { label: "Pensando", dot: "bg-warning motion-safe:animate-pulse" },
+  speaking: { label: "Hablando", dot: "bg-foreground motion-safe:animate-pulse" },
+  idle: { label: "En pausa", dot: "bg-muted-foreground" },
+  muted: { label: "Mic apagado", dot: "bg-muted-foreground" },
+  error: { label: "Error", dot: "bg-live" },
+  standby: { label: "Audio de un dispositivo", dot: "bg-info-foreground" },
 };
 
 const TOOL_STATUS: Record<string, string> = {
   running: "corriendo",
-  done: "ok",
+  done: "hecha",
   denied: "denegada",
-  error: "error",
+  error: "falló",
 };
 
 /** Mic / speaker level bars fed by the voice envelope (~25 fps). */
 export function LevelMeter({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-      <span className="w-8 shrink-0 tracking-[0.15em] uppercase">{label}</span>
-      <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+    <div className="flex items-center gap-3 text-meta text-muted-foreground">
+      <span className="w-8 shrink-0 font-terminal text-2xs tracking-[0.14em] uppercase">{label}</span>
+      <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
         <div
           className="h-full rounded-full transition-[width] duration-75"
           style={{ width: `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`, background: color }}
@@ -169,46 +170,46 @@ export default function LiveVoicePanel({
         <div className="flex items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Mic className="h-4 w-4 text-yellow-400" />
+              <Mic aria-hidden className="h-4 w-4 text-muted-foreground" />
               Hablá con Owy
             </CardTitle>
-            <CardDescription>El mismo bridge, prompts, tools y audio 16 kHz que el gadget.</CardDescription>
+            <CardDescription>El mismo bridge, prompts, herramientas y audio 16 kHz que el gadget.</CardDescription>
           </div>
-          <Badge className="shrink-0 whitespace-nowrap" variant={active ? "default" : "outline"}>
-            {active ? "Bridge en vivo" : "Opt-in"}
+          <Badge className="shrink-0 whitespace-nowrap" variant={active ? "info" : "outline"}>
+            {active ? "Bridge en vivo" : "Opcional"}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-4">
-        <div className="rounded-md border bg-zinc-900/60 p-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <span className={`inline-block h-2.5 w-2.5 rounded-full ${stage.dot}`} />
+        <div className="rounded-md border bg-background p-3">
+          <div className="flex items-center gap-2 text-ui font-medium">
+            <span aria-hidden className={`inline-block size-2 rounded-full ${stage.dot}`} />
             {stage.label}
           </div>
-          <p aria-live="polite" className="mt-1 text-sm text-muted-foreground" role="status">
+          <p aria-live="polite" className="mt-1 text-ui text-muted-foreground" role="status">
             {!active && unavailable ? unavailable : status.message}
           </p>
           {active && (
             <div className="mt-3 space-y-1.5">
-              <LevelMeter color="#0162C8" label="Mic" value={levels.mic} />
-              <LevelMeter color="#F5BB03" label="Owy" value={levels.speaker} />
+              <LevelMeter color="hsl(var(--info))" label="Mic" value={levels.mic} />
+              <LevelMeter color="hsl(var(--primary))" label="Owy" value={levels.speaker} />
             </div>
           )}
         </div>
 
         {!active ? (
           <>
-            <label className="flex items-start gap-3 text-sm">
+            <label className="flex items-start gap-3 text-ui">
               <Switch checked={consent} className="mt-0.5" onCheckedChange={setConsent} />
               <span className="text-muted-foreground">
                 Mandar el audio del micrófono por el bridge del companion a su proveedor de voz. No se graba audio,
-                transcripción ni actividad de tools; las tools autorizadas sí pueden persistir cambios.
+                transcripción ni actividad de las herramientas; las herramientas autorizadas sí pueden guardar cambios.
               </span>
             </label>
             <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium">
+              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-sm text-ui font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/70 pointer-coarse:min-h-11">
                 Permisos de la conversación
-                <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-2 text-meta text-muted-foreground">
                   {writes || staff || marketplace ? "personalizados" : "solo lectura"}
                   <ChevronDown className="h-4 w-4" />
                 </span>
@@ -217,31 +218,31 @@ export default function LiveVoicePanel({
                 {(
                   [
                     ["Permitir cambios reales en el evento (no es sandbox)", writes, setWrites],
-                    ["Habilitar tools de staff en esta sesión", staff, setStaff],
+                    ["Habilitar las herramientas de staff en esta sesión", staff, setStaff],
                     ["Abrir el mercado de ideas para este dispositivo", marketplace, setMarketplace],
                   ] as const
                 ).map(([label, value, set]) => (
-                  <label key={label} className="flex items-center justify-between gap-3 text-sm">
+                  <label key={label} className="flex items-center justify-between gap-3 text-ui">
                     <span>{label}</span>
                     <Switch checked={value} onCheckedChange={set} />
                   </label>
                 ))}
-                <p className="text-xs text-muted-foreground">
+                <p className="text-meta text-muted-foreground">
                   Fijos durante la sesión. El PIN del simulador nunca otorga permisos de producción.
                 </p>
               </CollapsibleContent>
             </Collapsible>
             <Button className="w-full" disabled={disabled || !consent || !!unavailable} size="lg" onClick={start}>
-              <Mic className="mr-2 h-4 w-4" /> Empezar a hablar
+              <Mic /> Empezar a hablar
             </Button>
             {attachOptions.length > 0 && (
               <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium">
+                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-sm text-ui font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/70 pointer-coarse:min-h-11">
                   Audio de laptop para un dispositivo físico
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-3 space-y-3">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-meta text-muted-foreground">
                     Este navegador pasa a ser el micrófono y los parlantes del dispositivo (enchufá el mic del escenario
                     y el PA a esta compu); el dispositivo conserva el toque, la cara y los subtítulos. Poné Mic/Audio en
                     “laptop” desde sus ajustes rápidos o la tarjeta de audio.
@@ -264,7 +265,7 @@ export default function LiveVoicePanel({
                     variant="secondary"
                     onClick={() => void client.current?.start({ writes, staff, marketplace }, attachId)}
                   >
-                    <Mic className="mr-2 h-4 w-4" /> Usar este navegador como audio de {attachId}
+                    <Mic /> Usar este navegador como audio de {attachId}
                   </Button>
                 </CollapsibleContent>
               </Collapsible>
@@ -272,46 +273,49 @@ export default function LiveVoicePanel({
           </>
         ) : status.attached ? (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
+            <span className="text-ui text-muted-foreground">
               Conectado a <strong className="text-foreground">{status.attached}</strong> · {stage.label}
             </span>
             <Button className="ml-auto" variant="destructive" onClick={() => client.current?.stop()}>
-              <PhoneOff className="mr-2 h-4 w-4" /> Desconectar
+              <PhoneOff /> Desconectar
             </Button>
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {["idle", "muted"].includes(status.stage) && (
               <Button disabled={status.blocked} onClick={() => void client.current?.resume()}>
-                <Play className="mr-2 h-4 w-4" /> Seguir
+                <Play /> Seguir
               </Button>
             )}
             {status.stage === "speaking" && (
               <Button onClick={() => client.current?.interrupt()}>
-                <Mic className="mr-2 h-4 w-4" /> Interrumpir
+                <Mic /> Interrumpir
               </Button>
             )}
             {status.stage === "listening" && (
               <Button variant="secondary" onClick={() => client.current?.finishTurn()}>
-                <Send className="mr-2 h-4 w-4" /> {status.pitch ? "Terminé el pitch" : "Listo, respondé"}
+                <Send /> {status.pitch ? "Terminé el pitch" : "Listo, respondé"}
               </Button>
             )}
             {["listening", "thinking", "speaking"].includes(status.stage) && (
               <Button variant="outline" onClick={() => client.current?.mute()}>
-                <MicOff className="mr-2 h-4 w-4" /> Silenciar
+                <MicOff /> Silenciar
               </Button>
             )}
             <Button className="ml-auto" variant="destructive" onClick={() => client.current?.stop()}>
-              <PhoneOff className="mr-2 h-4 w-4" /> Cortar
+              <PhoneOff /> Cortar
             </Button>
           </div>
         )}
 
         <div className="grid gap-3 rounded-md border p-3">
           <div className="flex items-center gap-3">
-            <Volume2 className="h-4 w-4 text-muted-foreground" />
-            <Label className="w-20 text-xs tracking-[0.15em] text-muted-foreground uppercase">Volumen</Label>
+            <Volume2 aria-hidden className="h-4 w-4 text-muted-foreground" />
+            <Label className="w-20 font-terminal text-2xs tracking-[0.14em] text-muted-foreground uppercase">
+              Volumen
+            </Label>
             <Slider
+              aria-label="Volumen de Owy"
               max={80}
               min={0}
               value={[volume]}
@@ -320,9 +324,9 @@ export default function LiveVoicePanel({
                 onSetting("volume", value);
               }}
             />
-            <span className="w-10 text-right font-terminal text-xs tabular-nums">{volume}%</span>
+            <span className="w-10 text-right font-terminal text-meta tabular-nums">{volume}%</span>
           </div>
-          <label className="flex items-center justify-between text-sm">
+          <label className="flex items-center justify-between text-ui">
             <span>Seguir escuchando después de cada respuesta</span>
             <Switch
               checked={continuous}
@@ -337,7 +341,7 @@ export default function LiveVoicePanel({
         {(status.input || status.output) && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-[0.15em] text-muted-foreground uppercase">Conversación</p>
+              <p className="font-terminal text-2xs tracking-[0.14em] text-muted-foreground uppercase">Conversación</p>
               <Button
                 size="sm"
                 variant="ghost"
@@ -353,30 +357,30 @@ export default function LiveVoicePanel({
               </Button>
             </div>
             {status.input && (
-              <div className="ml-8 rounded-2xl rounded-tr-sm border border-[#0162C8]/40 bg-[#0162C8]/15 px-4 py-2.5 text-sm">
+              <div className="ml-8 rounded-2xl rounded-tr-sm border border-info/40 bg-info-surface px-4 py-2.5 text-ui">
                 {status.input}
               </div>
             )}
             {status.output && (
-              <div className="mr-8 rounded-2xl rounded-tl-sm border border-yellow-400/40 bg-yellow-400/10 px-4 py-2.5 text-sm">
-                <span className="mr-2 font-semibold text-yellow-400">Owy</span>
+              <div className="mr-8 rounded-2xl rounded-tl-sm border border-primary/40 bg-primary-surface px-4 py-2.5 text-ui">
+                <span className="mr-2 font-semibold text-primary">Owy</span>
                 {status.output}
               </div>
             )}
-            <p className="text-[11px] text-muted-foreground">Solo en pantalla; no se guarda.</p>
+            <p className="text-2xs text-muted-foreground">Solo en pantalla; no se guarda.</p>
           </div>
         )}
 
         {status.bridge && (
           <Collapsible defaultOpen={false}>
-            <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium">
+            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-sm text-ui font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/70">
               <span className="flex items-center gap-2">
-                <Wrench className="h-4 w-4 text-muted-foreground" />
-                Bridge · {status.bridge.tools.length} tools
+                <Wrench aria-hidden className="h-4 w-4 text-muted-foreground" />
+                Bridge · {status.bridge.tools.length} herramientas
               </span>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 space-y-2 text-xs text-muted-foreground">
+            <CollapsibleContent className="mt-3 space-y-2 text-meta text-muted-foreground">
               <p className="font-terminal">
                 {status.bridge.model} · {status.bridge.voice} · prompt {status.bridge.promptHash}
               </p>
@@ -385,19 +389,17 @@ export default function LiveVoicePanel({
                 {status.bridge.permissions.staff ? "staff" : "visitante"} · mercado{" "}
                 {status.bridge.permissions.marketplace ? "abierto" : "cerrado"}
               </p>
-              {!status.bridge.siteConfigured && (
-                <p className="text-yellow-400" role="alert">
-                  El bridge no tiene OWY_API_KEY: las tools del evento van a fallar (como en el gadget) y la pared no se
-                  espeja.
-                </p>
-              )}
+              <Notice show={!status.bridge.siteConfigured} tone="warning">
+                El bridge no tiene OWY_API_KEY: las herramientas del evento van a fallar (como en el gadget) y la pared
+                no se espeja.
+              </Notice>
               <p className="font-terminal leading-relaxed">{status.bridge.tools.join(" · ")}</p>
             </CollapsibleContent>
           </Collapsible>
         )}
 
         {status.tools?.length ? (
-          <ol className="space-y-1 text-xs">
+          <ol className="space-y-1 text-meta">
             {status.tools.map((tool, index) => (
               <li key={index} className="flex items-center gap-2">
                 <Badge
@@ -414,7 +416,7 @@ export default function LiveVoicePanel({
           </ol>
         ) : null}
 
-        <p className="mt-auto text-[11px] leading-relaxed text-muted-foreground">
+        <p className="mt-auto text-2xs leading-relaxed text-muted-foreground">
           Ocho segundos de silencio arrancan una conversación nueva, como en el gadget. Las sesiones duran cinco
           minutos. Con auriculares anda mejor. Pantalla y volumen afectan solo a este dispositivo virtual.
         </p>

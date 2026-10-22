@@ -1,10 +1,17 @@
-import { owuApi, type AdminEventOption, type Room, type Schedule, type StickyNote } from "./owu-api";
+import { owuApi, type AdminEventOption, type Room, type RoomStatus, type Schedule, type StickyNote } from "./owu-api";
 
 /**
  * Openspace board composition + friendly-name resolution shared by the grid
  * tools. A board cell is (schedule, room) and holds at most one track/card
  * (enforced by the API with a unique constraint + slot-conflict validation).
  */
+
+/** How a room's status reads in Owy's answers. */
+export const ROOM_STATUS_WORDS: Record<RoomStatus, string> = {
+  open: "abierta",
+  full: "llena",
+  evacuate: "en evacuación",
+};
 
 export interface BoardSnapshot {
   openSpace: { id: string; name: string; community?: string };

@@ -27,7 +27,10 @@ import {
   X,
 } from "lucide-react";
 
+import { Notice } from "components/Admin/panel";
 import { ScaledFrame } from "components/Admin/stage/ScaledFrame";
+import { Meter, MicroLabel, PageContainer, PageHeader } from "components/Admin/ui/page";
+import { StatusDot } from "components/Admin/ui/status";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
@@ -81,6 +84,68 @@ type Manifest = {
   wasmHash: string;
 };
 
+/** The scenarios come from the emulator in English; the page tells them in Spanish (by id). */
+const SCENARIO_COPY: Record<string, { name: string; detail: string }> = {
+  hello: { name: "Un saludo", detail: "Inclinar, parpadear, una caricia y una sacudida a propósito." },
+  conversation: {
+    name: "Que siga la charla",
+    detail: "Tres respuestas, el parlante que termina de sonar y ocho segundos de silencio.",
+  },
+  pitch: {
+    name: "Un pitch en el mercado",
+    detail:
+      "Modo pitch: un toque, catorce segundos de pitch con pausas, otro toque. Sin ventana de silencio ni repregunta.",
+  },
+  calibration: {
+    name: "Encontrar el centro",
+    detail: "Una pose corrida del centro con 2°/s de desvío del giroscopio. Medir y guardar el neutro.",
+  },
+  "calibration-motion": {
+    name: "Muy movido para calibrar",
+    detail: "Las muestras en movimiento no pueden reemplazar la calibración anterior.",
+  },
+  privacy: {
+    name: "Privacidad a mitad de respuesta",
+    detail: "Cortar el audio y bloquear los intentos de activación que siguen.",
+  },
+  driver: {
+    name: "El parlante llega tarde",
+    detail: "Una falla inyectada al arrancar el driver ejercita la recuperación.",
+  },
+  drain: {
+    name: "Terminar no es detenerse",
+    detail: "Un parlante que no termina de vaciarse no puede reabrir el micrófono.",
+  },
+  transport: {
+    name: "Una ráfaga en el cable",
+    detail: "El marcapasos real, una pausa de 700 ms en el transporte y un receptor de 32 KiB.",
+  },
+  "ready-timeout": {
+    name: "Esperando al bus de audio",
+    detail: "El control de disponibilidad del turno de voz vence sin abrir la voz.",
+  },
+  "imu-gap": {
+    name: "Sensor desenchufado",
+    detail: "Cortar las muestras de la IMU, dejar quieta la mirada y recuperar la gravedad.",
+  },
+  offline: { name: "Se cortó la conexión", detail: "Desconectar mientras escucha y reconectar sin riesgo." },
+  staff: { name: "La puerta del staff", detail: "PIN equivocado, el PIN de prueba 1234 y la pantalla de ajustes." },
+  power: { name: "Batería y descanso", detail: "Cargando, batería baja y el atenuado tras dos minutos quieto." },
+  "long-reply": {
+    name: "Una historia larga",
+    detail: "Veinte segundos de respuesta modelada, con el movimiento todavía activo.",
+  },
+};
+
+/** The firmware's voice states, in words; an unknown one shows as the firmware names it. */
+const VOICE: Record<string, string> = {
+  wake_word: "esperando activación",
+  listening: "escuchando",
+  thinking: "pensando",
+  speaking: "hablando",
+  idle: "en reposo",
+};
+
 const stamp = (t: number) =>
   `${String(Math.floor(t / 60000)).padStart(2, "0")}:${((t % 60000) / 1000).toFixed(2).padStart(5, "0")}`;
 
@@ -93,21 +158,21 @@ const TOGGLES: [string, string][] = [
   ["reduced", "Animaciones mínimas"],
   ["invert_x", "Invertir horizontal"],
   ["invert_y", "Invertir vertical"],
-  ["wake", "Wake word"],
+  ["wake", "Palabra de activación"],
   ["quiet", "Modo silencioso"],
   ["pitch", "Modo pitch"],
   ["pitch_reacts", "Owy reacciona al pitch"],
 ];
 /** Label → owy::Mood value (companion_model.h); FOLLOWUP and SLEEP were appended. */
 const MOODS: [string, number][] = [
-  ["Idle", 0],
+  ["En reposo", 0],
   ["Escuchando", 1],
   ["¿Algo más?", 8],
   ["Pensando", 2],
   ["Hablando", 3],
   ["Feliz", 4],
   ["Error", 5],
-  ["Offline", 6],
+  ["Sin conexión", 6],
   ["Dormido", 9],
   ["Grabando", 10],
   ["Tocá (pitch)", 11],
@@ -128,7 +193,7 @@ const FAULTS = [
   "El parlante nunca termina de drenar",
   "El bridge pierde el timeout de silencio",
 ];
-const TRANSPORT_FAULTS = ["Ráfaga de 700 ms en el transporte", "Nunca confirmar playback ready"];
+const TRANSPORT_FAULTS = ["Ráfaga de 700 ms en el transporte", "Nunca confirmar que el audio está listo"];
 
 function SectionTitle({
   icon: Icon,
@@ -141,11 +206,11 @@ function SectionTitle({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.15em] text-muted-foreground uppercase">
-        {Icon && <Icon className="h-3.5 w-3.5" />}
+      <MicroLabel className="flex items-center gap-2">
+        {Icon && <Icon aria-hidden className="h-3.5 w-3.5" />}
         {children}
-      </p>
-      {hint && <span className="font-terminal text-[11px] text-muted-foreground">{hint}</span>}
+      </MicroLabel>
+      {hint && <span className="font-terminal text-2xs text-muted-foreground">{hint}</span>}
     </div>
   );
 }
@@ -171,7 +236,7 @@ function RangeRow({
 }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-28 shrink-0 text-sm">{label}</span>
+      <span className="w-28 shrink-0 text-ui">{label}</span>
       <Slider
         disabled={disabled}
         max={max}
@@ -180,7 +245,7 @@ function RangeRow({
         value={[value]}
         onValueChange={([v]) => onChange(v)}
       />
-      <span className="w-12 shrink-0 text-right font-terminal text-xs text-muted-foreground tabular-nums">
+      <span className="w-12 shrink-0 text-right font-terminal text-meta text-muted-foreground tabular-nums">
         {value}
         {unit}
       </span>
@@ -200,7 +265,7 @@ function SwitchRow({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label className="flex items-center justify-between gap-3 py-1 text-sm">
+    <label className="flex items-center justify-between gap-3 py-1 text-ui">
       <span>{label}</span>
       <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
     </label>
@@ -244,7 +309,7 @@ export default function CompanionWorkbench() {
   const [help, setHelp] = useState(false);
   const [zoom, setZoom] = useState(false);
   const [wall, setWall] = useState(false);
-  const [transport, setTransport] = useState("En modo fixture el micrófono del navegador nunca se abre.");
+  const [transport, setTransport] = useState("En modo simulado el micrófono del navegador nunca se abre.");
   const [live, setLive] = useState(false);
   const liveRef = useRef(false);
   const liveClient = useRef<WebVoice | null>(null);
@@ -325,7 +390,9 @@ export default function CompanionWorkbench() {
     instance.onmessage = ({ data }) => {
       if (data.type === "ready") {
         setManifest(data.manifest);
-        setScenarios(data.scenarios);
+        setScenarios(
+          (data.scenarios as Scenario[]).map((scenario) => ({ ...scenario, ...SCENARIO_COPY[scenario.id] }))
+        );
         instance.postMessage({ type: "play", value: true });
       }
       if (data.type === "error") {
@@ -382,7 +449,7 @@ export default function CompanionWorkbench() {
     };
     instance.onerror = () => {
       liveClient.current?.stop("El dispositivo virtual se detuvo. Micrófono apagado.");
-      setError("No se pudo cargar el runtime WASM. Corré el build del emulador y recargá.");
+      setError("No se pudo cargar el emulador (WASM). Corré el build del emulador y recargá.");
     };
     instance.postMessage({ type: "init" });
     const visibility = () => {
@@ -435,7 +502,7 @@ export default function CompanionWorkbench() {
       soundEnabled.current = true;
       setSound(true);
       setTransport(
-        `Cues PCM compartidos a 16 kHz · salida del navegador a ${audio.current.sampleRate / 1000} kHz. El transporte de voz es un fixture silencioso.`
+        `Cues PCM compartidos a 16 kHz · salida del navegador a ${audio.current.sampleRate / 1000} kHz. El transporte de voz es simulado y mudo.`
       );
     } catch {
       setError("No hay audio disponible. Igual podés correr todos los escenarios silenciosos.");
@@ -484,70 +551,80 @@ export default function CompanionWorkbench() {
 
   const currentScenario = scenarios.find((s) => s.id === selected);
   const progress = currentScenario ? Math.min(100, ((state?.time ?? 0) / currentScenario.duration) * 100) : 0;
-  const voiceLabel = state?.voice.replaceAll("_", " ") ?? "cargando runtime";
-  const modeLabel = live ? "Bridge en vivo · dispositivo virtual" : locked ? "Replay grabado" : "Dispositivo simulado";
+  const voiceLabel = state ? (VOICE[state.voice] ?? state.voice.replaceAll("_", " ")) : "cargando el emulador";
+  const modeLabel = live ? "Bridge en vivo · dispositivo virtual" : locked ? "Sesión grabada" : "Dispositivo simulado";
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Owy Companion</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            El firmware real corriendo en el navegador: la misma cara, gestos y voz que el Owy físico de la mesa.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Badge className="whitespace-nowrap" variant={ready ? "default" : "outline"}>
-            {ready ? "Runtime listo" : "Cargando runtime…"}
-          </Badge>
-          <Badge className="whitespace-nowrap" variant="outline">
-            {modeLabel}
-          </Badge>
-          <Button size="icon" title="Cómo funciona este emulador" variant="ghost" onClick={() => setHelp(!help)}>
-            <CircleHelp className="h-4 w-4" />
-          </Button>
-          <Button disabled={!ready || live} size="sm" variant="outline" onClick={() => picker.current?.click()}>
-            <ArrowUpFromLine className="mr-1 h-4 w-4" /> Importar replay
-          </Button>
-          <Button disabled={!ready || live} size="sm" onClick={() => send({ type: "export" })}>
-            <ArrowDownToLine className="mr-1 h-4 w-4" /> Exportar sesión
-          </Button>
-          <input
-            ref={picker}
-            hidden
-            accept="application/json,.json"
-            type="file"
-            onChange={async (event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (!file) return;
-              if (file.size > 2 * 1024 * 1024) {
-                setError("El replay supera el límite de 2 MiB.");
-                return;
-              }
-              resetControls();
-              setSelected(null);
-              send({ type: "import", json: await file.text() });
-            }}
-          />
-        </div>
-      </div>
+    <PageContainer className="space-y-6" size="large">
+      <PageHeader
+        actions={
+          <>
+            <Button
+              aria-expanded={help}
+              aria-label="Cómo funciona este emulador"
+              size="icon"
+              title="Cómo funciona este emulador"
+              variant="ghost"
+              onClick={() => setHelp(!help)}
+            >
+              <CircleHelp />
+            </Button>
+            <Button disabled={!ready || live} variant="outline" onClick={() => picker.current?.click()}>
+              <ArrowUpFromLine /> Importar sesión
+            </Button>
+            <Button disabled={!ready || live} onClick={() => send({ type: "export" })}>
+              <ArrowDownToLine /> Exportar sesión
+            </Button>
+            <input
+              ref={picker}
+              hidden
+              accept="application/json,.json"
+              type="file"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                  setError("La sesión supera el límite de 2 MiB.");
+                  return;
+                }
+                resetControls();
+                setSelected(null);
+                send({ type: "import", json: await file.text() });
+              }}
+            />
+          </>
+        }
+        description="El firmware real corriendo en el navegador: la misma cara, gestos y voz que el Owy físico de la mesa."
+        meta={
+          <>
+            <Badge variant={ready ? "success" : "secondary"}>
+              {ready ? "Emulador listo" : "Cargando el emulador…"}
+            </Badge>
+            <Badge variant="outline">{modeLabel}</Badge>
+          </>
+        }
+        title="Owy"
+      />
 
-      {error && (
-        <div
-          className="flex items-center justify-between gap-3 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm"
-          role="alert"
-        >
+      <Notice show={Boolean(error)} tone="danger">
+        <span className="flex items-start justify-between gap-3">
           <span>{error}</span>
-          <Button aria-label="Cerrar" size="icon" variant="ghost" onClick={() => setError(null)}>
-            <X className="h-4 w-4" />
+          <Button
+            aria-label="Cerrar el aviso"
+            className="-my-1"
+            size="icon-xs"
+            variant="ghost"
+            onClick={() => setError(null)}
+          >
+            <X />
           </Button>
-        </div>
-      )}
+        </span>
+      </Notice>
 
       {help && (
         <Card>
-          <CardContent className="space-y-2 p-4 text-sm text-muted-foreground">
+          <CardContent className="space-y-2 p-4 text-ui text-muted-foreground">
             <p className="font-medium text-foreground">Una ventana con forma de dispositivo al código real.</p>
             <p>
               Las nueve pantallas y las fuentes salen del LVGL de ESPHome fijado. Fusión de movimiento, calibración,
@@ -555,66 +632,65 @@ export default function CompanionWorkbench() {
             </p>
             <p>
               El VoiceTurn y el PacedSpeaker de producción corren contra tiempo virtual y un transporte simulado. Red,
-              energía y acceso de staff usan fixtures determinísticos; el wake se inyecta, no se reconoce. PIN del
-              fixture: <code className="font-terminal">1234</code>. La voz en vivo conecta este dispositivo virtual al
-              bridge Node real (mismos prompts, tools y turnos) y queda fuera del replay.
+              energía y acceso de staff usan datos simulados y repetibles; la palabra de activación se inyecta, no se
+              reconoce. PIN de prueba: <code className="font-terminal">1234</code>. La voz en vivo conecta este
+              dispositivo virtual al bridge Node real (mismos prompts, herramientas y turnos) y queda fuera de la sesión
+              grabada.
             </p>
             <p>
               Arrastrá sobre Owy para acariciarlo o deslizar; los botones y el teclado hacen lo mismo. Pausá, avanzá y
-              arrastrá la línea de tiempo para reproducir un problema; importar un replay bloquea las entradas hasta
+              arrastrá la línea de tiempo para reproducir un problema; importar una sesión bloquea las entradas hasta
               reiniciar.
             </p>
           </CardContent>
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_380px] 2xl:grid-cols-[300px_minmax(0,1fr)_420px]">
+      {/* Tablets: Owy first (portrait), or beside the scenarios with the voice below (landscape). */}
+      <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_380px] 2xl:grid-cols-[300px_minmax(0,1fr)_420px]">
         <div className="space-y-6">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <FlaskConical className="h-4 w-4 text-yellow-400" /> Escenarios
-                <span className="ml-auto font-terminal text-xs text-muted-foreground">
+              <CardTitle className="flex items-center gap-2">
+                <FlaskConical aria-hidden className="h-4 w-4 text-muted-foreground" /> Escenarios
+                <span className="ml-auto font-terminal text-meta text-muted-foreground tabular-nums">
                   {scenarios.length.toString().padStart(2, "0")}
                 </span>
               </CardTitle>
               <CardDescription>Historias cortas, comportamiento reproducible.</CardDescription>
             </CardHeader>
-            <CardContent className="max-h-[640px] [scrollbar-width:thin] [scrollbar-color:#3f3f46_transparent] space-y-1 overflow-y-auto p-2 pt-0">
+            <CardContent className="max-h-[640px] scrollbar-thin space-y-1 overflow-y-auto p-2 pt-0">
               {scenarios.map((scenario, index) => {
                 const isSelected = selected === scenario.id;
                 return (
                   <button
                     key={scenario.id}
-                    className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors hover:bg-accent disabled:opacity-50 ${
-                      isSelected ? "bg-accent ring-1 ring-yellow-400/60" : ""
+                    className={`flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-colors outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring/70 disabled:opacity-50 ${
+                      isSelected ? "bg-accent ring-1 ring-primary/60" : ""
                     }`}
                     disabled={!ready || live}
                     onClick={() => {
                       resetControls();
                       setSelected(scenario.id);
                       send({ type: "scenario", id: scenario.id });
+                      // A tablet stacks Owy above the list: bring it back to watch the scenario play.
+                      const box = panel.current?.getBoundingClientRect();
+                      if (box && (box.bottom < 0 || box.top > window.innerHeight))
+                        panel.current?.scrollIntoView({ block: "center" });
                     }}
                   >
-                    <span className="mt-0.5 font-terminal text-[11px] text-muted-foreground">
+                    <span className="mt-0.5 font-terminal text-2xs text-muted-foreground tabular-nums">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm leading-tight font-medium">{scenario.name}</span>
-                      <span className="block text-xs leading-snug text-muted-foreground">{scenario.detail}</span>
-                      {isSelected && (
-                        <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-zinc-800">
-                          <span
-                            className="block h-full bg-yellow-400 transition-[width]"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </span>
-                      )}
+                      <span className="block text-ui leading-tight font-medium">{scenario.name}</span>
+                      <span className="block text-meta leading-snug text-muted-foreground">{scenario.detail}</span>
+                      {isSelected && <Meter className="mt-2" value={progress} />}
                     </span>
                   </button>
                 );
               })}
-              <p className="px-3 pt-2 pb-1 text-[11px] text-muted-foreground">
+              <p className="px-3 pt-2 pb-1 text-2xs text-muted-foreground">
                 Los escenarios simulados nunca mandan audio. La voz en vivo es opt-in y no se graba ni se reproduce.
               </p>
             </CardContent>
@@ -622,8 +698,8 @@ export default function CompanionWorkbench() {
 
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Tv className="h-4 w-4 text-yellow-400" /> Pantalla grande
+              <CardTitle className="flex items-center gap-2">
+                <Tv aria-hidden className="h-4 w-4 text-muted-foreground" /> Pantalla grande
               </CardTitle>
               <CardDescription>Lo que la pared muestra mientras alguien habla con Owy.</CardDescription>
             </CardHeader>
@@ -635,9 +711,12 @@ export default function CompanionWorkbench() {
                   Mostrar la vista de la pared
                 </Button>
               )}
-              <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <div className="flex items-center justify-between text-2xs text-muted-foreground">
                 <span>Necesita el bridge con OWY_API_KEY.</span>
-                <a className="inline-flex items-center gap-1 hover:text-foreground" href="/admin/owy/scenes">
+                <a
+                  className="relative inline-flex items-center gap-1 hover:text-foreground pointer-coarse:after:absolute pointer-coarse:after:-inset-x-2 pointer-coarse:after:-inset-y-4"
+                  href="/admin/owy/scenes"
+                >
                   Escenas <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
@@ -645,16 +724,16 @@ export default function CompanionWorkbench() {
           </Card>
         </div>
 
-        <Card>
+        <Card className="max-lg:order-first">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span
-                className={`inline-block h-2.5 w-2.5 rounded-full ${live ? "animate-pulse bg-[#0162C8]" : ready ? "bg-yellow-400" : "bg-zinc-600"}`}
-              />
+            <div className="flex items-center gap-2 text-ui">
+              <StatusDot pulse={live} tone={live ? "info" : ready ? "brand" : "idle"} />
               <span className="font-medium">{modeLabel}</span>
             </div>
+            {/* A phone is narrower than the native 466 px: the face would push the page sideways. */}
             <Button
               aria-label={zoom ? "Ajustar" : "Tamaño nativo 466 px"}
+              className="max-sm:hidden"
               size="icon"
               variant="ghost"
               onClick={() => setZoom(!zoom)}
@@ -665,13 +744,13 @@ export default function CompanionWorkbench() {
           <CardContent className="space-y-4">
             <div
               aria-label="Owy. Espacio: tocar. H: mantener. P: acariciar. W: wake word. S: sacudir. C: centrar. Flechas: inclinar."
-              className="flex flex-col items-center rounded-lg bg-[radial-gradient(circle_at_50%_30%,rgba(245,187,3,0.10),transparent_60%)] p-4 outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60"
+              className="flex flex-col items-center rounded-lg bg-[radial-gradient(circle_at_50%_30%,hsl(var(--primary)/0.10),transparent_60%)] p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring/70"
               role="group"
               tabIndex={0}
               onKeyDown={shortcuts}
             >
               <div
-                className={`relative aspect-square shrink-0 overflow-hidden rounded-full border-[10px] border-zinc-800 bg-black shadow-[0_30px_70px_rgba(0,0,0,0.6),inset_0_0_0_2px_rgba(255,255,255,0.05)] ${
+                className={`relative aspect-square shrink-0 overflow-hidden rounded-full border-[10px] border-input bg-black shadow-[0_30px_70px_rgba(0,0,0,0.6),inset_0_0_0_2px_rgba(255,255,255,0.05)] ${
                   zoom ? "w-[486px]" : "w-full max-w-[440px]"
                 }`}
               >
@@ -698,13 +777,13 @@ export default function CompanionWorkbench() {
                   }}
                 />
                 {!ready && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black text-xs text-muted-foreground">
-                    <span className="h-6 w-6 animate-spin rounded-full border-2 border-yellow-400 border-t-transparent" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black text-meta text-muted-foreground">
+                    <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                     Despertando los píxeles reales…
                   </div>
                 )}
               </div>
-              <p className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <p className="mt-4 flex items-center gap-2 text-meta text-muted-foreground">
                 <Hand className="h-3.5 w-3.5" />
                 {live
                   ? "Tocá para cancelar o empezar; mantené para ajustes. Voz y pantalla usan el bridge real."
@@ -712,9 +791,9 @@ export default function CompanionWorkbench() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-meta">
               <span className="flex items-center gap-2">
-                <span className={`inline-block h-2 w-2 rounded-full ${ready ? "bg-yellow-400" : "bg-zinc-600"}`} />
+                <StatusDot tone={ready ? "brand" : "idle"} />
                 <span className="font-terminal">{voiceLabel}</span>
               </span>
               <span className="font-terminal text-muted-foreground">
@@ -723,8 +802,8 @@ export default function CompanionWorkbench() {
             </div>
 
             <div className="space-y-1.5">
-              <LevelMeter color="#0162C8" label="Mic" value={state?.envelope[0] ?? 0} />
-              <LevelMeter color="#F5BB03" label="Voz" value={(state?.envelope[1] ?? 0) / 100} />
+              <LevelMeter color="hsl(var(--info))" label="Mic" value={state?.envelope[0] ?? 0} />
+              <LevelMeter color="hsl(var(--primary))" label="Voz" value={(state?.envelope[1] ?? 0) / 100} />
             </div>
 
             <div>
@@ -735,7 +814,7 @@ export default function CompanionWorkbench() {
                     ["Tocar / BOOT", Mic, () => input("boot", [100]), "␣"],
                     ["Mantener", Settings2, () => input("boot", [900]), "H"],
                     ["Acariciar", Hand, () => input("pet"), "P"],
-                    ["Wake word", Radio, () => input("wake"), "W"],
+                    ["Palabra de activación", Radio, () => input("wake"), "W"],
                     ["Sacudir", Activity, () => send({ type: "shake" }), "S"],
                     ["Centrar mirada", RotateCcw, () => input("center"), "C"],
                   ] as const
@@ -752,7 +831,7 @@ export default function CompanionWorkbench() {
                       <Icon className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{label}</span>
                     </span>
-                    <Kbd className="ml-2 shrink-0">{key}</Kbd>
+                    <Kbd className="ml-2 shrink-0 pointer-coarse:hidden">{key}</Kbd>
                   </Button>
                 ))}
               </div>
@@ -762,7 +841,7 @@ export default function CompanionWorkbench() {
                   size="sm"
                   onClick={() => input("speech", [1, 1200])}
                 >
-                  <AudioLines className="mr-2 h-4 w-4" /> Decir algo (fixture)
+                  <AudioLines /> Decir algo (simulado)
                 </Button>
                 <Button disabled={inputsLocked} size="sm" variant="ghost" onClick={() => input("page", [], "help")}>
                   Deslizar ← ayuda
@@ -774,7 +853,7 @@ export default function CompanionWorkbench() {
             </div>
 
             <div>
-              <SectionTitle icon={Activity} hint={locked ? "fijo por voz/replay" : undefined}>
+              <SectionTitle icon={Activity} hint={locked ? "fija por la voz o la sesión grabada" : undefined}>
                 Cara
               </SectionTitle>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -793,7 +872,7 @@ export default function CompanionWorkbench() {
                   Seguir la voz
                 </Button>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
+              <p className="mt-3 text-meta text-muted-foreground">
                 Expresión al hablar (se ve con <em>Hablando</em> o <em>Pensando</em>; en vivo la elige jev por frase)
               </p>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -812,16 +891,16 @@ export default function CompanionWorkbench() {
             </div>
 
             {currentScenario && (
-              <div className="rounded-md border bg-zinc-900/60 p-3 text-sm">
-                <p className="text-xs font-semibold tracking-[0.15em] text-yellow-400 uppercase">Explorando</p>
+              <div className="rounded-md border bg-background p-3 text-ui">
+                <MicroLabel>Explorando</MicroLabel>
                 <p className="mt-1 font-medium">{currentScenario.name}</p>
-                <p className="text-xs text-muted-foreground">{currentScenario.detail}</p>
+                <p className="text-meta text-muted-foreground">{currentScenario.detail}</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 lg:col-span-2 xl:col-span-1">
           <LiveVoicePanel
             attachDevices={attachDevices}
             deviceSettings={state?.settings}
@@ -884,7 +963,7 @@ export default function CompanionWorkbench() {
               <RotateCcw className="h-4 w-4" />
             </Button>
             <span className="ml-2 font-terminal text-lg tabular-nums">{stamp(state?.time ?? 0)}</span>
-            <span className="text-xs text-muted-foreground">tiempo virtual</span>
+            <span className="text-meta text-muted-foreground">tiempo virtual</span>
             <Select
               disabled={live}
               value={speed}
@@ -905,10 +984,10 @@ export default function CompanionWorkbench() {
               </SelectContent>
             </Select>
             <Badge className="ml-auto" variant={live ? "outline" : locked ? "secondary" : "destructive"}>
-              {live ? "No graba" : locked ? "Replay" : "Grabando entradas"}
+              {live ? "No graba" : locked ? "Sesión grabada" : "Grabando entradas"}
             </Badge>
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-3 text-meta text-muted-foreground">
             <span className="w-16 shrink-0">Ir a</span>
             <Slider
               disabled={!ready || playing || duration < 16}
@@ -923,7 +1002,7 @@ export default function CompanionWorkbench() {
             />
             <span className="w-16 shrink-0 text-right font-terminal tabular-nums">{stamp(duration)}</span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-terminal text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-terminal text-2xs text-muted-foreground">
             <span className="tracking-[0.15em] uppercase">Traza</span>
             {trace
               .slice(-6)
@@ -935,7 +1014,7 @@ export default function CompanionWorkbench() {
                 </span>
               ))}
             <span className="ml-auto">
-              {live ? "bridge real · tools en vivo" : "determinístico · acotado · exportable"}
+              {live ? "bridge real · herramientas en vivo" : "determinístico · acotado · exportable"}
             </span>
           </div>
         </CardContent>
@@ -946,23 +1025,23 @@ export default function CompanionWorkbench() {
           <CardHeader className="pb-0">
             <TabsList className="w-fit">
               <TabsTrigger value="inputs">
-                <Move3D className="mr-2 h-4 w-4" /> Entradas
+                <Move3D /> Entradas
               </TabsTrigger>
               <TabsTrigger value="state">
-                <Activity className="mr-2 h-4 w-4" /> Estado
+                <Activity /> Estado
               </TabsTrigger>
               <TabsTrigger value="settings">
-                <Settings2 className="mr-2 h-4 w-4" /> Ajustes
+                <Settings2 /> Ajustes
               </TabsTrigger>
               <TabsTrigger value="faults">
-                <Gauge className="mr-2 h-4 w-4" /> Fallas
+                <Gauge /> Fallas
               </TabsTrigger>
             </TabsList>
             {locked && (
-              <p className="pt-3 text-xs text-muted-foreground">
+              <p className="pt-3 text-meta text-muted-foreground">
                 {live
-                  ? "Toque, movimiento y ajustes siguen activos. La voz usa el bridge; replay, voz sintética y fallas quedan bloqueados."
-                  : "El replay es de solo lectura. Reiniciá para probar otra cosa."}
+                  ? "Toque, movimiento y ajustes siguen activos. La voz usa el bridge; sesiones grabadas, voz simulada y fallas quedan bloqueadas."
+                  : "La sesión grabada es de solo lectura. Reiniciá para probar otra cosa."}
               </p>
             )}
           </CardHeader>
@@ -972,7 +1051,7 @@ export default function CompanionWorkbench() {
                 <SectionTitle icon={Move3D} hint="g / °/s">
                   Movimiento
                 </SectionTitle>
-                {["Roll", "Pitch", "Yaw"].map((axis, i) => (
+                {["Lateral", "Frontal", "Giro"].map((axis, i) => (
                   <RangeRow
                     key={axis}
                     disabled={!ready || inputsLocked}
@@ -984,15 +1063,15 @@ export default function CompanionWorkbench() {
                     onChange={(value) => changeAngle(i, value)}
                   />
                 ))}
-                <p className="text-xs text-muted-foreground">
-                  Cambiar la pose produce gravedad y velocidad angular juntas. El yaw es relativo, no una brújula.
+                <p className="text-meta text-muted-foreground">
+                  Cambiar la pose produce gravedad y velocidad angular juntas. El giro es relativo, no una brújula.
                 </p>
               </div>
               <div className="space-y-4">
                 <SectionTitle icon={Volume2}>Cues y envolventes</SectionTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button size="sm" variant={sound ? "secondary" : "outline"} onClick={toggleSound}>
-                    {sound ? <Volume2 className="mr-2 h-4 w-4" /> : <VolumeX className="mr-2 h-4 w-4" />}
+                    {sound ? <Volume2 /> : <VolumeX />}
                     {sound ? "Sonido activado" : "Activar sonido"}
                   </Button>
                   {["Escucha", "Juguetón", "Diagnóstico"].map((name, i) => (
@@ -1007,7 +1086,7 @@ export default function CompanionWorkbench() {
                     </Button>
                   ))}
                 </div>
-                <p className="text-xs text-muted-foreground">{transport}</p>
+                <p className="text-meta text-muted-foreground">{transport}</p>
                 {["Envolvente del mic", "Envolvente de voz"].map((name, i) => (
                   <RangeRow
                     key={name}
@@ -1024,7 +1103,7 @@ export default function CompanionWorkbench() {
                     }}
                   />
                 ))}
-                <p className="text-xs text-muted-foreground">
+                <p className="text-meta text-muted-foreground">
                   Niveles sintéticos para ejercitar la animación de escucha y de boca; no generan voz ni reconocen nada.
                 </p>
               </div>
@@ -1033,8 +1112,8 @@ export default function CompanionWorkbench() {
             <TabsContent className="grid gap-8 md:grid-cols-2" value="state">
               <div className="space-y-3">
                 <SectionTitle icon={Activity}>Por qué este estado</SectionTitle>
-                <p className="rounded-md border bg-zinc-900/60 p-3 text-sm">{state?.why ?? "Cargando el runtime…"}</p>
-                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                <p className="rounded-md border bg-background p-3 text-ui">{state?.why ?? "Cargando el emulador…"}</p>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-ui">
                   {[
                     ["Voz", state?.voice],
                     ["PCM recibido", `${state?.audioReceived ?? 0} B`],
@@ -1046,23 +1125,23 @@ export default function CompanionWorkbench() {
                     ["Bias del gyro · °/s", state?.bias.map((n) => n.toFixed(3)).join(", ")],
                     ["Neutral · g", state?.neutral.map((n) => n.toFixed(3)).join(", ")],
                     ["Calibración", `${state?.calibration ?? "—"} · ${state?.calibrationProgress ?? 0}%`],
-                    ["Staff (fixture)", state?.settings.staff ? "desbloqueado" : "bloqueado"],
+                    ["Staff (simulado)", state?.settings.staff ? "desbloqueado" : "bloqueado"],
                   ].map(([name, value]) => (
                     <div key={name} className="contents">
                       <dt className="text-muted-foreground">{name}</dt>
-                      <dd className="font-terminal text-xs tabular-nums">{value ?? "—"}</dd>
+                      <dd className="font-terminal text-meta tabular-nums">{value ?? "—"}</dd>
                     </div>
                   ))}
                 </dl>
               </div>
-              <div className="space-y-3 text-xs text-muted-foreground">
+              <div className="space-y-3 text-meta text-muted-foreground">
                 <SectionTitle>Límite de paridad</SectionTitle>
                 <p>C++ compartido: fusión de IMU, calibración, gestos, cara, PCM.</p>
                 <p>Generado del firmware: las nueve escenas LVGL y las fuentes.</p>
                 <p>Bridge compartido: VoiceTurn y PacedSpeaker de producción con timers virtuales.</p>
                 <p>
-                  HAL de fixture: driver de audio, red, energía, staff. El panel de voz conecta a Gemini aparte; el wake
-                  acústico y el hardware real no están conectados.
+                  HAL simulado: driver de audio, red, energía, staff. El panel de voz conecta a Gemini aparte; la
+                  palabra de activación acústica y el hardware real no están conectados.
                 </p>
                 <p className="font-terminal">
                   LVGL {manifest?.lvgl} · ESPHome {manifest?.esphome} · {manifest?.version}
@@ -1112,7 +1191,7 @@ export default function CompanionWorkbench() {
                     variant="outline"
                     onClick={() => input("page", [], "calibration")}
                   >
-                    <Move3D className="mr-2 h-4 w-4" /> Calibración
+                    <Move3D /> Calibración
                   </Button>
                   <Button
                     disabled={locked}
@@ -1120,7 +1199,7 @@ export default function CompanionWorkbench() {
                     variant="outline"
                     onClick={() => input("card", [], "Ideas que nos conectan")}
                   >
-                    Mostrar card
+                    Mostrar tarjeta
                   </Button>
                   <Button
                     disabled={locked}
@@ -1133,9 +1212,9 @@ export default function CompanionWorkbench() {
                     Mostrar texto
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Usá también los controles en pantalla del dispositivo. Reiniciar restaura los valores del fixture;
-                  nada de esto toca el dispositivo físico.
+                <p className="text-meta text-muted-foreground">
+                  Usá también los controles en pantalla del dispositivo. Reiniciar restaura los valores de prueba; nada
+                  de esto toca el dispositivo físico.
                 </p>
               </div>
             </TabsContent>
@@ -1145,7 +1224,7 @@ export default function CompanionWorkbench() {
                 <SectionTitle icon={Gauge} hint="modeladas">
                   Inyección de fallas
                 </SectionTitle>
-                <p className="pb-2 text-xs text-muted-foreground">
+                <p className="pb-2 text-meta text-muted-foreground">
                   Repetí fallas sin tocar un parlante, una conexión o un micrófono reales.
                 </p>
                 <div className="divide-y">
@@ -1239,14 +1318,14 @@ export default function CompanionWorkbench() {
                 >
                   PWR · {state?.powered ? "Apagar" : "Encender"}
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  La energía es una entrada del fixture, no una simulación eléctrica del PMIC.
+                <p className="text-meta text-muted-foreground">
+                  La energía es una entrada simulada, no una simulación eléctrica del PMIC.
                 </p>
               </div>
             </TabsContent>
           </CardContent>
         </Tabs>
       </Card>
-    </div>
+    </PageContainer>
   );
 }

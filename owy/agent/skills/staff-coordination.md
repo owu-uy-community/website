@@ -1,5 +1,5 @@
 ---
-description: Usar cuando el staff pida algo del tablero de tareas del día - ver qué falta, crear o mover tareas, cambiar estados, asignar gente, correr horarios o mandar un aviso interno.
+description: Usar cuando el staff pida algo del tablero de tareas del día - ver qué falta, crear o mover tareas, cambiar estados, asignar gente, correr horarios, mandar un aviso interno, ver los incidentes o marcar una sala llena o para evacuar.
 ---
 
 # Coordinación del staff (día del evento)
@@ -15,6 +15,7 @@ El sitio tiene un tablero de tareas por evento: cada tarea tiene día, horario, 
    - crear / editar / cambiar estado / asignar / desasignar / borrar → `manage_staff_task`
    - correr en bloque los horarios de un día → `shift_staff_tasks`
    - publicar un aviso al staff → `announce_to_staff`
+   - incidentes abiertos → `get_incidents`; una sala abierta, llena o para evacuar → `set_room_status` (evacuar avisa urgente a todo el staff: confirmalo con `ask_question`)
 
 ## Cosas que pasan seguido
 
