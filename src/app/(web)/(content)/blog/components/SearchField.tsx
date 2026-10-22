@@ -8,7 +8,10 @@ interface SearchFieldProps {
 export default function SearchField({ value, onChange }: SearchFieldProps) {
   return (
     <div className="relative w-full shrink-0 md:max-w-sm">
-      <Search aria-hidden className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-500" />
+      <Search
+        aria-hidden
+        className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-zinc-500"
+      />
       <input
         aria-label="Buscar posts"
         className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-11 text-[15px] text-white transition-colors outline-none placeholder:text-zinc-500 focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/20 [&::-webkit-search-cancel-button]:hidden"

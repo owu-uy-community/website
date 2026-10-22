@@ -8,7 +8,10 @@ const percent = (n: number, of: number) => (of ? Math.round((n / of) * 100) : 0)
 
 /** One question, as a bar per option: the label and the count in text, the bar for the eye */
 function Dimension({ dimension }: { dimension: ProfileDimension }) {
-  const rows = [...dimension.groups, ...(dimension.other > 0 ? [{ key: "otros", label: "Otros", n: dimension.other }] : [])];
+  const rows = [
+    ...dimension.groups,
+    ...(dimension.other > 0 ? [{ key: "otros", label: "Otros", n: dimension.other }] : []),
+  ];
   const max = Math.max(...rows.map((row) => row.n), 1);
 
   return (
@@ -20,7 +23,9 @@ function Dimension({ dimension }: { dimension: ProfileDimension }) {
       <ol className="flex flex-col gap-2.5">
         {rows.map((row) => (
           <li key={row.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 text-sm">
-            <span className={row.key === "otros" ? "truncate text-zinc-500" : "truncate text-zinc-300"}>{row.label}</span>
+            <span className={row.key === "otros" ? "truncate text-zinc-500" : "truncate text-zinc-300"}>
+              {row.label}
+            </span>
             <span className="text-right text-xs text-zinc-500 tabular-nums">
               <span className="text-zinc-200">{percent(row.n, dimension.answered)}%</span> · {count.format(row.n)}
             </span>

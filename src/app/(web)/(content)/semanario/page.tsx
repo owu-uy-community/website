@@ -132,7 +132,9 @@ export default async function SemanarioPage() {
               <div className="relative flex flex-col gap-4 p-6 md:p-8">
                 <Eyebrow>Semana del {weekRange(latest.weekStart)}</Eyebrow>
                 <h2 className={headingClassName.h2}>{latest.title}</h2>
-                {latest.intro ? <p className="max-w-2xl leading-relaxed text-zinc-400">{excerpt(latest.intro)}</p> : null}
+                {latest.intro ? (
+                  <p className="max-w-2xl leading-relaxed text-zinc-400">{excerpt(latest.intro)}</p>
+                ) : null}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
                   <p className="flex flex-wrap gap-x-2 text-[13px] text-zinc-500">
                     <span>{latest.counts.events} eventos</span>

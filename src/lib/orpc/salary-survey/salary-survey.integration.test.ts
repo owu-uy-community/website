@@ -77,7 +77,10 @@ describe("salarySurvey.submit", () => {
     await call(router.salarySurvey.submit, { slug, answers: answers() }, by(user));
 
     const responses = await db.select().from(salarySurveyResponses).where(eq(salarySurveyResponses.surveyId, surveyId));
-    const participants = await db.select().from(salarySurveyParticipants).where(eq(salarySurveyParticipants.surveyId, surveyId));
+    const participants = await db
+      .select()
+      .from(salarySurveyParticipants)
+      .where(eq(salarySurveyParticipants.surveyId, surveyId));
 
     expect(responses).toHaveLength(1);
     expect(JSON.stringify(responses)).not.toContain(user.id);

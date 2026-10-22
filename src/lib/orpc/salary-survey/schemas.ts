@@ -180,9 +180,9 @@ export const UpsertSurveySchema = z
     opensAt: z.iso.datetime({ offset: true }).nullable(),
     closesAt: z.iso.datetime({ offset: true }).nullable(),
   })
-  .refine(
-    ({ opensAt, closesAt }) => !opensAt || !closesAt || Date.parse(opensAt) < Date.parse(closesAt),
-    { message: "El cierre tiene que ser después de la apertura", path: ["closesAt"] }
-  );
+  .refine(({ opensAt, closesAt }) => !opensAt || !closesAt || Date.parse(opensAt) < Date.parse(closesAt), {
+    message: "El cierre tiene que ser después de la apertura",
+    path: ["closesAt"],
+  });
 
 export const SetStatusSchema = z.object({ slug: SurveySlugSchema, status: SurveyStatusSchema });

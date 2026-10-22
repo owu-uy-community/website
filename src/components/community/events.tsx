@@ -22,7 +22,9 @@ export function EventRow({ event, showMonth = true }: { event: CommunityEvent; s
       )}
     >
       <time className="flex w-12 shrink-0 flex-col items-center text-center sm:w-14" dateTime={event.start}>
-        <span className="font-title text-[26px] leading-none font-bold text-white tabular-nums sm:text-3xl">{when.day}</span>
+        <span className="font-title text-[26px] leading-none font-bold text-white tabular-nums sm:text-3xl">
+          {when.day}
+        </span>
         <span className="mt-1.5 text-[11px] font-semibold tracking-[0.14em] text-yellow-400 uppercase">
           {showMonth ? when.month : when.weekday}
         </span>
@@ -38,7 +40,9 @@ export function EventRow({ event, showMonth = true }: { event: CommunityEvent; s
           {event.title}
         </a>
         <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-zinc-400">
-          <span className="tabular-nums capitalize">{showMonth ? `${when.weekday} · ${when.time}` : `${when.time}`} h</span>
+          <span className="capitalize tabular-nums">
+            {showMonth ? `${when.weekday} · ${when.time}` : `${when.time}`} h
+          </span>
           <span aria-hidden className="text-zinc-600">
             ·
           </span>

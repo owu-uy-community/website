@@ -51,7 +51,8 @@ const clean = (value: string) => value.replace(/\./g, "").toLowerCase();
 export function weekRange(weekStart: string) {
   const monday = new Date(`${weekStart}T12:00:00Z`);
   const sunday = new Date(monday.getTime() + 6 * 86_400_000);
-  const from = monday.getUTCMonth() === sunday.getUTCMonth() ? String(monday.getUTCDate()) : clean(dayMonth.format(monday));
+  const from =
+    monday.getUTCMonth() === sunday.getUTCMonth() ? String(monday.getUTCDate()) : clean(dayMonth.format(monday));
 
   return `${from} al ${clean(dayMonthYear.format(sunday))}`;
 }

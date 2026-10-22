@@ -6,7 +6,15 @@ import { ogImageUrl } from "app/(web)/(content)/blog/(posts)/post-metadata";
  * Metadata for a community page. A page's `openGraph` replaces the root one
  * entirely, so it always carries its own image: the branded generator at /blog/og.
  */
-export function pageMetadata({ title, description, path }: { title: string; description: string; path: string }): Metadata {
+export function pageMetadata({
+  title,
+  description,
+  path,
+}: {
+  title: string;
+  description: string;
+  path: string;
+}): Metadata {
   const image = ogImageUrl({ title });
 
   return {

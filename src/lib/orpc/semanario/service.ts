@@ -128,7 +128,9 @@ const getById = (id: string) =>
       .leftJoin(user, eq(user.id, semanarioIssues.reviewedById))
       .where(eq(semanarioIssues.id, id))
   ).pipe(
-    Effect.flatMap(([found]) => (found ? Effect.succeed(toIssue(found.issue, found.reviewer)) : Effect.fail(issueNotFound)))
+    Effect.flatMap(([found]) =>
+      found ? Effect.succeed(toIssue(found.issue, found.reviewer)) : Effect.fail(issueNotFound)
+    )
   );
 
 /**
@@ -163,17 +165,14 @@ export const saveDraft = (input: { weekStart: string; title: string; intro: stri
   ).pipe(
     // Two runs racing on a new week: the loser retries as an update
     Effect.catchTag("UniqueViolation", () =>
-      Effect.fail(new Conflict({ reason: "week_taken", message: "Otro borrador de esa semana se guardó recién; probá de nuevo" }))
+      Effect.fail(
+        new Conflict({ reason: "week_taken", message: "Otro borrador de esa semana se guardó recién; probá de nuevo" })
+      )
     )
   );
 
 /** Staff edits (drafts and, for corrections, published issues) */
-export const updateIssue = (input: {
-  id: string;
-  title?: string;
-  intro?: string;
-  sections?: SemanarioSections;
-}) =>
+export const updateIssue = (input: { id: string; title?: string; intro?: string; sections?: SemanarioSections }) =>
   Effect.gen(function* () {
     const { id, ...changes } = input;
     const [row] = yield* query((db) =>
@@ -198,13 +197,18 @@ export const publish = (id: string) =>
 
     yield* transaction(
       Effect.gen(function* () {
-        const [row] = yield* query((db) => db.select().from(semanarioIssues).where(eq(semanarioIssues.id, id)).for("update"));
+        const [row] = yield* query((db) =>
+          db.select().from(semanarioIssues).where(eq(semanarioIssues.id, id)).for("update")
+        );
         if (!row) return yield* issueNotFound;
 
         let number = row.number;
         if (number === null) {
           const [{ last }] = yield* query((db) =>
-            db.select({ last: max(semanarioIssues.number) }).from(semanarioIssues).where(isNotNull(semanarioIssues.number))
+            db
+              .select({ last: max(semanarioIssues.number) })
+              .from(semanarioIssues)
+              .where(isNotNull(semanarioIssues.number))
           );
           number = (last ?? 0) + 1;
         }
@@ -223,7 +227,9 @@ export const publish = (id: string) =>
       })
     ).pipe(
       Effect.catchTag("UniqueViolation", () =>
-        Effect.fail(new Conflict({ reason: "number_taken", message: "Se publicó otro número al mismo tiempo; probá de nuevo" }))
+        Effect.fail(
+          new Conflict({ reason: "number_taken", message: "Se publicó otro número al mismo tiempo; probá de nuevo" })
+        )
       )
     );
     yield* refreshPages;

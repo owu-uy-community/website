@@ -25,23 +25,19 @@ export const getSearchIndex = cache(async (): Promise<SearchItem[]> => {
   const [communities, events, talks] = await Promise.all([getCommunities(), getUpcomingEvents(), getTalks()]);
 
   return [
-    ...PUBLIC_ROUTES.map(
-      (page): SearchItem => ({
-        group: "Páginas",
-        label: page.label,
-        hint: "description" in page ? page.description : undefined,
-        href: page.href,
-      })
-    ),
-    ...communities.map(
-      (community): SearchItem => ({
-        group: "Comunidades",
-        label: community.name,
-        hint: community.description,
-        href: `/comunidades#${community.slug}`,
-        keywords: community.topics.map(topicLabel).join(" "),
-      })
-    ),
+    ...PUBLIC_ROUTES.map((page): SearchItem => ({
+      group: "Páginas",
+      label: page.label,
+      hint: "description" in page ? page.description : undefined,
+      href: page.href,
+    })),
+    ...communities.map((community): SearchItem => ({
+      group: "Comunidades",
+      label: community.name,
+      hint: community.description,
+      href: `/comunidades#${community.slug}`,
+      keywords: community.topics.map(topicLabel).join(" "),
+    })),
     ...events.slice(0, 12).map((event): SearchItem => {
       const when = dateParts(event.start);
 
@@ -53,14 +49,12 @@ export const getSearchIndex = cache(async (): Promise<SearchItem[]> => {
         keywords: event.group,
       };
     }),
-    ...talks.map(
-      (talk): SearchItem => ({
-        group: "Charlas",
-        label: talk.title,
-        hint: `${talk.speakers.join(", ")} · ${eventLabel.get(talk.event) ?? ""}`,
-        href: `/charlas#${talk.slug}`,
-        keywords: talk.topics.map(topicLabel).join(" "),
-      })
-    ),
+    ...talks.map((talk): SearchItem => ({
+      group: "Charlas",
+      label: talk.title,
+      hint: `${talk.speakers.join(", ")} · ${eventLabel.get(talk.event) ?? ""}`,
+      href: `/charlas#${talk.slug}`,
+      keywords: talk.topics.map(topicLabel).join(" "),
+    })),
   ];
 });

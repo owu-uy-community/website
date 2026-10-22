@@ -185,8 +185,10 @@ export default async function SemanarioIssuePage({ params }: Props) {
             {newCommunities.length > 0 ? (
               <Cell className="gap-5">
                 <p className="text-zinc-400">
-                  {newCommunities.length === 1 ? "Se sumó una comunidad" : `Se sumaron ${newCommunities.length} comunidades`} al
-                  directorio:
+                  {newCommunities.length === 1
+                    ? "Se sumó una comunidad"
+                    : `Se sumaron ${newCommunities.length} comunidades`}{" "}
+                  al directorio:
                 </p>
                 <ul className="flex flex-wrap gap-2">
                   {newCommunities.map((community) => (
@@ -209,8 +211,14 @@ export default async function SemanarioIssuePage({ params }: Props) {
       <Section>
         <nav aria-label="Otros números" className="grid gap-3 sm:grid-cols-2">
           {issue.prev ? (
-            <Link className={cardClassName(true, "group flex items-center gap-4 p-5")} href={`/semanario/${issue.prev}`}>
-              <ArrowLeft aria-hidden className="size-4 text-zinc-500 transition-transform group-hover:-translate-x-0.5" />
+            <Link
+              className={cardClassName(true, "group flex items-center gap-4 p-5")}
+              href={`/semanario/${issue.prev}`}
+            >
+              <ArrowLeft
+                aria-hidden
+                className="size-4 text-zinc-500 transition-transform group-hover:-translate-x-0.5"
+              />
               <span>
                 <span className={navLabel}>Anterior</span>
                 <span className="font-title font-semibold text-white">#{issue.prev}</span>
@@ -228,7 +236,10 @@ export default async function SemanarioIssuePage({ params }: Props) {
                 <span className={navLabel}>Siguiente</span>
                 <span className="font-title font-semibold text-white">#{issue.next}</span>
               </span>
-              <ArrowRight aria-hidden className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight
+                aria-hidden
+                className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5"
+              />
             </Link>
           ) : (
             <Link
@@ -239,13 +250,17 @@ export default async function SemanarioIssuePage({ params }: Props) {
                 <span className={navLabel}>El próximo sale el lunes</span>
                 <span className="font-title font-semibold text-white">Recibilo por RSS o en Slack</span>
               </span>
-              <ArrowRight aria-hidden className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5" />
+              <ArrowRight
+                aria-hidden
+                className="size-4 text-zinc-500 transition-transform group-hover:translate-x-0.5"
+              />
             </Link>
           )}
         </nav>
         <p className="mt-10 text-center text-sm text-zinc-500">
           ¿Viste un hilo que tendría que estar acá? Marcalo con{" "}
-          <code className="font-terminal text-[12.5px] text-yellow-300">:{SEMANARIO_EMOJI}:</code> y entra en el próximo.{" "}
+          <code className="font-terminal text-[12.5px] text-yellow-300">:{SEMANARIO_EMOJI}:</code> y entra en el
+          próximo.{" "}
           <Link
             className="text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
             href="/semanario"

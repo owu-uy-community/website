@@ -75,7 +75,11 @@ export default function PhotoLightbox({
     if (index === null) return;
 
     setZoomed(false);
-    stripRef.current?.children[index]?.scrollIntoView({ inline: "center", block: "nearest", behavior: reduceMotion ? "auto" : "smooth" });
+    stripRef.current?.children[index]?.scrollIntoView({
+      inline: "center",
+      block: "nearest",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
     for (const delta of [1, -1]) {
       const neighbour = photos[(index + delta + photos.length) % photos.length];
 
@@ -89,7 +93,10 @@ export default function PhotoLightbox({
 
     if (!zoomed || !stage) return;
 
-    stage.scrollTo({ left: (stage.scrollWidth - stage.clientWidth) / 2, top: (stage.scrollHeight - stage.clientHeight) / 2 });
+    stage.scrollTo({
+      left: (stage.scrollWidth - stage.clientWidth) / 2,
+      top: (stage.scrollHeight - stage.clientHeight) / 2,
+    });
   }, [zoomed]);
 
   if (!mounted) return null;
@@ -122,11 +129,22 @@ export default function PhotoLightbox({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-              <button aria-label={zoomed ? "Alejar" : "Acercar"} className={tool} type="button" onClick={() => setZoomed((current) => !current)}>
+              <button
+                aria-label={zoomed ? "Alejar" : "Acercar"}
+                className={tool}
+                type="button"
+                onClick={() => setZoomed((current) => !current)}
+              >
                 {zoomed ? <ZoomOut aria-hidden className="size-4" /> : <ZoomIn aria-hidden className="size-4" />}
                 <span className="hidden sm:inline">{zoomed ? "Alejar" : "Acercar"}</span>
               </button>
-              <a aria-label="Abrir la foto original en otra pestaña" className={tool} href={photo.src} rel="noopener" target="_blank">
+              <a
+                aria-label="Abrir la foto original en otra pestaña"
+                className={tool}
+                href={photo.src}
+                rel="noopener"
+                target="_blank"
+              >
                 <ExternalLink aria-hidden className="size-4" />
                 <span className="hidden sm:inline">Original</span>
               </a>
@@ -134,7 +152,13 @@ export default function PhotoLightbox({
                 <Download aria-hidden className="size-4" />
                 <span className="hidden sm:inline">Descargar</span>
               </a>
-              <button ref={closeRef} aria-label="Cerrar" className={buttonClassName("secondary", "sm", "w-9 px-0")} type="button" onClick={onClose}>
+              <button
+                ref={closeRef}
+                aria-label="Cerrar"
+                className={buttonClassName("secondary", "sm", "w-9 px-0")}
+                type="button"
+                onClick={onClose}
+              >
                 <X aria-hidden className="size-4" />
               </button>
             </div>
@@ -144,7 +168,10 @@ export default function PhotoLightbox({
           <div className="relative min-h-0 flex-1">
             <div
               ref={stageRef}
-              className={cn("h-full w-full overflow-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", zoomed ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in")}
+              className={cn(
+                "h-full w-full [scrollbar-width:none] overflow-auto overscroll-contain [&::-webkit-scrollbar]:hidden",
+                zoomed ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"
+              )}
               onClick={(event) => {
                 if (event.target === event.currentTarget || (event.target as HTMLElement).dataset.backdrop) {
                   if (!pointer.current?.moved) onClose();
@@ -167,18 +194,27 @@ export default function PhotoLightbox({
               onPointerUp={(event) => {
                 const start = pointer.current;
 
-                if (start?.moved && !zoomed && Math.abs(event.clientX - start.x) > 48) onStep(event.clientX < start.x ? 1 : -1);
+                if (start?.moved && !zoomed && Math.abs(event.clientX - start.x) > 48)
+                  onStep(event.clientX < start.x ? 1 : -1);
               }}
             >
               <div
-                className={cn("flex items-center justify-center p-4 sm:p-6", zoomed ? "h-max min-h-full w-max min-w-full" : "h-full w-full")}
+                className={cn(
+                  "flex items-center justify-center p-4 sm:p-6",
+                  zoomed ? "h-max min-h-full w-max min-w-full" : "h-full w-full"
+                )}
                 data-backdrop="true"
               >
                 <motion.img
                   key={photo.src}
                   alt={photo.alt}
                   animate={{ opacity: 1 }}
-                  className={cn("block select-none", zoomed ? "max-w-none cursor-grab active:cursor-grabbing" : "max-h-[calc(100svh-11rem)] max-w-full object-contain")}
+                  className={cn(
+                    "block select-none",
+                    zoomed
+                      ? "max-w-none cursor-grab active:cursor-grabbing"
+                      : "max-h-[calc(100svh-11rem)] max-w-full object-contain"
+                  )}
                   draggable={false}
                   initial={reduceMotion ? false : { opacity: 0 }}
                   src={photo.src}
@@ -190,16 +226,29 @@ export default function PhotoLightbox({
               </div>
             </div>
 
-            <button aria-label="Foto anterior" className={cn(arrow, "left-3 sm:left-5")} type="button" onClick={() => onStep(-1)}>
+            <button
+              aria-label="Foto anterior"
+              className={cn(arrow, "left-3 sm:left-5")}
+              type="button"
+              onClick={() => onStep(-1)}
+            >
               <ChevronLeft aria-hidden className="size-5" />
             </button>
-            <button aria-label="Foto siguiente" className={cn(arrow, "right-3 sm:right-5")} type="button" onClick={() => onStep(1)}>
+            <button
+              aria-label="Foto siguiente"
+              className={cn(arrow, "right-3 sm:right-5")}
+              type="button"
+              onClick={() => onStep(1)}
+            >
               <ChevronRight aria-hidden className="size-5" />
             </button>
           </div>
 
           {/* ------------------------------------------------------ filmstrip */}
-          <div ref={stripRef} className="flex shrink-0 gap-1.5 overflow-x-auto px-4 py-3 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
+          <div
+            ref={stripRef}
+            className="flex shrink-0 [scrollbar-width:none] gap-1.5 overflow-x-auto px-4 py-3 sm:px-6 [&::-webkit-scrollbar]:hidden"
+          >
             {photos.map((item, i) => (
               <button
                 key={item.src}

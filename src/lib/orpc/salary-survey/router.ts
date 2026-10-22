@@ -19,11 +19,17 @@ import * as SalarySurvey from "./service";
 const docs = (summary: string) => openapi({ tags: ["Salary survey"], summary });
 
 /** The open-data endpoints answer plain GETs, so a spreadsheet or a script can read them */
-const open = (summary: string, path: `/${string}`) => openapi({ tags: ["Salary survey"], summary, method: "GET", path });
+const open = (summary: string, path: `/${string}`) =>
+  openapi({ tags: ["Salary survey"], summary, method: "GET", path });
 
 export const salarySurveyRouter = {
   current: pub
-    .meta(open("The open edition (or the latest one), its response count and whether the caller already answered", "/salary-survey/current"))
+    .meta(
+      open(
+        "The open edition (or the latest one), its response count and whether the caller already answered",
+        "/salary-survey/current"
+      )
+    )
     .output(CurrentSurveySchema)
     .effect(function* ({ context }) {
       const session = yield* Effect.promise(() => context.getSession());
@@ -40,7 +46,12 @@ export const salarySurveyRouter = {
     }),
 
   results: pub
-    .meta(open("Published results: quartiles per currency and group, the respondents' profile, satisfaction", "/salary-survey/{slug}/results"))
+    .meta(
+      open(
+        "Published results: quartiles per currency and group, the respondents' profile, satisfaction",
+        "/salary-survey/{slug}/results"
+      )
+    )
     .input(SurveyRefSchema)
     .output(ResultsSchema)
     .effect(function* ({ input }) {

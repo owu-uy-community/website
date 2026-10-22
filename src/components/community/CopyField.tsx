@@ -27,7 +27,12 @@ export default function CopyField({ value, label, className }: { value: string; 
   const { copied, copy } = useCopy(value);
 
   return (
-    <div className={cn("flex min-w-0 items-center rounded-xl border border-white/10 bg-black/30 font-terminal text-[13px]", className)}>
+    <div
+      className={cn(
+        "flex min-w-0 items-center rounded-xl border border-white/10 bg-black/30 font-terminal text-[13px]",
+        className
+      )}
+    >
       <span aria-hidden className="pl-3.5 text-zinc-600 select-none">
         $
       </span>

@@ -47,7 +47,8 @@ const SIZES = {
 const ORDER = [3, 8, 0, 5, 10, 2, 7, 1, 9, 6, 4];
 const TICK_MS = 2400;
 
-const initial = (): Photo[] => Array.from({ length: CELL_COUNT }, (_, index) => (index === 0 ? ROOMS[0]! : MOMENTS[index - 1]!));
+const initial = (): Photo[] =>
+  Array.from({ length: CELL_COUNT }, (_, index) => (index === 0 ? ROOMS[0]! : MOMENTS[index - 1]!));
 
 type Layer = { photo: Photo; fade: boolean };
 
@@ -107,7 +108,9 @@ function Tile({ photo, sizes, onOpen }: { photo: Photo; sizes: string; onOpen: (
   const [current, setCurrent] = useState(photo);
 
   useEffect(() => {
-    setLayers((stack) => (stack[stack.length - 1]?.photo.src === photo.src ? stack : [...stack.slice(-1), { photo, fade: true }]));
+    setLayers((stack) =>
+      stack[stack.length - 1]?.photo.src === photo.src ? stack : [...stack.slice(-1), { photo, fade: true }]
+    );
   }, [photo]);
 
   return (
@@ -122,15 +125,24 @@ function Tile({ photo, sizes, onOpen }: { photo: Photo; sizes: string; onOpen: (
           key={layer.photo.src}
           layer={layer}
           sizes={sizes}
-          onFailed={() => setLayers((stack) => (stack.length > 1 ? stack.filter((item) => item.photo.src !== layer.photo.src) : stack))}
+          onFailed={() =>
+            setLayers((stack) =>
+              stack.length > 1 ? stack.filter((item) => item.photo.src !== layer.photo.src) : stack
+            )
+          }
           onReady={() => setCurrent(layer.photo)}
           onSettled={() => setLayers((stack) => stack.slice(-1))}
         />
       ))}
-      <span aria-hidden className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/[0.08] ring-inset" />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/[0.08] ring-inset"
+      />
       <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-gradient-to-t from-zinc-950/85 via-zinc-950/30 to-transparent p-3.5 pt-14 sm:p-4">
         <span className="min-w-0">
-          <span className="line-clamp-2 font-title text-[14px] leading-tight font-semibold text-white sm:text-[15px]">{current.caption}</span>
+          <span className="line-clamp-2 font-title text-[14px] leading-tight font-semibold text-white sm:text-[15px]">
+            {current.caption}
+          </span>
           <span className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 group-hover:grid-rows-[1fr] group-focus-visible:grid-rows-[1fr]">
             <span className="block min-h-0 overflow-hidden text-[12px] text-zinc-300">
               <span className="block pt-0.5">{EVENTS[current.event]}</span>
@@ -227,7 +239,10 @@ export default function PhotoWall() {
         onPointerLeave={() => setHovered(false)}
       >
         {COLUMNS.map((column, c) => (
-          <div key={c} className={cn("lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-3", column.phone ? "contents" : "hidden")}>
+          <div
+            key={c}
+            className={cn("lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-3", column.phone ? "contents" : "hidden")}
+          >
             {column.cells.map((weight) => {
               const index = cell++;
               const room = index === 0;
@@ -235,10 +250,19 @@ export default function PhotoWall() {
               return (
                 <Reveal
                   key={index}
-                  className={cn("min-h-0", WEIGHT[weight], room ? "col-span-2 aspect-[16/10]" : "aspect-[4/3]", "lg:aspect-auto")}
+                  className={cn(
+                    "min-h-0",
+                    WEIGHT[weight],
+                    room ? "col-span-2 aspect-[16/10]" : "aspect-[4/3]",
+                    "lg:aspect-auto"
+                  )}
                   delay={index * 0.04}
                 >
-                  <Tile photo={shown[index]!} sizes={room ? SIZES.room : c === 0 ? SIZES.wide : SIZES.rest} onOpen={openAt} />
+                  <Tile
+                    photo={shown[index]!}
+                    sizes={room ? SIZES.room : c === 0 ? SIZES.wide : SIZES.rest}
+                    onOpen={openAt}
+                  />
                 </Reveal>
               );
             })}

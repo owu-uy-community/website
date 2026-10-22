@@ -43,8 +43,8 @@ export default async function CommunitiesPage() {
         }
         description={
           <>
-            {communities.length} comunidades que organizan meetups, charlas y talleres en Uruguay. Cada una tiene su propia
-            agenda; OWU las conecta con un Slack, un calendario y una conferencia.
+            {communities.length} comunidades que organizan meetups, charlas y talleres en Uruguay. Cada una tiene su
+            propia agenda; OWU las conecta con un Slack, un calendario y una conferencia.
           </>
         }
         eyebrow="Directorio"

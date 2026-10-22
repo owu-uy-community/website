@@ -14,7 +14,9 @@ export default function ContentError({ error, reset }: { error: Error & { digest
   return (
     <section className="relative isolate overflow-hidden">
       <Container className="flex min-h-[calc(100svh-4rem)] flex-col items-center justify-center py-24 text-center">
-        <h1 className="font-title text-4xl font-extrabold tracking-[-0.025em] text-white sm:text-5xl">Algo se rompió</h1>
+        <h1 className="font-title text-4xl font-extrabold tracking-[-0.025em] text-white sm:text-5xl">
+          Algo se rompió
+        </h1>
         <TitleBar className="mt-6" />
         <p className="mt-6 max-w-md text-[15px] leading-relaxed text-zinc-400 sm:text-base">
           Ya nos llegó el aviso. Probá de nuevo; si sigue fallando, contanos en el Slack de OWU.
