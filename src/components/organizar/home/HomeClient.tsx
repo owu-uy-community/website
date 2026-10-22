@@ -35,6 +35,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
   });
 
   const invitations = useQuery(orpc.events.cohostInvitations.queryOptions({ input: { communityId: community.id } }));
+  const polls = useQuery(orpc.polls.list.queryOptions({ input: { communityId: community.id } }));
   const answer = useMutation(
     orpc.events.answerCohost.mutationOptions({
       onSuccess: (result) => {
@@ -111,6 +112,22 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
     .toSorted((a, b) => a.start.localeCompare(b.start));
 
   const todo: { id: string; text: string; action: React.ReactNode }[] = [
+    ...(polls.data ?? [])
+      .filter(
+        (poll) =>
+          !poll.mine &&
+          !poll.chosenDay &&
+          Object.keys(poll.communities.find((row) => row.id === community.id)?.answers ?? {}).length === 0
+      )
+      .map((poll) => ({
+        id: `poll-${poll.id}`,
+        text: `${poll.asker.name} pregunta qué fecha les sirve para «${poll.title}»`,
+        action: (
+          <Button asChild size="xs" variant="outline">
+            <Link href={`${base}/encuestas`}>Responder</Link>
+          </Button>
+        ),
+      })),
     ...(invitations.data ?? []).map((invitation) => ({
       id: `cohost-${invitation.eventId}`,
       text: `${invitation.host} los invita a coorganizar «${invitation.name}» (${shortWhen(invitation.startDate)})`,

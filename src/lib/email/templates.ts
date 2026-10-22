@@ -428,3 +428,23 @@ export function cohostInviteEmail(input: {
     text: `${input.host} quiere organizar «${input.event}» (${input.when}) junto con ${input.community}.\n\nSi aceptan, el evento aparece también en el perfil de ${input.community} en owu.uy.\n\nVer la invitación: ${input.panelUrl}`,
   };
 }
+
+/** Another community asks which of a few days works for a joint event. */
+export function datePollEmail(input: {
+  asker: string;
+  community: string;
+  title: string;
+  days: string[];
+  panelUrl: string;
+}): Omit<Email, "to"> {
+  return {
+    subject: `${input.asker} pregunta qué fecha le sirve a ${input.community}: ${input.title}`,
+    html: layout({
+      preheader: `${input.days.length} fechas posibles. Respondé desde el panel de Organizá.`,
+      body: `<p style="margin:0 0 12px">${esc(input.asker)} quiere armar <strong>${esc(input.title)}</strong> con otras comunidades y pregunta qué días le sirven a ${esc(input.community)}:</p>
+<ul style="margin:0 0 20px;padding-left:18px">${input.days.map((day) => `<li>${esc(day)}</li>`).join("")}</ul>
+<p style="margin:0">${button(input.panelUrl, "Responder")}</p>`,
+    }),
+    text: `${input.asker} quiere armar «${input.title}» con otras comunidades y pregunta qué días le sirven a ${input.community}:\n${input.days.map((day) => `- ${day}`).join("\n")}\n\nResponder: ${input.panelUrl}`,
+  };
+}

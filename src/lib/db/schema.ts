@@ -1557,6 +1557,77 @@ export const eventHosts = pgTable(
   ]
 );
 
+/**
+ * Choosing a date with other communities (a joint meetup, a big event): a few candidate days, each
+ * invited community says sí / si hace falta / no per day, and the one that asked picks the date.
+ */
+export const datePolls = pgTable(
+  "date_polls",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    /** The community that asks (and picks the date) */
+    communityId: text("communityId").notNull(),
+    title: text("title").notNull(),
+    /** Candidate days, AAAA-MM-DD */
+    days: text("days").array().notNull(),
+    startTime: text("startTime").notNull().default("19:00"),
+    durationMin: integer("durationMin").notNull().default(120),
+    /** The communities asked to vote */
+    invited: text("invited").array().notNull().default([]),
+    /** The day picked: the poll is closed and the date reserved */
+    chosenDay: text("chosenDay"),
+    eventId: text("eventId"),
+    createdById: text("createdById"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("date_polls_communityId_idx").on(t.communityId),
+    foreignKey({
+      name: "date_polls_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "date_polls_eventId_fk", columns: [t.eventId], foreignColumns: [events.id] }).onDelete(
+      "set null"
+    ),
+    foreignKey({ name: "date_polls_createdById_fk", columns: [t.createdById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+/** One community's answer for one candidate day. */
+export const datePollVotes = pgTable(
+  "date_poll_votes",
+  {
+    pollId: text("pollId").notNull(),
+    communityId: text("communityId").notNull(),
+    day: text("day").notNull(),
+    answer: text("answer").$type<"yes" | "maybe" | "no">().notNull(),
+    votedById: text("votedById"),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ name: "date_poll_votes_pkey", columns: [t.pollId, t.communityId, t.day] }),
+    foreignKey({ name: "date_poll_votes_pollId_fk", columns: [t.pollId], foreignColumns: [datePolls.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({
+      name: "date_poll_votes_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "date_poll_votes_votedById_fk", columns: [t.votedById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
 export type IntegrationConnectionRow = typeof integrationConnections.$inferSelect;
 export type EventPublicationRow = typeof eventPublications.$inferSelect;
 
