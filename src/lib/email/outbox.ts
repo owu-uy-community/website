@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, lt, lte, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { emailDeliveries, type EmailDeliveryRow } from "../db/schema";
@@ -73,6 +73,22 @@ const settle = (row: EmailDeliveryRow) =>
   );
 
 /**
+ * What's left of today under `EMAIL_DAILY_CAP` (the email plan's limit; unset means no limit).
+ * Past 80 % only what can't wait goes out: codes, seat offers and confirmations (priority ≤ 3).
+ */
+export function allowance(sentToday: number, cap = Number(process.env.EMAIL_DAILY_CAP) || Infinity) {
+  return { room: Math.max(0, cap - sentToday), maxPriority: sentToday >= cap * 0.8 ? 3 : Infinity };
+}
+
+// ponytail: counted per batch, so drains running at once can pass the cap by a batch or two
+const sentToday = query((db) =>
+  db
+    .select({ sent: count() })
+    .from(emailDeliveries)
+    .where(and(eq(emailDeliveries.status, "sent"), gt(emailDeliveries.sentAt, new Date(Date.now() - 86_400_000))))
+).pipe(Effect.map(([row]) => row?.sent ?? 0));
+
+/**
  * Send what's due, best first. Each run claims its rows with FOR UPDATE SKIP LOCKED, so the
  * QStash tick, the daily cron and a fast path can all drain at once without sending anything twice.
  * Stops claiming when `deadline` (epoch ms) passes.
@@ -95,13 +111,21 @@ export const drainEmail = ({ deadline, batch = 25 }: { deadline: number; batch?:
     );
 
     while (Date.now() < deadline) {
+      const { room, maxPriority } = process.env.EMAIL_DAILY_CAP ? allowance(yield* sentToday) : allowance(0);
+      if (room === 0) break;
       const claimed = yield* query((db) => {
         const due = db
           .select({ id: emailDeliveries.id })
           .from(emailDeliveries)
-          .where(and(eq(emailDeliveries.status, "queued"), lte(emailDeliveries.nextAttemptAt, new Date())))
+          .where(
+            and(
+              eq(emailDeliveries.status, "queued"),
+              lte(emailDeliveries.nextAttemptAt, new Date()),
+              Number.isFinite(maxPriority) ? lte(emailDeliveries.priority, maxPriority) : undefined
+            )
+          )
           .orderBy(asc(emailDeliveries.priority), asc(emailDeliveries.createdAt))
-          .limit(batch)
+          .limit(Math.min(batch, room))
           .for("update", { skipLocked: true });
 
         return db

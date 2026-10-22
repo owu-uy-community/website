@@ -37,5 +37,5 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  return NextResponse.json(await tick(240_000));
+  return NextResponse.json(await tick(240_000, { daily: true }));
 }
