@@ -365,7 +365,7 @@ export const events = pgTable(
 
 export type EventStatus = "draft" | "published" | "cancelled";
 export type EventFormat = "charlas" | "taller" | "open-space" | "social" | "hackathon" | "otro";
-export type EventRegistration = "none" | "owu" | "external";
+export type EventRegistration = "none" | "owu" | "external" | "eventbrite";
 export type EventMode = "presencial" | "online" | "hibrido";
 export type RsvpQuestion = { id: string; label: string; required: boolean };
 
@@ -1400,6 +1400,110 @@ export const venueRequests = pgTable(
     }).onDelete("set null"),
   ]
 );
+
+// ---------------------------------------------------------------------------
+// Integraciones: a community's Eventbrite account and the events published there
+// ---------------------------------------------------------------------------
+
+/**
+ * A community's account on another platform, connected by one of its admins. The token is
+ * encrypted (INTEGRATIONS_SECRET); `webhookKey` is the secret path its webhooks come to.
+ */
+export const integrationConnections = pgTable(
+  "integration_connections",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId").notNull(),
+    platform: text("platform").$type<"eventbrite">().notNull().default("eventbrite"),
+    /** `error` once the platform rejects the token: an admin has to connect again */
+    status: text("status").$type<"active" | "error">().notNull().default("active"),
+    token: text("token").notNull(),
+    organizationId: text("organizationId").notNull(),
+    accountName: text("accountName").notNull().default(""),
+    webhookKey: text("webhookKey").notNull(),
+    webhookId: text("webhookId"),
+    error: text("error"),
+    connectedById: text("connectedById"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("integration_connections_communityId_platform_key").on(t.communityId, t.platform),
+    unique("integration_connections_webhookKey_key").on(t.webhookKey),
+    foreignKey({
+      name: "integration_connections_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "integration_connections_connectedById_fk",
+      columns: [t.connectedById],
+      foreignColumns: [user.id],
+    }).onDelete("set null"),
+  ]
+);
+
+/** The platform's ids for what a publication created, kept as each one is made. */
+export type PublicationIds = {
+  venueId?: string;
+  /** The place the venue was made for: a new one is made when it changes */
+  venueKey?: string;
+  ticketClassId?: string;
+  published?: boolean;
+  /** Cancelled on the platform, or renamed CANCELADO when it had orders */
+  cancelled?: boolean;
+};
+
+/**
+ * An event published on another platform. `nextAttemptAt` set means there's something to push
+ * (a publish, an edit, a cancel); the sweep pushes it, backing off on failures.
+ */
+export const eventPublications = pgTable(
+  "event_publications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId").notNull(),
+    connectionId: text("connectionId").notNull(),
+    platform: text("platform").$type<"eventbrite">().notNull().default("eventbrite"),
+    /** `failed` after the last retry: it waits for "Reintentar" */
+    status: text("status").$type<"pending" | "published" | "failed">().notNull().default("pending"),
+    externalId: text("externalId"),
+    externalUrl: text("externalUrl"),
+    ids: jsonb("ids").$type<PublicationIds>().notNull().default({}),
+    /** What was last pushed: an edit that changes nothing the platform shows pushes nothing */
+    pushedHash: text("pushedHash"),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: ts("nextAttemptAt"),
+    error: text("error"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    unique("event_publications_eventId_platform_key").on(t.eventId, t.platform),
+    index("event_publications_nextAttemptAt_idx").on(t.nextAttemptAt),
+    foreignKey({ name: "event_publications_eventId_fk", columns: [t.eventId], foreignColumns: [events.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({
+      name: "event_publications_connectionId_fk",
+      columns: [t.connectionId],
+      foreignColumns: [integrationConnections.id],
+    }).onDelete("cascade"),
+  ]
+);
+
+export type IntegrationConnectionRow = typeof integrationConnections.$inferSelect;
+export type EventPublicationRow = typeof eventPublications.$inferSelect;
 
 export type VenueRow = typeof venues.$inferSelect;
 export type VenueContactRow = typeof venueContacts.$inferSelect;

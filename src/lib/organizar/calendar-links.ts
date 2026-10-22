@@ -7,7 +7,7 @@ export type DescribedEvent = {
   status: "draft" | "published" | "cancelled";
   mode: "presencial" | "online" | "hibrido";
   place: { name: string; area: string | null; address: string | null } | null;
-  registration: "none" | "owu" | "external";
+  registration: "none" | "owu" | "external" | "eventbrite";
   capacity: number | null;
   taken: number;
   community: { name: string; slug: string };

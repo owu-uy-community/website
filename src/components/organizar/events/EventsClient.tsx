@@ -21,7 +21,12 @@ import type { OrganizerEvent } from "lib/orpc/events/schemas";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 
-const REGISTRATION = { none: "Entrada libre", owu: "Inscripción en OWU", external: "Inscripción externa" } as const;
+const REGISTRATION = {
+  none: "Entrada libre",
+  owu: "Inscripción en OWU",
+  external: "Inscripción externa",
+  eventbrite: "Inscripción en Eventbrite",
+} as const;
 
 /** The community's events: drafts to finish, what's coming, what happened. And a new one. */
 export function EventsClient({ community }: { community: CalendarCommunity }) {

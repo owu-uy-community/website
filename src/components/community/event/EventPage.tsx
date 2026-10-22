@@ -95,10 +95,12 @@ export function EventPage({
     <p className="text-[15px] text-zinc-400">Este evento ya pasó.</p>
   ) : event.registration === "owu" ? (
     rsvp
-  ) : event.registration === "external" && event.registrationUrl ? (
+  ) : (event.registration === "external" || event.registration === "eventbrite") && event.registrationUrl ? (
     <ButtonLink arrow className="w-full justify-center" href={event.registrationUrl} size="lg">
-      Inscribirme
+      {event.registration === "eventbrite" ? "Inscribirme en Eventbrite" : "Inscribirme"}
     </ButtonLink>
+  ) : event.registration === "eventbrite" ? (
+    <p className="text-[15px] leading-relaxed text-zinc-300">Las inscripciones abren en Eventbrite en unos minutos.</p>
   ) : (
     <p className="text-[15px] leading-relaxed text-zinc-300">Entrada libre: no hace falta anotarse.</p>
   );

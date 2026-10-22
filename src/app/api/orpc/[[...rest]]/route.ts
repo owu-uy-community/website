@@ -1,5 +1,6 @@
 import { drainSoon } from "lib/email/outbox";
 import { later } from "lib/later";
+import { pushSoon } from "lib/orpc/integrations/service";
 import { requestContext, rpcHandler } from "lib/orpc/handlers";
 
 /**
@@ -15,8 +16,10 @@ async function handle(request: Request) {
     context: () => requestContext(request.headers),
   });
 
-  // Email a procedure queued goes out right after the response, not at the next tick
+  // Email a procedure queued goes out right after the response, not at the next tick; so does an
+  // event published to Eventbrite
   later(drainSoon);
+  later(pushSoon);
 
   return matched ? response : new Response("Not found", { status: 404 });
 }

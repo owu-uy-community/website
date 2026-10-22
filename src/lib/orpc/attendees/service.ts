@@ -7,6 +7,7 @@ import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
 import type { Attendee as EventbriteAttendee } from "../eventbrite/schemas";
 import * as Eventbrite from "../eventbrite/service";
+import { tokenForEvent } from "../integrations/service";
 import { opsPing, recordActivity } from "../ops";
 import { CurrentUser } from "../services";
 import type {
@@ -157,7 +158,9 @@ export const sync = (eventId: string, force: boolean) =>
   Effect.gen(function* () {
     const event = yield* findEvent(eventId);
     const eventbriteEventId = Eventbrite.eventbriteIdOf(event);
-    const missing = !eventbriteEventId ? "event_id" : !Eventbrite.hasApiKey() ? "api_key" : null;
+    // Published through a community's own account: its token; otherwise OWU's key
+    const token = eventbriteEventId ? yield* tokenForEvent(eventId) : null;
+    const missing = !eventbriteEventId ? "event_id" : !token && !Eventbrite.hasApiKey() ? "api_key" : null;
     const state = (outcome: { ran: boolean; changed: number }) =>
       readSync(eventId).pipe(
         Effect.map((row): SyncState => ({
@@ -180,7 +183,9 @@ export const sync = (eventId: string, force: boolean) =>
         const wait = force ? FORCED_MS : THROTTLE_MS;
         if (!row || (row.syncedAt && Date.now() - row.syncedAt.getTime() < wait)) return { ran: false, changed: 0 };
 
-        const read = yield* Effect.result(Eventbrite.attendeesChangedSince(eventbriteEventId, row.cursor));
+        const read = yield* Effect.result(
+          Eventbrite.attendeesChangedSince(eventbriteEventId, row.cursor, token ?? undefined)
+        );
         if (Result.isFailure(read)) {
           yield* query((db) =>
             db.update(attendeeSync).set({ error: read.failure.message }).where(eq(attendeeSync.eventId, eventId))
@@ -210,11 +215,12 @@ export const sync = (eventId: string, force: boolean) =>
 
 /**
  * A webhook from Eventbrite: read what its `api_url` points at and mirror it into every event
- * that mirrors that Eventbrite event. Null when the URL isn't one to follow.
+ * that mirrors that Eventbrite event. Null when the URL isn't one to follow. A community's own
+ * account (`connection`) reads with its token and only reaches that community's events.
  */
-export const applyWebhook = (apiUrl: string) =>
+export const applyWebhook = (apiUrl: string, connection?: { token: string; communityId: string }) =>
   Effect.gen(function* () {
-    const people = yield* Eventbrite.attendeesAt(apiUrl);
+    const people = yield* Eventbrite.attendeesAt(apiUrl, connection?.token);
     if (!people) return null;
 
     const fromUrl = /\/events\/([^/]+)\//.exec(new URL(apiUrl).pathname)?.[1] ?? null;
@@ -223,7 +229,15 @@ export const applyWebhook = (apiUrl: string) =>
     for (const [eventbriteEventId, group] of byEvent) {
       if (!eventbriteEventId) continue;
       const mirrors = yield* query((db) =>
-        db.select({ id: events.id }).from(events).where(eq(events.eventbriteEventId, eventbriteEventId))
+        db
+          .select({ id: events.id })
+          .from(events)
+          .where(
+            and(
+              eq(events.eventbriteEventId, eventbriteEventId),
+              connection ? eq(events.communityId, connection.communityId) : undefined
+            )
+          )
       );
       for (const mirror of mirrors) {
         const written = yield* upsertMirror(mirror.id, group);

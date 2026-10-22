@@ -13,6 +13,7 @@ import { doorRouter } from "./door/router";
 import { eventbriteRouter } from "./eventbrite/router";
 import { eventsRouter } from "./events/router";
 import { incidentsRouter } from "./incidents/router";
+import { integrationsRouter } from "./integrations/router";
 import { obsControlRouter, obsCueRouter } from "./obs-control/router";
 import { obsQueueRouter } from "./obs-queue/router";
 import { ocrRouter } from "./ocr/router";
@@ -54,6 +55,7 @@ export const router = {
   venues: venuesRouter,
   rsvps: rsvpsRouter,
   door: doorRouter,
+  integrations: integrationsRouter,
   staffTasks: staffTasksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall

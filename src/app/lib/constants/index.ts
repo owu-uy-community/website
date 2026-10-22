@@ -9,7 +9,8 @@ export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const USE_SECURE_COOKIES = IS_PRODUCTION;
 
 // Eventbrite Constants
-export const EVENTBRITE_API_URL = "https://www.eventbriteapi.com/v3";
+/** Overridable for the e2e's fake Eventbrite (scripts/mock-eventbrite.mjs); server-side only. */
+export const EVENTBRITE_API_URL = process.env.EVENTBRITE_API_URL ?? "https://www.eventbriteapi.com/v3";
 export const EVENTBRITE_API_KEY = process.env.EVENTBRITE_API_KEY!;
 export const EVENTBRITE_EVENT_ID = process.env.NEXT_PUBLIC_EVENTBRITE_EVENT_ID ?? "";
 

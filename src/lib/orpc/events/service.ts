@@ -22,6 +22,7 @@ import { eventPagePath, refreshPage } from "../../revalidate";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
+import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { notifyCancelled } from "../rsvps/service";
@@ -448,6 +449,21 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
         });
       }
 
+      // One sign-up system per event: a published one doesn't move its people to or from Eventbrite
+      const { registration } = input.patch;
+      if (
+        row.status === "published" &&
+        registration !== undefined &&
+        registration !== row.registration &&
+        (registration === "eventbrite" || row.registration === "eventbrite")
+      ) {
+        return yield* new Conflict({
+          reason: "eventbrite",
+          message:
+            "Ya publicado, las inscripciones no pasan a Eventbrite ni vuelven: una sola forma de anotarse por evento",
+        });
+      }
+
       const { schedule, rsvpClosesAt, ...fields } = input.patch;
       const moved =
         row.status === "published" && schedule
@@ -484,6 +500,7 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
         });
       }
 
+      yield* queuePush(row);
       const saved = yield* editableOf(row.id);
       if (saved.status !== "draft") refreshPage(eventPagePath(saved.communitySlug, saved.slug));
 
@@ -538,6 +555,7 @@ export const publish = (eventId: string) =>
           .where(eq(events.id, eventId))
           .returning()
       );
+      yield* queuePush(published, { now: true, required: true });
       yield* headsUp(published);
       yield* recordActivity({
         eventId,
@@ -577,6 +595,7 @@ export const cancel = (input: { eventId: string; reason: string }) =>
         summary: input.reason ? `canceló el evento: ${input.reason}` : "canceló el evento",
       });
       yield* notifyCancelled(row.id);
+      yield* queuePush(row, { now: true });
       const cancelled = yield* editableOf(row.id);
       refreshPage(eventPagePath(cancelled.communitySlug, cancelled.slug));
 
