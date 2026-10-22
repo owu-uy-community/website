@@ -5,13 +5,13 @@
  *
  *   pnpm db:seed-venues
  */
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "./index";
 import { venues } from "./schema";
 
 const HOSTS = [
-  { name: "CIE · Universidad ORT", notes: "Plan B de siempre: dispuesto y gratis" },
+  { name: "CIE · Universidad ORT", notes: "Plan B de siempre: dispuesto y gratis", fallback: true },
   { name: "Ingenious", notes: "" },
   { name: "Mimiquate", notes: "" },
   { name: "WyeWorks", notes: "" },
@@ -26,6 +26,10 @@ const existing = new Set((await db.select({ name: venues.name }).from(venues)).m
 const missing = HOSTS.filter((host) => !existing.has(host.name.toLowerCase()));
 if (missing.length > 0) {
   await db.insert(venues).values(missing.map((host) => ({ ...host, status: "active" as const, requestable: false })));
+}
+// The Plan B space is offered last in every list, whatever the event
+for (const host of HOSTS.filter((item) => item.fallback)) {
+  await db.update(venues).set({ fallback: true }).where(eq(venues.name, host.name));
 }
 const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(venues);
 console.log(`Added ${missing.length} spaces (${total} in total).`);

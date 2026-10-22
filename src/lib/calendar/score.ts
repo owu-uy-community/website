@@ -33,6 +33,10 @@ export type ScoreInput = {
   venueBusy?: string[];
   /** The venue's allowed weekdays (0 = Sunday … 6 = Saturday); empty means any */
   hostDays?: number[];
+  /** The notice the venue asks for, in days */
+  leadDays?: number;
+  /** Months ("YYYY-MM") the venue already hosts all it can */
+  fullMonths?: string[];
   /** The community's own past event days, for its weekday preference */
   history?: string[];
   /** ISO, injected for tests */
@@ -159,7 +163,16 @@ function weekdayCounts(history: string[]) {
 
 /** Scores every day from `from` to `to` for a meetup at `startTime`, with the reasons behind each score. */
 export function scoreDays(input: ScoreInput): DayScore[] {
-  const { communitySlug, topics, items, venueBusy = [], hostDays = [], history = [] } = input;
+  const {
+    communitySlug,
+    topics,
+    items,
+    venueBusy = [],
+    hostDays = [],
+    history = [],
+    leadDays = 0,
+    fullMonths = [],
+  } = input;
   const now = Date.parse(input.now);
   const today = dayKey(input.now);
   const holidays = holidaysByDay(input.from, input.to);
@@ -193,6 +206,10 @@ export function scoreDays(input: ScoreInput): DayScore[] {
     };
     if (start < now) block("Ya pasó");
     if (venueBusy.includes(day)) block("El espacio está ocupado ese día");
+    if (leadDays > 0 && start >= now && start < now + leadDays * 86_400_000) {
+      block(`El espacio pide ${leadDays} días de anticipación`);
+    }
+    if (fullMonths.includes(day.slice(0, 7))) block("El espacio ya recibe todo lo que puede ese mes");
     if (hostDays.length > 0 && !hostDays.includes(weekday)) {
       block(
         `El espacio solo recibe los ${list.format(hostDays.toSorted((a, b) => a - b).map((index) => WEEKDAYS_PLURAL[index]))}`

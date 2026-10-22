@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Archive, Check, Pause, Play, Warehouse } from "lucide-react";
+import { Archive, Check, LifeBuoy, Pause, Play, Warehouse } from "lucide-react";
 
 import { PageContainer, PageHeader, Panel, PanelHead } from "components/Admin/ui/page";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
@@ -32,7 +32,7 @@ export function VenuesAdminClient() {
   );
   const change = (
     venue: ManagedVenue,
-    data: { status?: ManagedVenue["status"]; requestable?: boolean },
+    data: { status?: ManagedVenue["status"]; requestable?: boolean; fallback?: boolean },
     done: string
   ) => update.mutate({ venueId: venue.id, data }, { onSuccess: () => toast.success(done, venue.name) });
 
@@ -75,6 +75,7 @@ export function VenuesAdminClient() {
                         {venue.requestable ? "Recibe pedidos" : "Lo coordina OWU"}
                       </Badge>
                     ) : null}
+                    {venue.fallback ? <Badge variant="warning">Plan B</Badge> : null}
                   </div>
                   <p className="text-meta text-muted-foreground">
                     {[venue.neighbourhood, venue.city].filter(Boolean).join(", ")}
@@ -123,6 +124,24 @@ export function VenuesAdminClient() {
                     >
                       {venue.requestable ? <Pause /> : <Play />}
                       {venue.requestable ? "Pausar pedidos" : "Recibir pedidos"}
+                    </Button>
+                  ) : null}
+                  {venue.status === "active" ? (
+                    <Button
+                      disabled={update.isPending}
+                      size="sm"
+                      title="El Plan B se ofrece siempre, al final de la lista"
+                      variant="ghost"
+                      onClick={() =>
+                        change(
+                          venue,
+                          { fallback: !venue.fallback },
+                          venue.fallback ? "Ya no es el Plan B" : "Ahora es el Plan B"
+                        )
+                      }
+                    >
+                      <LifeBuoy />
+                      {venue.fallback ? "Quitar Plan B" : "Plan B"}
                     </Button>
                   ) : null}
                   {venue.status !== "archived" ? (

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, lt } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
@@ -20,13 +20,24 @@ import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { recordActivity } from "../ops";
 import { CommunityScope, CurrentUser } from "../services";
-import type { ManagedVenue, RequestVenueInput, RespondInput, SubmitVenueInput, Venue, VenueRequest } from "./schemas";
+import { fullMonths, rankVenues, venueFit } from "../../organizar/venue-fit";
+import type {
+  ManagedVenue,
+  RankedVenue,
+  RequestVenueInput,
+  RespondInput,
+  SubmitVenueInput,
+  Venue,
+  VenueListInput,
+  VenueRequest,
+} from "./schemas";
 
 /** A host has three days to answer. */
 const ANSWER_HOURS = 72;
 /** The link keeps opening (to show what happened) a while after the request closes. */
 const LINK_DAYS = 30;
 const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
 const WEEKDAYS = ["domingos", "lunes", "martes", "miércoles", "jueves", "viernes", "sábados"];
 
 const toVenue = (row: VenueRow, hostedUs = 0): Venue => ({
@@ -42,28 +53,75 @@ const toVenue = (row: VenueRow, hostedUs = 0): Venue => ({
   monthlyCap: row.monthlyCap,
   logoUrl: row.logoUrl,
   requestable: row.requestable,
+  fallback: row.fallback,
   hostedUs,
 });
 
 const notFound = new NotFound({ entity: "venue", message: "Ese espacio no existe" });
 const requestNotFound = new NotFound({ entity: "venue_request", message: "Ese pedido no existe" });
 
-/** The active spaces, the ones taking requests first, with how often each hosted this community. */
-export const list = (communityId: string) =>
+/**
+ * The active spaces for an event, best first (see venue-fit): what doesn't work for its size, needs
+ * or day goes last with the reason, and among the rest the best fit and who hosted least recently.
+ */
+export const list = (input: VenueListInput) =>
   Effect.gen(function* () {
     const rows = yield* query((db) =>
-      db.select().from(venues).where(eq(venues.status, "active")).orderBy(desc(venues.requestable), asc(venues.name))
+      db.select().from(venues).where(eq(venues.status, "active")).orderBy(asc(venues.name))
     );
-    const hosted = yield* query((db) =>
-      db
-        .select({ venueId: venueRequests.venueId, times: count() })
-        .from(venueRequests)
-        .where(and(eq(venueRequests.communityId, communityId), eq(venueRequests.status, "accepted")))
-        .groupBy(venueRequests.venueId)
-    );
-    const times = new Map(hosted.map((row) => [row.venueId, row.times]));
+    const yearAgo = new Date(Date.now() - 365 * DAY_MS);
+    const [requests, hosted] = yield* Effect.all([
+      query((db) =>
+        db
+          .select({
+            venueId: venueRequests.venueId,
+            communityId: venueRequests.communityId,
+            status: venueRequests.status,
+            createdAt: venueRequests.createdAt,
+          })
+          .from(venueRequests)
+      ),
+      query((db) =>
+        db
+          .select({ venueId: events.venueId, startDate: events.startDate })
+          .from(events)
+          .where(and(isNotNull(events.venueId), eq(events.status, "published")))
+      ),
+    ]);
+    const busy = yield* Effect.forEach(rows, (row) => busyDays(row.id));
+    const now = Date.now();
 
-    return rows.map((row) => toVenue(row, times.get(row.id) ?? 0));
+    const ranked = rankVenues(
+      rows.map((row, at) => {
+        const theirs = requests.filter((request) => request.venueId === row.id);
+        const asked = theirs.filter((request) => request.createdAt > yearAgo && request.status !== "cancelled");
+        const answered = asked.filter((request) => request.status === "accepted" || request.status === "declined");
+        const lastHosted = hosted
+          .filter((event) => event.venueId === row.id && event.startDate.getTime() <= now)
+          .reduce<Date | null>((last, event) => (!last || event.startDate > last ? event.startDate : last), null);
+        const ours = theirs.filter(
+          (request) => request.communityId === input.communityId && request.status === "accepted"
+        ).length;
+        const venue = toVenue(row, ours);
+        const fit = venueFit(
+          {
+            ...venue,
+            lastHostedAt: lastHosted?.toISOString() ?? null,
+            responseRate: asked.length > 0 ? answered.length / asked.length : null,
+          },
+          { size: input.size ?? null, needs: input.needs ?? [], day: input.day ?? null },
+          { busy: busy[at] ?? [] },
+          now
+        );
+
+        return { ...venue, fit };
+      })
+    );
+
+    return ranked.map(({ fit, ...venue }): RankedVenue => ({
+      ...venue,
+      fit: { blockers: fit.blockers, missing: fit.missing as RankedVenue["fit"]["missing"] },
+    }));
   });
 
 /** Days a space is taken: accepted requests and published events there. */
@@ -146,6 +204,18 @@ export const request = (input: RequestVenueInput) =>
       });
       if (options.some((option) => Date.parse(option.start) < Date.now())) {
         return yield* new Invalid({ message: "Una de las fechas ya pasó" });
+      }
+      const notice = Date.now() + venue.leadDays * DAY_MS;
+      const rushed = input.options.find((option) => Date.parse(montevideoIso(`${option.day}T23:59`)) < notice);
+      if (rushed) {
+        return yield* new Invalid({ message: `${venue.name} pide al menos ${venue.leadDays} días de anticipación` });
+      }
+      const full = fullMonths(yield* busyDays(venue.id), venue.monthlyCap);
+      const crowded = input.options.find((option) => full.includes(option.day.slice(0, 7)));
+      if (crowded) {
+        return yield* new Invalid({
+          message: `${venue.name} ya recibe ${venue.monthlyCap} ${venue.monthlyCap === 1 ? "meetup" : "meetups"} ese mes: probá otro mes`,
+        });
       }
       if (venue.hostDays.length > 0) {
         const off = input.options.find(
@@ -581,7 +651,9 @@ export const manageList = Effect.gen(function* () {
 
 export const manageUpdate = (
   venueId: string,
-  data: Partial<Pick<VenueRow, "status" | "requestable" | "name" | "neighbourhood" | "address" | "capacity" | "notes">>
+  data: Partial<
+    Pick<VenueRow, "status" | "requestable" | "fallback" | "name" | "neighbourhood" | "address" | "capacity" | "notes">
+  >
 ) =>
   Effect.gen(function* () {
     if (data.requestable) {

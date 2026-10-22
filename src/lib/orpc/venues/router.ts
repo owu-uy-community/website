@@ -7,6 +7,7 @@ import { limiter } from "../ratelimit";
 import {
   HostViewSchema,
   ManagedVenueSchema,
+  RankedVenueSchema,
   RequestRefSchema,
   RequestVenueSchema,
   RespondSchema,
@@ -35,12 +36,12 @@ const submitLimit = ratelimit({
 
 export const venuesRouter = {
   list: authed
-    .meta(docs("The active spaces (never their contacts), with how often each hosted this community"))
+    .meta(docs("The active spaces (never their contacts), best first for the event's size, needs and day"))
     .input(VenueListSchema)
     .use(inCommunity("editor"))
-    .output(z.array(VenueSchema))
+    .output(z.array(RankedVenueSchema))
     .effect(function* ({ input }) {
-      return yield* Venues.list(input.communityId);
+      return yield* Venues.list(input);
     }),
 
   request: authed

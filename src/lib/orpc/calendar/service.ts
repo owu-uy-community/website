@@ -10,6 +10,7 @@ import { communities, events, venues } from "../../db/schema";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query } from "../db";
 import { NotFound } from "../errors";
+import { fullMonths } from "../../organizar/venue-fit";
 import { busyDays } from "../venues/service";
 import type { PlanInput, PlanItem, PlanResult } from "./schemas";
 
@@ -104,12 +105,18 @@ export const plan = (input: PlanInput) =>
     const [venue] = input.venueId
       ? yield* query((db) =>
           db
-            .select({ id: venues.id, hostDays: venues.hostDays })
+            .select({
+              id: venues.id,
+              hostDays: venues.hostDays,
+              leadDays: venues.leadDays,
+              monthlyCap: venues.monthlyCap,
+            })
             .from(venues)
             .where(eq(venues.id, input.venueId ?? ""))
         )
       : [];
 
+    const busy = venue ? yield* busyDays(venue.id) : [];
     const days = scoreDays({
       communitySlug: ours.slug,
       topics: ours.topics,
@@ -119,8 +126,10 @@ export const plan = (input: PlanInput) =>
       durationMin: input.durationMin,
       items,
       history: past.map((row) => dayKey(row.startDate)),
-      venueBusy: venue ? yield* busyDays(venue.id) : [],
+      venueBusy: busy,
       hostDays: venue?.hostDays ?? [],
+      leadDays: venue?.leadDays ?? 0,
+      fullMonths: venue ? fullMonths(busy, venue.monthlyCap) : [],
       now: now.toISOString(),
     });
 

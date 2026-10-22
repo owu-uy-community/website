@@ -104,6 +104,20 @@ describe(scoreDays, () => {
     expect(JSON.stringify(scoreDays({ ...base, items: [hold] }))).not.toContain("Lambda");
   });
 
+  test("a venue's notice and its full months block days too", () => {
+    const soon = { ...base, now: "2026-08-10T12:00:00-03:00" };
+    const days = scoreDays({ ...soon, leadDays: 14, fullMonths: ["2026-08"] });
+    const early = days.find((score) => score.day === "2026-08-20")?.reasons.map((reason) => reason.text);
+
+    expect(early).toStrictEqual(
+      expect.arrayContaining([
+        "El espacio pide 14 días de anticipación",
+        "El espacio ya recibe todo lo que puede ese mes",
+      ])
+    );
+    expect(days.every((score) => score.blocked)).toBe(true);
+  });
+
   test("venue-busy days and days the venue doesn't host are blocked and never suggested", () => {
     const days = scoreDays({ ...base, venueBusy: ["2026-08-18"], hostDays: [4, 2] });
     expect(days.find((score) => score.day === "2026-08-18")).toMatchObject({
