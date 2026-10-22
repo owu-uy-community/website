@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import Script from "next/script";
 import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
 import { QueryProvider } from "components/providers/QueryProvider";
 import { Toaster } from "components/shared/ui/sonner";
-import { EXTERNAL_SERVICES } from "./lib/constants";
+import { fontVariables } from "./fonts";
+import { SiteAnalytics } from "./SiteAnalytics";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.owu.uy"),
@@ -29,18 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <Analytics />
-      <SpeedInsights />
-      <Script async src={EXTERNAL_SERVICES.googleTagManager} />
-      <Script id="google-analytics">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-RVTWHW4J21');
-        `}
-      </Script>
+    // Smooth in-page scrolling (anchors, the settings index), but a new page starts at the top
+    // instead of gliding there from wherever the last one was scrolled.
+    <html className={fontVariables} data-scroll-behavior="smooth" lang="es">
+      <SiteAnalytics />
       <body>
         <QueryProvider>
           <TicketReleaseProvider>{children}</TicketReleaseProvider>
