@@ -1253,6 +1253,8 @@ export const emailDeliveries = pgTable(
     html: text("html").notNull(),
     text: text("text").notNull(),
     headers: jsonb("headers").$type<Record<string, string>>().notNull().default({}),
+    /** Base64 files, like the calendar invite */
+    attachments: jsonb("attachments").$type<EmailAttachment[]>().notNull().default([]),
     dedupeKey: text("dedupeKey").notNull(),
     /** Lower goes first: 1 for codes and seat offers, 5 for the rest. */
     priority: integer("priority").notNull().default(5),
@@ -1272,6 +1274,7 @@ export const emailDeliveries = pgTable(
 );
 
 export type EmailDeliveryRow = typeof emailDeliveries.$inferSelect;
+export type EmailAttachment = { filename: string; content: string; contentType: string };
 
 // ---------------------------------------------------------------------------
 // Espacios: companies that host meetups, their (private) contacts and the requests

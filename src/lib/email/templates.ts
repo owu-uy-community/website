@@ -224,3 +224,95 @@ export function venueAnsweredHostEmail(input: {
     text: `${line}\n\n${contact}`,
   };
 }
+
+export type RsvpEmailKind =
+  | "confirmed"
+  | "waitlisted"
+  | "offered"
+  | "pending"
+  | "promoted"
+  | "declined"
+  | "offer_expired"
+  | "left";
+
+/** One RSVP email: what happened, what the event is, and the link that does the next thing. */
+export function rsvpEmail(input: {
+  kind: RsvpEmailKind;
+  name: string;
+  event: string;
+  community: string;
+  when: string;
+  place: string;
+  /** Only for people with a seat */
+  onlineUrl: string | null;
+  ticketUrl: string;
+  qrUrl: string | null;
+  pageUrl: string;
+  position?: number | null;
+  offerUntil?: string | null;
+}): Omit<Email, "to"> {
+  const hi = input.name ? `Hola ${input.name.split(" ")[0]},` : "Hola,";
+  const facts = `${input.when} · ${input.place}`;
+  const copy: Record<RsvpEmailKind, { subject: string; lead: string; action?: [string, string] }> = {
+    confirmed: {
+      subject: `Estás anotado: ${input.event}`,
+      lead: `Tenés lugar en ${input.event}, de ${input.community}. Te esperamos.`,
+      action: ["Ver mi entrada", input.ticketUrl],
+    },
+    promoted: {
+      subject: `Se liberó un lugar: ya estás en ${input.event}`,
+      lead: `Alguien liberó su lugar y ahora es tuyo. Si al final no podés ir, liberalo desde tu entrada así lo aprovecha otra persona.`,
+      action: ["Ver mi entrada", input.ticketUrl],
+    },
+    waitlisted: {
+      subject: `Estás en la lista de espera: ${input.event}`,
+      lead: `El cupo está lleno, así que quedaste en la lista de espera${input.position ? ` (puesto ${input.position})` : ""}. Si se libera un lugar te escribimos.`,
+      action: ["Ver mi lugar en la lista", input.ticketUrl],
+    },
+    offered: {
+      subject: `Se liberó un lugar en ${input.event}: confirmá antes del ${input.offerUntil}`,
+      lead: `Se liberó un lugar y es para vos. Confirmalo antes del ${input.offerUntil}; si no, pasa a la siguiente persona.`,
+      action: ["Confirmar mi lugar", input.ticketUrl],
+    },
+    pending: {
+      subject: `Recibimos tu inscripción: ${input.event}`,
+      lead: `${input.community} revisa las inscripciones a mano. Te avisamos cuando te confirmen.`,
+    },
+    declined: {
+      subject: `Tu inscripción a ${input.event}`,
+      lead: `Esta vez ${input.community} no pudo confirmarte un lugar. Gracias por el interés.`,
+    },
+    offer_expired: {
+      subject: `Se venció el lugar que te ofrecimos: ${input.event}`,
+      lead: `No confirmaste a tiempo y el lugar pasó a la siguiente persona. Si querés, podés volver a anotarte.`,
+      action: ["Ver el evento", input.pageUrl],
+    },
+    left: {
+      subject: `Liberaste tu lugar: ${input.event}`,
+      lead: `Listo, liberaste tu lugar. ¡Gracias por avisar! Si cambiás de idea, podés volver a anotarte.`,
+      action: ["Ver el evento", input.pageUrl],
+    },
+  };
+  const { subject, lead, action } = copy[input.kind];
+  const seat = input.kind === "confirmed" || input.kind === "promoted";
+  const extra = [
+    seat && input.onlineUrl ? `Link para conectarte: ${input.onlineUrl}` : "",
+    seat ? "Si no podés ir, liberá tu lugar desde la entrada: alguien de la lista de espera lo aprovecha." : "",
+  ].filter(Boolean);
+
+  return {
+    subject,
+    html: layout({
+      preheader: lead,
+      body: `<p style="margin:0 0 16px">${esc(hi)}</p>
+<p style="margin:0 0 16px">${esc(lead)}</p>
+<p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px"><strong>${esc(input.event)}</strong><br>${esc(facts)}</p>
+${seat && input.qrUrl ? `<p style="margin:0 0 16px;text-align:center"><img alt="Código QR de tu entrada" height="180" src="${esc(input.qrUrl)}" style="border-radius:8px" width="180"></p>` : ""}
+${extra.map((line) => `<p style="margin:0 0 12px;color:#52525b">${esc(line)}</p>`).join("")}
+${action ? `<p style="margin:8px 0 0">${button(action[1], action[0])}</p>` : ""}`,
+    }),
+    text: [hi, lead, `${input.event}\n${facts}`, ...extra, action ? `${action[0]}: ${action[1]}` : ""]
+      .filter(Boolean)
+      .join("\n\n"),
+  };
+}

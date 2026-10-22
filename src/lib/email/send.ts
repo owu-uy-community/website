@@ -1,3 +1,4 @@
+import type { EmailAttachment } from "../db/schema";
 import { deliverToMailbox, mailboxEnabled } from "./mailbox";
 
 export type Email = {
@@ -6,6 +7,7 @@ export type Email = {
   html: string;
   text: string;
   headers?: Record<string, string>;
+  attachments?: EmailAttachment[];
 };
 
 /** Resend refused the email; `status` tells a bad address (4xx) from a busy service (429, 5xx). */
@@ -54,6 +56,11 @@ export async function sendEmail(email: Email, idempotencyKey?: string): Promise<
       html: email.html,
       text: email.text,
       headers: email.headers,
+      attachments: email.attachments?.map((file) => ({
+        filename: file.filename,
+        content: file.content,
+        content_type: file.contentType,
+      })),
     }),
     signal: AbortSignal.timeout(10_000),
   });

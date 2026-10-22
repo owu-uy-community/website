@@ -85,3 +85,51 @@ export function buildIcs(events: IcsEvent[], options: { name: string; descriptio
 
   return `${lines.map(fold).join("\r\n")}\r\n`;
 }
+
+export type Invite = {
+  /** Stable per event and person, so updates and cancellations replace the same entry */
+  uid: string;
+  /** Goes up with every change; calendars ignore anything older than what they have */
+  sequence: number;
+  method: "REQUEST" | "CANCEL";
+  title: string;
+  start: string;
+  end: string;
+  location: string;
+  url: string;
+  description: string;
+  organizer: { name: string; email: string };
+  attendee: { name: string; email: string };
+};
+
+/**
+ * A personal calendar invite (iTIP): REQUEST adds or updates the entry in the person's calendar,
+ * CANCEL removes it. Sent with the confirmation, updates and cancellations.
+ */
+export function buildInvite(invite: Invite, now = new Date()) {
+  const cn = (name: string) => `"${name.replace(/"/g, "'")}"`;
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//OWU Uruguay//Organizá//ES",
+    "CALSCALE:GREGORIAN",
+    `METHOD:${invite.method}`,
+    "BEGIN:VEVENT",
+    `UID:${invite.uid}`,
+    `SEQUENCE:${invite.sequence}`,
+    `DTSTAMP:${utcStamp(now)}`,
+    `DTSTART:${utcStamp(new Date(invite.start))}`,
+    `DTEND:${utcStamp(new Date(invite.end))}`,
+    `SUMMARY:${escapeText(invite.title)}`,
+    `DESCRIPTION:${escapeText(invite.description)}`,
+    `LOCATION:${escapeText(invite.location)}`,
+    `URL:${invite.url}`,
+    `STATUS:${invite.method === "CANCEL" ? "CANCELLED" : "CONFIRMED"}`,
+    `ORGANIZER;CN=${cn(invite.organizer.name)}:mailto:${invite.organizer.email}`,
+    `ATTENDEE;CN=${cn(invite.attendee.name)};ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:${invite.attendee.email}`,
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ];
+
+  return `${lines.map(fold).join("\r\n")}\r\n`;
+}

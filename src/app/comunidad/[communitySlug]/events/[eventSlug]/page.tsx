@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
 import { EventPage } from "components/community/event/EventPage";
+import { RsvpCard } from "components/community/event/RsvpCard";
 import { SiteChrome } from "components/community/SiteChrome";
 import Footer from "components/shared/Footer";
 import { SITE_URL } from "lib/community/site";
@@ -42,7 +43,11 @@ export default async function EventRootPage({ params }: { params: Params }) {
 
   return (
     <SiteChrome>
-      <EventPage event={event} url={`${SITE_URL}/comunidad/${communitySlug}/events/${eventSlug}`} />
+      <EventPage
+        event={event}
+        rsvp={<RsvpCard event={event} />}
+        url={`${SITE_URL}/comunidad/${communitySlug}/events/${eventSlug}`}
+      />
       <Footer />
     </SiteChrome>
   );
