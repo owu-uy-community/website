@@ -383,3 +383,28 @@ export function eventMessageEmail(input: {
     text: `${paragraphs.join("\n\n")}\n\n${input.community}, por ${input.event}: ${input.pageUrl}`,
   };
 }
+
+/** A community someone follows published an event. Optional: one click turns these off. */
+export function followerNewEventEmail(input: {
+  community: string;
+  event: string;
+  summary: string | null;
+  when: string;
+  place: string;
+  pageUrl: string;
+  profileUrl: string;
+  unsubscribeUrl: string;
+}): Omit<Email, "to"> {
+  return {
+    subject: `${input.community} publicó: ${input.event}`,
+    html: layout({
+      preheader: `${input.when} · ${input.place}`,
+      body: `<p style="margin:0 0 6px;color:#71717a;font-size:13px">${esc(input.community)} publicó un evento</p>
+<p style="margin:0 0 6px;font-size:20px;font-weight:700;line-height:1.3">${esc(input.event)}</p>
+<p style="margin:0 0 16px;color:#52525b">${esc(input.when)} · ${esc(input.place)}</p>
+${input.summary ? `<p style="margin:0 0 20px">${esc(input.summary)}</p>` : ""}<p style="margin:0 0 24px">${button(input.pageUrl, "Ver el evento")}</p>
+<p style="margin:0;color:#71717a;font-size:12px">Te llegó porque seguís a ${esc(input.community)}. <a href="${esc(input.profileUrl)}" style="color:#71717a">Dejar de seguir</a> · <a href="${esc(input.unsubscribeUrl)}" style="color:#71717a">No recibir más avisos</a></p>`,
+    }),
+    text: `${input.community} publicó un evento: ${input.event}\n${input.when} · ${input.place}\n${input.summary ? `\n${input.summary}\n` : ""}\nVer el evento: ${input.pageUrl}\n\nTe llegó porque seguís a ${input.community}. Dejar de seguir: ${input.profileUrl}\nNo recibir más avisos: ${input.unsubscribeUrl}`,
+  };
+}

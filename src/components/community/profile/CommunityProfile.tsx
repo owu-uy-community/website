@@ -13,6 +13,8 @@ import {
   outbound,
 } from "components/community/ui";
 import type { CommunityEvent } from "lib/community/events";
+
+import { FollowButton } from "./FollowButton";
 import { dateParts, shortWhen } from "lib/community/time";
 import { topicLabel } from "lib/community/topics";
 import type { CommunityRow, EventRow } from "lib/db/schema";
@@ -57,6 +59,7 @@ export function CommunityProfile({
   past,
   hosts,
   claimHref,
+  canFollow = false,
 }: {
   community: CommunityRow;
   upcoming: CommunityEvent[];
@@ -64,6 +67,8 @@ export function CommunityProfile({
   hosts: string[];
   /** "¿Organizás esta comunidad?", once Organizá is open */
   claimHref: string | null;
+  /** "Seguir", once Organizá is open (its emails come with it) */
+  canFollow?: boolean;
 }) {
   const [next, ...later] = upcoming;
   const status = STATUS[community.status];
@@ -100,7 +105,8 @@ export function CommunityProfile({
               <p className="mt-4 max-w-2xl text-lg leading-relaxed text-zinc-300">{community.description}</p>
             ) : null}
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <ButtonLink href={calendar} size="md">
+              {canFollow ? <FollowButton communityId={community.id} /> : null}
+              <ButtonLink href={calendar} size="md" variant={canFollow ? "secondary" : "primary"}>
                 <CalendarPlus aria-hidden className="mr-2 size-4" />
                 Suscribirme al calendario
               </ButtonLink>
