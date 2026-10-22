@@ -66,18 +66,23 @@ export function Stagger({
   itemClassName?: string;
   interval?: number;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  // State, not whileInView: items that mount later (a filter changed the list) inherit "show" and fade in
+  const inView = useInView(ref, VIEWPORT);
+
   return (
     <motion.div
+      ref={ref}
+      animate={inView ? "show" : "hidden"}
       className={className}
       initial="hidden"
       variants={{ hidden: {}, show: { transition: { staggerChildren: interval, staggerDirection: 1 } } }}
-      viewport={VIEWPORT}
-      whileInView="show"
     >
-      {Children.map(children, (child, index) =>
+      {Children.map(children, (child) =>
         child == null || child === false ? null : (
+          // Keyed by the child's own key (Children.map carries it), so filtering keeps the cards that stay.
           // Each item fills its grid cell so cards in a row keep the same height
-          <motion.div key={index} className={cn("min-w-0 [&>*]:h-full", itemClassName)} variants={staggerItem}>
+          <motion.div className={cn("min-w-0 [&>*]:h-full", itemClassName)} variants={staggerItem}>
             {child}
           </motion.div>
         )
