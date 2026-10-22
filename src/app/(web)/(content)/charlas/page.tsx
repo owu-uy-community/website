@@ -41,7 +41,11 @@ const OUTSIDE = [
     label: "rubyevents.org",
     body: "Charlas de Ruby de conferencias de todo el mundo.",
   },
-  { href: SOCIAL_LINKS.youtube, label: "YouTube @owuuy", body: "Las grabaciones de OWU, a medida que las subimos." },
+  {
+    href: SOCIAL_LINKS.youtube,
+    label: "YouTube @owu-uruguay",
+    body: "Las grabaciones de OWU, a medida que las subimos.",
+  },
 ];
 
 const normalize = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
