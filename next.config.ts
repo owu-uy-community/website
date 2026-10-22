@@ -14,6 +14,13 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
+  // The English paths people and agents guess, to the Spanish pages that answer them
+  async redirects() {
+    return [
+      { source: "/contact", destination: "/contacto", permanent: true },
+      { source: "/privacy", destination: "/privacidad", permanent: true },
+    ];
+  },
   outputFileTracingIncludes: {
     // Every community page reads Keystatic content when it revalidates (the navbar's
     // ⌘K index too), so all routes carry the content folder (~400 KB of YAML/Markdown)

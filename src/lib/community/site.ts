@@ -54,6 +54,7 @@ export const PAGES = {
     description: "Cómo nos tratamos y cómo reportar",
   },
   privacidad: { href: "/privacidad", label: "Privacidad", description: "Qué datos guardamos y cómo borrarlos" },
+  contacto: { href: "/contacto", label: "Contacto", description: "Dónde escribirnos según lo que necesites" },
   darCharla: { href: "/dar-una-charla", label: "Dá una charla", description: "Dónde proponerla y cómo prepararla" },
   organizar: { href: "/organizar", label: "Organizá con OWU", description: "Qué te da OWU si organizás una comunidad" },
   empresas: {
@@ -69,6 +70,34 @@ export const PAGES = {
   conf: { href: CONF_URL, label: "OWU CONF", description: "La conferencia anual de la comunidad", external: true },
 } satisfies Record<string, SiteLink>;
 
+/** "De la primera meetup a organizar la próxima" on the home page (and in its Markdown twin) */
+export const HOME_STEPS = [
+  {
+    title: "Sumate al Slack",
+    body: "Más de 5.000 personas. Presentate, elegí los canales de tus temas y preguntá sin miedo.",
+    href: SOCIAL_LINKS.slack,
+    cta: "Entrar al Slack",
+  },
+  {
+    title: "Vení a una meetup",
+    body: "Son gratis y abiertas. Si es tu primera vez, te contamos qué esperar.",
+    href: PAGES.primeraVez.href,
+    cta: "Primera vez",
+  },
+  {
+    title: "Dá una charla",
+    body: "No hace falta ser experto: si resolviste un problema, ya tenés una charla.",
+    href: PAGES.darCharla.href,
+    cta: "Cómo empezar",
+  },
+  {
+    title: "Organizá o dá una mano",
+    body: "Sumá tu comunidad, armá una nueva o ayudá en OWU CONF.",
+    href: PAGES.organizar.href,
+    cta: "Organizar",
+  },
+];
+
 export const NAV_LINKS: SiteLink[] = [PAGES.comunidades, PAGES.eventos, PAGES.charlas, PAGES.blog, PAGES.conf];
 
 export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
@@ -80,6 +109,7 @@ export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
       PAGES.codigo,
       PAGES.privacidad,
       { href: "/primera-vez#preguntas", label: "Preguntas frecuentes" },
+      PAGES.contacto,
     ],
   },
   {
