@@ -26,7 +26,7 @@ export const retention = (now = new Date()) =>
     const anonymized = yield* query((db) =>
       db
         .update(attendees)
-        .set({ name: "Anónimo", email: "", userId: null, answers: {}, barcode: null })
+        .set({ name: "Anónimo", email: "", userId: null, answers: {}, barcode: null, showName: false })
         .where(
           and(
             eq(attendees.source, "owu"),

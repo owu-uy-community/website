@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { similarity } from "../../calendar/score";
@@ -53,6 +53,13 @@ export const toOrganizerEvent = (row: EventRow): OrganizerEvent => ({
 });
 
 const notFound = new NotFound({ entity: "event", message: "Ese evento no existe" });
+
+/** "Ana González Pérez" → "Ana G.": enough to recognize someone, not to look them up. */
+export const shortName = (name: string) => {
+  const [first = "", second] = name.trim().split(/\s+/);
+
+  return second ? `${first} ${second[0].toUpperCase()}.` : first;
+};
 
 /** Who organizes a community (editor and up): who hears about holds and clashes. */
 export const organizerEmails = (communityId: string) =>
@@ -685,6 +692,21 @@ const toPublic = (eventId: string) =>
       community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
       cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
+      going: (yield* query((db) =>
+        db
+          .select({ name: attendees.name })
+          .from(attendees)
+          .where(
+            and(
+              eq(attendees.eventId, eventId),
+              eq(attendees.source, "owu"),
+              eq(attendees.status, "attending"),
+              eq(attendees.showName, true)
+            )
+          )
+          .orderBy(asc(attendees.registeredAt))
+          .limit(12)
+      )).map((row) => shortName(row.name)),
     } satisfies PublicEvent;
   });
 

@@ -330,6 +330,7 @@ export const join = (input: JoinInput) =>
         status,
         guests: input.guests,
         answers,
+        showName: input.showName,
         registeredAt: new Date(),
         offerExpiresAt: null,
         name: account.name,

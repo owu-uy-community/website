@@ -246,7 +246,17 @@ export function EventPage({
                   </Fact>
                 ) : null}
                 {event.registration === "owu" && event.taken > 0 && !cancelled ? (
-                  <Fact icon={Users}>{event.taken === 1 ? "Va 1 persona" : `Van ${event.taken} personas`}</Fact>
+                  <Fact icon={Users}>
+                    {event.taken === 1 ? "Va 1 persona" : `Van ${event.taken} personas`}
+                    {event.going.length > 0 ? (
+                      <span className="block text-[14px] text-zinc-500">
+                        {new Intl.ListFormat("es").format([
+                          ...event.going,
+                          ...(event.taken > event.going.length ? [`${event.taken - event.going.length} más`] : []),
+                        ])}
+                      </span>
+                    ) : null}
+                  </Fact>
                 ) : null}
               </ul>
 

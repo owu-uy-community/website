@@ -30,6 +30,7 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
   const signedIn = Boolean(session.data);
   const [step, setStep] = useState<"idle" | "auth" | "form">("idle");
   const [guests, setGuests] = useState(0);
+  const [showName, setShowName] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [name, setName] = useState("");
   const input = { eventId: event.id };
@@ -175,7 +176,7 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
       onSubmit={(submitEvent) => {
         submitEvent.preventDefault();
         const save = nameless ? updateUser({ name: name.trim() }).then(() => session.refetch()) : Promise.resolve();
-        void save.then(() => join.mutate({ eventId: event.id, guests, answers }));
+        void save.then(() => join.mutate({ eventId: event.id, guests, answers, showName }));
       }}
     >
       {nameless ? (
@@ -220,12 +221,24 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
           />
         </label>
       ))}
+      <label className="flex items-center gap-3 text-[14px] text-zinc-300">
+        <input
+          checked={showName}
+          className="size-4 accent-yellow-400"
+          type="checkbox"
+          onChange={(change) => setShowName(change.target.checked)}
+        />
+        Mostrarme en «quiénes van» (nombre e inicial)
+      </label>
       <button className={buttonClassName("primary", "lg", "w-full")} disabled={join.isPending} type="submit">
         {join.isPending ? "Anotándote…" : cta}
       </button>
       <p className="text-[13px] leading-relaxed text-zinc-500">
         {event.community.name} y OWU ven tu nombre y tu email para este evento. Te mandamos la confirmación y un par de
-        recordatorios.
+        recordatorios.{" "}
+        <Link className="underline decoration-white/20 underline-offset-4 hover:text-zinc-300" href="/privacidad">
+          Privacidad
+        </Link>
       </p>
       {step === "form" || error ? (
         <p className={cn("text-sm", error ? "text-red-300" : "text-zinc-400")} role={error ? "alert" : undefined}>

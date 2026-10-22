@@ -203,6 +203,8 @@ export const PublicEventSchema = z.object({
   /** Other communities organizing it with this one (those that accepted) */
   cohosts: z.array(z.object({ slug: z.string(), name: z.string() })),
   meetupUrl: z.string().nullable(),
+  /** «Quiénes van»: the first 12 who chose to show it, as "Ana G." */
+  going: z.array(z.string()),
 });
 
 export const CohostInvitationSchema = z.object({

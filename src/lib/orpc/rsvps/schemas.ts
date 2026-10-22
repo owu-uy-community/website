@@ -8,6 +8,8 @@ export const JoinSchema = z.object({
   eventId: z.string().min(1),
   guests: z.number().int().min(0).max(3).default(0),
   answers: z.record(z.string().max(20), z.string().trim().max(500)).default({}),
+  /** Show their first name and initial in the event page's «quiénes van». */
+  showName: z.boolean().default(false),
 });
 
 export const RsvpTokenSchema = z.object({ token: z.string().min(10).max(500) });
