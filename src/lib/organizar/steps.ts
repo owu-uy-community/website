@@ -29,6 +29,8 @@ export type Checkable = {
   registration: "none" | "owu" | "external" | "eventbrite";
   registrationUrl: string | null;
   capacity: number | null;
+  /** Owy's post when it's published (channels chosen need a text) */
+  announcement?: { channels?: string[]; text?: string };
 };
 
 export type Issue = { step: StepKey; text: string; level: "required" | "recommended" };
@@ -63,6 +65,10 @@ export function issues(event: Checkable, now = Date.now()): Issue[] {
   if (event.registration === "owu" && !event.capacity) could("inscripcion", "Sin cupo: se puede anotar cualquiera");
   if (event.registration === "eventbrite" && !event.capacity) {
     need("inscripcion", "Poné el cupo: Eventbrite lo pide para las entradas");
+  }
+
+  if (event.announcement?.channels?.length && !event.announcement.text?.trim()) {
+    need("difusion", "Escribí el anuncio que publica Owy");
   }
 
   return list;

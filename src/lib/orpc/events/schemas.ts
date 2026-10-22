@@ -1,5 +1,7 @@
 import * as z from "zod";
 
+import { MESSAGE_MAX } from "../comms/schemas";
+
 export const DaySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Usá AAAA-MM-DD")
@@ -66,6 +68,24 @@ export const ModeSchema = z.enum(["presencial", "online", "hibrido"]);
 export const RegistrationSchema = z.enum(["none", "owu", "external", "eventbrite"]);
 const HttpsUrl = z.url({ protocol: /^https$/, message: "Usá un link https://" });
 
+/** How many people they expect; venues are matched on it */
+export const SIZE_BUCKETS = ["hasta-30", "30-60", "60-120", "120+"] as const;
+export const SizeBucketSchema = z.enum(SIZE_BUCKETS);
+
+export const TalkSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  speaker: z.string().trim().max(120),
+});
+
+/** Owy's post on OWU's Slack and Telegram when it's published */
+export const AnnouncementSchema = z.object({
+  channels: z
+    .array(z.enum(["slack", "telegram"]))
+    .max(2)
+    .optional(),
+  text: z.string().max(MESSAGE_MAX).optional(),
+});
+
 export const QuestionSchema = z.object({
   id: z.string().min(1).max(20),
   label: z.string().trim().min(1).max(200),
@@ -93,6 +113,14 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   rsvpClosesAt: z.string().nullable(),
   questions: z.array(QuestionSchema),
   externalLinks: z.object({ meetup: z.string().optional() }),
+  sizeBucket: SizeBucketSchema.nullable(),
+  needs: z.array(z.string()),
+  talks: z.array(TalkSchema),
+  announcement: AnnouncementSchema,
+  /** Where Owy can post (each needs its bot credentials on the server) */
+  announceChannels: z.object({ slack: z.boolean(), telegram: z.boolean() }),
+  /** A scheduled publish */
+  publishAt: z.string().nullable(),
   /** Other communities organizing it; an invited one shows on its profile once it accepts */
   cohosts: z.array(
     z.object({
@@ -131,6 +159,11 @@ export const DraftPatchSchema = z
         "Pegá el link del evento en meetup.com"
       ).optional(),
     }),
+    sizeBucket: SizeBucketSchema.nullable(),
+    /** Venue amenities (AMENITIES in venues/schemas, which imports this file) */
+    needs: z.array(z.string().min(1).max(30)).max(5),
+    talks: z.array(TalkSchema).max(12),
+    announcement: AnnouncementSchema,
     /** The other communities organizing it (ids), up to 3 */
     cohosts: z.array(z.string().min(1)).max(3),
     /** Published events move their date here (drafts reserve one instead) */
@@ -154,6 +187,9 @@ export const SaveEventSchema = z.object({
 });
 
 export const PublishResultSchema = z.object({ event: EditableEventSchema, path: z.string() });
+
+/** Publish later by itself (null takes the schedule back) */
+export const SchedulePublishSchema = EventRefSchema.extend({ publishAt: z.iso.datetime().nullable() });
 
 export const CancelEventSchema = EventRefSchema.extend({ reason: z.string().trim().max(500).default("") });
 

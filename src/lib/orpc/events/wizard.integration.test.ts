@@ -1,9 +1,16 @@
 import { call } from "@orpc/server";
+import { and, eq } from "drizzle-orm";
+import { Effect } from "effect";
 import { describe, expect, test } from "vitest";
 
+import { db } from "lib/db";
+import { activity, events, outboundMessages } from "lib/db/schema";
 import { router } from "lib/orpc/router";
+import { liveServices } from "lib/orpc/services";
 import { by } from "test/context";
 import { makeBoard, makeCommunity, makeEvent, makeMember, makeRsvp, makeVenue } from "test/factories";
+
+import { publishDue } from "./service";
 
 async function setup() {
   const community = await makeCommunity({ name: "Comunidad del asistente" });
@@ -144,5 +151,85 @@ describe("the public page", () => {
     await expect(
       call(router.events.public, { communitySlug: community.slug, eventSlug: event.slug }, by(null))
     ).resolves.toMatchObject({ hasBoard: true, registration: "none" });
+  });
+});
+
+/** A draft with everything required, its date reserved `days` ahead */
+async function readyDraft(days = 40) {
+  const { community, editor } = await setup();
+  const event = await draft(community.id, editor);
+  const day = new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+  const held = await call(
+    router.events.hold,
+    { communityId: community.id, eventId: event.id, day, startTime: "19:00", durationMin: 120 },
+    by(editor)
+  );
+  const patch = { name: "Meetup programado", summary: "Charlas cortas" };
+  const ready = await call(
+    router.events.save,
+    { communityId: community.id, eventId: event.id, expectedUpdatedAt: held.updatedAt, patch },
+    by(editor)
+  );
+
+  return { community, editor, event: ready, ref: { communityId: community.id, eventId: event.id } };
+}
+
+describe("publishing later and announcing", () => {
+  test("a scheduled draft publishes itself when its time comes", async () => {
+    const { editor, ref } = await readyDraft();
+    const schedule = (publishAt: string | null) =>
+      call(router.events.schedulePublish, { ...ref, publishAt }, by(editor));
+
+    await expect(schedule(new Date(Date.now() - 60_000).toISOString())).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const scheduled = await schedule(new Date(Date.now() + 3_600_000).toISOString());
+    await db
+      .update(events)
+      .set({ publishAt: new Date(Date.now() - 1000) })
+      .where(eq(events.id, ref.eventId));
+
+    await Effect.runPromiseWith(liveServices)(publishDue);
+
+    expect(scheduled.publishAt).not.toBeNull();
+    await expect(call(router.events.get, ref, by(editor))).resolves.toMatchObject({
+      status: "published",
+      publishAt: null,
+    });
+  });
+
+  test("a schedule that can't publish any more is dropped and says why", async () => {
+    const { editor, ref } = await readyDraft();
+    await call(
+      router.events.schedulePublish,
+      { ...ref, publishAt: new Date(Date.now() + 3_600_000).toISOString() },
+      by(editor)
+    );
+    await db
+      .update(events)
+      .set({ summary: null, publishAt: new Date(Date.now() - 1000) })
+      .where(eq(events.id, ref.eventId));
+
+    await Effect.runPromiseWith(liveServices)(publishDue);
+
+    await expect(call(router.events.get, ref, by(editor))).resolves.toMatchObject({ status: "draft", publishAt: null });
+    await expect(
+      db
+        .select()
+        .from(activity)
+        .where(and(eq(activity.eventId, ref.eventId), eq(activity.verb, "event.schedule_failed")))
+    ).resolves.toHaveLength(1);
+  });
+
+  test("Owy's announcement is queued on the channels asked for, once published", async () => {
+    const { editor, event, ref } = await readyDraft();
+    const announcement = { channels: ["slack" as const, "telegram" as const], text: "📣 Meetup programado" };
+    await call(router.events.save, { ...ref, expectedUpdatedAt: event.updatedAt, patch: { announcement } }, by(editor));
+
+    await call(router.events.publish, ref, by(editor));
+
+    const queued = await db.select().from(outboundMessages).where(eq(outboundMessages.eventId, ref.eventId));
+    expect(queued.map((row) => [row.channel, row.body]).toSorted(([a], [b]) => a.localeCompare(b))).toStrictEqual([
+      ["slack", "📣 Meetup programado"],
+      ["telegram", "📣 Meetup programado"],
+    ]);
   });
 });

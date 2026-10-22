@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
-import { Effect } from "effect";
+import { and, asc, count, desc, eq, gt, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
+import { Effect, Option } from "effect";
 
 import { similarity } from "../../calendar/score";
 import {
@@ -9,6 +9,7 @@ import {
   communities,
   communityMembers,
   events,
+  outboundMessages,
   schedules,
   user,
   venues,
@@ -19,16 +20,18 @@ import { appUrl, conflictHeadsUpEmail, eventMessageEmail, holdExpiringEmail } fr
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { issues, UNTITLED } from "../../organizar/steps";
 import { eventPagePath, refreshEvent } from "../../revalidate";
+import { owyChannels } from "../../owy/messaging";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
+import * as Comms from "../comms/service";
 import { notifyFollowers } from "../communities/follow";
 import { acceptedCohosts, cohostsOf, inviteCohosts, setCohosts } from "./cohosts";
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { notifyCancelled, seatsChanged } from "../rsvps/service";
-import { CommunityScope } from "../services";
+import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
 
 /** How long a date stays reserved; renewing starts the count again. */
@@ -349,6 +352,12 @@ const editableOf = (eventId: string) =>
       rsvpClosesAt: event.rsvpClosesAt?.toISOString() ?? null,
       questions: event.questions,
       externalLinks: event.externalLinks,
+      sizeBucket: event.sizeBucket,
+      needs: event.needs,
+      talks: event.talks,
+      announcement: event.announcement,
+      announceChannels: { slack: owyChannels().slack, telegram: owyChannels().telegram },
+      publishAt: event.publishAt?.toISOString() ?? null,
       cohosts: yield* cohostsOf(event.id),
     } satisfies EditableEvent;
   });
@@ -415,6 +424,8 @@ export const createDraft = (input: { title?: string; copyFrom?: string }) =>
                   waitlist: source.waitlist,
                   guestsAllowed: source.guestsAllowed,
                   questions: source.questions,
+                  sizeBucket: source.sizeBucket,
+                  needs: source.needs,
                 }
               : { registration: "owu" as const }),
           })
@@ -579,7 +590,7 @@ export const publish = (eventId: string) =>
       const [published] = yield* query((db) =>
         db
           .update(events)
-          .set({ status: "published", publishedAt: new Date(), heldUntil: null, slug })
+          .set({ status: "published", publishedAt: new Date(), publishAt: null, heldUntil: null, slug })
           .where(eq(events.id, eventId))
           .returning()
       );
@@ -587,6 +598,7 @@ export const publish = (eventId: string) =>
       yield* headsUp(published);
       yield* notifyFollowers(published);
       yield* inviteCohosts(published);
+      yield* announce(published);
       yield* recordActivity({
         eventId,
         verb: "event.published",
@@ -601,6 +613,126 @@ export const publish = (eventId: string) =>
       return { event, path: `/comunidad/${event.communitySlug}/events/${slug}` };
     })
   );
+
+/** Events whose Owy announcement was queued by this instance, sent right after the response */
+const toAnnounce = new Set<string>();
+
+/** The organizers asked Owy to post it on OWU's Slack and/or Telegram: queued as the event's messages. */
+const announce = (event: EventRow) =>
+  Effect.gen(function* () {
+    const { channels = [], text = "" } = event.announcement;
+    if (channels.length === 0 || !text.trim()) return;
+    const actor = yield* Effect.serviceOption(CurrentUser);
+    yield* query((db) =>
+      db.insert(outboundMessages).values(
+        channels.map((channel) => ({
+          eventId: event.id,
+          channel,
+          body: text.trim(),
+          scheduledAt: new Date(),
+          createdById: Option.isSome(actor) ? actor.value.id : null,
+        }))
+      )
+    );
+    toAnnounce.add(event.id);
+  });
+
+/** Post the announcements queued here now, not at the next tick (which still catches a miss). */
+export async function announceSoon() {
+  const ids = [...toAnnounce];
+  toAnnounce.clear();
+  for (const id of ids) {
+    await Effect.runPromiseWith(liveServices)(Comms.dispatchDue(id)).catch((error: unknown) =>
+      console.error("[events] announcement failed", error)
+    );
+  }
+}
+
+/**
+ * Publish later, by itself: the same checks as publishing now, a time ahead of the event, and the
+ * date stays reserved until then. `null` takes the schedule back.
+ */
+export const schedulePublish = (input: { eventId: string; publishAt: string | null }) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const [row] = yield* query((db) =>
+        db
+          .select()
+          .from(events)
+          .where(and(eq(events.id, input.eventId), eq(events.communityId, communityId)))
+          .for("update")
+      );
+      if (!row) return yield* notFound;
+      if (row.status !== "draft") {
+        return yield* new Conflict({ reason: "not_draft", message: "Ese evento ya está publicado" });
+      }
+      const at = input.publishAt ? new Date(input.publishAt) : null;
+      if (at) {
+        const missing = issues(yield* editableOf(row.id)).filter((issue) => issue.level === "required");
+        if (missing.length > 0) {
+          return yield* new Invalid({
+            message: `Antes de programarlo: ${missing.map((issue) => issue.text.toLowerCase()).join(", ")}`,
+            issues: missing,
+          });
+        }
+        if (at.getTime() < Date.now() + 5 * 60_000 || at.getTime() >= row.startDate.getTime()) {
+          return yield* new Invalid({ message: "Elegí un momento de acá a que empiece el evento" });
+        }
+      }
+
+      yield* query((db) =>
+        db
+          .update(events)
+          .set({
+            publishAt: at,
+            // The hold lasts until it publishes
+            ...(at && row.heldUntil && row.heldUntil < at ? { heldUntil: at } : {}),
+            updatedAt: new Date(),
+          })
+          .where(eq(events.id, row.id))
+      );
+
+      return yield* editableOf(row.id);
+    })
+  );
+
+/**
+ * The tick: publish the drafts whose time came. One that can't be published any more (something
+ * required went missing) loses its schedule, and the reason goes in its activity.
+ */
+export const publishDue = Effect.gen(function* () {
+  const due = yield* query((db) =>
+    db
+      .select({ id: events.id, communityId: events.communityId })
+      .from(events)
+      .where(and(eq(events.status, "draft"), lte(events.publishAt, new Date())))
+  );
+  let published = 0;
+  for (const event of due) {
+    const outcome = yield* publish(event.id).pipe(
+      Effect.provideService(CommunityScope, { communityId: event.communityId }),
+      Effect.as("published" as const),
+      Effect.catch((error) =>
+        query((db) => db.update(events).set({ publishAt: null }).where(eq(events.id, event.id))).pipe(
+          Effect.andThen(
+            recordActivity({
+              eventId: event.id,
+              verb: "event.schedule_failed",
+              entityType: "event",
+              entityId: event.id,
+              summary: `no se pudo publicar solo: ${error instanceof Error ? error.message : String(error)}`,
+            })
+          ),
+          Effect.as("failed" as const)
+        )
+      )
+    );
+    if (outcome === "published") published += 1;
+  }
+
+  return { due: due.length, published };
+});
 
 /** Cancel a published event: it stays listed as cancelled, and its calendar invites are withdrawn. */
 export const cancel = (input: { eventId: string; reason: string }) =>
