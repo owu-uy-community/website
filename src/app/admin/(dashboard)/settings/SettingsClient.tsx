@@ -15,7 +15,7 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { authClient, signOut } from "app/lib/auth-client";
+import { signOut } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
 import { deviceOf } from "components/Admin/access/shared";
 import { useAccessMe } from "components/Admin/shell/use-access-me";
@@ -196,31 +196,19 @@ const SHORTCUTS = [
   { keys: "mod+s", label: "Guardar, en las páginas de ajustes" },
 ];
 
-const SESSIONS_KEY = ["auth", "sessions"];
-
-/** My open sessions (Better Auth), this one first; close one or all the others. */
-function SessionRows({ currentId }: { currentId: string }) {
+function SessionRows() {
   const queryClient = useQueryClient();
-  const sessions = useQuery({
-    queryKey: SESSIONS_KEY,
-    queryFn: async () => {
-      const { data, error } = await authClient.listSessions();
-      if (error) throw new Error(error.message ?? "No se pudieron leer las sesiones");
-      return data;
-    },
-  });
-  const refresh = () => void queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
-  const close = useMutation({
-    mutationFn: async (token: string | null) => {
-      const { error } = token ? await authClient.revokeSession({ token }) : await authClient.revokeOtherSessions();
-      if (error) throw new Error(error.message ?? "Probá de nuevo en un rato.");
-    },
-    onSuccess: (_, token) => {
-      toast.success(token ? "Sesión cerrada" : "Cerraste las demás sesiones");
-      refresh();
-    },
-    onError: (error) => toast.error("No se pudo cerrar", error.message),
-  });
+  const sessions = useQuery(orpc.access.sessions.list.queryOptions());
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: orpc.access.sessions.list.key() });
+  const close = useMutation(
+    orpc.access.sessions.revoke.mutationOptions({
+      onSuccess: (_, input) => {
+        toast.success(input?.sessionId ? "Sesión cerrada" : "Cerraste las demás sesiones");
+        refresh();
+      },
+      onError: (error) => toast.error("No se pudo cerrar", error.message || "Probá de nuevo en un rato."),
+    })
+  );
 
   if (sessions.isError) {
     return (
@@ -232,7 +220,7 @@ function SessionRows({ currentId }: { currentId: string }) {
     );
   }
   if (!sessions.data) return <SettingsRowsSkeleton rows={2} />;
-  const rows = sessions.data.toSorted((a, b) => Number(b.id === currentId) - Number(a.id === currentId));
+  const rows = sessions.data.toSorted((a, b) => Number(b.current) - Number(a.current));
 
   return (
     <SettingsCard>
@@ -242,15 +230,20 @@ function SessionRows({ currentId }: { currentId: string }) {
             <div className="min-w-0 flex-1">
               <p className="truncate text-ui text-foreground">
                 {deviceOf(session.userAgent)}
-                {session.id === currentId ? <span className="text-muted-foreground"> · esta</span> : null}
+                {session.current ? <span className="text-muted-foreground"> · esta</span> : null}
               </p>
               <p className="truncate text-meta text-muted-foreground">
                 {session.ipAddress ?? "IP desconocida"} · desde{" "}
                 <RelativeTime className="text-meta" date={session.createdAt} />
               </p>
             </div>
-            {session.id === currentId ? null : (
-              <Button disabled={close.isPending} size="sm" variant="ghost" onClick={() => close.mutate(session.token)}>
+            {session.current ? null : (
+              <Button
+                disabled={close.isPending}
+                size="sm"
+                variant="ghost"
+                onClick={() => close.mutate({ sessionId: session.id })}
+              >
                 Cerrar
               </Button>
             )}
@@ -259,7 +252,7 @@ function SessionRows({ currentId }: { currentId: string }) {
       </ul>
       {rows.length > 1 ? (
         <SettingsRow compact hint="Te deja entrado solo en este dispositivo." label="Las demás">
-          <Button disabled={close.isPending} size="sm" variant="outline" onClick={() => close.mutate(null)}>
+          <Button disabled={close.isPending} size="sm" variant="outline" onClick={() => close.mutate({})}>
             <LogOut />
             Cerrar las demás
           </Button>
@@ -363,12 +356,9 @@ function TelegramRows() {
 
 export default function SettingsClient({
   user,
-  sessionId,
   roleLabel,
 }: {
   user: { name: string; email: string; image: string | null };
-  /** This device's session, marked in the list and never offered to close (that's "Cerrar sesión"). */
-  sessionId: string;
   /** Their site roles, as they read ("Staff de OWU · Moderación"). */
   roleLabel: string;
 }) {
@@ -422,7 +412,7 @@ export default function SettingsClient({
           </SettingsSection>
 
           <SettingsSection id="sesiones" title="Sesiones">
-            <SessionRows currentId={sessionId} />
+            <SessionRows />
           </SettingsSection>
 
           <SettingsSection id="telegram" title="Telegram">

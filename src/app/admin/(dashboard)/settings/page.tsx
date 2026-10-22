@@ -13,7 +13,6 @@ export default async function SettingsPage() {
   return (
     <SettingsClient
       roleLabel={roles.length > 0 ? roles.join(" · ") : "Staff de una comunidad"}
-      sessionId={session.session.id}
       user={{ name, email, image: image ?? null }}
     />
   );

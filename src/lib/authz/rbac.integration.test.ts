@@ -636,6 +636,23 @@ describe("small doors", () => {
   });
 });
 
+describe("my sessions", () => {
+  test("a session from days ago lists its devices and closes the others, never itself", async () => {
+    const person = await makeSlackUser();
+    const cookie = { cookie: await cookieOf(person.id) };
+    await cookieOf(person.id);
+    // Better Auth's own list refuses sessions older than a day; ours doesn't need a fresh sign-in
+    await db.update(session).set({ createdAt: new Date(Date.now() - 3 * 86_400_000) }).where(eq(session.userId, person.id));
+
+    const listed = await client(cookie).access.sessions.list();
+    await expect(client(cookie).access.sessions.revoke({})).resolves.toStrictEqual({ revoked: 1 });
+    const after = await client(cookie).access.sessions.list();
+
+    expect([listed.length, listed.filter((row) => row.current).length]).toStrictEqual([2, 1]);
+    expect(after.map((row) => row.current)).toStrictEqual([true]);
+  });
+});
+
 describe("API keys and the Owy bot", () => {
   test("P8 nobody mints or lists keys over HTTP; keys only come from the server, for machines", async () => {
     const person = await makeSlackUser();

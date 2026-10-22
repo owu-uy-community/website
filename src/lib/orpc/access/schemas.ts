@@ -229,6 +229,18 @@ export const CheckSchema = z.object({
   eventId: z.string().min(1).optional(),
 });
 
+/** One of my sessions, as Ajustes lists them (never its token). */
+export const MySessionSchema = z.object({
+  id: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  expiresAt: z.string(),
+  ipAddress: z.string().nullable(),
+  userAgent: z.string().nullable(),
+  /** The one this request came from. */
+  current: z.boolean(),
+});
+
 export const LinkTelegramSchema = z.object({
   code: z
     .string()

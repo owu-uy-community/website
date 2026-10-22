@@ -23,6 +23,8 @@ const EXPECTED: Record<string, Access> = {
   "access.request": "authed",
   "access.requests.decide": "platform:claim:decide",
   "access.requests.list": "platform:claim:read",
+  "access.sessions.list": "authed",
+  "access.sessions.revoke": "authed",
   "access.slackMembers": "authed",
   "access.telegram.code": "authed",
   "access.telegram.link": "platform:delegation:act-as",

@@ -962,6 +962,66 @@ export const check = (input: {
 // ---------------------------------------------------------------------------
 
 /** A one-time code (10 minutes) the person sends the bot: "/vincular <code>". */
+// ---------------------------------------------------------------------------
+// My sessions (Ajustes)
+// ---------------------------------------------------------------------------
+
+/**
+ * Where I'm signed in. Better Auth's own list asks for a session started in the last day, which
+ * left anyone signed in since longer unable to see theirs; reading your own devices doesn't need it.
+ */
+export const mySessions = (currentId: string | null) =>
+  Effect.gen(function* () {
+    const actor = yield* CurrentUser;
+    const rows = yield* query((db) =>
+      db
+        .select()
+        .from(session)
+        .where(and(eq(session.userId, actor.id), sql`${session.expiresAt} > now()`))
+        .orderBy(desc(session.updatedAt))
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+      expiresAt: row.expiresAt.toISOString(),
+      ipAddress: row.ipAddress,
+      userAgent: row.userAgent,
+      current: row.id === currentId,
+    }));
+  });
+
+/** Sign me out of one other device, or of every other one; never the session asking. */
+export const revokeMySessions = (input: { sessionId?: string | undefined; currentId: string | null }) =>
+  Effect.gen(function* () {
+    const actor = yield* CurrentUser;
+    // Only the person, from their own session: not a bot, not someone viewing the site as them
+    if (actor.via !== "session" || !input.currentId) {
+      return yield* new Forbidden({ message: "Solo vos podés cerrar tus sesiones" });
+    }
+    const removed = yield* query((db) =>
+      db
+        .delete(session)
+        .where(
+          and(
+            eq(session.userId, actor.id),
+            ne(session.id, input.currentId!),
+            input.sessionId ? eq(session.id, input.sessionId) : undefined
+          )
+        )
+        .returning({ id: session.id })
+    );
+    yield* record({
+      action: "session.revoke_own",
+      targetType: "user",
+      targetId: actor.id,
+      data: { sessions: removed.length },
+    });
+
+    return { revoked: removed.length };
+  });
+
 export const telegramCode = () =>
   Effect.gen(function* () {
     const actor = yield* CurrentUser;

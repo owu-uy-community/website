@@ -1,5 +1,6 @@
 import { openapi } from "@orpc/openapi";
 import { ratelimit } from "@orpc/ratelimit";
+import { Effect } from "effect";
 import * as z from "zod";
 
 import { authed, platform, type AuthedContext } from "../base";
@@ -18,6 +19,7 @@ import {
   ListAuditSchema,
   ListPeopleSchema,
   MeSchema,
+  MySessionSchema,
   PersonDetailSchema,
   PersonSchema,
   PlatformRoleSchema,
@@ -222,6 +224,28 @@ export const accessRouter = {
     .effect(function* ({ input }) {
       return yield* Access.listAudit(input);
     }),
+
+  /** Where I'm signed in, and closing the others (Ajustes → Sesiones). */
+  sessions: {
+    list: authed
+      .meta(docs("My active sessions (devices), the current one marked"))
+      .output(z.array(MySessionSchema))
+      .effect(function* ({ context }) {
+        const current = yield* Effect.promise(() => context.getSession());
+
+        return yield* Access.mySessions(current?.session.id ?? null);
+      }),
+
+    revoke: authed
+      .meta(docs("Sign me out of one other session, or of all the others"))
+      .input(z.object({ sessionId: z.string().min(1).optional() }).default({}))
+      .output(z.object({ revoked: z.number() }))
+      .effect(function* ({ input, context }) {
+        const current = yield* Effect.promise(() => context.getSession());
+
+        return yield* Access.revokeMySessions({ sessionId: input.sessionId, currentId: current?.session.id ?? null });
+      }),
+  },
 
   telegram: {
     code: authed
