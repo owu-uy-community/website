@@ -23,6 +23,7 @@ import {
 } from "../../db/schema";
 import { appUrl, esc } from "../../email/templates";
 import { eventPagePath, refreshPage } from "../../revalidate";
+import { soon } from "../../soon";
 import { query, transaction } from "../db";
 import { Invalid, UpstreamFailed } from "../errors";
 import { eventbriteTime } from "../eventbrite/service";
@@ -216,7 +217,7 @@ export const connect = (input: { communityId: string; userId: string; code: stri
       summary: `conectó Eventbrite (${organization.name})`,
       actorId: input.userId,
     });
-    pushQueued = true;
+    pushes.mark();
 
     return { accountName: organization.name };
   });
@@ -329,7 +330,7 @@ export const tokenForEvent = (eventId: string) =>
 // ---------------------------------------------------------------------------
 
 /** Set when something was queued in this instance: the fast path pushes it right after the response. */
-let pushQueued = false;
+const pushes = soon();
 
 /** An edit waits a minute (autosave sends many); publishing, cancelling and retrying go now. */
 const EDIT_DELAY_MS = 60_000;
@@ -371,7 +372,7 @@ export const queuePush = (
             .set(due)
             .where(and(eq(eventPublications.eventId, event.id), eq(eventPublications.connectionId, connection.id)))
         );
-    if (now) pushQueued = true;
+    if (now) pushes.mark();
   });
 
 /** "Reintentar": push again now, with a fresh set of attempts. */
@@ -388,7 +389,7 @@ export const retry = (eventId: string) =>
         .where(and(eq(eventPublications.eventId, eventId), eq(eventPublications.connectionId, connection.id)))
         .returning({ id: eventPublications.id })
     );
-    if (rows.length > 0) pushQueued = true;
+    if (rows.length > 0) pushes.mark();
 
     return { queued: rows.length > 0 };
   });
@@ -748,8 +749,7 @@ export const pushDue = ({ deadline }: { deadline: number }) =>
 
 /** The fast path: a publish or a retry reaches Eventbrite right after the response. */
 export async function pushSoon() {
-  if (!pushQueued) return;
-  pushQueued = false;
+  if (!pushes.pending()) return;
   await Effect.runPromiseWith(liveServices)(pushDue({ deadline: Date.now() + 20_000 })).catch((error: unknown) =>
     console.error("[eventbrite] fast push failed", error)
   );

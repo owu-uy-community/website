@@ -3,6 +3,7 @@ import { Effect } from "effect";
 
 import { emailDeliveries, type EmailDeliveryRow } from "../db/schema";
 import { query } from "../orpc/db";
+import { soon } from "../soon";
 import { liveServices } from "../orpc/services";
 import { canSendEmail, sendEmail, SendFailed, type Email } from "./send";
 
@@ -13,8 +14,8 @@ const STALE_SENDING_MS = 10 * 60_000;
 
 export type QueuedEmail = Email & { kind: string; dedupeKey: string; priority?: number };
 
-/** This instance queued email since its last fast drain (process-wide: any request may send it). */
-let queuedHere = false;
+/** Email queued recently by this instance: the fast drain looks for a while (see soon.ts) */
+const drains = soon();
 
 /**
  * Queue an email. Call it inside the transaction that causes it, so both commit or neither does.
@@ -22,7 +23,7 @@ let queuedHere = false;
  */
 export const enqueueEmail = (email: QueuedEmail) =>
   Effect.sync(() => {
-    queuedHere = true;
+    drains.mark();
   }).pipe(Effect.andThen(enqueueRow(email)));
 
 const enqueueRow = (email: QueuedEmail) =>
@@ -148,8 +149,7 @@ export const drainEmail = ({ deadline, batch = 25 }: { deadline: number; batch?:
  * this misses.
  */
 export async function drainSoon() {
-  if (!queuedHere || !canSendEmail()) return;
-  queuedHere = false;
+  if (!drains.pending() || !canSendEmail()) return;
   await Effect.runPromiseWith(liveServices)(drainEmail({ deadline: Date.now() + 15_000 })).catch((error: unknown) =>
     console.error("[email] fast drain failed", error)
   );

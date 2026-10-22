@@ -642,8 +642,8 @@ export const publish = (eventId: string) =>
     })
   );
 
-/** Events whose Owy announcement was queued by this instance, sent right after the response */
-const toAnnounce = new Set<string>();
+/** Events whose Owy announcement this instance queued, and until when to look (see soon.ts) */
+const toAnnounce = new Map<string, number>();
 
 /**
  * The organizers asked Owy to post it on OWU's Slack and/or Telegram: queued as the event's messages.
@@ -682,14 +682,15 @@ const announce = (event: EventRow) =>
         }))
       )
     );
-    toAnnounce.add(event.id);
+    toAnnounce.set(event.id, Date.now() + 30_000);
   });
 
 /** Post the announcements queued here now, not at the next tick (which still catches a miss). */
 export async function announceSoon() {
-  const ids = [...toAnnounce];
-  toAnnounce.clear();
-  for (const id of ids) {
+  const now = Date.now();
+  for (const [id, until] of toAnnounce) if (until < now) toAnnounce.delete(id);
+  // Not consumed: a request whose hook runs before the publish commits mustn't take it
+  for (const id of toAnnounce.keys()) {
     await Effect.runPromiseWith(liveServices)(Comms.dispatchDue(id)).catch((error: unknown) =>
       console.error("[events] announcement failed", error)
     );
