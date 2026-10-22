@@ -994,6 +994,8 @@ export const attendees = pgTable(
     userId: text("userId"),
     guests: integer("guests").notNull().default(0),
     answers: jsonb("answers").$type<Record<string, string>>().notNull().default({}),
+    /** They chose to show up in the event page's «quiénes van» (first name and initial). */
+    showName: boolean("showName").notNull().default(false),
     /** A freed seat offered from the waitlist is theirs until then. */
     offerExpiresAt: ts("offerExpiresAt"),
     orderId: text("orderId"),

@@ -192,3 +192,21 @@ describe("signing up", () => {
     await expect(join(event.id, beto)).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "declined" } });
   });
 });
+
+describe("quiénes van", () => {
+  test("the public page names only who chose it, as first name and initial, and only with a seat", async () => {
+    const { community, event } = await rsvpEvent({ capacity: 2 });
+    const [ana, bruno, carla] = await Promise.all([
+      makeUser({ name: "Ana  González Pérez" }),
+      makeUser({ name: "Bruno Díaz" }),
+      makeUser({ name: "Carla" }),
+    ]);
+    await join(event.id, ana, { showName: true });
+    await join(event.id, bruno);
+    await join(event.id, carla, { showName: true });
+
+    const page = await call(router.events.public, { communitySlug: community.slug, eventSlug: event.slug }, by(null));
+
+    expect(page).toMatchObject({ taken: 2, waiting: 1, going: ["Ana G."] });
+  });
+});
