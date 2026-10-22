@@ -322,6 +322,8 @@ export const events = pgTable(
     topics: text("topics").array().notNull().default([]),
     /** The streaming link: only confirmed attendees get it, never a public page. */
     onlineUrl: text("onlineUrl"),
+    /** The host space, once one accepted. */
+    venueId: text("venueId"),
     /** How people sign up: not at all (open door), with OWU's RSVP, or on another site. */
     registration: text("registration").$type<EventRegistration>().notNull().default("none"),
     registrationUrl: text("registrationUrl"),
@@ -347,6 +349,9 @@ export const events = pgTable(
     unique("open_spaces_communityId_slug_key").on(t.communityId, t.slug),
     index("open_spaces_communityId_idx").on(t.communityId),
     index("open_spaces_status_startDate_idx").on(t.status, t.startDate),
+    foreignKey({ name: "open_spaces_venueId_fk", columns: [t.venueId], foreignColumns: [venues.id] }).onDelete(
+      "set null"
+    ),
   ]
 );
 
@@ -1262,6 +1267,142 @@ export const emailDeliveries = pgTable(
 );
 
 export type EmailDeliveryRow = typeof emailDeliveries.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Espacios: companies that host meetups, their (private) contacts and the requests
+// ---------------------------------------------------------------------------
+
+export type VenueAmenity = "proyector" | "microfono" | "wifi" | "accesible" | "comida";
+
+/**
+ * A space that hosts meetups. `requestable` ones take requests through OWU (their contact
+ * consented); the rest are "Lo gestiona OWU": staff coordinate by hand.
+ */
+export const venues = pgTable(
+  "venues",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    /** The company or institution */
+    name: text("name").notNull(),
+    neighbourhood: text("neighbourhood").notNull().default(""),
+    city: text("city").notNull().default("Montevideo"),
+    /** The street address: organizers see it once a request is accepted */
+    address: text("address").notNull().default(""),
+    mapUrl: text("mapUrl"),
+    capacity: integer("capacity"),
+    amenities: text("amenities").array().$type<VenueAmenity[]>().notNull().default([]),
+    /** Weekdays they host (0 = Sunday … 6 = Saturday); empty means any */
+    hostDays: integer("hostDays").array().notNull().default([]),
+    availability: text("availability").notNull().default(""),
+    /** How far ahead a request must come */
+    leadDays: integer("leadDays").notNull().default(14),
+    /** At most this many meetups a month; null means no cap */
+    monthlyCap: integer("monthlyCap"),
+    /** Whether attendees see the exact address on the event page, or only the neighbourhood */
+    addressVisibility: text("addressVisibility").$type<"public" | "attendees">().notNull().default("attendees"),
+    logoUrl: text("logoUrl"),
+    notes: text("notes").notNull().default(""),
+    status: text("status").$type<"pending" | "active" | "archived">().notNull().default("pending"),
+    requestable: boolean("requestable").notNull().default(false),
+    submittedById: text("submittedById"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("venues_status_idx").on(t.status),
+    foreignKey({ name: "venues_submittedById_fk", columns: [t.submittedById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+/** Who answers a space's requests. Read by site staff and the request emails only, never listed. */
+export const venueContacts = pgTable(
+  "venue_contacts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    venueId: text("venueId").notNull(),
+    userId: text("userId"),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    /** When they agreed to receive requests from organizers (Ley 18.331) */
+    consentAt: ts("consentAt").notNull(),
+    consentNote: text("consentNote").notNull().default(""),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("venue_contacts_venueId_email_key").on(t.venueId, t.email),
+    foreignKey({ name: "venue_contacts_venueId_fk", columns: [t.venueId], foreignColumns: [venues.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({ name: "venue_contacts_userId_fk", columns: [t.userId], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+export type VenueRequestOption = { start: string; end: string };
+
+/** An organizer asking a space to host: 1–3 ranked dates, answered from a signed link within 72 h. */
+export const venueRequests = pgTable(
+  "venue_requests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    venueId: text("venueId").notNull(),
+    communityId: text("communityId").notNull(),
+    eventId: text("eventId"),
+    requestedById: text("requestedById"),
+    options: jsonb("options").$type<VenueRequestOption[]>().notNull(),
+    expectedAttendees: integer("expectedAttendees").notNull(),
+    message: text("message").notNull().default(""),
+    status: text("status")
+      .$type<"pending" | "accepted" | "declined" | "expired" | "cancelled">()
+      .notNull()
+      .default("pending"),
+    /** Which option the host took */
+    chosenOption: integer("chosenOption"),
+    /** Access notes, a counter-proposal or the reason, from the host */
+    hostMessage: text("hostMessage"),
+    /** The host agreed to share their contact with the organizer */
+    shareContact: boolean("shareContact").notNull().default(false),
+    respondedAt: ts("respondedAt"),
+    expiresAt: ts("expiresAt").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("venue_requests_venueId_status_idx").on(t.venueId, t.status),
+    index("venue_requests_communityId_idx").on(t.communityId),
+    foreignKey({ name: "venue_requests_venueId_fk", columns: [t.venueId], foreignColumns: [venues.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({
+      name: "venue_requests_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "venue_requests_eventId_fk", columns: [t.eventId], foreignColumns: [events.id] }).onDelete(
+      "set null"
+    ),
+    foreignKey({
+      name: "venue_requests_requestedById_fk",
+      columns: [t.requestedById],
+      foreignColumns: [user.id],
+    }).onDelete("set null"),
+  ]
+);
+
+export type VenueRow = typeof venues.$inferSelect;
+export type VenueContactRow = typeof venueContacts.$inferSelect;
+export type VenueRequestRow = typeof venueRequests.$inferSelect;
 
 export type CommunityRoleValue = CommunityMemberRow["role"];
 export type EventRow = typeof events.$inferSelect;

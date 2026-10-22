@@ -28,6 +28,7 @@ import { staffTasksRouter } from "./staff-tasks/router";
 import { surveysRouter } from "./surveys/router";
 import { systemRouter } from "./system/router";
 import { tracksRouter } from "./tracks/router";
+import { venuesRouter } from "./venues/router";
 
 /**
  * Every procedure, by the path clients call. Keys are part of the wire
@@ -48,6 +49,7 @@ export const router = {
   // Organizá: the shared calendar, and events as organizers make them (drafts, date holds)
   calendar: calendarRouter,
   events: eventsRouter,
+  venues: venuesRouter,
   staffTasks: staffTasksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall

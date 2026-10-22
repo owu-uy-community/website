@@ -7,6 +7,8 @@ export const PlanSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Usá AAAA-MM"),
   startTime: ClockSchema.default("19:00"),
   durationMin: DurationSchema.default(120),
+  /** A space being considered: its busy days and host weekdays block days */
+  venueId: z.string().min(1).optional(),
 });
 
 export const ReasonSchema = z.object({

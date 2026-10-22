@@ -127,3 +127,100 @@ export function holdExpiringEmail(input: {
     text: `${line}\n\nSi la seguís queriendo, renovala desde el panel; si no, se libera sola.\n\n${link}`,
   };
 }
+
+/** A community asks a space to host (to its consented contacts). */
+export function venueRequestEmail(input: {
+  venue: string;
+  community: string;
+  organizer: string;
+  options: string[];
+  expectedAttendees: number;
+  message: string;
+  until: string;
+  link: string;
+}): Omit<Email, "to"> {
+  const who = input.organizer ? `${input.organizer}, de ${input.community},` : input.community;
+  const dates = input.options.map((option, index) => `${index + 1}. ${option}`);
+
+  return {
+    subject: `${input.community} quiere hacer su meetup en ${input.venue}`,
+    html: layout({
+      preheader: `Para unas ${input.expectedAttendees} personas. Respondé antes del ${input.until}.`,
+      body: `<p style="margin:0 0 16px">${esc(who)} pregunta si pueden hacer su meetup en ${esc(input.venue)}, para unas <strong>${input.expectedAttendees} personas</strong>. Estas fechas, en orden de preferencia:</p>
+<p style="margin:0 0 16px;font-family:'Geist Mono',ui-monospace,Menlo,monospace">${dates.map(esc).join("<br>")}</p>
+${input.message ? `<p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px">«${esc(input.message)}»</p>` : ""}
+<p style="margin:0 0 16px">Respondé desde el link, sin crear cuenta: podés elegir una fecha, proponer otra o decir que esta vez no. Tu mail les llega solo si aceptás.</p>
+<p style="margin:0 0 8px">${button(input.link, "Ver el pedido")}</p>
+<p style="margin:16px 0 0;color:#71717a;font-size:13px">El pedido vence el ${esc(input.until)}.</p>`,
+    }),
+    text: `${who} pregunta si pueden hacer su meetup en ${input.venue}, para unas ${input.expectedAttendees} personas.\n\n${dates.join("\n")}\n${input.message ? `\n«${input.message}»\n` : ""}\nRespondé desde el link (vence el ${input.until}): ${input.link}`,
+  };
+}
+
+/** The host answered, or nobody did in time (to the organizer who asked). */
+export function venueResponseEmail(input: {
+  venue: string;
+  outcome: "accepted" | "declined" | "expired";
+  when: string | null;
+  address: string | null;
+  hostMessage: string | null;
+  contact: { name: string; email: string } | null;
+  panelPath: string;
+}): Omit<Email, "to"> {
+  const link = appUrl(input.panelPath);
+  const note = input.hostMessage
+    ? `<p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px">«${esc(input.hostMessage)}»</p>`
+    : "";
+  if (input.outcome === "accepted") {
+    const lines = [
+      `${input.venue} los recibe el ${input.when}.`,
+      input.address ? `Dirección: ${input.address}.` : "",
+      input.contact ? `Contacto: ${input.contact.name} (${input.contact.email}).` : "",
+    ].filter(Boolean);
+
+    return {
+      subject: `${input.venue} los recibe el ${input.when}`,
+      html: layout({
+        preheader: lines[0] ?? "",
+        body: `${lines.map((line) => `<p style="margin:0 0 12px">${esc(line)}</p>`).join("")}${note}
+<p style="margin:0 0 8px">${button(link, "Ver en el panel")}</p>`,
+      }),
+      text: `${lines.join("\n")}${input.hostMessage ? `\n\n«${input.hostMessage}»` : ""}\n\n${link}`,
+    };
+  }
+  const line =
+    input.outcome === "declined"
+      ? `${input.venue} no puede recibirlos en esas fechas.`
+      : `${input.venue} no respondió a tiempo: el pedido venció.`;
+
+  return {
+    subject: input.outcome === "declined" ? `${input.venue} no puede esta vez` : `Tu pedido a ${input.venue} venció`,
+    html: layout({
+      preheader: line,
+      body: `<p style="margin:0 0 16px">${esc(line)}</p>${note}
+<p style="margin:0 0 16px">Probá con otro espacio desde el panel.</p>
+<p style="margin:0 0 8px">${button(link, "Buscar otro espacio")}</p>`,
+    }),
+    text: `${line}${input.hostMessage ? `\n\n«${input.hostMessage}»` : ""}\n\nProbá con otro espacio: ${link}`,
+  };
+}
+
+/** The host accepted: now they get the organizer's contact. */
+export function venueAnsweredHostEmail(input: {
+  venue: string;
+  community: string;
+  when: string;
+  organizer: { name: string; email: string };
+}): Omit<Email, "to"> {
+  const line = `Confirmaste que ${input.venue} recibe a ${input.community} el ${input.when}. ¡Gracias!`;
+  const contact = `Quien organiza: ${input.organizer.name} (${input.organizer.email}). Coordinen los detalles directo.`;
+
+  return {
+    subject: `Confirmado: ${input.community} en ${input.venue} el ${input.when}`,
+    html: layout({
+      preheader: line,
+      body: `<p style="margin:0 0 12px">${esc(line)}</p><p style="margin:0 0 12px">${esc(contact)}</p>`,
+    }),
+    text: `${line}\n\n${contact}`,
+  };
+}

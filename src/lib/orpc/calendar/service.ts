@@ -6,10 +6,11 @@ import { mergeItems, monthRange } from "../../calendar/items";
 import { scoreDays, similarity, suggest, type CalendarItem } from "../../calendar/score";
 import { getUpcomingEvents } from "../../community/events";
 import { dayKey, montevideoIso } from "../../community/time";
-import { communities, events } from "../../db/schema";
+import { communities, events, venues } from "../../db/schema";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query } from "../db";
 import { NotFound } from "../errors";
+import { busyDays } from "../venues/service";
 import type { PlanInput, PlanItem, PlanResult } from "./schemas";
 
 const HISTORY_DAYS = 548;
@@ -97,6 +98,15 @@ export const plan = (input: PlanInput) =>
         )
     );
 
+    const [venue] = input.venueId
+      ? yield* query((db) =>
+          db
+            .select({ id: venues.id, hostDays: venues.hostDays })
+            .from(venues)
+            .where(eq(venues.id, input.venueId ?? ""))
+        )
+      : [];
+
     const days = scoreDays({
       communitySlug: ours.slug,
       topics: ours.topics,
@@ -106,6 +116,8 @@ export const plan = (input: PlanInput) =>
       durationMin: input.durationMin,
       items,
       history: past.map((row) => dayKey(row.startDate)),
+      venueBusy: venue ? yield* busyDays(venue.id) : [],
+      hostDays: venue?.hostDays ?? [],
       now: now.toISOString(),
     });
 

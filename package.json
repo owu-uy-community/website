@@ -18,6 +18,7 @@
     "db:pull": "drizzle-kit pull",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/lib/db/seed.ts",
+    "db:seed-venues": "tsx src/lib/db/seed-venues.ts",
     "owy:key": "tsx src/lib/db/create-owy-key.ts",
     "db:studio": "drizzle-kit studio",
     "stage:thumbs": "node scripts/stage-thumbs.mjs",
