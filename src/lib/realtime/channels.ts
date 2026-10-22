@@ -3,7 +3,11 @@
  * subscription key never leaks across tenants.
  */
 
-export type EventChannelTopic = "sync" | "countdown" | "highlights" | "cast" | "staff";
+/**
+ * `ops` carries content-free pings about the event day (incidents, rooms, check-ins, the run of
+ * show, screens, activity): it is public, so the data always comes from guarded reads.
+ */
+export type EventChannelTopic = "sync" | "countdown" | "highlights" | "cast" | "staff" | "ops";
 
 export function eventChannel(eventId: string, topic: EventChannelTopic): string {
   return `event:${eventId}:${topic}`;
@@ -14,7 +18,14 @@ export const GLOBAL_CHANNELS = {
   launchpad: "launchpad-sounds",
   /** Owy Stage: what the video wall shows + Owy face events (see src/lib/owy-stage). */
   owyStage: "owy-stage",
+  /** Venue screens: "identify" / "reload" for one screen id (harmless, server-sent only). */
+  screens: "screens",
 } as const;
+
+/** Who has the admin open for an event, and on which page. Admin sessions only. */
+export function presenceChannel(eventId: string): string {
+  return `private:presence:${eventId}`;
+}
 
 /**
  * OBS queue state per rig instance (1 = admin screen, 2 = standalone app).
