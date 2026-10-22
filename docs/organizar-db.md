@@ -1,20 +1,23 @@
-# Organizá database runbook
+# Community site and Organizá database runbook
 
-What the Organizá PR adds to the database, and how to apply it to production by hand before
-deploying. Everything is additive: new tables, and new columns that are nullable or have a
-default, so the code running in production keeps working before and after.
+What #310 (the community-first site, with Organizá merged in) adds to the database, and how to
+apply it to production by hand. **Production can't deploy that code until this runs:** pages
+built at deploy time read the new columns, so the build fails (and the previous deployment stays
+live) until then. Everything is additive: new tables, and new columns that are nullable or have
+a default, so the code running in production keeps working before and after.
 
 The repo is `db:push`-driven (no committed migrations). These statements are what
-`drizzle-kit push` generates from #310's schema to this branch's, checked locally: after
-applying them, a push lists only the known churn below.
+`drizzle-kit push` generates from production's schema (`main` at #313, f15fad9c) to #310's. Checked
+on a copy of that schema with rows in it: they apply in one go, the existing events come out as
+published with no sign-up (as today), and a push afterwards lists only the known churn below.
 
 **Never run any of this from an agent session. Agustín applies it.**
 
 ## 1. Before
 
 - Take a `pg_dump` of production.
-- Try everything first on a Neon branch of production (steps 2–4), then on production.
-- #310 (`salary_surveys`, `semanario_issues`) must already be applied.
+- Try everything first on a Neon branch of production (steps 2–5), then on production.
+- This includes #310's own tables (`salary_surveys`, `semanario_issues`…), never pushed before.
 
 ## 2. Apply the DDL
 
@@ -25,6 +28,8 @@ the site; if it fails, run it again.
 SET lock_timeout = '3s';
 BEGIN;
 
+CREATE TYPE "public"."SalarySurveyStatus" AS ENUM('draft', 'open', 'closed', 'published');
+CREATE TYPE "public"."SemanarioStatus" AS ENUM('draft', 'published');
 CREATE TABLE "community_claims" (
 	"id" text PRIMARY KEY NOT NULL,
 	"communityId" text NOT NULL,
@@ -135,6 +140,57 @@ CREATE TABLE "integration_connections" (
 	"updatedAt" timestamp (3) DEFAULT now() NOT NULL,
 	CONSTRAINT "integration_connections_communityId_platform_key" UNIQUE("communityId","platform"),
 	CONSTRAINT "integration_connections_webhookKey_key" UNIQUE("webhookKey")
+);
+CREATE TABLE "salary_survey_participants" (
+	"id" text PRIMARY KEY NOT NULL,
+	"surveyId" text NOT NULL,
+	"participantHash" text NOT NULL,
+	CONSTRAINT "salary_survey_participants_surveyId_hash_key" UNIQUE("surveyId","participantHash")
+);
+CREATE TABLE "salary_survey_responses" (
+	"id" text PRIMARY KEY NOT NULL,
+	"surveyId" text NOT NULL,
+	"role" text NOT NULL,
+	"seniority" text NOT NULL,
+	"experience" text NOT NULL,
+	"stacks" text[] NOT NULL,
+	"employer" text NOT NULL,
+	"contract" text NOT NULL,
+	"modality" text NOT NULL,
+	"department" text NOT NULL,
+	"currency" text NOT NULL,
+	"amount" integer NOT NULL,
+	"hoursPerWeek" integer NOT NULL,
+	"satisfaction" integer,
+	"gender" text,
+	"education" text,
+	"createdOn" date DEFAULT now() NOT NULL
+);
+CREATE TABLE "salary_surveys" (
+	"id" text PRIMARY KEY NOT NULL,
+	"slug" text NOT NULL,
+	"title" text NOT NULL,
+	"status" "SalarySurveyStatus" DEFAULT 'draft' NOT NULL,
+	"opensAt" timestamp (3),
+	"closesAt" timestamp (3),
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL,
+	CONSTRAINT "salary_surveys_slug_unique" UNIQUE("slug")
+);
+CREATE TABLE "semanario_issues" (
+	"id" text PRIMARY KEY NOT NULL,
+	"number" integer,
+	"weekStart" date NOT NULL,
+	"title" text NOT NULL,
+	"intro" text DEFAULT '' NOT NULL,
+	"sections" jsonb NOT NULL,
+	"status" "SemanarioStatus" DEFAULT 'draft' NOT NULL,
+	"publishedAt" timestamp (3),
+	"reviewedById" text,
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL,
+	CONSTRAINT "semanario_issues_number_unique" UNIQUE("number"),
+	CONSTRAINT "semanario_issues_weekStart_unique" UNIQUE("weekStart")
 );
 CREATE TABLE "venue_contacts" (
 	"id" text PRIMARY KEY NOT NULL,
@@ -252,6 +308,9 @@ ALTER TABLE "event_publications" ADD CONSTRAINT "event_publications_eventId_fk" 
 ALTER TABLE "event_publications" ADD CONSTRAINT "event_publications_connectionId_fk" FOREIGN KEY ("connectionId") REFERENCES "public"."integration_connections"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "integration_connections" ADD CONSTRAINT "integration_connections_communityId_fk" FOREIGN KEY ("communityId") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "integration_connections" ADD CONSTRAINT "integration_connections_connectedById_fk" FOREIGN KEY ("connectedById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "salary_survey_participants" ADD CONSTRAINT "salary_survey_participants_surveyId_salary_surveys_id_fk" FOREIGN KEY ("surveyId") REFERENCES "public"."salary_surveys"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "salary_survey_responses" ADD CONSTRAINT "salary_survey_responses_surveyId_salary_surveys_id_fk" FOREIGN KEY ("surveyId") REFERENCES "public"."salary_surveys"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "semanario_issues" ADD CONSTRAINT "semanario_issues_reviewedById_user_id_fk" FOREIGN KEY ("reviewedById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "venue_contacts" ADD CONSTRAINT "venue_contacts_venueId_fk" FOREIGN KEY ("venueId") REFERENCES "public"."venues"("id") ON DELETE cascade ON UPDATE no action;
 ALTER TABLE "venue_contacts" ADD CONSTRAINT "venue_contacts_userId_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
 ALTER TABLE "venue_requests" ADD CONSTRAINT "venue_requests_venueId_fk" FOREIGN KEY ("venueId") REFERENCES "public"."venues"("id") ON DELETE cascade ON UPDATE no action;
@@ -265,6 +324,7 @@ CREATE INDEX "date_polls_communityId_idx" ON "date_polls" USING btree ("communit
 CREATE INDEX "email_deliveries_queue_idx" ON "email_deliveries" USING btree ("status","nextAttemptAt");
 CREATE INDEX "event_hosts_communityId_idx" ON "event_hosts" USING btree ("communityId");
 CREATE INDEX "event_publications_nextAttemptAt_idx" ON "event_publications" USING btree ("nextAttemptAt");
+CREATE INDEX "salary_survey_responses_surveyId_idx" ON "salary_survey_responses" USING btree ("surveyId");
 CREATE INDEX "venue_requests_venueId_status_idx" ON "venue_requests" USING btree ("venueId","status");
 CREATE INDEX "venue_requests_communityId_idx" ON "venue_requests" USING btree ("communityId");
 CREATE INDEX "venues_status_idx" ON "venues" USING btree ("status");
@@ -302,7 +362,11 @@ DATABASE_URL=… pnpm db:import-communities
 It upserts by slug and only fills empty fields, so running it twice is safe. Check that
 `/comunidades` shows every community on the Neon branch's preview before running it on production.
 
-## 5. Environment
+## 5. Deploy
+
+Redeploy the failed production deployment on Vercel (or merge anything to `main`).
+
+## 6. Environment
 
 | Variable                                                                                                      | What for                                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -320,7 +384,7 @@ It upserts by slug and only fills empty fields, so running it twice is safe. Che
 Preview deployments need a non-production `DATABASE_URL` (a Neon branch): `/comunidades` now
 reads the database at build time.
 
-## 6. Later
+## 7. Later
 
 - One release after the directory is verified in production, delete the Keystatic communities
   YAML (`content/communities/`).
