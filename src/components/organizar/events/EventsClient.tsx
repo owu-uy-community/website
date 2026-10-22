@@ -206,7 +206,7 @@ function EventRow({
       <div className="min-w-0 flex-1">
         <Link
           className="block truncate text-ui font-medium text-foreground hover:underline"
-          href={`${base}/eventos/${event.id}/editar`}
+          href={event.status === "draft" ? `${base}/eventos/${event.id}/editar` : `${base}/eventos/${event.id}`}
         >
           {event.name}
         </Link>
@@ -231,7 +231,9 @@ function EventRow({
       )}
       <div className="flex gap-1">
         <Button asChild size="sm" variant="outline">
-          <Link href={`${base}/eventos/${event.id}/editar`}>{event.status === "draft" ? "Seguir" : "Editar"}</Link>
+          <Link href={event.status === "draft" ? `${base}/eventos/${event.id}/editar` : `${base}/eventos/${event.id}`}>
+            {event.status === "draft" ? "Seguir" : "Abrir"}
+          </Link>
         </Button>
         {event.status !== "draft" ? (
           <Button asChild size="icon-sm" variant="ghost">
