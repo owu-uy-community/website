@@ -18,6 +18,7 @@ import {
 import Footer from "components/shared/Footer";
 import { getCommunities, getLanding } from "lib/community/content";
 import { getUpcomingEvents } from "lib/community/events";
+import { ORGANIZAR_ON } from "lib/community/flags";
 import { pageMetadata } from "lib/community/metadata";
 import { CONF_URL, issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
 
@@ -31,12 +32,15 @@ export const metadata = pageMetadata({
   path: "/empresas",
 });
 
+/** Where "offer your space" goes: OWU's own form once Organizá is on, the GitHub issue form until then */
+const OFFER_SPACE = ORGANIZAR_ON ? "/empresas/espacio" : issueFormUrl("ofrecer-espacio");
+
 const OFFERS = [
   {
     icon: Building2,
     title: "Alojá una meetup",
     body: "Prestá tu espacio una noche: un lugar con proyector, sillas y wifi. Muchas meetups de la comunidad se hacen en oficinas de empresas que abren sus puertas.",
-    href: issueFormUrl("ofrecer-espacio"),
+    href: OFFER_SPACE,
     cta: "Ofrecer tu espacio",
     primary: true,
   },
@@ -100,7 +104,7 @@ export default async function EmpresasPage() {
       <PageHeader
         actions={
           <>
-            <ButtonLink arrow href={issueFormUrl("ofrecer-espacio")} utm="empresas-header">
+            <ButtonLink arrow href={OFFER_SPACE} utm="empresas-header">
               Alojá una meetup
             </ButtonLink>
             <ButtonLink href={`${CONF_URL}/sponsors`} utm="empresas-header" variant="secondary">
