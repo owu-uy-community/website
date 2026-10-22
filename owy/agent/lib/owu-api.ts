@@ -413,7 +413,46 @@ export interface SemanarioIssue extends SemanarioDraftInput {
   updatedAt: string;
 }
 
+/** One scored day of `calendar.plan` (site: src/lib/orpc/calendar/schemas.ts). */
+export interface PlanDay {
+  day: string;
+  score: number;
+  level: "libre" | "cuidado" | "choca" | "bloqueado";
+  blocked: boolean;
+  reasons: { tone: "ok" | "info" | "warn" | "bad"; text: string; itemId?: string }[];
+}
+
+export interface PlanItem {
+  id: string;
+  communityName: string;
+  /** Null for another community's hold */
+  title: string | null;
+  start: string;
+  kind: "event" | "hold";
+  url?: string | null;
+}
+
+export interface CommunityOption {
+  id: string;
+  slug: string;
+  name: string;
+  listed: boolean;
+}
+
 export interface OwuApi {
+  /** The directory (public). */
+  communities: {
+    list: (input: Record<string, never>) => Promise<CommunityOption[]>;
+  };
+  /** Organizá's shared calendar: every day of a month scored for a community's meetup. */
+  calendar: {
+    plan: (input: {
+      communityId: string;
+      month: string;
+      startTime?: string;
+      durationMin?: number;
+    }) => Promise<{ days: PlanDay[]; suggestions: PlanDay[]; items: PlanItem[] }>;
+  };
   openSpaces: {
     /** Every event the caller may operate; site-admin (Owy) sees all, newest first. */
     listForAdmin: () => Promise<AdminEventOption[]>;
