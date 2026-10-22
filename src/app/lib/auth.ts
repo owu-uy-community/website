@@ -43,6 +43,12 @@ export const auth = betterAuth({
       apikey: schema.apikey,
     },
   }),
+  /**
+   * Better Auth's own per-IP limit, minus the session read: at a meetup or the conf everyone shares
+   * the venue's Wi-Fi, and a limited read made signed-in people look signed out. Sign-in codes keep
+   * their limits (the plugin's and ours below).
+   */
+  rateLimit: { customRules: { "/get-session": false } },
   session: {
     cookieCache: {
       enabled: true,
