@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageHeader } from "components/Admin/ui/page";
-import { EmptyState } from "components/Admin/ui/states";
+import { HomeClient } from "components/organizar/home/HomeClient";
+import { dayKey } from "lib/community/time";
 
 import { panelCommunity } from "../access";
 
@@ -9,15 +9,7 @@ export default async function PanelHome({ params }: { params: Promise<{ communit
   const { communitySlug } = await params;
   const access = await panelCommunity(communitySlug);
   if (!access) notFound();
+  const { id, slug, name } = access.community;
 
-  return (
-    <PageContainer>
-      <PageHeader description={`El panel de ${access.community.name} en OWU.`} title="Inicio" />
-      <EmptyState
-        owy
-        description="Elegí una fecha sin choques, conseguí espacio y armá tu evento."
-        title="Todo listo para organizar"
-      />
-    </PageContainer>
-  );
+  return <HomeClient community={{ id, slug, name }} today={dayKey(new Date())} />;
 }
