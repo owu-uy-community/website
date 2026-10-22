@@ -70,9 +70,10 @@ const HttpsUrl = z.url({ protocol: /^https$/, message: "Usá un link https://" }
 export const SIZE_BUCKETS = ["hasta-30", "30-60", "60-120", "120+"] as const;
 export const SizeBucketSchema = z.enum(SIZE_BUCKETS);
 
+/** A talk; a row being typed may still be empty (the page skips it) */
 export const TalkSchema = z.object({
-  title: z.string().trim().min(1).max(160),
-  speaker: z.string().trim().max(120),
+  title: z.string().max(160),
+  speaker: z.string().max(120),
 });
 
 /** Where Owy posts it when it's published; the text is written from the event, never by hand */

@@ -26,10 +26,14 @@ import { HeaderActions } from "components/Admin/shell/HeaderActions";
 import { KeyHint, useShortcuts } from "components/Admin/shell/shortcuts";
 import { MicroLabel, PageContainer, PageHeader } from "components/Admin/ui/page";
 import { ErrorState } from "components/Admin/ui/states";
+import { QrCode } from "components/Admin/comms/QrCode";
+import { isTransient } from "components/Admin/attendees/scan-queue";
 import { RelativeTime } from "components/Admin/ui/time";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "components/shared/ui/sheet";
+import { useSidebar } from "components/shared/ui/sidebar";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { shortWhen } from "lib/community/time";
@@ -73,6 +77,10 @@ const EDITABLE = [
   "rsvpClosesAt",
   "questions",
   "externalLinks",
+  "sizeBucket",
+  "needs",
+  "talks",
+  "announcement",
 ] as const satisfies readonly (keyof EditableEvent & keyof DraftPatch)[];
 
 type Editable = (typeof EDITABLE)[number];
@@ -130,8 +138,11 @@ export function EventWizard({
   const [errors, setErrors] = useState<Errors>({});
   const [published, setPublished] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const { isMobile } = useSidebar();
   const inFlight = useRef(false);
   const again = useRef(false);
+  const retries = useRef(0);
   const queued = useRef<DraftPatch>({});
 
   useEffect(() => {
@@ -165,6 +176,7 @@ export function EventWizard({
       try {
         const result = await save.mutateAsync({ ...input, expectedUpdatedAt: last.updatedAt, patch: full });
         saved.current = result;
+        retries.current = 0;
         setDraft((mine) => (mine ? { ...result, ...pickEditable(mine) } : result));
         setStatus("saved");
         setSavedAt(new Date().toISOString());
@@ -172,6 +184,13 @@ export function EventWizard({
         return Object.keys(invalid).length === 0;
       } catch (error) {
         const reason = (error as { data?: { reason?: string } }).data?.reason;
+        // A dropped connection or a busy server: try again a few times before saying it failed
+        if (!reason && isTransient(error) && retries.current < 3) {
+          retries.current += 1;
+          setTimeout(() => void flush(), 1000 * 2 ** retries.current);
+          return false;
+        }
+        retries.current = 0;
         setStatus(reason === "stale" ? "stale" : "error");
         if (reason !== "stale") toast.error("No se pudo guardar", (error as Error).message);
 
@@ -359,10 +378,14 @@ export function EventWizard({
             </>
           ) : null}
         </span>
-        <Button asChild size="sm" variant="outline">
+        <Button className="min-[1400px]:hidden" size="sm" variant="outline" onClick={() => setPreviewing(true)}>
+          <Eye />
+          <span className="max-sm:hidden">Cómo se ve</span>
+        </Button>
+        <Button asChild className="max-[1399px]:hidden" size="sm" variant="outline">
           <Link href={`/organizar/vista-previa/${draft.id}`} target="_blank">
             <Eye />
-            <span className="max-sm:hidden">Vista previa</span>
+            Vista previa
           </Link>
         </Button>
       </HeaderActions>
@@ -389,7 +412,7 @@ export function EventWizard({
         </span>
       </Notice>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 min-[1400px]:grid-cols-[176px_minmax(0,1fr)_300px] lg:grid-cols-[176px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 min-[1400px]:grid-cols-[176px_minmax(0,1fr)_300px] lg:max-[1399px]:grid-cols-[176px_minmax(0,1fr)]">
         <nav aria-label="Pasos" className="lg:sticky lg:top-4 lg:self-start">
           <MicroLabel className="mb-2 max-lg:hidden">Pasos</MicroLabel>
           <ol className="flex [scrollbar-width:none] gap-1 overflow-x-auto lg:flex-col">
@@ -437,7 +460,16 @@ export function EventWizard({
               today={today}
             />
           ) : (
-            <StepRevisar draft={draft} list={list} onGo={go} />
+            <StepRevisar
+              community={community}
+              draft={draft}
+              list={list}
+              onGo={go}
+              onScheduled={(scheduled) => {
+                saved.current = scheduled;
+                setDraft((mine) => (mine ? { ...scheduled, ...pickEditable(mine) } : scheduled));
+              }}
+            />
           )}
 
           <div className="sticky bottom-[calc(var(--admin-tabbar-h,0px)+0.5rem)] z-10 flex items-center justify-between gap-2 rounded-lg border border-border bg-card/95 p-2 shadow-edge backdrop-blur">
@@ -487,6 +519,23 @@ export function EventWizard({
         </aside>
       </div>
 
+      <Sheet open={previewing} onOpenChange={setPreviewing}>
+        <SheetContent className="sm:max-w-sm" side={isMobile ? "bottom" : "right"}>
+          <SheetHeader>
+            <SheetTitle>Cómo se ve</SheetTitle>
+            <SheetDescription>La tarjeta del evento, como la ve la gente.</SheetDescription>
+          </SheetHeader>
+          <div className="p-4">
+            <Preview community={community} draft={draft} />
+            <Button asChild className="mt-3 w-full" variant="outline">
+              <Link href={`/organizar/vista-previa/${draft.id}`} target="_blank">
+                <ExternalLink />
+                Ver la página entera
+              </Link>
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
       <ShareDialog path={published} onClose={() => setPublished(null)} name={draft.name} />
       <ConfirmDialog
         confirmLabel="Cancelar el evento"
@@ -575,6 +624,14 @@ function ShareDialog({ path, name, onClose }: { path: string | null; name: strin
             Copiar
           </Button>
         </div>
+        {url ? (
+          <div className="flex items-center gap-3 rounded-md border border-border p-3">
+            <QrCode className="shrink-0 rounded-sm" size={96} title={`QR de ${name}`} value={url} />
+            <p className="text-meta text-muted-foreground">
+              Para una filmina o un cartel: el QR lleva a la página del evento.
+            </p>
+          </div>
+        ) : null}
         <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="outline">
             <a href={`https://wa.me/?text=${encodeURIComponent(text)}`} rel="noreferrer" target="_blank">
