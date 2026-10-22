@@ -15,6 +15,8 @@ export type Community = {
   topics: string[];
   status: "activa" | "pausa" | "busca-organizadores";
   website: string | null;
+  linkedin: string | null;
+  instagram: string | null;
   meetup: string | null;
   slackChannel: string | null;
   feedNames: string[];
@@ -34,6 +36,8 @@ export const getCommunities = cache(async (): Promise<Community[]> => {
       topics: [...entry.topics],
       status: entry.status,
       website: entry.website || null,
+      linkedin: entry.linkedin || null,
+      instagram: entry.instagram || null,
       meetup: entry.meetup || null,
       slackChannel: entry.slackChannel.replace(/^#/, "") || null,
       feedNames: [...entry.feedNames],

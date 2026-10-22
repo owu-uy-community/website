@@ -21,7 +21,8 @@ export const communities = collection({
     }),
     picture: fields.image({
       label: "Logo",
-      description: "Cuadrado, con el fondo del logo (blanco si no tiene) y aire alrededor: se muestra de borde a borde.",
+      description:
+        "Cuadrado, con el fondo del logo (blanco si no tiene) y aire alrededor: se muestra de borde a borde.",
       directory: "public/images/communities",
       publicPath: "/images/communities/",
     }),
@@ -42,6 +43,8 @@ export const communities = collection({
       defaultValue: "activa",
     }),
     website: fields.url({ label: "Sitio web" }),
+    linkedin: fields.url({ label: "LinkedIn", description: "La página del grupo, no la de quien organiza." }),
+    instagram: fields.url({ label: "Instagram" }),
     meetup: fields.url({ label: "Página de eventos", description: "Meetup.com, gdg.community.dev, Luma…" }),
     slackChannel: fields.text({
       label: "Canal de Slack",
@@ -49,7 +52,8 @@ export const communities = collection({
     }),
     feedNames: fields.array(fields.text({ label: "Nombre" }), {
       label: "Nombres en el feed de eventos",
-      description: "Cómo aparece el grupo en meetup-bot (p. ej. “OWASP Uruguay Chapter”), para mostrar su próximo evento.",
+      description:
+        "Cómo aparece el grupo en meetup-bot (p. ej. “OWASP Uruguay Chapter”), para mostrar su próximo evento.",
       itemLabel: (props) => props.value,
     }),
     confPartner: fields.checkbox({
