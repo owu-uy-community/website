@@ -4,20 +4,47 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock, Hourglass, Ticket } from "lucide-react";
+import { Check, CircleSlash, Clock, Hourglass, Ticket } from "lucide-react";
 
 import { authClient, signIn, useSession } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
 import { EmailCodeForm } from "components/shared/Auth/EmailCodeForm";
-import { buttonClassName } from "components/community/ui";
-import { shortWhen } from "lib/community/time";
+import { buttonClassName, ButtonLink } from "components/community/ui";
 import { orpc } from "lib/orpc/client";
 import type { PublicEvent } from "lib/orpc/events/schemas";
+import { offerDeadline, rsvpState, type RsvpState } from "lib/organizar/rsvp-state";
 
 const updateUser = (data: { name: string }) => authClient.updateUser(data);
 
 const fieldClassName =
   "h-11 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-[15px] text-white outline-none transition-colors placeholder:text-zinc-500 focus-visible:border-yellow-400/60 focus-visible:ring-2 focus-visible:ring-yellow-400/20";
+
+/** Where the viewer stands: their own place (once we know who's looking) over the event's state. */
+export function useRsvp(event: PublicEvent) {
+  const session = useSession();
+  const signedIn = Boolean(session.data);
+  const mine = useQuery({ ...orpc.rsvps.mine.queryOptions({ input: { eventId: event.id } }), enabled: signedIn });
+  const now = Date.now();
+
+  return {
+    session,
+    signedIn,
+    mine,
+    now,
+    state: rsvpState(event, mine.data ?? null, now),
+    loading: session.isPending || (signedIn && mine.isPending),
+  };
+}
+
+/** States with nothing to press: a line of what's going on */
+const NOTE: Partial<Record<RsvpState["kind"], string>> = {
+  lleno: "No quedan lugares.",
+  cerrado: "La inscripción ya cerró.",
+  "en-curso": "Está pasando ahora.",
+  pasado: "Este evento ya pasó.",
+  "evento-cancelado": "Este evento se canceló.",
+  libre: "Entrada libre: no hace falta anotarse.",
+};
 
 /**
  * Signing up on the event page: sign in right here (Slack or a code by email), answer the
@@ -26,8 +53,7 @@ const fieldClassName =
 export function RsvpCard({ event }: { event: PublicEvent }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const session = useSession();
-  const signedIn = Boolean(session.data);
+  const { session, signedIn, mine, now, state } = useRsvp(event);
   const [step, setStep] = useState<"idle" | "auth" | "form">("idle");
   const [guests, setGuests] = useState(0);
   const [showName, setShowName] = useState(false);
@@ -35,7 +61,6 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
   const [name, setName] = useState("");
   const input = { eventId: event.id };
 
-  const mine = useQuery({ ...orpc.rsvps.mine.queryOptions({ input }), enabled: signedIn });
   const done = () => {
     void queryClient.invalidateQueries({ queryKey: orpc.rsvps.mine.key() });
     router.refresh();
@@ -45,28 +70,20 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
   const confirm = useMutation(orpc.rsvps.confirmOffer.mutationOptions({ onSuccess: done }));
   const error = join.error ?? leave.error ?? confirm.error;
 
-  const full = event.capacity !== null && event.taken >= event.capacity;
   const nameless = signedIn && !session.data?.user.name.trim();
   const rsvp = mine.data;
-  const active = rsvp && ["attending", "offered", "waitlisted", "pending"].includes(rsvp.status);
   const ticketPath = `/comunidad/${event.community.slug}/events/${event.slug}/entrada`;
-  const cta = event.approval
-    ? "Pedir lugar"
-    : full
-      ? event.waitlist
-        ? "Anotarme en la lista de espera"
-        : "Sin lugares"
-      : "Anotarme";
+  const cta = "cta" in state ? state.cta : null;
 
   // Until we know who's looking, a placeholder: a click must not land on the wrong state
   if (session.isPending || (signedIn && step !== "auth" && mine.isPending)) {
     return <div className="h-12 animate-pulse rounded-xl bg-white/[0.05]" />;
   }
 
-  if (active && rsvp) {
+  if (rsvp && ["anotado", "oferta", "espera", "pendiente"].includes(state.kind)) {
     return (
       <div className="flex flex-col gap-4">
-        {rsvp.status === "attending" ? (
+        {state.kind === "anotado" ? (
           <>
             <p className="flex items-center gap-2 text-[15px] font-medium text-white">
               <span className="grid size-6 place-items-center rounded-full bg-yellow-400 text-zinc-950">
@@ -90,11 +107,11 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
               Ver mi entrada
             </Link>
           </>
-        ) : rsvp.status === "offered" ? (
+        ) : state.kind === "oferta" ? (
           <>
             <p className="text-[15px] leading-relaxed text-white">
-              Se liberó un lugar para vos. Confirmalo antes del{" "}
-              <span className="font-medium text-yellow-300">{shortWhen(rsvp.offerExpiresAt ?? event.startDate)}</span>.
+              Se liberó un lugar para vos. Confirmalo{" "}
+              <span className="font-medium text-yellow-300">{offerDeadline(state.until, now)}</span>.
             </p>
             <button
               className={buttonClassName("primary", "lg", "w-full")}
@@ -105,11 +122,11 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
               Confirmar mi lugar
             </button>
           </>
-        ) : rsvp.status === "waitlisted" ? (
+        ) : state.kind === "espera" ? (
           <p className="flex items-start gap-2 text-[15px] leading-relaxed text-zinc-200">
             <Hourglass aria-hidden className="mt-0.5 size-5 shrink-0 text-yellow-400" />
             <span>
-              Estás en la lista de espera{rsvp.position ? `, puesto ${rsvp.position}` : ""}. Si se libera un lugar te
+              Estás en la lista de espera{state.position ? `, puesto ${state.position}` : ""}. Si se libera un lugar te
               escribimos.
             </span>
           </p>
@@ -125,7 +142,7 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
           type="button"
           onClick={() => leave.mutate(input)}
         >
-          {rsvp.status === "waitlisted" ? "Salir de la lista" : "No puedo ir: liberar mi lugar"}
+          {state.kind === "espera" ? "Salir de la lista" : "No puedo ir: liberar mi lugar"}
         </button>
         {error ? (
           <p className="text-sm text-red-300" role="alert">
@@ -136,9 +153,28 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
     );
   }
 
-  if (full && !event.waitlist && !event.approval) {
-    return <p className="text-[15px] text-zinc-300">No quedan lugares.</p>;
+  if (state.kind === "rechazado") {
+    return (
+      <p className="flex items-start gap-2 text-[15px] leading-relaxed text-zinc-300">
+        <CircleSlash aria-hidden className="mt-0.5 size-5 shrink-0 text-zinc-500" />
+        <span>
+          Quienes organizan {event.community.name} no confirmaron tu inscripción. Si creés que es un error, escribiles.
+        </span>
+      </p>
+    );
   }
+
+  if (state.kind === "externo") {
+    return state.url ? (
+      <ButtonLink arrow className="w-full justify-center" href={state.url} size="lg">
+        {state.eventbrite ? "Inscribirme en Eventbrite" : "Inscribirme"}
+      </ButtonLink>
+    ) : (
+      <p className="text-[15px] text-zinc-300">La inscripción abre en unos minutos.</p>
+    );
+  }
+
+  if (!cta) return <p className="text-[15px] leading-relaxed text-zinc-300">{NOTE[state.kind]}</p>;
 
   // Signing in stays on screen until it's done: a new account still names itself after the code
   if (!signedIn || step === "auth") {
@@ -179,6 +215,11 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
         void save.then(() => join.mutate({ eventId: event.id, guests, answers, showName }));
       }}
     >
+      {state.kind === "cancelado" ? (
+        <p className="text-[15px] leading-relaxed text-zinc-300">
+          Tu lugar se liberó. Si al final podés ir, anotate de nuevo.
+        </p>
+      ) : null}
       {nameless ? (
         <label className="flex flex-col gap-2 text-[14px] text-zinc-300">
           Tu nombre
