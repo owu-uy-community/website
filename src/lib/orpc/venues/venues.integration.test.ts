@@ -142,6 +142,48 @@ describe("spaces", () => {
     await expect(ask(community.id, tuesdaysOnly.id, member)).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
+  test("a request respects the space's notice and its meetups a month", async () => {
+    const { community, editor } = await setup();
+    const strict = await makeVenue({ leadDays: 30, monthlyCap: 1 });
+    const soon = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+    await makeEvent(community.id, {
+      status: "published",
+      venueId: strict.id,
+      startDate: new Date("2029-09-04T22:00:00Z"),
+      endDate: new Date("2029-09-05T01:00:00Z"),
+    });
+
+    await expect(
+      ask(community.id, strict.id, editor, { options: [{ ...OPTIONS[0], day: soon }] })
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: expect.stringContaining("30 días de anticipación") });
+    await expect(ask(community.id, strict.id, editor)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: expect.stringContaining("ese mes"),
+    });
+  });
+
+  test("the list ranks spaces for the event: what fits first, the reasons on the rest, Plan B last", async () => {
+    const { community, editor } = await setup();
+    const [small, roomy, planB] = await Promise.all([
+      makeVenue({ capacity: 20 }),
+      makeVenue({ capacity: 100, amenities: ["proyector"] }),
+      makeVenue({ capacity: 300, fallback: true }),
+    ]);
+
+    const listed = await call(
+      router.venues.list,
+      { communityId: community.id, size: "30-60", needs: ["proyector"], day: "2029-09-13" },
+      by(editor)
+    );
+    const ids = listed.map((venue) => venue.id).filter((id) => [small.id, roomy.id, planB.id].includes(id));
+
+    expect(ids).toStrictEqual([roomy.id, small.id, planB.id]);
+    expect(listed.find((venue) => venue.id === small.id)?.fit).toStrictEqual({
+      blockers: ["Entran 20"],
+      missing: ["proyector"],
+    });
+  });
+
   test("an unanswered request expires and its organizer hears about it", async () => {
     const { community, editor, venue } = await setup();
     const request = await ask(community.id, venue.id, editor);

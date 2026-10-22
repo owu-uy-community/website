@@ -1327,6 +1327,8 @@ export const venues = pgTable(
     notes: text("notes").notNull().default(""),
     status: text("status").$type<"pending" | "active" | "archived">().notNull().default("pending"),
     requestable: boolean("requestable").notNull().default(false),
+    /** The "Plan B" space (CIE · ORT): always offered, last */
+    fallback: boolean("fallback").notNull().default(false),
     submittedById: text("submittedById"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")

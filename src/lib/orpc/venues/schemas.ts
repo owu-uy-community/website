@@ -38,11 +38,24 @@ export const VenueSchema = z.object({
   logoUrl: z.string().nullable(),
   /** Takes requests through OWU; otherwise OWU's staff coordinate it */
   requestable: z.boolean(),
+  /** The "Plan B" space, offered last whatever the event */
+  fallback: z.boolean(),
   /** Times it hosted this community */
   hostedUs: z.number(),
 });
 
-export const VenueListSchema = z.object({ communityId: z.string().min(1) });
+/** What the event needs, to rank the spaces (all optional: without them, the plain list) */
+export const VenueListSchema = z.object({
+  communityId: z.string().min(1),
+  size: z.enum(["hasta-30", "30-60", "60-120", "120+"]).nullish(),
+  needs: z.array(AmenitySchema).max(AMENITIES.length).optional(),
+  day: DaySchema.nullish(),
+});
+
+/** A space for this event: why it doesn't work (blockers) and which needs it doesn't cover */
+export const RankedVenueSchema = VenueSchema.extend({
+  fit: z.object({ blockers: z.array(z.string()), missing: z.array(AmenitySchema) }),
+});
 
 export const RequestOptionSchema = z.object({ day: DaySchema, startTime: ClockSchema, durationMin: DurationSchema });
 
@@ -146,6 +159,7 @@ export const UpdateVenueSchema = z.object({
     .object({
       status: z.enum(["pending", "active", "archived"]),
       requestable: z.boolean(),
+      fallback: z.boolean(),
       name: z.string().trim().min(2).max(120),
       neighbourhood: z.string().trim().max(80),
       address: z.string().trim().max(200),
@@ -159,6 +173,8 @@ export const UpdateVenueSchema = z.object({
 export const VenueIdSchema = z.object({ venueId: z.string().min(1) });
 
 export type Venue = z.infer<typeof VenueSchema>;
+export type RankedVenue = z.infer<typeof RankedVenueSchema>;
+export type VenueListInput = z.infer<typeof VenueListSchema>;
 export type VenueRequest = z.infer<typeof VenueRequestSchema>;
 export type RequestVenueInput = z.infer<typeof RequestVenueSchema>;
 export type RespondInput = z.infer<typeof RespondSchema>;
