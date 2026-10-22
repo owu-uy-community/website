@@ -76,7 +76,7 @@ describe("the daily cron backstop", () => {
     vi.stubEnv("CRON_SECRET", "s3cret");
 
     expect((await get("Bearer s3cret")).status).toBe(200);
-    expect(tick).toHaveBeenLastCalledWith(240_000);
+    expect(tick).toHaveBeenLastCalledWith(240_000, { daily: true });
     expect((await get("Bearer wrong")).status).toBe(401);
     expect((await get()).status).toBe(401);
   });
