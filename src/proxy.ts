@@ -154,8 +154,15 @@ async function isMissing(request: NextRequest) {
     (protocol === "https:" && SELF_HOSTS.has(host)) || (LOOPBACK.has(hostname) && port === process.env.PORT);
   if (!isSelf) return false;
 
+  // The path is set on this site's URL, never resolved against it: resolving "//elsewhere/x" leaves
+  // the site, and a page request could make this server call any host.
+  const target = new URL(origin);
+  target.pathname = pathname;
+  target.search = search;
+  if (target.origin !== origin) return false;
+
   try {
-    const response = await fetch(new URL(`${pathname}${search}`, origin), {
+    const response = await fetch(target, {
       method: "HEAD",
       headers: { Accept: HTML },
       redirect: "manual",

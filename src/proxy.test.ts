@@ -131,3 +131,13 @@ describe("sign-in bounce", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 });
+
+describe("the existence check stays on this site", () => {
+  test("a path that looks like another host (//elsewhere/…) is asked of owu.uy, never of that host", async () => {
+    const seen = pageAnswers(404);
+
+    await get("//evil.example/x", { accept: "text/markdown" });
+
+    expect(seen.map((request) => new URL(request.url).host)).toStrictEqual(["www.owu.uy"]);
+  });
+});
