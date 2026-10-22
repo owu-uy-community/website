@@ -22,7 +22,7 @@ import { PersonAvatar } from "components/Admin/ui/person";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
 import { RelativeTime } from "components/Admin/ui/time";
 import { usePanelSummary } from "components/organizar/shell/context";
-import { milestones, todoItems, holdLeft, type Todo } from "components/organizar/shell/todo";
+import { holdLeft, milestones, todoItems, type Todo, type TodoKind } from "components/organizar/shell/todo";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Skeleton } from "components/shared/ui/skeleton";
@@ -39,6 +39,17 @@ import type { CalendarCommunity } from "../calendar/CalendarClient";
 
 const HOLD_DAYS = 14;
 const AHEAD_DAYS = 21;
+
+/** The button that takes a to-do to the page where it gets resolved. */
+const GO_RESOLVE: Record<TodoKind, string> = {
+  renew: "Renovar",
+  venue: "Pedir a otro",
+  conflict: "Ver el día",
+  poll: "Responder",
+  cohost: "Responder",
+  date: "Elegir fecha",
+  first: "Buscar fecha",
+};
 
 /**
  * The panel's front page: the next event and how it fills, how the community is doing, what needs
@@ -127,11 +138,6 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
 
   /** What resolves an item: right here when it can (renew, co-host), else a link to where. */
   const resolve = (item: Todo): React.ReactNode => {
-    const link = (label: string) => (
-      <Button asChild size="xs" variant="outline">
-        <Link href={item.href}>{label}</Link>
-      </Button>
-    );
     if (item.kind === "renew") {
       const event = holds.find((hold) => hold.id === item.eventId);
       return event ? (
@@ -164,16 +170,10 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
       );
     }
 
-    return link(
-      {
-        venue: "Pedir a otro",
-        conflict: "Ver el día",
-        poll: "Responder",
-        date: "Elegir fecha",
-        first: "Buscar fecha",
-        renew: "Renovar",
-        cohost: "Responder",
-      }[item.kind]
+    return (
+      <Button asChild size="xs" variant="outline">
+        <Link href={item.href}>{GO_RESOLVE[item.kind]}</Link>
+      </Button>
     );
   };
 
