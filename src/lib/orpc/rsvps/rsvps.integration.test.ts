@@ -212,6 +212,36 @@ describe("quiénes van", () => {
 });
 
 describe("more room", () => {
+  test("removing the limit seats everyone waiting at once", async () => {
+    const { community, event } = await rsvpEvent({ capacity: 1 });
+    const editor = await makeMember(community.id, "editor");
+    const [first, second, third] = await people(3);
+    for (const person of [first, second, third]) await join(event.id, person);
+    const { updatedAt } = await call(router.events.get, { communityId: community.id, eventId: event.id }, by(editor));
+
+    await call(
+      router.events.save,
+      { communityId: community.id, eventId: event.id, expectedUpdatedAt: updatedAt, patch: { capacity: null } },
+      by(editor)
+    );
+
+    await expect(statuses(event.id)).resolves.toStrictEqual(["attending", "attending", "attending"]);
+    await expect(mail(third.email, "rsvp_promoted")).resolves.toHaveLength(1);
+  });
+
+  test("a cancelled event's list stays as it was: no seat given, nobody emailed", async () => {
+    const { community, event } = await rsvpEvent({ capacity: 1 });
+    const admin = await makeMember(community.id, "admin");
+    const [first, second] = await people(2);
+    await join(event.id, first);
+    const waiting = await join(event.id, second);
+    await call(router.events.cancel, { communityId: community.id, eventId: event.id, reason: "" }, by(admin));
+
+    await expect(
+      call(router.rsvps.giveSeat, { communityId: community.id, eventId: event.id, attendeeId: waiting.id }, by(admin))
+    ).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "closed" } });
+  });
+
   test("raising the capacity offers the new seats to the waitlist, in order", async () => {
     const { community, event } = await rsvpEvent({ capacity: 1 });
     const editor = await makeMember(community.id, "editor");
