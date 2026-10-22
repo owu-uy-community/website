@@ -127,7 +127,7 @@ describe(mergeEvents, () => {
     expect(someoneElses.map((event) => event.id)).toContain("meetup-259");
   });
 
-  test("a called-off OWU event is marked, so feeds can cancel it and the agenda can leave it out", () => {
+  test("a called-off OWU event is marked, so feeds can cancel it and the agenda can leave it out, and hides nothing", () => {
     const own = {
       id: "e2",
       name: "Suspendido",
@@ -137,12 +137,15 @@ describe(mergeEvents, () => {
       communitySlug: "owasp-uruguay",
       communityName: "OWASP Uruguay",
       place: null,
-      meetupUrl: null,
+      // Its copy on Meetup, which stays live there
+      meetupUrl: "https://example.com/owasp",
     };
     const merged = mergeEvents(feed, manual, communities, [{ ...own, cancelled: true }]);
 
     expect(merged.find((event) => event.id === "owu-e2")?.cancelled).toBe(true);
     expect(merged.filter((event) => "cancelled" in event).map((event) => event.id)).toStrictEqual(["owu-e2"]);
+    // What's still on Meetup is live there: a cancelled OWU copy doesn't hide it
+    expect(merged.map((event) => event.id)).toContain("meetup-259");
   });
 
   test("picks each community's next event", () => {
