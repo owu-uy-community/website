@@ -160,10 +160,12 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
 
   // A meetup made in OWU and copied to Meetup shows once, as OWU's. Only a community's own events
   // can hide its feed entries: another community pasting the link must not make them disappear.
+  // A cancelled one hides nothing: what's still on Meetup is live there.
   const copied = (meetup: FeedMeetup, communitySlug: string | null) =>
     communitySlug !== null &&
     own.some(
       (event) =>
+        !event.cancelled &&
         event.communitySlug === communitySlug &&
         ((event.meetupUrl !== null && sameLink(event.meetupUrl, meetup.event_url)) ||
           Math.abs(Date.parse(event.start) - Date.parse(montevideoIso(meetup.datetime))) <= SAME_MEETUP_MS)
