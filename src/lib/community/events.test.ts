@@ -127,6 +127,24 @@ describe(mergeEvents, () => {
     expect(someoneElses.map((event) => event.id)).toContain("meetup-259");
   });
 
+  test("a called-off OWU event is marked, so feeds can cancel it and the agenda can leave it out", () => {
+    const own = {
+      id: "e2",
+      name: "Suspendido",
+      slug: "suspendido",
+      start: "2026-12-01T22:00:00.000Z",
+      end: "2026-12-02T00:00:00.000Z",
+      communitySlug: "owasp-uruguay",
+      communityName: "OWASP Uruguay",
+      place: null,
+      meetupUrl: null,
+    };
+    const merged = mergeEvents(feed, manual, communities, [{ ...own, cancelled: true }]);
+
+    expect(merged.find((event) => event.id === "owu-e2")?.cancelled).toBe(true);
+    expect(merged.filter((event) => "cancelled" in event).map((event) => event.id)).toStrictEqual(["owu-e2"]);
+  });
+
   test("picks each community's next event", () => {
     expect(nextEventByCommunity(merged).get("gdg-montevideo")?.id).toBe("manual-devfest");
   });

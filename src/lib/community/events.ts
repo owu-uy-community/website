@@ -3,7 +3,7 @@ import "server-only";
 import { cache } from "react";
 import * as z from "zod";
 
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 import { db } from "lib/db";
@@ -31,6 +31,8 @@ export type CommunityEvent = {
   source: "meetup" | "manual" | "owu";
   /** Organized by OWU itself (CONF, La Meetup) */
   isOwu: boolean;
+  /** Made in OWU and called off: the calendar feeds keep it (so subscribed calendars drop it), the agenda doesn't */
+  cancelled?: boolean;
 };
 
 /** Links we render as hrefs: web pages only, never javascript: or data: */
@@ -72,7 +74,7 @@ const OWU_NAMES = new Set(OWU_FEED_NAMES.map((name) => name.toLowerCase()));
 /** Only listed names get the "Organiza OWU" badge: anyone can name a Meetup group "OWU …" */
 const isOwuName = (value: string) => OWU_NAMES.has(value.trim().toLowerCase());
 
-/** A published event made in Organizá, as the agenda needs it */
+/** A published (or called off) event made in Organizá, as the agenda needs it */
 export type OwnEvent = {
   id: string;
   name: string;
@@ -84,6 +86,7 @@ export type OwnEvent = {
   place: string | null;
   /** Its copy on Meetup, if the organizers pasted it back */
   meetupUrl: string | null;
+  cancelled?: boolean;
 };
 
 const SAME_MEETUP_MS = 90 * 60_000;
@@ -110,6 +113,7 @@ async function fetchOwnEvents(): Promise<OwnEvent[]> {
         slug: events.slug,
         startDate: events.startDate,
         endDate: events.endDate,
+        status: events.status,
         mode: events.mode,
         placeName: events.placeName,
         externalLinks: events.externalLinks,
@@ -122,7 +126,7 @@ async function fetchOwnEvents(): Promise<OwnEvent[]> {
       .leftJoin(venues, eq(venues.id, events.venueId))
       .where(
         and(
-          eq(events.status, "published"),
+          inArray(events.status, ["published", "cancelled"]),
           eq(events.isActive, true),
           eq(communities.isActive, true),
           gt(events.endDate, new Date())
@@ -139,6 +143,7 @@ async function fetchOwnEvents(): Promise<OwnEvent[]> {
       communityName: row.communityName,
       place: row.mode === "online" ? null : (row.venueName ?? row.placeName),
       meetupUrl: row.externalLinks.meetup ?? null,
+      cancelled: row.status === "cancelled",
     }));
   } catch {
     // The agenda renders from the feed alone rather than fail
@@ -195,6 +200,7 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
     url: `/comunidad/${event.communitySlug}/events/${event.slug}`,
     source: "owu",
     isOwu: event.communitySlug === LEGACY_COMMUNITY_SLUG,
+    ...(event.cancelled ? { cancelled: true } : {}),
   }));
 
   const fromManual = manual.flatMap((event): CommunityEvent[] => {
@@ -225,8 +231,11 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
 export const isUpcoming = (event: CommunityEvent, now = Date.now()) =>
   (event.end ? Date.parse(event.end) : Date.parse(event.start) + 2 * 3_600_000) >= now;
 
-/** Every known upcoming event: the meetup-bot feed plus the hand-curated list, oldest first. */
-export const getUpcomingEvents = cache(async (): Promise<CommunityEvent[]> => {
+/**
+ * Every known upcoming event for the calendar feeds: the meetup-bot feed, the hand-curated list and
+ * OWU's own, oldest first. OWU's called-off ones stay in, marked, so subscribed calendars drop them.
+ */
+export const getFeedEvents = cache(async (): Promise<CommunityEvent[]> => {
   const [feed, manual, communities, own] = await Promise.all([
     fetchFeed(),
     getManualEvents(),
@@ -236,6 +245,11 @@ export const getUpcomingEvents = cache(async (): Promise<CommunityEvent[]> => {
 
   return mergeEvents(feed, manual, communities, own).filter((event) => isUpcoming(event));
 });
+
+/** Every known upcoming event, as the agenda lists it: no called-off ones. */
+export const getUpcomingEvents = cache(async (): Promise<CommunityEvent[]> =>
+  (await getFeedEvents()).filter((event) => !event.cancelled)
+);
 
 /** The next event per directory entry */
 export function nextEventByCommunity(events: CommunityEvent[]) {

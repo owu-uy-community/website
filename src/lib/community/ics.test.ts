@@ -31,6 +31,13 @@ describe(buildIcs, () => {
     expect(unfolded).toContain("DESCRIPTION:Organiza: Ruby Montevideo\\nMás info en el link");
   });
 
+  test("only a cancelled event carries a STATUS, so calendars drop it", () => {
+    const cancelled = buildIcs([{ ...event, cancelled: true }], { name: "x", description: "y" });
+
+    expect(ics).not.toContain("STATUS:");
+    expect(cancelled).toContain("URL:https://www.meetup.com/ruby-montevideo/events/316855290/\r\nSTATUS:CANCELLED\r\n");
+  });
+
   test("uses CRLF and folds every line to 75 octets", () => {
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
     const encoder = new TextEncoder();

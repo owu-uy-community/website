@@ -1,4 +1,4 @@
-import { getUpcomingEvents } from "lib/community/events";
+import { getFeedEvents } from "lib/community/events";
 import { buildIcs } from "lib/community/ics";
 import { SITE_URL } from "lib/community/site";
 import { getCommunityBySlug } from "lib/tenant-server";
@@ -12,7 +12,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ com
   const community = await getCommunityBySlug(communitySlug);
   if (!community?.isActive) return new Response("Not found", { status: 404 });
 
-  const mine = (await getUpcomingEvents()).filter((event) => event.communitySlug === community.slug);
+  const mine = (await getFeedEvents()).filter((event) => event.communitySlug === community.slug);
   const body = buildIcs(
     mine.map((event) => {
       const url = new URL(event.url, SITE_URL).toString();
@@ -25,6 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ com
         location: event.venue,
         url,
         description: `Organiza: ${event.group}\n${url}`,
+        cancelled: event.cancelled,
       };
     }),
     {

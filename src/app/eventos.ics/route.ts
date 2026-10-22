@@ -1,4 +1,4 @@
-import { getUpcomingEvents } from "lib/community/events";
+import { getFeedEvents } from "lib/community/events";
 import { buildIcs } from "lib/community/ics";
 import { SITE_URL } from "lib/community/site";
 
@@ -6,7 +6,7 @@ import { SITE_URL } from "lib/community/site";
 export const revalidate = 3600;
 
 export async function GET() {
-  const events = (await getUpcomingEvents()).map((event) => ({
+  const events = (await getFeedEvents()).map((event) => ({
     ...event,
     url: new URL(event.url, SITE_URL).toString(),
   }));
@@ -19,6 +19,7 @@ export async function GET() {
       location: event.venue,
       url: event.url,
       description: `Organiza: ${event.group}\n${event.url}`,
+      cancelled: event.cancelled,
     })),
     {
       name: "OWU · Eventos tech en Uruguay",
