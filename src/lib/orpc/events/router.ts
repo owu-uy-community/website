@@ -21,6 +21,7 @@ import {
   PublicEventSchema,
   PublishResultSchema,
   SaveEventSchema,
+  ShowUpSchema,
   UpcomingEventSchema,
 } from "./schemas";
 import * as Door from "../door/service";
@@ -173,6 +174,15 @@ export const eventsRouter = {
     .output(EventStatsSchema)
     .effect(function* ({ input }) {
       return yield* Events.stats(input.eventId);
+    }),
+
+  showUp: authed
+    .meta(docs("How many of the people with a seat usually come, for this community"))
+    .input(z.object({ communityId: z.string().min(1) }))
+    .use(inCommunity("editor"))
+    .output(ShowUpSchema)
+    .effect(function* () {
+      return yield* Events.showUp;
     }),
 
   message: authed

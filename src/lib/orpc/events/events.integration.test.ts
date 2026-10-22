@@ -10,7 +10,7 @@ import { openApiHandler, requestContext } from "lib/orpc/handlers";
 import { router } from "lib/orpc/router";
 import { liveServices } from "lib/orpc/services";
 import { by } from "test/context";
-import { makeCommunity, makeEvent, makeMember } from "test/factories";
+import { makeCommunity, makeEvent, makeMember, makeRsvp } from "test/factories";
 
 import { remindExpiringHolds } from "./service";
 
@@ -160,5 +160,36 @@ describe("events.upcoming", () => {
     expect(ids).toContain(published.id);
     expect(ids).not.toContain(draft.id);
     expect(ids).not.toContain(past.id);
+  });
+});
+
+describe("events.showUp", () => {
+  test("the share of seated people who came, once three past events used the door", async () => {
+    const community = await makeCommunity();
+    const editor = await makeMember(community.id, "editor");
+    const ask = () => call(router.events.showUp, { communityId: community.id }, by(editor));
+    const pastEvent = (daysAgo: number) =>
+      makeEvent(community.id, {
+        status: "published",
+        registration: "owu",
+        startDate: new Date(Date.now() - daysAgo * 86_400_000),
+        endDate: new Date(Date.now() - daysAgo * 86_400_000 + 7_200_000),
+      });
+    // Each event: four with a seat, of whom `came` checked in
+    const withDoor = async (daysAgo: number, came: number) => {
+      const event = await pastEvent(daysAgo);
+      await Promise.all(
+        Array.from({ length: 4 }, (_, index) => makeRsvp(event.id, { checkedInAt: index < came ? new Date() : null }))
+      );
+    };
+
+    await withDoor(30, 2);
+    await withDoor(60, 3);
+    await expect(ask()).resolves.toStrictEqual({ rate: null, events: 2 });
+
+    await withDoor(90, 1);
+    await pastEvent(120).then((event) => makeRsvp(event.id));
+
+    await expect(ask()).resolves.toStrictEqual({ rate: 0.5, events: 3 });
   });
 });

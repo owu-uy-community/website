@@ -210,3 +210,29 @@ describe("quiénes van", () => {
     expect(page).toMatchObject({ taken: 2, waiting: 1, going: ["Ana G."] });
   });
 });
+
+describe("more room", () => {
+  test("raising the capacity offers the new seats to the waitlist, in order", async () => {
+    const { community, event } = await rsvpEvent({ capacity: 1 });
+    const editor = await makeMember(community.id, "editor");
+    const [first, second, third] = await people(3);
+    for (const person of [first, second, third]) await join(event.id, person);
+    const { updatedAt } = await call(router.events.get, { communityId: community.id, eventId: event.id }, by(editor));
+
+    await call(
+      router.events.save,
+      { communityId: community.id, eventId: event.id, expectedUpdatedAt: updatedAt, patch: { capacity: 2 } },
+      by(editor)
+    );
+
+    const rows = await db.select().from(attendees).where(eq(attendees.eventId, event.id));
+    expect(new Map(rows.map((row) => [row.userId, row.status]))).toStrictEqual(
+      new Map([
+        [first.id, "attending"],
+        [second.id, "offered"],
+        [third.id, "waitlisted"],
+      ])
+    );
+    await expect(mail(second.email, "rsvp_offered")).resolves.toHaveLength(1);
+  });
+});

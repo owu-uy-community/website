@@ -245,6 +245,9 @@ export type PublicEvent = z.infer<typeof PublicEventSchema>;
 // The event dashboard
 // ---------------------------------------------------------------------------
 
+/** Of the people with a seat, the share that came; null until the community has 3 events with check-in. */
+export const ShowUpSchema = z.object({ rate: z.number().nullable(), events: z.number() });
+
 export const EventStatsSchema = z.object({
   capacity: z.number().nullable(),
   /** Seats taken, with +1s */

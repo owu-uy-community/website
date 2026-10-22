@@ -27,7 +27,7 @@ import { acceptedCohosts, cohostsOf, inviteCohosts, setCohosts } from "./cohosts
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
-import { notifyCancelled } from "../rsvps/service";
+import { notifyCancelled, seatsChanged } from "../rsvps/service";
 import { CommunityScope } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
 
@@ -514,6 +514,19 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
           summary: `movió el evento al ${shortWhen(moved.startDate)}`,
         });
       }
+      if (row.status === "published" && fields.capacity !== undefined && fields.capacity !== row.capacity) {
+        yield* recordActivity({
+          eventId: row.id,
+          verb: "event.capacity",
+          entityType: "event",
+          entityId: row.id,
+          summary: fields.capacity === null ? "sacó el límite de lugares" : `cambió el cupo a ${fields.capacity}`,
+        });
+        // More room: the waitlist moves up now, not when someone leaves
+        if (fields.capacity === null || (row.capacity !== null && fields.capacity > row.capacity)) {
+          yield* seatsChanged(row.id);
+        }
+      }
 
       yield* queuePush(row);
       const saved = yield* editableOf(row.id);
@@ -874,3 +887,35 @@ export const upcoming = query((db) =>
     }))
   )
 );
+
+/**
+ * How many of the people with a seat came, over the community's last 18 months of events with OWU
+ * sign-up where the door was used (at least one check-in). Under 3 such events it isn't known yet.
+ */
+export const showUp = Effect.gen(function* () {
+  const { communityId } = yield* CommunityScope;
+  const rows = yield* query((db) =>
+    db
+      .select({
+        seated: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+        came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
+      })
+      .from(attendees)
+      .innerJoin(events, eq(events.id, attendees.eventId))
+      .where(
+        and(
+          eq(events.communityId, communityId),
+          eq(events.status, "published"),
+          eq(attendees.source, "owu"),
+          lt(events.endDate, new Date()),
+          gt(events.endDate, new Date(Date.now() - 548 * DAY_MS))
+        )
+      )
+      .groupBy(attendees.eventId)
+  );
+  const counted = rows.filter((row) => row.came > 0 && row.seated > 0);
+  const seated = counted.reduce((sum, row) => sum + row.seated, 0);
+  const came = counted.reduce((sum, row) => sum + row.came, 0);
+
+  return { rate: counted.length >= 3 ? Math.min(1, came / seated) : null, events: counted.length };
+});

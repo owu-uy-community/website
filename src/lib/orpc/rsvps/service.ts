@@ -756,6 +756,14 @@ export const sendUpdates = Effect.gen(function* () {
 });
 
 /** A cancelled event tells everyone signed up at once, and takes it out of their calendars. Call it locked. */
+/** After the organizers make room (more seats, or no limit): the waitlist moves up, first come first served. */
+export const seatsChanged = (eventId: string) =>
+  Effect.gen(function* () {
+    const event = yield* contextOf(yield* lockEvent(eventId));
+    yield* promote(event);
+    yield* opsPing(event.id, "checkins");
+  });
+
 export const notifyCancelled = (eventId: string) =>
   Effect.gen(function* () {
     const event = yield* contextOf(yield* lockEvent(eventId));
