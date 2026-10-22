@@ -263,9 +263,9 @@ const SESSIONS: Session[] = [
     blurb: speakerNames(TALKS[0]),
     description: (
       <>
-        Arranca el bloque de cierre con <Hl>Juan Pais y Ciro Mondueri</Hl>, de <Hl>Ironhide Game Studio</Hl>: cómo
-        llevaron Kingdom Rush a su primer juego <Hl yellow>multijugador y de operación continua</Hl>. Cuarenta minutos
-        sobre decisiones de diseño, desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.
+        Arranca el bloque de cierre <Hl>Sebastián Passaro</Hl>, de <Hl>OWASP Uruguay</Hl>, con un chatbot RAG que anda
+        bien hasta que <Hl yellow>un solo documento envenenado</Hl> lo da vuelta. Cuarenta minutos de ataques, tests
+        automatizables y defensa en profundidad, con el repositorio completo para que sigas investigando.
       </>
     ),
     Icon: MicVocal,
@@ -278,9 +278,9 @@ const SESSIONS: Session[] = [
     blurb: speakerNames(TALKS[1]),
     description: (
       <>
-        Cierra la tarde <Hl>Sebastián Passaro</Hl>, de <Hl>OWASP Uruguay</Hl>, con un chatbot RAG que anda bien hasta
-        que <Hl yellow>un solo documento envenenado</Hl> lo da vuelta. Cuarenta minutos de ataques, tests automatizables
-        y defensa en profundidad, con el repositorio completo para que sigas investigando.
+        Cierran la tarde <Hl>Juan Pais y Ciro Mondueri</Hl>, de <Hl>Ironhide Game Studio</Hl>: cómo llevaron Kingdom
+        Rush a su primer juego <Hl yellow>multijugador y de operación continua</Hl>. Cuarenta minutos sobre decisiones
+        de diseño, desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.
       </>
     ),
     Icon: MicVocal,
