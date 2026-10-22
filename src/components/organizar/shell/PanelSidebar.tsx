@@ -94,20 +94,19 @@ function NavExtra({ itemKey, summary }: { itemKey: PanelNavKey; summary: PanelSu
   if (!summary) return null;
   const count = (value: number) =>
     value ? <span className="ml-auto font-terminal text-2xs text-faint tabular-nums">{value}</span> : null;
-  const alert = (value: number, label: string) =>
+  // The number shows; what it counts is read out
+  const alert = (value: number, what: string) =>
     value > 0 ? (
-      <span
-        aria-label={label}
-        className="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] border border-primary/25 bg-primary-surface px-1 font-terminal text-[10.5px] text-primary tabular-nums"
-      >
+      <span className="ml-auto inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-[5px] border border-primary/25 bg-primary-surface px-1 font-terminal text-[10.5px] text-primary tabular-nums">
         {value}
+        <span className="sr-only"> {what}</span>
       </span>
     ) : null;
   const extras: Partial<Record<PanelNavKey, ReactNode>> = {
-    inicio: alert(summary.invitations.length, `${summary.invitations.length} invitaciones a coorganizar`),
+    inicio: alert(summary.invitations.length, "invitaciones a coorganizar"),
     eventos: count(summary.ahead.length),
-    encuestas: alert(summary.polls.length, `${summary.polls.length} esperan tu respuesta`),
-    espacios: alert(summary.venueRequests.length, `${summary.venueRequests.length} pedidos para mirar`),
+    encuestas: alert(summary.polls.length, "encuestas esperan tu respuesta"),
+    espacios: alert(summary.venueRequests.length, "pedidos de espacio para mirar"),
   };
 
   return <>{extras[itemKey] ?? null}</>;
