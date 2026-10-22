@@ -1,12 +1,13 @@
-import { CalendarClock, CalendarDays, Mic, Play, Presentation, VideoOff } from "lucide-react";
+import { Play, Presentation } from "lucide-react";
 import Image from "next/image";
 
 import { cn } from "app/lib/utils";
 import { TALK_EVENTS } from "keystatic/collections/talks";
 import type { Talk } from "lib/community/content";
 import { dateParts } from "lib/community/time";
+import { topicLabel } from "lib/community/topics";
 
-import { cardClassName, outbound } from "./ui";
+import { outbound } from "./ui";
 
 const EVENT_LABELS = new Map<string, string>(TALK_EVENTS.map(({ value, label }) => [value, label]));
 
@@ -15,22 +16,18 @@ export const talkEventLabel = (event: string) => EVENT_LABELS.get(event) ?? "Otr
 /** The talk's OWU-branded cover, rendered at build time (see /charlas/og/[slug]) */
 export const talkCoverUrl = (slug: string) => `/charlas/og/${slug}`;
 
-/** A talk from the archive: its branded cover, when and where, what it's about and who gave it */
+/** A talk from the archive: its branded cover (event, title and speakers), then who gave it */
 export default function TalkCard({ talk, className }: { talk: Talk; className?: string }) {
-  const when = dateParts(`${talk.date}T12:00:00-03:00`);
   // A talk still to be given (CONF agenda) shows its date instead of "no recording"
+  const when = dateParts(`${talk.date}T12:00:00-03:00`);
   const upcoming = Date.parse(`${talk.date}T23:59:59-03:00`) > Date.now();
-  const year = talk.date.slice(0, 4);
 
   return (
-    <article
-      className={cardClassName(true, cn("group flex h-full scroll-mt-24 flex-col overflow-hidden", className))}
-      id={talk.slug}
-    >
-      <div className="relative aspect-[40/21] overflow-hidden border-b border-white/[0.07] bg-[#0c0c0f]">
+    <article className={cn("group relative flex scroll-mt-24 flex-col gap-4", className)} id={talk.slug}>
+      <div className="relative aspect-[40/21] overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0c0c0f] shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] transition-[border-color,transform,box-shadow] duration-300 group-hover:-translate-y-0.5 group-hover:border-white/[0.14] group-hover:shadow-[0_24px_48px_-28px_rgba(0,0,0,0.9)]">
         <Image
           alt=""
-          className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-reduce:transition-none"
+          className="object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
           fill
           sizes="(min-width: 1024px) 368px, (min-width: 640px) 50vw, 100vw"
           src={talkCoverUrl(talk.slug)}
@@ -41,12 +38,11 @@ export default function TalkCard({ talk, className }: { talk: Talk; className?: 
           </span>
         ) : null}
       </div>
-
-      <div className="flex flex-1 flex-col gap-2.5 p-5 sm:p-6">
-        <h3 className="font-title text-[17px] leading-snug font-semibold text-zinc-50">
+      <div className="flex flex-col gap-1.5">
+        <h3 className="text-[15px] leading-snug font-semibold text-zinc-50">
           {talk.video ? (
             <a
-              className="after:absolute after:inset-0 after:content-['']"
+              className="after:absolute after:inset-0 after:content-[''] hover:text-white"
               href={outbound(talk.video, "charla")}
               rel="noopener"
               target="_blank"
@@ -57,42 +53,28 @@ export default function TalkCard({ talk, className }: { talk: Talk; className?: 
             talk.title
           )}
         </h3>
-        {talk.summary ? <p className="line-clamp-2 text-sm leading-relaxed text-zinc-400">{talk.summary}</p> : null}
-        <p className="flex items-start gap-1.5 text-sm text-zinc-300">
-          <Mic aria-hidden className="mt-0.5 size-3.5 shrink-0 text-zinc-500" />
-          {talk.speakers.join(", ")}
-        </p>
-
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-white/[0.07] pt-4 text-xs">
-          <span className="inline-flex items-center gap-1.5 text-zinc-500">
-            <CalendarDays aria-hidden className="size-3.5 shrink-0" />
-            {when.day} {when.month} {year}
-          </span>
-          <div className="flex items-center gap-3">
-            {talk.slides ? (
-              <a
-                className="relative z-10 inline-flex items-center gap-1 text-zinc-400 transition-colors hover:text-white"
-                href={outbound(talk.slides, "slides")}
-                rel="noopener"
-                target="_blank"
-              >
-                <Presentation aria-hidden className="size-3.5" /> Slides
-              </a>
-            ) : null}
-            {talk.video ? (
-              <span className="inline-flex items-center gap-1 font-medium text-yellow-400">
-                <Play aria-hidden className="size-3 fill-current" /> Ver charla
-              </span>
-            ) : upcoming ? (
-              <span className="inline-flex items-center gap-1 text-yellow-400">
-                <CalendarClock aria-hidden className="size-3.5" /> {when.weekday} {when.day} {when.month}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-zinc-600">
-                <VideoOff aria-hidden className="size-3.5" /> Sin grabación
-              </span>
-            )}
-          </div>
+        <p className="text-sm text-zinc-400">{talk.speakers.join(", ")}</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+          {talk.topics.slice(0, 2).map((topic) => (
+            <span key={topic}>#{topicLabel(topic).toLowerCase().replace(/\s+/g, "-")}</span>
+          ))}
+          {talk.slides ? (
+            <a
+              className="relative z-10 inline-flex items-center gap-1 text-zinc-400 transition-colors hover:text-white"
+              href={outbound(talk.slides, "slides")}
+              rel="noopener"
+              target="_blank"
+            >
+              <Presentation aria-hidden className="size-3.5" /> Slides
+            </a>
+          ) : null}
+          {talk.video ? null : upcoming ? (
+            <span className="text-yellow-400">
+              Se presenta el {when.weekday} {when.day} {when.month}
+            </span>
+          ) : (
+            <span className="text-zinc-600">Sin grabación</span>
+          )}
         </div>
       </div>
     </article>
