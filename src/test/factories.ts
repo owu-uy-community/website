@@ -142,6 +142,7 @@ export async function makeTrack(
 }
 
 /** An attendee of the event's Eventbrite mirror, not checked in unless told. */
+/** An attendee mirrored from Eventbrite. */
 export async function makeAttendee(eventId: string, overrides: Partial<typeof attendees.$inferInsert> = {}) {
   const eventbriteId = createId();
   const [row] = await db
@@ -154,6 +155,28 @@ export async function makeAttendee(eventId: string, overrides: Partial<typeof at
       ticketClass: "General",
       barcode: `${eventbriteId}001`,
       registeredAt: new Date("2026-10-01T12:00:00.000Z"),
+      ...overrides,
+    })
+    .returning();
+
+  return { ...row, eventbriteId: row.eventbriteId ?? eventbriteId };
+}
+
+/** Someone's RSVP through OWU (no Eventbrite id), attending unless `status` says otherwise. */
+export async function makeRsvp(eventId: string, overrides: Partial<typeof attendees.$inferInsert> = {}) {
+  const userId = overrides.userId ?? (await makeUser()).id;
+  const [row] = await db
+    .insert(attendees)
+    .values({
+      eventId,
+      eventbriteId: null,
+      source: "owu",
+      userId,
+      name: "Persona Anotada",
+      email: `${userId}@test.owu.uy`,
+      ticketClass: "General",
+      barcode: createId().slice(0, 10).toUpperCase(),
+      registeredAt: new Date(),
       ...overrides,
     })
     .returning();

@@ -39,7 +39,7 @@ import { Skeleton } from "components/shared/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "components/shared/ui/table";
 import { toast } from "components/shared/ui/toast-utils";
 import { orpc } from "lib/orpc";
-import type { Attendee, AttendeeSort } from "lib/orpc/attendees/schemas";
+import { NOT_ATTENDING_LABEL, type Attendee, type AttendeeSort } from "lib/orpc/attendees/schemas";
 
 import { doorOf, downloadCsv } from "./helpers";
 
@@ -75,7 +75,7 @@ function Presence({ attendee, timezone }: { attendee: Attendee; timezone: string
     return (
       <span className="flex items-center gap-1.5 text-muted-foreground">
         <CircleX aria-hidden className="size-3.5" />
-        {attendee.status === "refunded" ? "Reembolsada" : "Cancelada"}
+        {NOT_ATTENDING_LABEL[attendee.status]}
       </span>
     );
   }

@@ -311,6 +311,32 @@ export const events = pgTable(
     timezone: text("timezone").notNull().default("America/Montevideo"),
     eventbriteEventId: text("eventbriteEventId"),
     venueMapUrl: text("venueMapUrl"),
+    // Organizá: events made in the organizer panel. Every default keeps existing rows as they were.
+    /** Drafts are the organizer's only; existing events are published. */
+    status: text("status").$type<EventStatus>().notNull().default("published"),
+    /** A draft with a date and `heldUntil` ahead is a date hold: every organizer sees it on the calendar. */
+    heldUntil: ts("heldUntil"),
+    format: text("format").$type<EventFormat>(),
+    /** One line (≤140) for cards, the cover image and Eventbrite. `description` holds the Markdown. */
+    summary: text("summary"),
+    topics: text("topics").array().notNull().default([]),
+    /** The streaming link: only confirmed attendees get it, never a public page. */
+    onlineUrl: text("onlineUrl"),
+    /** How people sign up: not at all (open door), with OWU's RSVP, or on another site. */
+    registration: text("registration").$type<EventRegistration>().notNull().default("none"),
+    registrationUrl: text("registrationUrl"),
+    /** Organizers approve each RSVP. */
+    approval: boolean("approval").notNull().default(false),
+    capacity: integer("capacity"),
+    waitlist: boolean("waitlist").notNull().default(true),
+    /** How many +1s each person may bring. */
+    guestsAllowed: integer("guestsAllowed").notNull().default(0),
+    rsvpClosesAt: ts("rsvpClosesAt"),
+    questions: jsonb("questions").$type<RsvpQuestion[]>().notNull().default([]),
+    externalLinks: jsonb("externalLinks").$type<{ meetup?: string }>().notNull().default({}),
+    /** Bumped on every change attendees should hear about, so calendar invites update in place. */
+    icsSequence: integer("icsSequence").notNull().default(0),
+    publishedAt: ts("publishedAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()
@@ -320,8 +346,14 @@ export const events = pgTable(
   (t) => [
     unique("open_spaces_communityId_slug_key").on(t.communityId, t.slug),
     index("open_spaces_communityId_idx").on(t.communityId),
+    index("open_spaces_status_startDate_idx").on(t.status, t.startDate),
   ]
 );
+
+export type EventStatus = "draft" | "published" | "cancelled";
+export type EventFormat = "charlas" | "taller" | "open-space" | "social" | "hackathon" | "otro";
+export type EventRegistration = "none" | "owu" | "external";
+export type RsvpQuestion = { id: string; label: string; required: boolean };
 
 /** @deprecated transition alias — use `events`. */
 export const openSpaces = events;
@@ -920,7 +952,11 @@ export const runOfShowItems = pgTable(
   (t) => [index("run_of_show_items_eventId_position_idx").on(t.eventId, t.position)]
 );
 
-export type AttendeeStatus = "attending" | "cancelled" | "refunded";
+/**
+ * Eventbrite's three, plus OWU's own RSVP: on the waitlist, offered a freed seat (until
+ * `offerExpiresAt`), waiting for an organizer's approval, or turned down.
+ */
+export type AttendeeStatus = "attending" | "cancelled" | "refunded" | "waitlisted" | "offered" | "pending" | "declined";
 
 /**
  * Eventbrite attendees, mirrored per event. Eventbrite's API can't record a check-in, so the
@@ -936,7 +972,15 @@ export const attendees = pgTable(
     eventId: text("eventId")
       .notNull()
       .references(() => events.id, { onDelete: "cascade" }),
-    eventbriteId: text("eventbriteId").notNull(),
+    /** Mirrored Eventbrite attendees have it; OWU's own RSVPs don't. */
+    eventbriteId: text("eventbriteId"),
+    source: text("source").$type<"eventbrite" | "owu">().notNull().default("eventbrite"),
+    /** Who RSVP'd, for OWU's own registrations: one row per person and event. */
+    userId: text("userId"),
+    guests: integer("guests").notNull().default(0),
+    answers: jsonb("answers").$type<Record<string, string>>().notNull().default({}),
+    /** A freed seat offered from the waitlist is theirs until then. */
+    offerExpiresAt: ts("offerExpiresAt"),
     orderId: text("orderId"),
     name: text("name").notNull(),
     email: text("email").notNull().default(""),
@@ -959,6 +1003,8 @@ export const attendees = pgTable(
   },
   (t) => [
     unique("attendees_eventId_eventbriteId_key").on(t.eventId, t.eventbriteId),
+    unique("attendees_eventId_userId_key").on(t.eventId, t.userId),
+    foreignKey({ name: "attendees_userId_fk", columns: [t.userId], foreignColumns: [user.id] }).onDelete("set null"),
     index("attendees_eventId_checkedInAt_idx").on(t.eventId, t.checkedInAt),
     index("attendees_barcode_idx").on(t.barcode),
   ]
