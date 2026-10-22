@@ -46,6 +46,22 @@ export const surveysRouter = {
       return yield* Surveys.upsertSurvey(input);
     }),
 
+  clearResponses: staff
+    .meta(docs("Throw away the survey's answers (a test run) and keep its questions"))
+    .input(SurveyEventSchema)
+    .output(SurveySchema)
+    .effect(function* ({ input }) {
+      return yield* Surveys.clearResponses(input.eventId);
+    }),
+
+  delete: staff
+    .meta(docs("Delete the event's survey with its answers"))
+    .input(SurveyEventSchema)
+    .output(z.object({ ok: z.literal(true) }))
+    .effect(function* ({ input }) {
+      return yield* Surveys.deleteSurvey(input.eventId);
+    }),
+
   results: staff
     .meta(docs("NPS, averages, choice counts, the latest comments and the per-room breakdown"))
     .input(SurveyEventSchema)

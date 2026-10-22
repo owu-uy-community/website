@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   createColumnHelper,
   functionalUpdate,
@@ -21,10 +21,12 @@ import {
   SearchX,
   Tag,
   Ticket,
+  Undo2,
   X,
 } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { ConfirmDialog } from "components/Admin/panel";
 import { KeyHint, useShortcuts } from "components/Admin/shell/shortcuts";
 import { PersonAvatar } from "components/Admin/ui/person";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
@@ -54,20 +56,67 @@ function ticketVariant(ticketClass: string): BadgeProps["variant"] {
   return "secondary";
 }
 
-function Presence({ attendee, timezone }: { attendee: Attendee; timezone: string }) {
+/** A check-in that shouldn't have happened: back to «Por llegar», after a confirmation. */
+function UndoCheckin({ attendee, eventId }: { attendee: Attendee; eventId: string }) {
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  const undo = useMutation(
+    orpc.attendees.undoCheckin.mutationOptions({
+      onSuccess: () => {
+        setConfirming(false);
+        toast.success("Acreditación deshecha", `${attendee.name} vuelve a estar por llegar.`);
+        return queryClient.invalidateQueries({ queryKey: orpc.attendees.key() });
+      },
+      onError: (error) => {
+        setConfirming(false);
+        toast.error("No se pudo deshacer", error.message);
+      },
+    })
+  );
+
+  return (
+    <>
+      <Button
+        aria-label={`Deshacer la acreditación de ${attendee.name}`}
+        className="size-7 shrink-0 text-muted-foreground pointer-coarse:size-9"
+        size="icon"
+        title="Deshacer la acreditación"
+        variant="ghost"
+        onClick={() => setConfirming(true)}
+      >
+        <Undo2 />
+      </Button>
+      <ConfirmDialog
+        confirmLabel="Deshacer"
+        description="Vuelve a «Por llegar», también para los sorteos. El escaneo queda en el historial, y una sincronización con Eventbrite no la vuelve a acreditar."
+        open={confirming}
+        pending={undo.isPending}
+        pendingLabel="Deshaciendo…"
+        title={`¿Deshacer la acreditación de ${attendee.name}?`}
+        onConfirm={() => undo.mutate({ eventId, attendeeId: attendee.id })}
+        onOpenChange={setConfirming}
+      />
+    </>
+  );
+}
+
+function Presence({ attendee, timezone, eventId }: { attendee: Attendee; timezone: string; eventId: string }) {
   if (attendee.checkedInAt) {
     const repeated = attendee.repeatScans > 0;
     return (
-      <div className="min-w-0 leading-tight">
-        <p className="flex items-center gap-2">
-          <StatusDot tone={repeated ? "warn" : "ok"} />
-          <span className={repeated ? "text-warning-foreground" : "text-foreground"}>
-            {repeated ? `Escaneada ${attendee.repeatScans + 1} veces` : "Acreditado"}
-          </span>
-        </p>
-        <p className="truncate pl-3.5 font-terminal text-2xs text-muted-foreground tabular-nums">
-          {formatClock(new Date(attendee.checkedInAt), timezone)} · {doorOf(attendee)}
-        </p>
+      <div className="flex min-w-0 items-center gap-1">
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="flex items-center gap-2">
+            <StatusDot tone={repeated ? "warn" : "ok"} />
+            <span className={repeated ? "text-warning-foreground" : "text-foreground"}>
+              {repeated ? `Escaneada ${attendee.repeatScans + 1} veces` : "Acreditado"}
+            </span>
+          </p>
+          <p className="truncate pl-3.5 font-terminal text-2xs text-muted-foreground tabular-nums">
+            {formatClock(new Date(attendee.checkedInAt), timezone)} · {doorOf(attendee)}
+          </p>
+        </div>
+        <UndoCheckin attendee={attendee} eventId={eventId} />
       </div>
     );
   }
@@ -306,7 +355,7 @@ export function AttendeesTable({
         }),
         column.accessor("checkedInAt", {
           header: () => <SortButton by="checkin" label="Estado" sort={sort} onSort={onSort} />,
-          cell: ({ row }) => <Presence attendee={row.original} timezone={timezone} />,
+          cell: ({ row }) => <Presence attendee={row.original} eventId={eventId} timezone={timezone} />,
         }),
         column.accessor("tags", {
           header: "Etiquetas",
@@ -354,7 +403,7 @@ export function AttendeesTable({
           },
         }),
       ]),
-    [sort, onSort, timezone]
+    [sort, onSort, timezone, eventId]
   );
 
   const table = useTable({

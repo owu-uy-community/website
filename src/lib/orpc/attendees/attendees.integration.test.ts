@@ -9,7 +9,15 @@ import { db } from "lib/db";
 import { attendeeScans, attendeeSync, attendees, raffles } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeAttendee, makeCommunity, makeEvent, makeSiteAdmin, makeUser, type UserRow } from "test/factories";
+import {
+  makeAttendee,
+  makeCommunity,
+  makeEvent,
+  makeMember,
+  makeSiteAdmin,
+  makeUser,
+  type UserRow,
+} from "test/factories";
 import { server } from "test/msw/server";
 
 import { pickIndex } from "./raffles";
@@ -178,6 +186,26 @@ describe("the Eventbrite mirror", () => {
     await syncedLongAgo(event.id);
     await sync(event.id, staff);
     await expect(mirror(event.id)).resolves.toMatchObject({ x: owu });
+  });
+
+  test("an undone check-in is back to «por llegar», and Eventbrite doesn't bring it back", async () => {
+    const { event, eventbriteId, staff } = await mirroredEvent();
+    serveAttendees(eventbriteId, [[person("x", checkedIn("2026-11-07T18:30:00Z", "scan"))]]);
+    await sync(event.id, staff);
+    const { x } = await mirror(event.id);
+
+    await call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: x.id }, by(staff));
+    serveAttendees(eventbriteId, [[person("x", checkedIn("2026-11-07T18:45:00Z", "scan"))]]);
+    await syncedLongAgo(event.id);
+    await sync(event.id, staff);
+
+    await expect(mirror(event.id)).resolves.toMatchObject({ x: { checkedInAt: null, checkinDevice: null } });
+    await expect(
+      call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: x.id }, by(staff))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: x.id }, by(await makeUser()))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
   test("a key from outside the event's organization says so, instead of calling the key wrong", async () => {
@@ -579,6 +607,38 @@ describe("a raffle", () => {
     await call(router.attendees.raffles.claim, { drawId }, by(staff));
     await expect(call(router.attendees.raffles.claim, { drawId }, by(staff))).rejects.toMatchObject({
       code: "CONFLICT",
+    });
+  });
+
+  test("a new prize keeps the seed, so the draws so far still check out", async () => {
+    const { event, staff } = await hat();
+    const raffle = await call(router.attendees.raffles.create, { eventId: event.id, prize: "Remera" }, by(staff));
+    await call(router.attendees.raffles.draw, { raffleId: raffle.id }, by(staff));
+    const before = await listed(event.id, raffle.id, staff);
+
+    await call(router.attendees.raffles.update, { raffleId: raffle.id, prize: "Remera talle M" }, by(staff));
+    const after = await listed(event.id, raffle.id, staff);
+
+    expect(after).toMatchObject({ prize: "Remera talle M", seed: before?.seed, draws: before?.draws });
+  });
+
+  test("a deleted raffle goes with its draws; only site staff edit or delete one", async () => {
+    const { event, staff } = await hat();
+    const raffle = await call(router.attendees.raffles.create, { eventId: event.id, prize: "Taza" }, by(staff));
+    await call(router.attendees.raffles.draw, { raffleId: raffle.id }, by(staff));
+    const owner = await makeMember(event.communityId, "owner");
+
+    await expect(
+      call(router.attendees.raffles.update, { raffleId: raffle.id, prize: "Otra" }, by(owner))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.attendees.raffles.delete, { raffleId: raffle.id }, by(owner))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await call(router.attendees.raffles.delete, { raffleId: raffle.id }, by(staff));
+
+    await expect(listed(event.id, raffle.id, staff)).resolves.toBeUndefined();
+    await expect(call(router.attendees.raffles.draw, { raffleId: raffle.id }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
     });
   });
 

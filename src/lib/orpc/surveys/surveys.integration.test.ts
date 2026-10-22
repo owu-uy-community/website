@@ -221,3 +221,35 @@ describe("results", () => {
     await expect(call(router.surveys.get, { eventId: board.event.id }, by(admin))).resolves.toBeNull();
   });
 });
+
+describe("starting over", () => {
+  test("clearing the answers keeps the questions; deleting the survey lets the event start a new one", async () => {
+    const { eventId, admin, open, answer } = await setup();
+    await open();
+    await answer({ nps: 9 });
+    await answer({ nps: 3 });
+    const edited = await call(router.surveys.upsert, { eventId, title: "¿Qué tal?" }, by(admin));
+
+    const cleared = await call(router.surveys.clearResponses, { eventId }, by(admin));
+    await call(router.surveys.delete, { eventId }, by(admin));
+    const gone = await call(router.surveys.get, { eventId }, by(admin));
+    const fresh = await call(router.surveys.upsert, { eventId }, by(admin));
+
+    expect(cleared).toMatchObject({ id: edited.id, title: "¿Qué tal?", responses: 0 });
+    expect(gone).toBeNull();
+    expect(fresh).toMatchObject({ responses: 0, isOpen: false });
+    expect(fresh.id).not.toBe(edited.id);
+  });
+
+  test("only site staff clear or delete it; without a survey there is nothing to delete", async () => {
+    const { eventId, community, admin } = await setup();
+    const owner = await makeMember(community.id, "owner");
+
+    await expect(call(router.surveys.delete, { eventId }, by(owner))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.surveys.clearResponses, { eventId }, by(owner))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await call(router.surveys.delete, { eventId }, by(admin));
+    await expect(call(router.surveys.delete, { eventId }, by(admin))).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});

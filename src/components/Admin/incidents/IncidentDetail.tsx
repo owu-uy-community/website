@@ -3,15 +3,22 @@
 import * as React from "react";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LockKeyhole, MapPin, Send, UserRoundCheck } from "lucide-react";
+import { LockKeyhole, MapPin, MoreHorizontal, Pencil, Send, Trash2, UserRoundCheck } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { ConfirmDialog } from "components/Admin/panel";
 import { usePresence } from "components/Admin/shell/presence";
 import { MicroLabel } from "components/Admin/ui/page";
 import { AvatarStack, PersonAvatar } from "components/Admin/ui/person";
 import { formatClock, RelativeTime } from "components/Admin/ui/time";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "components/shared/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
@@ -33,11 +40,17 @@ import {
 import type { RoomOption } from "./ReportIncident";
 
 export type RosterPerson = { userId: string; name: string; image: string | null };
+type IncidentNote = IncidentDetail["notes"][number];
 
 const UNASSIGNED = "none";
 const NO_ROOM = "none";
-/** Log lines the server writes for a change (as opposed to a note someone typed). */
-const CHANGE_LINE = /^(cambió|asignó|se lo asignó|lo dejó|lo movió|le sacó)/;
+/**
+ * Log lines the server writes for a change, drawn as one line. Lines from before notes said
+ * their `kind` all read as changes, so the words tell an old typed note (drawn as a note, but
+ * not fixable) from an old change.
+ */
+const CHANGE_LINE = /^(cambió|asignó|se lo asignó|lo dejó|lo movió|le sacó|lo marcó|le agregó)/;
+const isChange = (note: IncidentNote) => note.kind === "change" && CHANGE_LINE.test(note.body);
 
 /** Status, assignment, notes: every write answers with the incident, which replaces the cached one. */
 export function useIncidentActions(eventId: string, id: string) {
@@ -63,6 +76,12 @@ export function useIncidentActions(eventId: string, id: string) {
     ),
     note: useMutation(
       orpc.incidents.addNote.mutationOptions({ onSuccess: settle, onError: fail("No se pudo anotar") })
+    ),
+    fixNote: useMutation(
+      orpc.incidents.updateNote.mutationOptions({ onSuccess: settle, onError: fail("No se pudo corregir la nota") })
+    ),
+    dropNote: useMutation(
+      orpc.incidents.deleteNote.mutationOptions({ onSuccess: settle, onError: fail("No se pudo borrar la nota") })
     ),
   };
 }
@@ -145,6 +164,7 @@ export function IncidentBody({
   eventId,
   meId,
   canEdit,
+  organizer = false,
   timezone,
   rooms,
   roster,
@@ -153,6 +173,7 @@ export function IncidentBody({
   eventId: string;
   meId: string;
   canEdit: boolean;
+  organizer?: boolean;
   timezone?: string;
   rooms: RoomOption[];
   roster: RosterPerson[];
@@ -336,7 +357,7 @@ export function IncidentBody({
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <MicroLabel>Registro</MicroLabel>
-          <span className="text-2xs text-muted-foreground">No se edita ni se borra</span>
+          <span className="text-2xs text-muted-foreground">Los cambios quedan; una nota se corrige</span>
         </div>
         <ol className="space-y-3">
           <li className="flex gap-2.5">
@@ -353,7 +374,7 @@ export function IncidentBody({
             <LogTime date={incident.createdAt} timezone={timezone} />
           </li>
           {incident.notes.map((note) =>
-            CHANGE_LINE.test(note.body) ? (
+            isChange(note) ? (
               <li key={note.id} className="flex gap-2.5">
                 <PersonAvatar className="mt-px" image={note.author?.image} name={note.author?.name ?? "?"} size={20} />
                 <p className="min-w-0 flex-1 text-meta text-muted-foreground">
@@ -362,19 +383,146 @@ export function IncidentBody({
                 <LogTime date={note.createdAt} timezone={timezone} />
               </li>
             ) : (
-              <li key={note.id} className="flex gap-2.5">
-                <PersonAvatar className="mt-0.5" image={note.author?.image} name={note.author?.name ?? "?"} size={20} />
-                <div className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2">
-                  <p className="text-meta font-medium text-subtle">{note.author?.name ?? "Alguien"}</p>
-                  <p className="mt-0.5 text-ui whitespace-pre-wrap text-foreground">{note.body}</p>
-                </div>
-                <LogTime date={note.createdAt} timezone={timezone} />
-              </li>
+              <TypedNote
+                key={note.id}
+                // Someone else's note on a confidential report is the organizers' to touch.
+                canFix={
+                  note.kind === "note" && (note.author?.id === meId || (incident.sensitive ? organizer : canEdit))
+                }
+                eventId={eventId}
+                incidentId={incident.id}
+                note={note}
+                timezone={timezone}
+              />
             )
           )}
         </ol>
       </section>
     </div>
+  );
+}
+
+/** A note someone typed: its author (or an editor) fixes it in place or takes it out. */
+function TypedNote({
+  note,
+  eventId,
+  incidentId,
+  canFix,
+  timezone,
+}: {
+  note: IncidentNote;
+  eventId: string;
+  incidentId: string;
+  canFix: boolean;
+  timezone?: string;
+}) {
+  const { fixNote, dropNote } = useIncidentActions(eventId, incidentId);
+  const [draft, setDraft] = React.useState<string | null>(null);
+  const [confirming, setConfirming] = React.useState(false);
+  const ref = { eventId, id: incidentId, noteId: note.id };
+  const save = () => {
+    const text = draft?.trim();
+    if (!text || fixNote.isPending) return;
+    if (text === note.body) return setDraft(null);
+    fixNote.mutate({ ...ref, body: text }, { onSuccess: () => setDraft(null) });
+  };
+
+  return (
+    <li className="flex gap-2.5">
+      <PersonAvatar className="mt-0.5" image={note.author?.image} name={note.author?.name ?? "?"} size={20} />
+      <div className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2">
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 truncate text-meta font-medium text-subtle">
+            {note.author?.name ?? "Alguien"}
+            {note.editedAt ? <span className="font-normal text-muted-foreground"> · editado</span> : null}
+          </p>
+          {canFix && draft === null ? (
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  aria-label="Más acciones de la nota"
+                  className="-my-1 size-6 shrink-0 text-muted-foreground pointer-coarse:size-9"
+                  size="icon"
+                  variant="ghost"
+                >
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setDraft(note.body)}>
+                  <Pencil />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+                  onSelect={() => setConfirming(true)}
+                >
+                  <Trash2 />
+                  Borrar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
+        {draft === null ? (
+          <p className="mt-0.5 text-ui whitespace-pre-wrap text-foreground">{note.body}</p>
+        ) : (
+          <form
+            className="mt-1.5 space-y-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              save();
+            }}
+          >
+            <Textarea
+              aria-label="Corregir la nota"
+              autoFocus
+              className="min-h-[60px] resize-none"
+              disabled={fixNote.isPending}
+              maxLength={2000}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  // Only the note: inside the phone's sheet, Esc would close the whole incident too.
+                  event.stopPropagation();
+                  setDraft(null);
+                }
+                if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault();
+                  save();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                disabled={fixNote.isPending}
+                size="sm"
+                type="button"
+                variant="ghost"
+                onClick={() => setDraft(null)}
+              >
+                Cancelar
+              </Button>
+              <Button disabled={!draft.trim() || fixNote.isPending} size="sm" type="submit">
+                {fixNote.isPending ? "Guardando…" : "Guardar"}
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
+      <LogTime date={note.createdAt} timezone={timezone} />
+      <ConfirmDialog
+        confirmLabel="Borrar nota"
+        description="Sale del registro del incidente. No se puede deshacer."
+        open={confirming}
+        pending={dropNote.isPending}
+        pendingLabel="Borrando…"
+        title="¿Borrar la nota?"
+        onConfirm={() => dropNote.mutate(ref, { onSettled: () => setConfirming(false) })}
+        onOpenChange={setConfirming}
+      />
+    </li>
   );
 }
 

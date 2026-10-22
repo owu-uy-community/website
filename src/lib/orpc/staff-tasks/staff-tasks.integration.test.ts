@@ -252,6 +252,60 @@ describe("staff announcements", () => {
       call(router.staffTasks.announcements.create, { eventId, body: "Para la tarea", audience: "task" }, by(editor))
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
+
+  test("an edit keeps who already read it, unless it asks everyone to read it again", async () => {
+    const { eventId, editor, member, colleague } = await setup();
+    const { id } = await call(router.staffTasks.announcements.create, { eventId, body: "Arrancamos en 5" }, by(editor));
+    await call(router.staffTasks.announcements.ack, { eventId, announcementId: id }, by(member));
+    const edit = { eventId, announcementId: id, urgent: true, audience: "all" as const };
+
+    await call(router.staffTasks.announcements.update, { ...edit, body: "Arrancamos en 10" }, by(editor));
+    const [typo] = await call(router.staffTasks.announcements.list, { eventId }, by(colleague));
+    await call(
+      router.staffTasks.announcements.update,
+      { ...edit, body: "Arrancamos en el patio", reread: true },
+      by(editor)
+    );
+    const [moved] = await call(router.staffTasks.announcements.list, { eventId }, by(colleague));
+
+    expect(typo).toMatchObject({ body: "Arrancamos en 10", urgent: true, ackCount: 1 });
+    expect(typo.editedAt).not.toBeNull();
+    expect(moved).toMatchObject({ body: "Arrancamos en el patio", ackCount: 0 });
+    expect(moved.pending.map((person) => person.userId).toSorted()).toStrictEqual([member.id, colleague.id].toSorted());
+  });
+
+  test("a deleted announcement is gone for everyone, with who read it", async () => {
+    const { eventId, editor, member } = await setup();
+    const { id } = await call(router.staffTasks.announcements.create, { eventId, body: "Se suspende" }, by(editor));
+    await call(router.staffTasks.announcements.ack, { eventId, announcementId: id }, by(member));
+
+    await call(router.staffTasks.announcements.delete, { eventId, announcementId: id }, by(editor));
+
+    await expect(call(router.staffTasks.announcements.list, { eventId }, by(member))).resolves.toStrictEqual([]);
+    await expect(
+      call(router.staffTasks.announcements.ack, { eventId, announcementId: id }, by(member))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("members can't edit or delete an announcement, and another event's is NOT_FOUND", async () => {
+    const { eventId, editor, member } = await setup();
+    const other = await setup();
+    const { id } = await call(router.staffTasks.announcements.create, { eventId, body: "Hola" }, by(editor));
+    const edit = { announcementId: id, body: "Chau", urgent: false, audience: "all" as const };
+
+    await expect(call(router.staffTasks.announcements.update, { ...edit, eventId }, by(member))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(
+      call(router.staffTasks.announcements.delete, { eventId, announcementId: id }, by(member))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      call(router.staffTasks.announcements.update, { ...edit, eventId: other.eventId }, by(other.editor))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      call(router.staffTasks.announcements.delete, { eventId: other.eventId, announcementId: id }, by(other.editor))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
 });
 
 describe("the activity log", () => {

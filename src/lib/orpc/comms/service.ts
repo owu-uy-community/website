@@ -11,8 +11,16 @@ import {
   surveys,
   user,
   type OutboundMessageRow,
+  type RemoteRef,
 } from "../../db/schema";
-import { owyChannels, sendSlackChannel, sendSlackDm, sendTelegram } from "../../owy/messaging";
+import {
+  deleteRemote,
+  editRemote,
+  owyChannels,
+  sendSlackChannel,
+  sendSlackDm,
+  sendTelegram,
+} from "../../owy/messaging";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound, UpstreamFailed, type ForeignKeyViolation, type UniqueViolation } from "../errors";
 import { opsPing, recordActivity } from "../ops";
@@ -26,6 +34,7 @@ import type {
   MessageRefSchema,
   OutboundMessage,
   RemindSchema,
+  RemoveMessageSchema,
   ScheduleMessageSchema,
   SendMessageSchema,
   UpdateMessageSchema,
@@ -35,6 +44,7 @@ type SendInput = z.infer<typeof SendMessageSchema>;
 type ScheduleInput = z.infer<typeof ScheduleMessageSchema>;
 type UpdateInput = z.infer<typeof UpdateMessageSchema>;
 type MessageRef = z.infer<typeof MessageRefSchema>;
+type RemoveInput = z.infer<typeof RemoveMessageSchema>;
 type MarkSentInput = z.infer<typeof MarkSentSchema>;
 type RemindInput = z.infer<typeof RemindSchema>;
 
@@ -86,6 +96,8 @@ const toMessage = ({ message, creator }: { message: OutboundMessageRow; creator:
   recipients: message.recipientIds.length,
   createdBy: creator,
   createdAt: message.createdAt.toISOString(),
+  editedAt: message.editedAt?.toISOString() ?? null,
+  remote: message.remoteRefs.length,
 });
 
 const messagesWhere = (where: SQL | undefined) =>
@@ -152,15 +164,27 @@ const slackAccounts = (userIds: readonly string[]) =>
           .where(and(eq(account.providerId, "slack"), inArray(account.userId, [...userIds])))
       );
 
-/** Hand a message to Owy. Every DM is tried; any that fails fails the whole message, saying how many. */
-const deliver = (
-  row: OutboundMessageRow
-): Effect.Effect<void, UpstreamFailed | UniqueViolation | ForeignKeyViolation, Database> => {
+/** Where a message's copies landed, and why it failed if it did. */
+type Delivery = { refs: RemoteRef[]; error: string | null };
+
+/** One post: where it landed, or why it didn't. */
+const posted = <R>(sending: Effect.Effect<RemoteRef | null, UpstreamFailed, R>) =>
+  sending.pipe(
+    Effect.map((ref): Delivery => ({ refs: ref ? [ref] : [], error: null })),
+    Effect.catchTag("UpstreamFailed", (failure) => Effect.succeed<Delivery>({ refs: [], error: failure.message }))
+  );
+
+/**
+ * Hand a message to Owy, keeping where each copy landed so it can be edited or deleted there.
+ * Every DM is tried; any that fails fails the whole message, saying how many (the ones that did
+ * land are kept, so deleting it reaches them too).
+ */
+const deliver = (row: OutboundMessageRow): Effect.Effect<Delivery, UniqueViolation | ForeignKeyViolation, Database> => {
   switch (row.channel) {
     case "telegram":
-      return sendTelegram(row.body);
+      return posted(sendTelegram(row.body));
     case "slack":
-      return sendSlackChannel(row.body);
+      return posted(sendSlackChannel(row.body));
     case "staff_dm":
       return Effect.gen(function* () {
         const people = yield* slackAccounts(row.recipientIds);
@@ -171,17 +195,20 @@ const deliver = (
             concurrency: 4,
           }
         );
+        const refs = results.flatMap((result) => (Result.isSuccess(result) && result.success ? [result.success] : []));
         const failures = results.filter(Result.isFailure);
-        if (failures.length === 0) return;
 
-        return yield* new UpstreamFailed({
-          service: "Slack",
-          message: `No le llegó a ${failures.length} de ${people.length}: ${failures[0].failure.message}`,
-        });
+        return {
+          refs,
+          error:
+            failures.length === 0
+              ? null
+              : `No le llegó a ${failures.length} de ${people.length}: ${failures[0].failure.message}`,
+        };
       });
     case "email":
       // Recorded by hand, never sent from here.
-      return Effect.void;
+      return Effect.succeed({ refs: [], error: null });
   }
 };
 
@@ -189,13 +216,17 @@ const deliver = (
  * The outcome, with its line in the activity log credited to the message's author: a scheduled
  * message goes out from whichever admin's tab is open, but it is still theirs.
  */
-const settle = (row: OutboundMessageRow, error: string | null) =>
+const settle = (row: OutboundMessageRow, { refs, error }: Delivery) =>
   transaction(
     Effect.gen(function* () {
       const [done] = yield* query((db) =>
         db
           .update(outboundMessages)
-          .set(error === null ? { status: "sent", sentAt: new Date(), error: null } : { status: "failed", error })
+          .set(
+            error === null
+              ? { status: "sent", sentAt: new Date(), error: null, remoteRefs: refs }
+              : { status: "failed", error, remoteRefs: refs }
+          )
           .where(eq(outboundMessages.id, row.id))
           .returning()
       );
@@ -220,11 +251,7 @@ const settle = (row: OutboundMessageRow, error: string | null) =>
   );
 
 const deliverAndSettle = (row: OutboundMessageRow) =>
-  deliver(row).pipe(
-    Effect.as(null),
-    Effect.catchTag("UpstreamFailed", (failure) => Effect.succeed(failure.message)),
-    Effect.flatMap((error) => settle(row, error))
-  );
+  deliver(row).pipe(Effect.flatMap((delivery) => settle(row, delivery)));
 
 const failedSend = (row: OutboundMessageRow) =>
   new UpstreamFailed({ service: "Owy", message: row.error ?? "El mensaje no salió" });
@@ -367,10 +394,78 @@ const notScheduled = ({ eventId, messageId }: MessageRef, verb: string) =>
     )
   );
 
-/** Edit a message while it waits to go out. */
+/** The row as stored, with where it landed: what an edit or a delete of a sent message needs. */
+const storedIn = (eventId: string, messageId: string) =>
+  query((db) =>
+    db
+      .select()
+      .from(outboundMessages)
+      .where(and(eq(outboundMessages.id, messageId), eq(outboundMessages.eventId, eventId)))
+  ).pipe(Effect.flatMap(([row]) => (row ? Effect.succeed(row) : Effect.fail(messageNotFound))));
+
+/**
+ * A message that already went out: only its text changes, rewritten where it landed (Telegram,
+ * Slack) for everyone who has it; an email marked by hand, only here.
+ */
+const updateSent = (stored: OutboundMessageRow, input: UpdateInput) =>
+  Effect.gen(function* () {
+    if (stored.status !== "sent") {
+      return yield* new Conflict({
+        reason: "message_not_sent",
+        message:
+          stored.status === "sending"
+            ? "Está saliendo: esperá a que termine"
+            : "No salió: usá «Reintentar» para mandarlo",
+      });
+    }
+    if (stored.channel === "staff_dm") {
+      return yield* new Conflict({
+        reason: "message_is_dm",
+        message: "Los recordatorios por mensaje directo no se editan: borralo y volvé a reenviar el aviso",
+      });
+    }
+    if ((input.channel !== undefined && input.channel !== stored.channel) || input.scheduledAt !== undefined) {
+      return yield* new Invalid({ message: "Ya salió: solo se puede cambiar el texto" });
+    }
+    const body = input.body;
+    if (body === undefined || body === stored.body) return yield* messageIn(input.eventId, input.messageId);
+    if (stored.channel !== "email") {
+      if (stored.remoteRefs.length === 0) {
+        return yield* new Conflict({
+          reason: "message_untracked",
+          message: `Salió antes de que el sitio guardara dónde quedó: editalo a mano en ${CHANNEL_WORDS[stored.channel]}`,
+        });
+      }
+      // There first: if Telegram or Slack says no, this list still shows what people have.
+      yield* Effect.forEach(stored.remoteRefs, (ref) => editRemote(ref, body), { concurrency: 4, discard: true });
+    }
+
+    yield* transaction(
+      Effect.gen(function* () {
+        yield* query((db) =>
+          db.update(outboundMessages).set({ body, editedAt: new Date() }).where(eq(outboundMessages.id, stored.id))
+        );
+        yield* recordActivity({
+          eventId: input.eventId,
+          verb: "message.updated",
+          entityType: "message",
+          entityId: stored.id,
+          summary: `editó lo que mandó por ${CHANNEL_WORDS[stored.channel]} ${quote(body)}`,
+        });
+      })
+    );
+    yield* opsPing(input.eventId, "comms");
+
+    return yield* messageIn(input.eventId, input.messageId);
+  });
+
+/** Edit a message: while it waits to go out, its channel, text and time; once out, only its text. */
 export const update = (input: UpdateInput) =>
   Effect.gen(function* () {
     yield* eventOf(input.eventId);
+    const stored = yield* storedIn(input.eventId, input.messageId);
+    if (stored.status !== "scheduled") return yield* updateSent(stored, input);
+
     const at = input.scheduledAt === undefined ? undefined : new Date(input.scheduledAt);
     if (at) yield* ensureFuture(at);
     const patch = {
@@ -440,6 +535,57 @@ export const cancel = (input: MessageRef) =>
             row.channel === "email"
               ? `desmarcó el email ${quote(row.body)}`
               : `canceló el mensaje programado ${quote(row.body)}`,
+        });
+      })
+    );
+    yield* opsPing(input.eventId, "comms");
+
+    return message;
+  });
+
+/**
+ * Delete a message for good: one waiting to go out, an email marked by hand, or one that went
+ * out, which also goes where it landed (every staff DM too) unless `onlyHere`. Telegram only lets
+ * a bot delete what it sent in the last 48 hours: past that it says no, and the message can
+ * still leave this list on its own.
+ */
+export const remove = (input: RemoveInput) =>
+  Effect.gen(function* () {
+    const message = yield* messageIn(input.eventId, input.messageId);
+    const stored = yield* storedIn(input.eventId, input.messageId);
+    if (stored.status === "sending") {
+      return yield* new Conflict({ reason: "message_sending", message: "Está saliendo: esperá a que termine" });
+    }
+    const there = input.onlyHere || stored.status === "scheduled" ? [] : stored.remoteRefs;
+    yield* Effect.forEach(there, deleteRemote, { concurrency: 4, discard: true });
+
+    yield* transaction(
+      Effect.gen(function* () {
+        const [row] = yield* query((db) =>
+          db
+            .delete(outboundMessages)
+            .where(and(eq(outboundMessages.id, stored.id), ne(outboundMessages.status, "sending")))
+            .returning()
+        );
+        if (!row)
+          return yield* new Conflict({ reason: "message_sending", message: "Empezó a salir: esperá a que termine" });
+
+        const what =
+          row.status === "scheduled"
+            ? "borró el mensaje programado"
+            : row.channel === "email"
+              ? "desmarcó el email"
+              : there.length === 0
+                ? `quitó de la lista lo que mandó por ${CHANNEL_WORDS[row.channel]}`
+                : row.channel === "staff_dm"
+                  ? `borró de Slack ${there.length === 1 ? "el mensaje directo" : `los ${there.length} mensajes directos`}`
+                  : `borró de ${CHANNEL_WORDS[row.channel]} el mensaje`;
+        yield* recordActivity({
+          eventId: input.eventId,
+          verb: "message.deleted",
+          entityType: "message",
+          entityId: row.id,
+          summary: `${what} ${quote(row.body)}`,
         });
       })
     );

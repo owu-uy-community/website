@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../../src/lib/db";
 import { events } from "../../src/lib/db/schema";
+import { makeCommunity, makeEvent } from "../../src/test/factories";
 import { expect, test } from "../fixtures";
 
 type Board = { community: { slug: string }; event: { slug: string }; rooms: { plain: { name: string } } };
@@ -95,4 +96,25 @@ test("with nothing changed, links just go", async ({ page, board }) => {
 
   await expect(page).toHaveURL(/\/admin\/communities$/);
   await expect(page.getByRole("alertdialog")).toBeHidden();
+});
+
+test("a community is deleted from its danger zone once it has no events", async ({ page }) => {
+  const name = `Para borrar ${Math.random().toString(36).slice(2, 8)}`;
+  const community = await makeCommunity({ name });
+  const event = await makeEvent(community.id);
+  const confirm = page.getByRole("alertdialog");
+  const remove = async () => {
+    await page.getByRole("button", { name: "Eliminar", exact: true }).click();
+    await confirm.getByRole("button", { name: "Eliminar la comunidad" }).click();
+  };
+  await page.goto(`/admin/communities/${community.slug}`);
+
+  // With an event left, it stays and says why.
+  await remove();
+  await expect(page.getByText("tiene un evento: eliminalos primero")).toBeVisible();
+  await db.delete(events).where(eq(events.id, event.id));
+  await remove();
+
+  await expect(page).toHaveURL(/\/admin\/communities$/);
+  await expect(page.getByRole("table").getByText(name)).toBeHidden();
 });

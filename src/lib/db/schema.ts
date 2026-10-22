@@ -639,6 +639,8 @@ export const staffAnnouncements = pgTable(
     /** When audience = "task": the announcement targets that task's assignees. */
     taskId: text("taskId").references(() => staffTasks.id, { onDelete: "set null" }),
     createdAt: ts("createdAt").notNull().defaultNow(),
+    /** The last edit, shown as «editado»; null while it reads as sent. */
+    editedAt: ts("editedAt"),
   },
   (t) => [index("staff_announcements_openSpaceId_createdAt_idx").on(t.openSpaceId, t.createdAt)]
 );
@@ -722,7 +724,15 @@ export const incidentNotes = pgTable(
       .references(() => incidents.id, { onDelete: "cascade" }),
     authorId: text("authorId").references(() => user.id, { onDelete: "set null" }),
     body: text("body").notNull(),
+    /**
+     * `note`: typed by someone; its author or an editor can fix or delete it. `change`: the log
+     * line of an edit, which stays as it was. Rows from before this column read as `change`: the
+     * log was append-only then, and stays so for them.
+     */
+    kind: text("kind").$type<"note" | "change">().notNull().default("change"),
     createdAt: ts("createdAt").notNull().defaultNow(),
+    /** A note fixed after the fact, shown as «editado». */
+    editedAt: ts("editedAt"),
   },
   (t) => [index("incident_notes_incidentId_idx").on(t.incidentId)]
 );
@@ -938,6 +948,11 @@ export const screens = pgTable("screens", {
 });
 
 /** Messages through Owy and the staff, sent now or when their time comes. */
+/** Where a sent message landed: Telegram's chat and message id, or Slack's channel and ts. */
+export type RemoteRef =
+  | { service: "telegram"; chatId: string; messageId: number }
+  | { service: "slack"; channel: string; ts: string };
+
 export const outboundMessages = pgTable(
   "outbound_messages",
   {
@@ -963,6 +978,13 @@ export const outboundMessages = pgTable(
     step: text("step"),
     createdById: text("createdById").references(() => user.id, { onDelete: "set null" }),
     createdAt: ts("createdAt").notNull().defaultNow(),
+    /**
+     * Where it landed (Telegram's chat and message id, Slack's channel and ts; one per staff DM), so
+     * editing or deleting it changes it there too. Empty for what went out before this was kept.
+     */
+    remoteRefs: jsonb("remoteRefs").$type<RemoteRef[]>().notNull().default([]),
+    /** The last edit after it went out, shown as «editado». */
+    editedAt: ts("editedAt"),
   },
   (t) => [index("outbound_messages_eventId_status_idx").on(t.eventId, t.status)]
 );

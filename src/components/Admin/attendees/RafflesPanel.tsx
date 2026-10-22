@@ -2,13 +2,20 @@
 
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Gift, MonitorPlay, RotateCcw, Shuffle } from "lucide-react";
+import { Gift, MonitorPlay, MoreHorizontal, Pencil, RotateCcw, Shuffle, Trash2 } from "lucide-react";
 
+import { ConfirmDialog } from "components/Admin/panel";
 import { MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
 import { StatusDot } from "components/Admin/ui/status";
 import { formatClock } from "components/Admin/ui/time";
 import { Button } from "components/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "components/shared/ui/dropdown-menu";
 import { Input } from "components/shared/ui/input";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
@@ -23,6 +30,9 @@ function RaffleCard({
   onRedraw,
   onClaim,
   onShow,
+  onRename,
+  onDelete,
+  deleting,
 }: {
   raffle: Raffle;
   timezone: string;
@@ -31,19 +41,90 @@ function RaffleCard({
   onRedraw: () => void;
   onClaim: (drawId: string) => void;
   onShow: () => void;
+  onRename: (prize: string, done: () => void) => void;
+  onDelete: () => void;
+  deleting: boolean;
 }) {
   const pending = raffle.draws.find((draw) => draw.status === "pending");
   const past = raffle.draws.filter((draw) => draw.status !== "pending").toReversed();
   const drawn = raffle.draws.some((draw) => draw.status !== "redrawn");
+  const [draft, setDraft] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const save = (event: FormEvent) => {
+    event.preventDefault();
+    const prize = draft?.trim();
+    if (!prize) return;
+    if (prize === raffle.prize) return setDraft(null);
+    onRename(prize, () => setDraft(null));
+  };
 
   return (
     <li className="space-y-2.5 px-3.5 py-3">
-      <div className="flex items-baseline gap-2">
-        <p className="min-w-0 flex-1 truncate text-ui font-medium text-foreground">{raffle.prize}</p>
-        <span className="shrink-0 font-terminal text-meta text-muted-foreground tabular-nums">
-          {raffle.pool} en el sorteo
-        </span>
-      </div>
+      {draft === null ? (
+        <div className="flex items-center gap-2">
+          <p className="min-w-0 flex-1 truncate text-ui font-medium text-foreground">{raffle.prize}</p>
+          <span className="shrink-0 font-terminal text-meta text-muted-foreground tabular-nums">
+            {raffle.pool} en el sorteo
+          </span>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                aria-label={`Más acciones de «${raffle.prize}»`}
+                className="-my-1 size-7 shrink-0 text-muted-foreground pointer-coarse:size-9"
+                disabled={busy}
+                size="icon"
+                variant="ghost"
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => setDraft(raffle.prize)}>
+                <Pencil />
+                Cambiar el premio
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+                onSelect={() => setConfirming(true)}
+              >
+                <Trash2 />
+                Borrar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      ) : (
+        <form className="flex gap-2" onSubmit={save}>
+          <Input
+            aria-label="Premio del sorteo"
+            autoFocus
+            maxLength={40}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => event.key === "Escape" && setDraft(null)}
+          />
+          <Button disabled={!draft.trim() || busy} size="sm" type="submit" variant="outline">
+            Guardar
+          </Button>
+          <Button disabled={busy} size="sm" type="button" variant="ghost" onClick={() => setDraft(null)}>
+            Cancelar
+          </Button>
+        </form>
+      )}
+      <ConfirmDialog
+        confirmLabel="Borrar sorteo"
+        description={
+          raffle.draws.length
+            ? `Se borra con ${raffle.draws.length === 1 ? "el ganador que salió" : `los ${raffle.draws.length} ganadores que salieron`}. No se puede deshacer.`
+            : "No se puede deshacer."
+        }
+        open={confirming}
+        pending={deleting}
+        pendingLabel="Borrando…"
+        title={`¿Borrar «${raffle.prize}»?`}
+        onConfirm={onDelete}
+        onOpenChange={setConfirming}
+      />
 
       {pending ? (
         <div className="rounded-lg border border-success/25 bg-success-surface px-3 py-2.5">
@@ -124,13 +205,30 @@ export function RafflesPanel({
   const draw = useMutation(orpc.attendees.raffles.draw.mutationOptions(options));
   const redraw = useMutation(orpc.attendees.raffles.redraw.mutationOptions(options));
   const claim = useMutation(orpc.attendees.raffles.claim.mutationOptions(options));
+  const rename = useMutation(orpc.attendees.raffles.update.mutationOptions(options));
+  const remove = useMutation(
+    orpc.attendees.raffles.delete.mutationOptions({
+      onSuccess: () => {
+        toast.success("Sorteo borrado");
+        return queryClient.invalidateQueries({ queryKey: orpc.attendees.raffles.key() });
+      },
+      onError: options.onError,
+    })
+  );
   const show = useMutation(
     orpc.attendees.raffles.show.mutationOptions({
       onSuccess: () => toast.success("Sorteo en la pantalla", "La escena gira y cae en quien ganó."),
       onError: options.onError,
     })
   );
-  const busy = create.isPending || draw.isPending || redraw.isPending || claim.isPending || show.isPending;
+  const busy =
+    create.isPending ||
+    draw.isPending ||
+    redraw.isPending ||
+    claim.isPending ||
+    show.isPending ||
+    rename.isPending ||
+    remove.isPending;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -166,7 +264,10 @@ export function RafflesPanel({
               timezone={timezone}
               onClaim={(drawId) => claim.mutate({ drawId })}
               onDraw={() => draw.mutate({ raffleId: raffle.id })}
+              deleting={remove.isPending}
+              onDelete={() => remove.mutate({ raffleId: raffle.id })}
               onRedraw={() => redraw.mutate({ raffleId: raffle.id })}
+              onRename={(prize, done) => rename.mutate({ raffleId: raffle.id, prize }, { onSuccess: done })}
               onShow={() => show.mutate({ raffleId: raffle.id })}
             />
           ))}

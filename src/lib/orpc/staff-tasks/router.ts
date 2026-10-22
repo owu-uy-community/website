@@ -29,6 +29,7 @@ import {
   StaffTaskSchema,
   SwapAssigneesSchema,
   SwapTimesSchema,
+  UpdateStaffAnnouncementSchema,
   UpdateStaffTaskSchema,
 } from "./schemas";
 import * as StaffTasks from "./service";
@@ -236,6 +237,24 @@ export const staffTasksRouter = {
       .output(z.object({ id: z.string() }))
       .effect(function* ({ input }) {
         return yield* StaffTasks.createAnnouncement(input);
+      }),
+
+    update: authed
+      .meta(docs("Rewrite an announcement; it can ask everyone to read it again"))
+      .input(UpdateStaffAnnouncementSchema)
+      .use(inCommunity("editor"))
+      .output(z.object({ ok: z.literal(true) }))
+      .effect(function* ({ input }) {
+        return yield* StaffTasks.updateAnnouncement(input);
+      }),
+
+    delete: authed
+      .meta(docs("Delete an announcement for everyone, with who read it"))
+      .input(AckStaffAnnouncementSchema)
+      .use(inCommunity("editor"))
+      .output(z.object({ ok: z.literal(true) }))
+      .effect(function* ({ input }) {
+        return yield* StaffTasks.deleteAnnouncement(input);
       }),
 
     ack: authed

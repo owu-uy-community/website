@@ -43,8 +43,11 @@ export const IncidentSchema = z.object({
 export const IncidentNoteSchema = z.object({
   id: z.string(),
   body: z.string(),
+  /** `note`: typed by someone, and fixable; `change`: the log line of an edit. */
+  kind: z.enum(["note", "change"]),
   author: PersonSchema.nullable(),
   createdAt: z.string(),
+  editedAt: z.string().nullable(),
 });
 
 /** One incident with its photo and its log, oldest line first. */
@@ -82,6 +85,21 @@ export const UpdateIncidentSchema = IncidentRefSchema.extend({
   severity: IncidentSeveritySchema.optional(),
   /** Null takes it out of any room. */
   roomId: z.string().min(1).nullable().optional(),
+  title: z.string().trim().min(1, "Contá qué pasa").max(140).optional(),
+  /** Null (or empty) clears it. */
+  description: z.string().trim().max(4000).nullable().optional(),
+  category: IncidentCategorySchema.optional(),
+  location: z.string().trim().max(120).nullable().optional(),
+  /** Anyone who may edit it marks it confidential; only organizers take that back. */
+  sensitive: z.boolean().optional(),
+  /** Null takes the photo off. */
+  photo: PhotoSchema.nullable().optional(),
+});
+
+/** One typed note in an incident's log. */
+export const IncidentNoteRefSchema = IncidentRefSchema.extend({ noteId: z.string().min(1) });
+export const UpdateIncidentNoteSchema = IncidentNoteRefSchema.extend({
+  body: z.string().trim().min(1, "Escribí la nota").max(2000),
 });
 
 export const AddIncidentNoteSchema = IncidentRefSchema.extend({

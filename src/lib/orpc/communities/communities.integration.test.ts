@@ -322,3 +322,33 @@ describe("communities.members", () => {
     expect((await membershipOf(editor.id))?.role).toBe("member");
   });
 });
+
+describe("communities.delete", () => {
+  test("site staff deletes a community with no events, and its members go with it", async () => {
+    const { community, staff } = await setup();
+
+    await call(router.communities.delete, { communityId: community.id }, by(staff));
+
+    await expect(call(router.communities.getBySlug, { communitySlug: community.slug }, by(staff))).resolves.toBeNull();
+    await expect(
+      db.select().from(communityMembers).where(eq(communityMembers.communityId, community.id))
+    ).resolves.toStrictEqual([]);
+  });
+
+  test("while it has events it stays, saying how many; and only site staff delete one", async () => {
+    const { community, owner, staff } = await setup();
+    await makeEvent(community.id);
+    await makeEvent(community.id);
+
+    await expect(call(router.communities.delete, { communityId: community.id }, by(owner))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(call(router.communities.delete, { communityId: community.id }, by(staff))).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: expect.stringContaining("tiene 2 eventos"),
+    });
+    await expect(
+      call(router.communities.getBySlug, { communitySlug: community.slug }, by(staff))
+    ).resolves.toMatchObject({ id: community.id });
+  });
+});

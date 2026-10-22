@@ -1,3 +1,5 @@
+import { db } from "../../src/lib/db";
+import { incidentNotes, incidents } from "../../src/lib/db/schema";
 import { expect, test } from "../fixtures";
 
 // The member works from a phone; the admin moves to a desktop screen below.
@@ -33,4 +35,42 @@ test("a room host reports from the phone and an organizer resolves it", async ({
 
   // The host's phone hears it: the room has nothing open anymore.
   await expect(card).toBeHidden();
+});
+
+test("an incident's title and a typed note are fixed, and then the incident is deleted", async ({
+  page,
+  board,
+  tenant,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const [incident] = await db
+    .insert(incidents)
+    .values({ eventId: board.event.id, title: "Proyector sin señal", category: "technical" })
+    .returning({ id: incidents.id });
+  await db
+    .insert(incidentNotes)
+    .values({ incidentId: incident.id, authorId: tenant.users.admin.id, body: "Voy con un adaptador", kind: "note" });
+  await page.goto(`/admin/${board.community.slug}/incidentes?event=${board.event.slug}&incidente=${incident.id}`);
+  const detail = page.getByRole("complementary");
+
+  await detail.getByRole("button", { name: "Editar el incidente" }).click();
+  const form = page.getByRole("dialog", { name: "Editar incidente" });
+  await form.getByLabel("En pocas palabras").fill("Proyector roto");
+  await form.getByRole("button", { name: "Guardar cambios" }).click();
+  await expect(form).toBeHidden();
+  await expect(detail.getByText("cambió el título a «Proyector roto»")).toBeVisible();
+
+  await detail.getByRole("button", { name: "Más acciones de la nota" }).click();
+  await page.getByRole("menuitem", { name: "Editar" }).click();
+  // While it's being fixed the note has no menu: its field is the one to find.
+  await detail.getByRole("textbox", { name: "Corregir la nota" }).fill("Voy con un adaptador HDMI");
+  await detail.getByRole("button", { name: "Guardar", exact: true }).click();
+  const note = detail.getByRole("listitem").filter({ hasText: "Voy con un adaptador HDMI" });
+  await expect(note).toContainText("editado");
+
+  await detail.getByRole("button", { name: "Editar el incidente" }).click();
+  await form.getByRole("button", { name: "Borrar" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Borrar incidente" }).click();
+
+  await expect(page.getByRole("button", { name: /Proyector roto/ })).toBeHidden();
 });

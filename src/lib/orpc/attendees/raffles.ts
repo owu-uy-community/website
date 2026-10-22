@@ -112,6 +112,41 @@ export const createRaffle = (input: { eventId: string; prize: string }) =>
     return { id: raffle.id };
   });
 
+/** A raffle's new prize. The seed stays: every draw done so far can still be checked. */
+export const updateRaffle = ({ raffleId, prize }: { raffleId: string; prize: string }) =>
+  Effect.gen(function* () {
+    const raffle = yield* transaction(
+      Effect.gen(function* () {
+        const before = yield* lockRaffle(raffleId);
+        if (before.prize === prize) return before;
+        const [row] = yield* query((db) =>
+          db.update(raffles).set({ prize }).where(eq(raffles.id, raffleId)).returning()
+        );
+        yield* announce(before.eventId, "raffle.updated", raffleId, `cambió el sorteo «${before.prize}» a «${prize}»`);
+        return row;
+      })
+    );
+    yield* opsPing(raffle.eventId, "raffle");
+
+    return { ok: true as const };
+  });
+
+/** A raffle gone, with every draw it had. */
+export const deleteRaffle = (raffleId: string) =>
+  Effect.gen(function* () {
+    const raffle = yield* transaction(
+      Effect.gen(function* () {
+        const [row] = yield* query((db) => db.delete(raffles).where(eq(raffles.id, raffleId)).returning());
+        if (!row) return yield* Effect.fail(raffleNotFound);
+        yield* announce(row.eventId, "raffle.deleted", raffleId, `borró el sorteo «${row.prize}»`);
+        return row;
+      })
+    );
+    yield* opsPing(raffle.eventId, "raffle");
+
+    return { ok: true as const };
+  });
+
 /** The raffle, locked: draws of one raffle happen one at a time. */
 const lockRaffle = (raffleId: string) =>
   query((db) => db.select().from(raffles).where(eq(raffles.id, raffleId)).for("update")).pipe(

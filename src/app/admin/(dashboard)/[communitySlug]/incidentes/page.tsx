@@ -58,8 +58,10 @@ export default async function IncidentesPage({
         .select({ role: communityMembers.role })
         .from(communityMembers)
         .where(and(eq(communityMembers.communityId, scope.community.id), eq(communityMembers.userId, session.user.id)));
-  // Editors manage incidents; the API enforces it, this only decides which controls to show.
+  // Editors manage incidents and organizers handle what's confidential; the API enforces both,
+  // this only decides which controls to show.
   const canEdit = admin || (membership !== undefined && membership.role !== "member");
+  const organizer = admin || membership?.role === "owner" || membership?.role === "admin";
 
-  return <IncidentsPage canEdit={canEdit} eventId={scope.selected.id} meId={session.user.id} />;
+  return <IncidentsPage canEdit={canEdit} eventId={scope.selected.id} meId={session.user.id} organizer={organizer} />;
 }

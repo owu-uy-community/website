@@ -20,6 +20,8 @@ import {
   ScanResultSchema,
   ScanSchema,
   SetTagsSchema,
+  UndoCheckinSchema,
+  UpdateRaffleSchema,
   SyncSchema,
   SyncStateSchema,
 } from "./schemas";
@@ -86,6 +88,14 @@ export const attendeesRouter = {
       return yield* Attendees.scan(input);
     }),
 
+  undoCheckin: staff
+    .meta(docs("Take back a check-in that shouldn't have happened; a later Eventbrite sync doesn't bring it back"))
+    .input(UndoCheckinSchema)
+    .output(ok)
+    .effect(function* ({ input }) {
+      return yield* Attendees.undoCheckin(input);
+    }),
+
   raffles: {
     list: staff
       .meta(docs("The event's raffles with every draw, newest raffle first"))
@@ -101,6 +111,22 @@ export const attendeesRouter = {
       .output(z.object({ id: z.string() }))
       .effect(function* ({ input }) {
         return yield* Raffles.createRaffle(input);
+      }),
+
+    update: staff
+      .meta(docs("Rename a raffle's prize; its seed, and so every draw, stays"))
+      .input(UpdateRaffleSchema)
+      .output(ok)
+      .effect(function* ({ input }) {
+        return yield* Raffles.updateRaffle(input);
+      }),
+
+    delete: staff
+      .meta(docs("Delete a raffle with all its draws"))
+      .input(RaffleIdSchema)
+      .output(ok)
+      .effect(function* ({ input }) {
+        return yield* Raffles.deleteRaffle(input.raffleId);
       }),
 
     draw: staff

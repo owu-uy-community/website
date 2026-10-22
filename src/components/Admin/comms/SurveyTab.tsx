@@ -2,14 +2,30 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpRight, ClipboardList, Plus, Printer, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpRight,
+  ClipboardList,
+  Eraser,
+  MoreHorizontal,
+  Plus,
+  Printer,
+  Trash2,
+} from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import { Notice } from "components/Admin/panel";
+import { ConfirmDialog, Notice } from "components/Admin/panel";
 import { MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "components/shared/ui/dropdown-menu";
 import { Input } from "components/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Skeleton } from "components/shared/ui/skeleton";
@@ -299,6 +315,86 @@ function SurveyEditor({ survey, eventId }: { survey: Survey; eventId: string }) 
   );
 }
 
+/**
+ * Starting over: throw away the answers (a test run before the event) or the whole survey, each
+ * after a confirmation.
+ */
+function SurveyMenu({ eventId, responses }: { eventId: string; responses: number }) {
+  const queryClient = useQueryClient();
+  const [asking, setAsking] = useState<"clear" | "delete" | null>(null);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: orpc.surveys.key() });
+  const clear = useMutation(
+    orpc.surveys.clearResponses.mutationOptions({
+      onSuccess: () => {
+        setAsking(null);
+        toast.success("Respuestas borradas", "Las preguntas quedaron como estaban.");
+        return refresh();
+      },
+      onError: (error) => toast.error("No se pudo borrar", error.message),
+    })
+  );
+  const remove = useMutation(
+    orpc.surveys.delete.mutationOptions({
+      onSuccess: () => {
+        setAsking(null);
+        toast.success("Encuesta borrada");
+        return refresh();
+      },
+      onError: (error) => toast.error("No se pudo borrar", error.message),
+    })
+  );
+  const answers = responses === 1 ? "la respuesta" : `las ${responses} respuestas`;
+
+  return (
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button aria-label="Más acciones de la encuesta" size="icon-sm" variant="outline">
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem disabled={responses === 0} onSelect={() => setAsking("clear")}>
+            <Eraser />
+            Borrar respuestas
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive [&_svg]:text-destructive"
+            onSelect={() => setAsking("delete")}
+          >
+            <Trash2 />
+            Borrar encuesta
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ConfirmDialog
+        confirmLabel="Borrar respuestas"
+        description={`Se borran ${answers}, con los números de cada sala. Las preguntas quedan. No se puede deshacer.`}
+        open={asking === "clear"}
+        pending={clear.isPending}
+        pendingLabel="Borrando…"
+        title="¿Borrar las respuestas?"
+        onConfirm={() => clear.mutate({ eventId })}
+        onOpenChange={(open) => !open && setAsking(null)}
+      />
+      <ConfirmDialog
+        confirmLabel="Borrar encuesta"
+        description={
+          responses
+            ? `Se borra con ${answers}. Los QR impresos van a mostrar que la encuesta no está abierta, hasta que crees y abras otra. No se puede deshacer.`
+            : "Los QR impresos van a mostrar que la encuesta no está abierta, hasta que crees y abras otra. No se puede deshacer."
+        }
+        open={asking === "delete"}
+        pending={remove.isPending}
+        pendingLabel="Borrando…"
+        title="¿Borrar la encuesta?"
+        onConfirm={() => remove.mutate({ eventId })}
+        onOpenChange={(open) => !open && setAsking(null)}
+      />
+    </>
+  );
+}
+
 /** The post-event survey: write it, open it, print the rooms' QR and read the answers. */
 export function SurveyTab({
   eventId,
@@ -383,6 +479,7 @@ export function SurveyTab({
               Imprimir QR
             </a>
           </Button>
+          <SurveyMenu eventId={eventId} responses={survey.data.responses} />
         </span>
       </div>
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,520px)_minmax(0,1fr)]">

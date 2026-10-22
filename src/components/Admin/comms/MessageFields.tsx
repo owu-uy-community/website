@@ -172,17 +172,22 @@ export function UnconfiguredNotice({
   channel,
   channels,
   sendNow,
+  editingSent = false,
 }: {
   channel: OwyChannel;
   channels: Channels | undefined;
   sendNow: boolean;
+  /** Rewriting a message that already went out: it can only be edited where it is. */
+  editingSent?: boolean;
 }) {
   return (
     <Notice show={channels !== undefined && !channels[channel]} tone="warning">
       Owy todavía no puede escribir en {CHANNELS[channel].label} desde el sitio.{" "}
-      {sendNow
-        ? "Programalo o elegí otro canal."
-        : "Podés programarlo igual: si sigue sin configurar a esa hora, va a fallar y lo vas a ver en el historial."}
+      {editingSent
+        ? "Hasta que se configure, este mensaje no se puede editar."
+        : sendNow
+          ? "Programalo o elegí otro canal."
+          : "Podés programarlo igual: si sigue sin configurar a esa hora, va a fallar y lo vas a ver en el historial."}
     </Notice>
   );
 }

@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
-import { ArrowUpRight, CalendarDays, Settings2, Users } from "lucide-react";
+import { ArrowUpRight, CalendarDays, Settings2, Trash2, TriangleAlert, Users } from "lucide-react";
 
+import { ConfirmDialog } from "components/Admin/panel";
 import { CommunityMark } from "components/shared/CommunityMark";
 import {
   countDirty,
@@ -36,6 +38,7 @@ const SECTIONS: SettingsSectionLink[] = [
   { id: "general", label: "General", icon: Settings2 },
   { id: "miembros", label: "Miembros", icon: Users },
   { id: "eventos", label: "Eventos", icon: CalendarDays },
+  { id: "peligro", label: "Zona peligrosa", icon: TriangleAlert },
 ];
 
 const communityFormSchema = z.object({
@@ -61,6 +64,7 @@ const reason = (error: unknown) => (error instanceof Error && error.message ? er
 
 export default function CommunityDetailClient({ initialCommunity }: { initialCommunity: Community }) {
   const queryClient = useQueryClient();
+  const router = useRouter();
   const input = { communitySlug: initialCommunity.slug };
   const { data: found } = useQuery({
     ...orpc.communities.getBySlug.queryOptions({ input }),
@@ -100,6 +104,23 @@ export default function CommunityDetailClient({ initialCommunity }: { initialCom
         toast.success("Cambios guardados", `${updated.name} ya está al día en el sitio.`);
       },
       onError: (error) => toast.error("No se pudo guardar", reason(error)),
+    })
+  );
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const remove = useMutation(
+    orpc.communities.delete.mutationOptions({
+      onSuccess: () => {
+        toast.success("Comunidad eliminada", `«${community.name}» y sus miembros ya no están.`);
+        for (const key of [orpc.communities.list.key(), orpc.communities.listForAdmin.key(), orpc.shell.status.key()]) {
+          void queryClient.invalidateQueries({ queryKey: key });
+        }
+        router.push("/admin/communities");
+      },
+      onError: (error) => {
+        setConfirmDelete(false);
+        toast.error("No se pudo eliminar", reason(error));
+      },
     })
   );
 
@@ -219,6 +240,21 @@ export default function CommunityDetailClient({ initialCommunity }: { initialCom
           <MembersSection communityId={community.id} communityName={community.name} />
 
           <EventsSection communityId={community.id} communitySlug={community.slug} />
+
+          <SettingsSection id="peligro" title="Zona peligrosa">
+            <SettingsCard className="border-live/25">
+              <SettingsRow
+                compact
+                hint="Solo sin eventos: eliminalos primero, desde sus ajustes. Se van sus miembros y sus datos; no se puede deshacer."
+                label="Eliminar la comunidad"
+              >
+                <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 />
+                  Eliminar
+                </Button>
+              </SettingsRow>
+            </SettingsCard>
+          </SettingsSection>
         </div>
 
         <SaveBar
@@ -230,6 +266,15 @@ export default function CommunityDetailClient({ initialCommunity }: { initialCom
       </PageContainer>
 
       <UnsavedChangesGuard count={dirtyCount} />
+      <ConfirmDialog
+        confirmLabel="Eliminar la comunidad"
+        description={`Se borran «${community.name}», sus miembros y su página. Si todavía tiene eventos, no se borra nada. No se puede deshacer.`}
+        open={confirmDelete}
+        pending={remove.isPending}
+        title={`¿Eliminar «${community.name}»?`}
+        onConfirm={() => remove.mutate({ communityId: community.id })}
+        onOpenChange={setConfirmDelete}
+      />
     </SettingsLayout>
   );
 }

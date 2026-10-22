@@ -1,6 +1,8 @@
 import { call } from "@orpc/server";
 import { describe, expect, test, vi } from "vitest";
 
+import { db } from "lib/db";
+import { incidentNotes } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
@@ -253,15 +255,157 @@ describe("following an incident", () => {
     expect(reopened.notes).toHaveLength(5);
   });
 
-  test("notes are append-only: nothing edits or deletes them", async () => {
-    const { eventId, colleague, report } = await setup();
+  test("a typed note is fixed or deleted by its author or an editor; what a change wrote stays", async () => {
+    const { eventId, editor, colleague, reporter, report } = await setup();
     const incident = await report();
+    const [typed] = (await call(router.incidents.addNote, { eventId, id: incident.id, body: "Voy yo" }, by(colleague)))
+      .notes;
+    const ref = { eventId, id: incident.id, noteId: typed.id };
 
-    await call(router.incidents.addNote, { eventId, id: incident.id, body: "Primera" }, by(colleague));
-    const after = await call(router.incidents.addNote, { eventId, id: incident.id, body: "Segunda" }, by(colleague));
+    const fixed = await call(router.incidents.updateNote, { ...ref, body: "Voy yo, con cinta" }, by(colleague));
+    await expect(call(router.incidents.updateNote, { ...ref, body: "Otra cosa" }, by(reporter))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    const changed = await call(router.incidents.update, { eventId, id: incident.id, severity: "high" }, by(editor));
+    const line = changed.notes.find((note) => note.kind === "change")!;
+    await expect(
+      call(router.incidents.updateNote, { eventId, id: incident.id, noteId: line.id, body: "Nada" }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const after = await call(router.incidents.deleteNote, ref, by(editor));
 
-    expect(after.notes.map((note) => note.body)).toStrictEqual(["Primera", "Segunda"]);
-    expect(Object.keys(router.incidents).filter((name) => /note/i.test(name))).toStrictEqual(["addNote"]);
+    expect(fixed.notes[0]).toMatchObject({ body: "Voy yo, con cinta", kind: "note" });
+    expect(fixed.notes[0].editedAt).not.toBeNull();
+    expect(after.notes.map((note) => note.body)).toStrictEqual(["cambió la gravedad a alta"]);
+  });
+
+  test("editors change every field, and the log says what changed", async () => {
+    const { eventId, editor, report } = await setup();
+    const incident = await report({ description: "No da imagen", location: "Hall" });
+
+    const edited = await call(
+      router.incidents.update,
+      {
+        eventId,
+        id: incident.id,
+        title: "Proyector roto",
+        description: "",
+        category: "venue",
+        location: "Sala grande",
+        photo: jpeg(1000),
+      },
+      by(editor)
+    );
+
+    expect(edited).toMatchObject({
+      title: "Proyector roto",
+      description: null,
+      category: "venue",
+      location: "Sala grande",
+      hasPhoto: true,
+    });
+    expect(edited.notes.at(-1)).toMatchObject({
+      kind: "change",
+      body: "cambió el título a «Proyector roto» · le sacó el detalle · cambió el tipo a venue · cambió el lugar a «Sala grande» · le agregó una foto",
+    });
+  });
+
+  test("anyone who edits it marks it confidential; only organizers take that back", async () => {
+    const { eventId, admin, editor, report } = await setup();
+    const incident = await report();
+    // Assigned, the editor still sees it once it is confidential.
+    await call(router.incidents.update, { eventId, id: incident.id, assigneeId: editor.id }, by(editor));
+
+    const hidden = await call(router.incidents.update, { eventId, id: incident.id, sensitive: true }, by(editor));
+    await expect(
+      call(router.incidents.update, { eventId, id: incident.id, sensitive: false }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const open = await call(router.incidents.update, { eventId, id: incident.id, sensitive: false }, by(admin));
+
+    expect([hidden.sensitive, open.sensitive]).toStrictEqual([true, false]);
+  });
+
+  test("a line from before notes said their kind stays as it was", async () => {
+    const { eventId, editor, report } = await setup();
+    const incident = await report();
+    const [old] = await db
+      .insert(incidentNotes)
+      .values({ incidentId: incident.id, authorId: editor.id, body: "cambió el estado a resuelto" })
+      .returning({ id: incidentNotes.id });
+
+    await expect(
+      call(router.incidents.updateNote, { eventId, id: incident.id, noteId: old.id, body: "Nada" }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      call(router.incidents.deleteNote, { eventId, id: incident.id, noteId: old.id }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a confidential incident is deleted only by an organizer, and others' notes on it too", async () => {
+    const { eventId, admin, editor, report } = await setup();
+    const incident = await report({ sensitive: true, category: "conduct" });
+    await call(router.incidents.update, { eventId, id: incident.id, assigneeId: editor.id }, by(admin));
+    const [note] = (
+      await call(router.incidents.addNote, { eventId, id: incident.id, body: "Hablé con la persona" }, by(admin))
+    ).notes.filter((item) => item.kind === "note");
+
+    await expect(call(router.incidents.delete, { eventId, id: incident.id }, by(editor))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(
+      call(router.incidents.deleteNote, { eventId, id: incident.id, noteId: note.id }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await call(router.incidents.delete, { eventId, id: incident.id }, by(admin));
+
+    await expect(call(router.incidents.get, { eventId, id: incident.id }, by(admin))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+  });
+
+  test("what a confidential report says only organizers change; how it's handled, its editors", async () => {
+    const { eventId, admin, editor, report } = await setup();
+    const incident = await report({ sensitive: true, category: "conduct", description: "Lo que vio" });
+    await call(router.incidents.update, { eventId, id: incident.id, assigneeId: editor.id }, by(admin));
+
+    await expect(
+      call(router.incidents.update, { eventId, id: incident.id, description: "Otra cosa" }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const handled = await call(router.incidents.update, { eventId, id: incident.id, severity: "high" }, by(editor));
+    const rewritten = await call(router.incidents.update, { eventId, id: incident.id, title: "Reporte" }, by(admin));
+
+    expect(handled).toMatchObject({ severity: "high", description: "Lo que vio" });
+    expect(rewritten.title).toBe("Reporte");
+  });
+
+  test("escalating while marking it confidential alerts without saying what happened", async () => {
+    const { eventId, editor, report, announcements } = await setup();
+    const incident = await report({ title: "Discusión en la fila" });
+    await call(router.incidents.update, { eventId, id: incident.id, assigneeId: editor.id }, by(editor));
+
+    await call(
+      router.incidents.update,
+      { eventId, id: incident.id, severity: "critical", sensitive: true, title: "Acoso en la fila" },
+      by(editor)
+    );
+
+    const bodies = (await announcements()).map((item) => item.body);
+    expect(bodies).toContain("Hay un reporte confidencial; organizadores, revisen Incidentes");
+    expect(bodies.join(" ")).not.toMatch(/fila/);
+  });
+
+  test("an editor deletes an incident with its log; a member can't", async () => {
+    const { eventId, editor, colleague, report } = await setup();
+    const incident = await report();
+    await call(router.incidents.addNote, { eventId, id: incident.id, body: "Duplicado" }, by(colleague));
+
+    await expect(call(router.incidents.delete, { eventId, id: incident.id }, by(colleague))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await call(router.incidents.delete, { eventId, id: incident.id }, by(editor));
+
+    await expect(call(router.incidents.get, { eventId, id: incident.id }, by(editor))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(call(router.incidents.list, { eventId }, by(editor))).resolves.toStrictEqual([]);
   });
 
   test("a change that changes nothing writes nothing", async () => {

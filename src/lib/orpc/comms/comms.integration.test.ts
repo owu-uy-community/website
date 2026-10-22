@@ -357,3 +357,146 @@ describe("comms", () => {
     });
   });
 });
+
+/**
+ * Owy's Telegram and Slack, configured: sends land with an id, and edits and deletes are recorded.
+ * `deleteAnswer` stands in for Telegram's "no" past 48 hours.
+ */
+function owyApis({ deleteAnswer = () => HttpResponse.json({ ok: true, result: true }) } = {}) {
+  vi.stubEnv("TELEGRAM_BOT_TOKEN", "test-token");
+  vi.stubEnv("OWY_ANNOUNCE_TELEGRAM_CHAT_ID", "-100123");
+  vi.stubEnv("OWY_SLACK_BOT_TOKEN", "xoxb-test");
+  vi.stubEnv("OWY_ANNOUNCE_SLACK_CHANNEL_ID", "C123");
+  const calls: { method: string; body: Record<string, unknown> }[] = [];
+  const record = async (method: string, request: Request) => {
+    calls.push({ method, body: (await request.json()) as Record<string, unknown> });
+  };
+  server.use(
+    http.post("https://api.telegram.org/bottest-token/sendMessage", async ({ request }) => {
+      await record("sendMessage", request);
+      return HttpResponse.json({ ok: true, result: { message_id: 7, chat: { id: -100123 } } });
+    }),
+    http.post("https://api.telegram.org/bottest-token/editMessageText", async ({ request }) => {
+      await record("editMessageText", request);
+      return HttpResponse.json({ ok: true, result: { message_id: 7, chat: { id: -100123 } } });
+    }),
+    http.post("https://api.telegram.org/bottest-token/deleteMessage", async ({ request }) => {
+      await record("deleteMessage", request);
+      return deleteAnswer();
+    }),
+    http.post(SLACK, async ({ request }) => {
+      await record("chat.postMessage", request);
+      return HttpResponse.json({ ok: true, channel: "C123", ts: "1730000000.000100" });
+    }),
+    http.post("https://slack.com/api/chat.delete", async ({ request }) => {
+      await record("chat.delete", request);
+      return HttpResponse.json({ ok: true });
+    })
+  );
+  return calls;
+}
+
+describe("editing and deleting what Owy already sent", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("a Telegram message keeps where it landed, and an edit rewrites it there for everyone", async () => {
+    const { eventId, admin } = await setup();
+    const calls = owyApis();
+    const sent = await call(router.comms.send, { eventId, channel: "telegram", body: "Abrimos 14:30" }, by(admin));
+
+    const edited = await call(router.comms.update, { eventId, messageId: sent.id, body: "Abrimos 15:00" }, by(admin));
+
+    expect(sent.remote).toBe(1);
+    expect(calls.find((item) => item.method === "editMessageText")?.body).toMatchObject({
+      chat_id: "-100123",
+      message_id: 7,
+      text: "Abrimos 15:00",
+    });
+    expect(edited).toMatchObject({ body: "Abrimos 15:00", status: "sent" });
+    expect(edited.editedAt).not.toBeNull();
+  });
+
+  test("once out, only the text changes", async () => {
+    const { eventId, admin } = await setup();
+    owyApis();
+    const sent = await call(router.comms.send, { eventId, channel: "telegram", body: "Hola" }, by(admin));
+
+    await expect(
+      call(router.comms.update, { eventId, messageId: sent.id, channel: "slack", body: "Hola" }, by(admin))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  test("deleting a Slack post deletes it in the channel too", async () => {
+    const { eventId, admin } = await setup();
+    const calls = owyApis();
+    const sent = await call(router.comms.send, { eventId, channel: "slack", body: "Pizza en el patio" }, by(admin));
+
+    await call(router.comms.remove, { eventId, messageId: sent.id }, by(admin));
+
+    expect(calls.find((item) => item.method === "chat.delete")?.body).toStrictEqual({
+      channel: "C123",
+      ts: "1730000000.000100",
+    });
+    await expect(messageRow(sent.id)).resolves.toBeUndefined();
+  });
+
+  test("when Telegram won't delete it (past 48 hours) it stays, and it can still leave the list alone", async () => {
+    const { eventId, admin } = await setup();
+    const calls = owyApis({
+      deleteAnswer: () => HttpResponse.json({ ok: false, description: "Bad Request: message can't be deleted" }),
+    });
+    const sent = await call(router.comms.send, { eventId, channel: "telegram", body: "Viejo" }, by(admin));
+
+    await expect(call(router.comms.remove, { eventId, messageId: sent.id }, by(admin))).rejects.toMatchObject({
+      code: "BAD_GATEWAY",
+      message: expect.stringContaining("Telegram no dejó borrarlo"),
+    });
+    await expect(messageRow(sent.id)).resolves.toBeDefined();
+    await call(router.comms.remove, { eventId, messageId: sent.id, onlyHere: true }, by(admin));
+
+    await expect(messageRow(sent.id)).resolves.toBeUndefined();
+    expect(calls.filter((item) => item.method === "deleteMessage")).toHaveLength(1);
+    const [line] = await db
+      .select({ summary: activity.summary })
+      .from(activity)
+      .where(and(eq(activity.entityId, sent.id), eq(activity.verb, "message.deleted")));
+    expect(line.summary).toMatch(/^quitó de la lista lo que mandó por Telegram/);
+  });
+
+  test("what went out before the site kept track can't be edited, but can leave the list", async () => {
+    const { eventId, admin } = await setup();
+    const calls = owyApis();
+    const [old] = await db
+      .insert(outboundMessages)
+      .values({
+        eventId,
+        channel: "telegram",
+        body: "De antes",
+        status: "sent",
+        sentAt: new Date(),
+        createdById: admin.id,
+      })
+      .returning();
+
+    await expect(
+      call(router.comms.update, { eventId, messageId: old.id, body: "Corregido" }, by(admin))
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    await call(router.comms.remove, { eventId, messageId: old.id }, by(admin));
+
+    await expect(messageRow(old.id)).resolves.toBeUndefined();
+    expect(calls).toStrictEqual([]);
+  });
+
+  test("only site staff delete Owy's messages", async () => {
+    const { eventId, community, admin } = await setup();
+    owyApis();
+    const owner = await makeMember(community.id, "owner");
+    const sent = await call(router.comms.send, { eventId, channel: "telegram", body: "Hola" }, by(admin));
+
+    await expect(call(router.comms.remove, { eventId, messageId: sent.id }, by(owner))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+});

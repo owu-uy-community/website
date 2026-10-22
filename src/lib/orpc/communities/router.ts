@@ -61,6 +61,14 @@ export const communitiesRouter = {
       return yield* Communities.createCommunity(input);
     }),
 
+  delete: staff
+    .meta(docs("Delete a community with its members, once it has no events (site staff)"))
+    .input(CommunityIdSchema)
+    .output(z.object({ ok: z.literal(true) }))
+    .effect(function* ({ input }) {
+      return yield* Communities.deleteCommunity(input.communityId);
+    }),
+
   update: authed
     .meta(docs("Edit a community"))
     .input(UpdateCommunitySchema)

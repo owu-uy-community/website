@@ -43,6 +43,7 @@ import type {
   MoveAssigneeSchema,
   SwapAssigneesSchema,
   SwapTimesSchema,
+  UpdateStaffAnnouncementSchema,
   UpdateStaffTaskSchema,
 } from "./schemas";
 import { parseSheet, taskKey } from "./sheet";
@@ -57,6 +58,7 @@ type AssignInput = z.infer<typeof AssignStaffTaskSchema>;
 type ShiftInput = z.infer<typeof ShiftStaffTasksSchema>;
 type CreateAnnouncementInput = z.infer<typeof CreateStaffAnnouncementSchema>;
 type AckInput = z.infer<typeof AckStaffAnnouncementSchema>;
+type UpdateAnnouncementInput = z.infer<typeof UpdateStaffAnnouncementSchema>;
 type ArrivalInput = z.infer<typeof StaffArrivalInputSchema>;
 type NoShowInput = z.infer<typeof SetNoShowSchema>;
 type ImportInput = z.infer<typeof ImportStaffTasksSchema>;
@@ -917,6 +919,7 @@ export const listAnnouncements = (eventId: string) =>
         taskTitle: row.task?.title ?? null,
         author: row.author,
         createdAt: row.createdAt.toISOString(),
+        editedAt: row.editedAt?.toISOString() ?? null,
         ackCount: acks.length,
         ackedByMe: ackedIds.has(me.id),
         acks,
@@ -959,6 +962,77 @@ export const createAnnouncement = (input: CreateAnnouncementInput) =>
     yield* ping(input.eventId, "announcement_created", { id: row.id });
 
     return row;
+  });
+
+/**
+ * An announcement rewritten: its text, urgency and audience. Who already read it stays, unless
+ * `reread` asks everyone again (a real change, not a typo): then it waits for everyone's «Recibido».
+ */
+export const updateAnnouncement = (input: UpdateAnnouncementInput) =>
+  Effect.gen(function* () {
+    const taskId = input.audience === "task" ? input.taskId : undefined;
+    if (taskId) yield* taskInEvent(taskId, input.eventId);
+
+    yield* transaction(
+      Effect.gen(function* () {
+        const [row] = yield* query((db) =>
+          db
+            .update(staffAnnouncements)
+            .set({
+              body: input.body,
+              urgent: input.urgent,
+              audience: input.audience,
+              taskId: taskId ?? null,
+              editedAt: new Date(),
+            })
+            .where(
+              and(eq(staffAnnouncements.id, input.announcementId), eq(staffAnnouncements.openSpaceId, input.eventId))
+            )
+            .returning({ id: staffAnnouncements.id })
+        );
+        if (!row) return yield* announcementNotFound;
+        if (input.reread)
+          yield* query((db) =>
+            db.delete(staffAnnouncementAcks).where(eq(staffAnnouncementAcks.announcementId, input.announcementId))
+          );
+        yield* recordActivity({
+          eventId: input.eventId,
+          verb: "announcement.updated",
+          entityType: "announcement",
+          entityId: row.id,
+          summary: `editó un aviso${input.reread ? " y pidió que lo vuelvan a leer" : ""}: ${quoted(input.body)}`,
+        });
+      })
+    );
+    yield* ping(input.eventId, "tasks_changed");
+
+    return { ok: true as const };
+  });
+
+/** An announcement gone for everyone, with who read it. */
+export const deleteAnnouncement = ({ eventId, announcementId }: AckInput) =>
+  Effect.gen(function* () {
+    yield* transaction(
+      Effect.gen(function* () {
+        const [row] = yield* query((db) =>
+          db
+            .delete(staffAnnouncements)
+            .where(and(eq(staffAnnouncements.id, announcementId), eq(staffAnnouncements.openSpaceId, eventId)))
+            .returning({ id: staffAnnouncements.id, body: staffAnnouncements.body })
+        );
+        if (!row) return yield* announcementNotFound;
+        yield* recordActivity({
+          eventId,
+          verb: "announcement.deleted",
+          entityType: "announcement",
+          entityId: row.id,
+          summary: `borró un aviso: ${quoted(row.body)}`,
+        });
+      })
+    );
+    yield* ping(eventId, "tasks_changed");
+
+    return { ok: true as const };
   });
 
 export const ackAnnouncement = ({ eventId, announcementId }: AckInput) =>
