@@ -11,6 +11,7 @@ import {
   type CommunityRow,
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
+import { refreshPage } from "../../revalidate";
 import { claimDecidedEmail } from "../../email/templates";
 import { query, transaction } from "../db";
 import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
@@ -37,6 +38,8 @@ const toCommunity = (row: CommunityRow): Community => ({
   isActive: row.isActive,
   status: row.status,
   topics: row.topics,
+  links: row.links,
+  slackChannel: row.slackChannel,
   listed: row.listed,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
@@ -118,12 +121,20 @@ export const createCommunity = (input: { slug: string; name: string; description
     );
   });
 
+/** Edit a community; its public pages (directory, profile, home, agenda) show it on their next visit. */
 export const updateCommunity = (
   communityId: string,
-  data: Partial<Pick<CommunityRow, "name" | "description" | "logoUrl" | "isActive">>
+  data: Partial<
+    Pick<CommunityRow, "name" | "description" | "logoUrl" | "isActive" | "status" | "topics" | "links" | "slackChannel">
+  >
 ) =>
   query((db) => db.update(communities).set(data).where(eq(communities.id, communityId)).returning()).pipe(
-    Effect.flatMap(([row]) => (row ? Effect.succeed(toCommunity(row)) : Effect.fail(communityNotFound)))
+    Effect.flatMap(([row]) => (row ? Effect.succeed(toCommunity(row)) : Effect.fail(communityNotFound))),
+    Effect.tap((community) =>
+      Effect.sync(() => {
+        for (const path of ["/", "/comunidades", "/eventos", `/comunidad/${community.slug}`]) refreshPage(path);
+      })
+    )
   );
 
 /**

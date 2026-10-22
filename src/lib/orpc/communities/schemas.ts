@@ -1,5 +1,6 @@
 import * as z from "zod";
 
+import { TOPICS, type Topic } from "../../community/topics";
 import { isValidCommunitySlug } from "../../tenant";
 
 export const CommunityRoleSchema = z.enum(["owner", "admin", "editor", "member"]);
@@ -14,6 +15,13 @@ export const CommunitySchema = z.object({
   isActive: z.boolean(),
   status: z.enum(["activa", "pausa", "busca-organizadores"]),
   topics: z.array(z.string()),
+  links: z.object({
+    website: z.string().optional(),
+    linkedin: z.string().optional(),
+    instagram: z.string().optional(),
+    meetup: z.string().optional(),
+  }),
+  slackChannel: z.string().nullable(),
   listed: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -57,6 +65,8 @@ export const LogoUrlSchema = z.union([
   z.string().regex(/^\/images\/communities\/[a-z0-9-]+\/[\w.-]+$/, "Usá una URL https"),
 ]);
 
+const LinkSchema = z.url({ protocol: /^https?$/, error: "Pegá el link completo (https://…)" }).optional();
+
 export const UpdateCommunitySchema = z.object({
   communityId: z.string().min(1),
   data: z
@@ -65,6 +75,16 @@ export const UpdateCommunitySchema = z.object({
       description: z.string().nullable(),
       logoUrl: LogoUrlSchema.nullable(),
       isActive: z.boolean(),
+      status: CommunitySchema.shape.status,
+      topics: z
+        .array(z.enum(TOPICS.map((topic) => topic.value) as [Topic, ...Topic[]]))
+        .max(5)
+        .transform((topics) => [...new Set(topics)]),
+      links: z.object({ website: LinkSchema, linkedin: LinkSchema, instagram: LinkSchema, meetup: LinkSchema }),
+      slackChannel: z
+        .string()
+        .regex(/^[a-z0-9][a-z0-9_-]{0,79}$/, "El nombre del canal, sin #: minúsculas, números, - o _")
+        .nullable(),
     })
     .partial()
     .refine((data) => Object.keys(data).length > 0, "No hay nada para cambiar"),

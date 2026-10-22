@@ -34,8 +34,8 @@ import type { CommunityMember, CommunityRole } from "lib/orpc/communities/schema
 export const ROLES: { value: CommunityRole; label: string; hint: string }[] = [
   { value: "owner", label: "Dueño", hint: "Todo lo de admin, y nombra o quita dueños." },
   { value: "admin", label: "Admin", hint: "Edita la comunidad y maneja su gente y sus roles." },
-  { value: "editor", label: "Editor", hint: "Crea y asigna tareas, y manda anuncios al staff." },
-  { value: "member", label: "Miembro", hint: "Ve su turno, toma tareas y recibe los anuncios." },
+  { value: "editor", label: "Editor", hint: "Arma eventos y tareas, y manda anuncios al staff." },
+  { value: "member", label: "Miembro", hint: "Ve su turno, toma tareas y acredita en la puerta." },
 ];
 
 const roleOf = (value: CommunityRole) => ROLES.find((role) => role.value === value) ?? ROLES[3];
