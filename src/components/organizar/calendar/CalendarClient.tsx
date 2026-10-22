@@ -40,7 +40,7 @@ import { orpc } from "lib/orpc/client";
 
 type Level = PlanDay["level"];
 
-const LEVEL: Record<
+export const LEVEL: Record<
   Level,
   { label: string; icon: LucideIcon; tone: string; badge: "success" | "warning" | "destructive" | "secondary" }
 > = {
@@ -50,7 +50,7 @@ const LEVEL: Record<
   bloqueado: { label: "No disponible", icon: Ban, tone: "text-faint", badge: "secondary" },
 };
 
-const REASON: Record<PlanDay["reasons"][number]["tone"], { icon: LucideIcon; tone: string }> = {
+export const REASON: Record<PlanDay["reasons"][number]["tone"], { icon: LucideIcon; tone: string }> = {
   ok: { icon: CircleCheck, tone: "text-success" },
   info: { icon: Info, tone: "text-muted-foreground" },
   warn: { icon: TriangleAlert, tone: "text-warning" },

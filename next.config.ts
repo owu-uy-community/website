@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
     "/keystatic": ["./content/**/*"],
     "/api/keystatic/[...params]": ["./content/**/*"],
     "/la-meetup": ["./content/**/*"],
+    // Event covers render on demand with OWU's cover fonts and logo (lib/og/cover)
+    "/comunidad/[communitySlug]/events/[eventSlug]/opengraph-image": [
+      "./src/app/(web)/(content)/blog/og/*.ttf",
+      "./src/app/(web)/(content)/charlas/og/owu-logo.png",
+    ],
     // owyStage.getSpeakers reads the speakers collection through the API routes
     "/api/orpc/[[...rest]]": ["./content/**/*"],
     "/api/v1/[[...rest]]": ["./content/**/*"],

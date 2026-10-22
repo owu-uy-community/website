@@ -2,7 +2,16 @@ import { and, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm"
 import { Effect } from "effect";
 
 import { similarity } from "../../calendar/score";
-import { communities, communityMembers, events, user, venues, type EventRow } from "../../db/schema";
+import {
+  attendees,
+  communities,
+  communityMembers,
+  events,
+  schedules,
+  user,
+  venues,
+  type EventRow,
+} from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
 import { conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
@@ -13,7 +22,7 @@ import { Conflict, Invalid, NotFound } from "../errors";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { CommunityScope } from "../services";
-import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent } from "./schemas";
+import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
 
 /** How long a date stays reserved; renewing starts the count again. */
 export const HOLD_DAYS = 14;
@@ -562,3 +571,109 @@ export const cancel = (input: { eventId: string; reason: string }) =>
       return yield* editableOf(row.id);
     })
   );
+
+// ---------------------------------------------------------------------------
+// The public page
+// ---------------------------------------------------------------------------
+
+const toPublic = (eventId: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) =>
+      db
+        .select({ event: events, community: communities, venue: venues })
+        .from(events)
+        .innerJoin(communities, eq(communities.id, events.communityId))
+        .leftJoin(venues, eq(venues.id, events.venueId))
+        .where(eq(events.id, eventId))
+    );
+    if (!row) return yield* notFound;
+    const { event, community, venue } = row;
+    const [seats] = yield* query((db) =>
+      db
+        .select({
+          taken:
+            sql<number>`coalesce(sum(1 + ${attendees.guests}) filter (where ${attendees.status} in ('attending', 'offered')), 0)`.mapWith(
+              Number
+            ),
+          waiting: sql<number>`count(*) filter (where ${attendees.status} = 'waitlisted')`.mapWith(Number),
+        })
+        .from(attendees)
+        .where(and(eq(attendees.eventId, eventId), eq(attendees.source, "owu")))
+    );
+    const [board] = yield* query((db) =>
+      db.select({ id: schedules.id }).from(schedules).where(eq(schedules.openSpaceId, eventId)).limit(1)
+    );
+    const place =
+      event.mode === "online"
+        ? null
+        : venue
+          ? {
+              name: venue.name,
+              area: [venue.neighbourhood, venue.city].filter(Boolean).join(", ") || null,
+              address: venue.addressVisibility === "public" ? venue.address || null : null,
+              mapUrl: venue.addressVisibility === "public" ? venue.mapUrl : null,
+            }
+          : event.placeName
+            ? { name: event.placeName, area: null, address: event.placeAddress, mapUrl: event.venueMapUrl }
+            : null;
+
+    return {
+      id: event.id,
+      slug: event.slug,
+      name: event.name,
+      summary: event.summary,
+      description: event.description,
+      format: event.format,
+      topics: event.topics.length > 0 ? event.topics : community.topics,
+      startDate: event.startDate.toISOString(),
+      endDate: event.endDate.toISOString(),
+      status: event.status,
+      mode: event.mode,
+      place,
+      registration: event.registration,
+      registrationUrl: event.registrationUrl,
+      capacity: event.capacity,
+      waitlist: event.waitlist,
+      approval: event.approval,
+      guestsAllowed: event.guestsAllowed,
+      rsvpClosesAt: event.rsvpClosesAt?.toISOString() ?? null,
+      questions: event.questions,
+      taken: seats?.taken ?? 0,
+      waiting: seats?.waiting ?? 0,
+      hasBoard: Boolean(board),
+      community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
+      meetupUrl: event.externalLinks.meetup ?? null,
+    } satisfies PublicEvent;
+  });
+
+/** A published (or cancelled) event by its address; drafts don't exist here. */
+export const publicEvent = (communitySlug: string, eventSlug: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) =>
+      db
+        .select({ id: events.id })
+        .from(events)
+        .innerJoin(communities, eq(communities.id, events.communityId))
+        .where(
+          and(
+            eq(communities.slug, communitySlug),
+            eq(communities.isActive, true),
+            eq(events.slug, eventSlug),
+            eq(events.isActive, true),
+            ne(events.status, "draft")
+          )
+        )
+    );
+    if (!row) return yield* notFound;
+
+    return yield* toPublic(row.id);
+  });
+
+/** The organizers' preview of any of their events, drafts included. */
+export const preview = (eventId: string) =>
+  Effect.gen(function* () {
+    const { communityId } = yield* CommunityScope;
+    if (!(yield* belongs(eventId, communityId))) return yield* notFound;
+
+    return yield* toPublic(eventId);
+  });

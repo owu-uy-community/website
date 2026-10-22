@@ -64,6 +64,8 @@ const EXPECTED: Record<string, Access> = {
   "events.createDraft": "community:editor",
   "events.get": "community:editor",
   "events.hold": "community:editor",
+  "events.preview": "community:editor",
+  "events.public": "public",
   "events.publish": "community:editor",
   "events.save": "community:editor",
   "events.list": "community:member",
