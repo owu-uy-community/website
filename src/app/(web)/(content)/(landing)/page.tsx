@@ -148,10 +148,8 @@ export default async function Landing() {
     (a, b) =>
       Number(nextByCommunity.has(b.slug)) - Number(nextByCommunity.has(a.slug)) || Number(!!b.logo) - Number(!!a.logo)
   );
-  // Every community gets a turn around the hero; the ones with a logo go first
-  const orbit = [...communities]
-    .sort((a, b) => Number(!!b.logo) - Number(!!a.logo))
-    .map(({ slug, name, logo }) => ({ slug, name, logo: logo ?? null }));
+  // Every community gets a turn around the hero, in a fresh order on each load (HeroOrbit shuffles)
+  const orbit = communities.map(({ slug, name, logo }) => ({ slug, name, logo: logo ?? null }));
 
   const confUpcoming = Date.now() < Date.parse(CONF_DATES.event) + 8 * 3_600_000;
   const conf = dateParts(CONF_DATES.event);
