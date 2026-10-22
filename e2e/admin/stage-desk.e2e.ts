@@ -12,7 +12,7 @@ const rpc = (page: Page, path: string, json: unknown) =>
 
 /** Empty desk, and `message` on air with this title. */
 async function reset(page: Page, title: string) {
-  await rpc(page, "saveDesk", { desk: { preview: null, queue: [], favorites: [] } });
+  await rpc(page, "saveDesk", { desk: { preview: null, queue: [], presets: [] } });
   await rpc(page, "setScene", { scene: "message", params: { title }, restart: true });
 }
 
@@ -111,8 +111,31 @@ test("a second admin device sees the same queue", async ({ page, pageAs }) => {
   await expect(tablet.getByRole("region", { name: "Cola" }).getByText("Countdown", { exact: true })).toBeVisible();
 });
 
+test("a preview saved as a preset comes back on key 1, and Shift+1 puts it on air", async ({ page, pageAs }) => {
+  await reset(page, "Antes");
+  const wall = await follow(await pageAs("anonymous"), "/owy/stage", "owy-stage");
+  await follow(page, DESK, "private:owy-desk");
+
+  await page.getByRole("button", { name: "Mensaje: a la preview" }).first().click();
+  await page.locator("#param-preview-title").fill("Volvemos en 10");
+  await page.getByRole("button", { name: "Guardar preset" }).click();
+  // The name it proposes is what the preview says.
+  await expect(page.getByLabel("Nombre del preset")).toHaveValue("Volvemos en 10");
+  await page.getByRole("button", { name: "Guardar", exact: true }).click();
+  await page.getByRole("tab", { name: /^Presets/ }).click();
+  await expect(page.getByRole("button", { name: "Volvemos en 10: a la preview" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Sacar de la preview" }).click();
+  await page.keyboard.press("1");
+  await expect(page.locator("#param-preview-title")).toHaveValue("Volvemos en 10");
+  await expect(wall.getByText("Antes")).toBeVisible();
+  await page.keyboard.press("Shift+Digit1");
+
+  await expect(wall.getByText("Volvemos en 10")).toBeVisible();
+});
+
 test("a question hidden from the desk leaves the wall, the others stay", async ({ page, pageAs }) => {
-  await rpc(page, "saveDesk", { desk: { preview: null, queue: [], favorites: [] } });
+  await rpc(page, "saveDesk", { desk: { preview: null, queue: [], presets: [] } });
   const taken = await rpc(page, "setScene", { scene: "live-questions", params: { title: "Q&A" }, restart: true });
   const { round } = ((await taken.json()) as { json: { round: string } }).json;
   const ask = (value: string, voter: string) =>
@@ -154,6 +177,21 @@ test.describe("from a phone", () => {
     await expect(wall.getByText("Desde el celular")).toBeVisible();
   });
 
+  test("a preset tapped in its tab lands in preview, ready to edit", async ({ page }) => {
+    await reset(page, "Antes");
+    const presets = [{ id: "b", name: "Almuerzo", scene: "message", params: { title: "Almuerzo en el patio" } }];
+    await rpc(page, "saveDesk", { desk: { preview: null, queue: [], presets } });
+    await follow(page, DESK, "private:owy-desk");
+
+    await page.getByRole("button", { name: "Presets", exact: true }).click();
+    await page.getByRole("button", { name: "Almuerzo: a la preview" }).click();
+    await page.getByRole("button", { name: "Editar", exact: true }).click();
+
+    await expect(page.locator("#param-preview-title")).toHaveValue("Almuerzo en el patio");
+    // The editor knows which preset this is.
+    await expect(page.getByRole("button", { name: "Almuerzo", exact: true })).toBeVisible();
+  });
+
   test("a long-press on a scene opens its menu, lifting the finger picks nothing, its actions work", async ({
     page,
   }) => {
@@ -188,7 +226,7 @@ test.describe("from a phone", () => {
       desk: {
         preview: { id: "p1", scene: "logo", params: {}, from: "pick" },
         queue: ["countdown", "clock", "agenda"].map((scene, i) => ({ id: `q${i}`, scene, params: {}, from: "queue" })),
-        favorites: [],
+        presets: [],
       },
     });
     await follow(page, DESK, "private:owy-desk");
@@ -208,7 +246,7 @@ test.describe("from a phone", () => {
   test("a queued scene swiped left leaves the queue, and Deshacer brings it back", async ({ page }) => {
     await reset(page, "Antes");
     await rpc(page, "saveDesk", {
-      desk: { preview: null, queue: [{ id: "q1", scene: "countdown", params: {}, from: "queue" }], favorites: [] },
+      desk: { preview: null, queue: [{ id: "q1", scene: "countdown", params: {}, from: "queue" }], presets: [] },
     });
     await follow(page, DESK, "private:owy-desk");
     await page.getByRole("button", { name: /^Cola/ }).click();

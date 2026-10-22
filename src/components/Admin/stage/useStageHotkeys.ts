@@ -10,8 +10,8 @@ const SHORTCUTS: [string, string][] = [
   ["backspace", "CUT, de golpe"],
   ["/", "Buscar una escena"],
   ["q", "Mandar la preview a la cola"],
-  ["1 – 9", "Favorito n a la preview"],
-  ["shift+1 – 9", "Favorito n al aire ya"],
+  ["1 – 9", "Preset n a la preview"],
+  ["shift+1 – 9", "Preset n al aire ya"],
   ["g", "Guion: reproducir o pausar"],
   ["arrowleft / arrowright", "Guion: paso anterior / siguiente"],
 ];
@@ -55,12 +55,24 @@ export const releaseFocus = (event: MouseEvent<HTMLElement>) => {
   if (event.detail > 0) event.currentTarget.blur();
 };
 
+/** Until when Space, Enter and Backspace stay off TAKE and CUT (see `holdTake`). */
+let heldUntil = 0;
+
+/**
+ * A field that Enter commits and then lets go of the focus (a preset's name)
+ * leaves the next key to the desk: a second Enter, or a quick Space, would put
+ * the preview on air. TAKE and CUT wait out a moment after it.
+ */
+export const holdTake = (ms = 800) => {
+  heldUntil = Date.now() + ms;
+};
+
 type Handlers = {
   take: () => void;
   cut: () => void;
   search: () => void;
   queue: () => void;
-  favorite: (index: number, air: boolean) => void;
+  preset: (index: number, air: boolean) => void;
   guionToggle: () => void;
   guionStep: (direction: 1 | -1) => void;
 };
@@ -80,6 +92,11 @@ export function useStageHotkeys(handlers: Handlers) {
 
       // Holding a key must never fire twice (a second TAKE would send the next scene).
       if (event.repeat) return;
+      if ((key === " " || key === "Enter" || key === "Backspace") && Date.now() < heldUntil) {
+        event.preventDefault();
+
+        return;
+      }
       if (key === " " || key === "Enter") {
         if (ownsKeys(target)) return;
         event.preventDefault();
@@ -104,7 +121,7 @@ export function useStageHotkeys(handlers: Handlers) {
       const digit = /^Digit([1-9])$/.exec(event.code);
       if (digit) {
         event.preventDefault();
-        run.favorite(Number(digit[1]) - 1, event.shiftKey);
+        run.preset(Number(digit[1]) - 1, event.shiftKey);
 
         return;
       }

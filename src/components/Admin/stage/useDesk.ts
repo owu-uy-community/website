@@ -6,13 +6,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "components/shared/ui/toast-utils";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc } from "lib/orpc";
-import { afterTake, cue, cueQueued, readDesk, stepId } from "lib/owy-stage/desk";
+import { afterTake, cue, cueQueued, fromFavorites, presetStep, readDesk, stepId } from "lib/owy-stage/desk";
 import {
   EMPTY_DESK,
   OWY_DESK_CHANNEL,
-  isSceneId,
   type Desk,
   type DeskStep,
+  type Preset,
   type SceneId,
   type StageState,
   type StageTransition,
@@ -20,14 +20,14 @@ import {
 
 /** Preview param edits reach the other devices after a pause in typing, not per keystroke. */
 const EDIT_SAVE_MS = 400;
-/** Where favorites lived before they moved to the server (one device's list seeds the shared one). */
+/** Where favorites lived before they moved to the server (one device's list seeds the shared presets). */
 const LEGACY_FAVORITES = "owy-stage-favorites";
 
 type Params = Record<string, unknown>;
 
 /**
  * The desk every admin device shares: the scene in preview, the queue behind
- * it and the favorites. Edits apply locally at once and save in the
+ * it and the presets. Edits apply locally at once and save in the
  * background; TAKE goes through the server so the queue moves up in the same
  * transaction that puts the preview on air.
  */
@@ -61,7 +61,7 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
           queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), saved);
       },
       onError: (error) => {
-        toast.error("No se pudo guardar la cola", error.message);
+        toast.error("No se pudo guardar", error.message);
         void refetch();
       },
     })
@@ -87,14 +87,17 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
     const key = orpc.owyStage.getDesk.queryKey();
     const current = () => deskRef.current;
     /**
-     * One save at a time, in order. Each one writes the whole desk, and two sent together (one
-     * batch) ran concurrently on the server: an older desk could commit last and drop a queued step.
-     * Counted from here, not from the request, so an echo between two chained saves is still stale.
+     * One save at a time, in order. Each one writes the preview and the queue whole, and two sent
+     * together (one batch) ran concurrently on the server: an older desk could commit last and drop a
+     * queued step. Counted from here, not from the request, so an echo between two chained saves is
+     * still stale. The presets only travel with a preset edit: a device that was typing (and so
+     * skipped the echo of a preset saved elsewhere) must not bring back its older list.
      */
-    const send = (next: Desk) => {
+    const send = (next: Desk, presets: boolean) => {
       inflight.current += 1;
+      const desk = presets ? next : { preview: next.preview, queue: next.queue };
       lastSave.current = lastSave.current
-        .then(() => saveRef.current({ desk: next }))
+        .then(() => saveRef.current({ desk }))
         .catch(() => undefined)
         .finally(() => {
           inflight.current -= 1;
@@ -106,7 +109,7 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
       void queryClient.cancelQueries({ queryKey: key, exact: true });
       queryClient.setQueryData(key, next);
     };
-    const write = (next: Desk, typing = false) => {
+    const write = (next: Desk, { typing = false, presets = false } = {}) => {
       if (!loaded.current) {
         toast.error("La cola todavía está cargando", "Probá de nuevo en un segundo.");
         return;
@@ -115,16 +118,16 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
       deskRef.current = next;
       if (editTimer.current) clearTimeout(editTimer.current);
       editTimer.current = null;
-      if (!typing) return send(next);
+      if (!typing) return send(next, presets);
       editTimer.current = setTimeout(() => {
         editTimer.current = null;
-        send(deskRef.current);
+        send(deskRef.current, false);
       }, EDIT_SAVE_MS);
     };
     const queued = (scene: SceneId, params: Params = {}): DeskStep => ({ id: stepId(), scene, params, from: "queue" });
 
     return {
-      /** A scene from the library, the palette or a favorite key: into preview, with its defaults. */
+      /** A scene from the library or the palette: into preview, with its defaults. */
       pick: (scene: SceneId, params: Params = {}) =>
         write(cue(current(), { id: stepId(), scene, params, from: "pick" })),
       /** What is on air, copied into preview to prepare a variant off air. */
@@ -135,7 +138,7 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
       cueQueued: (id: string) => write(cueQueued(current(), id)),
       editPreview: (params: Params) => {
         const { preview } = current();
-        if (preview) write({ ...current(), preview: { ...preview, params } }, true);
+        if (preview) write({ ...current(), preview: { ...preview, params } }, { typing: true });
       },
       /** Out of preview; a step that came from the queue goes back to its front. */
       clearPreview: () => {
@@ -146,7 +149,11 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
         write({ ...current(), queue: [...current().queue, queued(scene, params)] }),
       enqueuePreview: () => {
         const { preview, queue } = current();
-        if (preview) write({ ...current(), queue: [...queue, queued(preview.scene, preview.params)] });
+        if (preview)
+          write({
+            ...current(),
+            queue: [...queue, { ...queued(preview.scene, preview.params), preset: preview.preset }],
+          });
       },
       remove: (id: string) => write({ ...current(), queue: current().queue.filter((step) => step.id !== id) }),
       /** Undo for a removal: the step goes back where it was. */
@@ -176,13 +183,81 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
       },
       persistOrder: () => write(current()),
       clearQueue: () => write({ ...current(), queue: [] }),
-      toggleFavorite: (scene: SceneId) => {
-        const { favorites } = current();
-        write({
-          ...current(),
-          favorites: favorites.includes(scene) ? favorites.filter((id) => id !== scene) : [...favorites, scene],
-        });
+
+      /** A preset into preview, remembering it, so the editor can save a change back. */
+      pickPreset: (preset: Preset) => write(cue(current(), presetStep(preset, stepId()))),
+      enqueuePreset: (preset: Preset) =>
+        write({ ...current(), queue: [...current().queue, { ...presetStep(preset, stepId()), from: "queue" }] }),
+      /** A new preset at the end of the list (its number is its place). */
+      savePreset: (scene: SceneId, params: Params, name: string) =>
+        write(
+          { ...current(), presets: [...current().presets, { id: stepId(), name: name.trim(), scene, params }] },
+          { presets: true }
+        ),
+      /** The preview as a new preset. The preview then remembers it, so a later edit can update it. */
+      savePreview: (name: string) => {
+        const { preview, presets } = current();
+        if (!preview) return;
+        const preset: Preset = { id: stepId(), name: name.trim(), scene: preview.scene, params: preview.params };
+        write(
+          { ...current(), preview: { ...preview, preset: preset.id }, presets: [...presets, preset] },
+          { presets: true }
+        );
       },
+      /** A preset overwritten with the preview (renamed too, when a name comes); the preview is that preset now. */
+      updateFromPreview: (id: string, name?: string) => {
+        const { preview, presets } = current();
+        if (!preview) return;
+        write(
+          {
+            ...current(),
+            preview: { ...preview, preset: id },
+            presets: presets.map((preset) =>
+              preset.id === id
+                ? { ...preset, scene: preview.scene, params: preview.params, name: name?.trim() ?? preset.name }
+                : preset
+            ),
+          },
+          { presets: true }
+        );
+      },
+      renamePreset: (id: string, name: string) =>
+        write(
+          {
+            ...current(),
+            presets: current().presets.map((preset) => (preset.id === id ? { ...preset, name: name.trim() } : preset)),
+          },
+          { presets: true }
+        ),
+      duplicatePreset: (id: string) => {
+        const { presets } = current();
+        const at = presets.findIndex((preset) => preset.id === id);
+        if (at >= 0)
+          write(
+            {
+              ...current(),
+              presets: [...presets.slice(0, at + 1), { ...presets[at], id: stepId() }, ...presets.slice(at + 1)],
+            },
+            { presets: true }
+          );
+      },
+      removePreset: (id: string) =>
+        write({ ...current(), presets: current().presets.filter((preset) => preset.id !== id) }, { presets: true }),
+      /** Undo for a removal: the preset goes back where it was. */
+      restorePreset: (preset: Preset, index: number) => {
+        const { presets } = current();
+        if (presets.some((item) => item.id === preset.id)) return;
+        write(
+          { ...current(), presets: [...presets.slice(0, index), preset, ...presets.slice(index)] },
+          { presets: true }
+        );
+      },
+      /** While dragging: local only. `persistPresets` saves what the drag left behind. */
+      reorderPresets: (presets: Preset[]) => {
+        deskRef.current = { ...current(), presets };
+        local(deskRef.current);
+      },
+      persistPresets: () => write(current(), { presets: true }),
       /**
        * TAKE (or CUT). The step travels with the request (what goes out is
        * what the operator sees); a queue edit still saving lands first, or it
@@ -214,20 +289,17 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
     };
   }, [queryClient, refetch]);
 
-  // Favorites used to be per browser: the first device that loads the shared desk seeds it, once.
+  // Favorites used to be per browser: the first device that loads the shared desk turns its own into presets, once.
   const seeded = useRef(false);
   useEffect(() => {
     if (!data || seeded.current) return;
     seeded.current = true;
     try {
-      const stored = JSON.parse(window.localStorage.getItem(LEGACY_FAVORITES) ?? "[]") as unknown;
+      const legacy = fromFavorites(JSON.parse(window.localStorage.getItem(LEGACY_FAVORITES) ?? "[]"));
       window.localStorage.removeItem(LEGACY_FAVORITES);
-      const legacy = Array.isArray(stored)
-        ? stored.filter((id): id is SceneId => typeof id === "string" && isSceneId(id))
-        : [];
-      if (legacy.length && !data.favorites.length) {
-        queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), { ...data, favorites: legacy });
-        void saveRef.current({ desk: { ...data, favorites: legacy } }).catch(() => undefined);
+      if (legacy.length && !data.presets.length) {
+        queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), { ...data, presets: legacy });
+        void saveRef.current({ desk: { ...data, presets: legacy } }).catch(() => undefined);
       }
     } catch {
       // Corrupt or missing: nothing to carry over.

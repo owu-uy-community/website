@@ -14,10 +14,12 @@ import { haptic } from "components/Admin/stage/haptics";
 import { Inspector } from "components/Admin/stage/Inspector";
 import { Monitors, TakeControls, type Flight } from "components/Admin/stage/Monitors";
 import { PHONE_TABS, PhoneTabs, type PhoneTab } from "components/Admin/stage/PhoneTabs";
+import { PresetsPanel, type PresetActions } from "components/Admin/stage/Presets";
 import { Queue } from "components/Admin/stage/Queue";
 import { RundownPanel, useRundown } from "components/Admin/stage/Rundown";
 import { SceneLibrary, type LibraryActions, type LibraryTally } from "components/Admin/stage/SceneLibrary";
 import { ScenePalette } from "components/Admin/stage/ScenePalette";
+import { readParams } from "components/Admin/stage/SceneParams";
 import {
   StageSettingsSheet,
   copyText,
@@ -46,12 +48,14 @@ import {
   isSceneId,
   parseSceneParams,
   type DeskStep,
+  type Preset,
   type SceneId,
   type StageState,
   type StageTransition,
 } from "lib/owy-stage/scenes";
 
 type Target = "preview" | "program";
+type Tab = "library" | "presets" | "guion";
 type Params = Record<string, unknown>;
 
 const isOutput = (value: unknown): value is OutputSettings =>
@@ -108,8 +112,8 @@ export default function ScenesClient() {
 
 /**
  * The wall's control desk: PREVIEW → TAKE → AL AIRE, with the queue feeding
- * the preview, the library to pick from, the guion for unattended loops and
- * the params of whatever is being prepared. Shared state lives on the server
+ * the preview, the library to pick from, the presets one press away, the
+ * guion for unattended loops and the params of whatever is being prepared. Shared state lives on the server
  * (the wall, the desk, the guion), so the laptop, the tablet and the phone run
  * the same show; layout and filters are per device.
  */
@@ -126,7 +130,7 @@ function Desk() {
   const wide = useWide();
 
   const [target, setTarget] = useState<Target>("preview");
-  const [tab, setTab] = useState<"library" | "guion">("library");
+  const [tab, setTab] = useState<Tab>("library");
   const [phoneTab, setPhoneTab] = useStoredState<PhoneTab>("owy-stage-phone-tab", "library", isPhoneTab);
   const [replay, setReplay] = useState(0);
   const [flight, setFlight] = useState<Flight | null>(null);
@@ -223,8 +227,42 @@ function Desk() {
         haptic(18);
       },
       guion: (id) => rundownRef.current.add(id),
-      toggleFavorite: actions.toggleFavorite,
+      preset: (id) => {
+        actions.savePreset(id, {}, "");
+        haptic(8);
+      },
       copyUrl: (id) => copyText(stageUrlRef.current(`/owy/stage/${id}`)),
+    }),
+    [actions, put]
+  );
+  const presetActions = useMemo<PresetActions>(
+    () => ({
+      pick: (preset) => {
+        actions.pickPreset(preset);
+        setTarget("preview");
+        haptic(5);
+      },
+      // Spelled out, defaults included: empty params would keep what is up when the scene is already on air.
+      air: (preset) => {
+        put(preset.scene, readParams(preset.scene, preset.params), true);
+        haptic(18);
+      },
+      queue: actions.enqueuePreset,
+      guion: (preset) => rundownRef.current.add(preset.scene, preset.params),
+      rename: actions.renamePreset,
+      saveFromPreview: actions.savePreview,
+      saveFromLive: (name) => {
+        const { scene, params } = liveRef.current;
+        actions.savePreset(scene, params, name);
+      },
+      updateFromPreview: actions.updateFromPreview,
+      duplicate: actions.duplicatePreset,
+      remove: actions.removePreset,
+      restore: actions.restorePreset,
+      reorder: actions.reorderPresets,
+      persistOrder: actions.persistPresets,
+      copyUrl: (preset) =>
+        copyText(`${window.location.origin}/api/owy-stage/preset/${preset.id}`, "URL para Stream Deck copiada"),
     }),
     [actions, put]
   );
@@ -236,8 +274,9 @@ function Desk() {
         setTarget("preview");
         haptic(5);
       },
+      // Spelled out like TAKE reads them: empty params would keep what is up when the scene is already on air.
       airNow: (step: DeskStep) => {
-        put(step.scene, step.params, true);
+        put(step.scene, readParams(step.scene, step.params), true);
         actions.remove(step.id);
         haptic(18);
       },
@@ -292,17 +331,25 @@ function Desk() {
     },
     [actions, libraryActions]
   );
+  const choosePreset = useCallback(
+    (preset: Preset, intent: "preview" | "queue" | "air") => {
+      if (intent === "queue") presetActions.queue(preset);
+      else if (intent === "air") presetActions.air(preset);
+      else presetActions.pick(preset);
+    },
+    [presetActions]
+  );
 
   useStageHotkeys({
     take: () => take("wipe"),
     cut: () => take("cut"),
     search: openPalette,
     queue: actions.enqueuePreview,
-    favorite: (index, air) => {
-      const id = deskRef.current.favorites[index];
-      if (!id) return;
-      if (air) put(id, {}, true);
-      else libraryActions.pick(id);
+    preset: (index, air) => {
+      const preset = deskRef.current.presets[index];
+      if (!preset) return;
+      if (air) presetActions.air(preset);
+      else presetActions.pick(preset);
     },
     guionToggle: rundown.toggle,
     guionStep: rundown.skip,
@@ -344,6 +391,8 @@ function Desk() {
     <Inspector
       live={live}
       pending={setScene.isPending}
+      presetActions={presetActions}
+      presets={desk.presets}
       preview={desk.preview}
       target={target}
       onCopyLive={copyLive}
@@ -355,8 +404,9 @@ function Desk() {
   );
   const queue = <Queue actions={queueActions} queue={desk.queue} />;
   const library = (lead?: ReactNode) => (
-    <SceneLibrary actions={libraryActions} favorites={desk.favorites} lead={lead} recent={recent} tally={tally} />
+    <SceneLibrary actions={libraryActions} lead={lead} recent={recent} tally={tally} />
   );
+  const presets = <PresetsPanel actions={presetActions} live={live} presets={desk.presets} preview={desk.preview} />;
   const guion = <RundownPanel liveParams={liveParams} liveScene={live.scene} rundown={rundown} />;
   const searchLead = useMemo(
     () => (
@@ -434,12 +484,15 @@ function Desk() {
                         <Tabs
                           className="flex h-full flex-col overflow-hidden rounded-xl border bg-card"
                           value={tab}
-                          onValueChange={(value) => setTab(value as "library" | "guion")}
+                          onValueChange={(value) => setTab(value as Tab)}
                         >
                           <div className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
                             <TabsList className="h-9">
                               <TabsTrigger className="gap-1.5" value="library">
                                 Biblioteca <span className="text-xs text-muted-foreground">{SCENE_IDS.length}</span>
+                              </TabsTrigger>
+                              <TabsTrigger className="gap-1.5" value="presets">
+                                Presets <span className="text-xs text-muted-foreground">{desk.presets.length}</span>
                               </TabsTrigger>
                               <TabsTrigger className="gap-1.5" value="guion">
                                 Guion <span className="text-xs text-muted-foreground">{rundown.steps.length}</span>
@@ -453,6 +506,13 @@ function Desk() {
                             value="library"
                           >
                             {library()}
+                          </TabsContent>
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="presets"
+                          >
+                            {presets}
                           </TabsContent>
                           <TabsContent
                             forceMount
@@ -496,6 +556,7 @@ function Desk() {
           <section aria-label="Sección" className="min-h-0 flex-1 overflow-hidden border-t bg-card">
             <div className={cn("h-full", phoneTab !== "queue" && "hidden")}>{queue}</div>
             <div className={cn("h-full", phoneTab !== "library" && "hidden")}>{library(searchLead)}</div>
+            <div className={cn("h-full", phoneTab !== "presets" && "hidden")}>{presets}</div>
             <div className={cn("h-full", phoneTab !== "edit" && "hidden")}>{inspector}</div>
             <div className={cn("h-full", phoneTab !== "guion" && "hidden")}>{guion}</div>
           </section>
@@ -510,10 +571,11 @@ function Desk() {
       )}
 
       <ScenePalette
-        favorites={desk.favorites}
         open={paletteOpen}
+        presets={desk.presets}
         recent={recent}
         onChoose={choose}
+        onChoosePreset={choosePreset}
         onOpenChange={setPaletteOpen}
       />
       <StageSettingsSheet

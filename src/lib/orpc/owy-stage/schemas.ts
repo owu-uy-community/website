@@ -6,6 +6,7 @@ import {
   EffectEventSchema,
   FaceEventSchema,
   MODERATIONS,
+  PresetSchema,
   RundownSchema,
   SCENE_IDS,
   StageStateSchema,
@@ -25,12 +26,32 @@ export const SetSceneSchema = z.object({
 /** The whole rundown travels on every edit: it is tiny and conflict-free. */
 export const SaveRundownSchema = z.object({ steps: RundownSchema });
 
-/** The desk travels whole too (preview + queue + favorites: a few KB at most). */
-export const SaveDeskSchema = z.object({ desk: DeskSchema });
+/**
+ * The desk travels whole too (preview + queue + presets: a few KB at most).
+ * A desk tab opened before presets existed saves without them: the stored
+ * ones stay instead of being wiped.
+ */
+export const SaveDeskSchema = z.object({
+  desk: DeskSchema.extend({ presets: z.array(PresetSchema).max(100).optional() }),
+});
+export type SaveDeskInput = z.infer<typeof SaveDeskSchema>["desk"];
+
+/**
+ * The desk as it leaves the server. ponytail: `favorites` (the presets' scenes) keeps desk tabs
+ * opened before presets existed working until they reload; drop it after OWU CONF.
+ */
+export const DeskWireSchema = DeskSchema.extend({ favorites: z.array(z.string()).optional() });
+
+/** A preset by its id or its number on the desk, into preview (TAKE sends it) or straight on air. */
+export const FirePresetSchema = z.object({
+  preset: z.string().trim().min(1).max(40),
+  to: z.enum(["preview", "air"]).default("preview"),
+});
+export const FirePresetResultSchema = z.object({ preset: PresetSchema, to: z.enum(["preview", "air"]) });
 
 /** TAKE sends the step the operator is looking at, so what goes out is what they saw. */
 export const TakeSchema = z.object({ step: DeskStepSchema, transition: z.enum(["wipe", "cut"]).optional() });
-export const TakeResultSchema = z.object({ state: StageStateSchema, desk: DeskSchema });
+export const TakeResultSchema = z.object({ state: StageStateSchema, desk: DeskWireSchema });
 
 export const FireEffectSchema = EffectEventSchema;
 export const SetFaceSchema = FaceEventSchema;

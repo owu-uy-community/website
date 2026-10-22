@@ -6,7 +6,7 @@ import * as z from "zod";
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
 import { owyStageInputs, owyStageState, rooms, tracks } from "../../db/schema";
-import { afterTake, readDesk } from "../../owy-stage/desk";
+import { afterTake, cue, findPreset, presetStep, readDesk } from "../../owy-stage/desk";
 import {
   DEFAULT_STAGE_STATE,
   OWY_DESK_CHANNEL,
@@ -34,7 +34,15 @@ import { Invalid, NotFound } from "../errors";
 import * as Eventbrite from "../eventbrite/service";
 import { fetchJson } from "../http";
 import { Realtime } from "../services";
-import type { SetNowPlayingInput, SetSceneInput, StageMeetup, StagePulse, StageSpeaker, StageWeather } from "./schemas";
+import type {
+  SaveDeskInput,
+  SetNowPlayingInput,
+  SetSceneInput,
+  StageMeetup,
+  StagePulse,
+  StageSpeaker,
+  StageWeather,
+} from "./schemas";
 
 const ROW_ID = "global";
 
@@ -152,13 +160,16 @@ export const setScene = (input: SetSceneInput) =>
   });
 
 // ---------------------------------------------------------------------------
-// The desk: preview, queue and favorites (admin devices only)
+// The desk: preview, queue and presets (admin devices only)
 // ---------------------------------------------------------------------------
 
-const readStoredDesk = () =>
-  query((db) => db.select({ desk: owyStageState.desk }).from(owyStageState).where(eq(owyStageState.id, ROW_ID))).pipe(
-    Effect.map(([row]) => readDesk(row?.desk))
-  );
+/** The stored desk. `lock` holds the row until the transaction ends, so a TAKE can't land in between. */
+const readStoredDesk = (lock = false) =>
+  query((db) => {
+    const select = db.select({ desk: owyStageState.desk }).from(owyStageState).where(eq(owyStageState.id, ROW_ID));
+
+    return lock ? select.for("update") : select;
+  }).pipe(Effect.map(([row]) => readDesk(row?.desk)));
 
 /** Not a take: `updatedAt` stays (phones time their rounds off it), like the rundown. */
 const writeDesk = (desk: Desk) =>
@@ -169,15 +180,78 @@ const writeDesk = (desk: Desk) =>
       .onConflictDoUpdate({ target: owyStageState.id, set: { desk, updatedAt: sql`${owyStageState.updatedAt}` } })
   );
 
-export const getDesk = () => readStoredDesk();
+/**
+ * Just the preview and the queue, merged into the stored desk in one statement: the presets stay as
+ * stored, even when another device saves one at the same moment. Returns the desk as it now is.
+ */
+const writeDeskSteps = (steps: Pick<Desk, "preview" | "queue">) =>
+  query((db) =>
+    db
+      .insert(owyStageState)
+      .values({ id: ROW_ID, desk: steps })
+      .onConflictDoUpdate({
+        target: owyStageState.id,
+        set: {
+          desk: sql`${owyStageState.desk} || ${JSON.stringify(steps)}::jsonb`,
+          updatedAt: sql`${owyStageState.updatedAt}`,
+        },
+      })
+      .returning({ desk: owyStageState.desk })
+  ).pipe(Effect.map(([row]) => readDesk(row?.desk)));
 
-/** Replace the desk and tell the other admin devices. */
-export const saveDesk = (desk: Desk) =>
+/**
+ * ponytail: desk tabs opened before presets existed read `favorites` and break without it, so every
+ * desk that leaves the server names the presets' scenes that way too. Drop it after OWU CONF.
+ */
+const wire = (desk: Desk) => ({ ...desk, favorites: [...new Set(desk.presets.map((preset) => preset.scene))] });
+
+export const getDesk = () => readStoredDesk().pipe(Effect.map(wire));
+
+/**
+ * Replace the desk and tell the other admin devices. The presets only come with a preset edit: any
+ * other save leaves the stored ones alone, so a device that missed a preset saved elsewhere (or a
+ * tab opened before presets existed) can't bring back its older list.
+ */
+export const saveDesk = (input: SaveDeskInput) =>
   Effect.gen(function* () {
-    yield* writeDesk(desk);
-    yield* broadcast("desk", desk, OWY_DESK_CHANNEL);
+    const { preview, queue, presets } = input;
+    const desk: Desk = presets ? { preview, queue, presets } : yield* writeDeskSteps({ preview, queue });
+    if (presets) yield* writeDesk(desk);
+    yield* broadcast("desk", wire(desk), OWY_DESK_CHANNEL);
 
-    return desk;
+    return wire(desk);
+  });
+
+/**
+ * A preset fired from outside the desk (a Stream Deck): into preview, where
+ * TAKE sends it, or straight on air like «Al aire ya». `ref` is its id or its
+ * number on the desk.
+ */
+export const firePreset = (ref: string, to: "preview" | "air") =>
+  Effect.gen(function* () {
+    const missing = new NotFound({ entity: "preset", message: `No hay un preset «${ref}» en el desk` });
+    if (to === "air") {
+      const preset = findPreset((yield* readStoredDesk()).presets, ref);
+      if (!preset) return yield* Effect.fail(missing);
+      yield* setScene({ scene: preset.scene, params: preset.params, restart: true });
+
+      return { preset, to };
+    }
+
+    const { preset, desk } = yield* transaction(
+      Effect.gen(function* () {
+        const current = yield* readStoredDesk(true);
+        const preset = findPreset(current.presets, ref);
+        if (!preset) return yield* Effect.fail(missing);
+        const desk = cue(current, presetStep(preset, createId()));
+        yield* writeDesk(desk);
+
+        return { preset, desk };
+      })
+    );
+    yield* broadcast("desk", wire(desk), OWY_DESK_CHANNEL);
+
+    return { preset, to };
   });
 
 /**
@@ -204,9 +278,9 @@ export const take = (step: DeskStep, transition?: StageTransition) =>
       })
     );
     yield* broadcast("scene", state);
-    yield* broadcast("desk", desk, OWY_DESK_CHANNEL);
+    yield* broadcast("desk", wire(desk), OWY_DESK_CHANNEL);
 
-    return { state, desk };
+    return { state, desk: wire(desk) };
   });
 
 /** The operator's rundown, dropping any step whose scene no longer exists. */

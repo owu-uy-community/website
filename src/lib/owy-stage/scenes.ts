@@ -2124,30 +2124,46 @@ export const MONITOR_PREFETCH = "owy-stage:prefetch";
  * One scene waiting on the desk. `params` empty means "the scene's defaults".
  * `from` only matters for the preview: a step pulled out of the queue goes
  * back to its front when something else replaces it, a `pick` is just
- * dropped, and a `swap` is the scene that just left the air.
+ * dropped, and a `swap` is the scene that just left the air. `preset` is the
+ * preset it was recalled from, so the editor can save a change back to it.
  */
 export const DeskStepSchema = z.object({
   id: z.string().min(1).max(40),
   scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
   params: z.record(z.string(), z.unknown()).default({}),
   from: z.enum(["pick", "queue", "swap"]).default("pick"),
+  preset: z.string().max(40).optional(),
 });
 export type DeskStep = z.infer<typeof DeskStepSchema>;
 
 /**
+ * A scene with its params, saved under a name so it comes back in one press:
+ * a tap, keys 1–9, the search, a Stream Deck. Empty params mean the scene's
+ * defaults; an empty name, the scene's title.
+ */
+export const PresetSchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().trim().max(60).default(""),
+  scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
+  params: z.record(z.string(), z.unknown()).default({}),
+});
+export type Preset = z.infer<typeof PresetSchema>;
+
+/** What a preset is called on the desk: its name, or its scene's title. */
+export const presetLabel = (preset: Pick<Preset, "name" | "scene">) => preset.name || SCENES[preset.scene].title;
+
+/**
  * The operator's desk, shared by every admin device: the scene staged in
- * preview (what TAKE sends next), the queue that feeds it, and the favorites.
+ * preview (what TAKE sends next), the queue that feeds it, and the presets
+ * (in order: the first nine are keys 1–9).
  */
 export const DeskSchema = z.object({
   preview: DeskStepSchema.nullable().default(null),
   queue: z.array(DeskStepSchema).max(100).default([]),
-  favorites: z
-    .array(z.enum(SCENE_IDS as [SceneId, ...SceneId[]]))
-    .max(100)
-    .default([]),
+  presets: z.array(PresetSchema).max(100).default([]),
 });
 export type Desk = z.infer<typeof DeskSchema>;
-export const EMPTY_DESK: Desk = { preview: null, queue: [], favorites: [] };
+export const EMPTY_DESK: Desk = { preview: null, queue: [], presets: [] };
 
 /** Scenes that take input from phones at /owy/play. */
 export const INTERACTIVE_SCENES = [

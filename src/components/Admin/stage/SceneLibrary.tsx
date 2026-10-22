@@ -48,15 +48,12 @@ import { SceneThumb } from "./SceneThumb";
 import { releaseFocus } from "./useStageHotkeys";
 import { useStoredState } from "./useStoredState";
 
-type Filter = "favorites" | "recent" | "all" | SceneCategory;
+type Filter = "recent" | "all" | SceneCategory;
 type View = "grid" | "list";
 
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
 const isFilter = (value: unknown): value is Filter =>
-  value === "favorites" ||
-  value === "recent" ||
-  value === "all" ||
-  (typeof value === "string" && value in SCENE_CATEGORIES);
+  value === "recent" || value === "all" || (typeof value === "string" && value in SCENE_CATEGORIES);
 const isView = (value: unknown): value is View => value === "grid" || value === "list";
 const POP = { type: "spring", stiffness: 520, damping: 22 } as const;
 
@@ -68,26 +65,23 @@ export type LibraryActions = {
   queue: (id: SceneId) => void;
   airNow: (id: SceneId) => void;
   guion: (id: SceneId) => void;
-  toggleFavorite: (id: SceneId) => void;
+  /** A preset of the scene with its defaults, at the end of the presets. */
+  preset: (id: SceneId) => void;
   copyUrl: (id: SceneId) => void;
 };
 
-function sceneActions(id: SceneId, favorite: boolean, actions: LibraryActions): MenuAction[] {
+function sceneActions(id: SceneId, actions: LibraryActions): MenuAction[] {
   return [
     { label: "Al aire ya", icon: Zap, tone: "air", onSelect: () => actions.airNow(id) },
     { label: "Agregar a la cola", icon: ListPlus, onSelect: () => actions.queue(id) },
     { label: "Agregar al guion", icon: ListVideo, onSelect: () => actions.guion(id) },
-    {
-      label: favorite ? "Quitar de favoritos" : "Marcar favorito",
-      icon: Star,
-      onSelect: () => actions.toggleFavorite(id),
-    },
+    { label: "Guardar como preset", icon: Star, onSelect: () => actions.preset(id) },
     { label: "Copiar URL para OBS", icon: Copy, group: true, onSelect: () => actions.copyUrl(id) },
     { label: "Abrir en otra pestaña", icon: ExternalLink, href: `/owy/stage/${id}` },
   ];
 }
 
-function Tag({ tone, children }: { tone: "air" | "preview" | "queue"; children: React.ReactNode }) {
+export function Tag({ tone, children }: { tone: "air" | "preview" | "queue"; children: React.ReactNode }) {
   return (
     <motion.span
       animate={{ scale: 1, opacity: 1 }}
@@ -112,12 +106,9 @@ type Status = {
   preview: boolean;
   /** Position in the queue (1-based), if queued. */
   queued: number | undefined;
-  favorite: boolean;
-  /** 1–9 for the first nine favorites: the key that stages it. */
-  hotkey: number | null;
 };
 
-function Tags({ id, live, preview, queued, favorite, hotkey }: Status & { id: SceneId }) {
+function Tags({ id, live, preview, queued }: Status & { id: SceneId }) {
   return (
     <>
       <span className="pointer-events-none absolute top-1.5 left-1.5 flex gap-1">
@@ -140,19 +131,6 @@ function Tags({ id, live, preview, queued, favorite, hotkey }: Status & { id: Sc
         </AnimatePresence>
       </span>
       <span className="pointer-events-none absolute top-1.5 right-1.5 flex gap-1">
-        {hotkey && (
-          <span
-            className="hidden h-[18px] min-w-[18px] place-items-center rounded-sm bg-black/70 px-1 font-terminal text-3xs text-foreground pointer-fine:grid"
-            title={`Tecla ${hotkey}`}
-          >
-            {hotkey}
-          </span>
-        )}
-        {favorite && (
-          <span className="grid size-[18px] place-items-center rounded-sm bg-black/70 text-primary">
-            <Star className="h-3 w-3" fill="currentColor" />
-          </span>
-        )}
         {PHONE.has(id) && (
           <span
             className="grid size-[18px] place-items-center rounded-sm bg-black/70 text-foreground"
@@ -212,7 +190,7 @@ function QueueButton({ id, onQueue, className }: { id: SceneId; onQueue: (id: Sc
   );
 }
 
-function ringFor(live: boolean, preview: boolean) {
+export function ringFor(live: boolean, preview: boolean) {
   if (live) return cn("border-transparent ring-2", TALLY.program.ring);
   if (preview) return cn("border-transparent ring-2", TALLY.preview.ring);
 
@@ -253,7 +231,7 @@ function CardView({ id, actions, ...status }: ItemProps) {
         <div className="absolute right-1 bottom-1 flex rounded-md bg-black/75">
           <QueueButton className={onImage} id={id} onQueue={actions.queue} />
           <ActionsMenuButton
-            actions={() => sceneActions(id, status.favorite, actions)}
+            actions={() => sceneActions(id, actions)}
             className={onImage}
             label={menuLabel(id)}
             title={scene.title}
@@ -302,7 +280,7 @@ function RowView({ id, actions, ...status }: ItemProps) {
       <div className="relative flex items-center">
         <QueueButton className="h-9 w-9 pointer-coarse:h-10 pointer-coarse:w-10" id={id} onQueue={actions.queue} />
         <ActionsMenuButton
-          actions={() => sceneActions(id, status.favorite, actions)}
+          actions={() => sceneActions(id, actions)}
           className="h-8 w-8 shrink-0 text-muted-foreground pointer-coarse:h-10 pointer-coarse:w-10"
           label={menuLabel(id)}
           title={scene.title}
@@ -317,14 +295,12 @@ const Row = memo(RowView);
 /** The filter chips and the grid/list toggle: on their own, so a change on the desk doesn't redraw them. */
 function ToolbarView({
   lead,
-  favorites,
   filter,
   onFilter,
   view,
   onView,
 }: {
   lead?: ReactNode;
-  favorites: number;
   filter: Filter;
   onFilter: (filter: Filter) => void;
   view: View;
@@ -344,7 +320,6 @@ function ToolbarView({
   }, [filter]);
 
   const chips: [Filter, string, number | null][] = [
-    ["favorites", "★ Favoritos", favorites],
     ["recent", "Recientes", null],
     ["all", "Todas", null],
     ...SCENE_GROUPS.map((group): [Filter, string, number] => [group.category, group.title, group.scenes.length]),
@@ -430,13 +405,11 @@ const fromPortal = (event: MouseEvent | PointerEvent) => !event.currentTarget.co
  */
 function SceneLibraryView({
   tally,
-  favorites,
   recent,
   actions,
   lead,
 }: {
   tally: LibraryTally;
-  favorites: SceneId[];
   recent: SceneId[];
   actions: LibraryActions;
   /** Something to put before the chips (the phone's search button). */
@@ -447,32 +420,22 @@ function SceneLibraryView({
   // The chip and the toggle answer at once; the grid behind them follows without blocking the tap.
   const shownFilter = useDeferredValue(filter);
   const shownView = useDeferredValue(view);
-  const hotkeys = useMemo(() => new Map(favorites.slice(0, 9).map((id, index) => [id, index + 1])), [favorites]);
-  const starred = useMemo(() => new Set(favorites), [favorites]);
   /** One right-click / long-press menu for the whole grid, filled with the scene it was opened on. */
   const [menuFor, setMenuFor] = useState<SceneId | null>(null);
   const longPress = useLongPress();
 
   const groups = useMemo(() => {
-    if (shownFilter === "favorites") return [{ category: "favorites", title: "Favoritos", scenes: favorites }];
     if (shownFilter === "recent") return [{ category: "recent", title: "Recientes", scenes: recent }];
 
     return SCENE_GROUPS.filter((group) => shownFilter === "all" || group.category === shownFilter);
-  }, [shownFilter, favorites, recent]);
+  }, [shownFilter, recent]);
   const empty = groups.every((group) => group.scenes.length === 0);
 
   const Item = shownView === "grid" ? Card : Row;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <Toolbar
-        favorites={favorites.length}
-        filter={filter}
-        lead={lead}
-        view={view}
-        onFilter={setFilter}
-        onView={setView}
-      />
+      <Toolbar filter={filter} lead={lead} view={view} onFilter={setFilter} onView={setView} />
 
       <ContextMenu>
         <ContextMenuTrigger asChild>
@@ -500,13 +463,9 @@ function SceneLibraryView({
             {empty && (
               <Empty
                 className="mt-2"
-                description={
-                  shownFilter === "favorites"
-                    ? "Marcalas con «⋯ → Marcar favorito». Las primeras nueve salen con las teclas 1 a 9."
-                    : "Las escenas que salgan al aire desde este dispositivo aparecen acá."
-                }
-                icon={shownFilter === "favorites" ? Star : ListVideo}
-                title={shownFilter === "favorites" ? "Sin favoritos todavía" : "Nada reciente"}
+                description="Las escenas que salgan al aire desde este dispositivo aparecen acá."
+                icon={ListVideo}
+                title="Nada reciente"
               />
             )}
             {groups.map(
@@ -516,14 +475,9 @@ function SceneLibraryView({
                     key={group.category}
                     className="[contain-intrinsic-size:auto_480px] [content-visibility:auto]"
                   >
-                    {(shownFilter === "all" || shownFilter === "favorites" || shownFilter === "recent") && (
+                    {(shownFilter === "all" || shownFilter === "recent") && (
                       <h3 className="sticky top-0 z-10 -mx-3 bg-card px-3 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                         {group.title} · {group.scenes.length}
-                        {shownFilter === "favorites" && (
-                          <span className="ml-2 hidden tracking-normal normal-case pointer-fine:inline">
-                            teclas 1–9
-                          </span>
-                        )}
                       </h3>
                     )}
                     <div
@@ -538,8 +492,6 @@ function SceneLibraryView({
                         <Item
                           key={id}
                           actions={actions}
-                          favorite={starred.has(id)}
-                          hotkey={hotkeys.get(id) ?? null}
                           id={id}
                           live={tally.live === id}
                           preview={tally.preview === id}
@@ -552,12 +504,7 @@ function SceneLibraryView({
             )}
           </div>
         </ContextMenuTrigger>
-        {menuFor && (
-          <ActionsContext
-            actions={sceneActions(menuFor, starred.has(menuFor), actions)}
-            title={SCENES[menuFor].title}
-          />
-        )}
+        {menuFor && <ActionsContext actions={sceneActions(menuFor, actions)} title={SCENES[menuFor].title} />}
       </ContextMenu>
     </div>
   );
