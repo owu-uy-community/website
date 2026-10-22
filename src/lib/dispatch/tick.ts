@@ -10,6 +10,7 @@ import { expireOffers, sendFeedback, sendReminders, sendUpdates } from "../orpc/
 import { expireRequests } from "../orpc/venues/service";
 import { query } from "../orpc/db";
 import { liveServices, type AppServices } from "../orpc/services";
+import { retention } from "./retention";
 
 /** Scheduled event messages (Slack, Telegram, Owy) whose time has come, with no admin tab open. */
 const dueComms = Effect.gen(function* () {
@@ -49,12 +50,14 @@ const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknow
   email: (deadline: number) => drainEmail({ deadline }),
 };
 
-export async function tick(budgetMs: number) {
+/** `daily`: the once-a-day cron also runs retention. */
+export async function tick(budgetMs: number, { daily = false } = {}) {
   const deadline = Date.now() + budgetMs;
   const results: Record<string, unknown> = {};
   const run = Effect.runPromiseWith(liveServices);
+  const sweeps = daily ? { ...SWEEPS, retention: () => retention() } : SWEEPS;
 
-  for (const [name, sweep] of Object.entries(SWEEPS)) {
+  for (const [name, sweep] of Object.entries(sweeps)) {
     if (Date.now() >= deadline) {
       results[name] = "skipped: out of time";
       continue;

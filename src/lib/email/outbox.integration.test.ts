@@ -10,7 +10,7 @@ import { liveServices } from "lib/orpc/services";
 import { server } from "test/msw/server";
 
 import { mailboxMessages } from "./mailbox";
-import { drainEmail, enqueueEmail } from "./outbox";
+import { allowance, drainEmail, enqueueEmail } from "./outbox";
 
 const run = Effect.runPromiseWith(liveServices);
 const drain = () => run(drainEmail({ deadline: Date.now() + 10_000 }));
@@ -116,5 +116,14 @@ describe("the email outbox", () => {
 
       await expect(rowOf(dedupeKey)).resolves.toMatchObject({ status: "sent", providerId: "re-123" });
     });
+  });
+});
+
+describe(allowance, () => {
+  test("past 80 % of the daily cap only urgent email goes out, and none past the cap", () => {
+    expect(allowance(10, 100)).toStrictEqual({ room: 90, maxPriority: Infinity });
+    expect(allowance(80, 100)).toStrictEqual({ room: 20, maxPriority: 3 });
+    expect(allowance(120, 100)).toMatchObject({ room: 0 });
+    expect(allowance(5_000)).toStrictEqual({ room: Infinity, maxPriority: Infinity });
   });
 });
