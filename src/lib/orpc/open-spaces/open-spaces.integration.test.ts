@@ -70,6 +70,24 @@ describe("openSpaces.get", () => {
   });
 });
 
+describe("drafts", () => {
+  test("stay in the organizer panel: not on the site, the admin lists or the screens", async () => {
+    const community = await makeCommunity();
+    const [draft, published] = await Promise.all([
+      makeEvent(community.id, { status: "draft" }),
+      makeEvent(community.id),
+    ]);
+    const staff = await makeSiteAdmin();
+
+    await expect(call(router.openSpaces.get, { id: draft.id }, by(null))).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const listed = await call(router.openSpaces.listByCommunity, { communityId: community.id }, by(staff));
+    expect(listed.map((event) => event.id)).toStrictEqual([published.id]);
+    const operated = (await call(router.openSpaces.listForAdmin, undefined, by(staff))).map((event) => event.id);
+    expect(operated).toContain(published.id);
+    expect(operated).not.toContain(draft.id);
+  });
+});
+
 describe("openSpaces.create", () => {
   test("site staff creates an event; the slug comes from the name and stays unique", async () => {
     const community = await makeCommunity();

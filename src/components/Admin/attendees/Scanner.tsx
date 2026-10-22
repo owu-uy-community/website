@@ -29,7 +29,7 @@ import { toast } from "components/shared/ui/toast-utils";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { useWakeLock } from "hooks/useWakeLock";
 import { client, orpc } from "lib/orpc";
-import type { Attendee, ScanResult } from "lib/orpc/attendees/schemas";
+import { NOT_ATTENDING_LABEL, type Attendee, type ScanResult } from "lib/orpc/attendees/schemas";
 import { eventChannel } from "lib/realtime/channels";
 
 import { doorOf } from "./helpers";
@@ -88,7 +88,7 @@ function describe(result: ScanResult, timezone: string): Shown {
     case "cancelled":
       return {
         tone: "bad",
-        label: person?.status === "refunded" ? "Entrada reembolsada" : "Entrada cancelada",
+        label: person && person.status !== "attending" ? NOT_ATTENDING_LABEL[person.status] : "Entrada cancelada",
         title: person?.name ?? "Entrada cancelada",
         detail: "No sirve para entrar: que pase por la mesa de ayuda.",
       };
@@ -211,7 +211,8 @@ function subscribeOnline(listener: () => void) {
   };
 }
 
-const code = (attendee: Pick<Attendee, "barcode" | "eventbriteId">) => attendee.barcode ?? attendee.eventbriteId;
+// OWU's own RSVPs always carry a barcode; mirrored Eventbrite ones may only have the Eventbrite id.
+const code = (attendee: Pick<Attendee, "barcode" | "eventbriteId">) => attendee.barcode ?? attendee.eventbriteId ?? "";
 
 function useDebounced<T>(value: T, ms: number) {
   const [debounced, setDebounced] = useState(value);
@@ -287,7 +288,7 @@ function ManualSearch({
                     {person.checkedInAt
                       ? ` · entró ${formatClock(new Date(person.checkedInAt), timezone)}`
                       : person.status !== "attending"
-                        ? " · cancelada"
+                        ? ` · ${NOT_ATTENDING_LABEL[person.status].toLowerCase()}`
                         : ""}
                   </p>
                 </div>

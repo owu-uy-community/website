@@ -39,12 +39,15 @@ import { eventChannel } from "lib/realtime/channels";
 const PAGE_SIZE = 50;
 
 // The URL speaks Spanish; the API keeps its own words.
-const TAB_PARAMS = ["todos", "acreditados", "por-llegar", "cancelados"] as const;
+const TAB_PARAMS = ["todos", "acreditados", "por-llegar", "en-espera", "pendientes", "cancelados"] as const;
 type TabParam = (typeof TAB_PARAMS)[number];
-const TABS: { param: TabParam; presence: Presence; label: string }[] = [
+/** `onlyWhenAny`: the waitlist and approval tabs show up only for events that have them (OWU's own RSVP). */
+const TABS: { param: TabParam; presence: Presence; label: string; onlyWhenAny?: boolean }[] = [
   { param: "todos", presence: "all", label: "Todos" },
   { param: "acreditados", presence: "in", label: "Acreditados" },
   { param: "por-llegar", presence: "out", label: "Por llegar" },
+  { param: "en-espera", presence: "waiting", label: "En espera", onlyWhenAny: true },
+  { param: "pendientes", presence: "pending", label: "Pendientes", onlyWhenAny: true },
   { param: "cancelados", presence: "cancelled", label: "Cancelados" },
 ];
 const PRESENCE_OF = Object.fromEntries(TABS.map((tab) => [tab.param, tab.presence])) as Record<TabParam, Presence>;
@@ -386,7 +389,9 @@ function Attendees({
                   aria-label="Asistentes por estado"
                   className="flex max-w-full [scrollbar-width:none] gap-5 overflow-x-auto"
                 >
-                  {TABS.map((tab) => (
+                  {TABS.filter(
+                    (tab) => !tab.onlyWhenAny || params.estado === tab.param || (totals?.[tab.presence] ?? 0) > 0
+                  ).map((tab) => (
                     <TabsPrimitive.Trigger
                       key={tab.param}
                       className="relative flex h-9 shrink-0 items-center gap-1.5 text-ui font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full hover:text-foreground focus-visible:text-foreground focus-visible:after:bg-ring/70 data-[state=active]:text-foreground data-[state=active]:after:bg-primary pointer-coarse:h-11"

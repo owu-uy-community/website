@@ -2,7 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql, typ
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { Effect, Result } from "effect";
 
-import { attendeeScans, attendeeSync, attendees, events, type AttendeeRow } from "../../db/schema";
+import { attendeeScans, attendeeSync, attendees, events, type AttendeeRow, type AttendeeStatus } from "../../db/schema";
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
 import type { Attendee as EventbriteAttendee } from "../eventbrite/schemas";
@@ -22,12 +22,14 @@ import type {
   ScanResult,
   SyncState,
 } from "./schemas";
+import { NOT_ATTENDING_LABEL } from "./schemas";
 
 const iso = (at: Date | null | undefined) => at?.toISOString() ?? null;
 
 export const toAttendee = (row: AttendeeRow, repeatScans = 0): Attendee => ({
   id: row.id,
   eventbriteId: row.eventbriteId,
+  source: row.source,
   name: row.name,
   email: row.email,
   ticketClass: row.ticketClass,
@@ -247,15 +249,23 @@ export const applyWebhook = (apiUrl: string) =>
 export const fold = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 const ACCENTED = "áàäâãéèëêíìïîóòöôõúùüûñçÁÀÄÂÃÉÈËÊÍÌÏÎÓÒÖÔÕÚÙÜÛÑÇ";
-const searchable = sql`translate(lower(${attendees.name} || ' ' || ${attendees.email} || ' ' || coalesce(${attendees.barcode}, '') || ' ' || ${attendees.eventbriteId}), ${ACCENTED}, ${fold(ACCENTED)})`;
+const searchable = sql`translate(lower(${attendees.name} || ' ' || ${attendees.email} || ' ' || coalesce(${attendees.barcode}, '') || ' ' || coalesce(${attendees.eventbriteId}, '')), ${ACCENTED}, ${fold(ACCENTED)})`;
 
 const escapeLike = (word: string) => word.replace(/[\\%_]/g, (char) => `\\${char}`);
 
-/** A partition: once someone is in they count as in, whatever happened to their ticket after. */
+const WAITING: AttendeeStatus[] = ["waitlisted", "offered"];
+const GONE: AttendeeStatus[] = ["cancelled", "refunded", "declined"];
+
+/**
+ * A partition: once someone is in they count as in, whatever happened to their ticket after. The
+ * waitlist and the approval queue are their own tabs, never mixed with cancellations.
+ */
 const PRESENCE: Record<Exclude<Presence, "all">, SQL> = {
   in: isNotNull(attendees.checkedInAt),
   out: and(isNull(attendees.checkedInAt), eq(attendees.status, "attending")) as SQL,
-  cancelled: and(isNull(attendees.checkedInAt), ne(attendees.status, "attending")) as SQL,
+  waiting: and(isNull(attendees.checkedInAt), inArray(attendees.status, WAITING)) as SQL,
+  pending: and(isNull(attendees.checkedInAt), eq(attendees.status, "pending")) as SQL,
+  cancelled: and(isNull(attendees.checkedInAt), inArray(attendees.status, GONE)) as SQL,
 };
 
 const textArray = (values: readonly string[]) =>
@@ -284,11 +294,13 @@ const presenceCounts = (where: SQL[]) =>
         all: count(),
         in: sql<number>`count(*) filter (where ${PRESENCE.in})`.mapWith(Number),
         out: sql<number>`count(*) filter (where ${PRESENCE.out})`.mapWith(Number),
+        waiting: sql<number>`count(*) filter (where ${PRESENCE.waiting})`.mapWith(Number),
+        pending: sql<number>`count(*) filter (where ${PRESENCE.pending})`.mapWith(Number),
         cancelled: sql<number>`count(*) filter (where ${PRESENCE.cancelled})`.mapWith(Number),
       })
       .from(attendees)
       .where(and(...where))
-  ).pipe(Effect.map(([counts]) => counts ?? { all: 0, in: 0, out: 0, cancelled: 0 }));
+  ).pipe(Effect.map(([counts]) => counts ?? { all: 0, in: 0, out: 0, waiting: 0, pending: 0, cancelled: 0 }));
 
 const byName = sql`lower(${attendees.name})`;
 const SORTS: Record<AttendeeSort, SQL> = {
@@ -395,10 +407,7 @@ export const setTags = (input: { eventId: string; ids: string[]; add: string[]; 
     return { count: touched };
   });
 
-const PRESENCE_WORDS = { in: "Acreditado", out: "Por llegar", cancelled: "Cancelado" } as const;
-
-const presenceOf = (row: Pick<AttendeeRow, "checkedInAt" | "status">) =>
-  row.checkedInAt ? "in" : row.status === "attending" ? "out" : "cancelled";
+const PRESENCE_WORDS = { in: "Acreditado", out: "Por llegar" } as const;
 
 /** One CSV cell: quoted when it has to be, and never read as a formula by a spreadsheet. */
 export function csvCell(value: string) {
@@ -433,7 +442,11 @@ export const exportAttendees = (input: AttendeeFilters & { ids?: string[] }) =>
         row.name,
         row.email,
         row.ticketClass,
-        row.status === "refunded" && !row.checkedInAt ? "Reembolsado" : PRESENCE_WORDS[presenceOf(row)],
+        row.checkedInAt
+          ? PRESENCE_WORDS.in
+          : row.status === "attending"
+            ? PRESENCE_WORDS.out
+            : NOT_ATTENDING_LABEL[row.status],
         row.checkedInAt ? clock.format(row.checkedInAt) : "",
         row.tags.join(", "),
       ]),
