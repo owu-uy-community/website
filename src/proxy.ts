@@ -95,7 +95,9 @@ export async function proxy(request: NextRequest) {
     const sessionCookie =
       request.cookies.get("better-auth.session_token") || request.cookies.get("__Secure-better-auth.session_token");
 
-    if (sessionCookie) {
+    // A signed-in visitor has nothing to do here, unless their session just ended on the server
+    // (/api/session/expired sends them here): bouncing them back would loop.
+    if (sessionCookie && !request.nextUrl.searchParams.has("expired")) {
       return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url));
     }
   }
