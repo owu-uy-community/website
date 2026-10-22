@@ -322,3 +322,86 @@ describe("communities.members", () => {
     expect((await membershipOf(editor.id))?.role).toBe("member");
   });
 });
+
+describe("communities.claim", () => {
+  const claimInput = (communityId: string) => ({ communityId, relation: "organizo" as const, message: "", link: null });
+
+  test("a signed-in person asks once; a pending claim can't be sent again", async () => {
+    const community = await makeCommunity({ listed: true });
+    const organizer = await makeUser();
+
+    const claim = await call(router.communities.claim, claimInput(community.id), by(organizer));
+
+    expect(claim).toMatchObject({ communityId: community.id, status: "pending" });
+    await expect(call(router.communities.claim, claimInput(community.id), by(organizer))).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "claim_pending" },
+    });
+    await expect(call(router.communities.claim, claimInput(community.id), by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  test("someone who already organizes the community can't claim it", async () => {
+    const { community, editor } = await setup();
+
+    await expect(call(router.communities.claim, claimInput(community.id), by(editor))).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "already_member" },
+    });
+  });
+
+  test("only site staff list and decide claims", async () => {
+    const community = await makeCommunity({ listed: true });
+    const [organizer, staff] = await Promise.all([makeUser(), makeSiteAdmin()]);
+    const claim = await call(router.communities.claim, claimInput(community.id), by(organizer));
+
+    const pending = await call(router.communities.claims.list, undefined, by(staff));
+
+    expect(pending.find((item) => item.id === claim.id)).toMatchObject({
+      status: "pending",
+      community: { id: community.id, hasOwner: false },
+      user: { id: organizer.id },
+    });
+    await expect(
+      call(router.communities.claims.decide, { claimId: claim.id, decision: "approve" }, by(organizer))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("approving makes the first organizer owner and the next ones editors; mine lists them", async () => {
+    const community = await makeCommunity({ listed: true });
+    const [first, second, staff] = await Promise.all([makeUser(), makeUser(), makeSiteAdmin()]);
+    const firstClaim = await call(router.communities.claim, claimInput(community.id), by(first));
+    const secondClaim = await call(router.communities.claim, claimInput(community.id), by(second));
+    const decide = (claimId: string, decision: "approve" | "reject") =>
+      call(router.communities.claims.decide, { claimId, decision }, by(staff));
+
+    await expect(decide(firstClaim.id, "approve")).resolves.toMatchObject({ status: "approved", role: "owner" });
+    await expect(decide(secondClaim.id, "approve")).resolves.toMatchObject({ status: "approved", role: "editor" });
+    await expect(decide(secondClaim.id, "reject")).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "claim_decided" },
+    });
+
+    const mine = await call(router.communities.mine, undefined, by(first));
+    expect(mine.communities).toStrictEqual([
+      { id: community.id, slug: community.slug, name: community.name, logoUrl: null, role: "owner" },
+    ]);
+    expect(mine.claims[0]).toMatchObject({ id: firstClaim.id, status: "approved" });
+  });
+
+  test("a rejected claim can be sent again", async () => {
+    const community = await makeCommunity({ listed: true });
+    const [organizer, staff] = await Promise.all([makeUser(), makeSiteAdmin()]);
+    const claim = await call(router.communities.claim, claimInput(community.id), by(organizer));
+    await call(router.communities.claims.decide, { claimId: claim.id, decision: "reject" }, by(staff));
+
+    const again = await call(
+      router.communities.claim,
+      { ...claimInput(community.id), message: "Ahora sí organizo" },
+      by(organizer)
+    );
+
+    expect(again).toMatchObject({ id: claim.id, status: "pending" });
+  });
+});

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isHiddenPath } from "./lib/community/flags";
+import { safeNext } from "./lib/safe-next";
 import { LEGACY_REDIRECTS } from "./lib/tenant";
 
 const CONF_HOST = "conf.owu.uy";
@@ -63,12 +64,16 @@ export async function proxy(request: NextRequest) {
 
   // Cookie-presence bounce only (the proxy cannot query the DB); role checks
   // live server-side in every admin page (requireAdmin) and in the oRPC middleware.
-  if (pathname.startsWith("/admin") || pathname.startsWith("/keystatic")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/keystatic") || pathname.startsWith("/organizar/panel")) {
     const sessionCookie =
       request.cookies.get("better-auth.session_token") || request.cookies.get("__Secure-better-auth.session_token");
 
     if (!sessionCookie) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      // Back to the page they asked for once they sign in
+      const login = new URL("/login", request.url);
+      login.searchParams.set("next", `${pathname}${request.nextUrl.search}`);
+
+      return NextResponse.redirect(login);
     }
   }
 
@@ -77,7 +82,7 @@ export async function proxy(request: NextRequest) {
       request.cookies.get("better-auth.session_token") || request.cookies.get("__Secure-better-auth.session_token");
 
     if (sessionCookie) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL(safeNext(request.nextUrl.searchParams.get("next")), request.url));
     }
   }
 

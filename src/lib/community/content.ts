@@ -1,9 +1,12 @@
 import "server-only";
 
 import { createReader } from "@keystatic/core/reader";
+import { and, eq } from "drizzle-orm";
 import { cache } from "react";
 
 import keystaticConfig from "../../../keystatic.config";
+import { db } from "../db";
+import { communities, type CommunityRow } from "../db/schema";
 
 const reader = cache(() => createReader(process.cwd(), keystaticConfig));
 
@@ -24,27 +27,31 @@ export type Community = {
   reviewedAt: string | null;
 };
 
-export const getCommunities = cache(async (): Promise<Community[]> => {
-  const entries = await reader().collections.communities.all();
+export const toDirectoryCommunity = (row: CommunityRow): Community => ({
+  slug: row.slug,
+  name: row.name,
+  logo: row.logoUrl,
+  description: row.description ?? "",
+  topics: row.topics,
+  status: row.status,
+  website: row.links.website ?? null,
+  linkedin: row.links.linkedin ?? null,
+  instagram: row.links.instagram ?? null,
+  meetup: row.links.meetup ?? null,
+  slackChannel: row.slackChannel,
+  feedNames: row.feedNames,
+  confPartner: row.confPartner,
+  reviewedAt: row.reviewedAt,
+});
 
-  return entries
-    .map(({ slug, entry }) => ({
-      slug,
-      name: entry.name,
-      logo: entry.picture || null,
-      description: entry.description,
-      topics: [...entry.topics],
-      status: entry.status,
-      website: entry.website || null,
-      linkedin: entry.linkedin || null,
-      instagram: entry.instagram || null,
-      meetup: entry.meetup || null,
-      slackChannel: entry.slackChannel.replace(/^#/, "") || null,
-      feedNames: [...entry.feedNames],
-      confPartner: entry.confPartner,
-      reviewedAt: entry.reviewedAt,
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+/** The public directory: listed, active communities from the database (organizers edit them in the panel). */
+export const getCommunities = cache(async (): Promise<Community[]> => {
+  const rows = await db
+    .select()
+    .from(communities)
+    .where(and(eq(communities.listed, true), eq(communities.isActive, true)));
+
+  return rows.map(toDirectoryCommunity).sort((a, b) => a.name.localeCompare(b.name, "es"));
 });
 
 export type ManualEvent = {

@@ -132,12 +132,63 @@ export const communities = pgTable("communities", {
   logoUrl: text("logoUrl"),
   customDomain: text("customDomain").unique(),
   isActive: boolean("isActive").notNull().default(true),
+  // The public directory (/comunidades), imported from Keystatic and edited by each community
+  status: text("status").$type<CommunityStatus>().notNull().default("activa"),
+  topics: text("topics").array().notNull().default([]),
+  links: jsonb("links").$type<CommunityLinks>().notNull().default({}),
+  slackChannel: text("slackChannel"),
+  /** Names the meetup-bot feed uses for this group, so its events land on the right card. */
+  feedNames: text("feedNames").array().notNull().default([]),
+  confPartner: boolean("confPartner").notNull().default(false),
+  reviewedAt: date("reviewedAt", { mode: "string" }),
+  /** Shown in the public directory. OWU itself and demo tenants stay unlisted. */
+  listed: boolean("listed").notNull().default(false),
   createdAt: ts("createdAt").notNull().defaultNow(),
   updatedAt: ts("updatedAt")
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export type CommunityStatus = "activa" | "pausa" | "busca-organizadores";
+export type CommunityLinks = { website?: string; linkedin?: string; instagram?: string; meetup?: string };
+
+/** Someone asking to organize a directory community; site staff decide. */
+export const communityClaims = pgTable(
+  "community_claims",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId").notNull(),
+    userId: text("userId").notNull(),
+    /** What they do there: organize it, co-organize it, or want to bring it back. */
+    relation: text("relation").$type<"organizo" | "coorganizo" | "retomar">().notNull(),
+    message: text("message").notNull().default(""),
+    link: text("link"),
+    status: text("status").$type<"pending" | "approved" | "rejected">().notNull().default("pending"),
+    reviewedById: text("reviewedById"),
+    reviewedAt: ts("reviewedAt"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("community_claims_communityId_userId_key").on(t.communityId, t.userId),
+    index("community_claims_status_idx").on(t.status),
+    foreignKey({
+      name: "community_claims_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "community_claims_userId_fk", columns: [t.userId], foreignColumns: [user.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({
+      name: "community_claims_reviewedById_fk",
+      columns: [t.reviewedById],
+      foreignColumns: [user.id],
+    }).onDelete("set null"),
+  ]
+);
 
 export const communityMembers = pgTable(
   "community_members",
@@ -1102,6 +1153,7 @@ export const activity = pgTable(
 // ---------------------------------------------------------------------------
 export type CommunityRow = typeof communities.$inferSelect;
 export type CommunityMemberRow = typeof communityMembers.$inferSelect;
+export type CommunityClaimRow = typeof communityClaims.$inferSelect;
 export type CommunityRoleValue = CommunityMemberRow["role"];
 export type EventRow = typeof events.$inferSelect;
 export type EventLiveStateRow = typeof eventLiveState.$inferSelect;

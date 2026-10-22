@@ -9,6 +9,8 @@ import { Building2, ChevronRight, Plus } from "lucide-react";
 import { FieldError } from "components/Admin/panel";
 import { CommunityMark } from "components/shared/CommunityMark";
 import { PageContainer, PageHeader, Panel } from "components/Admin/ui/page";
+
+import { ClaimsReview } from "./ClaimsReview";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
 import { StatusDot } from "components/Admin/ui/status";
 import { Badge } from "components/shared/ui/badge";
@@ -168,6 +170,7 @@ export default function CommunitiesClient() {
         }
         title="Comunidades"
       />
+      <ClaimsReview />
 
       {communities.isError ? (
         <ErrorState
