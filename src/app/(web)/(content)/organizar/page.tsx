@@ -204,7 +204,7 @@ export default async function OrganizarPage() {
       </Section>
 
       <Section
-        description="Un programa para que las comunidades y la conferencia se potencien: ustedes llevan a su gente a OWU CONF y la conferencia les da lugar a ustedes."
+        description="Un programa para que las comunidades y la conferencia se potencien: ustedes llevan a su gente a OWU CONF y el directorio de owu.uy las muestra como aliadas."
         eyebrow="OWU CONF"
         id="aliadas"
         title="Comunidades aliadas de OWU CONF"
