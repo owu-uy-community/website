@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BellPlus, Check } from "lucide-react";
 
@@ -10,13 +10,15 @@ import { buttonClassName } from "components/community/ui";
 import { EmailCodeForm } from "components/shared/Auth/EmailCodeForm";
 import { orpc } from "lib/orpc/client";
 
+/** The community a Slack sign-in was started to follow, in this tab only */
+const PENDING = "owu:follow-after-sign-in";
+
 /**
  * "Seguir": an email each time the community publishes an event. Signing in happens right here
- * (Slack or a code by email); coming back from Slack with ?seguir finishes the follow.
+ * (Slack or a code by email); coming back from Slack finishes the follow it started.
  */
 export function FollowButton({ communityId }: { communityId: string }) {
   const session = useSession();
-  const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const [signingIn, setSigningIn] = useState(false);
@@ -31,12 +33,12 @@ export function FollowButton({ communityId }: { communityId: string }) {
 
   const resumed = useRef(false);
   const signedIn = Boolean(session.data);
+  // Back from Slack: finish the follow this browser started (a link alone never follows anyone)
   useEffect(() => {
-    // Read here, not with useSearchParams: the profile is a static page
-    if (resumed.current || !signedIn || !new URLSearchParams(window.location.search).has("seguir")) return;
+    if (resumed.current || !signedIn || sessionStorage.getItem(PENDING) !== communityId) return;
     resumed.current = true;
+    sessionStorage.removeItem(PENDING);
     follow.mutate(input);
-    router.replace(pathname, { scroll: false });
   });
 
   const following = state.data?.following ?? false;
@@ -67,7 +69,10 @@ export function FollowButton({ communityId }: { communityId: string }) {
           <button
             className={buttonClassName("secondary", "md", "w-full")}
             type="button"
-            onClick={() => void signIn.social({ provider: "slack", callbackURL: `${pathname}?seguir=1` })}
+            onClick={() => {
+              sessionStorage.setItem(PENDING, communityId);
+              void signIn.social({ provider: "slack", callbackURL: pathname });
+            }}
           >
             Entrar con Slack
           </button>
