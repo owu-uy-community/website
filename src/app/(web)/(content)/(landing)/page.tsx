@@ -13,6 +13,7 @@ import {
   Users,
   UsersRound,
 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CONF_DATES, SOCIAL_LINKS } from "app/lib/constants";
@@ -47,7 +48,16 @@ import { RichText } from "components/shared/RichText";
 import { getCommunities, getLanding, getTalks } from "lib/community/content";
 import { getUpcomingEvents, nextEventByCommunity } from "lib/community/events";
 import { RESOURCES_ON } from "lib/community/flags";
-import { CONF_URL, issueFormUrl, PAGES, SITE_URL, SOCIALS } from "lib/community/site";
+import {
+  CONDUCT_EMAIL,
+  CONF_URL,
+  HOME_STEPS,
+  issueFormUrl,
+  PAGES,
+  PRIVACY_EMAIL,
+  SITE_URL,
+  SOCIALS,
+} from "lib/community/site";
 import { dateParts } from "lib/community/time";
 
 import { PUBLISHER_LOGO, serializeJsonLd } from "../blog/(posts)/post-metadata";
@@ -55,36 +65,14 @@ import { PUBLISHER_LOGO, serializeJsonLd } from "../blog/(posts)/post-metadata";
 // The event feed refreshes hourly; the rest is content that ships with the deploy
 export const revalidate = 3600;
 
-const STEPS = [
-  {
-    icon: MessagesSquare,
-    title: "Sumate al Slack",
-    body: "Más de 5.000 personas. Presentate, elegí los canales de tus temas y preguntá sin miedo.",
-    href: SOCIAL_LINKS.slack,
-    cta: "Entrar al Slack",
-  },
-  {
-    icon: CalendarDays,
-    title: "Vení a una meetup",
-    body: "Son gratis y abiertas. Si es tu primera vez, te contamos qué esperar.",
-    href: PAGES.primeraVez.href,
-    cta: "Primera vez",
-  },
-  {
-    icon: Mic,
-    title: "Dá una charla",
-    body: "No hace falta ser experto: si resolviste un problema, ya tenés una charla.",
-    href: PAGES.darCharla.href,
-    cta: "Cómo empezar",
-  },
-  {
-    icon: Users,
-    title: "Organizá o dá una mano",
-    body: "Sumá tu comunidad, armá una nueva o ayudá en OWU CONF.",
-    href: PAGES.organizar.href,
-    cta: "Organizar",
-  },
-];
+// Title, description and social image come from the root layout. Agents asking for
+// `Accept: text/markdown` get the Markdown twin (src/proxy.ts), also listed here.
+export const metadata: Metadata = {
+  alternates: { canonical: "/", types: { "text/markdown": "/index.md" } },
+};
+
+// The steps' copy lives with the site map: the home page's Markdown twin lists them too
+const STEPS = HOME_STEPS.map((step, index) => ({ ...step, icon: [MessagesSquare, CalendarDays, Mic, Users][index]! }));
 
 const RESOURCES = [
   { icon: Newspaper, ...PAGES.semanario, tag: "Cada lunes" },
@@ -113,6 +101,12 @@ const SITE_JSON_LD = {
       url: SITE_URL,
       logo: { "@type": "ImageObject", url: PUBLISHER_LOGO },
       sameAs: SOCIALS.map(({ href }) => href),
+      // A volunteer community with no office: the city where it meets, and the inboxes it answers
+      address: { "@type": "PostalAddress", addressLocality: "Montevideo", addressCountry: "UY" },
+      contactPoint: [
+        { "@type": "ContactPoint", contactType: "privacy", email: PRIVACY_EMAIL, availableLanguage: "es" },
+        { "@type": "ContactPoint", contactType: "code of conduct", email: CONDUCT_EMAIL, availableLanguage: "es" },
+      ],
     },
     {
       "@type": "WebSite",

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { isHiddenPath } from "./lib/community/flags";
+import { NOT_FOUND_MARKDOWN } from "./lib/community/markdown";
+import { HTML, MARKDOWN, preferredType } from "./lib/negotiate";
 import { safeNext } from "./lib/safe-next";
 import { LEGACY_REDIRECTS } from "./lib/tenant";
 
@@ -11,6 +13,13 @@ const MAIN_HOSTS = new Set(["owu.uy", "www.owu.uy"]);
 
 // Pages that exist under /conf; anything else on the subdomain belongs to the main site
 const CONF_PATHS = new Set(["/", "/call-for-proposals", "/sponsors", "/credencial"]);
+
+/** This site's hosts (the Vercel URLs cover previews): the existence check asks nowhere else */
+const SELF_HOSTS = new Set([...MAIN_HOSTS, process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL].filter(Boolean));
+const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** Pages with a Markdown twin, and the route that renders it */
+const MARKDOWN_TWINS: Record<string, string> = { "/": "/index.md" };
 
 function getHost(request: NextRequest): string {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
@@ -44,7 +53,7 @@ export async function proxy(request: NextRequest) {
   // Features behind the resources launch flag: pages, feeds and downloads answer 404 until it's on.
   // Rewriting to a path no route matches renders the site's own 404 page with a 404 status.
   if (isHiddenPath(pathname)) {
-    return NextResponse.rewrite(new URL("/_hidden", request.url));
+    return pageType(request) === MARKDOWN ? markdownNotFound() : NextResponse.rewrite(new URL("/_hidden", request.url));
   }
 
   // Community routes moved from /c to /comunidad; keep the short form alive so
@@ -86,7 +95,77 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  return negotiate(request);
+}
+
+/**
+ * HTML or Markdown for a page request, per its Accept header (acceptmarkdown.com); null if it takes
+ * neither. Undefined when it isn't a page request: RSC fetches, server actions and files (.ics, .xml,
+ * .txt) keep their own type.
+ */
+function pageType(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isFile = pathname.slice(pathname.lastIndexOf("/")).includes(".");
+  if (!["GET", "HEAD"].includes(request.method) || request.headers.has("rsc") || isFile) return undefined;
+
+  return preferredType(request.headers.get("accept"), [HTML, MARKDOWN]);
+}
+
+/**
+ * Pages with a Markdown twin serve it to clients that prefer Markdown, and 406 to those that take
+ * neither (their HTML says `Vary: Accept` through next.config.ts). A page without one stays HTML
+ * (agents still read it); one that doesn't exist answers 404 in Markdown.
+ */
+async function negotiate(request: NextRequest) {
+  const type = pageType(request);
+  if (type === undefined) return NextResponse.next();
+
+  const twin = MARKDOWN_TWINS[request.nextUrl.pathname];
+  if (twin) {
+    if (type === MARKDOWN) return NextResponse.rewrite(new URL(twin, request.url));
+    if (type === null) {
+      return new NextResponse("Not Acceptable\n\nThis page is available as:\n- text/html\n- text/markdown\n", {
+        status: 406,
+        headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", Vary: "Accept" },
+      });
+    }
+  } else if (type === MARKDOWN && (await isMissing(request))) {
+    return markdownNotFound();
+  }
+
   return NextResponse.next();
+}
+
+/**
+ * Whether the page answers 404, asked as a browser would (so this proxy lets it through as HTML).
+ * Only ever this site: its own https hosts on Vercel, or this server on loopback when self-hosted
+ * (where Next builds the URL from its own hostname and port, not the Host header).
+ */
+async function isMissing(request: NextRequest) {
+  const { origin, protocol, host, hostname, port, pathname, search } = request.nextUrl;
+  const isSelf =
+    (protocol === "https:" && SELF_HOSTS.has(host)) || (LOOPBACK.has(hostname) && port === process.env.PORT);
+  if (!isSelf) return false;
+
+  try {
+    const response = await fetch(new URL(`${pathname}${search}`, origin), {
+      method: "HEAD",
+      headers: { Accept: HTML },
+      redirect: "manual",
+      signal: AbortSignal.timeout(5_000),
+    });
+
+    return response.status === 404;
+  } catch {
+    return false;
+  }
+}
+
+function markdownNotFound() {
+  return new NextResponse(NOT_FOUND_MARKDOWN, {
+    status: 404,
+    headers: { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "no-store", Vary: "Accept" },
+  });
 }
 
 export const config = {
