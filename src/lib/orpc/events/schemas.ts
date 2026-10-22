@@ -127,6 +127,14 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   announceChannels: z.object({ slack: z.boolean(), telegram: z.boolean() }),
   /** A scheduled publish */
   publishAt: z.string().nullable(),
+  /** Owy's posts about it, once published */
+  announcements: z.array(
+    z.object({
+      channel: z.enum(["slack", "telegram"]),
+      status: z.enum(["scheduled", "sending", "sent", "failed"]),
+      sentAt: z.string().nullable(),
+    })
+  ),
   reminderNote: z.string().nullable(),
   materials: z.array(MaterialSchema),
   /** Other communities organizing it; an invited one shows on its profile once it accepts */
