@@ -171,6 +171,8 @@ const EXPECTED: Record<string, Access> = {
   "staffTasks.swapTimes": "community:editor",
   "staffTasks.unassign": "community:editor",
   "staffTasks.update": "community:editor",
+  "surveys.clearResponses": "staff",
+  "surveys.delete": "staff",
   "surveys.get": "staff",
   "surveys.public": "public",
   "surveys.respond": "public",

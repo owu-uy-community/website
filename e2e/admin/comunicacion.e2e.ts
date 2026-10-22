@@ -111,3 +111,15 @@ test("someone answers the survey from a room's QR, once, and it shows in the res
   await expect(page.getByRole("row", { name: new RegExp(board.rooms.tv.name) })).toContainText("+100");
   await expect(panel(page, "Resultados")).toContainText("Muy buena la sala");
 });
+
+test("a survey is deleted from its menu, and the event can start a new one", async ({ page, board }) => {
+  await db.insert(surveys).values({ eventId: board.event.id, title: "Encuesta de prueba", questions: [] });
+  await page.goto(`/admin/${board.community.slug}/comunicacion?event=${board.event.slug}&tab=encuesta`);
+
+  await page.getByRole("button", { name: "Más acciones de la encuesta" }).click();
+  await page.getByRole("menuitem", { name: "Borrar encuesta" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Borrar encuesta" }).click();
+
+  await expect(page.getByText("Todavía no hay encuesta")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Crear encuesta" })).toBeVisible();
+});

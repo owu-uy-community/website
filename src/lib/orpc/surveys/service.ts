@@ -135,6 +135,62 @@ export const upsertSurvey = (input: UpsertInput) =>
     );
   });
 
+const surveyNotFound = new NotFound({ entity: "survey", message: "Este evento no tiene encuesta" });
+
+/** Throw away the answers (a test run before the event) and keep the questions. */
+export const clearResponses = (eventId: string) =>
+  Effect.gen(function* () {
+    yield* eventRow(eventId);
+    const survey = yield* readSurvey(eventId);
+    if (!survey) return yield* surveyNotFound;
+    yield* transaction(
+      Effect.gen(function* () {
+        const gone = yield* query((db) =>
+          db
+            .delete(surveyResponses)
+            .where(eq(surveyResponses.surveyId, survey.id))
+            .returning({ id: surveyResponses.id })
+        );
+        yield* recordActivity({
+          eventId,
+          verb: "survey.cleared",
+          entityType: "survey",
+          entityId: survey.id,
+          summary: `borró las ${gone.length} respuestas de la encuesta`,
+        });
+      })
+    );
+    yield* opsPing(eventId, "survey");
+
+    return yield* readSurvey(eventId).pipe(
+      Effect.flatMap((after) => (after ? Effect.succeed(after) : Effect.fail(surveyNotFound)))
+    );
+  });
+
+/** The survey gone, with its answers: the event can start a new one from the default questions. */
+export const deleteSurvey = (eventId: string) =>
+  Effect.gen(function* () {
+    yield* eventRow(eventId);
+    yield* transaction(
+      Effect.gen(function* () {
+        const [row] = yield* query((db) =>
+          db.delete(surveys).where(eq(surveys.eventId, eventId)).returning({ id: surveys.id })
+        );
+        if (!row) return yield* surveyNotFound;
+        yield* recordActivity({
+          eventId,
+          verb: "survey.deleted",
+          entityType: "survey",
+          entityId: row.id,
+          summary: "borró la encuesta post-evento",
+        });
+      })
+    );
+    yield* opsPing(eventId, "survey");
+
+    return { ok: true as const };
+  });
+
 const npsOf = (values: number[]) => {
   if (values.length === 0) return null;
   const promoters = values.filter((value) => value >= 9).length;
