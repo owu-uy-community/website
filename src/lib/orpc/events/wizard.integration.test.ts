@@ -219,6 +219,20 @@ describe("publishing later and announcing", () => {
     ).resolves.toHaveLength(1);
   });
 
+  test("moving the date before a scheduled publish drops the schedule", async () => {
+    const { editor, ref } = await readyDraft(40);
+    await call(
+      router.events.schedulePublish,
+      { ...ref, publishAt: new Date(Date.now() + 20 * 86_400_000).toISOString() },
+      by(editor)
+    );
+    const day = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+
+    await call(router.events.hold, { ...ref, day, startTime: "19:00", durationMin: 120 }, by(editor));
+
+    await expect(call(router.events.get, ref, by(editor))).resolves.toMatchObject({ publishAt: null });
+  });
+
   test("a schedule whose author stopped organizing the community doesn't publish", async () => {
     const { community, editor, ref } = await readyDraft();
     await call(
