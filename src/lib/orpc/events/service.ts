@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray, lt, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, lt, ne, or } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { similarity } from "../../calendar/score";
@@ -16,6 +16,8 @@ import type { HoldInput, OrganizerEvent } from "./schemas";
 
 /** How long a date stays reserved; renewing starts the count again. */
 export const HOLD_DAYS = 14;
+/** Live holds a community can keep at once: enough to compare dates, not to squat a season. */
+export const MAX_HOLDS = 8;
 const DAY_MS = 86_400_000;
 
 export const toOrganizerEvent = (row: EventRow): OrganizerEvent => ({
@@ -124,7 +126,8 @@ const headsUp = (row: EventRow) =>
         yield* enqueueEmail({
           kind: "conflict_heads_up",
           to,
-          dedupeKey: `conflict_heads_up:${row.id}:${other.communityId}:${day}:${to}`,
+          // Per community pair and day, not per hold: more holds that day don't mean more email
+          dedupeKey: `conflict_heads_up:${row.communityId}:${other.communityId}:${day}:${to}`,
           ...conflictHeadsUpEmail({
             community: ours.name,
             when: shortWhen(row.startDate),
@@ -163,6 +166,20 @@ export const hold = (input: HoldInput) =>
             .returning()
         );
       } else {
+        const [{ live }] = yield* query((db) =>
+          db
+            .select({ live: count() })
+            .from(events)
+            .where(
+              and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date()))
+            )
+        );
+        if (live >= MAX_HOLDS) {
+          return yield* new Conflict({
+            reason: "too_many_holds",
+            message: `Ya tenés ${MAX_HOLDS} fechas reservadas: liberá alguna para reservar otra`,
+          });
+        }
         const name = input.title ?? "Evento sin título";
         const slug = yield* freeSlug(communityId, slugify(name));
         [row] = yield* query((db) =>
