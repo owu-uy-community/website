@@ -23,6 +23,12 @@ const joinLimit = ratelimit({
   key: ({ context }: { context: AuthedContext }) => context.user.id,
 });
 
+/** Same for giving a seat back and taking an offer: each one moves the waitlist and sends email. */
+const seatLimit = ratelimit({
+  limiter: limiter({ prefix: "rsvp-seat:", maxRequests: 10, window: 60_000 }),
+  key: ({ context }: { context: AuthedContext }) => context.user.id,
+});
+
 export const rsvpsRouter = {
   mine: authed
     .meta(docs("My place in an event, if I have one"))
@@ -44,6 +50,7 @@ export const rsvpsRouter = {
   leave: authed
     .meta(docs("Give my seat or waitlist place back; the next person gets it"))
     .input(RsvpEventSchema)
+    .use(seatLimit)
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
       return yield* Rsvps.leave(input.eventId);
@@ -52,6 +59,7 @@ export const rsvpsRouter = {
   confirmOffer: authed
     .meta(docs("Take the seat offered to me while the offer lasts"))
     .input(RsvpEventSchema)
+    .use(seatLimit)
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
       return yield* Rsvps.confirmOffer(input.eventId);
