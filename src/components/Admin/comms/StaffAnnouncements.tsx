@@ -6,6 +6,7 @@ import { Bot, Check, Megaphone, Send, Siren } from "lucide-react";
 
 import { useSession } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
+import { AnnouncementActions } from "components/Admin/tareas/AnnouncementEditor";
 import { Meter, Panel, PanelHead } from "components/Admin/ui/page";
 import { AvatarStack, PersonAvatar } from "components/Admin/ui/person";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
@@ -189,7 +190,9 @@ function AnnouncementCard({
           <span className="ml-auto flex items-center gap-1.5 text-meta text-muted-foreground">
             <PersonAvatar image={announcement.author?.image} name={announcement.author?.name ?? "Staff"} size={16} />
             {announcement.author?.name ?? "Staff"} · <RelativeTime date={announcement.createdAt} />
+            {announcement.editedAt ? " · editado" : null}
           </span>
+          <AnnouncementActions announcement={announcement} eventId={eventId} />
         </div>
         <p className="mt-2 text-ui whitespace-pre-line text-foreground">{announcement.body}</p>
         <div className="mt-3 flex items-center gap-2.5">

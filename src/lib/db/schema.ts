@@ -639,6 +639,8 @@ export const staffAnnouncements = pgTable(
     /** When audience = "task": the announcement targets that task's assignees. */
     taskId: text("taskId").references(() => staffTasks.id, { onDelete: "set null" }),
     createdAt: ts("createdAt").notNull().defaultNow(),
+    /** The last edit, shown as «editado»; null while it reads as sent. */
+    editedAt: ts("editedAt"),
   },
   (t) => [index("staff_announcements_openSpaceId_createdAt_idx").on(t.openSpaceId, t.createdAt)]
 );

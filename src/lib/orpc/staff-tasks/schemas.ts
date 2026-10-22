@@ -143,6 +143,8 @@ export const StaffAnnouncementSchema = z.object({
   taskTitle: z.string().nullable(),
   author: z.object({ id: z.string(), name: z.string(), image: z.string().nullable() }).nullable(),
   createdAt: z.string(),
+  /** When it was last edited, if it was. */
+  editedAt: z.string().nullable(),
   ackCount: z.number(),
   ackedByMe: z.boolean(),
   /** Who marked it as received, most recent first. */
@@ -162,6 +164,25 @@ export const CreateStaffAnnouncementSchema = z
     urgent: z.boolean().default(false),
     audience: AnnouncementAudienceSchema.default("all"),
     taskId: z.string().optional(),
+  })
+  .refine((input) => input.audience !== "task" || input.taskId, {
+    message: "Un aviso para una tarea necesita la tarea",
+    path: ["taskId"],
+  });
+
+/**
+ * An announcement rewritten whole: its text, urgency and audience. `reread` clears who already
+ * marked it as read, so it shows up again for everyone (a real change, not a typo).
+ */
+export const UpdateStaffAnnouncementSchema = z
+  .object({
+    eventId: z.string().min(1),
+    announcementId: z.string().min(1),
+    body: z.string().min(1, "El mensaje es requerido").max(2000),
+    urgent: z.boolean(),
+    audience: AnnouncementAudienceSchema,
+    taskId: z.string().optional(),
+    reread: z.boolean().default(false),
   })
   .refine((input) => input.audience !== "task" || input.taskId, {
     message: "Un aviso para una tarea necesita la tarea",

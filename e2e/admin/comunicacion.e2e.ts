@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 
 import { db } from "../../src/lib/db";
-import { surveys } from "../../src/lib/db/schema";
+import { staffAnnouncementAcks, staffAnnouncements, surveys } from "../../src/lib/db/schema";
+import { makeMember } from "../../src/test/factories";
 import { expect, test } from "../fixtures";
 
 /** A card on the page, by its title. */
@@ -22,6 +23,38 @@ test("a message scheduled from the cadence waits in Owy's queue", async ({ page,
   await expect(step.getByText("programado", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: /^Owy/ }).click();
   await expect(panel(page, "Programados")).toContainText(`Mañana es ${board.event.name}`);
+});
+
+test("an announcement is edited, asking everyone to read it again, and then deleted", async ({ page, board }) => {
+  const author = await makeMember(board.community.id, "editor", { name: "Laura Autora" });
+  const reader = await makeMember(board.community.id, "member", { name: "Leo Lector" });
+  const [sent] = await db
+    .insert(staffAnnouncements)
+    .values({ openSpaceId: board.event.id, authorId: author.id, body: "Nos vemos en la puerta" })
+    .returning({ id: staffAnnouncements.id });
+  await db.insert(staffAnnouncementAcks).values({ announcementId: sent.id, userId: reader.id });
+  await page.goto(`/admin/${board.community.slug}/comunicacion?event=${board.event.slug}&tab=anuncios`);
+  await expect(page.locator("article", { hasText: "Nos vemos en la puerta" })).toContainText("1/1");
+
+  await page.getByRole("button", { name: "Más acciones del anuncio" }).click();
+  await page.getByRole("menuitem", { name: "Editar" }).click();
+  const editor = page.getByRole("dialog");
+  await editor.getByLabel("Texto del anuncio").fill("Nos vemos en el patio");
+  await editor.getByRole("switch", { name: /Pedir que lo vuelvan a leer/ }).click();
+  await editor.getByRole("button", { name: "Guardar cambios" }).click();
+
+  await expect(editor).toBeHidden();
+  const edited = page.locator("article", { hasText: "Nos vemos en el patio" });
+  // Asked again: whoever had read it is waiting on it once more.
+  await expect(edited).toContainText("editado");
+  await expect(edited).toContainText("0/1");
+
+  await edited.getByRole("button", { name: "Más acciones del anuncio" }).click();
+  await page.getByRole("menuitem", { name: "Borrar" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Borrar anuncio" }).click();
+
+  await expect(edited).toBeHidden();
+  await expect(page.getByText("Todavía no hay anuncios")).toBeVisible();
 });
 
 test("someone answers the survey from a room's QR, once, and it shows in the results", async ({

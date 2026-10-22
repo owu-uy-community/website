@@ -21,6 +21,7 @@ import type { RemindResultSchema } from "lib/orpc/staff-tasks/schemas";
 import { wallClock } from "lib/slot-day";
 import type * as z from "zod";
 
+import { AnnouncementActions } from "./AnnouncementEditor";
 import { firstName, formatDayLabel, plural, type StaffAnnouncement, type StaffTask } from "./helpers";
 import { staffKeys, useAck, type Me } from "./use-staff";
 
@@ -195,7 +196,13 @@ export function AnnouncementCard({
         <span className="truncate font-terminal text-2xs text-muted-foreground tabular-nums">
           {announcement.author ? firstName(announcement.author.name) : "Staff"} ·{" "}
           {whenSent(announcement.createdAt, timeZone, today)}
+          {announcement.editedAt ? " · editado" : null}
         </span>
+        {canEdit ? (
+          <span className="ml-auto">
+            <AnnouncementActions announcement={announcement} eventId={eventId} />
+          </span>
+        ) : null}
       </div>
       <p className="mt-1.5 text-ui leading-snug whitespace-pre-line text-foreground">{announcement.body}</p>
       {announcement.taskTitle ? (
