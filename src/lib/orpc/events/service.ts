@@ -18,6 +18,7 @@ import {
 import { enqueueEmail } from "../../email/outbox";
 import { appUrl, conflictHeadsUpEmail, eventMessageEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
+import { announcementText, slackSafe } from "../../organizar/announcement";
 import { issues, UNTITLED } from "../../organizar/steps";
 import { eventPagePath, refreshEvent } from "../../revalidate";
 import { owyChannels } from "../../owy/messaging";
@@ -30,6 +31,7 @@ import { acceptedCohosts, cohostsOf, inviteCohosts, setCohosts } from "./cohosts
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
+import { memberRole, ROLE_RANK } from "../scope";
 import { notifyCancelled, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
@@ -617,18 +619,38 @@ export const publish = (eventId: string) =>
 /** Events whose Owy announcement was queued by this instance, sent right after the response */
 const toAnnounce = new Set<string>();
 
-/** The organizers asked Owy to post it on OWU's Slack and/or Telegram: queued as the event's messages. */
+/**
+ * The organizers asked Owy to post it on OWU's Slack and/or Telegram: queued as the event's messages.
+ * The text is written here from the event, escaped for Slack, so it can't mention or link anything else.
+ */
 const announce = (event: EventRow) =>
   Effect.gen(function* () {
-    const { channels = [], text = "" } = event.announcement;
-    if (channels.length === 0 || !text.trim()) return;
+    const channels = event.announcement.channels ?? [];
+    if (channels.length === 0) return;
+    const [row] = yield* query((db) =>
+      db
+        .select({ community: communities.name, slug: communities.slug, venue: venues.name })
+        .from(events)
+        .innerJoin(communities, eq(communities.id, events.communityId))
+        .leftJoin(venues, eq(venues.id, events.venueId))
+        .where(eq(events.id, event.id))
+    );
+    if (!row) return;
+    const text = announcementText({
+      name: event.name,
+      summary: event.summary,
+      startDate: event.startDate.toISOString(),
+      place: event.mode === "online" ? "Online" : (row.venue ?? event.placeName ?? "Lugar a confirmar"),
+      community: row.community,
+      url: appUrl(eventPagePath(row.slug, event.slug)),
+    });
     const actor = yield* Effect.serviceOption(CurrentUser);
     yield* query((db) =>
       db.insert(outboundMessages).values(
         channels.map((channel) => ({
           eventId: event.id,
           channel,
-          body: text.trim(),
+          body: channel === "slack" ? slackSafe(text) : text,
           scheduledAt: new Date(),
           createdById: Option.isSome(actor) ? actor.value.id : null,
         }))
@@ -667,6 +689,7 @@ export const schedulePublish = (input: { eventId: string; publishAt: string | nu
       if (row.status !== "draft") {
         return yield* new Conflict({ reason: "not_draft", message: "Ese evento ya está publicado" });
       }
+      const me = yield* CurrentUser;
       const at = input.publishAt ? new Date(input.publishAt) : null;
       if (at) {
         const missing = issues(yield* editableOf(row.id)).filter((issue) => issue.level === "required");
@@ -686,6 +709,7 @@ export const schedulePublish = (input: { eventId: string; publishAt: string | nu
           .update(events)
           .set({
             publishAt: at,
+            publishById: at ? me.id : null,
             // The hold lasts until it publishes
             ...(at && row.heldUntil && row.heldUntil < at ? { heldUntil: at } : {}),
             updatedAt: new Date(),
@@ -698,19 +722,30 @@ export const schedulePublish = (input: { eventId: string; publishAt: string | nu
   );
 
 /**
- * The tick: publish the drafts whose time came. One that can't be published any more (something
- * required went missing) loses its schedule, and the reason goes in its activity.
+ * The tick: publish the drafts whose time came, as whoever scheduled them, while they still
+ * organize the community (or are site staff). One that can't be published any more loses its
+ * schedule, and the reason goes in its activity.
  */
 export const publishDue = Effect.gen(function* () {
   const due = yield* query((db) =>
     db
-      .select({ id: events.id, communityId: events.communityId })
+      .select({ id: events.id, communityId: events.communityId, by: user })
       .from(events)
+      .leftJoin(user, eq(user.id, events.publishById))
       .where(and(eq(events.status, "draft"), lte(events.publishAt, new Date())))
   );
   let published = 0;
   for (const event of due) {
-    const outcome = yield* publish(event.id).pipe(
+    const role = event.by ? yield* memberRole(event.communityId, event.by.id) : null;
+    const allowed = event.by?.role === "admin" || (role !== null && ROLE_RANK[role] >= ROLE_RANK.editor);
+    const actor = event.by
+      ? { id: event.by.id, name: event.by.name, role: event.by.role, via: "session" as const }
+      : null;
+    const attempt =
+      allowed && actor
+        ? publish(event.id).pipe(Effect.provideService(CurrentUser, actor))
+        : Effect.fail(new Error("quien lo programó ya no organiza la comunidad"));
+    const outcome = yield* attempt.pipe(
       Effect.provideService(CommunityScope, { communityId: event.communityId }),
       Effect.as("published" as const),
       Effect.catch((error) =>
