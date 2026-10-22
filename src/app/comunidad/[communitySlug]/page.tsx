@@ -1,74 +1,60 @@
-import Link from "next/link";
+import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { ArrowUpRight, CalendarDays } from "lucide-react";
 
 import { landingFor } from "components/community-landings/registry";
-import { CommunityMark } from "components/shared/CommunityMark";
+import { CommunityProfile } from "components/community/profile/CommunityProfile";
+import { SiteChrome } from "components/community/SiteChrome";
+import Footer from "components/shared/Footer";
+import { getUpcomingEvents } from "lib/community/events";
+import { ORGANIZAR_ON } from "lib/community/flags";
+import { db } from "lib/db";
+import { events, venues } from "lib/db/schema";
 import { getCommunityBySlug, listCommunityEvents } from "lib/tenant-server";
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("es-UY", { day: "numeric", month: "long", year: "numeric" }).format(date);
-}
+// What's next and the counts change; an hour is fresh enough (publishing refreshes event pages)
+export const revalidate = 3600;
 
 /**
- * Community home: a bespoke landing from the registry when the community has
- * one, otherwise this generic profile listing their events.
+ * A community's page: a bespoke landing from the registry when it has one, otherwise its profile
+ * with what's next (OWU's events and its Meetup ones), what it did and who hosted it.
  */
 export default async function CommunityHomePage({ params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;
   const community = await getCommunityBySlug(communitySlug);
   if (!community) notFound();
 
-  const events = await listCommunityEvents(community.id);
-
+  const all = await listCommunityEvents(community.id);
   const Landing = landingFor(community.slug);
-  if (Landing) return <Landing community={community} events={events} />;
+  if (Landing) return <Landing community={community} events={all} />;
+
+  const [upcoming, hosted] = await Promise.all([
+    getUpcomingEvents(),
+    db
+      .selectDistinct({ name: venues.name })
+      .from(events)
+      .innerJoin(venues, eq(venues.id, events.venueId))
+      .where(
+        and(
+          eq(events.communityId, community.id),
+          eq(events.status, "published"),
+          isNotNull(events.venueId),
+          lt(events.startDate, new Date())
+        )
+      )
+      .orderBy(desc(venues.name)),
+  ]);
+  const now = Date.now();
 
   return (
-    <main className="min-h-screen bg-[#18181b] px-6 py-16 text-white">
-      <div className="mx-auto w-full max-w-3xl">
-        <header className="flex items-center gap-4">
-          <CommunityMark logoUrl={community.logoUrl} name={community.name} size={56} slug={community.slug} />
-          <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">{community.name}</h1>
-            {community.description ? <p className="mt-1 text-zinc-400">{community.description}</p> : null}
-          </div>
-        </header>
-
-        <section className="mt-12">
-          <h2 className="flex items-center gap-2 text-sm font-medium tracking-widest text-zinc-500 uppercase">
-            <CalendarDays aria-hidden className="h-4 w-4" />
-            Eventos
-          </h2>
-          {events.length === 0 ? (
-            <p className="mt-4 text-zinc-400">Todavía no hay eventos publicados.</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {events.map((event) => (
-                <li key={event.id}>
-                  <Link
-                    className="group flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-5 py-4 transition-colors hover:border-yellow-400/50"
-                    href={`/comunidad/${community.slug}/events/${event.slug}/openspace`}
-                  >
-                    <div>
-                      <p className="font-semibold group-hover:text-yellow-400">{event.name}</p>
-                      <p className="text-sm text-zinc-400">{formatDate(event.startDate)}</p>
-                    </div>
-                    <ArrowUpRight aria-hidden className="h-5 w-5 text-zinc-500 group-hover:text-yellow-400" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <footer className="mt-16 border-t border-white/10 pt-6 text-sm text-zinc-500">
-          Comunidad en{" "}
-          <a className="text-zinc-300 underline-offset-4 hover:underline" href="https://owu.uy">
-            owu.uy
-          </a>
-        </footer>
-      </div>
-    </main>
+    <SiteChrome>
+      <CommunityProfile
+        claimHref={ORGANIZAR_ON ? "/organizar/panel/reclamar" : null}
+        community={community}
+        hosts={hosted.map((row) => row.name).toSorted((a, b) => a.localeCompare(b, "es"))}
+        past={all.filter((event) => event.status === "published" && event.endDate.getTime() < now)}
+        upcoming={upcoming.filter((event) => event.communitySlug === community.slug)}
+      />
+      <Footer />
+    </SiteChrome>
   );
 }
