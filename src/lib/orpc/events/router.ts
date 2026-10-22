@@ -30,6 +30,12 @@ import * as Events from "./service";
 const docs = (summary: string) => openapi({ tags: ["Organizer events"], summary });
 
 /** Writing to everyone signed up is for real news: ten a day per organizer. */
+/** Publishing emails followers and invited co-hosts: a real organizer publishes a few a week. */
+const publishLimit = ratelimit({
+  limiter: limiter({ prefix: "event-publish:", maxRequests: 10, window: 86_400_000 }),
+  key: ({ context }: { context: AuthedContext }) => context.user.id,
+});
+
 const messageLimit = ratelimit({
   limiter: limiter({ prefix: "event-message:", maxRequests: 10, window: 86_400_000 }),
   key: ({ context }: { context: AuthedContext }) => context.user.id,
@@ -95,6 +101,7 @@ export const eventsRouter = {
     .meta(docs("Publish a draft once everything required is in place"))
     .input(EventRefSchema)
     .use(inCommunity("editor"))
+    .use(publishLimit)
     .output(PublishResultSchema)
     .effect(function* ({ input }) {
       return yield* Events.publish(input.eventId);

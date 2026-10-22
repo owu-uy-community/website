@@ -36,14 +36,18 @@ describe("following a community", () => {
     });
   });
 
-  test("publishing emails each follower once, with one-click unsubscribe; turned-off emails get nothing", async () => {
+  test("publishing emails each follower once, with one-click unsubscribe; turning these off stops only them", async () => {
     const community = await makeCommunity({ name: "Comunidad seguida" });
     const editor = await makeMember(community.id, "editor");
     const [ana, quiet] = await Promise.all([makeUser(), makeUser()]);
     for (const follower of [ana, quiet]) {
       await call(router.communities.follow, { communityId: community.id }, by(follower));
     }
-    await db.insert(emailSuppressions).values({ email: quiet.email.toLowerCase() });
+    // Turned off follower mail; reminders being off (ana) doesn't touch it
+    await db.insert(emailSuppressions).values([
+      { email: quiet.email.toLowerCase(), scope: "followers" },
+      { email: ana.email.toLowerCase(), scope: "reminders" },
+    ]);
     const start = new Date(Date.now() + 20 * 86_400_000);
     const event = await makeEvent(community.id, {
       name: "Charlas de noviembre",

@@ -23,7 +23,7 @@ import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { notifyFollowers } from "../communities/follow";
-import { acceptedCohosts, cohostsOf, setCohosts } from "./cohosts";
+import { acceptedCohosts, cohostsOf, inviteCohosts, setCohosts } from "./cohosts";
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
@@ -468,7 +468,6 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
       }
 
       const { schedule, rsvpClosesAt, cohosts, ...fields } = input.patch;
-      if (cohosts) yield* setCohosts(row, cohosts);
       const moved =
         row.status === "published" && schedule
           ? (() => {
@@ -483,7 +482,7 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
           (fields.mode !== undefined && fields.mode !== row.mode));
       const dateChanged = moved !== null && moved.startDate.getTime() !== row.startDate.getTime();
 
-      yield* query((db) =>
+      const [updated] = yield* query((db) =>
         db
           .update(events)
           .set({
@@ -495,7 +494,10 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
             ...(dateChanged || placeChanged ? { icsSequence: row.icsSequence + 1 } : {}),
           })
           .where(eq(events.id, row.id))
+          .returning()
       );
+      // After the update, so an invitation going out carries the name and date just saved
+      if (cohosts) yield* setCohosts(updated ?? row, cohosts);
       if (dateChanged && moved) {
         yield* recordActivity({
           eventId: row.id,
@@ -564,6 +566,7 @@ export const publish = (eventId: string) =>
       yield* queuePush(published, { now: true, required: true });
       yield* headsUp(published);
       yield* notifyFollowers(published);
+      yield* inviteCohosts(published);
       yield* recordActivity({
         eventId,
         verb: "event.published",

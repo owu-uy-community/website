@@ -1,4 +1,4 @@
-import { and, arrayContains, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, arrayContains, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { Effect, Option } from "effect";
 
 import { dayKey, shortWhen, montevideoIso } from "../../community/time";
@@ -79,77 +79,81 @@ export const list = Effect.gen(function* () {
 
 /** Ask other communities which of a few days works; their organizers get an email. */
 export const create = (input: Omit<CreatePollInput, "communityId">) =>
-  Effect.gen(function* () {
-    const { communityId } = yield* CommunityScope;
-    const actor = yield* Effect.serviceOption(CurrentUser);
-    const today = dayKey(new Date());
-    const days = [...new Set(input.days)].toSorted();
-    if (days.some((day) => day < today)) return yield* new Invalid({ message: "Una de las fechas ya pasó" });
-    const invited = [...new Set(input.invited)].filter((id) => id !== communityId);
-    const found = yield* query((db) =>
-      db
-        .select({ id: communities.id, name: communities.name, slug: communities.slug })
-        .from(communities)
-        .where(and(inArray(communities.id, invited), eq(communities.isActive, true)))
-    );
-    if (invited.length === 0 || found.length !== invited.length) {
-      return yield* new Invalid({ message: "Invitá comunidades que estén en OWU" });
-    }
+  // One transaction: the poll and its emails are queued together, or neither is
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const actor = yield* Effect.serviceOption(CurrentUser);
+      const today = dayKey(new Date());
+      const days = [...new Set(input.days)].toSorted();
+      if (days.some((day) => day < today)) return yield* new Invalid({ message: "Una de las fechas ya pasó" });
+      const invited = [...new Set(input.invited)].filter((id) => id !== communityId);
+      const found = yield* query((db) =>
+        db
+          .select({ id: communities.id, name: communities.name, slug: communities.slug })
+          .from(communities)
+          .where(and(inArray(communities.id, invited), eq(communities.isActive, true)))
+      );
+      if (invited.length === 0 || found.length !== invited.length) {
+        return yield* new Invalid({ message: "Invitá comunidades que estén en OWU" });
+      }
 
-    const [poll] = yield* query((db) =>
-      db
-        .insert(datePolls)
-        .values({
-          communityId,
-          title: input.title,
-          days,
-          startTime: input.startTime,
-          durationMin: input.durationMin,
-          invited,
-          createdById: Option.isSome(actor) ? actor.value.id : null,
-        })
-        .returning()
-    );
-    const [asker] = yield* query((db) =>
-      db.select({ name: communities.name }).from(communities).where(eq(communities.id, communityId))
-    );
-    const organizers = yield* query((db) =>
-      db
-        .select({ communityId: communityMembers.communityId, email: user.email })
-        .from(communityMembers)
-        .innerJoin(user, eq(user.id, communityMembers.userId))
-        .where(
-          and(
-            inArray(communityMembers.communityId, invited),
-            inArray(communityMembers.role, ["owner", "admin", "editor"])
+      const [poll] = yield* query((db) =>
+        db
+          .insert(datePolls)
+          .values({
+            communityId,
+            title: input.title,
+            days,
+            startTime: input.startTime,
+            durationMin: input.durationMin,
+            invited,
+            createdById: Option.isSome(actor) ? actor.value.id : null,
+          })
+          .returning()
+      );
+      const [asker] = yield* query((db) =>
+        db.select({ name: communities.name }).from(communities).where(eq(communities.id, communityId))
+      );
+      const organizers = yield* query((db) =>
+        db
+          .select({ communityId: communityMembers.communityId, email: user.email })
+          .from(communityMembers)
+          .innerJoin(user, eq(user.id, communityMembers.userId))
+          .where(
+            and(
+              inArray(communityMembers.communityId, invited),
+              inArray(communityMembers.role, ["owner", "admin", "editor"])
+            )
           )
-        )
-    );
-    const when = days.map((day) => shortWhen(montevideoIso(`${day}T${input.startTime}`)));
-    for (const organizer of organizers) {
-      const community = found.find((row) => row.id === organizer.communityId);
-      if (!community) continue;
-      yield* enqueueEmail({
-        kind: "date_poll",
-        to: organizer.email,
-        priority: 4,
-        dedupeKey: `date_poll:${poll.id}:${community.id}:${organizer.email}`,
-        ...datePollEmail({
-          asker: asker?.name ?? "Una comunidad",
-          community: community.name,
-          title: input.title,
-          days: when,
-          panelUrl: appUrl(`/organizar/panel/${community.slug}/encuestas`),
-        }),
-      });
-    }
+      );
+      const when = days.map((day) => shortWhen(montevideoIso(`${day}T${input.startTime}`)));
+      for (const organizer of organizers) {
+        const community = found.find((row) => row.id === organizer.communityId);
+        if (!community) continue;
+        yield* enqueueEmail({
+          kind: "date_poll",
+          to: organizer.email,
+          priority: 4,
+          dedupeKey: `date_poll:${poll.id}:${community.id}:${organizer.email}`,
+          ...datePollEmail({
+            asker: asker?.name ?? "Una comunidad",
+            community: community.name,
+            title: input.title,
+            days: when,
+            panelUrl: appUrl(`/organizar/panel/${community.slug}/encuestas`),
+          }),
+        });
+      }
 
-    return (yield* viewOf([poll], communityId))[0];
-  });
+      return (yield* viewOf([poll], communityId))[0];
+    })
+  );
 
+/** A poll the community asked or was invited to. Locked: a vote and a pick never cross. */
 const pollFor = (pollId: string, communityId: string) =>
   Effect.gen(function* () {
-    const [poll] = yield* query((db) => db.select().from(datePolls).where(eq(datePolls.id, pollId)));
+    const [poll] = yield* query((db) => db.select().from(datePolls).where(eq(datePolls.id, pollId)).for("update"));
     if (!poll || (poll.communityId !== communityId && !poll.invited.includes(communityId))) return yield* notFound;
 
     return poll;
@@ -157,29 +161,31 @@ const pollFor = (pollId: string, communityId: string) =>
 
 /** This community's answers (any of its organizers can change them until a date is picked). */
 export const vote = (input: { pollId: string; votes: { day: string; answer: "yes" | "maybe" | "no" }[] }) =>
-  Effect.gen(function* () {
-    const { communityId } = yield* CommunityScope;
-    const actor = yield* Effect.serviceOption(CurrentUser);
-    const poll = yield* pollFor(input.pollId, communityId);
-    if (poll.chosenDay) return yield* new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
-    if (input.votes.some((entry) => !poll.days.includes(entry.day))) {
-      return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
-    }
-    for (const entry of input.votes) {
-      const values = { answer: entry.answer, votedById: Option.isSome(actor) ? actor.value.id : null };
-      yield* query((db) =>
-        db
-          .insert(datePollVotes)
-          .values({ pollId: poll.id, communityId, day: entry.day, ...values })
-          .onConflictDoUpdate({
-            target: [datePollVotes.pollId, datePollVotes.communityId, datePollVotes.day],
-            set: values,
-          })
-      );
-    }
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const actor = yield* Effect.serviceOption(CurrentUser);
+      const poll = yield* pollFor(input.pollId, communityId);
+      if (poll.chosenDay) return yield* new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
+      if (input.votes.some((entry) => !poll.days.includes(entry.day))) {
+        return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
+      }
+      for (const entry of input.votes) {
+        const values = { answer: entry.answer, votedById: Option.isSome(actor) ? actor.value.id : null };
+        yield* query((db) =>
+          db
+            .insert(datePollVotes)
+            .values({ pollId: poll.id, communityId, day: entry.day, ...values })
+            .onConflictDoUpdate({
+              target: [datePollVotes.pollId, datePollVotes.communityId, datePollVotes.day],
+              set: values,
+            })
+        );
+      }
 
-    return (yield* viewOf([poll], communityId))[0];
-  });
+      return (yield* viewOf([poll], communityId))[0];
+    })
+  );
 
 /**
  * Pick the date (the asking community only): it's reserved for 14 days like any hold, and the
@@ -211,13 +217,21 @@ export const choose = (input: { pollId: string; day: string }) =>
         title: poll.title,
       });
       const [event] = yield* query((db) => db.select().from(events).where(eq(events.id, held.id)));
+      // Who said yes first goes first; a community no longer active can't co-host
       const yes = (yield* query((db) =>
         db
           .select({ communityId: datePollVotes.communityId })
           .from(datePollVotes)
+          .innerJoin(communities, eq(communities.id, datePollVotes.communityId))
           .where(
-            and(eq(datePollVotes.pollId, poll.id), eq(datePollVotes.day, input.day), eq(datePollVotes.answer, "yes"))
+            and(
+              eq(datePollVotes.pollId, poll.id),
+              eq(datePollVotes.day, input.day),
+              eq(datePollVotes.answer, "yes"),
+              eq(communities.isActive, true)
+            )
           )
+          .orderBy(asc(datePollVotes.updatedAt))
       ))
         .map((row) => row.communityId)
         .filter((id) => id !== communityId)
