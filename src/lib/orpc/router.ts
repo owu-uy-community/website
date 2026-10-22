@@ -17,6 +17,7 @@ import { integrationsRouter } from "./integrations/router";
 import { obsControlRouter, obsCueRouter } from "./obs-control/router";
 import { obsQueueRouter } from "./obs-queue/router";
 import { ocrRouter } from "./ocr/router";
+import { pollsRouter } from "./polls/router";
 import { salarySurveyRouter } from "./salary-survey/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { owyStageRouter } from "./owy-stage/router";
@@ -56,6 +57,7 @@ export const router = {
   rsvps: rsvpsRouter,
   door: doorRouter,
   integrations: integrationsRouter,
+  polls: pollsRouter,
   staffTasks: staffTasksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall

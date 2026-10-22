@@ -1,6 +1,14 @@
-import { CalendarDays, House, MapPin, PlugZap, Ticket, UserRound, Users, type LucideIcon } from "lucide-react";
+import { CalendarDays, House, MapPin, PlugZap, Ticket, UserRound, Users, Vote, type LucideIcon } from "lucide-react";
 
-export type PanelNavKey = "inicio" | "calendario" | "eventos" | "espacios" | "perfil" | "equipo" | "integraciones";
+export type PanelNavKey =
+  | "inicio"
+  | "calendario"
+  | "encuestas"
+  | "eventos"
+  | "espacios"
+  | "perfil"
+  | "equipo"
+  | "integraciones";
 
 export type PanelNavItem = {
   key: PanelNavKey;
@@ -19,6 +27,7 @@ export const PANEL_NAV: { key: string; label?: string; items: PanelNavItem[] }[]
     label: "Organizar",
     items: [
       { key: "calendario", title: "Calendario", path: "calendario", icon: CalendarDays, go: "c" },
+      { key: "encuestas", title: "Encuestas", path: "encuestas", icon: Vote },
       { key: "eventos", title: "Eventos", path: "eventos", icon: Ticket, go: "e" },
       { key: "espacios", title: "Espacios", path: "espacios", icon: MapPin, go: "s" },
     ],
