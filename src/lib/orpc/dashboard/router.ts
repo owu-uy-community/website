@@ -1,8 +1,10 @@
 import { openapi } from "@orpc/openapi";
 
-import { staff } from "../base";
+import { authed, inCommunity, staff } from "../base";
 import { DashboardStatsSchema, GetDashboardStatsSchema } from "./schemas";
 import * as Dashboard from "./service";
+import { getToday } from "./today";
+import { TodayInputSchema, TodaySchema } from "./today-schemas";
 
 export const dashboardRouter = {
   getStats: staff
@@ -11,5 +13,16 @@ export const dashboardRouter = {
     .output(DashboardStatsSchema)
     .effect(function* ({ input }) {
       return yield* Dashboard.getStats(input.eventId);
+    }),
+
+  today: authed
+    .meta(
+      openapi({ tags: ["Dashboard"], summary: "Hoy: preparation, mission control or the report, by the event's phase" })
+    )
+    .input(TodayInputSchema)
+    .use(inCommunity("admin"))
+    .output(TodaySchema)
+    .effect(function* ({ input }) {
+      return yield* getToday(input.eventId);
     }),
 };
