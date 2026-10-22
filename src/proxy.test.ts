@@ -115,3 +115,29 @@ describe("Markdown negotiation", () => {
     expect(response.headers.get("location")).toBe(`${SITE}/comunidad/python`);
   });
 });
+
+describe("sign-in bounce", () => {
+  const cookie = { cookie: "__Secure-better-auth.session_token=stale.token" };
+
+  test("someone with a session cookie skips /login to where they were going", async () => {
+    const response = await get("/login?next=%2Fadmin", cookie);
+
+    expect(response.headers.get("location")).toBe(`${SITE}/admin`);
+  });
+
+  test("a session that just ended on the server reaches /login instead of looping back", async () => {
+    const response = await get("/login?next=%2Fadmin&expired=1", cookie);
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+});
+
+describe("the existence check stays on this site", () => {
+  test("a path that looks like another host (//elsewhere/…) is asked of owu.uy, never of that host", async () => {
+    const seen = pageAnswers(404);
+
+    await get("//evil.example/x", { accept: "text/markdown" });
+
+    expect(seen.map((request) => new URL(request.url).host)).toStrictEqual(["www.owu.uy"]);
+  });
+});
