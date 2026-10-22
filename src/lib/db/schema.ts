@@ -1482,6 +1482,8 @@ export const eventPublications = pgTable(
     pushedHash: text("pushedHash"),
     attempts: integer("attempts").notNull().default(0),
     nextAttemptAt: ts("nextAttemptAt"),
+    /** Being pushed since: nothing else claims it until it settles (or this is 5 minutes old) */
+    claimedAt: ts("claimedAt"),
     error: text("error"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")

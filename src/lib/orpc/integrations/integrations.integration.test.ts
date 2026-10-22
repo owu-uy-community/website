@@ -10,7 +10,7 @@ import { applyWebhook } from "lib/orpc/attendees/service";
 import { router } from "lib/orpc/router";
 import { liveServices } from "lib/orpc/services";
 import { by } from "test/context";
-import { makeAttendee, makeCommunity, makeEvent, makeMember, makeRsvp } from "test/factories";
+import { makeAttendee, makeCommunity, makeEvent, makeMember, makeRsvp, makeVenue } from "test/factories";
 import { server } from "test/msw/server";
 
 import { connect, connectionByWebhookKey, pushDue } from "./service";
@@ -238,7 +238,72 @@ describe("publishing to Eventbrite", () => {
   });
 });
 
+describe("pushing safely", () => {
+  test("a host's private street address never reaches the public listing", async () => {
+    const { ref, admin, event } = await setup();
+    const venue = await makeVenue({
+      name: "Casa Anfitriona",
+      address: "Calle Privada 99",
+      addressVisibility: "attendees",
+    });
+    await db.update(events).set({ venueId: venue.id, placeName: null }).where(eq(events.id, event.id));
+    const calls = mockPublishing();
+
+    await call(router.events.publish, ref, by(admin));
+    await pushNow();
+
+    expect(calls[0]).toMatchObject({
+      path: "POST /organizations/org-1/venues/",
+      body: { venue: { name: "Casa Anfitriona", address: { address_1: "Cordón" } } },
+    });
+  });
+
+  test("changed while it's pushed: no second push at once, and the change goes right after", async () => {
+    const { ref, admin, event } = await setup();
+    const calls = mockPublishing();
+    const during: unknown[] = [];
+    server.use(
+      http.post(`${API}/events/eb-1/publish/`, async () => {
+        await db.update(events).set({ capacity: 90 }).where(eq(events.id, event.id));
+        await call(router.integrations.retry, ref, by(admin));
+        during.push(await pushNow());
+        return HttpResponse.json({ published: true });
+      })
+    );
+
+    await call(router.events.publish, ref, by(admin));
+    await pushNow();
+
+    expect(during).toStrictEqual([{ pushed: 0, retry: 0, failed: 0 }]);
+    expect(calls.filter((entry) => entry.path === "POST /organizations/org-1/events/")).toHaveLength(1);
+    expect(calls.at(-3)).toMatchObject({
+      path: "POST /events/eb-1/ticket_classes/tc-1/",
+      body: { ticket_class: { quantity_total: 90 } },
+    });
+    await expect(publication(event.id)).resolves.toMatchObject([{ status: "published", nextAttemptAt: null }]);
+  });
+});
+
 describe("disconnecting", () => {
+  test("after a disconnect, editing the event never makes a second listing", async () => {
+    const { community, ref, admin, event } = await setup();
+    mockAccount();
+    mockPublishing();
+    await call(router.events.publish, ref, by(admin));
+    await pushNow();
+    await call(router.integrations.disconnect, { communityId: community.id }, by(admin));
+    await run(connect({ communityId: community.id, userId: admin.id, code: "good-code" }));
+    const editable = await call(router.events.get, ref, by(admin));
+
+    await call(
+      router.events.save,
+      { ...ref, expectedUpdatedAt: editable.updatedAt, patch: { capacity: 80 } },
+      by(admin)
+    );
+
+    await expect(publication(event.id)).resolves.toHaveLength(0);
+  });
+
   test("the token, the webhook and the attendees read from Eventbrite go; OWU's own sign-ups stay", async () => {
     const { community, ref, admin, event } = await setup();
     const removed = mockAccount();

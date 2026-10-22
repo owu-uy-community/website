@@ -3,8 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { auth } from "app/lib/auth";
 import { appUrl } from "lib/email/templates";
+import { later } from "lib/later";
 import { readLink } from "lib/links";
-import { adminCommunity, connect } from "lib/orpc/integrations/service";
+import { adminCommunity, connect, pushSoon } from "lib/orpc/integrations/service";
 import { liveServices } from "lib/orpc/services";
 
 export const runtime = "nodejs";
@@ -39,6 +40,9 @@ export async function GET(request: NextRequest) {
     console.error("[eventbrite] connect", outcome.failure);
     return back("error");
   }
+
+  // What was waiting for this account (failed publications) goes right away
+  later(pushSoon);
 
   return back("conectado");
 }

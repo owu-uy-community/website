@@ -34,11 +34,13 @@ const get = <S extends z.ZodType>(path: string, schema: S, revalidate: number) =
   });
 
 /** What went wrong, in words the person at the door can act on. */
-function explain(error: UpstreamFailed): UpstreamFailed {
+function explain(error: UpstreamFailed, connected = false): UpstreamFailed {
   const status = Number(/answered (\d{3})/.exec(error.cause instanceof Error ? error.cause.message : "")?.[1]);
   const message =
     status === 401
-      ? "Eventbrite rechazó la clave de la API (EVENTBRITE_API_KEY)"
+      ? connected
+        ? "Eventbrite rechazó la cuenta conectada: reconectala en Integraciones"
+        : "Eventbrite rechazó la clave de la API (EVENTBRITE_API_KEY)"
       : // A valid key whose account isn't in the event's organization: the event reads, its attendees don't.
         status === 403
         ? "La clave de Eventbrite es de una cuenta que no está en la organización del evento: no puede ver sus asistentes"
@@ -59,7 +61,7 @@ function explain(error: UpstreamFailed): UpstreamFailed {
  */
 const live = <S extends z.ZodType>(url: string, schema: S, token?: string) =>
   fetchJson("Eventbrite", url, schema, { headers: authorization(token), cache: "no-store" }).pipe(
-    Effect.mapError(explain)
+    Effect.mapError((error) => explain(error, token !== undefined))
   );
 
 /** The ticketed event itself (name, dates, capacity). */
