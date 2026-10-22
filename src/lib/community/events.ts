@@ -3,7 +3,12 @@ import "server-only";
 import { cache } from "react";
 import * as z from "zod";
 
+import { and, eq, gt } from "drizzle-orm";
+
 import { EXTERNAL_SERVICES } from "app/lib/constants";
+import { db } from "lib/db";
+import { communities, events, venues } from "lib/db/schema";
+import { LEGACY_COMMUNITY_SLUG } from "lib/tenant";
 
 import { getCommunities, getManualEvents, type Community, type ManualEvent } from "./content";
 import { OWU_FEED_NAMES } from "./site";
@@ -22,7 +27,8 @@ export type CommunityEvent = {
   /** Null means online */
   venue: string | null;
   url: string;
-  source: "meetup" | "manual";
+  /** The meetup-bot feed, the hand-curated list, or an event made in OWU (internal link) */
+  source: "meetup" | "manual" | "owu";
   /** Organized by OWU itself (CONF, La Meetup) */
   isOwu: boolean;
 };
@@ -66,29 +72,129 @@ const OWU_NAMES = new Set(OWU_FEED_NAMES.map((name) => name.toLowerCase()));
 /** Only listed names get the "Organiza OWU" badge: anyone can name a Meetup group "OWU …" */
 const isOwuName = (value: string) => OWU_NAMES.has(value.trim().toLowerCase());
 
-export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communities: Community[]) {
+/** A published event made in Organizá, as the agenda needs it */
+export type OwnEvent = {
+  id: string;
+  name: string;
+  slug: string;
+  start: string;
+  end: string;
+  communitySlug: string;
+  communityName: string;
+  place: string | null;
+  /** Its copy on Meetup, if the organizers pasted it back */
+  meetupUrl: string | null;
+};
+
+const SAME_MEETUP_MS = 90 * 60_000;
+/** Compare links by host and path: tracking params and a trailing slash don't make another event */
+const sameLink = (a: string, b: string) => {
+  const key = (value: string) => {
+    try {
+      const url = new URL(value);
+      return `${url.host.replace(/^www\./, "")}${url.pathname.replace(/\/$/, "")}`.toLowerCase();
+    } catch {
+      return value;
+    }
+  };
+
+  return key(a) === key(b);
+};
+
+async function fetchOwnEvents(): Promise<OwnEvent[]> {
+  try {
+    const rows = await db
+      .select({
+        id: events.id,
+        name: events.name,
+        slug: events.slug,
+        startDate: events.startDate,
+        endDate: events.endDate,
+        mode: events.mode,
+        placeName: events.placeName,
+        externalLinks: events.externalLinks,
+        communitySlug: communities.slug,
+        communityName: communities.name,
+        venueName: venues.name,
+      })
+      .from(events)
+      .innerJoin(communities, eq(communities.id, events.communityId))
+      .leftJoin(venues, eq(venues.id, events.venueId))
+      .where(
+        and(
+          eq(events.status, "published"),
+          eq(events.isActive, true),
+          eq(communities.isActive, true),
+          gt(events.endDate, new Date())
+        )
+      );
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      start: row.startDate.toISOString(),
+      end: row.endDate.toISOString(),
+      communitySlug: row.communitySlug,
+      communityName: row.communityName,
+      place: row.mode === "online" ? null : (row.venueName ?? row.placeName),
+      meetupUrl: row.externalLinks.meetup ?? null,
+    }));
+  } catch {
+    // The agenda renders from the feed alone rather than fail
+    return [];
+  }
+}
+
+export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communities: Community[], own: OwnEvent[] = []) {
   const byFeedName = new Map<string, Community>();
   for (const community of communities) {
     for (const name of [community.name, ...community.feedNames]) byFeedName.set(name.trim().toLowerCase(), community);
   }
   const bySlug = new Map(communities.map((community) => [community.slug, community]));
 
-  const fromFeed = feed.map((meetup): CommunityEvent => {
-    const community = byFeedName.get(meetup.name.trim().toLowerCase()) ?? null;
+  // A meetup made in OWU and copied to Meetup shows once, as OWU's
+  const copied = (meetup: FeedMeetup, communitySlug: string | null) =>
+    own.some(
+      (event) =>
+        (event.meetupUrl !== null && sameLink(event.meetupUrl, meetup.event_url)) ||
+        (communitySlug !== null &&
+          event.communitySlug === communitySlug &&
+          Math.abs(Date.parse(event.start) - Date.parse(montevideoIso(meetup.datetime))) <= SAME_MEETUP_MS)
+    );
 
-    return {
-      id: `meetup-${meetup.id}`,
-      title: meetup.title,
-      group: community?.name ?? meetup.name,
-      communitySlug: community?.slug ?? null,
-      start: montevideoIso(meetup.datetime),
-      end: meetup.end_datetime ? montevideoIso(meetup.end_datetime) : null,
-      venue: meetup.venue?.trim() || null,
-      url: meetup.event_url,
-      source: "meetup",
-      isOwu: isOwuName(meetup.name),
-    };
+  const fromFeed = feed.flatMap((meetup): CommunityEvent[] => {
+    const community = byFeedName.get(meetup.name.trim().toLowerCase()) ?? null;
+    if (copied(meetup, community?.slug ?? null)) return [];
+
+    return [
+      {
+        id: `meetup-${meetup.id}`,
+        title: meetup.title,
+        group: community?.name ?? meetup.name,
+        communitySlug: community?.slug ?? null,
+        start: montevideoIso(meetup.datetime),
+        end: meetup.end_datetime ? montevideoIso(meetup.end_datetime) : null,
+        venue: meetup.venue?.trim() || null,
+        url: meetup.event_url,
+        source: "meetup",
+        isOwu: isOwuName(meetup.name),
+      },
+    ];
   });
+
+  const fromOwn = own.map((event): CommunityEvent => ({
+    id: `owu-${event.id}`,
+    title: event.name,
+    group: event.communityName,
+    communitySlug: event.communitySlug,
+    start: event.start,
+    end: event.end,
+    venue: event.place,
+    url: `/comunidad/${event.communitySlug}/events/${event.slug}`,
+    source: "owu",
+    isOwu: event.communitySlug === LEGACY_COMMUNITY_SLUG,
+  }));
 
   const fromManual = manual.flatMap((event): CommunityEvent[] => {
     if (!WebUrl.safeParse(event.url).success) return [];
@@ -111,7 +217,7 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
     ];
   });
 
-  return [...fromFeed, ...fromManual].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+  return [...fromOwn, ...fromFeed, ...fromManual].sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
 }
 
 /** An event stays listed until it ends (or two hours after it starts, when the end is unknown). */
@@ -120,9 +226,14 @@ export const isUpcoming = (event: CommunityEvent, now = Date.now()) =>
 
 /** Every known upcoming event: the meetup-bot feed plus the hand-curated list, oldest first. */
 export const getUpcomingEvents = cache(async (): Promise<CommunityEvent[]> => {
-  const [feed, manual, communities] = await Promise.all([fetchFeed(), getManualEvents(), getCommunities()]);
+  const [feed, manual, communities, own] = await Promise.all([
+    fetchFeed(),
+    getManualEvents(),
+    getCommunities(),
+    fetchOwnEvents(),
+  ]);
 
-  return mergeEvents(feed, manual, communities).filter((event) => isUpcoming(event));
+  return mergeEvents(feed, manual, communities, own).filter((event) => isUpcoming(event));
 });
 
 /** The next event per directory entry */

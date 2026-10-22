@@ -69,7 +69,8 @@ export const plan = (input: PlanInput) =>
       isOwu: row.communitySlug === LEGACY_COMMUNITY_SLUG,
     }));
 
-    const upcoming = yield* Effect.promise(() => getUpcomingEvents());
+    // OWU's own events are already in `own`, straight from the database
+    const upcoming = (yield* Effect.promise(() => getUpcomingEvents())).filter((event) => event.source !== "owu");
     const urls = new Map(upcoming.map((event) => [event.id, event.url]));
     const feed = upcoming.map((event): CalendarItem => ({
       id: event.id,

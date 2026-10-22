@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import type { Community } from "./content";
-import { isUpcoming, mergeEvents, nextEventByCommunity } from "./events";
+import { isUpcoming, mergeEvents, nextEventByCommunity, type OwnEvent } from "./events";
 import { dateParts, montevideoIso } from "./time";
 
 const community = (slug: string, name: string, feedNames: string[] = []): Community => ({
@@ -98,6 +98,29 @@ describe(mergeEvents, () => {
     const owasp = merged[0];
     expect(isUpcoming(owasp, Date.parse("2026-10-26T21:00:00-03:00"))).toBe(true);
     expect(isUpcoming(owasp, Date.parse("2026-10-26T21:31:00-03:00"))).toBe(false);
+  });
+
+  test("an event made in OWU replaces its copy on Meetup, by link or by community and time", () => {
+    const own = (overrides: Partial<OwnEvent>): OwnEvent => ({
+      id: "e1",
+      name: "OWASP en OWU",
+      slug: "owasp-en-owu",
+      start: "2026-10-26T21:45:00.000Z",
+      end: "2026-10-27T00:30:00.000Z",
+      communitySlug: "owasp-uruguay",
+      communityName: "OWASP Uruguay",
+      place: "Sala",
+      meetupUrl: null,
+      ...overrides,
+    });
+    const byTime = mergeEvents(feed, [], communities, [own({})]);
+    const byLink = mergeEvents(feed, [], communities, [
+      own({ communitySlug: "otra", start: "2026-12-01T22:00:00.000Z", meetupUrl: "https://www.example.com/conf/" }),
+    ]);
+
+    expect(byTime.map((event) => event.id)).toStrictEqual(["owu-e1", "meetup-264"]);
+    expect(byTime[0]).toMatchObject({ source: "owu", url: "/comunidad/owasp-uruguay/events/owasp-en-owu" });
+    expect(byLink.map((event) => event.id)).toStrictEqual(["meetup-259", "owu-e1"]);
   });
 
   test("picks each community's next event", () => {

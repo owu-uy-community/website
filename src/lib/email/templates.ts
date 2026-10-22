@@ -233,7 +233,12 @@ export type RsvpEmailKind =
   | "promoted"
   | "declined"
   | "offer_expired"
-  | "left";
+  | "left"
+  | "reminder_48h"
+  | "reminder_2h"
+  | "updated"
+  | "event_cancelled"
+  | "feedback";
 
 /** One RSVP email: what happened, what the event is, and the link that does the next thing. */
 export function rsvpEmail(input: {
@@ -250,6 +255,10 @@ export function rsvpEmail(input: {
   pageUrl: string;
   position?: number | null;
   offerUntil?: string | null;
+  /** The post-event survey */
+  surveyUrl?: string | null;
+  /** Reminders and feedback can be turned off; the rest is essential */
+  unsubscribeUrl?: string | null;
 }): Omit<Email, "to"> {
   const hi = input.name ? `Hola ${input.name.split(" ")[0]},` : "Hola,";
   const facts = `${input.when} · ${input.place}`;
@@ -287,6 +296,31 @@ export function rsvpEmail(input: {
       lead: `No confirmaste a tiempo y el lugar pasó a la siguiente persona. Si querés, podés volver a anotarte.`,
       action: ["Ver el evento", input.pageUrl],
     },
+    reminder_48h: {
+      subject: `Pasado mañana: ${input.event}. ¿Seguís yendo?`,
+      lead: `${input.event} es en dos días. Si al final no podés, liberá tu lugar: hay gente en la lista de espera que lo aprovecha.`,
+      action: ["Ver mi entrada", input.ticketUrl],
+    },
+    reminder_2h: {
+      subject: `Hoy: ${input.event}, ${input.when.split(" · ")[1] ?? ""}`,
+      lead: `Te esperamos en un rato. Acá tenés cómo llegar y tu entrada para mostrar en la puerta.`,
+      action: ["Ver mi entrada", input.ticketUrl],
+    },
+    updated: {
+      subject: `Cambió ${input.event}: ahora es el ${input.when}`,
+      lead: `${input.community} cambió la fecha o el lugar. Ya actualizamos tu invitación del calendario. Si con el cambio no podés, liberá tu lugar.`,
+      action: ["Ver mi entrada", input.ticketUrl],
+    },
+    event_cancelled: {
+      subject: `Se canceló ${input.event}`,
+      lead: `${input.community} canceló ${input.event}. Lo sacamos de tu calendario. Perdón por las molestias.`,
+      action: ["Ver otros eventos", appUrl("/eventos")],
+    },
+    feedback: {
+      subject: `¿Qué te pareció ${input.event}?`,
+      lead: `Gracias por venir. Contale a ${input.community} qué te gustó y qué mejorarías: son dos minutos y ayuda a que el próximo salga mejor.`,
+      action: ["Dar mi opinión", input.surveyUrl ?? input.pageUrl],
+    },
     left: {
       subject: `Liberaste tu lugar: ${input.event}`,
       lead: `Listo, liberaste tu lugar. ¡Gracias por avisar! Si cambiás de idea, podés volver a anotarte.`,
@@ -294,7 +328,8 @@ export function rsvpEmail(input: {
     },
   };
   const { subject, lead, action } = copy[input.kind];
-  const seat = input.kind === "confirmed" || input.kind === "promoted";
+  const seat =
+    input.kind === "confirmed" || input.kind === "promoted" || input.kind === "reminder_2h" || input.kind === "updated";
   const extra = [
     seat && input.onlineUrl ? `Link para conectarte: ${input.onlineUrl}` : "",
     seat ? "Si no podés ir, liberá tu lugar desde la entrada: alguien de la lista de espera lo aprovecha." : "",
@@ -309,9 +344,17 @@ export function rsvpEmail(input: {
 <p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px"><strong>${esc(input.event)}</strong><br>${esc(facts)}</p>
 ${seat && input.qrUrl ? `<p style="margin:0 0 16px;text-align:center"><img alt="Código QR de tu entrada" height="180" src="${esc(input.qrUrl)}" style="border-radius:8px" width="180"></p>` : ""}
 ${extra.map((line) => `<p style="margin:0 0 12px;color:#52525b">${esc(line)}</p>`).join("")}
-${action ? `<p style="margin:8px 0 0">${button(action[1], action[0])}</p>` : ""}`,
+${action ? `<p style="margin:8px 0 0">${button(action[1], action[0])}</p>` : ""}
+${input.unsubscribeUrl ? `<p style="margin:24px 0 0;font-size:12px;color:#a1a1aa">¿No querés recordatorios? <a href="${esc(input.unsubscribeUrl)}" style="color:#a1a1aa">Dejá de recibirlos</a>.</p>` : ""}`,
     }),
-    text: [hi, lead, `${input.event}\n${facts}`, ...extra, action ? `${action[0]}: ${action[1]}` : ""]
+    text: [
+      hi,
+      lead,
+      `${input.event}\n${facts}`,
+      ...extra,
+      action ? `${action[0]}: ${action[1]}` : "",
+      input.unsubscribeUrl ? `Dejar de recibir recordatorios: ${input.unsubscribeUrl}` : "",
+    ]
       .filter(Boolean)
       .join("\n\n"),
   };
