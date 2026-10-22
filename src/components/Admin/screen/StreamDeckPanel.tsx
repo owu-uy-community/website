@@ -16,6 +16,7 @@ const ENDPOINTS: [string, string][] = [
   ["POST stream/start|stop · record/start|stop", "Stream y grabación"],
   ["POST cue/{id} · cue/next · cue/prev", "Disparar un cue del guion"],
   ["POST loop/play|pause|stop|next|prev", "Loop automático"],
+  ["POST rundown/next", "GO en el guion del día (el evento en curso, o ?event=<id>)"],
   ["GET status", "JSON con program/preview/estudio/stream/rec/cue actual (feedback)"],
 ];
 
@@ -39,11 +40,11 @@ export function StreamDeckPanel() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-3 text-sm">
+      <div className="space-y-3 text-ui">
         <ol className="list-decimal space-y-2 pl-5">
           <li>
             En el servidor:{" "}
-            <code className="rounded bg-muted px-1 font-terminal text-xs">
+            <code className="rounded-sm bg-raised px-1 font-terminal text-meta">
               pnpm owy:key -- --name &quot;stream deck&quot;
             </code>{" "}
             imprime la clave una sola vez.
@@ -51,7 +52,7 @@ export function StreamDeckPanel() {
           <li>
             En Companion: <b>Connections → Generic: HTTP</b>, Base URL{" "}
             <button
-              className="rounded bg-muted px-1 font-terminal text-xs hover:text-primary"
+              className="rounded-sm bg-raised px-1 font-terminal text-meta hover:text-primary"
               type="button"
               onClick={() => copy(base)}
             >
@@ -62,20 +63,20 @@ export function StreamDeckPanel() {
           <li>
             En cada botón: acción <b>POST</b>, URL = la ruta de la tabla, Headers{" "}
             <button
-              className="rounded bg-muted px-1 font-terminal text-xs hover:text-primary"
+              className="rounded-sm bg-raised px-1 font-terminal text-meta hover:text-primary"
               type="button"
               onClick={() => copy('{"x-api-key":"TU_CLAVE"}')}
             >
               {'{"x-api-key":"TU_CLAVE"}'}
             </button>
-            , Body <code className="rounded bg-muted px-1 font-terminal text-xs">{"{}"}</code>. La clave va siempre en
-            el header, nunca en la URL (quedaría en los logs).
+            , Body <code className="rounded-sm bg-raised px-1 font-terminal text-meta">{"{}"}</code>. La clave va
+            siempre en el header, nunca en la URL (quedaría en los logs).
           </li>
           <li>
             Feedback: un botón con <b>GET status</b> cada 2 s, &quot;JSON response → variable&quot;, y feedbacks por{" "}
-            <code className="rounded bg-muted px-1 font-terminal text-xs">$(obs:programScene)</code>,{" "}
-            <code className="rounded bg-muted px-1 font-terminal text-xs">streaming</code>,{" "}
-            <code className="rounded bg-muted px-1 font-terminal text-xs">currentCue.name</code>.
+            <code className="rounded-sm bg-raised px-1 font-terminal text-meta">$(obs:programScene)</code>,{" "}
+            <code className="rounded-sm bg-raised px-1 font-terminal text-meta">streaming</code>,{" "}
+            <code className="rounded-sm bg-raised px-1 font-terminal text-meta">currentCue.name</code>.
           </li>
           <li>
             Los comandos responden <b>202</b> cuando esta pestaña (el ejecutor) los va a correr y <b>409</b> si no hay
@@ -96,20 +97,20 @@ export function StreamDeckPanel() {
             Probar GET status con esta sesión
           </Button>
           <Button size="sm" variant="ghost" onClick={() => copy(`curl -X POST -H "x-api-key: TU_CLAVE" ${base}take`)}>
-            <Copy className="h-4 w-4" /> curl de ejemplo
+            <Copy /> curl de ejemplo
           </Button>
         </div>
         {probe && (
-          <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-black/40 p-3 font-terminal text-xs">
+          <pre className="max-h-64 overflow-auto rounded-lg border border-border bg-background p-3 font-terminal text-meta">
             {probe}
           </pre>
         )}
       </div>
-      <table className="w-full text-sm">
+      <table className="w-full text-ui">
         <tbody>
           {ENDPOINTS.map(([path, description]) => (
-            <tr key={path} className="border-b border-border/60">
-              <td className="py-1.5 pr-3 align-top font-terminal text-xs">{path}</td>
+            <tr key={path} className="border-b border-border">
+              <td className="py-1.5 pr-3 align-top font-terminal text-meta">{path}</td>
               <td className="py-1.5 text-muted-foreground">{description}</td>
             </tr>
           ))}

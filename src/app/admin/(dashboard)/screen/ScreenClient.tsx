@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Keyboard } from "lucide-react";
+import { AudioLines, Keyboard, ListVideo, Repeat } from "lucide-react";
 
 import { OBS_CONFIG } from "app/lib/constants";
+import { Notice } from "components/Admin/panel";
 import { AudioStrip } from "components/Admin/screen/AudioStrip";
 import { ConnectionSheet } from "components/Admin/screen/ConnectionSheet";
 import { HistoryPanel } from "components/Admin/screen/HistoryPanel";
@@ -15,10 +16,13 @@ import { SceneBus } from "components/Admin/screen/SceneBus";
 import { ScreenHeader } from "components/Admin/screen/ScreenHeader";
 import { StreamDeckPanel } from "components/Admin/screen/StreamDeckPanel";
 import { TransitionBar } from "components/Admin/screen/TransitionBar";
-import { SHORTCUTS, useObsHotkeys } from "components/Admin/screen/useObsHotkeys";
+import { useObsHotkeys } from "components/Admin/screen/useObsHotkeys";
+import { HeaderActions } from "components/Admin/shell/HeaderActions";
+import { openShortcutSheet } from "components/Admin/shell/shortcuts";
+import { PageContainer, Panel, PanelHead } from "components/Admin/ui/page";
 import { Button } from "components/shared/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
 import { Kbd } from "components/shared/ui/kbd";
+import { Skeleton } from "components/shared/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
 import { useObsQueue } from "hooks/useObsQueue";
 import { useWakeLock } from "hooks/useWakeLock";
@@ -29,6 +33,8 @@ import { orpc } from "lib/orpc/client";
 
 const INSTANCE_ID = 1; // 1 = this admin screen, 2 = the standalone app
 
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+
 export default function ScreenClient() {
   const { obs, status, view } = useObsView(INSTANCE_ID);
   const actions = useObsActions(INSTANCE_ID);
@@ -36,7 +42,6 @@ export default function ScreenClient() {
   const { isExecutor, busOpen, takeControl } = useObsExecutor(INSTANCE_ID);
   const { data: cues = [] } = useQuery(orpc.obsCue.list.queryOptions({ input: { instanceId: INSTANCE_ID } }));
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [connectFailed, setConnectFailed] = useState(false);
   const connected = obs.connection === "connected";
 
@@ -59,13 +64,7 @@ export default function ScreenClient() {
     );
   };
 
-  useObsHotkeys({
-    instanceId: INSTANCE_ID,
-    cues,
-    view,
-    actions,
-    onHelp: useCallback(() => setHelpOpen((open) => !open), []),
-  });
+  useObsHotkeys({ instanceId: INSTANCE_ID, cues, view, actions });
   useWakeLock(connected);
 
   // Auto-connect with the remembered settings (or ?connect=host:port, handy
@@ -93,98 +92,102 @@ export default function ScreenClient() {
     }
   }, [connectFailed, status]);
 
+  const loopItems = queue.state.queueItems;
+  const loopSeconds = loopItems.reduce((total, item) => total + item.delay, 0);
+
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-4 p-4 md:p-6">
-      <ScreenHeader
-        actions={actions}
-        busOpen={busOpen}
-        isExecutor={isExecutor}
-        obs={obs}
-        openSettings={() => setSettingsOpen(true)}
-        status={status}
-        takeControl={takeControl}
-        view={view}
-      />
+    <>
+      <HeaderActions>
+        <ScreenHeader
+          actions={actions}
+          busOpen={busOpen}
+          isExecutor={isExecutor}
+          obs={obs}
+          openSettings={() => setSettingsOpen(true)}
+          status={status}
+          takeControl={takeControl}
+          view={view}
+        />
+      </HeaderActions>
+      <h1 className="sr-only">OBS</h1>
 
-      {view.source === "remote" && (
-        <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground">
-          Esta pestaña no llega a OBS: ves lo que reporta el puesto de control y cada botón le manda el comando a él.
-        </p>
-      )}
+      <PageContainer className="space-y-4 pt-4" size="large">
+        {view.source === "remote" && (
+          <Notice tone="info">
+            Esta pestaña no llega a OBS: ves lo que reporta el puesto de control y cada botón le manda el comando a él.
+          </Notice>
+        )}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
-        <div className="min-w-0 space-y-4">
-          <Monitors view={view} />
-          <TransitionBar actions={actions} view={view} />
-          <SceneBus actions={actions} queued={queued} toggleQueued={toggleQueued} view={view} />
-          <section className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
-            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Loop automático</h2>
-            {queue.isLoading ? (
-              <p className="text-xs text-muted-foreground">Cargando…</p>
-            ) : (
-              <LoopPanel isExecutor={isExecutor} queue={queue} remaining={remaining} view={view} />
-            )}
-          </section>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]">
+          <div className="min-w-0 space-y-4">
+            <Monitors view={view} />
+            <TransitionBar actions={actions} view={view} />
+            <SceneBus actions={actions} queued={queued} toggleQueued={toggleQueued} view={view} />
+            <Panel>
+              <PanelHead
+                icon={Repeat}
+                meta={
+                  loopItems.length
+                    ? `${plural(loopItems.length, "escena", "escenas")} · ${loopSeconds} s la vuelta`
+                    : undefined
+                }
+                title="Loop automático"
+              />
+              <div className="p-3.5">
+                {queue.isLoading ? (
+                  <Skeleton className="h-24" />
+                ) : (
+                  <LoopPanel isExecutor={isExecutor} queue={queue} remaining={remaining} view={view} />
+                )}
+              </div>
+            </Panel>
+          </div>
+          <div className="min-w-0 space-y-4">
+            <Panel>
+              <PanelHead icon={ListVideo} meta={plural(cues.length, "cue", "cues")} title="Guion" />
+              <div className="p-3">
+                <Rundown instanceId={INSTANCE_ID} status={status} view={view} />
+              </div>
+            </Panel>
+            <Panel>
+              <PanelHead
+                icon={AudioLines}
+                meta={view.connected ? plural(view.inputs.length, "fuente", "fuentes") : undefined}
+                title="Audio"
+              />
+              <div className="p-3.5">
+                <AudioStrip actions={actions} view={view} />
+              </div>
+            </Panel>
+          </div>
         </div>
-        <div className="min-w-0 space-y-4">
-          <section className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Guion</h2>
-              <span className="text-xs text-muted-foreground">{cues.length} cues</span>
+
+        <Panel>
+          <Tabs defaultValue="history">
+            <div className="flex h-11 items-center gap-2 border-b border-border px-3">
+              <TabsList>
+                <TabsTrigger value="history">Historial</TabsTrigger>
+                <TabsTrigger value="deck">Stream Deck</TabsTrigger>
+              </TabsList>
+              <Button className="ml-auto max-sm:hidden" size="sm" variant="ghost" onClick={openShortcutSheet}>
+                <Keyboard /> Atajos <Kbd>?</Kbd>
+              </Button>
             </div>
-            <Rundown instanceId={INSTANCE_ID} status={status} view={view} />
-          </section>
-          <section className="space-y-2 rounded-lg border border-border bg-card/50 p-3">
-            <h2 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Audio</h2>
-            <AudioStrip actions={actions} view={view} />
-          </section>
-        </div>
-      </div>
+            <TabsContent className="mt-0 p-3.5" value="history">
+              <HistoryPanel instanceId={INSTANCE_ID} />
+            </TabsContent>
+            <TabsContent className="mt-0 p-3.5" value="deck">
+              <StreamDeckPanel />
+            </TabsContent>
+          </Tabs>
+        </Panel>
+      </PageContainer>
 
-      <Tabs defaultValue="history">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="history">Historial</TabsTrigger>
-            <TabsTrigger value="deck">Stream Deck</TabsTrigger>
-          </TabsList>
-          <Button
-            className="hidden text-muted-foreground sm:inline-flex"
-            size="sm"
-            variant="ghost"
-            onClick={() => setHelpOpen(true)}
-          >
-            <Keyboard className="h-4 w-4" /> Atajos <Kbd>?</Kbd>
-          </Button>
-        </div>
-        <TabsContent className="rounded-lg border border-border bg-card/50 p-3" value="history">
-          <HistoryPanel instanceId={INSTANCE_ID} />
-        </TabsContent>
-        <TabsContent className="rounded-lg border border-border bg-card/50 p-3" value="deck">
-          <StreamDeckPanel />
-        </TabsContent>
-      </Tabs>
-
-      <ConnectionSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
-
-      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Atajos de teclado</DialogTitle>
-          </DialogHeader>
-          <table className="w-full text-sm">
-            <tbody>
-              {SHORTCUTS.map(([keys, description]) => (
-                <tr key={keys} className="border-b border-border/60">
-                  <td className="py-1.5 pr-3">
-                    <Kbd>{keys}</Kbd>
-                  </td>
-                  <td className="py-1.5 text-muted-foreground">{description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <ConnectionSheet
+        open={settingsOpen}
+        seat={{ isExecutor, executorOnline: Boolean(status?.executorOnline), takeControl }}
+        onOpenChange={setSettingsOpen}
+      />
+    </>
   );
 }

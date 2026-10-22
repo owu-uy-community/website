@@ -288,8 +288,9 @@ const handlers = {
     outputReconnecting: false,
     outputTimecode: "00:00:00",
     outputDuration: state.streaming ? Date.now() - state.streamStartedAt : 0,
-    outputCongestion: 0,
-    outputBytes: 0,
+    // ~6.2 Mb/s, and a little congestion (MOCK_OBS_CONGESTION, 0–1) to see the stream health read.
+    outputCongestion: state.streaming ? Number(process.env.MOCK_OBS_CONGESTION ?? 0.04) : 0,
+    outputBytes: state.streaming ? Math.round((Date.now() - state.streamStartedAt) * 775) : 0,
     outputSkippedFrames: state.streaming ? 3 : 0,
     outputTotalFrames: state.streaming ? 5000 : 0,
   }),

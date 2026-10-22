@@ -1,6 +1,6 @@
 import { call } from "@orpc/server";
 import { eq, sql } from "drizzle-orm";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { GET, POST } from "app/api/obs/[...path]/route";
 import { auth } from "app/lib/auth";
@@ -8,7 +8,7 @@ import { db } from "lib/db";
 import { obsCommands } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeSiteAdmin, makeUser } from "test/factories";
+import { makeBoard, makeSiteAdmin, makeUser } from "test/factories";
 import { mintSession } from "test/session";
 
 /** Companion / Stream Deck and the executor tab, as they call /api/obs. */
@@ -97,6 +97,35 @@ describe("/api/obs", () => {
     });
     await expect(obs("POST", "nope", session)).resolves.toMatchObject({ status: 404, body: { ok: false } });
     await expect(obs("POST", "studio/maybe", session)).resolves.toMatchObject({ status: 400, body: { ok: false } });
+  });
+
+  test("the deck's GO runs the guion of the event that is on, or of the one it names", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { staff, session } = await setup();
+      const { event } = await makeBoard();
+      const add = (title: string, plannedStart: string) =>
+        call(router.runOfShow.create, { eventId: event.id, title, plannedStart }, by(staff));
+      const doors = await add("Puertas", "14:30");
+      const welcome = await add("Bienvenida", "15:00");
+
+      // Weeks before the day nothing is on, so the deck has to say which event.
+      vi.setSystemTime(new Date("2026-10-21T15:00:00Z"));
+      await expect(obs("POST", "rundown/next", session)).resolves.toMatchObject({ status: 404, body: { ok: false } });
+      await expect(obs("POST", `rundown/next?event=${event.id}`, session)).resolves.toMatchObject({
+        status: 202,
+        body: { ok: true, item: { id: doors.id, title: "Puertas" }, warnings: [] },
+      });
+      // With a moment running, that event is the one on.
+      vi.setSystemTime(new Date("2026-10-21T15:05:00Z"));
+      await expect(obs("POST", "rundown/next", session)).resolves.toMatchObject({
+        status: 202,
+        body: { ok: true, item: { id: welcome.id, title: "Bienvenida" } },
+      });
+      await expect(obs("GET", "rundown/next", session)).resolves.toMatchObject({ status: 405 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("loop buttons step the scene loop", async () => {

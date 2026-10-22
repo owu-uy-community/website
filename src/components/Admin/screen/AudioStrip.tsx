@@ -20,9 +20,9 @@ function Meter({ level, muted }: { level: number; muted: boolean }) {
     <div className="flex h-3 flex-1 items-stretch gap-px" aria-hidden>
       {Array.from({ length: SEGMENTS }, (_, i) => {
         const on = i < lit && !muted;
-        const tone = i >= SEGMENTS - 2 ? "bg-red-500" : i >= SEGMENTS - 6 ? "bg-amber-400" : "bg-green-500";
+        const tone = i >= SEGMENTS - 2 ? "bg-live" : i >= SEGMENTS - 6 ? "bg-warning" : "bg-success";
 
-        return <span key={i} className={cn("flex-1 rounded-[1px]", on ? tone : "bg-muted")} />;
+        return <span key={i} className={cn("flex-1 rounded-[1px]", on ? tone : "bg-white/[0.06]")} />;
       })}
     </div>
   );
@@ -42,8 +42,10 @@ function Fader({ name, db, onCommit }: { name: string; db: number; onCommit: (db
         onValueChange={([v]) => setValue(v ?? value)}
         onValueCommit={([v]) => onCommit(v ?? value)}
       />
-      <span className="w-14 text-right font-terminal text-xs text-muted-foreground">
-        {value <= -60 ? "-inf" : `${value.toFixed(1)} dB`}
+      <span className="w-16 text-right font-terminal text-2xs text-muted-foreground tabular-nums">
+        {value <= -60
+          ? "−∞ dB"
+          : `${value.toLocaleString("es-UY", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} dB`}
       </span>
     </div>
   );
@@ -54,8 +56,9 @@ export function AudioStrip({ view, actions }: { view: ObsView; actions: ObsActio
   const levels = useObsLevels();
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
-  if (!view.connected) return <p className="text-xs text-muted-foreground">Sin conexión a OBS.</p>;
-  if (view.inputs.length === 0) return <p className="text-xs text-muted-foreground">OBS no tiene fuentes de audio.</p>;
+  if (!view.connected) return <p className="text-meta text-muted-foreground">Sin conexión a OBS.</p>;
+  if (view.inputs.length === 0)
+    return <p className="text-meta text-muted-foreground">OBS no tiene fuentes de audio.</p>;
 
   return (
     <div className="space-y-2">
@@ -66,34 +69,37 @@ export function AudioStrip({ view, actions }: { view: ObsView; actions: ObsActio
           <div key={input.name} className="space-y-1">
             <div className="flex items-center gap-2">
               <Button
-                className={cn(
-                  "h-8 w-8 shrink-0",
-                  input.muted && "border-red-500/60 bg-red-500/20 text-red-100 hover:bg-red-500/30",
-                  pending && "animate-pulse border-amber-400"
-                )}
+                aria-label={input.muted ? `Activar ${input.name}` : `Silenciar ${input.name}`}
+                aria-pressed={input.muted}
+                className={cn(pending && "border-warning motion-safe:animate-pulse")}
                 size="icon"
-                title={input.muted ? "Activar" : "Mutear"}
-                variant="outline"
+                title={input.muted ? "Activar" : "Silenciar"}
+                variant={input.muted ? "destructive" : "outline"}
                 onClick={() => void actions.setMute(input.name)}
               >
-                {input.muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {input.muted ? <MicOff /> : <Mic />}
               </Button>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className={cn("truncate text-xs font-medium", input.muted && "text-red-200 line-through")}>
+                  <span
+                    className={cn("truncate text-meta font-medium", input.muted && "text-live-foreground line-through")}
+                  >
                     {input.name}
                   </span>
                   <span className="flex items-center gap-1">
-                    {index === 0 && <Kbd>M</Kbd>}
+                    {index === 0 && <Kbd className="pointer-coarse:hidden">M</Kbd>}
                     {input.volumeDb !== null && (
-                      <button
-                        className="text-muted-foreground hover:text-foreground"
+                      <Button
+                        aria-expanded={open[input.name] === true}
+                        aria-label={`Volumen de ${input.name}`}
+                        className="text-muted-foreground"
+                        size="icon-xs"
                         title="Volumen"
-                        type="button"
+                        variant="ghost"
                         onClick={() => setOpen((prev) => ({ ...prev, [input.name]: !prev[input.name] }))}
                       >
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                      </button>
+                        <SlidersHorizontal />
+                      </Button>
                     )}
                   </span>
                 </div>

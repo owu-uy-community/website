@@ -23,6 +23,7 @@ export const runtime = "nodejs";
  *   POST /api/obs/stream/{start|stop|toggle} | /record/{…}
  *   POST /api/obs/cue/{id} | /cue/next | /cue/prev
  *   POST /api/obs/loop/{play|pause|stop|next|prev}
+ *   POST /api/obs/rundown/next            GO on the guion del día: the event on now, or ?event=<id>
  *   POST /api/obs/release/{executorId}    executor tab giving the seat up on pagehide (keepalive fetch)
  *   GET  /api/obs/status | /cues
  *
@@ -72,9 +73,10 @@ function buildCommand(path: string[]): Command | null | "bad" {
   }
 }
 
-async function run(path: string[], headers: Headers, instanceId: number) {
+async function run(path: string[], headers: Headers, search: URLSearchParams) {
   const api = callerFor(headers);
   const [head] = path;
+  const instanceId = search.get("instance") === "2" ? 2 : 1;
 
   if (head === "status") {
     const [status, cues] = await Promise.all([api.obsControl.status({ instanceId }), api.obsCue.list({ instanceId })]);
@@ -101,6 +103,15 @@ async function run(path: string[], headers: Headers, instanceId: number) {
     if (!result) return json({ ok: false, error: "El guion está vacío" }, 404);
 
     return json({ ok: true, cue: { id: result.cue.id, name: result.cue.name }, id: result.commandId }, 202);
+  }
+
+  if (head === "rundown") {
+    if (seg(path, 1) !== "next") return json({ ok: false, error: "Comando de guion desconocido" }, 404);
+    const eventId = search.get("event") ?? (await api.runOfShow.live()).eventId;
+    if (!eventId) return json({ ok: false, error: "No hay un guion en curso: agregá ?event=<id del evento>" }, 404);
+    const { item, warnings } = await api.runOfShow.go({ eventId });
+
+    return json({ ok: true, item: item ? { id: item.id, title: item.title } : null, warnings }, 202);
   }
 
   if (head === "loop") {
@@ -130,7 +141,7 @@ async function handle(request: Request, { params }: { params: Promise<{ path: st
   }
 
   try {
-    return await run(path, request.headers, new URL(request.url).searchParams.get("instance") === "2" ? 2 : 1);
+    return await run(path, request.headers, new URL(request.url).searchParams);
   } catch (error) {
     // Procedures only throw typed errors (crashes are already reported and sanitized).
     if (error instanceof ORPCError) {
