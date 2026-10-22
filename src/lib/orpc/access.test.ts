@@ -40,6 +40,7 @@ const EXPECTED: Record<string, Access> = {
   "comms.send": "staff",
   "comms.update": "staff",
   "communities.create": "staff",
+  "communities.delete": "staff",
   "communities.getBySlug": "public",
   "communities.list": "public",
   "communities.listForAdmin": "staff",

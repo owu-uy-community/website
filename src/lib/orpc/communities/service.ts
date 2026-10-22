@@ -104,6 +104,35 @@ export const updateCommunity = (
     Effect.flatMap(([row]) => (row ? Effect.succeed(toCommunity(row)) : Effect.fail(communityNotFound)))
   );
 
+/**
+ * A community gone, with its members. Only once it has no events: those carry rooms, talks,
+ * attendees and the day's history, so they are deleted (each from its own settings) first.
+ */
+export const deleteCommunity = (communityId: string) =>
+  transaction(
+    Effect.gen(function* () {
+      const [community] = yield* query((db) =>
+        db.select().from(communities).where(eq(communities.id, communityId)).for("update")
+      );
+      if (!community) return yield* communityNotFound;
+      const [held] = yield* query((db) =>
+        db
+          .select({ events: countDistinct(events.id) })
+          .from(events)
+          .where(eq(events.communityId, communityId))
+      );
+      if (held && held.events > 0) {
+        return yield* new Conflict({
+          reason: "community_has_events",
+          message: `${community.name} tiene ${held.events === 1 ? "un evento" : `${held.events} eventos`}: eliminalos primero, desde sus ajustes.`,
+        });
+      }
+      yield* query((db) => db.delete(communities).where(eq(communities.id, communityId)));
+
+      return { ok: true as const };
+    })
+  );
+
 export const listCommunityMembers = (communityId: string) =>
   query((db) =>
     db
