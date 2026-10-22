@@ -9,7 +9,7 @@ import { Check, CircleSlash, Clock, Hourglass, Ticket } from "lucide-react";
 import { authClient, signIn, useSession } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
 import { EmailCodeForm } from "components/shared/Auth/EmailCodeForm";
-import { buttonClassName, ButtonLink } from "components/community/ui";
+import { buttonClassName } from "components/community/ui";
 import { orpc } from "lib/orpc/client";
 import type { PublicEvent } from "lib/orpc/events/schemas";
 import { offerDeadline, rsvpState, type RsvpState } from "lib/organizar/rsvp-state";
@@ -36,14 +36,13 @@ export function useRsvp(event: PublicEvent) {
   };
 }
 
-/** States with nothing to press: a line of what's going on */
+/** States with nothing to press: a line of what's going on (the card is only for OWU's own sign-up) */
 const NOTE: Partial<Record<RsvpState["kind"], string>> = {
   lleno: "No quedan lugares.",
   cerrado: "La inscripción ya cerró.",
   "en-curso": "Está pasando ahora.",
   pasado: "Este evento ya pasó.",
   "evento-cancelado": "Este evento se canceló.",
-  libre: "Entrada libre: no hace falta anotarse.",
 };
 
 /**
@@ -161,16 +160,6 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
           Quienes organizan {event.community.name} no confirmaron tu inscripción. Si creés que es un error, escribiles.
         </span>
       </p>
-    );
-  }
-
-  if (state.kind === "externo") {
-    return state.url ? (
-      <ButtonLink arrow className="w-full justify-center" href={state.url} size="lg">
-        {state.eventbrite ? "Inscribirme en Eventbrite" : "Inscribirme"}
-      </ButtonLink>
-    ) : (
-      <p className="text-[15px] text-zinc-300">La inscripción abre en unos minutos.</p>
     );
   }
 
