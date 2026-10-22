@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useInView, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -109,7 +109,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
           >
             {/* The leaving tile shrinks away; the one arriving plays the same entrance as on load */}
             <AnimatePresence initial={false} mode="wait">
-              <motion.div key={tile.slug} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.3 }}>
+              <m.div key={tile.slug} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.3 }}>
                 <Link
                   className="owu-orbit-drift pointer-events-auto relative flex items-center justify-center overflow-hidden rounded-[22%] border border-white/10 bg-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-[filter,scale] duration-300 hover:scale-110"
                   href={`/comunidad/${tile.slug}`}
@@ -136,7 +136,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
                     <span className="font-title text-lg font-bold text-zinc-900">{initials(tile.name)}</span>
                   )}
                 </Link>
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         );

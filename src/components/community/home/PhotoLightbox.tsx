@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, Download, ExternalLink, X, ZoomIn, ZoomOut } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -106,7 +106,7 @@ export default function PhotoLightbox({
   return createPortal(
     <AnimatePresence>
       {photo && index !== null ? (
-        <motion.div
+        <m.div
           key="lightbox"
           animate={{ opacity: 1 }}
           aria-label={photo.alt}
@@ -205,7 +205,7 @@ export default function PhotoLightbox({
                 )}
                 data-backdrop="true"
               >
-                <motion.img
+                <m.img
                   key={photo.src}
                   alt={photo.alt}
                   animate={{ opacity: 1 }}
@@ -272,7 +272,7 @@ export default function PhotoLightbox({
               </button>
             ))}
           </div>
-        </motion.div>
+        </m.div>
       ) : null}
     </AnimatePresence>,
     document.body

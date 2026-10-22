@@ -1,16 +1,20 @@
 "use client";
 
 import { Maximize2, Shuffle } from "lucide-react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { m, useInView, useReducedMotion } from "motion/react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "app/lib/utils";
-import { EASE_OUT, Reveal } from "components/community/motion";
+import { EASE_OUT } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import { buttonClassName, Section } from "components/community/ui";
 
-import PhotoLightbox from "./PhotoLightbox";
 import { EVENTS, PHOTOS, type Photo } from "./photos";
+
+// Only someone who opens a photo needs the lightbox
+const PhotoLightbox = dynamic(() => import("./PhotoLightbox"));
 
 /*
  * The people, before anything else: a wall of photos that fits one screen.
@@ -79,7 +83,7 @@ function PhotoLayer({
   }, []);
 
   return (
-    <motion.span
+    <m.span
       animate={{ opacity: ready ? 1 : 0 }}
       className="absolute inset-0 block"
       initial={false}
@@ -97,7 +101,7 @@ function PhotoLayer({
         onError={onFailed}
         onLoad={show}
       />
-    </motion.span>
+    </m.span>
   );
 }
 
@@ -160,6 +164,8 @@ function Tile({ photo, sizes, onOpen }: { photo: Photo; sizes: string; onOpen: (
 export default function PhotoWall() {
   const [shown, setShown] = useState<Photo[]>(initial);
   const [active, setActive] = useState<number | null>(null);
+  // Stays mounted after the first open, so closing still plays its exit
+  const [lightbox, setLightbox] = useState(false);
   const [hovered, setHovered] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { amount: 0.15 });
@@ -202,6 +208,7 @@ export default function PhotoWall() {
 
   const openAt = useCallback((photo: Photo) => {
     opener.current = document.activeElement as HTMLElement | null;
+    setLightbox(true);
     setActive(Math.max(0, PHOTOS.indexOf(photo)));
   }, []);
   const close = useCallback(() => {
@@ -270,7 +277,7 @@ export default function PhotoWall() {
         ))}
       </div>
 
-      <PhotoLightbox index={active} photos={PHOTOS} onClose={close} onStep={step} />
+      {lightbox ? <PhotoLightbox index={active} photos={PHOTOS} onClose={close} onStep={step} /> : null}
     </Section>
   );
 }

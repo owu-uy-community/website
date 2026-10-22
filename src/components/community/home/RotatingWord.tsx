@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 /** Cycles the hero verb ("Aprendemos", "Construimos"…) with a short rise; static when motion is reduced */
@@ -25,7 +25,7 @@ export default function RotatingWord({ words, interval = 2600 }: { words: readon
         {widest}
       </span>
       <AnimatePresence initial={false} mode="popLayout">
-        <motion.span
+        <m.span
           key={word}
           animate={{ y: "0%", opacity: 1 }}
           className="col-start-1 row-start-1 text-center"
@@ -34,7 +34,7 @@ export default function RotatingWord({ words, interval = 2600 }: { words: readon
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         >
           {word}
-        </motion.span>
+        </m.span>
       </AnimatePresence>
     </span>
   );

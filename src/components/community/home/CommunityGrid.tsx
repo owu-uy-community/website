@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useInView, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -66,7 +66,7 @@ export default function CommunityGrid({ communities, cta }: { communities: GridC
           // The card stays put; what's inside crossfades to the next group
           <Link key={index} className={cardClassName(true, "grid p-5 sm:p-6")} href={`/comunidad/${community.slug}`}>
             <AnimatePresence initial={false}>
-              <motion.span
+              <m.span
                 key={community.slug}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 className="col-start-1 row-start-1 flex min-w-0 flex-col gap-5"
@@ -87,7 +87,7 @@ export default function CommunityGrid({ communities, cta }: { communities: GridC
                     )}
                   </span>
                 </span>
-              </motion.span>
+              </m.span>
             </AnimatePresence>
           </Link>
         ))}

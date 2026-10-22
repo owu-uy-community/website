@@ -1,95 +1,34 @@
 "use client";
 
-import { animate, motion, MotionConfig, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
-import { Children, useEffect, useRef, type ReactNode } from "react";
+import { LazyMotion, m, MotionConfig, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "app/lib/utils";
 
 /*
- * The site's motion vocabulary, in three moves: a block that rises into view,
- * a grid whose items follow one another, and a number that counts up. Under
- * MotionRoot, a visitor who asked for reduced motion gets fades without movement.
+ * The site's Motion pieces: the root config and a number that counts up. Under MotionRoot, a
+ * visitor who asked for reduced motion gets fades without movement. Blocks and grids that rise
+ * into view are plain CSS (./reveal), so they never wait for this library.
  */
+
+// The animation engine (layout animations included, for the navbar's marker) loads after the page
+// instead of with it; until then `m` components render their current state, unanimated
+const loadFeatures = () => import("./motion-features").then((module) => module.default);
 
 /**
  * Wraps the community site. Components start from the same hidden state on the server
  * and the client (no hydration mismatch); Motion drops the movement for reduced motion.
+ * Use `m.*`, not `motion.*`, under it: `motion` brings the whole engine back into the page.
  */
 export function MotionRoot({ children }: { children: ReactNode }) {
-  return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
+  return (
+    <MotionConfig reducedMotion="user">
+      <LazyMotion features={loadFeatures}>{children}</LazyMotion>
+    </MotionConfig>
+  );
 }
 
 export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-
-// Fire once the block's top edge is a little way into the screen. A share of the block's own height
-// ("amount: 0.2") never arrives for blocks taller than the viewport on a phone, which left them invisible.
-const VIEWPORT = { once: true, amount: "some", margin: "0px 0px -12% 0px" } as const;
-
-export function Reveal({
-  children,
-  className,
-  delay = 0,
-  y = 16,
-}: {
-  children: ReactNode;
-  className?: string;
-  delay?: number;
-  y?: number;
-}) {
-  return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y }}
-      transition={{ duration: 0.6, ease: EASE_OUT, delay }}
-      viewport={VIEWPORT}
-      whileInView={{ opacity: 1, y: 0 }}
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-const staggerItem = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_OUT } },
-};
-
-/** A grid or list whose children enter one after another, left to right */
-export function Stagger({
-  children,
-  className,
-  itemClassName,
-  interval = 0.07,
-}: {
-  children: ReactNode;
-  className?: string;
-  itemClassName?: string;
-  interval?: number;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  // State, not whileInView: items that mount later (a filter changed the list) inherit "show" and fade in
-  const inView = useInView(ref, VIEWPORT);
-
-  return (
-    <motion.div
-      ref={ref}
-      animate={inView ? "show" : "hidden"}
-      className={className}
-      initial="hidden"
-      variants={{ hidden: {}, show: { transition: { staggerChildren: interval, staggerDirection: 1 } } }}
-    >
-      {Children.map(children, (child) =>
-        child == null || child === false ? null : (
-          // Keyed by the child's own key (Children.map carries it), so filtering keeps the cards that stay.
-          // Each item fills its grid cell so cards in a row keep the same height
-          <motion.div className={cn("min-w-0 [&>*]:h-full", itemClassName)} variants={staggerItem}>
-            {child}
-          </motion.div>
-        )
-      )}
-    </motion.div>
-  );
-}
 
 const format = (value: number) => new Intl.NumberFormat("es-UY").format(Math.round(value));
 
@@ -120,9 +59,16 @@ export function CountUp({
 
       return;
     }
-    const controls = animate(count, value, { duration, ease: [0.16, 1, 0.3, 1] });
+    let controls: { stop: () => void } | undefined;
+    let cancelled = false;
+    void import("motion/react").then(({ animate }) => {
+      if (!cancelled) controls = animate(count, value, { duration, ease: [0.16, 1, 0.3, 1] });
+    });
 
-    return () => controls.stop();
+    return () => {
+      cancelled = true;
+      controls?.stop();
+    };
   }, [inView, reduceMotion, value, duration, count]);
 
   return (
@@ -133,9 +79,9 @@ export function CountUp({
         {format(value)}
         {suffix}
       </span>
-      <motion.span aria-hidden className="absolute inset-0">
+      <m.span aria-hidden className="absolute inset-0">
         {text}
-      </motion.span>
+      </m.span>
       <span className="sr-only">
         {prefix}
         {format(value)}

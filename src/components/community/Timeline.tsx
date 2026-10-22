@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type Variants } from "motion/react";
+import { m, type Variants } from "motion/react";
 import type { ReactNode } from "react";
 
 import { cn } from "app/lib/utils";
@@ -43,11 +43,11 @@ const line: Variants = {
  */
 export default function Timeline({ items }: { items: Milestone[] }) {
   return (
-    <motion.ol initial="hidden" viewport={{ once: true, amount: 0.35 }} whileInView="show">
+    <m.ol initial="hidden" viewport={{ once: true, amount: 0.35 }} whileInView="show">
       {items.map(({ when, title, body, href, now, icon }, i) => (
         <li key={`${when}-${title}`} className="group relative grid grid-cols-[2rem_1fr] gap-x-4 pb-8 last:pb-0">
           {i < items.length - 1 ? (
-            <motion.span
+            <m.span
               aria-hidden
               className="absolute top-9 bottom-1 left-[calc(1rem-0.5px)] w-px origin-top bg-white/[0.12]"
               custom={i}
@@ -55,7 +55,7 @@ export default function Timeline({ items }: { items: Milestone[] }) {
             />
           ) : null}
 
-          <motion.span
+          <m.span
             aria-hidden
             className={cn(
               "relative flex size-8 items-center justify-center rounded-full border transition-colors duration-300 [&_svg]:size-4",
@@ -69,9 +69,9 @@ export default function Timeline({ items }: { items: Milestone[] }) {
             {/* Same markup on server and client; the CSS stops the pulse under reduced motion */}
             {now ? <span className="owu-pulse absolute inset-0 rounded-full bg-yellow-400" /> : null}
             <span className="relative">{icon}</span>
-          </motion.span>
+          </m.span>
 
-          <motion.div className="min-w-0 pt-0.5" custom={i} variants={text}>
+          <m.div className="min-w-0 pt-0.5" custom={i} variants={text}>
             <p
               className={cn(
                 "text-xs font-semibold tracking-[0.14em] uppercase",
@@ -95,9 +95,9 @@ export default function Timeline({ items }: { items: Milestone[] }) {
               )}
             </p>
             {body ? <div className="mt-1 text-sm leading-relaxed text-zinc-400">{body}</div> : null}
-          </motion.div>
+          </m.div>
         </li>
       ))}
-    </motion.ol>
+    </m.ol>
   );
 }
