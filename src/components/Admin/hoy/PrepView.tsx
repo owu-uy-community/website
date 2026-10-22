@@ -22,7 +22,15 @@ const shortDay = (at: Date, timeZone: string) =>
   new Intl.DateTimeFormat("es-UY", { day: "numeric", month: "short", timeZone }).format(at).replace(/\./g, "");
 
 /** The conf's own identity on the hero card: big digits, the yellow circle, the blue triangle. */
-function Countdown({ startDate, timeZone, venue }: { startDate: string; timeZone: string; venue: string | null }) {
+export function Countdown({
+  startDate,
+  timeZone,
+  venue,
+}: {
+  startDate: string;
+  timeZone: string;
+  venue: string | null;
+}) {
   const now = useNow(30_000);
   const left = Math.max(0, new Date(startDate).getTime() - (now || Date.now()));
   const days = Math.floor(left / DAY_MS);
