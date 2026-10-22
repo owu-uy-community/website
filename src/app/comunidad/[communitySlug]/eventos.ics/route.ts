@@ -6,6 +6,12 @@ import { getCommunityBySlug } from "lib/tenant-server";
 // Calendar apps poll this; the same hourly refresh as the agenda
 export const revalidate = 3600;
 
+// No paths at build: each one renders on its first visit and is then served from the cache.
+// Without this a dynamic route ignores `revalidate` and renders on every request.
+export async function generateStaticParams() {
+  return [];
+}
+
 /** One community's upcoming events as a calendar to subscribe to (OWU's and its Meetup ones). */
 export async function GET(_request: Request, { params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;

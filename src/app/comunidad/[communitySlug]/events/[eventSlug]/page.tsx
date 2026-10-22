@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
 
 import { EventPage } from "components/community/event/EventPage";
 import { RsvpCard } from "components/community/event/RsvpCard";
@@ -13,8 +14,16 @@ type Params = Promise<{ communitySlug: string; eventSlug: string }>;
 // Seats left and who's going change; a minute old is fine
 export const revalidate = 60;
 
-const load = (communitySlug: string, eventSlug: string) =>
-  publicCaller.events.public({ communitySlug, eventSlug }).catch(() => null);
+// No paths at build: each one renders on its first visit and is then served from the cache.
+// Without this a dynamic route ignores `revalidate` and renders on every request.
+export async function generateStaticParams() {
+  return [];
+}
+
+// Shared by the metadata and the page: one lookup per render
+const load = cache((communitySlug: string, eventSlug: string) =>
+  publicCaller.events.public({ communitySlug, eventSlug }).catch(() => null)
+);
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { communitySlug, eventSlug } = await params;

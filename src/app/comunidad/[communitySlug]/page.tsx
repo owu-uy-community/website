@@ -14,6 +14,12 @@ import { getCommunityBySlug, listCommunityEvents } from "lib/tenant-server";
 // What's next and the counts change; an hour is fresh enough (publishing refreshes event pages)
 export const revalidate = 3600;
 
+// No paths at build: each one renders on its first visit and is then served from the cache.
+// Without this a dynamic route ignores `revalidate` and renders on every request.
+export async function generateStaticParams() {
+  return [];
+}
+
 /**
  * A community's page: a bespoke landing from the registry when it has one, otherwise its profile
  * with what's next (OWU's events and its Meetup ones), what it did and who hosted it.

@@ -6,6 +6,12 @@ import { publicCaller } from "lib/orpc/server";
 // The same freshness as the event page
 export const revalidate = 60;
 
+// No paths at build: each one renders on its first visit and is then served from the cache.
+// Without this a dynamic route ignores `revalidate` and renders on every request.
+export async function generateStaticParams() {
+  return [];
+}
+
 /**
  * One event as a calendar file, for Apple Calendar and anything else that opens .ics. Its UID is
  * the one the feeds use, so subscribing later doesn't duplicate it; a cancelled event says so.

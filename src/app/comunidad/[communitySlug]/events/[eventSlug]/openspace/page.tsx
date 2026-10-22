@@ -7,7 +7,7 @@ import { AgendaSurface } from "components/displays/AgendaSurface";
 import { EventAgenda } from "components/displays/EventAgenda";
 import { LiveAgenda } from "components/displays/LiveAgenda";
 import { CommunityMark } from "components/shared/CommunityMark";
-import { caller } from "lib/orpc/server";
+import { publicCaller } from "lib/orpc/server";
 import { getEventBySlugs } from "lib/tenant-server";
 
 type Params = Promise<{ communitySlug: string; eventSlug: string }>;
@@ -15,6 +15,12 @@ type Params = Promise<{ communitySlug: string; eventSlug: string }>;
 // The board changes constantly while the event runs; LiveAgenda pushes updates,
 // this only bounds how stale a cold visit can be.
 export const revalidate = 60;
+
+// No paths at build: each one renders on its first visit and is then served from the cache.
+// Without this a dynamic route ignores `revalidate` and renders on every request.
+export async function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { communitySlug, eventSlug } = await params;
@@ -58,9 +64,10 @@ export default async function EventOpenSpacePage({ params }: { params: Params })
 
   const { community, event } = resolved;
   const [rooms, schedules, tracks] = await Promise.all([
-    caller.rooms.getByOpenSpace({ openSpaceId: event.id }),
-    caller.schedules.getByOpenSpace({ openSpaceId: event.id }),
-    caller.tracks.list({ openSpaceId: event.id }),
+    // Public procedures through the anonymous caller: reading the session would make the page dynamic
+    publicCaller.rooms.getByOpenSpace({ openSpaceId: event.id }),
+    publicCaller.schedules.getByOpenSpace({ openSpaceId: event.id }),
+    publicCaller.tracks.list({ openSpaceId: event.id }),
   ]);
 
   const status = eventStatus(event.startDate, event.endDate);
