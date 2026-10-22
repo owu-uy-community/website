@@ -4,7 +4,17 @@ import * as React from "react";
 import { useSearchParams } from "next/navigation";
 import * as ToggleGroup from "@radix-ui/react-toggle-group";
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, ImageIcon, ListFilter, LockKeyhole, Siren, UserRoundCheck, UserRoundX, X } from "lucide-react";
+import {
+  CircleCheck,
+  ImageIcon,
+  ListFilter,
+  LockKeyhole,
+  Pencil,
+  Siren,
+  UserRoundCheck,
+  UserRoundX,
+  X,
+} from "lucide-react";
 
 import { useSession } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
@@ -302,7 +312,18 @@ function ListSkeleton() {
  * reports and takes incidents; editors assign and close them. The detail sits on the right on
  * wide screens and opens as a sheet on phones.
  */
-export function IncidentsPage({ eventId, meId, canEdit }: { eventId: string; meId: string; canEdit: boolean }) {
+export function IncidentsPage({
+  eventId,
+  meId,
+  canEdit,
+  organizer = false,
+}: {
+  eventId: string;
+  meId: string;
+  canEdit: boolean;
+  /** Organizers take an incident out of confidential. */
+  organizer?: boolean;
+}) {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const wide = useWide();
@@ -313,6 +334,7 @@ export function IncidentsPage({ eventId, meId, canEdit }: { eventId: string; meI
   const selectedId = searchParams.get("incidente");
   const askedToReport = searchParams.get("nuevo") === "1";
   const [reporting, setReporting] = React.useState(askedToReport);
+  const [editing, setEditing] = React.useState(false);
   const [view, setView] = React.useState<View>("open");
   const [severity, setSeverity] = React.useState<IncidentSeverity | typeof ANY>(ANY);
   const [category, setCategory] = React.useState<IncidentCategory | typeof ANY>(ANY);
@@ -406,6 +428,7 @@ export function IncidentsPage({ eventId, meId, canEdit }: { eventId: string; meI
   const detailBody = detail.data ? (
     <IncidentBody
       canEdit={canEdit}
+      organizer={organizer}
       eventId={eventId}
       incident={detail.data}
       meId={meId}
@@ -601,14 +624,27 @@ export function IncidentsPage({ eventId, meId, canEdit }: { eventId: string; meI
               <PanelHead
                 actions={
                   selectedId ? (
-                    <Button
-                      aria-label="Cerrar el incidente"
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => select(null)}
-                    >
-                      <X />
-                    </Button>
+                    <span className="flex items-center gap-1">
+                      {canEdit && detail.data ? (
+                        <Button
+                          aria-label="Editar el incidente"
+                          size="icon-sm"
+                          title="Editar"
+                          variant="ghost"
+                          onClick={() => setEditing(true)}
+                        >
+                          <Pencil />
+                        </Button>
+                      ) : null}
+                      <Button
+                        aria-label="Cerrar el incidente"
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => select(null)}
+                      >
+                        <X />
+                      </Button>
+                    </span>
                   ) : undefined
                 }
                 icon={Siren}
@@ -647,6 +683,14 @@ export function IncidentsPage({ eventId, meId, canEdit }: { eventId: string; meI
       </div>
 
       <EditorPanel
+        actions={
+          canEdit && detail.data ? (
+            <Button variant="outline" onClick={() => setEditing(true)}>
+              <Pencil />
+              Editar
+            </Button>
+          ) : undefined
+        }
         icon={Siren}
         open={Boolean(selectedId) && wide === false}
         title={detail.data?.title ?? "Incidente"}
@@ -670,6 +714,16 @@ export function IncidentsPage({ eventId, meId, canEdit }: { eventId: string; meI
         source={phone ? "phone" : "admin"}
         onOpenChange={closeReport}
         onReported={(incident) => select(incident.id)}
+      />
+      <ReportIncidentPanel
+        editing={detail.data ?? null}
+        eventId={eventId}
+        open={editing && Boolean(detail.data)}
+        organizer={organizer}
+        rooms={rooms}
+        source="admin"
+        onDeleted={() => select(null)}
+        onOpenChange={setEditing}
       />
     </PageContainer>
   );

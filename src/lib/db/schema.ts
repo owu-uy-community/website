@@ -724,7 +724,15 @@ export const incidentNotes = pgTable(
       .references(() => incidents.id, { onDelete: "cascade" }),
     authorId: text("authorId").references(() => user.id, { onDelete: "set null" }),
     body: text("body").notNull(),
+    /**
+     * `note`: typed by someone; its author or an editor can fix or delete it. `change`: the log
+     * line of an edit, which stays as it was. Rows from before this column read as `change`: the
+     * log was append-only then, and stays so for them.
+     */
+    kind: text("kind").$type<"note" | "change">().notNull().default("change"),
     createdAt: ts("createdAt").notNull().defaultNow(),
+    /** A note fixed after the fact, shown as «editado». */
+    editedAt: ts("editedAt"),
   },
   (t) => [index("incident_notes_incidentId_idx").on(t.incidentId)]
 );

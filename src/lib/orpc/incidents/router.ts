@@ -6,10 +6,12 @@ import {
   AddIncidentNoteSchema,
   CreateIncidentSchema,
   IncidentDetailSchema,
+  IncidentNoteRefSchema,
   IncidentRefSchema,
   IncidentSchema,
   ListIncidentsSchema,
   RequestStaffSchema,
+  UpdateIncidentNoteSchema,
   UpdateIncidentSchema,
 } from "./schemas";
 import * as Incidents from "./service";
@@ -47,12 +49,41 @@ export const incidentsRouter = {
     }),
 
   update: authed
-    .meta(docs("Change an incident's status, assignee, severity or room (editors; the assignee, its status)"))
+    .meta(
+      docs("Edit an incident: anything for editors (confidential off only for organizers); its assignee, the status")
+    )
     .input(UpdateIncidentSchema)
     .use(inCommunity("member"))
     .output(IncidentDetailSchema)
     .effect(function* ({ input }) {
       return yield* Incidents.updateIncident(input);
+    }),
+
+  delete: authed
+    .meta(docs("Delete an incident with its log: a duplicate, a mistake (editors)"))
+    .input(IncidentRefSchema)
+    .use(inCommunity("editor"))
+    .output(z.object({ ok: z.literal(true) }))
+    .effect(function* ({ input }) {
+      return yield* Incidents.deleteIncident(input);
+    }),
+
+  updateNote: authed
+    .meta(docs("Fix a typed note in an incident's log (its author or an editor)"))
+    .input(UpdateIncidentNoteSchema)
+    .use(inCommunity("member"))
+    .output(IncidentDetailSchema)
+    .effect(function* ({ input }) {
+      return yield* Incidents.updateNote(input);
+    }),
+
+  deleteNote: authed
+    .meta(docs("Take a typed note out of an incident's log (its author or an editor)"))
+    .input(IncidentNoteRefSchema)
+    .use(inCommunity("member"))
+    .output(IncidentDetailSchema)
+    .effect(function* ({ input }) {
+      return yield* Incidents.deleteNote(input);
     }),
 
   addNote: authed

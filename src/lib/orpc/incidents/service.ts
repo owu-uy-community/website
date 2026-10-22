@@ -19,6 +19,7 @@ import { createAnnouncement } from "../staff-tasks/service";
 import type {
   CreateIncidentInput,
   Incident,
+  IncidentCategory,
   IncidentDetail,
   IncidentSeverity,
   IncidentStatus,
@@ -31,6 +32,14 @@ const SEVERITY_WORDS: Record<IncidentSeverity, string> = {
   medium: "media",
   high: "alta",
   critical: "crítica",
+};
+const CATEGORY_WORDS: Record<IncidentCategory, string> = {
+  medical: "médico",
+  conduct: "conducta",
+  technical: "técnica",
+  venue: "venue",
+  lost: "perdidos",
+  other: "otro",
 };
 const SEVERITY_RANK: Record<IncidentSeverity, number> = { low: 0, medium: 1, high: 2, critical: 3 };
 const isLoud = (severity: IncidentSeverity) => SEVERITY_RANK[severity] >= SEVERITY_RANK.high;
@@ -143,8 +152,10 @@ export const getIncident = (input: { eventId: string; id: string }) =>
       notes: row.notes.map((note) => ({
         id: note.id,
         body: note.body,
+        kind: note.kind,
         author: note.author,
         createdAt: note.createdAt.toISOString(),
+        editedAt: note.editedAt?.toISOString() ?? null,
       })),
     } satisfies IncidentDetail;
   });
@@ -272,7 +283,21 @@ export const createIncident = (input: CreateIncidentInput) =>
     return yield* getIncident({ eventId: input.eventId, id });
   });
 
-type Change = Partial<Pick<IncidentRow, "status" | "assigneeId" | "severity" | "roomId">>;
+type Change = Partial<
+  Pick<
+    IncidentRow,
+    | "status"
+    | "assigneeId"
+    | "severity"
+    | "roomId"
+    | "title"
+    | "description"
+    | "category"
+    | "location"
+    | "sensitive"
+    | "photo"
+  >
+>;
 
 /** The activity line for an edit: its most telling change, in the actor's voice. */
 function activityLine(
@@ -289,8 +314,14 @@ function activityLine(
   if (change.assigneeId === null) return `dejó ${quoted} sin asignar`;
   if (change.status) return `marcó ${quoted} como ${STATUS_WORDS[change.status]}`;
   if (change.severity) return `cambió ${quoted} a gravedad ${SEVERITY_WORDS[change.severity]}`;
-  return names.room ? `movió ${quoted} a ${names.room}` : `sacó ${quoted} de su sala`;
+  if (change.roomId !== undefined) return names.room ? `movió ${quoted} a ${names.room}` : `sacó ${quoted} de su sala`;
+  if (change.title) return `le cambió el título a ${quoted}: «${change.title}»`;
+
+  return `editó ${quoted}`;
 }
+
+/** What the report itself says, as opposed to how it's being handled (status, assignee, severity, room). */
+const REPORT_FIELDS = ["title", "description", "category", "location", "photo"] as const;
 
 /**
  * Apply a change to one incident: the row is locked while it's read and written, every
@@ -345,6 +376,42 @@ const editIncident = (
           roomName = wanted.roomId ? (yield* roomInEvent(wanted.roomId, eventId)).name : null;
           lines.push(roomName ? `lo movió a ${roomName}` : "le sacó la sala");
         }
+        if (wanted.title !== undefined && wanted.title !== current.title) {
+          change.title = wanted.title;
+          lines.push(`cambió el título a «${wanted.title}»`);
+        }
+        const description = wanted.description === undefined ? undefined : wanted.description || null;
+        if (description !== undefined && description !== current.description) {
+          change.description = description;
+          lines.push(description ? "cambió el detalle" : "le sacó el detalle");
+        }
+        if (wanted.category !== undefined && wanted.category !== current.category) {
+          change.category = wanted.category;
+          lines.push(`cambió el tipo a ${CATEGORY_WORDS[wanted.category]}`);
+        }
+        const location = wanted.location === undefined ? undefined : wanted.location || null;
+        if (location !== undefined && location !== current.location) {
+          change.location = location;
+          lines.push(location ? `cambió el lugar a «${location}»` : "le sacó el lugar");
+        }
+        if (wanted.sensitive !== undefined && wanted.sensitive !== current.sensitive) {
+          // Out of confidential, a conduct report reaches the whole staff: only organizers do that.
+          if (!wanted.sensitive && !who.organizer) {
+            return yield* new Forbidden({ message: "Solo un organizador le saca lo confidencial a un incidente" });
+          }
+          change.sensitive = wanted.sensitive;
+          lines.push(wanted.sensitive ? "lo marcó como confidencial" : "le sacó lo confidencial");
+        }
+        if (wanted.photo !== undefined && wanted.photo !== current.photo) {
+          change.photo = wanted.photo;
+          lines.push(wanted.photo ? (current.photo ? "cambió la foto" : "le agregó una foto") : "le sacó la foto");
+        }
+        // What a confidential report says is its evidence: like deleting it, only organizers rewrite it.
+        if (current.sensitive && !who.organizer && REPORT_FIELDS.some((field) => field in change)) {
+          return yield* new Forbidden({
+            message: "Lo que dice un incidente confidencial lo cambia solo un organizador: anotá lo nuevo",
+          });
+        }
         if (lines.length === 0) return null;
 
         yield* query((db) =>
@@ -357,29 +424,36 @@ const editIncident = (
             .where(eq(incidents.id, id))
         );
         yield* query((db) =>
-          db.insert(incidentNotes).values({ incidentId: id, authorId: me.id, body: lines.join(" · ") })
+          db.insert(incidentNotes).values({ incidentId: id, authorId: me.id, body: lines.join(" · "), kind: "change" })
         );
         yield* recordActivity({
           eventId,
           verb: change.status === "resolved" ? "incident.resolved" : "incident.updated",
           entityType: "incident",
           entityId: id,
-          summary: current.sensitive
-            ? "actualizó un incidente confidencial"
-            : activityLine(current, change, me.id, { assignee: assigneeName, room: roomName }),
+          summary:
+            current.sensitive || change.sensitive
+              ? "actualizó un incidente confidencial"
+              : activityLine(current, change, me.id, { assignee: assigneeName, room: roomName }),
         });
 
         if (!(change.severity !== undefined && isLoud(change.severity) && !isLoud(current.severity))) {
-          return { current, alertAt: undefined };
+          return { after: current, alertAt: undefined };
         }
+        // The alert tells of the incident as it is now, and as confidential if it was or now is one.
+        const after = {
+          title: change.title ?? current.title,
+          sensitive: current.sensitive || change.sensitive === true,
+        };
         const roomId = change.roomId === undefined ? current.roomId : change.roomId;
-        const where = roomId ? (roomName ?? (yield* roomInEvent(roomId, eventId)).name) : current.location;
-        return { current, alertAt: where };
+        const place = change.location === undefined ? current.location : change.location;
+        const where = roomId ? (roomName ?? (yield* roomInEvent(roomId, eventId)).name) : place;
+        return { after, alertAt: where };
       })
     );
 
     if (outcome) {
-      if (outcome.alertAt !== undefined) yield* alertStaff(eventId, outcome.current, outcome.alertAt);
+      if (outcome.alertAt !== undefined) yield* alertStaff(eventId, outcome.after, outcome.alertAt);
       yield* opsPing(eventId, "incidents");
     }
 
@@ -389,7 +463,8 @@ const editIncident = (
 /** Editors change anything; the person it's assigned to may move its status. */
 export const updateIncident = ({ eventId, id, ...wanted }: UpdateIncidentInput) =>
   editIncident(eventId, id, (current, who) => {
-    const statusOnly = wanted.assigneeId === undefined && wanted.severity === undefined && wanted.roomId === undefined;
+    const { status: _status, ...rest } = wanted;
+    const statusOnly = Object.values(rest).every((value) => value === undefined);
     if (who.editor || (statusOnly && current.assigneeId === who.id)) return Effect.succeed(wanted);
 
     return Effect.fail(
@@ -403,7 +478,7 @@ export const assignToMe = ({ eventId, id }: { eventId: string; id: string }) =>
     Effect.succeed({ assigneeId: who.id, ...(current.status === "open" ? { status: "in_progress" as const } : {}) })
   );
 
-/** Notes are append-only: there is no way to edit or delete one. */
+/** A note at the end of the log; its author (or an editor) can fix or delete it later. */
 export const addNote = ({ eventId, id, body }: { eventId: string; id: string; body: string }) =>
   Effect.gen(function* () {
     const me = yield* CurrentUser;
@@ -418,7 +493,7 @@ export const addNote = ({ eventId, id, body }: { eventId: string; id: string; bo
 
     yield* transaction(
       Effect.gen(function* () {
-        yield* query((db) => db.insert(incidentNotes).values({ incidentId: id, authorId: me.id, body }));
+        yield* query((db) => db.insert(incidentNotes).values({ incidentId: id, authorId: me.id, body, kind: "note" }));
         yield* recordActivity({
           eventId,
           verb: "incident.noted",
@@ -431,6 +506,130 @@ export const addNote = ({ eventId, id, body }: { eventId: string; id: string; bo
     yield* opsPing(eventId, "incidents");
 
     return yield* getIncident({ eventId, id });
+  });
+
+/**
+ * An incident gone, with its log: for a duplicate or a mistake. Editors, of what they can see; a
+ * confidential one only organizers, so whoever it's about can't make a conduct report disappear.
+ */
+export const deleteIncident = ({ eventId, id }: { eventId: string; id: string }) =>
+  Effect.gen(function* () {
+    const who = yield* viewer;
+    if (!who.editor) return yield* new Forbidden({ message: "Solo un editor borra un incidente" });
+
+    yield* transaction(
+      Effect.gen(function* () {
+        const [current] = yield* query((db) =>
+          db
+            .select({ sensitive: incidents.sensitive })
+            .from(incidents)
+            .where(and(eq(incidents.id, id), eq(incidents.eventId, eventId), visibleTo(who)))
+            .for("update")
+        );
+        if (!current) return yield* incidentNotFound;
+        if (current.sensitive && !who.organizer) {
+          return yield* new Forbidden({ message: "Un incidente confidencial lo borra solo un organizador" });
+        }
+        const [row] = yield* query((db) =>
+          db
+            .delete(incidents)
+            .where(eq(incidents.id, id))
+            .returning({ id: incidents.id, title: incidents.title, sensitive: incidents.sensitive })
+        );
+        yield* recordActivity({
+          eventId,
+          verb: "incident.deleted",
+          entityType: "incident",
+          entityId: row.id,
+          summary: row.sensitive ? "borró un incidente confidencial" : `borró «${row.title}»`,
+        });
+      })
+    );
+    yield* opsPing(eventId, "incidents");
+
+    return { ok: true as const };
+  });
+
+/**
+ * A typed note, the way it was meant: fix it or take it out of the log. Its author or an editor;
+ * the lines an edit wrote (`change`) stay as they were.
+ */
+const fixableNote = ({ eventId, id, noteId }: { eventId: string; id: string; noteId: string }) =>
+  Effect.gen(function* () {
+    const who = yield* viewer;
+    const [note] = yield* query((db) =>
+      db
+        .select({
+          id: incidentNotes.id,
+          kind: incidentNotes.kind,
+          authorId: incidentNotes.authorId,
+          incidentTitle: incidents.title,
+          sensitive: incidents.sensitive,
+        })
+        .from(incidentNotes)
+        .innerJoin(incidents, eq(incidents.id, incidentNotes.incidentId))
+        .where(and(eq(incidentNotes.id, noteId), eq(incidents.id, id), eq(incidents.eventId, eventId), visibleTo(who)))
+    );
+    if (!note) return yield* new NotFound({ entity: "note", message: "Esa nota no está en este incidente" });
+    if (note.kind !== "note") {
+      return yield* new Forbidden({ message: "Lo que registró un cambio queda como está: anotá la corrección" });
+    }
+    // On a confidential report, someone else's note is the organizers' to touch.
+    if (note.authorId !== who.id && !(note.sensitive ? who.organizer : who.editor)) {
+      return yield* new Forbidden({
+        message: note.sensitive
+          ? "En un incidente confidencial, una nota la cambia quien la escribió o un organizador"
+          : "Solo quien la escribió, o un editor, la cambia",
+      });
+    }
+
+    return note;
+  });
+
+export const updateNote = (input: { eventId: string; id: string; noteId: string; body: string }) =>
+  Effect.gen(function* () {
+    const note = yield* fixableNote(input);
+    yield* transaction(
+      Effect.gen(function* () {
+        yield* query((db) =>
+          db.update(incidentNotes).set({ body: input.body, editedAt: new Date() }).where(eq(incidentNotes.id, note.id))
+        );
+        yield* recordActivity({
+          eventId: input.eventId,
+          verb: "incident.note_updated",
+          entityType: "incident",
+          entityId: input.id,
+          summary: note.sensitive
+            ? "corrigió una nota de un incidente confidencial"
+            : `corrigió una nota de «${note.incidentTitle}»`,
+        });
+      })
+    );
+    yield* opsPing(input.eventId, "incidents");
+
+    return yield* getIncident({ eventId: input.eventId, id: input.id });
+  });
+
+export const deleteNote = (input: { eventId: string; id: string; noteId: string }) =>
+  Effect.gen(function* () {
+    const note = yield* fixableNote(input);
+    yield* transaction(
+      Effect.gen(function* () {
+        yield* query((db) => db.delete(incidentNotes).where(eq(incidentNotes.id, note.id)));
+        yield* recordActivity({
+          eventId: input.eventId,
+          verb: "incident.note_deleted",
+          entityType: "incident",
+          entityId: input.id,
+          summary: note.sensitive
+            ? "borró una nota de un incidente confidencial"
+            : `borró una nota de «${note.incidentTitle}»`,
+        });
+      })
+    );
+    yield* opsPing(input.eventId, "incidents");
+
+    return yield* getIncident({ eventId: input.eventId, id: input.id });
   });
 
 /** A room's host asks for a hand: every staff phone hears it, calmly. */
