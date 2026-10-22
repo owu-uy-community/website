@@ -13,6 +13,7 @@ import {
   Projector,
   Search,
   Send,
+  TriangleAlert,
   Users,
   UtensilsCrossed,
   Wifi,
@@ -38,7 +39,14 @@ import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group"
 import { addDays, daysBetween } from "lib/calendar/holidays";
 import { dayKey, shortWhen } from "lib/community/time";
 import { orpc } from "lib/orpc/client";
-import { AMENITIES, AMENITY_LABEL, AMENITY_SHORT, type Venue, type VenueRequest } from "lib/orpc/venues/schemas";
+import {
+  AMENITIES,
+  AMENITY_LABEL,
+  AMENITY_SHORT,
+  type RankedVenue,
+  type Venue,
+  type VenueRequest,
+} from "lib/orpc/venues/schemas";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 
@@ -141,7 +149,6 @@ export function VenuesClient({ community, today }: { community: CalendarCommunit
       {requests.data && requests.data.length > 0 ? (
         <RequestList
           requests={requests.data}
-          today={today}
           onCancel={(requestId) => cancel.mutate({ communityId: community.id, requestId })}
         />
       ) : null}
@@ -243,7 +250,18 @@ export function VenuesClient({ community, today }: { community: CalendarCommunit
   );
 }
 
-function VenueCard({ venue, pending, onAsk }: { venue: Venue; pending: boolean; onAsk: () => void }) {
+/** A space; with `fit` (from a ranked list), what doesn't work for this event and what it lacks. */
+export function VenueCard({
+  venue,
+  pending,
+  onAsk,
+}: {
+  venue: Venue & { fit?: RankedVenue["fit"] };
+  pending: boolean;
+  onAsk: () => void;
+}) {
+  const blockers = venue.fit?.blockers ?? [];
+
   return (
     <li className="flex min-w-0 flex-col rounded-lg border border-border bg-card shadow-edge">
       <div className="flex items-start gap-3 p-3.5">
@@ -265,6 +283,11 @@ function VenueCard({ venue, pending, onAsk }: { venue: Venue; pending: boolean; 
             {[venue.neighbourhood, venue.city].filter(Boolean).join(", ") || "Montevideo"}
           </p>
         </div>
+        {venue.fallback ? (
+          <Badge title="Siempre dispuesto: el último recurso" variant="warning">
+            Plan B
+          </Badge>
+        ) : null}
         {venue.hostedUs > 0 ? (
           <Badge variant="success" title="Veces que recibió a tu comunidad">
             <Check aria-hidden />
@@ -314,13 +337,22 @@ function VenueCard({ venue, pending, onAsk }: { venue: Venue; pending: boolean; 
         </ul>
       ) : null}
 
+      {blockers.length > 0 || (venue.fit?.missing.length ?? 0) > 0 ? (
+        <p className="flex items-start gap-1.5 px-3.5 pb-3 text-meta text-warning-foreground">
+          <TriangleAlert aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+          {[...blockers, ...(venue.fit?.missing ?? []).map((need) => `Sin ${AMENITY_SHORT[need].toLowerCase()}`)].join(
+            " · "
+          )}
+        </p>
+      ) : null}
+
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-border px-3.5 py-2.5">
         {venue.requestable ? (
           <>
             <span className="text-meta text-muted-foreground">
               Avisá con <span className="font-terminal tabular-nums">{venue.leadDays}</span> días
             </span>
-            <Button disabled={pending} size="sm" variant="outline" onClick={onAsk}>
+            <Button disabled={pending || blockers.length > 0} size="sm" variant="outline" onClick={onAsk}>
               {pending ? "Ya pediste" : "Pedir lugar"}
             </Button>
           </>
@@ -335,18 +367,21 @@ function VenueCard({ venue, pending, onAsk }: { venue: Venue; pending: boolean; 
   );
 }
 
-function RequestList({
+/** The community's requests, newest first, each with where it stands: sent, then answered or lapsed. */
+export function RequestList({
   requests,
-  today,
   onCancel,
+  title = "Tus pedidos",
+  className = "mb-5",
 }: {
   requests: VenueRequest[];
-  today: string;
   onCancel: (requestId: string) => void;
+  title?: string;
+  className?: string;
 }) {
   return (
-    <Panel className="mb-5">
-      <PanelHead icon={Send} meta={requests.length} title="Tus pedidos" />
+    <Panel className={className}>
+      <PanelHead icon={Send} meta={requests.length} title={title} />
       <ul className="divide-y divide-border">
         {requests.slice(0, 6).map((request) => {
           const status = STATUS[request.status];
@@ -366,6 +401,33 @@ function RequestList({
                     : `pedido el ${shortWhen(request.createdAt).split(" · ")[0]}`}
                 </span>
               </div>
+              <ol aria-label="Cómo va" className="flex items-center gap-2 text-meta text-muted-foreground">
+                <li className="flex items-center gap-1.5">
+                  <span aria-hidden className="size-1.5 rounded-full bg-info" />
+                  Enviado <span className="font-terminal tabular-nums">{shortWhen(request.createdAt)}</span>
+                </li>
+                <li aria-hidden className="h-px w-4 bg-border" />
+                <li className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      request.status === "accepted"
+                        ? "bg-success"
+                        : request.status === "declined"
+                          ? "bg-live"
+                          : request.status === "pending"
+                            ? "animate-pulse bg-warning"
+                            : "bg-faint"
+                    )}
+                  />
+                  {request.status === "pending"
+                    ? "Esperando respuesta"
+                    : request.respondedAt
+                      ? `${status.label} · ${shortWhen(request.respondedAt)}`
+                      : status.label}
+                </li>
+              </ol>
               <ol className="flex flex-wrap gap-1.5">
                 {request.options.map((option, index) => (
                   <li
