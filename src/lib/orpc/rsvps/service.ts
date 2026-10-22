@@ -156,11 +156,12 @@ const notify = (row: AttendeeRow, event: EventContext, kind: RsvpEmailKind, dedu
     if (optional && (yield* suppressed(row.email))) return;
     const token = yield* Effect.promise(() => signLink("ticket", row.id));
     const unsubscribe = optional ? yield* Effect.promise(() => signLink("unsubscribe", row.email.toLowerCase())) : null;
-    const seated = SEATED_KINDS.includes(kind);
+    // Seat details (QR, address, online link, the invite) only for someone who has the seat
+    const seated = SEATED_KINDS.includes(kind) && row.status === "attending";
     const removed = REMOVES.includes(kind);
     const ticketUrl = appUrl(`/comunidad/${event.community.slug}/events/${event.slug}/entrada?t=${token}`);
     const invite =
-      ADDS.includes(kind) || removed
+      (ADDS.includes(kind) && seated) || removed
         ? buildInvite({
             uid: `rsvp-${event.id}@owu.uy`,
             // Leaving outranks the invite they have; a cancelled event already moved the sequence

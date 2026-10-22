@@ -115,12 +115,16 @@ describe(mergeEvents, () => {
     });
     const byTime = mergeEvents(feed, [], communities, [own({})]);
     const byLink = mergeEvents(feed, [], communities, [
-      own({ communitySlug: "otra", start: "2026-12-01T22:00:00.000Z", meetupUrl: "https://www.example.com/conf/" }),
+      own({ start: "2026-12-01T22:00:00.000Z", meetupUrl: "https://www.example.com/owasp/" }),
+    ]);
+    const someoneElses = mergeEvents(feed, [], communities, [
+      own({ communitySlug: "otra", start: "2026-12-01T22:00:00.000Z", meetupUrl: "https://example.com/owasp" }),
     ]);
 
     expect(byTime.map((event) => event.id)).toStrictEqual(["owu-e1", "meetup-264"]);
     expect(byTime[0]).toMatchObject({ source: "owu", url: "/comunidad/owasp-uruguay/events/owasp-en-owu" });
-    expect(byLink.map((event) => event.id)).toStrictEqual(["meetup-259", "owu-e1"]);
+    expect(byLink.map((event) => event.id)).toStrictEqual(["meetup-264", "owu-e1"]);
+    expect(someoneElses.map((event) => event.id)).toContain("meetup-259");
   });
 
   test("picks each community's next event", () => {
