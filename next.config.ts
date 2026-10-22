@@ -27,6 +27,8 @@ const nextConfig: NextConfig = {
     "/api/v1/[[...rest]]": ["./content/**/*"],
     // Fonts read at runtime by the /blog/og image generator
     "/blog/og": ["./src/app/(web)/(content)/blog/og/*.ttf"],
+    // Talk covers: the blog's Poppins and the OWU logo (built at deploy, traced in case one renders later)
+    "/charlas/og/[slug]": ["./src/app/(web)/(content)/blog/og/*.ttf", "./src/app/(web)/(content)/charlas/og/owu-logo.png"],
     // OWU CONF share images: their own font and strap logo, the blog's Poppins, the badge logo
     "/api/conf/og": [
       "./src/app/api/conf/og/*.{ttf,png}",
