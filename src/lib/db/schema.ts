@@ -1527,6 +1527,36 @@ export const communityFollowers = pgTable(
   ]
 );
 
+/**
+ * Other communities organizing an event with its own. One the organizer also runs joins at once;
+ * any other is invited, and the event shows on its profile only once it accepts.
+ */
+export const eventHosts = pgTable(
+  "event_hosts",
+  {
+    eventId: text("eventId").notNull(),
+    communityId: text("communityId").notNull(),
+    status: text("status").$type<"invited" | "accepted">().notNull().default("invited"),
+    invitedById: text("invitedById"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "event_hosts_pkey", columns: [t.eventId, t.communityId] }),
+    index("event_hosts_communityId_idx").on(t.communityId),
+    foreignKey({ name: "event_hosts_eventId_fk", columns: [t.eventId], foreignColumns: [events.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({
+      name: "event_hosts_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "event_hosts_invitedById_fk", columns: [t.invitedById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
 export type IntegrationConnectionRow = typeof integrationConnections.$inferSelect;
 export type EventPublicationRow = typeof eventPublications.$inferSelect;
 

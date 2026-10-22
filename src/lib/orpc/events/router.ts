@@ -5,7 +5,9 @@ import * as z from "zod";
 import { authed, inCommunity, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
 import {
+  AnswerCohostSchema,
   CancelEventSchema,
+  CohostInvitationSchema,
   CreateDraftSchema,
   EditableEventSchema,
   EventBySlugSchema,
@@ -22,6 +24,7 @@ import {
 } from "./schemas";
 import * as Door from "../door/service";
 import { DoorLinkSchema } from "../door/schemas";
+import * as Cohosts from "./cohosts";
 import * as Events from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Organizer events"], summary });
@@ -121,6 +124,24 @@ export const eventsRouter = {
     .output(PublicEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.preview(input.eventId);
+    }),
+
+  cohostInvitations: authed
+    .meta(docs("Events other communities invited this one to organize with them"))
+    .input(ListEventsSchema)
+    .use(inCommunity("editor"))
+    .output(z.array(CohostInvitationSchema))
+    .effect(function* () {
+      return yield* Cohosts.invitations;
+    }),
+
+  answerCohost: authed
+    .meta(docs("Accept an invitation to co-organize (the event shows on this profile too) or decline it"))
+    .input(AnswerCohostSchema)
+    .use(inCommunity("editor"))
+    .output(z.object({ accepted: z.boolean() }))
+    .effect(function* ({ input }) {
+      return yield* Cohosts.answer(input);
     }),
 
   stats: authed

@@ -8,7 +8,7 @@ import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
 import { ORGANIZAR_ON } from "lib/community/flags";
 import { db } from "lib/db";
-import { events, venues } from "lib/db/schema";
+import { communities, eventHosts, events, venues } from "lib/db/schema";
 import { getCommunityBySlug, listCommunityEvents } from "lib/tenant-server";
 
 // What's next and the counts change; an hour is fresh enough (publishing refreshes event pages)
@@ -27,7 +27,7 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
   const Landing = landingFor(community.slug);
   if (Landing) return <Landing community={community} events={all} />;
 
-  const [upcoming, hosted] = await Promise.all([
+  const [upcoming, hosted, cohosted] = await Promise.all([
     getUpcomingEvents(),
     db
       .selectDistinct({ name: venues.name })
@@ -43,8 +43,24 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
         )
       )
       .orderBy(desc(venues.name)),
+    // Events another community organized with this one (once it accepted)
+    db
+      .select({ event: events, hostSlug: communities.slug })
+      .from(eventHosts)
+      .innerJoin(events, eq(events.id, eventHosts.eventId))
+      .innerJoin(communities, eq(communities.id, events.communityId))
+      .where(
+        and(eq(eventHosts.communityId, community.id), eq(eventHosts.status, "accepted"), eq(events.isActive, true))
+      ),
   ]);
   const now = Date.now();
+  const cohostedIds = new Set(cohosted.map((row) => `owu-${row.event.id}`));
+  const past = [
+    ...all.map((event) => ({ ...event, hostSlug: community.slug })),
+    ...cohosted.map((row) => ({ ...row.event, hostSlug: row.hostSlug })),
+  ]
+    .filter((event) => event.status === "published" && event.endDate.getTime() < now)
+    .toSorted((a, b) => b.startDate.getTime() - a.startDate.getTime());
 
   return (
     <SiteChrome>
@@ -53,8 +69,8 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
         claimHref={ORGANIZAR_ON ? "/organizar/panel/reclamar" : null}
         community={community}
         hosts={hosted.map((row) => row.name).toSorted((a, b) => a.localeCompare(b, "es"))}
-        past={all.filter((event) => event.status === "published" && event.endDate.getTime() < now)}
-        upcoming={upcoming.filter((event) => event.communitySlug === community.slug)}
+        past={past}
+        upcoming={upcoming.filter((event) => event.communitySlug === community.slug || cohostedIds.has(event.id))}
       />
       <Footer />
     </SiteChrome>

@@ -87,6 +87,10 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   rsvpClosesAt: z.string().nullable(),
   questions: z.array(QuestionSchema),
   externalLinks: z.object({ meetup: z.string().optional() }),
+  /** Other communities organizing it; an invited one shows on its profile once it accepts */
+  cohosts: z.array(
+    z.object({ id: z.string(), name: z.string(), slug: z.string(), status: z.enum(["invited", "accepted"]) })
+  ),
 });
 
 /** What autosave sends: any subset, checked loosely (publishing checks the rest). */
@@ -116,6 +120,8 @@ export const DraftPatchSchema = z
         "Pegá el link del evento en meetup.com"
       ).optional(),
     }),
+    /** The other communities organizing it (ids), up to 3 */
+    cohosts: z.array(z.string().min(1)).max(3),
     /** Published events move their date here (drafts reserve one instead) */
     schedule: z.object({ day: DaySchema, startTime: ClockSchema, durationMin: DurationSchema }),
   })
@@ -183,7 +189,24 @@ export const PublicEventSchema = z.object({
   /** It has an open-space board (rooms and slots) */
   hasBoard: z.boolean(),
   community: z.object({ slug: z.string(), name: z.string(), logoUrl: z.string().nullable() }),
+  /** Other communities organizing it with this one (those that accepted) */
+  cohosts: z.array(z.object({ slug: z.string(), name: z.string() })),
   meetupUrl: z.string().nullable(),
+});
+
+export const CohostInvitationSchema = z.object({
+  eventId: z.string(),
+  name: z.string(),
+  startDate: z.string(),
+  /** The community that invited */
+  host: z.string(),
+});
+
+export const AnswerCohostSchema = z.object({
+  communityId: z.string().min(1),
+  /** The invited event (not `eventId`: it belongs to the other community) */
+  hostedEventId: z.string().min(1),
+  accept: z.boolean(),
 });
 
 export const EventBySlugSchema = z.object({ communitySlug: z.string().min(1), eventSlug: z.string().min(1) });
