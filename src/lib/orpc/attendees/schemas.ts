@@ -169,6 +169,10 @@ export const CreateRaffleSchema = z.object({
   prize: z.string().trim().min(1, "¿Qué se sortea?").max(40, "Hasta 40 letras: es el título en la pantalla"),
 });
 export const RaffleIdSchema = z.object({ raffleId: z.string().min(1) });
+/** A new prize for a raffle; its seed stays, so every draw can still be checked. */
+export const UpdateRaffleSchema = RaffleIdSchema.extend({
+  prize: z.string().trim().min(1, "¿Qué se sortea?").max(40, "Hasta 40 letras: es el título en la pantalla"),
+});
 export const DrawIdSchema = z.object({ drawId: z.string().min(1) });
 
 export const RaffleDrawSchema = z.object({

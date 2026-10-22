@@ -20,6 +20,7 @@ import {
   ScanResultSchema,
   ScanSchema,
   SetTagsSchema,
+  UpdateRaffleSchema,
   SyncSchema,
   SyncStateSchema,
 } from "./schemas";
@@ -101,6 +102,22 @@ export const attendeesRouter = {
       .output(z.object({ id: z.string() }))
       .effect(function* ({ input }) {
         return yield* Raffles.createRaffle(input);
+      }),
+
+    update: staff
+      .meta(docs("Rename a raffle's prize; its seed, and so every draw, stays"))
+      .input(UpdateRaffleSchema)
+      .output(ok)
+      .effect(function* ({ input }) {
+        return yield* Raffles.updateRaffle(input);
+      }),
+
+    delete: staff
+      .meta(docs("Delete a raffle with all its draws"))
+      .input(RaffleIdSchema)
+      .output(ok)
+      .effect(function* ({ input }) {
+        return yield* Raffles.deleteRaffle(input.raffleId);
       }),
 
     draw: staff

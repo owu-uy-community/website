@@ -9,7 +9,15 @@ import { db } from "lib/db";
 import { attendeeScans, attendeeSync, attendees, raffles } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeAttendee, makeCommunity, makeEvent, makeSiteAdmin, makeUser, type UserRow } from "test/factories";
+import {
+  makeAttendee,
+  makeCommunity,
+  makeEvent,
+  makeMember,
+  makeSiteAdmin,
+  makeUser,
+  type UserRow,
+} from "test/factories";
 import { server } from "test/msw/server";
 
 import { pickIndex } from "./raffles";
@@ -579,6 +587,38 @@ describe("a raffle", () => {
     await call(router.attendees.raffles.claim, { drawId }, by(staff));
     await expect(call(router.attendees.raffles.claim, { drawId }, by(staff))).rejects.toMatchObject({
       code: "CONFLICT",
+    });
+  });
+
+  test("a new prize keeps the seed, so the draws so far still check out", async () => {
+    const { event, staff } = await hat();
+    const raffle = await call(router.attendees.raffles.create, { eventId: event.id, prize: "Remera" }, by(staff));
+    await call(router.attendees.raffles.draw, { raffleId: raffle.id }, by(staff));
+    const before = await listed(event.id, raffle.id, staff);
+
+    await call(router.attendees.raffles.update, { raffleId: raffle.id, prize: "Remera talle M" }, by(staff));
+    const after = await listed(event.id, raffle.id, staff);
+
+    expect(after).toMatchObject({ prize: "Remera talle M", seed: before?.seed, draws: before?.draws });
+  });
+
+  test("a deleted raffle goes with its draws; only site staff edit or delete one", async () => {
+    const { event, staff } = await hat();
+    const raffle = await call(router.attendees.raffles.create, { eventId: event.id, prize: "Taza" }, by(staff));
+    await call(router.attendees.raffles.draw, { raffleId: raffle.id }, by(staff));
+    const owner = await makeMember(event.communityId, "owner");
+
+    await expect(
+      call(router.attendees.raffles.update, { raffleId: raffle.id, prize: "Otra" }, by(owner))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.attendees.raffles.delete, { raffleId: raffle.id }, by(owner))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await call(router.attendees.raffles.delete, { raffleId: raffle.id }, by(staff));
+
+    await expect(listed(event.id, raffle.id, staff)).resolves.toBeUndefined();
+    await expect(call(router.attendees.raffles.draw, { raffleId: raffle.id }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
     });
   });
 
