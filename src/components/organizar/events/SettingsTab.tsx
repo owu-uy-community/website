@@ -161,7 +161,7 @@ export function SettingsTab({
                       value={String(form.guestsAllowed)}
                       onValueChange={(value) => set({ guestsAllowed: Number(value) })}
                     >
-                      <SelectTrigger aria-label="Acompañantes" className="w-36">
+                      <SelectTrigger aria-label="Acompañantes" className="w-44">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
