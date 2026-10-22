@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 
 import type { Room, Schedule, StickyNote } from "lib/orpc";
+import { RoomStatusBadge } from "components/Meetups/OpenSpace/atoms/RoomStatusBadge";
 import { StickyNoteCardKiosk } from "components/Meetups/OpenSpace/molecules/StickyNoteCardKiosk";
 import { roomIconFor } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
@@ -68,6 +69,7 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
               >
                 {room.name}
               </span>
+              <RoomStatusBadge status={room.status} />
             </div>
           );
         })}

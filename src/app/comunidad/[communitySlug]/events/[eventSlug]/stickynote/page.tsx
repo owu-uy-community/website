@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { ScreenBeacon } from "components/Admin/screens/ScreenBeacon";
 import StickyNoteDisplay from "components/displays/StickyNoteDisplay";
 import { getEventBySlugs } from "lib/tenant-server";
 
@@ -12,5 +13,10 @@ export default async function EventStickyNotePage({
   const resolved = await getEventBySlugs(communitySlug, eventSlug);
   if (!resolved) notFound();
 
-  return <StickyNoteDisplay eventId={resolved.event.id} />;
+  return (
+    <>
+      <ScreenBeacon eventId={resolved.event.id} />
+      <StickyNoteDisplay eventId={resolved.event.id} />
+    </>
+  );
 }
