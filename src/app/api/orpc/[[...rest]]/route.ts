@@ -1,3 +1,5 @@
+import { drainSoon } from "lib/email/outbox";
+import { later } from "lib/later";
 import { requestContext, rpcHandler } from "lib/orpc/handlers";
 
 /**
@@ -12,6 +14,9 @@ async function handle(request: Request) {
     prefix: "/api/orpc",
     context: () => requestContext(request.headers),
   });
+
+  // Email a procedure queued goes out right after the response, not at the next tick
+  later(drainSoon);
 
   return matched ? response : new Response("Not found", { status: 404 });
 }

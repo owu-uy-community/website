@@ -14,3 +14,9 @@ export const isHiddenPath = (pathname: string) =>
 
 /** While the flag is off, guides leave the blog index, the feed and the sitemap, and their pages 404 */
 export const isHiddenPost = (tags: readonly string[] = []) => !RESOURCES_ON && tags.includes("guias");
+
+/**
+ * Launch switch for Organizá (the organizer panel, Sumá tu espacio, RSVP): the code ships and the
+ * pages work, but the site only links to them once NEXT_PUBLIC_FLAG_ORGANIZAR is "1".
+ */
+export const ORGANIZAR_ON = ["1", "true"].includes(process.env.NEXT_PUBLIC_FLAG_ORGANIZAR ?? "");

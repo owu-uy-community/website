@@ -23,6 +23,7 @@ import {
   UserRoundCheck,
   Users,
   type LucideIcon,
+  Warehouse,
 } from "lucide-react";
 
 export type NavKey =
@@ -41,6 +42,7 @@ export type NavKey =
   | "mi-turno"
   | "sala"
   | "comunidades"
+  | "espacios"
   | "semanario"
   | "encuesta"
   | "ajustes";
@@ -226,6 +228,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/communities",
         icon: Building2,
         keywords: ["organizaciones", "eventos", "miembros"],
+      },
+      {
+        key: "espacios",
+        title: "Espacios",
+        href: "/admin/espacios",
+        icon: Warehouse,
+        keywords: ["venues", "empresas", "lugares", "hosts", "sumá tu espacio"],
       },
       {
         key: "semanario",

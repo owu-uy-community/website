@@ -12,6 +12,15 @@ export const AMENITY_LABEL: Record<z.infer<typeof AmenitySchema>, string> = {
   comida: "Se puede comer y tomar algo",
 };
 
+/** For chips and filters, where the full label doesn't fit */
+export const AMENITY_SHORT: Record<z.infer<typeof AmenitySchema>, string> = {
+  proyector: "Proyector",
+  microfono: "Micrófono",
+  wifi: "Wi-Fi",
+  accesible: "Accesible",
+  comida: "Comida",
+};
+
 const Weekdays = z.array(z.number().int().min(0).max(6)).max(7);
 
 /** A space as organizers see it: never its contacts, never the street address. */
