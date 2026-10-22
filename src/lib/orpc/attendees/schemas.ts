@@ -54,6 +54,9 @@ export const CheckinsSchema = z.object({
 
 export const RecentSchema = z.object({ eventId, limit: z.number().int().min(1).max(50).default(25) });
 
+/** A check-in that shouldn't have happened, taken back. */
+export const UndoCheckinSchema = z.object({ eventId, attendeeId: z.string().min(1) });
+
 export const ScanSchema = z.object({
   eventId,
   /** What the camera read (the ticket's barcode), or what was typed: a barcode or an Eventbrite attendee id. */

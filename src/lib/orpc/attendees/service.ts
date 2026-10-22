@@ -657,6 +657,48 @@ const scanTime = (scannedAt?: string) => {
 };
 
 /**
+ * A check-in that shouldn't have happened (the wrong ticket, a test): the attendee is back to
+ * «por llegar». OWU keeps the say over their presence from then on, so a later Eventbrite sync
+ * doesn't bring the check-in back; the scan itself stays in the history.
+ */
+export const undoCheckin = (input: { eventId: string; attendeeId: string }) =>
+  Effect.gen(function* () {
+    yield* transaction(
+      Effect.gen(function* () {
+        const [row] = yield* query((db) =>
+          db
+            .update(attendees)
+            .set({ checkedInAt: null, checkinSource: "owu", checkinDevice: null })
+            .where(
+              and(
+                eq(attendees.id, input.attendeeId),
+                eq(attendees.eventId, input.eventId),
+                isNotNull(attendees.checkedInAt)
+              )
+            )
+            .returning({ id: attendees.id, name: attendees.name })
+        );
+        if (!row) {
+          return yield* new NotFound({
+            entity: "attendee",
+            message: "Esa persona no figura acreditada en este evento",
+          });
+        }
+        yield* recordActivity({
+          eventId: input.eventId,
+          verb: "attendee.checkin_undone",
+          entityType: "attendee",
+          entityId: row.id,
+          summary: `deshizo la acreditación de ${row.name}`,
+        });
+      })
+    );
+    yield* opsPing(input.eventId, "checkins");
+
+    return { ok: true as const };
+  });
+
+/**
  * OWU's scanner at the door. The first valid scan of a ticket checks the person in (here only:
  * Eventbrite can't be told); later ones are repeats; every scan is kept. Idempotent by nonce,
  * and the attendee row is locked, so two phones reading one ticket at once let one person in.

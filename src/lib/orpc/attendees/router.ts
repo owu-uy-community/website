@@ -22,6 +22,7 @@ import {
   SetTagsSchema,
   SyncSchema,
   SyncStateSchema,
+  UndoCheckinSchema,
 } from "./schemas";
 import * as Attendees from "./service";
 
@@ -92,6 +93,15 @@ export const attendeesRouter = {
     .output(ScanResultSchema)
     .effect(function* ({ input }) {
       return yield* Attendees.scan(input);
+    }),
+
+  undoCheckin: authed
+    .meta(docs("Take back a check-in that shouldn't have happened; a later Eventbrite sync doesn't bring it back"))
+    .input(UndoCheckinSchema)
+    .use(inCommunity("admin"))
+    .output(ok)
+    .effect(function* ({ input }) {
+      return yield* Attendees.undoCheckin(input);
     }),
 
   raffles: {
