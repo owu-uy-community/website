@@ -20,6 +20,8 @@ const STATE_COOKIE = "eventbrite_oauth";
  */
 export async function GET(request: Request) {
   const communityId = new URL(request.url).searchParams.get("community") ?? "";
+  // Only from OWU's own pages: another site linking here can't swap in the admin's Eventbrite account
+  if (request.headers.get("sec-fetch-site") === "cross-site") return NextResponse.redirect(appUrl("/organizar/panel"));
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) {
     const next = `/api/integrations/eventbrite/connect?community=${encodeURIComponent(communityId)}`;

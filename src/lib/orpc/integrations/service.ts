@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { decrypt, encrypt } from "@orpc/server/helpers";
-import { and, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm";
 import { Effect, Result } from "effect";
 import * as z from "zod";
 
@@ -83,7 +83,8 @@ const api = <T = Record<string, unknown>>(
         method,
         headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
         cache: "no-store",
-        signal: AbortSignal.any([signal, AbortSignal.timeout(10_000)]),
+        // Generous: a create that answers after we gave up comes back as a duplicate on the retry
+        signal: AbortSignal.any([signal, AbortSignal.timeout(method === "GET" ? 10_000 : 30_000)]),
       };
       if (body) init.body = JSON.stringify(body);
       const response = await fetch(`${EVENTBRITE_API_URL}${path}`, init);
@@ -170,6 +171,8 @@ export const connect = (input: { communityId: string; userId: string; code: stri
 
     const previous = yield* connectionOf(input.communityId);
     if (previous?.webhookId) yield* dropWebhook(previous);
+    // Another account: what the old one published can't be managed from this one, and its data goes
+    if (previous && previous.organizationId !== organization.id) yield* wipe(previous);
     const webhookKey = randomBytes(24).toString("base64url");
     // Without a webhook (an http:// dev server, Eventbrite down) the 30 s read keeps the list current
     const hook = yield* Effect.result(
@@ -227,15 +230,23 @@ export const disconnect = Effect.gen(function* () {
   if (!connection) return { events: 0 };
   if (connection.webhookId) yield* dropWebhook(connection);
 
-  const linked = (yield* query((db) =>
-    db
-      .select({ eventId: eventPublications.eventId })
-      .from(eventPublications)
-      .where(eq(eventPublications.connectionId, connection.id))
-  )).map((row) => row.eventId);
+  return { events: yield* wipe(connection) };
+});
 
-  yield* transaction(
+/**
+ * Forget an account: its mirrored attendees (and with them their check-ins and raffle draws), the
+ * events' link to it, its publications and the connection itself. The events stay on Eventbrite.
+ */
+const wipe = (connection: IntegrationConnectionRow) =>
+  transaction(
     Effect.gen(function* () {
+      const linked = (yield* query((db) =>
+        db
+          .select({ eventId: eventPublications.eventId })
+          .from(eventPublications)
+          .where(eq(eventPublications.connectionId, connection.id))
+          .for("update")
+      )).map((row) => row.eventId);
       if (linked.length > 0) {
         yield* query((db) =>
           db.delete(attendees).where(and(inArray(attendees.eventId, linked), eq(attendees.source, "eventbrite")))
@@ -249,11 +260,10 @@ export const disconnect = Effect.gen(function* () {
         );
       }
       yield* query((db) => db.delete(integrationConnections).where(eq(integrationConnections.id, connection.id)));
+
+      return linked.length;
     })
   );
-
-  return { events: linked.length };
-});
 
 export const list = Effect.gen(function* () {
   const { communityId } = yield* CommunityScope;
@@ -309,8 +319,10 @@ let pushQueued = false;
 const EDIT_DELAY_MS = 60_000;
 
 /**
- * Queue a push for an event whose sign-up is on Eventbrite. Publishing one needs the community's
- * account (`required`); an edit after disconnecting just has nowhere to go.
+ * Queue a push for an event whose sign-up is on Eventbrite. Only publishing (`required`) creates a
+ * publication, and it needs the community's account; an edit or a cancel updates the one there is.
+ * After a disconnect there's none, so nothing makes a second listing of an event already on
+ * Eventbrite.
  */
 export const queuePush = (
   event: Pick<EventRow, "id" | "communityId" | "registration" | "status">,
@@ -327,18 +339,22 @@ export const queuePush = (
           : "Conectá Eventbrite en Integraciones para publicar ahí",
       });
     }
-    const due = { connectionId: connection.id, status: "pending" as const, attempts: 0, error: null };
     const nextAttemptAt = new Date(Date.now() + (now ? 0 : EDIT_DELAY_MS));
-    yield* query((db) =>
-      db
-        .insert(eventPublications)
-        .values({ eventId: event.id, platform: "eventbrite", nextAttemptAt, ...due })
-        .onConflictDoUpdate({
-          target: [eventPublications.eventId, eventPublications.platform],
-          // An edit only schedules a push (most change nothing Eventbrite shows); the rest start over
-          set: now ? { ...due, nextAttemptAt } : { connectionId: connection.id, nextAttemptAt },
-        })
-    );
+    // An edit only schedules a push (most change nothing Eventbrite shows); the rest start over
+    const due = now ? { status: "pending" as const, attempts: 0, error: null, nextAttemptAt } : { nextAttemptAt };
+    yield* required
+      ? query((db) =>
+          db
+            .insert(eventPublications)
+            .values({ eventId: event.id, platform: "eventbrite", connectionId: connection.id, ...due })
+            .onConflictDoUpdate({ target: [eventPublications.eventId, eventPublications.platform], set: due })
+        )
+      : query((db) =>
+          db
+            .update(eventPublications)
+            .set(due)
+            .where(and(eq(eventPublications.eventId, event.id), eq(eventPublications.connectionId, connection.id)))
+        );
     if (now) pushQueued = true;
   });
 
@@ -401,8 +417,13 @@ export function desiredOf(event: EventRow, venue: VenueRow | null, pageUrl: stri
     .map((block) => block.trim())
     .filter(Boolean)
     .map((block) => `<p>${esc(block).replaceAll("\n", "<br>")}</p>`);
+  // A host's street address only where the host made it public: the OWU page follows the same rule
   const place = venue
-    ? { name: venue.name, address: venue.address, city: venue.city }
+    ? {
+        name: venue.name,
+        address: venue.addressVisibility === "public" ? venue.address : venue.neighbourhood,
+        city: venue.city,
+      }
     : event.placeName
       ? { name: event.placeName, address: event.placeAddress ?? "", city: "Montevideo" }
       : null;
@@ -448,6 +469,7 @@ const push = ({ publication, connection, event, venue, communitySlug }: Target) 
     const token = yield* tokenOf(connection);
     const ids: PublicationIds = { ...publication.ids };
     let externalId = publication.externalId;
+    let externalUrl = publication.externalUrl;
     const keep = (patch: Partial<EventPublicationRow> = {}) =>
       query((db) =>
         db
@@ -460,7 +482,9 @@ const push = ({ publication, connection, event, venue, communitySlug }: Target) 
       if (!externalId || ids.cancelled) return hash;
       const cancelled = yield* Effect.result(api(token, "POST", `/events/${externalId}/cancel/`));
       if (Result.isFailure(cancelled)) {
-        if (statusOf(cancelled.failure) === 401) return yield* cancelled.failure;
+        // Only a refusal (it has orders) falls back; an outage or a bad token is retried as usual
+        const status = statusOf(cancelled.failure);
+        if (status < 400 || status >= 500 || status === 401 || status === 429) return yield* cancelled.failure;
         yield* api(token, "POST", `/events/${externalId}/`, {
           event: { name: { html: esc(`CANCELADO · ${want.name}`) } },
         });
@@ -519,12 +543,16 @@ const push = ({ publication, connection, event, venue, communitySlug }: Target) 
         body
       );
       externalId = created.id;
-      yield* keep({ externalId, externalUrl: created.url });
-      // The mirror, the scanner and the public page's "Inscribirme" follow the event from now on
+      externalUrl = created.url;
+      yield* keep({ externalId, externalUrl });
+    }
+    // The mirror, the scanner and the public page's "Inscribirme" follow the event (on every push,
+    // so a failure right after creating it can't leave them unlinked)
+    if (event.eventbriteEventId !== externalId || event.registrationUrl !== externalUrl) {
       yield* query((db) =>
         db
           .update(events)
-          .set({ eventbriteEventId: created.id, registrationUrl: created.url, updatedAt: sql`${events.updatedAt}` })
+          .set({ eventbriteEventId: externalId, registrationUrl: externalUrl, updatedAt: sql`${events.updatedAt}` })
           .where(eq(events.id, event.id))
       );
     }
@@ -569,21 +597,29 @@ const push = ({ publication, connection, event, venue, communitySlug }: Target) 
 
 /** Minutes between attempts; after the last one the publication waits for "Reintentar". */
 const BACKOFF_MIN = [1, 5, 30, 120];
-/** A claimed push holds its row this long: if the instance dies, the next tick takes it over. */
+/** A claimed push holds its row this long: if the instance dies, a later sweep takes it over. */
 const LEASE_MS = 5 * 60_000;
 
-const settle = (target: Target, lease: Date) =>
+const settle = (target: Target, claimedAt: Date) =>
   Effect.gen(function* () {
     const { publication } = target;
-    // An edit made while pushing moved `nextAttemptAt` off the lease: leave it queued
-    const clear = sql`case when ${eventPublications.nextAttemptAt} = ${lease} then null else ${eventPublications.nextAttemptAt} end`;
+    const id = eq(eventPublications.id, publication.id);
+    // Queued again while this push ran (an edit, a retry): `nextAttemptAt` moved past the claim
+    const untouched = or(isNull(eventPublications.nextAttemptAt), lte(eventPublications.nextAttemptAt, claimedAt));
     const outcome = yield* Effect.result(push(target));
     if (Result.isSuccess(outcome)) {
       yield* query((db) =>
         db
           .update(eventPublications)
-          .set({ status: "published", pushedHash: outcome.success, attempts: 0, error: null, nextAttemptAt: clear })
-          .where(eq(eventPublications.id, publication.id))
+          .set({
+            status: "published",
+            pushedHash: outcome.success,
+            attempts: 0,
+            error: null,
+            claimedAt: null,
+            nextAttemptAt: sql`case when ${untouched} then null else ${eventPublications.nextAttemptAt} end`,
+          })
+          .where(id)
       );
       if (!publication.externalId) refreshPage(eventPagePath(target.communitySlug, target.event.slug));
 
@@ -591,61 +627,70 @@ const settle = (target: Target, lease: Date) =>
     }
 
     const error = outcome.failure;
-    if (statusOf(error) === 401) {
-      const message = "Eventbrite rechazó la conexión: reconectala en Integraciones";
+    const rejected = statusOf(error) === 401;
+    const message = rejected
+      ? "Eventbrite rechazó la conexión: reconectala en Integraciones"
+      : error.message.slice(0, 500);
+    if (rejected) {
       yield* query((db) =>
         db
           .update(integrationConnections)
           .set({ status: "error", error: message })
           .where(eq(integrationConnections.id, target.connection.id))
       );
-      yield* query((db) =>
-        db
-          .update(eventPublications)
-          .set({ status: "failed", error: message, nextAttemptAt: clear })
-          .where(eq(eventPublications.id, publication.id))
-      );
-
-      return "failed" as const;
     }
-
     const attempts = publication.attempts + 1;
-    const giveUp = attempts >= BACKOFF_MIN.length;
-    yield* query((db) =>
+    const giveUp = rejected || attempts >= BACKOFF_MIN.length;
+    const [settled] = yield* query((db) =>
       db
         .update(eventPublications)
         .set({
           status: giveUp ? "failed" : "pending",
           attempts,
-          error: error.message.slice(0, 500),
+          error: message,
+          claimedAt: null,
           nextAttemptAt: giveUp ? null : new Date(Date.now() + BACKOFF_MIN[attempts - 1] * 60_000),
         })
-        .where(eq(eventPublications.id, publication.id))
+        .where(and(id, untouched))
+        .returning({ id: eventPublications.id })
     );
+    // Queued again meanwhile: that push goes as planned; only say what went wrong
+    if (!settled) {
+      yield* query((db) => db.update(eventPublications).set({ error: message, claimedAt: null }).where(id));
+    }
 
     return giveUp ? ("failed" as const) : ("retry" as const);
   });
 
 /**
- * Push every publication that's due, claiming each with a lease (FOR UPDATE SKIP LOCKED), so the
- * tick, the cron and the fast path never push the same one twice at once.
+ * Push every publication that's due. Each is claimed (FOR UPDATE SKIP LOCKED, then `claimedAt`)
+ * and stays claimed while it's pushed, whatever else queues it meanwhile, so the tick, the cron
+ * and the fast path never push the same one twice at once.
  */
 export const pushDue = ({ deadline }: { deadline: number }) =>
   Effect.gen(function* () {
     const tally = { pushed: 0, retry: 0, failed: 0 };
     while (Date.now() < deadline) {
-      const lease = new Date(Date.now() + LEASE_MS);
+      const claimedAt = new Date();
       const claimed = yield* query((db) => {
         const due = db
           .select({ id: eventPublications.id })
           .from(eventPublications)
-          .where(lte(eventPublications.nextAttemptAt, new Date()))
+          .where(
+            and(
+              lte(eventPublications.nextAttemptAt, claimedAt),
+              or(
+                isNull(eventPublications.claimedAt),
+                lt(eventPublications.claimedAt, new Date(claimedAt.getTime() - LEASE_MS))
+              )
+            )
+          )
           .limit(10)
           .for("update", { skipLocked: true });
 
         return db
           .update(eventPublications)
-          .set({ nextAttemptAt: lease })
+          .set({ claimedAt })
           .where(inArray(eventPublications.id, due))
           .returning({ id: eventPublications.id });
       });
@@ -672,7 +717,7 @@ export const pushDue = ({ deadline }: { deadline: number }) =>
             )
           )
       );
-      for (const target of targets) tally[yield* settle(target, lease)] += 1;
+      for (const target of targets) tally[yield* settle(target, claimedAt)] += 1;
     }
 
     return tally;
