@@ -234,6 +234,7 @@ export type RsvpEmailKind =
   | "declined"
   | "offer_expired"
   | "left"
+  | "removed"
   | "reminder_48h"
   | "reminder_2h"
   | "updated"
@@ -257,6 +258,8 @@ export function rsvpEmail(input: {
   offerUntil?: string | null;
   /** The post-event survey */
   surveyUrl?: string | null;
+  /** The organizers' note: the reminders carry it */
+  note?: string | null;
   /** Reminders and feedback can be turned off; the rest is essential */
   unsubscribeUrl?: string | null;
 }): Omit<Email, "to"> {
@@ -326,10 +329,16 @@ export function rsvpEmail(input: {
       lead: `Listo, liberaste tu lugar. ¡Gracias por avisar! Si cambiás de idea, podés volver a anotarte.`,
       action: ["Ver el evento", input.pageUrl],
     },
+    removed: {
+      subject: `Se canceló tu inscripción: ${input.event}`,
+      lead: `${input.community} canceló tu inscripción a ${input.event}. Si te parece un error, escribiles.`,
+      action: ["Ver el evento", input.pageUrl],
+    },
   };
   const { subject, lead, action } = copy[input.kind];
   const seat =
     input.kind === "confirmed" || input.kind === "promoted" || input.kind === "reminder_2h" || input.kind === "updated";
+  const note = (input.kind === "reminder_48h" || input.kind === "reminder_2h") && input.note ? input.note : null;
   const extra = [
     seat && input.onlineUrl ? `Link para conectarte: ${input.onlineUrl}` : "",
     seat ? "Si no podés ir, liberá tu lugar desde la entrada: alguien de la lista de espera lo aprovecha." : "",
@@ -342,6 +351,7 @@ export function rsvpEmail(input: {
       body: `<p style="margin:0 0 16px">${esc(hi)}</p>
 <p style="margin:0 0 16px">${esc(lead)}</p>
 <p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px"><strong>${esc(input.event)}</strong><br>${esc(facts)}</p>
+${note ? `<p style="margin:0 0 16px;padding:12px;border-left:3px solid #F5BB03;background:#fffbeb;white-space:pre-line"><strong>${esc(input.community)} te avisa:</strong><br>${esc(note)}</p>` : ""}
 ${seat && input.qrUrl ? `<p style="margin:0 0 16px;text-align:center"><img alt="Código QR de tu entrada" height="180" src="${esc(input.qrUrl)}" style="border-radius:8px" width="180"></p>` : ""}
 ${extra.map((line) => `<p style="margin:0 0 12px;color:#52525b">${esc(line)}</p>`).join("")}
 ${action ? `<p style="margin:8px 0 0">${button(action[1], action[0])}</p>` : ""}
@@ -351,6 +361,7 @@ ${input.unsubscribeUrl ? `<p style="margin:24px 0 0;font-size:12px;color:#a1a1aa
       hi,
       lead,
       `${input.event}\n${facts}`,
+      note ? `${input.community} te avisa: ${note}` : "",
       ...extra,
       action ? `${action[0]}: ${action[1]}` : "",
       input.unsubscribeUrl ? `Dejar de recibir recordatorios: ${input.unsubscribeUrl}` : "",
@@ -367,6 +378,8 @@ export function eventMessageEmail(input: {
   subject: string;
   body: string;
   pageUrl: string;
+  /** Like reminders, these can be turned off */
+  unsubscribeUrl: string;
 }): Omit<Email, "to"> {
   const paragraphs = input.body
     .split(/\n{2,}/)
@@ -378,9 +391,10 @@ export function eventMessageEmail(input: {
     html: layout({
       preheader: paragraphs[0] ?? input.subject,
       body: `${paragraphs.map((paragraph) => `<p style="margin:0 0 14px;white-space:pre-line">${esc(paragraph)}</p>`).join("")}
-<p style="margin:16px 0 0;color:#71717a;font-size:13px">${esc(input.community)}, por <a href="${esc(input.pageUrl)}" style="color:#71717a">${esc(input.event)}</a>.</p>`,
+<p style="margin:16px 0 0;color:#71717a;font-size:13px">${esc(input.community)}, por <a href="${esc(input.pageUrl)}" style="color:#71717a">${esc(input.event)}</a>.</p>
+<p style="margin:24px 0 0;font-size:12px;color:#a1a1aa">¿No querés recibir estos mails? <a href="${esc(input.unsubscribeUrl)}" style="color:#a1a1aa">Dejá de recibirlos</a>.</p>`,
     }),
-    text: `${paragraphs.join("\n\n")}\n\n${input.community}, por ${input.event}: ${input.pageUrl}`,
+    text: `${paragraphs.join("\n\n")}\n\n${input.community}, por ${input.event}: ${input.pageUrl}\n\nDejar de recibir estos mails: ${input.unsubscribeUrl}`,
   };
 }
 

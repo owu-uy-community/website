@@ -353,6 +353,10 @@ export const events = pgTable(
     /** A scheduled publish: the tick publishes the draft then, if who scheduled it still organizes it */
     publishAt: ts("publishAt"),
     publishById: text("publishById"),
+    /** The organizers' short note in the 48 h and 2 h reminders (how to get in, what to bring) */
+    reminderNote: text("reminderNote"),
+    /** Recordings, slides and links, shown on the public page once the event is over */
+    materials: jsonb("materials").$type<EventMaterial[]>().notNull().default([]),
     /** Bumped on every change attendees should hear about, so calendar invites update in place. */
     icsSequence: integer("icsSequence").notNull().default(0),
     /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
@@ -387,6 +391,7 @@ export type SizeBucket = "hasta-30" | "30-60" | "60-120" | "120+";
 export type EventTalk = { title: string; speaker: string };
 export type EventAnnouncement = { channels?: ("slack" | "telegram")[] };
 export type RsvpQuestion = { id: string; label: string; required: boolean };
+export type EventMaterial = { kind: "grabacion" | "slides" | "link"; title: string; url: string };
 
 /** @deprecated transition alias — use `events`. */
 export const openSpaces = events;

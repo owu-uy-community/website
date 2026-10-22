@@ -269,3 +269,82 @@ describe(forget, () => {
     await expect(statuses(event.id)).resolves.toContain("offered");
   });
 });
+
+describe("organizers", () => {
+  test("cancelling someone's seat tells them, takes back the invite and offers it to the next in line", async () => {
+    const { community, event } = await rsvpEvent({ capacity: 1 });
+    const admin = await makeMember(community.id, "admin");
+    const [ana, beto] = await people(2);
+    const seated = await join(event.id, ana);
+    await join(event.id, beto);
+
+    await expect(
+      call(
+        router.rsvps.cancelSpots,
+        { communityId: community.id, eventId: event.id, attendeeIds: [seated.id] },
+        by(admin)
+      )
+    ).resolves.toStrictEqual({ cancelled: 1 });
+
+    await expect(call(router.rsvps.mine, { eventId: event.id }, by(beto))).resolves.toMatchObject({
+      status: "offered",
+    });
+    const [told] = await mail(ana.email, "rsvp_removed");
+    expect(Buffer.from(told?.attachments[0]?.content ?? "", "base64").toString()).toContain("METHOD:CANCEL");
+    await expect(mail(beto.email, "rsvp_offered")).resolves.toHaveLength(1);
+  });
+
+  test("giving a seat takes an offer at once, and the waitlist only when it fits", async () => {
+    const { community, event } = await rsvpEvent({ capacity: 1 });
+    const admin = await makeMember(community.id, "admin");
+    const [ana, beto, caro] = await people(3);
+    await join(event.id, ana);
+    const waiting = await join(event.id, beto);
+    const later = await join(event.id, caro);
+    const give = (attendeeId: string) =>
+      call(router.rsvps.giveSeat, { communityId: community.id, eventId: event.id, attendeeId }, by(admin));
+
+    await expect(give(waiting.id)).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "full" } });
+    await call(router.rsvps.leave, { eventId: event.id }, by(ana));
+    await expect(give(waiting.id)).resolves.toMatchObject({ status: "attending" });
+    await expect(mail(beto.email, "rsvp_confirmed")).resolves.toHaveLength(1);
+    await expect(give(later.id)).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "full" } });
+  });
+
+  test("only the event's community admins act on people", async () => {
+    const { community, event } = await rsvpEvent();
+    const [editor, stranger] = await Promise.all([makeMember(community.id, "editor"), makeUser()]);
+    const other = await makeCommunity();
+    const otherAdmin = await makeMember(other.id, "admin");
+    const [ana] = await people(1);
+    const { id } = await join(event.id, ana);
+    const cancel = (actor: UserRow, communityId = community.id) =>
+      call(router.rsvps.cancelSpots, { communityId, eventId: event.id, attendeeIds: [id] }, by(actor));
+
+    await expect(cancel(editor)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(cancel(stranger)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(cancel(otherAdmin, other.id)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      call(router.rsvps.giveSeat, { communityId: community.id, eventId: event.id, attendeeId: id }, by(editor))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a test send gives the organizer each email of the cadence, marked, not counted, once a minute", async () => {
+    const { community, event } = await rsvpEvent({ reminderNote: "Entrada por la puerta lateral" });
+    const admin = await makeMember(community.id, "admin");
+    const input = { communityId: community.id, eventId: event.id };
+
+    await expect(call(router.rsvps.sendTest, input, by(admin))).resolves.toMatchObject({ sent: 4, to: admin.email });
+    await call(router.rsvps.sendTest, input, by(admin));
+
+    const sent = await db.select().from(emailDeliveries).where(eq(emailDeliveries.to, admin.email));
+    expect(sent.map((row) => row.kind).toSorted()).toStrictEqual(
+      ["rsvp_confirmed", "rsvp_feedback", "rsvp_reminder_2h", "rsvp_reminder_48h"].toSorted()
+    );
+    expect(sent.every((row) => row.subject.startsWith("[Prueba] "))).toBe(true);
+    expect(sent.find((row) => row.kind === "rsvp_reminder_48h")?.text).toContain("Entrada por la puerta lateral");
+    await expect(
+      call(router.events.stats, input, by(admin)).then((stats) => stats.emails.confirmed)
+    ).resolves.toStrictEqual({ sent: 0, queued: 0 });
+  });
+});

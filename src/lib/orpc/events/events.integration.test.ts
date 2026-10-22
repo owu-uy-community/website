@@ -5,7 +5,7 @@ import { Effect } from "effect";
 import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
-import { emailDeliveries, events } from "lib/db/schema";
+import { emailDeliveries, emailSuppressions, events } from "lib/db/schema";
 import { openApiHandler, requestContext } from "lib/orpc/handlers";
 import { router } from "lib/orpc/router";
 import { liveServices } from "lib/orpc/services";
@@ -191,5 +191,84 @@ describe("events.showUp", () => {
     await pastEvent(120).then((event) => makeRsvp(event.id));
 
     await expect(ask()).resolves.toStrictEqual({ rate: 0.5, events: 3 });
+  });
+});
+
+describe("the event dashboard", () => {
+  test("writing to people carries a one-click unsubscribe and skips whoever turned emails off", async () => {
+    const community = await makeCommunity();
+    const admin = await makeMember(community.id, "admin");
+    const event = await makeEvent(community.id, { status: "published", registration: "owu" });
+    const [ana, beto, caro] = await Promise.all([makeRsvp(event.id), makeRsvp(event.id), makeRsvp(event.id)]);
+    await db.insert(emailSuppressions).values({ email: beto.email.toLowerCase() });
+    const write = (extra: object) =>
+      call(
+        router.events.message,
+        {
+          communityId: community.id,
+          eventId: event.id,
+          to: ["attending"],
+          subject: "Cambio de sala",
+          body: "Nos vemos en la sala 2.",
+          ...extra,
+        },
+        by(admin)
+      );
+
+    await expect(write({})).resolves.toStrictEqual({ sent: 2 });
+    await expect(write({ ids: [caro.id], body: "Solo para vos, gracias." })).resolves.toStrictEqual({ sent: 1 });
+
+    const [toAna] = await mailTo(ana.email, "event_message");
+    expect(toAna?.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
+    await expect(mailTo(beto.email, "event_message")).resolves.toHaveLength(0);
+    await expect(mailTo(caro.email, "event_message")).resolves.toHaveLength(2);
+  });
+
+  test("stats draw the seats over time and know when a door link is out", async () => {
+    const community = await makeCommunity();
+    const admin = await makeMember(community.id, "admin");
+    const event = await makeEvent(community.id, {
+      status: "published",
+      registration: "owu",
+      capacity: 10,
+      startDate: new Date(Date.now() + 5 * DAY_MS),
+      endDate: new Date(Date.now() + 5 * DAY_MS + 7_200_000),
+    });
+    await makeRsvp(event.id, { registeredAt: new Date(Date.now() - 40 * DAY_MS) });
+    await makeRsvp(event.id, { registeredAt: new Date(Date.now() - DAY_MS), guests: 1 });
+    await makeRsvp(event.id, { status: "waitlisted" });
+    const input = { communityId: community.id, eventId: event.id };
+
+    const before = await call(router.events.stats, input, by(admin));
+    expect(before.series).toHaveLength(30);
+    expect(before.series.map((point) => point.total).slice(-3)).toStrictEqual([1, 3, 3]);
+    expect(before.doorLink).toBe(false);
+    await call(router.events.doorLink, input, by(admin));
+    await expect(call(router.events.stats, input, by(admin))).resolves.toMatchObject({ doorLink: true });
+  });
+
+  test("materials save as https links and show on the public page", async () => {
+    const community = await makeCommunity();
+    const editor = await makeMember(community.id, "editor");
+    const event = await makeEvent(community.id, { status: "published" });
+    const input = { communityId: community.id, eventId: event.id };
+    const { updatedAt } = await call(router.events.get, input, by(editor));
+    const save = (url: string, expectedUpdatedAt: string) =>
+      call(
+        router.events.save,
+        { ...input, expectedUpdatedAt, patch: { materials: [{ kind: "grabacion", title: "La charla", url }] } },
+        by(editor)
+      );
+
+    await expect(save("http://youtu.be/x", updatedAt)).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await save("https://youtu.be/x", updatedAt);
+
+    await expect(
+      call(router.events.public, { communitySlug: community.slug, eventSlug: event.slug }, by(null))
+    ).resolves.toMatchObject({ materials: [{ kind: "grabacion", title: "La charla", url: "https://youtu.be/x" }] });
+    await expect(save("https://youtu.be/y", updatedAt)).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "stale" },
+    });
   });
 });

@@ -21,6 +21,15 @@ export const ReviewSchema = z.object({
   decision: z.enum(["approve", "decline"]),
 });
 
+/** An organizer acting on one person of their event */
+export const SeatSchema = ReviewSchema.omit({ decision: true });
+
+export const CancelSpotsSchema = SeatSchema.omit({ attendeeId: true }).extend({
+  attendeeIds: z.array(z.string().min(1)).min(1).max(200),
+});
+
+export const TestEmailsSchema = SeatSchema.omit({ attendeeId: true });
+
 /** Someone's place in an event, as they see it. The code, address and online link only with a seat. */
 export const MyRsvpSchema = z.object({
   id: z.string(),

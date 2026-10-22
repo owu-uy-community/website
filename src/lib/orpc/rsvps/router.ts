@@ -5,12 +5,15 @@ import * as z from "zod";
 import { authed, inCommunity, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
 import {
+  CancelSpotsSchema,
   JoinSchema,
   MyEventSchema,
   MyRsvpSchema,
   ReviewSchema,
   RsvpEventSchema,
   RsvpTokenSchema,
+  SeatSchema,
+  TestEmailsSchema,
   TicketSchema,
 } from "./schemas";
 import * as Rsvps from "./service";
@@ -111,5 +114,32 @@ export const rsvpsRouter = {
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
       return yield* Rsvps.review(input);
+    }),
+
+  giveSeat: authed
+    .meta(docs("Give someone waiting (an offer, or the waitlist when it fits) their seat now"))
+    .input(SeatSchema)
+    .use(inCommunity("admin"))
+    .output(MyRsvpSchema)
+    .effect(function* ({ input }) {
+      return yield* Rsvps.giveSeat(input);
+    }),
+
+  cancelSpots: authed
+    .meta(docs("Cancel people's places; each is told, and the freed seats go to the next in line"))
+    .input(CancelSpotsSchema)
+    .use(inCommunity("admin"))
+    .output(z.object({ cancelled: z.number() }))
+    .effect(function* ({ input }) {
+      return yield* Rsvps.cancelSpots(input);
+    }),
+
+  sendTest: authed
+    .meta(docs("Every automatic email of the event to the organizer asking, marked [Prueba]"))
+    .input(TestEmailsSchema)
+    .use(inCommunity("admin"))
+    .output(z.object({ sent: z.number(), to: z.string() }))
+    .effect(function* ({ input }) {
+      return yield* Rsvps.sendTest(input.eventId);
     }),
 };

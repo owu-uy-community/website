@@ -220,6 +220,8 @@ ALTER TABLE "open_spaces" ADD COLUMN "guestsAllowed" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "rsvpClosesAt" timestamp (3);
 ALTER TABLE "open_spaces" ADD COLUMN "questions" jsonb DEFAULT '[]'::jsonb NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "externalLinks" jsonb DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "reminderNote" text;
+ALTER TABLE "open_spaces" ADD COLUMN "materials" jsonb DEFAULT '[]'::jsonb NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "icsSequence" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "notifiedSequence" integer DEFAULT 0 NOT NULL;
 ALTER TABLE "open_spaces" ADD COLUMN "doorVersion" integer DEFAULT 0 NOT NULL;

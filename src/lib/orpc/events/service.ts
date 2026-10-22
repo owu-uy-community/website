@@ -5,9 +5,11 @@ import { Effect, Option } from "effect";
 
 import { similarity } from "../../calendar/score";
 import {
+  activity,
   attendees,
   communities,
   communityMembers,
+  emailDeliveries,
   events,
   outboundMessages,
   schedules,
@@ -32,7 +34,7 @@ import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { memberRole, ROLE_RANK } from "../scope";
-import { notifyCancelled, seatsChanged } from "../rsvps/service";
+import { notifyCancelled, optionalMail, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
 
@@ -360,6 +362,8 @@ const editableOf = (eventId: string) =>
       announcement: event.announcement,
       announceChannels: { slack: owyChannels().slack, telegram: owyChannels().telegram },
       publishAt: event.publishAt?.toISOString() ?? null,
+      reminderNote: event.reminderNote,
+      materials: event.materials,
       cohosts: yield* cohostsOf(event.id),
     } satisfies EditableEvent;
   });
@@ -872,6 +876,7 @@ const toPublic = (eventId: string) =>
       community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
       cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
+      materials: event.materials,
       going: (yield* query((db) =>
         db
           .select({ name: attendees.name })
@@ -926,17 +931,75 @@ export const preview = (eventId: string) =>
 // The event dashboard
 // ---------------------------------------------------------------------------
 
+/** The emails the cadence sends on its own, as the outbox names them */
+const CADENCE_KINDS = ["confirmed", "reminder_48h", "reminder_2h", "feedback"] as const;
+
+/**
+ * Seats taken at the end of each of the last 30 days up to `end` (with +1s), counting who has a
+ * seat now by the day they signed up; earlier sign-ups start the curve.
+ */
+const seatSeries = (rows: { registeredAt: Date | null; guests: number }[], end: Date) => {
+  const days = Array.from({ length: 30 }, (_, index) => dayKey(new Date(end.getTime() - (29 - index) * DAY_MS)));
+  const counts = new Map<string, number>();
+  let running = 0;
+  for (const row of rows) {
+    if (!row.registeredAt) continue;
+    const key = dayKey(row.registeredAt);
+    if (key < days[0]) running += 1 + row.guests;
+    else counts.set(key, (counts.get(key) ?? 0) + 1 + row.guests);
+  }
+
+  return days.map((day) => ({ day, total: (running += counts.get(day) ?? 0) }));
+};
+
 /** Counts for the dashboard: how many, never who (that's the attendee list, for admins). */
 export const stats = (eventId: string) =>
   Effect.gen(function* () {
     const { communityId } = yield* CommunityScope;
     const [event] = yield* query((db) =>
       db
-        .select({ capacity: events.capacity })
+        .select({ capacity: events.capacity, startDate: events.startDate })
         .from(events)
         .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
     );
     if (!event) return yield* notFound;
+    const seated = yield* query((db) =>
+      db
+        .select({ registeredAt: attendees.registeredAt, guests: attendees.guests })
+        .from(attendees)
+        .where(and(eq(attendees.eventId, eventId), inArray(attendees.status, ["attending", "offered"])))
+    );
+    // The outbox keys every attendee's email `kind:attendeeId:…`; an organizer's test isn't counted
+    const mail = yield* query((db) =>
+      db
+        .select({
+          kind: emailDeliveries.kind,
+          sent: sql<number>`count(*) filter (where ${emailDeliveries.status} = 'sent')`.mapWith(Number),
+          queued: sql<number>`count(*) filter (where ${emailDeliveries.status} in ('queued', 'sending'))`.mapWith(
+            Number
+          ),
+        })
+        .from(emailDeliveries)
+        .innerJoin(attendees, eq(attendees.id, sql`split_part(${emailDeliveries.dedupeKey}, ':', 2)`))
+        .where(
+          and(
+            eq(attendees.eventId, eventId),
+            inArray(
+              emailDeliveries.kind,
+              CADENCE_KINDS.map((kind) => `rsvp_${kind}`)
+            )
+          )
+        )
+        .groupBy(emailDeliveries.kind)
+    );
+    const [door] = yield* query((db) =>
+      db
+        .select({ verb: activity.verb })
+        .from(activity)
+        .where(and(eq(activity.eventId, eventId), inArray(activity.verb, ["door.linked", "door.revoked"])))
+        .orderBy(desc(activity.createdAt))
+        .limit(1)
+    );
     const [row] = yield* query((db) =>
       db
         .select({
@@ -962,6 +1025,14 @@ export const stats = (eventId: string) =>
     return {
       capacity: event.capacity,
       ...(row ?? { taken: 0, attending: 0, waiting: 0, pending: 0, cancelled: 0, checkedIn: 0 }),
+      series: seatSeries(seated, new Date(Math.min(Date.now(), event.startDate.getTime()))),
+      emails: Object.fromEntries(
+        CADENCE_KINDS.map((kind) => {
+          const counted = mail.find((entry) => entry.kind === `rsvp_${kind}`);
+          return [kind, { sent: counted?.sent ?? 0, queued: counted?.queued ?? 0 }];
+        })
+      ) as Record<(typeof CADENCE_KINDS)[number], { sent: number; queued: number }>,
+      doorLink: door?.verb === "door.linked",
     };
   });
 
@@ -975,6 +1046,7 @@ const MESSAGE_STATUSES = {
 export const message = (input: {
   eventId: string;
   to: ("attending" | "waiting" | "pending")[];
+  ids?: string[];
   subject: string;
   body: string;
 }) =>
@@ -988,36 +1060,48 @@ export const message = (input: {
         db
           .select({ id: attendees.id, email: attendees.email })
           .from(attendees)
-          .where(and(eq(attendees.eventId, input.eventId), inArray(attendees.status, statuses)))
+          .where(
+            and(
+              eq(attendees.eventId, input.eventId),
+              inArray(attendees.status, statuses),
+              input.ids ? inArray(attendees.id, input.ids) : undefined
+            )
+          )
       );
       const [community] = yield* query((db) =>
         db.select({ name: communities.name }).from(communities).where(eq(communities.id, communityId))
       );
       const fingerprint = createHash("sha256").update(`${input.subject}\n${input.body}`).digest("hex").slice(0, 16);
-      const content = eventMessageEmail({
-        community: community?.name ?? "",
-        event: event.name,
-        subject: input.subject,
-        body: input.body,
-        pageUrl: appUrl(eventPagePath(event.communitySlug, event.slug)),
-      });
+      let sent = 0;
       for (const person of people.filter((row) => row.email)) {
+        // Whoever turned off reminders doesn't get these either; the rest can, in one click
+        const optOut = yield* optionalMail(person.email);
+        if (!optOut) continue;
         yield* enqueueEmail({
           kind: "event_message",
           to: person.email,
           dedupeKey: `event_message:${input.eventId}:${fingerprint}:${person.id}`,
-          ...content,
+          headers: optOut.headers,
+          ...eventMessageEmail({
+            community: community?.name ?? "",
+            event: event.name,
+            subject: input.subject,
+            body: input.body,
+            pageUrl: appUrl(eventPagePath(event.communitySlug, event.slug)),
+            unsubscribeUrl: optOut.url,
+          }),
         });
+        sent += 1;
       }
       yield* recordActivity({
         eventId: input.eventId,
         verb: "event.messaged",
         entityType: "event",
         entityId: input.eventId,
-        summary: `escribió a ${people.length} ${people.length === 1 ? "persona" : "personas"}: «${input.subject}»`,
+        summary: `escribió a ${sent} ${sent === 1 ? "persona" : "personas"}: «${input.subject}»`,
       });
 
-      return { sent: people.length };
+      return { sent };
     })
   );
 
