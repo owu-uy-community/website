@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { Effect, Result } from "effect";
+import { Effect, Option, Result } from "effect";
 
 import { attendeeScans, attendeeSync, attendees, events, type AttendeeRow, type AttendeeStatus } from "../../db/schema";
 import { query, transaction } from "../db";
@@ -683,7 +683,8 @@ export const undoCheckin = (input: { eventId: string; attendeeId: string }) =>
 export const scan = (input: ScanInput) =>
   Effect.gen(function* () {
     if (yield* scanByNonce(input.nonce)) return yield* replay(input.eventId, input.nonce);
-    const me = yield* CurrentUser;
+    // Staff and members scan signed in; a volunteer's door link has no account behind it
+    const me = Option.getOrNull(yield* Effect.serviceOption(CurrentUser));
     const scannedAt = scanTime(input.scannedAt);
     const device = input.device || "Escáner OWU";
 
@@ -726,7 +727,7 @@ export const scan = (input: ScanInput) =>
             code: input.code,
             result,
             device,
-            userId: me.id,
+            userId: me?.id ?? null,
             nonce: input.nonce,
             scannedAt,
           })

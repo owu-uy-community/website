@@ -344,6 +344,8 @@ export const events = pgTable(
     icsSequence: integer("icsSequence").notNull().default(0),
     /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
     notifiedSequence: integer("notifiedSequence").notNull().default(0),
+    /** Volunteer door links carry it: bumping it revokes every link handed out */
+    doorVersion: integer("doorVersion").notNull().default(0),
     publishedAt: ts("publishedAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")

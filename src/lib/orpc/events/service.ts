@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { and, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
@@ -13,7 +15,7 @@ import {
   type EventRow,
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
-import { conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
+import { appUrl, conflictHeadsUpEmail, eventMessageEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { issues, UNTITLED } from "../../organizar/steps";
 import { eventPagePath, refreshPage } from "../../revalidate";
@@ -687,3 +689,102 @@ export const preview = (eventId: string) =>
 
     return yield* toPublic(eventId);
   });
+
+// ---------------------------------------------------------------------------
+// The event dashboard
+// ---------------------------------------------------------------------------
+
+/** Counts for the dashboard: how many, never who (that's the attendee list, for admins). */
+export const stats = (eventId: string) =>
+  Effect.gen(function* () {
+    const { communityId } = yield* CommunityScope;
+    const [event] = yield* query((db) =>
+      db
+        .select({ capacity: events.capacity })
+        .from(events)
+        .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
+    );
+    if (!event) return yield* notFound;
+    const [row] = yield* query((db) =>
+      db
+        .select({
+          taken:
+            sql<number>`coalesce(sum(1 + ${attendees.guests}) filter (where ${attendees.status} in ('attending', 'offered')), 0)`.mapWith(
+              Number
+            ),
+          attending: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+          waiting: sql<number>`count(*) filter (where ${attendees.status} in ('waitlisted', 'offered'))`.mapWith(
+            Number
+          ),
+          pending: sql<number>`count(*) filter (where ${attendees.status} = 'pending')`.mapWith(Number),
+          cancelled:
+            sql<number>`count(*) filter (where ${attendees.status} in ('cancelled', 'refunded', 'declined'))`.mapWith(
+              Number
+            ),
+          checkedIn: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
+        })
+        .from(attendees)
+        .where(eq(attendees.eventId, eventId))
+    );
+
+    return {
+      capacity: event.capacity,
+      ...(row ?? { taken: 0, attending: 0, waiting: 0, pending: 0, cancelled: 0, checkedIn: 0 }),
+    };
+  });
+
+const MESSAGE_STATUSES = {
+  attending: ["attending"],
+  waiting: ["waitlisted", "offered"],
+  pending: ["pending"],
+} as const;
+
+/** Write to the event's people (by where they stand). Each gets it once, whoever clicks twice. */
+export const message = (input: {
+  eventId: string;
+  to: ("attending" | "waiting" | "pending")[];
+  subject: string;
+  body: string;
+}) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const event = yield* editableOf(input.eventId);
+      if (!(yield* belongs(input.eventId, communityId))) return yield* notFound;
+      const statuses = input.to.flatMap((key) => MESSAGE_STATUSES[key]);
+      const people = yield* query((db) =>
+        db
+          .select({ id: attendees.id, email: attendees.email })
+          .from(attendees)
+          .where(and(eq(attendees.eventId, input.eventId), inArray(attendees.status, statuses)))
+      );
+      const [community] = yield* query((db) =>
+        db.select({ name: communities.name }).from(communities).where(eq(communities.id, communityId))
+      );
+      const fingerprint = createHash("sha256").update(`${input.subject}\n${input.body}`).digest("hex").slice(0, 16);
+      const content = eventMessageEmail({
+        community: community?.name ?? "",
+        event: event.name,
+        subject: input.subject,
+        body: input.body,
+        pageUrl: appUrl(eventPagePath(event.communitySlug, event.slug)),
+      });
+      for (const person of people.filter((row) => row.email)) {
+        yield* enqueueEmail({
+          kind: "event_message",
+          to: person.email,
+          dedupeKey: `event_message:${input.eventId}:${fingerprint}:${person.id}`,
+          ...content,
+        });
+      }
+      yield* recordActivity({
+        eventId: input.eventId,
+        verb: "event.messaged",
+        entityType: "event",
+        entityId: input.eventId,
+        summary: `escribió a ${people.length} ${people.length === 1 ? "persona" : "personas"}: «${input.subject}»`,
+      });
+
+      return { sent: people.length };
+    })
+  );

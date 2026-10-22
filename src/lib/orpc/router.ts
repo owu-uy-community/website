@@ -9,6 +9,7 @@ import { companionRouter } from "./companion/router";
 import { confRouter } from "./conf/router";
 import { countdownRouter } from "./countdown/router";
 import { dashboardRouter } from "./dashboard/router";
+import { doorRouter } from "./door/router";
 import { eventbriteRouter } from "./eventbrite/router";
 import { eventsRouter } from "./events/router";
 import { incidentsRouter } from "./incidents/router";
@@ -52,6 +53,7 @@ export const router = {
   events: eventsRouter,
   venues: venuesRouter,
   rsvps: rsvpsRouter,
+  door: doorRouter,
   staffTasks: staffTasksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall

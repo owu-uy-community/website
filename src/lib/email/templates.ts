@@ -359,3 +359,27 @@ ${input.unsubscribeUrl ? `<p style="margin:24px 0 0;font-size:12px;color:#a1a1aa
       .join("\n\n"),
   };
 }
+
+/** An organizer writing to the people of their event. Their text is escaped and kept as paragraphs. */
+export function eventMessageEmail(input: {
+  community: string;
+  event: string;
+  subject: string;
+  body: string;
+  pageUrl: string;
+}): Omit<Email, "to"> {
+  const paragraphs = input.body
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
+
+  return {
+    subject: `${input.subject} · ${input.event}`,
+    html: layout({
+      preheader: paragraphs[0] ?? input.subject,
+      body: `${paragraphs.map((paragraph) => `<p style="margin:0 0 14px;white-space:pre-line">${esc(paragraph)}</p>`).join("")}
+<p style="margin:16px 0 0;color:#71717a;font-size:13px">${esc(input.community)}, por <a href="${esc(input.pageUrl)}" style="color:#71717a">${esc(input.event)}</a>.</p>`,
+    }),
+    text: `${paragraphs.join("\n\n")}\n\n${input.community}, por ${input.event}: ${input.pageUrl}`,
+  };
+}

@@ -285,8 +285,12 @@ describe("the Eventbrite mirror", () => {
     ]);
   });
 
-  test("the attendee API is for site staff only", async () => {
+  test("people's data is for the community's admins; the door, for any member; outsiders get nothing", async () => {
     const { event } = await mirroredEvent();
+    const [admin, member] = await Promise.all([
+      makeMember(event.communityId, "admin"),
+      makeMember(event.communityId, "member"),
+    ]);
 
     await expect(call(router.attendees.sync, { eventId: event.id }, by(await makeUser()))).rejects.toMatchObject({
       code: "FORBIDDEN",
@@ -294,6 +298,11 @@ describe("the Eventbrite mirror", () => {
     await expect(call(router.attendees.list, { eventId: event.id }, by(null))).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
+    await expect(call(router.attendees.list, { eventId: event.id }, by(member))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(call(router.attendees.list, { eventId: event.id }, by(admin))).resolves.toMatchObject({ page: 1 });
+    await expect(call(router.attendees.recent, { eventId: event.id }, by(member))).resolves.toStrictEqual([]);
   });
 });
 
