@@ -189,3 +189,27 @@ export const PublicEventSchema = z.object({
 export const EventBySlugSchema = z.object({ communitySlug: z.string().min(1), eventSlug: z.string().min(1) });
 
 export type PublicEvent = z.infer<typeof PublicEventSchema>;
+
+// ---------------------------------------------------------------------------
+// The event dashboard
+// ---------------------------------------------------------------------------
+
+export const EventStatsSchema = z.object({
+  capacity: z.number().nullable(),
+  /** Seats taken, with +1s */
+  taken: z.number(),
+  attending: z.number(),
+  waiting: z.number(),
+  pending: z.number(),
+  cancelled: z.number(),
+  checkedIn: z.number(),
+});
+
+export const MessageSchema = z.object({
+  communityId: z.string().min(1),
+  eventId: z.string().min(1),
+  /** Who gets it, by where they stand */
+  to: z.array(z.enum(["attending", "waiting", "pending"])).min(1),
+  subject: z.string().trim().min(3).max(120),
+  body: z.string().trim().min(10).max(5000),
+});

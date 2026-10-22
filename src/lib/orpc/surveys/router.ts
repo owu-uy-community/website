@@ -2,7 +2,7 @@ import { openapi } from "@orpc/openapi";
 import { ratelimit } from "@orpc/ratelimit";
 import * as z from "zod";
 
-import { pub, staff } from "../base";
+import { authed, inCommunity, pub } from "../base";
 import { limiter } from "../ratelimit";
 import {
   PublicSurveyInputSchema,
@@ -28,27 +28,31 @@ const phoneLimit = ratelimit({
   key: (_options, input: RespondInput) => input.respondent,
 });
 
-// The post-event survey: site staff write it and read the results; phones answer it.
+// The post-event survey: the event's organizers (editor and up) write it and read the results;
+// phones answer it.
 export const surveysRouter = {
-  get: staff
+  get: authed
     .meta(docs("The event's survey with its response count, or null"))
     .input(SurveyEventSchema)
+    .use(inCommunity("editor"))
     .output(SurveySchema.nullable())
     .effect(function* ({ input }) {
       return yield* Surveys.getSurvey(input.eventId);
     }),
 
-  upsert: staff
+  upsert: authed
     .meta(docs("Create the survey (default questions for what isn't sent) or change it"))
     .input(UpsertSurveySchema)
+    .use(inCommunity("editor"))
     .output(SurveySchema)
     .effect(function* ({ input }) {
       return yield* Surveys.upsertSurvey(input);
     }),
 
-  results: staff
+  results: authed
     .meta(docs("NPS, averages, choice counts, the latest comments and the per-room breakdown"))
     .input(SurveyEventSchema)
+    .use(inCommunity("editor"))
     .output(SurveyResultsSchema.nullable())
     .effect(function* ({ input }) {
       return yield* Surveys.results(input.eventId);

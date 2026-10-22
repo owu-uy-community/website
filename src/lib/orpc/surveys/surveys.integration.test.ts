@@ -40,12 +40,18 @@ describe("writing the survey", () => {
     ).resolves.toBeNull();
   });
 
-  test("only site staff write it or read its results", async () => {
+  test("the event's organizers write it and read its results; members and strangers don't", async () => {
     const { eventId, community } = await setup();
-    const owner = await makeMember(community.id, "owner");
+    const [editor, member] = await Promise.all([
+      makeMember(community.id, "editor"),
+      makeMember(community.id, "member"),
+    ]);
 
-    await expect(call(router.surveys.upsert, { eventId, isOpen: true }, by(owner))).rejects.toMatchObject({
+    await expect(call(router.surveys.upsert, { eventId, isOpen: true }, by(member))).rejects.toMatchObject({
       code: "FORBIDDEN",
+    });
+    await expect(call(router.surveys.upsert, { eventId, isOpen: true }, by(editor))).resolves.toMatchObject({
+      isOpen: true,
     });
     await expect(call(router.surveys.results, { eventId }, by(null))).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });

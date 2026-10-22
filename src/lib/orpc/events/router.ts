@@ -1,24 +1,36 @@
 import { openapi } from "@orpc/openapi";
+import { ratelimit } from "@orpc/ratelimit";
 import * as z from "zod";
 
-import { authed, inCommunity, pub } from "../base";
+import { authed, inCommunity, pub, type AuthedContext } from "../base";
+import { limiter } from "../ratelimit";
 import {
   CancelEventSchema,
   CreateDraftSchema,
   EditableEventSchema,
   EventBySlugSchema,
   EventRefSchema,
+  EventStatsSchema,
   HoldResultSchema,
   HoldSchema,
   ListEventsSchema,
+  MessageSchema,
   OrganizerEventSchema,
   PublicEventSchema,
   PublishResultSchema,
   SaveEventSchema,
 } from "./schemas";
+import * as Door from "../door/service";
+import { DoorLinkSchema } from "../door/schemas";
 import * as Events from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Organizer events"], summary });
+
+/** Writing to everyone signed up is for real news: ten a day per organizer. */
+const messageLimit = ratelimit({
+  limiter: limiter({ prefix: "event-message:", maxRequests: 10, window: 86_400_000 }),
+  key: ({ context }: { context: AuthedContext }) => context.user.id,
+});
 
 /** Events as the organizer panel handles them: drafts, date holds, publishing. */
 export const eventsRouter = {
@@ -109,6 +121,43 @@ export const eventsRouter = {
     .output(PublicEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.preview(input.eventId);
+    }),
+
+  stats: authed
+    .meta(docs("How many signed up, wait, came: counts only"))
+    .input(EventRefSchema)
+    .use(inCommunity("editor"))
+    .output(EventStatsSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.stats(input.eventId);
+    }),
+
+  message: authed
+    .meta(docs("Write to the event's people, by where they stand"))
+    .input(MessageSchema)
+    .use(inCommunity("admin"))
+    .use(messageLimit)
+    .output(z.object({ sent: z.number() }))
+    .effect(function* ({ input }) {
+      return yield* Events.message(input);
+    }),
+
+  doorLink: authed
+    .meta(docs("A link for the volunteers at the door: no account, valid until the night of the event"))
+    .input(EventRefSchema)
+    .use(inCommunity("admin"))
+    .output(DoorLinkSchema)
+    .effect(function* ({ input }) {
+      return yield* Door.link(input.eventId);
+    }),
+
+  revokeDoor: authed
+    .meta(docs("Make every door link handed out stop working"))
+    .input(EventRefSchema)
+    .use(inCommunity("admin"))
+    .output(z.object({ ok: z.literal(true) }))
+    .effect(function* ({ input }) {
+      return yield* Door.revoke(input.eventId);
     }),
 
   remove: authed
