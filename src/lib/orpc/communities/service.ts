@@ -10,6 +10,8 @@ import {
   type CommunityClaimRow,
   type CommunityRow,
 } from "../../db/schema";
+import { enqueueEmail } from "../../email/outbox";
+import { claimDecidedEmail } from "../../email/templates";
 import { query, transaction } from "../db";
 import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
 import { memberRole } from "../scope";
@@ -453,10 +455,11 @@ export const decideClaim = (input: { claimId: string; decision: "approve" | "rej
       yield* lockCommunity(row.communityId);
 
       const status: CommunityClaimRow["status"] = input.decision === "approve" ? "approved" : "rejected";
+      const reviewedAt = new Date();
       yield* query((db) =>
         db
           .update(communityClaims)
-          .set({ status, reviewedById: reviewer.id, reviewedAt: new Date() })
+          .set({ status, reviewedById: reviewer.id, reviewedAt })
           .where(eq(communityClaims.id, row.id))
       );
 
@@ -473,6 +476,26 @@ export const decideClaim = (input: { claimId: string; decision: "approve" | "rej
             })
         );
         role = granted;
+      }
+      const [person] = yield* query((db) =>
+        db
+          .select({
+            name: user.name,
+            email: user.email,
+            communityName: communities.name,
+            communitySlug: communities.slug,
+          })
+          .from(user)
+          .innerJoin(communities, eq(communities.id, row.communityId))
+          .where(eq(user.id, row.userId))
+      );
+      if (person) {
+        yield* enqueueEmail({
+          kind: "claim_decided",
+          to: person.email,
+          dedupeKey: `claim_decided:${row.id}:${reviewedAt.getTime()}`,
+          ...claimDecidedEmail({ ...person, role }),
+        });
       }
       yield* recordActivity({
         eventId: null,

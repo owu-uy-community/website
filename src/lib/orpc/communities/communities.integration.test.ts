@@ -1,9 +1,9 @@
 import { call } from "@orpc/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
-import { communityMembers } from "lib/db/schema";
+import { communityMembers, emailDeliveries } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
 import { makeCommunity, makeEvent, makeMember, makeSiteAdmin, makeUser } from "test/factories";
@@ -418,6 +418,30 @@ describe("communities.claim", () => {
       { id: community.id, slug: community.slug, name: community.name, logoUrl: null, role: "owner" },
     ]);
     expect(mine.claims[0]).toMatchObject({ id: firstClaim.id, status: "approved" });
+  });
+
+  test("the organizer hears back by email, approved or not", async () => {
+    const [approved, rejected] = await Promise.all([
+      makeCommunity({ listed: true, name: "Rust Montevideo" }),
+      makeCommunity({ listed: true, name: "Go Uruguay" }),
+    ]);
+    const [organizer, staff] = await Promise.all([makeUser(), makeSiteAdmin()]);
+    const yes = await call(router.communities.claim, claimInput(approved.id), by(organizer));
+    const no = await call(router.communities.claim, claimInput(rejected.id), by(organizer));
+    await call(router.communities.claims.decide, { claimId: yes.id, decision: "approve" }, by(staff));
+    await call(router.communities.claims.decide, { claimId: no.id, decision: "reject" }, by(staff));
+
+    const mail = await db
+      .select()
+      .from(emailDeliveries)
+      .where(and(eq(emailDeliveries.kind, "claim_decided"), eq(emailDeliveries.to, organizer.email)))
+      .orderBy(emailDeliveries.createdAt);
+
+    expect(mail.map((row) => row.subject)).toStrictEqual([
+      "Ya organizás Rust Montevideo en OWU",
+      "Tu pedido para organizar Go Uruguay",
+    ]);
+    expect(mail[0].html).toContain(`/organizar/panel/${approved.slug}`);
   });
 
   test("a rejected claim can be sent again", async () => {
