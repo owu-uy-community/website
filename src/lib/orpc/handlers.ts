@@ -9,8 +9,9 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod";
 
 import { auth, type Session } from "app/lib/auth";
 
+import { can } from "../authz/principal";
 import { evlogOptions } from "../evlog";
-import type { BaseContext } from "./base";
+import { principalOf, type BaseContext } from "./base";
 import { router } from "./router";
 import { liveServices } from "./services";
 
@@ -18,13 +19,15 @@ import { liveServices } from "./services";
  * The initial context of one request. The session lookup runs at most once,
  * and only if a procedure asks for it. An API key Better Auth rejects
  * (unknown, disabled, rate-limited) makes it throw; that is "no session", so
- * the procedure answers 401/403 instead of crashing.
+ * the procedure answers 401/403 instead of crashing. It skips Better Auth's
+ * cookie cache: a revoked session must stop working on the next request.
  */
 export function requestContext(headers: Headers): BaseContext {
   let session: Promise<Session | null> | undefined;
 
   return {
-    getSession: () => (session ??= auth.api.getSession({ headers }).catch(() => null)),
+    getSession: () =>
+      (session ??= auth.api.getSession({ headers, query: { disableCookieCache: true } }).catch(() => null)),
     requestHeaders: headers,
     "effect/context": liveServices,
   };
@@ -49,7 +52,7 @@ export const openApiHandler = new OpenAPIHandler(router, {
     new OpenAPIReferenceHandlerPlugin({
       docsPath: "/docs",
       docsTitle: "OWU API",
-      allow: async ({ context }) => (await context.getSession())?.user.role === "admin",
+      allow: async ({ context }) => can(await principalOf(context), "insight:read"),
       spec: () =>
         generator.generate(router, {
           base: {

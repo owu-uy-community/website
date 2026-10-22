@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import {
   GetIssueSchema,
   IssueIdSchema,
@@ -31,14 +31,14 @@ export const semanarioRouter = {
       return yield* Semanario.getPublished(input.number);
     }),
 
-  listAll: staff
+  listAll: platform("semanario:read")
     .meta(docs("Every issue, drafts included (site staff)"))
     .output(z.array(SemanarioIssueSchema))
     .effect(function* () {
       return yield* Semanario.listAll;
     }),
 
-  saveDraft: staff
+  saveDraft: platform("semanario:write")
     .meta(docs("Owy's weekly draft: create or rewrite the week's issue while it is still a draft"))
     .input(SaveDraftSchema)
     .output(SemanarioIssueSchema)
@@ -46,7 +46,7 @@ export const semanarioRouter = {
       return yield* Semanario.saveDraft(input);
     }),
 
-  update: staff
+  update: platform("semanario:write")
     .meta(docs("Edit an issue's title, intro or sections"))
     .input(UpdateIssueSchema)
     .output(SemanarioIssueSchema)
@@ -54,7 +54,7 @@ export const semanarioRouter = {
       return yield* Semanario.updateIssue(input);
     }),
 
-  publish: staff
+  publish: platform("semanario:publish")
     .meta(docs("Publish an issue (a person, never a bot); the first publish gives it its number"))
     .input(IssueIdSchema)
     .output(SemanarioIssueSchema)
@@ -62,7 +62,7 @@ export const semanarioRouter = {
       return yield* Semanario.publish(input.id);
     }),
 
-  unpublish: staff
+  unpublish: platform("semanario:publish")
     .meta(docs("Take an issue back to draft; it keeps its number"))
     .input(IssueIdSchema)
     .output(SemanarioIssueSchema)

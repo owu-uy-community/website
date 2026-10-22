@@ -2,7 +2,7 @@ import { openapi } from "@orpc/openapi";
 import { ratelimit } from "@orpc/ratelimit";
 import * as z from "zod";
 
-import { authed, inCommunity, pub, staff } from "../base";
+import { authed, inCommunity, platform, pub } from "../base";
 import { limiter } from "../ratelimit";
 import {
   PublicSurveyInputSchema,
@@ -34,7 +34,7 @@ export const surveysRouter = {
   get: authed
     .meta(docs("The event's survey with its response count, or null"))
     .input(SurveyEventSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("survey:read"))
     .output(SurveySchema.nullable())
     .effect(function* ({ input }) {
       return yield* Surveys.getSurvey(input.eventId);
@@ -43,13 +43,13 @@ export const surveysRouter = {
   upsert: authed
     .meta(docs("Create the survey (default questions for what isn't sent) or change it"))
     .input(UpsertSurveySchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("survey:write"))
     .output(SurveySchema)
     .effect(function* ({ input }) {
       return yield* Surveys.upsertSurvey(input);
     }),
 
-  clearResponses: staff
+  clearResponses: platform("survey:delete")
     .meta(docs("Throw away the survey's answers (a test run) and keep its questions"))
     .input(SurveyEventSchema)
     .output(SurveySchema)
@@ -57,7 +57,7 @@ export const surveysRouter = {
       return yield* Surveys.clearResponses(input.eventId);
     }),
 
-  delete: staff
+  delete: platform("survey:delete")
     .meta(docs("Delete the event's survey with its answers"))
     .input(SurveyEventSchema)
     .output(z.object({ ok: z.literal(true) }))
@@ -68,7 +68,7 @@ export const surveysRouter = {
   results: authed
     .meta(docs("NPS, averages, choice counts, the latest comments and the per-room breakdown"))
     .input(SurveyEventSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("survey:read"))
     .output(SurveyResultsSchema.nullable())
     .effect(function* ({ input }) {
       return yield* Surveys.results(input.eventId);

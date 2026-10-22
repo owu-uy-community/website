@@ -7,7 +7,7 @@ import { communities, communityMembers, eventHosts, events, user } from "../../d
 import { enqueueEmail } from "../../email/outbox";
 import { appUrl, cohostInviteEmail } from "../../email/templates";
 import { eventPagePath, refreshPage } from "../../revalidate";
-import { ROLE_RANK } from "../../roles";
+import { can } from "../../authz/principal";
 import { query } from "../db";
 import { Conflict, Invalid } from "../errors";
 import { CommunityScope, CurrentUser } from "../services";
@@ -73,18 +73,12 @@ export const setCohosts = (event: CohostEvent, ids: string[]) =>
         .where(and(inArray(communities.id, added), eq(communities.isActive, true)))
     );
     if (found.length !== added.length) return yield* new Invalid({ message: "Esa comunidad no está en OWU" });
-    const userId = Option.isSome(actor) ? actor.value.id : null;
-    const staff = Option.isSome(actor) && actor.value.role === "admin";
-    const roles = userId
-      ? yield* query((db) =>
-          db
-            .select({ communityId: communityMembers.communityId, role: communityMembers.role })
-            .from(communityMembers)
-            .where(and(eq(communityMembers.userId, userId), inArray(communityMembers.communityId, added)))
-        )
-      : [];
-    const organizes = (communityId: string) =>
-      staff || roles.some((row) => row.communityId === communityId && ROLE_RANK[row.role] >= ROLE_RANK.editor);
+    // Co-hosting is accepted on the spot when the editor may co-host for that community too
+    const principal = Option.isSome(actor) ? actor.value.principal : null;
+    const decided = yield* Effect.promise(() =>
+      Promise.all(added.map((communityId) => can(principal, "event:cohost", communityId)))
+    );
+    const organizes = (communityId: string) => decided[added.indexOf(communityId)];
 
     for (const communityId of added) {
       const accepted = organizes(communityId);
@@ -113,7 +107,12 @@ export const setCohosts = (event: CohostEvent, ids: string[]) =>
       yield* query((db) =>
         db
           .insert(eventHosts)
-          .values({ eventId: event.id, communityId, status: accepted ? "accepted" : "invited", invitedById: userId })
+          .values({
+            eventId: event.id,
+            communityId,
+            status: accepted ? "accepted" : "invited",
+            invitedById: Option.isSome(actor) ? actor.value.id : null,
+          })
           .onConflictDoNothing()
       );
     }

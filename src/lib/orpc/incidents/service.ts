@@ -13,8 +13,8 @@ import {
 import { query, transaction } from "../db";
 import { Forbidden, Invalid, NotFound } from "../errors";
 import { opsPing, recordActivity } from "../ops";
-import { memberRole, ROLE_RANK } from "../scope";
-import { CommunityScope, CurrentUser } from "../services";
+import { allowed } from "../authz";
+import { CommunityScope, CurrentUser, isBot } from "../services";
 import { createAnnouncement } from "../staff-tasks/service";
 import type {
   CreateIncidentInput,
@@ -50,20 +50,18 @@ const place = { columns: { id: true, name: true, color: true } } as const;
 const incidentNotFound = new NotFound({ entity: "incident", message: "Ese incidente no existe en este evento" });
 
 /**
- * Who is asking, as far as incidents care. Organizers (site staff, the community's owner and
- * admins) see code-of-conduct reports; editors manage incidents.
+ * Who is asking, as far as incidents care. Organizers (`incident:confidential`: site staff, the
+ * community's owners and admins) see code-of-conduct reports; `incident:manage` manages incidents.
  */
 const viewer = Effect.gen(function* () {
   const me = yield* CurrentUser;
-  if (me.role === "admin") return { id: me.id, organizer: true, editor: true };
   const { communityId } = yield* CommunityScope;
-  const role = yield* memberRole(communityId, me.id);
+  const [organizer, editor] = yield* Effect.all([
+    allowed("incident:confidential", communityId),
+    allowed("incident:manage", communityId),
+  ]);
 
-  return {
-    id: me.id,
-    organizer: role === "owner" || role === "admin",
-    editor: role !== null && ROLE_RANK[role] >= ROLE_RANK.editor,
-  };
+  return { id: me.id, organizer, editor };
 });
 type Viewer = Effect.Success<typeof viewer>;
 
@@ -243,7 +241,7 @@ export const createIncident = (input: CreateIncidentInput) =>
     const room = input.roomId ? yield* roomInEvent(input.roomId, input.eventId) : null;
     // ponytail: a per-event window, not per reporter (Owy doesn't tell us who's behind the chat);
     // the report itself always lands in Incidentes and Hoy, only the sticky urgent banner waits.
-    const quiet = me.via === "api-key" && isLoud(input.severity) && (yield* owyAlertedRecently(input.eventId, me.id));
+    const quiet = isBot(me) && isLoud(input.severity) && (yield* owyAlertedRecently(input.eventId, me.id));
 
     const id = yield* transaction(
       Effect.gen(function* () {
@@ -259,7 +257,7 @@ export const createIncident = (input: CreateIncidentInput) =>
               roomId: room?.id ?? null,
               location: input.location || null,
               reporterId: me.id,
-              source: me.via === "api-key" ? "owy" : (input.source ?? "admin"),
+              source: isBot(me) ? "owy" : (input.source ?? "admin"),
               sensitive: input.sensitive,
               photo: input.photo ?? null,
             })

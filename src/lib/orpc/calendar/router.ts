@@ -13,7 +13,7 @@ export const calendarRouter = {
       })
     )
     .input(PlanSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("calendar:read"))
     .output(PlanResultSchema)
     .effect(function* ({ input }) {
       return yield* Calendar.plan(input);

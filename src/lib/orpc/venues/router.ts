@@ -2,7 +2,7 @@ import { openapi } from "@orpc/openapi";
 import { ratelimit } from "@orpc/ratelimit";
 import * as z from "zod";
 
-import { authed, inCommunity, pub, staff, type AuthedContext } from "../base";
+import { authed, inCommunity, platform, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
 import {
   HostViewSchema,
@@ -38,7 +38,7 @@ export const venuesRouter = {
   list: authed
     .meta(docs("The active spaces (never their contacts), best first for the event's size, needs and day"))
     .input(VenueListSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("venue:read"))
     .output(z.array(RankedVenueSchema))
     .effect(function* ({ input }) {
       return yield* Venues.list(input);
@@ -47,7 +47,7 @@ export const venuesRouter = {
   request: authed
     .meta(docs("Ask a space to host on 1–3 ranked dates; its contact answers from an emailed link"))
     .input(RequestVenueSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("venue:request"))
     .use(requestLimit)
     .output(VenueRequestSchema)
     .effect(function* ({ input }) {
@@ -57,7 +57,7 @@ export const venuesRouter = {
   requests: authed
     .meta(docs("The community's requests; the address and contact show once accepted"))
     .input(VenueListSchema)
-    .use(inCommunity("member"))
+    .use(inCommunity("venue:requests"))
     .output(z.array(VenueRequestSchema))
     .effect(function* ({ input }) {
       return yield* Venues.requests(input.communityId);
@@ -66,7 +66,7 @@ export const venuesRouter = {
   cancelRequest: authed
     .meta(docs("Withdraw a request still waiting for an answer"))
     .input(RequestRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("venue:request"))
     .output(z.object({ id: z.string() }))
     .effect(function* ({ input }) {
       return yield* Venues.cancel(input.requestId);
@@ -98,14 +98,14 @@ export const venuesRouter = {
     }),
 
   manage: {
-    list: staff
+    list: platform("venue:manage")
       .meta(docs("Every space with its contacts and address"))
       .output(z.array(ManagedVenueSchema))
       .effect(function* () {
         return yield* Venues.manageList;
       }),
 
-    update: staff
+    update: platform("venue:manage")
       .meta(docs("Approve, archive or edit a space"))
       .input(UpdateVenueSchema)
       .output(z.object({ id: z.string() }))
@@ -113,7 +113,7 @@ export const venuesRouter = {
         return yield* Venues.manageUpdate(input.venueId, input.data);
       }),
 
-    remove: staff
+    remove: platform("venue:manage")
       .meta(docs("Delete a space and its requests"))
       .input(VenueIdSchema)
       .output(z.object({ id: z.string() }))

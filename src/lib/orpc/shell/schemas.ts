@@ -41,7 +41,9 @@ export const ShellStatusSchema = z.object({
   daysLeft: z.number(),
   me: z.object({
     siteAdmin: z.boolean(),
-    role: z.enum(["owner", "admin", "editor", "member"]).nullable(),
+    role: z.string().nullable(),
+    /** Every "resource:action" the caller holds in this event's community (src/lib/authz/catalog.ts). */
+    permissions: z.array(z.string()),
   }),
   clock: z.object({
     current: ClockBlockSchema.nullable(),

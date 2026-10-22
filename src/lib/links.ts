@@ -1,7 +1,7 @@
 import { sign, unsign } from "@orpc/server/helpers";
 
 /** What a signed link is for: a token made for one purpose never opens another. */
-export type LinkPurpose = "venue-request" | "rsvp" | "unsubscribe" | "ticket" | "door" | "oauth";
+export type LinkPurpose = "venue-request" | "rsvp" | "unsubscribe" | "ticket" | "door" | "oauth" | "telegram-link";
 
 const secret = () => {
   const value = process.env.ORGANIZAR_SECRET ?? process.env.BETTER_AUTH_SECRET;

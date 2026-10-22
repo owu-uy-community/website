@@ -28,7 +28,7 @@ import { query, transaction } from "../db";
 import { Invalid, UpstreamFailed } from "../errors";
 import { eventbriteTime } from "../eventbrite/service";
 import { recordActivity } from "../ops";
-import { memberRole, ROLE_RANK } from "../scope";
+import { can, type Principal } from "../../authz/principal";
 import { CommunityScope, liveServices } from "../services";
 import type { EventIntegration, Integrations } from "./schemas";
 
@@ -755,15 +755,13 @@ export async function pushSoon() {
   );
 }
 
-/** The community's slug when the user may connect its accounts (its admins and site staff), else null. */
-export const adminCommunity = (communityId: string, user: { id: string; role?: string | null }) =>
+/** The community's slug when the caller may connect its accounts (`integration:connect`), else null. */
+export const adminCommunity = (communityId: string, principal: Principal | null) =>
   Effect.gen(function* () {
     const [community] = yield* query((db) =>
       db.select({ slug: communities.slug }).from(communities).where(eq(communities.id, communityId))
     );
     if (!community) return null;
-    if (user.role === "admin") return community.slug;
-    const role = yield* memberRole(communityId, user.id);
 
-    return role && ROLE_RANK[role] >= ROLE_RANK.admin ? community.slug : null;
+    return (yield* Effect.promise(() => can(principal, "integration:connect", communityId))) ? community.slug : null;
   });

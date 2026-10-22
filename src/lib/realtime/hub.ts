@@ -7,7 +7,8 @@ import { isPublicChannel, parseFrame, type ClientFrame, type ServerFrame } from 
 
 type Connection = {
   ws: WebSocket;
-  canPublish: boolean;
+  /** Asked on every private subscribe and publish (memoized by the caller), so a revoked role stops the socket too. */
+  canPublish: () => Promise<boolean>;
   channels: Set<string>;
 };
 
@@ -40,7 +41,7 @@ class RealtimeHub {
   private redisReady: Promise<{ pub: { publish: (ch: string, msg: string) => Promise<unknown> } } | null> | null = null;
   private warnedNoBackplane = false;
 
-  attach(ws: WebSocket, options: { canPublish: boolean }): void {
+  attach(ws: WebSocket, options: { canPublish: () => Promise<boolean> }): void {
     // Join the backplane as soon as a socket lands here. Redis is what carries
     // publishes between function instances, and `ensureRedis` is where this
     // instance SUBSCRIBES — an instance that only holds sockets never
@@ -56,19 +57,21 @@ class RealtimeHub {
 
       switch (frame.t) {
         case "sub": {
-          if (!isPublicChannel(frame.ch) && !options.canPublish) {
-            this.sendFrame(ws, { t: "err", msg: "forbidden", ch: frame.ch });
+          void (async () => {
+            if (!isPublicChannel(frame.ch) && !(await connection.canPublish())) {
+              this.sendFrame(ws, { t: "err", msg: "forbidden", ch: frame.ch });
 
-            return;
-          }
-          connection.channels.add(frame.ch);
-          let set = this.channels.get(frame.ch);
-          if (!set) {
-            set = new Set();
-            this.channels.set(frame.ch, set);
-          }
-          set.add(connection);
-          this.sendFrame(ws, { t: "ok", ch: frame.ch });
+              return;
+            }
+            connection.channels.add(frame.ch);
+            let set = this.channels.get(frame.ch);
+            if (!set) {
+              set = new Set();
+              this.channels.set(frame.ch, set);
+            }
+            set.add(connection);
+            this.sendFrame(ws, { t: "ok", ch: frame.ch });
+          })();
           break;
         }
         case "unsub": {
@@ -77,12 +80,14 @@ class RealtimeHub {
           break;
         }
         case "pub": {
-          if (!connection.canPublish) {
-            this.sendFrame(ws, { t: "err", msg: "publish requires authentication", ch: frame.ch });
+          void (async () => {
+            if (!(await connection.canPublish())) {
+              this.sendFrame(ws, { t: "err", msg: "publish requires authentication", ch: frame.ch });
 
-            return;
-          }
-          void this.publish(frame.ch, frame.ev, frame.pl, frame.sid);
+              return;
+            }
+            await this.publish(frame.ch, frame.ev, frame.pl, frame.sid);
+          })();
           break;
         }
         case "ping": {

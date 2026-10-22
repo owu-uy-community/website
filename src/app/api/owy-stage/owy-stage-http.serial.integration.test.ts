@@ -3,11 +3,11 @@ import { sql } from "drizzle-orm";
 import { describe, expect, test } from "vitest";
 
 import { GET, POST } from "app/api/owy-stage/[...path]/route";
-import { auth } from "app/lib/auth";
 import { db } from "lib/db";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeSiteAdmin } from "test/factories";
+import { makeSiteAdmin, makeServiceAccount } from "test/factories";
+import { KEY_PRESETS, mintServiceKey } from "lib/authz/keys";
 import { mintSession } from "test/session";
 
 /** A Stream Deck (Companion's Generic HTTP module) firing the desk's presets, as it calls /api/owy-stage. */
@@ -38,7 +38,15 @@ async function stage(method: "GET" | "HEAD" | "POST", path: string, headers: Rec
 describe("/api/owy-stage", () => {
   test("a link can't fire a preset through someone's session; POST and API keys can", async () => {
     const { staff, session } = await setup();
-    const { key } = await auth.api.createApiKey({ body: { userId: staff.id, name: "deck" } });
+    // A Stream Deck: its own service account and a key that only fires presets and drives OBS
+    const deck = await makeServiceAccount({ id: `deck-${Date.now()}`, name: staff.name });
+    const { key } = await mintServiceKey({
+      ownerId: deck.id,
+      name: "deck",
+      permissions: KEY_PRESETS["stream-deck"],
+      expiresInDays: 1,
+      createdById: null,
+    });
 
     const viaLink = await stage("GET", "preset/2", session);
     const viaHead = await stage("HEAD", "preset/2", session);

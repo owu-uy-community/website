@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import ScreensClient from "components/Admin/screens/ScreensClient";
 
 import { resolveAdminCommunityScope } from "../scope";
@@ -13,11 +13,11 @@ export default async function ScreensPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("stage:read");
 
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, null);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "stage:read");
   if (!scope) notFound();
 
   return (

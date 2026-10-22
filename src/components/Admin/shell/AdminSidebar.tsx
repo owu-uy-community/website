@@ -36,6 +36,7 @@ import {
   useSidebar,
 } from "components/shared/ui/sidebar";
 import { useMounted } from "hooks/useMounted";
+import { roleLabel } from "lib/authz/labels";
 import type { ShellStatus } from "lib/orpc/shell/schemas";
 
 import { openCommandMenu } from "./command-bus";
@@ -44,8 +45,6 @@ import { ADMIN_NAV, isNavItemActive, type AdminNavItem, type NavKey } from "./na
 import { openShortcutSheet } from "./shortcuts";
 import { useShell } from "./use-shell-status";
 import { eventHref, normalizeAdminPath, useSelectedEvent } from "./use-selected-event";
-
-const ROLE_LABEL = { owner: "Dueño", admin: "Admin", editor: "Editor", member: "Miembro" } as const;
 
 /** The right edge of a nav row: a count, a status dot, or a "needs you" badge. */
 function NavExtra({ item, status }: { item: AdminNavItem; status: ShellStatus | undefined }) {
@@ -212,7 +211,7 @@ function UserRow({ status }: { status: ShellStatus | undefined }) {
   const role = status?.me.siteAdmin
     ? "Staff del sitio"
     : status?.me.role
-      ? `${ROLE_LABEL[status.me.role]} · ${status.event.communityName}`
+      ? `${roleLabel(status.me.role)} · ${status.event.communityName}`
       : "";
 
   return (

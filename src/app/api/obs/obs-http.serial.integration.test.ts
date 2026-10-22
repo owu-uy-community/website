@@ -3,12 +3,12 @@ import { eq, sql } from "drizzle-orm";
 import { describe, expect, test, vi } from "vitest";
 
 import { GET, POST } from "app/api/obs/[...path]/route";
-import { auth } from "app/lib/auth";
 import { db } from "lib/db";
 import { obsCommands } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeBoard, makeSiteAdmin, makeUser } from "test/factories";
+import { makeBoard, makeSiteAdmin, makeUser, makeServiceAccount } from "test/factories";
+import { KEY_PRESETS, mintServiceKey } from "lib/authz/keys";
 import { mintSession } from "test/session";
 
 /** Companion / Stream Deck and the executor tab, as they call /api/obs. */
@@ -47,7 +47,15 @@ const commandsOn = (instanceId: number) =>
 describe("/api/obs", () => {
   test("#7 a link can't fire a command through someone's session; POST and API keys can", async () => {
     const { staff, session } = await setup();
-    const { key } = await auth.api.createApiKey({ body: { userId: staff.id, name: "deck" } });
+    // A Stream Deck: its own service account and a key that only fires presets and drives OBS
+    const deck = await makeServiceAccount({ id: `deck-${Date.now()}`, name: staff.name });
+    const { key } = await mintServiceKey({
+      ownerId: deck.id,
+      name: "deck",
+      permissions: KEY_PRESETS["stream-deck"],
+      expiresInDays: 1,
+      createdById: null,
+    });
 
     const viaLink = await obs("GET", "take", session);
     const viaPost = await obs("POST", "take", session);

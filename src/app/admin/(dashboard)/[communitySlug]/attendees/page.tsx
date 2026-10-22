@@ -4,7 +4,7 @@ import { count, eq } from "drizzle-orm";
 import { CalendarX2 } from "lucide-react";
 
 import { BASE_URL } from "app/lib/constants";
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
@@ -32,11 +32,11 @@ export default async function AttendeesPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("raffle:read");
 
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, null);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "raffle:read");
   if (!scope) notFound();
 
   if (!scope.selected) {

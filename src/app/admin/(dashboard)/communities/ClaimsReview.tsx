@@ -9,7 +9,7 @@ import { RelativeTime } from "components/Admin/ui/time";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { toast } from "components/shared/ui/toast-utils";
-import { ROLE_LABEL } from "components/organizar/shell/nav";
+import { roleLabel } from "lib/authz/labels";
 import { orpc } from "lib/orpc/client";
 
 const RELATION = { organizo: "La organiza", coorganizo: "Coorganiza", retomar: "Quiere retomarla" } as const;
@@ -23,7 +23,7 @@ export function ClaimsReview() {
       onSuccess: (result) => {
         toast.success(
           result.status === "approved"
-            ? `Aprobado como ${ROLE_LABEL[result.role ?? "editor"].toLowerCase()}`
+            ? `Aprobado como ${roleLabel(result.role ?? "editor").toLowerCase()}`
             : "Pedido rechazado"
         );
         void queryClient.invalidateQueries({ queryKey: orpc.communities.key() });

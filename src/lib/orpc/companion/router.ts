@@ -1,6 +1,6 @@
 import { openapi } from "@orpc/openapi";
 
-import { staff } from "../base";
+import { platform } from "../base";
 import { AudioRoutingSnapshotSchema, SetAudioRoutingSchema } from "./schemas";
 import { getAudioRouting, setAudioRouting } from "./services";
 
@@ -13,12 +13,12 @@ const docs = (summary: string) => openapi({ tags: ["Companion"], summary });
  * answer, not an error.
  */
 export const companionRouter = {
-  getAudioRouting: staff
+  getAudioRouting: platform("stage:read")
     .meta(docs("Each companion's audio routing, as the bridge on the venue laptop has it"))
     .output(AudioRoutingSnapshotSchema)
     .handler(() => getAudioRouting()),
 
-  setAudioRouting: staff
+  setAudioRouting: platform("stage:operate")
     .meta(docs("Route a companion's microphone or audio output to the device or the laptop"))
     .input(SetAudioRoutingSchema)
     .output(AudioRoutingSnapshotSchema)

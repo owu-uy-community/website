@@ -12,7 +12,7 @@ import {
   type SubmitInput,
 } from "../../owy-stage/scenes";
 import { disconnectSpotify, getSpotifyNowPlaying, spotifyStatus } from "../../owy-stage/spotify";
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import { limiter } from "../ratelimit";
 import {
   DeskWireSchema,
@@ -61,7 +61,7 @@ export const owyStageRouter = {
       return yield* Stage.getStage();
     }),
 
-  setScene: staff
+  setScene: platform("stage:operate")
     .meta(docs("Put a scene on the wall, or edit the one on air"))
     .input(SetSceneSchema)
     .output(StageStateSchema)
@@ -69,14 +69,14 @@ export const owyStageRouter = {
       return yield* Stage.setScene(input);
     }),
 
-  getRundown: staff
+  getRundown: platform("stage:read")
     .meta(docs("The operator's rundown"))
     .output(RundownSchema)
     .effect(function* () {
       return yield* Stage.getRundown();
     }),
 
-  saveRundown: staff
+  saveRundown: platform("stage:operate")
     .meta(docs("Replace the rundown"))
     .input(SaveRundownSchema)
     .output(RundownSchema)
@@ -84,14 +84,14 @@ export const owyStageRouter = {
       return yield* Stage.saveRundown(input.steps);
     }),
 
-  getDesk: staff
+  getDesk: platform("stage:read")
     .meta(docs("The operator's desk: the preview, the queue behind it and the presets"))
     .output(DeskWireSchema)
     .effect(function* () {
       return yield* Stage.getDesk();
     }),
 
-  saveDesk: staff
+  saveDesk: platform("stage:operate")
     .meta(docs("Replace the desk"))
     .input(SaveDeskSchema)
     .output(DeskWireSchema)
@@ -99,7 +99,7 @@ export const owyStageRouter = {
       return yield* Stage.saveDesk(input.desk);
     }),
 
-  take: staff
+  take: platform("stage:operate")
     .meta(docs("TAKE or CUT: the preview goes on air and the queue moves up (or the scene that left comes back)"))
     .input(TakeSchema)
     .output(TakeResultSchema)
@@ -107,7 +107,7 @@ export const owyStageRouter = {
       return yield* Stage.take(input.step, input.transition);
     }),
 
-  firePreset: staff
+  firePreset: platform("stage:fire-preset")
     .meta(docs("A preset, by its id or its number on the desk: into preview (TAKE sends it) or straight on air"))
     .input(FirePresetSchema)
     .output(FirePresetResultSchema)
@@ -115,7 +115,7 @@ export const owyStageRouter = {
       return yield* Stage.firePreset(input.preset, input.to);
     }),
 
-  fireEffect: staff
+  fireEffect: platform("stage:operate")
     .meta(docs("A one-shot overlay: confetti, flash, a caption…"))
     .input(FireEffectSchema)
     .output(EffectEventSchema)
@@ -123,7 +123,7 @@ export const owyStageRouter = {
       return yield* Stage.echo("effect", input);
     }),
 
-  setFace: staff
+  setFace: platform("stage:operate")
     .meta(docs("Owy's face, running transcript, feeling and the card it just placed, mirrored from a companion"))
     .input(SetFaceSchema)
     .output(FaceEventSchema)
@@ -177,7 +177,7 @@ export const owyStageRouter = {
       return yield* Stage.getInputs(input.round);
     }),
 
-  moderate: staff
+  moderate: platform("stage:operate")
     .meta(docs("Hide, pin or mark answered a question from the phones"))
     .input(ModerateSchema)
     .output(ModerationEventSchema)
@@ -185,7 +185,7 @@ export const owyStageRouter = {
       return yield* Stage.moderate(input);
     }),
 
-  nowPlaying: staff
+  nowPlaying: platform("stage:read")
     .meta(docs("A song recogniser's report; only lands while now-playing is on air"))
     .input(SetNowPlayingSchema)
     .output(z.object({ applied: z.boolean() }))
@@ -200,14 +200,14 @@ export const owyStageRouter = {
       return yield* Effect.tryPromise(() => getSpotifyNowPlaying()).pipe(Effect.orElseSucceed(() => null));
     }),
 
-  spotifyStatus: staff
+  spotifyStatus: platform("stage:read")
     .meta(docs("Whether Spotify is set up and which account is linked"))
     .output(z.object({ configured: z.boolean(), account: z.string().nullable() }))
     .effect(function* () {
       return yield* Effect.promise(() => spotifyStatus());
     }),
 
-  disconnectSpotify: staff
+  disconnectSpotify: platform("stage:operate")
     .meta(docs("Unlink the Spotify account"))
     .output(z.object({ ok: z.literal(true) }))
     .effect(function* () {

@@ -6,16 +6,19 @@ import { db } from "lib/db";
 import { communityMembers, emailDeliveries } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeCommunity, makeEvent, makeMember, makeSiteAdmin, makeUser } from "test/factories";
+import { makeCommunity, makeEvent, makeMember, makeSiteAdmin, makeSlackUser, makeUser } from "test/factories";
 
 async function setup() {
   const community = await makeCommunity();
-  const [owner, admin, editor, member, staff, stranger] = await Promise.all([
+  const [owner, admin, editor, member, staff, stranger, unlinked] = await Promise.all([
     makeMember(community.id, "owner"),
     makeMember(community.id, "admin"),
     makeMember(community.id, "editor"),
     makeMember(community.id, "member"),
     makeSiteAdmin(),
+    // On the OWU Slack: can be given a role right away
+    makeSlackUser(),
+    // Signed in with an email code only: a role waits for them as an invitation
     makeUser(),
   ]);
   const membershipOf = async (userId: string) => {
@@ -24,7 +27,7 @@ async function setup() {
     return row;
   };
 
-  return { community, owner, admin, editor, member, staff, stranger, membershipOf };
+  return { community, owner, admin, editor, member, staff, stranger, unlinked, membershipOf };
 }
 
 describe("communities.list", () => {
@@ -202,19 +205,29 @@ describe("communities.members", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test("an admin adds someone by email; unknown emails are a BAD_REQUEST", async () => {
-    const { community, admin, stranger, membershipOf } = await setup();
+  test("an admin adds someone on the OWU Slack right away; anyone else gets an invitation", async () => {
+    const { community, admin, stranger, unlinked, membershipOf } = await setup();
 
-    await call(
-      router.communities.members.add,
-      { communityId: community.id, email: stranger.email.toUpperCase(), role: "editor" },
-      by(admin)
-    );
-
-    expect((await membershipOf(stranger.id))?.role).toBe("editor");
     await expect(
-      call(router.communities.members.add, { communityId: community.id, email: "nadie@test.owu.uy" }, by(admin))
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+      call(
+        router.communities.members.add,
+        { communityId: community.id, email: stranger.email.toUpperCase(), role: "editor" },
+        by(admin)
+      )
+    ).resolves.toMatchObject({ status: "added", member: { role: "editor" } });
+    expect((await membershipOf(stranger.id))?.role).toBe("editor");
+
+    // Not on the OWU Slack yet, or never signed in: the role waits for them
+    for (const email of [unlinked.email, "nadie@test.owu.uy"]) {
+      await expect(
+        call(router.communities.members.add, { communityId: community.id, email, role: "editor" }, by(admin))
+      ).resolves.toMatchObject({ status: "invited", member: null });
+    }
+    await expect(membershipOf(unlinked.id)).resolves.toBeUndefined();
+    const invited = await call(router.communities.invitations.list, { communityId: community.id }, by(admin));
+    expect(new Set(invited.map((invitation) => invitation.email))).toStrictEqual(
+      new Set([unlinked.email, "nadie@test.owu.uy"])
+    );
   });
 
   test("only an owner (or site staff) can grant the owner role", async () => {
@@ -227,13 +240,19 @@ describe("communities.members", () => {
     expect((await membershipOf(stranger.id))?.role).toBe("owner");
   });
 
-  test("#4 re-adding an owner by email cannot demote them", async () => {
-    const { community, owner, admin, membershipOf } = await setup();
+  test("#4 adding someone already on the team never changes their role (it used to demote)", async () => {
+    const { community, owner, admin, editor, membershipOf } = await setup();
 
-    await expect(
-      call(router.communities.members.add, { communityId: community.id, email: owner.email, role: "member" }, by(admin))
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    for (const [who, by_] of [
+      [owner, admin],
+      [editor, owner],
+    ] as const) {
+      await expect(
+        call(router.communities.members.add, { communityId: community.id, email: who.email, role: "member" }, by(by_))
+      ).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "already_member" } });
+    }
     expect((await membershipOf(owner.id))?.role).toBe("owner");
+    expect((await membershipOf(editor.id))?.role).toBe("editor");
   });
 
   test("an owner changes roles and removes members", async () => {
@@ -445,7 +464,7 @@ describe("communities.claim", () => {
 
   test("approving makes the first organizer owner and the next ones editors; mine lists them", async () => {
     const community = await makeCommunity({ listed: true });
-    const [first, second, staff] = await Promise.all([makeUser(), makeUser(), makeSiteAdmin()]);
+    const [first, second, staff] = await Promise.all([makeSlackUser(), makeSlackUser(), makeSiteAdmin()]);
     const firstClaim = await call(router.communities.claim, claimInput(community.id), by(first));
     const secondClaim = await call(router.communities.claim, claimInput(community.id), by(second));
     const decide = (claimId: string, decision: "approve" | "reject") =>

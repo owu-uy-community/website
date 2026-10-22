@@ -2,7 +2,7 @@ import { openapi } from "@orpc/openapi";
 import { ratelimit } from "@orpc/ratelimit";
 import * as z from "zod";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import { limiter } from "../ratelimit";
 import {
   BeatSchema,
@@ -38,7 +38,7 @@ export const screensRouter = {
       return yield* Screens.beat(input);
     }),
 
-  list: staff
+  list: platform("stage:read")
     .meta(docs("An event's screens, with when each was last seen"))
     .input(ListScreensSchema)
     .output(z.array(ScreenSchema))
@@ -46,7 +46,7 @@ export const screensRouter = {
       return yield* Screens.listScreens(input.eventId);
     }),
 
-  rename: staff
+  rename: platform("stage:operate")
     .meta(docs("Name a screen"))
     .input(RenameScreenSchema)
     .output(ScreenSchema)
@@ -54,7 +54,7 @@ export const screensRouter = {
       return yield* Screens.renameScreen(input);
     }),
 
-  forget: staff
+  forget: platform("stage:operate")
     .meta(docs("Drop a screen from the list"))
     .input(ScreenRefSchema)
     .output(ok)
@@ -62,7 +62,7 @@ export const screensRouter = {
       return yield* Screens.forgetScreen(input.id);
     }),
 
-  identify: staff
+  identify: platform("stage:operate")
     .meta(docs("Show a screen's name on it, full screen, for a few seconds"))
     .input(ScreenRefSchema)
     .output(ok)
@@ -70,7 +70,7 @@ export const screensRouter = {
       return yield* Screens.signalScreen(input.id, "identify");
     }),
 
-  reload: staff
+  reload: platform("stage:operate")
     .meta(docs("Reload a screen"))
     .input(ScreenRefSchema)
     .output(ok)

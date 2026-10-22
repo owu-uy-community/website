@@ -22,7 +22,7 @@ import { wallClock } from "../../slot-day";
 import { query, transaction } from "../db";
 import { Forbidden, Invalid, NotFound, UpstreamFailed } from "../errors";
 import { opsPing, recordActivity } from "../ops";
-import { memberRole, ROLE_RANK } from "../scope";
+import { allowed } from "../authz";
 import { CommunityScope, CurrentUser, Realtime } from "../services";
 import type {
   AckStaffAnnouncementSchema,
@@ -177,14 +177,11 @@ const ensureStaff = (userIds: readonly string[]) =>
     if (found.length < wanted.size) return yield* notStaff;
   });
 
-/** Acting on someone else's behalf (their arrival) takes an editor of the community, or site staff. */
+/** Acting on someone else's behalf (their arrival) takes `task:manage` in the community. */
 const ensureEditor = (message: string) =>
   Effect.gen(function* () {
-    const me = yield* CurrentUser;
-    if (me.role === "admin") return;
     const { communityId } = yield* CommunityScope;
-    const role = yield* memberRole(communityId, me.id);
-    if (!role || ROLE_RANK[role] < ROLE_RANK.editor) return yield* new Forbidden({ message });
+    if (!(yield* allowed("task:manage", communityId))) return yield* new Forbidden({ message });
   });
 
 /** Puts people on a task in the order given: a millisecond apart, so it's the order the task lists them in. */

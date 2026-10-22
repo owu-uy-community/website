@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { Scanner } from "components/Admin/attendees/Scanner";
 import { db } from "lib/db";
 import { events } from "lib/db/schema";
@@ -16,11 +16,11 @@ export default async function ScannerPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("raffle:read");
 
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, null);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "raffle:read");
   if (!scope?.selected) notFound();
 
   const selected = scope.selected;

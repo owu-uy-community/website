@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 
 import KeystaticApp from "./cms";
 
@@ -11,7 +11,7 @@ export default async function Layout() {
     notFound();
   }
 
-  await requireAdmin();
+  await requirePermission("event:manage");
 
   return <KeystaticApp />;
 }

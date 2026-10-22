@@ -7,10 +7,40 @@ import { sendEmail } from "../../lib/email/send";
 import { otpEmail } from "../../lib/email/templates";
 import { limiter } from "../../lib/orpc/ratelimit";
 import { BASE_URL, SLACK_CLIENT_ID, SLACK_CLIENT_SECRET } from "./constants";
-import { emailOTP, oAuthProxy } from "better-auth/plugins";
+import { admin, emailOTP, oAuthProxy } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
+import { platformAc, platformRoles } from "../../lib/authz/catalog";
+import { slackTeamOf } from "../../lib/authz/slack";
 
 const TEN_MINUTES = 10 * 60;
+
+/**
+ * Better Auth endpoints that stay server-side only: API keys and the admin plugin's people
+ * management. The access procedures call them after checking permissions, the escalation rule and
+ * the OWU Slack requirement, and write the audit log; over HTTP anyone signed in could mint a key
+ * that outlived their session. Impersonation stays reachable (it sets the cookie), behind its
+ * permission.
+ */
+const SERVER_ONLY_PATHS = [
+  "/api-key/create",
+  "/api-key/update",
+  "/api-key/delete",
+  "/api-key/list",
+  "/api-key/get",
+  "/api-key/delete-all-expired-api-keys",
+  "/admin/set-role",
+  "/admin/create-user",
+  "/admin/update-user",
+  "/admin/remove-user",
+  "/admin/set-user-password",
+  "/admin/ban-user",
+  "/admin/unban-user",
+  "/admin/list-users",
+  "/admin/get-user",
+  "/admin/list-user-sessions",
+  "/admin/revoke-user-session",
+  "/admin/revoke-user-sessions",
+];
 
 /**
  * Sign-in codes, on top of Better Auth's own per-IP window: 3 per mailbox from one network, so a
@@ -33,6 +63,7 @@ const clientIp = (headers: Headers | undefined) =>
   headers?.get("x-real-ip") ?? headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
 export const auth = betterAuth({
+  disabledPaths: SERVER_ONLY_PATHS,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: {
@@ -64,29 +95,78 @@ export const auth = betterAuth({
       enabled: true,
       async beforeDelete(user) {
         // Imported here: the oRPC services import this file
-        const [{ Effect }, { forget }, { liveServices }] = await Promise.all([
+        const [{ Effect }, { forget }, { liveServices }, { soleOwnerOf }] = await Promise.all([
           import("effect"),
           import("../../lib/orpc/rsvps/service"),
           import("../../lib/orpc/services"),
+          import("../../lib/authz/people"),
         ]);
+        // A community whose only owner leaves would be left without anyone able to run it.
+        const orphaned = await soleOwnerOf(user.id);
+        if (orphaned.length > 0) {
+          throw new APIError("BAD_REQUEST", {
+            message: `Sos el único owner de ${orphaned.join(", ")}: pasale el rol a alguien más antes de borrar tu cuenta.`,
+          });
+        }
         await Effect.runPromiseWith(liveServices)(forget(user.id));
       },
     },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+    },
     additionalFields: {
-      role: {
-        type: ["user", "admin"],
-        defaultValue: "user",
-        input: false, // Prevent users from setting this themselves
+      slackTeamId: { type: "string", required: false, input: false },
+    },
+  },
+  databaseHooks: {
+    // The workspace a Slack account signed in from, kept fresh on every sign-in: holding a role
+    // needs the OWU Slack (see src/lib/authz/slack.ts).
+    account: {
+      create: {
+        async before(account) {
+          if (account.providerId !== "slack") return;
+
+          return { data: { ...account, slackTeamId: slackTeamOf(account.idToken) } };
+        },
       },
-      status: {
-        type: ["active", "inactive"],
-        defaultValue: "inactive",
-        input: false, // Prevent users from setting this themselves
+      update: {
+        async before(account) {
+          if (!account.idToken) return;
+          const team = slackTeamOf(account.idToken);
+
+          return team ? { data: { ...account, slackTeamId: team } } : undefined;
+        },
+      },
+    },
+    // The allowlist: invitations waiting for this person take effect when they sign in.
+    session: {
+      create: {
+        async after(session) {
+          const { applyInvitations } = await import("../../lib/authz/people");
+          await applyInvitations(session.userId).catch((error: unknown) => {
+            console.error("Could not apply invitations on sign-in", error);
+          });
+        },
       },
     },
   },
   plugins: [
     oAuthProxy(),
+    /**
+     * Platform roles (user.role, comma-joined), bans and impersonation, checked against the
+     * permission catalog in src/lib/authz/catalog.ts. Every privileged role is an "admin role" here,
+     * so only `user:impersonate-admins` may view the site as one of them (nobody holds it).
+     */
+    admin({
+      ac: platformAc,
+      roles: platformRoles,
+      defaultRole: "user",
+      adminRoles: ["superadmin", "staff", "moderator", "service"],
+      impersonationSessionDuration: 15 * 60,
+      bannedUserMessage: "Tu cuenta está suspendida. Escribinos a hola@owu.uy si creés que es un error.",
+    }),
     /**
      * People without the OWU Slack sign in with a 6-digit code sent by email. Codes are stored
      * hashed, last 10 minutes and allow 5 tries; a new account starts with an empty name, which
@@ -139,11 +219,28 @@ export const auth = betterAuth({
         }
       }
     }),
-  },
-  account: {
-    accountLinking: {
-      enabled: true,
-    },
+    /** Viewing the site as someone else is always on the record: who, as whom, when. */
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/admin/impersonate-user" && ctx.path !== "/admin/stop-impersonating") return;
+      // The session the endpoint just started: the impersonation (it names the superadmin), or the
+      // superadmin's own again when they stop
+      const started = ctx.context.newSession as
+        | { user: { id: string }; session: { impersonatedBy?: string | null } }
+        | null
+        | undefined;
+      if (!started) return;
+      const starting = ctx.path === "/admin/impersonate-user";
+      const { audit } = await import("../../lib/authz/audit");
+      await audit(db, {
+        actorId: starting ? (started.session.impersonatedBy ?? null) : started.user.id,
+        via: "session",
+        action: starting ? "user.impersonate" : "user.stop_impersonating",
+        targetType: "user",
+        targetId: starting ? started.user.id : null,
+        ip: clientIp(ctx.headers),
+        userAgent: ctx.headers?.get("user-agent") ?? null,
+      });
+    }),
   },
   socialProviders: {
     slack: {

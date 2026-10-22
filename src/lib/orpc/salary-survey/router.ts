@@ -2,7 +2,7 @@ import { openapi } from "@orpc/openapi";
 import { Effect } from "effect";
 import * as z from "zod";
 
-import { authed, pub, staff } from "../base";
+import { authed, platform, pub } from "../base";
 import {
   CurrentSurveySchema,
   DatasetRowsSchema,
@@ -81,14 +81,14 @@ export const salarySurveyRouter = {
       return yield* SalarySurvey.listPublished();
     }),
 
-  list: staff
+  list: platform("salarySurvey:manage")
     .meta(docs("Every edition with its response count (site staff)"))
     .output(z.array(SurveySchema))
     .effect(function* () {
       return yield* SalarySurvey.listSurveys();
     }),
 
-  upsert: staff
+  upsert: platform("salarySurvey:manage")
     .meta(docs("Create an edition or change its title and dates (site staff)"))
     .input(UpsertSurveySchema)
     .output(SurveySchema)
@@ -96,7 +96,7 @@ export const salarySurveyRouter = {
       return yield* SalarySurvey.upsertSurvey(input);
     }),
 
-  setStatus: staff
+  setStatus: platform("salarySurvey:manage")
     .meta(docs("Open, close or publish an edition (site staff)"))
     .input(SetStatusSchema)
     .output(SurveySchema)

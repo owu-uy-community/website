@@ -49,7 +49,7 @@ export const eventsRouter = {
   list: authed
     .meta(docs("A community's events, drafts included, newest first"))
     .input(ListEventsSchema)
-    .use(inCommunity("member"))
+    .use(inCommunity("event:list"))
     .output(z.array(OrganizerEventSchema))
     .effect(function* ({ input }) {
       return yield* Events.list(input.communityId);
@@ -58,7 +58,7 @@ export const eventsRouter = {
   hold: authed
     .meta(docs("Reserve a date for 14 days, dating a draft or making one; renews an existing hold"))
     .input(HoldSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:hold"))
     .output(HoldResultSchema)
     .effect(function* ({ input }) {
       return yield* Events.hold(input);
@@ -67,7 +67,7 @@ export const eventsRouter = {
   release: authed
     .meta(docs("Give a reserved date back; the draft stays"))
     .input(EventRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:hold"))
     .output(OrganizerEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.release(input.eventId);
@@ -76,7 +76,7 @@ export const eventsRouter = {
   get: authed
     .meta(docs("One event, as the wizard edits it"))
     .input(EventRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:read"))
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.get(input.eventId);
@@ -85,7 +85,7 @@ export const eventsRouter = {
   createDraft: authed
     .meta(docs("A new draft with a provisional date, optionally copying a previous event"))
     .input(CreateDraftSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:create"))
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.createDraft(input);
@@ -94,7 +94,7 @@ export const eventsRouter = {
   save: authed
     .meta(docs("Autosave: apply a patch unless someone else saved since (CONFLICT stale)"))
     .input(SaveEventSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:update"))
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.save(input);
@@ -103,7 +103,7 @@ export const eventsRouter = {
   publish: authed
     .meta(docs("Publish a draft once everything required is in place"))
     .input(EventRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:publish"))
     .use(publishLimit)
     .output(PublishResultSchema)
     .effect(function* ({ input }) {
@@ -113,7 +113,7 @@ export const eventsRouter = {
   schedulePublish: authed
     .meta(docs("Publish a draft later by itself, with the same checks (null takes it back)"))
     .input(SchedulePublishSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:publish"))
     .use(publishLimit)
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
@@ -123,7 +123,7 @@ export const eventsRouter = {
   cancel: authed
     .meta(docs("Cancel a published event"))
     .input(CancelEventSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("event:cancel"))
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.cancel(input);
@@ -154,7 +154,7 @@ export const eventsRouter = {
   preview: authed
     .meta(docs("Any of the community's events as its public page will show it, drafts included"))
     .input(EventRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:read"))
     .output(PublicEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.preview(input.eventId);
@@ -163,7 +163,7 @@ export const eventsRouter = {
   cohostInvitations: authed
     .meta(docs("Events other communities invited this one to organize with them"))
     .input(ListEventsSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:cohost"))
     .output(z.array(CohostInvitationSchema))
     .effect(function* () {
       return yield* Cohosts.invitations;
@@ -172,7 +172,7 @@ export const eventsRouter = {
   answerCohost: authed
     .meta(docs("Accept an invitation to co-organize (the event shows on this profile too) or decline it"))
     .input(AnswerCohostSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:cohost"))
     .output(z.object({ accepted: z.boolean() }))
     .effect(function* ({ input }) {
       return yield* Cohosts.answer(input);
@@ -181,7 +181,7 @@ export const eventsRouter = {
   stats: authed
     .meta(docs("How many signed up, wait, came: counts only"))
     .input(EventRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:stats"))
     .output(EventStatsSchema)
     .effect(function* ({ input }) {
       return yield* Events.stats(input.eventId);
@@ -190,7 +190,7 @@ export const eventsRouter = {
   showUp: authed
     .meta(docs("How many of the people with a seat usually come, for this community"))
     .input(z.object({ communityId: z.string().min(1) }))
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:stats"))
     .output(ShowUpSchema)
     .effect(function* () {
       return yield* Events.showUp;
@@ -199,7 +199,7 @@ export const eventsRouter = {
   message: authed
     .meta(docs("Write to the event's people, by where they stand"))
     .input(MessageSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("event:message"))
     .use(messageLimit)
     .output(z.object({ sent: z.number() }))
     .effect(function* ({ input }) {
@@ -209,7 +209,7 @@ export const eventsRouter = {
   doorLink: authed
     .meta(docs("A link for the volunteers at the door: no account, valid until the night of the event"))
     .input(EventRefSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("event:door-link"))
     .output(DoorLinkSchema)
     .effect(function* ({ input }) {
       return yield* Door.link(input.eventId);
@@ -218,7 +218,7 @@ export const eventsRouter = {
   revokeDoor: authed
     .meta(docs("Make every door link handed out stop working"))
     .input(EventRefSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("event:door-link"))
     .output(z.object({ ok: z.literal(true) }))
     .effect(function* ({ input }) {
       return yield* Door.revoke(input.eventId);
@@ -227,7 +227,7 @@ export const eventsRouter = {
   remove: authed
     .meta(docs("Delete a draft"))
     .input(EventRefSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:delete"))
     .output(z.object({ id: z.string() }))
     .effect(function* ({ input }) {
       return yield* Events.remove(input.eventId);

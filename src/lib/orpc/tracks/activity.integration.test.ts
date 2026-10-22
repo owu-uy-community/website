@@ -8,7 +8,7 @@ import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { decidingModel, models } from "test/ai";
 import { by } from "test/context";
-import { makeBoard, makeSiteAdmin, makeTrack } from "test/factories";
+import { makeBoard, makeSiteAdmin, makeTrack, makeServiceAccount } from "test/factories";
 
 /** The board (two rooms, blocks at 15:00 and 16:00), a staffer, and the event's talk log. */
 async function setup() {
@@ -186,7 +186,7 @@ describe("the talks' activity log", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-11-07T12:00:00.000Z"));
     const { event, log } = await setup();
-    const owy = await makeSiteAdmin({ name: "Owy" });
+    const owy = await makeServiceAccount({ name: "Owy" });
 
     const placed = await call(
       router.tracks.createPlaced,

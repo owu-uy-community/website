@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { CalendarX2 } from "lucide-react";
 
-import { isSiteAdmin, requireStaffSession } from "app/lib/auth-helpers";
+import { requireDashboardAccess } from "app/lib/auth-helpers";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { EmptyState } from "components/Admin/ui/states";
 import { db } from "lib/db";
@@ -24,14 +24,10 @@ export default async function MiTurnoPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  const session = await requireStaffSession();
+  const { session } = await requireDashboardAccess();
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(
-    communitySlug,
-    eventSlug,
-    isSiteAdmin(session) ? null : session.user.id
-  );
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "task:read");
   if (!scope) notFound();
 
   if (!scope.selected) {

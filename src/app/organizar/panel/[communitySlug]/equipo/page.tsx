@@ -8,9 +8,8 @@ import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { ProfileOptIn } from "components/organizar/community/ProfileOptIn";
 import { db } from "lib/db";
 import { communityMembers } from "lib/db/schema";
-import { ROLE_RANK } from "lib/roles";
 
-import { panelCommunity } from "../../access";
+import { holds, panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Equipo · Organizá" };
 
@@ -19,7 +18,7 @@ export default async function TeamPage({ params }: { params: Promise<{ community
   const { communitySlug } = await params;
   const access = await panelCommunity(communitySlug);
   if (!access) notFound();
-  const { id, name, role } = access.community;
+  const { id, name } = access.community;
   // Site staff without a membership have nothing to show on the profile
   const [membership] = await db
     .select({ showOnProfile: communityMembers.showOnProfile })
@@ -34,10 +33,10 @@ export default async function TeamPage({ params }: { params: Promise<{ community
           <ProfileOptIn communityId={id} communityName={name} initial={membership.showOnProfile} />
         </div>
       ) : null}
-      {ROLE_RANK[role] >= ROLE_RANK.admin ? (
-        <MembersSection communityId={id} communityName={name} />
+      {holds(access.community, "member:read") ? (
+        <MembersSection communityId={id} communityName={name} permissions={access.community.permissions} />
       ) : (
-        <Notice tone="info">Solo los admins de la comunidad ven y cambian el equipo.</Notice>
+        <Notice tone="info">Solo quienes administran la comunidad ven y cambian el equipo.</Notice>
       )}
     </PageContainer>
   );

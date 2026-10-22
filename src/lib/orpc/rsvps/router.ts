@@ -110,7 +110,7 @@ export const rsvpsRouter = {
   review: authed
     .meta(docs("Approve or turn down someone waiting for review"))
     .input(ReviewSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("rsvp:review"))
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
       return yield* Rsvps.review(input);
@@ -119,7 +119,7 @@ export const rsvpsRouter = {
   giveSeat: authed
     .meta(docs("Give someone waiting (an offer, or the waitlist when it fits) their seat now"))
     .input(SeatSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("rsvp:seat"))
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
       return yield* Rsvps.giveSeat(input);
@@ -128,7 +128,7 @@ export const rsvpsRouter = {
   cancelSpots: authed
     .meta(docs("Cancel people's places; each is told, and the freed seats go to the next in line"))
     .input(CancelSpotsSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("rsvp:cancel"))
     .output(z.object({ cancelled: z.number() }))
     .effect(function* ({ input }) {
       return yield* Rsvps.cancelSpots(input);
@@ -137,7 +137,7 @@ export const rsvpsRouter = {
   sendTest: authed
     .meta(docs("Every automatic email of the event to the organizer asking, marked [Prueba]"))
     .input(TestEmailsSchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("rsvp:test"))
     .output(z.object({ sent: z.number(), to: z.string() }))
     .effect(function* ({ input }) {
       return yield* Rsvps.sendTest(input.eventId);

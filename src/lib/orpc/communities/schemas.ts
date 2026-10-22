@@ -3,7 +3,11 @@ import * as z from "zod";
 import { TOPICS, type Topic } from "../../community/topics";
 import { isValidCommunitySlug } from "../../tenant";
 
-export const CommunityRoleSchema = z.enum(["owner", "admin", "editor", "member"]);
+/** A built-in role (owner, admin, editor, member, door) or the slug of one of the community's custom roles. */
+export const CommunityRoleSchema = z
+  .string()
+  .trim()
+  .regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "Rol inválido");
 
 export const CommunitySchema = z.object({
   id: z.string(),
@@ -38,6 +42,8 @@ export const CommunityMemberSchema = z.object({
   name: z.string(),
   email: z.string(),
   image: z.string().nullable(),
+  /** Linked to the OWU Slack: without it their role doesn't count (after the grace period). */
+  owuSlack: z.boolean(),
   createdAt: z.string(),
 });
 
@@ -92,11 +98,18 @@ export const UpdateCommunitySchema = z.object({
 
 export const CommunityIdSchema = z.object({ communityId: z.string().min(1) });
 
-export const AddCommunityMemberSchema = z.object({
-  communityId: z.string().min(1),
-  email: z.email(),
-  role: CommunityRoleSchema.default("member"),
-});
+export const AddCommunityMemberSchema = z
+  .object({
+    communityId: z.string().min(1),
+    email: z.email().optional(),
+    /** An OWU Slack member id (U…), from the Slack picker. */
+    slackUserId: z
+      .string()
+      .regex(/^[UW][A-Z0-9]{6,}$/, "Usuario de Slack inválido")
+      .optional(),
+    role: CommunityRoleSchema.default("member"),
+  })
+  .refine((input) => Boolean(input.email || input.slackUserId), "Indicá un email o un usuario de Slack");
 
 export const UpdateCommunityMemberRoleSchema = z.object({
   communityId: z.string().min(1),

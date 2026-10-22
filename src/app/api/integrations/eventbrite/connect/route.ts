@@ -3,7 +3,8 @@ import { randomBytes } from "node:crypto";
 import { Effect } from "effect";
 import { NextResponse } from "next/server";
 
-import { auth } from "app/lib/auth";
+import { sessionFor } from "app/lib/auth-helpers";
+import { principalFor } from "lib/authz/principal";
 import { appUrl } from "lib/email/templates";
 import { signLink } from "lib/links";
 import { adminCommunity, authorizeUrl, eventbriteApp } from "lib/orpc/integrations/service";
@@ -22,12 +23,14 @@ export async function GET(request: Request) {
   const communityId = new URL(request.url).searchParams.get("community") ?? "";
   // Only from OWU's own pages: another site linking here can't swap in the admin's Eventbrite account
   if (request.headers.get("sec-fetch-site") === "cross-site") return NextResponse.redirect(appUrl("/organizar/panel"));
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await sessionFor(request.headers);
   if (!session) {
     const next = `/api/integrations/eventbrite/connect?community=${encodeURIComponent(communityId)}`;
     return NextResponse.redirect(appUrl(`/login?next=${encodeURIComponent(next)}`));
   }
-  const slug = await Effect.runPromiseWith(liveServices)(adminCommunity(communityId, session.user));
+  const slug = await Effect.runPromiseWith(liveServices)(
+    adminCommunity(communityId, await principalFor(session, request.headers))
+  );
   if (!slug) return NextResponse.redirect(appUrl("/organizar/panel"));
 
   const app = eventbriteApp();

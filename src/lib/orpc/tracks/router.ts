@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import {
   BulkUpdateTracksByScheduleSchema,
   CreatePlacedTrackSchema,
@@ -44,7 +44,7 @@ export const tracksRouter = {
       return yield* Tracks.listWithPlaces(input.openSpaceId, input.highlightedOnly);
     }),
 
-  create: staff
+  create: platform("program:manage")
     .meta(docs("Put a talk on the board; a taken place is a CONFLICT naming who has it"))
     .input(CreateTrackSchema)
     .output(StickyNoteSchema)
@@ -52,7 +52,7 @@ export const tracksRouter = {
       return yield* Tracks.createNote(input);
     }),
 
-  createPlaced: staff
+  createPlaced: platform("program:manage")
     .meta(
       docs(
         "Put a talk on the board wherever it fits best, in one call (the companion's spoken pitch); CONFLICT board_full when nothing is free"
@@ -64,7 +64,7 @@ export const tracksRouter = {
       return yield* Tracks.createPlaced(input);
     }),
 
-  update: staff
+  update: platform("program:manage")
     .meta(docs("Edit or move a talk; only the fields sent change"))
     .input(UpdateTrackInputSchema)
     .output(StickyNoteSchema)
@@ -72,7 +72,7 @@ export const tracksRouter = {
       return yield* Tracks.updateNote(input.id, input.data);
     }),
 
-  delete: staff
+  delete: platform("program:manage")
     .meta(docs("Take a talk off the board"))
     .input(TrackIdSchema)
     .output(StickyNoteSchema)
@@ -80,7 +80,7 @@ export const tracksRouter = {
       return yield* Tracks.deleteNote(input.id);
     }),
 
-  swap: staff
+  swap: platform("program:manage")
     .meta(docs("Two talks trade places"))
     .input(SwapTracksSchema)
     .output(z.array(StickyNoteSchema))
@@ -88,7 +88,7 @@ export const tracksRouter = {
       return yield* Tracks.swapNotes(input.trackAId, input.trackBId);
     }),
 
-  bulkUpdateBySchedule: staff
+  bulkUpdateBySchedule: platform("program:manage")
     .meta(docs("Re-label a slot's talks after its time changed, or move them to another slot"))
     .input(BulkUpdateTracksByScheduleSchema)
     .output(z.array(StickyNoteSchema))

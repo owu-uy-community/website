@@ -39,7 +39,6 @@ import { toast } from "components/shared/ui/toast-utils";
 import { shortWhen } from "lib/community/time";
 import { orpc } from "lib/orpc/client";
 import { DraftPatchSchema, type DraftPatch, type EditableEvent } from "lib/orpc/events/schemas";
-import { ROLE_RANK } from "lib/roles";
 import { isStep, issues, STEPS, stepState, UNTITLED, type StepKey } from "lib/organizar/steps";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
@@ -124,7 +123,7 @@ export function EventWizard({
 }) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const { current } = usePanel();
+  const { current, can } = usePanel();
   const base = `/organizar/panel/${community.slug}`;
   const input = { communityId: community.id, eventId };
 
@@ -351,7 +350,7 @@ export function EventWizard({
   }
 
   const Body = step === "revisar" ? null : STEP_BODY[step];
-  const isAdmin = current ? ROLE_RANK[current.role] >= ROLE_RANK.admin : false;
+  const isAdmin = can("event:cancel");
   const statusBadge =
     draft.status === "published" ? (
       <Badge variant="success">Publicado</Badge>

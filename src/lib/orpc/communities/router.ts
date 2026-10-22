@@ -3,7 +3,7 @@ import { ratelimit } from "@orpc/ratelimit";
 import { Effect } from "effect";
 import * as z from "zod";
 
-import { authed, inCommunity, pub, staff, type AuthedContext } from "../base";
+import { authed, inCommunity, platform, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
 import {
   AddCommunityMemberSchema,
@@ -26,7 +26,11 @@ import {
   UpdateCommunityMemberRoleSchema,
   UpdateCommunitySchema,
 } from "./schemas";
+import { AccessRequestSchema, InvitationSchema } from "../access/schemas";
+import * as Access from "../access/service";
 import * as Follow from "./follow";
+import { CommunityRoleInfoSchema, RoleInputSchema } from "./roles";
+import * as Roles from "./roles";
 import * as Communities from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Communities"], summary });
@@ -46,6 +50,13 @@ const MembershipSchema = z.object({
   role: CommunityMemberSchema.shape.role,
 });
 
+/** Added right away (they're on the OWU Slack), or invited (it applies when they sign in with it). */
+const AddResultSchema = z.object({
+  status: z.enum(["added", "invited"]),
+  member: MembershipSchema.nullable(),
+  invitationId: z.string().nullable(),
+});
+
 export const communitiesRouter = {
   list: pub
     .meta(docs("List communities"))
@@ -57,7 +68,7 @@ export const communitiesRouter = {
       return yield* Communities.listCommunities(input?.includeInactive === true && session?.user.role === "admin");
     }),
 
-  listForAdmin: staff
+  listForAdmin: platform("organization:list")
     .meta(docs("Every community, active or not, with its member and event counts (site staff)"))
     .output(z.array(CommunityOverviewSchema))
     .effect(function* () {
@@ -72,7 +83,7 @@ export const communitiesRouter = {
       return yield* Communities.getCommunityBySlug(input.communitySlug);
     }),
 
-  create: staff
+  create: platform("organization:create")
     .meta(docs("Create a community (site staff); the creator becomes its owner"))
     .input(CreateCommunitySchema)
     .output(CommunitySchema)
@@ -80,7 +91,7 @@ export const communitiesRouter = {
       return yield* Communities.createCommunity(input);
     }),
 
-  delete: staff
+  delete: platform("organization:delete")
     .meta(docs("Delete a community with its members, once it has no events (site staff)"))
     .input(CommunityIdSchema)
     .output(z.object({ ok: z.literal(true) }))
@@ -91,7 +102,7 @@ export const communitiesRouter = {
   update: authed
     .meta(docs("Edit a community"))
     .input(UpdateCommunitySchema)
-    .use(inCommunity("admin"))
+    .use(inCommunity("organization:update"))
     .output(CommunitySchema)
     .effect(function* ({ input }) {
       return yield* Communities.updateCommunity(input.communityId, input.data);
@@ -139,14 +150,14 @@ export const communitiesRouter = {
     }),
 
   claims: {
-    list: staff
+    list: platform("claim:read")
       .meta(docs("Claims to organize a community, pending first (site staff)"))
       .output(z.array(ClaimForReviewSchema))
       .effect(function* () {
         return yield* Communities.listClaims();
       }),
 
-    decide: staff
+    decide: platform("claim:decide")
       .meta(docs("Approve or reject a claim; approving adds the person to the community (site staff)"))
       .input(DecideClaimSchema)
       .output(z.object({ id: z.string(), status: ClaimStatusSchema, role: CommunityRoleSchema.nullable() }))
@@ -155,21 +166,120 @@ export const communitiesRouter = {
       }),
   },
 
+  /** The community's roles: the built-ins and its own (custom), with what each holds. */
+  roles: {
+    list: authed
+      .meta(docs("The community's roles and the permissions each holds"))
+      .input(CommunityIdSchema)
+      .use(inCommunity("role:read"))
+      .output(z.array(CommunityRoleInfoSchema))
+      .effect(function* ({ input }) {
+        return yield* Roles.listRoles(input.communityId);
+      }),
+
+    create: authed
+      .meta(docs("Create a custom role (never with more than the author holds)"))
+      .input(RoleInputSchema)
+      .use(inCommunity("role:create"))
+      .output(z.object({ role: z.string() }))
+      .effect(function* ({ input }) {
+        return yield* Roles.createRole(input);
+      }),
+
+    update: authed
+      .meta(docs("Rename a custom role or change what it holds"))
+      .input(
+        RoleInputSchema.partial({ label: true, description: true, permissions: true }).extend({
+          role: CommunityRoleSchema,
+        })
+      )
+      .use(inCommunity("role:update"))
+      .output(z.object({ role: z.string() }))
+      .effect(function* ({ input }) {
+        return yield* Roles.updateRole(input);
+      }),
+
+    delete: authed
+      .meta(docs("Delete a custom role nobody holds"))
+      .input(z.object({ communityId: z.string().min(1), role: CommunityRoleSchema }))
+      .use(inCommunity("role:delete"))
+      .output(z.object({ success: z.literal(true) }))
+      .effect(function* ({ input }) {
+        return yield* Roles.deleteRole(input);
+      }),
+  },
+
+  /** Invitations to the team waiting for the person to sign in with the OWU Slack. */
+  invitations: {
+    list: authed
+      .meta(docs("The community's pending invitations"))
+      .input(CommunityIdSchema)
+      .use(inCommunity("member:read"))
+      .output(z.array(InvitationSchema))
+      .effect(function* ({ input }) {
+        return yield* Access.listInvitations({ communityId: input.communityId });
+      }),
+
+    revoke: authed
+      .meta(docs("Cancel a pending invitation to the team"))
+      .input(z.object({ communityId: z.string().min(1), invitationId: z.string().min(1) }))
+      .use(inCommunity("invitation:cancel"))
+      .output(z.object({ success: z.literal(true) }))
+      .effect(function* ({ input }) {
+        return yield* Access.revokeInvitation(input);
+      }),
+  },
+
+  /** People asking to join the community's team (the waitlist). */
+  requests: {
+    list: authed
+      .meta(docs("Requests to join the community's team, pending first"))
+      .input(CommunityIdSchema)
+      .use(inCommunity("member:read"))
+      .output(z.array(AccessRequestSchema))
+      .effect(function* ({ input }) {
+        return yield* Access.listRequests({ communityId: input.communityId });
+      }),
+
+    decide: authed
+      .meta(docs("Approve (with a role) or reject a request to join the team"))
+      .input(
+        z.object({
+          communityId: z.string().min(1),
+          requestId: z.string().min(1),
+          decision: z.enum(["approve", "reject"]),
+          role: CommunityRoleSchema.default("member"),
+        })
+      )
+      .use(inCommunity("member:create"))
+      .output(
+        z.object({ id: z.string(), status: z.enum(["approved", "rejected"]), grantedRole: z.string().nullable() })
+      )
+      .effect(function* ({ input }) {
+        return yield* Access.decideRequest({
+          requestId: input.requestId,
+          decision: input.decision,
+          grant: { communityId: input.communityId, role: input.role },
+          scopeCommunityId: input.communityId,
+        });
+      }),
+  },
+
   members: {
     list: authed
       .meta(docs("List a community's members and their roles"))
       .input(CommunityIdSchema)
-      .use(inCommunity("admin"))
+      .use(inCommunity("member:read"))
       .output(z.array(CommunityMemberSchema))
       .effect(function* ({ input }) {
         return yield* Communities.listCommunityMembers(input.communityId);
       }),
 
     add: authed
-      .meta(docs("Add someone by email, or change an existing member's role"))
+      .meta(docs("Add someone to the team by email or OWU Slack id; without the OWU Slack yet, invite them"))
       .input(AddCommunityMemberSchema)
-      .use(inCommunity("admin"))
-      .output(MembershipSchema)
+      .use(inCommunity("member:create"))
+      .output(AddResultSchema)
       .effect(function* ({ input }) {
         return yield* Communities.addCommunityMember(input);
       }),
@@ -177,7 +287,7 @@ export const communitiesRouter = {
     updateRole: authed
       .meta(docs("Change a member's role"))
       .input(UpdateCommunityMemberRoleSchema)
-      .use(inCommunity("admin"))
+      .use(inCommunity("member:update"))
       .output(MembershipSchema)
       .effect(function* ({ input }) {
         return yield* Communities.updateCommunityMemberRole(input);
@@ -186,16 +296,24 @@ export const communitiesRouter = {
     showOnProfile: authed
       .meta(docs("Appear, or not, among the organizers on the community's public page (name and photo)"))
       .input(ShowOnProfileSchema)
-      .use(inCommunity("editor"))
+      .use(inCommunity("member:show-on-profile"))
       .output(z.object({ showOnProfile: z.boolean() }))
       .effect(function* ({ input }) {
         return yield* Communities.setShowOnProfile(input);
       }),
 
+    leave: authed
+      .meta(docs("Leave a community's team (the last owner can't)"))
+      .input(CommunityIdSchema)
+      .output(z.object({ success: z.literal(true) }))
+      .effect(function* ({ input }) {
+        return yield* Communities.leaveCommunity(input.communityId);
+      }),
+
     remove: authed
       .meta(docs("Remove a member"))
       .input(RemoveCommunityMemberSchema)
-      .use(inCommunity("admin"))
+      .use(inCommunity("member:delete"))
       .output(z.object({ success: z.literal(true) }))
       .effect(function* ({ input }) {
         return yield* Communities.removeCommunityMember(input);

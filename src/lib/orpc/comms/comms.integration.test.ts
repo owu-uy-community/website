@@ -4,7 +4,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { db } from "lib/db";
-import { account, activity, outboundMessages } from "lib/db/schema";
+import { activity, outboundMessages } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
 import { makeBoard, makeMember, makeSiteAdmin } from "test/factories";
@@ -303,20 +303,11 @@ describe("comms", () => {
   describe("reminding the staff", () => {
     test("Owy DMs, on Slack, whoever hasn't marked an announcement as received", async () => {
       const { eventId, community, admin } = await setup();
-      const [editor, withSlack] = await Promise.all([
+      const [editor] = await Promise.all([
         makeMember(community.id, "editor", { name: "Editora" }),
-        makeMember(community.id, "member", { name: "Con Slack" }),
-        makeMember(community.id, "member", { name: "Sin Slack" }),
+        makeMember(community.id, "member", { name: "Con Slack" }, { slack: "U0SLACK1" }),
+        makeMember(community.id, "member", { name: "Sin Slack" }, { slack: false }),
       ]);
-      const now = new Date();
-      await db.insert(account).values({
-        id: `acc-${withSlack.id}`,
-        accountId: "U0SLACK1",
-        providerId: "slack",
-        userId: withSlack.id,
-        createdAt: now,
-        updatedAt: now,
-      });
       vi.stubEnv("OWY_SLACK_BOT_TOKEN", "xoxb-test");
       const dms: { channel: string; text: string }[] = [];
       server.use(
@@ -343,7 +334,7 @@ describe("comms", () => {
     test("with nobody reachable on Slack it says so instead of pretending", async () => {
       const { eventId, community, admin } = await setup();
       const editor = await makeMember(community.id, "editor");
-      await makeMember(community.id, "member");
+      await makeMember(community.id, "member", {}, { slack: false });
       const { id: announcementId } = await call(
         router.staffTasks.announcements.create,
         { eventId, body: "Aviso" },
