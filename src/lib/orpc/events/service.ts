@@ -1,18 +1,19 @@
-import { and, count, desc, eq, gt, inArray, lt, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gt, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { similarity } from "../../calendar/score";
-import { communities, communityMembers, events, user, type EventRow } from "../../db/schema";
+import { communities, communityMembers, events, user, venues, type EventRow } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
 import { conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
+import { issues, UNTITLED } from "../../organizar/steps";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { CommunityScope } from "../services";
-import type { HoldInput, OrganizerEvent } from "./schemas";
+import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent } from "./schemas";
 
 /** How long a date stays reserved; renewing starts the count again. */
 export const HOLD_DAYS = 14;
@@ -282,3 +283,282 @@ export const remindExpiringHolds = Effect.gen(function* () {
 
   return { holds: soon.length, queued };
 });
+
+// ---------------------------------------------------------------------------
+// The wizard: create, edit (autosave), publish, cancel
+// ---------------------------------------------------------------------------
+
+const PROVISIONAL_DAYS = 28;
+
+const editableOf = (eventId: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) =>
+      db
+        .select({ event: events, communitySlug: communities.slug, venue: venues })
+        .from(events)
+        .innerJoin(communities, eq(communities.id, events.communityId))
+        .leftJoin(venues, eq(venues.id, events.venueId))
+        .where(eq(events.id, eventId))
+    );
+    if (!row) return yield* notFound;
+    const { event, venue } = row;
+
+    return {
+      ...toOrganizerEvent(event),
+      communitySlug: row.communitySlug,
+      summary: event.summary,
+      description: event.description,
+      format: event.format,
+      topics: event.topics,
+      mode: event.mode,
+      venueId: event.venueId,
+      venue: venue
+        ? { id: venue.id, name: venue.name, neighbourhood: venue.neighbourhood, address: venue.address }
+        : null,
+      placeName: event.placeName,
+      placeAddress: event.placeAddress,
+      venueMapUrl: event.venueMapUrl,
+      onlineUrl: event.onlineUrl,
+      registrationUrl: event.registrationUrl,
+      approval: event.approval,
+      waitlist: event.waitlist,
+      guestsAllowed: event.guestsAllowed,
+      rsvpClosesAt: event.rsvpClosesAt?.toISOString() ?? null,
+      questions: event.questions,
+      externalLinks: event.externalLinks,
+    } satisfies EditableEvent;
+  });
+
+/** One event of the scoped community, as the wizard edits it. */
+export const get = (eventId: string) =>
+  Effect.gen(function* () {
+    const { communityId } = yield* CommunityScope;
+    if (!(yield* belongs(eventId, communityId))) return yield* notFound;
+
+    return yield* editableOf(eventId);
+  });
+
+const belongs = (eventId: string, communityId: string) =>
+  query((db) =>
+    db
+      .select({ id: events.id })
+      .from(events)
+      .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
+  ).pipe(Effect.map((rows) => rows.length > 0));
+
+/**
+ * A new draft, with a provisional date four weeks out (reserving one makes it real), optionally
+ * starting from a previous event's texts and settings. A mutation, never a GET: prefetching a
+ * link must not make drafts.
+ */
+export const createDraft = (input: { title?: string; copyFrom?: string }) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const [source] = input.copyFrom
+        ? yield* query((db) =>
+            db
+              .select()
+              .from(events)
+              .where(and(eq(events.id, input.copyFrom ?? ""), eq(events.communityId, communityId)))
+          )
+        : [];
+      const startDate = new Date(Date.now() + PROVISIONAL_DAYS * DAY_MS);
+      startDate.setUTCHours(22, 0, 0, 0);
+      const length = source ? source.endDate.getTime() - source.startDate.getTime() : 2 * 3_600_000;
+      const name = input.title ?? (source ? source.name : UNTITLED);
+      const slug = yield* freeSlug(communityId, slugify(name === UNTITLED ? "borrador" : name));
+      const [row] = yield* query((db) =>
+        db
+          .insert(events)
+          .values({
+            communityId,
+            name,
+            slug,
+            status: "draft",
+            startDate,
+            endDate: new Date(startDate.getTime() + length),
+            ...(source
+              ? {
+                  summary: source.summary,
+                  description: source.description,
+                  format: source.format,
+                  topics: source.topics,
+                  mode: source.mode,
+                  registration: source.registration,
+                  approval: source.approval,
+                  capacity: source.capacity,
+                  waitlist: source.waitlist,
+                  guestsAllowed: source.guestsAllowed,
+                  questions: source.questions,
+                }
+              : { registration: "owu" as const }),
+          })
+          .returning({ id: events.id })
+      );
+      yield* recordActivity({
+        eventId: row.id,
+        verb: "event.drafted",
+        entityType: "event",
+        entityId: row.id,
+        summary: source ? `empezó un evento a partir de «${source.name}»` : "empezó un evento nuevo",
+      });
+
+      return yield* editableOf(row.id);
+    })
+  );
+
+/**
+ * Autosave: apply what changed, unless someone else saved since this editor loaded (a 409 the
+ * panel shows as "otra persona editó"). Published events can move their date; attendees hear
+ * about date or place changes (the calendar invite's sequence goes up).
+ */
+export const save = (input: { eventId: string; expectedUpdatedAt: string; patch: DraftPatch }) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const [row] = yield* query((db) =>
+        db
+          .select()
+          .from(events)
+          .where(and(eq(events.id, input.eventId), eq(events.communityId, communityId)))
+          .for("update")
+      );
+      if (!row) return yield* notFound;
+      if (row.status === "cancelled") {
+        return yield* new Conflict({ reason: "cancelled", message: "El evento está cancelado: ya no se edita" });
+      }
+      if (row.updatedAt.toISOString() !== input.expectedUpdatedAt) {
+        return yield* new Conflict({
+          reason: "stale",
+          message: "Otra persona editó este evento: recargá para ver sus cambios",
+        });
+      }
+
+      const { schedule, rsvpClosesAt, ...fields } = input.patch;
+      const moved =
+        row.status === "published" && schedule
+          ? (() => {
+              const start = new Date(montevideoIso(`${schedule.day}T${schedule.startTime}`));
+              return { startDate: start, endDate: new Date(start.getTime() + schedule.durationMin * 60_000) };
+            })()
+          : null;
+      const placeChanged =
+        row.status === "published" &&
+        ((fields.placeName !== undefined && fields.placeName !== row.placeName) ||
+          (fields.placeAddress !== undefined && fields.placeAddress !== row.placeAddress) ||
+          (fields.mode !== undefined && fields.mode !== row.mode));
+      const dateChanged = moved !== null && moved.startDate.getTime() !== row.startDate.getTime();
+
+      yield* query((db) =>
+        db
+          .update(events)
+          .set({
+            ...fields,
+            ...(rsvpClosesAt !== undefined ? { rsvpClosesAt: rsvpClosesAt ? new Date(rsvpClosesAt) : null } : {}),
+            ...moved,
+            ...(dateChanged || placeChanged ? { icsSequence: row.icsSequence + 1 } : {}),
+          })
+          .where(eq(events.id, row.id))
+      );
+      if (dateChanged && moved) {
+        yield* recordActivity({
+          eventId: row.id,
+          verb: "event.rescheduled",
+          entityType: "event",
+          entityId: row.id,
+          summary: `movió el evento al ${shortWhen(moved.startDate)}`,
+        });
+      }
+
+      return yield* editableOf(row.id);
+    })
+  );
+
+/**
+ * Publish a draft: everything required in place (the same checks the wizard shows), the address
+ * from its final name, the hold gone (it's an event now), similar communities told.
+ */
+export const publish = (eventId: string) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const [row] = yield* query((db) =>
+        db
+          .select()
+          .from(events)
+          .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
+          .for("update")
+      );
+      if (!row) return yield* notFound;
+      if (row.status !== "draft") {
+        return yield* new Conflict({ reason: "not_draft", message: "Ese evento ya está publicado" });
+      }
+      const current = yield* editableOf(eventId);
+      const missing = issues(current).filter((issue) => issue.level === "required");
+      if (missing.length > 0) {
+        return yield* new Invalid({
+          message: `Antes de publicar: ${missing.map((issue) => issue.text.toLowerCase()).join(", ")}`,
+          issues: missing,
+        });
+      }
+
+      const taken = new Set(
+        (yield* query((db) =>
+          db
+            .select({ slug: events.slug })
+            .from(events)
+            .where(and(eq(events.communityId, communityId), ne(events.id, eventId)))
+        )).map((other) => other.slug)
+      );
+      const base = slugify(row.name);
+      let slug = base;
+      for (let suffix = 2; taken.has(slug); suffix += 1) slug = `${base}-${suffix}`;
+
+      const [published] = yield* query((db) =>
+        db
+          .update(events)
+          .set({ status: "published", publishedAt: new Date(), heldUntil: null, slug })
+          .where(eq(events.id, eventId))
+          .returning()
+      );
+      yield* headsUp(published);
+      yield* recordActivity({
+        eventId,
+        verb: "event.published",
+        entityType: "event",
+        entityId: eventId,
+        summary: `publicó «${published.name}» para el ${shortWhen(published.startDate)}`,
+      });
+      const event = yield* editableOf(eventId);
+
+      return { event, path: `/comunidad/${event.communitySlug}/events/${slug}` };
+    })
+  );
+
+/** Cancel a published event: it stays listed as cancelled, and its calendar invites are withdrawn. */
+export const cancel = (input: { eventId: string; reason: string }) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const [row] = yield* query((db) =>
+        db
+          .update(events)
+          .set({ status: "cancelled", icsSequence: sql`${events.icsSequence} + 1` })
+          .where(and(eq(events.id, input.eventId), eq(events.communityId, communityId), eq(events.status, "published")))
+          .returning()
+      );
+      if (!row) {
+        return yield* new Conflict({ reason: "not_published", message: "Solo se cancela un evento publicado" });
+      }
+      yield* recordActivity({
+        eventId: row.id,
+        verb: "event.cancelled",
+        entityType: "event",
+        entityId: row.id,
+        summary: input.reason ? `canceló el evento: ${input.reason}` : "canceló el evento",
+      });
+
+      return yield* editableOf(row.id);
+    })
+  );

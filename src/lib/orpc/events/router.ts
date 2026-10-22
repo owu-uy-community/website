@@ -2,7 +2,18 @@ import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
 import { authed, inCommunity } from "../base";
-import { EventRefSchema, HoldResultSchema, HoldSchema, ListEventsSchema, OrganizerEventSchema } from "./schemas";
+import {
+  CancelEventSchema,
+  CreateDraftSchema,
+  EditableEventSchema,
+  EventRefSchema,
+  HoldResultSchema,
+  HoldSchema,
+  ListEventsSchema,
+  OrganizerEventSchema,
+  PublishResultSchema,
+  SaveEventSchema,
+} from "./schemas";
 import * as Events from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Organizer events"], summary });
@@ -34,6 +45,51 @@ export const eventsRouter = {
     .output(OrganizerEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.release(input.eventId);
+    }),
+
+  get: authed
+    .meta(docs("One event, as the wizard edits it"))
+    .input(EventRefSchema)
+    .use(inCommunity("editor"))
+    .output(EditableEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.get(input.eventId);
+    }),
+
+  createDraft: authed
+    .meta(docs("A new draft with a provisional date, optionally copying a previous event"))
+    .input(CreateDraftSchema)
+    .use(inCommunity("editor"))
+    .output(EditableEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.createDraft(input);
+    }),
+
+  save: authed
+    .meta(docs("Autosave: apply a patch unless someone else saved since (CONFLICT stale)"))
+    .input(SaveEventSchema)
+    .use(inCommunity("editor"))
+    .output(EditableEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.save(input);
+    }),
+
+  publish: authed
+    .meta(docs("Publish a draft once everything required is in place"))
+    .input(EventRefSchema)
+    .use(inCommunity("editor"))
+    .output(PublishResultSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.publish(input.eventId);
+    }),
+
+  cancel: authed
+    .meta(docs("Cancel a published event"))
+    .input(CancelEventSchema)
+    .use(inCommunity("admin"))
+    .output(EditableEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.cancel(input);
     }),
 
   remove: authed
