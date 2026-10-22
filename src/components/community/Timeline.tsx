@@ -8,14 +8,25 @@ import { cn } from "app/lib/utils";
 import { EASE_OUT } from "./motion";
 import { SmartLink } from "./ui";
 
-export type Milestone = { when: string; title: string; body?: ReactNode; href?: string; now?: boolean; icon?: ReactNode };
+export type Milestone = {
+  when: string;
+  title: string;
+  body?: ReactNode;
+  href?: string;
+  now?: boolean;
+  icon?: ReactNode;
+};
 
 // Seconds from one milestone to the next: its icon lands, then the line draws down to the next one
 const STEP = 0.32;
 
 const node: Variants = {
   hidden: { scale: 0.4, opacity: 0 },
-  show: (i: number) => ({ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 420, damping: 22, delay: i * STEP } }),
+  show: (i: number) => ({
+    scale: 1,
+    opacity: 1,
+    transition: { type: "spring", stiffness: 420, damping: 22, delay: i * STEP },
+  }),
 };
 const text: Variants = {
   hidden: { opacity: 0, x: -10 },
@@ -61,7 +72,12 @@ export default function Timeline({ items }: { items: Milestone[] }) {
           </motion.span>
 
           <motion.div className="min-w-0 pt-0.5" custom={i} variants={text}>
-            <p className={cn("text-xs font-semibold tracking-[0.14em] uppercase", now ? "text-yellow-400" : "text-zinc-500")}>
+            <p
+              className={cn(
+                "text-xs font-semibold tracking-[0.14em] uppercase",
+                now ? "text-yellow-400" : "text-zinc-500"
+              )}
+            >
               {when}
               {now ? <span className="ml-2 tracking-normal normal-case">· Se viene</span> : null}
             </p>

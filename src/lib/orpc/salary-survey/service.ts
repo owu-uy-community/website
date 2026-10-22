@@ -5,7 +5,14 @@ import { Effect } from "effect";
 
 import { salarySurveyParticipants, salarySurveyResponses, salarySurveys, type SalarySurveyRow } from "../../db/schema";
 import { MIN_GROUP_SIZE } from "../../salary-survey/questions";
-import { currencyResults, datasetCsv, datasetRows, profile, satisfactionStats, type ResponseFacts } from "../../salary-survey/stats";
+import {
+  currencyResults,
+  datasetCsv,
+  datasetRows,
+  profile,
+  satisfactionStats,
+  type ResponseFacts,
+} from "../../salary-survey/stats";
 import { query, transaction } from "../db";
 import { Conflict, NotFound } from "../errors";
 import { CurrentUser } from "../services";
@@ -36,9 +43,9 @@ const toSurvey = (row: SalarySurveyRow, responseCount: number): Survey => ({
 });
 
 const countResponses = (surveyId: string) =>
-  query((db) => db.select({ n: count() }).from(salarySurveyResponses).where(eq(salarySurveyResponses.surveyId, surveyId))).pipe(
-    Effect.map(([row]) => row?.n ?? 0)
-  );
+  query((db) =>
+    db.select({ n: count() }).from(salarySurveyResponses).where(eq(salarySurveyResponses.surveyId, surveyId))
+  ).pipe(Effect.map(([row]) => row?.n ?? 0));
 
 const findSurvey = (slug: string) =>
   query((db) => db.select().from(salarySurveys).where(eq(salarySurveys.slug, slug))).pipe(
@@ -89,7 +96,9 @@ export const submit = (slug: string, answers: Answers) =>
         }
 
         yield* query((db) =>
-          db.insert(salarySurveyParticipants).values({ surveyId: row.id, participantHash: participantHash(row.id, user.id) })
+          db
+            .insert(salarySurveyParticipants)
+            .values({ surveyId: row.id, participantHash: participantHash(row.id, user.id) })
         ).pipe(
           Effect.catchTag("UniqueViolation", () =>
             Effect.fail(new Conflict({ reason: "already_answered", message: "Ya respondiste esta edición. ¡Gracias!" }))
@@ -126,7 +135,9 @@ const responseFacts = (surveyId: string) =>
   );
 
 const publishedSurvey = (slug: string) =>
-  findSurvey(slug).pipe(Effect.flatMap((row) => (row.status === "published" ? Effect.succeed(row) : Effect.fail(notPublished))));
+  findSurvey(slug).pipe(
+    Effect.flatMap((row) => (row.status === "published" ? Effect.succeed(row) : Effect.fail(notPublished)))
+  );
 
 /**
  * Quartiles per currency (never converted) and per group; groups under the
@@ -224,7 +235,9 @@ export const upsertSurvey = (input: { slug: string; title: string; opensAt: stri
 
 export const setStatus = (slug: string, status: SalarySurveyRow["status"]) =>
   Effect.gen(function* () {
-    const [row] = yield* query((db) => db.update(salarySurveys).set({ status }).where(eq(salarySurveys.slug, slug)).returning());
+    const [row] = yield* query((db) =>
+      db.update(salarySurveys).set({ status }).where(eq(salarySurveys.slug, slug)).returning()
+    );
     if (!row) return yield* surveyNotFound;
 
     return toSurvey(row, yield* countResponses(row.id));

@@ -44,11 +44,7 @@ const OUTSIDE = [
   { href: SOCIAL_LINKS.youtube, label: "YouTube @owuuy", body: "Las grabaciones de OWU, a medida que las subimos." },
 ];
 
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
+const normalize = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 const isUpcoming = (talk: Talk) => Date.parse(`${talk.date}T23:59:59-03:00`) > Date.now();
 
@@ -164,10 +160,16 @@ export default async function CharlasPage() {
                 <FilePlus2 aria-hidden className="size-5" />
               </span>
               <div>
-                <h3 className="font-title text-[17px] font-semibold text-white">¿Tenés el video o las slides de una charla?</h3>
+                <h3 className="font-title text-[17px] font-semibold text-white">
+                  ¿Tenés el video o las slides de una charla?
+                </h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-zinc-400">
-                  Sumalos en Keystatic (Charlas, elegí la charla, campos Video y Slides) o mandá un PR editando su archivo
-                  en <code className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-terminal text-[12px] text-zinc-300">content/talks</code>.
+                  Sumalos en Keystatic (Charlas, elegí la charla, campos Video y Slides) o mandá un PR editando su
+                  archivo en{" "}
+                  <code className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-terminal text-[12px] text-zinc-300">
+                    content/talks
+                  </code>
+                  .
                 </p>
               </div>
             </div>
@@ -194,7 +196,9 @@ export default async function CharlasPage() {
                   <details key={edition.id} className="group" open={index < 2}>
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 [&::-webkit-details-marker]:hidden">
                       <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <span className="font-title text-base font-semibold text-white sm:text-[17px]">{edition.name}</span>
+                        <span className="font-title text-base font-semibold text-white sm:text-[17px]">
+                          {edition.name}
+                        </span>
                         <span className="text-[13px] text-zinc-500">
                           {when.day} {when.month} {edition.startDate.slice(0, 4)} ·{" "}
                           {pluralize(edition.sessions.length, "sesión", "sesiones")}
@@ -245,8 +249,8 @@ export default async function CharlasPage() {
           ))}
         </Cells>
         <p className="mt-10 max-w-xl text-[15px] leading-relaxed text-zinc-400">
-          <strong className="font-semibold text-white">¿Querés que tu charla esté acá?</strong> Proponela en una meetup de
-          la comunidad o en el open space de OWU CONF.{" "}
+          <strong className="font-semibold text-white">¿Querés que tu charla esté acá?</strong> Proponela en una meetup
+          de la comunidad o en el open space de OWU CONF.{" "}
           <SmartLink
             className="text-zinc-200 underline decoration-white/30 underline-offset-4 hover:decoration-yellow-400"
             href={PAGES.darCharla.href}

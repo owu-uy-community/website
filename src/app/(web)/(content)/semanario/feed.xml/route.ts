@@ -20,7 +20,8 @@ export async function GET() {
   const items = issues
     .map((issue) => {
       const url = `${SITE_URL}/semanario/${issue.number}`;
-      const description = excerpt(issue.intro, 400) || `Lo que pasó en la comunidad la semana del ${weekRange(issue.weekStart)}.`;
+      const description =
+        excerpt(issue.intro, 400) || `Lo que pasó en la comunidad la semana del ${weekRange(issue.weekStart)}.`;
 
       return [
         "<item>",

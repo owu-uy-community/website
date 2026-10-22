@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest";
 
-import { breakdown, datasetCsv, percentileOf, profile, satisfactionStats, summarize, type ResponseFacts } from "./stats";
+import {
+  breakdown,
+  datasetCsv,
+  percentileOf,
+  profile,
+  satisfactionStats,
+  summarize,
+  type ResponseFacts,
+} from "./stats";
 import { SENIORITIES } from "./questions";
 
 const answer = (overrides: Partial<ResponseFacts> = {}): ResponseFacts => ({

@@ -43,7 +43,13 @@ const useNarrow = () =>
 
 /** The p25–p75 band with a dot at the median: one series, so one hue in two strengths and no legend */
 function RangeShape(props: unknown) {
-  const { x, y, width, height, payload } = props as { x: number; y: number; width: number; height: number; payload: Row };
+  const { x, y, width, height, payload } = props as {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    payload: Row;
+  };
   const span = payload.p75 - payload.p25;
   const cx = x + (span > 0 ? ((payload.median - payload.p25) / span) * width : width / 2);
   const cy = y + height / 2;
@@ -124,7 +130,9 @@ function RangeChart({ title, breakdown, currency }: { title: string; breakdown: 
 
                 return (
                   <div className="w-max max-w-[14rem] rounded-xl border border-white/10 bg-[#141416] px-3.5 py-3 shadow-xl shadow-black/50">
-                    <p className="font-title text-base font-semibold text-white tabular-nums">{format.format(row.median)}</p>
+                    <p className="font-title text-base font-semibold text-white tabular-nums">
+                      {format.format(row.median)}
+                    </p>
                     <p className="text-xs text-zinc-400">mediana · {row.label}</p>
                     <p className="mt-2 text-xs text-zinc-400 tabular-nums">
                       50% central: {format.format(row.p25)} a {format.format(row.p75)}
@@ -204,7 +212,9 @@ function SatisfactionCard({ satisfaction }: { satisfaction: Satisfaction | null 
 
   return (
     <Card className="flex flex-col gap-3 p-5 sm:p-6">
-      <dt className="order-last text-xs font-semibold tracking-[0.14em] text-zinc-500 uppercase">Conformidad con el sueldo</dt>
+      <dt className="order-last text-xs font-semibold tracking-[0.14em] text-zinc-500 uppercase">
+        Conformidad con el sueldo
+      </dt>
       <dd className="flex items-end justify-between gap-4">
         <span>
           <span className="font-title text-2xl font-bold tracking-[-0.02em] text-white tabular-nums">
@@ -219,7 +229,11 @@ function SatisfactionCard({ satisfaction }: { satisfaction: Satisfaction | null 
             <span
               key={index}
               className="w-3 rounded-sm"
-              style={{ height: `${Math.max((n / max) * 100, 8)}%`, backgroundColor: MARK, opacity: 0.35 + (index / 4) * 0.6 }}
+              style={{
+                height: `${Math.max((n / max) * 100, 8)}%`,
+                backgroundColor: MARK,
+                opacity: 0.35 + (index / 4) * 0.6,
+              }}
               title={`${SATISFACTION[index].label}: ${count.format(n)}`}
             />
           ))}
@@ -230,7 +244,8 @@ function SatisfactionCard({ satisfaction }: { satisfaction: Satisfaction | null 
           {markets.map((group, index) => (
             <span key={group.key}>
               {index > 0 ? " · " : ""}
-              {group.label} <span className="text-zinc-300">{group.mean.toLocaleString("es-UY", { minimumFractionDigits: 1 })}</span>
+              {group.label}{" "}
+              <span className="text-zinc-300">{group.mean.toLocaleString("es-UY", { minimumFractionDigits: 1 })}</span>
             </span>
           ))}
         </p>
@@ -247,7 +262,11 @@ export default function Results({ results }: { results: SurveyResults }) {
 
   return (
     <div className="flex flex-col gap-8">
-      <div aria-label="Moneda" className="inline-flex w-fit rounded-xl border border-white/10 bg-white/[0.04] p-1" role="radiogroup">
+      <div
+        aria-label="Moneda"
+        className="inline-flex w-fit rounded-xl border border-white/10 bg-white/[0.04] p-1"
+        role="radiogroup"
+      >
         {(["UYU", "USD"] as const).map((option) => (
           <button
             key={option}

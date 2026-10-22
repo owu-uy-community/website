@@ -75,7 +75,11 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
       // The next community in line that no slot is showing right now
       let candidate = tiles[state.next++ % tiles.length]!;
 
-      for (let tries = 0; tries < tiles.length && shownRef.current.some((tile) => tile.slug === candidate.slug); tries++) {
+      for (
+        let tries = 0;
+        tries < tiles.length && shownRef.current.some((tile) => tile.slug === candidate.slug);
+        tries++
+      ) {
         candidate = tiles[state.next++ % tiles.length]!;
       }
       setShown((current) => current.map((tile, index) => (index === slot ? candidate : tile)));

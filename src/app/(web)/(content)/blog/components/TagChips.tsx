@@ -27,7 +27,13 @@ export default function TagChips({ tags, active = "", onSelect }: TagChipsProps)
 
         if (onSelect) {
           return (
-            <button key={label} aria-pressed={isActive} className={className} type="button" onClick={() => onSelect(tag)}>
+            <button
+              key={label}
+              aria-pressed={isActive}
+              className={className}
+              type="button"
+              onClick={() => onSelect(tag)}
+            >
               {label}
             </button>
           );

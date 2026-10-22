@@ -38,7 +38,11 @@ export default function CommunityGrid({ communities, cta }: { communities: GridC
       // The next group in line that no card is showing right now
       let candidate = communities[state.next++ % communities.length]!;
 
-      for (let tries = 0; tries < communities.length && shownRef.current.some((c) => c.slug === candidate.slug); tries++) {
+      for (
+        let tries = 0;
+        tries < communities.length && shownRef.current.some((c) => c.slug === candidate.slug);
+        tries++
+      ) {
         candidate = communities[state.next++ % communities.length]!;
       }
       setShown((current) => current.map((community, index) => (index === slot ? candidate : community)));
@@ -72,9 +76,15 @@ export default function CommunityGrid({ communities, cta }: { communities: GridC
               >
                 <CommunityLogo logo={community.logo} name={community.name} />
                 <span className="block min-w-0">
-                  <span className="block truncate font-title text-[15px] font-semibold text-white">{community.name}</span>
+                  <span className="block truncate font-title text-[15px] font-semibold text-white">
+                    {community.name}
+                  </span>
                   <span className="mt-1 block truncate text-[13px] text-zinc-500">
-                    {community.next ? <span className="font-medium text-yellow-400">{community.next}</span> : community.blurb}
+                    {community.next ? (
+                      <span className="font-medium text-yellow-400">{community.next}</span>
+                    ) : (
+                      community.blurb
+                    )}
                   </span>
                 </span>
               </motion.span>

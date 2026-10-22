@@ -46,7 +46,10 @@ const UNACCEPTABLE = [
 
 const PROTOCOL = [
   { title: "Recibimos y confirmamos", body: "Te respondemos en menos de 48 horas para avisarte que lo leímos." },
-  { title: "Escuchamos a las partes", body: "Hablamos con quien reportó y con las personas involucradas, con cuidado." },
+  {
+    title: "Escuchamos a las partes",
+    body: "Hablamos con quien reportó y con las personas involucradas, con cuidado.",
+  },
   { title: "Decidimos", body: "El equipo que recibe reportes define una acción proporcional a lo que pasó." },
   { title: "Te contamos", body: "Te avisamos qué decidimos. Tu identidad no se comparte sin tu permiso." },
 ];
@@ -140,7 +143,9 @@ export default function ConductPage() {
                       organizador durante un evento.
                     </p>
                   </div>
-                  <p className="mt-4 text-xs text-zinc-500">Respondemos en menos de 48 h. Todo reporte es confidencial.</p>
+                  <p className="mt-4 text-xs text-zinc-500">
+                    Respondemos en menos de 48 h. Todo reporte es confidencial.
+                  </p>
                 </Card>
                 <div className="flex gap-3 rounded-2xl border border-dashed border-white/15 p-5 text-sm leading-relaxed text-zinc-400">
                   <Phone aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-500" />

@@ -24,7 +24,8 @@ const PaletteContext = createContext<{ open: () => void }>({ open: () => {} });
 export const useCommandPalette = () => useContext(PaletteContext);
 
 const isTyping = (target: EventTarget | null) =>
-  target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
+  target instanceof HTMLElement &&
+  (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
 
 export function CommandPaletteProvider({ items, children }: { items: SearchItem[]; children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -105,7 +106,10 @@ export function CommandPaletteProvider({ items, children }: { items: SearchItem[
                           value={`${item.label} · ${group}`}
                           onSelect={() => go(item.href)}
                         >
-                          <Icon aria-hidden className="size-4 shrink-0 text-zinc-500 group-data-[selected=true]:text-yellow-400" />
+                          <Icon
+                            aria-hidden
+                            className="size-4 shrink-0 text-zinc-500 group-data-[selected=true]:text-yellow-400"
+                          />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-sm">{item.label}</span>
                             {item.hint ? (

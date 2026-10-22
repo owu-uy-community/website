@@ -35,7 +35,12 @@ const nextMonday = () => {
   return new Date(week).toISOString().slice(0, 10);
 };
 
-const draft = (weekStart: string, title = "Semana movida") => ({ weekStart, title, intro: "Hola, comunidad.", sections });
+const draft = (weekStart: string, title = "Semana movida") => ({
+  weekStart,
+  title,
+  intro: "Hola, comunidad.",
+  sections,
+});
 
 describe("semanario", () => {
   test("Owy's draft for a week is rewritten while it is still a draft, and nobody else sees it", async () => {
@@ -86,7 +91,9 @@ describe("semanario", () => {
     const { number } = await call(router.semanario.publish, { id: saved.id }, by(staff));
 
     await call(router.semanario.unpublish, { id: saved.id }, by(staff));
-    await expect(call(router.semanario.get, { number: number! }, by(null))).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(call(router.semanario.get, { number: number! }, by(null))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
     const again = await call(router.semanario.publish, { id: saved.id }, by(staff));
 
     expect(again.number).toBe(number);

@@ -50,7 +50,10 @@ export default function CalendarSubscribe({ wide = false }: { wide?: boolean }) 
             target={href.startsWith("http") ? "_blank" : undefined}
             title={app}
           >
-            <Icon aria-hidden className="size-4 shrink-0 text-zinc-400 transition-colors group-hover/button:text-white" />
+            <Icon
+              aria-hidden
+              className="size-4 shrink-0 text-zinc-400 transition-colors group-hover/button:text-white"
+            />
             {label}
           </a>
         ))}

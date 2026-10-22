@@ -38,7 +38,11 @@ const NEXT: Record<Survey["status"], { status: Survey["status"]; label: string; 
   draft: [{ status: "open", label: "Abrir", confirm: "La encuesta va a empezar a recibir respuestas. ¿Abrir?" }],
   open: [{ status: "closed", label: "Cerrar", confirm: "No va a aceptar más respuestas. ¿Cerrar?" }],
   closed: [
-    { status: "published", label: "Publicar resultados", confirm: "Los agregados y el dataset quedan públicos. ¿Publicar?" },
+    {
+      status: "published",
+      label: "Publicar resultados",
+      confirm: "Los agregados y el dataset quedan públicos. ¿Publicar?",
+    },
     { status: "open", label: "Reabrir" },
   ],
   published: [{ status: "closed", label: "Despublicar" }],
@@ -52,7 +56,12 @@ const fromLocalInput = (value: string) => (value ? new Date(montevideoIso(value)
 
 const shortDate = (iso: string | null) =>
   iso
-    ? new Intl.DateTimeFormat("es-UY", { timeZone: "America/Montevideo", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso))
+    ? new Intl.DateTimeFormat("es-UY", {
+        timeZone: "America/Montevideo",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }).format(new Date(iso))
     : "Sin fecha";
 
 type Form = { slug: string; title: string; opensAt: string; closesAt: string };
@@ -214,8 +223,8 @@ export default function EncuestaClient() {
           <DialogHeader>
             <DialogTitle>{isNew ? "Nueva edición" : "Editar edición"}</DialogTitle>
             <DialogDescription>
-              Las fechas son hora de Montevideo. Con la fecha de cierre pasada, la encuesta deja de aceptar respuestas aunque
-              siga abierta.
+              Las fechas son hora de Montevideo. Con la fecha de cierre pasada, la encuesta deja de aceptar respuestas
+              aunque siga abierta.
             </DialogDescription>
           </DialogHeader>
           {form ? (
@@ -249,7 +258,11 @@ export default function EncuestaClient() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="survey-title">Título</Label>
-                <Input id="survey-title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+                <Input
+                  id="survey-title"
+                  value={form.title}
+                  onChange={(event) => setForm({ ...form, title: event.target.value })}
+                />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">

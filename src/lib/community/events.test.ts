@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import type { Community } from "./content";
 import { isUpcoming, mergeEvents, nextEventByCommunity } from "./events";
@@ -60,45 +60,47 @@ const manual = [
   },
 ];
 
-describe("montevideoIso", () => {
-  it("adds the fixed UTC-3 offset to wall-clock times", () => {
+describe(montevideoIso, () => {
+  test("adds the fixed UTC-3 offset to wall-clock times", () => {
     expect(montevideoIso("2026-10-22T19:00:00")).toBe("2026-10-22T19:00:00-03:00");
     expect(montevideoIso("2026-11-01T10:00")).toBe("2026-11-01T10:00:00-03:00");
     expect(montevideoIso("2026-11-01T10:00:00Z")).toBe("2026-11-01T10:00:00Z");
   });
 
-  it("formats in Montevideo whatever the server timezone", () => {
+  test("formats in Montevideo whatever the server timezone", () => {
     expect(dateParts("2026-10-22T22:30:00Z")).toMatchObject({ day: "22", time: "19:30" });
   });
 });
 
-describe("mergeEvents", () => {
+describe(mergeEvents, () => {
   const merged = mergeEvents(feed, manual, communities);
 
-  it("sorts both sources by start and links them to the directory", () => {
-    expect(merged.map((event) => event.id)).toEqual(["meetup-259", "manual-devfest", "meetup-264"]);
+  test("sorts both sources by start and links them to the directory", () => {
+    expect(merged.map((event) => event.id)).toStrictEqual(["meetup-259", "manual-devfest", "meetup-264"]);
     expect(merged[0]).toMatchObject({ group: "OWASP Uruguay", communitySlug: "owasp-uruguay", venue: null });
     expect(merged[1]).toMatchObject({ group: "GDG Montevideo", source: "manual" });
   });
 
-  it("flags OWU's own events by exact name only", () => {
+  test("flags OWU's own events by exact name only", () => {
     expect(merged.find((event) => event.id === "meetup-264")?.isOwu).toBe(true);
     expect(merged.find((event) => event.id === "meetup-259")?.isOwu).toBe(false);
     const impostor = mergeEvents([{ ...feed[0], id: 1, name: "OWU Oficial Fans" }], [], communities);
     expect(impostor[0].isOwu).toBe(false);
   });
 
-  it("drops hand-added events whose link is not a web page", () => {
-    expect(mergeEvents([], [{ ...manual[0], url: "javascript:alert(1)" }], communities)).toEqual([]);
+  test("drops hand-added events whose link is not a web page", () => {
+    // The point of this test: a script URL must never reach the agenda
+    // oxlint-disable-next-line no-script-url
+    expect(mergeEvents([], [{ ...manual[0], url: "javascript:alert(1)" }], communities)).toStrictEqual([]);
   });
 
-  it("keeps an event until it ends", () => {
+  test("keeps an event until it ends", () => {
     const owasp = merged[0];
     expect(isUpcoming(owasp, Date.parse("2026-10-26T21:00:00-03:00"))).toBe(true);
     expect(isUpcoming(owasp, Date.parse("2026-10-26T21:31:00-03:00"))).toBe(false);
   });
 
-  it("picks each community's next event", () => {
+  test("picks each community's next event", () => {
     expect(nextEventByCommunity(merged).get("gdg-montevideo")?.id).toBe("manual-devfest");
   });
 });

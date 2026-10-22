@@ -45,7 +45,14 @@ function RowActions({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-0.5">
-      <Button aria-label="Subir" className="size-8" disabled={index === 0} size="icon" variant="ghost" onClick={() => onMove(-1)}>
+      <Button
+        aria-label="Subir"
+        className="size-8"
+        disabled={index === 0}
+        size="icon"
+        variant="ghost"
+        onClick={() => onMove(-1)}
+      >
         <ArrowUp className="size-4" />
       </Button>
       <Button
@@ -58,7 +65,13 @@ function RowActions({
       >
         <ArrowDown className="size-4" />
       </Button>
-      <Button aria-label="Sacar" className="size-8 text-muted-foreground hover:text-destructive" size="icon" variant="ghost" onClick={onRemove}>
+      <Button
+        aria-label="Sacar"
+        className="size-8 text-muted-foreground hover:text-destructive"
+        size="icon"
+        variant="ghost"
+        onClick={onRemove}
+      >
         <X className="size-4" />
       </Button>
     </div>
@@ -96,7 +109,9 @@ function Preview({ title, intro, sections }: { title: string; intro: string; sec
           ))}
         </section>
       ) : null}
-      {sections.jobs ? <p className="text-sm">{sections.jobs.count} búsquedas nuevas en el canal de trabajos.</p> : null}
+      {sections.jobs ? (
+        <p className="text-sm">{sections.jobs.count} búsquedas nuevas en el canal de trabajos.</p>
+      ) : null}
     </article>
   );
 }
@@ -156,7 +171,9 @@ function Editor({ issue }: { issue: SemanarioIssue }) {
             {issue.status === "published" ? `Publicado · #${issue.number}` : "Borrador"}
           </Badge>
           <span className="text-sm text-muted-foreground">{weekLabel(issue.weekStart)}</span>
-          {issue.reviewedBy ? <span className="text-sm text-muted-foreground">· lo revisó {issue.reviewedBy}</span> : null}
+          {issue.reviewedBy ? (
+            <span className="text-sm text-muted-foreground">· lo revisó {issue.reviewedBy}</span>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {issue.status === "published" && issue.number ? (
@@ -190,7 +207,12 @@ function Editor({ issue }: { issue: SemanarioIssue }) {
         <TabsContent className="space-y-6 pt-4" value="editar">
           <div className="space-y-2">
             <Label htmlFor="semanario-title">Título</Label>
-            <Input id="semanario-title" maxLength={160} value={title} onChange={(event) => setTitle(event.target.value)} />
+            <Input
+              id="semanario-title"
+              maxLength={160}
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="semanario-intro">Intro (Markdown)</Label>
@@ -225,7 +247,12 @@ function Editor({ issue }: { issue: SemanarioIssue }) {
                       count={sections.threads.length}
                       index={index}
                       onMove={(by) => set("threads", move(sections.threads, index, by))}
-                      onRemove={() => set("threads", sections.threads.filter((_, i) => i !== index))}
+                      onRemove={() =>
+                        set(
+                          "threads",
+                          sections.threads.filter((_, i) => i !== index)
+                        )
+                      }
                     />
                   </li>
                 ))}
@@ -241,7 +268,9 @@ function Editor({ issue }: { issue: SemanarioIssue }) {
               <ol className="divide-y divide-border rounded-md border border-border">
                 {sections.events.map((event, index) => (
                   <li key={`${event.url}-${index}`} className="flex items-center gap-3 px-3 py-2">
-                    <span className="w-14 shrink-0 font-terminal text-xs text-muted-foreground">{shortDate(event.start)}</span>
+                    <span className="w-14 shrink-0 font-terminal text-xs text-muted-foreground">
+                      {shortDate(event.start)}
+                    </span>
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {event.title} <span className="text-muted-foreground">· {event.group}</span>
                     </span>
@@ -249,7 +278,12 @@ function Editor({ issue }: { issue: SemanarioIssue }) {
                       count={sections.events.length}
                       index={index}
                       onMove={(by) => set("events", move(sections.events, index, by))}
-                      onRemove={() => set("events", sections.events.filter((_, i) => i !== index))}
+                      onRemove={() =>
+                        set(
+                          "events",
+                          sections.events.filter((_, i) => i !== index)
+                        )
+                      }
                     />
                   </li>
                 ))}
@@ -356,7 +390,12 @@ export default function SemanarioClient() {
               >
                 <span className="flex items-center justify-between gap-2">
                   <span className="truncate font-medium">{issue.title}</span>
-                  <span className={cn("shrink-0 text-xs", issue.status === "published" ? "text-primary" : "text-muted-foreground")}>
+                  <span
+                    className={cn(
+                      "shrink-0 text-xs",
+                      issue.status === "published" ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
                     {issue.status === "published" ? `#${issue.number}` : "borrador"}
                   </span>
                 </span>

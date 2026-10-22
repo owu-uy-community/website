@@ -7,15 +7,7 @@ import { cn } from "app/lib/utils";
 import { CountUp } from "components/community/motion";
 import { cardClassName, Freshness } from "components/community/ui";
 import type { DatasetRow } from "lib/orpc/salary-survey/schemas";
-import {
-  CONTRACTS,
-  EXPERIENCE,
-  labelOf,
-  MARKETS,
-  MODALITIES,
-  ROLES,
-  SENIORITIES,
-} from "lib/salary-survey/questions";
+import { CONTRACTS, EXPERIENCE, labelOf, MARKETS, MODALITIES, ROLES, SENIORITIES } from "lib/salary-survey/questions";
 import { percentileOf, summarize } from "lib/salary-survey/stats";
 
 /*
@@ -25,12 +17,24 @@ import { percentileOf, summarize } from "lib/salary-survey/stats";
  */
 
 type Currency = "UYU" | "USD";
-type Filters = { seniority: string; experience: string; role: string; modality: string; market: string; contract: string };
+type Filters = {
+  seniority: string;
+  experience: string;
+  role: string;
+  modality: string;
+  market: string;
+  contract: string;
+};
 
 const ALL = "";
 const EMPTY: Filters = { seniority: ALL, experience: ALL, role: ALL, modality: ALL, market: ALL, contract: ALL };
 
-const FILTERS: { key: keyof Filters; label: string; column: keyof DatasetRow; options: readonly { value: string; label: string }[] }[] = [
+const FILTERS: {
+  key: keyof Filters;
+  label: string;
+  column: keyof DatasetRow;
+  options: readonly { value: string; label: string }[];
+}[] = [
   { key: "seniority", label: "Seniority", column: "seniority", options: SENIORITIES },
   { key: "experience", label: "Experiencia", column: "experiencia", options: EXPERIENCE },
   { key: "role", label: "Rol", column: "rol", options: ROLES },
@@ -79,7 +83,15 @@ function Band({ p25, median, p75, mine }: { p25: number; median: number; p75: nu
   );
 }
 
-export default function Explorer({ edition, threshold, defaultCurrency }: { edition: string; threshold: number; defaultCurrency: Currency }) {
+export default function Explorer({
+  edition,
+  threshold,
+  defaultCurrency,
+}: {
+  edition: string;
+  threshold: number;
+  defaultCurrency: Currency;
+}) {
   const [rows, setRows] = useState<DatasetRow[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [currency, setCurrency] = useState<Currency>(defaultCurrency);
@@ -108,7 +120,8 @@ export default function Explorer({ edition, threshold, defaultCurrency }: { edit
     return rows
       .filter(
         (row) =>
-          row.moneda === currency && FILTERS.every(({ key, column }) => filters[key] === ALL || row[column] === filters[key])
+          row.moneda === currency &&
+          FILTERS.every(({ key, column }) => filters[key] === ALL || row[column] === filters[key])
       )
       .map((row) => row.monto_mensual);
   }, [rows, currency, filters]);
@@ -123,10 +136,14 @@ export default function Explorer({ edition, threshold, defaultCurrency }: { edit
     <div className={cardClassName(false, "overflow-hidden")}>
       <div className="grid gap-0 lg:grid-cols-[1fr_1.15fr]">
         {/* ------------------------------------------------------------ filters */}
-        <div className="flex flex-col gap-5 border-b border-white/[0.07] p-6 lg:border-r lg:border-b-0 sm:p-7">
+        <div className="flex flex-col gap-5 border-b border-white/[0.07] p-6 sm:p-7 lg:border-r lg:border-b-0">
           <div className="flex items-center justify-between gap-4">
             <p className="font-title text-[17px] font-semibold text-zinc-50">Tu perfil</p>
-            <div aria-label="Moneda" className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5" role="radiogroup">
+            <div
+              aria-label="Moneda"
+              className="inline-flex rounded-lg border border-white/10 bg-white/[0.04] p-0.5"
+              role="radiogroup"
+            >
               {(["UYU", "USD"] as const).map((option) => (
                 <button
                   key={option}
@@ -155,21 +172,28 @@ export default function Explorer({ edition, threshold, defaultCurrency }: { edit
                     value={filters[key]}
                     onChange={(event) => setFilters((current) => ({ ...current, [key]: event.target.value }))}
                   >
-                    <option value={ALL}>{key === "market" ? "Cualquiera" : key === "modality" ? "Cualquiera" : "Todos"}</option>
+                    <option value={ALL}>
+                      {key === "market" ? "Cualquiera" : key === "modality" ? "Cualquiera" : "Todos"}
+                    </option>
                     {options.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
                     ))}
                   </select>
-                  <ChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-zinc-500" />
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-zinc-500"
+                  />
                 </span>
               </label>
             ))}
           </div>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-zinc-500">¿Y vos? Tu nominal mensual, para ubicarte en el grupo (no se guarda)</span>
+            <span className="text-xs font-medium text-zinc-500">
+              ¿Y vos? Tu nominal mensual, para ubicarte en el grupo (no se guarda)
+            </span>
             <span className="relative max-w-[14rem]">
               <input
                 autoComplete="off"
@@ -211,7 +235,9 @@ export default function Explorer({ edition, threshold, defaultCurrency }: { edit
               <div>
                 <p className="text-[13px] text-zinc-500">
                   Mediana mensual ·{" "}
-                  {active.length ? active.map(({ key, options }) => labelOf(options, filters[key])).join(" · ") : "todas las respuestas"}
+                  {active.length
+                    ? active.map(({ key, options }) => labelOf(options, filters[key])).join(" · ")
+                    : "todas las respuestas"}
                 </p>
                 <p className="mt-1 font-title text-4xl font-bold tracking-[-0.02em] text-yellow-400 tabular-nums sm:text-5xl">
                   <CountUp prefix={currency === "USD" ? "US$ " : "$ "} value={stat.median} />
@@ -226,7 +252,9 @@ export default function Explorer({ edition, threshold, defaultCurrency }: { edit
 
               {myAmount && percentile != null ? (
                 <div className="rounded-xl bg-white/[0.04] p-4 text-sm leading-relaxed text-zinc-300">
-                  <span className="font-semibold text-zinc-50">Con {format.format(myAmount)} estás en el percentil {percentile}</span>
+                  <span className="font-semibold text-zinc-50">
+                    Con {format.format(myAmount)} estás en el percentil {percentile}
+                  </span>
                   {percentile >= 50
                     ? `: cobrás más que el ${percentile}% de este grupo.`
                     : `: el ${100 - percentile}% de este grupo cobra más que vos.`}{" "}
@@ -235,13 +263,17 @@ export default function Explorer({ edition, threshold, defaultCurrency }: { edit
                     : `La mediana está un ${Math.abs(Math.round(((stat.median - myAmount) / myAmount) * 100))}% ${stat.median > myAmount ? "arriba" : "abajo"}.`}
                 </div>
               ) : (
-                <Freshness>La raya blanca aparece cuando ponés tu monto. El punto es la mediana; la barra, el 50% central.</Freshness>
+                <Freshness>
+                  La raya blanca aparece cuando ponés tu monto. El punto es la mediana; la barra, el 50% central.
+                </Freshness>
               )}
             </>
           ) : (
             <div>
               <p className="font-title text-xl font-semibold text-zinc-50">
-                {amounts.length === 0 ? "Nadie con ese perfil respondió" : `Solo ${count.format(amounts.length)} ${amounts.length === 1 ? "respuesta" : "respuestas"} con ese perfil`}
+                {amounts.length === 0
+                  ? "Nadie con ese perfil respondió"
+                  : `Solo ${count.format(amounts.length)} ${amounts.length === 1 ? "respuesta" : "respuestas"} con ese perfil`}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
                 Mostramos números con {threshold} respuestas o más, para que nadie pueda reconocerse. Sacá un filtro o

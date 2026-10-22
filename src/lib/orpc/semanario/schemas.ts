@@ -35,7 +35,10 @@ export const SemanarioSectionsSchema = z.object({
     )
     .max(20)
     .default([]),
-  jobs: z.object({ count: z.number().int().min(0), channelUrl: SlackUrl.nullable() }).nullable().default(null),
+  jobs: z
+    .object({ count: z.number().int().min(0), channelUrl: SlackUrl.nullable() })
+    .nullable()
+    .default(null),
   newCommunities: z
     .array(z.object({ name: z.string().trim().min(1).max(120), slug: z.string().regex(/^[a-z0-9-]{1,80}$/) }))
     .max(20)

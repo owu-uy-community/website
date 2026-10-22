@@ -82,7 +82,8 @@ export function SmartLink({ href, utm, children, ...props }: SmartLinkProps) {
 
 const BUTTON_VARIANTS = {
   primary: "bg-zinc-50 text-zinc-950 hover:bg-yellow-400",
-  secondary: "border border-white/[0.09] bg-white/[0.03] text-zinc-100 hover:border-white/[0.16] hover:bg-white/[0.06] hover:text-white",
+  secondary:
+    "border border-white/[0.09] bg-white/[0.03] text-zinc-100 hover:border-white/[0.16] hover:bg-white/[0.06] hover:text-white",
   ghost: "text-zinc-300 hover:bg-white/[0.06] hover:text-white",
   accent: "bg-yellow-400 text-zinc-950 hover:bg-yellow-300",
 } as const;
@@ -180,7 +181,11 @@ export const cardClassName = (interactive = false, className?: string) =>
     className
   );
 
-export function Card({ interactive = false, className, ...props }: ComponentPropsWithoutRef<"div"> & { interactive?: boolean }) {
+export function Card({
+  interactive = false,
+  className,
+  ...props
+}: ComponentPropsWithoutRef<"div"> & { interactive?: boolean }) {
   return <div className={cardClassName(interactive, cn("p-6 sm:p-7", className))} {...props} />;
 }
 
@@ -188,7 +193,6 @@ export function Card({ interactive = false, className, ...props }: ComponentProp
 export function Cells({ className, children }: { className?: string; children: ReactNode }) {
   return <Stagger className={cn("grid gap-4", className)}>{children}</Stagger>;
 }
-
 
 export function Cell({ className, ...props }: ComponentPropsWithoutRef<"div">) {
   return <Card className={cn("flex flex-col", className)} {...props} />;
@@ -248,7 +252,9 @@ export function PageHeader({
 
   return (
     <header className={cn("relative", className)}>
-      <Container className={cn("relative pt-16 pb-12 sm:pt-24 sm:pb-16", centered && "flex flex-col items-center text-center")}>
+      <Container
+        className={cn("relative pt-16 pb-12 sm:pt-24 sm:pb-16", centered && "flex flex-col items-center text-center")}
+      >
         {eyebrow ? (
           <div className="owu-rise" style={delay(0)}>
             {typeof eyebrow === "string" ? <Eyebrow>{eyebrow}</Eyebrow> : eyebrow}
@@ -260,14 +266,20 @@ export function PageHeader({
         <TitleBar className={cn("owu-rise mt-6", centered && "mx-auto")} />
         {description ? (
           <div
-            className={cn("owu-rise mt-6 max-w-2xl text-base leading-relaxed text-pretty text-zinc-400 sm:text-lg", centered && "mx-auto")}
+            className={cn(
+              "owu-rise mt-6 max-w-2xl text-base leading-relaxed text-pretty text-zinc-400 sm:text-lg",
+              centered && "mx-auto"
+            )}
             style={delay(160)}
           >
             {description}
           </div>
         ) : null}
         {actions ? (
-          <div className={cn("owu-rise mt-8 flex flex-wrap items-center gap-3", centered && "justify-center")} style={delay(240)}>
+          <div
+            className={cn("owu-rise mt-8 flex flex-wrap items-center gap-3", centered && "justify-center")}
+            style={delay(240)}
+          >
             {actions}
           </div>
         ) : null}
@@ -316,7 +328,9 @@ export function Section({
               {title ? <h2 className={headingClassName.h2}>{title}</h2> : null}
               <TitleBar className="mt-5" />
               {description ? (
-                <div className="mt-5 text-base leading-relaxed text-pretty text-zinc-400 sm:text-[17px]">{description}</div>
+                <div className="mt-5 text-base leading-relaxed text-pretty text-zinc-400 sm:text-[17px]">
+                  {description}
+                </div>
               ) : null}
             </div>
             {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}

@@ -178,7 +178,10 @@ function Timeline({ survey }: { survey: Survey | null }) {
   const steps = [
     { title: "Abre", detail: formatDate(survey?.opensAt ?? null) ?? "En OWU CONF" },
     { title: "Cierra", detail: formatDate(survey?.closesAt ?? null) ?? "Unas seis semanas después" },
-    { title: "Resultados", detail: "Al cerrar: agregados, gráficos, un explorador para compararte y el dataset abierto" },
+    {
+      title: "Resultados",
+      detail: "Al cerrar: agregados, gráficos, un explorador para compararte y el dataset abierto",
+    },
   ];
 
   return (
@@ -199,7 +202,11 @@ function Timeline({ survey }: { survey: Survey | null }) {
 /** Where to read the numbers from outside the site */
 function OpenData({ slug, datasetHref }: { slug: string; datasetHref: string }) {
   const endpoints = [
-    { method: "GET", path: `/api/v1/salary-survey/${slug}/results`, what: "Agregados: medianas, cuartiles, perfil y conformidad" },
+    {
+      method: "GET",
+      path: `/api/v1/salary-survey/${slug}/results`,
+      what: "Agregados: medianas, cuartiles, perfil y conformidad",
+    },
     { method: "GET", path: `/api/v1/salary-survey/${slug}/rows`, what: "El dataset, fila por fila, en JSON" },
     { method: "GET", path: "/api/v1/salary-survey/editions", what: "Las ediciones publicadas" },
   ];
@@ -247,7 +254,10 @@ function OpenData({ slug, datasetHref }: { slug: string; datasetHref: string }) 
         </div>
         <div className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-zinc-500">Cómo citarlo</span>
-          <CopyField label="la atribución" value={`Encuesta de sueldos OWU ${slug} · ${SITE_URL}/encuesta-sueldos · CC BY 4.0`} />
+          <CopyField
+            label="la atribución"
+            value={`Encuesta de sueldos OWU ${slug} · ${SITE_URL}/encuesta-sueldos · CC BY 4.0`}
+          />
         </div>
       </Card>
     </div>
@@ -312,18 +322,24 @@ export default async function SalarySurveyPage({ searchParams }: { searchParams:
       >
         {survey && survey.status !== "draft" ? <Facts status={status} survey={survey} /> : null}
         {editions.length > 1 ? (
-          <nav aria-label="Ediciones" className="owu-rise mt-8 flex flex-wrap items-center gap-2" style={{ "--d": "400ms" } as React.CSSProperties}>
+          <nav
+            aria-label="Ediciones"
+            className="owu-rise mt-8 flex flex-wrap items-center gap-2"
+            style={{ "--d": "400ms" } as React.CSSProperties}
+          >
             <span className="text-xs font-medium text-zinc-500">Ediciones</span>
             {editions.map((edition) => (
               <Link
                 key={edition.slug}
                 className={cn(
-                  "h-8 rounded-full border px-3 text-[13px] font-medium leading-8 transition-colors",
+                  "h-8 rounded-full border px-3 text-[13px] leading-8 font-medium transition-colors",
                   edition.slug === survey?.slug
                     ? "border-yellow-400 bg-yellow-400 text-zinc-950"
                     : "border-white/10 bg-white/[0.04] text-zinc-300 hover:bg-white/[0.08] hover:text-white"
                 )}
-                href={edition.slug === current?.slug ? "/encuesta-sueldos" : `/encuesta-sueldos?edicion=${edition.slug}`}
+                href={
+                  edition.slug === current?.slug ? "/encuesta-sueldos" : `/encuesta-sueldos?edicion=${edition.slug}`
+                }
               >
                 {edition.slug}
               </Link>
@@ -379,8 +395,8 @@ export default async function SalarySurveyPage({ searchParams }: { searchParams:
       {survey?.status === "closed" ? (
         <Section title="Estamos procesando los resultados">
           <p className="max-w-2xl text-[17px] leading-relaxed text-zinc-400">
-            Gracias a las {number.format(survey.responseCount)} personas que respondieron. Los resultados y el dataset se
-            publican acá; te avisamos en el Slack y en el{" "}
+            Gracias a las {number.format(survey.responseCount)} personas que respondieron. Los resultados y el dataset
+            se publican acá; te avisamos en el Slack y en el{" "}
             <Link
               className="text-zinc-200 underline decoration-white/30 underline-offset-4 hover:decoration-yellow-400"
               href={PAGES.semanario.href}
@@ -425,7 +441,14 @@ export default async function SalarySurveyPage({ searchParams }: { searchParams:
               ¿Dudas o una idea para la próxima edición? Escribinos en{" "}
               <span className="font-medium text-zinc-200">#{SLACK_CHANNELS.general}</span>.
             </p>
-            <ButtonLink arrow className="self-start" href={SOCIAL_LINKS.slack} size="sm" utm="encuesta" variant="secondary">
+            <ButtonLink
+              arrow
+              className="self-start"
+              href={SOCIAL_LINKS.slack}
+              size="sm"
+              utm="encuesta"
+              variant="secondary"
+            >
               Ir al Slack
             </ButtonLink>
           </div>
@@ -461,7 +484,9 @@ export default async function SalarySurveyPage({ searchParams }: { searchParams:
                   <tbody className="divide-y divide-white/[0.07]">
                     {DATASET_DICTIONARY.map(({ column, description, options }) => (
                       <tr key={column} className="align-top">
-                        <td className="px-5 py-3.5 font-terminal text-[12.5px] whitespace-nowrap text-zinc-100">{column}</td>
+                        <td className="px-5 py-3.5 font-terminal text-[12.5px] whitespace-nowrap text-zinc-100">
+                          {column}
+                        </td>
                         <td className="px-5 py-3.5 text-zinc-400">{description}</td>
                         <td className="px-5 py-3.5 font-terminal text-[11.5px] leading-relaxed text-zinc-500">
                           {options ? [...new Set([...options.map((option) => option.value), "otro"])].join(", ") : null}

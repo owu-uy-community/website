@@ -108,7 +108,17 @@ function stepErrors(step: number, draft: Draft): Partial<Record<keyof Draft, str
   return {};
 }
 
-function Fieldset({ legend, hint, error, children }: { legend: string; hint?: string; error?: string; children: ReactNode }) {
+function Fieldset({
+  legend,
+  hint,
+  error,
+  children,
+}: {
+  legend: string;
+  hint?: string;
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <fieldset className="flex flex-col gap-4" aria-invalid={error ? true : undefined}>
       <legend className="font-title text-[17px] font-semibold text-white">{legend}</legend>
@@ -190,7 +200,9 @@ function StackChoices({ value, onChange }: { value: string[]; onChange: (value: 
               disabled={disabled}
               type="checkbox"
               value={option.value}
-              onChange={() => onChange(checked ? value.filter((item) => item !== option.value) : [...value, option.value])}
+              onChange={() =>
+                onChange(checked ? value.filter((item) => item !== option.value) : [...value, option.value])
+              }
             />
             <span className={optionClassName}>
               <span
@@ -232,7 +244,12 @@ function Scale({ value, onChange }: { value: string; onChange: (value: string) =
             type="button"
             onClick={() => onChange(option.value)}
           >
-            <span className={cn("font-title text-2xl font-bold tabular-nums", checked ? "text-yellow-400" : "text-zinc-200")}>
+            <span
+              className={cn(
+                "font-title text-2xl font-bold tabular-nums",
+                checked ? "text-yellow-400" : "text-zinc-200"
+              )}
+            >
               {option.value}
             </span>
             <span className="text-center text-[11px] leading-tight sm:text-xs">{option.label}</span>
@@ -253,7 +270,9 @@ function Thanks() {
         <PartyPopper aria-hidden className="size-5" />
       </span>
       <div className="max-w-xl">
-        <h3 className="font-title text-2xl font-bold tracking-[-0.02em] text-white sm:text-3xl">Tu respuesta ya cuenta</h3>
+        <h3 className="font-title text-2xl font-bold tracking-[-0.02em] text-white sm:text-3xl">
+          Tu respuesta ya cuenta
+        </h3>
         <p className="mt-3 leading-relaxed text-zinc-400">
           Cuantas más personas respondan, más grupos llegan al mínimo para publicarse. Pasale el link a tu equipo: tarda
           unos 8 minutos.
@@ -264,7 +283,15 @@ function Thanks() {
   );
 }
 
-export default function SurveyForm({ slug, signedIn, answered }: { slug: string; signedIn: boolean; answered: boolean }) {
+export default function SurveyForm({
+  slug,
+  signedIn,
+  answered,
+}: {
+  slug: string;
+  signedIn: boolean;
+  answered: boolean;
+}) {
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({});
@@ -280,7 +307,12 @@ export default function SurveyForm({ slug, signedIn, answered }: { slug: string;
 
   if (!signedIn) {
     return (
-      <div className={cardClassName(false, "flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8")}>
+      <div
+        className={cardClassName(
+          false,
+          "flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8"
+        )}
+      >
         <div className="max-w-xl">
           <Eyebrow>Antes de empezar</Eyebrow>
           <p className="mt-3 text-[15px] leading-relaxed text-zinc-300">
@@ -354,9 +386,17 @@ export default function SurveyForm({ slug, signedIn, answered }: { slug: string;
       step: 2,
     },
     { label: "Horas por semana", value: draft.hoursPerWeek, step: 2 },
-    { label: "Conformidad", value: draft.satisfaction ? `${draft.satisfaction} · ${labelOf(SATISFACTION, draft.satisfaction)}` : "", step: 2 },
+    {
+      label: "Conformidad",
+      value: draft.satisfaction ? `${draft.satisfaction} · ${labelOf(SATISFACTION, draft.satisfaction)}` : "",
+      step: 2,
+    },
     { label: "Género", value: draft.gender ? labelOf(GENDERS, draft.gender) : "Sin responder", step: 3 },
-    { label: "Nivel educativo", value: draft.education ? labelOf(EDUCATION, draft.education) : "Sin responder", step: 3 },
+    {
+      label: "Nivel educativo",
+      value: draft.education ? labelOf(EDUCATION, draft.education) : "Sin responder",
+      step: 3,
+    },
   ];
 
   return (
@@ -438,7 +478,12 @@ export default function SurveyForm({ slug, signedIn, answered }: { slug: string;
               />
             </Fieldset>
             <Fieldset error={errors.contract} legend="¿Cómo te contratan?">
-              <Choices name="contract" options={CONTRACTS} value={draft.contract} onChange={(value) => set("contract", value)} />
+              <Choices
+                name="contract"
+                options={CONTRACTS}
+                value={draft.contract}
+                onChange={(value) => set("contract", value)}
+              />
             </Fieldset>
             <Fieldset error={errors.modality} legend="¿Dónde trabajás?">
               <Choices
@@ -519,7 +564,8 @@ export default function SurveyForm({ slug, signedIn, answered }: { slug: string;
         {step === 3 ? (
           <>
             <p className="-mt-6 max-w-xl text-sm leading-relaxed text-zinc-400">
-              Estas dos preguntas ayudan a ver brechas. Podés saltearlas: “Siguiente” sin elegir nada las deja en blanco.
+              Estas dos preguntas ayudan a ver brechas. Podés saltearlas: “Siguiente” sin elegir nada las deja en
+              blanco.
             </p>
             <Fieldset legend="Género">
               <Choices
@@ -531,7 +577,12 @@ export default function SurveyForm({ slug, signedIn, answered }: { slug: string;
               />
             </Fieldset>
             <Fieldset legend="Nivel educativo">
-              <Choices name="education" options={EDUCATION} value={draft.education} onChange={(value) => set("education", value)} />
+              <Choices
+                name="education"
+                options={EDUCATION}
+                value={draft.education}
+                onChange={(value) => set("education", value)}
+              />
             </Fieldset>
           </>
         ) : null}

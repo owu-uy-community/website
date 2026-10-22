@@ -1,8 +1,4 @@
-const fold = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
+const fold = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 /**
  * Every word typed must appear somewhere (accents ignored); hits in the name
