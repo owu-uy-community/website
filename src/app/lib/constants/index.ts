@@ -8,12 +8,6 @@ export const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET!;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const USE_SECURE_COOKIES = IS_PRODUCTION;
 
-// Allowed emails for authentication (comma-separated in env variable)
-// Example: ALLOWED_EMAILS=user1@example.com,user2@example.com,admin@company.com
-export const ALLOWED_EMAILS = process.env.ALLOWED_EMAILS
-  ? process.env.ALLOWED_EMAILS.split(",").map((email) => email.trim().toLowerCase())
-  : [];
-
 // Eventbrite Constants
 export const EVENTBRITE_API_URL = "https://www.eventbriteapi.com/v3";
 export const EVENTBRITE_API_KEY = process.env.EVENTBRITE_API_KEY!;

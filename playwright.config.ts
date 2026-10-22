@@ -26,6 +26,8 @@ export const appEnv = {
   REALTIME_SIDECAR_URL: `http://127.0.0.1:${REALTIME_PORT}`,
   SLACK_CLIENT_ID: "e2e",
   SLACK_CLIENT_SECRET: "e2e",
+  // Sent mail stays in memory for /api/dev/mailbox, so specs can read sign-in codes.
+  EMAIL_MAILBOX: "1",
 };
 
 export default defineConfig({
