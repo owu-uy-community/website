@@ -24,6 +24,13 @@ describe(sendEmail, () => {
     });
   });
 
+  test("with neither a key nor the mailbox it fails instead of dropping the email", async () => {
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("EMAIL_MAILBOX", "");
+
+    await expect(sendEmail(email)).rejects.toThrow("RESEND_API_KEY is not set");
+  });
+
   test("with a key it posts to Resend, idempotently", async () => {
     vi.stubEnv("RESEND_API_KEY", "re_test");
     const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ id: "resend-id" }));

@@ -12,10 +12,23 @@ import { apiKey } from "@better-auth/api-key";
 
 const TEN_MINUTES = 10 * 60;
 
-/** Sign-in codes per mailbox and per network, on top of Better Auth's own per-IP window. */
-const codesPerEmail = limiter({ prefix: "otp:email:", maxRequests: 3, window: TEN_MINUTES * 1000 });
+/**
+ * Sign-in codes, on top of Better Auth's own per-IP window: 3 per mailbox from one network, so a
+ * stranger can't use up someone else's; 10 per mailbox overall against mail bombing; 20 per network.
+ */
+const codesPerEmailAndIp = limiter({ prefix: "otp:email-ip:", maxRequests: 3, window: TEN_MINUTES * 1000 });
+const codesPerEmail = limiter({ prefix: "otp:email:", maxRequests: 10, window: TEN_MINUTES * 1000 });
 const codesPerIp = limiter({ prefix: "otp:ip:", maxRequests: 20, window: TEN_MINUTES * 1000 });
 
+/** Every route that mails a code. Only sign-in codes go out, but all of them count. */
+const SENDS_CODE = new Set([
+  "/email-otp/send-verification-otp",
+  "/email-otp/request-password-reset",
+  "/forget-password/email-otp",
+  "/email-otp/request-email-change",
+]);
+
+// x-real-ip is set by Vercel; x-forwarded-for is the local fallback.
 const clientIp = (headers: Headers | undefined) =>
   headers?.get("x-real-ip") ?? headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
@@ -62,8 +75,9 @@ export const auth = betterAuth({
       allowedAttempts: 5,
       storeOTP: "hashed",
       rateLimit: { window: 60, max: 10 },
-      async sendVerificationOTP({ email, otp }) {
-        await sendEmail({ to: email, ...otpEmail(otp) });
+      async sendVerificationOTP({ email, otp, type }) {
+        // There are no passwords to reset or emails to change: only sign-in codes are mailed.
+        if (type === "sign-in") await sendEmail({ to: email, ...otpEmail(otp) });
       },
     }),
     /**
@@ -85,14 +99,16 @@ export const auth = betterAuth({
   ],
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      if (ctx.path !== "/email-otp/send-verification-otp") return;
+      if (!ctx.path || !SENDS_CODE.has(ctx.path)) return;
       const email = String((ctx.body as { email?: unknown } | undefined)?.email ?? "")
         .trim()
         .toLowerCase();
+      const ip = clientIp(ctx.headers);
 
       for (const [codes, key] of [
+        [codesPerEmailAndIp, `${email}|${ip}`],
         [codesPerEmail, email],
-        [codesPerIp, clientIp(ctx.headers)],
+        [codesPerIp, ip],
       ] as const) {
         if (!(await codes.limit(key)).success) {
           throw new APIError("TOO_MANY_REQUESTS", {
