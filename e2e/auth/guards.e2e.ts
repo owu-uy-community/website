@@ -8,10 +8,18 @@ test("an anonymous visitor is sent to /login from the admin", async ({ pageAs })
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("a site admin lands on the dashboard", async ({ page }) => {
+test("a site admin lands on the newest event's Hoy", async ({ page }) => {
   await page.goto("/admin");
 
-  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page).toHaveURL(/\/admin\/[a-z0-9-]+\?event=[a-z0-9-]+$/);
+});
+
+test("community staff land on their own day", async ({ pageAs, tenant }) => {
+  const page = await pageAs("member");
+
+  await page.goto("/admin");
+
+  await expect(page).toHaveURL(new RegExp(`/admin/${tenant.community.slug}/mi-turno\\?event=`));
 });
 
 test("the API refuses an anonymous write and a non-staff write", async ({ playwright, tenant, pageAs }) => {
