@@ -80,3 +80,50 @@ export function claimDecidedEmail(input: {
     text: `${hi}\n\nEl staff de OWU no pudo confirmar que organizás ${input.communityName}. Si es un error, escribinos en el Slack de OWU o mandá el pedido de nuevo con un link que lo muestre.`,
   };
 }
+
+/** Another community with a similar audience took a date the same day as something of yours. */
+export function conflictHeadsUpEmail(input: {
+  community: string;
+  when: string;
+  /** Your event's name; null when what you have that day is a hold */
+  theirs: string | null;
+  calendarPath: string;
+}): Omit<Email, "to"> {
+  const yours = input.theirs ? `tu evento «${input.theirs}»` : "tu fecha reservada";
+  const link = appUrl(input.calendarPath);
+  const line = `${input.community} reservó el ${input.when}, el mismo día que ${yours}. Tienen un público parecido.`;
+
+  return {
+    subject: `${input.community} eligió el mismo día que vos`,
+    html: layout({
+      preheader: line,
+      body: `<p style="margin:0 0 16px">${esc(line)}</p>
+<p style="margin:0 0 16px">Todavía están a tiempo de acomodarse: mirá el calendario y, si hace falta, coordinen en #organizadores-meetups.</p>
+<p style="margin:0 0 8px">${button(link, "Ver el calendario")}</p>`,
+    }),
+    text: `${line}\n\nTodavía están a tiempo de acomodarse: mirá el calendario y, si hace falta, coordinen en #organizadores-meetups.\n\n${link}`,
+  };
+}
+
+/** A reserved date is about to be released. */
+export function holdExpiringEmail(input: {
+  community: string;
+  title: string;
+  when: string;
+  until: string;
+  panelPath: string;
+}): Omit<Email, "to"> {
+  const link = appUrl(input.panelPath);
+  const line = `La reserva del ${input.when} («${input.title}», ${input.community}) vence el ${input.until}.`;
+
+  return {
+    subject: `Tu reserva del ${input.when} vence pronto`,
+    html: layout({
+      preheader: line,
+      body: `<p style="margin:0 0 16px">${esc(line)}</p>
+<p style="margin:0 0 16px">Si la seguís queriendo, renovala desde el panel; si no, se libera sola y otras comunidades pueden usar el día.</p>
+<p style="margin:0 0 8px">${button(link, "Renovar la reserva")}</p>`,
+    }),
+    text: `${line}\n\nSi la seguís queriendo, renovala desde el panel; si no, se libera sola.\n\n${link}`,
+  };
+}

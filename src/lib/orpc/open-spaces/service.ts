@@ -38,7 +38,7 @@ const checkDates = (startDate: Date, endDate: Date) =>
     ? Effect.void
     : Effect.fail(new Invalid({ message: "La fecha de fin tiene que ser posterior a la de inicio" }));
 
-function slugify(value: string): string {
+export function slugify(value: string): string {
   return (
     value
       .toLowerCase()
@@ -100,7 +100,7 @@ export const listEventsForOperator = (userId: string | null) =>
   );
 
 /** The first free slug for `base` in a community: base, base-2, base-3… */
-const freeSlug = (communityId: string, base: string) =>
+export const freeSlug = (communityId: string, base: string) =>
   query((db) => db.select({ slug: events.slug }).from(events).where(eq(events.communityId, communityId))).pipe(
     Effect.map((rows) => {
       const taken = new Set(rows.map((row) => row.slug));
