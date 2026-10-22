@@ -36,32 +36,32 @@ importers:
         specifier: 0.223.0
         version: 0.223.0(@opentelemetry/api@1.9.1)
       '@orpc/client':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44
       '@orpc/evlog':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))
       '@orpc/experimental-effect':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)
       '@orpc/openapi':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       '@orpc/opentelemetry':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(@opentelemetry/api@1.9.1)(@opentelemetry/instrumentation@0.223.0(@opentelemetry/api@1.9.1))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(@opentelemetry/api@1.9.1)(@opentelemetry/instrumentation@0.223.0(@opentelemetry/api@1.9.1))
       '@orpc/ratelimit':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       '@orpc/server':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       '@orpc/tanstack-query':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(@tanstack/query-core@5.101.4)(crossws@0.4.10(srvx@0.11.22))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(@tanstack/query-core@5.101.4)(crossws@0.4.10(srvx@0.11.22))
       '@orpc/zod':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(zod@4.6.5)
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(zod@4.6.5)
       '@paralleldrive/cuid2':
         specifier: ^3.3.0
         version: 3.3.0
@@ -235,7 +235,7 @@ importers:
         version: 8.6.0(react@19.3.0)
       evlog:
         specifier: 2.30.1
-        version: 2.30.1(@orpc/server@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
+        version: 2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
       ioredis:
         specifier: 6.0.0
         version: 6.0.0
@@ -334,8 +334,8 @@ importers:
         specifier: 16.4.0
         version: 16.4.0
       '@orpc/experimental-msw':
-        specifier: 2.0.0-beta.42
-        version: 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(msw@2.15.0(@types/node@25.9.1)(typescript@6.0.3))
+        specifier: 2.0.0-beta.44
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(msw@2.15.0(@types/node@25.9.1)(typescript@6.0.3))
       '@playwright/test':
         specifier: 1.63.0
         version: 1.63.0
@@ -2482,32 +2482,32 @@ packages:
     peerDependencies:
       '@opentelemetry/api': ^1.3.0
 
-  '@orpc/client@2.0.0-beta.42':
-    resolution: {integrity: sha512-5UVRiHw9UsOVsfK1EweJoOqDhnseIz1TG4U/pcGe/P6I/yBDafh+ijZ/ZaBrql2hC7PSgEwfCFljEG8IfxVGqA==}
+  '@orpc/client@2.0.0-beta.44':
+    resolution: {integrity: sha512-x78eWZACv7Xzc6qGyrG6BvbH9/p6zoG+urnmOo8Vr6U63fnk9yLN4AA0B5n3/Ndb2lA6kmW8fNCyYbqj2DzH7A==}
 
-  '@orpc/contract@2.0.0-beta.42':
-    resolution: {integrity: sha512-cLtAdjHGwGy2kNASBsdGKwlhFmRwqmlCOb9Avi6asFoV2fJH3Phht7QHa2/g61Yz1qF8IM6NgJ2+OA7iXRmU/g==}
+  '@orpc/contract@2.0.0-beta.44':
+    resolution: {integrity: sha512-8yRa8eY7b6ltf9EjswD+h6HlqLhyjzxn4YOmj48u39K2VGjRhFwXw/EpAGJGmochOuQZuWzrj9VcsyVg6uV7kQ==}
 
-  '@orpc/evlog@2.0.0-beta.42':
-    resolution: {integrity: sha512-XpifiXqjQv3m3vQwlodTw2iyvdO1uY9dv5zalffV3QOOGFgnjgA2TINY7pgTHbVFn3vq1y/Xo83OPN6kdIh75Q==}
+  '@orpc/evlog@2.0.0-beta.44':
+    resolution: {integrity: sha512-bf0mv9qoPqrv1ehnbw/rHLWsDy0gaKD+289Yl+PSddpUVjbVMwzPZqYUJR1OfBjEeeCoKiptJ2Dql1+4AAWh/g==}
     peerDependencies:
       evlog: '>=2.18.1'
 
-  '@orpc/experimental-effect@2.0.0-beta.42':
-    resolution: {integrity: sha512-N+YAmUveuCVvHfZT0CvEz99iF3NK3XCwN5tgUmBmxD4/VEIZ/G1HV8d0X1AU95w21YGjP4wqk+k31+S9NEn6BA==}
+  '@orpc/experimental-effect@2.0.0-beta.44':
+    resolution: {integrity: sha512-iqVsyksS3IQ79xOqnmIJPmKEUbHXcr0LjrT4NYf2Qo5ukJz6JcQqiT1zRsmEh0v5LdzGxrEzyhRK42UPe20Q0Q==}
     peerDependencies:
       effect: '>=4.0.0'
 
-  '@orpc/experimental-msw@2.0.0-beta.42':
-    resolution: {integrity: sha512-tipLtY7qgV2v59C4q68OSthq4RzIJ6wZXebiuv050fY02Mqc5wBgzYarliYNf+BqplQPEWbVa5WFpipIsisA3g==}
+  '@orpc/experimental-msw@2.0.0-beta.44':
+    resolution: {integrity: sha512-puOuMJIKjo+f+RZNg3JHroilThx8j9ZaaNg/hHKeS/f3fM1UGUYiC5yihe7jF34Vsi757JQpFFMhC762fiuiwA==}
     peerDependencies:
       msw: '>=2.0.0'
 
-  '@orpc/json-schema@2.0.0-beta.42':
-    resolution: {integrity: sha512-iw/NsGLkTS3Blqb7TUzCSITaD6DMTuKIxMyoNT3TJBId3hC5JaEm4eiKktg4xA0zWn8NdUbOcsg+1E+l7b95fg==}
+  '@orpc/json-schema@2.0.0-beta.44':
+    resolution: {integrity: sha512-V8FriE7bd+WEZgjYGuCYg1cAGEaM/+nSDIJLSGyp1Zco2lMaXZ7whwqWyh9KJm36d4VkraIePDA4Tntza9+w7A==}
 
-  '@orpc/openapi@2.0.0-beta.42':
-    resolution: {integrity: sha512-u4DdwDVXvSQBDsA//IP6i+kHDUlu+6eNsI45+8YnXeGxm+4+/ePq24zZoOrZbafTM2pevXQO+aGD2wtFNdjK0w==}
+  '@orpc/openapi@2.0.0-beta.44':
+    resolution: {integrity: sha512-FZ37L4iRZ1wFXtFBEla6Y2oZTgY9PVqQobzVnu+XqYA5tKOaWTWyeQ1j+OdeSv9tTbT8VLy3gcFtq3yfEGhkfQ==}
     peerDependencies:
       '@scalar/api-reference': '>=1.57.2'
       '@types/swagger-ui': '>=5.32.0'
@@ -2520,14 +2520,14 @@ packages:
       swagger-ui:
         optional: true
 
-  '@orpc/opentelemetry@2.0.0-beta.42':
-    resolution: {integrity: sha512-lGR68ovdSDsq0eo4lR4dUlUZu23uVdBkjH2Fm+EPsrzH42D1wgCTteRn9n9x3bt/F6PbWytovXbCUkrWm2Apuw==}
+  '@orpc/opentelemetry@2.0.0-beta.44':
+    resolution: {integrity: sha512-X1uZhPvMRYfivmGYqzpjyrefiG4bojeiwrooVzf4hGbXKatYrcOPEzIKP2z3oq3gTgLI3Af7stFysVCKSJxXog==}
     peerDependencies:
       '@opentelemetry/api': '>=1.9.0'
       '@opentelemetry/instrumentation': '>=0.203.0'
 
-  '@orpc/ratelimit@2.0.0-beta.42':
-    resolution: {integrity: sha512-zun8y7Eb+ZJoez19/P65/5JC0rB8w74iVownLsyypn0lysDLrGEFg690dGfmbJJvTsBW+Y5ePYpei1e0CWmJ6w==}
+  '@orpc/ratelimit@2.0.0-beta.44':
+    resolution: {integrity: sha512-Xq6KvY6EfYdsYiCmIvqlIhPD/Oy/gfSuIjehyYcTFXIF2pjWP05Gh1FC+LhBmCuY2yNsRVyoMQlbMHm2f2Nvig==}
     peerDependencies:
       '@upstash/ratelimit': '>=2.0.8'
       redis: '>=6.0.0'
@@ -2537,8 +2537,8 @@ packages:
       redis:
         optional: true
 
-  '@orpc/server@2.0.0-beta.42':
-    resolution: {integrity: sha512-gZXjfrKnYBNTgv70C3OB1ct04rbbMXOzX+sVx393YvcoEOjUr1cO8BwMBpIAQwaS42NKcoIjjo4zXF0dXOyb3Q==}
+  '@orpc/server@2.0.0-beta.44':
+    resolution: {integrity: sha512-XUyWiMyTqm+hoIU9XMG+C5dlh63Ay3hrwWqgoHG7eDfU+KjwJvnxQtR7HUVT7EeJknXioMaKDihf8Z7Qu01Uew==}
     peerDependencies:
       crossws: '>=0.3.4'
       fastify: '>=5.6.1'
@@ -2548,16 +2548,16 @@ packages:
       fastify:
         optional: true
 
-  '@orpc/shared@2.0.0-beta.42':
-    resolution: {integrity: sha512-jPmLnx9ZD39bXOlbCTYdopz/xN9iqGVHZnlo3QDVruRLHN0dUDzcVyfJE38DaBCJs5A6tFYRJTG3BJlO5rM/kw==}
+  '@orpc/shared@2.0.0-beta.44':
+    resolution: {integrity: sha512-3R+et5pRqGXJ0GKeU/Xzm+Ia0pgfN7C2Ur01RxvDQmkPnFCfU5XxPWmHq0AmiTbOwt5dV3xpSeP7JTgy8P8A9Q==}
 
-  '@orpc/tanstack-query@2.0.0-beta.42':
-    resolution: {integrity: sha512-yLhmDw5Y5JR4mRrdq3J+vWnzF64g4eL63PqHDewvIPu240QQCxMeZLlKY1QPTdHZhE1ytwYnUu43Z+R2G8oCwQ==}
+  '@orpc/tanstack-query@2.0.0-beta.44':
+    resolution: {integrity: sha512-9UEnHifpU2kAo84LNMmCabBb9PRfBkKskN69Tzol85Fu7oqWD9aUCH8PaIdOQQgv5EKUZRJFcU9mbihRX08Yzg==}
     peerDependencies:
-      '@tanstack/query-core': '>=5.80.2'
+      '@tanstack/query-core': '>=5.89.0'
 
-  '@orpc/zod@2.0.0-beta.42':
-    resolution: {integrity: sha512-ajYbDjL0VavTSz1DGrJb/o1UrLiIvw3KGkIM45ZXKyX4bbpqnLYwurPfUA8DBP/C+UOliPqtt2x9Cf84nwA06g==}
+  '@orpc/zod@2.0.0-beta.44':
+    resolution: {integrity: sha512-8okiueDOjcMF70v7W3RpMmLdzSzJzIMzWW1AaDZjLmc0WXC7eD1Om1PGO7SHYQIhxzKemsvxYRLJZZqTGgSP1A==}
     peerDependencies:
       zod: '>=4.5.0'
 
@@ -5153,31 +5153,31 @@ packages:
   '@standard-schema/utils@0.3.0':
     resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
-  '@standard-server/aws-lambda@0.10.1':
-    resolution: {integrity: sha512-Rba4wyO9T0ta+Ze2Gu+c27vfzEjFKBqwUobtODvoo0ArZvcycY9Pr5Bf5iFcDX1NAWPFjnyEg5YQe2d+lJqu4g==}
+  '@standard-server/aws-lambda@0.10.3':
+    resolution: {integrity: sha512-OOoYsr1DVMGPZ0e5xpyyHgjM/7jCRgQJnSvGEYxRt7fIWo9LcKWFqaRmMFDDgjFUQtKhnWwR3Jzw2yWzEhOeaQ==}
 
-  '@standard-server/core@0.10.1':
-    resolution: {integrity: sha512-LtTjCg2x2FfbExGRdtu5J1biNVyNOfLs1/4zHAh/t0qZlbY+jIIbFYT5BPwbiYjF4o+Va5/JKjrA6uZeOQ184w==}
+  '@standard-server/core@0.10.3':
+    resolution: {integrity: sha512-0ZnZg6F+VxqH6jsicQwKrLCKWOblrlLJPRkga7HRadQd+Dx6nLXd2ujcRIceLvSD2Yc/QzX2VGAT/vyc2CG72A==}
 
-  '@standard-server/fastify@0.10.1':
-    resolution: {integrity: sha512-8up+11uSaZRNlJ+ejyLPoxgAkftVeV1XCH+afmEbsaQ8YZlLGXQlf12mHFBoS+6Mr0NqtpYn4eBmC6yTnS7llw==}
+  '@standard-server/fastify@0.10.3':
+    resolution: {integrity: sha512-O293Jlv+bXGDl/KZ7vEOOmesyk2jQNbtbIuJxlEY/VRU4ilV7OHYa3l7U3cpvnAcanAUVCy2wUYBb+OCwmEjcw==}
     peerDependencies:
       fastify: '>=5.6.1'
     peerDependenciesMeta:
       fastify:
         optional: true
 
-  '@standard-server/fetch@0.10.1':
-    resolution: {integrity: sha512-YK16ZUjJNRl7BZkqsA9dimTqNgjC/pfhXVcRcox22G1x4hrzTd993JLaQSduJ79g8hEyx0LuMCkjLavumwmonQ==}
+  '@standard-server/fetch@0.10.3':
+    resolution: {integrity: sha512-cdRUrxfYjUv7F3rLeq+1y+d1tBNEI7YgMgyAS715p1mCZAKvueA2dDmM/DPQwM7BsjndfX1teDyc5GKmlj4tyw==}
 
-  '@standard-server/node@0.10.1':
-    resolution: {integrity: sha512-tVH85dY/qxflrqoGDXy/BiKmzw7w8ELif8yVbIx8XRGsc1qkTere51jsoJlx3tAQN/AC9SUoGjvgcVXVS6IwYw==}
+  '@standard-server/node@0.10.3':
+    resolution: {integrity: sha512-5AGTXbTcJ/zbFw3BMhfECASXqLALcehSLPusYgDwzpJRn/9Ow03ndQesO32COONW36DqGp44kL6sy9IPYAQZRg==}
 
-  '@standard-server/peer@0.10.1':
-    resolution: {integrity: sha512-M1CXBNKMzCSTq33bNHxvUoGSwjjw6rqA+EJ1Cv6UJZSdAN9GoXQPVkmf1qmpPIDlc+0WhXHPoMbND1pqrblMog==}
+  '@standard-server/peer@0.10.3':
+    resolution: {integrity: sha512-ukNYt8+yQM8YoQ9+gC1DtwrKQWVFnNC1PlWy+7+ph8oCPQJE5hvOfDptfVPv5Ho6nDnyXZdtsGAPQkqJhJLNxw==}
 
-  '@standard-server/shared@0.10.1':
-    resolution: {integrity: sha512-8OhXcAY13iAtEzprBFDlfOvGVLCrNnf31oiPOJ/aZaR+i2BzT8U7qsUhYU5VPbD++KKfkzsJ7hN2kDlOxJ9C6w==}
+  '@standard-server/shared@0.10.3':
+    resolution: {integrity: sha512-2HRC/4SByyIMttPHo6UQznFlgNkZf7lL+5nawzuyaEIFYh6i+UA6D9pSbIx0S4WqvP7iSI2Ec36q3p7OD5qjWw==}
 
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0':
     resolution: {integrity: sha512-b9MIk7yhdS1pMCZM8VeNfUlSKVRhsHZNMl5O9SfaX0l0t5wjdgu4IDzGB8bpnGBBOjGST3rRFVsaaEtI4W6f7g==}
@@ -11854,123 +11854,123 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@orpc/client@2.0.0-beta.42':
+  '@orpc/client@2.0.0-beta.44':
     dependencies:
-      '@orpc/shared': 2.0.0-beta.42
-      '@standard-server/core': 0.10.1
-      '@standard-server/fetch': 0.10.1
-      '@standard-server/peer': 0.10.1
+      '@orpc/shared': 2.0.0-beta.44
+      '@standard-server/core': 0.10.3
+      '@standard-server/fetch': 0.10.3
+      '@standard-server/peer': 0.10.3
 
-  '@orpc/contract@2.0.0-beta.42':
+  '@orpc/contract@2.0.0-beta.44':
     dependencies:
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/shared': 2.0.0-beta.42
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/shared': 2.0.0-beta.44
       '@standard-schema/spec': 1.1.0
 
-  '@orpc/evlog@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))':
+  '@orpc/evlog@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))':
     dependencies:
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
-      '@standard-server/core': 0.10.1
-      evlog: 2.30.1(@orpc/server@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
+      '@standard-server/core': 0.10.3
+      evlog: 2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
     transitivePeerDependencies:
       - crossws
       - fastify
 
-  '@orpc/experimental-effect@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)':
+  '@orpc/experimental-effect@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)':
     dependencies:
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/contract': 2.0.0-beta.42
-      '@orpc/json-schema': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/contract': 2.0.0-beta.44
+      '@orpc/json-schema': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
       effect: 4.0.1
     transitivePeerDependencies:
       - crossws
       - fastify
 
-  '@orpc/experimental-msw@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(msw@2.15.0(@types/node@25.9.1)(typescript@6.0.3))':
+  '@orpc/experimental-msw@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(msw@2.15.0(@types/node@25.9.1)(typescript@6.0.3))':
     dependencies:
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/contract': 2.0.0-beta.42
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/contract': 2.0.0-beta.44
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
       msw: 2.15.0(@types/node@25.9.1)(typescript@6.0.3)
     transitivePeerDependencies:
       - crossws
       - fastify
 
-  '@orpc/json-schema@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))':
+  '@orpc/json-schema@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))':
     dependencies:
       '@openapi-spec/types': 0.3.0
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/contract': 2.0.0-beta.42
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/contract': 2.0.0-beta.44
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
       '@standard-schema/spec': 1.1.0
     transitivePeerDependencies:
       - crossws
       - fastify
 
-  '@orpc/openapi@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))':
+  '@orpc/openapi@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))':
     dependencies:
       '@openapi-spec/downgrader': 0.3.0
       '@openapi-spec/types': 0.3.0
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/contract': 2.0.0-beta.42
-      '@orpc/json-schema': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
-      '@standard-server/core': 0.10.1
-      '@standard-server/fetch': 0.10.1
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/contract': 2.0.0-beta.44
+      '@orpc/json-schema': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
+      '@standard-server/core': 0.10.3
+      '@standard-server/fetch': 0.10.3
       rou3: 1.0.0
     transitivePeerDependencies:
       - crossws
       - fastify
 
-  '@orpc/opentelemetry@2.0.0-beta.42(@opentelemetry/api@1.9.1)(@opentelemetry/instrumentation@0.223.0(@opentelemetry/api@1.9.1))':
+  '@orpc/opentelemetry@2.0.0-beta.44(@opentelemetry/api@1.9.1)(@opentelemetry/instrumentation@0.223.0(@opentelemetry/api@1.9.1))':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/instrumentation': 0.223.0(@opentelemetry/api@1.9.1)
-      '@orpc/shared': 2.0.0-beta.42
+      '@orpc/shared': 2.0.0-beta.44
 
-  '@orpc/ratelimit@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))':
+  '@orpc/ratelimit@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))':
     dependencies:
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
-      '@standard-server/core': 0.10.1
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
+      '@standard-server/core': 0.10.3
     transitivePeerDependencies:
       - crossws
       - fastify
 
-  '@orpc/server@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))':
+  '@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))':
     dependencies:
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/contract': 2.0.0-beta.42
-      '@orpc/shared': 2.0.0-beta.42
-      '@standard-server/aws-lambda': 0.10.1
-      '@standard-server/core': 0.10.1
-      '@standard-server/fastify': 0.10.1
-      '@standard-server/fetch': 0.10.1
-      '@standard-server/node': 0.10.1
-      '@standard-server/peer': 0.10.1
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/contract': 2.0.0-beta.44
+      '@orpc/shared': 2.0.0-beta.44
+      '@standard-server/aws-lambda': 0.10.3
+      '@standard-server/core': 0.10.3
+      '@standard-server/fastify': 0.10.3
+      '@standard-server/fetch': 0.10.3
+      '@standard-server/node': 0.10.3
+      '@standard-server/peer': 0.10.3
       cookie: 2.0.1
     optionalDependencies:
       crossws: 0.4.10(srvx@0.11.22)
 
-  '@orpc/shared@2.0.0-beta.42':
+  '@orpc/shared@2.0.0-beta.44':
     dependencies:
-      '@standard-server/shared': 0.10.1
+      '@standard-server/shared': 0.10.3
       radash: 12.1.1
-      type-fest: 5.6.0
+      type-fest: 5.10.0
 
-  '@orpc/tanstack-query@2.0.0-beta.42(@tanstack/query-core@5.101.4)(crossws@0.4.10(srvx@0.11.22))':
+  '@orpc/tanstack-query@2.0.0-beta.44(@tanstack/query-core@5.101.4)(crossws@0.4.10(srvx@0.11.22))':
     dependencies:
-      '@orpc/client': 2.0.0-beta.42
-      '@orpc/contract': 2.0.0-beta.42
-      '@orpc/openapi': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
-      '@orpc/shared': 2.0.0-beta.42
+      '@orpc/client': 2.0.0-beta.44
+      '@orpc/contract': 2.0.0-beta.44
+      '@orpc/openapi': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/shared': 2.0.0-beta.44
       '@tanstack/query-core': 5.101.4
     transitivePeerDependencies:
       - '@scalar/api-reference'
@@ -11979,10 +11979,10 @@ snapshots:
       - fastify
       - swagger-ui
 
-  '@orpc/zod@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))(zod@4.6.5)':
+  '@orpc/zod@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(zod@4.6.5)':
     dependencies:
       '@openapi-spec/types': 0.3.0
-      '@orpc/json-schema': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/json-schema': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       zod: 4.6.5
     transitivePeerDependencies:
       - crossws
@@ -14839,39 +14839,39 @@ snapshots:
 
   '@standard-schema/utils@0.3.0': {}
 
-  '@standard-server/aws-lambda@0.10.1':
+  '@standard-server/aws-lambda@0.10.3':
     dependencies:
-      '@standard-server/core': 0.10.1
-      '@standard-server/fetch': 0.10.1
-      '@standard-server/node': 0.10.1
-      '@standard-server/shared': 0.10.1
+      '@standard-server/core': 0.10.3
+      '@standard-server/fetch': 0.10.3
+      '@standard-server/node': 0.10.3
+      '@standard-server/shared': 0.10.3
 
-  '@standard-server/core@0.10.1':
+  '@standard-server/core@0.10.3':
     dependencies:
-      '@standard-server/shared': 0.10.1
+      '@standard-server/shared': 0.10.3
 
-  '@standard-server/fastify@0.10.1':
+  '@standard-server/fastify@0.10.3':
     dependencies:
-      '@standard-server/core': 0.10.1
-      '@standard-server/node': 0.10.1
+      '@standard-server/core': 0.10.3
+      '@standard-server/node': 0.10.3
 
-  '@standard-server/fetch@0.10.1':
+  '@standard-server/fetch@0.10.3':
     dependencies:
-      '@standard-server/core': 0.10.1
-      '@standard-server/shared': 0.10.1
+      '@standard-server/core': 0.10.3
+      '@standard-server/shared': 0.10.3
 
-  '@standard-server/node@0.10.1':
+  '@standard-server/node@0.10.3':
     dependencies:
-      '@standard-server/core': 0.10.1
-      '@standard-server/fetch': 0.10.1
-      '@standard-server/shared': 0.10.1
+      '@standard-server/core': 0.10.3
+      '@standard-server/fetch': 0.10.3
+      '@standard-server/shared': 0.10.3
 
-  '@standard-server/peer@0.10.1':
+  '@standard-server/peer@0.10.3':
     dependencies:
-      '@standard-server/core': 0.10.1
-      '@standard-server/shared': 0.10.1
+      '@standard-server/core': 0.10.3
+      '@standard-server/shared': 0.10.3
 
-  '@standard-server/shared@0.10.1': {}
+  '@standard-server/shared@0.10.3': {}
 
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0(@babel/core@7.26.10)':
     dependencies:
@@ -16315,9 +16315,9 @@ snapshots:
 
   eventsource-parser@3.1.1: {}
 
-  evlog@2.30.1(@orpc/server@2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)):
+  evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)):
     optionalDependencies:
-      '@orpc/server': 2.0.0-beta.42(crossws@0.4.10(srvx@0.11.22))
+      '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       ai: 7.0.130(zod@4.6.5)
       next: 16.4.0(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
