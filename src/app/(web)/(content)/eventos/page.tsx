@@ -2,7 +2,7 @@ import { CalendarX } from "lucide-react";
 import Link from "next/link";
 
 import CalendarSubscribe from "components/community/CalendarSubscribe";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import { ButtonLink, cardClassName, Container, Eyebrow, PageHeader, TitleBar } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";

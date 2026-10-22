@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   ButtonLink,
   Card,

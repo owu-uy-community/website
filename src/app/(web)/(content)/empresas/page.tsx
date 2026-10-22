@@ -1,7 +1,7 @@
 import { Briefcase, Building2, Sparkles } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   Badge,
   ButtonLink,

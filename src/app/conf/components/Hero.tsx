@@ -1,6 +1,5 @@
-"use client";
-
-import { m } from "motion/react";
+import Image from "next/image";
+import type { CSSProperties } from "react";
 
 import { CONF_DATES, INTERNAL_ROUTES, MAPS_URLS } from "app/lib/constants";
 
@@ -8,7 +7,6 @@ import { confUtm } from "../utm";
 
 import Countdown from "./Countdown";
 import PillLink from "./PillLink";
-import { EASE_OUT } from "./Reveal";
 
 const HEADLINE = [
   { text: "IDEAS", className: "text-[#F5BB03]" },
@@ -16,12 +14,15 @@ const HEADLINE = [
   { text: "COMUNIDAD", className: "text-[#0162C8]" },
 ];
 
-/* Content blocks stagger in after the headline finishes */
-const contentEntrance = (order: number) => ({
-  initial: { opacity: 0, y: 26 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.65, delay: 0.55 + order * 0.12, ease: EASE_OUT },
-});
+/*
+ * The entrance is CSS (.conf-rise* in globals.css), so it plays from the first paint instead of
+ * waiting for the page to hydrate. Content blocks stagger in after the headline finishes.
+ */
+const entranceDelay = (order: number) => ({ "--d": `${550 + order * 120}ms` }) as CSSProperties;
+
+// One photo for both layouts: the same sizes pick the same file, so it downloads once
+const HERO_PHOTO = { src: "/images/conf/hero-crowd.webp", width: 707, height: 440 };
+const HERO_SIZES = "(min-width: 1440px) 674px, calc(100vw - 4rem)";
 
 export default function Hero() {
   return (
@@ -31,28 +32,26 @@ export default function Hero() {
         <h1 className="font-display text-[length:clamp(34px,11.6vw,54px)] leading-[0.95] font-extrabold tracking-[-0.02em] min-[1440px]:text-[84px] sm:text-[68px]">
           {HEADLINE.map(({ text, className }, i) => (
             <span key={text} className="block overflow-hidden pt-[0.04em] pb-[0.08em]">
-              <m.span
-                animate={{ y: 0, rotate: 0 }}
-                className={`block origin-bottom-left ${className}`}
-                initial={{ y: "110%", rotate: 3 }}
-                transition={{ duration: 0.8, delay: 0.12 + i * 0.11, ease: EASE_OUT }}
+              <span
+                className={`conf-rise-line block origin-bottom-left ${className}`}
+                style={{ "--d": `${120 + i * 110}ms` } as CSSProperties}
               >
                 {text}
-              </m.span>
+              </span>
             </span>
           ))}
         </h1>
 
-        <m.p
-          className="mx-auto mt-7 max-w-[560px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90 min-[1440px]:text-xl sm:mx-0"
-          {...contentEntrance(0)}
+        <p
+          className="conf-rise mx-auto mt-7 max-w-[560px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90 min-[1440px]:text-xl sm:mx-0"
+          style={entranceDelay(0)}
         >
           Una jornada de charlas, open space y encuentro.
           <br />
           La conferencia de la comunidad tecnológica de Uruguay, hecha por la comunidad y para la comunidad.
-        </m.p>
+        </p>
 
-        <m.div className="mt-8" {...contentEntrance(1)}>
+        <div className="conf-rise mt-8" style={entranceDelay(1)}>
           <p className="font-display text-xl leading-none font-extrabold tracking-[-0.01em] text-[#F5BB03] uppercase min-[1440px]:text-[28px] sm:text-2xl">
             Sábado 07 de noviembre de 2026
           </p>
@@ -80,44 +79,43 @@ export default function Hero() {
               ↗
             </span>
           </a>
-        </m.div>
+        </div>
 
         {/* w-fit is measured by the CTA row, so the countdown below stretches to exactly the buttons' width */}
         <div className="mx-auto w-fit sm:mx-0">
-          <m.div {...contentEntrance(2)}>
+          <div className="conf-rise" style={entranceDelay(2)}>
             <Countdown className="mt-8" expiredLabel="¡LLEGÓ EL DÍA!" fullWidth target={CONF_DATES.event} />
-          </m.div>
+          </div>
 
-          <m.div
-            className="mt-8 flex flex-wrap items-center justify-center gap-4 sm:justify-start"
-            {...contentEntrance(3)}
+          <div
+            className="conf-rise mt-8 flex flex-wrap items-center justify-center gap-4 sm:justify-start"
+            style={entranceDelay(3)}
           >
             <PillLink href="#entradas">¡QUIERO MI ENTRADA!</PillLink>
             <PillLink href={INTERNAL_ROUTES.conf.sponsors} variant="outline">
               ¡QUIERO SER SPONSOR!
             </PillLink>
-          </m.div>
+          </div>
         </div>
 
         {/* Right edge aligns with the navbar content line (inner px-8 edge); desktop LCP image */}
-        <m.img
+        <Image
           alt="La comunidad OWU reunida en La Meetup"
-          animate={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)", scale: 1, opacity: 1 }}
-          className="absolute top-[140px] right-8 hidden h-[419px] w-[674px] max-w-none object-cover min-[1440px]:block"
+          className="conf-hero-photo absolute top-[140px] right-8 hidden h-[419px] w-[674px] max-w-none object-cover min-[1440px]:block"
           fetchPriority="high"
-          initial={{ clipPath: "polygon(0% 0%, 100% 0%, 100% 0%, 0% 62%)", scale: 1.06, opacity: 0 }}
-          src="/images/conf/hero-crowd.webp"
-          transition={{ duration: 1.1, delay: 0.45, ease: EASE_OUT }}
+          preload
+          sizes={HERO_SIZES}
+          {...HERO_PHOTO}
         />
       </div>
 
-      <m.img
+      <Image
         alt="La comunidad OWU reunida en La Meetup"
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-8 mt-2 w-[calc(100%-4rem)] max-w-[674px] object-cover min-[1440px]:hidden"
-        initial={{ opacity: 0, y: 24 }}
-        src="/images/conf/hero-crowd.webp"
-        transition={{ duration: 0.8, delay: 0.6, ease: EASE_OUT }}
+        className="conf-rise mx-8 mt-2 w-[calc(100%-4rem)] max-w-[674px] object-cover min-[1440px]:hidden"
+        loading="eager"
+        sizes={HERO_SIZES}
+        style={{ "--d": "600ms", "--rise": "24px" } as CSSProperties}
+        {...HERO_PHOTO}
       />
     </section>
   );

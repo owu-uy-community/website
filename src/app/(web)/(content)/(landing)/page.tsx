@@ -24,7 +24,7 @@ import CommunityGrid from "components/community/home/CommunityGrid";
 import HeroOrbit from "components/community/home/HeroOrbit";
 import PhotoWall from "components/community/home/PhotoWall";
 import RotatingWord from "components/community/home/RotatingWord";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import TalkCard from "components/community/TalkCard";
 import Timeline from "components/community/Timeline";
 import {

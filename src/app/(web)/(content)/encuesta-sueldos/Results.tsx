@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { cn } from "app/lib/utils";
-import { Stagger } from "components/community/motion";
+import { Stagger } from "components/community/reveal";
 import { Card, cardClassName, Freshness } from "components/community/ui";
 import { ChartContainer, ChartTooltip } from "components/shared/ui/chart";
 import type { Breakdown, Satisfaction, Stat, SurveyResults } from "lib/orpc/salary-survey/schemas";

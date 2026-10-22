@@ -2,7 +2,7 @@ import { ArrowUpRight, FilePlus2, Plus } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import TalkCard, { talkEventLabel } from "components/community/TalkCard";
 import {
   ButtonLink,

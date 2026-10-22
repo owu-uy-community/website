@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { EventList } from "components/community/events";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   Badge,
   ButtonLink,

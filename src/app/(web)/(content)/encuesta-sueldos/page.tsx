@@ -4,7 +4,8 @@ import Link from "next/link";
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
 import CopyField from "components/community/CopyField";
-import { CountUp, Reveal } from "components/community/motion";
+import { CountUp } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   Badge,
   ButtonLink,

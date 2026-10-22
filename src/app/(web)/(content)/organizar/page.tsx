@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   ButtonLink,
   Card,

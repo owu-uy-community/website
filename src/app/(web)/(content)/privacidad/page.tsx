@@ -1,6 +1,6 @@
 import { Mail } from "lucide-react";
 
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import { ButtonLink, Card, Container, Eyebrow, Freshness, PageHeader } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
