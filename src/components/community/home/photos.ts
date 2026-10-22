@@ -397,7 +397,6 @@ export const PHOTOS: Photo[] = [
   iii("momento-16", "La foto del equipo", "El equipo organizador en la foto final del evento"),
   meetup("2025", "la-mesa-del-after", "La mesa del after", "Amigos charlando y riéndose en una mesa del after"),
   meetup("2025", "ronda-en-los-puf", "Ronda en los puf", "Una sesión del open space en ronda sobre puf amarillos"),
-  meetup("2025", "una-carcajada", "Una carcajada", "Un asistente se ríe tapándose la boca durante el after"),
   meetup("2025", "con-el-vaso-en-alto", "Con el vaso en alto", "Un asistente sonríe levantando su vaso en el after"),
   iii("momento-18", "Open space en pantalla", "El tablero del open space proyectado en pantalla"),
   meetup(
