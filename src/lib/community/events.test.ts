@@ -12,6 +12,8 @@ const community = (slug: string, name: string, feedNames: string[] = []): Commun
   topics: [],
   status: "activa",
   website: null,
+  linkedin: null,
+  instagram: null,
   meetup: null,
   slackChannel: null,
   feedNames,

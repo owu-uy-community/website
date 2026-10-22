@@ -3,7 +3,7 @@
 import { ArrowUpRight, CalendarDays, MapPin, Plus, Search, Wifi, X } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { FaSlack } from "react-icons/fa6";
+import { FaInstagram, FaLinkedin, FaSlack } from "react-icons/fa6";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
@@ -19,11 +19,7 @@ const STATUS_LABELS = {
   "busca-organizadores": "Busca organizadores",
 } as const;
 
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase();
+const normalize = (value: string) => value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 type Props = {
   communities: Community[];
@@ -266,6 +262,20 @@ function CommunityCard({ community, next }: { community: Community; next?: Commu
               <ExternalLink href={community.website}>Sitio web</ExternalLink>
             </li>
           ) : null}
+          {community.linkedin ? (
+            <li>
+              <SocialIcon href={community.linkedin} label={`${community.name} en LinkedIn`}>
+                <FaLinkedin aria-hidden className="size-3.5" />
+              </SocialIcon>
+            </li>
+          ) : null}
+          {community.instagram ? (
+            <li>
+              <SocialIcon href={community.instagram} label={`${community.name} en Instagram`}>
+                <FaInstagram aria-hidden className="size-3.5" />
+              </SocialIcon>
+            </li>
+          ) : null}
           {community.slackChannel ? (
             <li>
               <a
@@ -282,6 +292,22 @@ function CommunityCard({ community, next }: { community: Community; next?: Commu
         </ul>
       </div>
     </article>
+  );
+}
+
+/** An icon-only link to the group's own social profile */
+function SocialIcon({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
+  return (
+    <a
+      aria-label={label}
+      className="flex size-6 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-white"
+      href={outbound(href, "directorio")}
+      rel="noopener"
+      target="_blank"
+      title={label}
+    >
+      {children}
+    </a>
   );
 }
 
@@ -312,8 +338,8 @@ function JoinCard() {
         <div>
           <h2 className="font-title text-lg font-semibold text-white">¿Tu comunidad no está?</h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-            Contanos cómo se llama, de qué se trata y dónde se juntan. La sumamos al directorio, a la agenda y al ⌘K
-            del sitio.
+            Contanos cómo se llama, de qué se trata y dónde se juntan. La sumamos al directorio, a la agenda y al ⌘K del
+            sitio.
           </p>
         </div>
       </div>
