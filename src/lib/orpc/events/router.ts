@@ -21,6 +21,7 @@ import {
   PublicEventSchema,
   PublishResultSchema,
   SaveEventSchema,
+  SchedulePublishSchema,
   ShowUpSchema,
   UpcomingEventSchema,
 } from "./schemas";
@@ -107,6 +108,16 @@ export const eventsRouter = {
     .output(PublishResultSchema)
     .effect(function* ({ input }) {
       return yield* Events.publish(input.eventId);
+    }),
+
+  schedulePublish: authed
+    .meta(docs("Publish a draft later by itself, with the same checks (null takes it back)"))
+    .input(SchedulePublishSchema)
+    .use(inCommunity("editor"))
+    .use(publishLimit)
+    .output(EditableEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Events.schedulePublish(input);
     }),
 
   cancel: authed

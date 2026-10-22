@@ -341,6 +341,15 @@ export const events = pgTable(
     rsvpClosesAt: ts("rsvpClosesAt"),
     questions: jsonb("questions").$type<RsvpQuestion[]>().notNull().default([]),
     externalLinks: jsonb("externalLinks").$type<{ meetup?: string }>().notNull().default({}),
+    /** How many they expect and what the space needs: the wizard matches venues on both */
+    sizeBucket: text("sizeBucket").$type<SizeBucket>(),
+    needs: text("needs").array().notNull().default([]),
+    /** The talks and who gives them, for the page and its search snippet */
+    talks: jsonb("talks").$type<EventTalk[]>().notNull().default([]),
+    /** Owy posts it on OWU's Slack and Telegram when it's published, if the organizers asked */
+    announcement: jsonb("announcement").$type<EventAnnouncement>().notNull().default({}),
+    /** A scheduled publish: the tick publishes the draft then */
+    publishAt: ts("publishAt"),
     /** Bumped on every change attendees should hear about, so calendar invites update in place. */
     icsSequence: integer("icsSequence").notNull().default(0),
     /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
@@ -368,6 +377,9 @@ export type EventStatus = "draft" | "published" | "cancelled";
 export type EventFormat = "charlas" | "taller" | "open-space" | "social" | "hackathon" | "otro";
 export type EventRegistration = "none" | "owu" | "external" | "eventbrite";
 export type EventMode = "presencial" | "online" | "hibrido";
+export type SizeBucket = "hasta-30" | "30-60" | "60-120" | "120+";
+export type EventTalk = { title: string; speaker: string };
+export type EventAnnouncement = { channels?: ("slack" | "telegram")[]; text?: string };
 export type RsvpQuestion = { id: string; label: string; required: boolean };
 
 /** @deprecated transition alias — use `events`. */

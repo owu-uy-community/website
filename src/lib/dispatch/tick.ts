@@ -4,7 +4,7 @@ import { Effect } from "effect";
 import { outboundMessages } from "../db/schema";
 import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
-import { remindExpiringHolds } from "../orpc/events/service";
+import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
 import { expireOffers, sendFeedback, sendReminders, sendUpdates } from "../orpc/rsvps/service";
 import { expireRequests } from "../orpc/venues/service";
@@ -38,6 +38,8 @@ const dueComms = Effect.gen(function* () {
  * QStash and once a day by the Vercel cron; a sweep that throws is reported and the rest still run.
  */
 const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknown, AppServices>> = {
+  // First, so an announcement it queues goes out with the comms sweep below
+  scheduled: () => publishDue,
   comms: () => dueComms,
   offers: () => expireOffers,
   updates: () => sendUpdates,
