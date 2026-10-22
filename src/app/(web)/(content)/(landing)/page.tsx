@@ -326,7 +326,8 @@ export default async function Landing() {
             <div className="rounded-2xl border border-dashed border-white/15 p-6 sm:p-7">
               <h3 className="font-title text-[17px] font-semibold text-white">¿Organizás algo?</h3>
               <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                Si tu grupo publica en Meetup.com aparece solo. Si no, mandanos los datos y lo sumamos.
+                Si tu grupo está en Meetup.com, sumalo al bot de la agenda y sus eventos aparecen solos, acá y cada
+                lunes en #anuncios. Si no, mandanos los datos y lo sumamos.
               </p>
               <ButtonLink
                 arrow

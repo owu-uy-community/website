@@ -1,4 +1,4 @@
-**OWU** es una de las principales comunidades de desarrolladores de Uruguay: más de 5.000 personas en un Slack abierto, y más de 950 que participan todos los días.
+**OWU** es una de las principales comunidades de desarrolladores de Uruguay: más de 5.600 personas en un Slack abierto, unas 400 que entran cada día hábil y más de un millón de mensajes desde que arrancó.
 
 Nació en 2014 como el Slack para organizar la JSConfUY y se quedó para todo lo demás. Hoy reúne a las comunidades de Ruby, JavaScript, Angular, Node, React, testing, DevOps, data y más, cada una con sus propias meetups.
 

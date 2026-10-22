@@ -33,6 +33,18 @@ export const metadata = pageMetadata({
   path: PAGES.primeraVez.href,
 });
 
+/* The channels every member ends up using, from the pinned "Listado de canales" in #general */
+const BASICS: { name: string; body: string }[] = [
+  { name: SLACK_CHANNELS.anuncios, body: "Meetups y eventos, tu charla o tu proyecto open source." },
+  { name: SLACK_CHANNELS.ayuda, body: "Consultas técnicas y no tanto." },
+  { name: SLACK_CHANNELS.jobs, body: "Búsquedas laborales, remotas o en Uruguay." },
+  { name: SLACK_CHANNELS.forHire, body: "Tu perfil o tu CV, si estás buscando trabajo." },
+  { name: SLACK_CHANNELS.autobombo, body: "Proyectos personales, para crecer en conjunto." },
+  { name: SLACK_CHANNELS.marketplace, body: "Compra y venta de cosas." },
+  { name: SLACK_CHANNELS.random, body: "Charla de pasillo y memes." },
+  { name: SLACK_CHANNELS.general, body: "Avisos e información útil." },
+];
+
 const PROMISES = [
   {
     icon: Gift,
@@ -54,7 +66,11 @@ const PROMISES = [
 const EVENING = [
   { time: "19:00", title: "Llegás y te acomodás", body: "Es el mejor momento para conocer gente: nadie está apurado." },
   { time: "19:30", title: "Charlas", body: "Dos o tres, de 20 a 30 minutos cada una, con preguntas al final." },
-  { time: "21:00", title: "Charla libre y cierre", body: "La conversación sigue un rato más. Te podés ir cuando quieras." },
+  {
+    time: "21:00",
+    title: "Charla libre y cierre",
+    body: "La conversación sigue un rato más. Te podés ir cuando quieras.",
+  },
 ];
 
 const linkClass = "text-zinc-200 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400";
@@ -135,19 +151,20 @@ export default async function FirstTimePage() {
               </>,
               <>Completá tu perfil: con tu nombre y una foto es más fácil saludarte en persona.</>,
               <>
-                Presentate en <Channel name={SLACK_CHANNELS.general} />: quién sos, a qué te dedicás o qué estás
-                aprendiendo.
+                Sumate a los canales de tus temas desde “Explorar canales”: hay más de cien, de cada lenguaje, de data,
+                de seguridad y de cada comunidad. Los más concurridos son <Channel name="javascript" />,{" "}
+                <Channel name="react" /> y <Channel name="python" />.
               </>,
               <>
-                Buscá los canales de tus temas desde “Explorar canales”. Hay de lenguajes, de data, de seguridad
-                y de cada comunidad.
+                ¿Una duda? Preguntá en <Channel name={SLACK_CHANNELS.ayuda} />, o en el canal de esa tecnología si es
+                algo puntual.
               </>,
               <>
                 Las búsquedas laborales van solo en <Channel name={SLACK_CHANNELS.jobs} />, siguiendo{" "}
                 <Link className={linkClass} href="/empresas#jobs">
                   sus reglas
                 </Link>
-                .
+                . Si buscás trabajo, compartí tu perfil en <Channel name={SLACK_CHANNELS.forHire} />.
               </>,
             ].map((step, index) => (
               <li key={index} className="flex gap-4">
@@ -158,15 +175,17 @@ export default async function FirstTimePage() {
               </li>
             ))}
             <li className="pl-12 text-xs leading-relaxed text-zinc-500">
-              Los nombres de los canales pueden variar. Si no encontrás uno, preguntá en #{SLACK_CHANNELS.general}.
+              Es un Slack abierto: verificá con quién hablás y avisá del spam en #{SLACK_CHANNELS.admin}. En el plan
+              gratuito, los mensajes de más de 90 días se ocultan, así que un canal tranquilo puede tener más historia
+              de la que se ve.
             </li>
           </ol>
           <Terminal
             lines={[
               { kind: "cmd", text: "owu join --slack" },
               { kind: "out", text: "✓ Cuenta creada en slack.owu.uy" },
-              { kind: "cmd", text: `owu say "¡Hola! Soy Ana y hago frontend" --canal ${SLACK_CHANNELS.general}` },
-              { kind: "out", text: "✓ Mensaje enviado. Ahora sos parte." },
+              { kind: "cmd", text: `owu join --canal javascript --canal ${SLACK_CHANNELS.ayuda}` },
+              { kind: "out", text: `✓ Ya estás en #javascript y #${SLACK_CHANNELS.ayuda}. Ahora sos parte.` },
               { kind: "cmd", text: "owu agenda --proximo" },
               {
                 kind: "out",
@@ -179,6 +198,19 @@ export default async function FirstTimePage() {
             ]}
             title="~/primera-vez"
           />
+        </Reveal>
+        <Reveal className="mt-14">
+          <h3 className={headingClassName.h3}>Los canales de siempre</h3>
+          <ul className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">
+            {BASICS.map(({ name, body }) => (
+              <li key={name} className="flex flex-col gap-1.5">
+                <span>
+                  <Channel name={name} />
+                </span>
+                <span className="text-sm leading-relaxed text-zinc-400">{body}</span>
+              </li>
+            ))}
+          </ul>
         </Reveal>
       </Section>
 
@@ -205,7 +237,7 @@ export default async function FirstTimePage() {
                 question: "¿Puedo ir sin conocer a nadie?",
                 answer: (
                   <>
-                    Claro, es lo más común. Si querés, contá en #{SLACK_CHANNELS.general} que vas por primera vez: es
+                    Claro, es lo más común. Si querés, contá en el canal de esa comunidad que vas por primera vez: es
                     una buena forma de tener a quién saludar al llegar.
                   </>
                 ),
