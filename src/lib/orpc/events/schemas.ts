@@ -224,6 +224,21 @@ export const AnswerCohostSchema = z.object({
 
 export const EventBySlugSchema = z.object({ communitySlug: z.string().min(1), eventSlug: z.string().min(1) });
 
+/** An upcoming event made in OWU, for other sites and bots (meetup-bot, calendars). */
+export const UpcomingEventSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  summary: z.string().nullable(),
+  startDate: z.string(),
+  endDate: z.string(),
+  url: z.string(),
+  community: z.object({ slug: z.string(), name: z.string() }),
+  mode: ModeSchema,
+  /** The space's name; null for online events */
+  place: z.string().nullable(),
+  meetupUrl: z.string().nullable(),
+});
+
 export type PublicEvent = z.infer<typeof PublicEventSchema>;
 
 // ---------------------------------------------------------------------------

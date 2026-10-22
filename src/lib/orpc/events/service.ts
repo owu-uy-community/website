@@ -840,3 +840,37 @@ export const message = (input: {
       return { sent: people.length };
     })
   );
+
+/** OWU's own published events still ahead, soonest first: GET /api/v1/events/upcoming. */
+export const upcoming = query((db) =>
+  db
+    .select({ event: events, community: communities, venueName: venues.name })
+    .from(events)
+    .innerJoin(communities, eq(communities.id, events.communityId))
+    .leftJoin(venues, eq(venues.id, events.venueId))
+    .where(
+      and(
+        eq(events.status, "published"),
+        eq(events.isActive, true),
+        eq(communities.isActive, true),
+        gt(events.endDate, new Date())
+      )
+    )
+    .orderBy(asc(events.startDate))
+    .limit(100)
+).pipe(
+  Effect.map((rows) =>
+    rows.map(({ event, community, venueName }) => ({
+      id: event.id,
+      name: event.name,
+      summary: event.summary,
+      startDate: event.startDate.toISOString(),
+      endDate: event.endDate.toISOString(),
+      url: appUrl(eventPagePath(community.slug, event.slug)),
+      community: { slug: community.slug, name: community.name },
+      mode: event.mode,
+      place: event.mode === "online" ? null : (venueName ?? event.placeName),
+      meetupUrl: event.externalLinks.meetup ?? null,
+    }))
+  )
+);

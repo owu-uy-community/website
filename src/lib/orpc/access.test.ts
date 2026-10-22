@@ -77,6 +77,7 @@ const EXPECTED: Record<string, Access> = {
   "events.hold": "community:editor",
   "events.preview": "community:editor",
   "events.public": "public",
+  "events.upcoming": "public",
   "events.publish": "community:editor",
   "events.save": "community:editor",
   "events.stats": "community:editor",

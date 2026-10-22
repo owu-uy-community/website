@@ -21,6 +21,7 @@ import {
   PublicEventSchema,
   PublishResultSchema,
   SaveEventSchema,
+  UpcomingEventSchema,
 } from "./schemas";
 import * as Door from "../door/service";
 import { DoorLinkSchema } from "../door/schemas";
@@ -114,6 +115,20 @@ export const eventsRouter = {
     .output(EditableEventSchema)
     .effect(function* ({ input }) {
       return yield* Events.cancel(input);
+    }),
+
+  upcoming: pub
+    .meta(
+      openapi({
+        tags: ["Organizer events"],
+        summary: "OWU's own published events still ahead, soonest first (for meetup-bot and calendars)",
+        method: "GET",
+        path: "/events/upcoming",
+      })
+    )
+    .output(z.array(UpcomingEventSchema))
+    .effect(function* () {
+      return yield* Events.upcoming;
     }),
 
   public: pub
