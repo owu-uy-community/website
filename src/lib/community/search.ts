@@ -35,7 +35,7 @@ export const getSearchIndex = cache(async (): Promise<SearchItem[]> => {
       group: "Comunidades",
       label: community.name,
       hint: community.description,
-      href: `/comunidades#${community.slug}`,
+      href: `/comunidad/${community.slug}`,
       keywords: community.topics.map(topicLabel).join(" "),
     })),
     ...events.slice(0, 12).map((event): SearchItem => {

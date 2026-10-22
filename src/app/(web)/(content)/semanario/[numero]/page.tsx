@@ -195,7 +195,7 @@ export default async function SemanarioIssuePage({ params }: Props) {
                     <li key={community.slug}>
                       <Link
                         className="inline-flex h-9 items-center rounded-full border border-white/10 bg-white/[0.04] px-3.5 text-sm font-medium text-zinc-200 transition-colors hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
-                        href={`/comunidades#${community.slug}`}
+                        href={`/comunidad/${community.slug}`}
                       >
                         {community.name}
                       </Link>

@@ -47,7 +47,7 @@ export function EventRow({ event, showMonth = true }: { event: CommunityEvent; s
           {event.communitySlug ? (
             <Link
               className="relative z-10 underline decoration-white/15 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400"
-              href={`/comunidades#${event.communitySlug}`}
+              href={`/comunidad/${event.communitySlug}`}
             >
               {event.group}
             </Link>

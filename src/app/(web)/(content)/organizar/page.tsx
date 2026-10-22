@@ -235,7 +235,7 @@ export default async function OrganizarPage() {
                     <li key={community.slug}>
                       <Link
                         className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 transition-colors hover:bg-white/[0.07]"
-                        href={`/comunidades#${community.slug}`}
+                        href={`/comunidad/${community.slug}`}
                       >
                         <CommunityLogo logo={community.logo} name={community.name} size="sm" />
                         <span className="text-sm text-zinc-200">{community.name}</span>

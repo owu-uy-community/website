@@ -138,7 +138,7 @@ export default async function DarUnaCharlaPage() {
                     <li key={community.slug}>
                       <Link
                         className="group inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] py-1 pr-3.5 pl-1 text-sm text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white"
-                        href={`/comunidades#${community.slug}`}
+                        href={`/comunidad/${community.slug}`}
                       >
                         <CommunityLogo
                           className="size-7 rounded-full p-1"

@@ -64,7 +64,7 @@ export default function CommunityGrid({ communities, cta }: { communities: GridC
       <Cells className="grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
         {shown.map((community, index) => (
           // The card stays put; what's inside crossfades to the next group
-          <Link key={index} className={cardClassName(true, "grid p-5 sm:p-6")} href={`/comunidades#${community.slug}`}>
+          <Link key={index} className={cardClassName(true, "grid p-5 sm:p-6")} href={`/comunidad/${community.slug}`}>
             <AnimatePresence initial={false}>
               <motion.span
                 key={community.slug}
