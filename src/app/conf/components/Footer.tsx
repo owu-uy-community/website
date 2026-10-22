@@ -125,7 +125,7 @@ export default function Footer() {
 
         <div className="mt-14 flex flex-col gap-4 border-t border-white/[0.08] pt-6 text-[13px] text-[#FBF5E7]/50 sm:flex-row sm:items-center sm:justify-between">
           <span>© {CONF_DATES.event.slice(0, 4)} OWU CONF · Montevideo, Uruguay</span>
-          {/* Credit to the organizer, the way Nerdearla credits sysarmy */}
+          {/* Credit to the organizer */}
           <a
             aria-label="Organizado por OWU, la comunidad tech de Uruguay"
             className={`group inline-flex w-fit items-center gap-2 ${focusRing}`}
