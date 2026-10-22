@@ -54,17 +54,11 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
 
   const save = useMutation(
     orpc.owyStage.saveDesk.mutationOptions({
-      onMutate: () => {
-        inflight.current += 1;
-      },
       // The last save in flight is the desk as this device left it: settle on it, in case a read
       // that was already on its way (the first load, a reconnect) landed on top of the local edit.
       onSuccess: (saved) => {
         if (inflight.current === 1 && !editTimer.current)
           queryClient.setQueryData(orpc.owyStage.getDesk.queryKey(), saved);
-      },
-      onSettled: () => {
-        inflight.current -= 1;
       },
       onError: (error) => {
         toast.error("No se pudo guardar la cola", error.message);
@@ -92,8 +86,19 @@ export function useDesk(live: StageState, onAir: (state: StageState) => void) {
   const actions = useMemo(() => {
     const key = orpc.owyStage.getDesk.queryKey();
     const current = () => deskRef.current;
+    /**
+     * One save at a time, in order. Each one writes the whole desk, and two sent together (one
+     * batch) ran concurrently on the server: an older desk could commit last and drop a queued step.
+     * Counted from here, not from the request, so an echo between two chained saves is still stale.
+     */
     const send = (next: Desk) => {
-      lastSave.current = saveRef.current({ desk: next }).catch(() => undefined);
+      inflight.current += 1;
+      lastSave.current = lastSave.current
+        .then(() => saveRef.current({ desk: next }))
+        .catch(() => undefined)
+        .finally(() => {
+          inflight.current -= 1;
+        });
     };
     /** Local at once; saved now, or after a pause when it's typing. */
     /** A local change wins over any read still on its way (TanStack's optimistic-update rule). */
