@@ -1,6 +1,7 @@
 import { activityRouter } from "./activity/router";
 import { assistantRouter } from "./assistant/router";
 import { attendeesRouter } from "./attendees/router";
+import { calendarRouter } from "./calendar/router";
 import { castRouter } from "./cast/router";
 import { commsRouter } from "./comms/router";
 import { communitiesRouter } from "./communities/router";
@@ -9,6 +10,7 @@ import { confRouter } from "./conf/router";
 import { countdownRouter } from "./countdown/router";
 import { dashboardRouter } from "./dashboard/router";
 import { eventbriteRouter } from "./eventbrite/router";
+import { eventsRouter } from "./events/router";
 import { incidentsRouter } from "./incidents/router";
 import { obsControlRouter, obsCueRouter } from "./obs-control/router";
 import { obsQueueRouter } from "./obs-queue/router";
@@ -42,6 +44,10 @@ export const router = {
 
   // Communities (tenants) and their event-day staff coordination
   communities: communitiesRouter,
+
+  // Organizá: the shared calendar, and events as organizers make them (drafts, date holds)
+  calendar: calendarRouter,
+  events: eventsRouter,
   staffTasks: staffTasksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall

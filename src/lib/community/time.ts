@@ -51,3 +51,10 @@ export function monthKey(iso: string) {
 export function dayKey(iso: string | Date) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: MONTEVIDEO_TZ }).format(new Date(iso));
 }
+
+/** "jue 12 nov · 19:00", the way the organizer panel and its emails name a moment. */
+export function shortWhen(iso: string | Date) {
+  const parts = dateParts(new Date(iso).toISOString());
+
+  return `${parts.weekday} ${parts.day} ${parts.month} · ${parts.time}`;
+}

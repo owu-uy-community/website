@@ -88,7 +88,7 @@ const list = new Intl.ListFormat("es", { type: "conjunction" });
 const tone = (penalty: number): Reason["tone"] => (penalty >= 30 ? "bad" : penalty >= 10 ? "warn" : "info");
 
 /** Jaccard overlap of topics; 0.3 when a side is untagged or general; OWU's own events draw everyone. */
-function similarity(ours: string[], item: CalendarItem) {
+export function similarity(ours: string[], item: Pick<CalendarItem, "isOwu" | "topics">) {
   if (item.isOwu) return 1;
   const mine = new Set(ours);
   const theirs = new Set(item.topics);
