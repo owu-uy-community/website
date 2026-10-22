@@ -3,15 +3,7 @@ import Link from "next/link";
 
 import CalendarSubscribe from "components/community/CalendarSubscribe";
 import { Reveal } from "components/community/motion";
-import {
-  ButtonLink,
-  cardClassName,
-  Container,
-  Eyebrow,
-  Freshness,
-  PageHeader,
-  TitleBar,
-} from "components/community/ui";
+import { ButtonLink, cardClassName, Container, Eyebrow, PageHeader, TitleBar } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
 import { pageMetadata } from "lib/community/metadata";
@@ -97,10 +89,6 @@ export default async function EventsPage() {
               </div>
             </div>
           </Reveal>
-
-          <Freshness className="mt-6">
-            Fuentes: meetup-bot (grupos de Meetup.com) y la carga manual en content/events · Horarios de Montevideo
-          </Freshness>
         </Container>
       </section>
 

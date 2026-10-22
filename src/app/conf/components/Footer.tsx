@@ -31,12 +31,22 @@ export default function Footer() {
             <br />
             para la comunidad.
           </p>
-          {/* Back to the main site: same analytics property, so no UTM tags */}
+          {/* Credit to the organizer, the way Nerdearla credits sysarmy; same analytics property, so no UTM tags */}
           <a
-            className="font-display text-xs leading-none font-bold tracking-[0.08em] text-[#FBF5E7]/60 uppercase transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+            aria-label="Organizado por OWU, la comunidad tech de Uruguay"
+            className="group inline-flex items-center gap-2.5 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
             href={SITE_URL}
           >
-            OWU · La comunidad tech de Uruguay →
+            <span className="font-display text-xs leading-none font-bold tracking-[0.08em] text-[#FBF5E7]/60 uppercase transition-colors group-hover:text-[#FBF5E7]">
+              Organizado por
+            </span>
+            {/* The file has transparent margins; the negative margin keeps the line height tight */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              alt=""
+              className="-my-2 h-10 w-auto opacity-80 transition-opacity group-hover:opacity-100"
+              src="/images/logos/owu.webp"
+            />
           </a>
         </div>
 
