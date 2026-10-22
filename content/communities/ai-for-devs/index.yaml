@@ -5,4 +5,7 @@ topics:
   - data-ia
 status: activa
 meetup: https://www.meetup.com/ai-for-devs-montevideo/
+slackChannel: ai-4-devs
+feedNames:
+  - "AI for Devs Montevideo"
 confPartner: false

@@ -9,4 +9,5 @@ website: https://ruby.uy
 meetup: https://www.meetup.com/ruby-montevideo/
 feedNames:
   - "Ruby Montevideo"
+slackChannel: ruby
 confPartner: false
