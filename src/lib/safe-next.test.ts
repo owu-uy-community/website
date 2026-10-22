@@ -8,7 +8,17 @@ describe(safeNext, () => {
   });
 
   test("refuses other origins and falls back", () => {
-    for (const next of ["https://evil.com", "//evil.com", "/\\evil.com", "mailto:hola@owu.uy", "", null, undefined]) {
+    for (const next of [
+      "https://evil.com",
+      "//evil.com",
+      "/\\evil.com",
+      "/\t/evil.com",
+      "/\n/evil.com",
+      "mailto:hola@owu.uy",
+      "",
+      null,
+      undefined,
+    ]) {
       expect(safeNext(next)).toBe("/");
     }
     expect(safeNext("//evil.com", "/organizar/panel")).toBe("/organizar/panel");
