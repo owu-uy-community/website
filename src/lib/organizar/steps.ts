@@ -26,7 +26,7 @@ export type Checkable = {
   venueId: string | null;
   placeName: string | null;
   onlineUrl: string | null;
-  registration: "none" | "owu" | "external";
+  registration: "none" | "owu" | "external" | "eventbrite";
   registrationUrl: string | null;
   capacity: number | null;
 };
@@ -61,6 +61,9 @@ export function issues(event: Checkable, now = Date.now()): Issue[] {
 
   if (event.registration === "external" && !event.registrationUrl) need("inscripcion", "Poné el link de inscripción");
   if (event.registration === "owu" && !event.capacity) could("inscripcion", "Sin cupo: se puede anotar cualquiera");
+  if (event.registration === "eventbrite" && !event.capacity) {
+    need("inscripcion", "Poné el cupo: Eventbrite lo pide para las entradas");
+  }
 
   return list;
 }

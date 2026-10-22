@@ -17,6 +17,7 @@ import {
   Monitor,
   Plus,
   Sparkles,
+  Ticket,
   Trash2,
   Users,
   Wrench,
@@ -41,6 +42,7 @@ import type { EditableEvent } from "lib/orpc/events/schemas";
 import { UNTITLED, type Issue, type StepKey } from "lib/organizar/steps";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
+import { EventbriteStatus } from "../integrations/EventbriteStatus";
 import { RequestComposer } from "../venues/VenuesClient";
 import { DatePicker } from "./DatePicker";
 
@@ -80,7 +82,11 @@ function ChoiceCards<T extends string>({
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label={name}>
+    <div
+      className={cn("grid gap-2 sm:grid-cols-2", options.length % 3 === 0 && "lg:grid-cols-3")}
+      role="radiogroup"
+      aria-label={name}
+    >
       {options.map((option) => (
         <button
           key={option.value}
@@ -389,7 +395,13 @@ const REGISTRATIONS: {
     icon: Users,
     badge: "Gratis",
   },
-  { value: "external", title: "En otro sitio", hint: "Eventbrite, Meetup, un formulario", icon: Globe },
+  {
+    value: "eventbrite",
+    title: "En Eventbrite",
+    hint: "Con la cuenta de la comunidad: se publica y se actualiza solo",
+    icon: Ticket,
+  },
+  { value: "external", title: "En otro sitio", hint: "Meetup, un formulario, otra página", icon: Globe },
   { value: "none", title: "Sin inscripción", hint: "Entrada libre, sin anotarse", icon: CircleCheck },
 ];
 
@@ -399,7 +411,7 @@ const PRESETS = [
   "¿Necesitás algo para participar?",
 ];
 
-export function StepInscripcion({ draft, set, errors }: StepProps) {
+export function StepInscripcion({ draft, set, errors, community }: StepProps) {
   const question = (index: number, change: Partial<EditableEvent["questions"][number]>) =>
     set({ questions: draft.questions.map((item, at) => (at === index ? { ...item, ...change } : item)) });
   const add = (label = "") =>
@@ -414,6 +426,35 @@ export function StepInscripcion({ draft, set, errors }: StepProps) {
         value={draft.registration}
         onChange={(registration) => set({ registration })}
       />
+      {draft.registration === "eventbrite" ? (
+        <div className="mt-3 flex flex-col gap-3">
+          <EventbriteStatus
+            communityId={community.id}
+            communitySlug={community.slug}
+            draft={draft.status === "draft"}
+            eventId={draft.id}
+          />
+          <SettingsCard>
+            <SettingsRow
+              error={errors.capacity}
+              hint="Las entradas gratis que abre Eventbrite. A los eventos gratis falta cerca de un tercio de quienes se anotan."
+              htmlFor="capacity"
+              label="Cupo"
+            >
+              <Input
+                className="w-28 font-terminal tabular-nums"
+                id="capacity"
+                inputMode="numeric"
+                min={1}
+                placeholder="60"
+                type="number"
+                value={draft.capacity ?? ""}
+                onChange={(event) => set({ capacity: event.target.value ? Number(event.target.value) : null })}
+              />
+            </SettingsRow>
+          </SettingsCard>
+        </div>
+      ) : null}
       {draft.registration === "external" ? (
         <SettingsCard className="mt-3">
           <SettingsRow error={errors.registrationUrl} htmlFor="registration-url" label="Link de inscripción">

@@ -502,7 +502,9 @@ function Preview({ draft, community }: { draft: EditableEvent; community: Calend
     draft.mode === "online"
       ? "Online"
       : (draft.venue?.name ?? draft.placeName ?? "Lugar a confirmar") + (draft.mode === "hibrido" ? " · y online" : "");
-  const cta = { owu: "Anotarme", external: "Inscribirme", none: "Entrada libre" }[draft.registration];
+  const cta = { owu: "Anotarme", external: "Inscribirme", eventbrite: "Inscribirme", none: "Entrada libre" }[
+    draft.registration
+  ];
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(rgba(255,255,255,0.045),rgba(255,255,255,0.015))] p-5 font-sans">

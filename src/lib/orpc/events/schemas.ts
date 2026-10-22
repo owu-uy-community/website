@@ -22,7 +22,7 @@ export const OrganizerEventSchema = z.object({
   heldUntil: z.string().nullable(),
   /** A draft's date is provisional until it's reserved once. */
   dateChosen: z.boolean(),
-  registration: z.enum(["none", "owu", "external"]),
+  registration: z.enum(["none", "owu", "external", "eventbrite"]),
   capacity: z.number().nullable(),
   publishedAt: z.string().nullable(),
   updatedAt: z.string(),
@@ -57,7 +57,7 @@ export type HoldInput = z.infer<typeof HoldSchema>;
 export const FORMATS = ["charlas", "taller", "open-space", "social", "hackathon", "otro"] as const;
 export const FormatSchema = z.enum(FORMATS);
 export const ModeSchema = z.enum(["presencial", "online", "hibrido"]);
-export const RegistrationSchema = z.enum(["none", "owu", "external"]);
+export const RegistrationSchema = z.enum(["none", "owu", "external", "eventbrite"]);
 const HttpsUrl = z.url({ protocol: /^https$/, message: "Usá un link https://" });
 
 export const QuestionSchema = z.object({

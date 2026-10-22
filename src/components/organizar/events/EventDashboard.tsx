@@ -41,6 +41,7 @@ import { orpc } from "lib/orpc/client";
 import { ROLE_RANK } from "lib/roles";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
+import { EventbriteStatus } from "../integrations/EventbriteStatus";
 import { usePanel } from "../shell/context";
 
 const TABS = [
@@ -150,7 +151,22 @@ export function EventDashboard({
       </nav>
 
       {tab === "resumen" ? (
-        <Summary isAdmin={isAdmin} registration={data.registration} stats={stats} onGo={go} />
+        <Summary
+          eventbrite={
+            data.registration === "eventbrite" ? (
+              <EventbriteStatus
+                communityId={community.id}
+                communitySlug={community.slug}
+                draft={false}
+                eventId={eventId}
+              />
+            ) : null
+          }
+          isAdmin={isAdmin}
+          registration={data.registration}
+          stats={stats}
+          onGo={go}
+        />
       ) : null}
       {tab === "inscriptos" ? <People eventId={eventId} input={input} /> : null}
       {tab === "puerta" ? (
@@ -196,6 +212,7 @@ function Stat({
 function Summary({
   stats,
   registration,
+  eventbrite,
   isAdmin,
   onGo,
 }: {
@@ -210,11 +227,13 @@ function Summary({
       checkedIn: number;
     }>
   >;
-  registration: "none" | "owu" | "external";
+  registration: "none" | "owu" | "external" | "eventbrite";
+  /** How its publication on Eventbrite is going, when people sign up there */
+  eventbrite: React.ReactNode;
   isAdmin: boolean;
   onGo: (tab: Tab) => void;
 }) {
-  if (registration !== "owu") {
+  if (registration !== "owu" && registration !== "eventbrite") {
     return (
       <Panel>
         <EmptyState
@@ -235,10 +254,15 @@ function Summary({
 
   return (
     <div className="flex flex-col gap-4">
+      {eventbrite}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Lugares ocupados" of={data.capacity} tone="primary" value={data.taken} />
-        <Stat label="En espera" value={data.waiting} />
-        <Stat label="Por aprobar" value={data.pending} />
+        {registration === "owu" ? (
+          <>
+            <Stat label="En espera" value={data.waiting} />
+            <Stat label="Por aprobar" value={data.pending} />
+          </>
+        ) : null}
         <Stat label="Acreditados" of={data.attending || null} tone="success" value={data.checkedIn} />
       </div>
       {data.pending > 0 && isAdmin ? (
