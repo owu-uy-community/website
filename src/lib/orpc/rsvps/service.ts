@@ -253,8 +253,9 @@ export const offerWindowMs = (start: Date, now = Date.now()) => {
  */
 const promote = (event: EventContext) =>
   Effect.gen(function* () {
-    if (event.capacity === null || event.status !== "published") return;
-    let free = event.capacity - (yield* seatsTaken(event.id));
+    if (event.status !== "published") return;
+    // No limit (it was just removed): everyone waiting gets in
+    let free = event.capacity === null ? Number.POSITIVE_INFINITY : event.capacity - (yield* seatsTaken(event.id));
     if (free <= 0) return;
     const waiting = yield* query((db) =>
       db
@@ -263,7 +264,8 @@ const promote = (event: EventContext) =>
         .where(and(eq(attendees.eventId, event.id), eq(attendees.status, "waitlisted")))
         .orderBy(asc(attendees.registeredAt), asc(attendees.id))
     );
-    const window = offerWindowMs(event.startDate);
+    // Without a limit nobody needs to confirm: the seat is theirs
+    const window = event.capacity === null ? 0 : offerWindowMs(event.startDate);
     for (const person of waiting) {
       const need = 1 + person.guests;
       if (need > free) continue;
@@ -593,7 +595,8 @@ export const review = (input: { eventId: string; attendeeId: string; decision: "
         verb: input.decision === "approve" ? "rsvp.approved" : "rsvp.declined",
         entityType: "attendee",
         entityId: row.id,
-        summary: input.decision === "approve" ? `aprobó a ${row.name}` : `no aprobó a ${row.name}`,
+        // Never the person's name: editors read the log, and it outlives the sign-up
+        summary: input.decision === "approve" ? "aprobó una inscripción" : "no aprobó una inscripción",
       });
       yield* opsPing(event.id, "checkins");
       refreshPage(eventPagePath(event.community.slug, event.slug));
@@ -608,6 +611,13 @@ const lockOrganized = (eventId: string) =>
     const { communityId } = yield* CommunityScope;
     const event = yield* contextOf(yield* lockEvent(eventId));
     if (event.communityId !== communityId) return yield* eventNotFound;
+    // A cancelled or finished event keeps its list as it was: no seats, no emails, no invites
+    if (event.status !== "published" || event.endDate.getTime() <= Date.now()) {
+      return yield* new Conflict({
+        reason: "closed",
+        message: "El evento ya no está abierto: su lista queda como está",
+      });
+    }
 
     return event;
   });
@@ -653,7 +663,7 @@ export const giveSeat = (input: { eventId: string; attendeeId: string }) =>
         verb: "rsvp.seated",
         entityType: "attendee",
         entityId: row.id,
-        summary: `le dio un lugar a ${row.name}`,
+        summary: "le dio un lugar a alguien que esperaba",
       });
       yield* opsPing(event.id, "checkins");
       refreshPage(eventPagePath(event.community.slug, event.slug));
@@ -704,7 +714,7 @@ export const cancelSpots = (input: { eventId: string; attendeeIds: string[] }) =
           verb: "rsvp.cancelled",
           entityType: "attendee",
           entityId: row.id,
-          summary: `canceló el lugar de ${row.name}`,
+          summary: "canceló el lugar de una persona",
         });
       }
       yield* promote(event);

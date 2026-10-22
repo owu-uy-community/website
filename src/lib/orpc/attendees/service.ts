@@ -689,7 +689,7 @@ export const undoCheckin = (input: { eventId: string; attendeeId: string }) =>
           verb: "attendee.checkin_undone",
           entityType: "attendee",
           entityId: row.id,
-          summary: `deshizo la acreditación de ${row.name}`,
+          summary: "deshizo una acreditación",
         });
       })
     );
