@@ -182,8 +182,42 @@ function markdownNotFound() {
   });
 }
 
+/**
+ * Only where the proxy has something to do. A browser asking owu.uy for a page goes straight to it
+ * (and to Vercel's cache) without a hop through here. Matchers must be literals: Next reads them at
+ * build time. proxy.test.ts checks that every redirect above is still matched.
+ */
 export const config = {
   matcher: [
-    "/((?!api|monitoring|_next/static|_next/image|favicon.ico|images|icons|fonts|sounds|robots.txt|sitemap.xml).*)",
+    // conf.owu.uy: its pages map onto /conf, everything else goes to owu.uy
+    {
+      source:
+        "/((?!api|monitoring|_next/static|_next/image|favicon.ico|images|icons|fonts|sounds|robots.txt|sitemap.xml).*)",
+      has: [{ type: "host", value: "conf\\.owu\\.uy" }],
+    },
+    // Agents asking for Markdown, on any page
+    {
+      source:
+        "/((?!api|monitoring|_next/static|_next/image|favicon.ico|images|icons|fonts|sounds|robots.txt|sitemap.xml).*)",
+      has: [{ type: "header", key: "accept", value: ".*text/markdown.*" }],
+    },
+    // The home page (it has a Markdown twin) for clients that take no HTML: they get a 406
+    { source: "/", missing: [{ type: "header", key: "accept", value: ".*(text/html|text/\\*|\\*/\\*).*" }] },
+    // owu.uy/conf → conf.owu.uy, /c → /comunidad and the pre-multi-tenant URLs (LEGACY_REDIRECTS)
+    "/conf/:path*",
+    "/c/:path*",
+    "/la-meetup/openspace",
+    "/openspace/:path*",
+    "/2024/la-meetup/comunidades",
+    // Behind the resources launch flag (isHiddenPath)
+    "/semanario/:path*",
+    "/encuesta-sueldos/:path*",
+    // Sign-in bounces
+    "/admin/:path*",
+    "/keystatic/:path*",
+    "/organizar/panel/:path*",
+    "/acceso",
+    "/login",
+    "/registro",
   ],
 };
