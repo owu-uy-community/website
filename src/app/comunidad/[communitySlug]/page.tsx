@@ -37,6 +37,7 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
         and(
           eq(events.communityId, community.id),
           eq(events.status, "published"),
+          eq(events.isActive, true),
           isNotNull(events.venueId),
           lt(events.startDate, new Date())
         )
