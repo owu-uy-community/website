@@ -26,6 +26,7 @@ const EXPECTED: Record<string, Access> = {
   "attendees.scan": "staff",
   "attendees.setTags": "staff",
   "attendees.sync": "staff",
+  "attendees.undoCheckin": "staff",
   "cast.getState": "public",
   "cast.setHighlightedNote": "staff",
   "comms.cadence": "staff",

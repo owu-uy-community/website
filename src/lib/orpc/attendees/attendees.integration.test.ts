@@ -188,6 +188,26 @@ describe("the Eventbrite mirror", () => {
     await expect(mirror(event.id)).resolves.toMatchObject({ x: owu });
   });
 
+  test("an undone check-in is back to «por llegar», and Eventbrite doesn't bring it back", async () => {
+    const { event, eventbriteId, staff } = await mirroredEvent();
+    serveAttendees(eventbriteId, [[person("x", checkedIn("2026-11-07T18:30:00Z", "scan"))]]);
+    await sync(event.id, staff);
+    const { x } = await mirror(event.id);
+
+    await call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: x.id }, by(staff));
+    serveAttendees(eventbriteId, [[person("x", checkedIn("2026-11-07T18:45:00Z", "scan"))]]);
+    await syncedLongAgo(event.id);
+    await sync(event.id, staff);
+
+    await expect(mirror(event.id)).resolves.toMatchObject({ x: { checkedInAt: null, checkinDevice: null } });
+    await expect(
+      call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: x.id }, by(staff))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      call(router.attendees.undoCheckin, { eventId: event.id, attendeeId: x.id }, by(await makeUser()))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
   test("a key from outside the event's organization says so, instead of calling the key wrong", async () => {
     const { event, eventbriteId, staff } = await mirroredEvent();
     server.use(

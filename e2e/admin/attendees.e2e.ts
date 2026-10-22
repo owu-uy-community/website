@@ -69,3 +69,20 @@ test("the scanner's typed code lets someone in once, then says they're in", asyn
   await expect(page.getByText(/Ya entró/i)).toBeVisible();
   await expect(page.getByText(/Entró a las \d{2}:\d{2} · Puerta/)).toBeVisible();
 });
+
+test("a wrong check-in is undone from the list, back to «Por llegar»", async ({ page, board }) => {
+  await makeAttendee(board.event.id, {
+    name: "Lucía Sosa",
+    checkedInAt: new Date(Date.now() - 2 * 60_000),
+    checkinSource: "owu",
+    checkinDevice: "Puerta 2",
+  });
+  await page.goto(`/admin/${board.community.slug}/attendees?event=${board.event.slug}`);
+  const row = table(page).getByRole("row").filter({ hasText: "Lucía Sosa" });
+  await expect(row).toContainText("Acreditado");
+
+  await row.getByRole("button", { name: "Deshacer la acreditación de Lucía Sosa" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Deshacer" }).click();
+
+  await expect(row).toContainText("Por llegar");
+});
