@@ -9,6 +9,9 @@ export const REPO_URL = "https://github.com/owu-uy-community/website";
 /** Where code-of-conduct reports go */
 export const CONDUCT_EMAIL = "conducta@owu.uy";
 
+/** Where people ask what data OWU keeps about them, or to delete it (Ley 18.331) */
+export const PRIVACY_EMAIL = "privacidad@owu.uy";
+
 /** A prefilled GitHub issue form in the website repo (.github/ISSUE_TEMPLATE/<template>.yml) */
 export const issueFormUrl = (template: "sumar-comunidad" | "publicar-evento" | "ofrecer-espacio") =>
   `${REPO_URL}/issues/new?template=${template}.yml`;
@@ -50,6 +53,7 @@ export const PAGES = {
     label: "Código de conducta",
     description: "Cómo nos tratamos y cómo reportar",
   },
+  privacidad: { href: "/privacidad", label: "Privacidad", description: "Qué datos guardamos y cómo borrarlos" },
   darCharla: { href: "/dar-una-charla", label: "Dá una charla", description: "Dónde proponerla y cómo prepararla" },
   organizar: { href: "/organizar", label: "Organizá con OWU", description: "Qué te da OWU si organizás una comunidad" },
   empresas: {
@@ -74,6 +78,7 @@ export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
       PAGES.primeraVez,
       PAGES.comunidades,
       PAGES.codigo,
+      PAGES.privacidad,
       { href: "/primera-vez#preguntas", label: "Preguntas frecuentes" },
     ],
   },
