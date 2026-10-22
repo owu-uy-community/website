@@ -292,13 +292,6 @@ export const PHOTOS: Photo[] = [
     "Una sesión en sillas",
     "Asistentes sentados en sillas siguiendo una sesión del open space"
   ),
-  meetup("2025", "salud", "¡Salud!", "Dos asistentes brindan con cerveza en el after"),
-  meetup(
-    "2025",
-    "microfono-abierto",
-    "Micrófono abierto",
-    "Un asistente habla con el micrófono mientras otra asistente escucha"
-  ),
   meetup(
     "2024",
     "selfie-de-amigas",
@@ -308,18 +301,6 @@ export const PHOTOS: Photo[] = [
   meetup("2025", "una-sonrisa", "Una sonrisa", "Una asistente sonriendo entre la gente"),
   iii("momento-26", "Charla de pasillo", "Asistentes conversando en los sillones durante la pausa"),
   meetup("2025", "risas-en-primera-fila", "Risas en primera fila", "Dos asistentes riéndose, sentadas en una charla"),
-  meetup(
-    "2025",
-    "la-grilla-en-vivo",
-    "La grilla en vivo",
-    "El facilitador señala en la pantalla la grilla del open space"
-  ),
-  meetup(
-    "2025",
-    "pasando-el-microfono",
-    "Pasando el micrófono",
-    "Un asistente le pasa el micrófono a otro durante una sesión en ronda"
-  ),
   meetup("2025", "risas-en-el-sillon", "Risas en el sillón", "Dos asistentes riéndose sentados en un sillón"),
   meetup(
     "2025",
@@ -417,7 +398,6 @@ export const PHOTOS: Photo[] = [
   meetup("2025", "la-mesa-del-after", "La mesa del after", "Amigos charlando y riéndose en una mesa del after"),
   meetup("2025", "ronda-en-los-puf", "Ronda en los puf", "Una sesión del open space en ronda sobre puf amarillos"),
   meetup("2025", "una-carcajada", "Una carcajada", "Un asistente se ríe tapándose la boca durante el after"),
-  meetup("2025", "manos-al-centro", "Manos al centro", "Las manos del equipo juntas en el centro de una ronda"),
   meetup("2025", "con-el-vaso-en-alto", "Con el vaso en alto", "Un asistente sonríe levantando su vaso en el after"),
   iii("momento-18", "Open space en pantalla", "El tablero del open space proyectado en pantalla"),
   meetup(
@@ -433,12 +413,6 @@ export const PHOTOS: Photo[] = [
     "Las organizadoras cierran el evento frente al logo de OWU.UY en la pantalla"
   ),
   meetup("2025", "selfie-del-grupo", "Selfie del grupo", "Un grupo de asistentes sonriendo en una selfie"),
-  meetup(
-    "2025",
-    "risas-en-la-mesa-de-stickers",
-    "Risas en la mesa de stickers",
-    "Dos asistentes riéndose junto a la mesa de stickers"
-  ),
   meetup("2025", "selfie-de-tres", "Selfie de tres", "Tres asistentes sonriendo en una selfie"),
   iii("momento-28", "Dos speakers, un escenario", "Dos speakers compartiendo el escenario"),
   meetup(
@@ -469,12 +443,6 @@ export const PHOTOS: Photo[] = [
     "Asistentes sentados en ronda en el lounge de La Meetup II"
   ),
   iii("momento-22", "Charla sobre bioimplantes", "Charla sobre bioimplantes con visuales en pantalla"),
-  meetup(
-    "2024",
-    "manos-al-centro-2024",
-    "Manos al centro, 2024",
-    "Las manos del equipo de La Meetup II juntas en ronda"
-  ),
   iii("momento-06", "El cierre", "Cierre del evento con el logo de OWU en pantalla"),
   meetup("2024", "selfie-con-mate", "Selfie con mate", "Tres asistentes en una selfie, uno con el mate en la mano"),
   iii("momento-01", "La apertura", "Charla de apertura en el escenario principal de La Meetup III"),
@@ -482,7 +450,6 @@ export const PHOTOS: Photo[] = [
   iii("momento-07", "Sobre el escenario", "Presentación en el escenario de La Meetup III"),
   meetup("2024", "tres-amigas", "Tres amigas", "Tres asistentes sonriendo en una selfie, una con los dedos en V"),
   iii("momento-08", "Mercado de ideas", "Facilitación del Mercado de Ideas en el escenario"),
-  meetup("2024", "tres-y-un-pulgar", "Tres y un pulgar", "Tres asistentes sonriendo, uno con el pulgar arriba"),
   iii("momento-17", "Desde el podio", "Una speaker abriendo su charla desde el podio"),
   iii("momento-21", "Presentando", "Presentación de una charla desde el podio de speakers"),
   ii(7, "Owy en escena", "Un speaker en el escenario de La Meetup II junto al globo de Owy"),
