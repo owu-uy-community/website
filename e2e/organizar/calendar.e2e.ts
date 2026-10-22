@@ -14,7 +14,7 @@ test("a hold shows on another community's calendar without its title, until it's
 
   const mine = await pageFor(organizer);
   await mine.goto(`/organizar/panel/${ours.slug}/calendario${day}`);
-  await mine.getByPlaceholder(/Qué es/).fill("Algo que no se ve");
+  await mine.getByRole("textbox", { name: "Qué es (opcional)" }).fill("Algo que no se ve");
   await mine.getByRole("button", { name: /Reservar/ }).click();
   await expect(mine.getByText("Reservaste este día")).toBeVisible();
 

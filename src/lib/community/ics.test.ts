@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { buildIcs } from "./ics";
+import { buildIcs, buildInvite } from "./ics";
 
 const event = {
   id: "meetup-260",
@@ -35,5 +35,36 @@ describe(buildIcs, () => {
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
     const encoder = new TextEncoder();
     for (const line of ics.split("\r\n")) expect(encoder.encode(line).length).toBeLessThanOrEqual(75);
+  });
+});
+
+describe(buildInvite, () => {
+  const invite = {
+    uid: "rsvp-abc-123@owu.uy",
+    sequence: 2,
+    title: "Cierre del año",
+    start: "2029-11-26T22:00:00.000Z",
+    end: "2029-11-27T00:00:00.000Z",
+    location: "Sala, Cordón",
+    url: "https://www.owu.uy/comunidad/x/events/y",
+    description: "Tu entrada",
+    organizer: { name: "OWU", email: "hola@mail.owu.uy" },
+    attendee: { name: "Ana", email: "ana@example.com" },
+  };
+
+  test("a request updates the same entry, a cancel removes it", () => {
+    const request = buildInvite({ ...invite, method: "REQUEST" }, new Date("2029-11-01T00:00:00Z")).replace(
+      /\r\n /g,
+      ""
+    );
+    const cancel = buildInvite({ ...invite, method: "CANCEL", sequence: 3 }).replace(/\r\n /g, "");
+
+    expect(request).toContain("METHOD:REQUEST");
+    expect(request).toContain("UID:rsvp-abc-123@owu.uy\r\nSEQUENCE:2");
+    expect(request).toContain(
+      'ATTENDEE;CN="Ana";ROLE=REQ-PARTICIPANT;PARTSTAT=ACCEPTED;RSVP=FALSE:mailto:ana@example.com'
+    );
+    expect(cancel).toContain("METHOD:CANCEL");
+    expect(cancel).toContain("STATUS:CANCELLED");
   });
 });

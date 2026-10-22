@@ -16,6 +16,7 @@ import { enqueueEmail } from "../../email/outbox";
 import { conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { issues, UNTITLED } from "../../organizar/steps";
+import { eventPagePath, refreshPage } from "../../revalidate";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
@@ -480,7 +481,10 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
         });
       }
 
-      return yield* editableOf(row.id);
+      const saved = yield* editableOf(row.id);
+      if (saved.status !== "draft") refreshPage(eventPagePath(saved.communitySlug, saved.slug));
+
+      return saved;
     })
   );
 
@@ -541,6 +545,8 @@ export const publish = (eventId: string) =>
       });
       const event = yield* editableOf(eventId);
 
+      refreshPage(eventPagePath(event.communitySlug, slug));
+
       return { event, path: `/comunidad/${event.communitySlug}/events/${slug}` };
     })
   );
@@ -567,8 +573,10 @@ export const cancel = (input: { eventId: string; reason: string }) =>
         entityId: row.id,
         summary: input.reason ? `canceló el evento: ${input.reason}` : "canceló el evento",
       });
+      const cancelled = yield* editableOf(row.id);
+      refreshPage(eventPagePath(cancelled.communitySlug, cancelled.slug));
 
-      return yield* editableOf(row.id);
+      return cancelled;
     })
   );
 

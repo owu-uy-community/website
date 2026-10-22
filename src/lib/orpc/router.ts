@@ -19,6 +19,7 @@ import { salarySurveyRouter } from "./salary-survey/router";
 import { openSpacesRouter } from "./open-spaces/router";
 import { owyStageRouter } from "./owy-stage/router";
 import { roomsRouter } from "./rooms/router";
+import { rsvpsRouter } from "./rsvps/router";
 import { runOfShowRouter } from "./run-of-show/router";
 import { schedulesRouter } from "./schedules/router";
 import { screensRouter } from "./screens/router";
@@ -50,6 +51,7 @@ export const router = {
   calendar: calendarRouter,
   events: eventsRouter,
   venues: venuesRouter,
+  rsvps: rsvpsRouter,
   staffTasks: staffTasksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall

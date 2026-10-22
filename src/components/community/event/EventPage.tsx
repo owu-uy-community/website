@@ -220,7 +220,11 @@ export function EventPage({
                 ) : null}
                 {event.registration === "owu" && event.capacity !== null && !cancelled && !past ? (
                   <Fact icon={Ticket}>
-                    {left === 0 ? "Sin lugares: anotate en la lista de espera" : `Quedan ${left} lugares`}
+                    {left === 0
+                      ? "Sin lugares: anotate en la lista de espera"
+                      : left === 1
+                        ? "Queda 1 lugar"
+                        : `Quedan ${left} lugares`}
                   </Fact>
                 ) : null}
                 {event.registration === "owu" && event.taken > 0 && !cancelled ? (

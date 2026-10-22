@@ -36,6 +36,7 @@ const enqueueRow = (email: QueuedEmail) =>
         html: email.html,
         text: email.text,
         headers: email.headers ?? {},
+        attachments: email.attachments ?? [],
         dedupeKey: email.dedupeKey,
         priority: email.priority ?? 5,
       })
