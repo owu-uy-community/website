@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, lt } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 import { landingFor } from "components/community-landings/registry";
@@ -8,7 +8,7 @@ import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
 import { ORGANIZAR_ON } from "lib/community/flags";
 import { db } from "lib/db";
-import { communities, eventHosts, events, venues } from "lib/db/schema";
+import { communities, communityMembers, eventHosts, events, user, venues } from "lib/db/schema";
 import { getCommunityBySlug, listCommunityEvents } from "lib/tenant-server";
 
 // What's next and the counts change; an hour is fresh enough (publishing refreshes event pages)
@@ -27,10 +27,10 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
   const Landing = landingFor(community.slug);
   if (Landing) return <Landing community={community} events={all} />;
 
-  const [upcoming, hosted, cohosted] = await Promise.all([
+  const [upcoming, hosted, cohosted, organizers] = await Promise.all([
     getUpcomingEvents(),
     db
-      .selectDistinct({ name: venues.name })
+      .selectDistinct({ name: venues.name, logoUrl: venues.logoUrl })
       .from(events)
       .innerJoin(venues, eq(venues.id, events.venueId))
       .where(
@@ -52,6 +52,19 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
       .where(
         and(eq(eventHosts.communityId, community.id), eq(eventHosts.status, "accepted"), eq(events.isActive, true))
       ),
+    // «Organizan»: those on the team who chose to show; name and photo only, never the email
+    db
+      .select({ name: user.name, image: user.image })
+      .from(communityMembers)
+      .innerJoin(user, eq(user.id, communityMembers.userId))
+      .where(
+        and(
+          eq(communityMembers.communityId, community.id),
+          eq(communityMembers.showOnProfile, true),
+          inArray(communityMembers.role, ["owner", "admin", "editor"])
+        )
+      )
+      .orderBy(asc(communityMembers.createdAt)),
   ]);
   const now = Date.now();
   const cohostedIds = new Set(cohosted.map((row) => `owu-${row.event.id}`));
@@ -68,7 +81,8 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
         canFollow={ORGANIZAR_ON}
         claimHref={ORGANIZAR_ON ? "/organizar/panel/reclamar" : null}
         community={community}
-        hosts={hosted.map((row) => row.name).toSorted((a, b) => a.localeCompare(b, "es"))}
+        hosts={hosted.toSorted((a, b) => a.name.localeCompare(b.name, "es"))}
+        organizers={organizers}
         past={past}
         upcoming={upcoming.filter((event) => event.communitySlug === community.slug || cohostedIds.has(event.id))}
       />
