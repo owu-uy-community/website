@@ -60,6 +60,11 @@ export const CreateTrackSchema = TalkFields.extend({
   needsWhiteboard: z.boolean().default(false),
   /** The staffer confirmed the room even though it lacks what the talk needs. */
   skipResourceValidation: z.boolean().default(false),
+  /**
+   * How it got here, for the activity log: read off a card photo (someone should check the
+   * handwriting) or brought back by "Deshacer" after a delete.
+   */
+  origin: z.enum(["photo", "undo"]).optional(),
   /** Display-only labels the board paints on its optimistic card; the server ignores them. */
   room: z.string().optional(),
   timeSlot: z.string().optional(),

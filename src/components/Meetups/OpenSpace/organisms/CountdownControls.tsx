@@ -16,21 +16,18 @@ import {
 import { Input } from "components/shared/ui/input";
 import { Label } from "components/shared/ui/label";
 import { Separator } from "components/shared/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "components/shared/ui/tooltip";
 import { useCountdownState } from "hooks/useCountdownState";
 import { toast } from "components/shared/ui/toast-utils";
+import { formatCountdown } from "lib/utils";
 
+/** The event screen's countdown: an icon in the board's header (showing the time while it runs) that opens its controls. */
 export function CountdownControls({ eventId }: { eventId: string }) {
   const { state, loading, updateState } = useCountdownState({ enableRealtime: true, eventId });
   const [isOpen, setIsOpen] = useState(false);
   const [minutes, setMinutes] = useState("5");
   const [seconds, setSeconds] = useState("0");
   const [targetTime, setTargetTime] = useState("");
-
-  const formatTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const handlePlayPause = async () => {
     try {
@@ -65,7 +62,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
       }
 
       await updateState({ action: "setDuration", durationSeconds: totalSeconds });
-      toast.success("Duración establecida", `Temporizador configurado a ${formatTime(totalSeconds)}`);
+      toast.success("Duración establecida", `Temporizador configurado a ${formatCountdown(totalSeconds)}`);
     } catch {
       toast.error("Error", "No se pudo establecer la duración");
     }
@@ -94,7 +91,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
       const secondsUntil = Math.floor((target.getTime() - now.getTime()) / 1000);
       toast.success(
         "Hora objetivo establecida",
-        `Cuenta regresiva hasta las ${targetTime} (${formatTime(secondsUntil)})`
+        `Cuenta regresiva hasta las ${targetTime} (${formatCountdown(secondsUntil)})`
       );
     } catch {
       toast.error("Error", "No se pudo establecer la hora objetivo");
@@ -117,23 +114,30 @@ export function CountdownControls({ eventId }: { eventId: string }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <Timer />
-          Temporizador
-        </Button>
-      </DialogTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button aria-label="Temporizador" size={state.isRunning ? "default" : "icon"} variant="outline">
+              <Timer />
+              {state.isRunning ? (
+                <span className="font-terminal tabular-nums">{formatCountdown(state.remainingSeconds)}</span>
+              ) : null}
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Temporizador</TooltipContent>
+      </Tooltip>
       <DialogContent className="flex flex-col gap-0 overflow-hidden p-0 sm:max-w-md sm:p-0">
         <DialogHeader className="shrink-0 border-b border-border px-4 py-4 pr-14 sm:px-6 sm:pr-14">
           <DialogTitle>Temporizador</DialogTitle>
-          <DialogDescription>Controla la cuenta regresiva de la pantalla del evento.</DialogDescription>
+          <DialogDescription>Controlá la cuenta regresiva de la pantalla del evento.</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
           {/* Current Timer Display */}
-          <div className="rounded-lg border border-border bg-muted/40 p-6 text-center">
+          <div className="rounded-lg border border-border bg-raised p-6 text-center">
             <div className="font-terminal text-5xl font-bold text-primary tabular-nums">
-              {formatTime(state.remainingSeconds)}
+              {formatCountdown(state.remainingSeconds)}
             </div>
           </div>
 
@@ -152,24 +156,26 @@ export function CountdownControls({ eventId }: { eventId: string }) {
                 </>
               )}
             </Button>
-            <Button disabled={loading} size="icon" title="Reiniciar" variant="outline" onClick={handleReset}>
+            {/* Words, not titles: a touchscreen never shows a title. */}
+            <Button disabled={loading} variant="outline" onClick={handleReset}>
               <RotateCcw />
+              Reiniciar
             </Button>
             <Button
+              aria-pressed={state.soundEnabled}
               disabled={loading}
-              size="icon"
-              title={state.soundEnabled ? "Sonido activado" : "Sonido desactivado"}
               variant={state.soundEnabled ? "secondary" : "outline"}
               onClick={handleToggleSound}
             >
               {state.soundEnabled ? <Volume2 /> : <VolumeX />}
+              Sonido
             </Button>
           </div>
 
           {/* Set Timer */}
           <div className="space-y-4 rounded-lg border border-border p-4">
             <div className="space-y-3">
-              <Label className="text-xs text-muted-foreground" htmlFor="countdown-minutes">
+              <Label className="text-meta text-muted-foreground" htmlFor="countdown-minutes">
                 Por duración
               </Label>
               <div className="grid grid-cols-2 gap-2">
@@ -177,6 +183,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
                   className="flex-1 tabular-nums"
                   aria-label="Minutos"
                   id="countdown-minutes"
+                  inputMode="numeric"
                   min="0"
                   placeholder="Min"
                   type="number"
@@ -187,6 +194,7 @@ export function CountdownControls({ eventId }: { eventId: string }) {
                   className="flex-1 tabular-nums"
                   aria-label="Segundos"
                   id="countdown-seconds"
+                  inputMode="numeric"
                   max="59"
                   min="0"
                   placeholder="Seg"
@@ -202,13 +210,13 @@ export function CountdownControls({ eventId }: { eventId: string }) {
 
             <div className="relative">
               <Separator />
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-popover px-2 text-xs text-muted-foreground uppercase">
+              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-popover px-2 text-meta text-muted-foreground uppercase">
                 o
               </span>
             </div>
 
             <div className="space-y-3">
-              <Label className="text-xs text-muted-foreground" htmlFor="countdown-target">
+              <Label className="text-meta text-muted-foreground" htmlFor="countdown-target">
                 Hasta una hora específica
               </Label>
               <Input

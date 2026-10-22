@@ -27,12 +27,12 @@ export default function LoginPage() {
     <>
       <AuthHeader title="¡Qué alegría verte de nuevo!" description="Estás a un paso de entrar a la comunidad de OWU" />
 
-      <Card className="border-zinc-700 bg-zinc-800/50 backdrop-blur-xs">
-        <CardHeader className="pb-6 text-center">
-          <CardTitle className="text-2xl text-white">Iniciar sesión</CardTitle>
-          <CardDescription className="text-zinc-400">Ingresa con tu cuenta de Slack de OWU</CardDescription>
+      <Card className="border-zinc-700 bg-zinc-800/50 shadow-xs backdrop-blur-xs">
+        <CardHeader className="gap-0 p-5 pb-6 text-center">
+          <CardTitle className="text-2xl leading-none tracking-tight text-white">Iniciar sesión</CardTitle>
+          <CardDescription className="text-sm text-zinc-400">Ingresa con tu cuenta de Slack de OWU</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 p-5 pt-0">
           <SocialButton
             provider="slack"
             onClick={() => handleSocialLogin("slack")}
@@ -40,7 +40,7 @@ export default function LoginPage() {
             actionText="login"
             disabled={isLoading !== null}
           />
-          <CardFooter className="text-center text-xs text-zinc-400">
+          <CardFooter className="px-5 text-center text-xs text-zinc-400">
             <span className="leading-5">
               Para iniciar sesión necesitas una cuenta de Slack de OWU.
               <br />

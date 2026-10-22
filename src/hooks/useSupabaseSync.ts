@@ -12,6 +12,7 @@ import { supabase, type RealtimeChannel } from "../app/lib/supabase";
 import { eventChannel } from "../lib/realtime/channels";
 import { orpc } from "../lib/orpc";
 import type { StickyNote } from "../lib/orpc";
+import { withCreatedCard } from "./board-cache";
 
 interface OpenSpaceRealtimeEvent {
   type: "CARD_UPDATE" | "CARD_SWAP" | "CARD_CREATE" | "CARD_DELETE";
@@ -123,11 +124,21 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
         switch (event.type) {
           case "CARD_UPDATE":
             if (event.payload.updatedCard) {
+              const card = event.payload.updatedCard;
+              const before = queryClient.getQueryData<StickyNote[]>(listKey)?.find((note) => note.id === card.id);
               queryClient.setQueryData<StickyNote[]>(listKey, (oldNotes = []) =>
-                oldNotes.map((note) => (note.id === event.payload.cardId ? event.payload.updatedCard! : note))
+                oldNotes.map((note) => (note.id === event.payload.cardId ? card : note))
               );
               invalidateHighlighted();
-              if (event.payload.cardId) markUpdated(event.payload.cardId);
+              // The server echoes every change to every screen, ours included: only a card that now
+              // reads differently pulses, so a drop doesn't flash on the screen that made it.
+              const changed =
+                !before ||
+                before.title !== card.title ||
+                before.speaker !== card.speaker ||
+                before.room !== card.room ||
+                before.timeSlot !== card.timeSlot;
+              if (changed) markUpdated(card.id);
             }
             break;
 
@@ -155,10 +166,8 @@ export const useSupabaseSync = ({ openSpaceId, enabled = true }: UseSupabaseSync
 
           case "CARD_CREATE":
             if (event.payload.updatedCard) {
-              queryClient.setQueryData<StickyNote[]>(listKey, (oldNotes = []) => {
-                if (oldNotes.some((note) => note.id === event.payload.cardId)) return oldNotes;
-                return [...oldNotes, event.payload.updatedCard!];
-              });
+              const card = event.payload.updatedCard;
+              queryClient.setQueryData<StickyNote[]>(listKey, (oldNotes = []) => withCreatedCard(oldNotes, card));
               invalidateHighlighted();
             }
             break;

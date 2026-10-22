@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeSiteAdmin, makeUser } from "test/factories";
+import { makeCommunity, makeEvent, makeSiteAdmin, makeUser } from "test/factories";
 import { server } from "test/msw/server";
 
 // The Eventbrite constants are read when lib/orpc imports them, so they must be set first.
@@ -25,9 +25,18 @@ const attendee = (id: number, checkedIn: boolean) => ({
   profile: { name: `Persona ${id}`, email: `p${id}@test.owu.uy` },
 });
 
+/** Eventbrite's answer to a query parameter an endpoint doesn't take. */
+const unknownParameter = (name: string) =>
+  HttpResponse.json(
+    {
+      error: "ARGUMENTS_ERROR",
+      error_description: `There are errors with your arguments: ${name} - Unknown parameter`,
+    },
+    { status: 400 }
+  );
+
 /** 150 attendees over two pages: 10 checked in on the first page, 30 on the second. */
 function mockEventbrite() {
-  const requests: URL[] = [];
   server.use(
     http.get(`${API}/`, () =>
       HttpResponse.json({
@@ -40,9 +49,9 @@ function mockEventbrite() {
       })
     ),
     http.get(`${API}/attendees/`, ({ request }) => {
-      const url = new URL(request.url);
-      requests.push(url);
-      const page = Number(url.searchParams.get("page") ?? "1");
+      // Like Eventbrite: its attendee pages have a fixed size.
+      if (new URL(request.url).searchParams.has("page_size")) return unknownParameter("page_size");
+      const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
       const attendees =
         page === 1
           ? Array.from({ length: 100 }, (_, i) => attendee(i, i < 10))
@@ -54,28 +63,14 @@ function mockEventbrite() {
       });
     })
   );
-
-  return { requests };
 }
 
 describe("eventbrite", () => {
-  test("staff pages through attendees with the page and size they ask for", async () => {
-    const { requests } = mockEventbrite();
-    const staff = await makeSiteAdmin();
-
-    const result = await call(router.eventbrite.getAttendees, { page: 2, pageSize: 100 }, by(staff));
-
-    expect(result?.attendees).toHaveLength(50);
-    expect(requests.map((url) => [url.searchParams.get("page"), url.searchParams.get("page_size")])).toStrictEqual([
-      ["2", "100"],
-    ]);
-  });
-
-  test("the attendee list is staff-only", async () => {
+  test("the summary is staff-only", async () => {
     mockEventbrite();
     const user = await makeUser();
 
-    await expect(call(router.eventbrite.getAttendees, {}, by(user))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.eventbrite.getSummary, undefined, by(user))).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(call(router.eventbrite.getSummary, undefined, by(null))).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
@@ -103,9 +98,22 @@ describe("eventbrite", () => {
   });
 
   test("#12 an Eventbrite outage is a BAD_GATEWAY, not a crash", async () => {
+    mockEventbrite();
     server.use(http.get(`${API}/attendees/`, () => HttpResponse.json({ error_description: "down" }, { status: 503 })));
     const staff = await makeSiteAdmin();
 
-    await expect(call(router.eventbrite.getAttendees, {}, by(staff))).rejects.toMatchObject({ code: "BAD_GATEWAY" });
+    await expect(call(router.eventbrite.getSummary, undefined, by(staff))).rejects.toMatchObject({
+      code: "BAD_GATEWAY",
+    });
+  });
+
+  test("the env's event stays the bot's: an event without its own id mirrors nothing", async () => {
+    mockEventbrite();
+    const event = await makeEvent((await makeCommunity()).id);
+
+    await expect(call(router.attendees.sync, { eventId: event.id }, by(await makeSiteAdmin()))).resolves.toMatchObject({
+      missing: "event_id",
+      ran: false,
+    });
   });
 });

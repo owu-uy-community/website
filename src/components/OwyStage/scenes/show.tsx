@@ -3,6 +3,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
+import { geistMono } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
@@ -58,7 +59,7 @@ export function Donut() {
     }
     ctx.fillStyle = BRAND.black;
     ctx.fillRect(0, 0, W, H);
-    ctx.font = "bold 30px 'Geist Mono', ui-monospace, monospace";
+    ctx.font = `bold 30px ${geistMono.style.fontFamily}, ui-monospace, monospace`;
     ctx.textBaseline = "top";
     const cw = W / DCOLS;
     const ch = H / DROWS;

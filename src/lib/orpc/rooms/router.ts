@@ -1,12 +1,13 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { pub, staff } from "../base";
+import { authed, inCommunity, pub, staff } from "../base";
 import {
   CreateRoomSchema,
   GetRoomsByOpenSpaceSchema,
   ReorderRoomsSchema,
   RoomIdSchema,
+  SetRoomStatusSchema,
   RoomSchema,
   UpdateRoomInputSchema,
 } from "./schemas";
@@ -53,6 +54,15 @@ export const roomsRouter = {
     .output(RoomSchema)
     .effect(function* ({ input }) {
       return yield* Rooms.deleteRoom(input.id);
+    }),
+
+  setStatus: authed
+    .meta(docs("Mark a room open, full or to evacuate (its host, from the phone)"))
+    .input(SetRoomStatusSchema)
+    .use(inCommunity("member"))
+    .output(RoomSchema)
+    .effect(function* ({ input }) {
+      return yield* Rooms.setRoomStatus(input.roomId, input.status);
     }),
 
   reorder: staff

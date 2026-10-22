@@ -148,3 +148,11 @@ export const toast = {
    */
   custom: sonnerToast,
 };
+
+/**
+ * For a modal's `onInteractOutside`: a tap on a toast (its «Deshacer») is not a tap outside the
+ * dialog or panel that is open, so it doesn't close it.
+ */
+export function keepOpenForToasts(event: { target: EventTarget | null; preventDefault: () => void }) {
+  if (event.target instanceof Element && event.target.closest("[data-sonner-toaster]")) event.preventDefault();
+}

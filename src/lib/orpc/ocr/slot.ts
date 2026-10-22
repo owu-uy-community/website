@@ -424,7 +424,7 @@ export async function findFreeSpot(
     return {
       suggestedRoom: candidates[0].room,
       suggestedTimeSlot: candidates[0].timeSlot,
-      reasoning: `La AI no respondió, así que este es simplemente el primer espacio libre. ${describeAiFailure(error)}`,
+      reasoning: `La IA no respondió, así que este es simplemente el primer espacio libre. ${describeAiFailure(error)}`,
       degraded: true,
     };
   }

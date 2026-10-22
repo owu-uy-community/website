@@ -29,8 +29,19 @@ export function TalkFormModal({
   onSave,
   onDelete,
   isSaving = false,
+  suggest = false,
 }: TalkFormModalProps) {
-  const controller = useTalkForm({ open, openSpaceId, note, notes, rooms, roomsData, timeSlots, onSave });
+  const controller = useTalkForm({
+    open,
+    openSpaceId,
+    note,
+    notes,
+    rooms,
+    roomsData,
+    timeSlots,
+    onSave,
+    suggestOnTitle: suggest,
+  });
   const isEdit = Boolean(note?.id);
 
   return (
@@ -56,7 +67,7 @@ export function TalkFormModal({
           onDelete && isEdit ? (
             <Button
               aria-label="Eliminar charla"
-              className="h-11 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive sm:h-10"
+              className="text-live-foreground hover:bg-live-surface hover:text-live-foreground"
               disabled={isSaving}
               type="button"
               variant="ghost"
@@ -68,7 +79,11 @@ export function TalkFormModal({
           ) : undefined
         }
         description={
-          isEdit ? "Actualizá la información de la charla." : "Completá el formulario o sacale una foto a la tarjeta."
+          isEdit
+            ? "Actualizá la información de la charla."
+            : suggest
+              ? "Escribí el título y la IA sugiere la sala y el bloque."
+              : "Completá el formulario o sacale una foto a la tarjeta."
         }
         icon={StickyNote}
         open={open}

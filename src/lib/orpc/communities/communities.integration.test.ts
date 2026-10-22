@@ -6,7 +6,7 @@ import { db } from "lib/db";
 import { communityMembers } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeCommunity, makeMember, makeSiteAdmin, makeUser } from "test/factories";
+import { makeCommunity, makeEvent, makeMember, makeSiteAdmin, makeUser } from "test/factories";
 
 async function setup() {
   const community = await makeCommunity();
@@ -44,6 +44,31 @@ describe("communities.list", () => {
     const ids = (await call(router.communities.list, { includeInactive: true }, by(null))).map((c) => c.id);
 
     expect(ids).not.toContain(inactive.id);
+  });
+});
+
+describe("communities.listForAdmin", () => {
+  test("site staff sees every community, inactive too, with its member and event counts", async () => {
+    const { community } = await setup();
+    await Promise.all([makeEvent(community.id), makeEvent(community.id)]);
+    const empty = await makeCommunity({ isActive: false });
+    const staff = await makeSiteAdmin();
+
+    const list = await call(router.communities.listForAdmin, undefined, by(staff));
+
+    expect(list.find((row) => row.id === community.id)).toMatchObject({ memberCount: 4, eventCount: 2 });
+    expect(list.find((row) => row.id === empty.id)).toMatchObject({ isActive: false, memberCount: 0, eventCount: 0 });
+  });
+
+  test("it is site staff only: a community owner is refused", async () => {
+    const { owner } = await setup();
+
+    await expect(call(router.communities.listForAdmin, undefined, by(owner))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(call(router.communities.listForAdmin, undefined, by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
   });
 });
 
@@ -257,6 +282,31 @@ describe("communities.members", () => {
     // Whoever went second was no longer an owner — or no longer a member — by the time it ran.
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(owners.filter((member) => member.role === "owner")).toHaveLength(1);
+  });
+
+  test("not even site staff can demote or remove the only owner", async () => {
+    const { community, owner, staff, membershipOf } = await setup();
+    const ownerMembership = await membershipOf(owner.id);
+
+    await expect(
+      call(
+        router.communities.members.updateRole,
+        { communityId: community.id, memberId: ownerMembership.id, role: "admin" },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "last_owner" } });
+    await expect(
+      call(router.communities.members.remove, { communityId: community.id, memberId: ownerMembership.id }, by(staff))
+    ).rejects.toMatchObject({ code: "CONFLICT", data: { reason: "last_owner" } });
+
+    // With a second owner, the first one can step down.
+    await makeMember(community.id, "owner");
+    await call(
+      router.communities.members.updateRole,
+      { communityId: community.id, memberId: ownerMembership.id, role: "admin" },
+      by(staff)
+    );
+    expect((await membershipOf(owner.id))?.role).toBe("admin");
   });
 
   test("site staff manages any community without a membership", async () => {

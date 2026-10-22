@@ -79,6 +79,28 @@ test("with nothing queued, Space twice is a TAKE and its undo", async ({ page, p
   await expect(wall.getByText("Antes")).toBeVisible();
 });
 
+test("a title typed key by key keeps its spaces, on the preview monitor too", async ({ page }) => {
+  await reset(page, "Antes");
+  await follow(page, DESK, "private:owy-desk");
+  await page.getByRole("button", { name: "Mensaje: a la preview" }).first().click();
+  const title = page.locator("#param-preview-title");
+  await title.fill("");
+  await title.pressSequentially("Ya volvemos en cinco", { delay: 40 });
+
+  await expect(title).toHaveValue("Ya volvemos en cinco");
+  await expect(page.frameLocator('iframe[title="Preview"]').getByText("Ya volvemos en cinco")).toBeVisible();
+});
+
+test("a raffle with a single name lands on it and celebrates", async ({ page, pageAs }) => {
+  await rpc(page, "setScene", { scene: "raffle", params: { names: "Ana Pérez", winner: "Ana Pérez" }, restart: true });
+  const wall = await follow(await pageAs("anonymous"), "/owy/stage", "owy-stage");
+
+  // Each scene's code loads on first use, which a cold `next dev` compiles on the spot.
+  await expect(wall.getByText("¡Felicitaciones!")).toBeVisible({ timeout: 45_000 });
+  // The name lands in place of its spinning copy: for a moment both are there.
+  await expect(wall.getByText("Ana Pérez").first()).toBeVisible();
+});
+
 test("a second admin device sees the same queue", async ({ page, pageAs }) => {
   await reset(page, "Antes");
   const tablet = await follow(await pageAs("admin"), DESK, "private:owy-desk");
@@ -87,6 +109,32 @@ test("a second admin device sees the same queue", async ({ page, pageAs }) => {
   await page.getByRole("button", { name: "Agregar Countdown a la cola" }).first().click();
 
   await expect(tablet.getByRole("region", { name: "Cola" }).getByText("Countdown", { exact: true })).toBeVisible();
+});
+
+test("a question hidden from the desk leaves the wall, the others stay", async ({ page, pageAs }) => {
+  await rpc(page, "saveDesk", { desk: { preview: null, queue: [], favorites: [] } });
+  const taken = await rpc(page, "setScene", { scene: "live-questions", params: { title: "Q&A" }, restart: true });
+  const { round } = ((await taken.json()) as { json: { round: string } }).json;
+  const ask = (value: string, voter: string) =>
+    page.request.post("/api/orpc/owyStage/submit", {
+      data: { json: { round, key: "question", value, voter, mode: "multi" } },
+    });
+  await ask("¿Cómo escalan el open space?", "tel-1");
+  await ask("compren mi curso", "tel-2");
+  const wall = await follow(await pageAs("anonymous"), "/owy/stage", "owy-stage");
+  await expect(wall.getByText("compren mi curso")).toBeVisible();
+  await follow(page, DESK, "private:owy-desk");
+
+  await page.getByRole("button", { name: "Editar lo que está al aire" }).click();
+  await page
+    .getByRole("region", { name: "Preguntas" })
+    .getByRole("listitem")
+    .filter({ hasText: "compren mi curso" })
+    .getByRole("button", { name: "Ocultar de la pared" })
+    .click();
+
+  await expect(wall.getByText("compren mi curso")).toBeHidden();
+  await expect(wall.getByText("¿Cómo escalan el open space?")).toBeVisible();
 });
 
 test.describe("from a phone", () => {
@@ -104,6 +152,57 @@ test.describe("from a phone", () => {
     await page.getByRole("button", { name: "TAKE: la preview sale al aire" }).click();
 
     await expect(wall.getByText("Desde el celular")).toBeVisible();
+  });
+
+  test("a long-press on a scene opens its menu, lifting the finger picks nothing, its actions work", async ({
+    page,
+  }) => {
+    await reset(page, "Antes");
+    await follow(page, DESK, "private:owy-desk");
+    await page.getByRole("button", { name: "Escenas", exact: true }).click();
+    const card = page.getByRole("button", { name: "Mensaje: a la preview" }).first();
+    await card.scrollIntoViewIfNeeded();
+    const box = (await card.boundingBox())!;
+    const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    // A held finger that drifts a little, as a real one does: Playwright only taps, so through CDP.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [at] });
+    for (const dx of [3, -3, 3, -3, 3, -3, 3, -3, 3]) {
+      await page.waitForTimeout(100);
+      await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: at.x + dx, y: at.y }] });
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+
+    // Lifting the finger over the menu picks nothing (its first item is «Al aire ya»).
+    await expect(page.getByRole("menuitem", { name: "Al aire ya" })).toBeVisible();
+    const live = (await (await rpc(page, "getState", {})).json()) as { json: { scene: string } };
+    expect(live.json.scene).toBe("message");
+    await page.getByRole("menuitem", { name: "Agregar a la cola" }).click();
+
+    await expect(page.getByRole("button", { name: "Cola, 1" })).toBeVisible();
+  });
+
+  test("after TAKEs from the phone, the queue lists exactly what is waiting", async ({ page }) => {
+    await reset(page, "Antes");
+    await rpc(page, "saveDesk", {
+      desk: {
+        preview: { id: "p1", scene: "logo", params: {}, from: "pick" },
+        queue: ["countdown", "clock", "agenda"].map((scene, i) => ({ id: `q${i}`, scene, params: {}, from: "queue" })),
+        favorites: [],
+      },
+    });
+    await follow(page, DESK, "private:owy-desk");
+    await page.getByRole("button", { name: "Escenas", exact: true }).click();
+    const take = page.getByRole("button", { name: "TAKE: la preview sale al aire" });
+    await take.click();
+    await expect(take).toBeEnabled();
+    await take.click();
+    await expect(take).toBeEnabled();
+    await page.getByRole("button", { name: /^Cola/ }).click();
+    const queue = page.getByRole("region", { name: "Cola" });
+
+    await expect(queue.getByRole("listitem")).toHaveCount(1);
+    await expect(queue.getByText("Agenda", { exact: true })).toBeVisible();
   });
 
   test("a queued scene swiped left leaves the queue, and Deshacer brings it back", async ({ page }) => {

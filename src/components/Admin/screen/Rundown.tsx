@@ -35,28 +35,28 @@ function CueRow({
   return (
     <Reorder.Item
       className={cn(
-        "flex items-center gap-2 rounded-lg border bg-card p-2",
-        active ? "border-primary bg-primary/10" : "border-border"
+        "flex items-center gap-2 rounded-lg border p-2",
+        active ? "border-primary/40 bg-primary-surface" : "border-border bg-background"
       )}
       dragControls={controls}
       dragListener={false}
       value={cue}
     >
       <button
-        aria-label="Reordenar"
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        aria-label={`Mover ${cue.name}`}
+        className="relative cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing pointer-coarse:after:absolute pointer-coarse:after:-inset-3"
         type="button"
         onPointerDown={(event) => controls.start(event)}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="size-4" />
       </button>
       <span className={cn("h-8 w-1.5 shrink-0 rounded-full", cue.color ? CUE_COLOR_CLASS[cue.color] : "bg-muted")} />
       <button className="min-w-0 flex-1 text-left" title={cue.notes ?? undefined} type="button" onClick={onFire}>
         <span className="flex items-center gap-2">
-          <span className={cn("truncate text-sm font-semibold", active && "text-primary")}>{cue.name}</span>
+          <span className={cn("truncate text-ui font-semibold", active && "text-primary")}>{cue.name}</span>
           {cue.hotkey && <Kbd>{cue.hotkey}</Kbd>}
         </span>
-        <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+        <span className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-2xs text-muted-foreground">
           {cue.obsScene && (
             <span className="inline-flex items-center gap-1">
               <Monitor className="h-3 w-3" /> {cue.obsScene}
@@ -74,18 +74,14 @@ function CueRow({
           )}
           {!cue.obsScene && !stageTitle && !sound && <span>vacío</span>}
         </span>
+        {/* The notes before the tap that fires it: a touchscreen never shows the title. */}
+        {cue.notes ? <span className="mt-0.5 block truncate text-2xs text-subtle">{cue.notes}</span> : null}
       </button>
-      <Button className="h-8 w-8 shrink-0" size="icon" title="Editar" variant="ghost" onClick={onEdit}>
-        <Pencil className="h-3.5 w-3.5" />
+      <Button aria-label={`Editar ${cue.name}`} size="icon-sm" title="Editar" variant="ghost" onClick={onEdit}>
+        <Pencil />
       </Button>
-      <Button
-        className={cn("h-8 w-8 shrink-0", active && "text-primary")}
-        size="icon"
-        title="Disparar"
-        variant="outline"
-        onClick={onFire}
-      >
-        <Play className="h-3.5 w-3.5 fill-current" />
+      <Button aria-label={`Disparar ${cue.name}`} size="icon-sm" title="Disparar" variant="outline" onClick={onFire}>
+        <Play className="fill-current" />
       </Button>
     </Reorder.Item>
   );
@@ -124,34 +120,46 @@ export function Rundown({ instanceId, status, view }: { instanceId: number; stat
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <Button
-          className="h-12 min-w-0 flex-1 justify-start text-base font-bold"
+          className="min-w-0 flex-1 justify-start font-semibold"
           disabled={order.length === 0 || step.isPending}
+          size="lg"
+          variant="outline"
           onClick={() => step.mutate({ instanceId, direction: "next" })}
         >
-          <Play className="h-5 w-5 fill-current" /> Siguiente
-          {next && <span className="ml-1 min-w-0 flex-1 truncate text-left font-normal opacity-80">· {next.name}</span>}
-          <Kbd className="ml-auto border-black/20 bg-black/10 text-black">→</Kbd>
+          <Play className="fill-current" /> Siguiente
+          {next && (
+            <span className="min-w-0 flex-1 truncate text-left font-normal text-muted-foreground">· {next.name}</span>
+          )}
+          <Kbd className="ml-auto pointer-coarse:hidden">→</Kbd>
         </Button>
         <Button
-          className="h-12 w-12"
+          aria-label="Cue anterior"
+          className="size-10"
           disabled={order.length === 0 || step.isPending}
           size="icon"
           title="Anterior (←)"
           variant="outline"
           onClick={() => step.mutate({ instanceId, direction: "prev" })}
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft />
         </Button>
-        <Button className="h-12 w-12" size="icon" title="Nuevo cue" variant="outline" onClick={() => setDraft({})}>
-          <Plus className="h-5 w-5" />
+        <Button
+          aria-label="Nuevo cue"
+          className="size-10"
+          size="icon"
+          title="Nuevo cue"
+          variant="outline"
+          onClick={() => setDraft({})}
+        >
+          <Plus />
         </Button>
       </div>
 
       {order.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-input p-4 text-center text-meta text-muted-foreground">
           Sin cues todavía. Armá el guion del día: cada cue puede cambiar la escena de OBS, la pantalla Owy y disparar
           un sonido.
-        </div>
+        </p>
       ) : (
         <Reorder.Group
           axis="y"

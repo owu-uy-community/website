@@ -273,6 +273,69 @@ describe("phone inputs", () => {
   });
 });
 
+describe("Q&A moderation", () => {
+  /** Questions on the wall, one from a phone, plus a vote for it. */
+  async function questions() {
+    const { staff, putOnAir } = await setup();
+    const { round } = await putOnAir({ scene: "live-questions" });
+    const ask = (value: string, voter: string) =>
+      call(router.owyStage.submit, { round, key: "question", value, voter, mode: "multi" }, by(null));
+    const { id } = await ask("¿Cuándo es la próxima?", "tel-1");
+    const vote = await call(router.owyStage.submit, { round, key: `up:${id}`, value: "1", voter: "tel-2" }, by(null));
+    const moderate = (inputId: string, moderation: "" | "hidden" | "pinned" | "answered") =>
+      call(router.owyStage.moderate, { inputId, moderation }, by(staff));
+
+    return { round, id: id ?? "", voteId: vote.id ?? "", moderate };
+  }
+
+  test("pinning a question tells every wall and phone, and the round's read carries it", async () => {
+    const { round, id, moderate } = await questions();
+    const publish = vi.spyOn(hub, "publish");
+
+    await expect(moderate(id, "pinned")).resolves.toStrictEqual({ id, round, moderation: "pinned" });
+
+    expect(publish).toHaveBeenCalledWith("owy-stage", "moderation", { id, round, moderation: "pinned" });
+    const inputs = await call(router.owyStage.inputs, { round }, by(null));
+    expect(inputs.map((input) => [input.key, input.moderation])).toStrictEqual([
+      ["question", "pinned"],
+      [`up:${id}`, ""],
+    ]);
+  });
+
+  test("a hidden question can come back", async () => {
+    const { round, id, moderate } = await questions();
+
+    await moderate(id, "hidden");
+    await moderate(id, "");
+
+    const [question] = await call(router.owyStage.inputs, { round }, by(null));
+    expect(question).toMatchObject({ id, moderation: "" });
+  });
+
+  test("only questions are moderated: a vote, or a question that is gone, is NOT_FOUND", async () => {
+    const { voteId, moderate } = await questions();
+
+    await expect(moderate(voteId, "hidden")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(moderate("no-such-question", "hidden")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("only site staff moderate", async () => {
+    const { id } = await questions();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.moderate, { inputId: id, moderation: "hidden" }, by(user))).rejects.toMatchObject(
+      {
+        code: "FORBIDDEN",
+      }
+    );
+    await expect(call(router.owyStage.moderate, { inputId: id, moderation: "hidden" }, by(null))).rejects.toMatchObject(
+      {
+        code: "UNAUTHORIZED",
+      }
+    );
+  });
+});
+
 describe("data-driven scenes", () => {
   test("the pulse counts an event's ideas and active rooms", async () => {
     await setup();

@@ -145,3 +145,26 @@ describe("schedules writes", () => {
     await expect(db.select().from(tracks).where(eq(tracks.id, talk.id))).resolves.toStrictEqual([]);
   });
 });
+
+describe("schedules activity", () => {
+  test("adding, editing and deleting a slot each leave a line; highlighting it on the kiosk doesn't", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+
+    const slot = await call(
+      router.schedules.create,
+      { name: "Bloque 6", startTime: "18:30", endTime: "18:55", openSpaceId: event.id },
+      by(staff)
+    );
+    await call(router.schedules.update, { id: slot.id, data: { highlightInKiosk: true } }, by(staff));
+    await call(router.schedules.update, { id: slot.id, data: { endTime: "19:00" } }, by(staff));
+    await call(router.schedules.delete, { id: slot.id }, by(staff));
+
+    const lines = await call(router.activity.list, { eventId: event.id, entityId: slot.id }, by(staff));
+    expect(lines.map((line) => line.summary)).toStrictEqual([
+      "borró el bloque Bloque 6 · 18:30 – 19:00",
+      "editó el bloque Bloque 6 · 18:30 – 19:00",
+      "agregó el bloque Bloque 6 · 18:30 – 18:55",
+    ]);
+  });
+});

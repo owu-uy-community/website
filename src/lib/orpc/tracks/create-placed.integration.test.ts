@@ -109,7 +109,7 @@ describe("tracks.createPlaced", () => {
     );
 
     expect(placed.placement.degraded).toBe(true);
-    expect(placed.placement.reasoning).toContain("La AI no respondió");
+    expect(placed.placement.reasoning).toContain("La IA no respondió");
   });
 
   test("when no room has what the talk needs it goes to a free one and says what is missing", async () => {

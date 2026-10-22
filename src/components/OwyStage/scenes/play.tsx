@@ -3,6 +3,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
+import { poppins } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
@@ -133,7 +134,7 @@ export function Wheel({ params }: SceneProps<"wheel">) {
       ctx.save();
       ctx.rotate((a0 + a1) / 2);
       ctx.fillStyle = BRAND.black;
-      ctx.font = `bold ${Math.min(40, 1800 / n)}px Poppins, sans-serif`;
+      ctx.font = `bold ${Math.min(40, 1800 / n)}px ${poppins.style.fontFamily}, sans-serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
       ctx.fillText(name.slice(0, 18), RADIUS - 30, 0);

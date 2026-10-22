@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { poppins } from "app/fonts";
+
 const YELLOW = "#F5BB03";
 const BLUE = "#0162C8";
 const WHITE = "#F6F6F6";
@@ -158,10 +160,10 @@ export default function ShapeGame({ onClose }: { onClose: () => void }) {
 
       ctx.textBaseline = "top";
       ctx.fillStyle = "rgba(255,255,255,0.4)";
-      ctx.font = "600 9px Poppins, sans-serif";
+      ctx.font = `600 9px ${poppins.style.fontFamily}, sans-serif`;
       ctx.fillText("PUNTOS", 14, 12);
       ctx.fillStyle = "#fff";
-      ctx.font = "800 24px Poppins, sans-serif";
+      ctx.font = `800 24px ${poppins.style.fontFamily}, sans-serif`;
       ctx.fillText(String(s.score), 14, 22);
     };
 

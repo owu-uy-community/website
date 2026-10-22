@@ -5,6 +5,7 @@ import { useMemo, memo } from "react";
 import OpenSpaceMap from "components/Meetups/2024/OpenSpace/Map";
 import { useCountdownState } from "hooks/useCountdownState";
 import { useMapKioskData } from "hooks/useMapKioskData";
+import { useOpenSpaceSetup } from "hooks/useOpenSpaceSetup";
 import { useLocationCycling } from "hooks/useLocationCycling";
 import { MAP_KIOSK_CONFIG } from "components/Meetups/OpenSpace/utils/constants";
 import { MapHeader } from "components/Meetups/OpenSpace/molecules/MapHeader";
@@ -34,6 +35,12 @@ export default function MapKioskClient({ eventId }: { eventId: string }) {
 
   // Handle location cycling
   const { currentLocation } = useLocationCycling({ activeLocations, isLoading });
+
+  // Rooms carry what their hosts set (full, evacuate); a status change refetches them live.
+  const { roomsByName } = useOpenSpaceSetup(eventId, { refetchInterval: 60_000, hideInactiveRooms: true });
+  const currentStatus = Object.values(roomsByName).find(
+    (room) => room.name.toUpperCase() === currentLocation?.name
+  )?.status;
 
   // Compute derived data
   const eventProp = useMemo(() => {
@@ -66,7 +73,9 @@ export default function MapKioskClient({ eventId }: { eventId: string }) {
       </div>
 
       {/* Right Side Location Label with Arrow */}
-      {currentLocation && <LocationArrow color={currentLocation.color} locationName={currentLocation.name} />}
+      {currentLocation && (
+        <LocationArrow color={currentLocation.color} locationName={currentLocation.name} status={currentStatus} />
+      )}
 
       {/* Bottom Right Logo */}
       <LogoCorner />

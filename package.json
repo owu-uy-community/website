@@ -101,6 +101,7 @@
     "@vercel/speed-insights": "2.0.0",
     "ai": "7.0.130",
     "atropos": "2.0.2",
+    "barcode-detector": "3.2.2",
     "better-auth": "1.6.22",
     "class-variance-authority": "0.7.1",
     "classnames": "2.5.1",

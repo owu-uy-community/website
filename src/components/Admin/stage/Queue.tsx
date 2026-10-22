@@ -1,18 +1,8 @@
 "use client";
 
-import { memo, useRef } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import { AnimatePresence, Reorder, motion, useDragControls, useMotionValue, useTransform } from "motion/react";
-import {
-  ArrowUpToLine,
-  Copy,
-  Eye,
-  GripVertical,
-  ListOrdered,
-  MoreHorizontal,
-  Smartphone,
-  Trash2,
-  Zap,
-} from "lucide-react";
+import { ArrowUpToLine, Copy, Eye, GripVertical, ListOrdered, Smartphone, Trash2, Zap } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 import {
@@ -28,13 +18,12 @@ import {
 } from "components/shared/ui/alert-dialog";
 import { Button } from "components/shared/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "components/shared/ui/context-menu";
-import { DropdownMenu, DropdownMenuTrigger } from "components/shared/ui/dropdown-menu";
 import { Empty } from "components/shared/ui/empty";
 import { toast } from "components/shared/ui/toast-utils";
 import { INTERACTIVE_SCENES, SCENES, parseSceneParams, type DeskStep, type SceneId } from "lib/owy-stage/scenes";
 
 import { haptic } from "./haptics";
-import { ActionsContext, ActionsDropdown, type MenuAction } from "./menus";
+import { ActionsContext, ActionsMenuButton, useLongPress, type MenuAction } from "./menus";
 import { readParams } from "./SceneParams";
 import type { DeskActions } from "./useDesk";
 import { releaseFocus } from "./useStageHotkeys";
@@ -92,7 +81,7 @@ function stepActions(step: DeskStep, index: number, actions: QueueActions): Menu
  * — right to preview, left to remove — and long-presses for the menu. The
  * grip on the left reorders.
  */
-function QueueRow({ step, index, actions }: { step: DeskStep; index: number; actions: QueueActions }) {
+function QueueRowView({ step, index, actions }: { step: DeskStep; index: number; actions: QueueActions }) {
   const controls = useDragControls();
   const scene = SCENES[step.scene];
   const x = useMotionValue(0);
@@ -101,13 +90,14 @@ function QueueRow({ step, index, actions }: { step: DeskStep; index: number; act
   /** Set while a swipe is on, so the tap that ends it doesn't also cue the step. */
   const swiped = useRef(false);
   const armed = useRef(false);
-  const menu = stepActions(step, index, actions);
   const next = index === 0;
+  const summary = useMemo(() => stepSummary(step.scene, step.params), [step.scene, step.params]);
 
   return (
     <Reorder.Item
       animate={{ opacity: 1, y: 0 }}
       className="relative"
+      data-step={step.id}
       dragControls={controls}
       dragListener={false}
       exit={{ opacity: 0, height: 0, marginTop: 0, transition: { duration: 0.2 } }}
@@ -120,124 +110,124 @@ function QueueRow({ step, index, actions }: { step: DeskStep; index: number; act
         {/* What a swipe will do, revealed under the row as it slides. */}
         <motion.div
           aria-hidden
-          className="absolute inset-0 flex items-center bg-green-600/90 pl-4 text-sm font-semibold text-white"
+          className="absolute inset-0 flex items-center bg-success-surface pl-4 text-ui font-semibold text-success-foreground ring-1 ring-success/40 ring-inset"
           style={{ opacity: cueOpacity }}
         >
           <Eye className="mr-2 h-4 w-4" /> A la preview
         </motion.div>
         <motion.div
           aria-hidden
-          className="absolute inset-0 flex items-center justify-end bg-red-600/90 pr-4 text-sm font-semibold text-white"
+          className="absolute inset-0 flex items-center justify-end bg-live-surface pr-4 text-ui font-semibold text-live-foreground ring-1 ring-live/40 ring-inset"
           style={{ opacity: removeOpacity }}
         >
           Quitar <Trash2 className="ml-2 h-4 w-4" />
         </motion.div>
 
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <motion.div
-              className={cn(
-                "relative flex items-center gap-1.5 rounded-lg border bg-card py-1.5 pr-0.5 pl-0.5 select-none [-webkit-touch-callout:none] hover:border-muted-foreground/40 @[18rem]:gap-2",
-                next && "border-primary/50 bg-primary/[0.06]"
+        <motion.div
+          className={cn(
+            "relative flex items-center gap-1.5 rounded-lg border bg-card py-1.5 pr-0.5 pl-0.5 select-none [-webkit-touch-callout:none] hover:border-muted-foreground/40 @[18rem]:gap-2",
+            next && "border-primary/50 bg-primary/[0.06]"
+          )}
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragDirectionLock
+          dragElastic={0.55}
+          style={{ x }}
+          onDrag={(_, info) => {
+            const past = Math.abs(info.offset.x) > SWIPE;
+            if (past !== armed.current) {
+              armed.current = past;
+              if (past) haptic(8);
+            }
+          }}
+          onDragEnd={(_, info) => {
+            armed.current = false;
+            if (info.offset.x > SWIPE) actions.cueQueued(step.id);
+            else if (info.offset.x < -SWIPE) removeWithUndo(step, index, actions);
+          }}
+          onDragStart={() => {
+            swiped.current = true;
+          }}
+        >
+          {/* The row cues the step into preview; the handle and the menu sit above it. */}
+          <button
+            aria-label={`${scene.title}: a la preview`}
+            className="absolute inset-0 touch-manipulation rounded-lg"
+            type="button"
+            onClick={(event) => {
+              if (swiped.current) return;
+              actions.cueQueued(step.id);
+              releaseFocus(event);
+            }}
+            onPointerDown={() => {
+              swiped.current = false;
+            }}
+          />
+          <Button
+            aria-label={`Mover ${scene.title}`}
+            className="h-10 w-6 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+            size="icon"
+            variant="ghost"
+            onPointerDown={(event) => {
+              // Holding the grip reorders: keep the press from arming the row's long-press menu.
+              event.stopPropagation();
+              controls.start(event);
+            }}
+          >
+            <GripVertical className="h-4 w-4" />
+          </Button>
+          <span className="pointer-events-none hidden w-4 shrink-0 text-right font-terminal text-xs text-muted-foreground tabular-nums @[18rem]:inline">
+            {index + 1}
+          </span>
+          <img
+            alt=""
+            className="pointer-events-none hidden aspect-video w-12 shrink-0 rounded bg-black object-cover @[18rem]:block @[20rem]:w-16"
+            decoding="async"
+            draggable={false}
+            loading="lazy"
+            src={`/owy-stage/thumbs/${step.scene}.jpg`}
+          />
+          <div className="pointer-events-none min-w-0 flex-1">
+            <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
+              {next && (
+                <span className="shrink-0 rounded bg-primary px-1 text-[9px] leading-4 font-extrabold tracking-wider text-primary-foreground">
+                  SIGUE
+                </span>
               )}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragDirectionLock
-              dragElastic={0.55}
-              style={{ x }}
-              onDrag={(_, info) => {
-                const past = Math.abs(info.offset.x) > SWIPE;
-                if (past !== armed.current) {
-                  armed.current = past;
-                  if (past) haptic(8);
-                }
-              }}
-              onDragEnd={(_, info) => {
-                armed.current = false;
-                if (info.offset.x > SWIPE) actions.cueQueued(step.id);
-                else if (info.offset.x < -SWIPE) removeWithUndo(step, index, actions);
-              }}
-              onDragStart={() => {
-                swiped.current = true;
-              }}
-            >
-              {/* The row cues the step into preview; the handle and the menu sit above it. */}
-              <button
-                aria-label={`${scene.title}: a la preview`}
-                className="absolute inset-0 touch-manipulation rounded-lg"
-                type="button"
-                onClick={(event) => {
-                  if (swiped.current) return;
-                  actions.cueQueued(step.id);
-                  releaseFocus(event);
-                }}
-                onPointerDown={() => {
-                  swiped.current = false;
-                }}
-              />
-              <button
-                aria-label={`Mover ${scene.title}`}
-                className="relative cursor-grab touch-none px-1 py-3 text-muted-foreground hover:text-foreground active:cursor-grabbing"
-                type="button"
-                onPointerDown={(event) => {
-                  // Holding the grip reorders: keep the press from arming the row's long-press menu.
-                  event.stopPropagation();
-                  controls.start(event);
-                }}
-              >
-                <GripVertical className="h-4 w-4" />
-              </button>
-              <span className="pointer-events-none hidden w-4 shrink-0 text-right font-terminal text-xs text-muted-foreground tabular-nums @[18rem]:inline">
-                {index + 1}
-              </span>
-              <img
-                alt=""
-                className="pointer-events-none aspect-video w-12 shrink-0 rounded bg-black object-cover @[20rem]:w-16"
-                decoding="async"
-                draggable={false}
-                loading="lazy"
-                src={`/owy-stage/thumbs/${step.scene}.jpg`}
-              />
-              <div className="pointer-events-none min-w-0 flex-1">
-                <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
-                  {next && (
-                    <span className="shrink-0 rounded bg-primary px-1 text-[9px] leading-4 font-extrabold tracking-wider text-primary-foreground">
-                      SIGUE
-                    </span>
-                  )}
-                  <span className="truncate">{scene.title}</span>
-                  {PHONE.has(step.scene) && <Smartphone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                </p>
-                <p className="truncate text-xs text-muted-foreground">{stepSummary(step.scene, step.params)}</p>
-              </div>
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    aria-label={`Más acciones para ${scene.title}`}
-                    className="relative h-9 w-9 shrink-0 text-muted-foreground pointer-coarse:h-10 pointer-coarse:w-10"
-                    size="icon"
-                    variant="ghost"
-                    onPointerDown={(event) => event.stopPropagation()}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <ActionsDropdown actions={menu} title={scene.title} />
-              </DropdownMenu>
-            </motion.div>
-          </ContextMenuTrigger>
-          <ActionsContext actions={menu} title={scene.title} />
-        </ContextMenu>
+              <span className="truncate">{scene.title}</span>
+              {PHONE.has(step.scene) && <Smartphone className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">{summary}</p>
+          </div>
+          <ActionsMenuButton
+            actions={() => stepActions(step, index, actions)}
+            className="relative h-9 w-9 shrink-0 text-muted-foreground"
+            label={`Más acciones para ${scene.title}`}
+            title={scene.title}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+        </motion.div>
       </div>
     </Reorder.Item>
   );
 }
+
+const QueueRow = memo(QueueRowView);
 
 /**
  * "A continuación": what TAKE will bring into preview next, one per TAKE.
  * Shared by every admin device; drag to reorder, tap to cue one now.
  */
 function QueueView({ queue, actions }: { queue: DeskStep[]; actions: QueueActions }) {
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const longPress = useLongPress();
+  const menuIndex = menuFor ? queue.findIndex((step) => step.id === menuFor) : -1;
+  const stepAt = (event: React.MouseEvent | React.PointerEvent) =>
+    (event.target as HTMLElement).closest<HTMLElement>("[data-step]")?.dataset.step ?? null;
+  /** A press inside a step's open ⋯ menu reaches the list through React, from a portal: not the list's. */
+  const fromPortal = (event: React.MouseEvent | React.PointerEvent) =>
+    !event.currentTarget.contains(event.target as Node);
+
   return (
     <section aria-label="Cola" className="@container flex h-full min-h-0 flex-col">
       <header className="flex h-12 shrink-0 items-center gap-2 border-b pr-1.5 pl-3">
@@ -286,24 +276,52 @@ function QueueView({ queue, actions }: { queue: DeskStep[]; actions: QueueAction
           </AlertDialog>
         )}
       </header>
-      <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain p-2", queue.length === 0 && "flex")}>
-        {queue.length === 0 ? (
-          <Empty
-            className="m-auto border-0 px-3 py-6"
-            description="Sumá escenas con «+» en la biblioteca o mandá la preview con «A la cola». Cada TAKE trae la próxima."
-            icon={ListOrdered}
-            title="Nada en espera"
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain p-2", queue.length === 0 && "flex")}
+            onContextMenu={(event) => {
+              if (fromPortal(event)) return;
+              const id = stepAt(event);
+              if (!id) return event.preventDefault();
+              setMenuFor(id);
+            }}
+            onPointerDown={(event) => {
+              if (event.pointerType === "mouse" || fromPortal(event)) return;
+              const id = stepAt(event);
+              if (!id) return event.preventDefault();
+              setMenuFor(id);
+              longPress.start(event);
+            }}
+            onPointerCancel={longPress.cancel}
+            onPointerMove={longPress.move}
+            onPointerUp={longPress.cancel}
+          >
+            {queue.length === 0 ? (
+              <Empty
+                className="m-auto border-0 px-3 py-6"
+                description="Sumá escenas con «+» en la biblioteca o mandá la preview con «A la cola». Cada TAKE trae la próxima."
+                icon={ListOrdered}
+                title="Nada en espera"
+              />
+            ) : (
+              <Reorder.Group axis="y" className="space-y-1.5" values={queue} onReorder={actions.reorder}>
+                <AnimatePresence initial={false}>
+                  {queue.map((step, index) => (
+                    <QueueRow key={step.id} actions={actions} index={index} step={step} />
+                  ))}
+                </AnimatePresence>
+              </Reorder.Group>
+            )}
+          </div>
+        </ContextMenuTrigger>
+        {menuIndex >= 0 && (
+          <ActionsContext
+            actions={stepActions(queue[menuIndex], menuIndex, actions)}
+            title={SCENES[queue[menuIndex].scene].title}
           />
-        ) : (
-          <Reorder.Group axis="y" className="space-y-1.5" values={queue} onReorder={actions.reorder}>
-            <AnimatePresence initial={false}>
-              {queue.map((step, index) => (
-                <QueueRow key={step.id} actions={actions} index={index} step={step} />
-              ))}
-            </AnimatePresence>
-          </Reorder.Group>
         )}
-      </div>
+      </ContextMenu>
     </section>
   );
 }

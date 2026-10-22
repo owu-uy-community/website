@@ -1,7 +1,7 @@
 import { createId } from "@paralleldrive/cuid2";
 
 import { db } from "lib/db";
-import { communities, communityMembers, events, rooms, schedules, tracks, user } from "lib/db/schema";
+import { attendees, communities, communityMembers, events, rooms, schedules, tracks, user } from "lib/db/schema";
 
 /**
  * Row factories for integration tests. Every row gets unique ids/slugs, so
@@ -108,6 +108,26 @@ export async function makeTrack(
       openSpaceId: where.eventId,
       scheduleId: where.scheduleId,
       roomId: where.roomId,
+      ...overrides,
+    })
+    .returning();
+
+  return row;
+}
+
+/** An attendee of the event's Eventbrite mirror, not checked in unless told. */
+export async function makeAttendee(eventId: string, overrides: Partial<typeof attendees.$inferInsert> = {}) {
+  const eventbriteId = createId();
+  const [row] = await db
+    .insert(attendees)
+    .values({
+      eventId,
+      eventbriteId,
+      name: "Asistente de prueba",
+      email: `${eventbriteId}@test.owu.uy`,
+      ticketClass: "General",
+      barcode: `${eventbriteId}001`,
+      registeredAt: new Date("2026-10-01T12:00:00.000Z"),
       ...overrides,
     })
     .returning();

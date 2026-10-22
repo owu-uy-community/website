@@ -21,7 +21,7 @@ import { useBoard, useNow } from "./useful";
  * — UCU's wall is a 3584×960 strip, not 16:9.
  */
 
-const BODY = "font-['Open_Sans']";
+const BODY = "font-open";
 
 const splitList = (value: string) =>
   value

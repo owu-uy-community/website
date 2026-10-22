@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { labelFor } from "components/Admin/stage/SceneParams";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
 import { Label } from "components/shared/ui/label";
@@ -37,6 +38,15 @@ export const CUE_COLOR_CLASS: Record<CueColor, string> = {
   blue: "bg-sky-500",
   purple: "bg-purple-500",
   gray: "bg-zinc-500",
+};
+
+const CUE_COLOR_NAME: Record<CueColor, string> = {
+  yellow: "Amarillo",
+  red: "Rojo",
+  green: "Verde",
+  blue: "Azul",
+  purple: "Violeta",
+  gray: "Gris",
 };
 
 /** Draft of a cue being edited; `null` id = new. */
@@ -148,6 +158,9 @@ export function CueEditor({
             <div className="space-y-1.5">
               <Label htmlFor="cue-hotkey">Tecla</Label>
               <Input
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
                 className="w-16 text-center uppercase"
                 defaultValue={draft?.hotkey ?? ""}
                 id="cue-hotkey"
@@ -164,9 +177,10 @@ export function CueEditor({
               {CUE_COLORS.map((option) => (
                 <button
                   key={option}
-                  aria-label={option}
+                  aria-label={CUE_COLOR_NAME[option]}
+                  aria-pressed={color === option}
                   className={cn(
-                    "h-7 w-7 rounded-full ring-offset-background transition-transform",
+                    "h-7 w-7 rounded-full ring-offset-background transition-transform pointer-coarse:size-10",
                     CUE_COLOR_CLASS[option],
                     color === option ? "scale-110 ring-2 ring-foreground ring-offset-2" : "opacity-60 hover:opacity-100"
                   )}
@@ -272,8 +286,8 @@ export function CueEditor({
             )}
             {paramKeys.map((key) => (
               <div key={`${stageScene}:${key}`} className="flex items-center gap-3">
-                <Label className="w-24 shrink-0 capitalize" htmlFor={`cue-p-${key}`}>
-                  {key}
+                <Label className="w-24 shrink-0" htmlFor={`cue-p-${key}`}>
+                  {labelFor(key)}
                 </Label>
                 {typeof stageDefaults[key] === "boolean" ? (
                   <Switch defaultChecked={stageDefaults[key]} id={`cue-p-${key}`} name={`p:${key}`} />
@@ -290,7 +304,7 @@ export function CueEditor({
           </fieldset>
 
           <div className="space-y-1.5">
-            <Label>Sonido (launchpad)</Label>
+            <Label>Sonido</Label>
             <Select value={sound || NONE} onValueChange={(value) => setSound(value === NONE ? "" : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="(ninguno)" />

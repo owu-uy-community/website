@@ -62,3 +62,36 @@ test("a place that is already taken names the talk that has it", async ({ page, 
 
   await expect(page.getByText('Este espacio ya está ocupado por "Primera"')).toBeVisible();
 });
+
+test("saving an open talk keeps what another screen changed in it meanwhile", async ({ page, pageAs, board }) => {
+  const talk = await makeTrack(
+    { eventId: board.event.id, scheduleId: board.slots.early.id, roomId: board.rooms.plain.id },
+    { title: "Antes" }
+  );
+  const other = await pageAs("admin");
+  await Promise.all([page.goto(board.url), other.goto(board.url)]);
+  const inspector = (screen: Page) => screen.getByRole("complementary", { name: "Detalle de la charla" });
+
+  // Here the talk is open, a description half typed.
+  await page.locator(`[data-note-id="${talk.id}"]`).click();
+  await inspector(page).getByLabel("Descripción (opcional)").fill("Escrita acá");
+
+  // There, someone renames it.
+  await other.locator(`[data-note-id="${talk.id}"]`).click();
+  await inspector(other).getByLabel("Título").fill("Después");
+  const renamed = other.waitForResponse("**/api/orpc/tracks/update");
+  await inspector(other).getByRole("button", { name: "Guardar", exact: true }).click();
+  await renamed;
+
+  // The rename reaches the open form without touching the typing, and saving keeps both.
+  await expect(inspector(page).getByLabel("Título")).toHaveValue("Después");
+  await expect(inspector(page).getByLabel("Descripción (opcional)")).toHaveValue("Escrita acá");
+  const saved = page.waitForResponse("**/api/orpc/tracks/update");
+  await inspector(page).getByRole("button", { name: "Guardar", exact: true }).click();
+  await saved;
+
+  await other.reload();
+  await other.locator(`[data-note-id="${talk.id}"]`).click();
+  await expect(inspector(other).getByLabel("Título")).toHaveValue("Después");
+  await expect(inspector(other).getByLabel("Descripción (opcional)")).toHaveValue("Escrita acá");
+});

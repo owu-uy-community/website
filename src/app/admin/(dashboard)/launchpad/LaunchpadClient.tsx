@@ -1,111 +1,86 @@
 "use client";
 
-/**
- * Launchpad - Remote Sound Control System
- *
- * Professional audio control system for events with dual-mode operation:
- *
- * OUTPUT MODE: Devices play sounds locally and respond to remote triggers
- * CONTROLLER MODE: Devices send commands to output devices via real-time sync
- *
- * Features:
- * - Real-time bidirectional synchronization via Supabase
- * - State persistence and recovery
- * - Multi-device coordination
- * - Mobile-responsive UI
- */
-
-import type React from "react";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Button } from "components/shared/ui/button";
-import { Card, CardContent } from "components/shared/ui/card";
-import { Slider } from "components/shared/ui/slider";
-import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
-import { toast } from "components/shared/ui/toast-utils";
-import { useRealtimeBroadcast } from "hooks/useRealtimeBroadcast";
-import { SOUNDS } from "lib/launchpad/sounds";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import {
-  Volume2,
-  VolumeX,
-  Music,
-  Laugh,
-  Drum,
-  PartyPopper,
-  Sparkles,
-  Bird,
-  ThumbsDown,
-  HandMetal,
-  Disc,
-  ThumbsUp,
-  Smile,
+  AlertTriangle,
+  Bath,
   Bell,
-  CircleDot,
+  Bird,
   Bot,
+  BusFront,
+  CircleDot,
+  Clapperboard,
+  Code2,
+  Crown,
+  Disc,
+  Drum,
+  Film,
+  HandMetal,
+  Laugh,
+  Layers,
+  Megaphone,
+  MessageSquare,
+  MonitorPlay,
   MousePointer,
   MoveUp,
-  Zap,
-  Radio,
-  MonitorPlay,
-  ToggleLeft,
-  Layers,
-  Squirrel,
-  Clapperboard,
-  MessageSquare,
-  PlaySquare,
-  Code2,
-  Pause,
-  Sandwich,
-  AlertTriangle,
-  BusFront,
-  Crown,
-  Film,
-  ShieldAlert,
-  Rocket,
+  Music,
   Music4,
-  Megaphone,
+  PartyPopper,
+  Pause,
+  PlaySquare,
+  Radio,
+  Rocket,
+  Sandwich,
+  Search,
+  ShieldAlert,
+  Smile,
+  Sparkles,
   Speaker,
-  Bath,
+  Square,
+  Squirrel,
+  ThumbsDown,
+  ThumbsUp,
+  ToggleLeft,
+  Volume2,
+  VolumeX,
+  Zap,
 } from "lucide-react";
 
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
+import { cn } from "app/lib/utils";
+import { useShortcuts } from "components/Admin/shell/shortcuts";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { EmptyState } from "components/Admin/ui/states";
+import { StatusDot } from "components/Admin/ui/status";
+import { useNow } from "components/Admin/ui/time";
+import { Badge } from "components/shared/ui/badge";
+import { Button } from "components/shared/ui/button";
+import { Input } from "components/shared/ui/input";
+import { Kbd } from "components/shared/ui/kbd";
+import { Slider } from "components/shared/ui/slider";
+import { Tabs, TabsList, TabsTrigger } from "components/shared/ui/tabs";
+import { toast } from "components/shared/ui/toast-utils";
+import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { SOUNDS } from "lib/launchpad/sounds";
+import { GLOBAL_CHANNELS } from "lib/realtime/channels";
+import { getRealtimeClient } from "lib/realtime/client";
 
-interface SoundButton {
-  id: string;
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  audioFile: string;
-}
+type Sound = (typeof SOUNDS)[number] & { icon: ComponentType<{ className?: string }> };
 
-interface SoundPlayPayload {
-  soundId: string;
-  audioFile: string;
-  volume: number;
-  timestamp: number;
-}
+/** On the launchpad channel; the server sends `play_sound` too, when an OBS cue fires a sound. */
+type PlayPayload = { soundId: string; audioFile: string; volume: number; timestamp: number };
+type StatePayload = { playingId: string | null; timestamp: number };
+/** An output tab saying it is there, and whether it will sound. */
+type OutputPayload = { id: string; label: string; muted: boolean };
 
-interface SoundStatePayload {
-  playingId: string | null;
-  timestamp: number;
-}
+const OUTPUT_KEY = "launchpad-output-mode";
+/** Outputs say hello this often; one not heard from for OUTPUT_TTL_MS is gone. */
+const HELLO_MS = 15_000;
+const OUTPUT_TTL_MS = 40_000;
+/** How long a pad shows it was sent, before an output answers that it is playing. */
+const SENT_MS = 700;
+const KEYED_PADS = 9;
 
-interface StateRequestPayload {
-  requesterId: string;
-  timestamp: number;
-}
-
-interface StateResponsePayload {
-  playingId: string | null;
-  volume: number;
-  timestamp: number;
-}
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+const ICONS: Record<string, ComponentType<{ className?: string }>> = {
   "1": Layers,
   "2": Bird,
   "3": Sparkles,
@@ -151,392 +126,364 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 // The bank itself lives in lib/launchpad/sounds so OBS cues can fire it too.
-const SOUND_BUTTONS: SoundButton[] = SOUNDS.map((sound) => ({ ...sound, icon: ICONS[sound.id] ?? Music }));
+const BANK: Sound[] = SOUNDS.map((sound) => ({ ...sound, icon: ICONS[sound.id] ?? Music }));
 
-const CHANNEL_NAME = "launchpad-sounds";
-const STATE_REQUEST_DELAY = 500;
+const send = (event: string, payload: unknown) =>
+  getRealtimeClient().publish(GLOBAL_CHANNELS.launchpad, event, payload);
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
+/** "Mac · Chrome", "iPhone · Safari": enough to tell the sound laptop from a phone. First match wins. */
+const SYSTEMS = [
+  ["iPhone", "iPhone"],
+  ["iPad", "iPad"],
+  ["Android", "Android"],
+  ["Macintosh", "Mac"],
+  ["Windows", "Windows"],
+  ["Linux", "Linux"],
+] as const;
+const BROWSERS = [
+  ["OBS/", "OBS"],
+  ["Edg/", "Edge"],
+  ["Firefox/", "Firefox"],
+  ["Chrome/", "Chrome"],
+  ["Safari/", "Safari"],
+] as const;
 
-function getDeviceId(): string {
-  if (typeof window === "undefined") return `device-${Date.now()}`;
+function deviceLabel(agent: string): string {
+  const system = SYSTEMS.find(([mark]) => agent.includes(mark))?.[1] ?? "Dispositivo";
+  const browser = BROWSERS.find(([mark]) => agent.includes(mark))?.[1];
 
-  let id = localStorage.getItem("launchpad-device-id");
-  if (!id) {
-    id = `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    localStorage.setItem("launchpad-device-id", id);
-  }
-  return id;
+  return browser ? `${system} · ${browser}` : system;
 }
 
-function getInitialOutputMode(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem("launchpad-output-mode") === "true";
-}
+/** Search ignores case and accents: "pajaros" finds "Pájaros". */
+const fold = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
 
-// ============================================================================
-// MAIN COMPONENT
-// ============================================================================
-
+/**
+ * Sonidos: the sound pads. A tab is either a controller (its pads play on every output) or an
+ * output (it plays what controllers and OBS cues send, at its own volume). Outputs say hello on
+ * the channel, so every tab shows which devices will actually sound.
+ */
 export default function LaunchpadClient() {
-  // ========== State Management ==========
+  const [isOutput, setIsOutput] = useState(false);
+  const [tabId] = useState(() => `tab-${Math.random().toString(36).slice(2, 10)}`);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [sentId, setSentId] = useState<string | null>(null);
+  const [muted, setMuted] = useState(false);
   const [volume, setVolume] = useState(100);
-  const [isOutputDevice, setIsOutputDevice] = useState(getInitialOutputMode);
-  const [deviceId] = useState(getDeviceId);
+  const [query, setQuery] = useState("");
+  const [outputs, setOutputs] = useState<Record<string, OutputPayload & { at: number }>>({});
+  const search = useRef<HTMLInputElement>(null);
+  const audios = useRef(new Map<string, HTMLAudioElement>());
+  const live = useRef({ isOutput, muted, volume, playingId });
+  live.current = { isOutput, muted, volume, playingId };
+  const now = useNow(5_000);
 
-  // ========== Refs ==========
-  const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
-  const isOutputDeviceRef = useRef(isOutputDevice);
-  const volumeRef = useRef(volume);
-  const isMutedRef = useRef(isMuted);
-  const playingIdRef = useRef(playingId);
+  // The mode is per device; read after mount so the server render never disagrees.
+  useEffect(() => setIsOutput(window.localStorage.getItem(OUTPUT_KEY) === "true"), []);
+  const changeMode = (output: boolean) => {
+    setIsOutput(output);
+    window.localStorage.setItem(OUTPUT_KEY, String(output));
+  };
 
-  // Keep refs in sync
-  useEffect(() => {
-    isOutputDeviceRef.current = isOutputDevice;
-  }, [isOutputDevice]);
-
-  useEffect(() => {
-    volumeRef.current = volume;
-  }, [volume]);
-
-  useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
-
-  useEffect(() => {
-    playingIdRef.current = playingId;
-  }, [playingId]);
-
-  // ========== Audio Playback Logic ==========
-  const playSoundLocally = useCallback((soundId: string, audioFile: string, targetVolume: number) => {
-    console.log("🎵 Playing sound locally:", { soundId, audioFile, targetVolume, isMuted: isMutedRef.current });
-
-    if (isMutedRef.current) {
-      console.log("⏸️  Sound playback blocked: muted");
-      return;
+  const stopHere = useCallback(() => {
+    for (const audio of audios.current.values()) {
+      audio.pause();
+      audio.currentTime = 0;
     }
+    setPlayingId(null);
+  }, []);
 
-    // Stop all other sounds
-    Object.entries(audioRefs.current).forEach(([key, audio]) => {
-      if (key !== soundId && audio) {
+  const playHere = useCallback(
+    ({ soundId, audioFile }: { soundId: string; audioFile: string }) => {
+      if (live.current.muted) return;
+      // The sound already playing stops instead: the same press (or cue) twice is a stop.
+      if (live.current.playingId === soundId) return stopHere();
+      for (const [id, audio] of audios.current) {
+        if (id === soundId) continue;
         audio.pause();
         audio.currentTime = 0;
       }
-    });
-
-    // Get or create audio element
-    if (!audioRefs.current[soundId]) {
-      audioRefs.current[soundId] = new Audio(audioFile);
-    }
-
-    const audio = audioRefs.current[soundId];
-    if (!audio) {
-      console.error("Failed to create audio element");
-      return;
-    }
-
-    // If already playing this sound, stop it
-    if (playingIdRef.current === soundId) {
-      audio.pause();
-      audio.currentTime = 0;
-      setPlayingId(null);
-      return;
-    }
-
-    // Configure and play
-    audio.volume = targetVolume / 100;
-    audio.currentTime = 0;
-    setPlayingId(soundId);
-
-    audio
-      .play()
-      .then(() => {
-        console.log("✅ Sound playing:", soundId);
-      })
-      .catch((error) => {
-        console.error("❌ Error playing audio:", error);
-        setPlayingId(null);
-      });
-
-    // Handle sound end
-    audio.onended = () => {
-      console.log("🏁 Sound ended:", soundId);
-      setPlayingId(null);
-    };
-  }, []);
-
-  // ========== Broadcast State Changes ==========
-  const broadcastStateChange = useCallback((broadcast: any, newPlayingId: string | null) => {
-    broadcast("sound_state", {
-      playingId: newPlayingId,
-      timestamp: Date.now(),
-    } as SoundStatePayload).catch((err: Error) => {
-      console.error("Failed to broadcast state:", err);
-    });
-  }, []);
-
-  // ========== Real-time Communication Setup ==========
-  // Always active - broadcasts and listens automatically
-  const { broadcast } = useRealtimeBroadcast({
-    channelName: CHANNEL_NAME,
-    eventHandlers: [
-      {
-        event: "play_sound",
-        onReceive: (payload: SoundPlayPayload) => {
-          if (isOutputDeviceRef.current) {
-            console.log("📢 Received remote sound trigger:", payload);
-            playSoundLocally(payload.soundId, payload.audioFile, payload.volume);
-          }
-        },
-      },
-      {
-        event: "sound_state",
-        onReceive: (payload: SoundStatePayload) => {
-          if (!isOutputDeviceRef.current) {
-            console.log("📊 Received sound state update:", payload);
-            setPlayingId(payload.playingId);
-          }
-        },
-      },
-      {
-        event: "state_request",
-        onReceive: (payload: StateRequestPayload) => {
-          if (isOutputDeviceRef.current && payload.requesterId !== deviceId) {
-            console.log("📝 Received state request from:", payload.requesterId);
-            broadcast("state_response", {
-              playingId: playingIdRef.current,
-              volume: volumeRef.current,
-              timestamp: Date.now(),
-            } as StateResponsePayload).catch(console.error);
-          }
-        },
-      },
-      {
-        event: "state_response",
-        onReceive: (payload: StateResponsePayload) => {
-          if (!isOutputDeviceRef.current) {
-            console.log("📬 Received state response:", payload);
-            setPlayingId(payload.playingId);
-          }
-        },
-      },
-    ],
-    receiveSelf: false,
-    debug: true,
-  });
-
-  // ========== Broadcast playing state changes ==========
-  useEffect(() => {
-    if (isOutputDevice) {
-      broadcastStateChange(broadcast, playingId);
-    }
-  }, [playingId, isOutputDevice, broadcast, broadcastStateChange]);
-
-  // ========== Initial state request for controllers ==========
-  useEffect(() => {
-    if (!isOutputDevice) {
-      console.log("🔄 Requesting current state from output devices...");
-      const timer = setTimeout(() => {
-        broadcast("state_request", {
-          requesterId: deviceId,
-          timestamp: Date.now(),
-        } as StateRequestPayload).catch(console.error);
-      }, STATE_REQUEST_DELAY);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isOutputDevice, broadcast, deviceId]);
-
-  // ========== Mode Persistence ==========
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("launchpad-output-mode", String(isOutputDevice));
-    }
-  }, [isOutputDevice]);
-
-  // ========== Event Handlers ==========
-  const playSound = useCallback(
-    async (button: SoundButton) => {
-      if (isOutputDevice) {
-        // Output mode: play locally
-        playSoundLocally(button.id, button.audioFile, volume);
-      } else {
-        // Controller mode: broadcast to output devices
-        console.log("📡 Broadcasting sound trigger:", button.name);
-
-        try {
-          await broadcast("play_sound", {
-            soundId: button.id,
-            audioFile: button.audioFile,
-            volume: volume,
-            timestamp: Date.now(),
-          } as SoundPlayPayload);
-
-          toast.success({
-            title: `📡 ${button.name}`,
-            description: "Enviado a dispositivos de salida",
-            duration: 1500,
-          });
-        } catch (error) {
-          console.error("Failed to broadcast sound:", error);
-          toast.error("Error al enviar comando");
-        }
+      let audio = audios.current.get(soundId);
+      if (!audio) {
+        audio = new Audio(audioFile);
+        audios.current.set(soundId, audio);
       }
+      audio.volume = live.current.volume / 100;
+      audio.currentTime = 0;
+      audio.onended = () => setPlayingId((current) => (current === soundId ? null : current));
+      setPlayingId(soundId);
+      audio.play().catch(() => {
+        setPlayingId(null);
+        toast.error("El navegador no dejó reproducir", "Tocá esta página una vez y probá de nuevo.");
+      });
     },
-    [isOutputDevice, volume, broadcast, playSoundLocally]
+    [stopHere]
   );
 
-  const toggleMute = useCallback(() => {
-    const newMutedState = !isMuted;
-    setIsMuted(newMutedState);
+  const hello = useCallback(
+    () => send("output", { id: tabId, label: deviceLabel(navigator.userAgent), muted: live.current.muted }),
+    [tabId]
+  );
 
-    if (newMutedState) {
-      // Stop all sounds when muting
-      Object.values(audioRefs.current).forEach((audio) => {
-        if (audio) {
-          audio.pause();
-          audio.currentTime = 0;
-        }
-      });
-      setPlayingId(null);
+  const { isConnected } = useRealtimeChannel(GLOBAL_CHANNELS.launchpad, (event, payload) => {
+    if (event === "output") {
+      const output = payload as OutputPayload;
+      setOutputs((list) => ({ ...list, [output.id]: { ...output, at: Date.now() } }));
+    } else if (event === "output_gone") {
+      const { id } = payload as { id: string };
+      setOutputs(({ [id]: _gone, ...rest }) => rest);
+    } else if (live.current.isOutput) {
+      if (event === "play_sound") playHere(payload as PlayPayload);
+      if (event === "stop_all") stopHere();
+      if (event === "state_request") {
+        hello();
+        send("sound_state", { playingId: live.current.playingId, timestamp: Date.now() } satisfies StatePayload);
+      }
+    } else if (event === "sound_state") {
+      setPlayingId((payload as StatePayload).playingId);
     }
-  }, [isMuted]);
+  });
 
-  const toggleOutputDevice = useCallback(() => {
-    const newMode = !isOutputDevice;
-    setIsOutputDevice(newMode);
+  // Whoever opens the page asks who's out there (and what is playing), and again after a reconnect.
+  useEffect(() => {
+    if (isConnected) send("state_request", { requesterId: tabId, timestamp: Date.now() });
+  }, [isConnected, tabId]);
 
-    toast.info({
-      title: newMode ? "🔊 Modo Salida de Audio" : "📱 Modo Controlador",
-      description: newMode ? "Este dispositivo reproducirá sonidos" : "Envía comandos a dispositivos de salida",
-      duration: 2000,
-    });
-  }, [isOutputDevice]);
+  // An output says hello (again whenever it mutes or unmutes), keeps saying it, says goodbye when
+  // it stops being one, and tells what it plays.
+  useEffect(() => {
+    if (isOutput) hello();
+  }, [isOutput, muted, hello]);
+  useEffect(() => {
+    if (!isOutput) return;
+    const timer = setInterval(hello, HELLO_MS);
+    const bye = () => send("output_gone", { id: tabId });
+    window.addEventListener("pagehide", bye);
 
-  // ========== Render ==========
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("pagehide", bye);
+      bye();
+    };
+  }, [isOutput, hello, tabId]);
+  useEffect(() => {
+    if (isOutput) send("sound_state", { playingId, timestamp: Date.now() } satisfies StatePayload);
+  }, [isOutput, playingId]);
+
+  // The volume reaches what is already playing: a sound that came in too loud can be pulled down.
+  useEffect(() => {
+    for (const audio of audios.current.values()) audio.volume = volume / 100;
+  }, [volume]);
+
+  useEffect(() => {
+    if (!sentId) return;
+    const timer = setTimeout(() => setSentId(null), SENT_MS);
+    return () => clearTimeout(timer);
+  }, [sentId]);
+
+  const fire = (sound: Sound) => {
+    if (isOutput) return playHere({ soundId: sound.id, audioFile: sound.audioFile });
+    send("play_sound", {
+      soundId: sound.id,
+      audioFile: sound.audioFile,
+      volume: 100,
+      timestamp: Date.now(),
+    } satisfies PlayPayload);
+    setSentId(sound.id);
+  };
+  const stopEverywhere = () => {
+    if (isOutput) stopHere();
+    send("stop_all", { timestamp: Date.now() });
+  };
+  const toggleMute = () => {
+    if (!muted) stopHere();
+    setMuted(!muted);
+  };
+
+  const visible = useMemo(() => {
+    const term = fold(query.trim());
+    return term ? BANK.filter((sound) => fold(sound.name).includes(term)) : BANK;
+  }, [query]);
+
+  useShortcuts([
+    ...Array.from({ length: KEYED_PADS }, (_, index) => ({
+      id: `sonidos.pad-${index + 1}`,
+      keys: String(index + 1),
+      label: visible[index] ? `Disparar «${visible[index].name}»` : `Disparar el sonido ${index + 1}`,
+      group: "Sonidos",
+      run: () => {
+        const sound = visible[index];
+        if (sound && !(isOutput && muted)) fire(sound);
+      },
+    })),
+    { id: "sonidos.stop", keys: "0", label: "Detener todo", group: "Sonidos", run: stopEverywhere },
+    {
+      id: "sonidos.search",
+      keys: "/",
+      label: "Buscar un sonido",
+      group: "Sonidos",
+      run: () => search.current?.focus(),
+    },
+  ]);
+
+  const others = Object.values(outputs).filter((output) => output.id !== tabId && now - output.at < OUTPUT_TTL_MS);
+  const speakers = [
+    ...(isOutput ? [{ id: tabId, label: "Esta pestaña", muted }] : []),
+    ...others.toSorted((a, b) => a.label.localeCompare(b.label)),
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Launchpad</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {isOutputDevice
-              ? "Salida de audio — este dispositivo reproduce los sonidos"
-              : "Controlador — envía comandos a los dispositivos de salida"}
-          </p>
-        </div>
+    <PageContainer size="large">
+      <PageHeader
+        actions={
+          <>
+            <Tabs value={isOutput ? "output" : "controller"} onValueChange={(value) => changeMode(value === "output")}>
+              <TabsList aria-label="Qué hace este dispositivo">
+                <TabsTrigger value="controller">
+                  <Radio /> Controlador
+                </TabsTrigger>
+                <TabsTrigger value="output">
+                  <Speaker /> Salida de audio
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <Button variant="outline" onClick={stopEverywhere}>
+              <Square className="fill-current" /> Detener todo <Kbd className="pointer-coarse:hidden">0</Kbd>
+            </Button>
+          </>
+        }
+        description={
+          isOutput
+            ? "Esta pestaña reproduce lo que manden los controladores y los cues de OBS, a su propio volumen."
+            : speakers.length === 0
+              ? "Para que se escuche, abrí Sonidos en la compu del sonido y elegí «Salida de audio»."
+              : "Tocá un sonido y suena en las salidas de audio conectadas."
+        }
+        meta={
+          speakers.length === 0 ? (
+            <Badge variant="warning">
+              <VolumeX /> Ninguna salida: no se va a escuchar
+            </Badge>
+          ) : (
+            speakers.map((speaker) => (
+              <Badge
+                key={speaker.id}
+                title={speaker.muted ? "Silenciada: no va a sonar" : "Suena acá"}
+                variant={speaker.muted ? "warning" : "secondary"}
+              >
+                {speaker.muted ? <VolumeX /> : <StatusDot tone="ok" />}
+                {speaker.label}
+              </Badge>
+            ))
+          )
+        }
+        title="Sonidos"
+      />
 
-        <ToggleGroup
-          type="single"
-          value={isOutputDevice ? "output" : "controller"}
-          variant="outline"
-          onValueChange={(value) => {
-            if (value && (value === "output") !== isOutputDevice) toggleOutputDevice();
-          }}
-        >
-          <ToggleGroupItem aria-label="Modo controlador" value="controller">
-            <Radio />
-            Controlador
-          </ToggleGroupItem>
-          <ToggleGroupItem aria-label="Modo salida de audio" value="output">
-            <Speaker />
-            Salida de audio
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
-
-      {/* Audio Controls - Output Mode Only */}
-      {isOutputDevice && (
-        <div className="flex flex-col items-stretch gap-3 rounded-lg border border-border px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+      {isOutput && (
+        <div className="mb-4 flex flex-col items-stretch gap-3 rounded-lg border border-border bg-card px-3.5 py-2.5 shadow-edge sm:flex-row sm:items-center sm:gap-4">
           <div className="flex flex-1 items-center gap-3">
-            <Volume2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Volume2 aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             <Slider
+              aria-label="Volumen de esta salida"
               className="flex-1"
               max={100}
               step={1}
               value={[volume]}
-              onValueChange={(value) => setVolume(value[0])}
+              onValueChange={([value]) => setVolume(value ?? volume)}
             />
-            <span className="min-w-[3ch] font-terminal text-sm text-muted-foreground tabular-nums">{volume}%</span>
+            <span className="w-10 text-right font-terminal text-meta text-muted-foreground tabular-nums">
+              {volume}%
+            </span>
           </div>
-          <Button size="sm" variant={isMuted ? "destructive" : "outline"} onClick={toggleMute}>
-            {isMuted ? <VolumeX /> : <Volume2 />}
-            {isMuted ? "Silenciado" : "Activo"}
+          <Button aria-pressed={muted} size="sm" variant={muted ? "destructive" : "outline"} onClick={toggleMute}>
+            {muted ? <VolumeX /> : <Volume2 />}
+            {muted ? "Silenciada" : "Sonando"}
           </Button>
         </div>
       )}
 
-      {/* Sound Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-        {SOUND_BUTTONS.map((button) => {
-          const Icon = button.icon;
-          const isPlaying = playingId === button.id;
-
-          return (
-            <Card
-              key={button.id}
-              className={`group relative cursor-pointer touch-manipulation border transition-all duration-200 hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-hidden active:scale-95 ${
-                isPlaying
-                  ? "border-primary bg-accent shadow-lg shadow-primary/20"
-                  : "border-border hover:border-muted-foreground/40"
-              } ${isMuted && isOutputDevice ? "cursor-not-allowed opacity-50" : ""}`}
-              onClick={() => playSound(button)}
-              onKeyDown={(e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  playSound(button);
-                }
-              }}
-              tabIndex={isMuted && isOutputDevice ? -1 : 0}
-              role="button"
-              aria-label={isOutputDevice ? `Play ${button.name}` : `Trigger ${button.name} remotely`}
-              aria-pressed={isPlaying}
-              aria-disabled={isMuted && isOutputDevice}
-            >
-              <CardContent className="flex flex-col items-center justify-center p-4 sm:p-6">
-                <div className="mb-2 transition-transform group-hover:scale-110 sm:mb-3">
-                  <Icon
-                    className={`h-8 w-8 transition-colors sm:h-10 sm:w-10 md:h-12 md:w-12 ${
-                      isPlaying ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                    }`}
-                  />
-                </div>
-                <div
-                  className={`line-clamp-2 text-center text-xs font-medium transition-colors sm:text-sm ${
-                    isPlaying ? "text-primary" : "text-foreground"
-                  }`}
-                >
-                  {button.name}
-                </div>
-
-                {/* Playing Indicator */}
-                {isPlaying && (
-                  <>
-                    <div className="absolute top-2 right-2 h-2 w-2 animate-ping rounded-full bg-primary" />
-                    <div className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />
-                    {!isOutputDevice && (
-                      <div className="pointer-events-none absolute inset-0 animate-pulse rounded-lg border-2 border-primary" />
-                    )}
-                  </>
-                )}
-
-                {/* Controller Mode Indicator */}
-                {!isOutputDevice && !isPlaying && (
-                  <div className="absolute top-1.5 right-1.5 rounded-full bg-muted p-0.5 sm:top-2 sm:right-2 sm:p-1">
-                    <Radio className="h-2.5 w-2.5 text-muted-foreground sm:h-3 sm:w-3" />
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+      <div className="mb-3 flex items-center gap-3">
+        <div className="relative w-full max-w-xs">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            ref={search}
+            aria-label="Buscar un sonido"
+            className="pr-8 pl-8"
+            enterKeyHint="go"
+            placeholder="Buscar sonido…"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && visible[0]) fire(visible[0]);
+              if (event.key === "Escape") event.currentTarget.blur();
+            }}
+          />
+          <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 pointer-coarse:hidden">/</Kbd>
+        </div>
+        <span className="font-terminal text-meta whitespace-nowrap text-muted-foreground tabular-nums">
+          {visible.length === BANK.length ? `${BANK.length} sonidos` : `${visible.length} de ${BANK.length}`}
+        </span>
       </div>
-    </div>
+
+      {visible.length === 0 ? (
+        <EmptyState
+          action={
+            <Button size="sm" variant="outline" onClick={() => setQuery("")}>
+              Ver todos
+            </Button>
+          }
+          compact
+          description="Probá con otra palabra."
+          icon={Search}
+          title={`Ningún sonido se llama «${query.trim()}»`}
+        />
+      ) : (
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
+          {visible.map((sound, index) => {
+            const Icon = sound.icon;
+            const playing = playingId === sound.id;
+
+            return (
+              <button
+                key={sound.id}
+                aria-label={isOutput ? `Reproducir ${sound.name}` : `Disparar ${sound.name} en las salidas`}
+                aria-pressed={playing}
+                className={cn(
+                  "group relative flex h-20 touch-manipulation flex-col items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-2 text-center shadow-edge transition-colors outline-none select-none hover:border-input hover:bg-raised focus-visible:ring-2 focus-visible:ring-ring/70 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 motion-reduce:active:scale-100",
+                  playing && "border-primary/60 bg-primary-surface hover:border-primary/60 hover:bg-primary-surface",
+                  sentId === sound.id && !playing && "border-input bg-raised"
+                )}
+                disabled={isOutput && muted}
+                type="button"
+                onClick={() => fire(sound)}
+              >
+                {index < KEYED_PADS && (
+                  <Kbd className="absolute top-1.5 left-1.5 pointer-coarse:hidden">{index + 1}</Kbd>
+                )}
+                {playing && <StatusDot className="absolute top-2 right-2" tone="brand" />}
+                <Icon
+                  className={cn(
+                    "size-5 text-muted-foreground transition-colors group-hover:text-foreground",
+                    playing && "text-primary group-hover:text-primary"
+                  )}
+                />
+                <span className={cn("line-clamp-2 text-meta leading-tight font-medium", playing && "text-primary")}>
+                  {sound.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </PageContainer>
   );
 }

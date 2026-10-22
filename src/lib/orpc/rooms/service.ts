@@ -2,11 +2,13 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { events, rooms, tracks, type RoomRow } from "../../db/schema";
-import { ROOM_PALETTE } from "../../rooms/palette";
+import { ROOM_PALETTE, roomColorFor } from "../../rooms/palette";
 import { cardsDeleted, structureChanged } from "../board-events";
 import { query, transaction } from "../db";
 import { Conflict, NotFound } from "../errors";
-import type { CreateRoomInput, Room } from "./schemas";
+import { opsPing, recordActivity } from "../ops";
+import { createAnnouncement } from "../staff-tasks/service";
+import type { CreateRoomInput, Room, RoomStatus } from "./schemas";
 
 const toRoom = (row: RoomRow): Room => ({
   id: row.id,
@@ -20,6 +22,8 @@ const toRoom = (row: RoomRow): Room => ({
   color: row.color,
   icon: row.icon,
   sortOrder: row.sortOrder,
+  status: row.status,
+  statusUpdatedAt: row.statusUpdatedAt?.toISOString() ?? null,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -65,7 +69,16 @@ export const listRooms = (openSpaceId: string) =>
   ).pipe(Effect.map((rows) => rows.map(toRoom)));
 
 /** Tell the boards once the change is committed, so their re-read sees it. */
-const announce = (room: Room) => structureChanged(room.openSpaceId).pipe(Effect.as(room));
+const announce = (room: Room) =>
+  Effect.gen(function* () {
+    yield* structureChanged(room.openSpaceId);
+    yield* opsPing(room.openSpaceId, "activity");
+
+    return room;
+  });
+
+const logRoom = (room: Room, verb: string, summary: string) =>
+  recordActivity({ eventId: room.openSpaceId, verb, entityType: "room", entityId: room.id, summary });
 
 /** New rooms go to the end of the board with a palette color unless told otherwise. */
 export const createRoom = (input: CreateRoomInput) =>
@@ -74,23 +87,33 @@ export const createRoom = (input: CreateRoomInput) =>
       yield* lockEvent(input.openSpaceId);
       yield* ensureNameFree(input.openSpaceId, input.name);
       const existing = yield* query((db) =>
-        db.select({ sortOrder: rooms.sortOrder }).from(rooms).where(eq(rooms.openSpaceId, input.openSpaceId))
+        db
+          .select({ id: rooms.id, color: rooms.color, sortOrder: rooms.sortOrder })
+          .from(rooms)
+          .where(eq(rooms.openSpaceId, input.openSpaceId))
       );
       const lastPosition = Math.max(-1, ...existing.map((room) => room.sortOrder));
+      // Rooms are told apart by colour on the board and the kiosk: take one no other room shows.
+      const shown = new Set(existing.map((room) => roomColorFor(room.id, room.color)));
+      const color =
+        ROOM_PALETTE.find((candidate) => !shown.has(candidate)) ?? ROOM_PALETTE[existing.length % ROOM_PALETTE.length];
 
-      return yield* query((db) =>
+      const room = yield* query((db) =>
         db
           .insert(rooms)
           .values({
             ...input,
             description: input.description || null,
             capacity: input.capacity || null,
-            color: input.color ?? ROOM_PALETTE[existing.length % ROOM_PALETTE.length],
+            color: input.color ?? color,
             icon: input.icon ?? null,
             sortOrder: input.sortOrder ?? lastPosition + 1,
           })
           .returning()
       ).pipe(Effect.flatMap(found));
+      yield* logRoom(room, "room.created", `agregó la sala ${room.name}`);
+
+      return room;
     })
   ).pipe(Effect.flatMap(announce));
 
@@ -104,7 +127,7 @@ export const updateRoom = (id: string, data: Partial<Omit<CreateRoomInput, "open
         yield* ensureNameFree(current.openSpaceId, data.name, id);
       }
 
-      return yield* query((db) =>
+      const room = yield* query((db) =>
         db
           .update(rooms)
           .set({
@@ -115,6 +138,17 @@ export const updateRoom = (id: string, data: Partial<Omit<CreateRoomInput, "open
           .where(eq(rooms.id, id))
           .returning()
       ).pipe(Effect.flatMap(found));
+      yield* logRoom(
+        room,
+        "room.updated",
+        data.name !== undefined && data.name !== current.name
+          ? `renombró la sala ${current.name} a ${room.name}`
+          : data.isActive === false
+            ? `desactivó la sala ${room.name}`
+            : `editó la sala ${room.name}`
+      );
+
+      return room;
     })
   ).pipe(Effect.flatMap(announce));
 
@@ -122,8 +156,19 @@ export const updateRoom = (id: string, data: Partial<Omit<CreateRoomInput, "open
 export const deleteRoom = (id: string) =>
   Effect.gen(function* () {
     const talks = yield* query((db) => db.select({ id: tracks.id }).from(tracks).where(eq(tracks.roomId, id)));
-    const deleted = yield* query((db) => db.delete(rooms).where(eq(rooms.id, id)).returning()).pipe(
-      Effect.flatMap(found)
+    const deleted = yield* transaction(
+      Effect.gen(function* () {
+        const room = yield* query((db) => db.delete(rooms).where(eq(rooms.id, id)).returning()).pipe(
+          Effect.flatMap(found)
+        );
+        yield* logRoom(
+          room,
+          "room.deleted",
+          `borró la sala ${room.name}${talks.length ? ` y sus ${talks.length} charlas` : ""}`
+        );
+
+        return room;
+      })
     );
     yield* cardsDeleted(
       deleted.openSpaceId,
@@ -159,4 +204,48 @@ export const reorderRooms = (openSpaceId: string, orderedIds: readonly string[])
     yield* structureChanged(openSpaceId);
 
     return { success: true as const };
+  });
+
+const STATUS_WORDS: Record<RoomStatus, string> = { open: "abierta", full: "llena", evacuate: "para evacuar" };
+
+/**
+ * A host marks their room open, full or to evacuate. Boards and kiosks re-read the rooms;
+ * the admin's live views get an ops ping. Evacuating tells every staff phone, urgently; the
+ * all-clear goes out calmly. The previous status is read under a lock, so two hosts tapping
+ * "Evacuar" at once send one announcement.
+ */
+export const setRoomStatus = (roomId: string, status: RoomStatus) =>
+  Effect.gen(function* () {
+    const { room, previous } = yield* transaction(
+      Effect.gen(function* () {
+        const [current] = yield* query((db) =>
+          db.select({ status: rooms.status }).from(rooms).where(eq(rooms.id, roomId)).for("update")
+        );
+        if (!current) return yield* Effect.fail(roomNotFound);
+        const [row] = yield* query((db) =>
+          db.update(rooms).set({ status, statusUpdatedAt: new Date() }).where(eq(rooms.id, roomId)).returning()
+        );
+        yield* recordActivity({
+          eventId: row.openSpaceId,
+          verb: "room.status",
+          entityType: "room",
+          entityId: row.id,
+          summary: `marcó ${row.name} como ${STATUS_WORDS[status]}`,
+        });
+        return { room: toRoom(row), previous: current.status };
+      })
+    );
+    yield* structureChanged(room.openSpaceId);
+    yield* opsPing(room.openSpaceId, "rooms");
+
+    if (status !== previous && (status === "evacuate" || previous === "evacuate")) {
+      yield* createAnnouncement({
+        eventId: room.openSpaceId,
+        urgent: status === "evacuate",
+        audience: "all",
+        body: status === "evacuate" ? `Evacuar ${room.name}` : `${room.name} vuelve a estar abierta`,
+      });
+    }
+
+    return room;
   });

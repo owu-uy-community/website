@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowUpRight, CalendarDays } from "lucide-react";
 
 import { landingFor } from "components/community-landings/registry";
+import { CommunityMark } from "components/shared/CommunityMark";
 import { getCommunityBySlug, listCommunityEvents } from "lib/tenant-server";
 
 function formatDate(date: Date): string {
@@ -27,9 +28,7 @@ export default async function CommunityHomePage({ params }: { params: Promise<{ 
     <main className="min-h-screen bg-[#18181b] px-6 py-16 text-white">
       <div className="mx-auto w-full max-w-3xl">
         <header className="flex items-center gap-4">
-          <span className="flex size-14 items-center justify-center rounded-xl bg-yellow-400 font-bold text-black">
-            {community.name.slice(0, 3).toUpperCase()}
-          </span>
+          <CommunityMark logoUrl={community.logoUrl} name={community.name} size={56} slug={community.slug} />
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight">{community.name}</h1>
             {community.description ? <p className="mt-1 text-zinc-400">{community.description}</p> : null}

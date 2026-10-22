@@ -19,6 +19,8 @@ import {
   type DeskStep,
   type FaceEvent,
   type InputEvent,
+  type Moderation,
+  type ModerationEvent,
   type RundownStep,
   type SceneId,
   type StageInput,
@@ -336,6 +338,7 @@ export const submitInput = (input: SubmitInput) =>
       value: saved.value,
       voter: saved.voter,
       createdAt: saved.createdAt.toISOString(),
+      moderation: saved.moderation,
       round: saved.round,
       mode: input.mode,
     };
@@ -362,10 +365,31 @@ export const getInputs = (round: string) =>
             value: row.value,
             voter: row.voter,
             createdAt: row.createdAt.toISOString(),
+            moderation: row.moderation,
           }))
         )
       )
     : Effect.succeed([]);
+
+/**
+ * Hide, pin or mark answered a question from the phones, and tell everyone following the round:
+ * the wall re-ranks, the phones drop what was hidden. Only questions are moderated, never votes.
+ */
+export const moderate = ({ inputId, moderation }: { inputId: string; moderation: Moderation }) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) =>
+      db
+        .update(owyStageInputs)
+        .set({ moderation })
+        .where(and(eq(owyStageInputs.id, inputId), eq(owyStageInputs.key, "question")))
+        .returning({ id: owyStageInputs.id, round: owyStageInputs.round, moderation: owyStageInputs.moderation })
+    );
+    if (!row) return yield* Effect.fail(new NotFound({ entity: "question", message: "Esa pregunta ya no existe" }));
+    const event: ModerationEvent = row;
+    yield* broadcast("moderation", event);
+
+    return event;
+  });
 
 // ---------------------------------------------------------------------------
 // Public reads for the data-driven scenes. External feeds degrade to empty.

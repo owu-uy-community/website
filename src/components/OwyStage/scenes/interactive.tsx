@@ -4,18 +4,17 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
+import { visibleQuestions } from "lib/owy-stage/questions";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Confetti } from "../effects";
-import { tally, useInputs, useInputsWithStatus, usePlayUrl } from "../inputs";
+import { REACTION_EMOJIS, tally, useInputs, useInputsWithStatus, usePlayUrl } from "../inputs";
 import { Ambient, BRAND, StageContext, useStageFrame } from "../Stage";
 import { QrCode } from "./parts";
 import { Header, splitList } from "./service";
 import { EmptyText, useBoard } from "./useful";
-
-export const REACTION_EMOJIS = ["👏", "🔥", "❤️", "😂", "🤯", "🧉"];
 
 /** The "scan to play" card every phone-driven scene shows in the same corner. */
 function JoinCard({ label = "Participá" }: { label?: string }) {
@@ -165,19 +164,14 @@ export function LiveWordCloud({ params, round }: SceneProps<"word-cloud">) {
 export function LiveQuestions({ params, round }: SceneProps<"live-questions">) {
   const { preview } = useContext(StageContext);
   const inputs = useInputs(round, !preview);
-  const votes = new Map<string, number>();
-  for (const input of inputs)
-    if (input.key.startsWith("up:")) votes.set(input.key.slice(3), (votes.get(input.key.slice(3)) ?? 0) + 1);
-  const questions = inputs
-    .filter((i) => i.key === "question")
-    .map((q) => ({ ...q, votes: votes.get(q.id) ?? 0 }))
-    .sort((a, b) => b.votes - a.votes || a.createdAt.localeCompare(b.createdAt))
-    .slice(0, 6);
+  // The desk moderates: hidden ones never show, pinned ones lead, answered ones dim.
+  const visible = visibleQuestions(inputs);
+  const questions = visible.slice(0, 6);
 
   return (
     <>
       <Ambient />
-      <Header eyebrow={`${inputs.filter((i) => i.key === "question").length} preguntas`} title={params.title} />
+      <Header eyebrow={`${visible.length} preguntas`} title={params.title} />
       <JoinCard label="Preguntá y votá" />
       <ul className="absolute top-[380px] left-[340px] flex w-[1060px] flex-col gap-[16px]">
         {questions.length === 0 && (
@@ -189,15 +183,16 @@ export function LiveQuestions({ params, round }: SceneProps<"live-questions">) {
           {questions.map((q, i) => (
             <m.li
               key={q.id}
-              animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center gap-7 px-7 py-5 ${i === 0 && q.votes > 0 ? "bg-[#F5BB03] text-black" : "bg-[#FBF5E7]/[0.07]"}`}
+              animate={{ opacity: q.moderation === "answered" ? 0.4 : 1, x: 0 }}
+              className={`flex items-center gap-7 px-7 py-5 ${q.moderation === "pinned" || (i === 0 && q.votes > 0 && !q.moderation) ? "bg-[#F5BB03] text-black" : "bg-[#FBF5E7]/[0.07]"}`}
               exit={{ opacity: 0 }}
               initial={{ opacity: 0, x: 30 }}
               layout
               transition={{ duration: 0.4, ease: EASE_OUT }}
             >
               <span className="flex h-[76px] w-[96px] shrink-0 flex-col items-center justify-center bg-black/20 text-[34px] leading-none font-extrabold tabular-nums">
-                ▲<span className="mt-1 text-[26px]">{q.votes}</span>
+                {q.moderation === "answered" ? "✓" : "▲"}
+                <span className="mt-1 text-[26px]">{q.votes}</span>
               </span>
               <span className="line-clamp-2 text-[36px] leading-[1.15] font-semibold text-balance">{q.value}</span>
             </m.li>

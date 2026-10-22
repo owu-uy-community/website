@@ -1,12 +1,12 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, countDistinct, eq } from "drizzle-orm";
 import { Effect } from "effect";
 
-import { communities, communityMembers, user, type CommunityRow } from "../../db/schema";
+import { communities, communityMembers, events, user, type CommunityRow } from "../../db/schema";
 import { query, transaction } from "../db";
 import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
 import { memberRole } from "../scope";
 import { CurrentUser } from "../services";
-import type { Community, CommunityMember, CommunityRole } from "./schemas";
+import type { Community, CommunityMember, CommunityOverview, CommunityRole } from "./schemas";
 
 const toCommunity = (row: CommunityRow): Community => ({
   id: row.id,
@@ -30,6 +30,30 @@ export const listCommunities = (includeInactive: boolean) =>
       .where(includeInactive ? undefined : eq(communities.isActive, true))
       .orderBy(asc(communities.name))
   ).pipe(Effect.map((rows) => rows.map(toCommunity)));
+
+/** Every community, active or not, with its member and event counts (the admin's list). */
+export const listCommunitiesForAdmin = () =>
+  query((db) =>
+    db
+      .select({
+        community: communities,
+        memberCount: countDistinct(communityMembers.id),
+        eventCount: countDistinct(events.id),
+      })
+      .from(communities)
+      .leftJoin(communityMembers, eq(communityMembers.communityId, communities.id))
+      .leftJoin(events, eq(events.communityId, communities.id))
+      .groupBy(communities.id)
+      .orderBy(asc(communities.name))
+  ).pipe(
+    Effect.map((rows) =>
+      rows.map((row): CommunityOverview => ({
+        ...toCommunity(row.community),
+        memberCount: row.memberCount,
+        eventCount: row.eventCount,
+      }))
+    )
+  );
 
 export const getCommunityBySlug = (slug: string) =>
   query((db) => db.select().from(communities).where(eq(communities.slug, slug))).pipe(
@@ -63,7 +87,10 @@ export const createCommunity = (input: { slug: string; name: string; description
     ).pipe(
       Effect.catchTag("UniqueViolation", () =>
         Effect.fail(
-          new Conflict({ reason: "slug_taken", message: `Ya existe una comunidad con el slug "${input.slug}"` })
+          new Conflict({
+            reason: "slug_taken",
+            message: `Ya hay una comunidad en /comunidad/${input.slug}: elegí otra dirección.`,
+          })
         )
       )
     );

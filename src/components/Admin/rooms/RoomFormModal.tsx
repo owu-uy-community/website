@@ -95,7 +95,7 @@ function ColorPicker({
         <button
           aria-label="Color automático"
           aria-pressed={value === null}
-          className="relative flex h-11 items-center gap-1.5 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-colors hover:text-foreground sm:h-9"
+          className="relative flex h-11 items-center gap-1.5 rounded-lg border border-border px-3 text-xs text-muted-foreground transition-colors hover:text-foreground pointer-fine:sm:h-9"
           type="button"
           onClick={() => onChange(null)}
         >
@@ -108,7 +108,7 @@ function ColorPicker({
             key={hex}
             aria-label={`Color ${hex}`}
             aria-pressed={value === hex}
-            className="relative h-11 w-11 rounded-lg transition-transform hover:scale-105 active:scale-95 sm:h-9 sm:w-9"
+            className="relative h-11 w-11 rounded-lg transition-transform hover:scale-105 active:scale-95 pointer-fine:sm:h-9 pointer-fine:sm:w-9"
             style={{ backgroundColor: hex }}
             type="button"
             onClick={() => onChange(hex)}
@@ -121,7 +121,7 @@ function ColorPicker({
           <Input
             aria-invalid={Boolean(error)}
             aria-label="Color personalizado (hex)"
-            className="h-11 w-28 rounded-lg font-terminal text-base sm:h-9 sm:text-xs"
+            className="h-11 w-28 rounded-lg font-terminal text-base sm:h-11 sm:text-base pointer-fine:sm:h-9 pointer-fine:sm:text-xs"
             placeholder="#a1ff00"
             value={value ?? ""}
             onChange={(event) => {
@@ -154,7 +154,7 @@ function IconPicker({
       <div className="flex flex-wrap items-center gap-2.5">
         <button
           aria-pressed={value === null}
-          className="relative flex h-11 items-center rounded-lg border border-border px-3 text-xs text-muted-foreground transition-colors hover:text-foreground sm:h-9"
+          className="relative flex h-11 items-center rounded-lg border border-border px-3 text-xs text-muted-foreground transition-colors hover:text-foreground pointer-fine:sm:h-9"
           type="button"
           onClick={() => onChange(null)}
         >
@@ -170,7 +170,7 @@ function IconPicker({
               aria-label={`Ícono ${key}`}
               aria-pressed={value === key}
               className={cn(
-                "relative flex h-11 w-11 items-center justify-center rounded-lg transition-[transform,background-color] hover:scale-105 active:scale-95 sm:h-9 sm:w-9",
+                "relative flex h-11 w-11 items-center justify-center rounded-lg transition-[transform,background-color] hover:scale-105 active:scale-95 pointer-fine:sm:h-9 pointer-fine:sm:w-9",
                 value === key ? "bg-muted" : "bg-muted/40"
               )}
               type="button"
@@ -280,8 +280,9 @@ export function RoomFormModal({
   const submit = handleSubmit((values) => {
     const payload = {
       name: values.name.trim(),
-      description: values.description.trim() || undefined,
-      capacity: values.capacity ? Number(values.capacity) : undefined,
+      // Sent even when empty: clearing a field in the editor has to clear it on the server.
+      description: values.description.trim(),
+      capacity: values.capacity ? Number(values.capacity) : null,
       hasTV: values.hasTV,
       hasWhiteboard: values.hasWhiteboard,
       isActive: values.isActive,
@@ -310,7 +311,7 @@ export function RoomFormModal({
         room && onDelete ? (
           <Button
             aria-label="Eliminar sala"
-            className="h-11 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive sm:h-10"
+            className="h-11 px-3 text-live-foreground hover:bg-live-surface hover:text-live-foreground pointer-fine:sm:h-8"
             disabled={isSaving}
             type="button"
             variant="ghost"

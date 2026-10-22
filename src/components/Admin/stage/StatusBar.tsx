@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Clock, ListOrdered, ListVideo, Smartphone } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { StatusDot } from "components/Admin/ui/status";
 import { useInputs } from "components/OwyStage/inputs";
 import { Separator } from "components/shared/ui/separator";
 import { INTERACTIVE_SCENES, SCENES, type StageState } from "lib/owy-stage/scenes";
@@ -31,8 +32,8 @@ function Clocks({ takenAt }: { takenAt: string }) {
   return (
     <>
       <span className="flex items-center gap-1.5">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        <span className="font-semibold tracking-wider text-red-300">AL AIRE</span>
+        <StatusDot tone="live" />
+        <span className="font-terminal font-semibold tracking-[0.12em] text-live-foreground uppercase">Al aire</span>
         <span className="font-terminal text-foreground tabular-nums">
           {takenAt ? clockText((now - Date.parse(takenAt)) / 1000) : "—"}
         </span>
@@ -88,7 +89,7 @@ function GuionState({ rundown }: { rundown: Rundown }) {
  * The desk's status line, like a switcher's: connection, time on air, who's
  * answering from their phones, what's waiting, the guion and the clock.
  */
-export function StatusBar({
+function StatusBarView({
   live,
   connected,
   queued,
@@ -102,9 +103,9 @@ export function StatusBar({
   const divider = <Separator className="h-3" orientation="vertical" />;
 
   return (
-    <footer className="flex h-7 shrink-0 items-center gap-3 overflow-hidden rounded-lg border bg-card/60 px-3 text-[11px] whitespace-nowrap text-muted-foreground">
+    <footer className="flex h-7 shrink-0 items-center gap-3 overflow-hidden rounded-lg border bg-card px-3 text-2xs whitespace-nowrap text-muted-foreground">
       <span className="flex items-center gap-1.5">
-        <span className={cn("h-1.5 w-1.5 rounded-full", connected ? "bg-green-500" : "animate-pulse bg-amber-400")} />
+        <StatusDot pulse={!connected} tone={connected ? "ok" : "warn"} />
         {connected ? "Conectado" : "Reconectando…"}
       </span>
       {divider}
@@ -127,3 +128,5 @@ export function StatusBar({
     </footer>
   );
 }
+
+export const StatusBar = memo(StatusBarView);

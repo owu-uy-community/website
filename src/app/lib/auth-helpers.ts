@@ -5,7 +5,9 @@ import { auth } from "./auth";
 /**
  * Validates that the user is authenticated and has admin role.
  * Redirects to /login if not authenticated.
- * Redirects to / if user is not an admin.
+ * Redirects anyone else to the admin's front door, which sends community staff to their own day
+ * (a shared link to a site-staff page used to drop them on the public home, out of the admin and,
+ * installed, out of the app) and everyone else to the site.
  *
  * @returns The validated session with admin user
  */
@@ -21,7 +23,7 @@ export async function requireAdmin() {
 
   // Check if user has admin role
   if (session.user.role !== "admin") {
-    redirect("/");
+    redirect("/admin");
   }
 
   return session;

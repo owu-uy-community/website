@@ -6,6 +6,7 @@ import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import { AgendaSurface } from "components/displays/AgendaSurface";
 import { EventAgenda } from "components/displays/EventAgenda";
 import { LiveAgenda } from "components/displays/LiveAgenda";
+import { CommunityMark } from "components/shared/CommunityMark";
 import { caller } from "lib/orpc/server";
 import { getEventBySlugs } from "lib/tenant-server";
 
@@ -73,9 +74,7 @@ export default async function EventOpenSpacePage({ params }: { params: Params })
             className="inline-flex items-center gap-2 text-sm text-zinc-400 transition-colors hover:text-white"
             href={`/comunidad/${community.slug}`}
           >
-            <span className="flex size-6 items-center justify-center rounded bg-yellow-400 text-[10px] font-extrabold text-black">
-              {community.name.slice(0, 3).toUpperCase()}
-            </span>
+            <CommunityMark logoUrl={community.logoUrl} name={community.name} size={28} slug={community.slug} />
             {community.name}
           </Link>
 

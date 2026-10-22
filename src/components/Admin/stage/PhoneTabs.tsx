@@ -43,10 +43,7 @@ export function PhoneTabs({
   };
 
   return (
-    <nav
-      aria-label="Secciones del desk"
-      className="shrink-0 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
-    >
+    <nav aria-label="Secciones del desk" className="shrink-0 border-t bg-background pb-[env(safe-area-inset-bottom)]">
       <div className="grid grid-cols-4 px-[env(safe-area-inset-left)]">
         {TABS.map(([id, label, Icon]) => {
           const active = tab === id;

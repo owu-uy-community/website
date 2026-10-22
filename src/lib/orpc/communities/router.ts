@@ -7,6 +7,7 @@ import {
   AddCommunityMemberSchema,
   CommunityIdSchema,
   CommunityMemberSchema,
+  CommunityOverviewSchema,
   CommunitySchema,
   CreateCommunitySchema,
   GetCommunityBySlugSchema,
@@ -35,6 +36,13 @@ export const communitiesRouter = {
       const session = yield* Effect.promise(() => context.getSession());
 
       return yield* Communities.listCommunities(input?.includeInactive === true && session?.user.role === "admin");
+    }),
+
+  listForAdmin: staff
+    .meta(docs("Every community, active or not, with its member and event counts (site staff)"))
+    .output(z.array(CommunityOverviewSchema))
+    .effect(function* () {
+      return yield* Communities.listCommunitiesForAdmin();
     }),
 
   getBySlug: pub

@@ -103,7 +103,9 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
       className={cn(
         "group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50",
         "has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:border [&>*]:data-[slot=field]:p-4",
-        "has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/10",
+        // A choice card lights up when its control is on. Keyed on aria-checked, not data-state: every menu,
+        // tooltip and tab flips data-state, and a :has() on it made the browser restyle the whole page each time.
+        "has-[[aria-checked=true]]:border-primary has-[[aria-checked=true]]:bg-primary/10",
         className
       )}
       {...props}

@@ -2,6 +2,19 @@ import * as z from "zod";
 
 const slug = z.string().regex(/^[a-z0-9-]+$/, "Usá minúsculas, números y guiones");
 
+/** An IANA zone the runtime knows ("America/Montevideo"): the event's clock is read in it everywhere. */
+const timezone = z
+  .string()
+  .min(1)
+  .refine((zone) => {
+    try {
+      Intl.DateTimeFormat("en-US", { timeZone: zone });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Esa zona horaria no existe");
+
 /**
  * The editable fields of an event, with no defaults: an update must only
  * touch what it was sent (zod 4's `.partial()` keeps `.default()`s, which is
@@ -15,9 +28,11 @@ const EventFields = z.object({
   isActive: z.boolean(),
   autoHighlightEnabled: z.boolean(),
   slug,
-  timezone: z.string().min(1),
-  eventbriteEventId: z.string().nullable(),
-  venueMapUrl: z.url().nullable(),
+  timezone,
+  /** Goes into Eventbrite API paths, so digits only ("" clears it, like null). */
+  eventbriteEventId: z.string().regex(/^\d*$/, "El número de evento de Eventbrite son solo dígitos").nullable(),
+  /** A link on the public page: web addresses only, never `javascript:`. */
+  venueMapUrl: z.url({ protocol: /^https?$/, error: "Usá un link web (https://…)" }).nullable(),
 });
 
 /** What the API returns. Shapes only — input rules don't apply to rows already stored. */
@@ -43,9 +58,9 @@ export const CreateOpenSpaceSchema = EventFields.extend({
   isActive: z.boolean().default(true),
   autoHighlightEnabled: z.boolean().default(false),
   slug: slug.optional(),
-  timezone: z.string().min(1).optional(),
-  eventbriteEventId: z.string().nullable().optional(),
-  venueMapUrl: z.url().nullable().optional(),
+  timezone: timezone.optional(),
+  eventbriteEventId: EventFields.shape.eventbriteEventId.optional(),
+  venueMapUrl: EventFields.shape.venueMapUrl.optional(),
 });
 
 export const UpdateOpenSpaceInputSchema = z.object({

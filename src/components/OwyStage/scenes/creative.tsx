@@ -3,6 +3,7 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
+import { poppins } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { SPONSORS_2026 } from "app/conf/components/Sponsors";
 import { TANGRAM_PIECES } from "app/conf/components/TangramGallery";
@@ -235,7 +236,7 @@ export function Ideas({ eventId }: SceneProps<"ideas">) {
     const list = ideas.current;
     for (const idea of list) {
       if (!idea.w) {
-        ctx.font = `700 ${idea.size}px Poppins, sans-serif`;
+        ctx.font = `700 ${idea.size}px ${poppins.style.fontFamily}, sans-serif`;
         idea.w = ctx.measureText(idea.note.title).width + idea.size * 1.2;
       }
     }
@@ -269,7 +270,7 @@ export function Ideas({ eventId }: SceneProps<"ideas">) {
       }
 
       const color = roomColorFor(idea.note.roomId, idea.note.roomColor);
-      ctx.font = `700 ${idea.size}px Poppins, sans-serif`;
+      ctx.font = `700 ${idea.size}px ${poppins.style.fontFamily}, sans-serif`;
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(idea.x, idea.y, idea.size * 0.32, 0, Math.PI * 2);

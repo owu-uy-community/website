@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { memo, useEffect, useState, type ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   Keyboard,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { MicroLabel } from "components/Admin/ui/page";
 import { Button } from "components/shared/ui/button";
 import { ButtonGroup } from "components/shared/ui/button-group";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "components/shared/ui/input-group";
@@ -23,7 +24,9 @@ import { toast } from "components/shared/ui/toast-utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "components/shared/ui/tooltip";
 import { useFullscreen } from "hooks/useFullscreen";
 import { orpc } from "lib/orpc";
+import type { EffectEvent } from "lib/owy-stage/scenes";
 
+import { haptic } from "./haptics";
 import { RundownMiniPlayer, type Rundown } from "./Rundown";
 
 const EMOJIS = ["👏", "🎉", "🧉", "❤️", "🔥", "😂", "🙌", "🚀"];
@@ -39,51 +42,41 @@ function Tip({ label, children }: { label: string; children: ReactNode }) {
 
 const fxButton = "h-9 w-9 border border-input pointer-coarse:h-10 pointer-coarse:w-10";
 
-/** One-shot overlays on whatever is on air; they clear themselves. */
-function Effects() {
-  const [caption, setCaption] = useState("");
-  const [captionOpen, setCaptionOpen] = useState(false);
-  const fire = useMutation(
+/** The three one-tap overlays; the emoji rain and the lower third take a choice first. */
+const QUICK = [
+  { effect: "confetti", label: "Confetti", icon: PartyPopper },
+  { effect: "flash", label: "Flash", icon: Zap },
+  { effect: "owy-happy", label: "Owy feliz", icon: Smile },
+] as const;
+
+const useFire = () =>
+  useMutation(
     orpc.owyStage.fireEffect.mutationOptions({
       onError: (error) => toast.error("No se pudo disparar el efecto", error.message),
     })
   );
 
+/** One-shot overlays on whatever is on air; they clear themselves. Icons with tooltips, for a mouse. */
+function Effects() {
+  const [caption, setCaption] = useState("");
+  const [captionOpen, setCaptionOpen] = useState(false);
+  const fire = useFire();
+
   return (
     <ButtonGroup aria-label="Efectos sobre lo que está al aire">
-      <Tip label="Confetti">
-        <Button
-          aria-label="Confetti"
-          className={fxButton}
-          size="icon"
-          variant="ghost"
-          onClick={() => fire.mutate({ effect: "confetti" })}
-        >
-          <PartyPopper className="h-4 w-4" />
-        </Button>
-      </Tip>
-      <Tip label="Flash">
-        <Button
-          aria-label="Flash"
-          className={fxButton}
-          size="icon"
-          variant="ghost"
-          onClick={() => fire.mutate({ effect: "flash" })}
-        >
-          <Zap className="h-4 w-4" />
-        </Button>
-      </Tip>
-      <Tip label="Owy feliz">
-        <Button
-          aria-label="Owy feliz"
-          className={fxButton}
-          size="icon"
-          variant="ghost"
-          onClick={() => fire.mutate({ effect: "owy-happy" })}
-        >
-          <Smile className="h-4 w-4" />
-        </Button>
-      </Tip>
+      {QUICK.map(({ effect, label, icon: Icon }) => (
+        <Tip key={effect} label={label}>
+          <Button
+            aria-label={label}
+            className={fxButton}
+            size="icon"
+            variant="ghost"
+            onClick={() => fire.mutate({ effect })}
+          >
+            <Icon className="h-4 w-4" />
+          </Button>
+        </Tip>
+      ))}
       <Popover>
         <Tip label="Lluvia de emojis">
           <PopoverTrigger asChild>
@@ -150,18 +143,95 @@ function Effects() {
 }
 
 /**
- * The desk's controls in the admin header: connection, the guion's player,
- * effects, the settings sheet, fullscreen (the tablet gains the browser's
- * bars back) and the keyboard help.
+ * The same overlays for a finger (a tooltip never opens there) or a narrow
+ * header: each one named, behind the «Efectos» button so a stray tap in the
+ * header can't put anything on air, and saying plainly that they go on air.
  */
-export function StageToolbar({
-  connected,
+function EffectsPanel() {
+  const [caption, setCaption] = useState("");
+  const fire = useFire();
+  const go = (event: EffectEvent) => {
+    fire.mutate(event);
+    haptic(12);
+  };
+
+  return (
+    <div className="w-72 space-y-3">
+      <p className="flex items-center gap-1.5 font-terminal text-3xs font-semibold tracking-[0.12em] text-live-foreground uppercase">
+        <span className="size-1.5 rounded-full bg-live" /> Salen al aire al tocarlos
+      </p>
+      <div className="grid grid-cols-3 gap-1.5">
+        {QUICK.map(({ effect, label, icon: Icon }) => (
+          <Button
+            key={effect}
+            className="h-auto flex-col gap-1 py-2.5 text-meta"
+            variant="outline"
+            onClick={() => go({ effect })}
+          >
+            <Icon className="h-5 w-5" />
+            {label}
+          </Button>
+        ))}
+      </div>
+      <div className="space-y-1.5">
+        <MicroLabel>Lluvia de emojis</MicroLabel>
+        <div className="grid grid-cols-4 gap-1">
+          {EMOJIS.map((emoji) => (
+            <Button
+              key={emoji}
+              aria-label={`Lluvia de ${emoji}`}
+              className="h-11 w-full text-xl"
+              size="icon"
+              variant="ghost"
+              onClick={() => go({ effect: "emoji", payload: { text: emoji } })}
+            >
+              {emoji}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <form
+        className="space-y-1.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!caption.trim()) return;
+          go({ effect: "caption", payload: { text: caption.trim() } });
+          setCaption("");
+        }}
+      >
+        <MicroLabel>Lower third</MicroLabel>
+        <InputGroup className="pointer-coarse:h-11">
+          <InputGroupInput
+            aria-label="Texto del lower third"
+            className="pointer-coarse:text-base"
+            enterKeyHint="send"
+            maxLength={200}
+            placeholder="Texto abajo, sobre lo que está al aire…"
+            value={caption}
+            onChange={(event) => setCaption(event.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton size="sm" type="submit" variant="secondary">
+              Mostrar
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </form>
+    </div>
+  );
+}
+
+/**
+ * The desk's controls in the admin header: the guion's player, effects, the
+ * settings sheet, fullscreen (the tablet gains the browser's bars back) and
+ * the keyboard help. The connection is the shell's own pill, next to these.
+ */
+function StageToolbarView({
   rundown,
   onGuion,
   onSettings,
   onHelp,
 }: {
-  connected: boolean;
   rundown: Rundown;
   onGuion: () => void;
   onSettings: () => void;
@@ -175,36 +245,21 @@ export function StageToolbar({
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <Tip
-        label={
-          connected ? "Realtime conectado: los cambios llegan a la pared al instante" : "Sin realtime: reconectando…"
-        }
-      >
-        <span className="flex h-9 shrink-0 items-center gap-2 rounded-md border border-input px-2.5 text-xs text-muted-foreground">
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full",
-              connected ? "bg-green-500 shadow-[0_0_0_3px_rgba(34,197,94,.18)]" : "animate-pulse bg-red-500"
-            )}
-          />
-          <span className="hidden 2xl:inline">{connected ? "Conectado" : "Sin conexión"}</span>
-        </span>
-      </Tip>
       <RundownMiniPlayer rundown={rundown} onOpen={onGuion} />
-      <div className="hidden lg:flex">
+      <div className="hidden lg:pointer-fine:flex">
         <Effects />
       </div>
-      {/* Narrow screens: the same effects behind one button, so the header never overflows. */}
+      {/* Touch screens and narrow headers: the same effects, named, behind one button. */}
       <Popover>
         <Tip label="Efectos">
           <PopoverTrigger asChild>
-            <Button aria-label="Efectos" className={cn(fxButton, "lg:hidden")} size="icon" variant="ghost">
+            <Button aria-label="Efectos" className={cn(fxButton, "lg:pointer-fine:hidden")} size="icon" variant="ghost">
               <Sparkles className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
         </Tip>
-        <PopoverContent align="end" className="w-auto p-1.5">
-          <Effects />
+        <PopoverContent align="end" className="w-auto p-3">
+          <EffectsPanel />
         </PopoverContent>
       </Popover>
       <Tip label="Salida y ajustes (OBS, evento, Spotify, simulador)">
@@ -239,3 +294,5 @@ export function StageToolbar({
     </div>
   );
 }
+
+export const StageToolbar = memo(StageToolbarView);

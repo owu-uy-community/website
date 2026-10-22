@@ -71,7 +71,7 @@ function RoomRow({
     >
       <button
         aria-label={`Mover ${room.name} (flechas arriba/abajo)`}
-        className="flex h-10 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden active:cursor-grabbing"
+        className="flex h-10 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-hidden active:cursor-grabbing pointer-coarse:size-11"
         type="button"
         onKeyDown={(event) => {
           if (event.key === "ArrowUp" || event.key === "ArrowDown") {
@@ -91,6 +91,8 @@ function RoomRow({
         </p>
         <p className="truncate text-xs text-muted-foreground">
           {[
+            // What the switch did, on screen: its title never shows on a touchscreen.
+            room.isActive ? null : "oculta en el kiosco",
             room.capacity ? `${room.capacity} pers.` : null,
             room.hasTV ? "TV" : null,
             room.hasWhiteboard ? "Pizarra" : null,

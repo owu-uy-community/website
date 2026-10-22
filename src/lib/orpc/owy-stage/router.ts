@@ -19,6 +19,8 @@ import {
   FireEffectSchema,
   GetInputsSchema,
   GetPulseSchema,
+  ModerateSchema,
+  ModerationEventSchema,
   SaveDeskSchema,
   SaveRundownSchema,
   SetFaceSchema,
@@ -163,6 +165,14 @@ export const owyStageRouter = {
     .output(z.array(StageInputSchema))
     .effect(function* ({ input }) {
       return yield* Stage.getInputs(input.round);
+    }),
+
+  moderate: staff
+    .meta(docs("Hide, pin or mark answered a question from the phones"))
+    .input(ModerateSchema)
+    .output(ModerationEventSchema)
+    .effect(function* ({ input }) {
+      return yield* Stage.moderate(input);
     }),
 
   nowPlaying: staff

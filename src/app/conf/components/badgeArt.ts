@@ -1,3 +1,5 @@
+import { poppins } from "app/fonts";
+
 import { SPONSORS_2026 } from "./Sponsors";
 
 /*
@@ -13,7 +15,7 @@ const INK = "#0B0B0B";
 const CREAM = "#FBF5E7";
 const YELLOW = "#F5BB03";
 const BLUE = "#0162C8";
-const FONT = "Poppins, sans-serif";
+const FONT = `${poppins.style.fontFamily}, sans-serif`;
 /* The name is written by hand on the printed badge: a marker on the white panel */
 const HAND = '"Permanent Marker", cursive';
 const HAND_URL = "/fonts/permanent-marker.ttf";
@@ -68,7 +70,9 @@ async function load(): Promise<BadgeArt> {
   // Only the badge uses the marker, so it's loaded here rather than with the site's fonts
   const hand = new FontFace("Permanent Marker", `url(${HAND_URL})`);
   document.fonts.add(await hand.load());
-  await Promise.all(["800", "700", "500"].map((weight) => document.fonts.load(`${weight} 64px Poppins`)));
+  await Promise.all(
+    ["800", "700", "500"].map((weight) => document.fonts.load(`${weight} 64px ${poppins.style.fontFamily}`))
+  );
   const [sticker, owu, ...sponsors] = await Promise.all([
     loadImage(STICKER),
     loadImage(OWU_STICKER),

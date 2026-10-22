@@ -21,8 +21,8 @@ const SEP = " | ";
 const TIME = /^(\d{1,2}:\d{2}(?:\s*[-–]\s*\d{1,2}:\d{2})?)(?:\s+(.*))?$/;
 const newId = () => Math.random().toString(36).slice(2, 9);
 
-/** The keys most scenes share, in the operator's language; anything else is spelled out from the key. */
-const PARAM_LABELS: Record<string, string> = {
+/** Every scene param, in the operator's language (a test keeps it complete as scenes are added). */
+export const PARAM_LABELS: Record<string, string> = {
   title: "Título",
   subtitle: "Subtítulo",
   eyebrow: "Antetítulo",
@@ -39,6 +39,9 @@ const PARAM_LABELS: Record<string, string> = {
   rounds: "Rondas",
   options: "Opciones",
   time: "Hora",
+  end: "Fin",
+  until: "Hasta",
+  date: "Fecha",
   label: "Etiqueta",
   name: "Nombre",
   names: "Nombres",
@@ -46,28 +49,118 @@ const PARAM_LABELS: Record<string, string> = {
   prompt: "Consigna",
   prompts: "Consignas",
   venue: "Lugar",
+  room: "Sala",
   detail: "Detalle",
   offer: "Promo",
   message: "Mensaje",
   note: "Nota",
   network: "Red",
   password: "Contraseña",
+  wifi: "Wi-Fi",
   contact: "Contacto",
   code: "Código",
   address: "Dirección",
   talk: "Charla",
+  talks: "Charlas",
+  speaker: "Speaker",
+  company: "Empresa",
+  role: "Rol",
+  bio: "Bio",
   left: "Izquierda",
   right: "Derecha",
   song: "Tema",
   artist: "Artista",
   playlist: "Playlist",
+  spotify: "Tomar el tema de Spotify",
   a: "Opción A",
   b: "Opción B",
   c: "Opción C",
   d: "Opción D",
+  winner: "Ganador",
+  hold: "Segundos por aviso",
+  warn: "Aviso (min antes del final)",
+  state: "Luz (verde, amarillo o rojo)",
+  green: "Texto en verde",
+  yellow: "Texto en amarillo",
+  red: "Texto en rojo",
+  layout: "Cámaras",
+  label1: "Cámara 1",
+  label2: "Cámara 2",
+  label3: "Cámara 3",
+  captions: "Subtítulos",
+  caption: "Leyenda",
+  body: "Texto",
+  step1: "Paso 1",
+  step2: "Paso 2",
+  step3: "Paso 3",
+  step4: "Paso 4",
+  steps: "Pasos",
+  photoNote: "Aviso de fotos",
+  exits: "Salidas",
+  meetingPoint: "Punto de encuentro",
+  phone: "Teléfono",
+  bus: "Ómnibus",
+  taxi: "Taxi",
+  bike: "Bici",
+  mapUrl: "URL del mapa",
+  where: "Dónde",
+  h1: "Hora 1",
+  t1: "Charla 1",
+  s1: "Speaker 1",
+  h2: "Hora 2",
+  t2: "Charla 2",
+  s2: "Speaker 2",
+  h3: "Hora 3",
+  t3: "Charla 3",
+  s3: "Speaker 3",
+  l1: "Texto 1",
+  l2: "Texto 2",
+  l3: "Texto 3",
+  n1: "Número 1",
+  n2: "Número 2",
+  n3: "Número 3",
+  secondsPerSponsor: "Segundos por sponsor",
+  secondsPerPhoto: "Segundos por foto",
+  author: "Autor",
+  tagline: "Bajada",
+  sponsor: "Sponsor",
+  statement: "Afirmación",
+  statements: "Afirmaciones",
+  max: "Votos por persona",
+  opening: "Frase de arranque",
+  x: "Eje horizontal",
+  y: "Eje vertical",
+  groups: "Grupos",
+  instruction: "Instrucción",
+  prize: "Premio",
+  phrase: "Frase",
+  phrases: "Frases",
+  pairs: "Pares",
+  north: "Norte",
+  south: "Sur",
+  traits: "Casilleros",
+  bpm: "Pulsos por minuto",
+  step: "Aceleración por ronda",
+  beats: "Tiempos por ronda",
+  moves: "Movimientos",
+  word: "Palabra",
+  words: "Palabras",
+  guesses: "Intentos",
+  loop: "Repetir",
+  heads: "Cara",
+  tails: "Cruz",
+  scoreA: "Puntos A",
+  scoreB: "Puntos B",
+  votes: "Votos",
+  rule: "Regla",
+  seed: "Arranque (azar o centro)",
+  photo: "Foto",
+  accounts: "Cuentas",
+  law: "Ley",
 };
 
-const labelFor = (key: string) =>
+/** The label of a scene param; a key nobody named yet is spelled out from itself. */
+export const labelFor = (key: string) =>
   PARAM_LABELS[key] ?? key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, " $1");
 
 type Row = { id: string; time: string; title: string; detail: string };
@@ -212,17 +305,18 @@ function ItemRow({
       whileDrag={{ scale: 1.01, zIndex: 20 }}
       onDragEnd={onSettle}
     >
-      <button
+      <Button
         aria-label="Arrastrar para reordenar"
-        className="cursor-grab touch-none px-0.5 py-1.5 text-muted-foreground hover:text-foreground active:cursor-grabbing"
-        type="button"
+        className="h-8 w-5 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+        size="icon"
+        variant="ghost"
         onPointerDown={(event) => controls.start(event)}
       >
         <GripVertical className="h-4 w-4" />
-      </button>
+      </Button>
       {timed && (
         <Input
-          className="h-10 w-[112px] px-2 text-base tabular-nums sm:h-8 sm:text-xs"
+          className="h-10 w-[112px] px-2 text-base tabular-nums sm:h-8 sm:text-xs pointer-coarse:sm:h-10 pointer-coarse:sm:text-base"
           placeholder="17:00"
           value={row.time}
           onChange={(event) => onChange("time", event.target.value)}
@@ -230,7 +324,7 @@ function ItemRow({
       )}
       <Input
         autoFocus={autoFocus}
-        className="h-10 min-w-0 flex-1 text-base sm:h-8 sm:text-xs"
+        className="h-10 min-w-0 flex-1 text-base sm:h-8 sm:text-xs pointer-coarse:sm:h-10 pointer-coarse:sm:text-base"
         placeholder="Texto del ítem"
         value={row.title}
         onChange={(event) => onChange("title", event.target.value)}
@@ -240,17 +334,18 @@ function ItemRow({
           onEnter();
         }}
       />
-      <button
+      <Button
         aria-label="Quitar ítem"
-        className="px-1 py-1.5 text-muted-foreground hover:text-destructive"
-        type="button"
+        className="h-8 w-6 text-muted-foreground hover:text-destructive"
+        size="icon"
+        variant="ghost"
         onClick={onRemove}
       >
         <X className="h-4 w-4" />
-      </button>
+      </Button>
       {detailed && (
         <Input
-          className="h-10 w-full text-base text-muted-foreground sm:h-8 sm:text-xs"
+          className="h-10 w-full text-base text-muted-foreground sm:h-8 sm:text-xs pointer-coarse:sm:h-10 pointer-coarse:sm:text-base"
           placeholder="Detalle (segunda línea)"
           value={row.detail}
           onChange={(event) => onChange("detail", event.target.value)}
@@ -319,11 +414,16 @@ export function SceneParams({
 
   // Follow what is on air / in preview (a take, another device, the bot)
   // unless the operator is mid-edit; identical params change nothing, so our
-  // own echo never steals focus.
+  // own echo never steals focus. The echo comes back validated (trimmed), so
+  // it is compared with the draft validated too: «Hola » keeps its space while
+  // the next word is typed.
   useEffect(() => {
     if (dirty.current) return;
     const next = readParams(scene, params);
-    if (JSON.stringify(next) === JSON.stringify(draftRef.current)) return;
+    const incoming = JSON.stringify(next);
+    if (incoming === JSON.stringify(draftRef.current)) return;
+    const sent = SCENES[scene].params.safeParse(draftRef.current);
+    if (sent.success && incoming === JSON.stringify(sent.data)) return;
     setDraft(next);
     setStamp((value) => value + 1);
   }, [scene, params]);
@@ -421,7 +521,7 @@ export function SceneParams({
               {long ? (
                 <Textarea
                   aria-invalid={Boolean(error)}
-                  className="min-h-[72px] text-base sm:text-sm"
+                  className="min-h-[72px] text-base sm:text-sm pointer-coarse:sm:text-base"
                   id={id}
                   value={text}
                   onChange={(event) => set(key, event.target.value)}
@@ -430,7 +530,7 @@ export function SceneParams({
               ) : (
                 <Input
                   aria-invalid={Boolean(error)}
-                  className="h-10 sm:h-9"
+                  className="h-10 sm:h-9 pointer-coarse:sm:h-10 pointer-coarse:sm:text-base"
                   id={id}
                   max={bounds.max}
                   min={bounds.min}
@@ -459,7 +559,7 @@ export function SceneParams({
           </>
         ) : (
           <>
-            <Check className="h-3.5 w-3.5 text-green-500" /> Lo que escribís sale al aire solo
+            <Check className="h-3.5 w-3.5 text-success" /> Lo que escribís sale al aire solo
           </>
         )}
         {changed && (

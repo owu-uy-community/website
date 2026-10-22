@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { TalkSave } from "../components/Meetups/OpenSpace/organisms/talk-form/types";
 import type { StickyNote } from "./useOpenSpaceNotesORPC";
 import { orpc } from "../lib/orpc";
 
@@ -71,12 +72,12 @@ export function useNoteManagement({
           missingResources.push("TV");
         }
         if (originalNote.needsWhiteboard && !targetRoomData.hasWhiteboard) {
-          missingResources.push("Pizarra");
+          missingResources.push("pizarra");
         }
 
         if (missingResources.length > 0) {
           resourceIssues.push(
-            `"${originalNote.title}" requiere ${missingResources.join(" y ")} pero la sala "${changedNote.room}" no lo tiene`
+            `"${originalNote.title}" necesita ${missingResources.join(" y ")} pero la sala "${changedNote.room}" no tiene`
           );
         }
       }
@@ -146,7 +147,7 @@ export function useNoteManagement({
    */
   const handleSaveNote = useCallback(
     async (
-      noteData: Partial<StickyNote> & { skipResourceValidation?: boolean },
+      noteData: TalkSave,
       editingNote: StickyNote | null,
       rooms: string[],
       timeSlots: string[],
@@ -172,7 +173,7 @@ export function useNoteManagement({
       } else {
         // Create new
         await createNote({
-          title: noteData.title || "New Session",
+          title: noteData.title || "Charla sin título",
           speaker: noteData.speaker,
           description: noteData.description,
           needsTV: noteData.needsTV || false,
@@ -186,6 +187,7 @@ export function useNoteManagement({
           // field, so the confirmation from the resource warning would be
           // dropped here and the server would reject the talk again.
           skipResourceValidation: noteData.skipResourceValidation ?? false,
+          origin: noteData.origin,
         });
       }
     },

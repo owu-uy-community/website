@@ -1,353 +1,525 @@
 "use client";
 
-import * as React from "react";
-import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { Search, UserCheck, UserX, Users, RefreshCw, Mail, Ticket, Calendar, Loader2 } from "lucide-react";
-import { useEventbriteAttendees } from "hooks/useEventbriteAttendees";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
-import { Input } from "components/shared/ui/input";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, RefreshCw, ScanLine, ScanQrCode, Search, Settings, Ticket, X } from "lucide-react";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { parseAsArrayOf, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryStates } from "nuqs";
+
+import { cn } from "app/lib/utils";
+import { ArrivalsFeed } from "components/Admin/attendees/ArrivalsFeed";
+import { AttendeesTable, NoAttendees } from "components/Admin/attendees/AttendeesTable";
+import { DoorsPanel } from "components/Admin/attendees/DoorsPanel";
+import { FacetFilter } from "components/Admin/attendees/FacetFilter";
+import { downloadCsv } from "components/Admin/attendees/helpers";
+import { KpiStrip } from "components/Admin/attendees/KpiStrip";
+import { RafflesPanel } from "components/Admin/attendees/RafflesPanel";
+import { useAttendeeSync } from "components/Admin/attendees/use-attendee-sync";
+import { useActiveTabInView } from "components/Admin/comms/PageTabs";
+import { Notice } from "components/Admin/panel";
+import { useCommands } from "components/Admin/shell/commands";
+import { useShortcuts } from "components/Admin/shell/shortcuts";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { EmptyState, ErrorState } from "components/Admin/ui/states";
+import { StatusDot } from "components/Admin/ui/status";
+import { useSwipeTabs } from "components/Admin/ui/swipe";
+import { formatRelative, useNow } from "components/Admin/ui/time";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Skeleton } from "components/shared/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "components/shared/ui/avatar";
-import type { Attendee } from "lib/orpc/eventbrite/schemas";
-import { getGravatarUrl } from "lib/gravatar";
-import { cn } from "app/lib/utils";
+import { Input } from "components/shared/ui/input";
+import { Kbd } from "components/shared/ui/kbd";
+import { toast } from "components/shared/ui/toast-utils";
+import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { orpc } from "lib/orpc";
+import type { AttendeeSort, Presence, SyncState } from "lib/orpc/attendees/schemas";
+import { eventChannel } from "lib/realtime/channels";
 
-function AttendeesContent() {
-  const searchParams = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "checked_in" | "not_checked_in">("all");
+const PAGE_SIZE = 50;
 
-  // Ref for intersection observer
-  const loadMoreRef = useRef<HTMLDivElement>(null);
+// The URL speaks Spanish; the API keeps its own words.
+const TAB_PARAMS = ["todos", "acreditados", "por-llegar", "cancelados"] as const;
+type TabParam = (typeof TAB_PARAMS)[number];
+const TABS: { param: TabParam; presence: Presence; label: string }[] = [
+  { param: "todos", presence: "all", label: "Todos" },
+  { param: "acreditados", presence: "in", label: "Acreditados" },
+  { param: "por-llegar", presence: "out", label: "Por llegar" },
+  { param: "cancelados", presence: "cancelled", label: "Cancelados" },
+];
+const PRESENCE_OF = Object.fromEntries(TABS.map((tab) => [tab.param, tab.presence])) as Record<TabParam, Presence>;
 
-  // Read filter from URL query params
+const SORT_PARAMS = ["nombre", "-nombre", "llegada", "-llegada", "registro", "-registro"] as const;
+type SortParam = (typeof SORT_PARAMS)[number];
+const SORT_OF: Record<SortParam, AttendeeSort> = {
+  nombre: "name",
+  "-nombre": "-name",
+  llegada: "checkin",
+  "-llegada": "-checkin",
+  registro: "registered",
+  "-registro": "-registered",
+};
+const PARAM_OF = Object.fromEntries(Object.entries(SORT_OF).map(([param, sort]) => [sort, param])) as Record<
+  AttendeeSort,
+  SortParam
+>;
+
+function useDebounced<T>(value: T, ms: number) {
+  const [debounced, setDebounced] = useState(value);
   useEffect(() => {
-    const filterParam = searchParams.get("filter");
-    if (filterParam === "checked_in" || filterParam === "not_checked_in") {
-      setStatusFilter(filterParam);
-    } else {
-      setStatusFilter("all");
-    }
-  }, [searchParams]);
+    const timer = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return debounced;
+}
 
-  const {
-    attendees,
-    summary,
-    event,
-    isLoading,
-    error,
-    refreshAttendees,
-    isRefreshing,
-    notConfigured,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useEventbriteAttendees({
-    pageSize: 50,
-    infinite: true, // Enable infinite scrolling
-  });
-
-  // Intersection observer for infinite scroll
-  const handleObserver = useCallback(
-    (entries: IntersectionObserverEntry[]) => {
-      const [target] = entries;
-      if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        fetchNextPage?.();
-      }
-    },
-    [fetchNextPage, hasNextPage, isFetchingNextPage]
-  );
-
-  useEffect(() => {
-    const element = loadMoreRef.current;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(handleObserver, {
-      root: null,
-      rootMargin: "200px", // Start loading 200px before reaching the bottom
-      threshold: 0.1,
-    });
-
-    observer.observe(element);
-
-    return () => {
-      if (element) {
-        observer.unobserve(element);
-      }
-    };
-  }, [handleObserver]);
-
-  // Filter attendees based on search and status
-  const filteredAttendees = useMemo(() => {
-    let filtered = attendees.filter((a: Attendee) => !a.cancelled && !a.refunded);
-
-    // Filter by check-in status
-    if (statusFilter === "checked_in") {
-      filtered = filtered.filter((a: Attendee) => a.checked_in);
-    } else if (statusFilter === "not_checked_in") {
-      filtered = filtered.filter((a: Attendee) => !a.checked_in);
-    }
-
-    // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (a: Attendee) =>
-          a.profile.name.toLowerCase().includes(term) ||
-          a.profile.email.toLowerCase().includes(term) ||
-          a.ticket_class_name.toLowerCase().includes(term)
-      );
-    }
-
-    return filtered;
-  }, [attendees, searchTerm, statusFilter]);
+/** Where the mirror stands: Eventbrite and how long ago it was read, or what's wrong. */
+function SyncBadge({
+  state,
+  missing,
+  failed,
+}: {
+  state: SyncState | undefined;
+  missing: SyncState["missing"];
+  failed: boolean;
+}) {
+  const now = useNow(5000);
+  if (failed || state?.error) {
+    return (
+      <Badge variant="destructive">
+        <StatusDot tone="live" />
+        Error con Eventbrite
+      </Badge>
+    );
+  }
+  if (missing === "event_id") return <Badge variant="secondary">Sin Eventbrite</Badge>;
+  if (missing === "api_key") {
+    return (
+      <Badge variant="warning">
+        <StatusDot tone="warn" />
+        Eventbrite sin clave
+      </Badge>
+    );
+  }
+  if (!state) return null;
+  const seconds = state.syncedAt && now ? Math.max(0, Math.round((now - Date.parse(state.syncedAt)) / 1000)) : null;
 
   return (
-    <div className="w-full p-6">
-      <div className="mb-8">
-        <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="mb-2 text-3xl font-bold text-white">Asistentes del Evento</h1>
-            {event && (
-              <p className="text-zinc-400">
-                {event.name} • {new Date(event.start).toLocaleDateString("es-UY")}
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={refreshAttendees}
-              variant="outline"
-              size="sm"
-              className="border-zinc-700 bg-zinc-800 text-white hover:bg-zinc-700"
-              disabled={isRefreshing}
-            >
-              <RefreshCw size={16} className={cn("mr-2", isRefreshing && "animate-spin")} />
-              {isRefreshing ? "Actualizando..." : "Actualizar"}
+    <span className="inline-flex items-center gap-2">
+      <Badge variant="success">
+        <StatusDot tone="ok" />
+        Eventbrite
+      </Badge>
+      {state.syncedAt && seconds !== null ? (
+        <span className="font-terminal text-2xs text-muted-foreground tabular-nums">
+          sincronizado {seconds < 60 ? `hace ${seconds} s` : formatRelative(Date.parse(state.syncedAt) - now)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+type Props = {
+  eventId: string;
+  eventName: string;
+  timezone: string;
+  startsAt: string;
+  settingsHref: string;
+  scannerHref: string;
+  webhookUrl: string | null;
+  /** What the server knew when it rendered: a setup problem, and whether the mirror has anyone. */
+  initialSetup: { missing: SyncState["missing"]; mirrored: boolean };
+};
+
+function Attendees({
+  eventId,
+  eventName,
+  timezone,
+  startsAt,
+  settingsHref,
+  scannerHref,
+  webhookUrl,
+  initialSetup,
+}: Props) {
+  const queryClient = useQueryClient();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [doorsOpen, setDoorsOpen] = useState(false);
+  const [params, setParams] = useQueryStates(
+    {
+      q: parseAsString.withDefault(""),
+      estado: parseAsStringLiteral(TAB_PARAMS).withDefault("todos"),
+      entrada: parseAsArrayOf(parseAsString).withDefault([]),
+      etiqueta: parseAsArrayOf(parseAsString).withDefault([]),
+      orden: parseAsStringLiteral(SORT_PARAMS).withDefault("nombre"),
+      pagina: parseAsInteger.withDefault(1),
+      // ⌘K's "Buscar asistente…" lands here with ?buscar=1.
+      buscar: parseAsString,
+    },
+    { history: "replace" }
+  );
+  const q = useDebounced(params.q.trim(), 250);
+  const filters = {
+    eventId,
+    q,
+    status: PRESENCE_OF[params.estado],
+    ticket: params.entrada,
+    tag: params.etiqueta,
+  };
+  const filtered = Boolean(
+    params.q.trim() || params.entrada.length || params.etiqueta.length || params.estado !== "todos"
+  );
+
+  const list = useQuery(
+    orpc.attendees.list.queryOptions({
+      input: { ...filters, sort: SORT_OF[params.orden], page: params.pagina, pageSize: PAGE_SIZE },
+      placeholderData: keepPreviousData,
+    })
+  );
+  const stats = useQuery(orpc.attendees.checkins.queryOptions({ input: { eventId }, refetchInterval: 60_000 }));
+  const recent = useQuery(orpc.attendees.recent.queryOptions({ input: { eventId } }));
+  const raffles = useQuery(orpc.attendees.raffles.list.queryOptions({ input: { eventId } }));
+  const { state: sync, syncNow, syncing } = useAttendeeSync(eventId);
+
+  useRealtimeChannel(eventChannel(eventId, "ops"), (topic) => {
+    if (topic === "checkins") {
+      for (const key of [orpc.attendees.list.key(), orpc.attendees.checkins.key(), orpc.attendees.recent.key()]) {
+        void queryClient.invalidateQueries({ queryKey: key });
+      }
+    }
+    if (topic === "raffle") void queryClient.invalidateQueries({ queryKey: orpc.attendees.raffles.key() });
+  });
+
+  const exportAll = useMutation(
+    orpc.attendees.export.mutationOptions({
+      onSuccess: downloadCsv,
+      onError: (failure) => toast.error("No se pudo exportar", failure.message),
+    })
+  );
+  // ⌘K keeps the entries it was given; this way its export always uses the filters on screen.
+  const exportNow = useRef(() => {});
+  useEffect(() => {
+    exportNow.current = () => exportAll.mutate(filters);
+  });
+
+  useEffect(() => {
+    if (!params.buscar) return;
+    searchRef.current?.focus();
+    void setParams({ buscar: null });
+  }, [params.buscar, setParams]);
+
+  const totals = list.data?.totals;
+  const facets = list.data?.facets;
+  const total = facets ? facets.status[PRESENCE_OF[params.estado]] : 0;
+
+  // A page past the end (the list shrank under it) goes back to the first.
+  useEffect(() => {
+    if (list.data && !list.isPlaceholderData && list.data.rows.length === 0 && total > 0 && params.pagina > 1) {
+      void setParams({ pagina: null });
+    }
+  }, [list.data, list.isPlaceholderData, total, params.pagina, setParams]);
+
+  useShortcuts([
+    {
+      id: "attendees.search",
+      keys: "/",
+      label: "Buscar asistentes",
+      group: "Asistentes",
+      run: () => searchRef.current?.focus(),
+    },
+  ]);
+  useCommands(
+    "attendees",
+    "page",
+    [
+      {
+        id: "attendees:doors",
+        title: "Puertas de check-in",
+        subtitle: "Organizer, webhook y escáner",
+        icon: ScanQrCode,
+        keywords: ["organizer", "puerta", "check-in", "qr", "acreditación"],
+        perform: { type: "run", run: () => setDoorsOpen(true) },
+      },
+      {
+        id: "attendees:scanner",
+        title: "Abrir el escáner (beta)",
+        subtitle: "Acredita solo en OWU",
+        icon: ScanLine,
+        keywords: ["escanear", "cámara", "qr", "check-in"],
+        perform: { type: "navigate", href: scannerHref },
+      },
+      {
+        id: "attendees:sync",
+        title: "Sincronizar con Eventbrite",
+        icon: RefreshCw,
+        keywords: ["eventbrite", "actualizar"],
+        perform: { type: "run", run: syncNow },
+      },
+      {
+        id: "attendees:export",
+        title: "Exportar asistentes",
+        subtitle: "CSV con los filtros de ahora",
+        icon: Download,
+        keywords: ["csv", "excel", "planilla", "descargar"],
+        perform: { type: "run", run: () => exportNow.current() },
+      },
+    ],
+    "Asistentes"
+  );
+
+  const state = sync.data;
+  // Until the first sync answers, what the server already knew: notices don't pop in and push the page down.
+  const missing = state ? state.missing : initialSetup.missing;
+  const expected = totals ? totals.in + totals.out : 0;
+  const unconfigured = missing === "event_id" && (totals ? totals.all === 0 : !initialSetup.mirrored);
+  // The table's columns depend on it: the same function on every render.
+  const sortBy = useCallback(
+    (sort: AttendeeSort) =>
+      void setParams({ orden: PARAM_OF[sort] === "nombre" ? null : PARAM_OF[sort], pagina: null }),
+    [setParams]
+  );
+  const setFilter = (next: { [Key in keyof typeof params]?: (typeof params)[Key] | null }) =>
+    void setParams({ ...next, pagina: null });
+  const clearFilters = () => void setParams({ q: null, estado: null, entrada: null, etiqueta: null, pagina: null });
+  // A tap on a tab and a sideways swipe on the list (touchscreens) change the URL the same way.
+  const changeTab = (value: string) => setFilter({ estado: TAB_PARAMS.find((param) => param === value) ?? "todos" });
+  const swipeTabs = useSwipeTabs(TAB_PARAMS, params.estado, changeTab);
+  useActiveTabInView(tabsRef, params.estado);
+
+  return (
+    <PageContainer size="large">
+      <PageHeader
+        actions={
+          unconfigured ? null : (
+            <>
+              <Button disabled={syncing || Boolean(missing)} variant="outline" onClick={syncNow}>
+                <RefreshCw className={cn(syncing && "motion-safe:animate-spin")} />
+                <span className="max-sm:sr-only">Sincronizar ahora</span>
+              </Button>
+              <Button
+                disabled={exportAll.isPending || !totals?.all}
+                variant="outline"
+                onClick={() => exportAll.mutate(filters)}
+              >
+                <Download />
+                <span className="max-sm:sr-only">Exportar</span>
+              </Button>
+              <Button onClick={() => setDoorsOpen(true)}>
+                <ScanQrCode />
+                Puertas de check-in
+              </Button>
+            </>
+          )
+        }
+        description="Entradas de Eventbrite y acreditaciones de Eventbrite Organizer, en vivo."
+        meta={
+          <>
+            <SyncBadge failed={sync.isError} missing={missing} state={state} />
+            {totals && expected > 0 ? (
+              <span className="font-terminal text-meta text-muted-foreground tabular-nums">
+                {totals.in} / {expected} acreditados · {Math.round((totals.in / expected) * 100)}%
+              </span>
+            ) : null}
+          </>
+        }
+        title="Asistentes"
+      />
+
+      {unconfigured ? (
+        <EmptyState
+          action={
+            <Button asChild variant="outline">
+              <Link href={settingsHref}>
+                <Settings />
+                Abrir los ajustes del evento
+              </Link>
             </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      {isLoading ? (
-        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="border-zinc-800 bg-zinc-900">
-              <CardHeader>
-                <Skeleton className="h-4 w-24 bg-zinc-800" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16 bg-zinc-800" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : error ? (
-        <Card className="mb-8 border-red-900 bg-red-950/30">
-          <CardHeader>
-            <CardTitle className="text-red-400">Error al cargar datos</CardTitle>
-            <CardDescription className="text-red-300">{error}</CardDescription>
-          </CardHeader>
-        </Card>
-      ) : notConfigured ? (
-        <Card className="mb-8 border-zinc-800 bg-zinc-900">
-          <CardHeader>
-            <CardTitle className="text-zinc-200">Eventbrite sin configurar</CardTitle>
-            <CardDescription className="text-zinc-400">
-              Definí EVENTBRITE_API_KEY y NEXT_PUBLIC_EVENTBRITE_EVENT_ID para ver los asistentes del evento.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : (
-        summary && (
-          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-            <Card
-              className={`cursor-pointer border-zinc-800 bg-zinc-900 transition-colors ${statusFilter === "all" ? "ring-2 ring-yellow-400" : "hover:bg-zinc-850"}`}
-              onClick={() => setStatusFilter("all")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-400">Total Asistentes</CardTitle>
-                <Users className="h-4 w-4 text-zinc-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">{summary.total_attendees}</div>
-                <p className="text-xs text-zinc-500">Inscriptos confirmados</p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`cursor-pointer border-zinc-800 bg-zinc-900 transition-colors ${statusFilter === "checked_in" ? "ring-2 ring-green-400" : "hover:bg-zinc-850"}`}
-              onClick={() => setStatusFilter("checked_in")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-400">Check-in Realizado</CardTitle>
-                <UserCheck className="h-4 w-4 text-green-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-400">{summary.checked_in}</div>
-                <p className="text-xs text-zinc-500">
-                  {summary.total_attendees > 0
-                    ? `${Math.round((summary.checked_in / summary.total_attendees) * 100)}%`
-                    : "0%"}{" "}
-                  del total
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={`cursor-pointer border-zinc-800 bg-zinc-900 transition-colors ${statusFilter === "not_checked_in" ? "ring-2 ring-yellow-400" : "hover:bg-zinc-850"}`}
-              onClick={() => setStatusFilter("not_checked_in")}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-400">Pendientes</CardTitle>
-                <UserX className="h-4 w-4 text-yellow-400" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-400">{summary.not_checked_in}</div>
-                <p className="text-xs text-zinc-500">Sin check-in</p>
-              </CardContent>
-            </Card>
-          </div>
-        )
-      )}
-
-      {/* Search and Filters */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 sm:max-w-md">
-          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <Input
-            placeholder="Buscar por nombre, email o tipo de ticket..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border-zinc-700 bg-zinc-800 pl-10 text-white placeholder:text-zinc-500"
-          />
-        </div>
-        <div className="text-sm text-zinc-400">
-          Mostrando {filteredAttendees.length} de{" "}
-          {attendees.filter((a: Attendee) => !a.cancelled && !a.refunded).length} asistentes
-        </div>
-      </div>
-
-      {/* Attendees List */}
-      {isLoading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i} className="border-zinc-800 bg-zinc-900">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-full bg-zinc-800" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-48 bg-zinc-800" />
-                    <Skeleton className="h-3 w-32 bg-zinc-800" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredAttendees.length === 0 ? (
-        <Card className="border-zinc-800 bg-zinc-900">
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <Users size={48} className="mb-4 text-zinc-600" />
-            <p className="text-zinc-400">No se encontraron asistentes</p>
-          </CardContent>
-        </Card>
+          }
+          description="Cargá el ID del evento de Eventbrite en los ajustes y las entradas aparecen acá solas, con cada acreditación de la puerta."
+          icon={Ticket}
+          title="Este evento no está conectado a Eventbrite"
+        />
       ) : (
         <>
-          <div className="space-y-3">
-            {filteredAttendees.map((attendee: Attendee) => (
-              <AttendeeCard key={attendee.id} attendee={attendee} />
-            ))}
+          <div className="mb-4 space-y-3 empty:hidden">
+            {sync.isError ? (
+              <ErrorState
+                compact
+                description={sync.error.message}
+                retrying={syncing}
+                title="No pudimos sincronizar con Eventbrite"
+                onRetry={syncNow}
+              />
+            ) : state?.error ? (
+              <ErrorState
+                compact
+                description={`${state.error}. Lo que ves es la última copia que tenemos.`}
+                retrying={syncing}
+                title="No pudimos leer Eventbrite"
+                onRetry={syncNow}
+              />
+            ) : null}
+            {missing === "api_key" ? (
+              <Notice tone="warning">
+                Falta la clave de Eventbrite en el servidor (
+                <span className="font-terminal text-meta">EVENTBRITE_API_KEY</span>
+                ): la lista es la última copia y no se actualiza sola.
+              </Notice>
+            ) : missing === "event_id" ? (
+              <Notice tone="info">
+                Este evento ya no tiene un evento de Eventbrite: lo que ves es la última copia.{" "}
+                <Link className="text-info-foreground underline-offset-4 hover:underline" href={settingsHref}>
+                  Cargalo en los ajustes
+                </Link>
+                .
+              </Notice>
+            ) : null}
           </div>
 
-          {/* Intersection observer sentinel */}
-          <div ref={loadMoreRef} className="flex items-center justify-center py-8">
-            {isFetchingNextPage && (
-              <div className="flex items-center gap-2 text-zinc-400">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Cargando más asistentes...</span>
+          <KpiStrip opensAt={startsAt} stats={stats.data} timezone={timezone} totals={totals} />
+
+          <div className="mt-5 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <TabsPrimitive.Root className="min-w-0" value={params.estado} onValueChange={changeTab}>
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <TabsPrimitive.List
+                  ref={tabsRef}
+                  aria-label="Asistentes por estado"
+                  className="flex max-w-full [scrollbar-width:none] gap-5 overflow-x-auto"
+                >
+                  {TABS.map((tab) => (
+                    <TabsPrimitive.Trigger
+                      key={tab.param}
+                      className="relative flex h-9 shrink-0 items-center gap-1.5 text-ui font-medium whitespace-nowrap text-muted-foreground transition-colors outline-none after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:rounded-full hover:text-foreground focus-visible:text-foreground focus-visible:after:bg-ring/70 data-[state=active]:text-foreground data-[state=active]:after:bg-primary pointer-coarse:h-11"
+                      value={tab.param}
+                    >
+                      {tab.label}
+                      <span className="font-terminal text-[10.5px] text-muted-foreground tabular-nums">
+                        {facets ? facets.status[tab.presence] : "–"}
+                      </span>
+                    </TabsPrimitive.Trigger>
+                  ))}
+                </TabsPrimitive.List>
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                  <div className="relative w-full sm:w-64">
+                    <Search
+                      aria-hidden
+                      className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                    />
+                    <Input
+                      ref={searchRef}
+                      aria-label="Buscar asistentes"
+                      autoComplete="off"
+                      className="pr-9 pl-8"
+                      enterKeyHint="search"
+                      placeholder="Nombre, email o código…"
+                      value={params.q}
+                      onChange={(event) => setFilter({ q: event.target.value || null })}
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape" && params.q) {
+                          event.preventDefault();
+                          setFilter({ q: null });
+                        }
+                      }}
+                    />
+                    {params.q ? (
+                      <Button
+                        aria-label="Borrar la búsqueda"
+                        className="absolute top-1/2 right-1 -translate-y-1/2"
+                        size="icon-xs"
+                        variant="ghost"
+                        onClick={() => {
+                          setFilter({ q: null });
+                          searchRef.current?.focus();
+                        }}
+                      >
+                        <X />
+                      </Button>
+                    ) : (
+                      <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 max-sm:hidden">/</Kbd>
+                    )}
+                  </div>
+                  <FacetFilter
+                    emptyLabel="Sin entrada"
+                    options={facets?.tickets ?? []}
+                    selected={params.entrada}
+                    title="Entrada"
+                    onChange={(values) => setFilter({ entrada: values.length ? values : null })}
+                  />
+                  <FacetFilter
+                    emptyLabel="Sin etiqueta"
+                    options={facets?.tags ?? []}
+                    selected={params.etiqueta}
+                    title="Etiqueta"
+                    onChange={(values) => setFilter({ etiqueta: values.length ? values : null })}
+                  />
+                  {filtered ? (
+                    <Button size="sm" variant="ghost" onClick={clearFilters}>
+                      Limpiar
+                    </Button>
+                  ) : null}
+                </div>
               </div>
-            )}
-            {!hasNextPage && attendees.length > 0 && (
-              <p className="text-sm text-zinc-500">No hay más asistentes para cargar</p>
-            )}
+
+              <TabsPrimitive.Content ref={swipeTabs} className="mt-3 outline-none" tabIndex={-1} value={params.estado}>
+                <AttendeesTable
+                  empty={<NoAttendees filtered={filtered} onClear={clearFilters} />}
+                  error={list.error}
+                  eventId={eventId}
+                  loading={list.isPending || list.isPlaceholderData}
+                  page={params.pagina}
+                  pageSize={PAGE_SIZE}
+                  rows={list.data?.rows}
+                  sort={SORT_OF[params.orden]}
+                  tags={facets?.tags.map((tag) => tag.value) ?? []}
+                  timezone={timezone}
+                  total={total}
+                  onPage={(page) => void setParams({ pagina: page > 1 ? page : null })}
+                  onRetry={() => void list.refetch()}
+                  onSort={sortBy}
+                />
+              </TabsPrimitive.Content>
+            </TabsPrimitive.Root>
+
+            <aside
+              aria-label="La puerta y los sorteos"
+              className="grid gap-4 md:grid-cols-2 xl:sticky xl:top-4 xl:grid-cols-1"
+            >
+              <ArrivalsFeed
+                entries={recent.data}
+                error={recent.error}
+                timezone={timezone}
+                onRetry={() => void recent.refetch()}
+              />
+              <RafflesPanel
+                error={raffles.error}
+                eventId={eventId}
+                raffles={raffles.data}
+                timezone={timezone}
+                onRetry={() => void raffles.refetch()}
+              />
+            </aside>
           </div>
         </>
       )}
-    </div>
+
+      <DoorsPanel
+        eventName={eventName}
+        open={doorsOpen}
+        scannerHref={scannerHref}
+        stats={stats.data}
+        sync={state}
+        webhookUrl={webhookUrl}
+        onOpenChange={setDoorsOpen}
+      />
+    </PageContainer>
   );
 }
 
-function AttendeeCard({ attendee }: { attendee: Attendee }) {
-  const initials = attendee.profile.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  const avatarUrl = getGravatarUrl(attendee.profile.email, 80, "identicon");
-
+/** Filters, search, tab, sort and page live in the URL, so a view can be shared or reloaded as it is. */
+export default function AttendeesClient(props: Props) {
   return (
-    <Card className="hover:bg-zinc-850 border-zinc-800 bg-zinc-900 transition-colors">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={avatarUrl} alt={attendee.profile.name} />
-              <AvatarFallback className="bg-yellow-400 text-black">{initials}</AvatarFallback>
-            </Avatar>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white">{attendee.profile.name}</h3>
-                {attendee.checked_in ? (
-                  <Badge className="bg-green-900/30 text-green-400 hover:bg-green-900/40">
-                    <UserCheck size={12} className="mr-1" />
-                    Check-in
-                  </Badge>
-                ) : (
-                  <Badge className="bg-yellow-900/30 text-yellow-400 hover:bg-yellow-900/40">
-                    <UserX size={12} className="mr-1" />
-                    Pendiente
-                  </Badge>
-                )}
-              </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
-                <div className="flex items-center gap-1">
-                  <Mail size={12} />
-                  <span>{attendee.profile.email}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Ticket size={12} />
-                  <span>{attendee.ticket_class_name}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar size={12} />
-                  <span>Creado {new Date(attendee.created).toLocaleDateString("es-UY")}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export default function AttendeesClient() {
-  return (
-    <Suspense
-      fallback={
-        <div className="w-full p-6">
-          <Skeleton className="h-32 w-full" />
-        </div>
-      }
-    >
-      <AttendeesContent />
-    </Suspense>
+    <NuqsAdapter>
+      <Attendees {...props} />
+    </NuqsAdapter>
   );
 }

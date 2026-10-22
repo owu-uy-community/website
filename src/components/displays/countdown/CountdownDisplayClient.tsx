@@ -2,7 +2,7 @@
 
 import { useCountdownState } from "hooks/useCountdownState";
 import { useCountdownAudio } from "hooks/useCountdownAudio";
-import { formatTime } from "lib/utils";
+import { formatCountdown } from "lib/utils";
 import "./countdown.css";
 
 export default function CountdownDisplayClient({ eventId }: { eventId: string }) {
@@ -24,7 +24,7 @@ export default function CountdownDisplayClient({ eventId }: { eventId: string })
         }`}
         style={{ fontSize: "clamp(10rem, 25vw, 30rem)" }}
       >
-        {loading ? "00:00" : formatTime(state.remainingSeconds)}
+        {loading ? "00:00" : formatCountdown(state.remainingSeconds)}
       </div>
     </div>
   );

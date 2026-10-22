@@ -143,6 +143,60 @@ describe("openSpaces.update", () => {
 
     expect(row).toMatchObject(data);
   });
+
+  test("an update that would end the event before it starts is a BAD_REQUEST and changes nothing", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const staff = await makeSiteAdmin();
+
+    // Only the end moves, to before the stored start (17:30 UTC).
+    await expect(
+      call(
+        router.openSpaces.update,
+        { id: event.id, data: { name: "No", endDate: "2026-11-07T16:00:00.000Z" } },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "La fecha de fin tiene que ser posterior a la de inicio" });
+    await expect(
+      call(
+        router.openSpaces.update,
+        { id: event.id, data: { ...EVENT_DATES, endDate: EVENT_DATES.startDate } },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const [row] = await db.select().from(events).where(eq(events.id, event.id));
+    expect(row).toMatchObject({ name: event.name, endDate: event.endDate });
+  });
+
+  test("the venue map link is a web address, nothing a browser would run", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const staff = await makeSiteAdmin();
+
+    await expect(
+      call(
+        router.openSpaces.update,
+        { id: event.id, data: { venueMapUrl: "data:text/html,<script>alert(1)</script>" } },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  test("a time zone or an Eventbrite id that can't be real is a BAD_REQUEST", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const staff = await makeSiteAdmin();
+
+    await expect(
+      call(router.openSpaces.update, { id: event.id, data: { timezone: "America/Atlantida" } }, by(staff))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      call(router.openSpaces.update, { id: event.id, data: { eventbriteEventId: "../users/me" } }, by(staff))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      call(router.openSpaces.update, { id: event.id, data: { eventbriteEventId: "" } }, by(staff))
+    ).resolves.toMatchObject({ eventbriteEventId: null });
+  });
 });
 
 describe("openSpaces.delete", () => {

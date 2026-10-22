@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { CalendarX2 } from "lucide-react";
 
 import { requireAdmin } from "app/lib/auth-helpers";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
-import { Empty } from "components/shared/ui/empty";
 
 import { resolveAdminCommunityScope } from "../scope";
 import OpenSpaceClient from "./OpenSpaceClient";
@@ -30,20 +31,19 @@ export default async function OpenSpacePage({
 
   if (!scope.selected) {
     return (
-      <div className="mx-auto w-full max-w-3xl space-y-4 p-4 md:p-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Open Space</h1>
-        <Empty
+      <PageContainer size="small">
+        <PageHeader title="Agenda" />
+        <EmptyState
           action={
-            <Button asChild size="sm" variant="outline">
+            <Button asChild variant="outline">
               <Link href={`/admin/communities/${scope.community.slug}`}>Crear un evento</Link>
             </Button>
           }
-          className="py-16"
           description={`${scope.community.name} todavía no tiene eventos.`}
           icon={CalendarX2}
           title="Sin eventos"
         />
-      </div>
+      </PageContainer>
     );
   }
 
@@ -51,7 +51,6 @@ export default async function OpenSpacePage({
     <OpenSpaceClient
       eventHref={`/admin/communities/${scope.community.slug}/events/${scope.selected.slug}`}
       eventId={scope.selected.id}
-      eventName={scope.selected.name}
       kioskHref={`/comunidad/${scope.community.slug}/events/${scope.selected.slug}/kiosk`}
     />
   );

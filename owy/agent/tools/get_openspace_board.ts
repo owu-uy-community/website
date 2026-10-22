@@ -1,10 +1,10 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { getBoard } from "../lib/board";
+import { getBoard, ROOM_STATUS_WORDS } from "../lib/board";
 
 export default defineTool({
   description:
-    "Devuelve la grilla completa del open space en vivo: salas, horarios, cards (charlas propuestas) con su ubicación, y las celdas libres. Usala siempre antes de responder sobre la grilla o antes de crear/mover/editar cards.",
+    "Devuelve la grilla completa del open space en vivo: salas (con su estado ahora: abierta, llena o en evacuación, como lo marca su host), horarios, cards (charlas propuestas) con su ubicación, y las celdas libres. Usala siempre antes de responder sobre la grilla o antes de crear/mover/editar cards, y para '¿está llena la sala X?'.",
   inputSchema: z.object({
     openSpaceId: z
       .string()
@@ -22,6 +22,7 @@ export default defineTool({
         hasTV: room.hasTV ?? false,
         hasWhiteboard: room.hasWhiteboard ?? false,
         color: room.color ?? null,
+        status: ROOM_STATUS_WORDS[room.status],
       })),
       timeSlots: board.schedules.map((schedule) => ({
         id: schedule.id,
