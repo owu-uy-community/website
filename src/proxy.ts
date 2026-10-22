@@ -71,9 +71,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`${legacyTarget}${request.nextUrl.search}`, request.url), 308);
   }
 
-  // Cookie-presence bounce only (the proxy cannot query the DB); role checks
-  // live server-side in every admin page (requireAdmin) and in the oRPC middleware.
-  if (pathname.startsWith("/admin") || pathname.startsWith("/keystatic") || pathname.startsWith("/organizar/panel")) {
+  // Cookie-presence bounce only (the proxy cannot query the DB); permission checks
+  // live server-side in the admin layout and every page (requirePermission) and in the oRPC middleware.
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/keystatic") ||
+    pathname.startsWith("/organizar/panel") ||
+    pathname === "/acceso"
+  ) {
     const sessionCookie =
       request.cookies.get("better-auth.session_token") || request.cookies.get("__Secure-better-auth.session_token");
 

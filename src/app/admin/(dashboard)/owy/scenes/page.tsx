@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 
 import ScenesClient from "./ScenesClient";
 
@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 };
 
 export default async function OwyScenesPage() {
-  await requireAdmin();
+  await requirePermission("stage:read");
 
   return <ScenesClient />;
 }

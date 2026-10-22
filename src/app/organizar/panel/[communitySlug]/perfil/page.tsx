@@ -4,9 +4,8 @@ import { notFound } from "next/navigation";
 
 import { ProfileClient } from "components/organizar/community/ProfileClient";
 import { callerFor } from "lib/orpc/server";
-import { ROLE_RANK } from "lib/roles";
 
-import { panelCommunity } from "../../access";
+import { holds, panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Perfil · Organizá" };
 
@@ -17,5 +16,5 @@ export default async function ProfilePage({ params }: { params: Promise<{ commun
   const community = await callerFor(await headers()).communities.getBySlug({ communitySlug });
   if (!community) notFound();
 
-  return <ProfileClient canEdit={ROLE_RANK[access.community.role] >= ROLE_RANK.admin} initialCommunity={community} />;
+  return <ProfileClient canEdit={holds(access.community, "organization:update")} initialCommunity={community} />;
 }

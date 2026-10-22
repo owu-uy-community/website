@@ -13,9 +13,14 @@ type Overrides = {
   /** Replace the AI model resolver, e.g. `{ model: () => new MockLanguageModelV3(…) }`. */
   ai?: Context.Service.Shape<typeof Ai>;
   realtime?: Context.Service.Shape<typeof Realtime>;
-  /** Simulate an API-key caller (the Owy bot) instead of a browser session. */
+  /** Simulate an API-key caller (the Owy bot) instead of a browser session; `actor` acting for someone. */
   apiKey?: boolean;
+  /** With `apiKey`: the person the bot acts for ("slack:U…", "telegram:…", "anonymous"). */
+  actor?: string;
 };
+
+/** The key a simulated API-key caller sends: Better Auth's key sessions carry the key as their token. */
+const TEST_KEY = "owu-test-api-key";
 
 /**
  * Call options for a procedure invoked as `actor`:
@@ -28,7 +33,7 @@ export function by(actor: UserRow | null, overrides: Overrides = {}): { context:
     ? ({
         session: {
           id: createId(),
-          token: createId(),
+          token: overrides.apiKey ? TEST_KEY : createId(),
           userId: actor.id,
           expiresAt: new Date(now.getTime() + 3_600_000),
           createdAt: now,
@@ -47,7 +52,14 @@ export function by(actor: UserRow | null, overrides: Overrides = {}): { context:
   return {
     context: {
       getSession: async () => session,
-      ...(overrides.apiKey ? { requestHeaders: new Headers({ "x-api-key": "test" }) } : {}),
+      ...(overrides.apiKey
+        ? {
+            requestHeaders: new Headers({
+              "x-api-key": TEST_KEY,
+              ...(overrides.actor ? { "x-owu-actor": overrides.actor } : {}),
+            }),
+          }
+        : {}),
       "effect/context": services,
     },
   };

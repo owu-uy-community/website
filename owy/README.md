@@ -25,7 +25,7 @@ Slack / Telegram / HTTP (eve TUI)
 - **Conocimiento estático** (evento, comunidad, FAQ): `agent/sandbox/workspace/knowledge/*.md` — editá esos markdown para actualizar lo que Owy sabe.
 - **Datos en vivo** (grilla, OBS, countdown, stats): tools en `agent/tools/`.
 - **Fotos → grilla**: el staff manda una foto de la card física y `digitize_board_photo` la pasa por el OCR del sitio + sugerencia de lugar; la creación siempre se confirma y va por `create_track`.
-- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (allowlist por env; quien no es staff queda denegado antes de que la tool corra). Las acciones se ejecutan directo: **no** hay botones de "Approve tool call" (ver `lib/staff.ts` si se quieren volver a activar).
+- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (lo decide el sitio con los roles de la persona — por su usuario de Slack o su Telegram vinculado —; quien no puede queda denegado antes de que la tool corra, y la API lo vuelve a chequear en cada llamada). Las acciones se ejecutan directo: **no** hay botones de "Approve tool call" (ver `lib/staff.ts` si se quieren volver a activar).
 - **Botones de pregunta**: para desambiguar ("¿cuál de estas tres cards?") o confirmar algo irreversible ("¿borro «X»?"), Owy usa la tool `ask_question` de eve, que Slack dibuja como botones y Telegram como teclado. Siempre con `allowFreeform`, así también se puede contestar escribiendo.
 - **Persona**: `agent/instructions.md` (rioplatense, amable, no inventa datos).
 
@@ -40,7 +40,7 @@ AI_GATEWAY_API_KEY=
 
 # --- API de OWU ---
 OWU_API_URL=https://owu.uy            # local: http://localhost:3000
-OWY_API_KEY=                          # API key de Better Auth; se emite en el sitio con `pnpm owy:key`
+OWY_API_KEY=                          # llave de la cuenta de servicio de Owy; se emite en el sitio (`pnpm owy:key` o /admin/acceso)
 OWY_EVENT_ID=                         # id o slug del evento que maneja Owy (el sitio es multi-tenant).
                                       # Sin esto usa el evento más reciente que puede operar.
 
@@ -53,15 +53,9 @@ TELEGRAM_BOT_TOKEN=                   # de @BotFather
 TELEGRAM_WEBHOOK_SECRET_TOKEN=        # secreto propio, se registra en setWebhook
 TELEGRAM_BOT_USERNAME=owy_bot
 
-# --- Staff (IDs separados por coma) ---
-OWY_STAFF_SLACK_IDS=                  # member IDs de Slack (U0123ABC,U0456DEF)
-OWY_STAFF_TELEGRAM_IDS=               # user IDs numéricos de Telegram
-
-# --- Canal HTTP de eve (TUI remota / curl) — cuenta como staff ---
-# También protege el canal del Owy físico (/companion/*); el bridge las manda como
-# COMPANION_EVE_BASIC_USER/PASSWORD.
-ROUTE_AUTH_BASIC_USER=
-ROUTE_AUTH_BASIC_PASSWORD=
+# Quién es staff ya NO va acá: son roles en el sitio (owu.uy/admin/acceso). El canal HTTP de eve y
+# el del Owy físico (/companion/*) piden una llave de OWU con `owy:operate` (header `x-api-key` o
+# `Authorization: Bearer`), que el sitio verifica: revocarla allá cierra el acceso acá.
 
 # --- Owy físico ---
 COMPANION_PROPOSAL_COOLDOWN_S=60      # segundos entre propuestas de un mismo dispositivo (no staff)
@@ -73,18 +67,20 @@ OWY_JOBS_CHANNEL_ID=                  # id del canal de búsquedas (C0123ABC); v
 
 ### Cómo se autentica Owy
 
-Owy usa el **plugin `apiKey` de Better Auth**: manda su key en el header `x-api-key` y el sitio la resuelve a una sesión normal de la cuenta del bot (`owy-bot`, rol `admin`). No hay auth a medida: la API autoriza a Owy como a cualquier otro usuario, y sus escrituras quedan firmadas con su nombre (los avisos al staff aparecen como "Owy").
+Owy usa el **plugin `apiKey` de Better Auth**: manda su llave en el header `x-api-key` y el sitio la resuelve a la **cuenta de servicio** `owy-bot` (rol `service`), con los permisos de la llave como techo.
 
-Emitir la key **en el sitio** (crea la cuenta del bot si no existe y la imprime una sola vez):
+**Actúa por la persona.** Cada llamada que hace por alguien lleva quién es (`x-owu-actor: slack:U…`, `telegram:…` o `anonymous` en el kiosco del Owy físico) y la API autoriza a **esa persona**, nunca más que la llave: alguien del staff puede mover charlas por Owy; un asistente, no; cualquiera puede reportar un incidente. Lo que hace queda en la auditoría del sitio a nombre de la persona, "vía Owy". Sin persona detrás (la consola del operador, el Owy físico desbloqueado con su PIN, el cron del semanario) decide la llave.
+
+**Telegram**: Owy reconoce a alguien por Telegram cuando lo vinculó: en owu.uy/acceso → «Vincular Telegram» y le manda `/vincular <código>` a Owy (tool `link_telegram`).
+
+Emitir la llave **en el sitio** (crea la cuenta de servicio si no existe, vence en un año y se imprime una sola vez), o desde /admin/acceso → Llaves API:
 
 ```bash
-pnpm owy:key                     # o: pnpm owy:key -- --name "owy prod"
-# → OWY_API_KEY=owy...
+pnpm owy:key                     # o: pnpm owy:key -- --name "owy prod" --days 180
+pnpm auth:key -- --owner owy-operador --preset owy-operator --name "consola de Owy"   # para el canal HTTP de eve
 ```
 
-Copiás ese valor al `OWY_API_KEY` del proyecto de Owy. El sitio **no** necesita ninguna variable nueva: la key vive hasheada en la tabla `apikey`.
-
-**Revocar**: deshabilitá (`enabled = false`) o borrá la fila en `apikey` — sin redeploy. Emitir una key nueva no invalida las viejas; borralas si querés rotar. Las keys tienen rate limit (240 req/min) y quedan con registro de último uso.
+Copiás la llave al `OWY_API_KEY` del proyecto de Owy. **Revocar**: /admin/acceso → Llaves API (o borrar la fila en `apikey`) — sin redeploy.
 
 ## Desarrollo local
 
@@ -96,7 +92,7 @@ Copiás ese valor al `OWY_API_KEY` del proyecto de Owy. El sitio **no** necesita
 ```bash
 # --- en la raíz del repo (el sitio; db docker en :5433) ---
 pnpm install
-pnpm owy:key            # una vez: crea la cuenta del bot e imprime su OWY_API_KEY
+pnpm owy:key            # una vez: crea la cuenta de servicio del bot e imprime su OWY_API_KEY
 pnpm dev                # la API en :3000
 pnpm dev:realtime       # (otra terminal) para ver los cambios en vivo en las pantallas
 
@@ -160,10 +156,9 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 
 4. En grupos, Owy responde a `/comandos`, menciones `@owy_bot` o respuestas a sus mensajes. En privado responde siempre. (La privacidad de grupos se maneja en BotFather.)
 
-### IDs de staff
+### Quién es staff
 
-- **Slack**: perfil del usuario → ⋯ → *Copy member ID* (`U…`). Cargarlos en `OWY_STAFF_SLACK_IDS`.
-- **Telegram**: cada uno le escribe a [@userinfobot](https://t.me/userinfobot) (o similar) para conocer su ID numérico. Cargarlos en `OWY_STAFF_TELEGRAM_IDS`.
+Lo deciden los roles del sitio: alguien con un rol que permite la acción (por ejemplo staff de OWU para la grilla, o editor de la comunidad para las tareas) puede pedírsela a Owy. Se dan en **owu.uy/admin/acceso** (o en el Equipo de cada comunidad) y piden el Slack de OWU. Por Telegram, la persona primero vincula su cuenta (ver arriba).
 
 ## Semanario OWU (cron de los lunes)
 
@@ -212,8 +207,8 @@ durable de eve por dispositivo) y el modelo de voz sólo pronuncia la respuesta.
 `agent/tools/companion.ts` monta `propose_talk` (mercado de ideas) sólo ahí; el
 turno llega con `authenticator: companion | companion-staff` para el gating de
 staff. Rutas: `POST /companion/:deviceId/turns`, `GET /companion/sessions/:id/stream`,
-`POST /companion/:deviceId/{cancel,reset}`, protegidas con `ROUTE_AUTH_BASIC_*`
-(loopback libre en `eve dev`). Firmware ESPHome + bridge + runbook en
+`POST /companion/:deviceId/{cancel,reset}`, protegidas con la llave de OWU del
+dispositivo (`x-api-key`, preset `companion`; loopback libre en `eve dev`). Firmware ESPHome + bridge + runbook en
 [`companion/README.md`](companion/README.md); scripts `pnpm companion:*`.
 
 ## Mantener el conocimiento

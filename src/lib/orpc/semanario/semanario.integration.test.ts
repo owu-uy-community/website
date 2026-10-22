@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
-import { makeSiteAdmin, makeUser } from "test/factories";
+import { makeSiteAdmin, makeUser, makeServiceAccount } from "test/factories";
 
 const sections = {
   events: [
@@ -45,7 +45,7 @@ const draft = (weekStart: string, title = "Semana movida") => ({
 describe("semanario", () => {
   test("Owy's draft for a week is rewritten while it is still a draft, and nobody else sees it", async () => {
     const staff = await makeSiteAdmin();
-    const owy = by(staff, { apiKey: true });
+    const owy = by(await makeServiceAccount({ name: "Deck" }), { apiKey: true });
     const weekStart = nextMonday();
 
     const first = await call(router.semanario.saveDraft, draft(weekStart), owy);
@@ -58,7 +58,7 @@ describe("semanario", () => {
 
   test("publishing numbers the issue, signs the reviewer and links it to its neighbours", async () => {
     const staff = await makeSiteAdmin({ name: "Ana del staff" });
-    const owy = by(staff, { apiKey: true });
+    const owy = by(await makeServiceAccount({ name: "Deck" }), { apiKey: true });
     const older = await call(router.semanario.saveDraft, draft(nextMonday(), "Primero"), owy);
     const newer = await call(router.semanario.saveDraft, draft(nextMonday(), "Segundo"), owy);
 
@@ -74,7 +74,7 @@ describe("semanario", () => {
 
   test("a re-run never overwrites a published week, and only a person publishes", async () => {
     const staff = await makeSiteAdmin();
-    const owy = by(staff, { apiKey: true });
+    const owy = by(await makeServiceAccount({ name: "Deck" }), { apiKey: true });
     const weekStart = nextMonday();
     const saved = await call(router.semanario.saveDraft, draft(weekStart), owy);
 
@@ -87,7 +87,11 @@ describe("semanario", () => {
 
   test("unpublishing hides an issue and publishing it again keeps its number", async () => {
     const staff = await makeSiteAdmin();
-    const saved = await call(router.semanario.saveDraft, draft(nextMonday()), by(staff, { apiKey: true }));
+    const saved = await call(
+      router.semanario.saveDraft,
+      draft(nextMonday()),
+      by(await makeServiceAccount({ name: "Deck" }), { apiKey: true })
+    );
     const { number } = await call(router.semanario.publish, { id: saved.id }, by(staff));
 
     await call(router.semanario.unpublish, { id: saved.id }, by(staff));

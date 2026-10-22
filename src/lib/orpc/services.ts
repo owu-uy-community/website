@@ -1,6 +1,7 @@
 import type { Experimental_DecisionModel, LanguageModel } from "ai";
 import { Context, Effect } from "effect";
 
+import type { Principal } from "../authz/principal";
 import { db, type Db } from "../db";
 import { publishServer } from "../realtime/publish";
 
@@ -37,10 +38,17 @@ export class Ai extends Context.Service<
 export type Actor = {
   readonly id: string;
   readonly name: string;
-  readonly role: "user" | "admin";
-  /** How the caller authenticated: a browser session or an API key (the Owy bot, scripts). */
-  readonly via: "session" | "api-key";
+  /**
+   * How the caller authenticated: a browser session, a service API key (scripts, the Stream Deck),
+   * the Owy bot on behalf of a person, or a superadmin viewing the site as them.
+   */
+  readonly via: Principal["via"];
+  /** What permission checks read: roles, grants, the key's cap. See src/lib/authz. */
+  readonly principal: Principal;
 };
+
+/** A machine is behind the call: an API key, or the Owy bot acting for someone. */
+export const isBot = (actor: Actor) => actor.via === "api-key" || actor.via === "delegated";
 
 /** The authenticated caller. Present on every procedure behind `authed`. */
 export class CurrentUser extends Context.Service<CurrentUser, Actor>()("owu/CurrentUser") {}

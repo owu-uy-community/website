@@ -8,10 +8,13 @@ const store = globalThis as { owuMailbox?: MailboxMessage[] };
 
 /**
  * Without a Resend key, local dev and the e2e build (EMAIL_MAILBOX=1) keep sent mail in memory, so
- * people and tests can read sign-in codes. Never on a deployment with a key.
+ * people and tests can read sign-in codes. Never on a deployment with a key, and never in
+ * production whatever the env says: it would hand anyone every sign-in code.
  */
 export const mailboxEnabled = () =>
-  !process.env.RESEND_API_KEY && (process.env.NODE_ENV === "development" || process.env.EMAIL_MAILBOX === "1");
+  process.env.VERCEL_ENV !== "production" &&
+  !process.env.RESEND_API_KEY &&
+  (process.env.NODE_ENV === "development" || process.env.EMAIL_MAILBOX === "1");
 
 export function deliverToMailbox(email: Email) {
   const box = (store.owuMailbox ??= []);

@@ -56,7 +56,7 @@ describe("context shim", () => {
     const definition: OwyToolDefinition = {
       description: "x",
       inputSchema: z.object({}),
-      approval: staffOnly(),
+      approval: staffOnly("program:manage"),
       execute: () => ({ ok: true }),
     };
     const denied = await evaluateApproval(
@@ -118,7 +118,7 @@ describe("propose_talk", () => {
   const createTrack: OwyToolDefinition = {
     description: "create",
     inputSchema: z.object({ title: z.string(), room: z.string(), timeSlot: z.string() }),
-    approval: staffOnly(),
+    approval: staffOnly("program:manage"),
     execute: vi.fn(async (input: unknown, ctx: unknown) => {
       const auth = (ctx as { session: { auth: { current: { authenticator: string } } } }).session.auth.current;
       if (auth.authenticator !== "companion-staff") throw new Error("solo staff");

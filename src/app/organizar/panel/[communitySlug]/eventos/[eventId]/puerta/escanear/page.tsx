@@ -5,9 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { Scanner } from "components/Admin/attendees/Scanner";
 import { db } from "lib/db";
 import { events } from "lib/db/schema";
-import { ROLE_RANK } from "lib/roles";
 
-import { panelCommunity } from "../../../../../access";
+import { holds, panelCommunity } from "../../../../../access";
 
 export const metadata: Metadata = { title: "Escáner · Organizá" };
 
@@ -18,7 +17,7 @@ export const metadata: Metadata = { title: "Escáner · Organizá" };
 export default async function ScannerPage({ params }: { params: Promise<{ communitySlug: string; eventId: string }> }) {
   const { communitySlug, eventId } = await params;
   const access = await panelCommunity(communitySlug);
-  if (!access || ROLE_RANK[access.community.role] < ROLE_RANK.admin) notFound();
+  if (!access || !holds(access.community, "event:door-link")) notFound();
   const [event] = await db
     .select({ name: events.name, timezone: events.timezone, status: events.status })
     .from(events)

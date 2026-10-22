@@ -24,9 +24,6 @@ const ts = (name: string) => timestamp(name, { precision: 3, mode: "date" });
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
-export const userRole = pgEnum("UserRole", ["user", "admin"]);
-export const userStatus = pgEnum("UserStatus", ["active", "inactive"]);
-export const communityRole = pgEnum("CommunityRole", ["owner", "admin", "editor", "member"]);
 // Staff coordination (spreadsheet vocabulary: Tarea / Continuo / Agenda)
 export const staffTaskType = pgEnum("StaffTaskType", ["task", "ongoing", "milestone"]);
 export const staffTaskStatus = pgEnum("StaffTaskStatus", ["pending", "in_progress", "done", "blocked"]);
@@ -44,8 +41,17 @@ export const user = pgTable("user", {
   image: text("image"),
   createdAt: ts("createdAt").notNull(),
   updatedAt: ts("updatedAt").notNull(),
-  role: userRole("role").notNull().default("user"),
-  status: userStatus("status").notNull().default("inactive"),
+  /**
+   * Platform roles, comma-joined ("staff,moderator"): see src/lib/authz/catalog.ts. Written only
+   * through Better Auth's admin plugin and the access procedures, never by the person.
+   */
+  role: text("role").notNull().default("user"),
+  /** Better Auth admin plugin: a banned person can't sign in, and their sessions and keys stop working. */
+  banned: boolean("banned").default(false),
+  banReason: text("banReason"),
+  banExpires: ts("banExpires"),
+  /** The OWU Slack reported them deactivated (daily sync): their roles stop counting. */
+  slackDeactivatedAt: ts("slackDeactivatedAt"),
 });
 
 export const session = pgTable("session", {
@@ -59,25 +65,34 @@ export const session = pgTable("session", {
   userId: text("userId")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  /** Set while a superadmin is viewing the site as this person (Better Auth admin plugin). */
+  impersonatedBy: text("impersonatedBy"),
 });
 
-export const account = pgTable("account", {
-  id: text("id").primaryKey(),
-  accountId: text("accountId").notNull(),
-  providerId: text("providerId").notNull(),
-  userId: text("userId")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  accessToken: text("accessToken"),
-  refreshToken: text("refreshToken"),
-  idToken: text("idToken"),
-  accessTokenExpiresAt: ts("accessTokenExpiresAt"),
-  refreshTokenExpiresAt: ts("refreshTokenExpiresAt"),
-  scope: text("scope"),
-  password: text("password"),
-  createdAt: ts("createdAt").notNull(),
-  updatedAt: ts("updatedAt").notNull(),
-});
+export const account = pgTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("accountId").notNull(),
+    providerId: text("providerId").notNull(),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("accessToken"),
+    refreshToken: text("refreshToken"),
+    idToken: text("idToken"),
+    accessTokenExpiresAt: ts("accessTokenExpiresAt"),
+    refreshTokenExpiresAt: ts("refreshTokenExpiresAt"),
+    scope: text("scope"),
+    password: text("password"),
+    /** Slack only: the workspace the account signed in from, read from Slack's ID token. */
+    slackTeamId: text("slackTeamId"),
+    createdAt: ts("createdAt").notNull(),
+    updatedAt: ts("updatedAt").notNull(),
+  },
+  // The Owy bot names people by their Slack or Telegram id
+  (t) => [index("account_providerId_accountId_idx").on(t.providerId, t.accountId)]
+);
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -203,7 +218,8 @@ export const communityMembers = pgTable(
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: communityRole("role").notNull().default("member"),
+    /** A built-in role (owner, admin, editor, member, door) or the name of one of the community's custom roles. */
+    role: text("role").notNull().default("member"),
     /** They chose to appear (name and photo, never the email) in «Organizan» on the community's page */
     showOnProfile: boolean("showOnProfile").notNull().default(false),
     createdAt: ts("createdAt").notNull().defaultNow(),
@@ -215,6 +231,128 @@ export const communityMembers = pgTable(
   (t) => [
     unique("community_members_communityId_userId_key").on(t.communityId, t.userId),
     index("community_members_userId_idx").on(t.userId),
+  ]
+);
+
+/**
+ * A community's own roles, beyond the built-ins: a name and the permissions it holds (Better Auth
+ * access-control statements, JSON). Nobody can create or hand out a role that holds more than they do.
+ */
+export const communityRoles = pgTable(
+  "community_roles",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId")
+      .notNull()
+      .references(() => communities.id, { onDelete: "cascade" }),
+    /** Lowercase slug, unique in the community and never a built-in's name. */
+    role: text("role").notNull(),
+    label: text("label").notNull(),
+    description: text("description").notNull().default(""),
+    permission: jsonb("permission").$type<Record<string, string[]>>().notNull().default({}),
+    createdById: text("createdById").references(() => user.id, { onDelete: "set null" }),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [unique("community_roles_communityId_role_key").on(t.communityId, t.role)]
+);
+
+/**
+ * The allowlist: roles granted ahead of a sign-in, to an email or an OWU Slack member. Applied the
+ * moment that person signs in (or right away when they already have an account). Without a
+ * community it grants platform roles.
+ */
+export const invitations = pgTable(
+  "invitations",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId").references(() => communities.id, { onDelete: "cascade" }),
+    /** A community role, or comma-joined platform roles when there is no community. */
+    role: text("role").notNull(),
+    email: text("email"),
+    slackUserId: text("slackUserId"),
+    /** How the invitee reads in lists before they sign in (their Slack name). */
+    name: text("name"),
+    note: text("note").notNull().default(""),
+    status: text("status").$type<"pending" | "accepted" | "revoked">().notNull().default("pending"),
+    invitedById: text("invitedById").references(() => user.id, { onDelete: "set null" }),
+    acceptedById: text("acceptedById").references(() => user.id, { onDelete: "set null" }),
+    acceptedAt: ts("acceptedAt"),
+    expiresAt: ts("expiresAt").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("invitations_email_idx").on(t.email),
+    index("invitations_slackUserId_idx").on(t.slackUserId),
+    index("invitations_communityId_status_idx").on(t.communityId, t.status),
+  ]
+);
+
+/**
+ * The waitlist: someone signed in asks for access to the dashboard (no community) or to a
+ * community's team. Moderators decide platform requests; the community's admins decide theirs.
+ */
+export const accessRequests = pgTable(
+  "access_requests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    communityId: text("communityId").references(() => communities.id, { onDelete: "cascade" }),
+    message: text("message").notNull().default(""),
+    status: text("status").$type<"pending" | "approved" | "rejected" | "cancelled">().notNull().default("pending"),
+    /** The role granted on approval. */
+    grantedRole: text("grantedRole"),
+    decidedById: text("decidedById").references(() => user.id, { onDelete: "set null" }),
+    decidedAt: ts("decidedAt"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("access_requests_status_idx").on(t.status, t.communityId),
+    index("access_requests_userId_idx").on(t.userId),
+  ]
+);
+
+/**
+ * Who did what, for accountability: every change made through the API, every grant and ban,
+ * impersonations and API keys. Append-only; `activity` stays the readable per-event feed.
+ */
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    actorId: text("actorId").references(() => user.id, { onDelete: "set null" }),
+    /** How they acted: their session, an API key, a superadmin viewing as them, or a bot on their behalf. */
+    via: text("via").$type<"session" | "api-key" | "impersonation" | "delegated" | "system">().notNull(),
+    /** For "delegated": the API key's service account. For "impersonation": the superadmin. */
+    byId: text("byId").references(() => user.id, { onDelete: "set null" }),
+    /** "user.set_role", "member.update", or the procedure path ("tracks.create"). */
+    action: text("action").notNull(),
+    targetType: text("targetType"),
+    targetId: text("targetId"),
+    communityId: text("communityId").references(() => communities.id, { onDelete: "set null" }),
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+    ip: text("ip"),
+    userAgent: text("userAgent"),
+  },
+  (t) => [
+    index("audit_log_createdAt_idx").on(t.createdAt),
+    index("audit_log_actorId_idx").on(t.actorId, t.createdAt),
+    index("audit_log_communityId_idx").on(t.communityId, t.createdAt),
+    index("audit_log_target_idx").on(t.targetType, t.targetId),
   ]
 );
 
@@ -1689,6 +1827,10 @@ export type VenueContactRow = typeof venueContacts.$inferSelect;
 export type VenueRequestRow = typeof venueRequests.$inferSelect;
 
 export type CommunityRoleValue = CommunityMemberRow["role"];
+export type CommunityRoleRow = typeof communityRoles.$inferSelect;
+export type InvitationRow = typeof invitations.$inferSelect;
+export type AccessRequestRow = typeof accessRequests.$inferSelect;
+export type AuditLogRow = typeof auditLog.$inferSelect;
 export type EventRow = typeof events.$inferSelect;
 export type EventLiveStateRow = typeof eventLiveState.$inferSelect;
 /** @deprecated transition alias — use `EventRow`. */

@@ -33,7 +33,7 @@ import { acceptedCohosts, cohostsOf, inviteCohosts, setCohosts } from "./cohosts
 import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
-import { memberRole, ROLE_RANK } from "../scope";
+import { can, principalOf } from "../../authz/principal";
 import { notifyCancelled, optionalMail, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
@@ -763,11 +763,11 @@ export const publishDue = Effect.gen(function* () {
   );
   let published = 0;
   for (const event of due) {
-    const role = event.by ? yield* memberRole(event.communityId, event.by.id) : null;
-    const allowed = event.by?.role === "admin" || (role !== null && ROLE_RANK[role] >= ROLE_RANK.editor);
-    const actor = event.by
-      ? { id: event.by.id, name: event.by.name, role: event.by.role, via: "session" as const }
-      : null;
+    // Whoever scheduled it must still be able to publish there when the time comes
+    const principal = event.by ? yield* Effect.promise(() => principalOf(event.by!.id)) : null;
+    const allowed = yield* Effect.promise(() => can(principal, "event:publish", event.communityId));
+    const actor =
+      event.by && principal ? { id: event.by.id, name: event.by.name, via: "session" as const, principal } : null;
     const attempt =
       allowed && actor
         ? publish(event.id).pipe(Effect.provideService(CurrentUser, actor))

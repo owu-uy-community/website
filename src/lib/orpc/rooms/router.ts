@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { authed, inCommunity, pub, staff } from "../base";
+import { authed, inCommunity, platform, pub } from "../base";
 import {
   CreateRoomSchema,
   GetRoomsByOpenSpaceSchema,
@@ -32,7 +32,7 @@ export const roomsRouter = {
       return yield* Rooms.listRooms(input.openSpaceId);
     }),
 
-  create: staff
+  create: platform("program:manage")
     .meta(docs("Add a room to an event"))
     .input(CreateRoomSchema)
     .output(RoomSchema)
@@ -40,7 +40,7 @@ export const roomsRouter = {
       return yield* Rooms.createRoom(input);
     }),
 
-  update: staff
+  update: platform("program:manage")
     .meta(docs("Edit a room; only the fields sent change"))
     .input(UpdateRoomInputSchema)
     .output(RoomSchema)
@@ -48,7 +48,7 @@ export const roomsRouter = {
       return yield* Rooms.updateRoom(input.id, input.data);
     }),
 
-  delete: staff
+  delete: platform("program:manage")
     .meta(docs("Delete a room and its talks"))
     .input(RoomIdSchema)
     .output(RoomSchema)
@@ -59,13 +59,13 @@ export const roomsRouter = {
   setStatus: authed
     .meta(docs("Mark a room open, full or to evacuate (its host, from the phone)"))
     .input(SetRoomStatusSchema)
-    .use(inCommunity("member"))
+    .use(inCommunity("room:set-status"))
     .output(RoomSchema)
     .effect(function* ({ input }) {
       return yield* Rooms.setRoomStatus(input.roomId, input.status);
     }),
 
-  reorder: staff
+  reorder: platform("program:manage")
     .meta(docs("Set the board order of an event's rooms"))
     .input(ReorderRoomsSchema)
     .output(z.object({ success: z.literal(true) }))

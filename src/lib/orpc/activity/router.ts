@@ -25,7 +25,7 @@ export const activityRouter = {
         limit: z.number().int().min(1).max(200).default(40),
       })
     )
-    .use(inCommunity("editor"))
+    .use(inCommunity("activity:read"))
     .output(z.array(ActivitySchema))
     .effect(function* ({ input }) {
       return yield* listActivity(input);

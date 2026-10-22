@@ -6,7 +6,7 @@ import { db } from "lib/db";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by } from "test/context";
-import { makeSiteAdmin, makeUser } from "test/factories";
+import { makeSiteAdmin, makeUser, makeServiceAccount } from "test/factories";
 
 /** OBS rigs 1 and 2 are global rows, so every test starts from empty rigs. */
 async function setup() {
@@ -192,10 +192,11 @@ describe("obsControl bus", () => {
   test("commands from an API key are told apart from the admin screen in the history", async () => {
     const { staff } = await setup();
 
-    await call(router.obsControl.send, { instanceId: 1, type: "cut", payload: {} }, by(staff, { apiKey: true }));
+    const deck = await makeServiceAccount({ name: "Deck" });
+    await call(router.obsControl.send, { instanceId: 1, type: "cut", payload: {} }, by(deck, { apiKey: true }));
 
     const [history] = await call(router.obsControl.history, { instanceId: 1 }, by(staff));
-    expect(history.source).toBe(`api-key:${staff.name}`);
+    expect(history.source).toBe(`api-key:${deck.name}`);
   });
 
   test("a command nobody ran within 30 s is skipped, never replayed late", async () => {

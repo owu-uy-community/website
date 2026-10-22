@@ -8,7 +8,7 @@ export const assistantRouter = {
   ask: authed
     .meta(openapi({ tags: ["Admin"], summary: "Ask Owy about the event, answered from mission control's data" }))
     .input(z.object({ eventId: z.string().min(1), question: z.string().trim().min(3).max(300) }))
-    .use(inCommunity("admin"))
+    .use(inCommunity("assistant:ask"))
     .output(z.object({ answer: z.string() }))
     .effect(function* ({ input }) {
       return yield* Assistant.ask(input.eventId, input.question);

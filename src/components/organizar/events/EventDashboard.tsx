@@ -16,7 +16,7 @@ import { daysBetween } from "lib/calendar/holidays";
 import { dayKey, shortWhen } from "lib/community/time";
 import { orpc } from "lib/orpc/client";
 import { eventChannel } from "lib/realtime/channels";
-import { ROLE_RANK } from "lib/roles";
+import type { CommunityPermission } from "lib/authz/catalog";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
@@ -29,15 +29,16 @@ import { PublicationsTab } from "./PublicationsTab";
 import { SettingsTab } from "./SettingsTab";
 import { SummaryTab } from "./SummaryTab";
 
+/** The dashboard's tabs; `requires` hides one from whoever can't use it. */
 const TABS = [
-  { key: "resumen", title: "Resumen", admin: false },
-  { key: "inscriptos", title: "Inscriptos", admin: true },
-  { key: "puerta", title: "Puerta", admin: true },
-  { key: "emails", title: "Emails", admin: true },
-  { key: "publicaciones", title: "Publicaciones", admin: false },
-  { key: "feedback", title: "Feedback", admin: false },
-  { key: "ajustes", title: "Ajustes", admin: false },
-] as const;
+  { key: "resumen", title: "Resumen" },
+  { key: "inscriptos", title: "Inscriptos", requires: "attendee:read" },
+  { key: "puerta", title: "Puerta", requires: "event:door-link" },
+  { key: "emails", title: "Emails", requires: "event:message" },
+  { key: "publicaciones", title: "Publicaciones" },
+  { key: "feedback", title: "Feedback" },
+  { key: "ajustes", title: "Ajustes" },
+] as const satisfies readonly { key: string; title: string; requires?: CommunityPermission }[];
 export type Tab = (typeof TABS)[number]["key"];
 /** Tabs that changed name: their old links still land */
 const RENAMED: Record<string, Tab> = { mensajes: "emails", encuesta: "feedback" };
@@ -58,14 +59,15 @@ export function EventDashboard({
   const pathname = usePathname();
   const params = useSearchParams();
   const queryClient = useQueryClient();
-  const { current } = usePanel();
-  const isAdmin = current ? ROLE_RANK[current.role] >= ROLE_RANK.admin : false;
+  const { can } = usePanel();
+  // What admins do with a published event (cancel it, its settings): the API checks each again
+  const isAdmin = can("event:cancel");
   const input = { communityId: community.id, eventId };
   const event = useQuery(orpc.events.get.queryOptions({ input, refetchOnWindowFocus: false }));
   const stats = useQuery(orpc.events.stats.queryOptions({ input }));
   const asked = params.get("tab") ?? "";
   const requested = RENAMED[asked] ?? asked;
-  const visible = TABS.filter((tab) => isAdmin || !tab.admin);
+  const visible = TABS.filter((tab) => !("requires" in tab) || can(tab.requires));
   const tab: Tab = visible.find((item) => item.key === requested)?.key ?? "resumen";
   const go = (key: Tab) => {
     const next = new URLSearchParams(params.toString());

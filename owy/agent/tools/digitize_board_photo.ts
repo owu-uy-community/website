@@ -34,7 +34,7 @@ export default defineTool({
       .describe("Contexto extra para la sugerencia de ubicación (ej: 'preferís bloque de la tarde')"),
   }),
   async execute({ imagePath, additionalContext }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
 
     const sandbox = await ctx.getSandbox();
     const bytes = await sandbox.readBinaryFile({ path: imagePath });
@@ -51,7 +51,7 @@ export default defineTool({
     const imageData = `data:${mediaTypeFor(imagePath)};base64,${Buffer.from(bytes).toString("base64")}`;
 
     // The site reads the event's board itself.
-    const result = await owuApi().ocr.processImageWithSuggestion({
+    const result = await owuApi(ctx).ocr.processImageWithSuggestion({
       eventId: event.id,
       imageData,
       ...(additionalContext ? { additionalContext } : {}),

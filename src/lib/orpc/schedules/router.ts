@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import {
   CreateScheduleSchema,
   GetSchedulesByOpenSpaceSchema,
@@ -30,7 +30,7 @@ export const schedulesRouter = {
       return yield* Schedules.listSchedules(input.openSpaceId);
     }),
 
-  create: staff
+  create: platform("program:manage")
     .meta(docs("Add a time slot to an event"))
     .input(CreateScheduleSchema)
     .output(ScheduleSchema)
@@ -38,7 +38,7 @@ export const schedulesRouter = {
       return yield* Schedules.createSchedule(input);
     }),
 
-  update: staff
+  update: platform("program:manage")
     .meta(docs("Edit a time slot; only the fields sent change"))
     .input(UpdateScheduleInputSchema)
     .output(ScheduleSchema)
@@ -46,7 +46,7 @@ export const schedulesRouter = {
       return yield* Schedules.updateSchedule(input.id, input.data);
     }),
 
-  delete: staff
+  delete: platform("program:manage")
     .meta(docs("Delete a time slot and its talks"))
     .input(ScheduleIdSchema)
     .output(ScheduleSchema)

@@ -10,8 +10,11 @@ import { RPCLink } from "@orpc/client/fetch";
  * in the whole website graph. If the website API changes, update this file.
  *
  * Auth: the key travels as `x-api-key`. Better Auth's apiKey plugin turns it
- * into a session for the bot's own user account, so the API authorizes Owy
- * like any other admin user. Mint keys on the site with `pnpm owy:key`.
+ * into a session for Owy's service account, capped by the key's permissions.
+ * Calls made for a person also name them (`x-owu-actor: slack:U…` /
+ * `telegram:…` / `anonymous`): the API then authorizes that person, never more
+ * than the key. Who is staff lives in the site's roles, not here. Mint keys on
+ * the site with `pnpm owy:key`.
  */
 
 // ---------------------------------------------------------------------------
@@ -439,7 +442,19 @@ export interface CommunityOption {
   listed: boolean;
 }
 
+/** What the API says the caller (or the person Owy acts for) may do. */
+export interface AccessCheck {
+  actor: { id: string; name: string; via: string; roles: string[] };
+  allowed: Record<string, boolean>;
+}
+
 export interface OwuApi {
+  access: {
+    check(input: { permissions: string[]; communityId?: string; eventId?: string }): Promise<AccessCheck>;
+    telegram: {
+      link(input: { code: string; telegramUserId: string }): Promise<{ name: string }>;
+    };
+  };
   /** The directory (public). */
   communities: {
     list: (input: Record<string, never>) => Promise<CommunityOption[]>;
@@ -582,21 +597,78 @@ function requireApiKey(): string {
   return key;
 }
 
-let cachedClient: OwuApi | null = null;
+/**
+ * Who a call is made for, from the session's principal: the person writing on Slack or Telegram,
+ * someone anonymous at the companion's kiosk, or nobody (Owy itself: its operators, the
+ * PIN-unlocked companion, the weekly schedule), when the key's own permissions decide.
+ */
+export function actorOf(ctx: ActorCtx | null | undefined): string | null {
+  const auth = ctx?.session?.auth?.current;
+  if (!auth) return "anonymous";
+  const userId = auth.attributes?.user_id;
+  switch (auth.authenticator) {
+    case "slack-webhook":
+      return userId ? `slack:${String(userId)}` : "anonymous";
+    case "telegram-webhook":
+      return userId ? `telegram:${String(userId)}` : "anonymous";
+    case "companion-staff":
+    case "local-dev":
+    case "owu-key":
+    case "app":
+      return null;
+    default:
+      return "anonymous";
+  }
+}
 
-export function owuApi(): OwuApi {
-  if (cachedClient) return cachedClient;
+/** The slice of a tool or approval context `actorOf` reads. */
+export interface ActorCtx {
+  session?: { auth?: { current?: { authenticator?: string; attributes?: Record<string, unknown> } | null } };
+}
 
+let ownClient: OwuApi | null = null;
+
+const operators = new Map<string, { at: number; who: Promise<{ id: string; name: string } | null> }>();
+
+/**
+ * The OWU account behind someone else's API key, when it may operate Owy (`owy:operate`); null for
+ * anything else. Asked once every 5 minutes per key, so a key revoked on the site stops here soon.
+ */
+export function verifyOwuKey(key: string): Promise<{ id: string; name: string } | null> {
+  const hit = operators.get(key);
+  if (hit && Date.now() - hit.at < 300_000) return hit.who;
+  const client = createORPCClient(
+    new RPCLink({ origin: owuApiUrl(), url: "/api/orpc", headers: () => ({ "x-api-key": key }) })
+  ) as unknown as OwuApi;
+  const who = client.access
+    .check({ permissions: ["owy:operate"] })
+    .then((result) => (result.allowed["owy:operate"] ? { id: result.actor.id, name: result.actor.name } : null))
+    .catch(() => null);
+  if (operators.size > 100) operators.clear();
+  operators.set(key, { at: Date.now(), who });
+
+  return who;
+}
+
+function clientFor(actor: string | null): OwuApi {
   // oRPC v2: `origin` is the site, `url` the path (the site must be on v2 too —
   // v1 and v2 clients and servers cannot talk to each other).
   const link = new RPCLink({
     origin: owuApiUrl(),
     url: "/api/orpc",
-    headers: () => ({
-      "x-api-key": requireApiKey(),
-    }),
+    headers: () => ({ "x-api-key": requireApiKey(), ...(actor ? { "x-owu-actor": actor } : {}) }),
   });
 
-  cachedClient = createORPCClient(link) as unknown as OwuApi;
-  return cachedClient;
+  return createORPCClient(link) as unknown as OwuApi;
+}
+
+/**
+ * The OWU API, as the person behind `ctx` (pass the tool's context for anything done for someone),
+ * or as Owy itself without one (reads, and what the device or the schedule does on its own).
+ */
+export function owuApi(ctx?: ActorCtx | null): OwuApi {
+  const actor = ctx === undefined ? null : actorOf(ctx);
+  if (actor) return clientFor(actor);
+
+  return (ownClient ??= clientFor(null));
 }

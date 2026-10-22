@@ -1,20 +1,25 @@
 import { and, asc, countDistinct, desc, eq, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
+import { owuSlackLinked } from "../../authz/principal";
+import { higherCommunityRole } from "../../authz/people";
 import {
+  account,
   communities,
   communityClaims,
   communityMembers,
   events,
+  invitations,
   user,
   type CommunityClaimRow,
   type CommunityRow,
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
 import { refreshPage } from "../../revalidate";
-import { claimDecidedEmail } from "../../email/templates";
+import { accessInviteEmail, claimDecidedEmail } from "../../email/templates";
 import { query, transaction } from "../db";
-import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
+import { Conflict, Invalid, NotFound } from "../errors";
+import { checkGrant, holdsOwuSlack, needsOwuSlack, raises } from "./grants";
 import { memberRole } from "../scope";
 import { CurrentUser } from "../services";
 import { recordActivity } from "../ops";
@@ -178,6 +183,7 @@ export const listCommunityMembers = (communityId: string) =>
         name: user.name,
         email: user.email,
         image: user.image,
+        owuSlack: sql<boolean>`(${owuSlackLinked(sql.raw(`"user"."id"`))} and "user"."slackDeactivatedAt" is null)`,
       })
       .from(communityMembers)
       .innerJoin(user, eq(communityMembers.userId, user.id))
@@ -187,23 +193,14 @@ export const listCommunityMembers = (communityId: string) =>
     Effect.map((rows) => rows.map((row): CommunityMember => ({ ...row, createdAt: row.createdAt.toISOString() })))
   );
 
-/** Site staff, or an owner of this community: the only ones who may hand out or take away ownership. */
-const requesterIsOwner = (communityId: string) =>
-  Effect.gen(function* () {
-    const requester = yield* CurrentUser;
-    if (requester.role === "admin") return true;
-
-    return (yield* memberRole(communityId, requester.id)) === "owner";
-  });
-
-const ownersOnly = new Forbidden({ message: "Solo un owner de la comunidad puede cambiar a otro owner" });
-const lastOwner = new Conflict({ reason: "last_owner", message: "La comunidad tiene que conservar al menos un owner" });
+const lastOwner = new Conflict({ reason: "last_owner", message: "La comunidad tiene que conservar al menos un dueño" });
 
 /**
  * Membership changes of one community run one at a time: each locks the
  * community row first, inside its transaction. Two admins demoting the last
  * two owners at once can't both see "one left", and with a single lock taken
- * first there is no lock order to get wrong (no deadlocks).
+ * first there is no lock order to get wrong (no deadlocks). The database keeps
+ * the same rule for every other writer (src/lib/db/triggers.ts).
  */
 const lockCommunity = (communityId: string) =>
   query((db) =>
@@ -232,43 +229,86 @@ const findMembership = (communityId: string, memberId: string) =>
     )
   );
 
+const INVITATION_DAYS = 30;
+
 /**
- * Add someone by the email they signed in with, or change the role of an
- * existing member. Giving or taking away the owner role is reserved to owners
- * (and staff), and the last owner can never be demoted this way.
+ * Add someone to the team by the email they use or their OWU Slack id. Someone already on the OWU
+ * Slack joins right away; anyone else gets an invitation that applies when they sign in with it
+ * (the allowlist). Someone already on the team is refused: their role changes from the list.
  */
-export const addCommunityMember = (input: { communityId: string; email: string; role: CommunityRole }) =>
+export const addCommunityMember = (input: {
+  communityId: string;
+  email?: string | undefined;
+  slackUserId?: string | undefined;
+  name?: string | undefined;
+  role: CommunityRole;
+}) =>
   transaction(
     Effect.gen(function* () {
+      const me = yield* CurrentUser;
       yield* lockCommunity(input.communityId);
+      const email = input.email?.toLowerCase().trim() || null;
+      const slackUserId = input.slackUserId?.trim() || null;
+      if (!email && !slackUserId)
+        return yield* new Invalid({ message: "Indicá un email o un usuario del Slack de OWU" });
+
       const [target] = yield* query((db) =>
-        db.select({ id: user.id }).from(user).where(eq(user.email, input.email.toLowerCase().trim()))
+        db
+          .select({ id: user.id })
+          .from(user)
+          .where(
+            email
+              ? eq(sql`lower(${user.email})`, email)
+              : sql`${user.id} in (select ${account.userId} from ${account} where ${account.providerId} = 'slack' and ${account.accountId} = ${slackUserId})`
+          )
+          .limit(1)
       );
-      if (!target) {
-        return yield* new Invalid({
-          message: "No hay nadie con ese email: tiene que haber iniciado sesión al menos una vez",
+      if (target && (yield* memberRole(input.communityId, target.id))) {
+        return yield* new Conflict({
+          reason: "already_member",
+          message: "Ya es parte de la comunidad: cambiale el rol desde la lista",
         });
       }
+      yield* checkGrant(input.communityId, target?.id ?? null, null, input.role);
 
-      const current = yield* memberRole(input.communityId, target.id);
-      const touchesOwner = input.role === "owner" || current === "owner";
-      if (touchesOwner && !(yield* requesterIsOwner(input.communityId))) return yield* ownersOnly;
-      if (current === "owner" && input.role !== "owner" && (yield* ownerCount(input.communityId)) <= 1) {
-        return yield* lastOwner;
+      if (target && (yield* holdsOwuSlack(target.id))) {
+        const [row] = yield* query((db) =>
+          db
+            .insert(communityMembers)
+            .values({ communityId: input.communityId, userId: target.id, role: input.role })
+            .returning()
+        );
+
+        return { status: "added" as const, member: row, invitationId: null };
       }
 
-      const [row] = yield* query((db) =>
+      const [invitation] = yield* query((db) =>
         db
-          .insert(communityMembers)
-          .values({ communityId: input.communityId, userId: target.id, role: input.role })
-          .onConflictDoUpdate({
-            target: [communityMembers.communityId, communityMembers.userId],
-            set: { role: input.role },
+          .insert(invitations)
+          .values({
+            communityId: input.communityId,
+            role: input.role,
+            email,
+            slackUserId,
+            name: input.name ?? null,
+            invitedById: me.id,
+            expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
           })
           .returning()
       );
+      const [community] = yield* query((db) =>
+        db.select({ name: communities.name }).from(communities).where(eq(communities.id, input.communityId))
+      );
+      if (email) {
+        yield* enqueueEmail({
+          kind: "access_invite",
+          to: email,
+          dedupeKey: `access_invite:${invitation.id}`,
+          ...accessInviteEmail({ inviterName: me.name, communityName: community?.name ?? null, role: input.role }),
+        });
+      }
 
-      return row;
+      return { status: "invited" as const, member: null, invitationId: invitation.id };
     })
   );
 
@@ -277,13 +317,13 @@ export const updateCommunityMemberRole = (input: { communityId: string; memberId
     Effect.gen(function* () {
       yield* lockCommunity(input.communityId);
       const member = yield* findMembership(input.communityId, input.memberId);
+      if (member.role === input.role) return member;
 
-      if ((member.role === "owner" || input.role === "owner") && !(yield* requesterIsOwner(input.communityId))) {
-        return yield* ownersOnly;
+      yield* checkGrant(input.communityId, member.userId, member.role, input.role);
+      if ((yield* raises(input.communityId, member.role, input.role)) && !(yield* holdsOwuSlack(member.userId))) {
+        return yield* needsOwuSlack;
       }
-      if (member.role === "owner" && input.role !== "owner" && (yield* ownerCount(input.communityId)) <= 1) {
-        return yield* lastOwner;
-      }
+      if (member.role === "owner" && (yield* ownerCount(input.communityId)) <= 1) return yield* lastOwner;
 
       const [row] = yield* query((db) =>
         db.update(communityMembers).set({ role: input.role }).where(eq(communityMembers.id, input.memberId)).returning()
@@ -299,12 +339,30 @@ export const removeCommunityMember = (input: { communityId: string; memberId: st
       yield* lockCommunity(input.communityId);
       const member = yield* findMembership(input.communityId, input.memberId);
 
-      if (member.role === "owner") {
-        if (!(yield* requesterIsOwner(input.communityId))) return yield* ownersOnly;
-        if ((yield* ownerCount(input.communityId)) <= 1) return yield* lastOwner;
-      }
+      yield* checkGrant(input.communityId, member.userId, member.role, null);
+      if (member.role === "owner" && (yield* ownerCount(input.communityId)) <= 1) return yield* lastOwner;
 
       yield* query((db) => db.delete(communityMembers).where(eq(communityMembers.id, input.memberId)));
+
+      return { success: true as const };
+    })
+  );
+
+/** Leave a community's team. The last owner can't: someone has to keep running it. */
+export const leaveCommunity = (communityId: string) =>
+  transaction(
+    Effect.gen(function* () {
+      const me = yield* CurrentUser;
+      yield* lockCommunity(communityId);
+      const role = yield* memberRole(communityId, me.id);
+      if (!role) return yield* new NotFound({ entity: "member", message: "No sos parte de esta comunidad" });
+      if (role === "owner" && (yield* ownerCount(communityId)) <= 1) return yield* lastOwner;
+
+      yield* query((db) =>
+        db
+          .delete(communityMembers)
+          .where(and(eq(communityMembers.communityId, communityId), eq(communityMembers.userId, me.id)))
+      );
 
       return { success: true as const };
     })
@@ -496,16 +554,39 @@ export const decideClaim = (input: { claimId: string; decision: "approve" | "rej
 
       let role: CommunityRole | null = null;
       if (status === "approved") {
-        const granted = input.role ?? ((yield* ownerCount(row.communityId)) === 0 ? "owner" : "editor");
-        yield* query((db) =>
-          db
-            .insert(communityMembers)
-            .values({ communityId: row.communityId, userId: row.userId, role: granted })
-            .onConflictDoUpdate({
-              target: [communityMembers.communityId, communityMembers.userId],
-              set: { role: granted },
+        const offered = input.role ?? ((yield* ownerCount(row.communityId)) === 0 ? "owner" : "editor");
+        // Never lowers a role they got meanwhile (approving used to demote a sole owner to editor)
+        const current = yield* memberRole(row.communityId, row.userId);
+        const granted = current ? higherCommunityRole(current, offered) : offered;
+        yield* checkGrant(row.communityId, row.userId, current, granted);
+        if (current === granted) {
+          // Already there
+        } else if (yield* holdsOwuSlack(row.userId)) {
+          yield* query((db) =>
+            db
+              .insert(communityMembers)
+              .values({ communityId: row.communityId, userId: row.userId, role: granted })
+              .onConflictDoUpdate({
+                target: [communityMembers.communityId, communityMembers.userId],
+                set: { role: granted },
+              })
+          );
+        } else {
+          // Roles need the OWU Slack: it applies when they sign in with it
+          const [claimant] = yield* query((db) =>
+            db.select({ email: user.email }).from(user).where(eq(user.id, row.userId))
+          );
+          yield* query((db) =>
+            db.insert(invitations).values({
+              communityId: row.communityId,
+              role: granted,
+              email: claimant?.email ?? null,
+              invitedById: reviewer.id,
+              note: "Pedido para organizar aprobado",
+              expiresAt: new Date(Date.now() + INVITATION_DAYS * 86_400_000),
             })
-        );
+          );
+        }
         role = granted;
       }
       const [person] = yield* query((db) =>

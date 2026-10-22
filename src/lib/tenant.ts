@@ -5,6 +5,7 @@
 
 /** Slugs that can never be community slugs (they collide with app routes). */
 export const RESERVED_SLUGS = new Set([
+  "acceso",
   "admin",
   "api",
   "c",

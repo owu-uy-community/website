@@ -6,7 +6,7 @@
  * schedules/tracks — nothing else is touched).
  */
 import "dotenv/config";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
@@ -60,8 +60,11 @@ async function main() {
     .values({ slug: DEMO_SLUG, name: "Comunidad Demo", description: "Datos de ejemplo para desarrollo" })
     .returning();
 
-  // Site admins become owners of the demo community (handy in dev)
-  const admins = await db.select({ id: user.id }).from(user).where(eq(user.role, "admin"));
+  // Site staff become owners of the demo community (handy in dev)
+  const admins = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(sql`string_to_array(${user.role}, ',') && array['staff', 'superadmin', 'admin']`);
   for (const admin of admins) {
     await db
       .insert(communityMembers)

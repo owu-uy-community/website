@@ -4,10 +4,16 @@ import { createContext, useContext, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { skipToken, useQuery } from "@tanstack/react-query";
 
+import type { CommunityPermission } from "lib/authz/catalog";
 import type { MyCommunity } from "lib/orpc/communities/schemas";
 import { orpc } from "lib/orpc/client";
 
-export type PanelCommunity = Pick<MyCommunity, "id" | "slug" | "name" | "logoUrl" | "role">;
+export type PanelCommunity = Pick<MyCommunity, "id" | "slug" | "name" | "logoUrl" | "role"> & {
+  /** How their role reads ("Editor", or a custom role's own label). */
+  roleLabel: string;
+  /** Every "resource:action" they hold in this community (src/lib/authz/catalog.ts). */
+  permissions: readonly string[];
+};
 
 type PanelState = {
   /** The communities this person organizes (site staff: every active one). */
@@ -26,8 +32,10 @@ export function usePanel() {
   const state = useContext(PanelContext);
   const params = useParams<{ communitySlug?: string }>();
   const current = state.communities.find((community) => community.slug === params.communitySlug) ?? null;
+  /** Does the viewer hold `permission` in the current community? Only decides what to show: the API checks again. */
+  const can = (permission: CommunityPermission) => current?.permissions.includes(permission) ?? false;
 
-  return { ...state, current };
+  return { ...state, current, can };
 }
 
 /**

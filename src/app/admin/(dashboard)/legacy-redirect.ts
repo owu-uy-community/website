@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { requireStaffSession } from "app/lib/auth-helpers";
+import { requireDashboardAccess } from "app/lib/auth-helpers";
 import { caller } from "lib/orpc/server";
 
 /**
@@ -9,7 +9,7 @@ import { caller } from "lib/orpc/server";
  * keeping `?event=` when it was given.
  */
 export async function redirectToEventPage(page: string, eventSlug: string | undefined) {
-  await requireStaffSession();
+  await requireDashboardAccess();
   const events = await caller.openSpaces.listForAdmin();
   const selected = (eventSlug ? events.find((event) => event.slug === eventSlug) : events[0]) ?? events[0];
   if (!selected) redirect("/admin");

@@ -23,6 +23,8 @@ import { slotDay, wallClock } from "../../slot-day";
 import { query } from "../db";
 import { NotFound } from "../errors";
 import { visibleTo } from "../incidents/service";
+import { grantsHold, permissionsOf } from "../../authz/catalog";
+import { grantsIn, platformGrants } from "../../authz/principal";
 import { memberRole } from "../scope";
 import { ONLINE_MS } from "../screens/service";
 import { CurrentUser } from "../services";
@@ -132,9 +134,13 @@ export const getStatus = (eventId: string) =>
     );
     if (!row) return yield* new NotFound({ entity: "event", message: "Ese evento no existe" });
     const { event } = row;
-    const siteAdmin = me.role === "admin";
-    const role = yield* memberRole(event.communityId, me.id);
-    const organizer = siteAdmin || role === "owner" || role === "admin";
+    // What this person may do here drives the shell's nav and actions (see nav-config `requires`)
+    const grants = yield* Effect.promise(() => grantsIn(me.principal, event.communityId));
+    const permissions = permissionsOf(grants);
+    // Site staff: the event operations only a platform role holds
+    const siteAdmin = grantsHold(platformGrants(me.principal), "event:manage");
+    const role = me.principal.memberOf ? yield* memberRole(event.communityId, me.principal.memberOf) : null;
+    const organizer = grantsHold(grants, "incident:confidential");
 
     const [
       clock,
@@ -328,7 +334,7 @@ export const getStatus = (eventId: string) =>
       },
       phase,
       daysLeft,
-      me: { siteAdmin, role },
+      me: { siteAdmin, role, permissions },
       clock,
       counts: {
         talks: countOf(talks),

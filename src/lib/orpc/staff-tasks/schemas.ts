@@ -194,7 +194,7 @@ export const StaffMemberSchema = z.object({
   id: z.string(),
   communityId: z.string(),
   userId: z.string(),
-  role: z.enum(["owner", "admin", "editor", "member"]),
+  role: z.string(),
   name: z.string(),
   image: z.string().nullable(),
   createdAt: z.string(),

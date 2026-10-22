@@ -1,6 +1,8 @@
 import { defineChannel, GET, POST } from "eve/channels";
-import { type AuthFn, httpBasic, localDev, placeholderAuth, routeAuth } from "eve/channels/auth";
+import { type AuthFn, localDev, routeAuth } from "eve/channels/auth";
 import { z } from "zod";
+
+import { verifyOwuKey } from "../lib/owu-api";
 
 /**
  * Voice channel for the physical Owys (owy/companion).
@@ -53,13 +55,19 @@ export interface CompanionState {
   pitch: PitchContext | null;
 }
 
-const username = process.env.ROUTE_AUTH_BASIC_USER?.trim();
-const password = process.env.ROUTE_AUTH_BASIC_PASSWORD;
-const configuredAuth = username && password ? httpBasic({ username, password }) : placeholderAuth();
-const productionAuth: AuthFn<Request> = (request) => {
+/**
+ * Devices call these routes with their OWU API key (`x-api-key`); only keys the site says may
+ * operate Owy (`owy:operate`, the "companion" preset has it) get in. Revoked there, locked here.
+ */
+const productionAuth: AuthFn<Request> = async (request) => {
   const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
   if (new URL(request.url).protocol !== "https:" && forwardedProtocol !== "https") return null;
-  return configuredAuth(request);
+  const key = request.headers.get("x-api-key");
+  const device = key ? await verifyOwuKey(key) : null;
+
+  return device
+    ? { authenticator: "owu-key", principalId: device.id, principalType: "user", attributes: { name: device.name } }
+    : null;
 };
 const auth: AuthFn<Request>[] = process.env.NODE_ENV === "production" ? [productionAuth] : [localDev(), productionAuth];
 

@@ -14,7 +14,7 @@ export const panelRouter = {
       })
     )
     .input(SummaryInputSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("event:read"))
     .output(PanelSummarySchema)
     .effect(function* () {
       return yield* Panel.summary;

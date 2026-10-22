@@ -25,13 +25,13 @@ export default defineTool({
         input.needsWhiteboard !== undefined,
       { message: "Indicá al menos un campo a cambiar" }
     ),
-  approval: staffOnly(),
+  approval: staffOnly("program:manage"),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
     const board = await getBoard();
     const card = findCard(board, input.track);
 
-    const updated = await owuApi().tracks.update({
+    const updated = await owuApi(ctx).tracks.update({
       id: card.id,
       data: {
         ...(input.title !== undefined ? { title: input.title } : {}),

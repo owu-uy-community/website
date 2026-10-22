@@ -1,6 +1,7 @@
 import { and, inArray, lte } from "drizzle-orm";
 import { Effect } from "effect";
 
+import { syncOwuSlack } from "../authz/slack-sync";
 import { outboundMessages } from "../db/schema";
 import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
@@ -52,12 +53,14 @@ const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknow
   email: (deadline: number) => drainEmail({ deadline }),
 };
 
-/** `daily`: the once-a-day cron also runs retention. */
+/** `daily`: the once-a-day cron also runs retention and checks who left the OWU Slack. */
 export async function tick(budgetMs: number, { daily = false } = {}) {
   const deadline = Date.now() + budgetMs;
   const results: Record<string, unknown> = {};
   const run = Effect.runPromiseWith(liveServices);
-  const sweeps = daily ? { ...SWEEPS, retention: () => retention() } : SWEEPS;
+  const sweeps = daily
+    ? { ...SWEEPS, retention: () => retention(), slack: () => Effect.promise(() => syncOwuSlack()) }
+    : SWEEPS;
 
   for (const [name, sweep] of Object.entries(sweeps)) {
     if (Date.now() >= deadline) {

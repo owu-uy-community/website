@@ -63,4 +63,4 @@ export function activePanelItem(pathname: string | null, communitySlug: string |
 /** Which community the panel opens on: the last one used on this device. */
 export const LAST_COMMUNITY_COOKIE = "organizar:community";
 
-export const ROLE_LABEL = { owner: "Dueño", admin: "Admin", editor: "Editor", member: "Miembro" } as const;
+export { roleLabel } from "lib/authz/labels";

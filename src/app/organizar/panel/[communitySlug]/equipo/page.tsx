@@ -3,24 +3,28 @@ import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 import { Notice } from "components/Admin/panel";
+import { CommunityRolesSection } from "components/Admin/communities/CommunityRolesSection";
 import { MembersSection } from "components/Admin/communities/MembersSection";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { ProfileOptIn } from "components/organizar/community/ProfileOptIn";
 import { db } from "lib/db";
 import { communityMembers } from "lib/db/schema";
-import { ROLE_RANK } from "lib/roles";
 
-import { panelCommunity } from "../../access";
+import { holds, panelCommunity } from "../../access";
+import { LeaveTeam } from "./LeaveTeam";
 
 export const metadata: Metadata = { title: "Equipo · Organizá" };
 
-/** Who runs the community with what role; admins add people by email and change roles. */
+/**
+ * Who runs the community with what role; admins add people by email or OWU Slack, answer requests
+ * to join and define the community's own roles. Members may leave.
+ */
 export default async function TeamPage({ params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;
   const access = await panelCommunity(communitySlug);
   if (!access) notFound();
-  const { id, name, role } = access.community;
-  // Site staff without a membership have nothing to show on the profile
+  const { id, name, permissions } = access.community;
+  // Site staff without a membership have nothing to show on the profile, nor a team to leave
   const [membership] = await db
     .select({ showOnProfile: communityMembers.showOnProfile })
     .from(communityMembers)
@@ -34,11 +38,17 @@ export default async function TeamPage({ params }: { params: Promise<{ community
           <ProfileOptIn communityId={id} communityName={name} initial={membership.showOnProfile} />
         </div>
       ) : null}
-      {ROLE_RANK[role] >= ROLE_RANK.admin ? (
-        <MembersSection communityId={id} communityName={name} />
+      {holds(access.community, "member:read") ? (
+        <MembersSection communityId={id} communityName={name} permissions={permissions} />
       ) : (
-        <Notice tone="info">Solo los admins de la comunidad ven y cambian el equipo.</Notice>
+        <Notice tone="info">Solo quienes administran la comunidad ven y cambian el equipo.</Notice>
       )}
+      {holds(access.community, "role:read") ? (
+        <div className="mt-8">
+          <CommunityRolesSection communityId={id} permissions={permissions} />
+        </div>
+      ) : null}
+      {membership ? <LeaveTeam communityId={id} communityName={name} /> : null}
     </PageContainer>
   );
 }

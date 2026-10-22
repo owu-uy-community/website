@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
 import { CalendarX2 } from "lucide-react";
 
-import { isSiteAdmin, requireStaffSession } from "app/lib/auth-helpers";
+import { hasPermission, requireDashboardAccess } from "app/lib/auth-helpers";
 import { IncidentsPage } from "components/Admin/incidents/IncidentsPage";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
-import { db } from "lib/db";
-import { communityMembers } from "lib/db/schema";
 
 import { resolveAdminCommunityScope } from "../scope";
 
@@ -24,12 +21,12 @@ export default async function IncidentesPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  const session = await requireStaffSession();
-  const admin = isSiteAdmin(session);
+  const { session } = await requireDashboardAccess();
+  const admin = await hasPermission("event:manage");
 
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, admin ? null : session.user.id);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "incident:read");
   if (!scope) notFound();
 
   if (!scope.selected) {
@@ -52,16 +49,12 @@ export default async function IncidentesPage({
     );
   }
 
-  const [membership] = admin
-    ? []
-    : await db
-        .select({ role: communityMembers.role })
-        .from(communityMembers)
-        .where(and(eq(communityMembers.communityId, scope.community.id), eq(communityMembers.userId, session.user.id)));
-  // Editors manage incidents and organizers handle what's confidential; the API enforces both,
-  // this only decides which controls to show.
-  const canEdit = admin || (membership !== undefined && membership.role !== "member");
-  const organizer = admin || membership?.role === "owner" || membership?.role === "admin";
+  // Who manages incidents and who handles what's confidential; the API enforces both, this only
+  // decides which controls to show.
+  const [canEdit, organizer] = await Promise.all([
+    hasPermission("incident:manage", scope.community.id),
+    hasPermission("incident:confidential", scope.community.id),
+  ]);
 
   return <IncidentsPage canEdit={canEdit} eventId={scope.selected.id} meId={session.user.id} organizer={organizer} />;
 }

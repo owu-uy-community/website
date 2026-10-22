@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarX2 } from "lucide-react";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { CommsClient } from "components/Admin/comms/CommsClient";
 import { COMMS_TABS } from "components/Admin/comms/tabs";
 import { EmptyState } from "components/Admin/ui/states";
@@ -19,11 +19,11 @@ export default async function ComunicacionPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string; tab?: string; nuevo?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("comms:read");
 
   const { communitySlug } = await params;
   const { event: eventSlug, tab, nuevo } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, null);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "comms:read");
   if (!scope) notFound();
 
   if (!scope.selected) {

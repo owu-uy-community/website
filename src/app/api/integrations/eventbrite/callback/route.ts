@@ -1,7 +1,8 @@
 import { Effect, Result } from "effect";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { auth } from "app/lib/auth";
+import { sessionFor } from "app/lib/auth-helpers";
+import { principalFor } from "lib/authz/principal";
 import { appUrl } from "lib/email/templates";
 import { later } from "lib/later";
 import { readLink } from "lib/links";
@@ -21,8 +22,11 @@ export async function GET(request: NextRequest) {
   const run = Effect.runPromiseWith(liveServices);
   const signed = await readLink("oauth", request.cookies.get(STATE_COOKIE)?.value ?? "");
   const [communityId = "", userId, nonce] = signed?.split(".") ?? [];
-  const session = await auth.api.getSession({ headers: request.headers });
-  const slug = session && session.user.id === userId ? await run(adminCommunity(communityId, session.user)) : null;
+  const session = await sessionFor(request.headers);
+  const slug =
+    session && session.user.id === userId
+      ? await run(adminCommunity(communityId, await principalFor(session, request.headers)))
+      : null;
 
   const back = (result: string) => {
     const response = NextResponse.redirect(

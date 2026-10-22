@@ -3,7 +3,8 @@
 import { headers } from "next/headers";
 import { makeRouteHandler } from "@keystatic/next/route-handler";
 
-import { auth } from "app/lib/auth";
+import { principalFromRequest } from "app/lib/auth-helpers";
+import { can } from "lib/authz/principal";
 
 import keystaticConfig from "../../../../../keystatic.config";
 
@@ -17,9 +18,7 @@ async function rejectUnauthorized(): Promise<Response | null> {
     return new Response("Not found", { status: 404 });
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session || session.user.role !== "admin") {
+  if (!(await can(await principalFromRequest(await headers()), "event:manage"))) {
     return new Response("Unauthorized", { status: 401 });
   }
 

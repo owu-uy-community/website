@@ -45,14 +45,28 @@ export const appUrl = (path: string) => new URL(path, process.env.NEXT_PUBLIC_BA
 const button = (href: string, label: string) =>
   `<a href="${esc(href)}" style="display:inline-block;background:#F5BB03;color:#18181b;font-weight:600;text-decoration:none;padding:10px 18px;border-radius:8px">${esc(label)}</a>`;
 
-const ROLE = { owner: "dueño/a", admin: "admin", editor: "editor/a", member: "miembro" } as const;
+const ROLE: Record<string, string> = {
+  owner: "dueño/a",
+  admin: "admin",
+  editor: "editor/a",
+  member: "miembro",
+  door: "puerta",
+  staff: "staff de OWU",
+  moderator: "moderación de OWU",
+  superadmin: "superadmin",
+};
+const roleLabel = (role: string) =>
+  role
+    .split(",")
+    .map((name) => ROLE[name] ?? name)
+    .join(" y ");
 
 /** Staff answered someone's request to organize a community. */
 export function claimDecidedEmail(input: {
   name: string;
   communityName: string;
   communitySlug: string;
-  role: keyof typeof ROLE | null;
+  role: string | null;
 }): Omit<Email, "to"> {
   const hi = input.name ? `Hola ${input.name.split(" ")[0]},` : "Hola,";
   if (input.role) {
@@ -63,10 +77,10 @@ export function claimDecidedEmail(input: {
       html: layout({
         preheader: `Tu panel de ${input.communityName} está listo.`,
         body: `<p style="margin:0 0 16px">${esc(hi)}</p>
-<p style="margin:0 0 16px">El staff de OWU confirmó que organizás <strong>${esc(input.communityName)}</strong>. Entrás como ${ROLE[input.role]}: ya podés ver el calendario de todas las comunidades, reservar fecha y armar tus eventos.</p>
+<p style="margin:0 0 16px">El staff de OWU confirmó que organizás <strong>${esc(input.communityName)}</strong>. Entrás como ${esc(roleLabel(input.role))}: ya podés ver el calendario de todas las comunidades, reservar fecha y armar tus eventos.</p>
 <p style="margin:0 0 8px">${button(panel, "Abrir el panel")}</p>`,
       }),
-      text: `${hi}\n\nEl staff de OWU confirmó que organizás ${input.communityName}. Entrás como ${ROLE[input.role]}.\n\nAbrí el panel: ${panel}`,
+      text: `${hi}\n\nEl staff de OWU confirmó que organizás ${input.communityName}. Entrás como ${roleLabel(input.role)}.\n\nAbrí el panel: ${panel}`,
     };
   }
 
@@ -78,6 +92,65 @@ export function claimDecidedEmail(input: {
 <p style="margin:0 0 16px">El staff de OWU no pudo confirmar que organizás <strong>${esc(input.communityName)}</strong>. Si es un error, escribinos en el Slack de OWU o mandá el pedido de nuevo con un link que lo muestre.</p>`,
     }),
     text: `${hi}\n\nEl staff de OWU no pudo confirmar que organizás ${input.communityName}. Si es un error, escribinos en el Slack de OWU o mandá el pedido de nuevo con un link que lo muestre.`,
+  };
+}
+
+/**
+ * Someone gave you a role on OWU before you had it: on a community's team, or on the platform. It
+ * takes effect when you sign in with the OWU Slack.
+ */
+export function accessInviteEmail(input: {
+  inviterName: string;
+  communityName: string | null;
+  role: string;
+}): Omit<Email, "to"> {
+  const where = input.communityName ? `el equipo de ${input.communityName}` : "el staff de OWU";
+  const login = appUrl("/login?next=/admin");
+
+  return {
+    subject: `${input.inviterName} te sumó a ${where}`,
+    html: layout({
+      preheader: `Entrá con el Slack de OWU para empezar como ${roleLabel(input.role)}.`,
+      body: `<p style="margin:0 0 16px">Hola,</p>
+<p style="margin:0 0 16px">${esc(input.inviterName)} te sumó a <strong>${esc(where)}</strong> como ${esc(roleLabel(input.role))}.</p>
+<p style="margin:0 0 16px">Para empezar, entrá a OWU con tu cuenta del Slack de OWU (owu.slack.com): los roles necesitan ese Slack. Si todavía no estás, sumate primero.</p>
+<p style="margin:0 0 8px">${button(login, "Entrar con Slack")}</p>`,
+    }),
+    text: `Hola,\n\n${input.inviterName} te sumó a ${where} como ${roleLabel(input.role)}.\n\nPara empezar, entrá a OWU con tu cuenta del Slack de OWU (owu.slack.com): ${login}`,
+  };
+}
+
+/** Someone decided your request to access the dashboard or a community's team. */
+export function accessRequestDecidedEmail(input: {
+  name: string;
+  communityName: string | null;
+  role: string | null;
+}): Omit<Email, "to"> {
+  const hi = input.name ? `Hola ${input.name.split(" ")[0]},` : "Hola,";
+  const where = input.communityName ? `al equipo de ${input.communityName}` : "al panel de OWU";
+  if (input.role) {
+    const panel = appUrl("/admin");
+
+    return {
+      subject: `Ya tenés acceso ${where}`,
+      html: layout({
+        preheader: `Entrás como ${roleLabel(input.role)}.`,
+        body: `<p style="margin:0 0 16px">${esc(hi)}</p>
+<p style="margin:0 0 16px">Aprobaron tu pedido de acceso ${esc(where)}. Entrás como ${esc(roleLabel(input.role))}.</p>
+<p style="margin:0 0 8px">${button(panel, "Abrir el panel")}</p>`,
+      }),
+      text: `${hi}\n\nAprobaron tu pedido de acceso ${where}. Entrás como ${roleLabel(input.role)}.\n\n${panel}`,
+    };
+  }
+
+  return {
+    subject: `Tu pedido de acceso ${where}`,
+    html: layout({
+      preheader: "No lo pudieron aprobar esta vez.",
+      body: `<p style="margin:0 0 16px">${esc(hi)}</p>
+<p style="margin:0 0 16px">No pudieron aprobar tu pedido de acceso ${esc(where)} esta vez. Si creés que es un error, escribinos en el Slack de OWU.</p>`,
+    }),
+    text: `${hi}\n\nNo pudieron aprobar tu pedido de acceso ${where} esta vez. Si creés que es un error, escribinos en el Slack de OWU.`,
   };
 }
 

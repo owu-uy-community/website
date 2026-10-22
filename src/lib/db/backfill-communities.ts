@@ -11,7 +11,8 @@
  *   DATABASE_URL=... pnpm db:backfill-communities [--dry-run]
  *
  * Prod cutover order: apply phase-a additive SQL → run this → apply phase-c
- * SET NOT NULL SQL → deploy. Safe to re-run: every step is an upsert/no-op.
+ * SET NOT NULL SQL → deploy. Safe to re-run: every step is an upsert/no-op, and memberships are
+ * only seeded the first time.
  */
 import { eq, isNull, sql } from "drizzle-orm";
 
@@ -139,14 +140,25 @@ async function main() {
       console.log("  ✓ Palette colors assigned to color-less rooms");
 
       // 5. Memberships --------------------------------------------------------
-      const users = await tx.select({ id: user.id, role: user.role }).from(user);
-      for (const row of users) {
-        await tx
-          .insert(communityMembers)
-          .values({ communityId: owuId, userId: row.id, role: row.role === "admin" ? "owner" : "member" })
-          .onConflictDoNothing({ target: [communityMembers.communityId, communityMembers.userId] });
+      // Only on the first run: since then, roles are given on purpose (a membership is access), and
+      // a re-run would make everyone who ever signed in a member of OWU.
+      const [seeded] = await tx
+        .select({ id: communityMembers.id })
+        .from(communityMembers)
+        .where(eq(communityMembers.communityId, owuId))
+        .limit(1);
+      if (seeded) {
+        console.log("  ✓ Memberships already seeded: left as they are");
+      } else {
+        const users = await tx.select({ id: user.id, role: user.role }).from(user);
+        for (const row of users) {
+          await tx
+            .insert(communityMembers)
+            .values({ communityId: owuId, userId: row.id, role: row.role === "admin" ? "owner" : "member" })
+            .onConflictDoNothing({ target: [communityMembers.communityId, communityMembers.userId] });
+        }
+        console.log(`  ✓ Memberships seeded for ${users.length} users`);
       }
-      console.log(`  ✓ Memberships ensured for ${users.length} users`);
 
       // 6. Eventbrite pin → event column --------------------------------------
       const eventbriteId = process.env.NEXT_PUBLIC_EVENTBRITE_EVENT_ID;

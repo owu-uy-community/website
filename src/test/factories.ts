@@ -1,5 +1,6 @@
 import { createId } from "@paralleldrive/cuid2";
 
+import { OWU_SLACK_TEAM_ID } from "lib/authz/slack";
 import { db } from "lib/db";
 import {
   account,
@@ -37,7 +38,6 @@ export async function makeUser(overrides: Partial<typeof user.$inferInsert> = {}
       createdAt: now,
       updatedAt: now,
       role: "user",
-      status: "active",
       ...overrides,
     })
     .returning();
@@ -45,24 +45,45 @@ export async function makeUser(overrides: Partial<typeof user.$inferInsert> = {}
   return row;
 }
 
-/** Someone who signed in with the OWU Slack (email-code accounts have no `slack` account row). */
-export async function makeSlackUser(overrides: Partial<typeof user.$inferInsert> = {}) {
-  const row = await makeUser(overrides);
+/** Link a person to a Slack account: the OWU workspace unless `teamId` says otherwise. */
+export async function linkSlack(
+  userId: string,
+  teamId: string | null = OWU_SLACK_TEAM_ID,
+  accountId = `U${createId().toUpperCase().slice(0, 10)}`
+) {
   const now = new Date();
   await db.insert(account).values({
     id: createId(),
-    accountId: `U${createId()}`,
+    accountId,
     providerId: "slack",
-    userId: row.id,
+    slackTeamId: teamId,
+    userId,
     createdAt: now,
     updatedAt: now,
   });
 
+  return accountId;
+}
+
+/** Someone who signed in with the OWU Slack (email-code accounts have no `slack` account row). */
+export async function makeSlackUser(overrides: Partial<typeof user.$inferInsert> = {}) {
+  const row = await makeUser(overrides);
+  await linkSlack(row.id);
+
   return row;
 }
 
+/** Site staff: platform role `staff`, on the OWU Slack like every role holder. */
 export const makeSiteAdmin = (overrides: Partial<typeof user.$inferInsert> = {}) =>
-  makeUser({ name: "Site Admin", role: "admin", ...overrides });
+  makeSlackUser({ name: "Site Admin", role: "staff", ...overrides });
+
+/** A machine (the Owy bot, a Stream Deck): role `service`, only ever behind an API key. */
+export const makeServiceAccount = (overrides: Partial<typeof user.$inferInsert> = {}) =>
+  makeUser({ name: "Owy", role: "service", ...overrides });
+
+/** A platform role holder (superadmin, moderator…), on the OWU Slack. */
+export const makePlatformUser = (role: string, overrides: Partial<typeof user.$inferInsert> = {}) =>
+  makeSlackUser({ name: `Platform ${role}`, role, ...overrides });
 
 export async function makeCommunity(overrides: Partial<typeof communities.$inferInsert> = {}) {
   const [row] = await db
@@ -75,10 +96,14 @@ export async function makeCommunity(overrides: Partial<typeof communities.$infer
 
 export async function makeMember(
   communityId: string,
-  role: "owner" | "admin" | "editor" | "member",
-  overrides: Partial<typeof user.$inferInsert> = {}
+  role: string,
+  overrides: Partial<typeof user.$inferInsert> = {},
+  /** Their OWU Slack id (a random one by default), or false for someone without Slack. */
+  options: { slack?: string | false } = {}
 ): Promise<UserRow> {
+  // Roles count only for people on the OWU Slack
   const member = await makeUser({ name: `Community ${role}`, ...overrides });
+  if (options.slack !== false) await linkSlack(member.id, OWU_SLACK_TEAM_ID, options.slack);
   await db.insert(communityMembers).values({ communityId, userId: member.id, role });
 
   return member;

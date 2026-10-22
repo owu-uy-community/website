@@ -20,15 +20,15 @@ export default defineTool({
     .refine((input) => input.room !== undefined || input.timeSlot !== undefined, {
       message: "Indicá al menos sala o horario destino",
     }),
-  approval: staffOnly(),
+  approval: staffOnly("program:manage"),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
     const board = await getBoard();
     const card = findCard(board, input.track);
     const room = input.room ? findRoom(board, input.room) : undefined;
     const schedule = input.timeSlot ? findSchedule(board, input.timeSlot) : undefined;
 
-    const updated = await owuApi().tracks.update({
+    const updated = await owuApi(ctx).tracks.update({
       id: card.id,
       data: {
         ...(room ? { roomId: room.id } : {}),

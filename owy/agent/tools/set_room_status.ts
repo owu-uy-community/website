@@ -1,6 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { findRoom, getBoard, ROOM_STATUS_WORDS } from "../lib/board";
+import { findRoom, getBoard, ROOM_STATUS_WORDS, resolveActiveEvent } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
 import { requireStaff, staffOnly } from "../lib/staff";
 
@@ -11,12 +11,12 @@ export default defineTool({
     room: z.string().min(1).describe("La sala (nombre o id)"),
     status: z.enum(["open", "full", "evacuate"]).describe("open: abierta · full: llena · evacuate: evacuar"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("room:set-status", { inEvent: true }),
   async execute({ room, status }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "room:set-status", (await resolveActiveEvent()).id);
     const target = findRoom(await getBoard(), room);
 
-    const updated = await owuApi().rooms.setStatus({ roomId: target.id, status });
+    const updated = await owuApi(ctx).rooms.setStatus({ roomId: target.id, status });
 
     return {
       ok: true,

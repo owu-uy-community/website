@@ -20,7 +20,7 @@ function fakeEve(events: object[], opts: { streamIndex?: number } = {}): Promise
       method: req.method ?? "",
       url: req.url ?? "",
       body: raw ? JSON.parse(raw) : null,
-      auth: req.headers.authorization ?? null,
+      auth: (req.headers["x-api-key"] as string | undefined) ?? null,
     });
     if (req.method === "POST" && req.url?.endsWith("/turns")) {
       res.setHeader("content-type", "application/json");
@@ -78,7 +78,7 @@ describe("EveLink", () => {
       ],
       { streamIndex: 12 }
     );
-    const link = new EveLink({ url: eve.url, basic: { username: "u", password: "p" }, logger });
+    const link = new EveLink({ url: eve.url, apiKey: "owy_test", logger });
     const deltas: string[] = [];
     const tools: string[] = [];
 
@@ -106,7 +106,7 @@ describe("EveLink", () => {
       marketplaceOpen: true,
       eventName: "OWU Conf 2026",
     });
-    expect(post.auth).toBe(`Basic ${Buffer.from("u:p").toString("base64")}`);
+    expect(post.auth).toBe("owy_test");
     expect(stream.url).toBe("/companion/sessions/wrun_test/stream?startIndex=12");
   });
 

@@ -12,9 +12,9 @@ export default defineTool({
     durationSeconds: z.number().int().positive().optional().describe("Para setDuration: duración en segundos"),
     targetTime: z.string().optional().describe("Para setTargetTime: timestamp ISO con zona horaria, ej. 2026-11-07T18:00:00-03:00"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("stage:operate"),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "stage:operate");
     if (input.action === "setDuration" && !input.durationSeconds) {
       throw new Error("setDuration necesita durationSeconds.");
     }
@@ -22,7 +22,7 @@ export default defineTool({
       throw new Error("setTargetTime necesita targetTime.");
     }
     const event = await resolveActiveEvent();
-    const state = await owuApi().countdown.updateState({
+    const state = await owuApi(ctx).countdown.updateState({
       action: input.action,
       eventId: event.id,
       ...(input.durationSeconds ? { durationSeconds: input.durationSeconds } : {}),

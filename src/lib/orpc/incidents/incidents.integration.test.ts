@@ -6,7 +6,7 @@ import { incidentNotes } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeBoard, makeMember, makeSiteAdmin, makeUser, type UserRow } from "test/factories";
+import { makeBoard, makeMember, makeSiteAdmin, makeUser, type UserRow, makeServiceAccount } from "test/factories";
 
 type CreateInput = RouterInputs["incidents"]["create"];
 
@@ -15,7 +15,7 @@ const jpeg = (bytes: number) => `data:image/jpeg;base64,${Buffer.alloc(bytes, 7)
 
 async function setup() {
   const board = await makeBoard();
-  const [owner, admin, editor, reporter, colleague, outsider, staff] = await Promise.all([
+  const [owner, admin, editor, reporter, colleague, outsider, staff, owy] = await Promise.all([
     makeMember(board.community.id, "owner", { name: "Dueña" }),
     makeMember(board.community.id, "admin", { name: "Organizadora" }),
     makeMember(board.community.id, "editor", { name: "Editora" }),
@@ -23,6 +23,7 @@ async function setup() {
     makeMember(board.community.id, "member", { name: "Colega" }),
     makeUser({ name: "Afuera" }),
     makeSiteAdmin(),
+    makeServiceAccount(),
   ]);
   const eventId = board.event.id;
   const report = (data: Partial<CreateInput> = {}, as: UserRow = reporter, apiKey = false) =>
@@ -33,16 +34,16 @@ async function setup() {
     );
   const announcements = () => call(router.staffTasks.announcements.list, { eventId }, by(staff));
 
-  return { ...board, eventId, owner, admin, editor, reporter, colleague, outsider, staff, report, announcements };
+  return { ...board, eventId, owner, admin, editor, reporter, colleague, outsider, staff, owy, report, announcements };
 }
 
 describe("reporting", () => {
   test("any member reports; the source says where it came from", async () => {
-    const { eventId, rooms, reporter, staff, report } = await setup();
+    const { eventId, rooms, reporter, owy, report } = await setup();
 
     const fromAdmin = await report({ roomId: rooms.plain.id, description: "No da imagen" });
     const fromPhone = await report({ title: "Falta agua", source: "phone", location: "Lobby" });
-    const fromOwy = await report({ title: "Campera perdida", category: "lost", source: "phone" }, staff, true);
+    const fromOwy = await report({ title: "Campera perdida", category: "lost", source: "phone" }, owy, true);
 
     expect(fromAdmin).toMatchObject({
       status: "open",
@@ -115,11 +116,11 @@ describe("reporting", () => {
   });
 
   test("through Owy, one loud report per few minutes pages the staff; the next ones still reach them, calmly", async () => {
-    const { eventId, staff, report, announcements } = await setup();
+    const { eventId, staff, owy, report, announcements } = await setup();
 
-    await report({ title: "Incendio en el baño", severity: "critical" }, staff, true);
-    await report({ title: "Otro incendio", severity: "critical" }, staff, true);
-    await report({ title: "Y otro más", severity: "high", location: "Patio" }, staff, true);
+    await report({ title: "Incendio en el baño", severity: "critical" }, owy, true);
+    await report({ title: "Otro incendio", severity: "critical" }, owy, true);
+    await report({ title: "Y otro más", severity: "high", location: "Patio" }, owy, true);
     // A person in the admin isn't held back by the window.
     await report({ title: "Persona descompuesta", severity: "high" });
 

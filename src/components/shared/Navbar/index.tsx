@@ -13,6 +13,7 @@ import { cn } from "app/lib/utils";
 import { useCommandPalette } from "components/community/CommandPalette";
 import { ButtonLink, Kbd, SmartLink } from "components/community/ui";
 import { UserAvatarMenu } from "components/shared/ui/user-avatar-menu";
+import { platformRolesOf } from "lib/authz/catalog";
 import { NAV_LINKS } from "lib/community/site";
 
 import MobileNav from "./mobileNav";
@@ -140,7 +141,7 @@ function Navbar() {
             </ButtonLink>
             {session?.user && !isPending ? (
               <UserAvatarMenu
-                showAdminSettings={session.user.role === "admin"}
+                showAdminSettings={platformRolesOf(session.user.role).some((role) => role !== "user")}
                 user={session.user}
                 onSignOut={() => signOut()}
               />

@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
-import { auth } from "app/lib/auth";
+import { sessionFor, signInAgain } from "app/lib/auth-helpers";
 import { EventPage } from "components/community/event/EventPage";
 import { SiteChrome } from "components/community/SiteChrome";
 import { db } from "lib/db";
@@ -18,8 +18,8 @@ export const metadata: Metadata = { title: "Vista previa · Organizá", robots: 
 export default async function PreviewPage({ params }: { params: Promise<{ eventId: string }> }) {
   const { eventId } = await params;
   const requestHeaders = await headers();
-  const session = await auth.api.getSession({ headers: requestHeaders });
-  if (!session) redirect(`/login?next=/organizar/vista-previa/${eventId}`);
+  const session = await sessionFor(requestHeaders);
+  if (!session) return signInAgain(`/organizar/vista-previa/${eventId}`);
 
   const [row] = await db.select({ communityId: events.communityId }).from(events).where(eq(events.id, eventId));
   if (!row) notFound();

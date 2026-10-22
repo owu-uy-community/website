@@ -164,6 +164,13 @@ export function toWireError(error: unknown, scope: { path: readonly string[]; us
   if (pg?.code === PG_FOREIGN_KEY_VIOLATION) {
     return new ORPCError("BAD_REQUEST", { message: "El pedido apunta a algo que no existe" });
   }
+  // The database's own last-owner rule (src/lib/db/triggers.ts)
+  if (pg?.constraint === "community_keeps_owner") {
+    return new ORPCError("CONFLICT", {
+      message: "La comunidad tiene que conservar al menos un dueño",
+      data: { reason: "last_owner" },
+    });
+  }
   if (pg && PG_BAD_INPUT.has(pg.code)) {
     return new ORPCError("BAD_REQUEST", { message: "Datos inválidos" });
   }

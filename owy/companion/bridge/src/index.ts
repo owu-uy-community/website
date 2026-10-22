@@ -1285,10 +1285,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");
     const eve = new EveLink({
       url: config.COMPANION_EVE_URL,
-      basic:
-        config.COMPANION_EVE_BASIC_USER && config.COMPANION_EVE_BASIC_PASSWORD
-          ? { username: config.COMPANION_EVE_BASIC_USER, password: config.COMPANION_EVE_BASIC_PASSWORD }
-          : null,
+      apiKey: config.OWY_API_KEY ?? null,
       logger: logger.child("eve"),
     });
     const instructions = await loadVoiceOfOwyPrompt({ eventName: config.COMPANION_EVENT_NAME });

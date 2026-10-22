@@ -8,6 +8,7 @@ import { cn } from "app/lib/utils";
 import { useSidebar } from "components/shared/ui/sidebar";
 
 import { NAV_ITEMS, isNavItemActive, type NavKey } from "./nav-config";
+import { useNavViewer } from "./use-access-me";
 import { useShell } from "./use-shell-status";
 import { eventHref, normalizeAdminPath, useSelectedEvent } from "./use-selected-event";
 
@@ -30,10 +31,12 @@ export function AdminTabBar() {
   const { scope, communitySlug } = useSelectedEvent();
   const { status } = useShell();
   const { isMobile, setOpenMobile } = useSidebar();
+  const viewer = useNavViewer();
   const normalized = normalizeAdminPath(pathname, communitySlug);
   if (!isMobile || OWN_TABS.some((route) => normalized?.startsWith(route))) return null;
 
-  const keys = (status?.me.siteAdmin ?? true) ? SITE_TABS : STAFF_TABS;
+  // Until the viewer is known the bar keeps its room with only "Más": no site tabs flash for staff.
+  const keys = viewer ? (viewer.siteAdmin ? SITE_TABS : STAFF_TABS) : [];
   const items = keys.map((key) => NAV_ITEMS.find((item) => item.key === key)).filter((item) => item !== undefined);
   const badge = (key: NavKey) =>
     key === "incidentes"
@@ -86,7 +89,7 @@ export function AdminTabBar() {
           );
         })}
         <button
-          className="flex h-14 touch-manipulation flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
+          className="col-start-5 flex h-14 touch-manipulation flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-muted-foreground"
           type="button"
           onClick={() => setOpenMobile(true)}
         >

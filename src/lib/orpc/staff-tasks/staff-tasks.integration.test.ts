@@ -1,4 +1,3 @@
-import { createId } from "@paralleldrive/cuid2";
 import { call } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { http, HttpResponse } from "msw";
@@ -455,15 +454,9 @@ describe("Reenviar por Owy", () => {
     vi.stubEnv("OWY_SLACK_BOT_TOKEN", "xoxb-test");
     const { eventId, editor, member, colleague, community, announcementId } = await withAnnouncement();
     const reader = await makeMember(community.id, "member", { name: "Leyó" });
-    const now = new Date();
-    await db.insert(account).values({
-      id: createId(),
-      accountId: "U0MIEMBRO",
-      providerId: "slack",
-      userId: member.id,
-      createdAt: now,
-      updatedAt: now,
-    });
+    // The member's Slack is U0MIEMBRO; the colleague never linked one
+    await db.update(account).set({ accountId: "U0MIEMBRO" }).where(eq(account.userId, member.id));
+    await db.delete(account).where(eq(account.userId, colleague.id));
     await call(router.staffTasks.announcements.ack, { eventId, announcementId }, by(reader));
     const sent: unknown[] = [];
     server.use(

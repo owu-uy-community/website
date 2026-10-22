@@ -1,3 +1,4 @@
+import { accessRouter } from "./access/router";
 import { activityRouter } from "./activity/router";
 import { assistantRouter } from "./assistant/router";
 import { attendeesRouter } from "./attendees/router";
@@ -47,6 +48,9 @@ export const router = {
 
   // Talk cards: read a photo, suggest a place on the board
   ocr: ocrRouter,
+
+  // People and access: roles, the waitlist, invitations, bans, API keys, the audit log
+  access: accessRouter,
 
   // Communities (tenants) and their event-day staff coordination
   communities: communitiesRouter,

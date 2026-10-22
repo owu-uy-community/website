@@ -20,7 +20,7 @@ export const pollsRouter = {
   list: authed
     .meta(docs("The polls this community asked and the ones it's invited to"))
     .input(PollListSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("poll:read"))
     .output(z.array(PollSchema))
     .effect(function* () {
       return yield* Polls.list;
@@ -29,7 +29,7 @@ export const pollsRouter = {
   create: authed
     .meta(docs("Ask other communities which of a few days works for a joint event"))
     .input(CreatePollSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("poll:create"))
     .use(createLimit)
     .output(PollSchema)
     .effect(function* ({ input }) {
@@ -39,7 +39,7 @@ export const pollsRouter = {
   vote: authed
     .meta(docs("This community's answers: sí, si hace falta or no, per day"))
     .input(VoteSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("poll:vote"))
     .output(PollSchema)
     .effect(function* ({ input }) {
       return yield* Polls.vote(input);
@@ -48,7 +48,7 @@ export const pollsRouter = {
   choose: authed
     .meta(docs("Pick the date: it's reserved, and the communities that said yes are added as co-hosts"))
     .input(ChooseSchema)
-    .use(inCommunity("editor"))
+    .use(inCommunity("poll:choose"))
     .output(z.object({ poll: PollSchema, eventId: z.string() }))
     .effect(function* ({ input }) {
       return yield* Polls.choose(input);

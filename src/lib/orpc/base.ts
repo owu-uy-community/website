@@ -9,10 +9,13 @@ import { Context, Effect } from "effect";
 
 import type { Session } from "app/lib/auth";
 
-import type { CommunityRoleValue } from "../db/schema";
+import { audit } from "../authz/audit";
+import { parsePermission, type CommunityPermission, type Permission } from "../authz/catalog";
+import { can, principalFor, type Principal } from "../authz/principal";
+import { db } from "../db";
 import { wideEvent } from "../evlog";
 import { APP_ERRORS, toWireError } from "./errors";
-import { memberRole, resolveScope, ROLE_RANK, type ScopeInput } from "./scope";
+import { resolveScope, type ScopeInput } from "./scope";
 import { CommunityScope, CurrentUser, type Actor, type AppServices } from "./services";
 
 /**
@@ -24,6 +27,8 @@ export interface BaseContext extends WithEffectContext<AppServices> {
   getSession: () => Promise<Session | null>;
   /** Present for HTTP calls; tells an API-key caller (the Owy bot) from a browser. */
   requestHeaders?: Headers;
+  /** The caller as the permission checks see them; resolved once per request. */
+  principal?: Promise<Principal | null>;
 }
 
 /** What a procedure behind `authed` has: the caller, also available to effects as `CurrentUser`. */
@@ -32,8 +37,13 @@ export type AuthedContext = Omit<BaseContext, "effect/context"> & {
   "effect/context": Context.Context<AppServices | CurrentUser>;
 };
 
-/** Who may call a procedure. Every procedure declares one; a test pins the whole map. */
-export type Access = "public" | "authed" | "staff" | `community:${CommunityRoleValue}`;
+/**
+ * Who may call a procedure: anyone, anyone signed in, a platform permission ("platform:stage:operate",
+ * held through a platform role), or a community permission ("community:event:update", held through
+ * a role in the community the input points at, or a platform role that holds it everywhere). Every
+ * procedure declares one; a test pins the whole map.
+ */
+export type Access = "public" | "authed" | `platform:${Permission}` | `community:${CommunityPermission}`;
 
 const [accessMeta, getAccess] = defineMeta("access", (incoming: Access) => incoming);
 export { getAccess };
@@ -52,53 +62,96 @@ const errorBoundary = os.$context<BaseContext>().middleware(async ({ next, path 
   }
 });
 
-const requireSession = os.$context<BaseContext>().middleware(async ({ context, next }) => {
-  const session = await context.getSession();
-  if (!session) throw new ORPCError("UNAUTHORIZED", { message: "Iniciá sesión para continuar" });
+/** The caller, read fresh: a role taken away or a ban counts on the next request. */
+export const principalOf = (context: BaseContext): Promise<Principal | null> =>
+  (context.principal ??= context.getSession().then((session) => principalFor(session, context.requestHeaders)));
 
-  const user: Actor = {
-    id: session.user.id,
-    name: session.user.name,
-    role: session.user.role,
-    via: context.requestHeaders?.has("x-api-key") ? "api-key" : "session",
-  };
+const requireSession = os.$context<BaseContext>().middleware(async ({ context, next }) => {
+  const principal = await principalOf(context);
+  if (!principal || principal.banned) {
+    throw new ORPCError("UNAUTHORIZED", { message: "Iniciá sesión para continuar" });
+  }
+
+  const user: Actor = { id: principal.id, name: principal.name, via: principal.via, principal };
   Sentry.setUser({ id: user.id });
-  wideEvent()?.set({ user: { id: user.id, role: user.role, via: user.via } });
+  wideEvent()?.set({
+    user: {
+      id: user.id,
+      roles: principal.roles.join(","),
+      via: user.via,
+      ...(principal.byId ? { by: principal.byId } : {}),
+    },
+  });
 
   return next({
     context: { user, "effect/context": context["effect/context"].pipe(Context.add(CurrentUser, user)) },
   });
 });
 
-const requireStaff = os.$context<AuthedContext>().middleware(async ({ context, next }) => {
-  if (context.user.role !== "admin") {
-    throw new ORPCError("FORBIDDEN", { message: "Esto lo puede hacer solo el staff del sitio" });
-  }
+/** Actions that only read; everything else a permission guards is written to the audit log. */
+const READ_ACTIONS = new Set(["read", "list", "checkins", "requests", "stats", "ask"]);
 
-  return next();
-});
+/** Record a change made through a permission-guarded procedure, after it succeeded. */
+async function recordChange(
+  user: Actor,
+  permission: string,
+  path: readonly string[],
+  input: unknown,
+  communityId: string | null,
+  headers: Headers | undefined
+) {
+  if (READ_ACTIONS.has(parsePermission(permission)[1])) return;
+  const target = (input ?? {}) as Record<string, unknown>;
+  const targetId = typeof target.id === "string" ? target.id : null;
+  try {
+    await audit(db, {
+      actorId: user.id,
+      via: user.via,
+      byId: user.principal.byId,
+      action: path.join("."),
+      targetType: parsePermission(permission)[0],
+      targetId,
+      communityId,
+      data: { input },
+      ip: headers?.get("x-real-ip") ?? headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+      userAgent: headers?.get("user-agent") ?? null,
+    });
+  } catch (error) {
+    // The change already happened; a missing audit row must not turn it into an error for the caller.
+    Sentry.captureException(error, { tags: { audit: path.join(".") } });
+  }
+}
 
 const base = os.$context<BaseContext>().errors(APP_ERRORS).use(errorBoundary);
 
 /** Anyone, signed in or not. */
 export const pub = base.meta(accessMeta("public"));
 
-/** Any signed-in user (session or API key). Adds `CurrentUser`. */
+/** Any signed-in person, or a service account's API key. Adds `CurrentUser`. */
 export const authed = base.meta(accessMeta("authed")).use(requireSession);
 
-/** Site staff (`user.role === "admin"`): event setup, the OBS rig, the wall. */
-export const staff = authed.meta(accessMeta("staff")).use(requireStaff);
+/** A platform permission (held through a platform role). */
+export const platform = (permission: Permission) =>
+  authed.meta(accessMeta(`platform:${permission}`)).use(async ({ context, next, path }, input: unknown) => {
+    if (!(await can(context.user.principal, permission))) {
+      throw new ORPCError("FORBIDDEN", { message: "No tenés permiso para hacer esto" });
+    }
+    const result = await next();
+    await recordChange(context.user, permission, path, input, null, context.requestHeaders);
+
+    return result;
+  });
 
 /**
- * At least `minimum` role in the community the (validated) input points at;
- * site staff always pass. Use after `.input(...)` on `authed`. Adds
- * `CommunityScope` — services must still filter by it.
+ * A community permission in the community the (validated) input points at:
+ * through a role there, or a platform role that holds it everywhere. Use after
+ * `.input(...)` on `authed`. Adds `CommunityScope` — services must still filter by it.
  */
-export const inCommunity = (minimum: CommunityRoleValue) =>
+export const inCommunity = (permission: CommunityPermission) =>
   os
     .$context<AuthedContext>()
-    .meta(accessMeta(`community:${minimum}`))
-    .middleware(async ({ context, next }, input: ScopeInput) => {
+    .meta(accessMeta(`community:${permission}`))
+    .middleware(async ({ context, next, path }, input: ScopeInput) => {
       const run = Effect.runPromiseWith(context["effect/context"]);
       const scope = await run(resolveScope(input));
       if (!scope) {
@@ -108,11 +161,8 @@ export const inCommunity = (minimum: CommunityRoleValue) =>
         });
       }
 
-      if (context.user.role !== "admin") {
-        const role = await run(memberRole(scope.communityId, context.user.id));
-        if (!role || ROLE_RANK[role] < ROLE_RANK[minimum]) {
-          throw new ORPCError("FORBIDDEN", { message: `Necesitás rol ${minimum} en esta comunidad` });
-        }
+      if (!(await can(context.user.principal, permission, scope.communityId))) {
+        throw new ORPCError("FORBIDDEN", { message: "No tenés permiso para hacer esto en esta comunidad" });
       }
 
       wideEvent()?.set({
@@ -120,7 +170,10 @@ export const inCommunity = (minimum: CommunityRoleValue) =>
         ...(scope.eventId ? { event: { id: scope.eventId } } : {}),
       });
 
-      return next({
+      const result = await next({
         context: { scope, "effect/context": context["effect/context"].pipe(Context.add(CommunityScope, scope)) },
       });
+      await recordChange(context.user, permission, path, input, scope.communityId, context.requestHeaders);
+
+      return result;
     });

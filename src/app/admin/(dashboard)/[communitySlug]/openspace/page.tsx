@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarX2 } from "lucide-react";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
@@ -22,11 +22,11 @@ export default async function OpenSpacePage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("program:manage");
 
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, null);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "program:manage");
   if (!scope) notFound();
 
   if (!scope.selected) {

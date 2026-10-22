@@ -34,8 +34,9 @@ import { onOpenCommandMenu } from "./command-bus";
 import { CommandGroup as Group, CommandRow as Row, ID_MARK, matchEntry } from "./command-items";
 import { guardedPush } from "./navigation-guard";
 import { useRegisteredCommands, type CommandEntry, type CommandScope } from "./commands";
-import { ADMIN_NAV, adminTools } from "./nav-config";
+import { ADMIN_NAV, adminTools, navItemVisible } from "./nav-config";
 import { useShortcuts } from "./shortcuts";
+import { useNavViewer } from "./use-access-me";
 import { useShell } from "./use-shell-status";
 import { eventHref } from "./use-selected-event";
 
@@ -60,7 +61,8 @@ export function CommandMenu() {
   const [answer, setAnswer] = useState<Answer | null>(null);
   const frame = stack.at(-1) ?? null;
   const eventId = selected?.id ?? null;
-  const siteAdmin = status?.me.siteAdmin ?? true;
+  const viewer = useNavViewer();
+  const siteAdmin = viewer?.siteAdmin ?? false;
 
   useShortcuts([
     {
@@ -318,7 +320,7 @@ export function CommandMenu() {
 
   const navigation: CommandEntry[] = ADMIN_NAV.flatMap((group) =>
     group.items
-      .filter((item) => siteAdmin || item.audience === "staff")
+      .filter((item) => viewer !== null && navItemVisible(item, viewer))
       .map((item) => ({
         id: `nav:${item.key}`,
         title: item.title,

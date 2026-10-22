@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { QrCode } from "components/Admin/comms/QrCode";
 import { resolveAdminCommunityScope } from "app/admin/(dashboard)/[communitySlug]/scope";
 import { caller } from "lib/orpc/server";
@@ -24,11 +24,11 @@ export default async function SurveyQrPage({
   params: Promise<{ communitySlug: string }>;
   searchParams: Promise<{ event?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission("comms:read");
 
   const { communitySlug } = await params;
   const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, null);
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "comms:read");
   if (!scope?.selected) notFound();
 
   const event = scope.selected;

@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "app/lib/auth";
-import { isSiteAdmin } from "app/lib/auth-helpers";
+import { principalFromRequest } from "app/lib/auth-helpers";
+import { can } from "lib/authz/principal";
 import { connectSpotify, spotifyOrigin } from "lib/owy-stage/spotify";
 
 export const runtime = "nodejs";
 
 /** Spotify sends the code here; we swap it for a refresh token and go back to the director. */
 export async function GET(request: Request) {
-  const session = await auth.api.getSession({ headers: request.headers });
-  if (!session || !isSiteAdmin(session)) return NextResponse.redirect(new URL("/login", spotifyOrigin(request)));
+  if (!(await can(await principalFromRequest(request.headers), "stage:operate")))
+    return NextResponse.redirect(new URL("/login", spotifyOrigin(request)));
 
   const url = new URL(request.url);
   const code = url.searchParams.get("code");

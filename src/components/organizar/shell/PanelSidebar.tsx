@@ -41,7 +41,7 @@ import { dateParts } from "lib/community/time";
 import type { PanelSummary } from "lib/orpc/panel/schemas";
 
 import { usePanel, usePanelSummary, type PanelCommunity } from "./context";
-import { PANEL_NAV, PANEL_ROOT, ROLE_LABEL, activePanelItem, panelHref, type PanelNavKey } from "./nav";
+import { PANEL_NAV, PANEL_ROOT, activePanelItem, panelHref, type PanelNavKey } from "./nav";
 
 /** The community's logo tile, or its initials on the brand surface when it has none. */
 export function CommunityMark({
@@ -189,7 +189,7 @@ function CommunitySwitcher() {
           <span className="grid min-w-0 flex-1 text-left leading-tight">
             <span className="truncate text-ui font-semibold text-foreground">{current?.name ?? "Organizá"}</span>
             <span className="truncate font-terminal text-2xs text-muted-foreground tabular-nums">
-              {!current ? "Elegí una comunidad" : summary.data ? aheadLine(summary.data) : ROLE_LABEL[current.role]}
+              {!current ? "Elegí una comunidad" : summary.data ? aheadLine(summary.data) : current.roleLabel}
             </span>
           </span>
           <ChevronsUpDown className="ml-auto size-4 text-faint" />
@@ -243,7 +243,7 @@ function UserRow() {
           <span className="grid min-w-0 flex-1 text-left leading-tight">
             <span className="truncate text-meta font-medium text-foreground">{user.name}</span>
             <span className="truncate text-2xs text-muted-foreground">
-              {isStaff ? "Staff del sitio" : current ? `${ROLE_LABEL[current.role]} · ${current.name}` : "Organizador"}
+              {isStaff ? "Staff del sitio" : current ? `${current.roleLabel} · ${current.name}` : "Organizador"}
             </span>
           </span>
           <Ellipsis className="ml-auto size-4 text-faint" />
