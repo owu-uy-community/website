@@ -3,19 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
+  GROUP_EMOJIS,
   PIXEL_COLORS,
   PIXEL_SIZE,
   RACE_REVEAL,
+  REACTION_EMOJIS,
   encodePixels,
   parseRace,
   useElapsed,
   useInputs,
   useVoterId,
 } from "components/OwyStage/inputs";
-import { REACTION_EMOJIS } from "components/OwyStage/scenes/interactive";
-import { GROUP_EMOJIS } from "components/OwyStage/scenes/interactive2";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client, type StickyNote } from "lib/orpc";
+import { visibleQuestions } from "lib/owy-stage/questions";
 import {
   DEFAULT_STAGE_STATE,
   INTERACTIVE_SCENES,
@@ -356,17 +357,9 @@ function Questions({
 }) {
   const inputs = useInputs(round);
   const [text, setText] = useState("");
-  const votes = new Map<string, number>();
-  const mine = new Set<string>();
-  for (const input of inputs) {
-    if (!input.key.startsWith("up:")) continue;
-    const id = input.key.slice(3);
-    votes.set(id, (votes.get(id) ?? 0) + 1);
-    if (input.voter === voter) mine.add(id);
-  }
-  const questions = inputs
-    .filter((i) => i.key === "question")
-    .sort((a, b) => (votes.get(b.id) ?? 0) - (votes.get(a.id) ?? 0));
+  const mine = new Set(inputs.filter((i) => i.key.startsWith("up:") && i.voter === voter).map((i) => i.key.slice(3)));
+  // Moderated like the wall: hidden questions leave the phones too.
+  const questions = visibleQuestions(inputs);
   return (
     <>
       <Prompt>¿Qué le preguntarías al escenario?</Prompt>
@@ -391,13 +384,16 @@ function Questions({
       </form>
       <ul className="mt-6 flex flex-col gap-3">
         {questions.map((q) => (
-          <li key={q.id} className="flex items-center gap-3 rounded-2xl bg-[#FBF5E7]/10 p-3">
+          <li
+            key={q.id}
+            className={`flex items-center gap-3 rounded-2xl bg-[#FBF5E7]/10 p-3 ${q.moderation === "answered" ? "opacity-50" : ""}`}
+          >
             <button
               className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-xl text-sm font-extrabold ${mine.has(q.id) ? "bg-[#F5BB03] text-black" : "bg-[#0162C8] text-[#FBF5E7]"}`}
               onClick={() => send(`up:${q.id}`, "1")}
               type="button"
             >
-              ▲<span>{votes.get(q.id) ?? 0}</span>
+              ▲<span>{q.votes}</span>
             </button>
             <span className="text-base leading-snug">{q.value}</span>
           </li>

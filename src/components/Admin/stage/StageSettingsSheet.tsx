@@ -307,8 +307,13 @@ export function StageSettingsSheet({
           <TabsContent className="space-y-5 pt-2" value="output">
             <Field>
               <FieldLabel htmlFor="stage-url">URL para OBS (browser source)</FieldLabel>
-              <InputGroup>
-                <InputGroupInput readOnly className="font-terminal text-xs" id="stage-url" value={url} />
+              <InputGroup className="pointer-coarse:h-11">
+                <InputGroupInput
+                  readOnly
+                  className="font-terminal text-xs pointer-coarse:text-base"
+                  id="stage-url"
+                  value={url}
+                />
                 <InputGroupAddon align="inline-end">
                   <InputGroupButton aria-label="Copiar la URL" size="icon-xs" onClick={() => copyText(url)}>
                     <Copy />

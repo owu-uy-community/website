@@ -1,574 +1,273 @@
 "use client";
 
-import { useContext, useEffect, useState, type ComponentType } from "react";
-import { m } from "motion/react";
+import type { ComponentType } from "react";
 
-import { EASE_OUT } from "app/conf/components/Reveal";
-import { useCountdownState } from "hooks/useCountdownState";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type StickyNote } from "lib/orpc";
 import type { SceneId, SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
-import { formatTime } from "lib/utils";
 
-import { Ambient, BRAND, StageContext } from "../Stage";
-import OwyFace from "./OwyFace";
-import { Days, Ideas, Kaleidoscope, Launch, OwyTalks, Sponsor, Talk, Tangram, Terminal, Ticker } from "./creative";
-import {
-  Applause,
-  Board,
-  Marquee,
-  Numbers,
-  Questions,
-  Quote,
-  Rain,
-  RoomsNow,
-  Speaker,
-  SponsorWall,
-  Until,
-  Warp,
-} from "./extra";
-import { History, Meetups, OwyCard, Principles, Pulse, Raffle, Selfie, Venue, Welcome } from "./discover";
-import { Aurora, Conduct, Dvd, Life, Lineup, Mosaic, OwySays, TestCard, Trivia, Versus } from "./fun";
-import { Boids, Fire, FlowField, Julia, Metaballs, Plasma, ReactionDiffusion, Rotozoom, Tunnel, Voronoi } from "./gen";
-import { Blob, Dragon, Fireworks, Network, ParticleText, Rays, Ripples, Sand, Terrain, Wfc } from "./gen2";
-import { Captcha, Coin, Pipeline, Poll, Scoreboard, TalkTimer, TrafficLight, Update, Wheel, Wordle } from "./play";
-import { Bsod, Credits, Crawl, Cube, Donut, Equalizer, Halftone, HelloWorld, Kinetic, Neon } from "./show";
-import {
-  Changes,
-  Checklist,
-  Emergency,
-  Facilities,
-  Feedback,
-  Food,
-  Notices,
-  NowBar,
-  Rounds,
-  Transport,
-} from "./service";
-import { Badges, Checkin, Grid, Lightning, Live, LostFound, Reminders, Stands, Timeline, Weather } from "./service2";
-import {
-  Alumni,
-  Bingo,
-  Breathe,
-  Departures,
-  Hosts,
-  Icebreaker,
-  Links,
-  Networking,
-  NowPlaying,
-  RoomCards,
-  Topics,
-  WifiQr,
-} from "./more2";
-import {
-  Buzzer,
-  Corners,
-  Guess,
-  HumanBingo,
-  LineUp,
-  LivePoll,
-  LiveQuestions,
-  LiveWordCloud,
-  Quiz,
-  Rating,
-  Reactions,
-  Rps,
-  SessionVote,
-  StandUp,
-  Wave,
-} from "./interactive";
-import {
-  Clap,
-  Columns,
-  MessageWall,
-  MultiPoll,
-  Origin,
-  Pairs,
-  Presence,
-  Ranking,
-  Scale,
-  Signatures,
-  Stretch,
-  TapRace,
-} from "./interactive2";
-import {
-  Draw,
-  HumanMap,
-  Mirror,
-  MoodGrid,
-  OpenMic,
-  PaperPlanes,
-  PickNumber,
-  Pixel,
-  QuizRace,
-  Story,
-  Tug,
-  Typing,
-} from "./interactive3";
-import {
-  Automaton,
-  DoublePendulum,
-  Langton,
-  Maze,
-  Mystify,
-  PendulumWave,
-  Pipes,
-  Pong,
-  Raycaster,
-  Sorting,
-} from "./sims";
-import { Speakers, TalkIntro } from "./speakers";
-import { After, Block, Cams, Community, Frame, Promo, Qr, Silence } from "./legacy";
-import { Agenda, Clock, Closing, LowerThird, Moments, Shapes, Team } from "./more";
-import { Alert, CastBar, Next, OwyHowTo, Photo, Program, RoomDay, Social, Steps, Wifi } from "./useful";
-import {
-  AgilesBreak,
-  AgilesClosing,
-  AgilesCover,
-  AgilesMessage,
-  AgilesNow,
-  AgilesProgram,
-  AgilesSocial,
-  AgilesSpeaker,
-  AgilesSponsors,
-  AgilesWelcome,
-} from "./agiles";
-import { OsBoard, OsClosing, OsIntro, OsMarketplace, OsPrinciples, OsRoom, OsRounds } from "./agiles-openspace";
-import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
+type Loader<K extends SceneId> = () => Promise<ComponentType<SceneProps<K>>>;
 
-// ---------------------------------------------------------------------------
-// Scenes
-// ---------------------------------------------------------------------------
-
-function Black() {
-  return null;
-}
-
-function Logo() {
-  const [glitch, setGlitch] = useState(false);
-  useEffect(() => {
-    let off: ReturnType<typeof setTimeout>;
-    const id = setInterval(() => {
-      setGlitch(true);
-      off = setTimeout(() => setGlitch(false), 400);
-    }, 7000);
-    return () => {
-      clearInterval(id);
-      clearTimeout(off);
-    };
-  }, []);
-
-  return (
-    <>
-      <Ambient />
-      <div className="absolute top-[414px] left-[360px]">
-        <div className={`animate-float ${glitch ? "animate-glitch" : ""}`}>
-          <LogoReveal />
-        </div>
-      </div>
-      <m.p
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute right-0 bottom-[110px] left-0 text-center text-[34px] font-semibold tracking-[0.3em] text-[#FBF5E7]/70 uppercase"
-        initial={{ opacity: 0, y: 16 }}
-        transition={{ duration: 0.8, delay: 1, ease: EASE_OUT }}
-      >
-        conf.owu.uy
-      </m.p>
-    </>
-  );
-}
-
-function Opening() {
-  return (
-    <>
-      <Ambient />
-      <div className="absolute top-[300px] left-[360px]">
-        <LogoReveal delay={0.6} />
-      </div>
-      <div className="absolute top-[700px] right-0 left-0 text-center">
-        <Rise
-          className="text-[64px] leading-none font-extrabold tracking-[-0.01em] text-[#F5BB03] uppercase"
-          delay={1.6}
-        >
-          {DATE_LABEL}
-        </Rise>
-        <Rise className="mt-3 text-[40px] font-medium tracking-[0.12em] text-[#FBF5E7]/85 uppercase" delay={2}>
-          Sinergia Faro · Montevideo
-        </Rise>
-      </div>
-      <m.div
-        animate={{ scaleX: 1 }}
-        className="absolute bottom-[96px] left-[360px] h-[14px] w-[1200px] origin-left bg-[#F5BB03]"
-        initial={{ scaleX: 0 }}
-        transition={{ duration: 0.9, delay: 2.6, ease: EASE_OUT }}
-      />
-    </>
-  );
-}
-
-function Message({ params }: SceneProps<"message">) {
-  const long = params.title.length > 24;
-
-  return (
-    <>
-      <Ambient />
-      <div key={params.title} className="absolute inset-x-[160px] top-1/2 -translate-y-1/2 text-center">
-        <Rise
-          className={`leading-[0.95] font-extrabold tracking-[-0.02em] text-balance uppercase ${long ? "text-[120px]" : "text-[150px]"}`}
-          delay={0.1}
-        >
-          {params.title}
-        </Rise>
-        {params.subtitle && (
-          <Rise className="mt-8 font-sans text-[48px] font-medium text-[#FBF5E7]/80" delay={0.45}>
-            {params.subtitle}
-          </Rise>
-        )}
-      </div>
-    </>
-  );
-}
-
-function UpNext({ eventId }: SceneProps<"up-next">) {
-  const { preview } = useContext(StageContext);
-  const [note, setNote] = useState<StickyNote | null>(null);
-
-  useEffect(() => {
-    if (!eventId) return;
-    client.cast
-      .getState({ eventId })
-      .then((state) => setNote(state.note))
-      .catch((error) => console.error("[stage] cast state", error));
-  }, [eventId]);
-
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "cast") : null, (event, payload) => {
-    if (event === "note_highlighted") setNote((payload as { note: StickyNote | null }).note);
-  });
-
-  return (
-    <>
-      <Ambient />
-      <div className="absolute top-[200px] right-[200px] left-[340px]">
-        <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
-          A continuación
-        </Rise>
-        {note ? (
-          <div key={note.id}>
-            <Rise
-              className={`mt-8 leading-[0.98] font-extrabold tracking-[-0.02em] text-balance uppercase ${note.title.length > 40 ? "text-[88px]" : "text-[120px]"}`}
-              delay={0.2}
-            >
-              {note.title}
-            </Rise>
-            {note.speaker && (
-              <Rise className="mt-8 text-[56px] font-medium text-[#FBF5E7]/85" delay={0.45}>
-                {note.speaker}
-              </Rise>
-            )}
-            <m.div
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-12 flex items-center gap-8 text-[38px] font-semibold tracking-[0.08em] uppercase"
-              initial={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.6, delay: 0.7, ease: EASE_OUT }}
-            >
-              <span className="flex items-center gap-4 border-2 border-[#FBF5E7]/25 px-8 py-4">
-                <span className="h-[22px] w-[22px] rounded-full" style={{ background: note.roomColor ?? BRAND.blue }} />
-                {note.room}
-              </span>
-              <span className="border-2 border-[#FBF5E7]/25 px-8 py-4 text-[#F5BB03]">{note.timeSlot}</span>
-            </m.div>
-          </div>
-        ) : (
-          <Rise className="mt-8 text-[80px] leading-none font-extrabold text-[#FBF5E7]/40 uppercase" delay={0.2}>
-            {eventId ? "Esperando una charla…" : "Elegí un evento en el admin"}
-          </Rise>
-        )}
-      </div>
-    </>
-  );
-}
-
-function Sponsors() {
-  return (
-    <>
-      <Ambient />
-      <div className="absolute top-[150px] right-0 left-0 text-center">
-        <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
-          Empresas
-        </Rise>
-        <Rise className="mt-4 text-[110px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.2}>
-          Nos acompañan
-        </Rise>
-      </div>
-      <m.div
-        animate={{ opacity: 1 }}
-        className="absolute top-[620px] right-0 left-0 flex flex-col gap-[60px]"
-        initial={{ opacity: 0 }}
-        transition={{ duration: 0.8, delay: 0.5 }}
-      >
-        <SponsorRow />
-        <SponsorRow reverse />
-      </m.div>
-    </>
-  );
-}
-
-function CountdownClock({ eventId, label }: { eventId: string; label: string }) {
-  const { preview } = useContext(StageContext);
-  const { state, loading } = useCountdownState({ eventId, enableRealtime: !preview });
-  const done = state.remainingSeconds === 0;
-
-  return (
-    <>
-      {label && (
-        <Rise
-          className="absolute top-[150px] right-0 left-0 text-center text-[56px] font-semibold tracking-[0.25em] text-[#FBF5E7]/80 uppercase"
-          delay={0.1}
-        >
-          {label}
-        </Rise>
-      )}
-      <div
-        className={`countdown-font absolute top-1/2 right-0 left-0 -translate-y-1/2 text-center text-[420px] leading-none tracking-wider select-none ${
-          done ? "text-red-500" : `text-[#F5BB03] ${state.isRunning ? "animate-timer-pulse" : "opacity-80"}`
-        }`}
-      >
-        {loading ? "00:00" : formatTime(state.remainingSeconds)}
-      </div>
-    </>
-  );
-}
-
-function CountdownScene({ params, eventId }: SceneProps<"countdown">) {
-  return (
-    <>
-      <Ambient />
-      {eventId ? (
-        <CountdownClock eventId={eventId} label={params.label} />
-      ) : (
-        <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[64px] font-extrabold text-[#FBF5E7]/40 uppercase">
-          Elegí un evento en el admin
-        </p>
-      )}
-    </>
-  );
-}
-
-export const SCENE_COMPONENTS: { [K in SceneId]: ComponentType<SceneProps<K>> } = {
+/**
+ * Where each scene's code lives. Every scene file is its own chunk, so a page
+ * only downloads and parses what it shows: the wall loads the scene on air and
+ * then the rest while it idles, a monitor the scenes it is about to show, and
+ * the desk none at all.
+ */
+const LOADERS: { [K in SceneId]: Loader<K> } = {
   // Ágiles Uruguay 2026
-  "agiles-logo": AgilesCover,
-  "agiles-welcome": AgilesWelcome,
-  "agiles-program": AgilesProgram,
-  "agiles-now": AgilesNow,
-  "agiles-speaker": AgilesSpeaker,
-  "agiles-break": AgilesBreak,
-  "agiles-message": AgilesMessage,
-  "agiles-sponsors": AgilesSponsors,
-  "agiles-social": AgilesSocial,
-  "agiles-closing": AgilesClosing,
-  "agiles-os-intro": OsIntro,
-  "agiles-os-principles": OsPrinciples,
-  "agiles-os-marketplace": OsMarketplace,
-  "agiles-os-board": OsBoard,
-  "agiles-os-room": OsRoom,
-  "agiles-os-rounds": OsRounds,
-  "agiles-os-closing": OsClosing,
-  "owy-face": OwyFace,
-  logo: Logo,
-  opening: Opening,
-  message: Message,
-  "talk-intro": TalkIntro,
-  speakers: Speakers,
-  "up-next": UpNext,
-  sponsors: Sponsors,
-  countdown: CountdownScene,
-  agenda: Agenda,
-  moments: Moments,
-  "lower-third": LowerThird,
-  clock: Clock,
-  closing: Closing,
-  shapes: Shapes,
-  team: Team,
-  launch: Launch,
-  terminal: Terminal,
-  ideas: Ideas,
-  tangram: Tangram,
-  kaleidoscope: Kaleidoscope,
-  "owy-talks": OwyTalks,
-  ticker: Ticker,
-  talk: Talk,
-  sponsor: Sponsor,
-  days: Days,
-  program: Program,
-  next: Next,
-  room: RoomDay,
-  "cast-bar": CastBar,
-  wifi: Wifi,
-  alert: Alert,
-  steps: Steps,
-  "owy-howto": OwyHowTo,
-  social: Social,
-  photo: Photo,
-  block: Block,
-  cams: Cams,
-  community: Community,
-  silence: Silence,
-  promo: Promo,
-  qr: Qr,
-  after: After,
-  frame: Frame,
-  board: Board,
-  "rooms-now": RoomsNow,
-  marquee: Marquee,
-  until: Until,
-  quote: Quote,
-  "sponsor-wall": SponsorWall,
-  applause: Applause,
-  speaker: Speaker,
-  numbers: Numbers,
-  rain: Rain,
-  warp: Warp,
-  qa: Questions,
-  meetups: Meetups,
-  pulse: Pulse,
-  principles: Principles,
-  "owy-card": OwyCard,
-  history: History,
-  venue: Venue,
-  selfie: Selfie,
-  raffle: Raffle,
-  welcome: Welcome,
-  trivia: Trivia,
-  versus: Versus,
-  lineup: Lineup,
-  "owy-says": OwySays,
-  aurora: Aurora,
-  dvd: Dvd,
-  life: Life,
-  "test-card": TestCard,
-  conduct: Conduct,
-  mosaic: Mosaic,
-  plasma: Plasma,
-  tunnel: Tunnel,
-  fire: Fire,
-  metaballs: Metaballs,
-  voronoi: Voronoi,
-  "reaction-diffusion": ReactionDiffusion,
-  julia: Julia,
-  "flow-field": FlowField,
-  boids: Boids,
-  rotozoom: Rotozoom,
-  terrain: Terrain,
-  ripples: Ripples,
-  rays: Rays,
-  network: Network,
-  blob: Blob,
-  dragon: Dragon,
-  wfc: Wfc,
-  sand: Sand,
-  fireworks: Fireworks,
-  "particle-text": ParticleText,
-  mystify: Mystify,
-  pipes: Pipes,
-  "pendulum-wave": PendulumWave,
-  "double-pendulum": DoublePendulum,
-  automaton: Automaton,
-  langton: Langton,
-  maze: Maze,
-  raycaster: Raycaster,
-  sorting: Sorting,
-  pong: Pong,
-  donut: Donut,
-  cube: Cube,
-  neon: Neon,
-  kinetic: Kinetic,
-  crawl: Crawl,
-  credits: Credits,
-  halftone: Halftone,
-  equalizer: Equalizer,
-  "hello-world": HelloWorld,
-  bsod: Bsod,
-  poll: Poll,
-  wheel: Wheel,
-  coin: Coin,
-  scoreboard: Scoreboard,
-  "talk-timer": TalkTimer,
-  "traffic-light": TrafficLight,
-  wordle: Wordle,
-  pipeline: Pipeline,
-  update: Update,
-  captcha: Captcha,
-  rounds: Rounds,
-  "now-bar": NowBar,
-  notices: Notices,
-  changes: Changes,
-  facilities: Facilities,
-  emergency: Emergency,
-  transport: Transport,
-  food: Food,
-  feedback: Feedback,
-  checklist: Checklist,
-  grid: Grid,
-  checkin: Checkin,
-  badges: Badges,
-  stands: Stands,
-  "lost-found": LostFound,
-  live: Live,
-  weather: Weather,
-  timeline: Timeline,
-  reminders: Reminders,
-  lightning: Lightning,
-  hosts: Hosts,
-  "room-cards": RoomCards,
-  topics: Topics,
-  links: Links,
-  "wifi-qr": WifiQr,
-  alumni: Alumni,
-  breathe: Breathe,
-  bingo: Bingo,
-  "now-playing": NowPlaying,
-  departures: Departures,
-  networking: Networking,
-  icebreaker: Icebreaker,
-  "live-poll": LivePoll,
-  "word-cloud": LiveWordCloud,
-  "live-questions": LiveQuestions,
-  reactions: Reactions,
-  quiz: Quiz,
-  rating: Rating,
-  guess: Guess,
-  buzzer: Buzzer,
-  "session-vote": SessionVote,
-  "stand-up": StandUp,
-  corners: Corners,
-  rps: Rps,
-  "human-bingo": HumanBingo,
-  wave: Wave,
-  "line-up": LineUp,
-  scale: Scale,
-  ranking: Ranking,
-  wall: MessageWall,
-  "multi-poll": MultiPoll,
-  origin: Origin,
-  presence: Presence,
-  signatures: Signatures,
-  pairs: Pairs,
-  "tap-race": TapRace,
-  stretch: Stretch,
-  clap: Clap,
-  columns: Columns,
-  pixel: Pixel,
-  "mood-grid": MoodGrid,
-  "quiz-race": QuizRace,
-  "open-mic": OpenMic,
-  tug: Tug,
-  "pick-number": PickNumber,
-  draw: Draw,
-  typing: Typing,
-  story: Story,
-  mirror: Mirror,
-  "paper-planes": PaperPlanes,
-  "human-map": HumanMap,
-  black: Black,
+  "agiles-logo": () => import("./agiles").then((m) => m.AgilesCover),
+  "agiles-welcome": () => import("./agiles").then((m) => m.AgilesWelcome),
+  "agiles-program": () => import("./agiles").then((m) => m.AgilesProgram),
+  "agiles-now": () => import("./agiles").then((m) => m.AgilesNow),
+  "agiles-speaker": () => import("./agiles").then((m) => m.AgilesSpeaker),
+  "agiles-break": () => import("./agiles").then((m) => m.AgilesBreak),
+  "agiles-message": () => import("./agiles").then((m) => m.AgilesMessage),
+  "agiles-sponsors": () => import("./agiles").then((m) => m.AgilesSponsors),
+  "agiles-social": () => import("./agiles").then((m) => m.AgilesSocial),
+  "agiles-closing": () => import("./agiles").then((m) => m.AgilesClosing),
+  "agiles-os-intro": () => import("./agiles-openspace").then((m) => m.OsIntro),
+  "agiles-os-principles": () => import("./agiles-openspace").then((m) => m.OsPrinciples),
+  "agiles-os-marketplace": () => import("./agiles-openspace").then((m) => m.OsMarketplace),
+  "agiles-os-board": () => import("./agiles-openspace").then((m) => m.OsBoard),
+  "agiles-os-room": () => import("./agiles-openspace").then((m) => m.OsRoom),
+  "agiles-os-rounds": () => import("./agiles-openspace").then((m) => m.OsRounds),
+  "agiles-os-closing": () => import("./agiles-openspace").then((m) => m.OsClosing),
+  "owy-face": () => import("./OwyFace").then((m) => m.default),
+  logo: () => import("./core").then((m) => m.Logo),
+  opening: () => import("./core").then((m) => m.Opening),
+  message: () => import("./core").then((m) => m.Message),
+  "talk-intro": () => import("./speakers").then((m) => m.TalkIntro),
+  speakers: () => import("./speakers").then((m) => m.Speakers),
+  "up-next": () => import("./core").then((m) => m.UpNext),
+  sponsors: () => import("./core").then((m) => m.Sponsors),
+  countdown: () => import("./core").then((m) => m.CountdownScene),
+  agenda: () => import("./more").then((m) => m.Agenda),
+  moments: () => import("./more").then((m) => m.Moments),
+  "lower-third": () => import("./more").then((m) => m.LowerThird),
+  clock: () => import("./more").then((m) => m.Clock),
+  closing: () => import("./more").then((m) => m.Closing),
+  shapes: () => import("./more").then((m) => m.Shapes),
+  team: () => import("./more").then((m) => m.Team),
+  launch: () => import("./creative").then((m) => m.Launch),
+  terminal: () => import("./creative").then((m) => m.Terminal),
+  ideas: () => import("./creative").then((m) => m.Ideas),
+  tangram: () => import("./creative").then((m) => m.Tangram),
+  kaleidoscope: () => import("./creative").then((m) => m.Kaleidoscope),
+  "owy-talks": () => import("./creative").then((m) => m.OwyTalks),
+  ticker: () => import("./creative").then((m) => m.Ticker),
+  talk: () => import("./creative").then((m) => m.Talk),
+  sponsor: () => import("./creative").then((m) => m.Sponsor),
+  days: () => import("./creative").then((m) => m.Days),
+  program: () => import("./useful").then((m) => m.Program),
+  next: () => import("./useful").then((m) => m.Next),
+  room: () => import("./useful").then((m) => m.RoomDay),
+  "cast-bar": () => import("./useful").then((m) => m.CastBar),
+  wifi: () => import("./useful").then((m) => m.Wifi),
+  alert: () => import("./useful").then((m) => m.Alert),
+  steps: () => import("./useful").then((m) => m.Steps),
+  "owy-howto": () => import("./useful").then((m) => m.OwyHowTo),
+  social: () => import("./useful").then((m) => m.Social),
+  photo: () => import("./useful").then((m) => m.Photo),
+  block: () => import("./legacy").then((m) => m.Block),
+  cams: () => import("./legacy").then((m) => m.Cams),
+  community: () => import("./legacy").then((m) => m.Community),
+  silence: () => import("./legacy").then((m) => m.Silence),
+  promo: () => import("./legacy").then((m) => m.Promo),
+  qr: () => import("./legacy").then((m) => m.Qr),
+  after: () => import("./legacy").then((m) => m.After),
+  frame: () => import("./legacy").then((m) => m.Frame),
+  board: () => import("./extra").then((m) => m.Board),
+  "rooms-now": () => import("./extra").then((m) => m.RoomsNow),
+  marquee: () => import("./extra").then((m) => m.Marquee),
+  until: () => import("./extra").then((m) => m.Until),
+  quote: () => import("./extra").then((m) => m.Quote),
+  "sponsor-wall": () => import("./extra").then((m) => m.SponsorWall),
+  applause: () => import("./extra").then((m) => m.Applause),
+  speaker: () => import("./extra").then((m) => m.Speaker),
+  numbers: () => import("./extra").then((m) => m.Numbers),
+  rain: () => import("./extra").then((m) => m.Rain),
+  warp: () => import("./extra").then((m) => m.Warp),
+  qa: () => import("./extra").then((m) => m.Questions),
+  meetups: () => import("./discover").then((m) => m.Meetups),
+  pulse: () => import("./discover").then((m) => m.Pulse),
+  principles: () => import("./discover").then((m) => m.Principles),
+  "owy-card": () => import("./discover").then((m) => m.OwyCard),
+  history: () => import("./discover").then((m) => m.History),
+  venue: () => import("./discover").then((m) => m.Venue),
+  selfie: () => import("./discover").then((m) => m.Selfie),
+  raffle: () => import("./discover").then((m) => m.Raffle),
+  welcome: () => import("./discover").then((m) => m.Welcome),
+  trivia: () => import("./fun").then((m) => m.Trivia),
+  versus: () => import("./fun").then((m) => m.Versus),
+  lineup: () => import("./fun").then((m) => m.Lineup),
+  "owy-says": () => import("./fun").then((m) => m.OwySays),
+  aurora: () => import("./fun").then((m) => m.Aurora),
+  dvd: () => import("./fun").then((m) => m.Dvd),
+  life: () => import("./fun").then((m) => m.Life),
+  "test-card": () => import("./fun").then((m) => m.TestCard),
+  conduct: () => import("./fun").then((m) => m.Conduct),
+  mosaic: () => import("./fun").then((m) => m.Mosaic),
+  plasma: () => import("./gen").then((m) => m.Plasma),
+  tunnel: () => import("./gen").then((m) => m.Tunnel),
+  fire: () => import("./gen").then((m) => m.Fire),
+  metaballs: () => import("./gen").then((m) => m.Metaballs),
+  voronoi: () => import("./gen").then((m) => m.Voronoi),
+  "reaction-diffusion": () => import("./gen").then((m) => m.ReactionDiffusion),
+  julia: () => import("./gen").then((m) => m.Julia),
+  "flow-field": () => import("./gen").then((m) => m.FlowField),
+  boids: () => import("./gen").then((m) => m.Boids),
+  rotozoom: () => import("./gen").then((m) => m.Rotozoom),
+  terrain: () => import("./gen2").then((m) => m.Terrain),
+  ripples: () => import("./gen2").then((m) => m.Ripples),
+  rays: () => import("./gen2").then((m) => m.Rays),
+  network: () => import("./gen2").then((m) => m.Network),
+  blob: () => import("./gen2").then((m) => m.Blob),
+  dragon: () => import("./gen2").then((m) => m.Dragon),
+  wfc: () => import("./gen2").then((m) => m.Wfc),
+  sand: () => import("./gen2").then((m) => m.Sand),
+  fireworks: () => import("./gen2").then((m) => m.Fireworks),
+  "particle-text": () => import("./gen2").then((m) => m.ParticleText),
+  mystify: () => import("./sims").then((m) => m.Mystify),
+  pipes: () => import("./sims").then((m) => m.Pipes),
+  "pendulum-wave": () => import("./sims").then((m) => m.PendulumWave),
+  "double-pendulum": () => import("./sims").then((m) => m.DoublePendulum),
+  automaton: () => import("./sims").then((m) => m.Automaton),
+  langton: () => import("./sims").then((m) => m.Langton),
+  maze: () => import("./sims").then((m) => m.Maze),
+  raycaster: () => import("./sims").then((m) => m.Raycaster),
+  sorting: () => import("./sims").then((m) => m.Sorting),
+  pong: () => import("./sims").then((m) => m.Pong),
+  donut: () => import("./show").then((m) => m.Donut),
+  cube: () => import("./show").then((m) => m.Cube),
+  neon: () => import("./show").then((m) => m.Neon),
+  kinetic: () => import("./show").then((m) => m.Kinetic),
+  crawl: () => import("./show").then((m) => m.Crawl),
+  credits: () => import("./show").then((m) => m.Credits),
+  halftone: () => import("./show").then((m) => m.Halftone),
+  equalizer: () => import("./show").then((m) => m.Equalizer),
+  "hello-world": () => import("./show").then((m) => m.HelloWorld),
+  bsod: () => import("./show").then((m) => m.Bsod),
+  poll: () => import("./play").then((m) => m.Poll),
+  wheel: () => import("./play").then((m) => m.Wheel),
+  coin: () => import("./play").then((m) => m.Coin),
+  scoreboard: () => import("./play").then((m) => m.Scoreboard),
+  "talk-timer": () => import("./play").then((m) => m.TalkTimer),
+  "traffic-light": () => import("./play").then((m) => m.TrafficLight),
+  wordle: () => import("./play").then((m) => m.Wordle),
+  pipeline: () => import("./play").then((m) => m.Pipeline),
+  update: () => import("./play").then((m) => m.Update),
+  captcha: () => import("./play").then((m) => m.Captcha),
+  rounds: () => import("./service").then((m) => m.Rounds),
+  "now-bar": () => import("./service").then((m) => m.NowBar),
+  notices: () => import("./service").then((m) => m.Notices),
+  changes: () => import("./service").then((m) => m.Changes),
+  facilities: () => import("./service").then((m) => m.Facilities),
+  emergency: () => import("./service").then((m) => m.Emergency),
+  transport: () => import("./service").then((m) => m.Transport),
+  food: () => import("./service").then((m) => m.Food),
+  feedback: () => import("./service").then((m) => m.Feedback),
+  checklist: () => import("./service").then((m) => m.Checklist),
+  grid: () => import("./service2").then((m) => m.Grid),
+  checkin: () => import("./service2").then((m) => m.Checkin),
+  badges: () => import("./service2").then((m) => m.Badges),
+  stands: () => import("./service2").then((m) => m.Stands),
+  "lost-found": () => import("./service2").then((m) => m.LostFound),
+  live: () => import("./service2").then((m) => m.Live),
+  weather: () => import("./service2").then((m) => m.Weather),
+  timeline: () => import("./service2").then((m) => m.Timeline),
+  reminders: () => import("./service2").then((m) => m.Reminders),
+  lightning: () => import("./service2").then((m) => m.Lightning),
+  hosts: () => import("./more2").then((m) => m.Hosts),
+  "room-cards": () => import("./more2").then((m) => m.RoomCards),
+  topics: () => import("./more2").then((m) => m.Topics),
+  links: () => import("./more2").then((m) => m.Links),
+  "wifi-qr": () => import("./more2").then((m) => m.WifiQr),
+  alumni: () => import("./more2").then((m) => m.Alumni),
+  breathe: () => import("./more2").then((m) => m.Breathe),
+  bingo: () => import("./more2").then((m) => m.Bingo),
+  "now-playing": () => import("./more2").then((m) => m.NowPlaying),
+  departures: () => import("./more2").then((m) => m.Departures),
+  networking: () => import("./more2").then((m) => m.Networking),
+  icebreaker: () => import("./more2").then((m) => m.Icebreaker),
+  "live-poll": () => import("./interactive").then((m) => m.LivePoll),
+  "word-cloud": () => import("./interactive").then((m) => m.LiveWordCloud),
+  "live-questions": () => import("./interactive").then((m) => m.LiveQuestions),
+  reactions: () => import("./interactive").then((m) => m.Reactions),
+  quiz: () => import("./interactive").then((m) => m.Quiz),
+  rating: () => import("./interactive").then((m) => m.Rating),
+  guess: () => import("./interactive").then((m) => m.Guess),
+  buzzer: () => import("./interactive").then((m) => m.Buzzer),
+  "session-vote": () => import("./interactive").then((m) => m.SessionVote),
+  "stand-up": () => import("./interactive").then((m) => m.StandUp),
+  corners: () => import("./interactive").then((m) => m.Corners),
+  rps: () => import("./interactive").then((m) => m.Rps),
+  "human-bingo": () => import("./interactive").then((m) => m.HumanBingo),
+  wave: () => import("./interactive").then((m) => m.Wave),
+  "line-up": () => import("./interactive").then((m) => m.LineUp),
+  scale: () => import("./interactive2").then((m) => m.Scale),
+  ranking: () => import("./interactive2").then((m) => m.Ranking),
+  wall: () => import("./interactive2").then((m) => m.MessageWall),
+  "multi-poll": () => import("./interactive2").then((m) => m.MultiPoll),
+  origin: () => import("./interactive2").then((m) => m.Origin),
+  presence: () => import("./interactive2").then((m) => m.Presence),
+  signatures: () => import("./interactive2").then((m) => m.Signatures),
+  pairs: () => import("./interactive2").then((m) => m.Pairs),
+  "tap-race": () => import("./interactive2").then((m) => m.TapRace),
+  stretch: () => import("./interactive2").then((m) => m.Stretch),
+  clap: () => import("./interactive2").then((m) => m.Clap),
+  columns: () => import("./interactive2").then((m) => m.Columns),
+  pixel: () => import("./interactive3").then((m) => m.Pixel),
+  "mood-grid": () => import("./interactive3").then((m) => m.MoodGrid),
+  "quiz-race": () => import("./interactive3").then((m) => m.QuizRace),
+  "open-mic": () => import("./interactive3").then((m) => m.OpenMic),
+  tug: () => import("./interactive3").then((m) => m.Tug),
+  "pick-number": () => import("./interactive3").then((m) => m.PickNumber),
+  draw: () => import("./interactive3").then((m) => m.Draw),
+  typing: () => import("./interactive3").then((m) => m.Typing),
+  story: () => import("./interactive3").then((m) => m.Story),
+  mirror: () => import("./interactive3").then((m) => m.Mirror),
+  "paper-planes": () => import("./interactive3").then((m) => m.PaperPlanes),
+  "human-map": () => import("./interactive3").then((m) => m.HumanMap),
+  black: () => import("./core").then((m) => m.Black),
 };
+
+const loaded = new Map<SceneId, ComponentType<SceneProps<SceneId>>>();
+const loading = new Map<SceneId, Promise<void>>();
+
+/** The scene's component, once `loadScene` brought its code. */
+export function sceneComponent(id: SceneId) {
+  return loaded.get(id) ?? null;
+}
+
+/** Brings a scene's code once; a failed load (offline, a deploy) is tried again next time. */
+export function loadScene(id: SceneId): Promise<void> {
+  if (loaded.has(id)) return Promise.resolve();
+  let pending = loading.get(id);
+  if (!pending) {
+    pending = (LOADERS[id] as Loader<SceneId>)()
+      .then((component) => {
+        loaded.set(id, component);
+      })
+      .finally(() => loading.delete(id));
+    loading.set(id, pending);
+  }
+
+  return pending;
+}
+
+/**
+ * Every scene, one at a time while the page idles: the wall keeps them all at
+ * hand, so no take ever waits for the network (or breaks after a deploy).
+ */
+export function preloadScenes() {
+  const idle = (next: () => void) =>
+    typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(next) : window.setTimeout(next, 50);
+  const queue = (Object.keys(LOADERS) as SceneId[]).filter((id) => !loaded.has(id));
+  const step = () => {
+    const id = queue.shift();
+    if (!id) return;
+    loadScene(id)
+      .catch(() => undefined)
+      .finally(() => idle(step));
+  };
+  idle(step);
+}

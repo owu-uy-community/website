@@ -6,7 +6,9 @@ import { MotionConfig } from "motion/react";
 import { Search } from "lucide-react";
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { cn } from "app/lib/utils";
 import { HeaderActions } from "components/Admin/shell/HeaderActions";
+import { openShortcutSheet } from "components/Admin/shell/shortcuts";
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
 import { haptic } from "components/Admin/stage/haptics";
 import { Inspector } from "components/Admin/stage/Inspector";
@@ -25,10 +27,9 @@ import {
 import { StageToolbar } from "components/Admin/stage/StageToolbar";
 import { StatusBar } from "components/Admin/stage/StatusBar";
 import { useDesk } from "components/Admin/stage/useDesk";
-import { SHORTCUTS, releaseFocus, useStageHotkeys } from "components/Admin/stage/useStageHotkeys";
+import { releaseFocus, useStageHotkeys } from "components/Admin/stage/useStageHotkeys";
 import { useStoredState } from "components/Admin/stage/useStoredState";
 import { Button } from "components/shared/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
 import { Kbd } from "components/shared/ui/kbd";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "components/shared/ui/resizable";
 import { Skeleton } from "components/shared/ui/skeleton";
@@ -61,8 +62,8 @@ const isSceneList = (value: unknown): value is SceneId[] =>
   Array.isArray(value) && value.every((id) => typeof id === "string" && isSceneId(id));
 const isPhoneTab = (value: unknown): value is PhoneTab => PHONE_TABS.includes(value as PhoneTab);
 
-/** The space under the admin header, which also clears the notch in a home-screen app. */
-const DESK_HEIGHT = "h-[calc(100dvh-3.5rem-env(safe-area-inset-top))]";
+/** The shell's content area (under its header; it clears the notch in a home-screen app too). */
+const DESK_HEIGHT = "h-(--admin-content-h)";
 
 const noop = () => () => undefined;
 /** True once on the client: the desk reads localStorage while it renders (layout, filters, settings). */
@@ -131,7 +132,6 @@ function Desk() {
   const [flight, setFlight] = useState<Flight | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [output, setOutput] = useStoredState<OutputSettings>(
     "owy-stage-output",
     { transparent: false, canvas: "" },
@@ -271,6 +271,8 @@ function Desk() {
     setTarget("preview");
   }, [actions]);
   const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const openGuion = useCallback(() => (wide ? setTab("guion") : setPhoneTab("guion")), [wide, setPhoneTab]);
   const replayPreview = useCallback(() => setReplay((value) => value + 1), []);
   const onLiveParams = useCallback((params: Params) => put(liveRef.current.scene, params, false), [put]);
   // On a phone, tapping a monitor also opens what edits it.
@@ -304,7 +306,6 @@ function Desk() {
     },
     guionToggle: rundown.toggle,
     guionStep: rundown.skip,
-    help: () => setHelpOpen((open) => !open),
   });
 
   const liveParams = useMemo(() => parseSceneParams(live.scene, live.params) as Params, [live.scene, live.params]);
@@ -312,23 +313,22 @@ function Desk() {
   const stageLayout = useDefaultLayout({ id: "owy-desk-stage", storage: localStorage });
   const listsLayout = useDefaultLayout({ id: "owy-desk-lists", storage: localStorage });
 
+  const next = desk.queue[0] ?? null;
   const takeControls = (layout: "column" | "bar") => (
-    <TakeControls
-      layout={layout}
-      live={live}
-      next={desk.queue[0] ?? null}
-      preview={desk.preview}
-      taking={taking}
-      onTake={take}
-    />
+    <TakeControls layout={layout} live={live} next={next} preview={desk.preview} taking={taking} onTake={take} />
+  );
+  const takeColumn = useMemo(
+    () => <TakeControls layout="column" live={live} next={next} preview={desk.preview} taking={taking} onTake={take} />,
+    [live, next, desk.preview, taking, take]
   );
   const monitors = (compact: boolean) => (
     <Monitors
       canvas={canvas}
-      center={compact ? undefined : takeControls("column")}
+      center={compact ? undefined : takeColumn}
       compact={compact}
       flight={flight}
       live={live}
+      next={next}
       preview={desk.preview}
       replay={replay}
       taking={taking}
@@ -358,6 +358,23 @@ function Desk() {
     <SceneLibrary actions={libraryActions} favorites={desk.favorites} lead={lead} recent={recent} tally={tally} />
   );
   const guion = <RundownPanel liveParams={liveParams} liveScene={live.scene} rundown={rundown} />;
+  const searchLead = useMemo(
+    () => (
+      <Button
+        aria-label="Buscar escena"
+        className="h-10 w-10 shrink-0 rounded-full"
+        size="icon"
+        variant="outline"
+        onClick={(event) => {
+          openPalette();
+          releaseFocus(event);
+        }}
+      >
+        <Search className="h-4 w-4" />
+      </Button>
+    ),
+    [openPalette]
+  );
   const searchButton = (
     <Button
       className="ml-auto h-9 w-full max-w-60 justify-start gap-2 px-3 font-normal text-muted-foreground pointer-coarse:h-10"
@@ -376,13 +393,7 @@ function Desk() {
   return (
     <div className="[-webkit-tap-highlight-color:transparent]">
       <HeaderActions>
-        <StageToolbar
-          connected={isConnected}
-          rundown={rundown}
-          onGuion={() => (wide ? setTab("guion") : setPhoneTab("guion"))}
-          onHelp={() => setHelpOpen(true)}
-          onSettings={() => setSettingsOpen(true)}
-        />
+        <StageToolbar rundown={rundown} onGuion={openGuion} onHelp={openShortcutSheet} onSettings={openSettings} />
       </HeaderActions>
 
       {wide ? (
@@ -436,10 +447,18 @@ function Desk() {
                             </TabsList>
                             {searchButton}
                           </div>
-                          <TabsContent className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden" value="library">
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="library"
+                          >
                             {library()}
                           </TabsContent>
-                          <TabsContent className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden" value="guion">
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="guion"
+                          >
                             {guion}
                           </TabsContent>
                         </Tabs>
@@ -469,25 +488,16 @@ function Desk() {
             <div className="h-[clamp(124px,33vw,300px)]">{monitors(true)}</div>
             {takeControls("bar")}
           </div>
+          {/*
+            Every section stays mounted and a tab switch only shows it: the library is two hundred
+            cards to rebuild otherwise. Hidden with CSS, so what animates out (a taken step, a tag)
+            still finishes while out of sight.
+          */}
           <section aria-label="Sección" className="min-h-0 flex-1 overflow-hidden border-t bg-card">
-            {phoneTab === "queue" && queue}
-            {phoneTab === "library" &&
-              library(
-                <Button
-                  aria-label="Buscar escena"
-                  className="h-10 w-10 shrink-0 rounded-full"
-                  size="icon"
-                  variant="outline"
-                  onClick={(event) => {
-                    openPalette();
-                    releaseFocus(event);
-                  }}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              )}
-            {phoneTab === "edit" && inspector}
-            {phoneTab === "guion" && guion}
+            <div className={cn("h-full", phoneTab !== "queue" && "hidden")}>{queue}</div>
+            <div className={cn("h-full", phoneTab !== "library" && "hidden")}>{library(searchLead)}</div>
+            <div className={cn("h-full", phoneTab !== "edit" && "hidden")}>{inspector}</div>
+            <div className={cn("h-full", phoneTab !== "guion" && "hidden")}>{guion}</div>
           </section>
           <PhoneTabs
             guionPlaying={rundown.playing}
@@ -516,26 +526,6 @@ function Desk() {
         onOpenChange={setSettingsOpen}
         onOutput={setOutput}
       />
-      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Atajos de teclado</DialogTitle>
-            <DialogDescription>Funcionan mientras no estés escribiendo en un campo.</DialogDescription>
-          </DialogHeader>
-          <table className="w-full text-sm">
-            <tbody>
-              {SHORTCUTS.map(([keys, description]) => (
-                <tr key={keys} className="border-b border-border/60 last:border-0">
-                  <td className="py-1.5 pr-3 whitespace-nowrap">
-                    <Kbd>{keys}</Kbd>
-                  </td>
-                  <td className="py-1.5 text-muted-foreground">{description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

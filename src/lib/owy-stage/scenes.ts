@@ -1427,6 +1427,8 @@ export const SCENES = {
     params: z.object({
       title: z.string().trim().max(40).default("Sorteo"),
       names: z.string().trim().max(3000).default("Ana, Bruno, Camila, Diego, Elena, Fede, Gabi, Hernán"),
+      /** One of the names to land on (a draw made in Asistentes); empty: the scene picks. */
+      winner: z.string().trim().max(80).default(""),
     }),
   },
   wheel: {
@@ -2110,6 +2112,15 @@ export type RundownStep = z.infer<typeof RundownStepSchema>;
 export const OWY_DESK_CHANNEL = "private:owy-desk";
 
 /**
+ * The desk's monitors are stage pages in iframes, spoken to with postMessage:
+ * a monitor says it is ready, the preview is shown what the desk posts, and
+ * both are told which scenes are coming so their code is loaded before TAKE.
+ */
+export const MONITOR_READY = "owy-stage:ready";
+export const MONITOR_SHOW = "owy-stage:show";
+export const MONITOR_PREFETCH = "owy-stage:prefetch";
+
+/**
  * One scene waiting on the desk. `params` empty means "the scene's defaults".
  * `from` only matters for the preview: a step pulled out of the queue goes
  * back to its front when something else replaces it, a `pick` is just
@@ -2178,8 +2189,20 @@ export const SubmitInputSchema = z.object({
   mode: InputModeSchema.default("single"),
 });
 export type SubmitInput = z.infer<typeof SubmitInputSchema>;
-export type StageInput = { id: string; key: string; value: string; voter: string; createdAt: string };
+/** Q&A moderation from the desk: hidden never reaches the wall, pinned leads it, answered dims. */
+export const MODERATIONS = ["", "hidden", "pinned", "answered"] as const;
+export type Moderation = (typeof MODERATIONS)[number];
+export type StageInput = {
+  id: string;
+  key: string;
+  value: string;
+  voter: string;
+  createdAt: string;
+  moderation: Moderation;
+};
 export type InputEvent = StageInput & { round: string; mode: z.infer<typeof InputModeSchema> };
+/** A moderation change, broadcast to every wall and phone following the round. */
+export type ModerationEvent = { id: string; round: string; moderation: Moderation };
 
 export const EffectEventSchema = z.object({
   effect: z.enum(EFFECTS),

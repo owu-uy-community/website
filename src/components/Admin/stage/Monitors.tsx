@@ -16,12 +16,21 @@ import { AnimatePresence, motion } from "motion/react";
 import { Copy, Loader2, RotateCcw, Scissors, Search, Smartphone, Timer, Undo2, X } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { TALLY } from "components/Admin/screen/tally";
 import { useInputs } from "components/OwyStage/inputs";
-import { MONITOR_READY, MONITOR_SHOW } from "components/OwyStage/StageClient";
 import { Button } from "components/shared/ui/button";
 import { Kbd } from "components/shared/ui/kbd";
 import type { StageCanvas } from "lib/owy-stage/canvas";
-import { INTERACTIVE_SCENES, SCENES, type DeskStep, type SceneId, type StageState } from "lib/owy-stage/scenes";
+import {
+  INTERACTIVE_SCENES,
+  MONITOR_PREFETCH,
+  MONITOR_READY,
+  MONITOR_SHOW,
+  SCENES,
+  type DeskStep,
+  type SceneId,
+  type StageState,
+} from "lib/owy-stage/scenes";
 
 import { ScaledFrame } from "./ScaledFrame";
 import { readParams } from "./SceneParams";
@@ -31,7 +40,7 @@ import { releaseFocus } from "./useStageHotkeys";
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
 /** The wall's wipe (WIPE_MS in the stage engine): TAKE's progress bar runs as long. */
 const WIPE_S = 0.9;
-const EASE = [0.2, 0.8, 0.2, 1] as const;
+const EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
 
 /** A TAKE on its way to the wall, for the animation from the preview monitor to AL AIRE. */
 export type Flight = { id: number; scene: SceneId };
@@ -68,8 +77,8 @@ function ClockChip({ live }: { live: StageState }) {
   return (
     <span
       className={cn(
-        "flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 font-terminal text-[11px] text-white tabular-nums backdrop-blur",
-        left <= 5 && left > 0 && "animate-pulse bg-red-600/90"
+        "flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 font-terminal text-2xs text-white tabular-nums",
+        left <= 5 && left > 0 && "bg-live/90 motion-safe:animate-pulse"
       )}
       title="El reloj de la escena"
     >
@@ -90,7 +99,7 @@ function PhonesChip({ live }: { live: StageState }) {
     <motion.span
       key={people}
       animate={{ scale: 1 }}
-      className="flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 font-terminal text-[11px] text-white tabular-nums backdrop-blur"
+      className="flex items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 font-terminal text-2xs text-white tabular-nums"
       initial={{ scale: people ? 1.3 : 1 }}
       title={`${people} personas participando · ${inputs.length} respuestas`}
       transition={{ type: "spring", stiffness: 500, damping: 18 }}
@@ -133,9 +142,11 @@ function Monitor({
       <div
         className={cn(
           "flex flex-col overflow-hidden rounded-lg bg-black ring-2 transition-shadow duration-300",
-          tone === "preview" ? "ring-green-500" : "ring-red-500",
+          TALLY[tone].ring,
           selected &&
-            (tone === "preview" ? "shadow-[0_0_0_5px_rgba(34,197,94,.2)]" : "shadow-[0_0_0_5px_rgba(239,68,68,.22)]")
+            (tone === "preview"
+              ? "shadow-[0_0_0_5px_hsl(var(--success)/0.2)]"
+              : "shadow-[0_0_0_5px_hsl(var(--live)/0.22)]")
         )}
         style={{ width: `min(100cqw, calc((100cqh - ${bar}px) * ${canvas.w} / ${canvas.h}))` }}
       >
@@ -155,9 +166,10 @@ function Monitor({
         </div>
         <div
           className={cn(
-            "flex shrink-0 items-center gap-1.5 px-2 font-bold tracking-[0.08em] uppercase",
-            compact ? "text-[10px]" : "text-[11px]",
-            tone === "preview" ? "bg-green-500/15 text-green-300" : "bg-red-500/15 text-red-300"
+            "flex shrink-0 items-center gap-1.5 px-2 font-terminal font-semibold tracking-[0.08em] uppercase",
+            compact ? "text-3xs" : "text-2xs",
+            TALLY[tone].surface,
+            TALLY[tone].text
           )}
           style={{ height: bar }}
         >
@@ -174,13 +186,14 @@ function PreviewScreen({
   live,
   canvas,
   replay,
+  frame,
 }: {
   step: DeskStep;
   live: StageState;
   canvas: StageCanvas;
   replay: number;
+  frame: RefObject<HTMLIFrameElement | null>;
 }) {
-  const frame = useRef<HTMLIFrameElement>(null);
   // Timers in the staged scene start when it is cued (or replayed), not on every keystroke.
   const cueKey = `${step.id}:${replay}`;
   const [cued, setCued] = useState(() => ({ key: cueKey, at: new Date().toISOString() }));
@@ -203,7 +216,7 @@ function PreviewScreen({
 
   const post = useCallback(() => {
     frame.current?.contentWindow?.postMessage({ type: MONITOR_SHOW, state: stateRef.current }, window.location.origin);
-  }, []);
+  }, [frame]);
 
   // The monitor page asks for the state when it (re)loads.
   useEffect(() => {
@@ -214,7 +227,7 @@ function PreviewScreen({
     window.addEventListener("message", onMessage);
 
     return () => window.removeEventListener("message", onMessage);
-  }, [post]);
+  }, [frame, post]);
 
   useEffect(post, [post, state]);
 
@@ -254,7 +267,9 @@ const canvasQuery = (canvas: StageCanvas) =>
 
 /**
  * TAKE, drawn: the taken scene flies from the preview monitor into AL AIRE,
- * so the eye follows what just happened. Rendered in a portal above everything.
+ * so the eye follows what just happened. Rendered in a portal above everything,
+ * and animated with transform and opacity only: the compositor runs it, so the
+ * work a TAKE sets off on the page can't make it stutter.
  */
 function FlightGhost({
   flight,
@@ -265,6 +280,7 @@ function FlightGhost({
   from: RefObject<HTMLDivElement | null>;
   to: RefObject<HTMLDivElement | null>;
 }) {
+  const ghost = useRef<HTMLImageElement>(null);
   const [trip, setTrip] = useState<{ id: number; scene: SceneId; a: DOMRect; b: DOMRect } | null>(null);
 
   useLayoutEffect(() => {
@@ -277,29 +293,67 @@ function FlightGhost({
     });
   }, [flight, from, to]);
 
+  useLayoutEffect(() => {
+    const img = ghost.current;
+    if (!trip || !img) return;
+    const { a, b } = trip;
+    // It sits on AL AIRE and starts drawn over the preview; with reduced motion it only fades there.
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const start = `translate(${a.left - b.left}px, ${a.top - b.top}px) scale(${a.width / b.width}, ${a.height / b.height})`;
+    const fly = still
+      ? null
+      : img.animate([{ transform: start }, { transform: "none" }], { duration: 450, easing: EASE });
+    const fade = img.animate([{ opacity: 1 }, { opacity: 1, offset: 0.75 }, { opacity: 0 }], {
+      duration: 600,
+      fill: "forwards",
+    });
+    fade.onfinish = () => setTrip((current) => (current?.id === trip.id ? null : current));
+
+    return () => {
+      fly?.cancel();
+      fade.cancel();
+    };
+  }, [trip]);
+
   if (!trip) return null;
 
   return createPortal(
-    <AnimatePresence>
-      <motion.img
-        key={trip.id}
-        alt=""
-        animate={{
-          left: trip.b.left,
-          top: trip.b.top,
-          width: trip.b.width,
-          height: trip.b.height,
-          opacity: [1, 1, 0],
-        }}
-        className="pointer-events-none fixed z-[60] rounded-md object-cover shadow-[0_18px_50px_rgba(0,0,0,.55),0_0_0_2px_rgba(250,204,21,.9)]"
-        src={`/owy-stage/thumbs/${trip.scene}.jpg`}
-        style={{ left: trip.a.left, top: trip.a.top, width: trip.a.width, height: trip.a.height }}
-        transition={{ default: { duration: 0.45, ease: EASE }, opacity: { duration: 0.6, times: [0, 0.75, 1] } }}
-        onAnimationComplete={() => setTrip((current) => (current?.id === trip.id ? null : current))}
-      />
-    </AnimatePresence>,
+    <img
+      key={trip.id}
+      ref={ghost}
+      alt=""
+      className="pointer-events-none fixed z-[60] origin-top-left rounded-md object-cover shadow-[0_18px_50px_rgba(0,0,0,.55),0_0_0_2px_hsl(var(--primary)/0.9)]"
+      src={`/owy-stage/thumbs/${trip.scene}.jpg`}
+      style={{ left: trip.b.left, top: trip.b.top, width: trip.b.width, height: trip.b.height }}
+    />,
     document.body
   );
+}
+
+/**
+ * Tells a monitor page which scenes are coming (what TAKE would put on air,
+ * what drops into preview after it, what goes back), so it loads their code
+ * ahead and TAKE never waits for it. Sent again whenever the page (re)loads.
+ */
+function useWarmScenes(frame: RefObject<HTMLIFrameElement | null>, scenes: string) {
+  const post = useCallback(() => {
+    frame.current?.contentWindow?.postMessage(
+      { type: MONITOR_PREFETCH, scenes: scenes.split(",") },
+      window.location.origin
+    );
+  }, [frame, scenes]);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== frame.current?.contentWindow) return;
+      if ((event.data as { type?: string } | null)?.type === MONITOR_READY) post();
+    };
+    window.addEventListener("message", onMessage);
+
+    return () => window.removeEventListener("message", onMessage);
+  }, [frame, post]);
+
+  useEffect(post, [post]);
 }
 
 /** The red flash on AL AIRE whenever something new goes on air (not on page load). */
@@ -325,7 +379,7 @@ function OnAirFlash({ round }: { round: string }) {
         <motion.div
           key={flash}
           animate={{ opacity: 0 }}
-          className="pointer-events-none absolute inset-0 z-10 bg-red-500/25 ring-4 ring-red-500 ring-inset"
+          className="pointer-events-none absolute inset-0 z-10 bg-live/25 ring-4 ring-live ring-inset"
           initial={{ opacity: 1 }}
           transition={{ duration: 0.9, ease: "easeOut" }}
           onAnimationComplete={() => setFlash(null)}
@@ -343,6 +397,7 @@ function OnAirFlash({ round }: { round: string }) {
 function MonitorsView({
   live,
   preview,
+  next,
   canvas,
   target,
   replay,
@@ -358,6 +413,8 @@ function MonitorsView({
 }: {
   live: StageState;
   preview: DeskStep | null;
+  /** The head of the queue: what drops into preview after a TAKE. */
+  next: DeskStep | null;
   canvas: StageCanvas;
   target: "preview" | "program";
   replay: number;
@@ -373,6 +430,11 @@ function MonitorsView({
 }) {
   const previewRef = useRef<HTMLDivElement>(null);
   const programRef = useRef<HTMLDivElement>(null);
+  const previewFrame = useRef<HTMLIFrameElement>(null);
+  const programFrame = useRef<HTMLIFrameElement>(null);
+  const coming = [...new Set([preview?.scene, next?.scene, live.scene].filter(Boolean))].join(",");
+  useWarmScenes(previewFrame, coming);
+  useWarmScenes(programFrame, coming);
   const iconButton = cn(
     "h-6 w-6 shrink-0 pointer-coarse:h-8 pointer-coarse:w-8",
     compact && "pointer-coarse:h-7 pointer-coarse:w-7"
@@ -387,9 +449,9 @@ function MonitorsView({
           compact={compact}
           label={
             <>
-              <span className="h-2 w-2 shrink-0 rounded-full bg-green-500" />
+              <span className={cn("size-2 shrink-0 rounded-full", TALLY.preview.dot)} />
               <span className={cn(compact && "sr-only")}>Preview</span>
-              <span className="min-w-0 truncate font-semibold tracking-normal text-zinc-100 normal-case">
+              <span className="min-w-0 truncate font-sans font-semibold tracking-normal text-foreground normal-case">
                 {SCENES[preview.scene].title}
               </span>
               {preview.from === "swap" && !compact && (
@@ -400,7 +462,7 @@ function MonitorsView({
               <span className="ml-auto flex shrink-0 items-center">
                 <Button
                   aria-label="Reiniciar la preview"
-                  className={cn(iconButton, "text-green-200 hover:bg-green-500/20")}
+                  className={cn(iconButton, "text-success-foreground hover:bg-success/15")}
                   size="icon"
                   title="Reiniciar (vuelve a correr lo que cuenta o se anima)"
                   variant="ghost"
@@ -410,7 +472,7 @@ function MonitorsView({
                 </Button>
                 <Button
                   aria-label="Sacar de la preview"
-                  className={cn(iconButton, "text-green-200 hover:bg-green-500/20")}
+                  className={cn(iconButton, "text-success-foreground hover:bg-success/15")}
                   size="icon"
                   title="Sacar de la preview"
                   variant="ghost"
@@ -426,26 +488,26 @@ function MonitorsView({
           tone="preview"
           onSelect={() => onTarget("preview")}
         >
-          <PreviewScreen canvas={canvas} live={live} replay={replay} step={preview} />
+          <PreviewScreen canvas={canvas} frame={previewFrame} live={live} replay={replay} step={preview} />
         </Monitor>
       ) : (
         <div className="[container-type:size] flex min-h-0 min-w-0 flex-1 items-center justify-center">
           <div
             ref={previewRef}
-            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-green-500/40 p-3 text-center"
+            className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-success/40 p-3 text-center"
             style={{
               width: `min(100cqw, calc((100cqh - 30px) * ${canvas.w} / ${canvas.h}))`,
               aspectRatio: `${canvas.w} / ${canvas.h}`,
             }}
           >
-            <p className="text-sm font-semibold text-green-300">Preview vacía</p>
+            <p className="text-ui font-semibold text-success-foreground">Preview vacía</p>
             {!compact && (
-              <p className="max-w-xs text-xs text-muted-foreground">
+              <p className="max-w-xs text-meta text-muted-foreground">
                 Tocá una escena de la biblioteca o de la cola: se ve acá antes de salir al aire.
               </p>
             )}
-            <Button className="h-9" size="sm" variant="outline" onClick={onSearch}>
-              <Search className="h-4 w-4" /> Buscar
+            <Button variant="outline" onClick={onSearch}>
+              <Search /> Buscar
             </Button>
           </div>
         </div>
@@ -459,17 +521,20 @@ function MonitorsView({
         label={
           <>
             <span
-              className={cn("h-2 w-2 shrink-0 rounded-full", taking ? "animate-pulse bg-amber-400" : "bg-red-500")}
+              className={cn(
+                "size-2 shrink-0 rounded-full",
+                taking ? [TALLY.pending.dot, "motion-safe:animate-pulse"] : TALLY.program.dot
+              )}
             />
             <span className={cn(compact && "sr-only")}>Al aire</span>
-            <span className="min-w-0 truncate font-semibold tracking-normal text-zinc-100 normal-case">
+            <span className="min-w-0 truncate font-sans font-semibold tracking-normal text-foreground normal-case">
               {SCENES[live.scene].title}
             </span>
             <span className="ml-auto flex shrink-0 items-center gap-1 tracking-normal">
               <OnAirFor iso={live.takenAt} />
               <Button
                 aria-label="Copiar a la preview"
-                className={cn(iconButton, "text-red-200 hover:bg-red-500/20")}
+                className={cn(iconButton, "text-live-foreground hover:bg-live/15")}
                 size="icon"
                 title="Copiar a la preview, para preparar un cambio fuera del aire"
                 variant="ghost"
@@ -499,6 +564,7 @@ function MonitorsView({
         <ScaledFrame
           canvas={canvas}
           className="rounded-none"
+          frameRef={programFrame}
           src={`/owy/stage?monitor=program${canvasQuery(canvas)}`}
           title="Al aire"
         />
@@ -535,7 +601,7 @@ function TakeControlsView({
     <Button
       aria-label="TAKE: la preview sale al aire"
       className={cn(
-        "relative h-auto touch-manipulation flex-col gap-1.5 overflow-hidden rounded-xl font-extrabold tracking-[0.12em] shadow-[0_10px_28px_rgba(250,204,21,.16)] transition-transform active:scale-[0.97]",
+        "relative h-auto touch-manipulation flex-col gap-1.5 overflow-hidden rounded-xl font-extrabold tracking-[0.12em] shadow-[0_10px_28px_hsl(var(--primary)/0.16)] transition-transform active:scale-[0.97]",
         column ? "h-[clamp(52px,32cqh,104px)] text-xl" : "h-14 flex-1 text-lg"
       )}
       disabled={disabled}
@@ -545,11 +611,7 @@ function TakeControlsView({
       }}
     >
       {taking ? <Loader2 className="h-6 w-6 animate-spin" /> : "TAKE"}
-      {column && (
-        <Kbd className="hidden border-black/20 bg-black/10 text-black/70 [@container(min-height:240px)]:pointer-fine:inline-flex">
-          Espacio
-        </Kbd>
-      )}
+      {column && <Kbd className="hidden [@container(min-height:240px)]:pointer-fine:inline-flex">Espacio</Kbd>}
       {/* The wall's wipe, as a progress bar along the button. */}
       <AnimatePresence>
         {taking && (
@@ -568,8 +630,8 @@ function TakeControlsView({
     <Button
       aria-label="CUT: la preview sale al aire sin transición"
       className={cn(
-        "touch-manipulation gap-1.5 border-red-500/40 font-bold tracking-[0.12em] text-red-200 transition-transform hover:bg-red-500/10 active:scale-[0.97]",
-        column ? "h-9" : "h-14 w-[4.5rem] flex-col gap-0.5 text-xs"
+        "touch-manipulation gap-1.5 font-bold tracking-[0.12em] transition-transform active:scale-[0.97]",
+        column ? "h-9" : "h-14 w-[4.5rem] flex-col gap-0.5 text-meta"
       )}
       disabled={disabled}
       title="Sin el barrido: aparece de golpe"
@@ -584,11 +646,9 @@ function TakeControlsView({
     </Button>
   );
   const upcoming = after && (
-    <div
-      className={cn("min-w-0 text-[11px] leading-tight text-muted-foreground", !column && "flex items-center gap-2")}
-    >
+    <div className={cn("min-w-0 text-2xs leading-tight text-muted-foreground", !column && "flex items-center gap-2")}>
       <span className="shrink-0">{next ? "Después entra" : "Después vuelve"}</span>
-      <span className={cn("truncate text-xs font-semibold text-foreground", column && "mt-0.5 block")}>
+      <span className={cn("truncate text-meta font-semibold text-foreground", column && "mt-0.5 block")}>
         {SCENES[after.scene].title}
       </span>
       {column && (
@@ -607,7 +667,7 @@ function TakeControlsView({
       <div className="flex w-[116px] shrink-0 flex-col justify-center gap-2 overflow-hidden">
         {take}
         {cut}
-        <p className="hidden text-center text-[10px] tracking-wide text-muted-foreground uppercase [@container(min-height:220px)]:block">
+        <p className="hidden text-center font-terminal text-3xs tracking-[0.12em] text-muted-foreground uppercase [@container(min-height:220px)]:block">
           Barrido · 0,9 s
         </p>
         {upcoming}
@@ -620,7 +680,8 @@ function TakeControlsView({
         {take}
         {cut}
       </div>
-      {upcoming}
+      {/* Its line is kept even while empty: what arrives with the desk must not push the page down. */}
+      <div className="h-4">{upcoming}</div>
     </div>
   );
 }

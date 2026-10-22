@@ -7,7 +7,7 @@ import { Copy, Eye, ListPlus, Radio, Smartphone } from "lucide-react";
 import { cn } from "app/lib/utils";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Empty } from "components/shared/ui/empty";
+import { EmptyState } from "components/Admin/ui/states";
 import { Kbd } from "components/shared/ui/kbd";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import {
@@ -19,6 +19,7 @@ import {
   type StageState,
 } from "lib/owy-stage/scenes";
 
+import { QuestionsPanel } from "./Questions";
 import { SceneParams } from "./SceneParams";
 
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
@@ -30,7 +31,7 @@ function Highlight({ tone }: { tone: "preview" | "program" }) {
     <motion.span
       className={cn(
         "absolute inset-0 rounded-md border",
-        tone === "preview" ? "border-green-500/50 bg-green-500/10" : "border-red-500/50 bg-red-500/10"
+        tone === "preview" ? "border-success/50 bg-success-surface" : "border-live/50 bg-live-surface"
       )}
       layoutId="inspector-target"
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
@@ -99,8 +100,8 @@ function InspectorView({
           value="preview"
         >
           {target === "preview" && <Highlight tone="preview" />}
-          <span className="relative flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-green-400 uppercase">
-            <span className="h-2 w-2 rounded-full bg-green-500" /> Preview
+          <span className="relative flex items-center gap-1.5 font-terminal text-3xs font-semibold tracking-[0.12em] text-success-foreground uppercase">
+            <span className="size-2 rounded-full bg-success" /> Preview
           </span>
           <span className="relative w-full truncate text-sm font-semibold text-foreground">
             {preview ? SCENES[preview.scene].title : "Vacía"}
@@ -111,8 +112,8 @@ function InspectorView({
           value="program"
         >
           {target === "program" && <Highlight tone="program" />}
-          <span className="relative flex items-center gap-1.5 text-[10px] font-bold tracking-[0.12em] text-red-400 uppercase">
-            <span className="h-2 w-2 rounded-full bg-red-500" /> Al aire
+          <span className="relative flex items-center gap-1.5 font-terminal text-3xs font-semibold tracking-[0.12em] text-live-foreground uppercase">
+            <span className="size-2 rounded-full bg-live" /> Al aire
           </span>
           <span className="relative w-full truncate text-sm font-semibold text-foreground">
             {SCENES[live.scene].title}
@@ -123,21 +124,23 @@ function InspectorView({
       {target === "program" ? (
         <>
           <Heading scene={live.scene} />
-          <div className="mx-4 mb-1 flex items-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          <div className="mx-4 mb-1 flex items-center gap-2 rounded-md border border-live/30 bg-live-surface px-3 py-2 text-meta text-live-foreground">
             <Radio className="h-3.5 w-3.5 shrink-0" />
             <span className="flex-1">En vivo: cada cambio sale al aire mientras escribís.</span>
-            <Button className="h-8 shrink-0 px-2 text-xs" size="sm" variant="ghost" onClick={onCopyLive}>
-              <Copy className="h-3.5 w-3.5" /> A preview
+            <Button className="shrink-0" size="sm" variant="ghost" onClick={onCopyLive}>
+              <Copy /> A preview
             </Button>
           </div>
-          <div className="min-h-0 flex-1">
+          {/* The live questions: their one field, then the moderation of what the phones sent. */}
+          <div className={live.scene === "live-questions" ? "shrink-0" : "min-h-0 flex-1"}>
             <SceneParams apply={onLiveParams} mode="live" params={live.params} pending={pending} scene={live.scene} />
           </div>
+          {live.scene === "live-questions" && <QuestionsPanel round={live.round} />}
         </>
       ) : preview ? (
         <>
           <Heading scene={preview.scene} />
-          <div className="mx-4 mb-1 hidden items-center gap-2 rounded-md border border-green-500/25 bg-green-500/10 px-3 py-2 text-xs text-green-200 sm:flex">
+          <div className="mx-4 mb-1 hidden items-center gap-2 rounded-md border border-success/25 bg-success-surface px-3 py-2 text-meta text-success-foreground sm:flex">
             <Eye className="h-3.5 w-3.5 shrink-0" /> Fuera del aire · TAKE para mostrarlo
           </div>
           <div className="min-h-0 flex-1">
@@ -157,9 +160,10 @@ function InspectorView({
           </footer>
         </>
       ) : (
-        <div className={cn("flex min-h-0 flex-1 p-4")}>
-          <Empty
-            className="m-auto border-0"
+        <div className="flex min-h-0 flex-1 p-4">
+          <EmptyState
+            className="m-auto"
+            compact
             description="Lo que pongas en preview se edita acá antes de salir al aire."
             icon={Eye}
             title="Nada en preview"

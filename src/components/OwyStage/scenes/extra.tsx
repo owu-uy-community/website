@@ -3,6 +3,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { m } from "motion/react";
 
+import { geistMono } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { SPONSORS_2026 } from "app/conf/components/Sponsors";
 import type { SceneProps } from "lib/owy-stage/scenes";
@@ -440,7 +441,7 @@ export function Rain() {
     // Fade instead of clear: the trail is the previous frames dimming.
     ctx.fillStyle = "rgba(0,0,0,0.09)";
     ctx.fillRect(0, 0, W, H);
-    ctx.font = `bold ${COLUMN - 4}px "Geist Mono", ui-monospace, monospace`;
+    ctx.font = `bold ${COLUMN - 4}px ${geistMono.style.fontFamily}, ui-monospace, monospace`;
     ctx.textBaseline = "top";
     columns.forEach((column, i) => {
       column.y += column.speed * (dt / 1000);

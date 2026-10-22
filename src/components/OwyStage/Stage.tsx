@@ -12,6 +12,7 @@ import {
 } from "react";
 import { LazyMotion, MotionConfig, domAnimation, m, useAnimationFrame } from "motion/react";
 
+import { inter, openSans, poppins } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { DEFAULT_CANVAS, type StageCanvas } from "lib/owy-stage/canvas";
 import "components/displays/countdown/countdown.css";
@@ -58,10 +59,10 @@ export function useCanvas() {
 }
 
 const FONTS = [
-  "800 10px Poppins",
-  "700 10px Poppins",
-  "500 10px Inter",
-  "600 10px 'Open Sans'",
+  `800 10px ${poppins.style.fontFamily}`,
+  `700 10px ${poppins.style.fontFamily}`,
+  `500 10px ${inter.style.fontFamily}`,
+  `600 10px ${openSans.style.fontFamily}`,
   "10px 'Organic Stencil'",
 ];
 

@@ -5,6 +5,7 @@ import {
   DeskStepSchema,
   EffectEventSchema,
   FaceEventSchema,
+  MODERATIONS,
   RundownSchema,
   SCENE_IDS,
   StageStateSchema,
@@ -40,6 +41,9 @@ export const GetPulseSchema = z.object({ eventId: z.string().nullable().optional
 
 export const GetInputsSchema = z.object({ round: z.string().trim().max(40) });
 
+export const ModerateSchema = z.object({ inputId: z.string().min(1).max(40), moderation: z.enum(MODERATIONS) });
+export const ModerationEventSchema = z.object({ id: z.string(), round: z.string(), moderation: z.enum(MODERATIONS) });
+
 /** What a recogniser (Shazam via macOS Shortcuts, SongRec…) reports. */
 export const SetNowPlayingSchema = z.object({
   song: z.string().trim().min(1).max(80),
@@ -58,6 +62,7 @@ export const StageInputSchema = z.object({
   value: z.string(),
   voter: z.string(),
   createdAt: z.string(),
+  moderation: z.enum(MODERATIONS),
 });
 
 export const StagePulseSchema = z.object({

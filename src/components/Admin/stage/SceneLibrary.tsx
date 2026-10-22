@@ -1,6 +1,16 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Check,
@@ -10,7 +20,6 @@ import {
   List,
   ListPlus,
   ListVideo,
-  MoreHorizontal,
   Plus,
   Smartphone,
   Star,
@@ -18,9 +27,9 @@ import {
 } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { TALLY } from "components/Admin/screen/tally";
 import { Button } from "components/shared/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "components/shared/ui/context-menu";
-import { DropdownMenu, DropdownMenuTrigger } from "components/shared/ui/dropdown-menu";
 import { Empty } from "components/shared/ui/empty";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import {
@@ -28,12 +37,13 @@ import {
   SCENES,
   SCENE_CATEGORIES,
   SCENE_GROUPS,
+  isSceneId,
   type SceneCategory,
   type SceneId,
 } from "lib/owy-stage/scenes";
 
 import { haptic } from "./haptics";
-import { ActionsContext, ActionsDropdown, type MenuAction } from "./menus";
+import { ActionsContext, ActionsMenuButton, useLongPress, type MenuAction } from "./menus";
 import { SceneThumb } from "./SceneThumb";
 import { releaseFocus } from "./useStageHotkeys";
 import { useStoredState } from "./useStoredState";
@@ -82,10 +92,10 @@ function Tag({ tone, children }: { tone: "air" | "preview" | "queue"; children: 
     <motion.span
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
-        "rounded px-1.5 text-[10px] leading-[18px] font-bold tracking-wide",
-        tone === "air" && "bg-red-600 text-white",
-        tone === "preview" && "bg-green-600 text-white",
-        tone === "queue" && "bg-primary text-primary-foreground"
+        "rounded-sm px-1.5 font-terminal text-3xs leading-[18px] font-semibold tracking-[0.08em]",
+        tone === "air" && TALLY.program.chip,
+        tone === "preview" && TALLY.preview.chip,
+        tone === "queue" && "border border-white/15 bg-black/75 text-foreground"
       )}
       exit={{ scale: 0.6, opacity: 0 }}
       initial={{ scale: 0.6, opacity: 0 }}
@@ -96,39 +106,35 @@ function Tag({ tone, children }: { tone: "air" | "preview" | "queue"; children: 
   );
 }
 
-function Tags({
-  id,
-  tally,
-  favorite,
-  hotkey,
-  withQueue = true,
-}: {
-  id: SceneId;
-  tally: LibraryTally;
+/** A card's place on the desk, as plain values: a memoized card re-renders only when its own changes. */
+type Status = {
+  live: boolean;
+  preview: boolean;
+  /** Position in the queue (1-based), if queued. */
+  queued: number | undefined;
   favorite: boolean;
   /** 1–9 for the first nine favorites: the key that stages it. */
   hotkey: number | null;
-  withQueue?: boolean;
-}) {
-  const position = withQueue ? tally.queued.get(id) : undefined;
+};
 
+function Tags({ id, live, preview, queued, favorite, hotkey }: Status & { id: SceneId }) {
   return (
     <>
       <span className="pointer-events-none absolute top-1.5 left-1.5 flex gap-1">
         <AnimatePresence>
-          {tally.live === id && (
+          {live && (
             <Tag key="air" tone="air">
               AL AIRE
             </Tag>
           )}
-          {tally.preview === id && (
+          {preview && (
             <Tag key="preview" tone="preview">
               PREVIEW
             </Tag>
           )}
-          {position && (
-            <Tag key={`queue-${position}`} tone="queue">
-              COLA #{position}
+          {queued && (
+            <Tag key={`queue-${queued}`} tone="queue">
+              COLA #{queued}
             </Tag>
           )}
         </AnimatePresence>
@@ -136,20 +142,20 @@ function Tags({
       <span className="pointer-events-none absolute top-1.5 right-1.5 flex gap-1">
         {hotkey && (
           <span
-            className="hidden h-[18px] min-w-[18px] place-items-center rounded bg-black/70 px-1 font-terminal text-[10px] text-zinc-100 pointer-fine:grid"
+            className="hidden h-[18px] min-w-[18px] place-items-center rounded-sm bg-black/70 px-1 font-terminal text-3xs text-foreground pointer-fine:grid"
             title={`Tecla ${hotkey}`}
           >
             {hotkey}
           </span>
         )}
         {favorite && (
-          <span className="grid h-[18px] w-[18px] place-items-center rounded bg-black/70 text-primary">
+          <span className="grid size-[18px] place-items-center rounded-sm bg-black/70 text-primary">
             <Star className="h-3 w-3" fill="currentColor" />
           </span>
         )}
         {PHONE.has(id) && (
           <span
-            className="grid h-[18px] w-[18px] place-items-center rounded bg-black/70 text-zinc-100"
+            className="grid size-[18px] place-items-center rounded-sm bg-black/70 text-foreground"
             title="La gente participa desde el celular"
           >
             <Smartphone className="h-3 w-3" />
@@ -163,6 +169,8 @@ function Tags({
 /** «+»: to the queue, answered with a check (and a tap on phones) so it's clear it landed. */
 function QueueButton({ id, onQueue, className }: { id: SceneId; onQueue: (id: SceneId) => void; className?: string }) {
   const [added, setAdded] = useState(0);
+  /** The icons pop in only after a first press, never when the card mounts. */
+  const [pressed, setPressed] = useState(false);
   useEffect(() => {
     if (!added) return;
     const timer = setTimeout(() => setAdded(0), 900);
@@ -175,8 +183,8 @@ function QueueButton({ id, onQueue, className }: { id: SceneId; onQueue: (id: Sc
       aria-label={`Agregar ${SCENES[id].title} a la cola`}
       className={cn(
         "relative shrink-0 text-muted-foreground transition-transform active:scale-90",
-        added && "text-primary",
-        className
+        className,
+        added && "text-primary"
       )}
       size="icon"
       title="Agregar a la cola"
@@ -185,140 +193,234 @@ function QueueButton({ id, onQueue, className }: { id: SceneId; onQueue: (id: Sc
         onQueue(id);
         haptic(8);
         setAdded(Date.now());
+        setPressed(true);
         releaseFocus(event);
       }}
     >
-      <AnimatePresence initial={false} mode="popLayout">
-        <motion.span
-          key={added ? "added" : "add"}
-          animate={{ scale: 1, rotate: 0, opacity: 1 }}
-          exit={{ scale: 0.4, opacity: 0 }}
-          initial={{ scale: 0.4, rotate: added ? -45 : 0, opacity: 0 }}
-          transition={POP}
-        >
-          {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-        </motion.span>
-      </AnimatePresence>
+      {/* A CSS pop, not a presence animation: two hundred cards each carrying one is not free. */}
+      <span
+        key={added ? "added" : "add"}
+        className={cn(
+          pressed &&
+            "duration-300 ease-[cubic-bezier(0.2,0.9,0.25,1.25)] motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-50",
+          pressed && added && "motion-safe:spin-in-[-45deg]"
+        )}
+      >
+        {added ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+      </span>
     </Button>
   );
 }
 
-function SceneMenu({ id, menu }: { id: SceneId; menu: MenuAction[] }) {
-  return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={`Más acciones para ${SCENES[id].title}`}
-          className="h-8 w-8 shrink-0 text-muted-foreground pointer-coarse:h-10 pointer-coarse:w-10"
-          size="icon"
-          variant="ghost"
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <ActionsDropdown actions={menu} title={SCENES[id].title} />
-    </DropdownMenu>
-  );
+function ringFor(live: boolean, preview: boolean) {
+  if (live) return cn("border-transparent ring-2", TALLY.program.ring);
+  if (preview) return cn("border-transparent ring-2", TALLY.preview.ring);
+
+  return "hover:border-input";
 }
 
-function ringFor(id: SceneId, tally: LibraryTally) {
-  if (tally.live === id) return "border-transparent ring-2 ring-red-500";
-  if (tally.preview === id) return "border-transparent ring-2 ring-green-500";
+type ItemProps = Status & { id: SceneId; actions: LibraryActions };
 
-  return "hover:border-muted-foreground/40";
-}
+const menuLabel = (id: SceneId) => `Más acciones para ${SCENES[id].title}`;
 
-type ItemProps = {
-  id: SceneId;
-  tally: LibraryTally;
-  favorite: boolean;
-  hotkey: number | null;
-  actions: LibraryActions;
-};
-
-function Card({ id, tally, favorite, hotkey, actions }: ItemProps) {
+function CardView({ id, actions, ...status }: ItemProps) {
   const scene = SCENES[id];
-  const menu = sceneActions(id, favorite, actions);
+  const onImage = "h-7 w-7 text-white/85 hover:bg-white/15 hover:text-white pointer-coarse:h-8 pointer-coarse:w-8";
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={cn(
-            "overflow-hidden rounded-lg border bg-card transition-[box-shadow,border-color] duration-300 select-none [-webkit-touch-callout:none]",
-            ringFor(id, tally)
-          )}
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-card transition-[box-shadow,border-color] duration-300 select-none [-webkit-touch-callout:none]",
+        ringFor(status.live, status.preview)
+      )}
+      data-scene={id}
+    >
+      <div className="relative">
+        <button
+          aria-label={`${scene.title}: a la preview`}
+          className="relative block w-full touch-manipulation text-left transition-transform duration-100 active:scale-[0.97]"
+          title={scene.description}
+          type="button"
+          onClick={(event) => {
+            actions.pick(id);
+            releaseFocus(event);
+          }}
         >
-          <button
-            aria-label={`${scene.title}: a la preview`}
-            className="relative block w-full touch-manipulation text-left transition-transform duration-100 active:scale-[0.97]"
-            title={scene.description}
-            type="button"
-            onClick={(event) => {
-              actions.pick(id);
-              releaseFocus(event);
-            }}
-          >
-            <SceneThumb className="rounded-none" id={id} title={scene.title} />
-            <Tags favorite={favorite} hotkey={hotkey} id={id} tally={tally} />
-          </button>
-          <div className="flex items-center gap-0.5 py-1 pr-1 pl-2.5">
-            <span className="min-w-0 flex-1 truncate text-xs font-semibold">{scene.title}</span>
-            <QueueButton className="h-8 w-8 pointer-coarse:h-10 pointer-coarse:w-10" id={id} onQueue={actions.queue} />
-            <SceneMenu id={id} menu={menu} />
-          </div>
-        </div>
-      </ContextMenuTrigger>
-      <ActionsContext actions={menu} title={scene.title} />
-    </ContextMenu>
-  );
-}
-
-function Row({ id, tally, favorite, hotkey, actions }: ItemProps) {
-  const scene = SCENES[id];
-  const menu = sceneActions(id, favorite, actions);
-  const position = tally.queued.get(id);
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          className={cn(
-            "relative flex items-center gap-3 rounded-lg border bg-card p-1.5 pr-1 transition-[box-shadow,border-color] duration-300 select-none [-webkit-touch-callout:none]",
-            ringFor(id, tally)
-          )}
-        >
-          {/* The whole row picks; the buttons on top keep their own action. */}
-          <button
-            aria-label={`${scene.title}: a la preview`}
-            className="absolute inset-0 touch-manipulation rounded-lg active:bg-accent/40"
-            type="button"
-            onClick={(event) => {
-              actions.pick(id);
-              releaseFocus(event);
-            }}
+          <SceneThumb className="rounded-none" id={id} title={scene.title} />
+          <Tags id={id} {...status} />
+        </button>
+        {/* The two actions ride on the picture, so the title below gets the card's whole width. */}
+        <div className="absolute right-1 bottom-1 flex rounded-md bg-black/75">
+          <QueueButton className={onImage} id={id} onQueue={actions.queue} />
+          <ActionsMenuButton
+            actions={() => sceneActions(id, status.favorite, actions)}
+            className={onImage}
+            label={menuLabel(id)}
+            title={scene.title}
           />
-          <div className="pointer-events-none relative w-24 shrink-0">
-            <SceneThumb className="rounded" id={id} title={scene.title} />
-            <Tags favorite={favorite} hotkey={hotkey} id={id} tally={tally} withQueue={false} />
-          </div>
-          <div className="pointer-events-none min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {scene.title}
-              {position && <span className="ml-2 text-xs font-medium text-primary">cola #{position}</span>}
-            </p>
-            <p className="truncate text-xs text-muted-foreground">{scene.description}</p>
-          </div>
-          <div className="relative flex items-center">
-            <QueueButton className="h-9 w-9 pointer-coarse:h-10 pointer-coarse:w-10" id={id} onQueue={actions.queue} />
-            <SceneMenu id={id} menu={menu} />
-          </div>
         </div>
-      </ContextMenuTrigger>
-      <ActionsContext actions={menu} title={scene.title} />
-    </ContextMenu>
+      </div>
+      <p className="line-clamp-2 min-h-[2lh] px-2.5 py-1.5 text-xs leading-tight font-semibold">{scene.title}</p>
+    </div>
   );
 }
+
+const Card = memo(CardView);
+
+function RowView({ id, actions, ...status }: ItemProps) {
+  const scene = SCENES[id];
+
+  return (
+    <div
+      className={cn(
+        "relative flex items-center gap-3 rounded-lg border bg-card p-1.5 pr-1 transition-[box-shadow,border-color] duration-300 select-none [-webkit-touch-callout:none]",
+        ringFor(status.live, status.preview)
+      )}
+      data-scene={id}
+    >
+      {/* The whole row picks; the buttons on top keep their own action. */}
+      <button
+        aria-label={`${scene.title}: a la preview`}
+        className="absolute inset-0 touch-manipulation rounded-lg active:bg-accent/40"
+        type="button"
+        onClick={(event) => {
+          actions.pick(id);
+          releaseFocus(event);
+        }}
+      />
+      <div className="pointer-events-none relative w-24 shrink-0">
+        <SceneThumb className="rounded" id={id} title={scene.title} />
+        <Tags id={id} {...status} queued={undefined} />
+      </div>
+      <div className="pointer-events-none min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">
+          {scene.title}
+          {status.queued && <span className="ml-2 text-xs font-medium text-primary">cola #{status.queued}</span>}
+        </p>
+        <p className="truncate text-xs text-muted-foreground">{scene.description}</p>
+      </div>
+      <div className="relative flex items-center">
+        <QueueButton className="h-9 w-9 pointer-coarse:h-10 pointer-coarse:w-10" id={id} onQueue={actions.queue} />
+        <ActionsMenuButton
+          actions={() => sceneActions(id, status.favorite, actions)}
+          className="h-8 w-8 shrink-0 text-muted-foreground pointer-coarse:h-10 pointer-coarse:w-10"
+          label={menuLabel(id)}
+          title={scene.title}
+        />
+      </div>
+    </div>
+  );
+}
+
+const Row = memo(RowView);
+
+/** The filter chips and the grid/list toggle: on their own, so a change on the desk doesn't redraw them. */
+function ToolbarView({
+  lead,
+  favorites,
+  filter,
+  onFilter,
+  view,
+  onView,
+}: {
+  lead?: ReactNode;
+  favorites: number;
+  filter: Filter;
+  onFilter: (filter: Filter) => void;
+  view: View;
+  onView: (view: View) => void;
+}) {
+  const chipRow = useRef<HTMLDivElement>(null);
+
+  // The chosen chip slides into view when the row was scrolled away from it (only the row scrolls).
+  useEffect(() => {
+    const row = chipRow.current;
+    const chip = row?.querySelector<HTMLElement>('[data-state="on"]');
+    if (!row || !chip) return;
+    const box = row.getBoundingClientRect();
+    const at = chip.getBoundingClientRect();
+    if (at.left >= box.left && at.right <= box.right) return;
+    row.scrollTo({ left: row.scrollLeft + at.left - box.left - 12, behavior: "smooth" });
+  }, [filter]);
+
+  const chips: [Filter, string, number | null][] = [
+    ["favorites", "★ Favoritos", favorites],
+    ["recent", "Recientes", null],
+    ["all", "Todas", null],
+    ...SCENE_GROUPS.map((group): [Filter, string, number] => [group.category, group.title, group.scenes.length]),
+  ];
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2">
+      {lead}
+      <div
+        ref={chipRow}
+        className="min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto [mask-image:linear-gradient(90deg,#000_92%,transparent)] [&::-webkit-scrollbar]:hidden"
+      >
+        <ToggleGroup
+          className="w-max justify-start gap-1.5"
+          type="single"
+          value={filter}
+          onValueChange={(value) => value && onFilter(value as Filter)}
+        >
+          {chips.map(([id, label, count]) => (
+            <ToggleGroupItem
+              key={id}
+              className="relative h-8 rounded-full border border-input px-3 text-xs whitespace-nowrap hover:bg-accent data-[state=on]:border-primary data-[state=on]:bg-transparent data-[state=on]:text-primary-foreground pointer-coarse:h-10"
+              value={id}
+              onClick={releaseFocus}
+            >
+              {filter === id && (
+                <motion.span
+                  className="absolute inset-0 rounded-full bg-primary"
+                  layoutId="library-chip"
+                  transition={{ type: "spring", stiffness: 500, damping: 38 }}
+                />
+              )}
+              <span className="relative">{label}</span>
+              {count !== null && <span className="relative opacity-60">{count}</span>}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+      <ToggleGroup
+        aria-label="Vista"
+        className="shrink-0 gap-0.5"
+        type="single"
+        value={view}
+        onValueChange={(value) => value && onView(value as View)}
+      >
+        <ToggleGroupItem
+          aria-label="Grilla"
+          className="h-8 w-8 min-w-8 px-0 pointer-coarse:h-10 pointer-coarse:w-10"
+          value="grid"
+          onClick={releaseFocus}
+        >
+          <LayoutGrid className="h-4 w-4" />
+        </ToggleGroupItem>
+        <ToggleGroupItem
+          aria-label="Lista"
+          className="h-8 w-8 min-w-8 px-0 pointer-coarse:h-10 pointer-coarse:w-10"
+          value="list"
+          onClick={releaseFocus}
+        >
+          <List className="h-4 w-4" />
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </div>
+  );
+}
+
+const Toolbar = memo(ToolbarView);
+
+/** The scene under a right-click or a long-press, read off the card it landed on. */
+const sceneAt = (event: MouseEvent | PointerEvent) => {
+  const id = (event.target as HTMLElement).closest<HTMLElement>("[data-scene]")?.dataset.scene;
+
+  return id && isSceneId(id) ? id : null;
+};
+/** A press inside a card's open ⋯ menu reaches the grid through React, from a portal: not the grid's. */
+const fromPortal = (event: MouseEvent | PointerEvent) => !event.currentTarget.contains(event.target as Node);
 
 /**
  * Every scene the wall can show, by category, in the day's order. Tapping a
@@ -342,140 +444,121 @@ function SceneLibraryView({
 }) {
   const [filter, setFilter] = useStoredState<Filter>("owy-stage-library-filter", "all", isFilter);
   const [view, setView] = useStoredState<View>("owy-stage-library-view", "grid", isView);
+  // The chip and the toggle answer at once; the grid behind them follows without blocking the tap.
+  const shownFilter = useDeferredValue(filter);
+  const shownView = useDeferredValue(view);
   const hotkeys = useMemo(() => new Map(favorites.slice(0, 9).map((id, index) => [id, index + 1])), [favorites]);
   const starred = useMemo(() => new Set(favorites), [favorites]);
-  const chipRow = useRef<HTMLDivElement>(null);
-
-  // The chosen chip slides into view when the row was scrolled away from it (only the row scrolls).
-  useEffect(() => {
-    const row = chipRow.current;
-    const chip = row?.querySelector<HTMLElement>('[data-state="on"]');
-    if (!row || !chip) return;
-    const box = row.getBoundingClientRect();
-    const at = chip.getBoundingClientRect();
-    if (at.left >= box.left && at.right <= box.right) return;
-    row.scrollTo({ left: row.scrollLeft + at.left - box.left - 12, behavior: "smooth" });
-  }, [filter]);
+  /** One right-click / long-press menu for the whole grid, filled with the scene it was opened on. */
+  const [menuFor, setMenuFor] = useState<SceneId | null>(null);
+  const longPress = useLongPress();
 
   const groups = useMemo(() => {
-    if (filter === "favorites") return [{ category: "favorites", title: "Favoritos", scenes: favorites }];
-    if (filter === "recent") return [{ category: "recent", title: "Recientes", scenes: recent }];
+    if (shownFilter === "favorites") return [{ category: "favorites", title: "Favoritos", scenes: favorites }];
+    if (shownFilter === "recent") return [{ category: "recent", title: "Recientes", scenes: recent }];
 
-    return SCENE_GROUPS.filter((group) => filter === "all" || group.category === filter);
-  }, [filter, favorites, recent]);
+    return SCENE_GROUPS.filter((group) => shownFilter === "all" || group.category === shownFilter);
+  }, [shownFilter, favorites, recent]);
   const empty = groups.every((group) => group.scenes.length === 0);
 
-  const chips: [Filter, string, number | null][] = [
-    ["favorites", "★ Favoritos", favorites.length],
-    ["recent", "Recientes", null],
-    ["all", "Todas", null],
-    ...SCENE_GROUPS.map((group): [Filter, string, number] => [group.category, group.title, group.scenes.length]),
-  ];
+  const Item = shownView === "grid" ? Card : Row;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 px-3 py-2">
-        {lead}
-        <div
-          ref={chipRow}
-          className="min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto [mask-image:linear-gradient(90deg,#000_92%,transparent)] [&::-webkit-scrollbar]:hidden"
-        >
-          <ToggleGroup
-            className="w-max justify-start gap-1.5"
-            type="single"
-            value={filter}
-            onValueChange={(value) => value && setFilter(value as Filter)}
-          >
-            {chips.map(([id, label, count]) => (
-              <ToggleGroupItem
-                key={id}
-                className="relative h-8 rounded-full border border-input px-3 text-xs whitespace-nowrap hover:bg-accent data-[state=on]:border-primary data-[state=on]:bg-transparent data-[state=on]:text-primary-foreground pointer-coarse:h-10"
-                value={id}
-              >
-                {filter === id && (
-                  <motion.span
-                    className="absolute inset-0 rounded-full bg-primary"
-                    layoutId="library-chip"
-                    transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                  />
-                )}
-                <span className="relative">{label}</span>
-                {count !== null && <span className="relative opacity-60">{count}</span>}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-        <ToggleGroup
-          aria-label="Vista"
-          className="shrink-0 gap-0.5"
-          type="single"
-          value={view}
-          onValueChange={(value) => value && setView(value as View)}
-        >
-          <ToggleGroupItem
-            aria-label="Grilla"
-            className="h-8 w-8 min-w-8 px-0 pointer-coarse:h-10 pointer-coarse:w-10"
-            value="grid"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem
-            aria-label="Lista"
-            className="h-8 w-8 min-w-8 px-0 pointer-coarse:h-10 pointer-coarse:w-10"
-            value="list"
-          >
-            <List className="h-4 w-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+      <Toolbar
+        favorites={favorites.length}
+        filter={filter}
+        lead={lead}
+        view={view}
+        onFilter={setFilter}
+        onView={setView}
+      />
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3">
-        {empty && (
-          <Empty
-            className="mt-2"
-            description={
-              filter === "favorites"
-                ? "Marcalas con «⋯ → Marcar favorito». Las primeras nueve salen con las teclas 1 a 9."
-                : "Las escenas que salgan al aire desde este dispositivo aparecen acá."
-            }
-            icon={filter === "favorites" ? Star : ListVideo}
-            title={filter === "favorites" ? "Sin favoritos todavía" : "Nada reciente"}
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3"
+            onContextMenu={(event) => {
+              if (fromPortal(event)) return;
+              const id = sceneAt(event);
+              // Off the cards (a gap, a heading) there is nothing to act on.
+              if (!id) return event.preventDefault();
+              setMenuFor(id);
+            }}
+            onPointerDown={(event) => {
+              // A long-press opens after a hold: know the scene from the moment the finger lands.
+              if (event.pointerType === "mouse" || fromPortal(event)) return;
+              const id = sceneAt(event);
+              if (!id) return event.preventDefault();
+              setMenuFor(id);
+              longPress.start(event);
+            }}
+            onPointerCancel={longPress.cancel}
+            onPointerMove={longPress.move}
+            onPointerUp={longPress.cancel}
+          >
+            {empty && (
+              <Empty
+                className="mt-2"
+                description={
+                  shownFilter === "favorites"
+                    ? "Marcalas con «⋯ → Marcar favorito». Las primeras nueve salen con las teclas 1 a 9."
+                    : "Las escenas que salgan al aire desde este dispositivo aparecen acá."
+                }
+                icon={shownFilter === "favorites" ? Star : ListVideo}
+                title={shownFilter === "favorites" ? "Sin favoritos todavía" : "Nada reciente"}
+              />
+            )}
+            {groups.map(
+              (group) =>
+                group.scenes.length > 0 && (
+                  <section
+                    key={group.category}
+                    className="[contain-intrinsic-size:auto_480px] [content-visibility:auto]"
+                  >
+                    {(shownFilter === "all" || shownFilter === "favorites" || shownFilter === "recent") && (
+                      <h3 className="sticky top-0 z-10 -mx-3 bg-card px-3 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
+                        {group.title} · {group.scenes.length}
+                        {shownFilter === "favorites" && (
+                          <span className="ml-2 hidden tracking-normal normal-case pointer-fine:inline">
+                            teclas 1–9
+                          </span>
+                        )}
+                      </h3>
+                    )}
+                    <div
+                      className={cn(
+                        "pb-3",
+                        shownView === "grid"
+                          ? "grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5"
+                          : "space-y-1.5"
+                      )}
+                    >
+                      {group.scenes.map((id) => (
+                        <Item
+                          key={id}
+                          actions={actions}
+                          favorite={starred.has(id)}
+                          hotkey={hotkeys.get(id) ?? null}
+                          id={id}
+                          live={tally.live === id}
+                          preview={tally.preview === id}
+                          queued={tally.queued.get(id)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )
+            )}
+          </div>
+        </ContextMenuTrigger>
+        {menuFor && (
+          <ActionsContext
+            actions={sceneActions(menuFor, starred.has(menuFor), actions)}
+            title={SCENES[menuFor].title}
           />
         )}
-        {groups.map(
-          (group) =>
-            group.scenes.length > 0 && (
-              <section key={group.category} className="[contain-intrinsic-size:auto_480px] [content-visibility:auto]">
-                {(filter === "all" || filter === "favorites" || filter === "recent") && (
-                  <h3 className="sticky top-0 z-10 -mx-3 bg-card/95 px-3 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase backdrop-blur">
-                    {group.title} · {group.scenes.length}
-                    {filter === "favorites" && (
-                      <span className="ml-2 hidden tracking-normal normal-case pointer-fine:inline">teclas 1–9</span>
-                    )}
-                  </h3>
-                )}
-                <div
-                  className={cn(
-                    "pb-3",
-                    view === "grid" ? "grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5" : "space-y-1.5"
-                  )}
-                >
-                  {group.scenes.map((id) => {
-                    const props = {
-                      actions,
-                      favorite: starred.has(id),
-                      hotkey: hotkeys.get(id) ?? null,
-                      id,
-                      tally,
-                    };
-
-                    return view === "grid" ? <Card key={id} {...props} /> : <Row key={id} {...props} />;
-                  })}
-                </div>
-              </section>
-            )
-        )}
-      </div>
+      </ContextMenu>
     </div>
   );
 }

@@ -449,7 +449,10 @@ export function Raffle({ params }: SceneProps<"raffle">) {
         .filter(Boolean),
     [params.names]
   );
-  const winner = useMemo(() => (names.length ? Math.floor(Math.random() * names.length) : -1), [names]);
+  const winner = useMemo(() => {
+    const chosen = names.indexOf(params.winner);
+    return chosen >= 0 ? chosen : names.length ? Math.floor(Math.random() * names.length) : -1;
+  }, [names, params.winner]);
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(preview);
 
@@ -507,13 +510,14 @@ export function Raffle({ params }: SceneProps<"raffle">) {
         </AnimatePresence>
       </div>
       <div className="absolute inset-x-0 top-[800px] text-center text-[40px] font-semibold tracking-[0.25em] text-[#FBF5E7]/60 uppercase">
-        {names.length < 2
+        {/* One name is a draw too (one person checked in): it lands at once and is celebrated. */}
+        {names.length === 0
           ? "Cargá nombres separados por coma"
           : done
             ? "¡Felicitaciones!"
             : `${names.length} participantes`}
       </div>
-      {done && !preview && names.length > 1 && (
+      {done && !preview && names.length > 0 && (
         <div className="pointer-events-none absolute inset-0">
           <Confetti />
           <Confetti />

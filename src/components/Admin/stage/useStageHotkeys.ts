@@ -2,18 +2,27 @@
 
 import { useEffect, useRef, type MouseEvent } from "react";
 
-export const SHORTCUTS: [string, string][] = [
-  ["Espacio / ↵", "TAKE: la preview sale al aire, con el barrido"],
-  ["⌫", "CUT: la preview sale al aire de golpe"],
+import { useShortcuts, type Shortcut } from "components/Admin/shell/shortcuts";
+
+/** The keys the desk handles itself, listed in the admin's `?` sheet (which also has ⌘B and ?). */
+const SHORTCUTS: [string, string][] = [
+  ["space / enter", "TAKE, con el barrido"],
+  ["backspace", "CUT, de golpe"],
   ["/", "Buscar una escena"],
-  ["Q", "Mandar la preview a la cola"],
+  ["q", "Mandar la preview a la cola"],
   ["1 – 9", "Favorito n a la preview"],
-  ["⇧ + 1 – 9", "Favorito n al aire ya"],
-  ["G", "Guion: reproducir o pausar"],
-  ["← / →", "Guion: paso anterior / siguiente"],
-  ["⌘B", "Mostrar u ocultar el menú lateral"],
-  ["?", "Esta ayuda"],
+  ["shift+1 – 9", "Favorito n al aire ya"],
+  ["g", "Guion: reproducir o pausar"],
+  ["arrowleft / arrowright", "Guion: paso anterior / siguiente"],
 ];
+const SHEET: Shortcut[] = SHORTCUTS.map(([keys, label], index) => ({
+  id: `escenas.${index}`,
+  keys,
+  label,
+  group: "Escenas",
+  run: () => {},
+  displayOnly: true,
+}));
 
 /** Typing, or inside a dialog or menu: the keys belong to it. */
 function busy(el: HTMLElement | null) {
@@ -54,13 +63,13 @@ type Handlers = {
   favorite: (index: number, air: boolean) => void;
   guionToggle: () => void;
   guionStep: (direction: 1 | -1) => void;
-  help: () => void;
 };
 
-/** The desk's keyboard. Bound once; always calls the latest handlers. */
+/** The desk's keyboard. Bound once; always calls the latest handlers. `?` is the admin's own. */
 export function useStageHotkeys(handlers: Handlers) {
   const latest = useRef(handlers);
   latest.current = handlers;
+  useShortcuts(SHEET);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -69,12 +78,6 @@ export function useStageHotkeys(handlers: Handlers) {
       const run = latest.current;
       const key = event.key;
 
-      if (key === "?") {
-        event.preventDefault();
-        run.help();
-
-        return;
-      }
       // Holding a key must never fire twice (a second TAKE would send the next scene).
       if (event.repeat) return;
       if (key === " " || key === "Enter") {
