@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LayoutGrid, MapPin, UsersRound, Wifi, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { cn } from "app/lib/utils";
@@ -12,10 +12,11 @@ import { dateParts, monthKey } from "lib/community/time";
 
 type Mode = "todos" | "presencial" | "online";
 
-const MODES: { value: Mode; label: string }[] = [
-  { value: "todos", label: "Todos" },
-  { value: "presencial", label: "Presencial" },
-  { value: "online", label: "Online" },
+// Same icons as the event rows: a pin for a venue, wifi for online
+const MODES: { value: Mode; label: string; icon: LucideIcon }[] = [
+  { value: "todos", label: "Todos", icon: LayoutGrid },
+  { value: "presencial", label: "Presencial", icon: MapPin },
+  { value: "online", label: "Online", icon: Wifi },
 ];
 
 /** "octubre de 2026" → "Octubre" */
@@ -64,8 +65,12 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative">
             <span className="sr-only">Filtrar por comunidad</span>
+            <UsersRound
+              aria-hidden
+              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-zinc-500"
+            />
             <select
-              className="h-11 appearance-none rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-4 text-[15px] text-white transition-colors outline-none focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/20"
+              className="h-11 appearance-none rounded-xl border border-white/10 bg-white/[0.04] pr-10 pl-10 text-[15px] text-white transition-colors outline-none hover:border-white/20 focus:border-yellow-400/60 focus:ring-2 focus:ring-yellow-400/20"
               value={group}
               onChange={(event) => setGroup(event.target.value)}
             >
@@ -82,17 +87,21 @@ export default function AgendaExplorer({ events }: { events: CommunityEvent[] })
             />
           </label>
           <div aria-label="Modalidad" className="flex rounded-xl border border-white/10 p-1" role="group">
-            {MODES.map(({ value, label }) => (
+            {MODES.map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
                 aria-pressed={mode === value}
                 className={cn(
-                  "h-9 rounded-lg px-3.5 text-[13px] font-medium transition-colors",
+                  "inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium transition-colors",
                   mode === value ? "bg-white/[0.08] text-white" : "text-zinc-400 hover:text-white"
                 )}
                 type="button"
                 onClick={() => setMode(value)}
               >
+                <Icon
+                  aria-hidden
+                  className={cn("size-3.5 shrink-0", mode === value ? "text-yellow-400" : "text-zinc-500")}
+                />
                 {label}
               </button>
             ))}
