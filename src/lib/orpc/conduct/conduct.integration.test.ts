@@ -44,8 +44,7 @@ describe("conduct responders", () => {
   test("only people on the team with editor or more can be named, up to three", async () => {
     const { community, editor, responder, member, event } = await setup();
     const stranger = await makeUser();
-    const set = (userIds: string[]) =>
-      call(router.conduct.setResponders, { communityId: community.id, eventId: event.id, userIds }, by(editor));
+    const set = (userIds: string[]) => call(router.conduct.setResponders, { eventId: event.id, userIds }, by(editor));
 
     await expect(set([stranger.id])).rejects.toMatchObject({ code: "BAD_REQUEST" });
     await expect(set([member.id])).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -59,11 +58,7 @@ describe("conduct responders", () => {
     const { community, member, responder, event } = await setup();
 
     await expect(
-      call(
-        router.conduct.setResponders,
-        { communityId: community.id, eventId: event.id, userIds: [responder.id] },
-        by(member)
-      )
+      call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id] }, by(member))
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
@@ -91,7 +86,7 @@ describe("conduct responders", () => {
       call(router.events.schedulePublish, { ...ref, publishAt: new Date(Date.now() + DAY).toISOString() }, by(editor))
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
-    await call(router.conduct.setResponders, { ...ref, userIds: [responder.id, second.id] }, by(editor));
+    await call(router.conduct.setResponders, { eventId: draft.id, userIds: [responder.id, second.id] }, by(editor));
     await expect(call(router.events.publish, ref, by(editor))).resolves.toMatchObject({
       event: { status: "published" },
     });
@@ -119,11 +114,7 @@ describe("conduct reports", () => {
 
   test("an anonymous report goes to the event's responders and to OWU's conduct team", async () => {
     const { community, editor, responder, second, event } = await setup();
-    await call(
-      router.conduct.setResponders,
-      { communityId: community.id, eventId: event.id, userIds: [responder.id, second.id] },
-      by(editor)
-    );
+    await call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id, second.id] }, by(editor));
 
     await expect(report(community, event, { where: "Afuera, en el break" })).resolves.toStrictEqual({
       ok: true,
@@ -147,11 +138,7 @@ describe("conduct reports", () => {
 
   test("a report that names someone on the team goes to OWU only, and no one on the team reads it", async () => {
     const { community, editor, admin, owner, responder, event } = await setup();
-    await call(
-      router.conduct.setResponders,
-      { communityId: community.id, eventId: event.id, userIds: [responder.id] },
-      by(editor)
-    );
+    await call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id] }, by(editor));
     await expect(
       report(community, event, { involvesOrganizer: true, contact: "anon@example.com" })
     ).resolves.toStrictEqual({
@@ -189,11 +176,7 @@ describe("conduct reports", () => {
 
   test("responders and staff read reports; another editor, the admin and the owner can't", async () => {
     const { community, editor, admin, owner, responder, event } = await setup();
-    await call(
-      router.conduct.setResponders,
-      { communityId: community.id, eventId: event.id, userIds: [responder.id] },
-      by(editor)
-    );
+    await call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id] }, by(editor));
     await report(community, event);
     const incident = await lastIncident(event.id);
 
@@ -239,11 +222,7 @@ describe("conduct reports", () => {
 
   test("a responder taken off the team stops reading them; drafts can't be reported", async () => {
     const { community, editor, responder, event } = await setup();
-    await call(
-      router.conduct.setResponders,
-      { communityId: community.id, eventId: event.id, userIds: [responder.id] },
-      by(editor)
-    );
+    await call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id] }, by(editor));
     const draft = await makeEvent(community.id, { status: "draft" });
     await expect(report(community, draft)).rejects.toMatchObject({ code: "NOT_FOUND" });
 
