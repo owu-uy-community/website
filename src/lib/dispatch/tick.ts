@@ -9,6 +9,7 @@ import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
 import { expireOffers, sendFeedback, sendReminders, sendUpdates } from "../orpc/rsvps/service";
 import { sendHostDaySheets, sendYearlyChecks } from "../orpc/venues/hosting";
+import { sendSpeakerEmails } from "../orpc/talks/service";
 import { expireRequests } from "../orpc/venues/service";
 import { query } from "../orpc/db";
 import { liveServices, type AppServices } from "../orpc/services";
@@ -50,6 +51,7 @@ const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknow
   holds: () => remindExpiringHolds,
   venues: () => expireRequests,
   hostDays: () => sendHostDaySheets,
+  speakers: () => sendSpeakerEmails,
   publications: (deadline: number) => pushDue({ deadline }),
   // Last, so what the sweeps above queued goes out in the same tick
   email: (deadline: number) => drainEmail({ deadline }),

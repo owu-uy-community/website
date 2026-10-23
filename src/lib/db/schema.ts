@@ -2076,6 +2076,8 @@ export const talkClaims = pgTable(
     eventId: text("eventId"),
     status: text("status").$type<"claimed" | "scheduled" | "given" | "released">().notNull().default("claimed"),
     claimedById: text("claimedById"),
+    /** When the speaker sent slides or the recording from the emailed link: the link works once */
+    materialsAt: ts("materialsAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()

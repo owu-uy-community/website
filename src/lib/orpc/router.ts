@@ -32,6 +32,7 @@ import { semanarioRouter } from "./semanario/router";
 import { shellRouter } from "./shell/router";
 import { staffTasksRouter } from "./staff-tasks/router";
 import { surveysRouter } from "./surveys/router";
+import { talksRouter } from "./talks/router";
 import { systemRouter } from "./system/router";
 import { tracksRouter } from "./tracks/router";
 import { venuesRouter } from "./venues/router";
@@ -65,6 +66,8 @@ export const router = {
   integrations: integrationsRouter,
   polls: pollsRouter,
   staffTasks: staffTasksRouter,
+  // Talks: the call for talks, the pool, claims, requests, speaker profiles, share cards
+  talks: talksRouter,
 
   // Event-day screens: countdown, cast to screen, the stage wall
   countdown: countdownRouter,
