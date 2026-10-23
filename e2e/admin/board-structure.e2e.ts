@@ -22,8 +22,11 @@ test("a deleted talk comes back with Deshacer", async ({ page, board }) => {
   await page.getByRole("button", { name: "Eliminar charla" }).click();
   await expect(grid(page).getByText("Volveré", { exact: true })).toBeHidden();
 
+  // The card comes back at once; the reload waits for the server to have it, or it would abort the write
+  const restored = page.waitForResponse("**/api/orpc/tracks/create");
   await page.getByRole("button", { name: "Deshacer" }).click();
   await expect(grid(page).getByText("Volveré", { exact: true })).toBeVisible();
+  await restored;
   await page.reload();
   await expect(grid(page).getByText("Volveré", { exact: true })).toBeVisible();
 });
