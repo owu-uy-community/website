@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { busFactorLow, healthOf } from "./health";
+import { pacing } from "./pacing";
 import { expectedTurnout, foodFor, suggestedLimit } from "./turnout";
 
 describe(expectedTurnout, () => {
@@ -65,5 +66,26 @@ describe(healthOf, () => {
       "dormida"
     );
     expect([busFactorLow(1), busFactorLow(2)]).toStrictEqual([true, false]);
+  });
+});
+
+describe(pacing, () => {
+  const now = new Date("2026-10-23T12:00:00.000Z").getTime();
+  const inDays = (days: number) => new Date(now + days * 86_400_000);
+
+  test("behind at two weeks below half the room, at one week below the room; never past the start", () => {
+    expect(pacing({ capacity: 60, startDate: inDays(14) }, 12, now)).toStrictEqual({
+      behind: true,
+      daysLeft: 14,
+      target: 30,
+    });
+    expect(pacing({ capacity: 60, startDate: inDays(14) }, 30, now)).toStrictEqual({ behind: false });
+    expect(pacing({ capacity: 60, startDate: inDays(6) }, 50, now)).toStrictEqual({
+      behind: true,
+      daysLeft: 6,
+      target: 60,
+    });
+    expect(pacing({ capacity: 60, startDate: inDays(20) }, 0, now)).toStrictEqual({ behind: false });
+    expect(pacing({ capacity: null, startDate: inDays(3) }, 0, now)).toStrictEqual({ behind: false });
   });
 });
