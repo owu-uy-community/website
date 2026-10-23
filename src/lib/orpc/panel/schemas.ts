@@ -1,5 +1,6 @@
 import * as z from "zod";
 
+import { CommunitySchema, RecurringSlotSchema } from "../communities/schemas";
 import { CohostInvitationSchema, OrganizerEventSchema, ShowUpSchema } from "../events/schemas";
 import { RequestStatusSchema } from "../venues/schemas";
 
@@ -13,6 +14,33 @@ const Person = z.object({ id: z.string(), name: z.string(), image: z.string().nu
  * calendar already shows them (a hold without its title).
  */
 export const PanelSummarySchema = z.object({
+  /** The community itself: its health line, the onboarding checklist and its usual day */
+  community: z.object({
+    status: CommunitySchema.shape.status,
+    pausedUntil: z.string().nullable(),
+    recurringSlot: RecurringSlotSchema.nullable(),
+    hasDescription: z.boolean(),
+    topics: z.array(z.string()),
+  }),
+  /** The start of the last published event that already ended */
+  lastEventAt: z.string().nullable(),
+  /** The team: everyone with a role, and the organizers (editor and up) who did something lately */
+  team: z.object({ size: z.number(), activeOrganizers: z.number() }),
+  /** Published events that ended less than CLOSE_OUT_DAYS ago and nobody closed out yet */
+  closeOut: z.array(z.object({ id: z.string(), name: z.string(), endDate: z.string() })),
+  /** Lugares ocupados (anotados, their +1s and seats offered) per event ahead */
+  seats: z.record(z.string(), z.number()),
+  /** Tasks of this community's events assigned to the viewer, not done, due by tomorrow */
+  myTasks: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      eventId: z.string(),
+      eventName: z.string(),
+      /** "YYYY-MM-DD" */
+      day: z.string(),
+    })
+  ),
   /** Published and still ahead, soonest first */
   ahead: z.array(OrganizerEventSchema),
   /** Every draft: the live holds, the lapsed ones, the ones without a date */

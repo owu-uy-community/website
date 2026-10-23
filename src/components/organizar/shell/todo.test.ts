@@ -3,10 +3,12 @@ import { describe, expect, test } from "vitest";
 import type { OrganizerEvent } from "lib/orpc/events/schemas";
 import type { PanelSummary } from "lib/orpc/panel/schemas";
 
-import { milestones, todoItems } from "./todo";
+import { milestones, onboarding, todoItems } from "./todo";
 
+// A Friday
 const NOW = Date.parse("2029-06-01T12:00:00-03:00");
 const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
 const iso = (hours: number) => new Date(NOW + hours * HOUR_MS).toISOString();
 
 const event = (overrides: Partial<OrganizerEvent>): OrganizerEvent => ({
@@ -25,7 +27,14 @@ const event = (overrides: Partial<OrganizerEvent>): OrganizerEvent => ({
   ...overrides,
 });
 
+/** An established community: an event a month ago, a team of three, two of them active. */
 const summary = (overrides: Partial<PanelSummary>): PanelSummary => ({
+  community: { status: "activa", pausedUntil: null, recurringSlot: null, hasDescription: true, topics: ["web"] },
+  lastEventAt: iso(-24 * 30),
+  team: { size: 3, activeOrganizers: 2 },
+  closeOut: [],
+  seats: {},
+  myTasks: [],
   ahead: [],
   drafts: [],
   nextSeats: null,
@@ -40,9 +49,11 @@ const summary = (overrides: Partial<PanelSummary>): PanelSummary => ({
   ...overrides,
 });
 
+const kinds = (data: PanelSummary) => todoItems(data, "c", NOW).map((item) => item.kind);
+
 describe(todoItems, () => {
-  test("nothing ahead and nothing held: reserve a first date", () => {
-    expect(todoItems(summary({}), "c", NOW).map((item) => item.kind)).toStrictEqual(["first"]);
+  test("nothing ahead and nothing held: reserve the next date", () => {
+    expect(kinds(summary({}))).toStrictEqual(["first"]);
     expect(todoItems(undefined, "c", NOW)).toStrictEqual([]);
   });
 
@@ -50,6 +61,7 @@ describe(todoItems, () => {
     const items = todoItems(
       summary({
         ahead: [event({ id: "next" })],
+        seats: { next: 40 },
         drafts: [
           event({ id: "soon", status: "draft", heldUntil: iso(30) }),
           event({ id: "later", status: "draft", heldUntil: iso(24 * 10) }),
@@ -96,6 +108,105 @@ describe(todoItems, () => {
       href: "/organizar/panel/c/calendario?dia=2029-06-11",
       text: "«Meetup» cae el mismo día que una reserva de Parecida",
     });
+  });
+
+  test("my tasks due by tomorrow, the close-out and slow sign-ups each lead to the event", () => {
+    const items = todoItems(
+      summary({
+        ahead: [event({ id: "next", name: "JS Night", startDate: iso(24 * 6 - 3), capacity: 60 })],
+        seats: { next: 12 },
+        myTasks: [{ id: "t", title: "Pedir las pizzas", eventId: "next", eventName: "JS Night", day: "2029-06-02" }],
+        closeOut: [{ id: "past", name: "Meetup de mayo", endDate: iso(-24 * 3) }],
+      }),
+      "c",
+      NOW
+    );
+
+    expect(items.map((item) => [item.kind, item.text, item.href])).toStrictEqual([
+      ["task", "«Pedir las pizzas» es para mañana (JS Night)", "/organizar/panel/c/eventos/next"],
+      [
+        "closeout",
+        "Cerrá «Meetup de mayo»: quién vino, la encuesta y las gracias (2 min)",
+        "/organizar/panel/c/eventos/past",
+      ],
+      [
+        "pacing",
+        "«JS Night»: faltan 6 días y van 12 de 60 lugares. Difundilo de nuevo",
+        "/organizar/panel/c/eventos/next",
+      ],
+    ]);
+  });
+
+  test("full enough, or without OWU sign-up, there's nothing to push", () => {
+    const next = event({ id: "next", startDate: iso(24 * 6) });
+
+    expect(kinds(summary({ ahead: [next], seats: { next: 60 } }))).toStrictEqual([]);
+    expect(kinds(summary({ ahead: [{ ...next, registration: "external" }] }))).toStrictEqual([]);
+  });
+
+  test("a long silence asks for something light; a declared pause doesn't", () => {
+    const quiet = summary({ lastEventAt: iso(-24 * 74) });
+
+    expect(todoItems(quiet, "c", NOW)).toMatchObject([
+      { kind: "health", text: "Hace 74 días del último evento. ¿Armamos algo liviano?" },
+    ]);
+    expect(
+      kinds({ ...quiet, community: { ...quiet.community, status: "pausa", pausedUntil: "2029-09-01" } })
+    ).toStrictEqual([]);
+  });
+
+  test("one active organizer: bring someone else to the team", () => {
+    const items = todoItems(
+      summary({ ahead: [event({ id: "next" })], seats: { next: 40 }, team: { size: 2, activeOrganizers: 1 } }),
+      "c",
+      NOW
+    );
+
+    expect(items).toMatchObject([
+      { kind: "team", href: "/organizar/panel/c/equipo", text: expect.stringContaining("sumá a otra persona") },
+    ]);
+  });
+
+  test("our usual day with nothing on it in the next six weeks asks what to do with it", () => {
+    // The 2nd Thursday: 14 June 2029
+    const slot = { weekday: 4, nth: 2, time: "19:00", durationMin: 120 } as const;
+    const usual = summary({ community: { ...summary({}).community, recurringSlot: slot } });
+
+    expect(todoItems(usual, "c", NOW)).toMatchObject([
+      {
+        kind: "slot",
+        text: "Tu jueves 14/6 no tiene evento: ¿lo armamos, lo cedemos o hacemos algo liviano?",
+        href: "/organizar/panel/c/calendario?dia=2029-06-14&hora=19:00&dur=120",
+      },
+    ]);
+
+    // Held that day: the next one (12 July) is still within six weeks
+    const held = event({ id: "h", status: "draft", startDate: "2029-06-14T22:00:00.000Z", heldUntil: iso(24 * 10) });
+    expect(todoItems({ ...usual, drafts: [held] }, "c", NOW)).toMatchObject([
+      { kind: "slot", text: expect.stringContaining("jueves 12/7") },
+    ]);
+  });
+
+  test("a new community gets its checklist, not to-dos about events it never had", () => {
+    expect(kinds(summary({ lastEventAt: null, team: { size: 1, activeOrganizers: 0 } }))).toStrictEqual([]);
+  });
+});
+
+describe(onboarding, () => {
+  test("each first step ticks itself from what the community already has", () => {
+    const fresh = summary({
+      lastEventAt: null,
+      community: { status: "activa", pausedUntil: null, recurringSlot: null, hasDescription: true, topics: [] },
+      team: { size: 1, activeOrganizers: 1 },
+      drafts: [event({ id: "held", status: "draft", heldUntil: new Date(NOW + 3 * DAY_MS).toISOString() })],
+    });
+
+    expect(onboarding(fresh, "c", NOW).map((step) => [step.id, step.done])).toStrictEqual([
+      ["profile", true],
+      ["topics", false],
+      ["team", false],
+      ["date", true],
+    ]);
   });
 });
 

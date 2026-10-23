@@ -10,8 +10,10 @@ import {
   Bookmark,
   CalendarDays,
   CalendarSearch,
+  Check,
   CircleCheck,
   ListChecks,
+  Rocket,
   Users,
 } from "lucide-react";
 
@@ -22,14 +24,24 @@ import { PersonAvatar } from "components/Admin/ui/person";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
 import { RelativeTime } from "components/Admin/ui/time";
 import { usePanelSummary } from "components/organizar/shell/context";
-import { holdLeft, milestones, todoItems, type Todo, type TodoKind } from "components/organizar/shell/todo";
+import {
+  holdLeft,
+  isNew,
+  milestones,
+  onboarding,
+  todoItems,
+  type Todo,
+  type TodoKind,
+} from "components/organizar/shell/todo";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { daysBetween } from "lib/calendar/holidays";
 import { shiftMonth } from "lib/calendar/items";
-import { dayKey, shortWhen } from "lib/community/time";
+import { clockTime, dayKey, shortWhen } from "lib/community/time";
+import { HOLD_DAYS } from "lib/organizar/rules";
+import { plural } from "lib/organizar/words";
 import type { PlanItem } from "lib/orpc/calendar/schemas";
 import { orpc } from "lib/orpc/client";
 import type { OrganizerEvent } from "lib/orpc/events/schemas";
@@ -37,23 +49,40 @@ import type { PanelSummary } from "lib/orpc/panel/schemas";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 
-const HOLD_DAYS = 14;
 const AHEAD_DAYS = 21;
 
 /** The button that takes a to-do to the page where it gets resolved. */
 const GO_RESOLVE: Record<TodoKind, string> = {
   renew: "Renovar",
+  task: "Ver",
+  closeout: "Cerrar",
+  pacing: "Difundir",
   venue: "Pedir a otro",
   conflict: "Ver el día",
   poll: "Responder",
   cohost: "Responder",
   date: "Elegir fecha",
+  slot: "Reservar",
+  health: "Buscar fecha",
+  team: "Sumar a alguien",
   first: "Buscar fecha",
+};
+
+/** A hold's schedule as the hold procedure takes it: its day, wall-clock start and length. */
+const scheduleOf = (event: OrganizerEvent) => {
+  const start = new Date(event.startDate);
+
+  return {
+    day: dayKey(start),
+    startTime: clockTime(start),
+    durationMin: Math.round((Date.parse(event.endDate) - start.getTime()) / 60_000),
+  };
 };
 
 /**
  * The panel's front page: the next event and how it fills, how the community is doing, what needs
- * doing, what's coming, what the team did, and what's on in OWU.
+ * doing, what's coming, what the team did, and what's on in OWU. A community that never published
+ * gets its first steps instead.
  */
 export function HomeClient({ community, today }: { community: CalendarCommunity; today: string }) {
   const base = `/organizar/panel/${community.slug}`;
@@ -67,10 +96,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
 
   const answer = useMutation(
     orpc.events.answerCohost.mutationOptions({
-      onSuccess: (result) => {
-        toast.success(result.accepted ? "Ahora lo coorganizan" : "Invitación rechazada");
-        void queryClient.invalidateQueries({ queryKey: orpc.events.cohostInvitations.key() });
-      },
+      onSuccess: (result) => toast.success(result.accepted ? "Ahora lo coorganizan" : "Invitación rechazada"),
       onError: (error) => toast.error("No se pudo responder", error.message),
     })
   );
@@ -83,37 +109,41 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
   const renew = useMutation(
     orpc.events.hold.mutationOptions({
       onSuccess: (result) => {
-        toast.success("Renovaste la reserva", `El ${shortWhen(result.startDate)} queda tuyo 14 días más.`);
+        toast.success("Renovaste la reserva", `El ${shortWhen(result.startDate)} queda tuyo ${HOLD_DAYS} días más.`);
         void invalidate();
       },
       onError: (error) => toast.error("No se pudo renovar", error.message),
     })
   );
-  const release = useMutation(
-    orpc.events.release.mutationOptions({
+  // Undoing a release reserves the same date again
+  const rehold = useMutation(
+    orpc.events.hold.mutationOptions({
       onSuccess: () => {
-        toast.success("Liberaste la fecha");
+        toast.success("Volviste a reservar la fecha");
         void invalidate();
       },
+      onError: (error) => toast.error("No se pudo volver a reservar", error.message),
+    })
+  );
+  const release = useMutation(
+    orpc.events.release.mutationOptions({
       onError: (error) => toast.error("No se pudo liberar", error.message),
     })
   );
-  const renewHold = (event: OrganizerEvent) => {
-    const start = new Date(event.startDate);
-    const clock = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "America/Montevideo",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }).format(start);
-    renew.mutate({
-      communityId: community.id,
-      eventId: event.id,
-      day: dayKey(start),
-      startTime: clock,
-      durationMin: Math.round((Date.parse(event.endDate) - start.getTime()) / 60_000),
-    });
-  };
+  const renewHold = (event: OrganizerEvent) =>
+    renew.mutate({ communityId: community.id, eventId: event.id, ...scheduleOf(event) });
+  const releaseHold = (event: OrganizerEvent) =>
+    release.mutate(
+      { communityId: community.id, eventId: event.id },
+      {
+        onSuccess: () => {
+          toast.undo(`Liberaste el ${shortWhen(event.startDate)}`, () =>
+            rehold.mutate({ communityId: community.id, eventId: event.id, ...scheduleOf(event) })
+          );
+          void invalidate();
+        },
+      }
+    );
 
   const now = Date.now();
   const data = summary.data;
@@ -123,6 +153,8 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
     .toSorted((a, b) => a.startDate.localeCompare(b.startDate));
   const todo = todoItems(data, community.slug, now);
   const coming = milestones(data, now);
+  const fresh = data ? isNew(data) : false;
+  const steps = data && fresh ? onboarding(data, community.slug, now) : [];
 
   const seen = new Set<string>();
   const around = plans
@@ -177,6 +209,35 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
     );
   };
 
+  // Phones read top to bottom: "Para hacer" right under the next event (it's in the side column on desktop)
+  const todoPanel = (className: string) => (
+    <Panel className={className}>
+      <PanelHead icon={ListChecks} meta={todo.length || undefined} title="Para hacer" />
+      {!data ? (
+        <Skeleton className="m-3.5 h-16" />
+      ) : todo.length === 0 ? (
+        <div className="flex items-center gap-2.5 p-3.5 text-ui text-muted-foreground">
+          <CircleCheck aria-hidden className="size-[18px] shrink-0 text-success" />
+          {fresh ? "Empezá por los primeros pasos." : "Nada pendiente. Bien ahí."}
+        </div>
+      ) : (
+        <ul className="divide-y divide-border">
+          {todo.map((item) => (
+            <li key={item.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
+              <span
+                aria-label="Pendiente"
+                className="size-[18px] shrink-0 rounded-full border-[1.5px] border-dashed border-faint"
+                role="img"
+              />
+              <span className="min-w-0 flex-1 text-ui text-foreground">{item.text}</span>
+              {resolve(item)}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+
   return (
     <PageContainer>
       <PageHeader
@@ -193,206 +254,214 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
       />
 
       {summary.isError ? (
-        <ErrorState onRetry={() => void summary.refetch()} title="No pudimos traer el resumen" />
+        <ErrorState
+          retrying={summary.isFetching}
+          title="No pudimos traer el resumen"
+          onRetry={() => void summary.refetch()}
+        />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-4">
-            <Panel>
-              <PanelHead icon={CalendarDays} title="Próximo evento" />
-              {!data ? (
-                <Skeleton className="m-3.5 h-20" />
-              ) : next ? (
-                <NextEvent base={base} event={next} seats={data.nextSeats} today={today} />
-              ) : (
-                <EmptyState
-                  compact
-                  description="Cuando publiques uno desde Organizá, aparece acá."
-                  icon={CalendarDays}
-                  title="Ningún evento publicado por delante"
-                />
-              )}
-            </Panel>
+            {fresh ? <FirstSteps steps={steps} /> : null}
 
-            {data ? <Stats summary={data} today={today} /> : <Skeleton className="h-[104px] rounded-lg" />}
+            {fresh ? null : (
+              <Panel className="order-1">
+                <PanelHead icon={CalendarDays} title="Próximo evento" />
+                {!data ? (
+                  <Skeleton className="m-3.5 h-20" />
+                ) : next ? (
+                  <NextEvent base={base} event={next} seats={data.nextSeats} today={today} />
+                ) : (
+                  <EmptyState
+                    compact
+                    description="Cuando publiques uno desde Organizá, aparece acá."
+                    icon={CalendarDays}
+                    title="Ningún evento publicado por delante"
+                  />
+                )}
+              </Panel>
+            )}
 
-            <Panel>
-              <PanelHead icon={Bookmark} meta={holds.length || undefined} title="Tus reservas" />
-              {!data ? (
-                <Skeleton className="m-3.5 h-20" />
-              ) : holds.length === 0 ? (
-                <EmptyState
-                  compact
-                  action={
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`${base}/calendario`}>Ir al calendario</Link>
-                    </Button>
-                  }
-                  description="Reservá una fecha en el calendario: todas las comunidades la ven y la evitan."
-                  icon={Bookmark}
-                  title="Sin fechas reservadas"
-                />
-              ) : (
-                <ul className="divide-y divide-border">
-                  {holds.map((event) => {
-                    const days = daysBetween(today, dayKey(event.heldUntil ?? ""));
+            {todoPanel("order-2 lg:hidden")}
 
-                    return (
-                      <li key={event.id} className="flex flex-wrap items-center gap-3 px-3.5 py-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-ui font-medium text-foreground">{event.name}</p>
-                          <p className="font-terminal text-meta text-muted-foreground tabular-nums">
-                            {shortWhen(event.startDate)} · {holdLeft(days)}
+            {data && fresh ? null : (
+              <div className="order-4 lg:order-2">
+                {data ? <Stats summary={data} today={today} /> : <Skeleton className="h-[104px] rounded-lg" />}
+              </div>
+            )}
+
+            {fresh && holds.length === 0 ? null : (
+              <Panel className="order-3">
+                <PanelHead icon={Bookmark} meta={holds.length || undefined} title="Tus reservas" />
+                {!data ? (
+                  <Skeleton className="m-3.5 h-20" />
+                ) : holds.length === 0 ? (
+                  <EmptyState
+                    compact
+                    action={
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`${base}/calendario`}>Ir al calendario</Link>
+                      </Button>
+                    }
+                    description="Reservá una fecha en el calendario: todas las comunidades la ven y la evitan."
+                    icon={Bookmark}
+                    title="Sin fechas reservadas"
+                  />
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {holds.map((event) => {
+                      const days = daysBetween(today, dayKey(event.heldUntil ?? ""));
+
+                      return (
+                        <li key={event.id} className="flex flex-wrap items-center gap-3 px-3.5 py-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-ui font-medium break-words text-foreground">{event.name}</p>
+                            <p className="font-terminal text-meta text-muted-foreground tabular-nums">
+                              {shortWhen(event.startDate)} · {holdLeft(days)}
+                            </p>
+                            <Meter
+                              className="mt-2 max-w-48"
+                              label={`La reserva ${holdLeft(days)}`}
+                              max={HOLD_DAYS}
+                              tone={days <= 2 ? "warning" : "info"}
+                              value={days}
+                            />
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Button
+                              aria-label={`Renovar la reserva del ${shortWhen(event.startDate)}`}
+                              disabled={renew.isPending}
+                              size="sm"
+                              variant="outline"
+                              onClick={() => renewHold(event)}
+                            >
+                              Renovar
+                            </Button>
+                            <Button
+                              aria-label={`Liberar el ${shortWhen(event.startDate)}`}
+                              disabled={release.isPending}
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => releaseHold(event)}
+                            >
+                              Liberar
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Panel>
+            )}
+
+            {data && fresh ? null : (
+              <Panel className="order-5">
+                <PanelHead icon={Activity} meta="últimos cambios" title="Actividad del equipo" />
+                {!data ? (
+                  <Skeleton className="m-3.5 h-16" />
+                ) : data.activity.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-meta text-muted-foreground">
+                    Todavía no hay cambios registrados.
+                  </p>
+                ) : (
+                  <ul className="grid py-1 md:grid-cols-2">
+                    {data.activity.map((item) => (
+                      <li key={item.id} className="flex min-w-0 items-start gap-2.5 px-4 py-2">
+                        {item.actor ? (
+                          <PersonAvatar className="mt-px" image={item.actor.image} name={item.actor.name} size={20} />
+                        ) : (
+                          <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-md bg-raised ring-1 ring-border">
+                            <CircleCheck aria-hidden className="size-3 text-subtle" />
+                          </span>
+                        )}
+                        <div className="min-w-0 flex-1 text-meta">
+                          <p className="text-subtle">
+                            {item.actor ? (
+                              <span className="font-medium text-foreground">{item.actor.name.split(" ")[0]} </span>
+                            ) : null}
+                            {item.summary}
                           </p>
-                          <Meter
-                            className="mt-2 max-w-48"
-                            label="Tiempo que le queda a la reserva"
-                            max={HOLD_DAYS}
-                            tone={days <= 2 ? "warning" : "info"}
-                            value={days}
-                          />
+                          <p className="truncate text-2xs text-faint">{item.eventName}</p>
                         </div>
-                        <div className="flex gap-1.5">
-                          <Button
-                            disabled={renew.isPending}
-                            size="sm"
-                            variant="outline"
-                            onClick={() => renewHold(event)}
-                          >
-                            Renovar
-                          </Button>
-                          <Button
-                            disabled={release.isPending}
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => release.mutate({ communityId: community.id, eventId: event.id })}
-                          >
-                            Liberar
-                          </Button>
-                        </div>
+                        <RelativeTime className="shrink-0 text-2xs text-faint" date={item.createdAt} />
                       </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Panel>
-
-            <Panel>
-              <PanelHead icon={Activity} meta="últimos cambios" title="Actividad del equipo" />
-              {!data ? (
-                <Skeleton className="m-3.5 h-16" />
-              ) : data.activity.length === 0 ? (
-                <p className="px-4 py-6 text-center text-meta text-muted-foreground">
-                  Todavía no hay cambios registrados.
-                </p>
-              ) : (
-                <ul className="grid py-1 md:grid-cols-2">
-                  {data.activity.map((item) => (
-                    <li key={item.id} className="flex min-w-0 items-start gap-2.5 px-4 py-2">
-                      {item.actor ? (
-                        <PersonAvatar className="mt-px" image={item.actor.image} name={item.actor.name} size={20} />
-                      ) : (
-                        <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-md bg-raised ring-1 ring-border">
-                          <CircleCheck aria-hidden className="size-3 text-subtle" />
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1 text-meta">
-                        <p className="text-subtle">
-                          {item.actor ? (
-                            <span className="font-medium text-foreground">{item.actor.name.split(" ")[0]} </span>
-                          ) : null}
-                          {item.summary}
-                        </p>
-                        <p className="truncate text-2xs text-faint">{item.eventName}</p>
-                      </div>
-                      <RelativeTime className="shrink-0 text-2xs text-faint" date={item.createdAt} />
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+            )}
           </div>
 
           <div className="flex min-w-0 flex-col gap-4">
-            <Panel>
-              <PanelHead icon={ListChecks} meta={todo.length || undefined} title="Para hacer" />
-              {!data ? (
-                <Skeleton className="m-3.5 h-16" />
-              ) : todo.length === 0 ? (
-                <div className="flex items-center gap-2.5 p-3.5 text-ui text-muted-foreground">
-                  <CircleCheck aria-hidden className="size-[18px] shrink-0 text-success" />
-                  Nada pendiente. Bien ahí.
-                </div>
-              ) : (
-                <ul className="divide-y divide-border">
-                  {todo.map((item) => (
-                    <li key={item.id} className="flex items-center gap-2.5 px-3.5 py-2.5">
-                      <span
-                        aria-label="Pendiente"
-                        className="size-[18px] shrink-0 rounded-full border-[1.5px] border-dashed border-faint"
-                        role="img"
-                      />
-                      <span className="min-w-0 flex-1 text-ui text-foreground">{item.text}</span>
-                      {resolve(item)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
+            {todoPanel("max-lg:hidden")}
 
-            <Panel className="p-4">
-              <MicroLabel className="mb-3 block">Próximos hitos</MicroLabel>
-              {!data ? (
-                <Skeleton className="h-16" />
-              ) : coming.length === 0 ? (
-                <p className="text-meta text-muted-foreground">Nada en el horizonte: reservá una fecha.</p>
-              ) : (
-                <ol>
-                  {coming.map((milestone, index) => (
-                    <li key={milestone.id} className="relative flex gap-3 pb-4 last:pb-0">
-                      <div className="flex flex-col items-center">
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "mt-1 size-2.5 rounded-full",
-                            index === 0
-                              ? "bg-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]"
-                              : milestone.kind === "event"
-                                ? "bg-success"
-                                : milestone.kind === "hold"
-                                  ? "border border-dashed border-info-foreground bg-background"
-                                  : "border border-input bg-background"
-                          )}
-                        />
-                        {index < coming.length - 1 ? <span aria-hidden className="mt-1 w-px flex-1 bg-input" /> : null}
-                      </div>
-                      <div className="-mt-0.5 min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className={cn("truncate text-ui", index === 0 && "font-medium")}>
-                            {milestone.title}
-                          </span>
+            {data && fresh ? null : (
+              <Panel className="p-4">
+                <MicroLabel className="mb-3 block">Próximos hitos</MicroLabel>
+                {!data ? (
+                  <Skeleton className="h-16" />
+                ) : coming.length === 0 ? (
+                  <p className="text-meta text-muted-foreground">Nada en el horizonte: reservá una fecha.</p>
+                ) : (
+                  <ol>
+                    {coming.map((milestone, index) => (
+                      <li key={milestone.id} className="relative flex gap-3 pb-4 last:pb-0">
+                        <div className="flex flex-col items-center">
                           <span
+                            aria-hidden
                             className={cn(
-                              "shrink-0 font-terminal text-2xs tabular-nums",
-                              index === 0 ? "text-primary" : "text-faint"
+                              "mt-1 size-2.5 rounded-full",
+                              index === 0
+                                ? "bg-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.15)]"
+                                : milestone.kind === "event"
+                                  ? "bg-success"
+                                  : milestone.kind === "hold"
+                                    ? "border border-dashed border-info-foreground bg-background"
+                                    : "border border-input bg-background"
                             )}
-                          >
-                            {shortWhen(milestone.at)}
-                          </span>
+                          />
+                          {index < coming.length - 1 ? (
+                            <span aria-hidden className="mt-1 w-px flex-1 bg-input" />
+                          ) : null}
                         </div>
-                        <p className="truncate text-meta text-muted-foreground">{milestone.meta}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </Panel>
+                        <div className="-mt-0.5 min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={cn("truncate text-ui", index === 0 && "font-medium")}>
+                              {milestone.title}
+                            </span>
+                            <span
+                              className={cn(
+                                "shrink-0 font-terminal text-2xs tabular-nums",
+                                index === 0 ? "text-primary" : "text-faint"
+                              )}
+                            >
+                              {shortWhen(milestone.at)}
+                            </span>
+                          </div>
+                          <p className="truncate text-meta text-muted-foreground">{milestone.meta}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </Panel>
+            )}
 
             <Panel>
               <PanelHead icon={Users} meta={around.length || undefined} title="En OWU las próximas 3 semanas" />
-              {plans.some((plan) => plan.isPending) ? (
+              {plans.some((plan) => plan.isError) ? (
+                <ErrorState
+                  compact
+                  className="m-3"
+                  retrying={plans.some((plan) => plan.isFetching)}
+                  title="No pudimos traer el calendario de OWU"
+                  onRetry={() => plans.forEach((plan) => plan.isError && void plan.refetch())}
+                />
+              ) : plans.some((plan) => plan.isPending) ? (
                 <Skeleton className="m-3.5 h-24" />
               ) : around.length === 0 ? (
-                <p className="p-3.5 text-ui text-muted-foreground">Nadie anunció nada todavía.</p>
+                <p className="p-3.5 text-ui text-muted-foreground">Ninguna otra comunidad anunció nada todavía.</p>
               ) : (
                 <ul className="flex flex-col p-1.5">
                   {around.slice(0, 8).map((item) => (
@@ -413,6 +482,49 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/** A new community's first steps, ticked from what it already has; gone once it publishes. */
+function FirstSteps({ steps }: { steps: ReturnType<typeof onboarding> }) {
+  const done = steps.filter((step) => step.done).length;
+
+  return (
+    <Panel className="order-first">
+      <PanelHead
+        icon={Rocket}
+        meta={<span className="font-terminal tabular-nums">{`${done} de ${steps.length} listos`}</span>}
+        title="Primeros pasos"
+      />
+      <ol className="divide-y divide-border">
+        {steps.map((step) => (
+          <li key={step.id}>
+            <Link
+              className="flex items-center gap-3 px-3.5 py-3 text-ui transition-colors hover:bg-raised"
+              href={step.href}
+            >
+              {step.done ? (
+                <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-success text-background">
+                  <Check aria-hidden className="size-3" strokeWidth={3} />
+                </span>
+              ) : (
+                <span
+                  aria-hidden
+                  className="size-[18px] shrink-0 rounded-full border-[1.5px] border-dashed border-faint"
+                />
+              )}
+              <span
+                className={cn("min-w-0 flex-1", step.done ? "text-muted-foreground line-through" : "text-foreground")}
+              >
+                {step.text}
+                <span className="sr-only">{step.done ? " (listo)" : " (pendiente)"}</span>
+              </span>
+              {step.done ? null : <ArrowRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />}
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </Panel>
   );
 }
 
@@ -440,7 +552,7 @@ function NextEvent({
           </span>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-medium text-foreground">{event.name}</p>
+          <p className="text-[15px] font-medium break-words text-foreground">{event.name}</p>
           <p className="font-terminal text-meta text-muted-foreground tabular-nums">{shortWhen(event.startDate)}</p>
         </div>
         <Badge variant="success">{days <= 0 ? "Hoy" : days === 1 ? "Mañana" : `Faltan ${days} días`}</Badge>
@@ -450,9 +562,11 @@ function NextEvent({
           {counted && seats ? (
             <>
               <div className="flex items-baseline justify-between gap-2">
-                <MicroLabel>Inscriptos</MicroLabel>
+                <MicroLabel>Lugares</MicroLabel>
                 <span className="font-terminal text-meta text-muted-foreground tabular-nums">
-                  {event.capacity ? `${seats.taken} de ${event.capacity}` : seats.taken}
+                  {event.capacity
+                    ? `${seats.taken} de ${event.capacity}`
+                    : plural(seats.taken, "lugar ocupado", "lugares ocupados")}
                   {seats.waiting ? ` · ${seats.waiting} en espera` : ""}
                 </span>
               </div>
@@ -483,20 +597,22 @@ function NextEvent({
   );
 }
 
-/** Hoy's KPI strip: show-up rate, followers, events published this year. */
+/** Inicio's KPI strip: show-up rate, followers, events published this year. */
 function Stats({ summary, today }: { summary: PanelSummary; today: string }) {
   const { rate, events } = summary.showUp;
   const mono = (value: React.ReactNode) => <span className="font-terminal tabular-nums">{value}</span>;
 
   return (
     <Panel className="grid divide-border max-sm:divide-y sm:grid-cols-3 sm:divide-x">
-      <Kpi label="Vienen" value={mono(rate === null ? "—" : `${Math.round(rate * 100)} %`)}>
+      <Kpi label="De los anotados, vienen" value={mono(rate === null ? "—" : `${Math.round(rate * 100)} %`)}>
         {rate === null ? (
-          <p className="mt-2 text-meta text-muted-foreground">Todavía no sabemos: hace falta la puerta en 3 eventos.</p>
+          <p className="mt-2 text-meta text-muted-foreground">Lo calculamos cuando uses la puerta en 3 eventos.</p>
         ) : (
           <>
             <Meter className="mt-2" label="De los anotados, cuántos vienen" tone="success" value={rate * 100} />
-            <p className="mt-1.5 text-meta text-muted-foreground">de los anotados, en tus últimos {events} eventos</p>
+            <p className="mt-1.5 text-meta text-muted-foreground">
+              en tus últimos {plural(events, "evento", "eventos")}
+            </p>
           </>
         )}
       </Kpi>
