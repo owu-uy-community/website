@@ -3,10 +3,12 @@ import {
   Bot,
   Building2,
   CalendarClock,
+  ChartColumn,
   Clapperboard,
   ClipboardCheck,
   DoorOpen,
   Gauge,
+  HandHeart,
   LayoutGrid,
   ListVideo,
   Map,
@@ -45,6 +47,8 @@ export type NavKey =
   | "mi-turno"
   | "sala"
   | "comunidades"
+  | "una-mano"
+  | "numeros"
   | "espacios"
   | "semanario"
   | "encuesta"
@@ -234,6 +238,22 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/communities",
         icon: Building2,
         keywords: ["organizaciones", "eventos", "miembros"],
+      },
+      {
+        key: "una-mano",
+        title: "Necesitan una mano",
+        href: "/admin/una-mano",
+        icon: HandHeart,
+        requires: ["insight:read"],
+        keywords: ["salud", "dormidas", "en riesgo", "acompañar", "outreach", "bus factor"],
+      },
+      {
+        key: "numeros",
+        title: "Números de OWU",
+        href: "/admin/numeros",
+        icon: ChartColumn,
+        requires: ["insight:read"],
+        keywords: ["métricas", "impacto", "asistencia", "segunda visita", "insights"],
       },
       {
         key: "espacios",
