@@ -177,7 +177,11 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
                 {rsvp.onlineUrl}
               </a>
             ) : null}
-            <Link className={buttonClassName("primary", "lg", "w-full")} href={ticketPath}>
+            {/* One call to action at a time: while "Voy" is asked, the ticket steps back */}
+            <Link
+              className={buttonClassName(canConfirm(event, rsvp, now) ? "secondary" : "primary", "lg", "w-full")}
+              href={ticketPath}
+            >
               <Ticket aria-hidden className="mr-2 size-4" />
               Ver mi entrada
             </Link>
@@ -369,8 +373,8 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
       <p className="text-[13px] leading-relaxed text-zinc-500" data-testid="rsvp-privacy">
         {event.community.name} y OWU guardan tu nombre, tu email y tus respuestas para organizar este evento y llevar la
         cuenta de la asistencia a la comunidad. Lo ven solo quienes organizan {event.community.name}; nunca es público.
-        {asksId ? " La cédula es solo para la seguridad del edificio y la borramos a la semana." : ""} Te mandamos la
-        confirmación y un par de recordatorios.{" "}
+        {asksId ? " La cédula se la pasamos solo a la seguridad del espacio y la borramos a la semana." : ""} Te
+        mandamos la confirmación y un par de recordatorios.{" "}
         <Link className="underline decoration-white/20 underline-offset-4 hover:text-zinc-300" href="/privacidad">
           Privacidad
         </Link>

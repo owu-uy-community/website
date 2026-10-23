@@ -94,11 +94,11 @@ export function PendingList({ input }: { input: EventInput }) {
         {pending.data.map((person) => (
           <li key={person.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start">
             <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-1.5 text-ui font-medium text-foreground">
+              <div className="flex flex-wrap items-center gap-1.5 text-ui font-medium text-foreground">
                 {person.name}
                 {person.guests ? <span className="text-muted-foreground">+{person.guests}</span> : null}
                 <HistoryChips history={person.history} />
-              </p>
+              </div>
               {person.registeredAt ? (
                 <p className="text-meta text-muted-foreground">
                   Pidió lugar <RelativeTime className="text-meta" date={person.registeredAt} />

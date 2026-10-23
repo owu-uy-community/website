@@ -1137,6 +1137,8 @@ export const stats = (eventId: string) =>
     );
     const show = yield* showUpOf(communityId);
     const expected = expectedTurnout({ ...counts, showRate: show.rate });
+    // The diets come from everyone with a seat; the food is for who's likely to come
+    const share = counts.attending + counts.guests > 0 ? expected.likely / (counts.attending + counts.guests) : 0;
 
     return {
       capacity: event.capacity,
@@ -1144,7 +1146,10 @@ export const stats = (eventId: string) =>
       turnout: {
         ...expected,
         events: show.events,
-        food: foodFor(expected.likely, diets),
+        food: foodFor(expected.likely, {
+          vegetarian: Math.round(diets.vegetarian * share),
+          glutenFree: Math.round(diets.glutenFree * share),
+        }),
         diets,
       },
       series: seatSeries(seated, new Date(Math.min(Date.now(), event.startDate.getTime()))),

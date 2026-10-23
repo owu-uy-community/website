@@ -20,8 +20,8 @@ export const PRESETS: Record<QuestionPreset, { button: string; label: string; op
   foto: { button: "Fotos", label: "¿Te podemos sacar fotos?", options: ["Sí", "Preguntame antes", "No"] },
   ci: {
     button: "Cédula para entrar",
-    label:
-      "Tu cédula, para la lista de seguridad del edificio (solo la ve la seguridad del lugar y la borramos a la semana)",
+    // The host-day sheet hands it to the space's security (slice D reads preset "ci"): the label says so
+    label: "Cédula para el ingreso (se la pasamos solo a la seguridad del espacio; la borramos a la semana)",
   },
 };
 

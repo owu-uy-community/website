@@ -831,7 +831,8 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
                   ) : null}
                   {item.preset === "ci" ? (
                     <p className="text-meta text-warning-foreground">
-                      Dato sensible: lo ven solo quienes administran la comunidad y se borra a la semana del evento.
+                      Dato sensible: lo ven quienes administran la comunidad y la seguridad del espacio; se borra a la
+                      semana del evento.
                     </p>
                   ) : null}
                 </div>

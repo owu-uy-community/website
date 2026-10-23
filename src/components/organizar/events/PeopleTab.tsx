@@ -390,8 +390,10 @@ function PeopleList({ input, event }: { input: EventInput; event: EditableEvent 
                         className="max-sm:size-6"
                         onCheckedChange={(on) => toggle(person, on === true)}
                       />
-                      <div className="min-w-0 flex-1">
-                        <p className="flex flex-wrap items-center gap-1.5 text-ui font-medium text-foreground">
+                      {/* On a phone the name keeps its width and the actions wrap below it */}
+                      <div className="min-w-0 flex-1 basis-48">
+                        {/* A div: the chips are divs, which a <p> can't hold */}
+                        <div className="flex flex-wrap items-center gap-1.5 text-ui font-medium text-foreground">
                           <span className="truncate">{person.name}</span>
                           {person.guests ? <span className="text-muted-foreground">+{person.guests}</span> : null}
                           {person.ticketClass === "En la puerta" ? (
@@ -404,7 +406,7 @@ function PeopleList({ input, event }: { input: EventInput; event: EditableEvent 
                             </Badge>
                           ) : null}
                           <HistoryChips history={person.history} />
-                        </p>
+                        </div>
                         <p className="truncate text-meta text-muted-foreground">
                           {person.email || "sin email"}
                           {person.registeredAt ? (
