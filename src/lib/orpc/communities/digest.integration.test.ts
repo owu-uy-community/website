@@ -76,11 +76,13 @@ describe("the weekly digest", () => {
       subject: "Esta semana en OWU: 2 eventos de las comunidades que seguís",
       headers: { "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
     });
+    // "Y en OWU" picks 3 of every community's events: other test files publish some too, so only its
+    // presence is this test's to check
     expect(
-      ["Meetup cercano", "Taller en diez días", "Meetup lejano", "Y en OWU:", "Evento de otra comunidad"].map((text) =>
+      ["Meetup cercano", "Taller en diez días", "Meetup lejano", "Y en OWU:"].map((text) =>
         digests[0].text.includes(text)
       )
-    ).toStrictEqual([true, true, false, true, true]);
+    ).toStrictEqual([true, true, false, true]);
   });
 
   test("nothing ahead, nothing sent; turning follower mail off stops the digest too", async () => {
