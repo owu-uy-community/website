@@ -40,6 +40,35 @@ export type RsvpState =
 
 const WAITLIST_CTA = "Anotarme en la lista de espera";
 
+const HOUR_MS = 3_600_000;
+
+/**
+ * When sign-ups close: the team's time, or the start (owner decision). Whoever comes later gets in
+ * at the door as a walk-in. The server and the card read this one rule.
+ */
+export const signupClosesAt = (event: { startDate: string | Date; rsvpClosesAt: string | Date | null }) =>
+  new Date(event.rsvpClosesAt ?? event.startDate).getTime();
+
+/** The close time the wizard and Ajustes offer when the team turns a custom one on: 2 h before. */
+export const suggestedCloseAt = (startDate: string | Date) =>
+  new Date(new Date(startDate).getTime() - 2 * HOUR_MS).toISOString();
+
+/** "Voy" is asked (and offered on the ticket and the card) from three days before until the start. */
+export const CONFIRM_WINDOW_HOURS = 72;
+
+/** Someone with a seat who hasn't said "Voy" yet, inside the window before the start. */
+export function canConfirm(
+  event: { startDate: string | Date },
+  rsvp: { status: string; confirmedAt: string | null } | null,
+  now: number
+) {
+  const start = new Date(event.startDate).getTime();
+
+  return (
+    rsvp?.status === "attending" && !rsvp.confirmedAt && start > now && start - now <= CONFIRM_WINDOW_HOURS * HOUR_MS
+  );
+}
+
 /** The card's state from the event, the viewer's own RSVP (null if none or signed out) and the time. */
 export function rsvpState(
   event: StateEvent,
@@ -59,12 +88,14 @@ export function rsvpState(
   // A decline is the organizers' call: only they undo it, so no "Anotarme" here
   if (rsvp?.status === "declined") return { kind: "rechazado" };
 
-  if (Date.parse(event.startDate) <= now) return { kind: "en-curso" };
+  const closed = signupClosesAt(event) <= now;
+  // Under way: closed, unless the team kept OWU's sign-up open past the start
+  if (Date.parse(event.startDate) <= now && (event.registration !== "owu" || closed)) return { kind: "en-curso" };
   if (event.registration === "none") return { kind: "libre" };
   if (event.registration !== "owu") {
     return { kind: "externo", url: event.registrationUrl, eventbrite: event.registration === "eventbrite" };
   }
-  if (event.rsvpClosesAt && Date.parse(event.rsvpClosesAt) <= now) return { kind: "cerrado" };
+  if (closed) return { kind: "cerrado" };
 
   const left = event.capacity === null ? null : Math.max(0, event.capacity - event.taken);
   // With approval every request waits for review, full or not
