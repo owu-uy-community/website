@@ -1008,7 +1008,7 @@ export const preview = (eventId: string) =>
 // ---------------------------------------------------------------------------
 
 /** The emails the cadence sends on its own, as the outbox names them */
-const CADENCE_KINDS = ["confirmed", "reminder_48h", "reminder_2h", "feedback"] as const;
+const CADENCE_KINDS = ["confirmed", "reminder_48h", "confirm_ping", "reminder_2h", "feedback"] as const;
 
 /**
  * Seats taken at the end of each of the last 30 days up to `end` (with +1s), counting who has a

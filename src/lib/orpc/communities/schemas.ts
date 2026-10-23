@@ -91,6 +91,8 @@ export const UpdateCommunitySchema = z.object({
         .string()
         .regex(/^[a-z0-9][a-z0-9_-]{0,79}$/, "El nombre del canal, sin #: minúsculas, números, - o _")
         .nullable(),
+      /** A friendly note after someone's second silent no-show (Organizá's Emails tab) */
+      noShowNudge: z.boolean(),
     })
     .partial()
     .refine((data) => Object.keys(data).length > 0, "No hay nada para cambiar"),

@@ -130,7 +130,10 @@ export const createCommunity = (input: { slug: string; name: string; description
 export const updateCommunity = (
   communityId: string,
   data: Partial<
-    Pick<CommunityRow, "name" | "description" | "logoUrl" | "isActive" | "status" | "topics" | "links" | "slackChannel">
+    Pick<
+      CommunityRow,
+      "name" | "description" | "logoUrl" | "isActive" | "status" | "topics" | "links" | "slackChannel" | "noShowNudge"
+    >
   >
 ) =>
   query((db) => db.update(communities).set(data).where(eq(communities.id, communityId)).returning()).pipe(

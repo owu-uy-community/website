@@ -3,7 +3,7 @@
 import type * as React from "react";
 import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { CircleCheck, Copy, ListChecks, Share2, Users } from "lucide-react";
+import { CircleCheck, Copy, ListChecks, Pizza, Share2, Users } from "lucide-react";
 import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
 
 import { cn } from "app/lib/utils";
@@ -11,14 +11,18 @@ import { QrCode } from "components/Admin/comms/QrCode";
 import { Countdown } from "components/Admin/hoy/PrepView";
 import { AreaChart } from "components/Admin/ui/charts";
 import { Meter, MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
+import { ErrorState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { SITE_URL } from "lib/community/site";
 import { dateParts, MONTEVIDEO_TZ } from "lib/community/time";
+import { FEEDBACK_TIMING } from "lib/organizar/rules";
+import { headcount, plural } from "lib/organizar/words";
 import type { EditableEvent, EventStats } from "lib/orpc/events/schemas";
 import { orpc } from "lib/orpc/client";
 
+import { usePanel } from "../shell/context";
 import type { Tab } from "./EventDashboard";
 
 /** A stat card: micro label, a big mono figure, then a meter or a line under it. */
@@ -95,11 +99,7 @@ function todos(event: EditableEvent, stats: EventStats, surveyOpen: boolean | nu
     {
       key: "encuesta",
       title: "Encuesta lista",
-      meta: surveyOpen
-        ? "Abierta: sale sola al día siguiente"
-        : surveyOpen === false
-          ? "Creada, sin abrir"
-          : "Sin encuesta",
+      meta: surveyOpen ? `Abierta. ${FEEDBACK_TIMING}` : surveyOpen === false ? "Creada, sin abrir" : "Sin encuesta",
       done: Boolean(surveyOpen),
       go: "feedback",
     },
@@ -115,10 +115,12 @@ function todos(event: EditableEvent, stats: EventStats, surveyOpen: boolean | nu
   return list.filter((item) => item !== false);
 }
 
-function Checklist({ items, isAdmin, onGo }: { items: Todo[]; isAdmin: boolean; onGo: (tab: Tab) => void }) {
+function Checklist({ items, onGo }: { items: Todo[]; onGo: (tab: Tab) => void }) {
+  const { can } = usePanel();
   const done = items.filter((item) => item.done).length;
-  // Inscriptos, Puerta and Emails are for admins: an editor sees what's missing without the way there
-  const reachable = (item: Todo) => item.href ?? (item.go === "puerta" || item.go === "emails" ? isAdmin : true);
+  // Puerta and Emails need their own permission: without it, what's missing shows without the way there
+  const reachable = (item: Todo) =>
+    item.href ?? (item.go === "puerta" ? can("event:door-link") : item.go === "emails" ? can("event:message") : true);
 
   return (
     <Panel>
@@ -223,30 +225,77 @@ function ShareBox({ url, name }: { url: string; name: string }) {
  * The event at a glance: the countdown, sign-ups against the cupo, who will likely come, what's
  * still missing before the day, and its link to share.
  */
+/**
+ * "Cuántos esperamos" and "Comida para ~N": a range, never a bare number, each with its n and why
+ * (the community's own show rate, or the default for free meetups).
+ */
+function Turnout({ stats }: { stats: EventStats }) {
+  const { turnout } = stats;
+  const { food, diets } = turnout;
+  const people = stats.attending + stats.guests;
+  const why = turnout.fromHistory
+    ? `Con el ${Math.round(turnout.rate * 100)} % que vino a ${plural(turnout.events, "evento", "eventos")} con puerta de la comunidad`
+    : `Con el ${Math.round(turnout.rate * 100)} % que suele venir a un meetup gratis: la comunidad todavía no tiene 3 eventos con puerta`;
+  const extras = [food.veggie ? `${food.veggie} veggie` : "", food.glutenFree ? `${food.glutenFree} sin TACC` : ""]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <Panel>
+      <PanelHead icon={Pizza} title="Cuántos esperamos" />
+      <div className="grid gap-4 p-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <p className="text-ui text-foreground">
+            <span className="font-terminal text-[20px] font-semibold tabular-nums">
+              {turnout.low}–{turnout.high}
+            </span>{" "}
+            <span className="text-muted-foreground">(lo más probable {turnout.likely})</span>
+          </p>
+          <p className="text-meta text-muted-foreground">
+            De {plural(people, "anotado", "anotados")} con sus +1. {why}
+            {stats.confirmed ? `; los ${stats.confirmed} que confirmaron cuentan casi enteros` : ""}.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <p className="text-ui text-foreground">
+            Comida para ~{turnout.likely}:{" "}
+            <span className="font-medium">
+              {plural(food.pizzas, "pizza", "pizzas")}
+              {extras ? ` (${extras})` : ""}, {food.drinks} bebidas
+            </span>
+          </p>
+          <p className="text-meta text-muted-foreground">
+            2,5 porciones por persona y 10 % de más; al menos un cuarto veggie y 1 sin TACC cada 50.
+            {diets.answered
+              ? ` De ${plural(diets.answered, "respuesta", "respuestas")} a la pregunta de comida: ${diets.vegetarian} veggie, ${diets.glutenFree} sin TACC.`
+              : ""}
+          </p>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 export function SummaryTab({
-  communityId,
   base,
   event,
   stats,
   days,
-  isAdmin,
   eventbrite,
   onGo,
 }: {
-  communityId: string;
   /** The event's path in the panel */
   base: string;
   event: EditableEvent;
   stats: UseQueryResult<EventStats>;
   /** Days until the event: 0 is today, negative once it passed */
   days: number;
-  isAdmin: boolean;
   /** How its publication on Eventbrite is going, when people sign up there */
   eventbrite: React.ReactNode;
   onGo: (tab: Tab) => void;
 }) {
+  const { can } = usePanel();
   const signUp = event.registration === "owu" || event.registration === "eventbrite";
-  const showUp = useQuery(orpc.events.showUp.queryOptions({ input: { communityId }, enabled: signUp }));
   const survey = useQuery(orpc.surveys.get.queryOptions({ input: { eventId: event.id }, staleTime: 30_000 }));
   const url = new URL(
     `/comunidad/${event.communitySlug}/events/${event.slug}`,
@@ -254,7 +303,7 @@ export function SummaryTab({
   ).toString();
   const upcoming = days >= 0 && event.status === "published";
   const data = stats.data;
-  const rate = showUp.data?.rate ?? null;
+  const count = data ? headcount(data, data.capacity) : null;
   const place = event.mode === "online" ? "Online" : (event.venue?.name ?? event.placeName);
 
   return (
@@ -288,42 +337,39 @@ export function SummaryTab({
       </div>
 
       {signUp ? (
-        data ? (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        data && count ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="summary-stats">
             <Stat
-              label="Inscriptos"
+              label="Lugares"
               meter={
-                data.capacity ? <Meter label="Lugares ocupados" max={data.capacity} value={data.taken} /> : undefined
+                data.capacity ? <Meter label="Lugares ocupados" max={data.capacity} value={count.seats} /> : undefined
               }
-              note={data.capacity ? undefined : "Sin límite de lugares"}
-              value={outOf(data.taken, data.capacity)}
+              note={
+                <>
+                  {count.attendingLabel}
+                  {data.guests ? ` · ${data.guests} +1` : ""}
+                  {data.offered ? ` · ${plural(data.offered, "lugar ofrecido", "lugares ofrecidos")}` : ""}
+                  {data.capacity ? "" : " · sin límite"}
+                </>
+              }
+              value={outOf(count.seats, data.capacity)}
             />
             <Stat
               label="En espera"
               note={data.pending > 0 ? `${data.pending} por aprobar` : "Toman los lugares que se liberan"}
-              value={data.waiting}
+              value={data.waitlisted}
             />
             <Stat
-              label="Vienen"
-              note={
-                rate === null
-                  ? "Lo calculamos con 3 eventos con puerta"
-                  : `≈ ${Math.round(rate * data.attending)} de ${data.attending}, por los últimos ${showUp.data?.events} eventos`
-              }
-              value={
-                rate === null ? (
-                  <span className="text-[18px] leading-8 font-medium text-muted-foreground">todavía no sabemos</span>
-                ) : (
-                  `~${Math.round(rate * 100)} %`
-                )
-              }
+              label="Confirmaron"
+              note={`${data.confirmed} confirmaron · ${Math.max(0, data.attending - data.confirmed)} sin respuesta`}
+              value={outOf(data.confirmed, data.attending || null)}
             />
             <Stat
-              label="Llegadas"
+              label="Entraron"
               meter={
                 days <= 0 ? (
                   <Meter
-                    label="Acreditados"
+                    label="Entraron"
                     max={data.attending || data.checkedIn || 1}
                     tone="success"
                     value={data.checkedIn}
@@ -334,12 +380,16 @@ export function SummaryTab({
               value={days > 0 ? "–" : outOf(data.checkedIn, data.attending || null)}
             />
           </div>
+        ) : stats.isError ? (
+          <ErrorState onRetry={() => void stats.refetch()} title="No pudimos traer los números" />
         ) : (
           <Skeleton className="h-28 rounded-lg" />
         )
       ) : null}
 
-      {data && data.pending > 0 && isAdmin ? (
+      {data && event.registration === "owu" && upcoming ? <Turnout stats={data} /> : null}
+
+      {data && data.pending > 0 && can("rsvp:review") ? (
         <Panel className="flex items-center gap-3 p-3.5">
           <Users aria-hidden className="size-4 text-warning" />
           <p className="flex-1 text-ui text-foreground">
@@ -354,7 +404,7 @@ export function SummaryTab({
       <div className={cn("grid gap-4", upcoming ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "max-w-md")}>
         {upcoming ? (
           data ? (
-            <Checklist isAdmin={isAdmin} items={todos(event, data, survey.data?.isOpen ?? null, base)} onGo={onGo} />
+            <Checklist items={todos(event, data, survey.data?.isOpen ?? null, base)} onGo={onGo} />
           ) : (
             <Skeleton className="h-64 rounded-lg" />
           )

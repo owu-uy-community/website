@@ -405,7 +405,7 @@ export const EventStatsSchema = z.object({
   series: z.array(z.object({ day: z.string(), total: z.number() })),
   /** The automatic emails so far, per kind: sent, and still in the queue */
   emails: z.record(
-    z.enum(["confirmed", "reminder_48h", "reminder_2h", "feedback"]),
+    z.enum(["confirmed", "reminder_48h", "confirm_ping", "reminder_2h", "feedback"]),
     z.object({ sent: z.number(), queued: z.number() })
   ),
   /** A volunteer door link was made and not revoked since */

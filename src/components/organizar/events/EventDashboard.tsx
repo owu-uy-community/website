@@ -29,16 +29,17 @@ import { PublicationsTab } from "./PublicationsTab";
 import { SettingsTab } from "./SettingsTab";
 import { SummaryTab } from "./SummaryTab";
 
-/** The dashboard's tabs; `requires` hides one from whoever can't use it. */
+/** The dashboard's tabs; `requires` hides one from whoever holds none of those permissions. */
 const TABS = [
   { key: "resumen", title: "Resumen" },
-  { key: "inscriptos", title: "Inscriptos", requires: "attendee:read" },
-  { key: "puerta", title: "Puerta", requires: "event:door-link" },
-  { key: "emails", title: "Emails", requires: "event:message" },
+  // The whole list (attendee:read), or just who waits for approval (rsvp:review, editors)
+  { key: "inscriptos", title: "Inscriptos", requires: ["attendee:read", "rsvp:review"] },
+  { key: "puerta", title: "Puerta", requires: ["event:door-link"] },
+  { key: "emails", title: "Emails", requires: ["event:message"] },
   { key: "publicaciones", title: "Publicaciones" },
   { key: "feedback", title: "Feedback" },
   { key: "ajustes", title: "Ajustes" },
-] as const satisfies readonly { key: string; title: string; requires?: CommunityPermission }[];
+] as const satisfies readonly { key: string; title: string; requires?: readonly CommunityPermission[] }[];
 export type Tab = (typeof TABS)[number]["key"];
 /** Tabs that changed name: their old links still land */
 const RENAMED: Record<string, Tab> = { mensajes: "emails", encuesta: "feedback" };
@@ -60,14 +61,12 @@ export function EventDashboard({
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const { can } = usePanel();
-  // What admins do with a published event (cancel it, its settings): the API checks each again
-  const isAdmin = can("event:cancel");
   const input = { communityId: community.id, eventId };
   const event = useQuery(orpc.events.get.queryOptions({ input, refetchOnWindowFocus: false }));
   const stats = useQuery(orpc.events.stats.queryOptions({ input }));
   const asked = params.get("tab") ?? "";
   const requested = RENAMED[asked] ?? asked;
-  const visible = TABS.filter((tab) => !("requires" in tab) || can(tab.requires));
+  const visible = TABS.filter((tab) => !("requires" in tab) || tab.requires.some((permission) => can(permission)));
   const tab: Tab = visible.find((item) => item.key === requested)?.key ?? "resumen";
   const go = (key: Tab) => {
     const next = new URLSearchParams(params.toString());
@@ -157,7 +156,6 @@ export function EventDashboard({
       {tab === "resumen" ? (
         <SummaryTab
           base={base}
-          communityId={community.id}
           days={days}
           event={data}
           eventbrite={
@@ -170,28 +168,28 @@ export function EventDashboard({
               />
             ) : null
           }
-          isAdmin={isAdmin}
           stats={stats}
           onGo={go}
         />
       ) : null}
-      {tab === "inscriptos" ? <PeopleTab input={input} /> : null}
+      {tab === "inscriptos" ? <PeopleTab event={data} input={input} /> : null}
       {tab === "puerta" ? (
-        <DoorTab base={base} input={input} linked={stats.data?.doorLink ?? false} startDate={data.startDate} />
+        <DoorTab
+          base={base}
+          input={input}
+          linked={stats.data?.doorLink ?? false}
+          registration={data.registration}
+          startDate={data.startDate}
+        />
       ) : null}
       {tab === "emails" ? <EmailsTab event={data} input={input} stats={stats.data} /> : null}
       {tab === "publicaciones" ? <PublicationsTab base={base} community={community} event={data} /> : null}
       {tab === "feedback" ? <FeedbackTab event={data} input={input} /> : null}
       {tab === "ajustes" ? (
-        <SettingsTab
-          event={data}
-          input={input}
-          isAdmin={isAdmin}
-          people={(stats.data?.attending ?? 0) + (stats.data?.waiting ?? 0) + (stats.data?.pending ?? 0)}
-        />
+        <SettingsTab canCancel={can("event:cancel")} event={data} input={input} stats={stats.data} />
       ) : null}
 
-      {!isAdmin ? (
+      {!can("attendee:read") ? (
         <p className="mt-6 text-meta text-muted-foreground">
           Los nombres y mails de quienes se anotan los ven solo las personas admin de la comunidad.
         </p>
