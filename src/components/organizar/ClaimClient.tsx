@@ -181,9 +181,13 @@ export function ClaimClient({
                     Proponé tu comunidad
                   </Button>
                 }
-                description={`Ninguna comunidad de OWU se llama «${search.trim()}». Si es tuya, sumala: el staff la revisa y te avisa.`}
+                description={
+                  search.trim()
+                    ? `Ninguna comunidad de OWU se llama «${search.trim()}». Si es tuya, sumala: el staff la revisa y te avisa.`
+                    : "Sumá la tuya: el staff la revisa y te avisa."
+                }
                 icon={Search}
-                title="No está en la lista"
+                title={search.trim() ? "No está en la lista" : "Todavía no hay comunidades en la lista"}
               />
             </li>
           ) : null}
