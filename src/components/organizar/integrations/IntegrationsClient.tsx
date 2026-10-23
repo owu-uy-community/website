@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -55,8 +55,11 @@ export function IntegrationsClient({
   );
 
   const returned = params.get("eventbrite");
+  // Said once: development mounts effects twice, and the URL loses the param a moment later
+  const said = useRef<string | null>(null);
   useEffect(() => {
-    if (!returned) return;
+    if (!returned || said.current === returned) return;
+    said.current = returned;
     RETURNED[returned]?.();
     router.replace(pathname);
   }, [returned, pathname, router]);
