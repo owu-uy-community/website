@@ -200,7 +200,7 @@ describe("publishing to Eventbrite", () => {
       )
     );
 
-    await call(router.events.cancel, { ...ref, reason: "" }, by(admin));
+    await call(router.events.cancel, { ...ref, reason: "Se suspendió por lluvia" }, by(admin));
     await pushNow();
 
     expect(calls.slice(6)).toStrictEqual([
