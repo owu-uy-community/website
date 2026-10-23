@@ -223,6 +223,10 @@ const releaseLive = (proposal: TalkProposalRow, { tell }: { tell: boolean }) =>
         .where(and(eq(talkClaims.proposalId, proposal.id), inArray(talkClaims.status, [...LIVE_CLAIM])))
         .returning()
     );
+    // A talk on an event leaves its agenda too
+    for (const claim of released) {
+      if (claim.eventId) yield* unschedule(claim.eventId, proposal);
+    }
     for (const claim of tell ? released : []) {
       if (!claim.claimedById) continue;
       const [organizer, [community]] = yield* Effect.all([
@@ -487,6 +491,7 @@ export const inbox = Effect.gen(function* () {
 
     return {
       ...proposalView(proposal),
+      notes: proposal.notes,
       forUs: proposal.communityIds.includes(communityId),
       takenBy: state.kind === "taken" ? state.by : null,
       speaker: speakerCard(profiles.get(proposal.speakerUserId)),

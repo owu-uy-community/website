@@ -107,6 +107,8 @@ const SpeakerCardSchema = z.object({
 
 /** A proposal in a community's inbox: addressed to it or to any of OWU. */
 export const InboxProposalSchema = ProposalBase.extend({
+  /** What the speaker told organizers (dates that suit, what they need) */
+  notes: z.string(),
   /** Addressed to this community by name, not only to the whole pool */
   forUs: z.boolean(),
   /** Another community holds it right now */

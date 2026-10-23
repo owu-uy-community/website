@@ -286,12 +286,16 @@ describe("claims", () => {
     const { python, pythonEditor, speaker } = await setup();
     const staff = await makeSiteAdmin();
     const { id } = await propose(speaker);
-    await call(router.talks.claim, { communityId: python.id, proposalId: id }, by(pythonEditor));
+    const claim = await call(router.talks.claim, { communityId: python.id, proposalId: id }, by(pythonEditor));
+    const event = await upcoming(python.id, 10);
+    await call(router.talks.assign, { communityId: python.id, claimId: claim.id, eventId: event.id }, by(pythonEditor));
 
     await call(router.talks.withdraw, { proposalId: id }, by(speaker));
-    await expect(call(router.talks.claimedFor, { communityId: python.id }, by(pythonEditor))).resolves.toStrictEqual(
-      []
-    );
+    expect([
+      await call(router.talks.claimedFor, { communityId: python.id }, by(pythonEditor)),
+      // Off the event's agenda too
+      await talksOf(event.id),
+    ]).toStrictEqual([[], []]);
     await expect(mail(pythonEditor.email, "talk_withdrawn")).resolves.toHaveLength(1);
 
     const spam = await propose(speaker, { title: "Comprá cripto ya" });

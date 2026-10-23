@@ -82,7 +82,7 @@ ${input.pageUrl ? `<p style="margin:0 0 16px">${button(input.pageUrl, "Ver el ev
 /** The speaker withdrew a talk this community had taken (to whoever took it). */
 export function talkWithdrawnEmail(input: { title: string; speaker: string; panelUrl: string }): Mail {
   const line = `${input.speaker} retiró «${input.title}». Ya no está en tus charlas tomadas.`;
-  const next = "Si estaba en un evento, sacala de la agenda desde el evento y buscá otra en Charlas.";
+  const next = "Si estaba en un evento, ya la sacamos de la agenda. Buscá otra en Charlas.";
 
   return {
     subject: `${input.speaker} retiró su charla`,
