@@ -1,4 +1,5 @@
 import { dayKey, montevideoIso } from "lib/community/time";
+import { SLOT_HOLD_FACTOR } from "lib/organizar/recurring";
 
 import { BLOCKERS, summer } from "./blockers";
 import { addDays, daysBetween, uyHolidays, weekdayOf, type Holiday } from "./holidays";
@@ -16,6 +17,19 @@ export type CalendarItem = {
   kind: "event" | "hold";
   isOwu: boolean;
   venueId?: string | null;
+};
+
+/** One day a community usually meets ("Nuestro día"): a habit, not an event. */
+export type SlotOccurrence = {
+  day: string;
+  communitySlug: string;
+  communityName: string;
+  topics: string[];
+  /** ISO with offset, at the slot's time */
+  start: string;
+  end: string;
+  /** "2.º jueves · 19:00" */
+  label: string;
 };
 
 export type ScoreInput = {
@@ -39,6 +53,8 @@ export type ScoreInput = {
   fullMonths?: string[];
   /** The community's own past event days, for its weekday preference */
   history?: string[];
+  /** Every community's usual days in the range (see weighedSlots): others' weigh softly, ours is a hint */
+  slots?: SlotOccurrence[];
   /** ISO, injected for tests */
   now: string;
 };
@@ -145,6 +161,20 @@ function itemPenalty(
   return { penalty, text };
 }
 
+/**
+ * The usual days that still mean something: a community with an event or a hold that day already
+ * shows it (and weighs it) on its own, so its habit doesn't count twice.
+ */
+export const weighedSlots = (slots: SlotOccurrence[], items: CalendarItem[]) =>
+  slots.filter(
+    (slot) =>
+      !items.some((item) => {
+        const { firstDay, lastDay } = span(item);
+
+        return item.communitySlug === slot.communitySlug && firstDay <= slot.day && slot.day <= lastDay;
+      })
+  );
+
 /** Holidays by observed day, for every year the range touches, plus three days for eves and long weekends */
 function holidaysByDay(from: string, to: string) {
   const byDay = new Map<string, Holiday[]>();
@@ -189,6 +219,10 @@ export function scoreDays(input: ScoreInput): DayScore[] {
   const others = items
     .filter((item) => item.communitySlug !== communitySlug)
     .map((item): Other => ({ item, sim: similarity(topics, item), ...span(item) }));
+  const slotsByDay = new Map<string, SlotOccurrence[]>();
+  for (const slot of weighedSlots(input.slots ?? [], items)) {
+    slotsByDay.set(slot.day, [...(slotsByDay.get(slot.day) ?? []), slot]);
+  }
 
   const days: DayScore[] = [];
   for (let day = input.from; day <= input.to; day = addDays(day, 1)) {
@@ -222,17 +256,40 @@ export function scoreDays(input: ScoreInput): DayScore[] {
 
     // Events
     let clash = false;
-    for (const own of ourDays) {
-      if (own.day === day) {
-        clash = true;
-        add(WEIGHTS.ownEvent, "Tu comunidad ya tiene un evento ese día", own.id);
-      }
+    // Once, however many of ours fall that day
+    const own = ourDays.find((event) => event.day === day);
+    if (own) {
+      clash = true;
+      add(WEIGHTS.ownEvent, "Tu comunidad ya tiene un evento ese día", own.id);
     }
     for (const other of others) {
       const { penalty, text } = itemPenalty(other, day, slot);
       if (penalty > 0) {
         clash = true;
         add(penalty, text, other.item.id);
+      }
+    }
+    for (const usual of slotsByDay.get(day) ?? []) {
+      if (usual.communitySlug === communitySlug) {
+        reasons.push({ tone: "ok", text: `Es su día habitual (${usual.label})` });
+        continue;
+      }
+      // Weighs like a hold of theirs at that time, softened: it's a habit, nobody reserved it
+      const habit: CalendarItem = {
+        id: `slot:${usual.communitySlug}:${day}`,
+        communitySlug: usual.communitySlug,
+        communityName: usual.communityName,
+        title: null,
+        start: usual.start,
+        end: usual.end,
+        topics: usual.topics,
+        kind: "hold",
+        isOwu: false,
+      };
+      const { penalty } = itemPenalty({ item: habit, sim: similarity(topics, habit), ...span(habit) }, day, slot);
+      if (penalty > 0) {
+        clash = true;
+        add(penalty * SLOT_HOLD_FACTOR, `Suele ser el día de ${usual.communityName}`);
       }
     }
     if (!clash) reasons.push({ tone: "ok", text: "Nadie con público parecido ese día" });
@@ -289,11 +346,19 @@ export function scoreDays(input: ScoreInput): DayScore[] {
   return days;
 }
 
-/** The best days that aren't blocked (so never past), at most two per week, in score order. */
-export function suggest(days: DayScore[], count = 5) {
+/** How far a community's usual day jumps ahead in the suggestions (the score shown doesn't change). */
+const USUAL_DAY_BONUS = 20;
+
+/**
+ * The best days that aren't blocked (so never past), at most two per week, in score order; the
+ * community's usual days (`preferred`) go ahead unless they clash.
+ */
+export function suggest(days: DayScore[], count = 5, preferred: readonly string[] = []) {
+  const usual = new Set(preferred);
+  const rank = (day: DayScore) => day.score + (usual.has(day.day) && day.level !== "choca" ? USUAL_DAY_BONUS : 0);
   const perWeek = new Map<string, number>();
   const picked: DayScore[] = [];
-  for (const day of days.filter((candidate) => !candidate.blocked).toSorted((a, b) => b.score - a.score)) {
+  for (const day of days.filter((candidate) => !candidate.blocked).toSorted((a, b) => rank(b) - rank(a))) {
     if (picked.length === count) break;
     const monday = addDays(day.day, -((weekdayOf(day.day) + 6) % 7));
     const taken = perWeek.get(monday) ?? 0;

@@ -1,9 +1,12 @@
 import { createId } from "@paralleldrive/cuid2";
 import { call } from "@orpc/server";
+import { eq } from "drizzle-orm";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
+import { db } from "lib/db";
+import { communities, type RecurringSlot } from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
 import { makeCommunity, makeEvent, makeMember } from "test/factories";
@@ -111,5 +114,49 @@ describe("calendar.plan", () => {
       "Solo en Meetup",
     ]);
     expect(result.items.find((item) => item.title === "Solo en Meetup")?.url).toBe("https://www.meetup.com/x/2");
+  });
+
+  test("another community's usual day weighs softly, ours is a hint; a paused one's doesn't count", async () => {
+    const { ours, similar, unrelated, editor } = await setup();
+    const usual = (communityId: string, slot: Omit<RecurringSlot, "time" | "durationMin">, paused = false) =>
+      db
+        .update(communities)
+        .set({ recurringSlot: { ...slot, time: "19:00", durationMin: 120 }, ...(paused ? { status: "pausa" } : {}) })
+        .where(eq(communities.id, communityId));
+    // June 2029: the 2nd Tuesday is the 12th, the last Thursday the 28th, the 1st Wednesday the 6th
+    await usual(similar.id, { weekday: 2, nth: 2 });
+    await usual(ours.id, { weekday: 4, nth: -1 });
+    await usual(unrelated.id, { weekday: 3, nth: 1 }, true);
+
+    const result = await plan(ours.id, editor);
+    const reasons = (day: string) =>
+      result.days.find((entry) => entry.day === day)?.reasons.map((reason) => reason.text);
+
+    expect(reasons("2029-06-12")).toContain("Suele ser el día de Parecida");
+    expect(reasons("2029-06-28")).toContain("Es su día habitual (último jueves · 19:00)");
+    expect(result.slots).toStrictEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ day: "2029-06-12", communitySlug: similar.slug, own: false }),
+        expect.objectContaining({ day: "2029-06-28", communitySlug: ours.slug, own: true }),
+      ])
+    );
+    // A paused community's habit doesn't count
+    expect(result.slots.map((slot) => slot.communitySlug)).not.toContain(unrelated.slug);
+    expect(result.suggestions[0]?.day).toBe("2029-06-28");
+  });
+
+  test("without a start time, the days are scored for the community's usual one (19:00 without any)", async () => {
+    const { ours, editor } = await setup();
+    const fresh = await setup();
+    for (const day of ["2026-03-10", "2026-04-14", "2026-05-12"]) {
+      await makeEvent(ours.id, { status: "published", startDate: at(day, "18:30"), endDate: at(day, "20:30") });
+    }
+    await makeEvent(ours.id, { status: "published", startDate: at("2026-06-09"), endDate: at("2026-06-09", "21:00") });
+
+    await expect(plan(ours.id, editor)).resolves.toMatchObject({ usualStart: "18:30", startTime: "18:30" });
+    await expect(
+      call(router.calendar.plan, { communityId: ours.id, month: MONTH, startTime: "10:00" }, by(editor))
+    ).resolves.toMatchObject({ usualStart: "18:30", startTime: "10:00" });
+    await expect(plan(fresh.ours.id, fresh.editor)).resolves.toMatchObject({ usualStart: "19:00", startTime: "19:00" });
   });
 });
