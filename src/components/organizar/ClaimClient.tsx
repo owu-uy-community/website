@@ -16,7 +16,7 @@ import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
 import { orpc } from "lib/orpc/client";
 
-import { CommunityMark } from "./shell/PanelSidebar";
+import { CommunityMark } from "components/shared/CommunityMark";
 
 export type ClaimableCommunity = {
   id: string;
