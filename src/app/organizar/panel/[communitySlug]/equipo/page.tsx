@@ -7,6 +7,7 @@ import { CommunityRolesSection } from "components/Admin/communities/CommunityRol
 import { MembersSection } from "components/Admin/communities/MembersSection";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { ProfileOptIn } from "components/organizar/community/ProfileOptIn";
+import { TeamCare } from "components/organizar/community/TeamCare";
 import { db } from "lib/db";
 import { communityMembers } from "lib/db/schema";
 
@@ -43,6 +44,7 @@ export default async function TeamPage({ params }: { params: Promise<{ community
       ) : (
         <Notice tone="info">Solo quienes administran la comunidad ven y cambian el equipo.</Notice>
       )}
+      <TeamCare communityId={id} />
       {holds(access.community, "role:read") ? (
         <div className="mt-8">
           <CommunityRolesSection communityId={id} permissions={permissions} />
