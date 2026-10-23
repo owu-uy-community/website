@@ -9,14 +9,9 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.owu.uy"),
   description: "Únete a nuestra comunidad de desarrolladores.",
   title: "OWU | Comunidad TI de Uruguay",
-  openGraph: {
-    type: "website",
-    images: ["/images/events/la_meetup_2024.png"],
-  },
-  twitter: {
-    card: "summary_large_image",
-    images: ["/images/events/la_meetup_2024.png"],
-  },
+  // The image is ./opengraph-image.tsx; Twitter falls back to it
+  openGraph: { type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export default function RootLayout({

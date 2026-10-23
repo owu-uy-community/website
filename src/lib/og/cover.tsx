@@ -3,13 +3,13 @@ import path from "path";
 
 import { ImageResponse } from "next/og";
 
-const FONTS_DIR = path.join(process.cwd(), "src", "app", "(web)", "(content)", "blog", "og");
-const LOGO = path.join(process.cwd(), "src", "app", "(web)", "(content)", "charlas", "og", "owu-logo.png");
+export const FONTS_DIR = path.join(process.cwd(), "src", "app", "(web)", "(content)", "blog", "og");
+export const LOGO = path.join(process.cwd(), "src", "app", "(web)", "(content)", "charlas", "og", "owu-logo.png");
 
 export const COVER_SIZE = { width: 1200, height: 630 };
 
 // Deterministic star positions, like the blog covers (a nod to the site's starfield)
-const STARS = [
+export const STARS = [
   [64, 96],
   [210, 44],
   [380, 150],
