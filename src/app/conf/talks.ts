@@ -66,3 +66,15 @@ export const TALKS: Talk[] = [
     ],
   },
 ];
+
+/**
+ * The open space part of the afternoon, on the venue's clock. The agenda, the open space explainer
+ * and the live board at /openspace all read it, so moving a time is one edit.
+ */
+export const OPEN_SPACE_TIMES = {
+  bienvenida: { start: "15:00", end: "15:15" },
+  mercado: { start: "15:15", end: "16:00" },
+  sesiones: { start: "16:00", end: "18:25" },
+  /** The break runs into the first talk. */
+  coffee: { start: "18:25", end: TALKS[0].start },
+} as const;

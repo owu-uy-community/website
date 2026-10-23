@@ -21,7 +21,7 @@ const ARCHIVE_ROUTES = [
 ];
 
 // conf.owu.uy paths served by this same app (main-host /conf* 308-redirects to the subdomain)
-const CONF_ROUTES = ["", "/call-for-proposals", "/sponsors"];
+const CONF_ROUTES = ["", "/call-for-proposals", "/sponsors", "/openspace"];
 
 /**
  * Every listed community's profile and its events' pages. An open-door event with a board

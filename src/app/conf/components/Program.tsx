@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { CONF_DATES } from "app/lib/constants";
 
-import { TALKS, type Talk } from "../talks";
+import { OPEN_SPACE_TIMES, TALKS, type Talk } from "../talks";
 
 import Reveal, { EASE_OUT } from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -194,8 +194,7 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-pop",
   },
   {
-    start: "15:00",
-    end: "15:15",
+    ...OPEN_SPACE_TIMES.bienvenida,
     title: "Bienvenida",
     blurb: "Apertura oficial de la primera edición",
     description: (
@@ -209,8 +208,7 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-pop",
   },
   {
-    start: "15:15",
-    end: "16:00",
+    ...OPEN_SPACE_TIMES.mercado,
     title: "Open Space · Mercado de ideas",
     blurb: "Proponé tu tema frente a todos",
     description: (
@@ -227,8 +225,7 @@ const SESSIONS: Session[] = [
     extra: <TopicNote />,
   },
   {
-    start: "16:00",
-    end: "18:25",
+    ...OPEN_SPACE_TIMES.sesiones,
     title: "Open Space · Sesiones",
     blurb: "Cinco bloques de conversaciones en simultáneo",
     description: (
@@ -242,8 +239,7 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-pop",
   },
   {
-    start: "18:25",
-    end: "19:00",
+    ...OPEN_SPACE_TIMES.coffee,
     title: "Coffee break",
     blurb: "Café, algo rico y networking",
     description: (
