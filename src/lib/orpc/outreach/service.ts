@@ -34,6 +34,14 @@ import type { OutreachQueue, OutreachRow } from "./schemas";
 
 const DAY = 86_400_000;
 const EMAIL_KIND = "community_outreach";
+/** Most urgent first: a community going quiet before one waiting on a host */
+const URGENCY: Record<OutreachReason, number> = {
+  dormida: 0,
+  "en-riesgo": 1,
+  "pedido-sin-respuesta": 2,
+  "contacto-viejo": 3,
+  "un-organizador": 4,
+};
 
 /**
  * The communities that need a hand, one row per reason, minus what staff marked done or snoozed
@@ -185,7 +193,12 @@ export const queue = Effect.gen(function* () {
   });
 
   return {
-    rows,
+    rows: rows.toSorted(
+      (a, b) =>
+        URGENCY[a.reason] - URGENCY[b.reason] ||
+        (a.since ?? "9").localeCompare(b.since ?? "9") ||
+        a.community.name.localeCompare(b.community.name)
+    ),
     claims: claims.map((claim) => ({ ...claim, createdAt: claim.createdAt.toISOString() })),
     log: log.map((row) => ({ ...row, at: row.at.toISOString(), until: row.until?.toISOString() ?? null })),
   } satisfies OutreachQueue;

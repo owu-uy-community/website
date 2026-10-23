@@ -31,7 +31,7 @@ import type { OutreachRow } from "lib/orpc/outreach/schemas";
 const REASONS: Record<OutreachRow["reason"], { label: string; tone: "destructive" | "warning" | "info" }> = {
   dormida: { label: "Dormida", tone: "destructive" },
   "en-riesgo": { label: "En riesgo", tone: "warning" },
-  "un-organizador": { label: "Una sola persona", tone: "warning" },
+  "un-organizador": { label: "Menos de 2 activos", tone: "warning" },
   "pedido-sin-respuesta": { label: "Pedido sin respuesta", tone: "info" },
   "contacto-viejo": { label: "Contacto viejo", tone: "info" },
 };
@@ -93,7 +93,9 @@ function Row({ row, onEmail }: { row: OutreachRow; onEmail: (row: OutreachRow) =
               <li key={`${person.name}-${person.role}`} className="flex items-center gap-1.5 text-foreground">
                 <StatusDot tone={person.active ? "ok" : "idle"} />
                 {person.name}
-                <span className="text-muted-foreground">{person.active ? "activa en 90 días" : "sin actividad"}</span>
+                <span className="text-muted-foreground">
+                  {person.active ? "con actividad" : "sin actividad en 90 días"}
+                </span>
               </li>
             ))
           )}

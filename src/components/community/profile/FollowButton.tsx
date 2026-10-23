@@ -48,6 +48,8 @@ export function FollowButton({ communityId }: { communityId: string }) {
   });
 
   const following = state.data?.following ?? false;
+  // The choice shows at once; the server confirms it
+  const digest = (follow.isPending && follow.variables?.digest) || state.data?.digest || "each";
   const followers = state.data?.followers ?? 0;
   const failed = follow.isError || unfollow.isError;
 
@@ -72,7 +74,7 @@ export function FollowButton({ communityId }: { communityId: string }) {
           {DIGESTS.map((option) => (
             <label key={option.value} className="flex min-h-6 cursor-pointer items-center gap-2" title={option.hint}>
               <input
-                checked={(state.data?.digest ?? "each") === option.value}
+                checked={digest === option.value}
                 className="size-4 accent-yellow-400"
                 disabled={follow.isPending}
                 name={`digest-${communityId}`}

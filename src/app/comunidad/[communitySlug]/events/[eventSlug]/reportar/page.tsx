@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 
 import { SiteChrome } from "components/community/SiteChrome";
 import { CONDUCT_EMAIL } from "lib/community/site";
@@ -25,6 +26,8 @@ export const metadata: Metadata = {
  */
 export default async function ReportPage({ params }: { params: Params }) {
   const { communitySlug, eventSlug } = await params;
+  // Always the event as it is now (cancelled, past): read at request time
+  await connection();
   const event = await publicCaller.events.public({ communitySlug, eventSlug }).catch(() => null);
   if (!event) notFound();
   const names = new Intl.ListFormat("es", { type: "conjunction" }).format(event.responders);
@@ -32,7 +35,7 @@ export default async function ReportPage({ params }: { params: Params }) {
   return (
     <SiteChrome>
       <main className="mx-auto w-full max-w-xl px-5 pt-10 pb-24 text-zinc-100">
-        <nav aria-label="Ruta" className="mb-6 text-[13px] text-zinc-500">
+        <nav aria-label="Ruta" className="mb-6 text-[13px] text-zinc-400">
           <Link className="hover:text-zinc-300" href={`/comunidad/${communitySlug}/events/${eventSlug}`}>
             {event.name}
           </Link>

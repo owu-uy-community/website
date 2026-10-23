@@ -83,7 +83,7 @@ export function ReportForm({ communitySlug, eventSlug }: { communitySlug: string
       </div>
       <div className="space-y-2">
         <label className="block text-[15px] font-semibold text-white" htmlFor="report-where">
-          ¿Dónde o cuándo? <span className="font-normal text-zinc-500">(opcional)</span>
+          ¿Dónde o cuándo? <span className="font-normal text-zinc-400">(opcional)</span>
         </label>
         <input
           className={field}
@@ -96,7 +96,7 @@ export function ReportForm({ communitySlug, eventSlug }: { communitySlug: string
       </div>
       <div className="space-y-2">
         <label className="block text-[15px] font-semibold text-white" htmlFor="report-contact">
-          ¿Cómo te contactamos? <span className="font-normal text-zinc-500">(opcional)</span>
+          ¿Cómo te contactamos? <span className="font-normal text-zinc-400">(opcional)</span>
         </label>
         <p className="text-[14px] text-zinc-400" id="report-contact-hint">
           Email o teléfono. Si lo dejás vacío, el reporte es anónimo.
