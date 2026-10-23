@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { Effect } from "effect";
 
 import {
@@ -10,13 +10,16 @@ import {
   type ScheduleRow,
   type TrackRow,
 } from "../../db/schema";
+import { later } from "../../later";
+import type { TrackTags } from "../../openspace/topics";
 import { eventChannel } from "../../realtime/channels";
 import { cardChanged } from "../board-events";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
+import { CARD_OCR_MODEL } from "../ocr/models";
 import { suggestCells } from "../ocr/service";
 import { opsPing, recordActivity } from "../ops";
-import { Realtime } from "../services";
+import { Ai, Realtime, type AppServices } from "../services";
 import type {
   CreatePlacedTrackInput,
   CreateTrackInput,
@@ -25,6 +28,7 @@ import type {
   TrackWithRelations,
   UpdateTrackInput,
 } from "./schemas";
+import { keywordTags, tagTrack } from "./tags";
 
 type PlacedTrack = TrackRow & { room?: RoomRow | null; schedule?: ScheduleRow | null };
 
@@ -42,6 +46,8 @@ export const toStickyNote = (track: PlacedTrack): StickyNote => ({
   room: track.room?.name || track.roomId,
   roomColor: track.room?.color ?? undefined,
   timeSlot: track.schedule ? `${track.schedule.startTime} - ${track.schedule.endTime}` : track.scheduleId,
+  topics: track.topics ?? null,
+  format: track.format ?? null,
   createdAt: track.createdAt.toISOString(),
   updatedAt: track.updatedAt.toISOString(),
 });
@@ -77,6 +83,64 @@ const loadNote = (id: string) =>
   query((db) => db.query.tracks.findFirst({ where: eq(tracks.id, id), with: { room: true, schedule: true } })).pipe(
     Effect.flatMap((track) => (track ? Effect.succeed(toStickyNote(track)) : Effect.fail(trackNotFound)))
   );
+
+const sortedJoin = (topics: readonly string[] | null | undefined) => [...(topics ?? [])].toSorted().join(",");
+
+/** Whether the card already carries these tags (topic order aside). */
+const hasTags = (note: StickyNote, tags: TrackTags) =>
+  (note.format ?? null) === tags.format && sortedJoin(note.topics) === sortedJoin(tags.topics);
+
+/**
+ * The model's tags for a card, stored and announced. The write is conditional on the card still
+ * saying what was tagged: an edit in the meantime schedules its own tagging, and this one must not
+ * overwrite it.
+ */
+const retag = (note: StickyNote) =>
+  Effect.gen(function* () {
+    const ai = yield* Ai;
+    const tags = yield* Effect.promise(() => tagTrack(ai.model(CARD_OCR_MODEL.primary), note.title, note.description));
+    // The keyword tags written with the card already say this (always the case when the gateway is down)
+    if (hasTags(note, tags)) return;
+
+    const [updated] = yield* query((db) =>
+      db
+        .update(tracks)
+        .set({ topics: tags.topics, format: tags.format })
+        .where(
+          and(
+            eq(tracks.id, note.id),
+            eq(tracks.title, note.title),
+            note.description ? eq(tracks.description, note.description) : isNull(tracks.description)
+          )
+        )
+        .returning({ id: tracks.id })
+    );
+    if (!updated) return;
+
+    const tagged = yield* loadNote(note.id);
+    yield* cardChanged({
+      type: "CARD_UPDATE",
+      openSpaceId: tagged.openSpaceId,
+      cardId: tagged.id,
+      updatedCard: tagged,
+    });
+  });
+
+/**
+ * Tag a card with the model after the response, so a staffer at the table never waits on the
+ * gateway (AI_TIMEOUT_MS). Until it answers — and for good if it can't — the card keeps the
+ * keyword tags it was written with.
+ */
+const tagSoon = (note: StickyNote) =>
+  Effect.gen(function* () {
+    // Taken after the write's transaction: inside it, this would capture a transaction that has ended.
+    const services = yield* Effect.context<AppServices>();
+    later(() =>
+      Effect.runPromiseWith(services)(retag(note)).catch((error: unknown) =>
+        console.warn("[tracks] tagging failed", error)
+      )
+    );
+  });
 
 /** "Lobby · 16:30": where a talk sits, in the activity log's words. */
 const placeOf = (note: StickyNote) => `${note.room} · ${note.timeSlot.split(" - ")[0]}`;
@@ -219,6 +283,7 @@ export const createNote = (input: CreateTrackInput) =>
               openSpaceId: input.openSpaceId,
               scheduleId: input.scheduleId,
               roomId: input.roomId,
+              ...keywordTags(input.title, input.description),
             })
             .returning()
         );
@@ -238,6 +303,7 @@ export const createNote = (input: CreateTrackInput) =>
 
     yield* cardChanged({ type: "CARD_CREATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
     yield* opsPing(note.openSpaceId, "activity");
+    yield* tagSoon(note);
 
     return note;
   });
@@ -300,6 +366,10 @@ export const updateNote = (id: string, data: UpdateTrackInput) =>
 
     const scheduleId = data.scheduleId ?? current.scheduleId;
     const roomId = data.roomId ?? current.roomId;
+    // A move keeps its tags; new words get new ones (keyword now, the model's after the response)
+    const title = data.title ?? current.title;
+    const description = data.description === undefined ? current.description : data.description || null;
+    const retitled = title !== current.title || description !== current.description;
     const placeChanges =
       data.scheduleId !== undefined || data.roomId !== undefined || data.needsTV || data.needsWhiteboard;
     if (placeChanges) {
@@ -325,6 +395,7 @@ export const updateNote = (id: string, data: UpdateTrackInput) =>
               ...(data.description === undefined ? {} : { description: data.description || null }),
               ...(data.needsTV === undefined ? {} : { needsTV: data.needsTV }),
               ...(data.needsWhiteboard === undefined ? {} : { needsWhiteboard: data.needsWhiteboard }),
+              ...(retitled ? keywordTags(title, description) : {}),
               scheduleId,
               roomId,
             })
@@ -339,6 +410,7 @@ export const updateNote = (id: string, data: UpdateTrackInput) =>
 
     yield* cardChanged({ type: "CARD_UPDATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
     if (logged) yield* opsPing(note.openSpaceId, "activity");
+    if (retitled) yield* tagSoon(note);
 
     return note;
   });
