@@ -32,30 +32,65 @@ export type PanelNavItem = {
   icon: LucideIcon;
   /** Second key after G ("G C" → Calendario). */
   go?: string;
+  /** Other words people use for it, for ⌘K ("venue" finds Espacios). */
+  keywords?: string[];
 };
 
 export const PANEL_NAV: { key: string; label?: string; items: PanelNavItem[] }[] = [
-  { key: "home", items: [{ key: "inicio", title: "Inicio", path: "", icon: House, go: "i" }] },
+  { key: "home", items: [{ key: "inicio", title: "Inicio", path: "", icon: House, go: "i", keywords: ["pendiente"] }] },
   {
     key: "organizar",
     label: "Organizar",
     items: [
-      { key: "calendario", title: "Calendario", path: "calendario", icon: CalendarDays, go: "c" },
+      {
+        key: "calendario",
+        title: "Calendario",
+        path: "calendario",
+        icon: CalendarDays,
+        go: "c",
+        keywords: ["reservar", "reserva", "choques", "fecha"],
+      },
       // The path stays "encuestas": the date_poll emails already sent link there
-      { key: "encuestas", title: "Votar fecha", path: "encuestas", icon: Vote },
-      { key: "eventos", title: "Eventos", path: "eventos", icon: Ticket, go: "e" },
-      { key: "espacios", title: "Espacios", path: "espacios", icon: MapPin, go: "s" },
-      { key: "charlas", title: "Charlas", path: "charlas", icon: Mic, go: "h" },
+      {
+        key: "encuestas",
+        title: "Votar fecha",
+        path: "encuestas",
+        icon: Vote,
+        keywords: ["votar", "votación", "encuesta de fecha", "fecha", "poll"],
+      },
+      { key: "eventos", title: "Eventos", path: "eventos", icon: Ticket, go: "e", keywords: ["meetups", "borradores"] },
+      {
+        key: "espacios",
+        title: "Espacios",
+        path: "espacios",
+        icon: MapPin,
+        go: "s",
+        keywords: ["espacio", "venue", "lugar", "sede", "anfitrión", "host"],
+      },
+      {
+        key: "charlas",
+        title: "Charlas",
+        path: "charlas",
+        icon: Mic,
+        go: "h",
+        keywords: ["charla", "talk", "talks", "oradores", "speakers"],
+      },
     ],
   },
   {
     key: "comunidad",
     label: "Comunidad",
     items: [
-      { key: "perfil", title: "Perfil", path: "perfil", icon: UserRound },
-      { key: "equipo", title: "Equipo", path: "equipo", icon: Users },
-      { key: "numeros", title: "Números", path: "numeros", icon: ChartColumn },
-      { key: "integraciones", title: "Integraciones", path: "integraciones", icon: PlugZap },
+      { key: "perfil", title: "Perfil", path: "perfil", icon: UserRound, keywords: ["logo", "descripción", "temas"] },
+      { key: "equipo", title: "Equipo", path: "equipo", icon: Users, keywords: ["roles", "organizadores", "miembros"] },
+      { key: "numeros", title: "Números", path: "numeros", icon: ChartColumn, keywords: ["estadísticas", "métricas"] },
+      {
+        key: "integraciones",
+        title: "Integraciones",
+        path: "integraciones",
+        icon: PlugZap,
+        keywords: ["eventbrite", "meetup"],
+      },
     ],
   },
 ];
