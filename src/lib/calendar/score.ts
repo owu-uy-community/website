@@ -271,7 +271,7 @@ export function scoreDays(input: ScoreInput): DayScore[] {
     }
     for (const usual of slotsByDay.get(day) ?? []) {
       if (usual.communitySlug === communitySlug) {
-        reasons.push({ tone: "ok", text: `Es su día habitual (${usual.label})` });
+        reasons.push({ tone: "ok", text: `Es el día habitual de tu comunidad (${usual.label})` });
         continue;
       }
       // Weighs like a hold of theirs at that time, softened: it's a habit, nobody reserved it

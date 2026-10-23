@@ -231,7 +231,10 @@ describe("usual days (Nuestro día)", () => {
     const day = days.find((score) => score.day === "2026-08-27");
 
     expect(day?.score).toBe(100);
-    expect(day?.reasons).toContainEqual({ tone: "ok", text: "Es su día habitual (3.º martes · 19:00)" });
+    expect(day?.reasons).toContainEqual({
+      tone: "ok",
+      text: "Es el día habitual de tu comunidad (3.º martes · 19:00)",
+    });
     expect(suggest(days, 5, ["2026-08-27"])[0]?.day).toBe("2026-08-27");
   });
 

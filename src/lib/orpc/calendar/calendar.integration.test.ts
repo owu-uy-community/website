@@ -133,7 +133,7 @@ describe("calendar.plan", () => {
       result.days.find((entry) => entry.day === day)?.reasons.map((reason) => reason.text);
 
     expect(reasons("2029-06-12")).toContain("Suele ser el día de Parecida");
-    expect(reasons("2029-06-28")).toContain("Es su día habitual (último jueves · 19:00)");
+    expect(reasons("2029-06-28")).toContain("Es el día habitual de tu comunidad (último jueves · 19:00)");
     expect(result.slots).toStrictEqual(
       expect.arrayContaining([
         expect.objectContaining({ day: "2029-06-12", communitySlug: similar.slug, own: false }),
