@@ -16,6 +16,7 @@ import { usePanel } from "../shell/context";
 import { AgendaPanel } from "./AgendaPanel";
 import { DoorTab } from "./DoorTab";
 import { Composer } from "./EmailsTab";
+import type { Tab } from "./EventDashboard";
 import type { EventInput } from "./save";
 
 /** What a change of room usually says; the organizer fills in the blanks. */
@@ -33,12 +34,14 @@ export function DayView({
   input,
   event,
   stats,
+  onGo,
 }: {
   base: string;
   input: EventInput;
   event: EditableEvent;
   stats: UseQueryResult<EventStats>;
   eventbrite?: React.ReactNode;
+  onGo: (tab: Tab, anchor?: string) => void;
 }) {
   const { can } = usePanel();
   const [telling, setTelling] = useState(false);
@@ -78,11 +81,9 @@ export function DayView({
           ) : null}
           <div className="flex flex-wrap gap-1.5">
             {signUp && can("event:door-link") ? (
-              <Button asChild size="sm" variant="outline">
-                <Link href="?tab=puerta#puerta-link">
-                  <QrCode />
-                  Compartir link de la puerta
-                </Link>
+              <Button size="sm" variant="outline" onClick={() => onGo("puerta", "puerta-link")}>
+                <QrCode />
+                Compartir link de la puerta
               </Button>
             ) : null}
             {can("event:message") ? (

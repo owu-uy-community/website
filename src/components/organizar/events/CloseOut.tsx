@@ -2,11 +2,11 @@
 
 import type * as React from "react";
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { CircleCheck, Repeat, UserCheck } from "lucide-react";
 
+import { cn } from "app/lib/utils";
 import { Panel, PanelHead } from "components/Admin/ui/page";
 import { ErrorState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
@@ -23,6 +23,7 @@ import type { EditableEvent, EventStats } from "lib/orpc/events/schemas";
 
 import { usePanel } from "../shell/context";
 import { HostRecapDialog } from "../venues/HostRecapDialog";
+import type { Tab } from "./EventDashboard";
 import { NotifyDialog } from "./NotifyDialog";
 import type { EventInput } from "./save";
 
@@ -133,8 +134,33 @@ function NotIn({ eventId }: { eventId: string }) {
   );
 }
 
+type Go = (tab: Tab, anchor?: string) => void;
+
+/** A link to Después on this same page: it opens in place, at the part it names */
+function InPage({
+  anchor,
+  onGo,
+  className,
+  children,
+}: {
+  anchor: string;
+  onGo: Go;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      className={cn("min-h-6 text-foreground underline underline-offset-4", className)}
+      type="button"
+      onClick={() => onGo("despues", anchor)}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** The survey: open or closed in one tap, and how many answered so far. */
-function SurveyStep({ eventId }: { eventId: string }) {
+function SurveyStep({ eventId, onGo }: { eventId: string; onGo: Go }) {
   const queryClient = useQueryClient();
   const survey = useQuery(orpc.surveys.get.queryOptions({ input: { eventId } }));
   const toggle = useMutation(
@@ -154,9 +180,9 @@ function SurveyStep({ eventId }: { eventId: string }) {
     return (
       <p className="text-ui text-muted-foreground">
         Sin encuesta.{" "}
-        <Link className="text-foreground underline underline-offset-4" href="?tab=despues#encuesta">
+        <InPage anchor="encuesta" onGo={onGo}>
           Armala en Después
-        </Link>{" "}
+        </InPage>{" "}
         y les llega a quienes vinieron.
       </p>
     );
@@ -174,9 +200,9 @@ function SurveyStep({ eventId }: { eventId: string }) {
         {survey.data.isOpen ? "Abierta" : "Cerrada"}
       </label>
       <span className="text-ui text-muted-foreground">{plural(survey.data.responses, "respuesta", "respuestas")}</span>
-      <Link className="ml-auto text-meta text-foreground underline underline-offset-4" href="?tab=despues#encuesta">
+      <InPage anchor="encuesta" className="ml-auto text-meta" onGo={onGo}>
         Ver las respuestas
-      </Link>
+      </InPage>
     </div>
   );
 }
@@ -282,10 +308,12 @@ export function CloseOut({
   input,
   event,
   stats,
+  onGo,
 }: {
   input: EventInput;
   event: EditableEvent;
   stats: UseQueryResult<EventStats>;
+  onGo: Go;
 }) {
   const queryClient = useQueryClient();
   const { can } = usePanel();
@@ -343,7 +371,7 @@ export function CloseOut({
       </Step>
 
       <Step n={2} title="Encuesta">
-        <SurveyStep eventId={event.id} />
+        <SurveyStep eventId={event.id} onGo={onGo} />
       </Step>
 
       <Step done={event.materials.length > 0} n={3} title="Materiales">
@@ -352,12 +380,9 @@ export function CloseOut({
             ? `${plural(event.materials.length, "material", "materiales")} en la página: ${event.materials.map((item) => item.title).join(", ")}.`
             : "Todavía ninguno. Las slides que mandan quienes hablaron se suman solas."}
         </p>
-        <Link
-          className="self-start text-meta text-foreground underline underline-offset-4"
-          href="?tab=despues#materiales"
-        >
+        <InPage anchor="materiales" className="self-start text-meta" onGo={onGo}>
           Sumar slides o la grabación
-        </Link>
+        </InPage>
       </Step>
 
       <Step done={Boolean(event.hostRecapSentAt)} n={4} title="Agradecer">

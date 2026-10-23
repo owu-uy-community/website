@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +62,7 @@ const RENAMED: Record<string, Tab> = {
 const UP_FRONT: Tab[] = ["hoy", "personas"];
 
 /** Focus what a deep link names (`#recordatorio`) once it's on the page, so the next key works there. */
-function useFocusHash(tab: Tab, ready: boolean) {
+function useFocusHash(tab: Tab, ready: boolean, asked: number) {
   useEffect(() => {
     if (!ready) return;
     const id = decodeURIComponent(window.location.hash.slice(1));
@@ -83,7 +83,7 @@ function useFocusHash(tab: Tab, ready: boolean) {
     }, 100);
 
     return () => window.clearInterval(timer);
-  }, [tab, ready]);
+  }, [tab, ready, asked]);
 }
 
 /**
@@ -116,12 +116,15 @@ export function EventDashboard({
       : (visible.find((item) => item.key === requested)?.key ?? "hoy");
   // The strip marks Hoy while the door (a page of Hoy) is open
   const current = tab === "puerta" ? "hoy" : tab;
-  const go = (key: Tab) => {
+  // Sections change in place (no server round trip that would remount them), with the field to focus
+  const [focusAsked, setFocusAsked] = useState(0);
+  const go = (key: Tab, anchor?: string) => {
     const next = new URLSearchParams(params.toString());
     next.set("tab", key);
-    window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
+    window.history.replaceState(null, "", `${pathname}?${next.toString()}${anchor ? `#${anchor}` : ""}`);
+    setFocusAsked((count) => count + 1);
   };
-  useFocusHash(tab, Boolean(event.data));
+  useFocusHash(tab, Boolean(event.data), focusAsked);
 
   // Check-ins, sign-ups and seat changes ping the event's ops channel: read the counts again
   useRealtimeChannel(eventChannel(eventId, "ops"), (topic) => {

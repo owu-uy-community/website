@@ -174,7 +174,8 @@ type HoyProps = {
   days: number;
   /** How its publication on Eventbrite is going, when people sign up there */
   eventbrite: React.ReactNode;
-  onGo: (tab: Tab) => void;
+  /** Another section of the dashboard, in place, and what to focus there */
+  onGo: (tab: Tab, anchor?: string) => void;
 };
 
 /**
@@ -186,7 +187,9 @@ export function HoyTab(props: HoyProps) {
   const now = useNow(60_000);
   const phase = props.event.status === "cancelled" ? "antes" : eventPhase(props.event, now || Date.now());
   if (phase === "dia") return <DayView {...props} />;
-  if (phase === "despues") return <CloseOut event={props.event} input={props.input} stats={props.stats} />;
+  if (phase === "despues") {
+    return <CloseOut event={props.event} input={props.input} stats={props.stats} onGo={props.onGo} />;
+  }
 
   return <Antes {...props} />;
 }
@@ -293,7 +296,9 @@ function Antes({ base, input, event, stats, days, eventbrite, onGo }: HoyProps) 
           <div className="flex min-w-0 flex-col gap-4">
             {data ? (
               <ReadyList
+                base={base}
                 input={input}
+                onGo={onGo}
                 rows={eventChecklist(
                   {
                     event,

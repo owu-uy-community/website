@@ -21,6 +21,7 @@ import { orpc } from "lib/orpc/client";
 import type { EventTasks } from "lib/orpc/events/schemas";
 
 import { usePanel } from "../shell/context";
+import type { Tab } from "./EventDashboard";
 import type { EventInput } from "./save";
 
 const NOBODY = "nadie";
@@ -35,13 +36,25 @@ function dueLabel(day: string, today: string) {
   return days === -1 ? "venció ayer" : `venció hace ${-days} días`;
 }
 
-/** One computed row, GOV.UK's task list: the whole row is the link; the state in plain words. */
-function Row({ row }: { row: ChecklistRow }) {
+type Go = (tab: Tab, anchor?: string) => void;
+
+/**
+ * One computed row, GOV.UK's task list: the whole row is the link; the state in plain words. A
+ * section of this page opens in place (the link still works in a new tab).
+ */
+function Row({ row, base, onGo }: { row: ChecklistRow; base: string; onGo: Go }) {
+  const here = row.href.startsWith(`${base}?tab=`) ? new URL(row.href, "http://panel") : null;
+
   return (
     <li>
       <Link
         className="group flex min-h-12 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-raised/60 focus-visible:bg-raised/60"
         href={row.href}
+        onClick={(click) => {
+          if (!here || click.metaKey || click.ctrlKey || click.shiftKey) return;
+          click.preventDefault();
+          onGo(here.searchParams.get("tab") as Tab, here.hash.slice(1) || undefined);
+        }}
       >
         <div className="min-w-0 flex-1 leading-tight">
           <p className="text-ui text-foreground underline-offset-4 group-hover:underline">{row.title}</p>
@@ -210,7 +223,18 @@ function Tasks({ input, data, today }: { input: EventInput; data: EventTasks; to
  * "Antes": what the event needs, computed from it (each row is the link to where it's done), and
  * the team's tasks. When everything is done it folds into "Listo para el día".
  */
-export function ReadyList({ rows, input }: { rows: ChecklistRow[]; input: EventInput }) {
+export function ReadyList({
+  rows,
+  input,
+  base,
+  onGo,
+}: {
+  rows: ChecklistRow[];
+  input: EventInput;
+  /** The event's path in the panel */
+  base: string;
+  onGo: Go;
+}) {
   const today = dayKey(new Date());
   const tasks = useQuery(orpc.events.tasks.queryOptions({ input }));
   const [open, setOpen] = useState(false);
@@ -241,7 +265,7 @@ export function ReadyList({ rows, input }: { rows: ChecklistRow[]; input: EventI
       />
       <ul aria-label="Lo que necesita el evento" className="divide-y divide-border">
         {rows.map((row) => (
-          <Row key={row.key} row={row} />
+          <Row key={row.key} base={base} row={row} onGo={onGo} />
         ))}
       </ul>
       <div className="flex items-baseline justify-between border-t border-border px-4 pt-3 pb-1">
