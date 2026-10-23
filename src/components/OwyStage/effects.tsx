@@ -151,8 +151,30 @@ export function Confetti() {
 
 type Drop = { x: number; y: number; vy: number; size: number; char: string; sway: number; spin: number; rot: number };
 
+/** The largest drop, plus room for the glyph's overhang. */
+const SPRITE_PX = 150;
+
+/**
+ * Each emoji drawn once into a bitmap: a colour glyph at a new size and angle
+ * is rasterized from scratch, which made the rain cost ~3.5 ms a frame.
+ */
+function emojiSprite(char: string) {
+  const sprite = document.createElement("canvas");
+  sprite.width = SPRITE_PX;
+  sprite.height = SPRITE_PX;
+  const ctx = sprite.getContext("2d");
+  if (ctx) {
+    ctx.font = `120px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(char, SPRITE_PX / 2, SPRITE_PX / 2);
+  }
+  return sprite;
+}
+
 export function EmojiRain({ chars, count = 70 }: { chars: string; count?: number }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const sprites = useRef(new Map<string, HTMLCanvasElement>());
   const drops = useMemo<Drop[]>(() => {
     const glyphs = Array.from(chars.trim() || "👏");
     return Array.from({ length: count }, (_, i) => ({
@@ -172,18 +194,19 @@ export function EmojiRain({ chars, count = 70 }: { chars: string; count?: number
     if (!ctx) return;
     const s = dt / 1000;
     ctx.clearRect(0, 0, W, H);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
     for (const d of drops) {
       d.y += d.vy * s;
       d.x += Math.sin(t / 700 + d.sway) * 30 * s;
       d.rot += d.spin * s;
       if (d.y > H + 80) continue;
+      let sprite = sprites.current.get(d.char);
+      if (!sprite) sprites.current.set(d.char, (sprite = emojiSprite(d.char)));
+      // The sprite's 120 px glyph, scaled to this drop's size
+      const box = (d.size * SPRITE_PX) / 120;
       ctx.save();
       ctx.translate(d.x, d.y);
       ctx.rotate(d.rot);
-      ctx.font = `${d.size}px system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
-      ctx.fillText(d.char, 0, 0);
+      ctx.drawImage(sprite, -box / 2, -box / 2, box, box);
       ctx.restore();
     }
   });
