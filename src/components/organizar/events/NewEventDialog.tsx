@@ -6,8 +6,10 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { CalendarPlus, Copy } from "lucide-react";
 
 import { MicroLabel } from "components/Admin/ui/page";
+import { ErrorState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
+import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { shortWhen } from "lib/community/time";
 import { orpc } from "lib/orpc/client";
@@ -70,7 +72,17 @@ export function NewEventDialog({ community }: { community: { id: string; slug: s
             <CalendarPlus />
             Empezar de cero
           </Button>
-          {previous.length > 0 ? (
+          {events.isError ? (
+            <ErrorState
+              compact
+              description="Podés empezar de cero igual, o probá de nuevo para copiar uno."
+              retrying={events.isFetching}
+              title="No pudimos traer tus eventos anteriores"
+              onRetry={() => void events.refetch()}
+            />
+          ) : events.isPending ? (
+            <Skeleton className="h-24 rounded-lg" />
+          ) : previous.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <MicroLabel>O a partir de</MicroLabel>
               <ul className="flex flex-col rounded-lg border border-border">

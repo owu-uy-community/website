@@ -15,8 +15,8 @@ import type { CreatePollInput, Poll } from "./schemas";
 type PollRow = typeof datePolls.$inferSelect;
 
 const notFound = new NotFound({ entity: "poll", message: "Esa votación no existe" });
-const chosen = new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
-const closed = new Conflict({ reason: "closed", message: "La votación está cerrada: ya no se puede cambiar" });
+const alreadyChosen = new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
+const pollClosed = new Conflict({ reason: "closed", message: "La votación está cerrada: ya no se puede cambiar" });
 
 /** Polls as a community sees them: everyone's answers, by community and day. */
 const viewOf = (polls: PollRow[], communityId: string) =>
@@ -182,8 +182,8 @@ export const vote = (input: { pollId: string; votes: { day: string; answer: "yes
       const { communityId } = yield* CommunityScope;
       const actor = yield* Effect.serviceOption(CurrentUser);
       const poll = yield* pollFor(input.pollId, communityId);
-      if (poll.chosenDay) return yield* chosen;
-      if (poll.closedAt) return yield* closed;
+      if (poll.chosenDay) return yield* alreadyChosen;
+      if (poll.closedAt) return yield* pollClosed;
       if (input.votes.some((entry) => !poll.days.includes(entry.day))) {
         return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
       }
@@ -214,8 +214,8 @@ export const choose = (input: { pollId: string; day: string }) =>
     Effect.gen(function* () {
       const { communityId } = yield* CommunityScope;
       const poll = yield* ownPoll(input.pollId, communityId);
-      if (poll.chosenDay) return yield* chosen;
-      if (poll.closedAt) return yield* closed;
+      if (poll.chosenDay) return yield* alreadyChosen;
+      if (poll.closedAt) return yield* pollClosed;
       if (!poll.days.includes(input.day)) return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
 
       const [claimed] = yield* query((db) =>
@@ -225,7 +225,7 @@ export const choose = (input: { pollId: string; day: string }) =>
           .where(and(eq(datePolls.id, poll.id), isNull(datePolls.chosenDay)))
           .returning()
       );
-      if (!claimed) return yield* chosen;
+      if (!claimed) return yield* alreadyChosen;
       const held = yield* hold({
         communityId,
         day: input.day,
@@ -268,7 +268,7 @@ export const close = (input: { pollId: string }) =>
     Effect.gen(function* () {
       const { communityId } = yield* CommunityScope;
       const poll = yield* ownPoll(input.pollId, communityId);
-      if (poll.chosenDay) return yield* chosen;
+      if (poll.chosenDay) return yield* alreadyChosen;
       const [row] = poll.closedAt
         ? [poll]
         : yield* query((db) =>
