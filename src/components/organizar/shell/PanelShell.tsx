@@ -1,16 +1,17 @@
 "use client";
 
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { matchMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Plus, Search } from "lucide-react";
 
+import { cn } from "app/lib/utils";
 import { openCommandMenu } from "components/Admin/shell/command-bus";
 import { HEADER_ACTIONS_ID } from "components/Admin/shell/HeaderActions";
 import { KeyHint, ShortcutListener, ShortcutSheet, useShortcuts } from "components/Admin/shell/shortcuts";
-import { ConnectionPill } from "components/Admin/ui/status";
+import { StatusDot, useRealtimeStatus } from "components/Admin/ui/status";
 import { NewEventDialog, openNewEvent } from "components/organizar/events/NewEventDialog";
 import { Button } from "components/shared/ui/button";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "components/shared/ui/sidebar";
@@ -22,11 +23,15 @@ import { PanelProvider, usePanel, usePanelSummary, type PanelCommunity } from ".
 import { LAST_COMMUNITY_COOKIE, PANEL_NAV_ITEMS, activePanelItem, panelHref } from "./nav";
 import { PanelCommandMenu } from "./PanelCommandMenu";
 import { PanelSidebar } from "./PanelSidebar";
-import { PanelTabBar } from "./PanelTabBar";
+import { hasTabBar, PanelTabBar } from "./PanelTabBar";
 import { TodoBell } from "./TodoBell";
 
-/** Pages where "Nuevo evento" is the one yellow action; the others bring their own. */
-const NEW_EVENT_PAGES = new Set(["inicio", "calendario", "eventos"]);
+/**
+ * Pages where "Nuevo evento" is the one yellow action. Everywhere else in a community it's there
+ * too, outlined: Calendario's yellow is "Reservar", Votar fecha's "Nueva votación", Perfil's
+ * "Guardar"… The wizard and the door scanner, full-screen, don't show it.
+ */
+const NEW_EVENT_LEADS = new Set(["inicio", "eventos"]);
 
 function Breadcrumbs() {
   const pathname = usePathname();
@@ -59,19 +64,50 @@ function Breadcrumbs() {
   );
 }
 
-/** Right of the header: live status, the bell, ⌘K on touch, and "Nuevo evento" where it leads. */
+/**
+ * Only when something's wrong: the next event's sign-ups stopped arriving live. While all is well
+ * there's nothing to say (a "Tiempo real" pill was jargon that never changed).
+ */
+function Offline() {
+  const status = useRealtimeStatus();
+  const [down, setDown] = useState(false);
+
+  useEffect(() => {
+    if (status === "open") {
+      setDown(false);
+      return;
+    }
+    // A reconnect takes a second or two: only a real outage is news
+    const timer = setTimeout(() => setDown(true), 4000);
+    return () => clearTimeout(timer);
+  }, [status]);
+  if (!down) return null;
+
+  return (
+    <span
+      aria-live="polite"
+      className="inline-flex items-center gap-1.5 text-meta whitespace-nowrap text-muted-foreground"
+      title="Lo que ves puede estar desactualizado: recargá la página si tarda"
+    >
+      <StatusDot ring tone="live" />
+      Sin conexión
+    </span>
+  );
+}
+
+/** Right of the header: a lost connection, the bell, ⌘K on touch, and "Nuevo evento" on every page. */
 function HeaderTools({ live }: { live: boolean }) {
   const pathname = usePathname();
   const { current } = usePanel();
   const item = activePanelItem(pathname, current?.slug ?? null);
   const leads = Boolean(
-    current && item && NEW_EVENT_PAGES.has(item.key) && pathname === panelHref(current.slug, item.path)
+    current && item && NEW_EVENT_LEADS.has(item.key) && pathname === panelHref(current.slug, item.path)
   );
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      {/* Only listening when an event is ahead; with nothing to listen to the pill would say "Sin conexión" */}
-      {live ? <ConnectionPill /> : null}
+      {/* Only listening when an event is ahead; with nothing to listen to it would say "Sin conexión" */}
+      {live ? <Offline /> : null}
       <TodoBell />
       {/* Phones, and any touchscreen: a tablet's sidebar may be folded away, and there's no ⌘K. */}
       <Button
@@ -84,8 +120,8 @@ function HeaderTools({ live }: { live: boolean }) {
         <Search />
       </Button>
       {/* Phones have the tab bar's + */}
-      {leads ? (
-        <Button className="max-md:hidden" size="sm" onClick={openNewEvent}>
+      {current && hasTabBar(pathname, true) ? (
+        <Button className="max-md:hidden" size="sm" variant={leads ? "default" : "outline"} onClick={openNewEvent}>
           <Plus />
           Nuevo evento
           <KeyHint keys="c" />
@@ -143,17 +179,25 @@ function PanelEffects({ nextEventId }: { nextEventId: string | null }) {
 }
 
 function Chrome({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const { current } = usePanel();
   const summary = usePanelSummary();
   const nextEventId = summary.data?.ahead[0]?.id ?? null;
+  // On phones the tab bar's «Más» opens the menu: a second menu button in the header was the same thing
+  const menuInTabBar = hasTabBar(pathname, current !== null);
 
   return (
     <>
       <PanelSidebar />
       <SidebarInset className="min-w-0">
         <header className="sticky top-0 z-40 flex h-[calc(46px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border bg-background pt-[env(safe-area-inset-top)] pr-[max(0.75rem,env(safe-area-inset-right))] pl-[max(0.75rem,env(safe-area-inset-left))]">
-          <SidebarTrigger className="-ml-0.5 size-7 shrink-0 text-muted-foreground hover:text-foreground" />
-          <span aria-hidden className="h-4 w-px shrink-0 bg-input" />
+          <SidebarTrigger
+            className={cn(
+              "-ml-0.5 size-7 shrink-0 text-muted-foreground hover:text-foreground",
+              menuInTabBar && "max-md:hidden"
+            )}
+          />
+          <span aria-hidden className={cn("h-4 w-px shrink-0 bg-input", menuInTabBar && "max-md:hidden")} />
           <Breadcrumbs />
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2" id={HEADER_ACTIONS_ID} />
           <HeaderTools live={nextEventId !== null} />

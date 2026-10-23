@@ -16,6 +16,10 @@ const TABS = ["inicio", "calendario", "eventos"] as const;
 /** Full-screen steps with their own action bar: the wizard and the door scanner. */
 const OWN_BAR = /\/(editar|puerta\/escanear)(\/|$)/;
 
+/** Whether the phone tab bar shows on this page (on phones): then its «Más» is the menu. */
+export const hasTabBar = (pathname: string | null, inCommunity: boolean) =>
+  inCommunity && !OWN_BAR.test(pathname ?? "");
+
 /**
  * The panel's bottom bar on phones, like OWU Ops: three destinations, a centered "Nuevo evento"
  * and "Más", which opens the full menu.
@@ -24,7 +28,7 @@ export function PanelTabBar() {
   const pathname = usePathname();
   const { current } = usePanel();
   const { isMobile, setOpenMobile } = useSidebar();
-  if (!isMobile || !current || OWN_BAR.test(pathname ?? "")) return null;
+  if (!isMobile || !current || !hasTabBar(pathname, true)) return null;
   const active = activePanelItem(pathname, current.slug);
   const items = TABS.map((key) => PANEL_NAV_ITEMS.find((item) => item.key === key)).filter(
     (item) => item !== undefined
