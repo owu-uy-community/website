@@ -12,6 +12,7 @@ import Meetups from "./components/Meetups";
 import Moments from "./components/Moments";
 import MotionRoot from "./components/MotionRoot";
 import Navbar from "./components/Navbar";
+import OpenSpace from "./components/OpenSpace";
 import Program from "./components/Program";
 import Reveal from "./components/Reveal";
 import Speakers from "./components/Speakers";
@@ -91,7 +92,7 @@ export default async function ConfPage() {
         type="application/ld+json"
       />
       <div className="min-h-[100dvh] w-full overflow-x-clip bg-black">
-        <Navbar />
+        <Navbar home />
         <main>
           <Hero />
           <Reveal amount={0.3} delay={0.5} duration={0.8} y={28}>
@@ -103,6 +104,8 @@ export default async function ConfPage() {
           <Reveal grow="x" amount={0.9} className="mt-16 h-10 w-full bg-[#F5BB03]" duration={0.9} />
           <Program />
           <Speakers />
+          {/* What the agenda calls the open space, explained for people who have never been to one */}
+          <OpenSpace />
           <Moments />
           <Sponsors />
           <Team />
