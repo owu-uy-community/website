@@ -31,10 +31,12 @@ test("organizers and staff open the panel; anyone else signed in sees why, and t
   await anonymous.goto(`${panel}/eventos`);
   await expect(anonymous).toHaveURL(new RegExp(`/login\\?next=${encodeURIComponent(`${panel}/eventos`)}`));
 
-  // A community that doesn't exist is still a 404
+  // A community that doesn't exist is still the not-found page. Its status is 404 under next dev but
+  // 200 on a production build: the panel renders per request and streams (Cache Components), and
+  // Next marks the page noindex instead
   const lost = await pageFor(editor);
-  const response = await lost.goto("/organizar/panel/no-existe-esta-comunidad");
-  expect(response?.status()).toBe(404);
+  await lost.goto("/organizar/panel/no-existe-esta-comunidad");
+  await expect(lost.getByRole("heading", { level: 1, name: /Esta página no está/ })).toBeVisible();
 });
 
 test("a member who helps at the door sees their role, the admins who show up, and asks for access", async ({

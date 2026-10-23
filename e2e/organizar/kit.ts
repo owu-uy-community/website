@@ -114,8 +114,13 @@ export async function runTick(request: APIRequestContext) {
 /** Makes calls to one oRPC procedure ("events.list") fail, to see the page's error state. */
 export async function failNext(page: Page, procedure: string, { times = Infinity } = {}) {
   let left = times;
-  await page.route(`**/api/orpc/${procedure.replaceAll(".", "/")}**`, async (route) => {
-    if (left-- <= 0) return route.fallback();
+  const path = `/api/orpc/${procedure.replaceAll(".", "/")}`;
+  // The client batches calls (BatchLinkPlugin): a production build often sends several in one
+  // request, so a batch that carries the procedure fails whole, like a dropped connection would
+  await page.route("**/api/orpc/**", async (route) => {
+    const request = route.request();
+    const carries = decodeURIComponent(request.url()).includes(path) || (request.postData() ?? "").includes(path);
+    if (!carries || left-- <= 0) return route.fallback();
     await route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ json: {} }) });
   });
 }
@@ -125,6 +130,16 @@ export async function expectAccessible(
   page: Page,
   { include, exclude }: { include?: string; exclude?: string[] } = {}
 ) {
+  // Contrast is measured on what's painted: a reveal or a sheet still fading in reads as low
+  // contrast, so let finite animations end first (skeletons and starfields loop forever: skip those)
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined))
+    )
+  );
   let builder = new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]);
   if (include) builder = builder.include(include);
   for (const selector of exclude ?? []) builder = builder.exclude(selector);

@@ -125,7 +125,10 @@ test("a speaker's public page only once they open it, and it reads well", async 
   const { speaker } = await seedProposal(`Con página ${Date.now().toString(36)}`);
   const page = await pageAs("anonymous");
 
-  expect((await page.goto(`/charlas/oradores/${speaker.id}`))?.status()).toBe(404);
+  // Closed: the not-found page, kept out of search (a production build streams it with a 200, noindex)
+  await page.goto(`/charlas/oradores/${speaker.id}`);
+  await expect(page.getByRole("heading", { level: 1, name: /Esta página no está/ })).toBeVisible();
+  await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1);
   await db.insert(speakerProfiles).values({
     userId: speaker.id,
     bio: "Hago frontend hace años y me gusta enseñar.",
