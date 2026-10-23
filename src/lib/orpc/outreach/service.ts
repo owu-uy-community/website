@@ -17,14 +17,8 @@ import {
 import { outreachEmail } from "../../email/community-templates";
 import { enqueueEmail } from "../../email/outbox";
 import { appUrl } from "../../email/templates";
-import {
-  activeAt,
-  contactStale,
-  DONE_DAYS,
-  outreachItems,
-  REQUEST_WAIT_HOURS,
-  SNOOZE_DAYS,
-} from "../../organizar/outreach";
+import { activeAt, DONE_DAYS, outreachItems, REQUEST_WAIT_HOURS, SNOOZE_DAYS } from "../../organizar/outreach";
+import { isStale } from "../../organizar/venue-contacts";
 import { query } from "../db";
 import { Invalid, NotFound } from "../errors";
 import { organizerEmails } from "../events/service";
@@ -80,13 +74,13 @@ export const queue = Effect.gen(function* () {
         .from(venueRequests)
         .where(gt(venueRequests.createdAt, yearAgo))
     ),
-    // ponytail: staleness by hand here (outreach.contactStale); swap for venue-contacts' isStale once it lands
     query((db) =>
       db
         .select({
           venueId: venueContacts.venueId,
           venue: venues.name,
           leftAt: venueContacts.leftAt,
+          leftReportedAt: venueContacts.leftReportedAt,
           bouncedAt: venueContacts.bouncedAt,
           lastConfirmedAt: venueContacts.lastConfirmedAt,
           consentAt: venueContacts.consentAt,
@@ -157,10 +151,11 @@ export const queue = Effect.gen(function* () {
 
   const staleVenues = new Map<string, { venue: string; since: Date | null }>();
   for (const contact of contacts) {
-    if (!contactStale(contact, now)) continue;
+    if (!isStale(contact, now)) continue;
     staleVenues.set(contact.venueId, {
       venue: contact.venue,
-      since: contact.leftAt ?? contact.bouncedAt ?? contact.lastConfirmedAt ?? contact.consentAt,
+      since:
+        contact.leftAt ?? contact.leftReportedAt ?? contact.bouncedAt ?? contact.lastConfirmedAt ?? contact.consentAt,
     });
   }
   const rows: OutreachRow[] = list.flatMap((community) => {

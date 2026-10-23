@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { activeAt, contactStale, outreachItems, type CommunityFacts } from "./outreach";
+import { activeAt, outreachItems, type CommunityFacts } from "./outreach";
 
 const NOW = Date.parse("2026-10-23T15:00:00Z");
 const DAY = 86_400_000;
@@ -81,17 +81,5 @@ describe(activeAt, () => {
   test("someone who did something in the last 90 days is active", () => {
     expect([89, 90, 91].map((days) => activeAt(ago(days), NOW))).toStrictEqual([true, true, false]);
     expect(activeAt(null, NOW)).toBe(false);
-  });
-});
-
-describe(contactStale, () => {
-  const contact = { leftAt: null, bouncedAt: null, lastConfirmedAt: null, consentAt: ago(30) };
-
-  test("a contact goes stale when gone, bouncing, or unconfirmed for 6 months", () => {
-    expect(contactStale(contact, NOW)).toBe(false);
-    expect(contactStale({ ...contact, leftAt: ago(1) }, NOW)).toBe(true);
-    expect(contactStale({ ...contact, bouncedAt: ago(1) }, NOW)).toBe(true);
-    expect(contactStale({ ...contact, consentAt: ago(400), lastConfirmedAt: ago(100) }, NOW)).toBe(false);
-    expect(contactStale({ ...contact, consentAt: ago(400), lastConfirmedAt: ago(183) }, NOW)).toBe(true);
   });
 });

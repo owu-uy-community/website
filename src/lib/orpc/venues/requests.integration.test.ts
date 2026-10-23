@@ -341,10 +341,11 @@ describe("links and contacts", () => {
     await expect(
       call(router.venues.contactLeft, { communityId: community.id, requestId: asked.id }, by(editor))
     ).resolves.toStrictEqual({ remaining: 0 });
-    await expect(requestRow(asked.id)).resolves.toMatchObject([{ status: "pending" }]);
-    await expect(db.select().from(venues).where(eq(venues.id, venue.id))).resolves.toMatchObject([
-      { requestable: true },
+    const [[request], [space]] = await Promise.all([
+      requestRow(asked.id),
+      db.select().from(venues).where(eq(venues.id, venue.id)),
     ]);
+    expect([request.status, space.requestable]).toStrictEqual(["pending", true]);
   });
 
   test("a cancel can be undone while the request is in time", async () => {

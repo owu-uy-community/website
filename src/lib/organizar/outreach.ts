@@ -6,8 +6,6 @@ import { plural } from "./words";
  * The staff's outreach queue: why a community needs a hand, computed from its own data. Client-safe.
  */
 
-/** A host contact nobody confirmed for this long (or bounced, or gone) needs re-checking. */
-export const CONTACT_STALE_DAYS = 182;
 /** A venue request unanswered this long gets a nudge. */
 export const REQUEST_WAIT_HOURS = 72;
 /** "Hecho" keeps a reason off the queue this long; if it's still true then, it comes back. */
@@ -39,15 +37,6 @@ const iso = (value: Date | string | null) => (value === null ? null : new Date(v
 /** Did they do something in the community recently enough to count as an active organizer? */
 export const activeAt = (lastActiveAt: Date | string | null, now = Date.now()) =>
   lastActiveAt !== null && now - new Date(lastActiveAt).getTime() <= ACTIVE_ORGANIZER_DAYS * DAY;
-
-/** Is a host contact stale: gone, bouncing, or not confirmed in 6 months (consent counts as one)? */
-export const contactStale = (
-  contact: { leftAt: Date | null; bouncedAt: Date | null; lastConfirmedAt: Date | null; consentAt: Date },
-  now = Date.now()
-) =>
-  contact.leftAt !== null ||
-  contact.bouncedAt !== null ||
-  now - (contact.lastConfirmedAt ?? contact.consentAt).getTime() > CONTACT_STALE_DAYS * DAY;
 
 /**
  * Why a community needs a hand now, most urgent first. A declared pause hides it until its date;
