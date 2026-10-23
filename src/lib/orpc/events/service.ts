@@ -203,7 +203,6 @@ export const hold = (input: HoldInput) =>
       if (startDate.getTime() < Date.now()) return yield* new Invalid({ message: "Esa fecha ya pasó" });
       const endDate = new Date(startDate.getTime() + input.durationMin * 60_000);
       const heldUntil = new Date(Date.now() + HOLD_DAYS * DAY_MS);
-
       let row: EventRow;
       if (input.eventId) {
         const draft = yield* draftOf(communityId, input.eventId);
