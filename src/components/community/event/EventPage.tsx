@@ -15,6 +15,7 @@ import { ShareButton } from "./ShareButton";
 
 import { EventMaterials } from "./EventMaterials";
 import { EventTalks } from "./EventTalks";
+import { VenueFacts } from "./VenueFacts";
 
 const FORMAT = {
   charlas: "Charlas",
@@ -154,6 +155,7 @@ export function EventPage({
             ) : null}
             <EventTalks talks={event.talks} />
             <EventMaterials event={event} />
+            {event.mode !== "online" ? <VenueFacts place={event.place} /> : null}
 
             {event.topics.length > 0 ? (
               <ul aria-label="Temas" className="mt-10 flex flex-wrap gap-2">

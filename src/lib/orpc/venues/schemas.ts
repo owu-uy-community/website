@@ -289,6 +289,7 @@ export const UpdateVenueSchema = z.object({
       capacity: z.number().int().min(5).max(2000).nullable(),
       notes: z.string().trim().max(1000),
       facts: VenueFactsSchema,
+      logoUrl: z.url().max(500).nullable(),
     })
     .partial()
     .refine((data) => Object.keys(data).length > 0, "No hay nada para cambiar"),

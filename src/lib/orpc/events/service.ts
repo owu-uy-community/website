@@ -883,9 +883,17 @@ const toPublic = (eventId: string) =>
               address: venue.addressVisibility === "public" ? venue.address || null : null,
               mapUrl: venue.addressVisibility === "public" ? venue.mapUrl : null,
               facts: publicFacts(venue.facts, venue.addressVisibility),
+              logoUrl: venue.logoUrl,
             }
           : event.placeName
-            ? { name: event.placeName, area: null, address: event.placeAddress, mapUrl: event.venueMapUrl, facts: null }
+            ? {
+                name: event.placeName,
+                area: null,
+                address: event.placeAddress,
+                mapUrl: event.venueMapUrl,
+                facts: null,
+                logoUrl: null,
+              }
             : null;
 
     return {

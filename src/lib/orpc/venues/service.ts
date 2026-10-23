@@ -1260,7 +1260,10 @@ export const manageList = Effect.gen(function* () {
 export const manageUpdate = (
   venueId: string,
   data: Partial<
-    Pick<VenueRow, "status" | "requestable" | "fallback" | "name" | "neighbourhood" | "address" | "capacity" | "notes">
+    Pick<
+      VenueRow,
+      "status" | "requestable" | "fallback" | "name" | "neighbourhood" | "address" | "capacity" | "notes" | "logoUrl"
+    >
   > & { facts?: VenueFactsInput }
 ) =>
   Effect.gen(function* () {

@@ -263,6 +263,8 @@ export const PublicEventSchema = z.object({
       mapUrl: z.string().nullable(),
       /** A directory space's access and ID facts (see publicFacts); null for other places */
       facts: PublicVenueFactsSchema.nullable(),
+      /** The host space's logo, credited on the page */
+      logoUrl: z.string().nullable(),
     })
     .nullable(),
   registration: RegistrationSchema,

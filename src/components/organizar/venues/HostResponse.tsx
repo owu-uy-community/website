@@ -1,56 +1,113 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { CalendarCheck, CalendarX, Clock, Hourglass, Users } from "lucide-react";
+import { CalendarCheck, CalendarClock, CalendarX, Clock, Handshake, Hourglass, Plus, Users, X } from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import { MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
+import { MicroLabel, Panel } from "components/Admin/ui/page";
 import { Button } from "components/shared/ui/button";
 import { Checkbox } from "components/shared/ui/checkbox";
+import { Input } from "components/shared/ui/input";
 import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
-import { shortWhen } from "lib/community/time";
+import { addDays } from "lib/calendar/holidays";
+import { clockTime, dayKey, shortWhen } from "lib/community/time";
 import { orpc } from "lib/orpc/client";
-import type { z } from "zod";
-import type { HostViewSchema } from "lib/orpc/venues/schemas";
+import type { HostView } from "lib/orpc/venues/schemas";
 
-type HostView = z.infer<typeof HostViewSchema>;
+const durationLabel = (minutes: number) =>
+  minutes % 60 === 0 ? `${minutes / 60} h` : `${Math.floor(minutes / 60)} h ${minutes % 60}`;
+const hours = (option: { start: string; end: string }) =>
+  durationLabel(Math.round((Date.parse(option.end) - Date.parse(option.start)) / 60_000));
 
-const hours = (option: { start: string; end: string }) => {
-  const minutes = Math.round((Date.parse(option.end) - Date.parse(option.start)) / 60_000);
+type Closed = { icon: typeof CalendarCheck; title: string; tone: string; text: string };
 
-  return minutes % 60 === 0 ? `${minutes / 60} h` : `${Math.floor(minutes / 60)} h ${minutes % 60}`;
-};
+/** Why the request isn't open anymore, in words: answered, proposed, lapsed, withdrawn or taken by another space. */
+function closedState(view: HostView): Closed {
+  if (view.taken) {
+    return {
+      icon: Handshake,
+      title: "Ya se resolvió, ¡gracias!",
+      tone: "text-success",
+      text: "La comunidad le preguntó a varios espacios y otro respondió primero. No hace falta que hagas nada.",
+    };
+  }
+  const states: Record<HostView["status"], Closed> = {
+    accepted: {
+      icon: CalendarCheck,
+      title: "Los recibís",
+      tone: "text-success",
+      text: "Te mandamos el contacto de quien organiza por mail. ¡Gracias por recibir a la comunidad!",
+    },
+    proposed: {
+      icon: CalendarClock,
+      title: "Propusiste otras fechas",
+      tone: "text-info",
+      text: "Le avisamos a la comunidad. Si alguna le sirve, te llega un mail con la confirmación.",
+    },
+    declined: {
+      icon: CalendarX,
+      title: "Esta vez no",
+      tone: "text-muted-foreground",
+      text: "Le avisamos a la comunidad. ¡Gracias por responder!",
+    },
+    expired: {
+      icon: Hourglass,
+      title: "El pedido venció",
+      tone: "text-muted-foreground",
+      text: "Pasaron los 3 días para responder y la comunidad siguió buscando. No hace falta que hagas nada.",
+    },
+    cancelled: {
+      icon: CalendarX,
+      title: "La comunidad canceló el pedido",
+      tone: "text-muted-foreground",
+      text: "Ya no necesitan el lugar. No hace falta que hagas nada.",
+    },
+    pending: { icon: Clock, title: "", tone: "", text: "" },
+  };
 
-const CLOSED = {
-  accepted: { icon: CalendarCheck, title: "Los recibís", tone: "text-success" },
-  declined: { icon: CalendarX, title: "Esta vez no", tone: "text-muted-foreground" },
-  expired: { icon: Hourglass, title: "El pedido venció", tone: "text-muted-foreground" },
-  cancelled: { icon: CalendarX, title: "La comunidad canceló el pedido", tone: "text-muted-foreground" },
-} as const;
+  return states[view.status];
+}
 
-/** The host's answer: take one of the dates (with access notes), propose another, or not this time. */
+type DateDraft = { day: string; startTime: string };
+
+/** The host's answer: take one of the dates (with access notes), propose others, or not this time. */
 export function HostResponse({ token, view }: { token: string; view: HostView }) {
   const router = useRouter();
+  const ids = useId();
   const [option, setOption] = useState(0);
   const [note, setNote] = useState("");
-  const [share, setShare] = useState(true);
+  // Consent is an affirmative act (Ley 18.331, art. 9): never pre-checked
+  const [share, setShare] = useState(false);
   const [publicAddress, setPublicAddress] = useState(view.addressVisibility === "public");
   const [mode, setMode] = useState<"accept" | "propose" | "decline">("accept");
+  const first = view.options[0];
+  const durationMin = first ? Math.round((Date.parse(first.end) - Date.parse(first.start)) / 60_000) : 120;
+  const [dates, setDates] = useState<DateDraft[]>(() => [
+    { day: addDays(dayKey(first?.start ?? new Date()), 7), startTime: clockTime(first?.start ?? new Date()) },
+  ]);
 
   const respond = useMutation(
     orpc.venues.respond.mutationOptions({
       onSuccess: () => router.refresh(),
-      onError: (error) => toast.error("No se pudo enviar la respuesta", error.message),
+      onError: (error) => {
+        toast.error("No se pudo enviar la respuesta", error.message);
+        // Someone else answered or it lapsed meanwhile: show how it stands
+        router.refresh();
+      },
     })
   );
   const who = view.organizerName ? `${view.organizerName}, de ${view.communityName}` : view.communityName;
+  const update = (index: number, change: Partial<DateDraft>) =>
+    setDates(dates.map((row, at) => (at === index ? { ...row, ...change } : row)));
 
   return (
     <Panel>
-      <PanelHead title={`${view.communityName} quiere hacer su meetup en ${view.venueName}`} />
+      <h1 className="border-b border-border px-4 py-3 text-ui font-semibold text-pretty text-foreground">
+        {view.communityName} quiere hacer su meetup en {view.venueName}
+      </h1>
       <div className="flex flex-col gap-5 p-4">
         <dl className="grid grid-cols-2 gap-3 text-ui">
           <div>
@@ -68,7 +125,7 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
               {view.expectedAttendees}
             </dd>
           </div>
-          {view.status === "pending" ? (
+          {view.status === "pending" && !view.taken ? (
             <div className="col-span-2">
               <dt>
                 <MicroLabel>Respondé antes del</MicroLabel>
@@ -94,8 +151,8 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
           </blockquote>
         ) : null}
 
-        {view.status !== "pending" ? (
-          <Closed view={view} />
+        {view.status !== "pending" || view.taken ? (
+          <ClosedNote view={view} />
         ) : (
           <form
             className="flex flex-col gap-4"
@@ -110,116 +167,210 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
                   shareContact: share,
                   addressVisibility: publicAddress ? "public" : "attendees",
                 });
+              } else if (mode === "propose") {
+                respond.mutate({
+                  token,
+                  decision: "propose",
+                  options: dates.map((date) => ({ ...date, durationMin })),
+                  hostMessage: note,
+                  shareContact: share,
+                });
               } else {
                 respond.mutate({ token, decision: "decline", hostMessage: note });
               }
             }}
           >
-            <fieldset className="flex flex-col gap-2">
-              <legend className="mb-2">
-                <MicroLabel>Fechas, en orden de preferencia</MicroLabel>
-              </legend>
-              {view.options.map((item, index) => (
-                <label
-                  key={item.start}
+            <div
+              className="grid grid-cols-3 gap-1 rounded-lg border border-input p-1"
+              role="radiogroup"
+              aria-label="Tu respuesta"
+            >
+              {(
+                [
+                  { value: "accept", label: "Sí, puedo" },
+                  { value: "propose", label: "Otra fecha" },
+                  { value: "decline", label: "Esta vez no" },
+                ] as const
+              ).map((choice) => (
+                <button
+                  key={choice.value}
+                  aria-checked={mode === choice.value}
                   className={cn(
-                    "flex cursor-pointer items-center gap-3 rounded-lg border border-input bg-raised/50 px-3 py-2.5 transition-colors hover:border-subtle/40",
-                    mode === "accept" && option === index && "border-primary/60 bg-primary-surface"
+                    "min-h-11 rounded-md px-2 text-ui font-medium text-muted-foreground transition-colors hover:text-foreground",
+                    mode === choice.value && "bg-raised text-foreground shadow-edge"
                   )}
+                  role="radio"
+                  type="button"
+                  onClick={() => setMode(choice.value)}
                 >
-                  <input
-                    checked={mode === "accept" && option === index}
-                    className="accent-[hsl(var(--primary))]"
-                    name="option"
-                    type="radio"
-                    onChange={() => {
-                      setMode("accept");
-                      setOption(index);
-                    }}
-                  />
-                  <span className="font-terminal text-meta text-muted-foreground tabular-nums">{index + 1}</span>
-                  <span className="flex-1 font-terminal text-ui text-foreground tabular-nums">
-                    {shortWhen(item.start)}
-                  </span>
-                  <span className="font-terminal text-meta text-muted-foreground tabular-nums">{hours(item)}</span>
-                </label>
+                  {choice.label}
+                </button>
               ))}
-            </fieldset>
+            </div>
+
+            {mode === "accept" ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2">
+                  <MicroLabel>Elegí una fecha (están en orden de preferencia)</MicroLabel>
+                </legend>
+                {view.options.map((item, index) => (
+                  <label
+                    key={item.start}
+                    className={cn(
+                      "flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-input bg-raised/50 px-3 py-2.5 transition-colors hover:border-subtle/40",
+                      option === index && "border-primary/60 bg-primary-surface"
+                    )}
+                  >
+                    <input
+                      checked={option === index}
+                      className="size-4 accent-[hsl(var(--primary))]"
+                      name="option"
+                      type="radio"
+                      onChange={() => setOption(index)}
+                    />
+                    <span className="font-terminal text-meta text-muted-foreground tabular-nums">{index + 1}</span>
+                    <span className="flex-1 font-terminal text-ui text-foreground tabular-nums">
+                      {shortWhen(item.start)}
+                    </span>
+                    <span className="font-terminal text-meta text-muted-foreground tabular-nums">{hours(item)}</span>
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+
+            {mode === "propose" ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2">
+                  <MicroLabel>Hasta tres fechas que les sirvan, la mejor primero</MicroLabel>
+                </legend>
+                {dates.map((row, index) => (
+                  // oxlint-disable-next-line react/no-array-index-key -- the rows are positions in a ranking
+                  <div key={index} className="flex items-center gap-1.5">
+                    <span className="w-4 font-terminal text-meta text-muted-foreground tabular-nums">{index + 1}</span>
+                    <Input
+                      aria-label={`Fecha ${index + 1}`}
+                      className="h-11 flex-1 font-terminal tabular-nums"
+                      min={dayKey(new Date())}
+                      required
+                      type="date"
+                      value={row.day}
+                      onChange={(event) => update(index, { day: event.target.value })}
+                    />
+                    <Input
+                      aria-label={`Hora ${index + 1}`}
+                      className="h-11 w-28 font-terminal tabular-nums"
+                      required
+                      step={900}
+                      type="time"
+                      value={row.startTime}
+                      onChange={(event) => update(index, { startTime: event.target.value })}
+                    />
+                    {dates.length > 1 ? (
+                      <Button
+                        aria-label={`Quitar la fecha ${index + 1}`}
+                        className="size-11"
+                        size="icon"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setDates(dates.filter((_, at) => at !== index))}
+                      >
+                        <X />
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+                {dates.length < 3 ? (
+                  <Button
+                    className="self-start"
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      const last = dates[dates.length - 1];
+                      setDates([
+                        ...dates,
+                        { day: addDays(last?.day ?? dayKey(new Date()), 7), startTime: last?.startTime ?? "19:00" },
+                      ]);
+                    }}
+                  >
+                    <Plus />
+                    Otra fecha
+                  </Button>
+                ) : null}
+                <p className="text-meta text-muted-foreground">
+                  Duran lo mismo que pidieron ({durationLabel(durationMin)}).
+                </p>
+              </fieldset>
+            ) : null}
 
             <label className="flex flex-col gap-1.5">
               <MicroLabel>
                 {mode === "accept"
                   ? "Para la comunidad: cómo entrar, a quién preguntar (opcional)"
                   : mode === "propose"
-                    ? "¿Qué fechas les sirven?"
-                    : "¿Querés contarles algo? (opcional)"}
+                    ? "¿Algo que quieras contarles? (opcional)"
+                    : "¿Querés contarles por qué? (opcional)"}
               </MicroLabel>
-              <Textarea
-                maxLength={1000}
-                required={mode === "propose"}
-                rows={3}
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-              />
+              <Textarea maxLength={1000} rows={3} value={note} onChange={(event) => setNote(event.target.value)} />
             </label>
 
-            {mode === "accept" ? (
-              <label className="flex items-start gap-2.5 text-ui text-foreground">
-                <Checkbox checked={share} className="mt-0.5" onCheckedChange={(value) => setShare(value === true)} />
-                <span>
-                  Compartir mi contacto con quien organiza
-                  <span className="block text-meta text-muted-foreground">
-                    Si no, coordinan por la dirección y las notas que dejes.
+            {mode !== "decline" ? (
+              <div className="flex items-start gap-2.5 text-ui text-foreground">
+                <Checkbox
+                  aria-describedby={`${ids}-share-hint`}
+                  aria-labelledby={`${ids}-share`}
+                  checked={share}
+                  className="mt-0.5 size-5"
+                  id={`${ids}-share-box`}
+                  onCheckedChange={(value) => setShare(value === true)}
+                />
+                <label className="cursor-pointer" htmlFor={`${ids}-share-box`}>
+                  <span id={`${ids}-share`}>Compartir mi contacto con quien organiza</span>
+                  <span className="block text-meta text-muted-foreground" id={`${ids}-share-hint`}>
+                    Le llega tu nombre y tu mail si confirman la fecha. Si no, coordinan por la dirección y las notas
+                    que dejes.
                   </span>
-                </span>
-              </label>
+                </label>
+              </div>
             ) : null}
             {mode === "accept" ? (
-              <label className="flex items-start gap-2.5 text-ui text-foreground">
+              <div className="flex items-start gap-2.5 text-ui text-foreground">
                 <Checkbox
+                  aria-describedby={`${ids}-address-hint`}
+                  aria-labelledby={`${ids}-address`}
                   checked={publicAddress}
-                  className="mt-0.5"
+                  className="mt-0.5 size-5"
+                  id={`${ids}-address-box`}
                   onCheckedChange={(value) => setPublicAddress(value === true)}
                 />
-                <span>
-                  Mostrar la dirección en la página del evento
-                  <span className="block text-meta text-muted-foreground">
+                <label className="cursor-pointer" htmlFor={`${ids}-address-box`}>
+                  <span id={`${ids}-address`}>Mostrar la dirección en la página del evento</span>
+                  <span className="block text-meta text-muted-foreground" id={`${ids}-address-hint`}>
                     Si no, la ven solo quienes se anotan. Vale también para las próximas meetups acá.
                   </span>
-                </span>
-              </label>
+                </label>
+              </div>
             ) : null}
 
-            <div className="flex flex-col gap-2">
+            <Button className="h-11 w-full" disabled={respond.isPending} type="submit">
               {mode === "accept" ? (
-                <Button className="h-11 w-full" disabled={respond.isPending} type="submit">
+                <>
                   <CalendarCheck />
-                  Sí, los recibimos el {shortWhen(view.options[option]?.start ?? view.options[0].start)}
-                </Button>
+                  Sí, los recibimos el {shortWhen(view.options[option]?.start ?? first?.start ?? "")}
+                </>
+              ) : mode === "propose" ? (
+                <>
+                  <CalendarClock />
+                  Proponer {dates.length === 1 ? "esta fecha" : `estas ${dates.length} fechas`}
+                </>
               ) : (
-                <Button className="h-11 w-full" disabled={respond.isPending} type="submit" variant="outline">
-                  {mode === "propose" ? "Enviar otra propuesta" : "Avisar que esta vez no"}
-                </Button>
+                "Avisar que esta vez no"
               )}
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={mode === "propose" ? "default" : "outline"}
-                  onClick={() => setMode(mode === "propose" ? "accept" : "propose")}
-                >
-                  Proponer otra fecha
-                </Button>
-                <Button
-                  type="button"
-                  variant={mode === "decline" ? "default" : "ghost"}
-                  onClick={() => setMode(mode === "decline" ? "accept" : "decline")}
-                >
-                  Esta vez no
-                </Button>
-              </div>
-            </div>
+            </Button>
             <p className="text-meta text-muted-foreground">
-              Si aceptás, {view.organizerName || "quien organiza"} recibe tu respuesta y vos su mail para coordinar.
+              {mode === "decline"
+                ? "Le avisamos a la comunidad para que siga buscando. ¡Gracias por responder!"
+                : `Si se confirma, ${view.organizerName || "quien organiza"} recibe tu respuesta y vos su mail para coordinar.`}
             </p>
           </form>
         )}
@@ -228,25 +379,28 @@ export function HostResponse({ token, view }: { token: string; view: HostView })
   );
 }
 
-function Closed({ view }: { view: HostView }) {
-  const state = CLOSED[view.status as keyof typeof CLOSED];
+function ClosedNote({ view }: { view: HostView }) {
+  const state = closedState(view);
   const chosen = view.chosenOption === null ? null : view.options[view.chosenOption];
 
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-border bg-raised px-3.5 py-3">
+    <div className="flex items-start gap-3 rounded-lg border border-border bg-raised px-3.5 py-3" role="status">
       <state.icon aria-hidden className={cn("mt-0.5 size-5 shrink-0", state.tone)} />
       <div>
         <p className="text-ui font-medium text-foreground">
           {state.title}
-          {chosen ? <span className="font-terminal tabular-nums"> el {shortWhen(chosen.start)}</span> : null}
+          {chosen && view.status === "accepted" ? (
+            <span className="font-terminal tabular-nums"> el {shortWhen(chosen.start)}</span>
+          ) : null}
         </p>
-        <p className="text-meta text-muted-foreground">
-          {view.status === "accepted"
-            ? "Te mandamos el contacto de quien organiza por mail. ¡Gracias por recibir a la comunidad!"
-            : view.status === "declined"
-              ? "Le avisamos a la comunidad. ¡Gracias por responder!"
-              : "No hace falta que hagas nada."}
-        </p>
+        <p className="text-meta text-muted-foreground">{state.text}</p>
+        {view.status === "proposed" && view.counterOptions.length > 0 ? (
+          <ul className="mt-1.5 font-terminal text-meta text-foreground tabular-nums">
+            {view.counterOptions.map((item) => (
+              <li key={item.start}>{shortWhen(item.start)}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </div>
   );

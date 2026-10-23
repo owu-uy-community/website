@@ -30,6 +30,7 @@ import {
 import { cn } from "app/lib/utils";
 import { SettingsCard, SettingsRow, SettingsSection } from "components/Admin/settings/settings";
 import { MicroLabel } from "components/Admin/ui/page";
+import { ErrorState } from "components/Admin/ui/states";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
@@ -48,7 +49,8 @@ import { SIZE_BUCKETS, type EditableEvent } from "lib/orpc/events/schemas";
 import { AMENITIES, AMENITY_LABEL, type Amenity } from "lib/orpc/venues/schemas";
 import { announcementText } from "lib/organizar/announcement";
 import { UNTITLED, type Issue, type StepKey } from "lib/organizar/steps";
-import { SIZE_LABEL } from "lib/organizar/venue-fit";
+import { SIZE_LABEL, SIZE_PEOPLE } from "lib/organizar/venue-fit";
+import { factLines } from "lib/organizar/venue-facts";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
@@ -455,21 +457,16 @@ export function StepLugar({ draft, set, errors, community, today, refresh }: Ste
     ...orpc.venues.requests.queryOptions({ input: { communityId: community.id } }),
     enabled: inPerson,
   });
-  const cancelRequest = useMutation(
-    orpc.venues.cancelRequest.mutationOptions({
-      onSuccess: () => void queryClient.invalidateQueries({ queryKey: orpc.venues.requests.key() }),
-      onError: (error) => toast.error("No se pudo cancelar", error.message),
-    })
-  );
   const [asking, setAsking] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   const mine = (requests.data ?? []).filter((request) => request.eventId === draft.id);
-  const open = mine.find((request) => request.status === "pending");
+  const open = mine.find((request) => request.status === "pending" || request.status === "proposed");
   const pending = new Set(
     (requests.data ?? []).filter((request) => request.status === "pending").map((request) => request.venue.id)
   );
   const ranked = venues.data ?? [];
   const shown = all ? ranked : ranked.slice(0, 4);
+  const facts = draft.venue ? factLines(draft.venue.facts) : [];
 
   return (
     <SettingsSection id="espacio" title="Dónde">
@@ -478,34 +475,60 @@ export function StepLugar({ draft, set, errors, community, today, refresh }: Ste
         <SettingsCard className="mt-3">
           {draft.venue ? (
             <SettingsRow hint="Aceptó el pedido: la dirección la ven quienes se anoten." label="Espacio">
-              <div className="flex items-center gap-2.5 rounded-md border border-success/40 bg-success-surface px-3 py-2">
-                <Building2 aria-hidden className="size-4 text-success" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-ui font-medium text-foreground">{draft.venue.name}</span>
-                  <span className="block truncate text-meta text-muted-foreground">
-                    {draft.venue.neighbourhood} · {draft.venue.address}
+              <div className="flex flex-col gap-1.5 rounded-md border border-success/40 bg-success-surface px-3 py-2">
+                <div className="flex items-center gap-2.5">
+                  <Building2 aria-hidden className="size-4 text-success" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-ui font-medium text-foreground">{draft.venue.name}</span>
+                    <span className="block truncate text-meta text-muted-foreground">
+                      {draft.venue.neighbourhood} · {draft.venue.address}
+                    </span>
                   </span>
-                </span>
+                </div>
+                {facts.length > 0 ? (
+                  <ul aria-label="Cómo es el espacio" className="pl-6.5 text-meta text-muted-foreground">
+                    {facts.map((fact) => (
+                      <li key={fact}>{fact}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </SettingsRow>
           ) : (
             <>
-              {mine.length > 0 ? (
+              {requests.isError ? (
+                <ErrorState
+                  className="m-3"
+                  compact
+                  title="No pudimos traer tus pedidos"
+                  onRetry={() => void requests.refetch()}
+                />
+              ) : mine.length > 0 ? (
                 <RequestList
                   className="m-3"
+                  communityId={community.id}
                   requests={mine}
                   title="Pedidos para este evento"
-                  onCancel={(requestId) => cancelRequest.mutate({ communityId: community.id, requestId })}
+                  onChanged={refresh}
                 />
               ) : null}
               {open ? null : (
                 <div className="flex flex-col gap-2 border-b border-border p-3">
-                  <MicroLabel>
-                    {draft.sizeBucket || draft.needs.length > 0 || draft.dateChosen
-                      ? "Los que mejor encajan con tu evento"
-                      : "Espacios"}
-                  </MicroLabel>
-                  {venues.isPending ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <MicroLabel>
+                      {draft.sizeBucket || draft.needs.length > 0 || draft.dateChosen
+                        ? "Los que mejor encajan con tu evento"
+                        : "Espacios"}
+                    </MicroLabel>
+                    {ranked.some((venue) => venue.requestable) ? (
+                      <Button size="sm" variant="outline" onClick={() => setAsking("broadcast")}>
+                        Pedir a varios a la vez
+                      </Button>
+                    ) : null}
+                  </div>
+                  {venues.isError ? (
+                    <ErrorState compact title="No pudimos traer los espacios" onRetry={() => void venues.refetch()} />
+                  ) : venues.isPending ? (
                     <Skeleton className="h-28 rounded-lg" />
                   ) : ranked.length === 0 ? (
                     <p className="text-meta text-muted-foreground">Todavía no hay espacios cargados.</p>
@@ -583,13 +606,15 @@ export function StepLugar({ draft, set, errors, community, today, refresh }: Ste
       ) : null}
       <RequestComposer
         community={community}
+        needs={want.needs}
+        presetAttendees={draft.capacity ?? (draft.sizeBucket ? SIZE_PEOPLE[draft.sizeBucket] : undefined)}
         presetEventId={draft.id}
+        target={asking === "broadcast" ? "broadcast" : (ranked.find((venue) => venue.id === asking) ?? null)}
         today={today}
-        venue={(venues.data ?? []).find((venue) => venue.id === asking) ?? null}
         onClose={() => setAsking(null)}
         onSent={() => {
           setAsking(null);
-          void queryClient.invalidateQueries({ queryKey: orpc.venues.requests.key() });
+          void queryClient.invalidateQueries({ queryKey: orpc.venues.key() });
           refresh();
         }}
       />
