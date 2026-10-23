@@ -39,7 +39,7 @@ function BusFactor({ communityId }: { communityId: string }) {
     <div className="mt-8">
       <Notice tone="warning">
         <p className="font-medium">Si alguien deja, la comunidad se frena: sumá a otra persona.</p>
-        <p className="mt-0.5 text-muted-foreground">
+        <p className="mt-0.5">
           {data.active === 0
             ? `Nadie del equipo usó el panel en ${ACTIVE_ORGANIZER_DAYS} días.`
             : `En ${ACTIVE_ORGANIZER_DAYS} días usó el panel una sola persona${active.length === 1 ? ` (${active[0].name})` : ""}.`}{" "}
@@ -51,7 +51,7 @@ function BusFactor({ communityId }: { communityId: string }) {
             Sumar a alguien
           </Button>
         ) : (
-          <p className="mt-1 text-meta text-muted-foreground">Pedile a quien administra que sume a alguien.</p>
+          <p className="mt-1 text-meta">Pedile a quien administra que sume a alguien.</p>
         )}
       </Notice>
     </div>

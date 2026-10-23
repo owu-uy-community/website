@@ -89,6 +89,22 @@ describe("Cuentas y accesos", () => {
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
+  test("anyone on the team sees the accounts they hold or back up; strangers don't", async () => {
+    const { community, owner, admin, editor } = await setup();
+    const input = { communityId: community.id };
+    await call(router.assets.save, { ...input, platform: "meetup", holderUserId: editor.id }, by(admin));
+    await call(
+      router.assets.save,
+      { ...input, platform: "x", holderUserId: owner.id, backupUserId: editor.id },
+      by(admin)
+    );
+    await call(router.assets.save, { ...input, platform: "youtube", holderUserId: owner.id }, by(admin));
+
+    const held = await call(router.assets.mine, input, by(editor));
+    expect(held.map((asset) => asset.platform)).toStrictEqual(["meetup", "x"]);
+    await expect(call(router.assets.mine, input, by(await makeUser()))).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
   test("holders must be on the team, and passwords are refused", async () => {
     const { community, admin } = await setup();
     const stranger = await makeUser();

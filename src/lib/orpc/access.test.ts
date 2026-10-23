@@ -35,6 +35,7 @@ const EXPECTED: Record<string, Access> = {
   "access.users.unban": "platform:user:ban",
   "activity.list": "community:activity:read",
   "assets.list": "community:member:read",
+  "assets.mine": "authed",
   "assets.remove": "community:organization:update",
   "assets.save": "community:organization:update",
   "assistant.ask": "community:assistant:ask",

@@ -43,7 +43,10 @@ export function LeaveTeam({ communityId, communityName }: { communityId: string;
   const organizers = useQuery(
     orpc.insights.organizers.queryOptions({ input: open && can("event:stats") ? input : skipToken })
   );
-  const assets = useQuery(orpc.assets.list.queryOptions({ input: open && can("member:read") ? input : skipToken }));
+  // Admins pass on what they know of; anyone else, what they hold or back up
+  const all = useQuery(orpc.assets.list.queryOptions({ input: open && can("member:read") ? input : skipToken }));
+  const held = useQuery(orpc.assets.mine.queryOptions({ input: open && !can("member:read") ? input : skipToken }));
+  const assets = can("member:read") ? all : held;
   const me = useQuery({ ...orpc.access.me.queryOptions(), enabled: open });
   const others = (organizers.data?.people ?? []).filter((person) => person.userId !== me.data?.id);
 
@@ -121,8 +124,7 @@ export function LeaveTeam({ communityId, communityName }: { communityId: string;
           label="Salir del equipo"
         >
           <Button
-            aria-describedby={lastOwner ? "leave-blocked" : undefined}
-            disabled={lastOwner || members.isPending}
+            disabled={lastOwner || (owner && members.isPending)}
             size="sm"
             variant="destructive"
             onClick={() => {
@@ -136,11 +138,6 @@ export function LeaveTeam({ communityId, communityName }: { communityId: string;
             Salir
           </Button>
         </SettingsRow>
-        {lastOwner ? (
-          <p className="sr-only" id="leave-blocked">
-            Sos la única persona dueña: pasá la propiedad a otra persona primero.
-          </p>
-        ) : null}
       </SettingsCard>
 
       <EditorPanel
@@ -234,7 +231,12 @@ export function LeaveTeam({ communityId, communityName }: { communityId: string;
                 <ul className="space-y-1.5">
                   {accounts.map((asset) => {
                     const id = `passed-${asset.id}`;
-                    const mine = asset.holder?.userId === me.data?.id || asset.backup?.userId === me.data?.id;
+                    const role =
+                      asset.holder?.userId === me.data?.id
+                        ? "La tenés vos"
+                        : asset.backup?.userId === me.data?.id
+                          ? "Sos el respaldo"
+                          : null;
 
                     return (
                       <li key={asset.id}>
@@ -251,9 +253,7 @@ export function LeaveTeam({ communityId, communityName }: { communityId: string;
                           <span className="min-w-0 text-ui text-foreground">
                             {`Ya le pasé el acceso: ${PLATFORM_LABELS[asset.platform]}`}
                             {asset.label ? <span className="text-muted-foreground">{` · ${asset.label}`}</span> : null}
-                            {mine ? (
-                              <span className="block text-meta text-warning-foreground">La tenés vos</span>
-                            ) : null}
+                            {role ? <span className="block text-meta text-warning-foreground">{role}</span> : null}
                           </span>
                         </label>
                       </li>

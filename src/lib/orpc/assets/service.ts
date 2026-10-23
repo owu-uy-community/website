@@ -5,6 +5,8 @@ import { Effect } from "effect";
 import { communityAssets, communityMembers, user, type CommunityAssetRow } from "../../db/schema";
 import { query } from "../db";
 import { Invalid, NotFound } from "../errors";
+import { memberRole } from "../scope";
+import { CurrentUser } from "../services";
 import type { Asset, SaveAssetInput } from "./schemas";
 
 const holder = alias(user, "holder");
@@ -43,6 +45,22 @@ const listQuery = (communityId: string, id?: string) =>
 
 /** The community's accounts elsewhere and who holds each. */
 export const list = (communityId: string) => listQuery(communityId);
+
+/**
+ * The accounts the caller holds or backs up in a community they're on: what someone leaving the
+ * team has to pass on, even without seeing the whole list.
+ */
+export const mine = (communityId: string) =>
+  Effect.gen(function* () {
+    const me = yield* CurrentUser;
+    if (!(yield* memberRole(communityId, me.id))) {
+      return yield* new NotFound({ entity: "member", message: "No sos parte de esta comunidad" });
+    }
+
+    return (yield* listQuery(communityId)).filter(
+      (asset) => asset.holder?.userId === me.id || asset.backup?.userId === me.id
+    );
+  });
 
 /** Add an account, or change one of this community's. Holders and backups must be on the team. */
 export const save = ({ communityId, id, ...fields }: SaveAssetInput) =>

@@ -20,6 +20,14 @@ export const assetsRouter = {
       return yield* Assets.list(input.communityId);
     }),
 
+  mine: authed
+    .meta(docs("The accounts I hold or back up in a community I'm on (to pass on when leaving)"))
+    .input(CommunityRefSchema)
+    .output(z.array(AssetSchema))
+    .effect(function* ({ input }) {
+      return yield* Assets.mine(input.communityId);
+    }),
+
   save: authed
     .meta(docs("Add an account or change who holds it (never a password)"))
     .input(SaveAssetSchema)
