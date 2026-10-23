@@ -30,7 +30,7 @@ type Slide = { key: string; title: string; body: React.ReactNode };
 function Title({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <h2 className="text-[clamp(2.5rem,6.5vw,6rem)] leading-[1.05] font-bold text-balance text-white">{children}</h2>
+      <h2 className="font-title text-[clamp(2.5rem,6.5vw,6rem)] leading-[1.05] font-bold text-balance text-white">{children}</h2>
       <span aria-hidden className="mt-6 block h-2 w-24 rounded-full bg-yellow-400" />
     </>
   );
