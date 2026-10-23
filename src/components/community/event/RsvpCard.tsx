@@ -74,8 +74,10 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
   const ticketPath = `/comunidad/${event.community.slug}/events/${event.slug}/entrada`;
   const cta = "cta" in state ? state.cta : null;
 
-  // Until we know who's looking, a placeholder: a click must not land on the wrong state
-  if (session.isPending || (signedIn && step !== "auth" && mine.isPending)) {
+  // Until we know who's looking, a placeholder: a click must not land on the wrong state. Never
+  // while signing in: the session refetch that follows the code would unmount the form mid-flow
+  // and drop a new account back at the email step, before it names itself.
+  if (step !== "auth" && (session.isPending || (signedIn && mine.isPending))) {
     return <div className="h-12 animate-pulse rounded-xl bg-white/[0.05]" />;
   }
 
