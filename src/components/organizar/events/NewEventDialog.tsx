@@ -3,13 +3,18 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CalendarPlus, Copy } from "lucide-react";
+import { CalendarPlus, Copy, Repeat } from "lucide-react";
 
 import { MicroLabel } from "components/Admin/ui/page";
+import { ErrorState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
+import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { shortWhen } from "lib/community/time";
+import { LEVEL_LABEL } from "lib/organizar/repeat";
+import { MAX_HOLDS } from "lib/organizar/rules";
+import { shortDay } from "lib/organizar/times";
 import { orpc } from "lib/orpc/client";
 
 const OPEN_EVENT = "organizar:new-event";
@@ -45,16 +50,28 @@ export function NewEventDialog({ community }: { community: { id: string; slug: s
   }, [params, pathname]);
 
   const events = useQuery(orpc.events.list.queryOptions({ input: { communityId: community.id }, enabled: open }));
+  const next = useQuery(orpc.events.nextDate.queryOptions({ input: { communityId: community.id }, enabled: open }));
   const create = useMutation(
     orpc.events.createDraft.mutationOptions({
-      onSuccess: (event) => {
+      onSuccess: (event, variables) => {
         setOpen(false);
+        if (variables.copyFrom) {
+          toast.success(
+            event.dateChosen ? `Reservamos el ${shortWhen(event.startDate)}` : "Quedó sin fecha",
+            event.dateChosen
+              ? "Revisá lo que viene del evento anterior."
+              : `Ya tenían ${MAX_HOLDS} fechas reservadas: elegí una en Fecha.`
+          );
+        }
         router.push(`/organizar/panel/${community.slug}/eventos/${event.id}/editar`);
       },
       onError: (error) => toast.error("No se pudo crear el evento", error.message),
     })
   );
-  const previous = (events.data ?? []).filter((event) => event.status === "published").slice(0, 6);
+  const previous = (events.data ?? [])
+    .filter((event) => event.status === "published" && event.id !== next.data?.source.id)
+    .slice(0, 6);
+  const last = next.data;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -62,15 +79,46 @@ export function NewEventDialog({ community }: { community: { id: string; slug: s
         <DialogHeader>
           <DialogTitle>Nuevo evento</DialogTitle>
           <DialogDescription>
-            Empezá de cero o usá uno anterior como base: copia los textos y la inscripción.
+            Repetí el último (mismo día y hora, unas cuatro semanas después), empezá de cero o partí de otro.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3">
-          <Button disabled={create.isPending} onClick={() => create.mutate({ communityId: community.id })}>
+          {last ? (
+            <Button
+              className="h-auto min-h-11 flex-col items-start gap-0.5 py-2 text-left whitespace-normal"
+              disabled={create.isPending}
+              onClick={() => create.mutate({ communityId: community.id, copyFrom: last.source.id })}
+            >
+              <span className="flex items-center gap-2">
+                <Repeat aria-hidden />
+                Repetir «{last.source.name}»
+              </span>
+              <span className="text-meta font-normal opacity-80">
+                {shortDay(last.day)} · {last.startTime} · {LEVEL_LABEL[last.level]}
+              </span>
+            </Button>
+          ) : next.isPending ? (
+            <Skeleton className="h-14 rounded-md" />
+          ) : null}
+          <Button
+            disabled={create.isPending}
+            variant={last || next.isPending ? "outline" : "default"}
+            onClick={() => create.mutate({ communityId: community.id })}
+          >
             <CalendarPlus />
             Empezar de cero
           </Button>
-          {previous.length > 0 ? (
+          {events.isError ? (
+            <ErrorState
+              compact
+              description="Podés empezar de cero igual, o probá de nuevo para copiar uno."
+              retrying={events.isFetching}
+              title="No pudimos traer tus eventos anteriores"
+              onRetry={() => void events.refetch()}
+            />
+          ) : events.isPending ? (
+            <Skeleton className="h-24 rounded-lg" />
+          ) : previous.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <MicroLabel>O a partir de</MicroLabel>
               <ul className="flex flex-col rounded-lg border border-border">

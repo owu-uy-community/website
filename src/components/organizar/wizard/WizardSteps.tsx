@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BellRing,
   Building2,
   CircleAlert,
   CircleCheck,
@@ -17,6 +18,7 @@ import {
   Mic,
   Monitor,
   Plus,
+  ShieldCheck,
   Smartphone,
   Sparkles,
   Ticket,
@@ -29,7 +31,8 @@ import {
 
 import { cn } from "app/lib/utils";
 import { SettingsCard, SettingsRow, SettingsSection } from "components/Admin/settings/settings";
-import { MicroLabel } from "components/Admin/ui/page";
+import { MicroLabel, Panel } from "components/Admin/ui/page";
+import { ErrorState } from "components/Admin/ui/states";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
@@ -47,20 +50,33 @@ import { orpc } from "lib/orpc/client";
 import { SIZE_BUCKETS, type EditableEvent } from "lib/orpc/events/schemas";
 import { AMENITIES, AMENITY_LABEL, type Amenity } from "lib/orpc/venues/schemas";
 import { announcementText } from "lib/organizar/announcement";
+import type { StaleField } from "lib/organizar/repeat";
 import { UNTITLED, type Issue, type StepKey } from "lib/organizar/steps";
-import { SIZE_LABEL } from "lib/organizar/venue-fit";
+import { SIZE_LABEL, SIZE_PEOPLE } from "lib/organizar/venue-fit";
+import { factLines } from "lib/organizar/venue-facts";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
+import { ResponderPicker } from "../events/ConductSection";
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
+import { usePanel } from "../shell/context";
+import { CardLink } from "../talks/parts";
 import { RequestComposer, RequestList, VenueCard } from "../venues/VenuesClient";
 import { DatePicker } from "./DatePicker";
+import { QuestionPresets, useCapacityHint, VolunteerRoles } from "./SignupExtras";
+import { FEEDBACK_TIMING, RSVP_CLOSE_HINT } from "lib/organizar/rules";
+import { suggestedCloseAt } from "lib/organizar/rsvp-state";
 
 /** A change to the draft; `schedule` (a published event's new date) is sent at once, not kept. */
 export type DraftChange = Partial<EditableEvent> & {
   schedule?: { day: string; startTime: string; durationMin: number };
   /** The co-organizing communities, saved right away (the server says which joined and which are invited) */
   cohostIds?: string[];
+  /** Copied fields looked at and left as they are: they stop saying "Revisá" (saved right away) */
+  reviewed?: StaleField[];
 };
+
+/** What attendees of a published event last heard: changing any of it emails them */
+export type Notified = Pick<EditableEvent, "startDate" | "endDate" | "mode" | "placeName" | "placeAddress">;
 
 export type StepProps = {
   draft: EditableEvent;
@@ -68,9 +84,42 @@ export type StepProps = {
   errors: Partial<Record<keyof EditableEvent, string>>;
   community: CalendarCommunity;
   today: string;
-  /** Read the event again (a hold, a venue answer) */
-  refresh: () => void;
+  /** Read the event again (a hold, a venue answer); `take` are fields the server changed, over what's typed */
+  refresh: (take?: (keyof EditableEvent)[]) => void;
+  /** Save what's pending now */
+  flush: () => Promise<boolean>;
+  /** A published event as attendees know it (null for drafts) */
+  notified: Notified | null;
 };
+
+/** "Revisá": copied from the last event and nobody looked at it yet */
+function Revisa({ draft, field }: { draft: EditableEvent; field: StaleField }) {
+  return draft.staleFields.includes(field) ? <Badge variant="warning">Revisá</Badge> : null;
+}
+
+/** Under a copied field: where it came from, and a way to keep it as it is */
+function StaleHint({ draft, field, set }: { draft: EditableEvent; field: StaleField; set: StepProps["set"] }) {
+  if (!draft.staleFields.includes(field)) return null;
+
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-x-2 text-warning-foreground">
+      Viene de «{draft.copiedFrom?.name ?? "el evento anterior"}»: fijate que siga valiendo.
+      <button className="underline underline-offset-2" type="button" onClick={() => set({ reviewed: [field] })}>
+        Está bien así
+      </button>
+    </span>
+  );
+}
+
+/** Next to a field of a published event that differs from what attendees know: they'll hear about it */
+export function NotifyChip({ show }: { show: boolean }) {
+  return show ? (
+    <Badge variant="info">
+      <BellRing aria-hidden />
+      Les avisamos
+    </Badge>
+  ) : null;
+}
 
 const FORMAT: { value: NonNullable<EditableEvent["format"]>; title: string; hint: string; icon: LucideIcon }[] = [
   { value: "charlas", title: "Charlas", hint: "Una o más charlas, con preguntas", icon: Mic },
@@ -199,7 +248,86 @@ export function StepTipo({ draft, set }: StepProps) {
   );
 }
 
-export function StepDatos({ draft, set, errors, community }: StepProps) {
+/**
+ * "Charlas tomadas": talks the community took in Charlas and hasn't put on a date yet, one tap to
+ * this event (the speaker hears the date). The event is read again after, since the talk joins it.
+ */
+function TakenTalks({
+  draft,
+  community,
+  flush,
+  refresh,
+}: Pick<StepProps, "draft" | "community" | "flush" | "refresh">) {
+  const { can } = usePanel();
+  const queryClient = useQueryClient();
+  const claims = useQuery(
+    orpc.talks.claimedFor.queryOptions({
+      input: { communityId: community.id },
+      enabled: can("talk:read"),
+      select: (all) => all.filter((claim) => claim.status === "claimed" && !claim.event),
+    })
+  );
+  const assign = useMutation(
+    orpc.talks.assign.mutationOptions({
+      onSuccess: (claim) => {
+        void queryClient.invalidateQueries({ queryKey: orpc.talks.key() });
+        refresh(["talks", "staleFields"]);
+        toast.success(`Sumamos «${claim.title}»`, `Le avisamos a ${claim.speakerName} la fecha.`);
+      },
+      onError: (error) => toast.error("No se pudo sumar la charla", error.message),
+    })
+  );
+  if (!can("talk:read") || !can("talk:claim")) return null;
+  const list = claims.data ?? [];
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border p-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <MicroLabel>Charlas tomadas</MicroLabel>
+        <Link
+          className="text-meta text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          href={`/organizar/panel/${community.slug}/charlas`}
+        >
+          Ver en Charlas
+        </Link>
+      </div>
+      {claims.isError ? (
+        <ErrorState compact title="No pudimos traer las charlas" onRetry={() => void claims.refetch()} />
+      ) : claims.isPending ? (
+        <Skeleton className="h-8" />
+      ) : list.length === 0 ? (
+        <p className="text-meta text-muted-foreground">
+          Ninguna esperando fecha. Las que la gente propone para ustedes están en Charlas.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1">
+          {list.map((claim) => (
+            <li key={claim.id} className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate text-ui text-foreground">
+                {claim.title} <span className="text-muted-foreground">· {claim.speakerName}</span>
+              </span>
+              <Button
+                disabled={assign.isPending}
+                size="xs"
+                variant="outline"
+                onClick={() =>
+                  void flush().then(() =>
+                    assign.mutate({ communityId: community.id, claimId: claim.id, eventId: draft.id })
+                  )
+                }
+              >
+                <Plus />
+                Sumar
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function StepDatos({ draft, set, errors, community, flush, refresh }: StepProps) {
   const [preview, setPreview] = useState(false);
   const others = useQuery({
     ...orpc.communities.list.queryOptions({ input: {} }),
@@ -214,9 +342,18 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
       <SettingsCard>
         <SettingsRow
           error={errors.name}
-          hint="Corto y concreto: va en el título y en el link."
+          hint={
+            <>
+              Corto y concreto: va en el título y en el link.
+              <StaleHint draft={draft} field="name" set={set} />
+            </>
+          }
           htmlFor="event-name"
-          label="Nombre"
+          label={
+            <>
+              Nombre <Revisa draft={draft} field="name" />
+            </>
+          }
         >
           <Input
             id="event-name"
@@ -232,10 +369,15 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
             <>
               Una línea para la tarjeta, la imagen para compartir y Meetup.{" "}
               <span className="font-terminal tabular-nums">{draft.summary?.length ?? 0}/140</span>
+              <StaleHint draft={draft} field="summary" set={set} />
             </>
           }
           htmlFor="event-summary"
-          label="Resumen"
+          label={
+            <>
+              Resumen <Revisa draft={draft} field="summary" />
+            </>
+          }
         >
           <Input
             id="event-summary"
@@ -253,10 +395,15 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
               <button className="underline underline-offset-2" type="button" onClick={() => setPreview(!preview)}>
                 {preview ? "Editar" : "Ver cómo queda"}
               </button>
+              <StaleHint draft={draft} field="description" set={set} />
             </>
           }
           htmlFor="event-description"
-          label="Descripción"
+          label={
+            <>
+              Descripción <Revisa draft={draft} field="description" />
+            </>
+          }
         >
           {preview ? (
             <div className="prose-sm max-h-80 overflow-y-auto rounded-md border border-border bg-raised/40 p-3 text-ui text-foreground [&_a]:underline [&_li]:ml-4 [&_ul]:list-disc">
@@ -273,8 +420,33 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
             />
           )}
         </SettingsRow>
-        <SettingsRow error={errors.talks} hint="Título y quién la da: salen en la página del evento." label="Charlas">
-          <div className="flex flex-col gap-2">
+        <SettingsRow
+          error={errors.talks}
+          hint={
+            <>
+              Título y quién la da: salen en la página del evento.
+              {draft.staleFields.includes("talks") ? (
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 text-warning-foreground">
+                  Las de «{draft.copiedFrom?.name ?? "el evento anterior"}» no se copian: sumá las de esta vez.
+                  <button
+                    className="underline underline-offset-2"
+                    type="button"
+                    onClick={() => set({ reviewed: ["talks"] })}
+                  >
+                    Esta vez no hay charlas
+                  </button>
+                </span>
+              ) : null}
+            </>
+          }
+          label={
+            <>
+              Charlas <Revisa draft={draft} field="talks" />
+            </>
+          }
+        >
+          <div className="flex scroll-mt-24 flex-col gap-2" id="charlas" tabIndex={-1}>
+            <TakenTalks community={community} draft={draft} flush={flush} refresh={refresh} />
             {draft.talks.map((talk, index) => (
               <div key={index} className="flex items-center gap-2">
                 <Input
@@ -327,7 +499,10 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
             ) : null}
           </div>
         </SettingsRow>
-        <SettingsRow hint="Hasta 5. El calendario los usa para saber con quién chocás." label="Temas">
+        <SettingsRow
+          hint="Hasta 5; sin elegir, valen los de la comunidad. El calendario marca como choque un evento del mismo día con temas parecidos y les avisa a esas comunidades cuando reservás."
+          label="Temas"
+        >
           <div className="flex flex-wrap gap-1.5">
             {TOPICS.map((topic) => {
               const on = draft.topics.includes(topic.value);
@@ -383,6 +558,27 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
                 ))}
               </ul>
             ) : null}
+            {(draft.copiedFrom?.cohosts ?? [])
+              .filter((cohost) => !chosen.includes(cohost.id))
+              .map((cohost) => (
+                <p key={cohost.id} className="flex flex-wrap items-center gap-2 text-meta text-muted-foreground">
+                  La última vez lo armaron con {cohost.name}.
+                  <Button
+                    disabled={chosen.length >= 3}
+                    size="xs"
+                    variant="outline"
+                    onClick={() =>
+                      set({
+                        cohostIds: [...chosen, cohost.id],
+                        cohosts: [...draft.cohosts, { ...cohost, slug: "", status: "invited" }],
+                      })
+                    }
+                  >
+                    <Plus />
+                    Invitarla de nuevo
+                  </Button>
+                </p>
+              ))}
             <Select
               disabled={chosen.length >= 3 || addable.length === 0}
               value=""
@@ -416,15 +612,21 @@ export function StepDatos({ draft, set, errors, community }: StepProps) {
   );
 }
 
-export function StepFecha({ draft, set, community, today, refresh }: StepProps) {
+export function StepFecha({ draft, set, community, today, refresh, notified }: StepProps) {
   return (
-    <SettingsSection id="fecha" title={draft.status === "published" ? "Fecha del evento" : "Elegí la fecha"}>
+    <SettingsSection
+      actions={
+        <NotifyChip show={notified !== null && Date.parse(notified.startDate) !== Date.parse(draft.startDate)} />
+      }
+      id="fecha"
+      title={draft.status === "published" ? "Fecha del evento" : "Elegí la fecha"}
+    >
       <SettingsCard className="py-4">
         <DatePicker
           communityId={community.id}
           event={draft}
           today={today}
-          onHeld={refresh}
+          onHeld={() => refresh()}
           onSchedule={(schedule) => set({ schedule })}
         />
       </SettingsCard>
@@ -438,7 +640,7 @@ const MODES: { value: EditableEvent["mode"]; title: string; hint: string; icon: 
   { value: "hibrido", title: "Híbrido", hint: "En un lugar y transmitido", icon: Globe },
 ];
 
-export function StepLugar({ draft, set, errors, community, today, refresh }: StepProps) {
+export function StepLugar({ draft, set, errors, community, today, refresh, notified }: StepProps) {
   const queryClient = useQueryClient();
   const inPerson = draft.mode !== "online";
   const want = {
@@ -455,57 +657,99 @@ export function StepLugar({ draft, set, errors, community, today, refresh }: Ste
     ...orpc.venues.requests.queryOptions({ input: { communityId: community.id } }),
     enabled: inPerson,
   });
-  const cancelRequest = useMutation(
-    orpc.venues.cancelRequest.mutationOptions({
-      onSuccess: () => void queryClient.invalidateQueries({ queryKey: orpc.venues.requests.key() }),
-      onError: (error) => toast.error("No se pudo cancelar", error.message),
-    })
-  );
   const [asking, setAsking] = useState<string | null>(null);
   const [all, setAll] = useState(false);
   const mine = (requests.data ?? []).filter((request) => request.eventId === draft.id);
-  const open = mine.find((request) => request.status === "pending");
+  const open = mine.find((request) => request.status === "pending" || request.status === "proposed");
   const pending = new Set(
     (requests.data ?? []).filter((request) => request.status === "pending").map((request) => request.venue.id)
   );
   const ranked = venues.data ?? [];
   const shown = all ? ranked : ranked.slice(0, 4);
+  const facts = draft.venue ? factLines(draft.venue.facts) : [];
+  const moved =
+    notified !== null &&
+    (notified.mode !== draft.mode ||
+      (notified.placeName ?? "") !== (draft.placeName ?? "") ||
+      (notified.placeAddress ?? "") !== (draft.placeAddress ?? ""));
+  // "Repetir": last time's space, offered again (never asked by itself)
+  const before = draft.copiedFrom?.venue;
+  const askAgain = before && !draft.venue && !open ? ranked.find((venue) => venue.id === before.id) : undefined;
 
   return (
-    <SettingsSection id="espacio" title="Dónde">
+    <SettingsSection actions={<NotifyChip show={moved} />} id="espacio" title="Dónde">
       <ChoiceCards name="Modalidad" options={MODES} value={draft.mode} onChange={(mode) => set({ mode })} />
       {inPerson ? (
         <SettingsCard className="mt-3">
           {draft.venue ? (
             <SettingsRow hint="Aceptó el pedido: la dirección la ven quienes se anoten." label="Espacio">
-              <div className="flex items-center gap-2.5 rounded-md border border-success/40 bg-success-surface px-3 py-2">
-                <Building2 aria-hidden className="size-4 text-success" />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-ui font-medium text-foreground">{draft.venue.name}</span>
-                  <span className="block truncate text-meta text-muted-foreground">
-                    {draft.venue.neighbourhood} · {draft.venue.address}
+              <div className="flex flex-col gap-1.5 rounded-md border border-success/40 bg-success-surface px-3 py-2">
+                <div className="flex items-center gap-2.5">
+                  <Building2 aria-hidden className="size-4 text-success" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-ui font-medium text-foreground">{draft.venue.name}</span>
+                    <span className="block truncate text-meta text-muted-foreground">
+                      {draft.venue.neighbourhood} · {draft.venue.address}
+                    </span>
                   </span>
-                </span>
+                </div>
+                {facts.length > 0 ? (
+                  <ul aria-label="Cómo es el espacio" className="pl-6.5 text-meta text-muted-foreground">
+                    {facts.map((fact) => (
+                      <li key={fact}>{fact}</li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             </SettingsRow>
           ) : (
             <>
-              {mine.length > 0 ? (
+              {requests.isError ? (
+                <ErrorState
+                  className="m-3"
+                  compact
+                  title="No pudimos traer tus pedidos"
+                  onRetry={() => void requests.refetch()}
+                />
+              ) : mine.length > 0 ? (
                 <RequestList
                   className="m-3"
+                  communityId={community.id}
                   requests={mine}
                   title="Pedidos para este evento"
-                  onCancel={(requestId) => cancelRequest.mutate({ communityId: community.id, requestId })}
+                  onChanged={refresh}
                 />
+              ) : null}
+              {before && !open ? (
+                <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+                  <Building2 aria-hidden className="size-4 text-muted-foreground" />
+                  <p className="min-w-0 flex-1 text-ui text-foreground">La última vez fue en {before.name}.</p>
+                  {askAgain ? (
+                    <Button size="sm" variant="outline" onClick={() => setAsking(askAgain.id)}>
+                      Pedírselo de nuevo
+                    </Button>
+                  ) : venues.isSuccess ? (
+                    <span className="text-meta text-muted-foreground">Ahora no está recibiendo pedidos.</span>
+                  ) : null}
+                </div>
               ) : null}
               {open ? null : (
                 <div className="flex flex-col gap-2 border-b border-border p-3">
-                  <MicroLabel>
-                    {draft.sizeBucket || draft.needs.length > 0 || draft.dateChosen
-                      ? "Los que mejor encajan con tu evento"
-                      : "Espacios"}
-                  </MicroLabel>
-                  {venues.isPending ? (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <MicroLabel>
+                      {draft.sizeBucket || draft.needs.length > 0 || draft.dateChosen
+                        ? "Los que mejor encajan con tu evento"
+                        : "Espacios"}
+                    </MicroLabel>
+                    {ranked.some((venue) => venue.requestable) ? (
+                      <Button size="sm" variant="outline" onClick={() => setAsking("broadcast")}>
+                        Pedir a varios a la vez
+                      </Button>
+                    ) : null}
+                  </div>
+                  {venues.isError ? (
+                    <ErrorState compact title="No pudimos traer los espacios" onRetry={() => void venues.refetch()} />
+                  ) : venues.isPending ? (
                     <Skeleton className="h-28 rounded-lg" />
                   ) : ranked.length === 0 ? (
                     <p className="text-meta text-muted-foreground">Todavía no hay espacios cargados.</p>
@@ -583,13 +827,15 @@ export function StepLugar({ draft, set, errors, community, today, refresh }: Ste
       ) : null}
       <RequestComposer
         community={community}
+        needs={want.needs}
+        presetAttendees={draft.capacity ?? (draft.sizeBucket ? SIZE_PEOPLE[draft.sizeBucket] : undefined)}
         presetEventId={draft.id}
+        target={asking === "broadcast" ? "broadcast" : (ranked.find((venue) => venue.id === asking) ?? null)}
         today={today}
-        venue={(venues.data ?? []).find((venue) => venue.id === asking) ?? null}
         onClose={() => setAsking(null)}
         onSent={() => {
           setAsking(null);
-          void queryClient.invalidateQueries({ queryKey: orpc.venues.requests.key() });
+          void queryClient.invalidateQueries({ queryKey: orpc.venues.key() });
           refresh();
         }}
       />
@@ -621,29 +867,11 @@ const REGISTRATIONS: {
   { value: "none", title: "Sin inscripción", hint: "Entrada libre, sin anotarse", icon: CircleCheck },
 ];
 
-const PRESETS = [
-  "¿Es tu primera vez en un evento de la comunidad?",
-  "Empresa o institución",
-  "¿Necesitás algo para participar?",
-];
-
 /** "18:30" on Montevideo's clock, for a time input */
 const clockOf = (iso: string) => shortWhen(iso).split(" · ")[1] ?? "19:00";
 
-/** The capacity hint, from how many of this community's people actually come */
-function useShowUpHint(communityId: string) {
-  const showUp = useQuery({ ...orpc.events.showUp.queryOptions({ input: { communityId } }), staleTime: 10 * 60_000 });
-  const rate = showUp.data?.rate;
-  if (rate === null || rate === undefined) {
-    return "A los eventos gratis falta cerca de un tercio de quienes se anotan: si entran 50, abrí unos 70.";
-  }
-  const percent = Math.round(rate * 100);
-
-  return `A tus eventos vino el ${percent} % de los anotados: si entran 50, abrí unos ${Math.round(50 / rate / 5) * 5}.`;
-}
-
 export function StepInscripcion({ draft, set, errors, community }: StepProps) {
-  const showUpHint = useShowUpHint(community.id);
+  const showUpHint = useCapacityHint(community.id);
   const closes = draft.rsvpClosesAt;
   const question = (index: number, change: Partial<EditableEvent["questions"][number]>) =>
     set({ questions: draft.questions.map((item, at) => (at === index ? { ...item, ...change } : item)) });
@@ -705,7 +933,7 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
         <SettingsCard className="mt-3">
           <SettingsRow error={errors.capacity} hint={showUpHint} htmlFor="capacity" label="Cupo">
             <Input
-              className="w-28 font-terminal tabular-nums"
+              className="w-36 font-terminal tabular-nums"
               id="capacity"
               inputMode="numeric"
               min={1}
@@ -725,9 +953,20 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
           </SettingsRow>
           <SettingsRow
             error={errors.rsvpClosesAt}
-            hint={closes ? "Después de esa hora ya no se anota nadie." : "Sin cierre: se anotan hasta que empieza."}
+            hint={
+              <>
+                {closes
+                  ? "Después de esa hora ya no se anota nadie; quien llegue entra en la puerta."
+                  : RSVP_CLOSE_HINT}
+                <StaleHint draft={draft} field="rsvpClosesAt" set={set} />
+              </>
+            }
             htmlFor="rsvp-closes"
-            label="Cierre de inscripción"
+            label={
+              <>
+                Cierre de inscripción <Revisa draft={draft} field="rsvpClosesAt" />
+              </>
+            }
           >
             {closes ? (
               <div className="flex items-center gap-2">
@@ -744,7 +983,7 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
                   }
                 />
                 <Button
-                  aria-label="Sin cierre"
+                  aria-label="Que cierre cuando empieza"
                   size="icon-sm"
                   variant="ghost"
                   onClick={() => set({ rsvpClosesAt: null })}
@@ -756,12 +995,10 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
               <Button
                 size="xs"
                 variant="outline"
-                onClick={() =>
-                  set({ rsvpClosesAt: new Date(Date.parse(draft.startDate) - 2 * 3_600_000).toISOString() })
-                }
+                onClick={() => set({ rsvpClosesAt: suggestedCloseAt(draft.startDate) })}
               >
                 <Plus />
-                Poner un cierre
+                Otro horario de cierre
               </Button>
             )}
           </SettingsRow>
@@ -785,51 +1022,91 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
               </SelectContent>
             </Select>
           </SettingsRow>
-          <SettingsRow hint="Hasta 5, cortas. Nada sensible (salud, documento)." label="Preguntas">
+          <SettingsRow
+            hint="Hasta 5, cortas. «Primera vez» no hace falta: lo sabemos por la asistencia."
+            label="Preguntas"
+          >
             <div className="flex flex-col gap-2">
               {draft.questions.map((item, index) => (
-                <div key={item.id} className="flex items-center gap-2">
-                  <Input
-                    aria-label={`Pregunta ${index + 1}`}
-                    maxLength={200}
-                    value={item.label}
-                    onChange={(event) => question(index, { label: event.target.value })}
-                  />
-                  <label className="flex shrink-0 items-center gap-1.5 text-meta text-muted-foreground">
-                    <Switch checked={item.required} onCheckedChange={(required) => question(index, { required })} />
-                    Obligatoria
-                  </label>
-                  <Button
-                    aria-label={`Quitar la pregunta ${index + 1}`}
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() => set({ questions: draft.questions.filter((_, at) => at !== index) })}
-                  >
-                    <Trash2 />
-                  </Button>
+                <div key={item.id} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      aria-label={`Pregunta ${index + 1}`}
+                      maxLength={200}
+                      value={item.label}
+                      onChange={(event) => question(index, { label: event.target.value })}
+                    />
+                    <label className="flex shrink-0 items-center gap-1.5 text-meta text-muted-foreground">
+                      <Switch
+                        aria-label={`Pregunta ${index + 1} obligatoria`}
+                        checked={item.required}
+                        onCheckedChange={(required) => question(index, { required })}
+                      />
+                      Obligatoria
+                    </label>
+                    <Button
+                      aria-label={`Quitar la pregunta ${index + 1}`}
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() => set({ questions: draft.questions.filter((_, at) => at !== index) })}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                  {item.options?.length ? (
+                    <p className="text-meta text-muted-foreground">Opciones: {item.options.join(" · ")}</p>
+                  ) : null}
+                  {item.preset === "ci" ? (
+                    <p className="text-meta text-warning-foreground">
+                      Dato sensible: lo ven quienes administran la comunidad y la seguridad del espacio; se borra a la
+                      semana del evento.
+                    </p>
+                  ) : null}
                 </div>
               ))}
               {draft.questions.length < 5 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  <Button size="xs" variant="outline" onClick={() => add()}>
+                <div className="flex flex-col gap-1.5">
+                  <Button className="self-start" size="xs" variant="outline" onClick={() => add()}>
                     <Plus />
                     Pregunta
                   </Button>
-                  {PRESETS.filter((preset) => !draft.questions.some((item) => item.label === preset)).map((preset) => (
-                    <Button key={preset} size="xs" variant="ghost" onClick={() => add(preset)}>
-                      {preset}
-                    </Button>
-                  ))}
+                  <QuestionPresets draft={draft} set={set} />
                 </div>
               ) : null}
             </div>
           </SettingsRow>
+          <VolunteerRoles draft={draft} set={set} />
+          <SettingsRow
+            error={errors.reminderNote}
+            hint={
+              <>
+                Va en el recordatorio de 48 h y en el de 2 h: cómo entrar, qué traer.
+                <StaleHint draft={draft} field="reminderNote" set={set} />
+              </>
+            }
+            htmlFor="reminder-note"
+            label={
+              <>
+                Nota en los recordatorios <Revisa draft={draft} field="reminderNote" />
+              </>
+            }
+          >
+            <Textarea
+              id="reminder-note"
+              maxLength={500}
+              placeholder="Entrada por la puerta lateral. Traé tu cédula para el edificio."
+              rows={2}
+              value={draft.reminderNote ?? ""}
+              onChange={(event) => set({ reminderNote: event.target.value || null })}
+            />
+          </SettingsRow>
           <SettingsRow hint="Lo mandamos solos; no hace falta hacer nada." label="Mails">
             <ul className="flex flex-col gap-1 text-meta text-muted-foreground">
               <li>Confirmación al anotarse, con la invitación para el calendario</li>
-              <li>Recordatorio 48 h antes, con «No puedo ir» para liberar el lugar</li>
+              <li>Recordatorio 48 h antes, con «Voy ✅» y «No puedo ir» para liberar el lugar</li>
+              <li>Un segundo aviso 24 h antes a quien no confirmó, si hay cupo o lista de espera</li>
               <li>Cómo llegar, 2 h antes</li>
-              <li>Feedback, al día siguiente</li>
+              <li>La encuesta. {FEEDBACK_TIMING}</li>
             </ul>
           </SettingsRow>
         </SettingsCard>
@@ -861,7 +1138,12 @@ function CopyRow({ label, value, html }: { label: string; value: string; html?: 
         disabled={!value}
         size="icon-sm"
         variant="ghost"
-        onClick={() => void copyRich(value, html?.()).then(() => toast.success(`${label} copiado`))}
+        onClick={() =>
+          void copyRich(value, html?.()).then(
+            () => toast.success(`${label} copiado`),
+            () => toast.error("No se pudo copiar", "Seleccioná el texto y copialo a mano.")
+          )
+        }
       >
         <Copy />
       </Button>
@@ -879,13 +1161,52 @@ const placeText = (draft: EditableEvent) =>
         ? [draft.placeName, draft.placeAddress].filter(Boolean).join(", ")
         : "Lugar a confirmar";
 
-export function StepDifusion({ draft, set, errors, community }: StepProps) {
+/**
+ * What to paste into Meetup when creating the event there (title, description with its format,
+ * date, place) and a link to the community's group. Also in the dashboard's Difusión.
+ */
+export function MeetupCopy({ draft, communitySlug }: { draft: EditableEvent; communitySlug: string }) {
   const rendered = useRef<HTMLDivElement>(null);
   const profile = useQuery({
-    ...orpc.communities.getBySlug.queryOptions({ input: { communitySlug: community.slug } }),
+    ...orpc.communities.getBySlug.queryOptions({ input: { communitySlug } }),
     staleTime: 10 * 60_000,
   });
   const meetupGroup = profile.data?.links.meetup;
+  const when = draft.dateChosen ? shortWhen(draft.startDate) : "Fecha a confirmar";
+
+  return (
+    <div>
+      <div className="rounded-md border border-border px-3">
+        <CopyRow label="Título" value={draft.name === UNTITLED ? "" : draft.name.slice(0, 80)} />
+        <CopyRow
+          html={() => rendered.current?.innerHTML}
+          label="Descripción"
+          value={[draft.summary, draft.description].filter(Boolean).join("\n\n")}
+        />
+        <CopyRow label="Fecha" value={when} />
+        <CopyRow label="Lugar" value={placeText(draft)} />
+      </div>
+      {/* The description as HTML, for pasting into Meetup with its format */}
+      <div ref={rendered} aria-hidden className="hidden">
+        {draft.summary ? <p>{draft.summary}</p> : null}
+        <RichText content={draft.description ?? ""} />
+      </div>
+      {draft.name.length > 80 ? (
+        <p className="mt-1 text-meta text-warning-foreground">El nombre tiene más de 80 caracteres: Meetup lo corta.</p>
+      ) : null}
+      {meetupGroup ? (
+        <Button asChild className="mt-2" size="xs" variant="outline">
+          <a href={meetupGroup} rel="noreferrer" target="_blank">
+            <ExternalLink />
+            Abrir el grupo en Meetup
+          </a>
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+export function StepDifusion({ draft, set, errors, community }: StepProps) {
   const channels = draft.announcement.channels ?? [];
   const toggleChannel = (channel: "slack" | "telegram", on: boolean) =>
     set({
@@ -926,34 +1247,7 @@ export function StepDifusion({ draft, set, errors, community }: StepProps) {
           }
           label="Copiar a Meetup"
         >
-          <div className="rounded-md border border-border px-3">
-            <CopyRow label="Título" value={draft.name === UNTITLED ? "" : draft.name.slice(0, 80)} />
-            <CopyRow
-              html={() => rendered.current?.innerHTML}
-              label="Descripción"
-              value={[draft.summary, draft.description].filter(Boolean).join("\n\n")}
-            />
-            <CopyRow label="Fecha" value={when} />
-            <CopyRow label="Lugar" value={placeText(draft)} />
-          </div>
-          {/* The description as HTML, for pasting into Meetup with its format */}
-          <div ref={rendered} aria-hidden className="hidden">
-            {draft.summary ? <p>{draft.summary}</p> : null}
-            <RichText content={draft.description ?? ""} />
-          </div>
-          {draft.name.length > 80 ? (
-            <p className="mt-1 text-meta text-warning-foreground">
-              El nombre tiene más de 80 caracteres: Meetup lo corta.
-            </p>
-          ) : null}
-          {meetupGroup ? (
-            <Button asChild className="mt-2" size="xs" variant="outline">
-              <a href={meetupGroup} rel="noreferrer" target="_blank">
-                <ExternalLink />
-                Abrir el grupo en Meetup
-              </a>
-            </Button>
-          ) : null}
+          <MeetupCopy communitySlug={community.slug} draft={draft} />
         </SettingsRow>
         <SettingsRow error={errors.externalLinks} htmlFor="meetup-url" label="Link del evento en Meetup">
           <Input
@@ -966,9 +1260,11 @@ export function StepDifusion({ draft, set, errors, community }: StepProps) {
         </SettingsRow>
         <SettingsRow
           hint={
-            draft.announceChannels.slack || draft.announceChannels.telegram
-              ? "Owy lo publica cuando el evento sale: el texto se arma con los datos del evento."
-              : "Owy todavía no puede escribir desde el sitio."
+            draft.status !== "draft"
+              ? "Owy anuncia un evento en el momento de publicarlo; este ya salió, así que ya no se suma."
+              : draft.announceChannels.slack || draft.announceChannels.telegram
+                ? "Owy lo publica cuando el evento sale: el texto se arma con los datos del evento."
+                : "Owy todavía no puede escribir desde el sitio."
           }
           label="Que lo anuncie Owy"
         >
@@ -1003,8 +1299,99 @@ export function StepDifusion({ draft, set, errors, community }: StepProps) {
             <CopyRow label="Mensaje" value={share} />
           </div>
         </SettingsRow>
+        <SettingsRow
+          hint="Para Instagram, LinkedIn o un grupo: con el nombre, la fecha y el lugar que tenga ahora."
+          label="Tarjetas para compartir"
+        >
+          <div className="flex flex-wrap gap-1.5">
+            <CardLink format="cuadrada" id={draft.id} kind="evento" label="Cuadrada" />
+            <CardLink format="historia" id={draft.id} kind="evento" label="Historia" />
+          </div>
+        </SettingsRow>
       </SettingsCard>
     </SettingsSection>
+  );
+}
+
+const REGISTRATION_LABEL: Record<EditableEvent["registration"], string> = {
+  owu: "Con OWU",
+  eventbrite: "En Eventbrite",
+  external: "En otro sitio",
+  none: "Sin inscripción",
+};
+
+/**
+ * GOV.UK's "check your answers": the event step by step as it stands, each with "Cambiar" back to
+ * where it's edited. A published event's Editar opens here.
+ */
+function CheckAnswers({ draft, onGo }: { draft: EditableEvent; onGo: (step: StepKey) => void }) {
+  const talks = draft.talks.filter((talk) => talk.title.trim());
+  const channels = draft.announcement.channels ?? [];
+  const rows: { step: StepKey; label: string; value: string }[] = [
+    {
+      step: "tipo",
+      label: "Tipo",
+      value:
+        [
+          FORMAT.find((format) => format.value === draft.format)?.title,
+          draft.sizeBucket ? SIZE_LABEL[draft.sizeBucket] : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || "Sin elegir",
+    },
+    { step: "datos", label: "Nombre", value: draft.name === UNTITLED ? "Sin nombre" : draft.name },
+    { step: "datos", label: "Resumen", value: draft.summary || "Sin resumen" },
+    {
+      step: "datos",
+      label: "Charlas",
+      value: talks.length > 0 ? talks.map((talk) => talk.title).join(" · ") : "Ninguna",
+    },
+    { step: "fecha", label: "Fecha", value: draft.dateChosen ? shortWhen(draft.startDate) : "Sin fecha" },
+    { step: "espacio", label: "Lugar", value: placeText(draft) + (draft.mode === "hibrido" ? " · y online" : "") },
+    {
+      step: "inscripcion",
+      label: "Inscripción",
+      value:
+        REGISTRATION_LABEL[draft.registration] +
+        (draft.registration === "owu" ? ` · ${draft.capacity ? `${draft.capacity} lugares` : "sin cupo"}` : ""),
+    },
+    {
+      step: "difusion",
+      label: "Difusión",
+      value:
+        [
+          "owu.uy",
+          draft.externalLinks.meetup ? "Meetup" : "",
+          ...channels.map((channel) => (channel === "slack" ? "Slack" : "Telegram")),
+        ]
+          .filter(Boolean)
+          .join(" · ") || "owu.uy",
+    },
+  ];
+
+  return (
+    <SettingsCard className="py-1">
+      <dl>
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5 border-b border-border py-2.5 last:border-0"
+          >
+            <dt className="w-28 shrink-0 text-meta text-muted-foreground">{row.label}</dt>
+            <dd className="min-w-0 flex-1 text-ui text-foreground">{row.value}</dd>
+            <dd>
+              <button
+                className="min-h-6 text-meta text-foreground underline underline-offset-4 hover:text-primary"
+                type="button"
+                onClick={() => onGo(row.step)}
+              >
+                Cambiar<span className="sr-only"> {row.label.toLowerCase()}</span>
+              </button>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </SettingsCard>
   );
 }
 
@@ -1039,14 +1426,22 @@ export function StepRevisar({
     })
   );
   const ref = { communityId: community.id, eventId: draft.id };
+  // The responders' picker is right here: "Resolver" brings it into view
+  const resolve = (step: StepKey) => {
+    if (step !== "revisar") return onGo(step);
+    const picker = document.getElementById("conducta");
+    picker?.scrollIntoView({ block: "center" });
+    picker?.focus({ preventScroll: true });
+  };
 
   return (
-    <SettingsSection id="revisar" title={draft.status === "published" ? "Publicado" : "Antes de publicar"}>
-      <SettingsCard className="py-3">
+    <SettingsSection id="revisar" title={draft.status === "published" ? "Cómo está publicado" : "Antes de publicar"}>
+      <CheckAnswers draft={draft} onGo={onGo} />
+      <SettingsCard className="mt-3 py-3">
         {list.length === 0 ? (
           <p className="flex items-center gap-2 py-2 text-ui text-foreground">
             <CircleCheck aria-hidden className="size-4 text-success" />
-            Está todo. Listo para publicar.
+            {draft.status === "draft" ? "Está todo. Listo para publicar." : "Está todo."}
           </p>
         ) : (
           <ul className="flex flex-col">
@@ -1064,7 +1459,12 @@ export function StepRevisar({
                 <Badge variant={issue.level === "required" ? "destructive" : "secondary"}>
                   {issue.level === "required" ? "Falta" : "Sugerido"}
                 </Badge>
-                <Button size="xs" variant="outline" onClick={() => onGo(issue.step)}>
+                <Button
+                  aria-label={`Resolver: ${issue.text}`}
+                  size="xs"
+                  variant="outline"
+                  onClick={() => resolve(issue.step)}
+                >
                   Resolver
                 </Button>
               </li>
@@ -1072,6 +1472,13 @@ export function StepRevisar({
           </ul>
         )}
       </SettingsCard>
+      <Panel className="mt-3 scroll-mt-24 px-4 py-4 md:px-5" id="conducta" tabIndex={-1}>
+        <h3 className="mb-3 flex items-center gap-2 text-ui font-medium text-foreground">
+          <ShieldCheck aria-hidden className="size-4 text-muted-foreground" />
+          Responsables de conducta
+        </h3>
+        <ResponderPicker disabled={draft.status === "cancelled"} eventId={draft.id} />
+      </Panel>
       {draft.status === "draft" ? (
         <SettingsCard className="mt-3">
           <SettingsRow

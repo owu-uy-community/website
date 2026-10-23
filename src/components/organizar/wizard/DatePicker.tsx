@@ -8,36 +8,33 @@ import { cn } from "app/lib/utils";
 import { MicroLabel } from "components/Admin/ui/page";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
+import { Input } from "components/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { addDays, weekdayOf } from "lib/calendar/holidays";
 import { monthRange, shiftMonth } from "lib/calendar/items";
-import { dayKey, shortWhen } from "lib/community/time";
+import { clockTime, dayKey, shortWhen } from "lib/community/time";
+import { HOLD_DAYS } from "lib/organizar/rules";
+import {
+  DEFAULT_DURATION,
+  DEFAULT_START,
+  TIME_STEP_SECONDS,
+  durationLabel,
+  durationsWith,
+  isDuration,
+  isStartTime,
+  longDay,
+  monthTitle,
+  shortDay,
+} from "lib/organizar/times";
+import { plural } from "lib/organizar/words";
 import { orpc } from "lib/orpc/client";
 import type { EditableEvent } from "lib/orpc/events/schemas";
 
-import { LEVEL, REASON } from "../calendar/CalendarClient";
+import { LEVEL, REASON, scoreHint, why } from "../calendar/CalendarClient";
 
-const TIMES = ["18:00", "18:30", "19:00", "19:30", "20:00"];
-const DURATIONS = [
-  { value: 60, label: "1 h" },
-  { value: 90, label: "1 h 30" },
-  { value: 120, label: "2 h" },
-  { value: 180, label: "3 h" },
-  { value: 240, label: "4 h" },
-];
 const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
-
-const clockOf = (iso: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    timeZone: "America/Montevideo",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
-const onDay = (day: string, options: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat("es-UY", { timeZone: "UTC", ...options }).format(new Date(`${day}T12:00:00Z`));
 
 /**
  * Step 3: the community's calendar in small. A draft reserves its date here (every organizer sees
@@ -60,27 +57,34 @@ export function DatePicker({
   // Without a date yet, open where there's time to promote it (three weeks out)
   const [month, setMonth] = useState((event.dateChosen ? current : addDays(today, 21)).slice(0, 7));
   const [day, setDay] = useState<string | null>(event.dateChosen ? current : null);
-  const initialTime = clockOf(event.startDate);
-  const [startTime, setStartTime] = useState(TIMES.includes(initialTime) ? initialTime : "19:00");
+  const initialTime = clockTime(event.startDate);
+  // Without a date yet, the community's usual start ("Lo de siempre"), which the calendar says
+  const [chosenTime, setChosenTime] = useState<string | null>(event.dateChosen ? initialTime : null);
   const initialLength = Math.round((Date.parse(event.endDate) - Date.parse(event.startDate)) / 60_000);
-  const [durationMin, setDurationMin] = useState(
-    DURATIONS.some((option) => option.value === initialLength) ? initialLength : 120
-  );
+  const [durationMin, setDurationMin] = useState(isDuration(initialLength) ? initialLength : DEFAULT_DURATION);
 
   const plan = useQuery(
     orpc.calendar.plan.queryOptions({
-      input: { communityId, month, startTime, durationMin, venueId: event.venueId ?? undefined },
+      input: {
+        communityId,
+        month,
+        startTime: chosenTime ?? undefined,
+        durationMin,
+        venueId: event.venueId ?? undefined,
+      },
       placeholderData: keepPreviousData,
     })
   );
+  const usual = plan.data?.usualStart ?? DEFAULT_START;
+  const startTime = chosenTime ?? plan.data?.startTime ?? usual;
   const hold = useMutation(
     orpc.events.hold.mutationOptions({
       onSuccess: (result) => {
         toast.success(
           `Reservaste el ${shortWhen(result.startDate)}`,
           result.headsUp > 0
-            ? "Le avisamos a las comunidades con público parecido."
-            : "Todas las comunidades la ven por 14 días."
+            ? `Le avisamos a ${plural(result.headsUp, "comunidad", "comunidades")} con público parecido.`
+            : `Todas las comunidades la ven por ${HOLD_DAYS} días.`
         );
         onHeld();
       },
@@ -117,9 +121,7 @@ export function DatePicker({
           >
             <ChevronLeft />
           </Button>
-          <span className="font-terminal text-ui text-foreground tabular-nums first-letter:uppercase">
-            {onDay(`${month}-15`, { month: "long", year: "numeric" })}
-          </span>
+          <span className="font-terminal text-ui text-foreground tabular-nums">{monthTitle(month)}</span>
           <Button
             aria-label="Mes siguiente"
             size="icon-sm"
@@ -140,11 +142,12 @@ export function DatePicker({
             const score = scores.get(cell);
             const level = score ? LEVEL[score.level] : null;
             const inMonth = cell >= from && cell <= to;
+            // Named by what shows plus what a screen reader needs: "jueves 12 de noviembre, Libre"
+            const [weekday, , ...rest] = longDay(cell).split(" ");
 
             return (
               <button
                 key={cell}
-                aria-label={`${onDay(cell, { weekday: "long", day: "numeric", month: "long" })}${level ? `, ${level.label}` : ""}`}
                 aria-pressed={cell === day}
                 className={cn(
                   "relative flex aspect-square flex-col items-center justify-center rounded-md border border-transparent font-terminal text-meta tabular-nums transition-colors",
@@ -154,10 +157,17 @@ export function DatePicker({
                   cell === current && event.dateChosen && cell !== day && "border-dashed border-info/70"
                 )}
                 disabled={!inMonth || score?.blocked}
+                title={score && inMonth ? scoreHint(score) : undefined}
                 type="button"
                 onClick={() => setDay(cell)}
               >
+                <span className="sr-only">{weekday} </span>
                 {Number(cell.slice(8))}
+                <span className="sr-only">
+                  {" "}
+                  {rest.join(" ")}
+                  {level ? `, ${level.label}` : ""}
+                </span>
                 {inMonth && level && !score?.blocked ? (
                   <level.icon aria-hidden className={cn("absolute right-0.5 bottom-0.5 size-2.5", level.tone)} />
                 ) : null}
@@ -168,31 +178,44 @@ export function DatePicker({
             );
           })}
         </div>
-        <div className="flex gap-2">
-          <Select value={startTime} onValueChange={setStartTime}>
-            <SelectTrigger aria-label="Hora de inicio" className="flex-1 font-terminal tabular-nums">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TIMES.map((time) => (
-                <SelectItem key={time} className="font-terminal tabular-nums" value={time}>
-                  {time}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="date-start">
+            Hora de inicio
+          </label>
+          <Input
+            className="w-[104px] font-terminal tabular-nums"
+            id="date-start"
+            step={TIME_STEP_SECONDS}
+            type="time"
+            value={startTime}
+            onChange={(change) => {
+              const [hours, minutes] = change.target.value.split(":").map(Number);
+              if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+              const snapped = `${String(hours).padStart(2, "0")}:${String(Math.floor(minutes / 15) * 15).padStart(2, "0")}`;
+              if (isStartTime(snapped)) setChosenTime(snapped);
+            }}
+          />
           <Select value={String(durationMin)} onValueChange={(value) => setDurationMin(Number(value))}>
-            <SelectTrigger aria-label="Duración" className="flex-1 font-terminal tabular-nums">
+            <SelectTrigger aria-label="Duración" className="w-[140px] font-terminal tabular-nums">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {DURATIONS.map((option) => (
-                <SelectItem key={option.value} className="font-terminal tabular-nums" value={String(option.value)}>
-                  {option.label}
+              {durationsWith(durationMin).map((value) => (
+                <SelectItem key={value} className="font-terminal tabular-nums" value={String(value)}>
+                  {durationLabel(value)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {startTime === usual ? null : (
+            <button
+              className="h-8 rounded-md px-1 text-meta text-foreground underline underline-offset-2"
+              type="button"
+              onClick={() => setChosenTime(usual)}
+            >
+              Lo de siempre: <span className="font-terminal tabular-nums">{usual}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -206,17 +229,16 @@ export function DatePicker({
               return (
                 <button
                   key={entry.day}
-                  className="flex items-center gap-2.5 rounded-md border border-border px-2.5 py-2 text-left transition-colors hover:bg-raised"
+                  className="flex items-start gap-2.5 rounded-md border border-border px-2.5 py-2 text-left transition-colors hover:bg-raised"
+                  title={scoreHint(entry)}
                   type="button"
                   onClick={() => setDay(entry.day)}
                 >
-                  <level.icon aria-hidden className={cn("size-3.5", level.tone)} />
-                  <span className="font-terminal text-ui text-foreground tabular-nums">
-                    {onDay(entry.day, { weekday: "short", day: "numeric", month: "short" }).replaceAll(".", "")}
+                  <level.icon aria-hidden className={cn("mt-0.5 size-3.5 shrink-0", level.tone)} />
+                  <span className="shrink-0 font-terminal text-ui text-foreground tabular-nums">
+                    {shortDay(entry.day)}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-meta text-muted-foreground">
-                    {(entry.reasons.find((reason) => reason.tone !== "ok") ?? entry.reasons[0])?.text}
-                  </span>
+                  <span className="min-w-0 flex-1 text-meta text-muted-foreground">{why(entry)}</span>
                 </button>
               );
             })}
@@ -226,15 +248,13 @@ export function DatePicker({
         {day && chosen ? (
           <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-raised/40 p-3">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-ui font-medium text-foreground first-letter:uppercase">
-                {onDay(day, { weekday: "long", day: "numeric", month: "long" }).replace(",", "")}
-              </span>
-              <Badge variant={LEVEL[chosen.level].badge}>
-                {LEVEL[chosen.level].label} · <span className="font-terminal tabular-nums">{chosen.score}</span>
+              <span className="text-ui font-medium text-foreground">{longDay(day)}</span>
+              <Badge title={scoreHint(chosen)} variant={LEVEL[chosen.level].badge}>
+                {LEVEL[chosen.level].label}
               </Badge>
             </div>
             <ul className="flex flex-col gap-1">
-              {chosen.reasons.slice(0, 4).map((reason) => {
+              {chosen.reasons.map((reason) => {
                 const { icon: Icon, tone } = REASON[reason.tone];
 
                 return (
@@ -255,7 +275,7 @@ export function DatePicker({
               </Button>
             ) : (
               <Button
-                disabled={hold.isPending || unchanged}
+                disabled={hold.isPending || unchanged || !plan.data}
                 onClick={() => hold.mutate({ communityId, eventId: event.id, day, startTime, durationMin })}
               >
                 <Bookmark />
@@ -265,7 +285,7 @@ export function DatePicker({
             <p className="text-meta text-muted-foreground">
               {published
                 ? "Quienes se anotaron reciben el cambio y la invitación actualizada."
-                : "Todas las comunidades la ven por 14 días; la renovás desde Inicio."}
+                : `Todas las comunidades la ven por ${HOLD_DAYS} días; la renovás desde Inicio.`}
             </p>
           </div>
         ) : null}

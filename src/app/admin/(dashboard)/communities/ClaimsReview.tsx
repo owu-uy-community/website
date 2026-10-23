@@ -51,8 +51,16 @@ export function ClaimsReview() {
                 {claim.user.email} · <RelativeTime className="text-meta" date={claim.createdAt} />
                 {claim.message ? ` · «${claim.message}»` : ""}
               </p>
+              {claim.proposed ? (
+                <p className="truncate text-meta text-muted-foreground">
+                  No está en el directorio: al aprobar, la sumamos como /comunidad/{claim.community.slug}
+                  {claim.community.topics.length ? ` · ${claim.community.topics.join(", ")}` : ""}
+                </p>
+              ) : null}
             </div>
-            {claim.community.hasOwner ? (
+            {claim.proposed ? (
+              <Badge variant="warning">Nueva comunidad</Badge>
+            ) : claim.community.hasOwner ? (
               <Badge variant="secondary">Ya tiene dueño</Badge>
             ) : (
               <Badge variant="info">Sin dueño</Badge>
@@ -80,7 +88,7 @@ export function ClaimsReview() {
                 onClick={() => decide.mutate({ claimId: claim.id, decision: "approve" })}
               >
                 <Check />
-                Aprobar
+                {claim.proposed ? "Aprobar y sumarla" : "Aprobar"}
               </Button>
             </div>
           </li>

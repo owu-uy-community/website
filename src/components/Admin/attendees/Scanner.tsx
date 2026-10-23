@@ -36,7 +36,14 @@ import { doorOf } from "./helpers";
 import { enqueue, flush, isTransient, readQueue, type QueuedScan } from "./scan-queue";
 
 type Tone = "ok" | "warn" | "bad" | "queued";
-type Shown = { tone: Tone; label: string; title: string; detail: string };
+type Shown = {
+  tone: Tone;
+  label: string;
+  title: string;
+  detail: string;
+  /** "Primera vez", the photo preference: what the door should know about whoever just came in */
+  chips?: string[];
+};
 
 /** Eventbrite tickets carry a QR; some printers use a plain barcode. */
 const FORMATS = ["qr_code", "code_128"] as const;
@@ -65,7 +72,26 @@ const TONES: Record<Tone, { box: string; icon: string; text: string; Icon: typeo
   },
 };
 
-function describe(result: ScanResult, timezone: string): Shown {
+/** The words at the door: Organizá's glossary for meetups ("hacer entrar"), the conf's own in /admin. */
+const WORDS = {
+  admin: {
+    title: "Check-in",
+    admit: "Acreditar",
+    admitting: "Acreditando…",
+    count: "acreditados",
+    help: "la mesa de ayuda",
+  },
+  organizar: {
+    title: "Puerta",
+    admit: "Hacer entrar",
+    admitting: "Haciendo entrar…",
+    count: "entraron",
+    help: "quien organiza",
+  },
+} as const;
+type Words = (typeof WORDS)[keyof typeof WORDS];
+
+function describe(result: ScanResult, timezone: string, words: Words): Shown {
   const person = result.attendee;
   const clock = (at: string | null | undefined) => (at ? formatClock(new Date(at), timezone) : "");
   switch (result.result) {
@@ -75,6 +101,7 @@ function describe(result: ScanResult, timezone: string): Shown {
         label: `Adelante · ${clock(result.scannedAt)}`,
         title: person?.name ?? "Adelante",
         detail: person?.ticketClass || "Entrada válida",
+        chips: [person?.firstTime ? "Primera vez" : "", person?.photo ?? ""].filter(Boolean),
       };
     case "repeat":
       return {
@@ -90,14 +117,14 @@ function describe(result: ScanResult, timezone: string): Shown {
         tone: "bad",
         label: person && person.status !== "attending" ? NOT_ATTENDING_LABEL[person.status] : "Entrada cancelada",
         title: person?.name ?? "Entrada cancelada",
-        detail: "No sirve para entrar: que pase por la mesa de ayuda.",
+        detail: `No sirve para entrar: que hable con ${words.help}.`,
       };
     case "unknown":
       return {
         tone: "bad",
         label: "Entrada no válida",
         title: "No es una entrada de este evento",
-        detail: "Que pase por la mesa de ayuda con su email.",
+        detail: `Que hable con ${words.help}, con su nombre o su email.`,
       };
   }
 }
@@ -115,22 +142,22 @@ type CameraState = "off" | "starting" | "on" | "denied" | "unavailable" | "unsup
 const CAMERA_PROBLEMS: Partial<Record<CameraState, { title: string; detail: string; retry: boolean }>> = {
   denied: {
     title: "Sin permiso para la cámara",
-    detail: "Habilitala en los ajustes del navegador, o acreditá con Buscar o Código.",
+    detail: "Habilitala en los ajustes del navegador, o usá Buscar o Código.",
     retry: true,
   },
   unavailable: {
     title: "La cámara no está disponible",
-    detail: "Si otra app la está usando, cerrala y probá de nuevo. Mientras, acreditá con Buscar o Código.",
+    detail: "Si otra app la está usando, cerrala y probá de nuevo. Mientras, usá Buscar o Código.",
     retry: true,
   },
   reader: {
     title: "No se pudo preparar el lector de QR",
-    detail: "La primera vez necesita señal. Probá de nuevo, o acreditá con Buscar o Código.",
+    detail: "La primera vez necesita señal. Probá de nuevo, o usá Buscar o Código.",
     retry: true,
   },
   unsupported: {
     title: "Este navegador no deja usar la cámara",
-    detail: "Acreditá con Buscar o Código.",
+    detail: "Usá Buscar o Código.",
     retry: false,
   },
 };
@@ -230,6 +257,7 @@ function ManualSearch({
   timezone,
   online,
   busy,
+  words,
   onPick,
 }: {
   eventId: string;
@@ -239,6 +267,7 @@ function ManualSearch({
   online: boolean;
   /** A check-in on its way: one at a time. */
   busy: boolean;
+  words: Words;
   onPick: (code: string) => void;
 }) {
   const [text, setText] = useState("");
@@ -262,21 +291,22 @@ function ManualSearch({
   const found = door ? volunteer : staff;
 
   return (
-    <div className="flex h-full flex-col gap-3 p-4">
+    // In the page's flow, not a fixed box: every match shows (ten at most), with its button
+    <div className="flex flex-col gap-3 p-4">
       <Input
         // The door is looking for someone: the keyboard should already be up.
         autoFocus
-        aria-label="Buscar por nombre o email"
+        aria-label={door ? "Buscar por nombre" : "Buscar por nombre o email"}
         autoComplete="off"
         autoCorrect="off"
         className="h-11 text-base"
         enterKeyHint="search"
-        placeholder="Nombre o email…"
+        placeholder={door ? "Nombre…" : "Nombre o email…"}
         spellCheck={false}
         value={text}
         onChange={(event) => setText(event.target.value)}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div>
         {!online ? (
           <p className="text-ui text-muted-foreground">
             Sin señal no se puede buscar: escribí el código de la entrada.
@@ -290,28 +320,28 @@ function ManualSearch({
         ) : found.data.rows.length === 0 ? (
           <p className="text-ui text-muted-foreground">Nadie con ese nombre o email.</p>
         ) : (
-          <ul className="divide-y divide-border">
+          <ul aria-label="Resultados" className="divide-y divide-border">
             {found.data?.rows.map((person) => (
               <li key={person.id} className="flex items-center gap-3 py-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[15px] font-medium text-foreground">{person.name}</p>
                   <p className="truncate text-meta text-muted-foreground">
                     {person.ticketClass}
-                    {person.checkedInAt
-                      ? ` · entró ${formatClock(new Date(person.checkedInAt), timezone)}`
-                      : person.status !== "attending"
-                        ? ` · ${NOT_ATTENDING_LABEL[person.status].toLowerCase()}`
-                        : ""}
+                    {!person.checkedInAt && person.status !== "attending"
+                      ? ` · ${NOT_ATTENDING_LABEL[person.status].toLowerCase()}`
+                      : ""}
                   </p>
                 </div>
-                <Button
-                  disabled={busy}
-                  size="touch"
-                  variant={person.checkedInAt ? "outline" : "default"}
-                  onClick={() => onPick(code(person))}
-                >
-                  Acreditar
-                </Button>
+                {person.checkedInAt ? (
+                  // Information, not an action: they're already in
+                  <span className="shrink-0 text-ui font-medium text-success-foreground tabular-nums">
+                    Ya entró {formatClock(new Date(person.checkedInAt), timezone)}
+                  </span>
+                ) : (
+                  <Button disabled={busy} size="touch" onClick={() => onPick(code(person))}>
+                    {words.admit}
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
@@ -321,7 +351,15 @@ function ManualSearch({
   );
 }
 
-function ManualCode({ busy, onSubmit }: { busy: boolean; onSubmit: (code: string) => Promise<boolean> }) {
+function ManualCode({
+  busy,
+  words,
+  onSubmit,
+}: {
+  busy: boolean;
+  words: Words;
+  onSubmit: (code: string) => Promise<boolean>;
+}) {
   const [text, setText] = useState("");
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -330,7 +368,7 @@ function ManualCode({ busy, onSubmit }: { busy: boolean; onSubmit: (code: string
   };
 
   return (
-    <form className="flex h-full flex-col gap-3 p-4" onSubmit={(event) => void submit(event)}>
+    <form className="flex flex-col gap-3 p-4" onSubmit={(event) => void submit(event)}>
       <label className="text-ui text-subtle" htmlFor="scanner-code">
         El número debajo del QR de la entrada
       </label>
@@ -349,7 +387,7 @@ function ManualCode({ busy, onSubmit }: { busy: boolean; onSubmit: (code: string
         onChange={(event) => setText(event.target.value)}
       />
       <Button disabled={!text.trim() || busy} size="touch" type="submit">
-        {busy ? "Acreditando…" : "Acreditar"}
+        {busy ? words.admitting : words.admit}
       </Button>
     </form>
   );
@@ -366,6 +404,7 @@ export function Scanner({
   timezone,
   backHref,
   door,
+  registration,
 }: {
   eventId: string;
   eventName: string;
@@ -374,7 +413,14 @@ export function Scanner({
   backHref?: string;
   /** A volunteer's door link: every call goes through it instead of a session */
   door?: string;
+  /**
+   * An Organizá event's sign-up: the door speaks Organizá's glossary and mentions Eventbrite only
+   * when people signed up there. Unset in /admin (the conf, Eventbrite's Organizer at the door).
+   */
+  registration?: "none" | "owu" | "external" | "eventbrite";
 }) {
+  const words = registration ? WORDS.organizar : WORDS.admin;
+  const eventbrite = registration ? registration === "eventbrite" : !door;
   const queryClient = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -476,7 +522,7 @@ export function Scanner({
       busyRef.current = true;
       setSending(true);
       try {
-        show(describe(await sendScan(scan), timezone));
+        show(describe(await sendScan(scan), timezone, words));
       } catch (error) {
         if (isTransient(error)) keep();
         else
@@ -492,7 +538,7 @@ export function Scanner({
       }
       return true;
     },
-    [device, eventId, sendScan, show, timezone]
+    [device, eventId, sendScan, show, timezone, words]
   );
 
   // Scans made without signal go out as soon as it's back (and every 15 s while some wait).
@@ -507,7 +553,7 @@ export function Scanner({
         const repeats = sent.filter((result) => result.result !== "ok").length;
         toast.success(
           sent.length === 1 ? "Se mandó 1 escaneo sin señal" : `Se mandaron ${sent.length} escaneos sin señal`,
-          repeats ? `${repeats} no eran válidos o ya habían entrado: revisá Llegadas.` : undefined
+          repeats ? `${repeats} no eran válidos o ya habían entrado: revisá la lista de quienes entraron.` : undefined
         );
       }
     };
@@ -609,9 +655,8 @@ export function Scanner({
     // One screen, controls included. The shell hides its tab bar here, so the bottom clears the home indicator.
     <div className="mx-auto flex min-h-(--admin-content-h) w-full max-w-md flex-col gap-3 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <div className="flex items-start gap-3">
-        {/* Phones get the shell's own back link in the header. */}
         {backHref ? (
-          <Button asChild aria-label="Volver a Asistentes" className="-ml-2 max-md:hidden" size="icon" variant="ghost">
+          <Button asChild aria-label="Volver" className="-ml-2" size="icon" variant="ghost">
             <Link href={backHref}>
               <ArrowLeft />
             </Link>
@@ -619,7 +664,7 @@ export function Scanner({
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-[17px] leading-6 font-semibold text-foreground">Check-in</h1>
+            <h1 className="font-display text-[17px] leading-6 font-semibold text-foreground">{words.title}</h1>
             <Badge variant="outline">Beta</Badge>
           </div>
           {editingDevice ? (
@@ -673,12 +718,20 @@ export function Scanner({
           <span className="font-terminal text-[22px] leading-none font-semibold text-foreground tabular-nums">
             {totals ? totals.in : "—"}
           </span>
-          <span className="text-ui text-subtle tabular-nums">/ {totals ? expected : "—"} acreditados</span>
+          <span className="text-ui text-subtle tabular-nums">
+            / {totals ? expected : "—"} {words.count}
+          </span>
         </div>
-        <Meter className="mt-2.5" label="Acreditados" max={expected} value={totals?.in ?? 0} />
+        <Meter className="mt-2.5" label={words.count} max={expected} value={totals?.in ?? 0} />
       </div>
 
-      <div className="relative min-h-44 flex-1 overflow-hidden rounded-2xl border border-border bg-black">
+      {/* The camera fills what's left; Buscar and Código flow with their content (no fixed box to clip it) */}
+      <div
+        className={cn(
+          "relative min-h-80 overflow-hidden rounded-2xl border border-border",
+          mode === "camera" ? "flex-1 bg-black" : "bg-card"
+        )}
+      >
         <video
           ref={videoRef}
           aria-hidden
@@ -731,30 +784,28 @@ export function Scanner({
               )}
             </div>
           )
+        ) : mode === "search" ? (
+          <ManualSearch
+            busy={sending}
+            door={door}
+            eventId={eventId}
+            online={online}
+            timezone={timezone}
+            words={words}
+            onPick={(ticket) => {
+              unlock();
+              void submit(ticket, "manual");
+            }}
+          />
         ) : (
-          <div className="absolute inset-0 bg-card">
-            {mode === "search" ? (
-              <ManualSearch
-                busy={sending}
-                door={door}
-                eventId={eventId}
-                online={online}
-                timezone={timezone}
-                onPick={(ticket) => {
-                  unlock();
-                  void submit(ticket, "manual");
-                }}
-              />
-            ) : (
-              <ManualCode
-                busy={sending}
-                onSubmit={(ticket) => {
-                  unlock();
-                  return submit(ticket, "manual");
-                }}
-              />
-            )}
-          </div>
+          <ManualCode
+            busy={sending}
+            words={words}
+            onSubmit={(ticket) => {
+              unlock();
+              return submit(ticket, "manual");
+            }}
+          />
         )}
 
         {shown && tone ? (
@@ -775,6 +826,19 @@ export function Scanner({
               {shown.title}
             </span>
             <span className="max-w-72 text-ui text-subtle">{shown.detail}</span>
+            {shown.chips?.length ? (
+              <span className="flex flex-wrap justify-center gap-1.5">
+                {shown.chips.map((chip) => (
+                  <Badge
+                    key={chip}
+                    className="h-6 px-2 text-meta"
+                    variant={chip === "Primera vez" ? "info" : "warning"}
+                  >
+                    {chip}
+                  </Badge>
+                ))}
+              </span>
+            ) : null}
             <span className="mt-2 flex items-center gap-1.5 text-meta text-muted-foreground">
               <Vibrate aria-hidden className="size-3.5" />
               Tocá para seguir
@@ -809,11 +873,11 @@ export function Scanner({
         ))}
       </div>
 
-      {door ? null : (
+      {eventbrite ? (
         <p className="text-center text-meta text-muted-foreground">
-          Beta: lo que acredites acá queda en OWU y no llega a Eventbrite. En la puerta, Organizer es lo principal.
+          Beta: quien entra por acá queda en OWU y no llega a Eventbrite. En la puerta, Organizer es lo principal.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

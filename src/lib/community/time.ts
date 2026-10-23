@@ -13,31 +13,38 @@ export function montevideoIso(value: string): string {
   return `${withSeconds}${MONTEVIDEO_OFFSET}`;
 }
 
-const formatter = (options: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat("es-UY", { timeZone: MONTEVIDEO_TZ, ...options });
+const cache = new Map<string, Intl.DateTimeFormat>();
+/** es-UY formatters per time zone (every OWU event is in Montevideo; `events.timezone` can say otherwise). */
+const formatter = (options: Intl.DateTimeFormatOptions, timeZone = MONTEVIDEO_TZ) => {
+  const key = `${timeZone}|${JSON.stringify(options)}`;
+  let format = cache.get(key);
+  if (!format) cache.set(key, (format = new Intl.DateTimeFormat("es-UY", { timeZone, ...options })));
 
-const weekday = formatter({ weekday: "short" });
-const day = formatter({ day: "numeric" });
-const month = formatter({ month: "short" });
-const monthYear = formatter({ month: "long", year: "numeric" });
-const time = formatter({ hour: "2-digit", minute: "2-digit", hour12: false });
-const longDate = formatter({ weekday: "long", day: "numeric", month: "long" });
+  return format;
+};
+
+// h23, never hour12: false, which renders midnight as "24:00" in some engines. es-UY's default is "7:00 p. m.".
+const TIME: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
 
 const clean = (value: string) => value.replace(/\.$/, "").toLowerCase();
 
-/** Pieces of a date as shown on event rows, always in Montevideo time. */
-export function dateParts(iso: string) {
+/** Pieces of a date as shown on event rows, in Montevideo time unless the event says otherwise. */
+export function dateParts(iso: string | Date, timeZone = MONTEVIDEO_TZ) {
   const date = new Date(iso);
 
   return {
-    weekday: clean(weekday.format(date)),
-    day: day.format(date),
-    month: clean(month.format(date)),
-    monthYear: monthYear.format(date),
-    time: time.format(date),
-    long: longDate.format(date),
+    weekday: clean(formatter({ weekday: "short" }, timeZone).format(date)),
+    day: formatter({ day: "numeric" }, timeZone).format(date),
+    month: clean(formatter({ month: "short" }, timeZone).format(date)),
+    monthYear: formatter({ month: "long", year: "numeric" }, timeZone).format(date),
+    time: formatter(TIME, timeZone).format(date),
+    long: formatter({ weekday: "long", day: "numeric", month: "long" }, timeZone).format(date),
   };
 }
+
+/** "19:00": a wall-clock time, 24 h. */
+export const clockTime = (iso: string | Date, timeZone = MONTEVIDEO_TZ) =>
+  formatter(TIME, timeZone).format(new Date(iso));
 
 /** "2026-10" style key for grouping by month in Montevideo */
 export function monthKey(iso: string) {
@@ -48,13 +55,13 @@ export function monthKey(iso: string) {
 }
 
 /** Calendar day key (YYYY-MM-DD) in Montevideo */
-export function dayKey(iso: string | Date) {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: MONTEVIDEO_TZ }).format(new Date(iso));
+export function dayKey(iso: string | Date, timeZone = MONTEVIDEO_TZ) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone }).format(new Date(iso));
 }
 
 /** "jue 12 nov · 19:00", the way the organizer panel and its emails name a moment. */
-export function shortWhen(iso: string | Date) {
-  const parts = dateParts(new Date(iso).toISOString());
+export function shortWhen(iso: string | Date, timeZone = MONTEVIDEO_TZ) {
+  const parts = dateParts(iso, timeZone);
 
   return `${parts.weekday} ${parts.day} ${parts.month} · ${parts.time}`;
 }

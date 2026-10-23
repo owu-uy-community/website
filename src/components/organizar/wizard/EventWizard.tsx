@@ -8,26 +8,27 @@ import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
 import {
   ArrowLeft,
   ArrowRight,
-  Ban,
   CalendarDays,
   Check,
   CircleAlert,
   Copy,
   ExternalLink,
   Eye,
+  LayoutDashboard,
   MapPin,
   Rocket,
   Ticket,
 } from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import { ConfirmDialog, Notice } from "components/Admin/panel";
+import { Notice } from "components/Admin/panel";
 import { HeaderActions } from "components/Admin/shell/HeaderActions";
 import { KeyHint, useShortcuts } from "components/Admin/shell/shortcuts";
 import { MicroLabel, PageContainer, PageHeader } from "components/Admin/ui/page";
 import { ErrorState } from "components/Admin/ui/states";
 import { QrCode } from "components/Admin/comms/QrCode";
 import { isTransient } from "components/Admin/attendees/scan-queue";
+import { ScrollCue } from "components/Admin/ui/scroll-cue";
 import { RelativeTime } from "components/Admin/ui/time";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
@@ -35,14 +36,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "components/shared/ui/sheet";
 import { useSidebar } from "components/shared/ui/sidebar";
 import { Skeleton } from "components/shared/ui/skeleton";
+import { copyText } from "components/shared/ui/copy-text";
 import { toast } from "components/shared/ui/toast-utils";
 import { shortWhen } from "lib/community/time";
+import { plural } from "lib/organizar/words";
 import { orpc } from "lib/orpc/client";
 import { DraftPatchSchema, type DraftPatch, type EditableEvent } from "lib/orpc/events/schemas";
 import { isStep, issues, STEPS, stepState, UNTITLED, type StepKey } from "lib/organizar/steps";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
-import { usePanel } from "../shell/context";
 import {
   StepDatos,
   StepDifusion,
@@ -52,6 +54,7 @@ import {
   StepRevisar,
   StepTipo,
   type DraftChange,
+  type Notified,
   type StepProps,
 } from "./WizardSteps";
 
@@ -75,11 +78,13 @@ const EDITABLE = [
   "guestsAllowed",
   "rsvpClosesAt",
   "questions",
+  "volunteerRoles",
   "externalLinks",
   "sizeBucket",
   "needs",
   "talks",
   "announcement",
+  "reminderNote",
 ] as const satisfies readonly (keyof EditableEvent & keyof DraftPatch)[];
 
 type Editable = (typeof EDITABLE)[number];
@@ -95,6 +100,8 @@ function diff(current: EditableEvent, saved: EditableEvent) {
   for (const key of EDITABLE) {
     if (JSON.stringify(current[key]) === JSON.stringify(saved[key])) continue;
     const checked = DraftPatchSchema.shape[key].safeParse(current[key]);
+    // " Python " saves as "Python": once it did, a trailing space isn't a change to send again
+    if (checked.success && JSON.stringify(checked.data) === JSON.stringify(saved[key])) continue;
     if (checked.success) patch[key] = checked.data;
     else invalid[key] = checked.error.issues[0]?.message ?? "Revisá este campo";
   }
@@ -123,7 +130,6 @@ export function EventWizard({
 }) {
   const pathname = usePathname();
   const params = useSearchParams();
-  const { current, can } = usePanel();
   const base = `/organizar/panel/${community.slug}`;
   const input = { communityId: community.id, eventId };
 
@@ -136,7 +142,6 @@ export function EventWizard({
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [errors, setErrors] = useState<Errors>({});
   const [published, setPublished] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const { isMobile } = useSidebar();
   const inFlight = useRef(false);
@@ -241,12 +246,17 @@ export function EventWizard({
     };
   }, [flush]);
 
-  const refresh = useCallback(async () => {
-    const { data } = await event.refetch();
-    if (!data) return;
-    saved.current = data;
-    setDraft((mine) => (mine ? { ...data, ...pickEditable(mine) } : data));
-  }, [event]);
+  const refresh = useCallback(
+    async (take: (keyof EditableEvent)[] = []) => {
+      const { data } = await event.refetch();
+      if (!data) return;
+      saved.current = data;
+      // What's being typed stays, except the fields the server just changed (a talk assigned from Charlas)
+      const server = Object.fromEntries(take.map((key) => [key, data[key]]));
+      setDraft((mine) => (mine ? { ...data, ...pickEditable(mine), ...server } : data));
+    },
+    [event]
+  );
 
   const reload = async () => {
     const { data } = await event.refetch();
@@ -257,9 +267,10 @@ export function EventWizard({
   };
 
   const set = (change: DraftChange) => {
-    const { schedule, cohostIds, ...rest } = change;
+    const { schedule, cohostIds, reviewed, ...rest } = change;
     setDraft((mine) => (mine ? { ...mine, ...rest } : mine));
     if (cohostIds) void flush({ cohosts: cohostIds });
+    if (reviewed) void flush({ reviewed });
     if (schedule)
       void flush({ schedule }).then(
         (ok) => ok && toast.success("Movimos el evento", shortWhen(`${schedule.day}T${schedule.startTime}:00-03:00`))
@@ -274,14 +285,47 @@ export function EventWizard({
   const firstStep = useRef<StepKey | null>(null);
   if (draft && !firstStep.current) {
     const fresh = draft.format === null && draft.name === UNTITLED;
-    firstStep.current = fresh ? "tipo" : (required[0]?.step ?? "tipo");
+    // A published event opens on its summary, with "Cambiar" next to each part
+    firstStep.current = draft.status !== "draft" ? "revisar" : fresh ? "tipo" : (required[0]?.step ?? "tipo");
   }
+  // What attendees of a published event know, from when this editor opened it: a change to it
+  // reaches them (the server waits 10 minutes after the last one)
+  const notified = useRef<Notified | null>(null);
+  if (draft && !notified.current && draft.status === "published") {
+    const { startDate, endDate, mode, placeName, placeAddress } = draft;
+    notified.current = { startDate, endDate, mode, placeName, placeAddress };
+  }
+  // ?campo=charlas: focus that field once its step is on screen
+  const field = params.get("campo");
+  useEffect(() => {
+    if (!field || !draft) return;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(field);
+      if (!target) return;
+      target.scrollIntoView({ block: "center" });
+      const input = target.matches("input, textarea, select, button")
+        ? target
+        : (target.querySelector<HTMLElement>("input, textarea, select") ?? target);
+      input.focus({ preventScroll: true });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+    // Once per link: not on every keystroke
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [field, Boolean(draft)]);
   const step: StepKey = isStep(requested) ? requested : (firstStep.current ?? "tipo");
   const index = STEPS.findIndex((item) => item.key === step);
+  // On a phone the strip scrolls sideways: the step you're on stays in it
+  useEffect(() => {
+    document
+      .querySelector('nav[aria-label="Pasos"] [aria-current="step"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [step, Boolean(draft)]);
   const go = (key: StepKey) => {
     void flush();
     const next = new URLSearchParams(params.toString());
     next.set("paso", key);
+    next.delete("campo");
     window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
     document.getElementById("wizard-top")?.scrollIntoView({ block: "start" });
   };
@@ -296,17 +340,8 @@ export function EventWizard({
       onError: (error) => toast.error("Todavía no se puede publicar", error.message),
     })
   );
-  const cancel = useMutation(
-    orpc.events.cancel.mutationOptions({
-      onSuccess: (result) => {
-        saved.current = result;
-        setDraft(result);
-        setCancelling(false);
-        toast.success("Evento cancelado", "Sigue en la agenda como cancelado.");
-      },
-      onError: (error) => toast.error("No se pudo cancelar", error.message),
-    })
-  );
+  // Who hears about a change to a published event: the people with a seat
+  const signedUp = useQuery(orpc.events.stats.queryOptions({ input, enabled: draft?.status === "published" }));
 
   useShortcuts([
     {
@@ -350,7 +385,7 @@ export function EventWizard({
   }
 
   const Body = step === "revisar" ? null : STEP_BODY[step];
-  const isAdmin = can("event:cancel");
+  const seated = signedUp.data ? signedUp.data.attending + signedUp.data.offered : null;
   const statusBadge =
     draft.status === "published" ? (
       <Badge variant="success">Publicado</Badge>
@@ -413,42 +448,69 @@ export function EventWizard({
           </Button>
         </span>
       </Notice>
+      {draft.status === "published" ? (
+        <div className="mb-5" data-testid="published-banner">
+          <Notice tone="info">
+            Ya está publicado: si cambiás la fecha, el lugar o la modalidad, les avisamos a{" "}
+            {seated === null ? "quienes tienen lugar" : plural(seated, "persona", "personas")} (10 minutos después del
+            último cambio). Lo demás se guarda solo y ya se ve en la página.
+            {draft.notifyPending ? " Hay un cambio por avisar: sale en unos minutos." : ""}
+          </Notice>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 min-[1400px]:grid-cols-[176px_minmax(0,1fr)_300px] lg:max-[1399px]:grid-cols-[176px_minmax(0,1fr)]">
-        <nav aria-label="Pasos" className="lg:sticky lg:top-4 lg:self-start">
+        <nav aria-label="Pasos" className="min-w-0 lg:sticky lg:top-4 lg:self-start">
           <MicroLabel className="mb-2 max-lg:hidden">Pasos</MicroLabel>
-          <ol className="flex [scrollbar-width:none] gap-1 overflow-x-auto lg:flex-col">
-            {STEPS.map((item, at) => {
-              const state =
-                item.key === "revisar" ? (required.length ? "required" : "done") : stepState(item.key, list);
+          <ScrollCue>
+            <ol className="flex gap-1 lg:flex-col">
+              {STEPS.map((item, at) => {
+                const state =
+                  item.key === "revisar" ? (required.length ? "required" : "done") : stepState(item.key, list);
 
-              return (
-                <li key={item.key} className="shrink-0">
-                  <button
-                    aria-current={item.key === step ? "step" : undefined}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui transition-colors",
-                      item.key === step
-                        ? "bg-raised font-medium text-foreground shadow-[inset_2px_0_0_hsl(var(--primary))]"
-                        : "text-muted-foreground hover:bg-raised/60 hover:text-foreground"
-                    )}
-                    type="button"
-                    onClick={() => go(item.key)}
-                  >
-                    <span className="font-terminal text-2xs text-faint tabular-nums">{at + 1}</span>
-                    <span className="flex-1 whitespace-nowrap">{item.title}</span>
-                    {state === "done" ? (
-                      <Check aria-label="Listo" className="size-3.5 text-success" />
-                    ) : state === "required" ? (
-                      <CircleAlert aria-label="Falta algo" className="size-3.5 text-live" />
-                    ) : (
-                      <span aria-label="Con sugerencias" className="size-1.5 rounded-full bg-warning" />
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
+                return (
+                  <li key={item.key} className="shrink-0">
+                    <button
+                      aria-current={item.key === step ? "step" : undefined}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui transition-colors",
+                        item.key === step
+                          ? "bg-raised font-medium text-foreground shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                          : "text-muted-foreground hover:bg-raised/60 hover:text-foreground"
+                      )}
+                      type="button"
+                      onClick={() => go(item.key)}
+                    >
+                      <span className="font-terminal text-2xs text-faint tabular-nums">{at + 1}</span>
+                      <span className="flex-1 whitespace-nowrap">{item.title}</span>
+                      {state === "done" ? (
+                        <Check aria-label="Listo" className="size-3.5 text-success" />
+                      ) : state === "required" ? (
+                        <CircleAlert aria-label="Falta algo" className="size-3.5 text-live" />
+                      ) : (
+                        <span aria-label="Con sugerencias" className="size-1.5 rounded-full bg-warning" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </ScrollCue>
+          {/* What the marks mean, once, under the steps */}
+          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground" data-testid="steps-legend">
+            <span className="flex items-center gap-1">
+              <Check aria-hidden className="size-3 text-success" />
+              Listo
+            </span>
+            <span className="flex items-center gap-1">
+              <span aria-hidden className="size-1.5 rounded-full bg-warning" />
+              Con sugerencias
+            </span>
+            <span className="flex items-center gap-1">
+              <CircleAlert aria-hidden className="size-3 text-live" />
+              Falta algo
+            </span>
+          </p>
         </nav>
 
         <div className="flex min-w-0 flex-col gap-5">
@@ -457,7 +519,9 @@ export function EventWizard({
               community={community}
               draft={draft}
               errors={errors}
-              refresh={() => void refresh()}
+              flush={() => flush()}
+              notified={notified.current}
+              refresh={(take) => void refresh(take)}
               set={set}
               today={today}
             />
@@ -474,18 +538,16 @@ export function EventWizard({
             />
           )}
 
-          <div className="sticky bottom-[calc(var(--admin-tabbar-h,0px)+0.5rem)] z-10 flex items-center justify-between gap-2 rounded-lg border border-border bg-card/95 p-2 shadow-edge backdrop-blur">
+          {/* data-save-bar: toasts rise above it, and focus scrolls clear of it */}
+          <div
+            className="sticky bottom-[calc(var(--admin-tabbar-h,0px)+0.5rem)] z-10 flex items-center justify-between gap-2 rounded-lg border border-border bg-card/95 p-2 shadow-edge backdrop-blur"
+            data-save-bar
+          >
             <Button disabled={index === 0} variant="outline" onClick={() => go(STEPS[index - 1].key)}>
               <ArrowLeft />
               Atrás
             </Button>
             <div className="flex items-center gap-2">
-              {draft.status === "published" && isAdmin ? (
-                <Button variant="ghost" onClick={() => setCancelling(true)}>
-                  <Ban />
-                  <span className="max-sm:hidden">Cancelar evento</span>
-                </Button>
-              ) : null}
               {step !== "revisar" ? (
                 <Button onClick={() => go(STEPS[index + 1].key)}>
                   Siguiente
@@ -538,16 +600,11 @@ export function EventWizard({
           </div>
         </SheetContent>
       </Sheet>
-      <ShareDialog path={published} onClose={() => setPublished(null)} name={draft.name} />
-      <ConfirmDialog
-        confirmLabel="Cancelar el evento"
-        description="Queda en la agenda como cancelado y quienes se anotaron reciben un aviso."
-        open={cancelling}
-        pending={cancel.isPending}
-        pendingLabel="Cancelando…"
-        title={`¿Cancelar «${draft.name}»?`}
-        onConfirm={() => cancel.mutate({ ...input, reason: "" })}
-        onOpenChange={setCancelling}
+      <ShareDialog
+        dashboard={`${base}/eventos/${draft.id}`}
+        name={draft.name}
+        path={published}
+        onClose={() => setPublished(null)}
       />
     </PageContainer>
   );
@@ -594,7 +651,8 @@ function Preview({ draft, community }: { draft: EditableEvent; community: Calend
       <span
         className={cn(
           "mt-5 flex h-10 items-center justify-center rounded-xl text-sm font-semibold",
-          draft.registration === "none" ? "border border-white/10 text-zinc-300" : "bg-yellow-400 text-zinc-950"
+          // The real page's primary: light, yellow only on hover
+          draft.registration === "none" ? "border border-white/10 text-zinc-300" : "bg-zinc-50 text-zinc-950"
         )}
       >
         {cta}
@@ -604,7 +662,18 @@ function Preview({ draft, community }: { draft: EditableEvent; community: Calend
 }
 
 /** Right after publishing: the link, ready to share. */
-function ShareDialog({ path, name, onClose }: { path: string | null; name: string; onClose: () => void }) {
+function ShareDialog({
+  path,
+  name,
+  dashboard,
+  onClose,
+}: {
+  path: string | null;
+  name: string;
+  /** The event's page in the panel */
+  dashboard: string;
+  onClose: () => void;
+}) {
   const url = path && typeof window !== "undefined" ? `${window.location.origin}${path}` : "";
   const text = `${name} ${url}`;
 
@@ -617,11 +686,7 @@ function ShareDialog({ path, name, onClose }: { path: string | null; name: strin
         </DialogHeader>
         <div className="flex items-center gap-2 rounded-md border border-border bg-raised/50 px-3 py-2">
           <span className="min-w-0 flex-1 truncate font-terminal text-meta text-foreground">{url}</span>
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => void navigator.clipboard.writeText(url).then(() => toast.success("Link copiado"))}
-          >
+          <Button size="xs" variant="outline" onClick={() => void copyText(url, "Link copiado")}>
             <Copy />
             Copiar
           </Button>
@@ -652,12 +717,20 @@ function ShareDialog({ path, name, onClose }: { path: string | null; name: strin
             </a>
           </Button>
         </div>
-        <Button asChild>
-          <a href={path ?? "#"} rel="noreferrer" target="_blank">
-            <ExternalLink />
-            Ver la página
-          </a>
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild variant="outline">
+            <a href={path ?? "#"} rel="noreferrer" target="_blank">
+              <ExternalLink />
+              Ver la página
+            </a>
+          </Button>
+          <Button asChild>
+            <Link href={dashboard}>
+              <LayoutDashboard />
+              Abrir el tablero
+            </Link>
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

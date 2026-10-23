@@ -195,6 +195,7 @@ describe("spaces", () => {
     expect(listed.find((venue) => venue.id === small.id)?.fit).toStrictEqual({
       blockers: ["Entran 20"],
       missing: ["proyector"],
+      score: 20,
     });
   });
 

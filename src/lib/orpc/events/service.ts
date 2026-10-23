@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { and, asc, count, desc, eq, gt, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
 import { Effect, Option } from "effect";
 
@@ -10,6 +8,7 @@ import {
   communities,
   communityMembers,
   emailDeliveries,
+  eventMessages,
   events,
   outboundMessages,
   schedules,
@@ -18,10 +17,12 @@ import {
   type EventRow,
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
-import { appUrl, conflictHeadsUpEmail, eventMessageEmail, holdExpiringEmail } from "../../email/templates";
+import { appUrl, conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { announcementText, slackSafe } from "../../organizar/announcement";
+import { STALE_FIELDS, stillStale, type StaleField } from "../../organizar/repeat";
 import { issues, UNTITLED } from "../../organizar/steps";
+import { moveTemplateTasks } from "./tasks";
 import { eventPagePath, refreshEvent } from "../../revalidate";
 import { owyChannels } from "../../owy/messaging";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
@@ -34,14 +35,16 @@ import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { can, principalOf } from "../../authz/principal";
-import { notifyCancelled, optionalMail, seatsChanged } from "../rsvps/service";
+import { notifyCancelled, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
+import { dietTally } from "../../organizar/presets";
+import { HOLD_DAYS, MAX_HOLDS } from "../../organizar/rules";
+import { publicFacts } from "../../organizar/venue-facts";
+import { expectedTurnout, foodFor } from "../../organizar/turnout";
 
-/** How long a date stays reserved; renewing starts the count again. */
-export const HOLD_DAYS = 14;
-/** Live holds a community can keep at once: enough to compare dates, not to squat a season. */
-export const MAX_HOLDS = 8;
+export { HOLD_DAYS, MAX_HOLDS };
+
 const DAY_MS = 86_400_000;
 
 export const toOrganizerEvent = (row: EventRow): OrganizerEvent => ({
@@ -110,7 +113,7 @@ const draftOf = (communityId: string, eventId: string) =>
  * Tell organizers with a similar audience that this date was taken the same day as theirs (an event
  * or a hold), once per date. Meetups only on the meetup-bot feed have nobody here to tell.
  */
-const headsUp = (row: EventRow) =>
+export const headsUp = (row: EventRow) =>
   Effect.gen(function* () {
     const day = dayKey(row.startDate);
     const dayStart = new Date(montevideoIso(`${day}T00:00`));
@@ -172,10 +175,41 @@ const headsUp = (row: EventRow) =>
     return told.size;
   });
 
+/** How many dates the community holds right now */
+export const liveHolds = (communityId: string) =>
+  query((db) =>
+    db
+      .select({ live: count() })
+      .from(events)
+      .where(and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date())))
+  ).pipe(Effect.map(([row]) => row?.live ?? 0));
+
+/**
+ * Holds are counted, then made: the community's row is locked for the rest of the transaction, so
+ * two at once can't both see 7 and both make the 8th and 9th. Call it inside a transaction.
+ */
+export const lockHoldCount = (communityId: string) =>
+  query((db) =>
+    db.select({ id: communities.id }).from(communities).where(eq(communities.id, communityId)).for("update")
+  );
+
+/** A community keeps at most MAX_HOLDS live holds: a new one (or dating a draft that isn't held) waits. */
+const capHolds = (communityId: string) =>
+  Effect.gen(function* () {
+    yield* lockHoldCount(communityId);
+    const live = yield* liveHolds(communityId);
+    if (live >= MAX_HOLDS) {
+      return yield* new Conflict({
+        reason: "too_many_holds",
+        message: `Ya tenés ${MAX_HOLDS} fechas reservadas: liberá alguna para reservar otra`,
+      });
+    }
+  });
+
 /**
  * Reserve a date for 14 days: date an existing draft, or make one for it. Every organizer sees the
  * hold on the calendar (another community's, without its title), and similar communities with
- * something that day get an email.
+ * something that day get an email. A space accepting a draft's request dates it through here too.
  */
 export const hold = (input: HoldInput) =>
   transaction(
@@ -185,10 +219,11 @@ export const hold = (input: HoldInput) =>
       if (startDate.getTime() < Date.now()) return yield* new Invalid({ message: "Esa fecha ya pasó" });
       const endDate = new Date(startDate.getTime() + input.durationMin * 60_000);
       const heldUntil = new Date(Date.now() + HOLD_DAYS * DAY_MS);
-
       let row: EventRow;
       if (input.eventId) {
         const draft = yield* draftOf(communityId, input.eventId);
+        // Moving a live hold doesn't add one; dating a draft that isn't held does
+        if (!draft.heldUntil || draft.heldUntil <= new Date()) yield* capHolds(communityId);
         // A scheduled publish stays only while it comes before the new date, and keeps it held until then
         const scheduled = draft.publishAt && draft.publishAt < startDate ? draft.publishAt : null;
         [row] = yield* query((db) =>
@@ -204,21 +239,9 @@ export const hold = (input: HoldInput) =>
             .where(eq(events.id, input.eventId ?? ""))
             .returning()
         );
+        yield* moveTemplateTasks(row.id, row.startDate);
       } else {
-        const [{ live }] = yield* query((db) =>
-          db
-            .select({ live: count() })
-            .from(events)
-            .where(
-              and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date()))
-            )
-        );
-        if (live >= MAX_HOLDS) {
-          return yield* new Conflict({
-            reason: "too_many_holds",
-            message: `Ya tenés ${MAX_HOLDS} fechas reservadas: liberá alguna para reservar otra`,
-          });
-        }
+        yield* capHolds(communityId);
         const name = input.title ?? "Evento sin título";
         const slug = yield* freeSlug(communityId, slugify(name));
         [row] = yield* query((db) =>
@@ -328,11 +351,16 @@ export const remindExpiringHolds = Effect.gen(function* () {
 
 const PROVISIONAL_DAYS = 28;
 
-const editableOf = (eventId: string) =>
+export const editableOf = (eventId: string) =>
   Effect.gen(function* () {
     const [row] = yield* query((db) =>
       db
-        .select({ event: events, communitySlug: communities.slug, venue: venues })
+        .select({
+          event: events,
+          communitySlug: communities.slug,
+          noShowNudge: communities.noShowNudge,
+          venue: venues,
+        })
         .from(events)
         .innerJoin(communities, eq(communities.id, events.communityId))
         .leftJoin(venues, eq(venues.id, events.venueId))
@@ -351,7 +379,14 @@ const editableOf = (eventId: string) =>
       mode: event.mode,
       venueId: event.venueId,
       venue: venue
-        ? { id: venue.id, name: venue.name, neighbourhood: venue.neighbourhood, address: venue.address }
+        ? {
+            id: venue.id,
+            name: venue.name,
+            neighbourhood: venue.neighbourhood,
+            address: venue.address,
+            facts: venue.facts,
+            idRequired: venue.facts.idRequired === true,
+          }
         : null,
       placeName: event.placeName,
       placeAddress: event.placeAddress,
@@ -385,9 +420,44 @@ const editableOf = (eventId: string) =>
         sentAt: row.status === "sent" ? (row.sentAt?.toISOString() ?? null) : null,
       })),
       reminderNote: event.reminderNote,
+      confirmPing: event.confirmPing,
+      volunteerRoles: event.volunteerRoles,
+      noShowNudge: row.noShowNudge,
+      cancelReason: event.cancelReason,
       materials: event.materials,
       cohosts: yield* cohostsOf(event.id),
+      responders: event.responders,
+      staleFields: event.staleFields.filter((field): field is StaleField =>
+        (STALE_FIELDS as readonly string[]).includes(field)
+      ),
+      copiedFrom: event.copiedFromId ? yield* copiedFromOf(event.copiedFromId, event.communityId) : null,
+      notifyPending: event.status === "published" && event.icsSequence > event.notifiedSequence,
+      closedOutAt: event.closedOutAt?.toISOString() ?? null,
+      hostRecapSentAt: event.hostRecapSentAt?.toISOString() ?? null,
+      slideNotes: event.slideNotes ?? {},
     } satisfies EditableEvent;
+  });
+
+/** The event a draft repeats, with what it offers again: its space and the other communities. */
+const copiedFromOf = (sourceId: string, communityId: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) =>
+      db
+        .select({ id: events.id, name: events.name, venueId: venues.id, venueName: venues.name })
+        .from(events)
+        .leftJoin(venues, eq(venues.id, events.venueId))
+        .where(and(eq(events.id, sourceId), eq(events.communityId, communityId)))
+    );
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      venue: row.venueId && row.venueName ? { id: row.venueId, name: row.venueName } : null,
+      cohosts: (yield* cohostsOf(row.id))
+        .filter((cohost) => cohost.status !== "declined")
+        .map((cohost) => ({ id: cohost.id, name: cohost.name })),
+    };
   });
 
 /** One event of the scoped community, as the wizard edits it. */
@@ -408,26 +478,17 @@ const belongs = (eventId: string, communityId: string) =>
   ).pipe(Effect.map((rows) => rows.length > 0));
 
 /**
- * A new draft, with a provisional date four weeks out (reserving one makes it real), optionally
- * starting from a previous event's texts and settings. A mutation, never a GET: prefetching a
- * link must not make drafts.
+ * A new draft from scratch, with a provisional date four weeks out (reserving one makes it real).
+ * Copies of an earlier event go through `repeat` (lifecycle.ts). A mutation, never a GET:
+ * prefetching a link must not make drafts.
  */
-export const createDraft = (input: { title?: string; copyFrom?: string }) =>
+export const createDraft = (input: { title?: string }) =>
   transaction(
     Effect.gen(function* () {
       const { communityId } = yield* CommunityScope;
-      const [source] = input.copyFrom
-        ? yield* query((db) =>
-            db
-              .select()
-              .from(events)
-              .where(and(eq(events.id, input.copyFrom ?? ""), eq(events.communityId, communityId)))
-          )
-        : [];
       const startDate = new Date(Date.now() + PROVISIONAL_DAYS * DAY_MS);
       startDate.setUTCHours(22, 0, 0, 0);
-      const length = source ? source.endDate.getTime() - source.startDate.getTime() : 2 * 3_600_000;
-      const name = input.title ?? (source ? source.name : UNTITLED);
+      const name = input.title ?? UNTITLED;
       const slug = yield* freeSlug(communityId, slugify(name === UNTITLED ? "borrador" : name));
       const [row] = yield* query((db) =>
         db
@@ -438,24 +499,8 @@ export const createDraft = (input: { title?: string; copyFrom?: string }) =>
             slug,
             status: "draft",
             startDate,
-            endDate: new Date(startDate.getTime() + length),
-            ...(source
-              ? {
-                  summary: source.summary,
-                  description: source.description,
-                  format: source.format,
-                  topics: source.topics,
-                  mode: source.mode,
-                  registration: source.registration,
-                  approval: source.approval,
-                  capacity: source.capacity,
-                  waitlist: source.waitlist,
-                  guestsAllowed: source.guestsAllowed,
-                  questions: source.questions,
-                  sizeBucket: source.sizeBucket,
-                  needs: source.needs,
-                }
-              : { registration: "owu" as const }),
+            endDate: new Date(startDate.getTime() + 2 * 3_600_000),
+            registration: "owu",
           })
           .returning({ id: events.id })
       );
@@ -464,7 +509,7 @@ export const createDraft = (input: { title?: string; copyFrom?: string }) =>
         verb: "event.drafted",
         entityType: "event",
         entityId: row.id,
-        summary: source ? `empezó un evento a partir de «${source.name}»` : "empezó un evento nuevo",
+        summary: "empezó un evento nuevo",
       });
 
       return yield* editableOf(row.id);
@@ -513,7 +558,14 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
         });
       }
 
-      const { schedule, rsvpClosesAt, cohosts, ...fields } = input.patch;
+      const { schedule, rsvpClosesAt, cohosts, reviewed, ...fields } = input.patch;
+      // A copied field stops saying "Revisá" once it changes, or when someone says it's fine as it is
+      const changed = STALE_FIELDS.filter((field) =>
+        field === "rsvpClosesAt"
+          ? rsvpClosesAt !== undefined && rsvpClosesAt !== (row.rsvpClosesAt?.toISOString() ?? null)
+          : fields[field] !== undefined && JSON.stringify(fields[field]) !== JSON.stringify(row[field])
+      );
+      const staleFields = stillStale(row.staleFields, changed, reviewed);
       const moved =
         row.status === "published" && schedule
           ? (() => {
@@ -538,10 +590,12 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
             ...(rsvpClosesAt !== undefined ? { rsvpClosesAt: rsvpClosesAt ? new Date(rsvpClosesAt) : null } : {}),
             ...moved,
             ...(dateChanged || placeChanged ? { icsSequence: row.icsSequence + 1 } : {}),
+            ...(staleFields.length !== row.staleFields.length ? { staleFields } : {}),
           })
           .where(eq(events.id, row.id))
           .returning()
       );
+      if (dateChanged && moved) yield* moveTemplateTasks(row.id, moved.startDate);
       // After the update, so an invitation going out carries the name and date just saved
       if (cohosts) yield* setCohosts(updated ?? row, cohosts);
       if (dateChanged && moved) {
@@ -807,19 +861,27 @@ export const cancel = (input: { eventId: string; reason: string }) =>
       const [row] = yield* query((db) =>
         db
           .update(events)
-          .set({ status: "cancelled", icsSequence: sql`${events.icsSequence} + 1` })
+          // The reason goes in the attendees' email and on the public page
+          .set({ status: "cancelled", cancelReason: input.reason, icsSequence: sql`${events.icsSequence} + 1` })
           .where(and(eq(events.id, input.eventId), eq(events.communityId, communityId), eq(events.status, "published")))
           .returning()
       );
       if (!row) {
         return yield* new Conflict({ reason: "not_published", message: "Solo se cancela un evento publicado" });
       }
+      // Messages waiting for their time don't go out for an event that isn't happening
+      yield* query((db) =>
+        db
+          .update(eventMessages)
+          .set({ status: "cancelled" })
+          .where(and(eq(eventMessages.eventId, row.id), eq(eventMessages.status, "scheduled")))
+      );
       yield* recordActivity({
         eventId: row.id,
         verb: "event.cancelled",
         entityType: "event",
         entityId: row.id,
-        summary: input.reason ? `canceló el evento: ${input.reason}` : "canceló el evento",
+        summary: `canceló el evento: ${input.reason}`,
       });
       yield* notifyCancelled(row.id);
       yield* queuePush(row, { now: true });
@@ -833,6 +895,14 @@ export const cancel = (input: { eventId: string; reason: string }) =>
 // ---------------------------------------------------------------------------
 // The public page
 // ---------------------------------------------------------------------------
+
+/** Code-of-conduct responders as the public page names them ("Ana G."), in the order the team named them. */
+export const responderNames = (ids: string[]) =>
+  ids.length === 0
+    ? Effect.succeed([])
+    : query((db) => db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, ids))).pipe(
+        Effect.map((rows) => ids.flatMap((id) => rows.filter((row) => row.id === id).map((row) => shortName(row.name))))
+      );
 
 const toPublic = (eventId: string) =>
   Effect.gen(function* () {
@@ -854,10 +924,13 @@ const toPublic = (eventId: string) =>
               Number
             ),
           waiting: sql<number>`count(*) filter (where ${attendees.status} = 'waitlisted')`.mapWith(Number),
+          attending: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+          came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
         })
         .from(attendees)
         .where(and(eq(attendees.eventId, eventId), eq(attendees.source, "owu")))
     );
+    const over = event.endDate.getTime() <= Date.now();
     const [board] = yield* query((db) =>
       db.select({ id: schedules.id }).from(schedules).where(eq(schedules.openSpaceId, eventId)).limit(1)
     );
@@ -870,9 +943,18 @@ const toPublic = (eventId: string) =>
               area: [venue.neighbourhood, venue.city].filter(Boolean).join(", ") || null,
               address: venue.addressVisibility === "public" ? venue.address || null : null,
               mapUrl: venue.addressVisibility === "public" ? venue.mapUrl : null,
+              facts: publicFacts(venue.facts, venue.addressVisibility),
+              logoUrl: venue.logoUrl,
             }
           : event.placeName
-            ? { name: event.placeName, area: null, address: event.placeAddress, mapUrl: event.venueMapUrl }
+            ? {
+                name: event.placeName,
+                area: null,
+                address: event.placeAddress,
+                mapUrl: event.venueMapUrl,
+                facts: null,
+                logoUrl: null,
+              }
             : null;
 
     return {
@@ -898,12 +980,17 @@ const toPublic = (eventId: string) =>
       questions: event.questions,
       taken: seats?.taken ?? 0,
       waiting: seats?.waiting ?? 0,
+      attending: seats?.attending ?? 0,
+      // "Fueron 31": counted at the door, so only when the door was used
+      came: over && (seats?.came ?? 0) > 0 ? (seats?.came ?? 0) : null,
+      cancelReason: event.status === "cancelled" ? event.cancelReason : "",
+      volunteerRoles: event.volunteerRoles,
       hasBoard: Boolean(board),
       community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
       cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
       // Recordings and slides once it's over, like the page shows them
-      materials: event.endDate.getTime() <= Date.now() ? event.materials : [],
+      materials: over ? event.materials : [],
       talks: event.talks.filter((talk) => talk.title.trim()),
       going: (yield* query((db) =>
         db
@@ -920,6 +1007,7 @@ const toPublic = (eventId: string) =>
           .orderBy(asc(attendees.registeredAt))
           .limit(12)
       )).map((row) => shortName(row.name)),
+      responders: yield* responderNames(event.responders),
     } satisfies PublicEvent;
   });
 
@@ -960,7 +1048,7 @@ export const preview = (eventId: string) =>
 // ---------------------------------------------------------------------------
 
 /** The emails the cadence sends on its own, as the outbox names them */
-const CADENCE_KINDS = ["confirmed", "reminder_48h", "reminder_2h", "feedback"] as const;
+const CADENCE_KINDS = ["confirmed", "reminder_48h", "confirm_ping", "reminder_2h", "feedback"] as const;
 
 /**
  * Seats taken at the end of each of the last 30 days up to `end` (with +1s), counting who has a
@@ -986,7 +1074,7 @@ export const stats = (eventId: string) =>
     const { communityId } = yield* CommunityScope;
     const [event] = yield* query((db) =>
       db
-        .select({ capacity: events.capacity, startDate: events.startDate })
+        .select({ capacity: events.capacity, startDate: events.startDate, questions: events.questions })
         .from(events)
         .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
     );
@@ -1045,14 +1133,65 @@ export const stats = (eventId: string) =>
               Number
             ),
           checkedIn: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
+          guests:
+            sql<number>`coalesce(sum(${attendees.guests}) filter (where ${attendees.status} = 'attending'), 0)`.mapWith(
+              Number
+            ),
+          offered: sql<number>`count(*) filter (where ${attendees.status} = 'offered')`.mapWith(Number),
+          waitlisted: sql<number>`count(*) filter (where ${attendees.status} = 'waitlisted')`.mapWith(Number),
+          confirmed:
+            sql<number>`count(*) filter (where ${attendees.status} = 'attending' and ${attendees.confirmedAt} is not null)`.mapWith(
+              Number
+            ),
+          missed:
+            sql<number>`count(*) filter (where ${attendees.status} = 'attending' and ${attendees.checkedInAt} is null)`.mapWith(
+              Number
+            ),
         })
         .from(attendees)
         .where(eq(attendees.eventId, eventId))
     );
+    const counts = row ?? {
+      taken: 0,
+      attending: 0,
+      waiting: 0,
+      pending: 0,
+      cancelled: 0,
+      checkedIn: 0,
+      guests: 0,
+      offered: 0,
+      waitlisted: 0,
+      confirmed: 0,
+      missed: 0,
+    };
+    // The food counts what the people with a seat answered to the diet question
+    const answers = yield* query((db) =>
+      db
+        .select({ answers: attendees.answers })
+        .from(attendees)
+        .where(and(eq(attendees.eventId, eventId), eq(attendees.status, "attending")))
+    );
+    const diets = dietTally(
+      event.questions,
+      answers.map((entry) => entry.answers)
+    );
+    const show = yield* showUpOf(communityId);
+    const expected = expectedTurnout({ ...counts, showRate: show.rate });
+    // The diets come from everyone with a seat; the food is for who's likely to come
+    const share = counts.attending + counts.guests > 0 ? expected.likely / (counts.attending + counts.guests) : 0;
 
     return {
       capacity: event.capacity,
-      ...(row ?? { taken: 0, attending: 0, waiting: 0, pending: 0, cancelled: 0, checkedIn: 0 }),
+      ...counts,
+      turnout: {
+        ...expected,
+        events: show.events,
+        food: foodFor(expected.likely, {
+          vegetarian: Math.round(diets.vegetarian * share),
+          glutenFree: Math.round(diets.glutenFree * share),
+        }),
+        diets,
+      },
       series: seatSeries(seated, new Date(Math.min(Date.now(), event.startDate.getTime()))),
       emails: Object.fromEntries(
         CADENCE_KINDS.map((kind) => {
@@ -1063,75 +1202,6 @@ export const stats = (eventId: string) =>
       doorLink: door?.verb === "door.linked",
     };
   });
-
-const MESSAGE_STATUSES = {
-  attending: ["attending"],
-  waiting: ["waitlisted", "offered"],
-  pending: ["pending"],
-} as const;
-
-/** Write to the event's people (by where they stand). Each gets it once, whoever clicks twice. */
-export const message = (input: {
-  eventId: string;
-  to: ("attending" | "waiting" | "pending")[];
-  ids?: string[];
-  subject: string;
-  body: string;
-}) =>
-  transaction(
-    Effect.gen(function* () {
-      const { communityId } = yield* CommunityScope;
-      const event = yield* editableOf(input.eventId);
-      if (!(yield* belongs(input.eventId, communityId))) return yield* notFound;
-      const statuses = input.to.flatMap((key) => MESSAGE_STATUSES[key]);
-      const people = yield* query((db) =>
-        db
-          .select({ id: attendees.id, email: attendees.email })
-          .from(attendees)
-          .where(
-            and(
-              eq(attendees.eventId, input.eventId),
-              inArray(attendees.status, statuses),
-              input.ids ? inArray(attendees.id, input.ids) : undefined
-            )
-          )
-      );
-      const [community] = yield* query((db) =>
-        db.select({ name: communities.name }).from(communities).where(eq(communities.id, communityId))
-      );
-      const fingerprint = createHash("sha256").update(`${input.subject}\n${input.body}`).digest("hex").slice(0, 16);
-      let sent = 0;
-      for (const person of people.filter((row) => row.email)) {
-        // Whoever turned off reminders doesn't get these either; the rest can, in one click
-        const optOut = yield* optionalMail(person.email);
-        if (!optOut) continue;
-        yield* enqueueEmail({
-          kind: "event_message",
-          to: person.email,
-          dedupeKey: `event_message:${input.eventId}:${fingerprint}:${person.id}`,
-          headers: optOut.headers,
-          ...eventMessageEmail({
-            community: community?.name ?? "",
-            event: event.name,
-            subject: input.subject,
-            body: input.body,
-            pageUrl: appUrl(eventPagePath(event.communitySlug, event.slug)),
-            unsubscribeUrl: optOut.url,
-          }),
-        });
-        sent += 1;
-      }
-      yield* recordActivity({
-        eventId: input.eventId,
-        verb: "event.messaged",
-        entityType: "event",
-        entityId: input.eventId,
-        summary: `escribió a ${sent} ${sent === 1 ? "persona" : "personas"}: «${input.subject}»`,
-      });
-
-      return { sent };
-    })
-  );
 
 /** OWU's own published events still ahead, soonest first: GET /api/v1/events/upcoming. */
 export const upcoming = query((db) =>
@@ -1173,28 +1243,34 @@ export const upcoming = query((db) =>
  */
 export const showUp = Effect.gen(function* () {
   const { communityId } = yield* CommunityScope;
-  const rows = yield* query((db) =>
-    db
-      .select({
-        seated: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
-        came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
-      })
-      .from(attendees)
-      .innerJoin(events, eq(events.id, attendees.eventId))
-      .where(
-        and(
-          eq(events.communityId, communityId),
-          eq(events.status, "published"),
-          eq(attendees.source, "owu"),
-          lt(events.endDate, new Date()),
-          gt(events.endDate, new Date(Date.now() - 548 * DAY_MS))
-        )
-      )
-      .groupBy(attendees.eventId)
-  );
-  const counted = rows.filter((row) => row.came > 0 && row.seated > 0);
-  const seated = counted.reduce((sum, row) => sum + row.seated, 0);
-  const came = counted.reduce((sum, row) => sum + row.came, 0);
 
-  return { rate: counted.length >= 3 ? Math.min(1, came / seated) : null, events: counted.length };
+  return yield* showUpOf(communityId);
 });
+
+const showUpOf = (communityId: string) =>
+  Effect.gen(function* () {
+    const rows = yield* query((db) =>
+      db
+        .select({
+          seated: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+          came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
+        })
+        .from(attendees)
+        .innerJoin(events, eq(events.id, attendees.eventId))
+        .where(
+          and(
+            eq(events.communityId, communityId),
+            eq(events.status, "published"),
+            eq(attendees.source, "owu"),
+            lt(events.endDate, new Date()),
+            gt(events.endDate, new Date(Date.now() - 548 * DAY_MS))
+          )
+        )
+        .groupBy(attendees.eventId)
+    );
+    const counted = rows.filter((row) => row.came > 0 && row.seated > 0);
+    const seated = counted.reduce((sum, row) => sum + row.seated, 0);
+    const came = counted.reduce((sum, row) => sum + row.came, 0);
+
+    return { rate: counted.length >= 3 ? Math.min(1, came / seated) : null, events: counted.length };
+  });

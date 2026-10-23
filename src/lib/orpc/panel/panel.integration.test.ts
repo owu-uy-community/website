@@ -6,7 +6,15 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 import { dayKey } from "lib/community/time";
 import { db } from "lib/db";
-import { activity, communityFollowers, eventHosts, venueRequests } from "lib/db/schema";
+import {
+  activity,
+  auditLog,
+  communityFollowers,
+  eventHosts,
+  staffTaskAssignments,
+  staffTasks,
+  venueRequests,
+} from "lib/db/schema";
 import { router } from "lib/orpc/router";
 import { by } from "test/context";
 import { makeCommunity, makeEvent, makeMember, makeRsvp, makeUser, makeVenue } from "test/factories";
@@ -164,5 +172,71 @@ describe("panel.summary", () => {
     expect(result.activity).toMatchObject([
       { eventId: mine.id, eventName: "Nuestro", summary: "publicó", actor: { id: editor.id, name: editor.name } },
     ]);
+  });
+
+  test("what Inicio weighs: the last event, the team, a close-out, seats ahead and my tasks", async () => {
+    const { ours, editor } = await setup();
+    const [quiet, otherEditor] = await Promise.all([makeMember(ours.id, "admin"), makeMember(ours.id, "editor")]);
+    await makeMember(ours.id, "member");
+    const past = await makeEvent(ours.id, {
+      name: "El de la semana pasada",
+      status: "published",
+      ...evening(inDays(-5)),
+    });
+    const closed = await makeEvent(ours.id, {
+      name: "Cerrado",
+      status: "published",
+      closedOutAt: new Date(),
+      ...evening(inDays(-3)),
+    });
+    await makeEvent(ours.id, { name: "Hace mucho", status: "published", ...evening(inDays(-40)) });
+    const next = await makeEvent(ours.id, {
+      name: "El próximo",
+      status: "published",
+      registration: "owu",
+      capacity: 60,
+      ...evening(inDays(6)),
+    });
+    await makeRsvp(next.id, { guests: 2 });
+    await makeRsvp(next.id, { status: "offered" });
+    await makeRsvp(next.id, { status: "waitlisted" });
+    // Active: the editor through an event, the other editor through the community's audit log; the admin did nothing
+    await db.insert(activity).values({
+      eventId: next.id,
+      actorId: editor.id,
+      verb: "event.updated",
+      entityType: "event",
+      summary: "cambió algo",
+    });
+    await db
+      .insert(auditLog)
+      .values({ actorId: otherEditor.id, via: "session", action: "member.update", communityId: ours.id });
+    const [task, later] = await db
+      .insert(staffTasks)
+      .values([
+        { openSpaceId: next.id, title: "Pedir las pizzas", dayDate: at(inDays(1), "00:00") },
+        { openSpaceId: next.id, title: "Para más adelante", dayDate: at(inDays(4), "00:00") },
+      ])
+      .returning();
+    await db.insert(staffTaskAssignments).values([
+      { taskId: task.id, userId: editor.id },
+      { taskId: later.id, userId: editor.id },
+      { taskId: task.id, userId: quiet.id },
+    ]);
+
+    const result = await summary(ours.id, editor);
+
+    expect({ lastEventAt: result.lastEventAt, team: result.team }).toStrictEqual({
+      lastEventAt: closed.startDate.toISOString(),
+      team: { size: 4, activeOrganizers: 2 },
+    });
+    expect(result.closeOut).toStrictEqual([
+      { id: past.id, name: "El de la semana pasada", endDate: past.endDate.toISOString() },
+    ]);
+    expect(result.seats).toStrictEqual({ [next.id]: 4 });
+    expect(result.myTasks).toStrictEqual([
+      { id: task.id, title: "Pedir las pizzas", eventId: next.id, eventName: "El próximo", day: inDays(1) },
+    ]);
+    expect(result.community).toMatchObject({ status: "activa", recurringSlot: null, topics: ours.topics });
   });
 });

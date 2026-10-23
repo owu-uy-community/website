@@ -6,6 +6,7 @@ import { Check, PartyPopper } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 import { buttonClassName, cardClassName, Eyebrow } from "components/community/ui";
+import { DEFAULT_ID_DEADLINE_HOURS, FACT_FLAGS, type VenueFactsInput } from "lib/organizar/venue-facts";
 import { orpc } from "lib/orpc/client";
 import { AMENITIES, AMENITY_LABEL } from "lib/orpc/venues/schemas";
 
@@ -39,6 +40,38 @@ function Group({ legend, hint, children }: { legend: string; hint?: string; chil
   );
 }
 
+/** A checkbox drawn as an option card (the amenities, the access facts) */
+function OptionCheck({ checked, onChange, children }: { checked: boolean; onChange: () => void; children: ReactNode }) {
+  return (
+    <label className="group relative cursor-pointer">
+      <input checked={checked} className="peer sr-only" type="checkbox" onChange={onChange} />
+      <span className={optionClassName}>
+        <span
+          aria-hidden
+          className={cn(
+            "flex size-4 shrink-0 items-center justify-center rounded border",
+            checked ? "border-yellow-400 bg-yellow-400 text-zinc-950" : "border-zinc-600"
+          )}
+        >
+          {checked ? <Check className="size-3" strokeWidth={3} /> : null}
+        </span>
+        {children}
+      </span>
+    </label>
+  );
+}
+
+const FACT_TEXTS = [
+  { key: "transit", label: "Cómo llegar (opcional)", placeholder: "Ómnibus 121 y 187 por 18 de Julio" },
+  { key: "parking", label: "Estacionamiento y bicicletas (opcional)", placeholder: "Parking pago en la esquina" },
+  { key: "foodRules", label: "Comida y bebida (opcional)", placeholder: "Se puede comer en el comedor, no en la sala" },
+  {
+    key: "avNotes",
+    label: "Proyector y sonido (opcional)",
+    placeholder: "Proyector con HDMI-C, micrófono inalámbrico",
+  },
+] as const;
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-2 text-sm text-zinc-300">
@@ -60,7 +93,9 @@ export function OfferVenueForm({ name }: { name: string }) {
     notes: "",
     monthlyCap: "",
     addressVisibility: "attendees" as "attendees" | "public",
+    role: "",
   });
+  const [facts, setFacts] = useState<VenueFactsInput>({});
   const [amenities, setAmenities] = useState<(typeof AMENITIES)[number][]>([]);
   const [hostDays, setHostDays] = useState<number[]>([2, 3, 4]);
   const [consent, setConsent] = useState(false);
@@ -100,6 +135,8 @@ export function OfferVenueForm({ name }: { name: string }) {
           monthlyCap: form.monthlyCap ? Number(form.monthlyCap) : null,
           addressVisibility: form.addressVisibility,
           notes: form.notes,
+          role: form.role,
+          facts,
           consent: true,
         });
       }}
@@ -149,31 +186,67 @@ export function OfferVenueForm({ name }: { name: string }) {
               const checked = amenities.includes(amenity);
 
               return (
-                <label key={amenity} className="group relative cursor-pointer">
-                  <input
-                    checked={checked}
-                    className="peer sr-only"
-                    type="checkbox"
-                    onChange={() =>
-                      setAmenities(checked ? amenities.filter((item) => item !== amenity) : [...amenities, amenity])
-                    }
-                  />
-                  <span className={optionClassName}>
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "flex size-4 shrink-0 items-center justify-center rounded border",
-                        checked ? "border-yellow-400 bg-yellow-400 text-zinc-950" : "border-zinc-600"
-                      )}
-                    >
-                      {checked ? <Check className="size-3" strokeWidth={3} /> : null}
-                    </span>
-                    {AMENITY_LABEL[amenity]}
-                  </span>
-                </label>
+                <OptionCheck
+                  key={amenity}
+                  checked={checked}
+                  onChange={() =>
+                    setAmenities(checked ? amenities.filter((item) => item !== amenity) : [...amenities, amenity])
+                  }
+                >
+                  {AMENITY_LABEL[amenity]}
+                </OptionCheck>
               );
             })}
           </div>
+        </div>
+      </Group>
+
+      <Group
+        hint="Aparece en la página de cada evento acá, para que quien vaya sepa qué esperar. Lo del proyector lo ve solo quien organiza."
+        legend="Cómo es llegar y estar"
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          {FACT_FLAGS.map((flag) => (
+            <OptionCheck
+              key={flag.key}
+              checked={facts[flag.key] === true}
+              onChange={() => setFacts({ ...facts, [flag.key]: !facts[flag.key] })}
+            >
+              {flag.label}
+            </OptionCheck>
+          ))}
+        </div>
+        <OptionCheck
+          checked={facts.idRequired === true}
+          onChange={() => setFacts({ ...facts, idRequired: !facts.idRequired })}
+        >
+          Seguridad pide la lista de nombres y cédulas de quienes vienen
+        </OptionCheck>
+        {facts.idRequired ? (
+          <Field label="¿Cuántas horas antes la necesitan?">
+            <input
+              className={cn(inputClassName, "max-w-[8rem] tabular-nums")}
+              inputMode="numeric"
+              max={168}
+              min={1}
+              type="number"
+              value={facts.idDeadlineHours ?? DEFAULT_ID_DEADLINE_HOURS}
+              onChange={(event) => setFacts({ ...facts, idDeadlineHours: Number(event.target.value) || undefined })}
+            />
+          </Field>
+        ) : null}
+        <div className="grid gap-4 sm:grid-cols-2">
+          {FACT_TEXTS.map((item) => (
+            <Field key={item.key} label={item.label}>
+              <input
+                className={inputClassName}
+                maxLength={item.key === "foodRules" || item.key === "avNotes" ? 300 : 200}
+                placeholder={item.placeholder}
+                value={facts[item.key] ?? ""}
+                onChange={(event) => setFacts({ ...facts, [item.key]: event.target.value || undefined })}
+              />
+            </Field>
+          ))}
         </div>
       </Group>
 
@@ -262,6 +335,15 @@ export function OfferVenueForm({ name }: { name: string }) {
       </Group>
 
       <Group legend="Algo más">
+        <Field label="Tu rol en la empresa (opcional)">
+          <input
+            className={inputClassName}
+            maxLength={80}
+            placeholder="Office manager, CTO, Comunicación…"
+            value={form.role}
+            onChange={set("role")}
+          />
+        </Field>
         <Field label="Comentarios (opcional)">
           <textarea
             className={cn(inputClassName, "h-auto min-h-24 py-3")}

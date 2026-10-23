@@ -8,11 +8,14 @@ import { Check, CircleSlash, Clock, Hourglass, Ticket } from "lucide-react";
 
 import { authClient, signIn, useSession } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
+import { useNow } from "components/Admin/ui/time";
 import { EmailCodeForm } from "components/shared/Auth/EmailCodeForm";
 import { buttonClassName } from "components/community/ui";
+import type { VolunteerRole } from "lib/db/schema";
 import { orpc } from "lib/orpc/client";
 import type { PublicEvent } from "lib/orpc/events/schemas";
-import { offerDeadline, rsvpState, type RsvpState } from "lib/organizar/rsvp-state";
+import { VOLUNTEER_ROLES } from "lib/organizar/presets";
+import { canConfirm, offerDeadline, rsvpState, type RsvpState } from "lib/organizar/rsvp-state";
 
 const updateUser = (data: { name: string }) => authClient.updateUser(data);
 
@@ -24,7 +27,8 @@ export function useRsvp(event: PublicEvent) {
   const session = useSession();
   const signedIn = Boolean(session.data);
   const mine = useQuery({ ...orpc.rsvps.mine.queryOptions({ input: { eventId: event.id } }), enabled: signedIn });
-  const now = Date.now();
+  // The clock only on the client (0 while prerendering): the page is cached, the time isn't
+  const now = useNow(30_000);
 
   return {
     session,
@@ -32,8 +36,55 @@ export function useRsvp(event: PublicEvent) {
     mine,
     now,
     state: rsvpState(event, mine.data ?? null, now),
-    loading: session.isPending || (signedIn && mine.isPending),
+    loading: now === 0 || session.isPending || (signedIn && mine.isPending),
   };
+}
+
+/** One sign-up question: pick one when it has options (diet, photos), type otherwise. */
+function QuestionField({
+  question,
+  value,
+  onChange,
+}: {
+  question: PublicEvent["questions"][number];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const label = `${question.label}${question.required ? "" : " (opcional)"}`;
+
+  return question.options?.length ? (
+    <label className="flex flex-col gap-2 text-[14px] text-zinc-300">
+      {label}
+      <select
+        className={cn(fieldClassName, "appearance-none")}
+        required={question.required}
+        value={value}
+        onChange={(change) => onChange(change.target.value)}
+      >
+        <option className="bg-zinc-900" value="">
+          Elegí una opción
+        </option>
+        {question.options.map((option) => (
+          <option key={option} className="bg-zinc-900" value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  ) : (
+    <label className="flex flex-col gap-2 text-[14px] text-zinc-300">
+      {label}
+      <input
+        autoComplete={question.preset === "ci" ? "off" : undefined}
+        className={fieldClassName}
+        inputMode={question.preset === "ci" ? "numeric" : undefined}
+        maxLength={500}
+        required={question.required}
+        value={value}
+        onChange={(change) => onChange(change.target.value)}
+      />
+    </label>
+  );
 }
 
 /** States with nothing to press: a line of what's going on (the card is only for OWU's own sign-up) */
@@ -57,6 +108,7 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
   const [guests, setGuests] = useState(0);
   const [showName, setShowName] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [roles, setRoles] = useState<VolunteerRole[]>([]);
   const [name, setName] = useState("");
   const input = { eventId: event.id };
 
@@ -67,15 +119,20 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
   const join = useMutation(orpc.rsvps.join.mutationOptions({ onSuccess: done }));
   const leave = useMutation(orpc.rsvps.leave.mutationOptions({ onSuccess: done }));
   const confirm = useMutation(orpc.rsvps.confirmOffer.mutationOptions({ onSuccess: done }));
-  const error = join.error ?? leave.error ?? confirm.error;
+  const attend = useMutation(orpc.rsvps.confirm.mutationOptions({ onSuccess: done }));
+  const error = join.error ?? leave.error ?? confirm.error ?? attend.error;
+  const asksId = event.questions.some((question) => question.preset === "ci");
+  const offered = VOLUNTEER_ROLES.filter((role) => event.volunteerRoles.includes(role.value));
 
   const nameless = signedIn && !session.data?.user.name.trim();
   const rsvp = mine.data;
   const ticketPath = `/comunidad/${event.community.slug}/events/${event.slug}/entrada`;
   const cta = "cta" in state ? state.cta : null;
 
-  // Until we know who's looking, a placeholder: a click must not land on the wrong state
-  if (session.isPending || (signedIn && step !== "auth" && mine.isPending)) {
+  // Until we know who's looking, a placeholder: a click must not land on the wrong state. Never
+  // while signing in: the session refetch that follows the code would unmount the form mid-flow
+  // and drop a new account back at the email step, before it names itself.
+  if (step !== "auth" && (now === 0 || session.isPending || (signedIn && mine.isPending))) {
     return <div className="h-12 animate-pulse rounded-xl bg-white/[0.05]" />;
   }
 
@@ -89,8 +146,27 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
                 <Check aria-hidden className="size-4" strokeWidth={3} />
               </span>
               Estás anotado
+              {rsvp.confirmedAt ? <span className="text-[14px] font-normal text-zinc-400">· confirmaste</span> : null}
             </p>
             {rsvp.address ? <p className="text-[14px] text-zinc-400">Dirección: {rsvp.address}</p> : null}
+            {canConfirm(event, rsvp, now) ? (
+              <div className="flex flex-col gap-2 rounded-xl border border-yellow-400/30 bg-yellow-400/[0.06] p-3">
+                <p className="text-[14px] text-zinc-200">
+                  ¿Seguís viniendo?{" "}
+                  {event.waiting
+                    ? `Hay ${event.waiting === 1 ? "1 persona" : `${event.waiting} personas`} en lista de espera.`
+                    : "Así sabemos cuántos somos."}
+                </p>
+                <button
+                  className={buttonClassName("accent", "md", "w-full")}
+                  disabled={attend.isPending}
+                  type="button"
+                  onClick={() => attend.mutate(input)}
+                >
+                  {attend.isPending ? "Confirmando…" : "Voy ✅"}
+                </button>
+              </div>
+            ) : null}
             {rsvp.onlineUrl ? (
               <a
                 className="text-[14px] break-all text-yellow-400 underline underline-offset-4"
@@ -101,7 +177,11 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
                 {rsvp.onlineUrl}
               </a>
             ) : null}
-            <Link className={buttonClassName("primary", "lg", "w-full")} href={ticketPath}>
+            {/* One call to action at a time: while "Voy" is asked, the ticket steps back */}
+            <Link
+              className={buttonClassName(canConfirm(event, rsvp, now) ? "secondary" : "primary", "lg", "w-full")}
+              href={ticketPath}
+            >
               <Ticket aria-hidden className="mr-2 size-4" />
               Ver mi entrada
             </Link>
@@ -201,7 +281,7 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
       onSubmit={(submitEvent) => {
         submitEvent.preventDefault();
         const save = nameless ? updateUser({ name: name.trim() }).then(() => session.refetch()) : Promise.resolve();
-        void save.then(() => join.mutate({ eventId: event.id, guests, answers, showName }));
+        void save.then(() => join.mutate({ eventId: event.id, guests, answers, showName, volunteerRoles: roles }));
       }}
     >
       {state.kind === "cancelado" ? (
@@ -239,22 +319,49 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
         </label>
       ) : null}
       {event.questions.map((question) => (
-        <label key={question.id} className="flex flex-col gap-2 text-[14px] text-zinc-300">
-          {question.label}
-          {question.required ? "" : " (opcional)"}
-          <input
-            className={fieldClassName}
-            maxLength={500}
-            required={question.required}
-            value={answers[question.id] ?? ""}
-            onChange={(change) => setAnswers({ ...answers, [question.id]: change.target.value })}
-          />
-        </label>
+        <QuestionField
+          key={question.id}
+          question={question}
+          value={answers[question.id] ?? ""}
+          onChange={(value) => setAnswers({ ...answers, [question.id]: value })}
+        />
       ))}
-      <label className="flex items-center gap-3 text-[14px] text-zinc-300">
+      {offered.length > 0 ? (
+        <fieldset className="flex flex-col gap-2 text-[14px] text-zinc-300">
+          <legend className="mb-2">¿Querés dar una mano? (opcional)</legend>
+          <div className="flex flex-wrap gap-2">
+            {offered.map((role) => {
+              const on = roles.includes(role.value);
+
+              return (
+                <label
+                  key={role.value}
+                  className={cn(
+                    "flex min-h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors",
+                    on ? "border-yellow-400/60 bg-yellow-400/[0.08] text-white" : "border-white/10 text-zinc-300"
+                  )}
+                >
+                  <input
+                    checked={on}
+                    className="size-5 accent-yellow-400"
+                    type="checkbox"
+                    onChange={(change) =>
+                      setRoles(
+                        change.target.checked ? [...roles, role.value] : roles.filter((item) => item !== role.value)
+                      )
+                    }
+                  />
+                  {role.label}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
+      ) : null}
+      <label className="flex min-h-6 items-center gap-3 text-[14px] text-zinc-300">
         <input
           checked={showName}
-          className="size-4 accent-yellow-400"
+          className="size-5 accent-yellow-400"
           type="checkbox"
           onChange={(change) => setShowName(change.target.checked)}
         />
@@ -263,9 +370,11 @@ export function RsvpCard({ event }: { event: PublicEvent }) {
       <button className={buttonClassName("primary", "lg", "w-full")} disabled={join.isPending} type="submit">
         {join.isPending ? "Anotándote…" : cta}
       </button>
-      <p className="text-[13px] leading-relaxed text-zinc-500">
-        {event.community.name} y OWU ven tu nombre y tu email para este evento. Te mandamos la confirmación y un par de
-        recordatorios.{" "}
+      <p className="text-[13px] leading-relaxed text-zinc-500" data-testid="rsvp-privacy">
+        {event.community.name} y OWU guardan tu nombre, tu email y tus respuestas para organizar este evento y llevar la
+        cuenta de la asistencia a la comunidad. Lo ven solo quienes organizan {event.community.name}; nunca es público.
+        {asksId ? " La cédula se la pasamos solo a la seguridad del espacio y la borramos a la semana." : ""} Te
+        mandamos la confirmación y un par de recordatorios.{" "}
         <Link className="underline decoration-white/20 underline-offset-4 hover:text-zinc-300" href="/privacidad">
           Privacidad
         </Link>

@@ -32,6 +32,8 @@ const readBody = async (request) => {
 };
 
 const routes = [
+  // The meetup-bot feed (MEETUP_BOT_URL in e2e): no outside events, so specs never need the internet
+  ["GET", /^\/meetup-bot\/json$/, (_request, response) => json(response, 200, { meetups: [] })],
   [
     "GET",
     /^\/oauth\/authorize$/,

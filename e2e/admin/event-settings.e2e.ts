@@ -77,7 +77,7 @@ test("leaving with unsaved changes asks first", async ({ page, board }) => {
   await expect(dialog).toContainText("1 cambio sin guardar");
 
   // Staying keeps the page and what was typed.
-  await dialog.getByRole("button", { name: "Cancelar" }).click();
+  await dialog.getByRole("button", { name: "Volver" }).click();
   await expect(dialog).toBeHidden();
   expect(page.url()).toBe(url);
   await expect(page.getByLabel("Nombre")).toHaveValue("Un nombre que no se guarda");

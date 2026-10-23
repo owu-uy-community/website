@@ -41,6 +41,9 @@ export default async function CommunitiesPage() {
             <ButtonLink href={PAGES.organizar.href} variant="secondary">
               Organizá con OWU
             </ButtonLink>
+            <ButtonLink arrow href="/comunidades/numeros" variant="ghost">
+              Los números de OWU
+            </ButtonLink>
           </>
         }
         description={

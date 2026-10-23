@@ -69,16 +69,23 @@ describe("the QStash tick", () => {
 describe("the daily cron backstop", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  const get = (authorization?: string) =>
-    GET(new NextRequest(URL, { headers: authorization ? { authorization } : {} }));
+  const get = (authorization?: string, url = URL) =>
+    GET(new NextRequest(url, { headers: authorization ? { authorization } : {} }));
 
   test("runs with the cron secret and refuses without it", async () => {
     vi.stubEnv("CRON_SECRET", "s3cret");
 
     expect((await get("Bearer s3cret")).status).toBe(200);
-    expect(tick).toHaveBeenLastCalledWith(240_000, { daily: true });
+    expect(tick).toHaveBeenLastCalledWith(240_000, { daily: true, digestNow: false });
     expect((await get("Bearer wrong")).status).toBe(401);
     expect((await get()).status).toBe(401);
+  });
+
+  test("?digest=now also sends the weekly digest, whatever the day", async () => {
+    vi.stubEnv("CRON_SECRET", "s3cret");
+
+    expect((await get("Bearer s3cret", `${URL}?digest=now`)).status).toBe(200);
+    expect(tick).toHaveBeenLastCalledWith(240_000, { daily: true, digestNow: true });
   });
 
   test("with no secret configured it refuses everything", async () => {

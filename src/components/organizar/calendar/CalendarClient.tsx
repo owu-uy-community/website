@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,6 +8,7 @@ import {
   Ban,
   Bookmark,
   CalendarDays,
+  Check,
   ChevronLeft,
   ChevronRight,
   CircleCheck,
@@ -15,6 +17,8 @@ import {
   Info,
   List,
   PartyPopper,
+  Repeat,
+  SlidersHorizontal,
   Sparkles,
   Star,
   TriangleAlert,
@@ -36,8 +40,23 @@ import { toast } from "components/shared/ui/toast-utils";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import { addDays, weekdayOf } from "lib/calendar/holidays";
 import { itemDays, monthRange, shiftMonth } from "lib/calendar/items";
-import { dayKey, shortWhen } from "lib/community/time";
-import type { PlanDay, PlanItem } from "lib/orpc/calendar/schemas";
+import { clockTime, dayKey, shortWhen } from "lib/community/time";
+import { HOLD_DAYS } from "lib/organizar/rules";
+import {
+  DEFAULT_DURATION,
+  DEFAULT_START,
+  TIME_STEP_SECONDS,
+  durationLabel,
+  durationsWith,
+  endTime,
+  isDuration,
+  isStartTime,
+  longDay,
+  monthTitle,
+  shortDay,
+} from "lib/organizar/times";
+import { plural } from "lib/organizar/words";
+import type { PlanDay, PlanItem, PlanSlot } from "lib/orpc/calendar/schemas";
 import { orpc } from "lib/orpc/client";
 
 type Level = PlanDay["level"];
@@ -49,7 +68,7 @@ export const LEVEL: Record<
   libre: { label: "Libre", icon: CircleCheck, tone: "text-success", badge: "success" },
   cuidado: { label: "Con cuidado", icon: TriangleAlert, tone: "text-warning", badge: "warning" },
   choca: { label: "Choca", icon: CircleX, tone: "text-live", badge: "destructive" },
-  bloqueado: { label: "No disponible", icon: Ban, tone: "text-faint", badge: "secondary" },
+  bloqueado: { label: "Bloqueado", icon: Ban, tone: "text-muted-foreground", badge: "secondary" },
 };
 
 export const REASON: Record<PlanDay["reasons"][number]["tone"], { icon: LucideIcon; tone: string }> = {
@@ -59,56 +78,57 @@ export const REASON: Record<PlanDay["reasons"][number]["tone"], { icon: LucideIc
   bad: { icon: CircleX, tone: "text-live" },
 };
 
-const TIMES = ["18:00", "18:30", "19:00", "19:30", "20:00"];
-const DURATIONS = [
-  { value: 60, label: "1 h" },
-  { value: 90, label: "1 h 30" },
-  { value: 120, label: "2 h" },
-  { value: 180, label: "3 h" },
-  { value: 240, label: "4 h" },
-];
-const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+/** "Puntaje 75 de 100": the number behind the word, for a tooltip or a screen reader. */
+export const scoreHint = (day: Pick<PlanDay, "score" | "blocked">) =>
+  day.blocked ? undefined : `Puntaje ${day.score} de 100`;
 
-/** What the calendar can hide: holds, holidays, and the big events and periods (CONF, vacations) */
+/** What the day's score is made of, in one line: the costs, or why it's fine. */
+export const why = (day: PlanDay) => {
+  const costs = day.reasons.filter((reason) => reason.tone !== "ok");
+
+  return (costs.length > 0 ? costs : day.reasons.slice(0, 1)).map((reason) => reason.text).join(" · ");
+};
+
+const WEEKDAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+
+/** What the calendar can hide: holds, holidays, big events and periods, and communities' usual days */
 const LAYERS = [
   { value: "reservas", label: "Reservas" },
   { value: "feriados", label: "Feriados" },
   { value: "grandes", label: "Eventos grandes" },
+  { value: "habituales", label: "Días habituales" },
 ] as const;
 type Layer = (typeof LAYERS)[number]["value"];
 
-/** Day keys are calendar days: format them at noon UTC so no timezone moves them. */
-const onDay = (day: string, options: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat("es-UY", { timeZone: "UTC", ...options }).format(new Date(`${day}T12:00:00Z`));
-const longDay = (day: string) => onDay(day, { weekday: "long", day: "numeric", month: "long" }).replace(",", "");
-const shortDay = (day: string) =>
-  `${onDay(day, { weekday: "short" })} ${Number(day.slice(8))} ${onDay(day, { month: "short" })}`.replaceAll(".", "");
-const monthTitle = (month: string) => onDay(`${month}-15`, { month: "long", year: "numeric" });
-const clock = (iso: string) =>
-  new Intl.DateTimeFormat("es-UY", {
-    timeZone: "America/Montevideo",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(iso));
+/** "Meetup", "Luma", "Eventbrite", or the site's own name: where a feed link goes. */
+export function siteName(url: string) {
+  const host = URL.canParse(url) ? new URL(url).hostname.replace(/^www\./, "") : url;
+  if (/(^|\.)meetup\.com$/.test(host)) return "Meetup";
+  if (/(^|\.)(lu\.ma|luma\.com)$/.test(host)) return "Luma";
+  if (/(^|\.)eventbrite\./.test(host)) return "Eventbrite";
+
+  return host;
+}
 
 export type CalendarCommunity = { id: string; slug: string; name: string };
 
 /**
- * The shared calendar: a month of days scored for a meetup at the chosen time, every community's
- * events and holds on it, the best days suggested, and a hold one click away.
+ * The shared calendar: a month of days scored for a meetup at the chosen time (the community's
+ * usual one at first), every community's events, holds and usual days on it, the best days
+ * suggested, and a hold one click away.
  */
 export function CalendarClient({ community, today }: { community: CalendarCommunity; today: string }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const { isMobile } = useSidebar();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersSheet = useRef<HTMLDivElement>(null);
 
   const month = /^\d{4}-\d{2}$/.test(params.get("mes") ?? "") ? (params.get("mes") as string) : today.slice(0, 7);
-  const startTime = TIMES.includes(params.get("hora") ?? "") ? (params.get("hora") as string) : "19:00";
-  const durationMin = DURATIONS.some((option) => String(option.value) === params.get("dur"))
-    ? Number(params.get("dur"))
-    : 120;
+  // Without one in the URL, the server scores the community's usual start ("Lo de siempre")
+  const chosenTime = isStartTime(params.get("hora")) ? (params.get("hora") as string) : undefined;
+  const durationMin = isDuration(Number(params.get("dur"))) ? Number(params.get("dur")) : DEFAULT_DURATION;
   const scope = params.get("alcance") === "audiencia" ? "audiencia" : "todas";
   const selected = params.get("dia");
   /** Dating an existing draft (from Inicio or Eventos) instead of making a new one */
@@ -131,9 +151,11 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
     window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
   };
 
-  const input = { communityId: community.id, month, startTime, durationMin };
+  const input = { communityId: community.id, month, startTime: chosenTime, durationMin };
   const plan = useQuery(orpc.calendar.plan.queryOptions({ input, placeholderData: keepPreviousData }));
   const own = useQuery(orpc.events.list.queryOptions({ input: { communityId: community.id } }));
+  const usual = plan.data?.usualStart ?? DEFAULT_START;
+  const startTime = chosenTime ?? plan.data?.startTime ?? usual;
 
   const invalidate = () =>
     Promise.all([
@@ -146,8 +168,8 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
         toast.success(
           `Reservaste el ${shortWhen(result.startDate)}`,
           result.headsUp > 0
-            ? `Le avisamos a ${result.headsUp === 1 ? "una comunidad" : `${result.headsUp} comunidades`} con público parecido.`
-            : "Todas las comunidades la ven por 14 días."
+            ? `Le avisamos a ${plural(result.headsUp, "comunidad", "comunidades")} con público parecido.`
+            : `Todas las comunidades la ven por ${HOLD_DAYS} días.`
         );
         void invalidate();
       },
@@ -178,6 +200,12 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
     return byDay;
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- layers is rebuilt from the URL each render
   }, [plan.data, scope, params.get("capas")]);
+  const slotsByDay = useMemo(() => {
+    const byDay = new Map<string, PlanSlot[]>();
+    for (const slot of plan.data?.slots ?? []) byDay.set(slot.day, [...(byDay.get(slot.day) ?? []), slot]);
+
+    return byDay;
+  }, [plan.data]);
   const holdsById = useMemo(
     () => new Map((own.data ?? []).filter((event) => event.heldUntil).map((event) => [event.id, event])),
     [own.data]
@@ -230,22 +258,20 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
   const ownHold = selected
     ? (plan.data?.items ?? []).find((item) => item.own && item.kind === "hold" && dayKey(item.start) === selected)
     : undefined;
-  const ownEvent = detailItems.find((item) => item.own && item.kind === "event");
 
   const dayPanel = selected ? (
     <DayDetail
       key={selected}
-      inSheet={isMobile}
-      busy={hold.isPending || release.isPending}
+      busy={hold.isPending || release.isPending || !plan.data}
       day={selected}
+      draftName={draft?.name ?? null}
       durationMin={durationMin}
       heldUntil={ownHold ? (holdsById.get(ownHold.id)?.heldUntil ?? null) : null}
+      inSheet={isMobile}
       items={detailItems}
-      ownEvent={ownEvent}
       ownHold={ownHold}
       score={detail}
       startTime={startTime}
-      draftName={draft?.name ?? null}
       onHold={(title) =>
         hold.mutate(
           {
@@ -264,6 +290,37 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
     />
   ) : null;
 
+  const controls = (
+    <Controls
+      durationMin={durationMin}
+      layers={layers}
+      scope={scope}
+      startTime={startTime}
+      usual={usual}
+      onDuration={(value) => setParams({ dur: value === DEFAULT_DURATION ? null : String(value) })}
+      onLayers={(value) => setParams({ capas: value.length === LAYERS.length ? null : value.join(",") || "ninguna" })}
+      onScope={(value) => setParams({ alcance: value === "todas" ? null : value })}
+      // Back to the usual start: no `hora` in the URL
+      onTime={(value) => setParams({ hora: value === usual ? null : value })}
+    />
+  );
+  const viewToggle = (
+    <ToggleGroup
+      aria-label="Vista"
+      className="rounded-md border border-input"
+      type="single"
+      value={view}
+      onValueChange={(value) => value && setParams({ vista: value })}
+    >
+      <ToggleGroupItem aria-label="Mes" className="h-8 px-2.5" value="mes">
+        <CalendarDays aria-hidden className="size-4" />
+      </ToggleGroupItem>
+      <ToggleGroupItem aria-label="Agenda" className="h-8 px-2.5" value="agenda">
+        <List aria-hidden className="size-4" />
+      </ToggleGroupItem>
+    </ToggleGroup>
+  );
+
   return (
     <PageContainer size="large">
       <PageHeader
@@ -281,7 +338,7 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
           </div>
         }
         description="Los eventos y las reservas de todas las comunidades. Elegí horario y te decimos qué día choca menos."
-        meta={<span className="font-terminal tabular-nums first-letter:uppercase">{monthTitle(month)}</span>}
+        meta={<span className="font-terminal tabular-nums">{monthTitle(month)}</span>}
         title="Calendario"
       />
 
@@ -297,79 +354,50 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
         </div>
       ) : null}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Select value={startTime} onValueChange={(value) => setParams({ hora: value })}>
-          <SelectTrigger aria-label="Hora de inicio" className="w-[104px] font-terminal tabular-nums">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TIMES.map((time) => (
-              <SelectItem key={time} className="font-terminal tabular-nums" value={time}>
-                {time}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={String(durationMin)} onValueChange={(value) => setParams({ dur: value })}>
-          <SelectTrigger aria-label="Duración" className="w-[100px] font-terminal tabular-nums">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {DURATIONS.map((option) => (
-              <SelectItem key={option.value} className="font-terminal tabular-nums" value={String(option.value)}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <ToggleGroup
-          aria-label="Qué eventos ver"
-          className="rounded-md border border-input"
-          type="single"
-          value={scope}
-          onValueChange={(value) => value && setParams({ alcance: value === "todas" ? null : value })}
-        >
-          <ToggleGroupItem className="h-8 px-3 text-ui" value="todas">
-            Todas
-          </ToggleGroupItem>
-          <ToggleGroupItem className="h-8 px-3 text-ui" value="audiencia">
-            Mi audiencia
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <ToggleGroup
-          aria-label="Capas"
-          className="rounded-md border border-input"
-          type="multiple"
-          value={[...layers]}
-          onValueChange={(value) =>
-            setParams({ capas: value.length === LAYERS.length ? null : value.join(",") || "ninguna" })
-          }
-        >
-          {LAYERS.map((layer) => (
-            <ToggleGroupItem key={layer.value} className="h-8 px-2.5 text-ui" value={layer.value}>
-              {layer.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-        <ToggleGroup
-          aria-label="Vista"
-          className="rounded-md border border-input"
-          type="single"
-          value={view}
-          onValueChange={(value) => value && setParams({ vista: value })}
-        >
-          <ToggleGroupItem aria-label="Mes" className="h-8 px-2.5" value="mes">
-            <CalendarDays aria-hidden className="size-4" />
-          </ToggleGroupItem>
-          <ToggleGroupItem aria-label="Agenda" className="h-8 px-2.5" value="agenda">
-            <List aria-hidden className="size-4" />
-          </ToggleGroupItem>
-        </ToggleGroup>
-        <Legend />
-      </div>
+      {isMobile ? (
+        <div className="mb-3 flex items-center gap-2">
+          <Button className="h-10" variant="outline" onClick={() => setFiltersOpen(true)}>
+            <SlidersHorizontal aria-hidden />
+            Filtros
+            <span className="font-terminal text-meta text-muted-foreground tabular-nums">
+              {startTime} · {durationLabel(durationMin)}
+            </span>
+          </Button>
+          <span className="ml-auto">{viewToggle}</span>
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetContent
+              ref={filtersSheet}
+              className="max-h-[85svh] overflow-y-auto rounded-t-2xl"
+              side="bottom"
+              onOpenAutoFocus={keepKeyboardDown(filtersSheet)}
+            >
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 flex flex-col gap-5">
+                {controls}
+                <Legend />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      ) : (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {controls}
+          {viewToggle}
+          <Legend className="ml-auto" />
+        </div>
+      )}
 
-      {plan.isError ? (
-        <ErrorState onRetry={() => void plan.refetch()} title="No pudimos armar el calendario" />
+      {plan.isError || own.isError ? (
+        <ErrorState
+          onRetry={() => {
+            if (plan.isError) void plan.refetch();
+            if (own.isError) void own.refetch();
+          }}
+          retrying={plan.isFetching || own.isFetching}
+          title={plan.isError ? "No pudimos armar el calendario" : "No pudimos traer tus eventos y reservas"}
+        />
       ) : (
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
           {view === "agenda" ? (
@@ -379,6 +407,7 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
               layers={layers}
               loading={!plan.data}
               selected={selected}
+              slotsByDay={slotsByDay}
               suggested={suggested}
               today={today}
               onSelect={(day) => select(day)}
@@ -398,9 +427,9 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
                     key={day}
                     compact={isMobile}
                     day={day}
-                    layers={layers}
                     inMonth={day >= from && day <= to}
                     items={itemsByDay.get(day) ?? []}
+                    layers={layers}
                     loading={!plan.data}
                     refCallback={(node) => {
                       if (node) cellRefs.current.set(day, node);
@@ -408,6 +437,7 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
                     }}
                     score={days.get(day)}
                     selected={day === selected}
+                    slots={layers.has("habituales") ? (slotsByDay.get(day) ?? []) : []}
                     suggested={suggested.has(day)}
                     tabbable={day === (selected ?? (today.startsWith(month) ? today : from))}
                     today={day === today}
@@ -426,25 +456,129 @@ export function CalendarClient({ community, today }: { community: CalendarCommun
         </div>
       )}
 
-      {isMobile ? (
-        <Sheet open={Boolean(selected)} onOpenChange={(open) => !open && setParams({ dia: null })}>
-          <SheetContent className="max-h-[85svh] overflow-y-auto rounded-t-2xl p-0" side="bottom">
-            <SheetHeader className="sr-only">
-              <SheetTitle>{selected ? longDay(selected) : "Día"}</SheetTitle>
-            </SheetHeader>
-            {dayPanel}
-          </SheetContent>
-        </Sheet>
-      ) : null}
+      {isMobile ? <DaySheet day={selected} onClose={() => setParams({ dia: null })} panel={dayPanel} /> : null}
     </PageContainer>
   );
 }
 
-function Legend() {
+/** A filter that is on or off: says which with a check, not only with a color. */
+function FilterChip({ on, label, onToggle }: { on: boolean; label: string; onToggle: () => void }) {
+  return (
+    <button
+      aria-pressed={on}
+      className={cn(
+        "flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-ui transition-colors pointer-coarse:h-10",
+        on ? "border-subtle/50 bg-raised text-foreground" : "border-input text-muted-foreground hover:text-foreground"
+      )}
+      type="button"
+      onClick={onToggle}
+    >
+      {on ? (
+        <Check aria-hidden className="size-3.5" />
+      ) : (
+        <span aria-hidden className="size-3.5 rounded-[3px] border border-input" />
+      )}
+      {label}
+    </button>
+  );
+}
+
+/** Start time (any quarter hour, "Lo de siempre" first), length, audience and layers. */
+function Controls({
+  startTime,
+  usual,
+  durationMin,
+  scope,
+  layers,
+  onTime,
+  onDuration,
+  onScope,
+  onLayers,
+}: {
+  startTime: string;
+  usual: string;
+  durationMin: number;
+  scope: "todas" | "audiencia";
+  layers: Set<Layer>;
+  onTime: (value: string) => void;
+  onDuration: (value: number) => void;
+  onScope: (value: "todas" | "audiencia") => void;
+  onLayers: (value: Layer[]) => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center gap-1.5">
+        <label className="sr-only" htmlFor="calendar-start">
+          Hora de inicio
+        </label>
+        <Input
+          className="h-9 w-[104px] font-terminal tabular-nums"
+          id="calendar-start"
+          step={TIME_STEP_SECONDS}
+          type="time"
+          value={startTime}
+          onChange={(event) => {
+            const [hours, minutes] = event.target.value.split(":").map(Number);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+            // On the quarter-hour grid the calendar scores
+            const snapped = `${String(hours).padStart(2, "0")}:${String(Math.floor(minutes / 15) * 15).padStart(2, "0")}`;
+            if (isStartTime(snapped)) onTime(snapped);
+          }}
+        />
+        <button
+          aria-pressed={startTime === usual}
+          className={cn(
+            "h-8 rounded-md px-2 text-meta transition-colors pointer-coarse:h-10",
+            startTime === usual ? "text-muted-foreground" : "text-foreground underline underline-offset-2"
+          )}
+          type="button"
+          onClick={() => onTime(usual)}
+        >
+          Lo de siempre: <span className="font-terminal tabular-nums">{usual}</span>
+        </button>
+      </div>
+      <Select value={String(durationMin)} onValueChange={(value) => onDuration(Number(value))}>
+        <SelectTrigger aria-label="Duración" className="w-[140px] font-terminal tabular-nums">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {durationsWith(durationMin).map((value) => (
+            <SelectItem key={value} className="font-terminal tabular-nums" value={String(value)}>
+              {durationLabel(value)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <div aria-label="Filtros" className="flex flex-wrap items-center gap-1.5" role="group">
+        <FilterChip
+          label="Solo mi audiencia"
+          on={scope === "audiencia"}
+          onToggle={() => onScope(scope === "audiencia" ? "todas" : "audiencia")}
+        />
+        {LAYERS.map((layer) => (
+          <FilterChip
+            key={layer.value}
+            label={layer.label}
+            on={layers.has(layer.value)}
+            onToggle={() =>
+              onLayers(
+                LAYERS.map((item) => item.value).filter((value) =>
+                  value === layer.value ? !layers.has(value) : layers.has(value)
+                )
+              )
+            }
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function Legend({ className }: { className?: string }) {
   return (
     <ul
       aria-label="Referencias"
-      className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-muted-foreground"
+      className={cn("flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-muted-foreground", className)}
     >
       {(["libre", "cuidado", "choca", "bloqueado"] as const).map((level) => {
         const { icon: Icon, label, tone } = LEVEL[level];
@@ -457,8 +591,16 @@ function Legend() {
         );
       })}
       <li className="flex items-center gap-1">
+        <span aria-hidden className="h-3.5 w-0.5 rounded-full bg-live" />
+        Borde rojo: el día choca
+      </li>
+      <li className="flex items-center gap-1">
         <Bookmark aria-hidden className="size-3.5 text-info-foreground" />
         Reserva
+      </li>
+      <li className="flex items-center gap-1">
+        <Repeat aria-hidden className="size-3.5 text-muted-foreground" />
+        Día habitual
       </li>
       <li className="flex items-center gap-1">
         <Star aria-hidden className="size-3.5 text-success" />
@@ -472,6 +614,7 @@ function DayCell({
   day,
   score,
   items,
+  slots,
   inMonth,
   selected,
   today,
@@ -488,6 +631,8 @@ function DayCell({
   layers: Set<Layer>;
   score: PlanDay | undefined;
   items: PlanItem[];
+  /** Usual days that day, when the layer is on */
+  slots: PlanSlot[];
   inMonth: boolean;
   selected: boolean;
   today: boolean;
@@ -503,25 +648,23 @@ function DayCell({
   const level = score ? LEVEL[score.level] : null;
   const shown = items.slice(0, compact ? 0 : 2);
   const more = items.length - shown.length;
-  const label = [
-    longDay(day),
-    level?.label,
-    score && !score.blocked ? `puntaje ${score.score}` : null,
-    suggested ? "sugerida" : null,
-    items.length > 0 ? `${items.length} ${items.length === 1 ? "evento" : "eventos"}` : null,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  // The name is what shows plus what only a screen reader needs: "jueves 12 de noviembre, Libre, puntaje…"
+  const [weekday, , ...month] = longDay(day).split(" ");
+  const details = [
+    score && !score.blocked && inMonth ? `puntaje ${score.score} de 100` : null,
+    suggested && inMonth ? "sugerida" : null,
+    compact && items.length > 0 ? plural(items.length, "evento", "eventos") : null,
+    compact && slots.length > 0 ? "día habitual" : null,
+  ].filter(Boolean);
 
   return (
     <button
       ref={refCallback}
-      aria-label={label}
       aria-pressed={selected}
       className={cn(
         "relative flex min-w-0 flex-col items-stretch gap-1 border-r border-b border-border p-1.5 text-left transition-colors outline-none [&:nth-child(7n)]:border-r-0",
         compact ? "min-h-14" : "min-h-[108px]",
-        inMonth ? "hover:bg-raised" : "bg-app/40 text-faint",
+        inMonth ? "hover:bg-raised" : "bg-app/40",
         score?.level === "bloqueado" &&
           inMonth &&
           "bg-[repeating-linear-gradient(135deg,transparent_0_6px,hsl(var(--faint)/0.12)_6px_7px)]",
@@ -530,6 +673,7 @@ function DayCell({
         "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       )}
       tabIndex={tabbable ? 0 : -1}
+      title={score && inMonth ? scoreHint(score) : undefined}
       type="button"
       onClick={onSelect}
       onKeyDown={onKeyDown}
@@ -541,23 +685,30 @@ function DayCell({
             today
               ? "grid size-5 place-items-center rounded-full bg-primary font-semibold text-primary-foreground"
               : "text-subtle",
-            !inMonth && "text-faint"
+            !inMonth && "text-muted-foreground"
           )}
         >
+          <span className="sr-only">{weekday} </span>
           {Number(day.slice(8))}
+          <span className="sr-only">
+            {" "}
+            {month.join(" ")}
+            {level && inMonth ? ", " : ""}
+          </span>
         </span>
         {suggested && inMonth ? <Star aria-hidden className="size-3 fill-success text-success" /> : null}
-        <span className="ml-auto flex items-center gap-1">
+        <span className="ml-auto flex min-w-0 items-center gap-1">
           {loading && inMonth ? (
-            <Skeleton className="h-3 w-6" />
+            <Skeleton className="h-3 w-10" />
           ) : level && inMonth ? (
             <>
-              {!compact && !score?.blocked ? (
-                <span className="font-terminal text-2xs text-muted-foreground tabular-nums">{score?.score}</span>
-              ) : null}
-              <level.icon aria-hidden className={cn("size-3.5", level.tone)} />
+              {/* Words first: the score is in the tooltip and the label */}
+              {/* On a phone the cell only fits the icon; elsewhere the word says it */}
+              <span className={cn("text-2xs whitespace-nowrap", level.tone, compact && "sr-only")}>{level.label}</span>
+              {compact ? <level.icon aria-hidden className={cn("size-3.5 shrink-0", level.tone)} /> : null}
             </>
           ) : null}
+          {details.length > 0 ? <span className="sr-only">, {details.join(", ")}</span> : null}
         </span>
       </span>
       {!compact && inMonth && layers.has("feriados") && score?.holiday ? (
@@ -568,6 +719,14 @@ function DayCell({
       ) : null}
       {!compact && inMonth && layers.has("grandes") && score?.period && !score.holiday ? (
         <span className="truncate px-1 text-2xs text-muted-foreground">{score.period}</span>
+      ) : null}
+      {!compact && inMonth && slots.length > 0 ? (
+        <span className="flex min-w-0 items-center gap-1 px-1 text-2xs text-muted-foreground">
+          <Repeat aria-hidden className="size-2.5 shrink-0" />
+          <span className="truncate">
+            {slots.some((slot) => slot.own) ? "Tu día habitual" : slots.map((slot) => slot.communityName).join(", ")}
+          </span>
+        </span>
       ) : null}
       {compact ? (
         items.length > 0 ? (
@@ -599,10 +758,11 @@ function DayCell({
   );
 }
 
-/** The month as a list: each day with something on it (events, holds, a holiday), or suggested. */
+/** The month as a list: each day with something on it (events, holds, a holiday, a usual day), or suggested. */
 function Agenda({
   days,
   itemsByDay,
+  slotsByDay,
   layers,
   loading,
   selected,
@@ -612,6 +772,7 @@ function Agenda({
 }: {
   days: PlanDay[];
   itemsByDay: Map<string, PlanItem[]>;
+  slotsByDay: Map<string, PlanSlot[]>;
   layers: Set<Layer>;
   loading: boolean;
   selected: string | null;
@@ -619,11 +780,13 @@ function Agenda({
   today: string;
   onSelect: (day: string) => void;
 }) {
+  const habitual = (day: string) => (layers.has("habituales") ? (slotsByDay.get(day) ?? []) : []);
   const shown = days.filter(
     (day) =>
       day.day >= today &&
       ((itemsByDay.get(day.day)?.length ?? 0) > 0 ||
         suggested.has(day.day) ||
+        habitual(day.day).length > 0 ||
         (layers.has("feriados") && day.holiday) ||
         (layers.has("grandes") && day.period))
   );
@@ -643,6 +806,7 @@ function Agenda({
           {shown.map((day) => {
             const level = LEVEL[day.level];
             const items = itemsByDay.get(day.day) ?? [];
+            const slots = habitual(day.day);
 
             return (
               <li key={day.day}>
@@ -652,10 +816,11 @@ function Agenda({
                     "flex w-full items-start gap-3 px-3.5 py-3 text-left transition-colors hover:bg-raised",
                     selected === day.day && "bg-raised shadow-[inset_2px_0_0_hsl(var(--primary))]"
                   )}
+                  title={scoreHint(day)}
                   type="button"
                   onClick={() => onSelect(day.day)}
                 >
-                  <span className="w-20 shrink-0 font-terminal text-meta text-subtle tabular-nums first-letter:uppercase">
+                  <span className="w-20 shrink-0 font-terminal text-meta text-subtle tabular-nums">
                     {shortDay(day.day)}
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -667,6 +832,14 @@ function Agenda({
                     ) : null}
                     {layers.has("grandes") && day.period ? (
                       <span className="text-meta text-muted-foreground">{day.period}</span>
+                    ) : null}
+                    {slots.length > 0 ? (
+                      <span className="flex items-center gap-1 text-meta text-muted-foreground">
+                        <Repeat aria-hidden className="size-3" />
+                        {slots.some((slot) => slot.own)
+                          ? "Tu día habitual"
+                          : `Día habitual de ${slots.map((slot) => slot.communityName).join(", ")}`}
+                      </span>
                     ) : null}
                     {items.map((item) => (
                       <ItemChip key={item.id} item={item} />
@@ -704,9 +877,40 @@ function ItemChip({ item }: { item: PlanItem }) {
       )}
     >
       {hold ? <Bookmark aria-hidden className="size-2.5 shrink-0" /> : null}
-      <span className="shrink-0 font-terminal tabular-nums">{clock(item.start)}</span>
+      <span className="shrink-0 font-terminal tabular-nums">{clockTime(item.start)}</span>
       <span className="truncate">{item.own ? (item.title ?? "Tu reserva") : item.communityName}</span>
     </span>
+  );
+}
+
+/**
+ * On touch, a sheet takes the focus itself instead of its first field: the keyboard would pop up
+ * and cover what's below (in the day, «Reservar»).
+ */
+const keepKeyboardDown = (content: React.RefObject<HTMLDivElement | null>) => (event: Event) => {
+  if (!window.matchMedia("(pointer: coarse)").matches) return;
+  event.preventDefault();
+  content.current?.focus();
+};
+
+/** The day on a phone, as a bottom sheet. */
+function DaySheet({ day, panel, onClose }: { day: string | null; panel: React.ReactNode; onClose: () => void }) {
+  const content = useRef<HTMLDivElement>(null);
+
+  return (
+    <Sheet open={Boolean(day)} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent
+        ref={content}
+        className="max-h-[85svh] overflow-y-auto rounded-t-2xl p-0"
+        side="bottom"
+        onOpenAutoFocus={keepKeyboardDown(content)}
+      >
+        <SheetHeader className="sr-only">
+          <SheetTitle>{day ? longDay(day) : "Día"}</SheetTitle>
+        </SheetHeader>
+        {panel}
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -717,7 +921,6 @@ function DayDetail({
   score,
   items,
   ownHold,
-  ownEvent,
   heldUntil,
   startTime,
   durationMin,
@@ -726,7 +929,7 @@ function DayDetail({
   onRenew,
   onRelease,
 }: {
-  /** In the phone sheet, the header leaves room for its close button */
+  /** In the phone sheet: the header leaves room for its close button and the action stays in view */
   inSheet: boolean;
   /** The draft this date is for, when choosing one for an existing draft */
   draftName: string | null;
@@ -734,7 +937,6 @@ function DayDetail({
   score: PlanDay | undefined;
   items: PlanItem[];
   ownHold: PlanItem | undefined;
-  ownEvent: PlanItem | undefined;
   heldUntil: string | null;
   startTime: string;
   durationMin: number;
@@ -745,23 +947,24 @@ function DayDetail({
 }) {
   const [title, setTitle] = useState("");
   const level = score ? LEVEL[score.level] : null;
-  const end = clock(new Date(Date.parse(`${day}T${startTime}:00-03:00`) + durationMin * 60_000).toISOString());
+  const end = endTime(day, startTime, durationMin);
+  // On a phone the action sits at the bottom of the sheet, always in view
+  const action = cn(inSheet && "sticky bottom-0 z-10 -mx-3.5 border-t border-border bg-background px-3.5 pt-3");
 
   return (
     <div className="flex flex-col">
       <PanelHead
         actions={
-          level ? (
-            <Badge variant={level.badge}>
+          level && score ? (
+            <Badge title={scoreHint(score)} variant={level.badge}>
               <level.icon aria-hidden />
               {level.label}
-              {score && !score.blocked ? <span className="font-terminal tabular-nums">· {score.score}</span> : null}
             </Badge>
           ) : null
         }
         className={inSheet ? "pr-12" : undefined}
         icon={CalendarDays}
-        title={<span className="first-letter:uppercase">{longDay(day)}</span>}
+        title={longDay(day)}
       />
 
       <div className="flex flex-col gap-4 p-3.5">
@@ -780,6 +983,9 @@ function DayDetail({
                 );
               })}
             </ul>
+            {!score.blocked ? (
+              <p className="mt-2 font-terminal text-2xs text-muted-foreground tabular-nums">{scoreHint(score)}</p>
+            ) : null}
           </section>
         ) : (
           <Skeleton className="h-16" />
@@ -792,7 +998,7 @@ function DayDetail({
               {items.map((item) => (
                 <li key={item.id} className="flex items-center gap-2.5 px-2.5 py-2">
                   <span className="w-11 shrink-0 font-terminal text-meta text-muted-foreground tabular-nums">
-                    {clock(item.start)}
+                    {clockTime(item.start)}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-ui text-foreground">
@@ -810,11 +1016,16 @@ function DayDetail({
                     </Badge>
                   ) : null}
                   {item.url ? (
-                    <Button asChild size="icon-sm" variant="ghost">
-                      <a aria-label={`Ver «${item.title}» en Meetup`} href={item.url} rel="noreferrer" target="_blank">
-                        <ExternalLink />
-                      </a>
-                    </Button>
+                    <a
+                      aria-label={`Ver «${item.title ?? item.communityName}» en ${siteName(item.url)}`}
+                      className="flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-meta text-muted-foreground hover:bg-raised hover:text-foreground"
+                      href={item.url}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      Ver en {siteName(item.url)}
+                      <ExternalLink aria-hidden className="size-3" />
+                    </a>
                   ) : null}
                 </li>
               ))}
@@ -823,7 +1034,12 @@ function DayDetail({
         ) : null}
 
         {ownHold ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-dashed border-info/60 bg-info-surface p-3">
+          <div
+            className={cn(
+              "flex flex-col gap-2 rounded-lg border border-dashed border-info/60 bg-info-surface p-3",
+              inSheet && "sticky bottom-0 z-10"
+            )}
+          >
             <p className="flex items-center gap-1.5 text-ui font-medium text-foreground">
               <Bookmark aria-hidden className="size-3.5 text-info-foreground" />
               Reservaste este día
@@ -836,7 +1052,7 @@ function DayDetail({
             ) : null}
             <div className="flex gap-2">
               <Button disabled={busy} size="sm" variant="outline" onClick={() => onRenew(ownHold.id)}>
-                Renovar 14 días
+                Renovar {HOLD_DAYS} días
               </Button>
               <Button disabled={busy} size="sm" variant="ghost" onClick={() => onRelease(ownHold.id)}>
                 Liberar
@@ -845,18 +1061,12 @@ function DayDetail({
           </div>
         ) : score?.blocked ? null : (
           <form
-            className="flex flex-col gap-2"
+            className={cn("flex flex-col gap-2", action)}
             onSubmit={(event) => {
               event.preventDefault();
               onHold(title.trim());
             }}
           >
-            {ownEvent ? (
-              <p className="flex items-start gap-1.5 text-meta text-warning-foreground">
-                <TriangleAlert aria-hidden className="mt-px size-3.5 shrink-0" />
-                Tu comunidad ya tiene un evento ese día.
-              </p>
-            ) : null}
             {draftName ? (
               <p className="text-meta text-muted-foreground">
                 Fecha para <span className="font-medium text-foreground">«{draftName}»</span>
@@ -875,7 +1085,7 @@ function DayDetail({
                 />
               </>
             )}
-            <Button disabled={busy || !score} type="submit">
+            <Button className="pointer-coarse:h-11" disabled={busy || !score} type="submit">
               <Bookmark />
               Reservar ·{" "}
               <span className="font-terminal tabular-nums">
@@ -883,7 +1093,7 @@ function DayDetail({
               </span>
             </Button>
             <p className="text-meta text-muted-foreground">
-              Todas las comunidades la ven por 14 días. La renovás o la liberás cuando quieras.
+              Todas las comunidades la ven por {HOLD_DAYS} días. La renovás o la liberás cuando quieras.
             </p>
           </form>
         )}
@@ -902,7 +1112,7 @@ function Suggestions({
   onPick: (day: string) => void;
 }) {
   return (
-    <Panel>
+    <Panel aria-label="Fechas sugeridas">
       <PanelHead icon={Sparkles} title="Fechas sugeridas" />
       {days === undefined ? (
         <div className="flex flex-col gap-2 p-3.5">
@@ -916,25 +1126,26 @@ function Suggestions({
         <ul className="flex flex-col p-1.5">
           {days.map((day) => {
             const level = LEVEL[day.level];
-            const why = day.reasons.find((reason) => reason.tone !== "ok") ?? day.reasons[0];
 
             return (
               <li key={day.day}>
                 <button
                   aria-current={day.day === selected ? "date" : undefined}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-raised",
+                    "flex w-full items-start gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-raised",
                     day.day === selected && "bg-raised"
                   )}
+                  title={scoreHint(day)}
                   type="button"
                   onClick={() => onPick(day.day)}
                 >
-                  <level.icon aria-hidden className={cn("size-3.5 shrink-0", level.tone)} />
+                  <level.icon aria-hidden className={cn("mt-0.5 size-3.5 shrink-0", level.tone)} />
                   <span className="w-[88px] shrink-0 font-terminal text-ui whitespace-nowrap text-foreground tabular-nums">
                     {shortDay(day.day)}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-meta text-muted-foreground">{why?.text}</span>
-                  <span className="font-terminal text-meta text-subtle tabular-nums">{day.score}</span>
+                  <span className="min-w-0 flex-1 text-meta text-muted-foreground">
+                    <span className={cn("font-medium", level.tone)}>{level.label}</span> · {why(day)}
+                  </span>
                 </button>
               </li>
             );

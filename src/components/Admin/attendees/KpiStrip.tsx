@@ -26,8 +26,43 @@ function Figure({ value, note }: { value: React.ReactNode; note?: React.ReactNod
 const opening = (at: string, timeZone: string) =>
   `${new Intl.DateTimeFormat("es-UY", { weekday: "short", day: "numeric", month: "short", timeZone }).format(new Date(at))} · ${formatClock(new Date(at), timeZone)}`;
 
+/** The conf's words in /admin; Organizá's glossary for meetups (entraron, liberaron) */
+const WORDS = {
+  admin: {
+    in: "Acreditados",
+    meter: "Acreditados sobre quienes tienen entrada",
+    out: "Con entrada, sin acreditar",
+    gone: "Cancelados",
+    goneNote: "Cancelaron o se reembolsaron",
+    pace: "Llegadas · 15′",
+    paceNote: "ahora",
+    lastHour: "llegadas en la última hora",
+  },
+  organizar: {
+    in: "Entraron",
+    meter: "Entraron sobre quienes tienen lugar",
+    out: "Con lugar, todavía afuera",
+    gone: "Liberaron o bajas",
+    goneNote: "Liberaron su lugar o los dieron de baja",
+    pace: "Entraron en 15 minutos",
+    paceNote: "en los últimos 15 minutos",
+    lastHour: "entraron en la última hora",
+  },
+} as const;
+type Words = (typeof WORDS)[keyof typeof WORDS];
+
 /** The arrivals of the last hour, per 5 minutes; the bar still filling is "ahora". */
-function Rhythm({ stats, timezone, opensAt }: { stats?: CheckinStats; timezone: string; opensAt: string }) {
+function Rhythm({
+  stats,
+  timezone,
+  opensAt,
+  words,
+}: {
+  stats?: CheckinStats;
+  timezone: string;
+  opensAt: string;
+  words: Words;
+}) {
   const buckets = stats?.buckets ?? [];
   const highest = Math.max(1, ...buckets.map((bucket) => bucket.count));
   const lastHour = buckets.reduce((sum, bucket) => sum + bucket.count, 0);
@@ -35,8 +70,8 @@ function Rhythm({ stats, timezone, opensAt }: { stats?: CheckinStats; timezone: 
   return (
     <Kpi className="col-span-2 flex gap-4 lg:col-span-1">
       <div className="shrink-0">
-        <MicroLabel>Llegadas · 15′</MicroLabel>
-        {stats ? <Figure note="ahora" value={`+${stats.last15}`} /> : <Skeleton className="mt-2 h-6 w-16" />}
+        <MicroLabel>{words.pace}</MicroLabel>
+        {stats ? <Figure note={words.paceNote} value={`+${stats.last15}`} /> : <Skeleton className="mt-2 h-6 w-16" />}
         <p className="mt-2 text-meta text-muted-foreground">
           {!stats ? null : stats.peak ? (
             <>
@@ -54,7 +89,7 @@ function Rhythm({ stats, timezone, opensAt }: { stats?: CheckinStats; timezone: 
         </p>
       </div>
       <div
-        aria-label={`${lastHour} llegadas en la última hora`}
+        aria-label={`${lastHour} ${words.lastHour}`}
         className="flex h-[52px] min-w-0 flex-1 items-end gap-1 self-end"
         role="img"
       >
@@ -80,39 +115,38 @@ export function KpiStrip({
   stats,
   timezone,
   opensAt,
+  organizar = false,
 }: {
   totals?: AttendeeList["totals"];
   stats?: CheckinStats;
   timezone: string;
   /** When the event starts: the pace card says when the door opens until someone comes in. */
   opensAt: string;
+  /** Organizá's Puerta tab: its glossary instead of the conf's */
+  organizar?: boolean;
 }) {
+  const words = organizar ? WORDS.organizar : WORDS.admin;
   const expected = totals ? totals.in + totals.out : 0;
   const percent = expected ? Math.round(((totals?.in ?? 0) / expected) * 100) : 0;
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-[1fr_1fr_1fr_1.6fr]">
       <Kpi>
-        <MicroLabel>Acreditados</MicroLabel>
+        <MicroLabel>{words.in}</MicroLabel>
         {totals ? <Figure note={`${percent}%`} value={totals.in} /> : <Skeleton className="mt-2 h-6 w-20" />}
-        <Meter
-          className="mt-3"
-          label="Acreditados sobre quienes tienen entrada"
-          max={expected}
-          value={totals?.in ?? 0}
-        />
+        <Meter className="mt-3" label={words.meter} max={expected} value={totals?.in ?? 0} />
       </Kpi>
       <Kpi>
         <MicroLabel>Por llegar</MicroLabel>
         {totals ? <Figure note={`de ${expected}`} value={totals.out} /> : <Skeleton className="mt-2 h-6 w-20" />}
-        <p className="mt-2 text-meta text-muted-foreground">Con entrada, sin acreditar</p>
+        <p className="mt-2 text-meta text-muted-foreground">{words.out}</p>
       </Kpi>
       <Kpi className="max-lg:col-span-2">
-        <MicroLabel>Cancelados</MicroLabel>
+        <MicroLabel>{words.gone}</MicroLabel>
         {totals ? <Figure value={totals.cancelled} /> : <Skeleton className="mt-2 h-6 w-12" />}
-        <p className="mt-2 text-meta text-muted-foreground">Cancelaron o se reembolsaron</p>
+        <p className="mt-2 text-meta text-muted-foreground">{words.goneNote}</p>
       </Kpi>
-      <Rhythm opensAt={opensAt} stats={stats} timezone={timezone} />
+      <Rhythm opensAt={opensAt} stats={stats} timezone={timezone} words={words} />
     </div>
   );
 }

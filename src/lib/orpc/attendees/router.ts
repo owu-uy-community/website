@@ -26,6 +26,7 @@ import {
   SyncStateSchema,
 } from "./schemas";
 import * as Attendees from "./service";
+import * as Lifecycle from "../events/lifecycle";
 
 const docs = (summary: string) => openapi({ tags: ["Attendees"], summary });
 const ok = z.object({ ok: z.literal(true) });
@@ -39,7 +40,7 @@ export const attendeesRouter = {
     .use(inCommunity("attendee:read"))
     .output(AttendeeListSchema)
     .effect(function* ({ input }) {
-      return yield* Attendees.listAttendees(input);
+      return yield* Attendees.listForOrganizers(input);
     }),
 
   sync: authed
@@ -103,6 +104,16 @@ export const attendeesRouter = {
     .output(ok)
     .effect(function* ({ input }) {
       return yield* Attendees.undoCheckin(input);
+    }),
+
+  // Same people as undoing a check-in: both correct the attendance record, which only admins read
+  excuse: authed
+    .meta(docs("«Avisó que no venía»: someone with a seat who told the team never counts as a no-show"))
+    .input(z.object({ eventId: z.string().min(1), attendeeId: z.string().min(1), excused: z.boolean() }))
+    .use(inCommunity("attendee:undo"))
+    .output(z.object({ attendeeId: z.string(), excused: z.boolean() }))
+    .effect(function* ({ input }) {
+      return yield* Lifecycle.excuse(input);
     }),
 
   raffles: {

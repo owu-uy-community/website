@@ -105,8 +105,9 @@ function Navbar() {
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
+            {/* The name holds what shows (the shortcut, and "Buscar" on wide screens): WCAG 2.5.3 */}
             <button
-              aria-label="Buscar"
+              aria-label={`Buscar ${isMac ? "⌘K" : "Ctrl K"}`}
               className="hidden h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] pr-1.5 pl-3 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-zinc-200 md:inline-flex"
               type="button"
               onClick={open}

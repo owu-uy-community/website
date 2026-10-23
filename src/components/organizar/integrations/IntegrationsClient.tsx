@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, PlugZap, Ticket, Unplug } from "lucide-react";
+import { ArrowRight, Copy, Plus, PlugZap, Ticket, Unplug } from "lucide-react";
 
 import { ConfirmDialog, Notice } from "components/Admin/panel";
 import { PageContainer, PageHeader, Panel, PanelHead } from "components/Admin/ui/page";
@@ -13,7 +14,10 @@ import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
+import { shortWhen } from "lib/community/time";
 import { orpc } from "lib/orpc/client";
+
+import { openNewEvent } from "../events/NewEventDialog";
 
 /** What came back from Eventbrite's OAuth, said once. */
 const RETURNED: Record<string, () => void> = {
@@ -38,6 +42,7 @@ export function IntegrationsClient({
   const [confirming, setConfirming] = useState(false);
   const input = { communityId: community.id };
   const integrations = useQuery(orpc.integrations.list.queryOptions({ input }));
+  const events = useQuery(orpc.events.list.queryOptions({ input }));
   const disconnect = useMutation(
     orpc.integrations.disconnect.mutationOptions({
       onSuccess: () => {
@@ -50,8 +55,11 @@ export function IntegrationsClient({
   );
 
   const returned = params.get("eventbrite");
+  // Said once: development mounts effects twice, and the URL loses the param a moment later
+  const said = useRef<string | null>(null);
   useEffect(() => {
-    if (!returned) return;
+    if (!returned || said.current === returned) return;
+    said.current = returned;
     RETURNED[returned]?.();
     router.replace(pathname);
   }, [returned, pathname, router]);
@@ -59,6 +67,13 @@ export function IntegrationsClient({
   const connectHref = `/api/integrations/eventbrite/connect?community=${encodeURIComponent(community.id)}`;
   const data = integrations.data;
   const connection = data?.eventbrite ?? null;
+  // What to copy to Meetup: the next published event, else the draft being prepared
+  const now = Date.now();
+  const nextEvent =
+    (events.data ?? [])
+      .filter((event) => event.status === "published" && Date.parse(event.endDate) > now)
+      .toSorted((a, b) => a.startDate.localeCompare(b.startDate))[0] ??
+    (events.data ?? []).find((event) => event.status === "draft");
 
   return (
     <PageContainer>
@@ -131,7 +146,7 @@ export function IntegrationsClient({
                 <p className="text-ui text-subtle">
                   Conectá la cuenta de Eventbrite de {community.name} y los eventos que elijan inscribirse ahí se
                   publican solos: entrada gratis con el cupo de acá, la descripción y el lugar. Las inscripciones
-                  vuelven a la lista de inscriptos y al escáner de la puerta.
+                  vuelven a la lista de anotados y al escáner de la puerta.
                 </p>
                 {!data.configured ? (
                   <Notice tone="info">Eventbrite todavía no está habilitado en OWU.</Notice>
@@ -154,17 +169,50 @@ export function IntegrationsClient({
 
         <Panel>
           <PanelHead icon={Copy} title="Meetup" />
-          <p className="p-4 text-ui text-subtle">
-            Meetup solo deja publicar por su API con Meetup Pro. Mientras tanto, en el paso «Difusión» de cada evento
-            está «Copiar a Meetup»: copiás los textos, lo creás en tu grupo y pegás el link de vuelta, así la agenda de
-            OWU no lo muestra dos veces.
-          </p>
+          <div className="flex flex-col gap-3 p-4">
+            <p className="text-ui text-subtle">
+              Meetup solo deja publicar por su API con Meetup Pro, así que no se sincroniza solo. En el paso «Difusión»
+              de cada evento está «Copiar a Meetup»: copiás los textos, lo creás en tu grupo y pegás el link de vuelta,
+              así la agenda de OWU no lo muestra dos veces.
+            </p>
+            {events.isError ? (
+              <ErrorState
+                compact
+                retrying={events.isFetching}
+                title="No pudimos traer tus eventos"
+                onRetry={() => void events.refetch()}
+              />
+            ) : events.isPending ? (
+              <Skeleton className="h-8 w-64 rounded-md" />
+            ) : nextEvent ? (
+              <div>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/organizar/panel/${community.slug}/eventos/${nextEvent.id}/editar?paso=difusion`}>
+                    Copiar a Meetup «{nextEvent.name}»
+                    <ArrowRight aria-hidden />
+                  </Link>
+                </Button>
+                {nextEvent.dateChosen ? (
+                  <p className="mt-1.5 font-terminal text-meta text-muted-foreground tabular-nums">
+                    {shortWhen(nextEvent.startDate)}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div>
+                <Button size="sm" variant="outline" onClick={openNewEvent}>
+                  <Plus aria-hidden />
+                  Crear un evento para copiar
+                </Button>
+              </div>
+            )}
+          </div>
         </Panel>
       </div>
 
       <ConfirmDialog
         confirmLabel="Desconectar"
-        description="Se borran el token, el aviso automático y los inscriptos que leímos de Eventbrite (con sus acreditaciones y sorteos). Los eventos siguen publicados en Eventbrite: cerralos ahí si hace falta."
+        description="Se borran el token, el aviso automático y las personas anotadas que leímos de Eventbrite (con quién entró y sus sorteos). Los eventos siguen publicados en Eventbrite: cerralos ahí si hace falta."
         open={confirming}
         pending={disconnect.isPending}
         pendingLabel="Desconectando…"

@@ -1,6 +1,7 @@
 import { openapi } from "@orpc/openapi";
 
 import { authed, inCommunity } from "../base";
+import { headcounts, HeadcountsSchema } from "./headcounts";
 import { PanelSummarySchema, SummaryInputSchema } from "./schemas";
 import * as Panel from "./service";
 
@@ -18,5 +19,19 @@ export const panelRouter = {
     .output(PanelSummarySchema)
     .effect(function* () {
       return yield* Panel.summary;
+    }),
+
+  headcounts: authed
+    .meta(
+      openapi({
+        tags: ["Organizer events"],
+        summary: "How many signed up to each of the community's published events (no names)",
+      })
+    )
+    .input(SummaryInputSchema)
+    .use(inCommunity("event:read"))
+    .output(HeadcountsSchema)
+    .effect(function* () {
+      return yield* headcounts;
     }),
 };

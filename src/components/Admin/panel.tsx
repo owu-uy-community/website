@@ -431,7 +431,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>Volver</AlertDialogCancel>
           <AlertDialogAction
             disabled={pending}
             variant="destructive"

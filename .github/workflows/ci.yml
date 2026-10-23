@@ -109,6 +109,8 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://127.0.0.1:3100
       NEXT_PUBLIC_DOMAIN: 127.0.0.1
       NEXT_PUBLIC_REALTIME_URL: ws://127.0.0.1:3299
+      # Organizá's entry points are inlined at build time; the specs cover them on
+      NEXT_PUBLIC_FLAG_ORGANIZAR: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6

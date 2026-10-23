@@ -1,20 +1,37 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Check, ChevronsUpDown, Ellipsis, ExternalLink, Flag, LogOut, Search, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  Ellipsis,
+  ExternalLink,
+  Flag,
+  Keyboard,
+  LogOut,
+  Search,
+  ShieldCheck,
+} from "lucide-react";
 
 import { signOut, useSession } from "app/lib/auth-client";
 import { cn } from "app/lib/utils";
 import { openCommandMenu } from "components/Admin/shell/command-bus";
-import { KeyHint } from "components/Admin/shell/shortcuts";
+import {
+  KeyHint,
+  openShortcutSheet,
+  setSingleKeyShortcuts,
+  useSingleKeyShortcuts,
+} from "components/Admin/shell/shortcuts";
 import { Meter } from "components/Admin/ui/page";
 import { PersonAvatar } from "components/Admin/ui/person";
 import { StatusDot } from "components/Admin/ui/status";
+import { CommunityMark } from "components/shared/CommunityMark";
+import { Button } from "components/shared/ui/button";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -38,55 +55,18 @@ import {
 } from "components/shared/ui/sidebar";
 import { useMounted } from "hooks/useMounted";
 import { dateParts } from "lib/community/time";
+import { plural } from "lib/organizar/words";
 import type { PanelSummary } from "lib/orpc/panel/schemas";
 
-import { usePanel, usePanelSummary, type PanelCommunity } from "./context";
+import { usePanel, usePanelSummary } from "./context";
 import { PANEL_NAV, PANEL_ROOT, activePanelItem, panelHref, type PanelNavKey } from "./nav";
-
-/** The community's logo tile, or its initials on the brand surface when it has none. */
-export function CommunityMark({
-  community,
-  size = 28,
-}: {
-  community: Pick<PanelCommunity, "name" | "logoUrl">;
-  size?: number;
-}) {
-  if (community.logoUrl) {
-    return (
-      <Image
-        alt=""
-        className="shrink-0 rounded-[7px] border border-input object-cover"
-        height={size}
-        src={community.logoUrl}
-        style={{ width: size, height: size }}
-        width={size}
-      />
-    );
-  }
-  const initials = community.name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-
-  return (
-    <span
-      aria-hidden
-      className="grid shrink-0 place-items-center rounded-[7px] border border-input bg-raised font-display text-[11px] font-bold text-primary"
-      style={{ width: size, height: size }}
-    >
-      {initials}
-    </span>
-  );
-}
 
 /** "3 eventos · próximo jue 19", under the community's name. */
 const aheadLine = ({ ahead }: PanelSummary) => {
   if (ahead.length === 0) return "Sin eventos por delante";
   const { weekday, day } = dateParts(ahead[0].startDate);
 
-  return `${ahead.length} ${ahead.length === 1 ? "evento" : "eventos"} · próximo ${weekday} ${day}`;
+  return `${plural(ahead.length, "evento", "eventos")} · próximo ${weekday} ${day}`;
 };
 
 /** The right edge of a nav row: a mono count, or a yellow-outline "needs you" badge. */
@@ -102,11 +82,15 @@ function NavExtra({ itemKey, summary }: { itemKey: PanelNavKey; summary: PanelSu
         <span className="sr-only"> {what}</span>
       </span>
     ) : null;
+  const invitations = summary.invitations.length;
+  const polls = summary.polls.length;
+  // Only what needs an answer, as in Para hacer: a host's reply is news on Inicio, not a to-do
+  const waiting = summary.venueRequests.filter((request) => request.status === "pending").length;
   const extras: Partial<Record<PanelNavKey, ReactNode>> = {
-    inicio: alert(summary.invitations.length, "invitaciones a coorganizar"),
+    inicio: alert(invitations, invitations === 1 ? "invitación a coorganizar" : "invitaciones a coorganizar"),
     eventos: count(summary.ahead.length),
-    encuestas: alert(summary.polls.length, "encuestas esperan tu respuesta"),
-    espacios: alert(summary.venueRequests.length, "pedidos de espacio para mirar"),
+    encuestas: alert(polls, polls === 1 ? "votación espera su respuesta" : "votaciones esperan su respuesta"),
+    espacios: alert(waiting, waiting === 1 ? "pedido de espacio sin respuesta" : "pedidos de espacio sin respuesta"),
   };
 
   return <>{extras[itemKey] ?? null}</>;
@@ -114,7 +98,7 @@ function NavExtra({ itemKey, summary }: { itemKey: PanelNavKey; summary: PanelSu
 
 const OPEN_DOOR = { none: "Entrada libre", external: "Inscripción externa" } as const;
 
-/** "● PRÓXIMO · JUE 19 NOV", its name and "48 de 60 inscriptos" with a meter, opening its dashboard. */
+/** "● PRÓXIMO · JUE 19 NOV", its name and "48 de 60 lugares" with a meter, opening its dashboard. */
 function NextEventCard({ slug, summary, onOpen }: { slug: string; summary: PanelSummary; onOpen: () => void }) {
   const next = summary.ahead[0];
   const card = "block rounded-[10px] border border-border bg-card p-3 shadow-edge transition-colors hover:border-input";
@@ -148,7 +132,10 @@ function NextEventCard({ slug, summary, onOpen }: { slug: string; summary: Panel
       ) : seats ? (
         <>
           <p className="font-terminal text-2xs text-muted-foreground tabular-nums">
-            {next.capacity ? `${seats.taken} de ${next.capacity} inscriptos` : `${seats.taken} inscriptos`}
+            {/* Seats taken (with +1s and offers): the words every surface uses for this number */}
+            {next.capacity
+              ? `${seats.taken} de ${next.capacity} lugares`
+              : plural(seats.taken, "lugar ocupado", "lugares ocupados")}
             {seats.waiting ? ` · ${seats.waiting} en espera` : ""}
           </p>
           {next.capacity ? (
@@ -232,6 +219,7 @@ function UserRow() {
   const { data: session } = useSession();
   const { isStaff, current } = usePanel();
   const mounted = useMounted();
+  const singleKeys = useSingleKeyShortcuts();
   const user = session?.user;
   if (!mounted || !user) return <div aria-hidden className="h-11" />;
 
@@ -266,6 +254,20 @@ function UserRow() {
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
+        {/* Keyboard users who trip over them can turn them off here too (WCAG 2.1.4); not on touch */}
+        <DropdownMenuCheckboxItem
+          checked={singleKeys}
+          className="pointer-coarse:hidden"
+          onCheckedChange={setSingleKeyShortcuts}
+          onSelect={(event) => event.preventDefault()}
+        >
+          Atajos de una tecla
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuItem className="pointer-coarse:hidden" onSelect={() => setTimeout(openShortcutSheet, 0)}>
+          <Keyboard />
+          Ver los atajos
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem className="text-live-foreground focus:text-live-foreground" onSelect={() => signOut()}>
           <LogOut className="!text-live-foreground" />
           Cerrar sesión
@@ -282,7 +284,6 @@ export function PanelSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const active = activePanelItem(pathname, current?.slug ?? null);
   const close = () => isMobile && setOpenMobile(false);
-  const mounted = useMounted();
 
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -293,7 +294,7 @@ export function PanelSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
         <button
-          className="flex h-8 w-full items-center gap-2 rounded-lg border border-border bg-background px-2.5 text-ui text-faint transition-colors group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 hover:border-input hover:text-muted-foreground pointer-coarse:h-10"
+          className="flex h-8 w-full items-center gap-2 rounded-lg border border-border bg-background px-2.5 text-ui text-muted-foreground transition-colors group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 hover:border-input hover:text-foreground pointer-coarse:h-10"
           type="button"
           onClick={() => {
             close();
@@ -302,9 +303,9 @@ export function PanelSidebar() {
         >
           <Search aria-hidden className="size-[15px] shrink-0 text-muted-foreground" />
           <span className="truncate group-data-[collapsible=icon]:hidden">Buscar o ejecutar…</span>
-          {/* ⌘ on a Mac, Ctrl elsewhere: known once mounted */}
-          <span className="ml-auto group-data-[collapsible=icon]:hidden pointer-coarse:hidden">
-            {mounted ? <KeyHint keys="mod+k" /> : null}
+          {/* ⌘ on a Mac, Ctrl elsewhere, nothing on a touchscreen */}
+          <span className="ml-auto group-data-[collapsible=icon]:hidden">
+            <KeyHint keys="mod+k" />
           </span>
           <span className="sr-only">Abrir la paleta de comandos</span>
         </button>
@@ -367,6 +368,21 @@ export function PanelSidebar() {
           <div className="group-data-[collapsible=icon]:hidden">
             {summary.data ? (
               <NextEventCard slug={current.slug} summary={summary.data} onOpen={close} />
+            ) : summary.isError ? (
+              <div
+                className="flex items-center gap-2 rounded-[10px] border border-live/25 bg-live-surface/60 p-3"
+                role="alert"
+              >
+                <p className="min-w-0 flex-1 text-meta text-foreground">No pudimos traer el próximo evento.</p>
+                <Button
+                  disabled={summary.isFetching}
+                  size="xs"
+                  variant="outline"
+                  onClick={() => void summary.refetch()}
+                >
+                  Reintentar
+                </Button>
+              </div>
             ) : (
               <Skeleton className="h-[88px] rounded-[10px]" />
             )}

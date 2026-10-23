@@ -3,20 +3,38 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CircleHelp, Minus, Plus, Send, Trash2, Vote, X } from "lucide-react";
+import { Ban, Check, ChevronDown, CircleHelp, Lock, Minus, Plus, Send, Trash2, Vote, X } from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import { ConfirmDialog } from "components/Admin/panel";
 import { MicroLabel, PageContainer, PageHeader, Panel, PanelHead } from "components/Admin/ui/page";
 import { EmptyState, ErrorState } from "components/Admin/ui/states";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "components/shared/ui/alert-dialog";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "components/shared/ui/dropdown-menu";
 import { Input } from "components/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
-import { shortWhen } from "lib/community/time";
-import { orpc } from "lib/orpc/client";
+import { dateParts } from "lib/community/time";
+import { HOLD_DAYS } from "lib/organizar/rules";
+import { plural } from "lib/organizar/words";
+import { client, orpc } from "lib/orpc/client";
 import type { Poll } from "lib/orpc/polls/schemas";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
@@ -33,42 +51,57 @@ const ANSWERS: Record<Answer, { label: string; icon: typeof Check; className: st
   },
   no: { label: "No", icon: X, className: "border-live/30 bg-live-surface text-live-foreground" },
 };
-const NEXT: Record<Answer | "none", Answer> = { none: "yes", yes: "maybe", maybe: "no", no: "yes" };
 
-const dayLabel = (day: string) => shortWhen(`${day}T12:00:00-03:00`).replace(/ · .*$/, "");
+/** "jue 12 nov": a poll's days are calendar days, read at noon UTC so no time zone moves them. */
+const dayLabel = (day: string) => {
+  const parts = dateParts(`${day}T12:00:00Z`, "UTC");
+
+  return `${parts.weekday} ${parts.day} ${parts.month}`;
+};
 
 /** Choosing a date with other communities: ask, answer, and pick. */
 export function PollsClient({ community, today }: { community: CalendarCommunity; today: string }) {
   const [creating, setCreating] = useState(false);
   const polls = useQuery(orpc.polls.list.queryOptions({ input: { communityId: community.id } }));
+  const start = () => setCreating(true);
 
   return (
-    <PageContainer size="large">
+    <PageContainer>
       <PageHeader
         actions={
           creating ? null : (
-            <Button onClick={() => setCreating(true)}>
+            <Button onClick={start}>
               <Plus aria-hidden />
-              Nueva encuesta
+              Nueva votación
             </Button>
           )
         }
         description="Para un evento con otras comunidades: proponé fechas, cada una dice cuáles le sirven y vos elegís."
-        title="Encuestas de fecha"
+        title="Votar fecha"
       />
 
       <div className="flex flex-col gap-4">
         {creating ? <NewPoll community={community} today={today} onDone={() => setCreating(false)} /> : null}
         {polls.isError ? (
-          <ErrorState onRetry={() => void polls.refetch()} />
+          <ErrorState
+            retrying={polls.isFetching}
+            title="No pudimos traer las votaciones"
+            onRetry={() => void polls.refetch()}
+          />
         ) : !polls.data ? (
           <Skeleton className="h-40 rounded-lg" />
         ) : polls.data.length === 0 && !creating ? (
           <Panel>
             <EmptyState
-              description="Cuando otra comunidad te pregunte por una fecha, aparece acá."
+              action={
+                <Button size="sm" variant="outline" onClick={start}>
+                  <Plus aria-hidden />
+                  Nueva votación
+                </Button>
+              }
+              description="Proponé fechas a otras comunidades para un evento juntos. Cuando otra te pregunte, aparece acá."
               icon={Vote}
-              title="Ninguna encuesta todavía"
+              title="Ninguna votación todavía"
             />
           </Panel>
         ) : (
@@ -93,7 +126,10 @@ function NewPoll({ community, today, onDone }: { community: CalendarCommunity; t
   const create = useMutation(
     orpc.polls.create.mutationOptions({
       onSuccess: (poll) => {
-        toast.success("Encuesta enviada", `Les avisamos a ${poll.communities.length - 1} comunidades por mail.`);
+        toast.success(
+          "Votación enviada",
+          `Les avisamos por mail a ${plural(poll.communities.length - 1, "comunidad", "comunidades")}.`
+        );
         void queryClient.invalidateQueries({ queryKey: orpc.polls.list.key() });
         onDone();
       },
@@ -105,7 +141,7 @@ function NewPoll({ community, today, onDone }: { community: CalendarCommunity; t
 
   return (
     <Panel>
-      <PanelHead icon={Vote} title="Nueva encuesta" />
+      <PanelHead icon={Vote} title="Nueva votación" />
       <form
         className="flex flex-col gap-4 p-4"
         onSubmit={(event) => {
@@ -126,6 +162,7 @@ function NewPoll({ community, today, onDone }: { community: CalendarCommunity; t
           <MicroLabel>Fechas posibles</MicroLabel>
           <div className="flex flex-wrap items-center gap-2">
             {days.map((day, index) => (
+              // oxlint-disable-next-line react/no-array-index-key -- the rows are positions; their values repeat while empty
               <span key={index} className="flex items-center gap-1">
                 <Input
                   aria-label={`Fecha ${index + 1}`}
@@ -160,6 +197,7 @@ function NewPoll({ community, today, onDone }: { community: CalendarCommunity; t
           <MicroLabel>Hora</MicroLabel>
           <Input
             className="font-terminal tabular-nums"
+            step={900}
             type="time"
             value={startTime}
             onChange={(event) => setStartTime(event.target.value)}
@@ -167,43 +205,61 @@ function NewPoll({ community, today, onDone }: { community: CalendarCommunity; t
         </label>
         <div className="flex flex-col gap-1.5">
           <MicroLabel>A quién le preguntás</MicroLabel>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {invited.map((id) => (
-              <span
-                key={id}
-                className="flex h-7 items-center gap-1.5 rounded-md border border-input pr-1 pl-2 text-meta text-foreground"
-              >
-                {others.data?.find((item) => item.id === id)?.name}
-                <button
-                  aria-label="Sacar"
-                  className="grid size-5 place-items-center rounded-sm text-muted-foreground hover:bg-raised hover:text-foreground"
-                  type="button"
-                  onClick={() => setInvited(invited.filter((item) => item !== id))}
-                >
-                  <X aria-hidden className="size-3" />
-                </button>
-              </span>
-            ))}
-            <Select disabled={invited.length >= 8} value="" onValueChange={(id) => setInvited([...invited, id])}>
-              <SelectTrigger aria-label="Sumar una comunidad" className="w-56">
-                <SelectValue placeholder="Sumar una comunidad" />
-              </SelectTrigger>
-              <SelectContent>
-                {(others.data ?? [])
-                  .filter((item) => !invited.includes(item.id))
-                  .map((item) => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {others.isError ? (
+            <ErrorState
+              compact
+              description="Sin la lista no podés invitar a nadie. Probá de nuevo."
+              retrying={others.isFetching}
+              title="No pudimos traer las comunidades"
+              onRetry={() => void others.refetch()}
+            />
+          ) : (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {invited.map((id) => {
+                const name = others.data?.find((item) => item.id === id)?.name ?? "";
+
+                return (
+                  <span
+                    key={id}
+                    className="flex h-7 items-center gap-1.5 rounded-md border border-input pr-1 pl-2 text-meta text-foreground"
+                  >
+                    {name}
+                    <button
+                      aria-label={`Sacar a ${name}`}
+                      className="grid size-6 place-items-center rounded-sm text-muted-foreground hover:bg-raised hover:text-foreground"
+                      type="button"
+                      onClick={() => setInvited(invited.filter((item) => item !== id))}
+                    >
+                      <X aria-hidden className="size-3" />
+                    </button>
+                  </span>
+                );
+              })}
+              {others.isPending ? (
+                <Skeleton className="h-9 w-56" />
+              ) : (
+                <Select disabled={invited.length >= 8} value="" onValueChange={(id) => setInvited([...invited, id])}>
+                  <SelectTrigger aria-label="Sumar una comunidad" className="w-56">
+                    <SelectValue placeholder="Sumar una comunidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(others.data ?? [])
+                      .filter((item) => !invited.includes(item.id))
+                      .map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button disabled={!ready || create.isPending} type="submit">
             <Send aria-hidden />
-            {invited.length > 0 ? `Enviar a ${invited.length} comunidades` : "Enviar"}
+            {invited.length > 0 ? `Enviar a ${plural(invited.length, "comunidad", "comunidades")}` : "Enviar"}
           </Button>
           <Button type="button" variant="ghost" onClick={onDone}>
             Cancelar
@@ -214,14 +270,59 @@ function NewPoll({ community, today, onDone }: { community: CalendarCommunity; t
   );
 }
 
+/** The community's own answer for a day: a button showing it, a menu to change it. */
+function AnswerPicker({
+  day,
+  answer,
+  disabled,
+  onPick,
+}: {
+  day: string;
+  answer: Answer | undefined;
+  disabled: boolean;
+  onPick: (answer: Answer) => void;
+}) {
+  const shown = answer ? ANSWERS[answer] : null;
+  const Icon = shown?.icon ?? Minus;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild disabled={disabled}>
+        <button
+          aria-label={`Tu respuesta para el ${dayLabel(day)}: ${shown?.label.toLowerCase() ?? "sin responder"}`}
+          className={cn(
+            "inline-flex h-8 min-w-28 items-center justify-center gap-1 rounded-md border px-2 text-meta shadow-edge transition-colors hover:brightness-125 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-60",
+            shown?.className ?? "border-input bg-raised text-foreground"
+          )}
+          type="button"
+        >
+          <Icon aria-hidden className="size-3.5" />
+          {shown?.label ?? "Responder"}
+          <ChevronDown aria-hidden className="size-3.5 opacity-70" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="center">
+        <DropdownMenuRadioGroup value={answer ?? ""} onValueChange={(value) => onPick(value as Answer)}>
+          {(Object.keys(ANSWERS) as Answer[]).map((key) => (
+            <DropdownMenuRadioItem key={key} value={key}>
+              {ANSWERS[key].label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function PollCard({ community, poll }: { community: CalendarCommunity; poll: Poll }) {
   const queryClient = useQueryClient();
   const [picking, setPicking] = useState<string | null>(null);
   const refresh = () => void queryClient.invalidateQueries({ queryKey: orpc.polls.list.key() });
+  const ref = { communityId: community.id, pollId: poll.id };
   const vote = useMutation(
     orpc.polls.vote.mutationOptions({
       onSuccess: refresh,
-      onError: (error) => toast.error("No se pudo", error.message),
+      onError: (error) => toast.error("No se guardó tu respuesta", error.message),
     })
   );
   const choose = useMutation(
@@ -236,14 +337,40 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
           "Fecha reservada",
           yes > 0
             ? "Invitamos a coorganizar a las comunidades que dijeron que sí."
-            : "Queda reservada 14 días: seguí armando el evento."
+            : `Queda reservada ${HOLD_DAYS} días: seguí armando el evento.`
         );
         refresh();
       },
       onError: (error) => toast.error("No se pudo reservar", error.message),
     })
   );
-  const closed = poll.chosenDay !== null;
+  const close = useMutation(
+    orpc.polls.close.mutationOptions({
+      onSuccess: () => {
+        toast.success("Votación cerrada", "Ya nadie puede cambiar su respuesta.");
+        refresh();
+      },
+      onError: (error) => toast.error("No se pudo cerrar", error.message),
+    })
+  );
+  const remove = useMutation(
+    orpc.polls.remove.mutationOptions({
+      onSuccess: () => {
+        refresh();
+        // The card is gone by then: the undo calls the API on its own
+        toast.undo(`Borraste «${poll.title}»`, () =>
+          client.polls
+            .restore(ref)
+            .then(refresh)
+            .catch((error: Error) => toast.error("No se pudo recuperar", error.message))
+        );
+      },
+      onError: (error) => toast.error("No se pudo borrar", error.message),
+    })
+  );
+
+  const chosen = poll.chosenDay !== null;
+  const open = !chosen && poll.closedAt === null;
   const tally = (day: string) =>
     poll.communities.reduce(
       (sum, row) => ({
@@ -252,15 +379,22 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
       }),
       { yes: 0, maybe: 0 }
     );
+  const yesOn = (day: string) =>
+    Math.min(3, poll.communities.filter((row) => row.id !== community.id && row.answers[day] === "yes").length);
 
   return (
     <Panel>
       <PanelHead
         actions={
-          closed ? (
+          chosen ? (
             <Badge variant="success">
               <Check aria-hidden />
               {dayLabel(poll.chosenDay ?? "")}
+            </Badge>
+          ) : !open ? (
+            <Badge variant="secondary">
+              <Lock aria-hidden />
+              Cerrada
             </Badge>
           ) : poll.mine ? (
             <Badge variant="info">Elegís vos</Badge>
@@ -272,6 +406,11 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
         meta={<span className="font-terminal tabular-nums">{poll.startTime}</span>}
         title={poll.title}
       />
+      {poll.days.length > 1 ? (
+        <p className="px-4 pt-2 text-meta text-muted-foreground sm:hidden">
+          Deslizá la tabla para ver las {poll.days.length} fechas.
+        </p>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full min-w-max border-collapse text-ui">
           <thead>
@@ -305,41 +444,32 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
                   </th>
                   {poll.days.map((day) => {
                     const answer = row.answers[day] as Answer | undefined;
+                    if (own && open) {
+                      return (
+                        <td key={day} className="px-2 py-2 text-center">
+                          <AnswerPicker
+                            answer={answer}
+                            day={day}
+                            disabled={vote.isPending}
+                            onPick={(next) => vote.mutate({ ...ref, votes: [{ day, answer: next }] })}
+                          />
+                        </td>
+                      );
+                    }
                     const shown = answer ? ANSWERS[answer] : null;
                     const Icon = shown?.icon ?? Minus;
-                    const cell = (
-                      <span
-                        className={cn(
-                          "inline-flex h-7 min-w-24 items-center justify-center gap-1 rounded-md border px-2 text-meta",
-                          shown?.className ?? "border-border text-faint"
-                        )}
-                      >
-                        <Icon aria-hidden className="size-3.5" />
-                        {shown?.label ?? "Sin responder"}
-                      </span>
-                    );
 
                     return (
                       <td key={day} className="px-2 py-2 text-center">
-                        {own && !closed ? (
-                          <button
-                            aria-label={`${dayLabel(day)}: ${shown?.label ?? "sin responder"}. Cambiar`}
-                            className="rounded-md focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none disabled:opacity-60"
-                            disabled={vote.isPending}
-                            type="button"
-                            onClick={() =>
-                              vote.mutate({
-                                communityId: community.id,
-                                pollId: poll.id,
-                                votes: [{ day, answer: NEXT[answer ?? "none"] }],
-                              })
-                            }
-                          >
-                            {cell}
-                          </button>
-                        ) : (
-                          cell
-                        )}
+                        <span
+                          className={cn(
+                            "inline-flex h-7 min-w-24 items-center justify-center gap-1 rounded-md border px-2 text-meta",
+                            shown?.className ?? "border-border text-muted-foreground"
+                          )}
+                        >
+                          <Icon aria-hidden className="size-3.5" />
+                          {shown?.label ?? "Sin responder"}
+                        </span>
                       </td>
                     );
                   })}
@@ -355,12 +485,17 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
 
                 return (
                   <td key={day} className="px-2 py-2 text-center">
-                    <span className="font-terminal text-meta text-subtle tabular-nums">
-                      {yes} sí{maybe ? ` · ${maybe} ?` : ""}
+                    <span className="text-meta text-subtle tabular-nums">
+                      {yes} sí{maybe ? ` · ${maybe} si hace falta` : ""}
                     </span>
-                    {poll.mine && !closed ? (
+                    {poll.mine && open ? (
                       <div className="mt-1.5">
-                        <Button size="xs" variant="outline" onClick={() => setPicking(day)}>
+                        <Button
+                          aria-label={`Elegir el ${dayLabel(day)}`}
+                          size="xs"
+                          variant="outline"
+                          onClick={() => setPicking(day)}
+                        >
                           Elegir
                         </Button>
                       </div>
@@ -372,27 +507,68 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
           </tbody>
         </table>
       </div>
-      {poll.mine && poll.eventId ? (
-        <p className="border-t border-border px-4 py-3 text-meta text-muted-foreground">
-          Reservada como borrador:{" "}
-          <Link
-            className="text-foreground underline underline-offset-2"
-            href={`/organizar/panel/${community.slug}/eventos/${poll.eventId}/editar`}
+      {poll.mine ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2.5">
+          <p className="mr-auto text-meta text-muted-foreground">
+            {poll.eventId ? (
+              <>
+                Reservada como borrador:{" "}
+                <Link
+                  className="text-foreground underline underline-offset-2"
+                  href={`/organizar/panel/${community.slug}/eventos/${poll.eventId}/editar`}
+                >
+                  seguir armando el evento
+                </Link>
+              </>
+            ) : null}
+          </p>
+          {open ? (
+            <Button disabled={close.isPending} size="sm" variant="ghost" onClick={() => close.mutate(ref)}>
+              <Ban aria-hidden />
+              Cerrar
+            </Button>
+          ) : null}
+          <Button
+            aria-label={`Borrar la votación «${poll.title}»`}
+            disabled={remove.isPending}
+            size="sm"
+            variant="ghost"
+            onClick={() => remove.mutate(ref)}
           >
-            seguir armando el evento
-          </Link>
-        </p>
+            <Trash2 aria-hidden />
+            Borrar
+          </Button>
+        </div>
       ) : null}
-      <ConfirmDialog
-        confirmLabel="Reservar esta fecha"
-        description="Queda reservada 14 días como cualquier reserva, y las comunidades que dijeron que sí quedan invitadas a coorganizar. La encuesta se cierra."
-        open={picking !== null}
-        pending={choose.isPending}
-        pendingLabel="Reservando…"
-        title={picking ? `¿Elegir el ${dayLabel(picking)}?` : ""}
-        onConfirm={() => picking && choose.mutate({ communityId: community.id, pollId: poll.id, day: picking })}
-        onOpenChange={(open) => !open && setPicking(null)}
-      />
+      <AlertDialog open={picking !== null} onOpenChange={(next) => !next && !choose.isPending && setPicking(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{picking ? `Reservar el ${dayLabel(picking)} · ${poll.startTime}` : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Queda reservada {HOLD_DAYS} días como cualquier reserva y la votación se cierra.
+              {picking && yesOn(picking) > 0
+                ? ` ${yesOn(picking) === 1 ? "La comunidad que dijo" : `Las ${yesOn(picking)} comunidades que dijeron`} que sí quedan invitadas a coorganizar: les avisamos por mail.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={choose.isPending}>Volver</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={choose.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (picking) choose.mutate({ ...ref, day: picking });
+              }}
+            >
+              {choose.isPending
+                ? "Reservando…"
+                : picking && yesOn(picking) > 0
+                  ? `Reservar e invitar a ${plural(yesOn(picking), "comunidad", "comunidades")}`
+                  : "Reservar esta fecha"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Panel>
   );
 }

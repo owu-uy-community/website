@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { Reveal } from "components/community/reveal";
+import { TalkCall } from "components/community/talks/TalkCall";
 import {
   ButtonLink,
   cardClassName,
@@ -25,7 +26,7 @@ import { TOPICS } from "lib/community/topics";
 export const metadata = pageMetadata({
   title: "Dá una charla",
   description:
-    "Cómo preparar tu primera charla, en qué comunidad encaja tu tema y cómo funciona la convocatoria de OWU CONF.",
+    "Proponé tu charla a las comunidades de OWU, cómo preparar la primera y cómo funciona la convocatoria de OWU CONF.",
   path: "/dar-una-charla",
 });
 
@@ -45,7 +46,9 @@ const STEPS = [
   {
     icon: Send,
     title: "Mandá tu propuesta",
-    body: "Un título y tres líneas alcanzan. Escribile a quien organiza la comunidad: por su página de eventos, su web o su canal en el Slack.",
+    body: "Un título y tres líneas alcanzan. Proponela acá: la ven quienes organizan las comunidades que elijas, o todas las de OWU.",
+    href: "#proponer",
+    cta: "Proponer una charla",
   },
   {
     icon: MessagesSquare,
@@ -85,11 +88,11 @@ export default async function DarUnaCharlaPage() {
       <PageHeader
         actions={
           <>
-            <ButtonLink arrow href="#donde">
-              Ver dónde encaja tu tema
+            <ButtonLink arrow href="#proponer">
+              Proponé tu charla
             </ButtonLink>
-            <ButtonLink href={SOCIAL_LINKS.slack} utm="dar-charla-header" variant="secondary">
-              Preguntá en el Slack
+            <ButtonLink href="#donde" variant="secondary">
+              Ver dónde encaja tu tema
             </ButtonLink>
           </>
         }
@@ -125,6 +128,15 @@ export default async function DarUnaCharlaPage() {
             </Cell>
           ))}
         </Cells>
+      </Section>
+
+      <Section
+        description="Contá de qué va y elegí a qué comunidades se la ofrecés, o dejala abierta a todas. Cuando una la quiera, te escribe para elegir la fecha."
+        eyebrow="Proponé"
+        id="proponer"
+        title="Proponé tu charla"
+      >
+        <TalkCall />
       </Section>
 
       <Section
@@ -179,7 +191,7 @@ export default async function DarUnaCharlaPage() {
             </div>
           </div>
         </Reveal>
-        <p className="mt-5 text-sm text-zinc-500">
+        <p className="mt-5 text-sm text-zinc-400">
           ¿Tu tema no tiene comunidad? Proponelo igual en el Slack: muchas veces así nace una nueva.{" "}
           <Link
             className="text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400"

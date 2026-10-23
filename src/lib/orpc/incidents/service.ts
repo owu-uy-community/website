@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import {
@@ -56,23 +56,36 @@ const incidentNotFound = new NotFound({ entity: "incident", message: "Ese incide
 const viewer = Effect.gen(function* () {
   const me = yield* CurrentUser;
   const { communityId } = yield* CommunityScope;
-  const [organizer, editor] = yield* Effect.all([
+  const [organizer, editor, staff] = yield* Effect.all([
     allowed("incident:confidential", communityId),
     allowed("incident:manage", communityId),
+    allowed("incident:confidential"),
   ]);
 
-  return { id: me.id, organizer, editor };
+  return { id: me.id, organizer, editor, staff };
 });
 type Viewer = Effect.Success<typeof viewer>;
 
 /**
  * A sensitive report is visible to organizers and to the two people on it, and to nobody else.
- * The shell's incident counts use it too, so a badge never counts what its list hides.
+ * Reports from an event's public page are the conduct page's (its responders and OWU's staff):
+ * here only site staff see them. The shell's incident counts use it too, so a badge never counts
+ * what its list hides.
  */
-export const visibleTo = (who: Pick<Viewer, "id" | "organizer">) =>
-  who.organizer
-    ? undefined
-    : or(eq(incidents.sensitive, false), eq(incidents.reporterId, who.id), eq(incidents.assigneeId, who.id));
+export const visibleTo = (who: Pick<Viewer, "id" | "organizer"> & { staff?: boolean }) =>
+  and(
+    who.staff
+      ? // …except a report that names the team, if they're on the event's community team themselves
+        or(
+          ne(incidents.source, "public"),
+          eq(incidents.involvesOrganizer, false),
+          sql`not exists (select 1 from "community_members" cm join "open_spaces" e on e."communityId" = cm."communityId" where e."id" = ${incidents.eventId} and cm."userId" = ${who.id})`
+        )
+      : ne(incidents.source, "public"),
+    who.organizer
+      ? undefined
+      : or(eq(incidents.sensitive, false), eq(incidents.reporterId, who.id), eq(incidents.assigneeId, who.id))
+  );
 
 type Person = { id: string; name: string; image: string | null };
 type ListRow = Omit<IncidentRow, "photo"> & {

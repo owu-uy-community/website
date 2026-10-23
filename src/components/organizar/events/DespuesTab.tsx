@@ -7,7 +7,7 @@ import * as z from "zod";
 
 import { SurveyTab } from "components/Admin/comms/SurveyTab";
 import { FieldError } from "components/Admin/panel";
-import { Panel, PanelHead } from "components/Admin/ui/page";
+import { MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
@@ -36,7 +36,7 @@ function MaterialsEditor({ input, event }: { input: EventInput; event: EditableE
     setEdits(list.map((item, at) => (at === index ? { ...item, ...patch } : item)));
 
   return (
-    <Panel>
+    <Panel className="scroll-mt-20" id="materiales" tabIndex={-1}>
       <PanelHead
         icon={Presentation}
         meta={`${list.length}/${MAX}`}
@@ -135,12 +135,15 @@ function MaterialsEditor({ input, event }: { input: EventInput; event: EditableE
 }
 
 /** After the event: what people said (the survey) and what stays (recordings, slides). */
-export function FeedbackTab({ input, event }: { input: EventInput; event: EditableEvent }) {
+export function DespuesTab({ input, event }: { input: EventInput; event: EditableEvent }) {
   const survey = useQuery(orpc.surveys.get.queryOptions({ input: { eventId: event.id }, staleTime: 30_000 }));
 
   return (
     <div className="flex flex-col gap-4">
       <MaterialsEditor event={event} input={input} />
+      <h2 className="scroll-mt-20 pt-2" id="encuesta" tabIndex={-1}>
+        <MicroLabel>Encuesta</MicroLabel>
+      </h2>
       <SurveyTab
         communitySlug={event.communitySlug}
         eventId={event.id}

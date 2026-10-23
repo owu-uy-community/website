@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { fullMonths, rankVenues, venueFit, type FitVenue } from "./venue-fit";
+import { broadcastPicks, fullMonths, rankVenues, rotationLabel, venueFit, type FitVenue } from "./venue-fit";
 
 const NOW = Date.parse("2026-10-01T12:00:00-03:00");
 
@@ -60,5 +60,45 @@ describe(fullMonths, () => {
   test("months whose hosted days reach the cap", () => {
     expect(fullMonths(["2026-11-03", "2026-11-20", "2026-12-01"], 2)).toStrictEqual(["2026-11"]);
     expect(fullMonths(["2026-11-03"], null)).toStrictEqual([]);
+  });
+});
+
+describe(broadcastPicks, () => {
+  const pick = (id: string, overrides: Partial<FitVenue> = {}, busy: string[] = []) => ({
+    id,
+    fallback: overrides.fallback ?? false,
+    requestable: overrides.requestable ?? true,
+    fit: venueFit(space(overrides), want, { busy }, NOW),
+  });
+
+  test("only requestable spaces that work that day and fit well enough, never the Plan B", () => {
+    const picked = broadcastPicks([
+      pick("fits"),
+      pick("busy", {}, ["2026-11-12"]),
+      pick("staff", { requestable: false }),
+      pick("plan-b", { fallback: true }),
+      pick("no-projector", { amenities: [] }),
+      pick("never-answers", { responseRate: 0, lastHostedAt: "2026-10-01T22:00:00Z" }),
+    ]);
+
+    expect(picked.map((venue) => venue.id)).toStrictEqual(["fits"]);
+  });
+
+  test("at most five, best first", () => {
+    const many = Array.from({ length: 7 }, (_, index) =>
+      pick(`v${index}`, { responseRate: index / 10, lastHostedAt: "2026-01-01T22:00:00Z" })
+    );
+
+    expect(broadcastPicks(many).map((venue) => venue.id)).toStrictEqual(["v6", "v5", "v4", "v3", "v2"]);
+  });
+});
+
+describe(rotationLabel, () => {
+  test("in words: this year's count, or how long since it hosted", () => {
+    expect(rotationLabel(3, "2026-09-20T22:00:00Z", NOW)).toBe("Recibió 3 este año");
+    expect(rotationLabel(1, "2026-09-20T22:00:00Z", NOW)).toBe("Recibió 1 meetup este año");
+    expect(rotationLabel(0, null, NOW)).toBe("Todavía no recibió meetups");
+    expect(rotationLabel(0, "2025-12-01T22:00:00Z", NOW)).toBe("No recibe hace 10 meses");
+    expect(rotationLabel(0, "2024-12-01T22:00:00Z", NOW)).toBe("No recibe hace más de un año");
   });
 });

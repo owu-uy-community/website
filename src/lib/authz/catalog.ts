@@ -42,6 +42,8 @@ export const communityStatements = {
   venue: ["requests", "read", "request"],
   survey: ["read", "write"],
   poll: ["read", "create", "vote", "choose"],
+  /** Talks people offer (/dar-una-charla): read the pool and take one for an event. */
+  talk: ["read", "claim"],
   room: ["set-status"],
   calendar: ["read"],
   activity: ["read"],
@@ -132,6 +134,7 @@ const editorGrants = plus(memberGrants, {
   rsvp: ["review"],
   survey: ["read", "write"],
   poll: ["read", "create", "vote", "choose"],
+  talk: ["read", "claim"],
   calendar: ["read"],
   activity: ["read"],
 });

@@ -8,6 +8,9 @@ import { panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Eventos · Organizá" };
 
+// Who is looking decides what renders: per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function EventsPage({ params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;
   const access = await panelCommunity(communitySlug);

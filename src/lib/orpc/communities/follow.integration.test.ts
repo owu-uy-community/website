@@ -25,14 +25,17 @@ describe("following a community", () => {
     await expect(call(router.communities.follow, input, by(beto))).resolves.toStrictEqual({
       followers: 2,
       following: true,
+      digest: "each",
     });
     await expect(call(router.communities.unfollow, input, by(beto))).resolves.toStrictEqual({
       followers: 1,
       following: false,
+      digest: null,
     });
     await expect(call(router.communities.followState, input, by(null))).resolves.toStrictEqual({
       followers: 1,
       following: false,
+      digest: null,
     });
   });
 

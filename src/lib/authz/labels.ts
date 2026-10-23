@@ -14,6 +14,25 @@ export const ROLE_LABELS: Record<string, { label: string; hint: string }> = {
   user: { label: "Persona", hint: "Sin rol: puede anotarse a eventos y pedir acceso." },
 };
 
+/**
+ * How the built-in roles read in Organizá for a community that only runs meetups: no staff of the
+ * day, tasks or incident desk there (those are the conference's).
+ */
+export const MEETUP_ROLE_HINTS: Record<string, string> = {
+  editor: "Arma y publica eventos, reserva fechas y vota fechas con otras comunidades.",
+  member: "Ayuda en la puerta y ve los pedidos de espacio.",
+};
+
+/**
+ * Permissions that only mean something at a conference or open space: rooms, the staff's tasks and
+ * announcements, the incident desk, the day's summary and its assistant. Organizá hides them for a
+ * community that never ran one; /admin always lists everything. Conduct reports
+ * (`incident:confidential`) stay: a code of conduct applies at any meetup.
+ */
+const CONF_ONLY_RESOURCES = new Set(["room", "task", "announcement", "incident", "dashboard", "assistant"]);
+export const confOnly = (permission: string) =>
+  CONF_ONLY_RESOURCES.has(permission.split(":")[0]) && permission !== "incident:confidential";
+
 /** "Editor", a custom role's own label, or the slug itself. */
 export const roleLabel = (role: string | null | undefined, custom?: string | null) =>
   custom ?? (role ? (ROLE_LABELS[role]?.label ?? role) : "Sin rol");
@@ -103,9 +122,10 @@ export const COMMUNITY_PERMISSION_LABELS: Labels<CommunityStatements> = {
   venue: { label: "Espacios", actions: { requests: "Ver pedidos", read: "Ver espacios", request: "Pedir espacio" } },
   survey: { label: "Encuestas", actions: { read: "Ver resultados", write: "Armar" } },
   poll: {
-    label: "Votaciones de fecha",
+    label: "Votar fecha",
     actions: { read: "Ver", create: "Crear", vote: "Votar", choose: "Elegir fecha" },
   },
+  talk: { label: "Charlas", actions: { read: "Ver las propuestas", claim: "Tomar una charla" } },
   room: { label: "Salas", actions: { "set-status": "Cambiar el estado de una sala" } },
   calendar: { label: "Calendario", actions: { read: "Ver el calendario compartido" } },
   activity: { label: "Actividad", actions: { read: "Ver la actividad" } },

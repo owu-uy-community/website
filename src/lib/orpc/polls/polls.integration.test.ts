@@ -123,4 +123,53 @@ describe("date polls", () => {
       )
     ).rejects.toMatchObject({ code: "CONFLICT" });
   });
+
+  test("only the asker closes a poll: it stays listed, nobody can answer or pick a date after", async () => {
+    const { asker, python, askerEditor, pythonEditor, days, poll } = await setup();
+    const ref = (communityId: string) => ({ communityId, pollId: poll.id });
+
+    await expect(call(router.polls.close, ref(python.id), by(pythonEditor))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const closed = await call(router.polls.close, ref(asker.id), by(askerEditor));
+    expect(closed.closedAt).not.toBeNull();
+
+    const [listed] = await call(router.polls.list, { communityId: python.id }, by(pythonEditor));
+    expect([listed.id, listed.closedAt]).toStrictEqual([poll.id, closed.closedAt]);
+    await expect(
+      call(router.polls.vote, { ...ref(python.id), votes: [{ day: days[0], answer: "yes" }] }, by(pythonEditor))
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(call(router.polls.choose, { ...ref(asker.id), day: days[0] }, by(askerEditor))).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+  });
+
+  test("only the asker deletes or restores a poll", async () => {
+    const { python, pythonEditor, poll } = await setup();
+    const ref = { communityId: python.id, pollId: poll.id };
+
+    await expect(call(router.polls.remove, ref, by(pythonEditor))).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(call(router.polls.restore, ref, by(pythonEditor))).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("a deleted poll disappears for everyone until restored, answers included", async () => {
+    const { asker, python, askerEditor, pythonEditor, days, poll } = await setup();
+    const ref = (communityId: string) => ({ communityId, pollId: poll.id });
+    await call(router.polls.vote, { ...ref(python.id), votes: [{ day: days[1], answer: "maybe" }] }, by(pythonEditor));
+
+    await call(router.polls.remove, ref(asker.id), by(askerEditor));
+    const lists = await Promise.all([
+      call(router.polls.list, { communityId: asker.id }, by(askerEditor)),
+      call(router.polls.list, { communityId: python.id }, by(pythonEditor)),
+    ]);
+    expect(lists).toStrictEqual([[], []]);
+    await expect(
+      call(router.polls.vote, { ...ref(python.id), votes: [{ day: days[0], answer: "yes" }] }, by(pythonEditor))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    const restored = await call(router.polls.restore, ref(asker.id), by(askerEditor));
+    expect(restored.communities.find((row) => row.id === python.id)?.answers).toStrictEqual({ [days[1]]: "maybe" });
+    const [listed] = await call(router.polls.list, { communityId: python.id }, by(pythonEditor));
+    expect(listed.id).toBe(poll.id);
+  });
 });

@@ -147,6 +147,13 @@ export const toast = {
    * Custom toast with full control
    */
   custom: sonnerToast,
+
+  /**
+   * Something reversible just happened: say so, with "Deshacer" for 8 seconds. Use it instead of
+   * asking "¿Seguro?" first; keep confirmations for what notifies people or can't be undone.
+   */
+  undo: (title: string, onUndo: () => void, description?: string) =>
+    sonnerToast.success(title, { description, duration: 8000, action: { label: "Deshacer", onClick: onUndo } }),
 };
 
 /**

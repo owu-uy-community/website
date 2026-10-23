@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
+import { cn } from "app/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
 import { Kbd } from "components/shared/ui/kbd";
+import { Switch } from "components/shared/ui/switch";
 
 /**
  * One keyboard map for the admin. Shortcuts ignore typing (inputs, textareas, contentEditable),
@@ -64,6 +66,56 @@ export function useShortcuts(shortcuts: Shortcut[]) {
 
 const isMac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
 
+// ---------------------------------------------------------------------------
+// "Atajos de una tecla": letters, symbols and sequences like "g c" can be turned off on a device
+// (WCAG 2.1.4). Chords with ⌘/Ctrl/Alt keep working: typing never fires them by accident.
+// ---------------------------------------------------------------------------
+const SINGLE_KEYS = "owu:atajos-una-tecla";
+const singleKeyListeners = new Set<() => void>();
+
+function singleKeysOn() {
+  try {
+    return localStorage.getItem(SINGLE_KEYS) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function setSingleKeyShortcuts(on: boolean) {
+  try {
+    if (on) localStorage.removeItem(SINGLE_KEYS);
+    else localStorage.setItem(SINGLE_KEYS, "off");
+  } catch {
+    // No storage (private mode): the switch lasts while the page is open
+  }
+  for (const listener of singleKeyListeners) listener();
+}
+
+/** Whether single-key shortcuts and sequences are on, on this device (on until someone turns them off). */
+export function useSingleKeyShortcuts() {
+  return useSyncExternalStore(
+    (listener) => {
+      singleKeyListeners.add(listener);
+      window.addEventListener("storage", listener);
+      return () => {
+        singleKeyListeners.delete(listener);
+        window.removeEventListener("storage", listener);
+      };
+    },
+    singleKeysOn,
+    () => true
+  );
+}
+
+/** A letter, digit or symbol without ⌘/Ctrl/Alt ("c", "?", "shift+p"), or a sequence ("g c"). */
+export function isSingleKey(keys: string) {
+  if (keys.includes(" ")) return true;
+  const parts = keys.toLowerCase().split("+");
+  const key = parts.pop() ?? "";
+
+  return key.length === 1 && !parts.some((part) => ["mod", "ctrl", "meta", "alt"].includes(part));
+}
+
 function isTyping(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) return false;
   return (
@@ -100,7 +152,10 @@ export function ShortcutListener() {
       if (event.defaultPrevented || event.repeat) return;
       const typing = isTyping(event.target);
       const combo = comboOf(event);
-      const candidates = [...registry.values()].filter((shortcut) => !shortcut.displayOnly);
+      const singleKeys = singleKeysOn();
+      const candidates = [...registry.values()].filter(
+        (shortcut) => !shortcut.displayOnly && (singleKeys || !isSingleKey(shortcut.keys))
+      );
 
       // Second key of a sequence ("g" then "a").
       if (pending && Date.now() - pending.at < 800) {
@@ -144,9 +199,21 @@ export function openShortcutSheet() {
   window.dispatchEvent(new Event(SHEET_EVENT));
 }
 
-/** How a combo reads: "⌘ K", "G A", "⇧ P". */
-export function KeyHint({ keys }: { keys: string }) {
-  const mac = isMac();
+const noop = () => () => {};
+
+/**
+ * How a combo reads: "⌘ K", "Ctrl K", "G A", "⇧ P". Hidden on touchscreens, where there's no
+ * keyboard to press it on (`className` can bring it back), and, for ⌘/Ctrl/⌥, until the browser
+ * says which platform it is: a Mac never flashes "Ctrl" while the page hydrates.
+ */
+export function KeyHint({ keys, className }: { keys: string; className?: string }) {
+  const platform = useSyncExternalStore(
+    noop,
+    () => (isMac() ? "mac" : "other"),
+    () => null
+  );
+  if (platform === null && /\b(mod|alt)\b/.test(keys)) return null;
+  const mac = platform === "mac";
   const label = (part: string) =>
     ({
       mod: mac ? "⌘" : "Ctrl",
@@ -165,7 +232,7 @@ export function KeyHint({ keys }: { keys: string }) {
     })[part] ?? part.toUpperCase();
 
   return (
-    <span className="flex items-center gap-1">
+    <span className={cn("flex items-center gap-1 pointer-coarse:hidden", className)}>
       {keys
         .split(" ")
         .flatMap((step, stepIndex) =>
@@ -178,6 +245,7 @@ export function KeyHint({ keys }: { keys: string }) {
 /** The `?` sheet: every shortcut registered right now, grouped. */
 export function ShortcutSheet() {
   const [open, setOpen] = useState(false);
+  const singleKeys = useSingleKeyShortcuts();
   useSyncExternalStore(
     subscribe,
     () => version,
@@ -204,10 +272,25 @@ export function ShortcutSheet() {
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Atajos de teclado</DialogTitle>
-          <DialogDescription>
-            Los de esta página y los de todo el admin. No se activan mientras escribís.
-          </DialogDescription>
+          <DialogDescription>Los de esta página y los generales. No se activan mientras escribís.</DialogDescription>
         </DialogHeader>
+        <div className="flex min-h-11 items-center gap-3 rounded-lg border border-border px-3 py-2">
+          <span className="min-w-0 flex-1">
+            <label className="block text-ui font-medium text-foreground" htmlFor="single-key-shortcuts">
+              Atajos de una tecla
+            </label>
+            <span className="block text-meta text-muted-foreground" id="single-key-shortcuts-hint">
+              Letras, símbolos y secuencias como G C. Apagalos si se te disparan sin querer: los que llevan ⌘ o Ctrl
+              siguen andando.
+            </span>
+          </span>
+          <Switch
+            aria-describedby="single-key-shortcuts-hint"
+            checked={singleKeys}
+            id="single-key-shortcuts"
+            onCheckedChange={setSingleKeyShortcuts}
+          />
+        </div>
         <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
           {[...groups.entries()].map(([group, shortcuts]) => (
             <section key={group}>
@@ -216,9 +299,15 @@ export function ShortcutSheet() {
               </h3>
               <ul className="divide-y divide-border">
                 {shortcuts.map((shortcut) => (
-                  <li key={shortcut.id} className="flex h-8 items-center justify-between gap-3 text-ui">
+                  <li
+                    key={shortcut.id}
+                    className={cn(
+                      "flex h-8 items-center justify-between gap-3 text-ui",
+                      !singleKeys && isSingleKey(shortcut.keys) && "opacity-50"
+                    )}
+                  >
                     <span className="truncate text-subtle">{shortcut.label}</span>
-                    <KeyHint keys={shortcut.keys} />
+                    <KeyHint className="pointer-coarse:flex" keys={shortcut.keys} />
                   </li>
                 ))}
               </ul>

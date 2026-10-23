@@ -19,6 +19,8 @@ export const DoorInfoSchema = z.object({
   communityName: z.string(),
   expiresAt: z.string(),
   totals: Totals,
+  /** How people signed up: the door mentions Eventbrite only when it's Eventbrite */
+  registration: z.enum(["none", "owu", "external", "eventbrite"]),
 });
 
 /** People found at the door: names and tickets; never emails or ticket codes */
@@ -26,3 +28,5 @@ export const DoorSearchResultSchema = z.object({ rows: z.array(AttendeeSchema) }
 export const DoorCountsSchema = z.object({ totals: Totals });
 
 export const DoorLinkSchema = z.object({ url: z.string(), expiresAt: z.string() });
+
+export type DoorInfo = z.infer<typeof DoorInfoSchema>;

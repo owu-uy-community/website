@@ -11,6 +11,7 @@ import { events } from "lib/db/schema";
 import { panelCommunity } from "../../../access";
 
 export const metadata: Metadata = { title: "Evento · Organizá" };
+export const instant = false;
 
 /** A published event's dashboard; a draft opens its wizard instead. */
 export default async function EventPage({ params }: { params: Promise<{ communitySlug: string; eventId: string }> }) {

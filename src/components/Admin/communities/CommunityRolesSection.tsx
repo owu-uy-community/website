@@ -17,7 +17,7 @@ import { Skeleton } from "components/shared/ui/skeleton";
 import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
 import { parsePermission } from "lib/authz/catalog";
-import { COMMUNITY_PERMISSION_LABELS } from "lib/authz/labels";
+import { COMMUNITY_PERMISSION_LABELS, confOnly, MEETUP_ROLE_HINTS } from "lib/authz/labels";
 import { orpc } from "lib/orpc";
 import type { CommunityRoleInfo } from "lib/orpc/communities/roles";
 
@@ -51,6 +51,7 @@ function RoleEditor({
   editing,
   open,
   holds,
+  shows,
   onClose,
   onSaved,
 }: {
@@ -58,6 +59,8 @@ function RoleEditor({
   editing: Editing;
   open: boolean;
   holds: (permission: string) => boolean;
+  /** Listed in the editor; a hidden permission the role holds stays held on save */
+  shows: (permission: string) => boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -160,7 +163,11 @@ function RoleEditor({
           </div>
         )}
 
-        {GROUPS.map((group) => {
+        {GROUPS.map((group) => ({
+          ...group,
+          permissions: group.permissions.filter((item) => shows(item.permission)),
+        })).map((group) => {
+          if (group.permissions.length === 0) return null;
           const editable = readOnly ? [] : group.permissions.filter((item) => holds(item.permission));
           const on = group.permissions.filter((item) => selected.includes(item.permission));
           if (readOnly && on.length === 0) return null;
@@ -227,11 +234,15 @@ function RoleEditor({
 export function CommunityRolesSection({
   communityId,
   permissions,
+  meetup = false,
 }: {
   communityId: string;
   permissions?: readonly string[];
+  /** A community that only runs meetups: conference-only permissions and wording stay out of sight */
+  meetup?: boolean;
 }) {
   const holds = (permission: string) => permissions?.includes(permission) ?? true;
+  const shows = (permission: string) => !meetup || !confOnly(permission);
   const queryClient = useQueryClient();
   // Roles feed the members' pickers too.
   const refresh = () => void queryClient.invalidateQueries({ queryKey: orpc.communities.key() });
@@ -289,6 +300,7 @@ export function CommunityRolesSection({
           <ul className="divide-y divide-border">
             {rows.map((role) => {
               const editable = !role.builtIn && holds("role:update");
+              const description = (role.builtIn && meetup ? MEETUP_ROLE_HINTS[role.role] : null) ?? role.description;
 
               return (
                 <li key={role.role} className="flex items-center gap-2 py-1 pr-2 pl-1">
@@ -304,10 +316,12 @@ export function CommunityRolesSection({
                         {people(role.members)}
                       </span>
                     </span>
-                    {role.description ? (
-                      <span className="block truncate text-meta text-muted-foreground">{role.description}</span>
+                    {description ? (
+                      <span className="block truncate text-meta text-muted-foreground">{description}</span>
                     ) : null}
-                    <span className="block truncate text-meta text-subtle">{summary(role.permissions)}</span>
+                    <span className="block truncate text-meta text-subtle">
+                      {summary(role.permissions.filter(shows))}
+                    </span>
                   </button>
                   {!role.builtIn && holds("role:delete") ? (
                     <Button
@@ -336,6 +350,7 @@ export function CommunityRolesSection({
           editing={editor.editing}
           holds={holds}
           open={editor.open}
+          shows={shows}
           onClose={close}
           onSaved={() => {
             close();

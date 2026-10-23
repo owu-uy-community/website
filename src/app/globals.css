@@ -139,10 +139,16 @@
      the page, its full-height layouts, sticky footers and toasts make room for it. */
   :root:has([data-admin-tabbar]) {
     --admin-tabbar-h: calc(57px + env(safe-area-inset-bottom));
+    /* On phones the page itself scrolls: a field reached with Tab (or the keyboard's next) scrolls
+       clear of the sticky header and the tab bar instead of hiding under them (WCAG 2.4.11). */
+    scroll-padding-top: calc(46px + env(safe-area-inset-top));
+    scroll-padding-bottom: var(--admin-tabbar-h);
   }
   /* The settings save bar, while it's up: toasts rise above it instead of covering "Guardar". */
   :root:has([data-save-bar]) {
     --admin-savebar-h: 4rem;
+    /* A field reached with Tab scrolls clear of the bar instead of hiding under it (WCAG 2.4.11) */
+    scroll-padding-bottom: calc(var(--admin-tabbar-h, 0px) + var(--admin-savebar-h));
   }
   /* An editor panel's footer (its Guardar), while one is open: the same for toasts. */
   :root:has([data-editor-footer]) {

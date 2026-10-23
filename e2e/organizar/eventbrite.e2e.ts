@@ -26,7 +26,8 @@ test("an admin connects Eventbrite, publishes an event there, and its page sends
   const page = await pageFor(admin);
   await page.goto(`/organizar/panel/${community.slug}/integraciones`);
   await page.getByRole("link", { name: "Conectar Eventbrite" }).click();
-  await expect(page.getByText("Eventbrite conectado")).toBeVisible();
+  // The toast, and the shell's own notice of it
+  await expect(page.getByText("Eventbrite conectado").first()).toBeVisible();
   await expect(page.getByText("Cuenta de prueba en Eventbrite")).toBeVisible();
 
   await page.goto(`/organizar/panel/${community.slug}/eventos/${event.id}/editar?paso=inscripcion`);

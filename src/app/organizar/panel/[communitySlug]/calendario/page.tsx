@@ -9,6 +9,9 @@ import { panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Calendario · Organizá" };
 
+// Per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function CalendarPage({ params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;
   const access = await panelCommunity(communitySlug);

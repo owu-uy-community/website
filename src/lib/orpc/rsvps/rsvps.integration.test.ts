@@ -235,7 +235,7 @@ describe("more room", () => {
     const [first, second] = await people(2);
     await join(event.id, first);
     const waiting = await join(event.id, second);
-    await call(router.events.cancel, { communityId: community.id, eventId: event.id, reason: "" }, by(admin));
+    await call(router.events.cancel, { communityId: community.id, eventId: event.id, reason: "Sin sala" }, by(admin));
 
     await expect(
       call(router.rsvps.giveSeat, { communityId: community.id, eventId: event.id, attendeeId: waiting.id }, by(admin))
@@ -364,12 +364,13 @@ describe("organizers", () => {
     const admin = await makeMember(community.id, "admin");
     const input = { communityId: community.id, eventId: event.id };
 
-    await expect(call(router.rsvps.sendTest, input, by(admin))).resolves.toMatchObject({ sent: 4, to: admin.email });
+    // With a limit, the second "¿Seguís viniendo?" is part of the cadence
+    await expect(call(router.rsvps.sendTest, input, by(admin))).resolves.toMatchObject({ sent: 5, to: admin.email });
     await call(router.rsvps.sendTest, input, by(admin));
 
     const sent = await db.select().from(emailDeliveries).where(eq(emailDeliveries.to, admin.email));
     expect(sent.map((row) => row.kind).toSorted()).toStrictEqual(
-      ["rsvp_confirmed", "rsvp_feedback", "rsvp_reminder_2h", "rsvp_reminder_48h"].toSorted()
+      ["rsvp_confirmed", "rsvp_feedback", "rsvp_reminder_2h", "rsvp_reminder_48h", "rsvp_confirm_ping"].toSorted()
     );
     expect(sent.every((row) => row.subject.startsWith("[Prueba] "))).toBe(true);
     expect(sent.find((row) => row.kind === "rsvp_reminder_48h")?.text).toContain("Entrada por la puerta lateral");

@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Ban, TriangleAlert, Users } from "lucide-react";
+import { Ban, Presentation, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 
-import { ConfirmDialog, Notice } from "components/Admin/panel";
+import { Notice } from "components/Admin/panel";
 import { DateTimeInput } from "components/Admin/settings/event-fields";
 import {
   SaveBar,
@@ -21,17 +20,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "c
 import { Switch } from "components/shared/ui/switch";
 import { toast } from "components/shared/ui/toast-utils";
 import { dateParts, dayKey, montevideoIso } from "lib/community/time";
-import { DraftPatchSchema, type EditableEvent } from "lib/orpc/events/schemas";
-import { orpc } from "lib/orpc/client";
+import { suggestedCloseAt } from "lib/organizar/rsvp-state";
+import { RSVP_CLOSE_HINT } from "lib/organizar/rules";
+import { headcount, plural } from "lib/organizar/words";
+import { DraftPatchSchema, type EditableEvent, type EventStats } from "lib/orpc/events/schemas";
 
+import { ConductSection } from "./ConductSection";
+import { CancelEventDialog } from "./NotifyDialog";
 import { StaleNotice, useEventSave, type EventInput } from "./save";
 
-type Form = Pick<EditableEvent, "capacity" | "waitlist" | "approval" | "guestsAllowed" | "rsvpClosesAt">;
-const FIELDS = ["capacity", "waitlist", "approval", "guestsAllowed", "rsvpClosesAt"] as const;
+type Form = Pick<EditableEvent, "capacity" | "waitlist" | "approval" | "guestsAllowed" | "rsvpClosesAt" | "slideNotes">;
+const FIELDS = ["capacity", "waitlist", "approval", "guestsAllowed", "rsvpClosesAt", "slideNotes"] as const;
 
 const SECTIONS = [
   { id: "inscripcion", label: "Inscripción", icon: Users },
+  { id: "conducta", label: "Conducta", icon: ShieldCheck },
+  { id: "presentacion", label: "Presentación", icon: Presentation },
   { id: "peligro", label: "Zona peligrosa", icon: TriangleAlert },
+];
+const NOTES: { key: keyof EditableEvent["slideNotes"]; label: string; placeholder: string }[] = [
+  { key: "wifiName", label: "Nombre del wifi", placeholder: "Invitados" },
+  { key: "wifiPassword", label: "Contraseña del wifi", placeholder: "bienvenidos2026" },
+  {
+    key: "access",
+    label: "Cómo entrar y moverse",
+    placeholder: "Baños al fondo a la izquierda; la terraza cierra a las 21",
+  },
 ];
 
 /** A Montevideo day and time as the ISO instant the API keeps */
@@ -44,21 +58,20 @@ const instant = (day: string, time: string) => new Date(montevideoIso(`${day}T${
 export function SettingsTab({
   input,
   event,
-  isAdmin,
-  people,
+  canCancel,
+  stats,
 }: {
   input: EventInput;
   event: EditableEvent;
-  isAdmin: boolean;
-  /** Signed up now: who a cancellation tells */
-  people: number;
+  /** event:cancel: the danger zone */
+  canCancel: boolean;
+  stats: EventStats | undefined;
 }) {
-  const queryClient = useQueryClient();
   const { save, saving, stale, reload } = useEventSave(input);
   const [edits, setEdits] = useState<Partial<Form>>({});
   const [cancelling, setCancelling] = useState(false);
   const form: Form = { ...event, ...edits };
-  const dirty = FIELDS.filter((key) => key in edits && edits[key] !== event[key]);
+  const dirty = FIELDS.filter((key) => key in edits && JSON.stringify(edits[key]) !== JSON.stringify(event[key]));
   const set = (change: Partial<Form>) => setEdits((current) => ({ ...current, ...change }));
   const capacityError = DraftPatchSchema.shape.capacity.safeParse(form.capacity).success
     ? undefined
@@ -66,18 +79,9 @@ export function SettingsTab({
   const closesError =
     form.rsvpClosesAt && form.rsvpClosesAt > event.endDate ? "Tiene que ser antes de que termine el evento" : undefined;
   const cancelled = event.status === "cancelled";
-  const cancel = useMutation(
-    orpc.events.cancel.mutationOptions({
-      onSuccess: (result) => {
-        queryClient.setQueryData(orpc.events.get.queryKey({ input }), result);
-        void queryClient.invalidateQueries({ queryKey: orpc.events.stats.key() });
-        setCancelling(false);
-        setEdits({});
-        toast.success("Evento cancelado", "Sigue en la agenda como cancelado y avisamos a quienes se anotaron.");
-      },
-      onError: (error) => toast.error("No se pudo cancelar", error.message),
-    })
-  );
+  // Everyone signed up (a seat, an offer, waiting, pending) hears about a cancellation
+  const notified = stats ? stats.attending + stats.waiting + stats.pending : 0;
+  const count = stats ? headcount(stats, event.capacity) : null;
 
   const onSave = () => {
     if (capacityError || closesError) return;
@@ -90,7 +94,7 @@ export function SettingsTab({
   const closes = form.rsvpClosesAt ? new Date(form.rsvpClosesAt) : null;
 
   return (
-    <SettingsLayout label="Ajustes" sections={isAdmin && !cancelled ? SECTIONS : SECTIONS.slice(0, 1)}>
+    <SettingsLayout label="Ajustes" sections={canCancel && !cancelled ? SECTIONS : SECTIONS.slice(0, -1)}>
       <div className="max-w-3xl space-y-7 md:pl-6">
         <StaleNotice
           show={stale}
@@ -103,7 +107,17 @@ export function SettingsTab({
           Este evento está cancelado: ya no se edita.
         </Notice>
 
-        <SettingsSection id="inscripcion" title="Inscripción">
+        <SettingsSection
+          actions={
+            count && event.registration === "owu" ? (
+              <span className="text-meta text-muted-foreground tabular-nums" data-testid="headcount">
+                {count.seatsLabel} · {count.attendingLabel} · {count.waitlistLabel}
+              </span>
+            ) : undefined
+          }
+          id="inscripcion"
+          title="Inscripción"
+        >
           {event.registration === "owu" || event.registration === "eventbrite" ? (
             <SettingsCard>
               <SettingsRow
@@ -176,24 +190,22 @@ export function SettingsTab({
                   <SettingsRow
                     dirty={dirty.includes("rsvpClosesAt")}
                     error={closesError}
-                    hint="Si no, se puede anotar hasta que termina. Quien ya está anotado no cambia."
+                    hint={
+                      closes
+                        ? "Después de esa hora ya no se anota nadie; quien llegue entra en la puerta. Quien ya está anotado no cambia."
+                        : RSVP_CLOSE_HINT
+                    }
                     htmlFor="closes"
-                    label="Cerrar la inscripción antes"
+                    label="Otro horario de cierre"
                   >
                     <div className="flex flex-col gap-2">
                       <Switch
-                        aria-label="Cerrar la inscripción antes"
+                        aria-label="Otro horario de cierre"
                         checked={closes !== null}
                         disabled={cancelled}
                         id="closes"
-                        // A day before the start, as a starting point
-                        onCheckedChange={(on) =>
-                          set({
-                            rsvpClosesAt: on
-                              ? new Date(new Date(event.startDate).getTime() - 86_400_000).toISOString()
-                              : null,
-                          })
-                        }
+                        // The same starting point as the wizard: two hours before
+                        onCheckedChange={(on) => set({ rsvpClosesAt: on ? suggestedCloseAt(event.startDate) : null })}
                       />
                       {closes ? (
                         <DateTimeInput
@@ -230,12 +242,47 @@ export function SettingsTab({
           )}
         </SettingsSection>
 
-        {isAdmin && !cancelled ? (
+        <ConductSection event={event} />
+
+        <SettingsSection id="presentacion" title="Datos para la presentación">
+          <SettingsCard>
+            {NOTES.map((note) => (
+              <SettingsRow
+                key={note.key}
+                dirty={
+                  dirty.includes("slideNotes") &&
+                  (form.slideNotes[note.key] ?? "") !== (event.slideNotes[note.key] ?? "")
+                }
+                hint={
+                  note.key === "wifiName"
+                    ? "Van en la presentación de bienvenida, que solo abren ustedes. Nunca en la página del evento."
+                    : undefined
+                }
+                htmlFor={`slide-${note.key}`}
+                label={note.label}
+              >
+                <Input
+                  disabled={cancelled}
+                  id={`slide-${note.key}`}
+                  maxLength={note.key === "access" ? 200 : 80}
+                  placeholder={note.placeholder}
+                  value={form.slideNotes[note.key] ?? ""}
+                  onChange={(change) =>
+                    set({ slideNotes: { ...form.slideNotes, [note.key]: change.target.value || undefined } })
+                  }
+                />
+              </SettingsRow>
+            ))}
+          </SettingsCard>
+        </SettingsSection>
+
+        {canCancel && !cancelled ? (
           <SettingsSection id="peligro" title="Zona peligrosa">
             <div className="flex flex-col gap-3">
               <Notice tone="danger">
-                Cancelar avisa por mail a {people === 1 ? "la persona anotada" : `las ${people} personas anotadas`},
-                saca el evento de sus calendarios y lo deja en la agenda como cancelado. No se puede deshacer.
+                Cancelar avisa por mail a {plural(notified, "persona", "personas")} (con lugar, en espera o por
+                aprobar), con el motivo; saca el evento de sus calendarios y lo deja en la agenda como cancelado. No se
+                puede deshacer.
               </Notice>
               <SettingsCard className="border-live/25">
                 <SettingsRow
@@ -256,14 +303,12 @@ export function SettingsTab({
         <SaveBar count={dirty.length} saving={saving} onDiscard={() => setEdits({})} onSave={onSave} />
       </div>
       <UnsavedChangesGuard count={dirty.length} />
-      <ConfirmDialog
-        confirmLabel="Cancelar el evento"
-        description="Queda en la agenda como cancelado y quienes se anotaron reciben un aviso."
+      <CancelEventDialog
+        event={event}
+        input={input}
+        notified={notified}
         open={cancelling}
-        pending={cancel.isPending}
-        pendingLabel="Cancelando…"
-        title={`¿Cancelar «${event.name}»?`}
-        onConfirm={() => cancel.mutate({ ...input, reason: "" })}
+        onCancelled={() => setEdits({})}
         onOpenChange={setCancelling}
       />
     </SettingsLayout>

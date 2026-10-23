@@ -390,3 +390,195 @@ reads the database at build time.
   YAML (`content/communities/`).
 - Create the `privacidad@owu.uy` alias that `/privacidad` points to, and register the database
   with the URCDP.
+
+## 8. Organizá v2
+
+What the Organizá v2 release adds, on top of everything above (production at `main` 81840449).
+Same rules: additive only (new tables; new columns nullable or with a default), so production
+keeps working before and after; **apply it before deploying**, because pages built at deploy time
+read the new columns. Generated with `drizzle-kit push --verbose` from `main`'s schema to this
+release's on a scratch database, and pushed twice to check that nothing else drifts.
+
+**Never run any of this from an agent session. Agustín applies it.** Same order as before:
+`pg_dump`, a Neon branch first (and its preview), then production.
+
+```sql
+SET lock_timeout = '3s';
+BEGIN;
+
+CREATE TABLE "community_assets" (
+	"id" text PRIMARY KEY NOT NULL,
+	"communityId" text NOT NULL,
+	"platform" text NOT NULL,
+	"label" text DEFAULT '' NOT NULL,
+	"holderUserId" text,
+	"holderName" text DEFAULT '' NOT NULL,
+	"backupUserId" text,
+	"note" text DEFAULT '' NOT NULL,
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "community_outreach" (
+	"id" text PRIMARY KEY NOT NULL,
+	"communityId" text NOT NULL,
+	"reason" text NOT NULL,
+	"status" text DEFAULT 'done' NOT NULL,
+	"note" text DEFAULT '' NOT NULL,
+	"snoozedUntil" timestamp (3),
+	"byId" text,
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "event_messages" (
+	"id" text PRIMARY KEY NOT NULL,
+	"eventId" text NOT NULL,
+	"audience" text NOT NULL,
+	"subject" text NOT NULL,
+	"body" text NOT NULL,
+	"sendAt" timestamp (3) DEFAULT now() NOT NULL,
+	"status" text DEFAULT 'scheduled' NOT NULL,
+	"recipients" integer DEFAULT 0 NOT NULL,
+	"createdById" text,
+	"sentAt" timestamp (3),
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "speaker_profiles" (
+	"userId" text PRIMARY KEY NOT NULL,
+	"bio" text DEFAULT '' NOT NULL,
+	"topics" text[] DEFAULT '{}' NOT NULL,
+	"languages" text[] DEFAULT '{"es"}' NOT NULL,
+	"formats" text[] DEFAULT '{}' NOT NULL,
+	"links" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"mentor" boolean DEFAULT false NOT NULL,
+	"public" boolean DEFAULT false NOT NULL,
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "talk_claims" (
+	"id" text PRIMARY KEY NOT NULL,
+	"proposalId" text NOT NULL,
+	"communityId" text NOT NULL,
+	"eventId" text,
+	"status" text DEFAULT 'claimed' NOT NULL,
+	"claimedById" text,
+	"materialsAt" timestamp (3),
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "talk_proposals" (
+	"id" text PRIMARY KEY NOT NULL,
+	"speakerUserId" text NOT NULL,
+	"speakerName" text NOT NULL,
+	"title" text NOT NULL,
+	"abstract" text DEFAULT '' NOT NULL,
+	"format" text DEFAULT 'corta' NOT NULL,
+	"level" text DEFAULT 'inicial' NOT NULL,
+	"topics" text[] DEFAULT '{}' NOT NULL,
+	"language" text DEFAULT 'es' NOT NULL,
+	"firstTime" boolean DEFAULT false NOT NULL,
+	"recordingOk" boolean DEFAULT true NOT NULL,
+	"communityIds" text[] DEFAULT '{}' NOT NULL,
+	"notes" text DEFAULT '' NOT NULL,
+	"status" text DEFAULT 'open' NOT NULL,
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL,
+	"updatedAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+CREATE TABLE "talk_requests" (
+	"id" text PRIMARY KEY NOT NULL,
+	"communityId" text NOT NULL,
+	"topic" text NOT NULL,
+	"details" text DEFAULT '' NOT NULL,
+	"createdById" text,
+	"closedAt" timestamp (3),
+	"createdAt" timestamp (3) DEFAULT now() NOT NULL
+);
+
+ALTER TABLE "survey_responses" DROP CONSTRAINT "survey_responses_one";
+ALTER TABLE "communities" ALTER COLUMN "topics" SET DEFAULT '{}';
+ALTER TABLE "communities" ALTER COLUMN "feedNames" SET DEFAULT '{}';
+ALTER TABLE "date_polls" ALTER COLUMN "invited" SET DEFAULT '{}';
+ALTER TABLE "open_spaces" ALTER COLUMN "topics" SET DEFAULT '{}';
+ALTER TABLE "open_spaces" ALTER COLUMN "needs" SET DEFAULT '{}';
+ALTER TABLE "owy_stage_state" ALTER COLUMN "desk" SET DEFAULT '{"preview":null,"queue":[],"favorites":[]}'::jsonb;
+ALTER TABLE "venues" ALTER COLUMN "amenities" SET DEFAULT '{}';
+ALTER TABLE "communities" ADD COLUMN "recurringSlot" jsonb;
+ALTER TABLE "communities" ADD COLUMN "pausedUntil" date;
+ALTER TABLE "communities" ADD COLUMN "noShowNudge" boolean DEFAULT false NOT NULL;
+ALTER TABLE "communities" ADD COLUMN "publicStats" boolean DEFAULT false NOT NULL;
+ALTER TABLE "attendees" ADD COLUMN "confirmedAt" timestamp (3);
+ALTER TABLE "attendees" ADD COLUMN "cancelledAt" timestamp (3);
+ALTER TABLE "attendees" ADD COLUMN "excusedAt" timestamp (3);
+ALTER TABLE "attendees" ADD COLUMN "volunteerRoles" text[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "community_claims" ADD COLUMN "proposed" boolean DEFAULT false NOT NULL;
+ALTER TABLE "date_polls" ADD COLUMN "closedAt" timestamp (3);
+ALTER TABLE "date_polls" ADD COLUMN "deletedAt" timestamp (3);
+ALTER TABLE "incidents" ADD COLUMN "reporterContact" text;
+ALTER TABLE "incidents" ADD COLUMN "involvesOrganizer" boolean DEFAULT false NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "cancelReason" text DEFAULT '' NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "confirmPing" boolean DEFAULT true NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "staleFields" text[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "volunteerRoles" text[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "responders" text[] DEFAULT '{}' NOT NULL;
+ALTER TABLE "open_spaces" ADD COLUMN "closedOutAt" timestamp (3);
+ALTER TABLE "open_spaces" ADD COLUMN "hostRecapSentAt" timestamp (3);
+ALTER TABLE "open_spaces" ADD COLUMN "copiedFromId" text;
+ALTER TABLE "open_spaces" ADD COLUMN "slideNotes" jsonb;
+ALTER TABLE "staff_tasks" ADD COLUMN "templateKey" text;
+ALTER TABLE "venue_contacts" ADD COLUMN "role" text DEFAULT '' NOT NULL;
+ALTER TABLE "venue_contacts" ADD COLUMN "lastConfirmedAt" timestamp (3);
+ALTER TABLE "venue_contacts" ADD COLUMN "bouncedAt" timestamp (3);
+ALTER TABLE "venue_contacts" ADD COLUMN "leftAt" timestamp (3);
+ALTER TABLE "venue_contacts" ADD COLUMN "leftReportedAt" timestamp (3);
+ALTER TABLE "venue_requests" ADD COLUMN "counterOptions" jsonb DEFAULT '[]'::jsonb NOT NULL;
+ALTER TABLE "venue_requests" ADD COLUMN "broadcastId" text;
+ALTER TABLE "venue_requests" ADD COLUMN "answeredById" text;
+ALTER TABLE "venues" ADD COLUMN "facts" jsonb DEFAULT '{}'::jsonb NOT NULL;
+ALTER TABLE "community_followers" ADD COLUMN "digest" text DEFAULT 'each' NOT NULL;
+ALTER TABLE "community_assets" ADD CONSTRAINT "community_assets_communityId_fk" FOREIGN KEY ("communityId") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "community_assets" ADD CONSTRAINT "community_assets_holderUserId_fk" FOREIGN KEY ("holderUserId") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "community_assets" ADD CONSTRAINT "community_assets_backupUserId_fk" FOREIGN KEY ("backupUserId") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "community_outreach" ADD CONSTRAINT "community_outreach_communityId_fk" FOREIGN KEY ("communityId") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "community_outreach" ADD CONSTRAINT "community_outreach_byId_fk" FOREIGN KEY ("byId") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "event_messages" ADD CONSTRAINT "event_messages_eventId_fk" FOREIGN KEY ("eventId") REFERENCES "public"."open_spaces"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "event_messages" ADD CONSTRAINT "event_messages_createdById_fk" FOREIGN KEY ("createdById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "speaker_profiles" ADD CONSTRAINT "speaker_profiles_userId_fk" FOREIGN KEY ("userId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "talk_claims" ADD CONSTRAINT "talk_claims_proposalId_fk" FOREIGN KEY ("proposalId") REFERENCES "public"."talk_proposals"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "talk_claims" ADD CONSTRAINT "talk_claims_communityId_fk" FOREIGN KEY ("communityId") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "talk_claims" ADD CONSTRAINT "talk_claims_eventId_fk" FOREIGN KEY ("eventId") REFERENCES "public"."open_spaces"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "talk_claims" ADD CONSTRAINT "talk_claims_claimedById_fk" FOREIGN KEY ("claimedById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "talk_proposals" ADD CONSTRAINT "talk_proposals_speakerUserId_fk" FOREIGN KEY ("speakerUserId") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "talk_requests" ADD CONSTRAINT "talk_requests_communityId_fk" FOREIGN KEY ("communityId") REFERENCES "public"."communities"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "talk_requests" ADD CONSTRAINT "talk_requests_createdById_fk" FOREIGN KEY ("createdById") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;
+CREATE INDEX "community_assets_communityId_idx" ON "community_assets" USING btree ("communityId");
+CREATE INDEX "community_outreach_communityId_idx" ON "community_outreach" USING btree ("communityId");
+CREATE INDEX "event_messages_eventId_idx" ON "event_messages" USING btree ("eventId");
+CREATE INDEX "event_messages_status_sendAt_idx" ON "event_messages" USING btree ("status","sendAt");
+CREATE UNIQUE INDEX "talk_claims_live_proposalId_key" ON "talk_claims" USING btree ("proposalId") WHERE "talk_claims"."status" in ('claimed', 'scheduled');
+CREATE INDEX "talk_claims_communityId_idx" ON "talk_claims" USING btree ("communityId");
+CREATE INDEX "talk_proposals_status_idx" ON "talk_proposals" USING btree ("status");
+CREATE INDEX "talk_requests_communityId_idx" ON "talk_requests" USING btree ("communityId");
+ALTER TABLE "open_spaces" ADD CONSTRAINT "open_spaces_copiedFromId_fk" FOREIGN KEY ("copiedFromId") REFERENCES "public"."open_spaces"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "venue_requests" ADD CONSTRAINT "venue_requests_answeredById_fk" FOREIGN KEY ("answeredById") REFERENCES "public"."venue_contacts"("id") ON DELETE set null ON UPDATE no action;
+CREATE INDEX "venue_requests_broadcastId_idx" ON "venue_requests" USING btree ("broadcastId");
+
+COMMIT;
+```
+
+After it, `pnpm db:push` must list only the churn in §3, plus the same `'{}'` default churn on
+the new array columns: `open_spaces.staleFields`, `open_spaces.volunteerRoles`,
+`open_spaces.responders`, `attendees.volunteerRoles`, `speaker_profiles.topics`,
+`speaker_profiles.formats`, `talk_proposals.topics` and `talk_proposals.communityIds`.
+
+No new environment variables. `MEETUP_BOT_URL` exists only to point tests and local runs at a mock
+of the meetup-bot feed; production leaves it unset.
+
+Owner actions for this release:
+
+- Decide who receives `conducta@owu.uy` (code-of-conduct reports go there and to each event's
+  responders; reports that involve the organization go only there).
+- The weekly digest and the T−24 h "¿Seguís viniendo?" ping raise email volume: check the Resend
+  plan's daily limit (`EMAIL_DAILY_CAP`) before announcing them.

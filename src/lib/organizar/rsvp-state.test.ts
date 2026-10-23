@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { offerDeadline, rsvpBar, rsvpState } from "./rsvp-state";
+import { canConfirm, offerDeadline, rsvpBar, rsvpState, signupClosesAt } from "./rsvp-state";
 
 const NOW = Date.parse("2029-11-20T15:00:00.000Z");
 const event = {
@@ -51,6 +51,17 @@ describe(rsvpState, () => {
     expect(rsvpState({ ...event, status: "cancelled" }, rsvp("attending"), NOW).kind).toBe("evento-cancelado");
   });
 
+  test("sign-ups close at the start unless the team picked another time", () => {
+    const start = Date.parse(event.startDate);
+
+    expect(rsvpState(event, null, start - 1000).kind).toBe("abierto");
+    expect(rsvpState(event, null, start).kind).toBe("en-curso");
+    // Kept open past the start on purpose: still open until then
+    const late = { ...event, rsvpClosesAt: "2029-11-26T23:30:00.000Z" };
+    expect(rsvpState(late, null, start + 60_000).kind).toBe("abierto");
+    expect(rsvpState(late, null, Date.parse(late.rsvpClosesAt)).kind).toBe("en-curso");
+  });
+
   test("sign-up elsewhere, or none at all", () => {
     expect(rsvpState({ ...event, registration: "eventbrite", registrationUrl: "https://x" }, null, NOW)).toStrictEqual({
       kind: "externo",
@@ -66,6 +77,28 @@ describe(rsvpBar, () => {
     expect(rsvpBar(rsvpState(event, null, NOW), NOW)).toStrictEqual({ text: "Gratis · quedan 12", action: "Anotarme" });
     expect(rsvpBar(rsvpState({ ...event, capacity: null }, null, NOW), NOW).text).toBe("Gratis");
     expect(rsvpBar(rsvpState({ ...event, taken: 20 }, rsvp("cancelled"), NOW), NOW).action).toBe("Lista de espera");
+  });
+});
+
+describe(signupClosesAt, () => {
+  test("the team's time, or the start", () => {
+    expect(signupClosesAt(event)).toBe(Date.parse(event.startDate));
+    expect(signupClosesAt({ ...event, rsvpClosesAt: "2029-11-25T12:00:00.000Z" })).toBe(
+      Date.parse("2029-11-25T12:00:00.000Z")
+    );
+  });
+});
+
+describe(canConfirm, () => {
+  const start = Date.parse(event.startDate);
+  const seated = { status: "attending", confirmedAt: null };
+
+  test("asks people with a seat from 72 h before until the start, once", () => {
+    expect(canConfirm(event, seated, start - 73 * 3_600_000)).toBe(false);
+    expect(canConfirm(event, seated, start - 72 * 3_600_000)).toBe(true);
+    expect(canConfirm(event, { ...seated, confirmedAt: "2029-11-25T00:00:00.000Z" }, start - 3_600_000)).toBe(false);
+    expect(canConfirm(event, { status: "waitlisted", confirmedAt: null }, start - 3_600_000)).toBe(false);
+    expect(canConfirm(event, seated, start)).toBe(false);
   });
 });
 

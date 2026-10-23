@@ -9,6 +9,7 @@ import { events } from "lib/db/schema";
 import { holds, panelCommunity } from "../../../../../access";
 
 export const metadata: Metadata = { title: "Escáner · Organizá" };
+export const instant = false;
 
 /**
  * OWU's door scanner for the event's admins, signed in (it reads names and emails). Members and
@@ -19,7 +20,12 @@ export default async function ScannerPage({ params }: { params: Promise<{ commun
   const access = await panelCommunity(communitySlug);
   if (!access || !holds(access.community, "event:door-link")) notFound();
   const [event] = await db
-    .select({ name: events.name, timezone: events.timezone, status: events.status })
+    .select({
+      name: events.name,
+      timezone: events.timezone,
+      status: events.status,
+      registration: events.registration,
+    })
     .from(events)
     .where(and(eq(events.id, eventId), eq(events.communityId, access.community.id)));
   if (!event || event.status === "draft") notFound();
@@ -29,6 +35,7 @@ export default async function ScannerPage({ params }: { params: Promise<{ commun
       backHref={`/organizar/panel/${communitySlug}/eventos/${eventId}?tab=puerta`}
       eventId={eventId}
       eventName={event.name}
+      registration={event.registration}
       timezone={event.timezone}
     />
   );

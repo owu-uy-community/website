@@ -6,9 +6,12 @@ import { authed, inCommunity, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
 import {
   CancelSpotsSchema,
+  ConfirmByLinkSchema,
   JoinSchema,
   MyEventSchema,
   MyRsvpSchema,
+  PendingListSchema,
+  PendingSchema,
   ReviewSchema,
   RsvpEventSchema,
   RsvpTokenSchema,
@@ -92,11 +95,11 @@ export const rsvpsRouter = {
     }),
 
   leaveByToken: pub
-    .meta(docs("No puedo ir, from the signed link"))
+    .meta(docs("No puedo ir, from the signed link (for that event's ticket only, when it says which)"))
     .input(RsvpTokenSchema)
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
-      return yield* Rsvps.leaveByToken(input.token);
+      return yield* Rsvps.leaveByToken(input.token, input.eventId);
     }),
 
   confirmByToken: pub
@@ -105,6 +108,32 @@ export const rsvpsRouter = {
     .output(MyRsvpSchema)
     .effect(function* ({ input }) {
       return yield* Rsvps.confirmByToken(input.token);
+    }),
+
+  confirm: authed
+    .meta(docs("Voy: say I'm coming to an event I have a seat at"))
+    .input(RsvpEventSchema)
+    .use(seatLimit)
+    .output(MyRsvpSchema)
+    .effect(function* ({ input }) {
+      return yield* Rsvps.confirm(input.eventId);
+    }),
+
+  confirmByLink: pub
+    .meta(docs("Voy, from the reminder's signed link (it lapses at the start; that event only)"))
+    .input(ConfirmByLinkSchema)
+    .output(MyRsvpSchema)
+    .effect(function* ({ input }) {
+      return yield* Rsvps.confirmByLink(input.token, input.eventId);
+    }),
+
+  pending: authed
+    .meta(docs("Who waits for approval: names, answers and their history here; no emails"))
+    .input(PendingListSchema)
+    .use(inCommunity("rsvp:review"))
+    .output(z.array(PendingSchema))
+    .effect(function* ({ input }) {
+      return yield* Rsvps.pending(input.eventId);
     }),
 
   review: authed

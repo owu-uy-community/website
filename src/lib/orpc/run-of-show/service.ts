@@ -585,6 +585,7 @@ export const liveEventId = () =>
           endDate: events.endDate,
           timezone: events.timezone,
           running: sql<boolean>`bool_or(${runOfShowItems.actualStart} is not null and ${runOfShowItems.actualEnd} is null)`,
+          cued: sql<boolean>`bool_or(${runOfShowItems.cueId} is not null)`,
         })
         .from(events)
         .innerJoin(runOfShowItems, eq(runOfShowItems.eventId, events.id))
@@ -593,6 +594,8 @@ export const liveEventId = () =>
     const running = candidates.filter((candidate) => candidate.running);
     const pool =
       running.length > 0 ? running : candidates.filter((candidate) => eventPhase(candidate, now).phase === "live");
+    // A meetup's agenda (Organizá, no cues) the same night doesn't take the Stream Deck from the stage
+    const staged = pool.length > 1 ? pool.filter((candidate) => candidate.cued) : pool;
 
-    return { eventId: pool.length === 1 ? pool[0].id : null };
+    return { eventId: staged.length === 1 ? staged[0].id : null };
   });

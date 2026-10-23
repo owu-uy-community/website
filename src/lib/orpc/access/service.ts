@@ -136,7 +136,12 @@ export const requestAccess = (input: { communityId: string | null; message: stri
             .from(communityMembers)
             .where(and(eq(communityMembers.communityId, input.communityId!), eq(communityMembers.userId, actor.id)))
         );
-        if (member) return yield* new Conflict({ reason: "already_member", message: "Ya sos parte de esa comunidad" });
+        // A member who helps at the door may ask to organize too; someone who already does, no
+        const organizes =
+          member &&
+          grantsHold(yield* Effect.promise(() => grantsIn(actor.principal, input.communityId!)), "event:read");
+        if (organizes)
+          return yield* new Conflict({ reason: "already_member", message: "Ya sos parte de esa comunidad" });
       } else {
         const has =
           actor.principal.roles.some((role) => role !== "user") ||

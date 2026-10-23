@@ -99,6 +99,7 @@ export const info = (token: string) =>
       communityName: community?.name ?? "",
       expiresAt: expiryOf(event).toISOString(),
       totals: yield* totals(event.id),
+      registration: event.registration,
     };
   });
 

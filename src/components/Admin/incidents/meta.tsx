@@ -52,6 +52,7 @@ export const SOURCE_LABEL: Record<Incident["source"], string> = {
   admin: "desde el admin",
   phone: "desde un teléfono",
   owy: "por Owy",
+  public: "desde la página del evento",
 };
 
 /** The leading glyph of an incident: its severity, blinking only when a loud one has nobody on it. */

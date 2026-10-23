@@ -7,14 +7,17 @@ import { cn } from "app/lib/utils";
 import { Badge, ButtonLink, cardClassName, CommunityLogo, Container, headingClassName } from "components/community/ui";
 import { dateParts, shortWhen } from "lib/community/time";
 import { topicLabel } from "lib/community/topics";
+import { people } from "lib/organizar/words";
 import type { PublicEvent } from "lib/orpc/events/schemas";
 import { eventJsonLd, googleCalendarUrl, outlookCalendarUrl, safeJson } from "lib/organizar/calendar-links";
 
 import { RsvpSheet } from "./RsvpSheet";
 import { ShareButton } from "./ShareButton";
 
+import { EventConduct } from "./EventConduct";
 import { EventMaterials } from "./EventMaterials";
 import { EventTalks } from "./EventTalks";
+import { VenueFacts } from "./VenueFacts";
 
 const FORMAT = {
   charlas: "Charlas",
@@ -93,10 +96,17 @@ export function EventPage({
   const left = event.capacity === null ? null : Math.max(0, event.capacity - event.taken);
 
   const signUp = cancelled ? (
-    <p className="flex items-center gap-2 text-[15px] text-zinc-300">
-      <CircleSlash aria-hidden className="size-5 text-red-300" />
-      Este evento se canceló.
-    </p>
+    <div className="flex flex-col gap-1.5">
+      <p className="flex items-center gap-2 text-[15px] text-zinc-300">
+        <CircleSlash aria-hidden className="size-5 text-red-300" />
+        Este evento se canceló.
+      </p>
+      {event.cancelReason ? (
+        <p className="text-[15px] leading-relaxed text-zinc-400" data-testid="cancel-reason">
+          {event.cancelReason}
+        </p>
+      ) : null}
+    </div>
   ) : past ? (
     <p className="text-[15px] text-zinc-400">Este evento ya pasó.</p>
   ) : event.registration === "owu" ? (
@@ -154,6 +164,7 @@ export function EventPage({
             ) : null}
             <EventTalks talks={event.talks} />
             <EventMaterials event={event} />
+            {event.mode !== "online" ? <VenueFacts place={event.place} /> : null}
 
             {event.topics.length > 0 ? (
               <ul aria-label="Temas" className="mt-10 flex flex-wrap gap-2">
@@ -191,6 +202,7 @@ export function EventPage({
                 ))}
               </p>
             ) : null}
+            <EventConduct event={event} />
           </article>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -254,14 +266,19 @@ export function EventPage({
                         : `Quedan ${left} lugares`}
                   </Fact>
                 ) : null}
-                {event.registration === "owu" && event.taken > 0 && !cancelled ? (
+                {/* Before: people signed up (anotadas, without +1s). After: who came, counted at the door, or nothing */}
+                {event.registration === "owu" && !cancelled && past && event.came ? (
+                  <Fact icon={Users}>{event.came === 1 ? "Fue 1 persona" : `Fueron ${event.came}`}</Fact>
+                ) : event.registration === "owu" && !cancelled && !past && event.attending > 0 ? (
                   <Fact icon={Users}>
-                    {event.taken === 1 ? "Va 1 persona" : `Van ${event.taken} personas`}
+                    {people(event.attending, { one: "anotada", many: "anotadas" })}
                     {event.going.length > 0 ? (
                       <span className="block text-[14px] text-zinc-500">
                         {new Intl.ListFormat("es").format([
                           ...event.going,
-                          ...(event.taken > event.going.length ? [`${event.taken - event.going.length} más`] : []),
+                          ...(event.attending > event.going.length
+                            ? [`${event.attending - event.going.length} más`]
+                            : []),
                         ])}
                       </span>
                     ) : null}

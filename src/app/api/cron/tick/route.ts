@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
 
 const digest = (value: string) => createHash("sha256").update(value).digest();
 
-/** The daily Vercel cron (GET with the CRON_SECRET bearer): a backstop when QStash is down. */
+/**
+ * The daily Vercel cron (GET with the CRON_SECRET bearer): a backstop when QStash is down.
+ * `?digest=now` also sends the weekly digest today (once per person and week, as on Mondays).
+ */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return new NextResponse("CRON_SECRET is not set", { status: 503 });
@@ -37,5 +40,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  return NextResponse.json(await tick(240_000, { daily: true }));
+  const digestNow = request.nextUrl.searchParams.get("digest") === "now";
+
+  return NextResponse.json(await tick(240_000, { daily: true, digestNow }));
 }

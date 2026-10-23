@@ -2,12 +2,21 @@ import * as z from "zod";
 
 import { TOPICS, type Topic } from "../../community/topics";
 import { isValidCommunitySlug } from "../../tenant";
+import { ClockSchema, DaySchema, DurationSchema } from "../events/schemas";
 
 /** A built-in role (owner, admin, editor, member, door) or the slug of one of the community's custom roles. */
 export const CommunityRoleSchema = z
   .string()
   .trim()
   .regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "Rol inválido");
+
+/** "Nuestro día": the 2nd Thursday at 19:00 (`nth` -1 is the last one in the month). */
+export const RecurringSlotSchema = z.object({
+  weekday: z.number().int().min(0).max(6),
+  nth: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(-1)]),
+  time: ClockSchema,
+  durationMin: DurationSchema,
+});
 
 export const CommunitySchema = z.object({
   id: z.string(),
@@ -27,6 +36,9 @@ export const CommunitySchema = z.object({
   }),
   slackChannel: z.string().nullable(),
   listed: z.boolean(),
+  recurringSlot: RecurringSlotSchema.nullable(),
+  /** Back from a declared pause on this day (status "pausa") */
+  pausedUntil: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -91,6 +103,10 @@ export const UpdateCommunitySchema = z.object({
         .string()
         .regex(/^[a-z0-9][a-z0-9_-]{0,79}$/, "El nombre del canal, sin #: minúsculas, números, - o _")
         .nullable(),
+      /** A friendly note after someone's second silent no-show (Organizá's Emails tab) */
+      noShowNudge: z.boolean(),
+      recurringSlot: RecurringSlotSchema.nullable(),
+      pausedUntil: DaySchema.nullable(),
     })
     .partial()
     .refine((data) => Object.keys(data).length > 0, "No hay nada para cambiar"),
@@ -143,6 +159,22 @@ export const ClaimCommunitySchema = z.object({
     .default(null),
 });
 
+/** A community that isn't in the directory yet: proposed with its first claim, listed once staff approve. */
+export const ProposeCommunitySchema = z.object({
+  name: z.string().trim().min(2, "Poné el nombre de la comunidad").max(80),
+  relation: ClaimRelationSchema.default("organizo"),
+  /** Where it shows up today: its Meetup, site or socials (the first one is the main link) */
+  links: z
+    .array(z.url({ protocol: /^https?$/, error: "Pegá el link completo (https://…)" }))
+    .min(1, "Sumá al menos un link donde se la vea")
+    .max(3),
+  topics: z
+    .array(z.enum(TOPICS.map((topic) => topic.value) as [Topic, ...Topic[]]))
+    .max(5)
+    .transform((topics) => [...new Set(topics)]),
+  message: z.string().trim().max(1000).default(""),
+});
+
 export const MyCommunitySchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -169,7 +201,15 @@ export const ClaimForReviewSchema = z.object({
   link: z.string().nullable(),
   status: ClaimStatusSchema,
   createdAt: z.string(),
-  community: z.object({ id: z.string(), slug: z.string(), name: z.string(), hasOwner: z.boolean() }),
+  /** The community isn't in the directory: approving lists it and makes this person its owner */
+  proposed: z.boolean(),
+  community: z.object({
+    id: z.string(),
+    slug: z.string(),
+    name: z.string(),
+    hasOwner: z.boolean(),
+    topics: z.array(z.string()),
+  }),
   user: z.object({ id: z.string(), name: z.string(), email: z.string(), image: z.string().nullable() }),
 });
 

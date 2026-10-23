@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { scoreDays, suggest, type CalendarItem, type ScoreInput } from "./score";
+import { SLOT_HOLD_FACTOR } from "lib/organizar/recurring";
+
+import { scoreDays, suggest, weighedSlots, type CalendarItem, type ScoreInput, type SlotOccurrence } from "./score";
 
 // August 2026: Monday 17, Tuesday 18, Thursday 20; Tuesday 25 is a feriado.
 const base: ScoreInput = {
@@ -191,6 +193,57 @@ describe(scoreDays, () => {
       text: "Verano: mucha gente de vacaciones",
     });
     expect(on("2026-11-10", { from: "2026-11-10", to: "2026-11-10" })).toMatchObject({ score: 95 });
+  });
+});
+
+describe("usual days (Nuestro día)", () => {
+  const habit = (overrides: Partial<SlotOccurrence> = {}): SlotOccurrence => ({
+    day: "2026-08-18",
+    communitySlug: "python-montevideo",
+    communityName: "Python Montevideo",
+    topics: ["web"],
+    start: "2026-08-18T19:00:00-03:00",
+    end: "2026-08-18T21:00:00-03:00",
+    label: "3.º martes · 19:00",
+    ...overrides,
+  });
+
+  test("another community's usual day weighs like its hold, softened", () => {
+    const hold = on("2026-08-18", { items: [item({ kind: "hold" })] });
+    const usual = on("2026-08-18", { slots: [habit()] });
+
+    expect(usual.reasons).toStrictEqual([{ tone: "info", text: "Suele ser el día de Python Montevideo" }]);
+    expect(100 - usual.score).toBe(Math.round((100 - hold.score) * SLOT_HOLD_FACTOR));
+  });
+
+  test("a usual day with that community's own event or hold counts once, as the event", () => {
+    const day = on("2026-08-18", { items: [item({})], slots: [habit()] });
+
+    expect(day.reasons).toStrictEqual([{ tone: "warn", text: "Mismo horario que Python Montevideo", itemId: "other" }]);
+    expect(weighedSlots([habit(), habit({ day: "2026-08-25" })], [item({ kind: "hold" })])).toStrictEqual([
+      habit({ day: "2026-08-25" }),
+    ]);
+  });
+
+  test("our own usual day is a hint, not a cost, and goes first among the suggestions", () => {
+    const ours = habit({ communitySlug: "montevideo-js", communityName: "Montevideo JS", day: "2026-08-27" });
+    const days = scoreDays({ ...base, slots: [ours] });
+    const day = days.find((score) => score.day === "2026-08-27");
+
+    expect(day?.score).toBe(100);
+    expect(day?.reasons).toContainEqual({
+      tone: "ok",
+      text: "Es el día habitual de tu comunidad (3.º martes · 19:00)",
+    });
+    expect(suggest(days, 5, ["2026-08-27"])[0]?.day).toBe("2026-08-27");
+  });
+
+  test("two of our own events the same day read once", () => {
+    const own = { communitySlug: "montevideo-js", communityName: "Montevideo JS" };
+    const day = on("2026-08-18", { items: [item({ ...own, id: "a" }), item({ ...own, id: "b" })] });
+
+    expect(day.reasons).toStrictEqual([{ tone: "bad", text: "Tu comunidad ya tiene un evento ese día", itemId: "a" }]);
+    expect(day.score).toBe(40);
   });
 });
 
