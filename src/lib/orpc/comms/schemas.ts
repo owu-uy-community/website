@@ -38,6 +38,19 @@ export type OutboundMessage = z.infer<typeof OutboundMessageSchema>;
 
 export const EventIdSchema = z.object({ eventId: z.string().min(1) });
 
+/**
+ * A message Owy posted for attendees, as the public live board shows it: the words and when, and
+ * nothing about who wrote it or where it landed.
+ */
+export const PostedMessageSchema = z.object({
+  id: z.string(),
+  body: z.string(),
+  sentAt: z.string(),
+  /** Edited after it went out (Owy edited it where it landed too). */
+  editedAt: z.string().nullable(),
+});
+export type PostedMessage = z.infer<typeof PostedMessageSchema>;
+
 export const SendMessageSchema = z.object({
   eventId: z.string().min(1),
   channel: OwyChannelSchema,

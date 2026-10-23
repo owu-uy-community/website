@@ -669,6 +669,13 @@ export const tracks = pgTable(
     description: text("description"),
     needsTV: boolean("needsTV").notNull().default(false),
     needsWhiteboard: boolean("needsWhiteboard").notNull().default(false),
+    /**
+     * Interest tags for the live board's «Para vos»: keyword tags when the card is written, then the
+     * model's after the response (lib/orpc/tracks/tags.ts). Null on cards older than tagging.
+     */
+    topics: text("topics").array(),
+    /** The session's shape as the model read it (charla, demo, debate, pregunta); null until it answers. */
+    format: text("format"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()

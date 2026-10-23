@@ -12,7 +12,7 @@ const MAIN_URL = "https://owu.uy";
 const MAIN_HOSTS = new Set(["owu.uy", "www.owu.uy"]);
 
 // Pages that exist under /conf; anything else on the subdomain belongs to the main site
-const CONF_PATHS = new Set(["/", "/call-for-proposals", "/sponsors", "/credencial"]);
+const CONF_PATHS = new Set(["/", "/call-for-proposals", "/sponsors", "/credencial", "/openspace"]);
 
 /** This site's hosts (the Vercel URLs cover previews): the existence check asks nowhere else */
 const SELF_HOSTS = new Set([...MAIN_HOSTS, process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL].filter(Boolean));

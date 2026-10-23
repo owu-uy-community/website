@@ -29,6 +29,16 @@ export const CONF_DATES = {
   event: "2026-11-07T14:30:00-03:00",
 } as const;
 
+/**
+ * The event whose open space board backs conf.owu.uy/openspace. Until a board exists under this
+ * community/slug pair the page shows how the afternoon will go instead (it never 404s);
+ * `pnpm db:seed` creates a matching board locally.
+ */
+export const CONF_EVENT = {
+  communitySlug: "owu",
+  eventSlug: "owu-conf-2026",
+} as const;
+
 // OpenSpace Room Colors
 export const ROOM_COLORS = {
   LOBBY: "#03A9F4",
@@ -127,6 +137,7 @@ export const INTERNAL_ROUTES = {
     current: "/conf",
     callForProposals: "/conf/call-for-proposals",
     sponsors: "/conf/sponsors",
+    openspace: "/conf/openspace",
   },
 } as const;
 

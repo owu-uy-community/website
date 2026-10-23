@@ -15,6 +15,10 @@ export const StickyNoteSchema = z.object({
   /** The room's explicit color; the UI falls back to a palette. */
   roomColor: z.string().optional(),
   timeSlot: z.string(),
+  /** Interest tags for «Para vos» (lib/openspace/topics); null on cards older than tagging. */
+  topics: z.array(z.string()).nullish(),
+  /** charla · demo · debate · pregunta, once the model has read the card. */
+  format: z.string().nullish(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

@@ -491,3 +491,54 @@ describe("editing and deleting what Owy already sent", () => {
     });
   });
 });
+
+describe("comms feed (the live board's avisos)", () => {
+  const sent = (
+    eventId: string,
+    channel: "telegram" | "slack" | "staff_dm" | "email",
+    body: string,
+    minutesAgo: number
+  ) => ({
+    eventId,
+    channel,
+    body,
+    status: "sent" as const,
+    sentAt: minutesFromNow(-minutesAgo),
+  });
+
+  test("anyone reads what attendees were told: sent Telegram and Slack posts, newest first, words and time only", async () => {
+    const { eventId } = await setup();
+    const other = await makeBoard();
+    await db.insert(outboundMessages).values([
+      sent(eventId, "telegram", "Arranca el mercado de ideas en el Lobby", 10),
+      // The same text on both channels is one notice; Slack's copy comes escaped
+      sent(eventId, "slack", "Arranca el mercado de ideas en el Lobby", 10),
+      sent(
+        eventId,
+        "slack",
+        "Café & medialunas <en el patio>".replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"),
+        2
+      ),
+      // Never public: staff DMs, the record of a hand-sent email, what failed or is still scheduled, other events
+      sent(eventId, "staff_dm", "Staff: reponer cards", 1),
+      sent(eventId, "email", "Recordatorio T-7", 1),
+      { eventId, channel: "telegram" as const, body: "Falló", status: "failed" as const },
+      {
+        eventId,
+        channel: "telegram" as const,
+        body: "Más tarde",
+        status: "scheduled" as const,
+        scheduledAt: minutesFromNow(30),
+      },
+      sent(other.event.id, "telegram", "De otro evento", 1),
+    ]);
+
+    const feed = await call(router.comms.feed, { eventId }, by(null));
+
+    expect(feed.map(({ body }) => body)).toStrictEqual([
+      "Café & medialunas <en el patio>",
+      "Arranca el mercado de ideas en el Lobby",
+    ]);
+    expect(Object.keys(feed[0]).toSorted()).toStrictEqual(["body", "editedAt", "id", "sentAt"]);
+  });
+});

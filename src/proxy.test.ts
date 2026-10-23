@@ -145,6 +145,26 @@ describe("the existence check stays on this site", () => {
   });
 });
 
+describe("conf.owu.uy", () => {
+  const conf = (path: string) =>
+    proxy(new NextRequest(`https://conf.owu.uy${path}`, { headers: { host: "conf.owu.uy" } }));
+
+  test("its pages map onto /conf, the live open space board included", async () => {
+    for (const path of ["/", "/openspace"]) {
+      const response = await conf(path);
+
+      expect(response.headers.get("x-middleware-rewrite")).toBe(`https://conf.owu.uy/conf${path === "/" ? "" : path}`);
+    }
+  });
+
+  test("owu.uy/conf/openspace moves to the subdomain", async () => {
+    const response = await get("/conf/openspace");
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://conf.owu.uy/openspace");
+  });
+});
+
 describe("where the proxy runs", () => {
   const BROWSER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
   const runs = (path: string, headers: Record<string, string> = { accept: BROWSER, host: "owu.uy" }) =>
@@ -183,6 +203,7 @@ describe("where the proxy runs", () => {
 
     expect(runs("/", conf)).toBe(true);
     expect(runs("/sponsors", conf)).toBe(true);
+    expect(runs("/openspace", conf)).toBe(true);
     expect(runs("/2024/la-meetup", conf)).toBe(true);
     expect(runs("/_next/static/chunks/app.js", conf)).toBe(false);
   });

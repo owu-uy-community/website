@@ -30,6 +30,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
       { label: "Sobre OWU CONF", href: "/conf#sobre-owu" },
       { label: "Programa", href: "/conf#programa" },
       { label: "Speakers", href: "/conf#speakers" },
+      { label: "Open space", href: "/conf#open-space" },
       { label: "Sponsors", href: "/conf#sponsors" },
       { label: "Equipo", href: "/conf#equipo" },
     ],
@@ -38,6 +39,7 @@ const COLUMNS: { title: string; links: { label: string; href: string; external?:
     title: "Participá",
     links: [
       { label: "Entradas", href: "/conf#entradas" },
+      { label: "La grilla en vivo", href: "/conf/openspace" },
       { label: "Tu credencial", href: "/conf/credencial" },
       { label: "Call for proposals", href: "/conf/call-for-proposals" },
       { label: "Sumá tu empresa", href: "/conf/sponsors" },

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 
+import { CONF_EVENT, INTERNAL_ROUTES } from "app/lib/constants";
 import { AgendaSurface } from "components/displays/AgendaSurface";
 import { EventAgenda } from "components/displays/EventAgenda";
 import { LiveAgenda } from "components/displays/LiveAgenda";
@@ -58,6 +59,10 @@ function eventStatus(start: Date, end: Date): { label: string; live: boolean } {
 
 export default async function EventOpenSpacePage({ params }: { params: Params }) {
   const { communitySlug, eventSlug } = await params;
+  // OWU CONF's board has its own live page: one address to share, on the conf's site
+  if (communitySlug === CONF_EVENT.communitySlug && eventSlug === CONF_EVENT.eventSlug) {
+    redirect(INTERNAL_ROUTES.conf.openspace);
+  }
   const resolved = await publicEvent(communitySlug, eventSlug);
   if (!resolved) notFound();
 

@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { platform } from "../base";
+import { platform, pub } from "../base";
 import {
   CadenceSchema,
   ChannelsSchema,
@@ -10,6 +10,7 @@ import {
   MarkSentSchema,
   MessageRefSchema,
   OutboundMessageSchema,
+  PostedMessageSchema,
   RemindResultSchema,
   RemindSchema,
   RemoveMessageSchema,
@@ -21,8 +22,17 @@ import * as Comms from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Comms"], summary });
 
-// What Owy tells attendees (Telegram, Slack) and staff (DMs), now or when its time comes. Site staff.
+// What Owy tells attendees (Telegram, Slack) and staff (DMs), now or when its time comes. Site staff,
+// except `feed`: what attendees were already told is public (the live board shows it).
 export const commsRouter = {
+  feed: pub
+    .meta(docs("What Owy posted for an event's attendees (Telegram, Slack), newest first: text and time only"))
+    .input(EventIdSchema)
+    .output(z.array(PostedMessageSchema))
+    .effect(function* ({ input }) {
+      return yield* Comms.feed(input.eventId);
+    }),
+
   list: platform("comms:read")
     .meta(docs("Owy's messages for an event, newest first: scheduled, sent and failed with their error"))
     .input(EventIdSchema)

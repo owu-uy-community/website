@@ -234,9 +234,12 @@ export async function makeVenue(
 }
 
 /** A community with one event, two rooms (one with TV) and two time slots. */
-export async function makeBoard() {
-  const community = await makeCommunity();
-  const event = await makeEvent(community.id);
+/** A community with one event: two rooms and two slots. `overrides` pin slugs (the conf's live page reads fixed ones). */
+export async function makeBoard(
+  overrides: { community?: Partial<typeof communities.$inferInsert>; event?: Partial<typeof events.$inferInsert> } = {}
+) {
+  const community = await makeCommunity(overrides.community);
+  const event = await makeEvent(community.id, overrides.event);
   const [plainRoom, tvRoom] = await Promise.all([
     makeRoom(event.id, { name: slug("Sala"), sortOrder: 0 }),
     makeRoom(event.id, { name: slug("Sala TV"), hasTV: true, hasWhiteboard: true, sortOrder: 1 }),
