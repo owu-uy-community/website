@@ -36,7 +36,9 @@ import * as Communities from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Communities"], summary });
 
-const FollowStateSchema = z.object({ followers: z.number(), following: z.boolean() });
+const DigestSchema = z.enum(["each", "weekly"]);
+/** How many follow, whether the caller does, and how they hear: each event, or the weekly digest */
+const FollowStateSchema = z.object({ followers: z.number(), following: z.boolean(), digest: DigestSchema.nullable() });
 
 /** Three claims a day per person is plenty for a real organizer and stops a script. */
 const claimLimit = ratelimit({
@@ -129,11 +131,11 @@ export const communitiesRouter = {
     }),
 
   follow: authed
-    .meta(docs("Follow a community: an email for each event it publishes"))
-    .input(CommunityIdSchema)
+    .meta(docs("Follow a community: an email for each event it publishes, or a weekly digest; again to switch"))
+    .input(CommunityIdSchema.extend({ digest: DigestSchema.optional() }))
     .output(FollowStateSchema)
     .effect(function* ({ input, context }) {
-      return yield* Follow.follow(input.communityId, context.user.id);
+      return yield* Follow.follow(input.communityId, context.user.id, input.digest);
     }),
 
   unfollow: authed

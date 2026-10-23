@@ -5,6 +5,7 @@ import { syncOwuSlack } from "../authz/slack-sync";
 import { outboundMessages } from "../db/schema";
 import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
+import { sendDigests } from "../orpc/communities/digest";
 import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
 import { sendScheduled } from "../orpc/events/messages";
@@ -44,32 +45,42 @@ const dueComms = Effect.gen(function* () {
   return { events: due.length, sent, failed };
 });
 
+type TickOptions = { daily?: boolean; digestNow?: boolean };
+
 /**
  * Everything time-driven, in order, each safe to run twice at once. Called every 5 minutes by
  * QStash and once a day by the Vercel cron; a sweep that throws is reported and the rest still run.
  */
-const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknown, AppServices>> = {
-  // First, so an announcement it queues goes out with the comms sweep below
-  scheduled: () => publishDue,
-  comms: () => dueComms,
-  offers: () => expireOffers,
-  updates: () => sendUpdates,
-  reminders: () => sendReminders,
-  confirmPings: () => sendConfirmPings,
-  messages: () => sendScheduled,
-  feedback: () => sendFeedback,
-  noShowNudges: () => sendNoShowNudges,
-  holds: () => remindExpiringHolds,
-  venues: () => expireRequests,
-  hostDays: () => sendHostDaySheets,
-  speakers: () => sendSpeakerEmails,
-  publications: (deadline: number) => pushDue({ deadline }),
-  // Last, so what the sweeps above queued goes out in the same tick
-  email: (deadline: number) => drainEmail({ deadline }),
-};
+const SWEEPS: Record<string, (deadline: number, options: TickOptions) => Effect.Effect<unknown, unknown, AppServices>> =
+  {
+    // First, so an announcement it queues goes out with the comms sweep below
+    scheduled: () => publishDue,
+    comms: () => dueComms,
+    offers: () => expireOffers,
+    updates: () => sendUpdates,
+    reminders: () => sendReminders,
+    confirmPings: () => sendConfirmPings,
+    messages: () => sendScheduled,
+    feedback: () => sendFeedback,
+    noShowNudges: () => sendNoShowNudges,
+    holds: () => remindExpiringHolds,
+    venues: () => expireRequests,
+    hostDays: () => sendHostDaySheets,
+    speakers: () => sendSpeakerEmails,
+    publications: (deadline: number) => pushDue({ deadline }),
+    // Mondays from 09:00 (or now, when the cron asks): the weekly digest for followers who chose it
+    digest: (_deadline, { digestNow }) => sendDigests({ force: digestNow }),
+    // Last, so what the sweeps above queued goes out in the same tick
+    email: (deadline: number) => drainEmail({ deadline }),
+  };
 
-/** `daily`: the once-a-day cron also runs retention, checks who left the OWU Slack and asks spaces' contacts if they still host. */
-export async function tick(budgetMs: number, { daily = false } = {}) {
+/**
+ * `daily`: the once-a-day cron also runs retention, checks who left the OWU Slack and asks spaces'
+ * contacts if they still host. `digestNow`: send the weekly digest whatever the day (it still goes
+ * once per person and week).
+ */
+export async function tick(budgetMs: number, options: TickOptions = {}) {
+  const { daily = false } = options;
   const deadline = Date.now() + budgetMs;
   const results: Record<string, unknown> = {};
   const run = Effect.runPromiseWith(liveServices);
@@ -88,7 +99,7 @@ export async function tick(budgetMs: number, { daily = false } = {}) {
       continue;
     }
     try {
-      results[name] = await run(sweep(deadline));
+      results[name] = await run(sweep(deadline, options));
     } catch (error) {
       console.error(`[tick] ${name} failed`, error);
       results[name] = { error: error instanceof Error ? error.message : String(error) };

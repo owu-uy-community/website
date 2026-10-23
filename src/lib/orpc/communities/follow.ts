@@ -9,7 +9,9 @@ import { unsubscribeToken } from "../../links";
 import { eventPagePath } from "../../revalidate";
 import { query } from "../db";
 
-/** How many follow a community, and whether the caller does. */
+export type Digest = "each" | "weekly";
+
+/** How many follow a community, and whether (and how) the caller does. */
 export const state = (communityId: string, userId: string | null) =>
   Effect.gen(function* () {
     const [[total], mine] = yield* Effect.all([
@@ -19,20 +21,28 @@ export const state = (communityId: string, userId: string | null) =>
       userId
         ? query((db) =>
             db
-              .select({ userId: communityFollowers.userId })
+              .select({ digest: communityFollowers.digest })
               .from(communityFollowers)
               .where(and(eq(communityFollowers.communityId, communityId), eq(communityFollowers.userId, userId)))
           )
         : Effect.succeed([]),
     ]);
 
-    return { followers: total?.value ?? 0, following: mine.length > 0 };
+    return { followers: total?.value ?? 0, following: mine.length > 0, digest: mine[0]?.digest ?? null };
   });
 
-export const follow = (communityId: string, userId: string) =>
-  query((db) => db.insert(communityFollowers).values({ communityId, userId }).onConflictDoNothing()).pipe(
-    Effect.andThen(state(communityId, userId))
-  );
+/** Follow, or change how: an email per event (default) or the weekly digest. */
+export const follow = (communityId: string, userId: string, digest?: Digest) =>
+  query((db) => {
+    const insert = db.insert(communityFollowers).values({ communityId, userId, ...(digest ? { digest } : {}) });
+
+    return digest
+      ? insert.onConflictDoUpdate({
+          target: [communityFollowers.communityId, communityFollowers.userId],
+          set: { digest },
+        })
+      : insert.onConflictDoNothing();
+  }).pipe(Effect.andThen(state(communityId, userId)));
 
 export const unfollow = (communityId: string, userId: string) =>
   query((db) =>
@@ -43,7 +53,8 @@ export const unfollow = (communityId: string, userId: string) =>
 
 /**
  * A community published an event: each follower gets one email about it (the dedupe key makes a
- * second publish of the same event send nothing), unless they turned these emails off.
+ * second publish of the same event send nothing), unless they turned these emails off or get the
+ * weekly digest instead.
  */
 export const notifyFollowers = (event: EventRow) =>
   Effect.gen(function* () {
@@ -64,7 +75,13 @@ export const notifyFollowers = (event: EventRow) =>
           emailSuppressions,
           and(eq(emailSuppressions.email, sql`lower(${user.email})`), eq(emailSuppressions.scope, "followers"))
         )
-        .where(and(eq(communityFollowers.communityId, event.communityId), isNull(emailSuppressions.email)))
+        .where(
+          and(
+            eq(communityFollowers.communityId, event.communityId),
+            eq(communityFollowers.digest, "each"),
+            isNull(emailSuppressions.email)
+          )
+        )
     );
     if (followers.length === 0) return 0;
 

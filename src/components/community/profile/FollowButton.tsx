@@ -13,9 +13,15 @@ import { orpc } from "lib/orpc/client";
 /** The community a Slack sign-in was started to follow, in this tab only */
 const PENDING = "owu:follow-after-sign-in";
 
+const DIGESTS = [
+  { value: "each", label: "Cada evento", hint: "Un mail cuando publica uno" },
+  { value: "weekly", label: "Un resumen por semana", hint: "Los lunes, lo que viene en dos semanas" },
+] as const;
+
 /**
- * "Seguir": an email each time the community publishes an event. Signing in happens right here
- * (Slack or a code by email); coming back from Slack finishes the follow it started.
+ * "Seguir": an email each time the community publishes an event, or a weekly digest if they pick
+ * it. Signing in happens right here (Slack or a code by email); coming back from Slack finishes the
+ * follow it started.
  */
 export function FollowButton({ communityId }: { communityId: string }) {
   const session = useSession();
@@ -25,7 +31,7 @@ export function FollowButton({ communityId }: { communityId: string }) {
   const input = { communityId };
   const state = useQuery(orpc.communities.followState.queryOptions({ input }));
   const settle = {
-    onSuccess: (data: { followers: number; following: boolean }) =>
+    onSuccess: (data: { followers: number; following: boolean; digest: "each" | "weekly" | null }) =>
       queryClient.setQueryData(orpc.communities.followState.queryKey({ input }), data),
   };
   const follow = useMutation(orpc.communities.follow.mutationOptions(settle));
@@ -60,6 +66,25 @@ export function FollowButton({ communityId }: { communityId: string }) {
         {following ? "Siguiendo" : "Seguir"}
         {followers > 0 ? <span className="ml-2 font-normal tabular-nums opacity-70">{followers}</span> : null}
       </button>
+      {following ? (
+        <fieldset className="flex basis-full flex-wrap items-center gap-x-4 gap-y-2 text-[14px] text-zinc-300">
+          <legend className="sr-only">Cómo te avisamos</legend>
+          {DIGESTS.map((option) => (
+            <label key={option.value} className="flex min-h-6 cursor-pointer items-center gap-2" title={option.hint}>
+              <input
+                checked={(state.data?.digest ?? "each") === option.value}
+                className="size-4 accent-yellow-400"
+                disabled={follow.isPending}
+                name={`digest-${communityId}`}
+                type="radio"
+                value={option.value}
+                onChange={() => follow.mutate({ communityId, digest: option.value })}
+              />
+              {option.label}
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
       {failed ? <p className="basis-full text-[14px] text-red-300">No se pudo. Probá de nuevo.</p> : null}
       {signingIn && !signedIn ? (
         <div className="flex max-w-sm basis-full flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
