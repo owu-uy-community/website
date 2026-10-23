@@ -12,7 +12,7 @@ test("the Meetup card opens «Copiar a Meetup» of the next event", async ({ pag
     "href",
     `${panel}/eventos/${next.id}/editar?paso=difusion`
   );
-  await expectAccessible(page, { include: "main" });
+  await expectAccessible(page);
 });
 
 test("without events, the Meetup card offers to create one", async ({ pageFor }) => {

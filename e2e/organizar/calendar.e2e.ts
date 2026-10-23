@@ -49,7 +49,10 @@ test("a Saturday workshop from 10:00 for 6 hours can be held, from the calendar 
 
   // Saturday 17 March 2029
   await page.goto(`/organizar/panel/${community.slug}/calendario?mes=2029-03&dia=2029-03-17`);
+  // Scored days mean the page is hydrated: typing before that is reset by React
+  await expect(page.getByRole("button", { name: /^sábado 17 de marzo, / })).toBeVisible();
   await page.getByLabel("Hora de inicio").fill("10:00");
+  await expect(page.getByLabel("Hora de inicio")).toHaveValue("10:00");
   await page.getByRole("combobox", { name: "Duración" }).click();
   await page.getByRole("option", { name: "6 h", exact: true }).click();
   await page.getByRole("button", { name: "Reservar · 10:00–16:00" }).click();
@@ -104,8 +107,7 @@ test("days read in words, the layers switch on and off, and the reasons read who
   expect(
     await reasons.evaluateAll((buttons) => buttons.every((button) => button.scrollWidth <= button.clientWidth + 1))
   ).toBe(true);
-  // The shell (sidebar, header) has its own checks
-  await expectAccessible(page, { include: "main" });
+  await expectAccessible(page);
 });
 
 test("when our events don't load, the calendar says so and retries instead of looking empty", async ({ pageFor }) => {

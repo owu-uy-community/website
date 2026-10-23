@@ -26,7 +26,7 @@ test("a meetup community's roles leave the conference's out, and keep what a rol
   );
   await expect(roles).not.toContainText("Staff del día");
   await expect(roles.getByRole("button", { name: /^Difusión/ })).not.toContainText("Tareas");
-  await expectAccessible(page, { include: "main" });
+  await expectAccessible(page);
 
   await roles.getByRole("button", { name: /^Difusión/ }).click();
   const editor = page.getByRole("dialog", { name: "Editar «Difusión»" });

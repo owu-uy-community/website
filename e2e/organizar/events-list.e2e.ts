@@ -37,7 +37,7 @@ test("Eventos says who's coming, that past events passed, and drafts continue", 
   await expect(row(past.name)).toContainText("Pasó");
   await expect(row(past.name)).not.toContainText("Publicado");
   await expect(page.getByRole("link", { name: "Continuar «Borrador sin fecha»" })).toBeVisible();
-  await expectAccessible(page, { include: "main" });
+  await expectAccessible(page);
 });
 
 test("deleting a draft only mentions a reserved date when there is one", async ({ pageFor }) => {

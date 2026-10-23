@@ -58,7 +58,7 @@ test("A asks B and C, B answers from its own panel, A picks the day: it's reserv
   await invitee.getByRole("button", { name: `Tu respuesta para el ${label(second)}: sin responder` }).click();
   await invitee.getByRole("menuitemradio", { name: "Sí" }).click();
   await expect(invitee.getByRole("button", { name: `Tu respuesta para el ${label(second)}: sí` })).toBeVisible();
-  await expectAccessible(invitee, { include: "main" });
+  await expectAccessible(invitee);
 
   // A sees it and picks that day: the confirm says who gets invited
   await asker.reload();
@@ -113,7 +113,7 @@ test("an empty Votar fecha teaches, and the communities list says when it failed
   await page.goto(`${panel}/encuestas`);
 
   await expect(page.getByText("Ninguna votación todavía")).toBeVisible();
-  await expectAccessible(page, { include: "main" });
+  await expectAccessible(page);
   await failNext(page, "communities.list");
   // The inline button, in the empty state
   await page.getByRole("button", { name: "Nueva votación" }).last().click();
