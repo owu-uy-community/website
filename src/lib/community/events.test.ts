@@ -148,6 +148,24 @@ describe(mergeEvents, () => {
     expect(merged.map((event) => event.id)).toContain("meetup-259");
   });
 
+  test("OWU's own event gives way to the bot's OWU event the same day", () => {
+    const conf: OwnEvent = {
+      id: "conf",
+      name: "OWU CONF 2026",
+      slug: "owu-conf-2026",
+      start: "2026-11-07T12:00:00.000Z",
+      end: "2026-11-07T23:30:00.000Z",
+      communitySlug: "owu",
+      communityName: "OWU Uruguay",
+      place: null,
+      meetupUrl: null,
+    };
+    const ids = (own: OwnEvent[]) => mergeEvents(feed, [], communities, own).map((event) => event.id);
+
+    expect(ids([conf])).toStrictEqual(["meetup-259", "meetup-264"]);
+    expect(ids([{ ...conf, start: "2026-12-05T12:00:00.000Z" }])).toContain("owu-conf");
+  });
+
   test("picks each community's next event", () => {
     expect(nextEventByCommunity(merged).get("gdg-montevideo")?.id).toBe("manual-devfest");
   });
