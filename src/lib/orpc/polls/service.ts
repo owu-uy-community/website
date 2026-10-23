@@ -185,7 +185,7 @@ export const vote = (input: { pollId: string; votes: { day: string; answer: "yes
       if (poll.chosenDay) return yield* alreadyChosen;
       if (poll.closedAt) return yield* pollClosed;
       if (input.votes.some((entry) => !poll.days.includes(entry.day))) {
-        return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
+        return yield* new Invalid({ message: "Esa fecha no está en la votación" });
       }
       for (const entry of input.votes) {
         const values = { answer: entry.answer, votedById: Option.isSome(actor) ? actor.value.id : null };
@@ -216,7 +216,7 @@ export const choose = (input: { pollId: string; day: string }) =>
       const poll = yield* ownPoll(input.pollId, communityId);
       if (poll.chosenDay) return yield* alreadyChosen;
       if (poll.closedAt) return yield* pollClosed;
-      if (!poll.days.includes(input.day)) return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
+      if (!poll.days.includes(input.day)) return yield* new Invalid({ message: "Esa fecha no está en la votación" });
 
       const [claimed] = yield* query((db) =>
         db

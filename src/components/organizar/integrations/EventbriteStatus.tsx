@@ -58,7 +58,7 @@ export function EventbriteStatus({
     return (
       <Notice tone="info">
         Al publicar lo creamos en Eventbrite con entrada gratis por el cupo, la descripción y el lugar. Los cambios
-        llegan solos en unos minutos; la gente se anota ahí y aparece en tus inscriptos.
+        llegan solos en unos minutos; la gente se anota ahí y aparece entre tus anotados.
       </Notice>
     );
   }

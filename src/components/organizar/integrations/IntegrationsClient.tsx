@@ -143,7 +143,7 @@ export function IntegrationsClient({
                 <p className="text-ui text-subtle">
                   Conectá la cuenta de Eventbrite de {community.name} y los eventos que elijan inscribirse ahí se
                   publican solos: entrada gratis con el cupo de acá, la descripción y el lugar. Las inscripciones
-                  vuelven a la lista de inscriptos y al escáner de la puerta.
+                  vuelven a la lista de anotados y al escáner de la puerta.
                 </p>
                 {!data.configured ? (
                   <Notice tone="info">Eventbrite todavía no está habilitado en OWU.</Notice>
@@ -209,7 +209,7 @@ export function IntegrationsClient({
 
       <ConfirmDialog
         confirmLabel="Desconectar"
-        description="Se borran el token, el aviso automático y los inscriptos que leímos de Eventbrite (con sus acreditaciones y sorteos). Los eventos siguen publicados en Eventbrite: cerralos ahí si hace falta."
+        description="Se borran el token, el aviso automático y las personas anotadas que leímos de Eventbrite (con quién entró y sus sorteos). Los eventos siguen publicados en Eventbrite: cerralos ahí si hace falta."
         open={confirming}
         pending={disconnect.isPending}
         pendingLabel="Desconectando…"
