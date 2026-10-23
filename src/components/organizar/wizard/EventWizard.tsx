@@ -315,6 +315,12 @@ export function EventWizard({
   }, [field, Boolean(draft)]);
   const step: StepKey = isStep(requested) ? requested : (firstStep.current ?? "tipo");
   const index = STEPS.findIndex((item) => item.key === step);
+  // On a phone the strip scrolls sideways: the step you're on stays in it
+  useEffect(() => {
+    document
+      .querySelector('nav[aria-label="Pasos"] [aria-current="step"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [step, Boolean(draft)]);
   const go = (key: StepKey) => {
     void flush();
     const next = new URLSearchParams(params.toString());
