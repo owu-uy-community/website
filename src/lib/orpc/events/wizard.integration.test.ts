@@ -110,7 +110,7 @@ describe("the wizard", () => {
 
     expect(moved).toMatchObject({ startDate: "2029-12-11T21:30:00.000Z", endDate: "2029-12-11T23:00:00.000Z" });
     await expect(
-      call(router.events.cancel, { communityId: community.id, eventId: event.id }, by(editor))
+      call(router.events.cancel, { communityId: community.id, eventId: event.id, reason: "Sin lugar" }, by(editor))
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(
       call(router.events.cancel, { communityId: community.id, eventId: event.id, reason: "Sin lugar" }, by(admin))

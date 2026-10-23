@@ -3,13 +3,16 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { Effect, Option, Result } from "effect";
 
 import { attendeeScans, attendeeSync, attendees, events, type AttendeeRow, type AttendeeStatus } from "../../db/schema";
+import { photoPreference, sensitiveIds } from "../../organizar/presets";
+import { isFirstTime } from "../../organizar/attendance";
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
 import type { Attendee as EventbriteAttendee } from "../eventbrite/schemas";
 import * as Eventbrite from "../eventbrite/service";
 import { tokenForEvent } from "../integrations/service";
 import { opsPing, recordActivity } from "../ops";
-import { CurrentUser } from "../services";
+import { CommunityScope, CurrentUser } from "../services";
+import { historyOf, labelled, seesSensitive } from "./history";
 import type {
   Attendee,
   AttendeeFilters,
@@ -55,6 +58,10 @@ export const findEvent = (eventId: string) =>
         slug: events.slug,
         timezone: events.timezone,
         eventbriteEventId: events.eventbriteEventId,
+        communityId: events.communityId,
+        registration: events.registration,
+        startDate: events.startDate,
+        questions: events.questions,
       })
       .from(events)
       .where(eq(events.id, eventId))
@@ -306,6 +313,14 @@ function conditions(filters: AttendeeFilters, skip?: "status" | "ticket" | "tag"
   if (skip !== "status" && filters.status !== "all") where.push(PRESENCE[filters.status]);
   if (skip !== "ticket" && filters.ticket.length > 0) where.push(inArray(attendees.ticketClass, filters.ticket));
   if (skip !== "tag" && filters.tag.length > 0) where.push(sql`${attendees.tags} ?| ${textArray(filters.tag)}`);
+  // "Sin confirmar": a seat, not in yet, no "Voy"
+  if (filters.confirmed) {
+    where.push(
+      filters.confirmed === "yes"
+        ? isNotNull(attendees.confirmedAt)
+        : (and(eq(attendees.status, "attending"), isNull(attendees.checkedInAt), isNull(attendees.confirmedAt)) as SQL)
+    );
+  }
 
   return where;
 }
@@ -346,6 +361,71 @@ const tally = (values: string[]) =>
     .toSorted((a, b) => b.count - a.count || a.value.localeCompare(b.value, "es"));
 
 export const listAttendees = (input: AttendeeListInput) =>
+  listRows(input).pipe(
+    Effect.map(
+      ({ rows, ...rest }) =>
+        ({
+          ...rest,
+          rows: rows.map(({ row, repeatScans: repeats }) => toAttendee(row, repeats)),
+        }) satisfies AttendeeList
+    )
+  );
+
+/**
+ * Organizá's list for the community's organizers (attendee:read): each row also carries the +1s,
+ * the answers (the ID only for admins), "Voy", the hands offered and the person's history in the
+ * community; the list carries the numbers headcount() labels.
+ */
+export const listForOrganizers = (input: AttendeeListInput) =>
+  Effect.gen(function* () {
+    const { communityId } = yield* CommunityScope;
+    const event = yield* findEvent(input.eventId);
+    if (event.communityId !== communityId) return yield* eventNotFound;
+    const [{ rows, ...rest }, sensitive, [counts]] = yield* Effect.all([
+      listRows(input),
+      seesSensitive(communityId),
+      query((db) =>
+        db
+          .select({
+            attending: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+            guests:
+              sql<number>`coalesce(sum(${attendees.guests}) filter (where ${attendees.status} = 'attending'), 0)`.mapWith(
+                Number
+              ),
+            offered: sql<number>`count(*) filter (where ${attendees.status} = 'offered')`.mapWith(Number),
+            waitlisted: sql<number>`count(*) filter (where ${attendees.status} = 'waitlisted')`.mapWith(Number),
+            pending: sql<number>`count(*) filter (where ${attendees.status} = 'pending')`.mapWith(Number),
+            confirmed:
+              sql<number>`count(*) filter (where ${attendees.status} = 'attending' and ${attendees.confirmedAt} is not null)`.mapWith(
+                Number
+              ),
+          })
+          .from(attendees)
+          .where(eq(attendees.eventId, input.eventId))
+      ),
+    ]);
+    const history = yield* historyOf(
+      communityId,
+      rows.flatMap(({ row }) => (row.userId ? [row.userId] : [])),
+      event.startDate
+    );
+
+    return {
+      ...rest,
+      headcount: counts,
+      rows: rows.map(({ row, repeatScans: repeats }) => ({
+        ...toAttendee(row, repeats),
+        guests: row.guests,
+        confirmedAt: iso(row.confirmedAt),
+        excused: row.excusedAt !== null,
+        answers: labelled(event.questions, row.answers, sensitive),
+        volunteerRoles: row.volunteerRoles,
+        history: row.userId ? (history.get(row.userId) ?? null) : null,
+      })),
+    } satisfies AttendeeList;
+  });
+
+const listRows = (input: AttendeeListInput) =>
   Effect.gen(function* () {
     const [rows, status, tickets, tagged, totals] = yield* Effect.all(
       [
@@ -379,12 +459,12 @@ export const listAttendees = (input: AttendeeListInput) =>
     );
 
     return {
-      rows: rows.map(({ row, repeatScans: repeats }) => toAttendee(row, repeats)),
+      rows,
       page: input.page,
       pageSize: input.pageSize,
       facets: { status, tickets, tags: tally(tagged.flatMap((row) => row.tags)) },
       totals,
-    } satisfies AttendeeList;
+    };
   });
 
 /** Add and remove tags on some attendees of the event; how many were touched. */
@@ -442,6 +522,10 @@ export function csvCell(value: string) {
 export const exportAttendees = (input: AttendeeFilters & { ids?: string[] }) =>
   Effect.gen(function* () {
     const event = yield* findEvent(input.eventId);
+    // OWU's own sign-ups add their +1s, "Voy" and the answers (the ID only for admins)
+    const owu = event.registration === "owu";
+    const hidden = owu && !(yield* seesSensitive(event.communityId)) ? sensitiveIds(event.questions) : [];
+    const questions = owu ? event.questions.filter((question) => !hidden.includes(question.id)) : [];
     const where = conditions(input);
     if (input.ids) where.push(input.ids.length > 0 ? inArray(attendees.id, input.ids) : sql`false`);
     const rows = yield* query((db) =>
@@ -460,7 +544,15 @@ export const exportAttendees = (input: AttendeeFilters & { ids?: string[] }) =>
       minute: "2-digit",
     });
     const lines = [
-      ["Nombre", "Email", "Entrada", "Estado", "Acreditación", "Etiquetas"],
+      [
+        "Nombre",
+        "Email",
+        "Entrada",
+        "Estado",
+        "Acreditación",
+        "Etiquetas",
+        ...(owu ? ["Acompañantes", "Confirmó", ...questions.map((question) => question.label)] : []),
+      ],
       ...rows.map((row) => [
         row.name,
         row.email,
@@ -472,6 +564,13 @@ export const exportAttendees = (input: AttendeeFilters & { ids?: string[] }) =>
             : NOT_ATTENDING_LABEL[row.status],
         row.checkedInAt ? clock.format(row.checkedInAt) : "",
         row.tags.join(", "),
+        ...(owu
+          ? [
+              String(row.guests),
+              row.confirmedAt ? "Sí" : "",
+              ...questions.map((question) => row.answers[question.id] ?? ""),
+            ]
+          : []),
       ]),
     ];
 
@@ -650,6 +749,23 @@ const replay = (eventId: string, nonce: string) =>
     )
   );
 
+/**
+ * What the door shows next to a name: "Primera vez" (someone to greet; derived from the community's
+ * past events, the only bit of history the door gets) and the photo preference. OWU sign-ups only.
+ */
+const doorChips = (row: AttendeeRow) =>
+  Effect.gen(function* () {
+    if (row.source !== "owu" || !row.userId) return {};
+    const event = yield* findEvent(row.eventId);
+    const history = yield* historyOf(event.communityId, [row.userId], event.startDate);
+    const past = history.get(row.userId);
+
+    return {
+      firstTime: past ? isFirstTime(past) : false,
+      photo: photoPreference(event.questions, row.answers),
+    };
+  });
+
 /** A queued scan keeps the time it happened, but a phone's clock can't put it in the future or days back. */
 const scanTime = (scannedAt?: string) => {
   const now = Date.now();
@@ -756,12 +872,20 @@ export const scan = (input: ScanInput) =>
           })
         );
 
-        return { result, replayed: false, scannedAt: scannedAt.toISOString(), attendee: scanAttendee(admitted) };
+        return {
+          result,
+          replayed: false,
+          scannedAt: scannedAt.toISOString(),
+          attendee: scanAttendee(admitted),
+          row: admitted,
+        };
       })
     );
     yield* opsPing(input.eventId, "checkins");
+    const { row, ...answer } = outcome;
+    const chips = row ? yield* doorChips(row) : {};
 
-    return outcome satisfies ScanResult;
+    return { ...answer, attendee: answer.attendee ? { ...answer.attendee, ...chips } : null } satisfies ScanResult;
   }).pipe(
     // The same nonce sent twice at once (a replay racing the original): the second one reads the first.
     Effect.catchTag("UniqueViolation", () => replay(input.eventId, input.nonce))

@@ -39,7 +39,7 @@ export const attendeesRouter = {
     .use(inCommunity("attendee:read"))
     .output(AttendeeListSchema)
     .effect(function* ({ input }) {
-      return yield* Attendees.listAttendees(input);
+      return yield* Attendees.listForOrganizers(input);
     }),
 
   sync: authed

@@ -7,7 +7,15 @@ import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
 import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
-import { expireOffers, sendFeedback, sendReminders, sendUpdates } from "../orpc/rsvps/service";
+import { sendScheduled } from "../orpc/events/messages";
+import {
+  expireOffers,
+  sendConfirmPings,
+  sendFeedback,
+  sendNoShowNudges,
+  sendReminders,
+  sendUpdates,
+} from "../orpc/rsvps/service";
 import { sendHostDaySheets, sendYearlyChecks } from "../orpc/venues/hosting";
 import { sendSpeakerEmails } from "../orpc/talks/service";
 import { expireRequests } from "../orpc/venues/service";
@@ -47,7 +55,10 @@ const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknow
   offers: () => expireOffers,
   updates: () => sendUpdates,
   reminders: () => sendReminders,
+  confirmPings: () => sendConfirmPings,
+  messages: () => sendScheduled,
   feedback: () => sendFeedback,
+  noShowNudges: () => sendNoShowNudges,
   holds: () => remindExpiringHolds,
   venues: () => expireRequests,
   hostDays: () => sendHostDaySheets,

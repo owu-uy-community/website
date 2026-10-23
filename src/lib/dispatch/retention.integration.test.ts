@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 
 import { db } from "lib/db";
 import { attendees } from "lib/db/schema";
+import { presetQuestion } from "lib/organizar/presets";
 import { liveServices } from "lib/orpc/services";
 import { makeCommunity, makeEvent, makeRsvp } from "test/factories";
 
@@ -38,5 +39,25 @@ describe(retention, () => {
       checkedInAt,
     });
     await expect(rowOf(kept.id)).resolves.toMatchObject({ name: kept.name, email: kept.email });
+  });
+
+  test("a week after an event, the ID the building asked for is gone; the other answers stay", async () => {
+    const community = await makeCommunity();
+    const questions = [presetQuestion("dieta"), presetQuestion("ci")];
+    const ended = (days: number) =>
+      makeEvent(community.id, {
+        questions,
+        startDate: new Date(Date.now() - days * 86_400_000 - 7_200_000),
+        endDate: new Date(Date.now() - days * 86_400_000),
+      });
+    const [old, recent] = await Promise.all([ended(8), ended(6)]);
+    const answers = { dieta: "Vegana", ci: "1.234.567-8" };
+    const [purged, kept] = await Promise.all([makeRsvp(old.id, { answers }), makeRsvp(recent.id, { answers })]);
+
+    await Effect.runPromiseWith(liveServices)(retention());
+    await Effect.runPromiseWith(liveServices)(retention());
+
+    await expect(rowOf(purged.id)).resolves.toMatchObject({ answers: { dieta: "Vegana" }, name: purged.name });
+    await expect(rowOf(kept.id)).resolves.toMatchObject({ answers });
   });
 });

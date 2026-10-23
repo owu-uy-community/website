@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { buildInvite } from "../../community/ics";
@@ -15,16 +15,20 @@ import {
   type AttendeeRow,
   type EventRow,
 } from "../../db/schema";
+import { firstTimeEmail, noShowNudgeEmail } from "../../email/attendance-templates";
 import { enqueueEmail } from "../../email/outbox";
-import { appUrl, rsvpEmail, type RsvpEmailKind } from "../../email/templates";
+import { appUrl, rsvpEmail, type OtherEvent, type RsvpEmailKind } from "../../email/templates";
 import { readLink, signLink, unsubscribeToken } from "../../links";
+import { NUDGE_AFTER_NO_SHOWS } from "../../organizar/attendance";
+import { signupClosesAt } from "../../organizar/rsvp-state";
 import { ticketCode } from "../../organizar/ticket";
 import { eventPagePath, refreshPage } from "../../revalidate";
+import { doorUsedAt, historyOf, labelled, seesSensitive } from "../attendees/history";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
 import { opsPing, recordActivity } from "../ops";
 import { CommunityScope, CurrentUser } from "../services";
-import type { JoinInput, MyRsvp, Ticket } from "./schemas";
+import type { JoinInput, MyRsvp, Pending, Ticket } from "./schemas";
 
 const HOUR_MS = 3_600_000;
 /** People with a seat: what the capacity counts */
@@ -78,6 +82,9 @@ const seatsTaken = (eventId: string) =>
       .where(and(eq(attendees.eventId, eventId), eq(attendees.source, "owu"), inArray(attendees.status, [...SEATED])))
   ).pipe(Effect.map(([row]) => row?.taken ?? 0));
 
+/** The event says where it happens (a space or an address), or nothing yet */
+const hasPlace = (event: EventContext) => event.mode !== "online" && Boolean(event.venue ?? event.placeName);
+
 /** Where an attendee is, with the full address (people with a seat get it whatever the host shows) */
 const placeFor = (event: EventContext, seated: boolean) =>
   event.mode === "online"
@@ -123,14 +130,20 @@ const toMine = (row: AttendeeRow, event: EventContext) =>
       offerExpiresAt: row.offerExpiresAt?.toISOString() ?? null,
       position: yield* positionOf(row),
       code: seated ? row.barcode : null,
-      address: seated && event.mode !== "online" ? placeFor(event, true) : null,
+      // Only an address worth reading: "Lugar a confirmar" isn't one
+      address: seated && hasPlace(event) ? placeFor(event, true) : null,
       onlineUrl: seated && event.mode !== "presencial" ? event.onlineUrl : null,
       checkedInAt: row.checkedInAt?.toISOString() ?? null,
+      confirmedAt: row.confirmedAt?.toISOString() ?? null,
     } satisfies MyRsvp;
   });
 
 /** Reminders and feedback: the person can turn these off; everything else is essential */
-const OPTIONAL: RsvpEmailKind[] = ["reminder_48h", "reminder_2h", "feedback"];
+const OPTIONAL: RsvpEmailKind[] = ["reminder_48h", "reminder_2h", "feedback", "confirm_ping"];
+/** The ones that ask "¿Seguís yendo?" with "Voy" and "No puedo ir" a tap away */
+const ASKS: RsvpEmailKind[] = ["reminder_48h", "confirm_ping"];
+/** The ones with "Otros eventos de OWU esta semana" at the bottom */
+const REMINDERS: RsvpEmailKind[] = ["reminder_48h", "reminder_2h", "confirm_ping"];
 /** Emails that put the event in the person's calendar, or take it out */
 const ADDS: RsvpEmailKind[] = ["confirmed", "promoted", "updated"];
 const REMOVES: RsvpEmailKind[] = ["left", "removed", "event_cancelled"];
@@ -164,22 +177,45 @@ export const optionalMail = (email: string) =>
     };
   });
 
+type NotifyOptions = {
+  /** This registration's own key by default */
+  dedupeKey?: string;
+  /** To an organizer, as is, without the invite */
+  test?: boolean;
+  /** For the reminders' footer */
+  others?: OtherEvent[];
+  /** People waiting for a seat, for "¿Seguís yendo?" */
+  waiting?: number;
+};
+
+/** The ticket page from an email: plain, or asking "Voy" / "No puedo ir" (that link lapses at the start). */
+const ticketLink = (event: EventContext, token: string, action?: "confirmar" | "liberar") =>
+  appUrl(
+    `/comunidad/${event.community.slug}/events/${event.slug}/entrada?t=${token}${action ? `&accion=${action}` : ""}`
+  );
+
 /**
  * Queue the email for where the person stands now. Seats come with the calendar invite and the
  * QR; the dedupe key (this registration, or the caller's) sends each one once. A `test` goes to
  * an organizer as is, without the invite.
  */
-const notify = (row: AttendeeRow, event: EventContext, kind: RsvpEmailKind, dedupeKey?: string, test = false) =>
+const notify = (row: AttendeeRow, event: EventContext, kind: RsvpEmailKind, options: NotifyOptions = {}) =>
   Effect.gen(function* () {
+    const { dedupeKey, test = false } = options;
+    if (!row.email) return;
     const optional = OPTIONAL.includes(kind);
     const optOut = optional ? yield* optionalMail(row.email) : null;
     if (optional && !optOut && !test) return;
     const token = yield* Effect.promise(() => signLink("ticket", row.id));
+    // The one-tap answers expire when the event starts: an old reminder can't move anything after
+    const asking = ASKS.includes(kind)
+      ? yield* Effect.promise(() => signLink("ticket", row.id, event.startDate))
+      : null;
     // Seat details (QR, address, online link, the invite) only for someone who has the seat
     const seated = SEATED_KINDS.includes(kind) && row.status === "attending";
     // Organizers taking someone's place withdraw the invite only if they had one (pass the row as it was)
     const removed = REMOVES.includes(kind) && (kind !== "removed" || row.status === "attending");
-    const ticketUrl = appUrl(`/comunidad/${event.community.slug}/events/${event.slug}/entrada?t=${token}`);
+    const ticketUrl = ticketLink(event, token);
     const invite =
       !test && ((ADDS.includes(kind) && seated) || removed)
         ? buildInvite({
@@ -215,6 +251,11 @@ const notify = (row: AttendeeRow, event: EventContext, kind: RsvpEmailKind, dedu
         kind === "feedback" ? appUrl(`/comunidad/${event.community.slug}/events/${event.slug}/encuesta`) : null,
       note: event.reminderNote,
       unsubscribeUrl: optOut?.url ?? null,
+      confirmUrl: asking ? ticketLink(event, asking, "confirmar") : null,
+      releaseUrl: asking ? ticketLink(event, asking, "liberar") : null,
+      waiting: options.waiting,
+      others: REMINDERS.includes(kind) ? options.others : undefined,
+      reason: event.cancelReason,
     });
 
     yield* enqueueEmail({
@@ -288,8 +329,9 @@ const openFor = (event: EventRow) => {
   if (event.status !== "published" || event.registration !== "owu") {
     return new Conflict({ reason: "closed", message: "Este evento no tiene inscripción abierta en OWU" });
   }
-  if (event.endDate.getTime() < Date.now() || (event.rsvpClosesAt && event.rsvpClosesAt.getTime() < Date.now())) {
-    return new Conflict({ reason: "closed", message: "La inscripción ya cerró" });
+  // One rule with the card (rsvp-state): the team's close time, or the start; later comes in at the door
+  if (event.endDate.getTime() <= Date.now() || signupClosesAt(event) <= Date.now()) {
+    return new Conflict({ reason: "closed", message: "La inscripción ya cerró: si venís, pasá por la puerta" });
   }
 
   return null;
@@ -350,8 +392,14 @@ export const join = (input: JoinInput) =>
         guests: input.guests,
         answers,
         showName: input.showName,
+        // Only the hands this event asks for
+        volunteerRoles: input.volunteerRoles.filter((role) => event.volunteerRoles.includes(role)),
         registeredAt: new Date(),
         offerExpiresAt: null,
+        // A new sign-up starts clean: no "Voy" yet, nothing freed
+        confirmedAt: null,
+        cancelledAt: null,
+        excusedAt: null,
         name: account.name,
         email: account.email,
       } as const;
@@ -371,6 +419,7 @@ export const join = (input: JoinInput) =>
               .returning()
           );
       yield* notify(row, event, status === "attending" ? "confirmed" : status);
+      if (status === "attending" && !existing) yield* welcomeFirstTimer(row, event);
       yield* opsPing(event.id, "checkins");
       refreshPage(eventPagePath(event.community.slug, event.slug));
 
@@ -378,14 +427,60 @@ export const join = (input: JoinInput) =>
     })
   );
 
+/**
+ * Someone's first seat with a community: a "qué esperar" email (the agenda, how to get in, that
+ * someone greets them). Optional mail, once per community and person.
+ */
+const welcomeFirstTimer = (row: AttendeeRow, event: EventContext) =>
+  Effect.gen(function* () {
+    if (!row.userId || !row.email) return;
+    const [before] = yield* query((db) =>
+      db
+        .select({ id: attendees.id })
+        .from(attendees)
+        .innerJoin(events, eq(events.id, attendees.eventId))
+        .where(
+          and(
+            eq(events.communityId, event.communityId),
+            eq(attendees.userId, row.userId ?? ""),
+            ne(events.id, event.id)
+          )
+        )
+        .limit(1)
+    );
+    if (before) return;
+    const optOut = yield* optionalMail(row.email);
+    if (!optOut) return;
+    const token = yield* Effect.promise(() => signLink("ticket", row.id));
+    yield* enqueueEmail({
+      kind: "rsvp_first_time",
+      to: row.email,
+      priority: 5,
+      dedupeKey: `first_time:${event.communityId}:${row.userId}`,
+      headers: optOut.headers,
+      ...firstTimeEmail({
+        name: row.name,
+        community: event.community.name,
+        event: event.name,
+        when: shortWhen(event.startDate),
+        place: placeFor(event, true),
+        note: event.reminderNote,
+        pageUrl: pageUrl(event),
+        ticketUrl: ticketLink(event, token),
+        unsubscribeUrl: optOut.url,
+      }),
+    });
+  });
+
 /** Give the seat (or the waitlist place) back; the next person in line gets it. */
-const leaveRow = (attendeeId: string) =>
+const leaveRow = (attendeeId: string, eventId?: string) =>
   transaction(
     Effect.gen(function* () {
       const [peek] = yield* query((db) =>
         db.select({ eventId: attendees.eventId }).from(attendees).where(eq(attendees.id, attendeeId))
       );
-      if (!peek) return yield* rsvpNotFound;
+      // A link for another event's ticket doesn't free anything here
+      if (!peek || (eventId && peek.eventId !== eventId)) return yield* rsvpNotFound;
       const event = yield* contextOf(yield* lockEvent(peek.eventId));
       const [row] = yield* query((db) => db.select().from(attendees).where(eq(attendees.id, attendeeId)));
       if (!row) return yield* rsvpNotFound;
@@ -396,7 +491,8 @@ const leaveRow = (attendeeId: string) =>
       const [left] = yield* query((db) =>
         db
           .update(attendees)
-          .set({ status: "cancelled", offerExpiresAt: null })
+          // When they freed it: a late release (under 24 h) shows in their history, a no-show doesn't
+          .set({ status: "cancelled", offerExpiresAt: null, cancelledAt: new Date() })
           .where(eq(attendees.id, row.id))
           .returning()
       );
@@ -430,7 +526,8 @@ const confirmRow = (attendeeId: string) =>
       const [seated] = yield* query((db) =>
         db
           .update(attendees)
-          .set({ status: "attending", offerExpiresAt: null })
+          // Taking the offer is saying "Voy"
+          .set({ status: "attending", offerExpiresAt: null, confirmedAt: new Date() })
           .where(eq(attendees.id, row.id))
           .returning()
       );
@@ -441,6 +538,42 @@ const confirmRow = (attendeeId: string) =>
       return yield* toMine(seated, event);
     })
   );
+
+/**
+ * "Voy": someone with a seat says they're coming (the reminder's link, the ticket, the card).
+ * Saying it twice changes nothing; after the start, or without a seat, there's nothing to confirm.
+ */
+const attendRow = (attendeeId: string, eventId?: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) => db.select().from(attendees).where(eq(attendees.id, attendeeId)));
+    if (!row || (eventId && row.eventId !== eventId)) return yield* rsvpNotFound;
+    const [event] = yield* query((db) => db.select().from(events).where(eq(events.id, row.eventId)));
+    if (!event) return yield* eventNotFound;
+    const context = yield* contextOf(event);
+    if (row.status !== "attending") {
+      return yield* new Conflict({
+        reason: "no_seat",
+        message:
+          row.status === "cancelled"
+            ? "Ya liberaste tu lugar: si podés ir, anotate de nuevo"
+            : "No tenés un lugar todavía",
+      });
+    }
+    if (event.status !== "published" || event.startDate.getTime() <= Date.now()) {
+      return yield* new Conflict({ reason: "closed", message: "El evento ya empezó: no hace falta confirmar" });
+    }
+    if (row.confirmedAt) return yield* toMine(row, context);
+    const [confirmed] = yield* query((db) =>
+      db
+        .update(attendees)
+        .set({ confirmedAt: new Date() })
+        .where(and(eq(attendees.id, row.id), isNull(attendees.confirmedAt)))
+        .returning()
+    );
+    yield* opsPing(event.id, "checkins");
+
+    return yield* toMine(confirmed ?? row, context);
+  });
 
 const mineFor = (eventId: string) =>
   Effect.gen(function* () {
@@ -481,6 +614,15 @@ export const confirmOffer = (eventId: string) =>
     return yield* confirmRow(row.id);
   });
 
+/** "Voy" from the RSVP card, signed in. */
+export const confirm = (eventId: string) =>
+  Effect.gen(function* () {
+    const row = yield* mineFor(eventId);
+    if (!row) return yield* rsvpNotFound;
+
+    return yield* attendRow(row.id);
+  });
+
 const fromToken = (token: string) =>
   Effect.promise(() => readLink("ticket", token)).pipe(
     Effect.flatMap((id) => (id ? Effect.succeed(id) : Effect.fail(rsvpNotFound)))
@@ -495,12 +637,19 @@ export const ticket = (token: string) =>
     const [event] = yield* query((db) => db.select().from(events).where(eq(events.id, row.eventId)));
     if (!event) return yield* eventNotFound;
     const context = yield* contextOf(event);
+    const [waiting] = yield* query((db) =>
+      db
+        .select({ count: sql<number>`count(*)`.mapWith(Number) })
+        .from(attendees)
+        .where(and(eq(attendees.eventId, event.id), eq(attendees.status, "waitlisted")))
+    );
 
     return {
       rsvp: yield* toMine(row, context),
       name: row.name,
       token,
       event: {
+        id: event.id,
         name: event.name,
         slug: event.slug,
         startDate: event.startDate.toISOString(),
@@ -508,6 +657,7 @@ export const ticket = (token: string) =>
         status: event.status,
         place: placeFor(context, row.status === "attending"),
         community: context.community,
+        waiting: waiting?.count ?? 0,
       },
     } satisfies Ticket;
   });
@@ -521,8 +671,13 @@ export const myTicket = (eventId: string) =>
     return yield* ticket(yield* Effect.promise(() => signLink("ticket", row.id)));
   });
 
-export const leaveByToken = (token: string) => fromToken(token).pipe(Effect.flatMap(leaveRow));
+/** "No puedo ir" from a signed link; with `eventId`, only for that event's ticket. */
+export const leaveByToken = (token: string, eventId?: string) =>
+  fromToken(token).pipe(Effect.flatMap((id) => leaveRow(id, eventId)));
 export const confirmByToken = (token: string) => fromToken(token).pipe(Effect.flatMap(confirmRow));
+/** "Voy" from the reminder's signed link (it lapses at the start), for that event only. */
+export const confirmByLink = (token: string, eventId: string) =>
+  fromToken(token).pipe(Effect.flatMap((id) => attendRow(id, eventId)));
 
 /** Every event the person signed up for, offers first, then what's next. */
 export const myEvents = Effect.gen(function* () {
@@ -556,13 +711,11 @@ export const myEvents = Effect.gen(function* () {
   return list.toSorted((a, b) => Number(b.rsvp.status === "offered") - Number(a.rsvp.status === "offered"));
 });
 
-/** The organizers approve or turn down someone waiting for review. */
+/** The organizers approve or turn down someone waiting for review (not on a cancelled or finished event). */
 export const review = (input: { eventId: string; attendeeId: string; decision: "approve" | "decline" }) =>
   transaction(
     Effect.gen(function* () {
-      const { communityId } = yield* CommunityScope;
-      const event = yield* contextOf(yield* lockEvent(input.eventId));
-      if (event.communityId !== communityId) return yield* eventNotFound;
+      const event = yield* lockOrganized(input.eventId);
       const [row] = yield* query((db) =>
         db
           .select()
@@ -590,6 +743,7 @@ export const review = (input: { eventId: string; attendeeId: string; decision: "
         event,
         status === "attending" ? "confirmed" : status === "waitlisted" ? "waitlisted" : "declined"
       );
+      if (status === "attending") yield* welcomeFirstTimer(reviewed, event);
       yield* recordActivity({
         eventId: event.id,
         verb: input.decision === "approve" ? "rsvp.approved" : "rsvp.declined",
@@ -604,6 +758,46 @@ export const review = (input: { eventId: string; attendeeId: string; decision: "
       return yield* toMine(reviewed, event);
     })
   );
+
+/**
+ * Who waits for the team's approval, for anyone who reviews (editors included, without
+ * attendee:read): name, what they answered (never the ID unless admin), their history here. No
+ * emails, nothing to export.
+ */
+export const pending = (eventId: string) =>
+  Effect.gen(function* () {
+    const { communityId } = yield* CommunityScope;
+    const [event] = yield* query((db) =>
+      db
+        .select()
+        .from(events)
+        .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
+    );
+    if (!event) return yield* eventNotFound;
+    const rows = yield* query((db) =>
+      db
+        .select()
+        .from(attendees)
+        .where(and(eq(attendees.eventId, eventId), eq(attendees.status, "pending")))
+        .orderBy(asc(attendees.registeredAt), asc(attendees.id))
+        .limit(500)
+    );
+    const sensitive = yield* seesSensitive(communityId);
+    const history = yield* historyOf(
+      communityId,
+      rows.flatMap((row) => (row.userId ? [row.userId] : [])),
+      event.startDate
+    );
+
+    return rows.map((row): Pending => ({
+      id: row.id,
+      name: row.name,
+      guests: row.guests,
+      registeredAt: row.registeredAt?.toISOString() ?? null,
+      answers: labelled(event.questions, row.answers, sensitive),
+      history: row.userId ? (history.get(row.userId) ?? null) : null,
+    }));
+  });
 
 /** The scoped community's event, locked like every path that changes who has a seat. */
 const lockOrganized = (eventId: string) =>
@@ -695,10 +889,12 @@ export const cancelSpots = (input: { eventId: string; attendeeIds: string[] }) =
           )
       );
       if (rows.length === 0) return { cancelled: 0 };
+      const now = new Date();
       yield* query((db) =>
         db
           .update(attendees)
-          .set({ status: "cancelled", offerExpiresAt: null })
+          // The team's call (a duplicate, someone who told them): never a no-show or a late release
+          .set({ status: "cancelled", offerExpiresAt: null, cancelledAt: now, excusedAt: now })
           .where(
             inArray(
               attendees.id,
@@ -726,7 +922,7 @@ export const cancelSpots = (input: { eventId: string; attendeeIds: string[] }) =
   );
 
 /** What the cadence sends on its own, in order: an organizer's test gets one of each. */
-const CADENCE: RsvpEmailKind[] = ["confirmed", "reminder_48h", "reminder_2h", "feedback"];
+const CADENCE: RsvpEmailKind[] = ["confirmed", "reminder_48h", "confirm_ping", "reminder_2h", "feedback"];
 
 /**
  * Every email of the cadence to the organizer asking, as their people would get it now (the
@@ -759,9 +955,12 @@ export const sendTest = (eventId: string) =>
       registeredAt: new Date(),
       offerExpiresAt: null,
     } as AttendeeRow;
-    for (const kind of CADENCE) yield* notify(sample, event, kind, `test_${kind}:${eventId}:${me.id}:${minute}`, true);
+    const kinds = CADENCE.filter((kind) => kind !== "confirm_ping" || pings(event));
+    for (const kind of kinds) {
+      yield* notify(sample, event, kind, { dedupeKey: `test_${kind}:${eventId}:${me.id}:${minute}`, test: true });
+    }
 
-    return { sent: CADENCE.length, to: account.email };
+    return { sent: kinds.length, to: account.email };
   });
 
 /** Offers nobody took in time: the seat goes to the next in line (from the tick). */
@@ -837,25 +1036,124 @@ export const sendReminders = Effect.gen(function* () {
   );
   const due = rows.flatMap(({ attendee, event }) => {
     const hours = (event.startDate.getTime() - now) / HOUR_MS;
-    const settled = attendee.registeredAt !== null && now - attendee.registeredAt.getTime() > 12 * HOUR_MS;
-    const kind = hours <= 2 ? ("reminder_2h" as const) : settled ? ("reminder_48h" as const) : null;
+    const kind = hours <= 2 ? ("reminder_2h" as const) : settled(attendee, now) ? ("reminder_48h" as const) : null;
 
     return kind ? [{ attendee, event, kind, key: `${kind}:${attendee.id}:${event.startDate.getTime()}` }] : [];
   });
-  const done = yield* queued(due.map((item) => item.key));
-  const contexts = new Map<string, EventContext>();
-  let sent = 0;
-  for (const item of due.filter((entry) => !done.has(entry.key))) {
-    const context = contexts.get(item.event.id) ?? (yield* contextOf(item.event));
-    contexts.set(item.event.id, context);
-    yield* notify(item.attendee, context, item.kind, item.key);
-    sent += 1;
-  }
 
-  return { reminders: sent };
+  return { reminders: yield* sendDue(due) };
 });
 
-/** Between 2 and 26 hours after it ends, attendees get the event's survey, when it has one open. */
+/** Signed up more than 12 hours before: a fresh sign-up isn't asked "¿seguís yendo?" */
+const settled = (attendee: AttendeeRow, now: number) =>
+  attendee.registeredAt !== null && now - attendee.registeredAt.getTime() > 12 * HOUR_MS;
+
+/** The event asks its unconfirmed people again 24 h before: it's on, and a seat is worth freeing. */
+const pings = (event: EventRow) => event.confirmPing && (event.waitlist || event.capacity !== null);
+
+/**
+ * A day before, a second "¿Seguís viniendo?" only to people with a seat who haven't said "Voy",
+ * when the event has a waitlist or a limit (and the team didn't turn it off). Once per date.
+ */
+export const sendConfirmPings = Effect.gen(function* () {
+  const now = Date.now();
+  const rows = yield* seatedAt(
+    and(
+      gt(events.startDate, new Date(now + 2 * HOUR_MS)),
+      lt(events.startDate, new Date(now + 24 * HOUR_MS)),
+      eq(events.confirmPing, true),
+      or(eq(events.waitlist, true), isNotNull(events.capacity)),
+      isNull(attendees.confirmedAt),
+      isNull(attendees.checkedInAt)
+    )
+  );
+  const due = rows
+    .filter(({ attendee, event }) => pings(event) && settled(attendee, now))
+    .map(({ attendee, event }) => ({
+      attendee,
+      event,
+      kind: "confirm_ping" as const,
+      key: `confirm_ping:${attendee.id}:${event.startDate.getTime()}`,
+    }));
+
+  return { pings: yield* sendDue(due) };
+});
+
+/**
+ * Up to three other published OWU events in the next 7 days (any community), soonest first: the
+ * reminders' footer. Read once per sweep.
+ */
+const upcomingThisWeek = (now: number) =>
+  query((db) =>
+    db
+      .select({
+        id: events.id,
+        name: events.name,
+        slug: events.slug,
+        startDate: events.startDate,
+        community: communities,
+      })
+      .from(events)
+      .innerJoin(communities, eq(communities.id, events.communityId))
+      .where(
+        and(
+          eq(events.status, "published"),
+          eq(events.isActive, true),
+          eq(communities.isActive, true),
+          gt(events.startDate, new Date(now)),
+          lt(events.startDate, new Date(now + 7 * 24 * HOUR_MS))
+        )
+      )
+      .orderBy(asc(events.startDate))
+      .limit(12)
+  );
+
+/** Send the reminders that are due (skipping what's already queued), each event read once. */
+const sendDue = (due: { attendee: AttendeeRow; event: EventRow; kind: RsvpEmailKind; key: string }[]) =>
+  Effect.gen(function* () {
+    const done = yield* queued(due.map((item) => item.key));
+    const todo = due.filter((entry) => !done.has(entry.key));
+    if (todo.length === 0) return 0;
+    const soon = yield* upcomingThisWeek(Date.now());
+    const contexts = new Map<string, { context: EventContext; waiting: number; others: OtherEvent[] }>();
+    for (const item of todo) {
+      let found = contexts.get(item.event.id);
+      if (!found) {
+        const [waiting] = yield* query((db) =>
+          db
+            .select({ count: sql<number>`count(*)`.mapWith(Number) })
+            .from(attendees)
+            .where(and(eq(attendees.eventId, item.event.id), eq(attendees.status, "waitlisted")))
+        );
+        found = {
+          context: yield* contextOf(item.event),
+          waiting: waiting?.count ?? 0,
+          others: soon
+            .filter((other) => other.id !== item.event.id)
+            .slice(0, 3)
+            .map((other) => ({
+              name: other.name,
+              community: other.community.name,
+              when: shortWhen(other.startDate),
+              url: appUrl(eventPagePath(other.community.slug, other.slug)),
+            })),
+        };
+        contexts.set(item.event.id, found);
+      }
+      yield* notify(item.attendee, found.context, item.kind, {
+        dedupeKey: item.key,
+        waiting: found.waiting,
+        others: found.others,
+      });
+    }
+
+    return todo.length;
+  });
+
+/**
+ * Between 2 and 26 hours after it ends, the event's open survey goes to the people who came when
+ * the door was used (someone checked in), or to everyone with a seat when it wasn't.
+ */
 export const sendFeedback = Effect.gen(function* () {
   const now = Date.now();
   const rows = yield* query((db) =>
@@ -868,9 +1166,11 @@ export const sendFeedback = Effect.gen(function* () {
         and(
           eq(attendees.status, "attending"),
           eq(attendees.source, "owu"),
+          ne(attendees.email, ""),
           eq(events.status, "published"),
           lt(events.endDate, new Date(now - 2 * HOUR_MS)),
-          gt(events.endDate, new Date(now - 26 * HOUR_MS))
+          gt(events.endDate, new Date(now - 26 * HOUR_MS)),
+          or(isNotNull(attendees.checkedInAt), sql`not ${doorUsedAt}`)
         )
       )
   );
@@ -880,11 +1180,83 @@ export const sendFeedback = Effect.gen(function* () {
   for (const { attendee, event } of rows.filter((row) => !done.has(`feedback:${row.attendee.id}`))) {
     const context = contexts.get(event.id) ?? (yield* contextOf(event));
     contexts.set(event.id, context);
-    yield* notify(attendee, context, "feedback", `feedback:${attendee.id}`);
+    yield* notify(attendee, context, "feedback", { dedupeKey: `feedback:${attendee.id}` });
     sent += 1;
   }
 
   return { feedback: sent };
+});
+
+/**
+ * For communities that turned it on (off by default): one friendly note to someone after their
+ * second silent no-show there ("la próxima, si no podés, liberá tu lugar"). Looks at events that
+ * ended 2 h to 3 days ago, so a no-show is fresh; once per community and person.
+ */
+export const sendNoShowNudges = Effect.gen(function* () {
+  const now = Date.now();
+  const missed = yield* query((db) =>
+    db
+      .select({
+        userId: attendees.userId,
+        email: attendees.email,
+        name: attendees.name,
+        communityId: communities.id,
+        community: communities.name,
+        slug: communities.slug,
+      })
+      .from(attendees)
+      .innerJoin(events, eq(events.id, attendees.eventId))
+      .innerJoin(communities, eq(communities.id, events.communityId))
+      .where(
+        and(
+          eq(communities.noShowNudge, true),
+          eq(events.status, "published"),
+          lt(events.endDate, new Date(now - 2 * HOUR_MS)),
+          gt(events.endDate, new Date(now - 72 * HOUR_MS)),
+          eq(attendees.source, "owu"),
+          eq(attendees.status, "attending"),
+          isNull(attendees.checkedInAt),
+          isNull(attendees.excusedAt),
+          isNotNull(attendees.userId),
+          ne(attendees.email, ""),
+          doorUsedAt
+        )
+      )
+  );
+  const key = (row: (typeof missed)[number]) => `noshow_nudge:${row.communityId}:${row.userId}`;
+  const done = yield* queued(missed.map(key));
+  let sent = 0;
+  for (const [communityId, people] of Map.groupBy(
+    missed.filter((row) => !done.has(key(row))),
+    (row) => row.communityId
+  )) {
+    const history = yield* historyOf(
+      communityId,
+      people.map((row) => row.userId ?? ""),
+      new Date(now)
+    );
+    for (const person of people) {
+      if ((history.get(person.userId ?? "")?.noShows ?? 0) < NUDGE_AFTER_NO_SHOWS) continue;
+      const optOut = yield* optionalMail(person.email);
+      if (!optOut) continue;
+      yield* enqueueEmail({
+        kind: "rsvp_noshow_nudge",
+        to: person.email,
+        priority: 6,
+        dedupeKey: key(person),
+        headers: optOut.headers,
+        ...noShowNudgeEmail({
+          name: person.name,
+          community: person.community,
+          profileUrl: appUrl(`/comunidad/${person.slug}`),
+          unsubscribeUrl: optOut.url,
+        }),
+      });
+      sent += 1;
+    }
+  }
+
+  return { nudges: sent };
 });
 
 /**
@@ -916,7 +1288,7 @@ export const sendUpdates = Effect.gen(function* () {
             .where(and(eq(attendees.eventId, id), inArray(attendees.status, [...SEATED])))
         );
         for (const person of people) {
-          yield* notify(person, event, "updated", `event_updated:${person.id}:${event.icsSequence}`);
+          yield* notify(person, event, "updated", { dedupeKey: `event_updated:${person.id}:${event.icsSequence}` });
         }
         // Keep updatedAt: an organizer editing right now must not read this as someone else's save
         yield* query((db) =>
@@ -952,7 +1324,9 @@ export const notifyCancelled = (eventId: string) =>
         .from(attendees)
         .where(and(eq(attendees.eventId, eventId), inArray(attendees.status, [...ACTIVE])))
     );
-    for (const person of people) yield* notify(person, event, "event_cancelled", `event_cancelled:${person.id}`);
+    for (const person of people) {
+      yield* notify(person, event, "event_cancelled", { dedupeKey: `event_cancelled:${person.id}` });
+    }
     yield* query((db) =>
       db
         .update(events)

@@ -108,14 +108,21 @@ describe("changes", () => {
     ]);
   });
 
-  test("a cancelled event takes itself out of everyone's calendar", async () => {
+  test("a cancelled event takes itself out of everyone's calendar and says why", async () => {
     const { community, event, person } = await eventIn(24 * 20);
     const admin = await makeMember(community.id, "admin");
+    const cancel = (reason: string) =>
+      call(router.events.cancel, { communityId: community.id, eventId: event.id, reason }, by(admin));
 
-    await call(router.events.cancel, { communityId: community.id, eventId: event.id }, by(admin));
+    await expect(cancel("")).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await cancel("Se inundó la sala");
 
     const [notice] = await mail(person.email, "rsvp_event_cancelled");
     expect(invite(notice)).toContain("METHOD:CANCEL");
+    expect(notice.text).toContain("Por qué: Se inundó la sala");
+    await expect(
+      call(router.events.public, { communitySlug: community.slug, eventSlug: event.slug }, by(null))
+    ).resolves.toMatchObject({ status: "cancelled", cancelReason: "Se inundó la sala" });
   });
 });
 

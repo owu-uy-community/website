@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { and, asc, count, desc, eq, gt, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
 import { Effect, Option } from "effect";
 
@@ -10,6 +8,7 @@ import {
   communities,
   communityMembers,
   emailDeliveries,
+  eventMessages,
   events,
   outboundMessages,
   schedules,
@@ -18,7 +17,7 @@ import {
   type EventRow,
 } from "../../db/schema";
 import { enqueueEmail } from "../../email/outbox";
-import { appUrl, conflictHeadsUpEmail, eventMessageEmail, holdExpiringEmail } from "../../email/templates";
+import { appUrl, conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { announcementText, slackSafe } from "../../organizar/announcement";
 import { issues, UNTITLED } from "../../organizar/steps";
@@ -34,11 +33,13 @@ import { queuePush } from "../integrations/service";
 import { freeSlug, slugify } from "../open-spaces/service";
 import { recordActivity } from "../ops";
 import { can, principalOf } from "../../authz/principal";
-import { notifyCancelled, optionalMail, seatsChanged } from "../rsvps/service";
+import { notifyCancelled, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
+import { dietTally } from "../../organizar/presets";
 import { HOLD_DAYS, MAX_HOLDS } from "../../organizar/rules";
 import { publicFacts } from "../../organizar/venue-facts";
+import { expectedTurnout, foodFor } from "../../organizar/turnout";
 
 export { HOLD_DAYS, MAX_HOLDS };
 
@@ -338,7 +339,12 @@ const editableOf = (eventId: string) =>
   Effect.gen(function* () {
     const [row] = yield* query((db) =>
       db
-        .select({ event: events, communitySlug: communities.slug, venue: venues })
+        .select({
+          event: events,
+          communitySlug: communities.slug,
+          noShowNudge: communities.noShowNudge,
+          venue: venues,
+        })
         .from(events)
         .innerJoin(communities, eq(communities.id, events.communityId))
         .leftJoin(venues, eq(venues.id, events.venueId))
@@ -363,6 +369,7 @@ const editableOf = (eventId: string) =>
             neighbourhood: venue.neighbourhood,
             address: venue.address,
             facts: venue.facts,
+            idRequired: venue.facts.idRequired === true,
           }
         : null,
       placeName: event.placeName,
@@ -397,6 +404,10 @@ const editableOf = (eventId: string) =>
         sentAt: row.status === "sent" ? (row.sentAt?.toISOString() ?? null) : null,
       })),
       reminderNote: event.reminderNote,
+      confirmPing: event.confirmPing,
+      volunteerRoles: event.volunteerRoles,
+      noShowNudge: row.noShowNudge,
+      cancelReason: event.cancelReason,
       materials: event.materials,
       cohosts: yield* cohostsOf(event.id),
     } satisfies EditableEvent;
@@ -819,19 +830,27 @@ export const cancel = (input: { eventId: string; reason: string }) =>
       const [row] = yield* query((db) =>
         db
           .update(events)
-          .set({ status: "cancelled", icsSequence: sql`${events.icsSequence} + 1` })
+          // The reason goes in the attendees' email and on the public page
+          .set({ status: "cancelled", cancelReason: input.reason, icsSequence: sql`${events.icsSequence} + 1` })
           .where(and(eq(events.id, input.eventId), eq(events.communityId, communityId), eq(events.status, "published")))
           .returning()
       );
       if (!row) {
         return yield* new Conflict({ reason: "not_published", message: "Solo se cancela un evento publicado" });
       }
+      // Messages waiting for their time don't go out for an event that isn't happening
+      yield* query((db) =>
+        db
+          .update(eventMessages)
+          .set({ status: "cancelled" })
+          .where(and(eq(eventMessages.eventId, row.id), eq(eventMessages.status, "scheduled")))
+      );
       yield* recordActivity({
         eventId: row.id,
         verb: "event.cancelled",
         entityType: "event",
         entityId: row.id,
-        summary: input.reason ? `canceló el evento: ${input.reason}` : "canceló el evento",
+        summary: `canceló el evento: ${input.reason}`,
       });
       yield* notifyCancelled(row.id);
       yield* queuePush(row, { now: true });
@@ -866,10 +885,13 @@ const toPublic = (eventId: string) =>
               Number
             ),
           waiting: sql<number>`count(*) filter (where ${attendees.status} = 'waitlisted')`.mapWith(Number),
+          attending: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+          came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
         })
         .from(attendees)
         .where(and(eq(attendees.eventId, eventId), eq(attendees.source, "owu")))
     );
+    const over = event.endDate.getTime() <= Date.now();
     const [board] = yield* query((db) =>
       db.select({ id: schedules.id }).from(schedules).where(eq(schedules.openSpaceId, eventId)).limit(1)
     );
@@ -919,12 +941,17 @@ const toPublic = (eventId: string) =>
       questions: event.questions,
       taken: seats?.taken ?? 0,
       waiting: seats?.waiting ?? 0,
+      attending: seats?.attending ?? 0,
+      // "Fueron 31": counted at the door, so only when the door was used
+      came: over && (seats?.came ?? 0) > 0 ? (seats?.came ?? 0) : null,
+      cancelReason: event.status === "cancelled" ? event.cancelReason : "",
+      volunteerRoles: event.volunteerRoles,
       hasBoard: Boolean(board),
       community: { slug: community.slug, name: community.name, logoUrl: community.logoUrl },
       cohosts: yield* acceptedCohosts(event.id),
       meetupUrl: event.externalLinks.meetup ?? null,
       // Recordings and slides once it's over, like the page shows them
-      materials: event.endDate.getTime() <= Date.now() ? event.materials : [],
+      materials: over ? event.materials : [],
       talks: event.talks.filter((talk) => talk.title.trim()),
       going: (yield* query((db) =>
         db
@@ -1007,7 +1034,7 @@ export const stats = (eventId: string) =>
     const { communityId } = yield* CommunityScope;
     const [event] = yield* query((db) =>
       db
-        .select({ capacity: events.capacity, startDate: events.startDate })
+        .select({ capacity: events.capacity, startDate: events.startDate, questions: events.questions })
         .from(events)
         .where(and(eq(events.id, eventId), eq(events.communityId, communityId)))
     );
@@ -1066,14 +1093,60 @@ export const stats = (eventId: string) =>
               Number
             ),
           checkedIn: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
+          guests:
+            sql<number>`coalesce(sum(${attendees.guests}) filter (where ${attendees.status} = 'attending'), 0)`.mapWith(
+              Number
+            ),
+          offered: sql<number>`count(*) filter (where ${attendees.status} = 'offered')`.mapWith(Number),
+          waitlisted: sql<number>`count(*) filter (where ${attendees.status} = 'waitlisted')`.mapWith(Number),
+          confirmed:
+            sql<number>`count(*) filter (where ${attendees.status} = 'attending' and ${attendees.confirmedAt} is not null)`.mapWith(
+              Number
+            ),
+          missed:
+            sql<number>`count(*) filter (where ${attendees.status} = 'attending' and ${attendees.checkedInAt} is null)`.mapWith(
+              Number
+            ),
         })
         .from(attendees)
         .where(eq(attendees.eventId, eventId))
     );
+    const counts = row ?? {
+      taken: 0,
+      attending: 0,
+      waiting: 0,
+      pending: 0,
+      cancelled: 0,
+      checkedIn: 0,
+      guests: 0,
+      offered: 0,
+      waitlisted: 0,
+      confirmed: 0,
+      missed: 0,
+    };
+    // The food counts what the people with a seat answered to the diet question
+    const answers = yield* query((db) =>
+      db
+        .select({ answers: attendees.answers })
+        .from(attendees)
+        .where(and(eq(attendees.eventId, eventId), eq(attendees.status, "attending")))
+    );
+    const diets = dietTally(
+      event.questions,
+      answers.map((entry) => entry.answers)
+    );
+    const show = yield* showUpOf(communityId);
+    const expected = expectedTurnout({ ...counts, showRate: show.rate });
 
     return {
       capacity: event.capacity,
-      ...(row ?? { taken: 0, attending: 0, waiting: 0, pending: 0, cancelled: 0, checkedIn: 0 }),
+      ...counts,
+      turnout: {
+        ...expected,
+        events: show.events,
+        food: foodFor(expected.likely, diets),
+        diets,
+      },
       series: seatSeries(seated, new Date(Math.min(Date.now(), event.startDate.getTime()))),
       emails: Object.fromEntries(
         CADENCE_KINDS.map((kind) => {
@@ -1084,75 +1157,6 @@ export const stats = (eventId: string) =>
       doorLink: door?.verb === "door.linked",
     };
   });
-
-const MESSAGE_STATUSES = {
-  attending: ["attending"],
-  waiting: ["waitlisted", "offered"],
-  pending: ["pending"],
-} as const;
-
-/** Write to the event's people (by where they stand). Each gets it once, whoever clicks twice. */
-export const message = (input: {
-  eventId: string;
-  to: ("attending" | "waiting" | "pending")[];
-  ids?: string[];
-  subject: string;
-  body: string;
-}) =>
-  transaction(
-    Effect.gen(function* () {
-      const { communityId } = yield* CommunityScope;
-      const event = yield* editableOf(input.eventId);
-      if (!(yield* belongs(input.eventId, communityId))) return yield* notFound;
-      const statuses = input.to.flatMap((key) => MESSAGE_STATUSES[key]);
-      const people = yield* query((db) =>
-        db
-          .select({ id: attendees.id, email: attendees.email })
-          .from(attendees)
-          .where(
-            and(
-              eq(attendees.eventId, input.eventId),
-              inArray(attendees.status, statuses),
-              input.ids ? inArray(attendees.id, input.ids) : undefined
-            )
-          )
-      );
-      const [community] = yield* query((db) =>
-        db.select({ name: communities.name }).from(communities).where(eq(communities.id, communityId))
-      );
-      const fingerprint = createHash("sha256").update(`${input.subject}\n${input.body}`).digest("hex").slice(0, 16);
-      let sent = 0;
-      for (const person of people.filter((row) => row.email)) {
-        // Whoever turned off reminders doesn't get these either; the rest can, in one click
-        const optOut = yield* optionalMail(person.email);
-        if (!optOut) continue;
-        yield* enqueueEmail({
-          kind: "event_message",
-          to: person.email,
-          dedupeKey: `event_message:${input.eventId}:${fingerprint}:${person.id}`,
-          headers: optOut.headers,
-          ...eventMessageEmail({
-            community: community?.name ?? "",
-            event: event.name,
-            subject: input.subject,
-            body: input.body,
-            pageUrl: appUrl(eventPagePath(event.communitySlug, event.slug)),
-            unsubscribeUrl: optOut.url,
-          }),
-        });
-        sent += 1;
-      }
-      yield* recordActivity({
-        eventId: input.eventId,
-        verb: "event.messaged",
-        entityType: "event",
-        entityId: input.eventId,
-        summary: `escribió a ${sent} ${sent === 1 ? "persona" : "personas"}: «${input.subject}»`,
-      });
-
-      return { sent };
-    })
-  );
 
 /** OWU's own published events still ahead, soonest first: GET /api/v1/events/upcoming. */
 export const upcoming = query((db) =>
@@ -1194,28 +1198,34 @@ export const upcoming = query((db) =>
  */
 export const showUp = Effect.gen(function* () {
   const { communityId } = yield* CommunityScope;
-  const rows = yield* query((db) =>
-    db
-      .select({
-        seated: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
-        came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
-      })
-      .from(attendees)
-      .innerJoin(events, eq(events.id, attendees.eventId))
-      .where(
-        and(
-          eq(events.communityId, communityId),
-          eq(events.status, "published"),
-          eq(attendees.source, "owu"),
-          lt(events.endDate, new Date()),
-          gt(events.endDate, new Date(Date.now() - 548 * DAY_MS))
-        )
-      )
-      .groupBy(attendees.eventId)
-  );
-  const counted = rows.filter((row) => row.came > 0 && row.seated > 0);
-  const seated = counted.reduce((sum, row) => sum + row.seated, 0);
-  const came = counted.reduce((sum, row) => sum + row.came, 0);
 
-  return { rate: counted.length >= 3 ? Math.min(1, came / seated) : null, events: counted.length };
+  return yield* showUpOf(communityId);
 });
+
+const showUpOf = (communityId: string) =>
+  Effect.gen(function* () {
+    const rows = yield* query((db) =>
+      db
+        .select({
+          seated: sql<number>`count(*) filter (where ${attendees.status} = 'attending')`.mapWith(Number),
+          came: sql<number>`count(*) filter (where ${attendees.checkedInAt} is not null)`.mapWith(Number),
+        })
+        .from(attendees)
+        .innerJoin(events, eq(events.id, attendees.eventId))
+        .where(
+          and(
+            eq(events.communityId, communityId),
+            eq(events.status, "published"),
+            eq(attendees.source, "owu"),
+            lt(events.endDate, new Date()),
+            gt(events.endDate, new Date(Date.now() - 548 * DAY_MS))
+          )
+        )
+        .groupBy(attendees.eventId)
+    );
+    const counted = rows.filter((row) => row.came > 0 && row.seated > 0);
+    const seated = counted.reduce((sum, row) => sum + row.seated, 0);
+    const came = counted.reduce((sum, row) => sum + row.came, 0);
+
+    return { rate: counted.length >= 3 ? Math.min(1, came / seated) : null, events: counted.length };
+  });

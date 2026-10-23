@@ -12,11 +12,15 @@ import {
   EditableEventSchema,
   EventBySlugSchema,
   EventRefSchema,
+  EventMessageSchema,
   EventStatsSchema,
   HoldResultSchema,
   HoldSchema,
   ListEventsSchema,
+  MessageRefSchema,
   MessageSchema,
+  MessageTestSchema,
+  ScheduleMessageSchema,
   OrganizerEventSchema,
   PublicEventSchema,
   PublishResultSchema,
@@ -28,6 +32,7 @@ import {
 import * as Door from "../door/service";
 import { DoorLinkSchema } from "../door/schemas";
 import * as Cohosts from "./cohosts";
+import * as Messages from "./messages";
 import * as Events from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Organizer events"], summary });
@@ -41,6 +46,12 @@ const publishLimit = ratelimit({
 
 const messageLimit = ratelimit({
   limiter: limiter({ prefix: "event-message:", maxRequests: 10, window: 86_400_000 }),
+  key: ({ context }: { context: AuthedContext }) => context.user.id,
+});
+
+/** Tests go to the organizer alone: enough to iterate on a text, not to spam oneself. */
+const messageTestLimit = ratelimit({
+  limiter: limiter({ prefix: "event-message-test:", maxRequests: 20, window: 3_600_000 }),
   key: ({ context }: { context: AuthedContext }) => context.user.id,
 });
 
@@ -197,13 +208,51 @@ export const eventsRouter = {
     }),
 
   message: authed
-    .meta(docs("Write to the event's people, by where they stand"))
+    .meta(docs("Write to the event's people, by where they stand or whether they came"))
     .input(MessageSchema)
     .use(inCommunity("event:message"))
     .use(messageLimit)
     .output(z.object({ sent: z.number() }))
     .effect(function* ({ input }) {
-      return yield* Events.message(input);
+      return yield* Messages.message(input);
+    }),
+
+  scheduleMessage: authed
+    .meta(docs("Write to the event's people at a set time: the tick sends it"))
+    .input(ScheduleMessageSchema)
+    .use(inCommunity("event:message"))
+    .use(messageLimit)
+    .output(EventMessageSchema)
+    .effect(function* ({ input }) {
+      return yield* Messages.schedule(input);
+    }),
+
+  cancelMessage: authed
+    .meta(docs("Call off a scheduled message before it goes out"))
+    .input(MessageRefSchema)
+    .use(inCommunity("event:message"))
+    .output(EventMessageSchema)
+    .effect(function* ({ input }) {
+      return yield* Messages.cancelScheduled(input);
+    }),
+
+  messages: authed
+    .meta(docs("The event's messages: sent, scheduled and called off, newest first"))
+    .input(EventRefSchema)
+    .use(inCommunity("event:message"))
+    .output(z.array(EventMessageSchema))
+    .effect(function* ({ input }) {
+      return yield* Messages.list(input.eventId);
+    }),
+
+  messageTest: authed
+    .meta(docs("The message as written, to the organizer asking only, marked [Prueba]"))
+    .input(MessageTestSchema)
+    .use(inCommunity("event:message"))
+    .use(messageTestLimit)
+    .output(z.object({ to: z.string() }))
+    .effect(function* ({ input }) {
+      return yield* Messages.test(input);
     }),
 
   doorLink: authed

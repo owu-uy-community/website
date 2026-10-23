@@ -102,7 +102,14 @@ export const QuestionSchema = z.object({
   id: z.string().min(1).max(20),
   label: z.string().trim().min(1).max(200),
   required: z.boolean(),
+  /** One Organizá reads (lib/organizar/presets): diet for the food, photos at the door, the ID (sensitive) */
+  preset: z.enum(["dieta", "accesibilidad", "foto", "ci"]).optional(),
+  /** Pick one of these instead of typing */
+  options: z.array(z.string().trim().min(1).max(60)).max(8).optional(),
 });
+
+/** The hands an event asks attendees for */
+export const VolunteerRoleSchema = z.enum(["recepcion", "puerta", "comida", "fotos", "mc", "cierre"]);
 
 /** A recording, slides or a link, for the public page once the event is over. */
 export const MaterialSchema = z.object({
@@ -128,6 +135,8 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
       address: z.string(),
       /** Access and AV notes, for the team */
       facts: VenueFactsSchema,
+      /** The building asks for a list of IDs: the sign-up can ask for the cédula */
+      idRequired: z.boolean(),
     })
     .nullable(),
   placeName: z.string().nullable(),
@@ -158,6 +167,14 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
     })
   ),
   reminderNote: z.string().nullable(),
+  /** A second "¿Seguís viniendo?" 24 h before, to people who didn't answer "Voy" */
+  confirmPing: z.boolean(),
+  /** The hands it asks attendees for on the RSVP card */
+  volunteerRoles: z.array(VolunteerRoleSchema),
+  /** The community's setting: a friendly note after someone's second silent no-show */
+  noShowNudge: z.boolean(),
+  /** Why it was cancelled */
+  cancelReason: z.string(),
   materials: z.array(MaterialSchema),
   /** Other communities organizing it; an invited one shows on its profile once it accepts */
   cohosts: z.array(
@@ -204,6 +221,11 @@ export const DraftPatchSchema = z
     announcement: AnnouncementSchema,
     /** In the 48 h and 2 h reminders: how to get in, what to bring */
     reminderNote: z.string().trim().max(500).nullable(),
+    confirmPing: z.boolean(),
+    volunteerRoles: z
+      .array(VolunteerRoleSchema)
+      .max(6)
+      .transform((roles) => [...new Set(roles)]),
     materials: z.array(MaterialSchema).max(10),
     /** The other communities organizing it (ids), up to 3 */
     cohosts: z.array(z.string().min(1)).max(3),
@@ -232,7 +254,10 @@ export const PublishResultSchema = z.object({ event: EditableEventSchema, path: 
 /** Publish later by itself (null takes the schedule back) */
 export const SchedulePublishSchema = EventRefSchema.extend({ publishAt: z.iso.datetime().nullable() });
 
-export const CancelEventSchema = EventRefSchema.extend({ reason: z.string().trim().max(500).default("") });
+/** The reason is required: the attendees' email and the public page say it. */
+export const CancelEventSchema = EventRefSchema.extend({
+  reason: z.string().trim().min(3, "Contá en una línea por qué se cancela: les llega a quienes se anotaron").max(500),
+});
 
 export type EditableEvent = z.infer<typeof EditableEventSchema>;
 export type DraftPatch = z.infer<typeof DraftPatchSchema>;
@@ -278,6 +303,14 @@ export const PublicEventSchema = z.object({
   /** Seats taken (with +1s) and people waiting, for "quedan 12" */
   taken: z.number(),
   waiting: z.number(),
+  /** People with a seat (anotados, without their +1s) */
+  attending: z.number(),
+  /** How many came in, once it's over and only when the door was used */
+  came: z.number().nullable(),
+  /** Why it was cancelled ("" when it wasn't, or nobody said) */
+  cancelReason: z.string(),
+  /** The hands it asks for: the RSVP card offers them */
+  volunteerRoles: z.array(VolunteerRoleSchema),
   /** It has an open-space board (rooms and slots) */
   hasBoard: z.boolean(),
   community: z.object({ slug: z.string(), name: z.string(), logoUrl: z.string().nullable() }),
@@ -333,15 +366,41 @@ export type PublicEvent = z.infer<typeof PublicEventSchema>;
 /** Of the people with a seat, the share that came; null until the community has 3 events with check-in. */
 export const ShowUpSchema = z.object({ rate: z.number().nullable(), events: z.number() });
 
+/** "Cuántos esperamos" and "Comida para ~N", each with what it's based on */
+export const TurnoutSchema = z.object({
+  low: z.number(),
+  likely: z.number(),
+  high: z.number(),
+  rate: z.number(),
+  /** The rate is the community's own (3+ events with the door); else the 55% default */
+  fromHistory: z.boolean(),
+  /** Events the community's rate comes from */
+  events: z.number(),
+  food: z.object({ pizzas: z.number(), veggie: z.number(), glutenFree: z.number(), drinks: z.number() }),
+  /** Answers to the diet question among the people with a seat */
+  diets: z.object({ vegetarian: z.number(), glutenFree: z.number(), answered: z.number() }),
+});
+
 export const EventStatsSchema = z.object({
   capacity: z.number().nullable(),
   /** Seats taken, with +1s */
   taken: z.number(),
   attending: z.number(),
+  /** Waitlisted plus offered (kept for older screens); the split is below */
   waiting: z.number(),
   pending: z.number(),
   cancelled: z.number(),
   checkedIn: z.number(),
+  /** The +1s of the people with a seat */
+  guests: z.number(),
+  /** Seats offered to the waitlist and not taken yet */
+  offered: z.number(),
+  waitlisted: z.number(),
+  /** Of the people with a seat, those who answered "Voy" */
+  confirmed: z.number(),
+  /** Had a seat and didn't come in (only meaningful once the door was used) */
+  missed: z.number(),
+  turnout: TurnoutSchema,
   /** Seats taken (with +1s) at the end of each day with sign-ups, Montevideo days, oldest first */
   series: z.array(z.object({ day: z.string(), total: z.number() })),
   /** The automatic emails so far, per kind: sent, and still in the queue */
@@ -356,13 +415,51 @@ export const EventStatsSchema = z.object({
 export type EventStats = z.infer<typeof EventStatsSchema>;
 export type Material = z.infer<typeof MaterialSchema>;
 
+/**
+ * Who a message goes to: by where they stand now, and after the event by whether they came
+ * ("came" and "missed" only once the door was used) or waited without getting in.
+ */
+export const AudienceSchema = z.enum(["attending", "waiting", "pending", "came", "missed", "waitlist-left"]);
+export type Audience = z.infer<typeof AudienceSchema>;
+
+const Subject = z.string().trim().min(3).max(120);
+const Body = z.string().trim().min(10).max(5000);
+
 export const MessageSchema = z.object({
   communityId: z.string().min(1),
   eventId: z.string().min(1),
-  /** Who gets it, by where they stand */
-  to: z.array(z.enum(["attending", "waiting", "pending"])).min(1),
+  /** Who gets it */
+  to: z.array(AudienceSchema).min(1),
   /** Only these people (a selection in Inscriptos), still within `to` */
   ids: z.array(z.string().min(1)).min(1).max(500).optional(),
-  subject: z.string().trim().min(3).max(120),
-  body: z.string().trim().min(10).max(5000),
+  subject: Subject,
+  body: Body,
 });
+
+/** Send it later by itself (the tick sends what's due) */
+export const ScheduleMessageSchema = EventRefSchema.extend({
+  to: AudienceSchema,
+  subject: Subject,
+  body: Body,
+  sendAt: z.iso.datetime(),
+});
+
+/** The message as written, to the organizer only, marked [Prueba] */
+export const MessageTestSchema = EventRefSchema.extend({ subject: Subject, body: Body });
+
+export const MessageRefSchema = EventRefSchema.extend({ messageId: z.string().min(1) });
+
+/** A message in the event's log: sent, waiting for its time, or called off */
+export const EventMessageSchema = z.object({
+  id: z.string(),
+  audience: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  status: z.enum(["scheduled", "sending", "sent", "cancelled"]),
+  sendAt: z.string(),
+  sentAt: z.string().nullable(),
+  recipients: z.number(),
+  by: z.string().nullable(),
+});
+
+export type EventMessage = z.infer<typeof EventMessageSchema>;

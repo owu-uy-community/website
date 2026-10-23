@@ -18,6 +18,8 @@ const Filters = z.object({
   ticket: z.array(z.string().max(120)).max(30).default([]),
   /** Tags: any of them. */
   tag: z.array(tag).max(30).default([]),
+  /** "no": people with a seat who haven't answered "Voy" (and aren't in yet) */
+  confirmed: z.enum(["yes", "no"]).optional(),
 });
 
 export const ListAttendeesSchema = Filters.extend({
@@ -89,6 +91,21 @@ export const NOT_ATTENDING_LABEL: Record<Exclude<z.infer<typeof AttendeeStatusSc
 };
 export const CheckinSourceSchema = z.enum(["eventbrite", "owu"]);
 
+/**
+ * Someone's attendance in the community before this event (lib/organizar/attendance). Private to
+ * the community's organizers: never on public pages, never to hosts.
+ */
+export const HistorySchema = z.object({
+  attended: z.number(),
+  noShows: z.number(),
+  lateReleases: z.number(),
+  excused: z.number(),
+  seated: z.number(),
+});
+
+/** An answer to a sign-up question, with the question's label (the ID only for community admins) */
+export const AnswerSchema = z.object({ label: z.string(), value: z.string() });
+
 export const AttendeeSchema = z.object({
   id: z.string(),
   /** Null for OWU's own RSVPs. */
@@ -107,6 +124,16 @@ export const AttendeeSchema = z.object({
   tags: z.array(z.string()),
   /** Times OWU's scanner read this ticket again after it was used. */
   repeatScans: z.number(),
+  // Organizá's list only (attendees.list for the community's organizers): never at the door or in /admin
+  /** Their +1s */
+  guests: z.number().optional(),
+  /** When they answered "Voy" to the reminder */
+  confirmedAt: z.string().nullable().optional(),
+  /** The team took their place, or marked that they said they couldn't come */
+  excused: z.boolean().optional(),
+  answers: z.array(AnswerSchema).optional(),
+  volunteerRoles: z.array(z.string()).optional(),
+  history: HistorySchema.nullable().optional(),
 });
 
 const Count = z.object({ value: z.string(), count: z.number() });
@@ -127,6 +154,17 @@ export const AttendeeListSchema = z.object({
   facets: z.object({ status: PresenceCounts, tickets: z.array(Count), tags: z.array(Count) }),
   /** The whole event, no filters. */
   totals: PresenceCounts,
+  /** Organizá's list: the numbers headcount() labels (lugares, anotados, en espera) */
+  headcount: z
+    .object({
+      attending: z.number(),
+      guests: z.number(),
+      offered: z.number(),
+      waitlisted: z.number(),
+      pending: z.number(),
+      confirmed: z.number(),
+    })
+    .optional(),
 });
 
 export const ExportSchema = z.object({ filename: z.string(), csv: z.string(), count: z.number() });
@@ -186,7 +224,14 @@ export const ScanResultSchema = z.object({
     checkedInAt: true,
     checkinSource: true,
     checkinDevice: true,
-  }).nullable(),
+  })
+    .extend({
+      /** Their first time with the community: the door greets them (derived, never asked) */
+      firstTime: z.boolean().optional(),
+      /** "Sin fotos" / "Fotos: preguntar antes", from the photo question */
+      photo: z.string().nullable().optional(),
+    })
+    .nullable(),
 });
 
 // ---------------------------------------------------------------------------

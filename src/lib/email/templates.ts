@@ -318,7 +318,27 @@ export type RsvpEmailKind =
   | "reminder_2h"
   | "updated"
   | "event_cancelled"
-  | "feedback";
+  | "feedback"
+  | "confirm_ping";
+
+/** Another OWU event soon, for the reminders' footer */
+export type OtherEvent = { name: string; community: string; when: string; url: string };
+
+/** "Otros eventos de OWU esta semana": at the bottom of the reminders, at most three. */
+export function othersBlock(others: OtherEvent[]) {
+  if (others.length === 0) return { html: "", text: "" };
+
+  return {
+    html: `<p style="margin:28px 0 8px;font-size:13px;font-weight:700;color:#52525b">Otros eventos de OWU esta semana</p>
+<ul style="margin:0;padding-left:18px;font-size:14px;color:#52525b">${others
+      .map(
+        (other) =>
+          `<li style="margin:0 0 6px"><a href="${esc(other.url)}" style="color:#18181b">${esc(other.name)}</a> · ${esc(other.community)} · ${esc(other.when)}</li>`
+      )
+      .join("")}</ul>`,
+    text: `Otros eventos de OWU esta semana:\n${others.map((other) => `- ${other.name} (${other.community}), ${other.when}: ${other.url}`).join("\n")}`,
+  };
+}
 
 /** One RSVP email: what happened, what the event is, and the link that does the next thing. */
 export function rsvpEmail(input: {
@@ -341,9 +361,21 @@ export function rsvpEmail(input: {
   note?: string | null;
   /** Reminders and feedback can be turned off; the rest is essential */
   unsubscribeUrl?: string | null;
+  /** The reminders' one-tap answers: signed links to the ticket page, which asks once more and POSTs */
+  confirmUrl?: string | null;
+  releaseUrl?: string | null;
+  /** People waiting for a seat now: the reminder names what a freed seat is worth */
+  waiting?: number;
+  /** Other OWU events in the next 7 days, at the bottom of the reminders */
+  others?: OtherEvent[];
+  /** Why the event was cancelled, in the team's words */
+  reason?: string | null;
 }): Omit<Email, "to"> {
   const hi = input.name ? `Hola ${input.name.split(" ")[0]},` : "Hola,";
   const facts = `${input.when} · ${input.place}`;
+  const cost = input.waiting
+    ? `Hay ${input.waiting === 1 ? "1 persona" : `${input.waiting} personas`} en lista de espera; si no podés, liberá tu lugar.`
+    : "Si no podés, liberá tu lugar así lo sabemos.";
   const copy: Record<RsvpEmailKind, { subject: string; lead: string; action?: [string, string] }> = {
     confirmed: {
       subject: `Estás anotado: ${input.event}`,
@@ -380,7 +412,12 @@ export function rsvpEmail(input: {
     },
     reminder_48h: {
       subject: `Pasado mañana: ${input.event}. ¿Seguís yendo?`,
-      lead: `${input.event} es en dos días. Si al final no podés, liberá tu lugar: hay gente en la lista de espera que lo aprovecha.`,
+      lead: `${input.event} es en dos días. ¿Seguís yendo? ${cost}`,
+      action: ["Ver mi entrada", input.ticketUrl],
+    },
+    confirm_ping: {
+      subject: `¿Seguís viniendo a ${input.event}? Es mañana`,
+      lead: `${input.event} es mañana y todavía no nos dijiste si venís. ${cost}`,
       action: ["Ver mi entrada", input.ticketUrl],
     },
     reminder_2h: {
@@ -418,10 +455,14 @@ export function rsvpEmail(input: {
   const seat =
     input.kind === "confirmed" || input.kind === "promoted" || input.kind === "reminder_2h" || input.kind === "updated";
   const note = (input.kind === "reminder_48h" || input.kind === "reminder_2h") && input.note ? input.note : null;
+  const reason = input.kind === "event_cancelled" && input.reason?.trim() ? input.reason.trim() : null;
   const extra = [
     seat && input.onlineUrl ? `Link para conectarte: ${input.onlineUrl}` : "",
     seat ? "Si no podés ir, liberá tu lugar desde la entrada: alguien de la lista de espera lo aprovecha." : "",
   ].filter(Boolean);
+  // "Voy" and "No puedo ir" a tap away; each opens the ticket page, which asks once more and POSTs
+  const answers = input.confirmUrl && input.releaseUrl ? { voy: input.confirmUrl, libero: input.releaseUrl } : null;
+  const others = othersBlock(input.others ?? []);
 
   return {
     subject,
@@ -430,19 +471,34 @@ export function rsvpEmail(input: {
       body: `<p style="margin:0 0 16px">${esc(hi)}</p>
 <p style="margin:0 0 16px">${esc(lead)}</p>
 <p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px"><strong>${esc(input.event)}</strong><br>${esc(facts)}</p>
+${reason ? `<p style="margin:0 0 16px;padding:12px;border-left:3px solid #F5BB03;background:#fffbeb;white-space:pre-line"><strong>Por qué:</strong><br>${esc(reason)}</p>` : ""}
 ${note ? `<p style="margin:0 0 16px;padding:12px;border-left:3px solid #F5BB03;background:#fffbeb;white-space:pre-line"><strong>${esc(input.community)} te avisa:</strong><br>${esc(note)}</p>` : ""}
 ${seat && input.qrUrl ? `<p style="margin:0 0 16px;text-align:center"><img alt="Código QR de tu entrada" height="180" src="${esc(input.qrUrl)}" style="border-radius:8px" width="180"></p>` : ""}
 ${extra.map((line) => `<p style="margin:0 0 12px;color:#52525b">${esc(line)}</p>`).join("")}
-${action ? `<p style="margin:8px 0 0">${button(action[1], action[0])}</p>` : ""}
+${
+  answers
+    ? `<p style="margin:8px 0 0">${button(answers.voy, "Voy ✅")} <a href="${esc(answers.libero)}" style="display:inline-block;margin:8px 0 0 4px;color:#18181b;font-weight:600;text-decoration:none;padding:9px 16px;border-radius:8px;border:1px solid #d4d4d8">No puedo ir · liberar mi lugar</a></p>
+<p style="margin:12px 0 0;font-size:13px"><a href="${esc(input.ticketUrl)}" style="color:#52525b">Ver mi entrada</a></p>`
+    : action
+      ? `<p style="margin:8px 0 0">${button(action[1], action[0])}</p>`
+      : ""
+}
+${others.html}
 ${input.unsubscribeUrl ? `<p style="margin:24px 0 0;font-size:12px;color:#a1a1aa">¿No querés recordatorios? <a href="${esc(input.unsubscribeUrl)}" style="color:#a1a1aa">Dejá de recibirlos</a>.</p>` : ""}`,
     }),
     text: [
       hi,
       lead,
       `${input.event}\n${facts}`,
+      reason ? `Por qué: ${reason}` : "",
       note ? `${input.community} te avisa: ${note}` : "",
       ...extra,
-      action ? `${action[0]}: ${action[1]}` : "",
+      answers
+        ? `Voy: ${answers.voy}\nNo puedo ir · liberar mi lugar: ${answers.libero}\nVer mi entrada: ${input.ticketUrl}`
+        : action
+          ? `${action[0]}: ${action[1]}`
+          : "",
+      others.text,
       input.unsubscribeUrl ? `Dejar de recibir recordatorios: ${input.unsubscribeUrl}` : "",
     ]
       .filter(Boolean)
