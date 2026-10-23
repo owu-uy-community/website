@@ -310,7 +310,7 @@ describe("links and contacts", () => {
     expect(JSON.stringify([mine, listed])).not.toContain(venue.contact?.email);
   });
 
-  test("«esta persona ya no está»: the request goes to the space's other contact; with nobody left, it closes", async () => {
+  test("«esta persona ya no está» asks staff to check, and re-sends only this request to the space's other contact", async () => {
     const { community, editor } = await setup();
     const venue = await makeVenue();
     const asked = await call(
@@ -330,13 +330,20 @@ describe("links and contacts", () => {
       call(router.venues.contactLeft, { communityId: community.id, requestId: asked.id }, by(editor))
     ).resolves.toStrictEqual({ remaining: 1 });
     const contacts = await db.select().from(venueContacts).where(eq(venueContacts.venueId, venue.id));
-    expect(contacts.find((contact) => contact.email === venue.contact?.email)?.leftAt).toBeInstanceOf(Date);
+    // Flagged for staff, not marked gone: one organizer can't take a contact (or a space) off for everyone
+    expect(contacts.find((contact) => contact.email === venue.contact?.email)).toMatchObject({
+      leftAt: null,
+      leftReportedAt: expect.any(Date),
+    });
     await expect(mail(second.email, "venue_request")).resolves.toHaveLength(1);
 
-    await call(router.venues.contactLeft, { communityId: community.id, requestId: asked.id }, by(editor));
-    await expect(requestRow(asked.id)).resolves.toMatchObject([{ status: "cancelled" }]);
+    // With nobody else to ask, the request stays as it is and the space stays open to other communities
+    await expect(
+      call(router.venues.contactLeft, { communityId: community.id, requestId: asked.id }, by(editor))
+    ).resolves.toStrictEqual({ remaining: 0 });
+    await expect(requestRow(asked.id)).resolves.toMatchObject([{ status: "pending" }]);
     await expect(db.select().from(venues).where(eq(venues.id, venue.id))).resolves.toMatchObject([
-      { requestable: false },
+      { requestable: true },
     ]);
   });
 

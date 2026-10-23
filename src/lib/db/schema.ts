@@ -1599,8 +1599,10 @@ export const venueContacts = pgTable(
     lastConfirmedAt: ts("lastConfirmedAt"),
     /** Mail to them bounced */
     bouncedAt: ts("bouncedAt"),
-    /** An organizer or staff marked them as gone from the company */
+    /** Staff confirmed they're gone from the company: no request goes to them */
     leftAt: ts("leftAt"),
+    /** An organizer said they're gone: staff check it (only staff set `leftAt`) */
+    leftReportedAt: ts("leftReportedAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },
   (t) => [

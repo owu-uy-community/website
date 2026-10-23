@@ -27,6 +27,8 @@ describe(isStale, () => {
   test("a bounce or someone who left is stale however recent the confirmation", () => {
     expect(isStale(contact({ bouncedAt: daysAgo(1) }), NOW)).toBe(true);
     expect(isStale(contact({ leftAt: daysAgo(1) }), NOW)).toBe(true);
+    // An organizer's report waits for staff, but already counts as "sin verificar"
+    expect(isStale(contact({ leftReportedAt: daysAgo(1) }), NOW)).toBe(true);
   });
 });
 
@@ -35,6 +37,9 @@ describe(staleReason, () => {
     expect(staleReason(contact(), NOW)).toBeNull();
     expect(staleReason(contact({ leftAt: daysAgo(1), bouncedAt: daysAgo(1) }), NOW)).toBe("Ya no está en la empresa");
     expect(staleReason(contact({ bouncedAt: daysAgo(1) }), NOW)).toBe("Rebotó el mail");
+    expect(staleReason(contact({ leftReportedAt: daysAgo(1) }), NOW)).toBe(
+      "Una comunidad avisó que ya no está: confirmalo"
+    );
     expect(staleReason(contact({ lastConfirmedAt: daysAgo(300) }), NOW)).toBe("Sin confirmar hace más de 6 meses");
   });
 });

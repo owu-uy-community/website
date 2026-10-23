@@ -537,7 +537,7 @@ export function RequestList({
           "Gracias por avisar",
           remaining > 0
             ? "Le reenviamos el pedido a otra persona del espacio. El staff de OWU revisa el contacto."
-            : "No queda otra persona: el staff de OWU busca un contacto nuevo. Probá con otro espacio."
+            : "No hay otra persona en el espacio: le avisamos al staff de OWU. Mientras, probá con otro espacio."
         );
         changed();
       },

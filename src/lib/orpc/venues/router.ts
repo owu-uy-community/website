@@ -42,6 +42,11 @@ const requestLimit = ratelimit({
   limiter: limiter({ prefix: "venue-request:", maxRequests: 5, window: 86_400_000 }),
   key: byUser,
 });
+/** Reporting a contact gone is rare; ten a day per person stops anyone flagging the whole directory. */
+const reportLimit = ratelimit({
+  limiter: limiter({ prefix: "venue-contact-left:", maxRequests: 10, window: 86_400_000 }),
+  key: byUser,
+});
 const submitLimit = ratelimit({
   limiter: limiter({ prefix: "venue-submit:", maxRequests: 3, window: 86_400_000 }),
   key: byUser,
@@ -132,9 +137,12 @@ export const venuesRouter = {
     }),
 
   contactLeft: authed
-    .meta(docs("Esta persona ya no está: the contact is marked gone and the request goes to the space's others"))
+    .meta(
+      docs("Esta persona ya no está: staff are asked to check the contact, and the request goes to the space's others")
+    )
     .input(ContactLeftSchema)
     .use(inCommunity("venue:request"))
+    .use(reportLimit)
     .output(z.object({ remaining: z.number() }))
     .effect(function* ({ input }) {
       return yield* Venues.contactLeft(input);

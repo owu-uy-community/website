@@ -1103,29 +1103,30 @@ export const contactLeft = (input: { requestId: string; contactId?: string }) =>
         ? shownContact(row, contacts)?.id === input.contactId
           ? contacts.find((contact) => contact.id === input.contactId)
           : undefined
-        : (contacts.find((contact) => contact.id === row.answeredById && isActive(contact)) ??
+        : (contacts.find(
+            (contact) => contact.id === row.answeredById && isActive(contact) && !contact.leftReportedAt
+          ) ??
           contacts
-            .filter(isActive)
+            .filter((contact) => isActive(contact) && !contact.leftReportedAt)
             .toSorted(
               (a, b) => (b.lastConfirmedAt ?? b.consentAt).getTime() - (a.lastConfirmedAt ?? a.consentAt).getTime()
             )[0]);
       if (!target)
         return yield* new NotFound({ entity: "venue_contact", message: "Esa persona no está en este pedido" });
-      if (target.leftAt) return { remaining: contacts.filter(isActive).length };
 
-      yield* query((db) => db.update(venueContacts).set({ leftAt: new Date() }).where(eq(venueContacts.id, target.id)));
-      const remaining = contacts.filter((contact) => contact.id !== target.id && isActive(contact));
-      const [venue] = yield* query((db) => db.select().from(venues).where(eq(venues.id, row.venueId)));
-      if (remaining.length === 0) {
-        yield* query((db) => db.update(venues).set({ requestable: false }).where(eq(venues.id, row.venueId)));
-        if (row.status === "pending") {
-          yield* query((db) =>
-            db.update(venueRequests).set({ status: "cancelled" }).where(eq(venueRequests.id, row.id))
-          );
-        }
-      } else if (effectiveStatus(row) === "pending") {
-        yield* deliver(row, venue?.name ?? "", remaining);
+      // One organizer's word only flags the contact for staff (it shows as "sin verificar"): marking
+      // them gone or closing the space for every community is staff's call, in /admin.
+      if (!target.leftReportedAt) {
+        yield* query((db) =>
+          db.update(venueContacts).set({ leftReportedAt: new Date() }).where(eq(venueContacts.id, target.id))
+        );
       }
+      const remaining = contacts.filter(
+        (contact) => contact.id !== target.id && isActive(contact) && !contact.leftReportedAt
+      );
+      const [venue] = yield* query((db) => db.select().from(venues).where(eq(venues.id, row.venueId)));
+      // This organizer's own request, still waiting, goes to the space's other people
+      if (remaining.length > 0 && effectiveStatus(row) === "pending") yield* deliver(row, venue?.name ?? "", remaining);
       yield* recordActivity({
         eventId: row.eventId,
         verb: "venue.contact_left",
