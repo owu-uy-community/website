@@ -1,9 +1,14 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
+import { eq } from "drizzle-orm";
 
 import { Panel } from "components/Admin/ui/page";
 import { EmptyState } from "components/Admin/ui/states";
+import { reportPath } from "components/community/event/EventConduct";
 import { DoorClient } from "components/organizar/door/DoorClient";
+import { db } from "lib/db";
+import { communities, events } from "lib/db/schema";
 import { publicCaller } from "lib/orpc/server";
 
 // A door link's own check-in list: rendered per request, allowed to block (Cache Components)
@@ -25,11 +30,30 @@ export default async function DoorPage({ params }: { params: Promise<{ token: st
     (info) => ({ info, problem: null }),
     (error: { code?: string }) => ({ info: null, problem: error.code === "NOT_FOUND" ? "expired" : "failed" })
   );
+  const info = outcome.info;
+  // Volunteers see things at the door: the event's report form, for them too
+  const [event] = info
+    ? await db
+        .select({ slug: events.slug, communitySlug: communities.slug })
+        .from(events)
+        .innerJoin(communities, eq(communities.id, events.communityId))
+        .where(eq(events.id, info.eventId))
+    : [];
 
   return (
     <div className="min-h-svh bg-app text-foreground" data-admin-shell="">
-      {outcome.info ? (
-        <DoorClient info={outcome.info} token={token} />
+      {info ? (
+        <>
+          <DoorClient info={info} token={token} />
+          {event ? (
+            <p className="pb-8 text-center text-meta text-muted-foreground">
+              ¿Pasó algo?{" "}
+              <Link className="underline underline-offset-4" href={reportPath(event.communitySlug, event.slug)}>
+                Reportar un problema de conducta
+              </Link>
+            </p>
+          ) : null}
+        </>
       ) : (
         <main className="mx-auto max-w-md px-4 py-16">
           <Panel>

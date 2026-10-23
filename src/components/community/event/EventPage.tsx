@@ -14,6 +14,7 @@ import { eventJsonLd, googleCalendarUrl, outlookCalendarUrl, safeJson } from "li
 import { RsvpSheet } from "./RsvpSheet";
 import { ShareButton } from "./ShareButton";
 
+import { EventConduct } from "./EventConduct";
 import { EventMaterials } from "./EventMaterials";
 import { EventTalks } from "./EventTalks";
 import { VenueFacts } from "./VenueFacts";
@@ -201,6 +202,7 @@ export function EventPage({
                 ))}
               </p>
             ) : null}
+            <EventConduct event={event} />
           </article>
 
           <aside className="lg:sticky lg:top-24 lg:self-start">

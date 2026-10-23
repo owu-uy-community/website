@@ -25,6 +25,7 @@ import { RSVP_CLOSE_HINT } from "lib/organizar/rules";
 import { headcount, plural } from "lib/organizar/words";
 import { DraftPatchSchema, type EditableEvent, type EventStats } from "lib/orpc/events/schemas";
 
+import { ConductSection } from "./ConductSection";
 import { CancelEventDialog } from "./NotifyDialog";
 import { StaleNotice, useEventSave, type EventInput } from "./save";
 
@@ -229,6 +230,8 @@ export function SettingsTab({
             </Notice>
           )}
         </SettingsSection>
+
+        <ConductSection event={event} />
 
         {canCancel && !cancelled ? (
           <SettingsSection id="peligro" title="Zona peligrosa">

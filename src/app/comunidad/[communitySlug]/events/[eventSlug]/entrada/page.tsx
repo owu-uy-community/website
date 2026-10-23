@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { signInAgain } from "app/lib/auth-helpers";
+import { reportPath } from "components/community/event/EventConduct";
 import { TicketView } from "components/community/event/TicketView";
 import { SiteChrome } from "components/community/SiteChrome";
 import { callerFor, publicCaller } from "lib/orpc/server";
@@ -76,6 +77,12 @@ export default async function TicketPage({
             </p>
           </div>
         )}
+        <p className="mt-6 text-center text-[14px] text-zinc-500">
+          ¿Algo no está bien?{" "}
+          <Link className="text-zinc-300 underline underline-offset-4" href={reportPath(communitySlug, eventSlug)}>
+            Reportar un problema
+          </Link>
+        </p>
       </main>
     </SiteChrome>
   );
