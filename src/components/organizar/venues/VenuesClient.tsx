@@ -43,7 +43,7 @@ import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group"
 import { addDays, daysBetween } from "lib/calendar/holidays";
 import { clockTime, dayKey, shortWhen } from "lib/community/time";
 import { factLines } from "lib/organizar/venue-facts";
-import { rotationLabel, SIZE_PEOPLE, type SizeBucket } from "lib/organizar/venue-fit";
+import { rotationLabel, type SizeBucket } from "lib/organizar/venue-fit";
 import { plural } from "lib/organizar/words";
 import { orpc } from "lib/orpc/client";
 import {
@@ -870,7 +870,7 @@ export function RequestComposer({
         communityId: community.id,
         eventId: eventId === "none" ? undefined : eventId,
         options: rows,
-        size: sizeFor(people || SIZE_PEOPLE["30-60"]),
+        size: sizeFor(people),
         needs,
       },
     }),
