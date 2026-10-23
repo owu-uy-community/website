@@ -1,3 +1,5 @@
+import { STALE_LABEL, type StaleField } from "./repeat";
+
 /** The wizard's steps, in order, and what each still needs. Shared by the panel and `events.publish`. */
 export const STEPS = [
   { key: "tipo", title: "Tipo" },
@@ -31,6 +33,18 @@ export type Checkable = {
   capacity: number | null;
   /** Code-of-conduct responders (team members' ids) */
   responders: string[];
+  /** Copied from an earlier event and not reviewed yet ("Repetir") */
+  staleFields?: readonly StaleField[];
+};
+
+/** Where each copied field is edited in the wizard */
+const STALE_STEP: Record<StaleField, StepKey> = {
+  name: "datos",
+  summary: "datos",
+  description: "datos",
+  talks: "datos",
+  rsvpClosesAt: "inscripcion",
+  reminderNote: "inscripcion",
 };
 
 export type Issue = { step: StepKey; text: string; level: "required" | "recommended" };
@@ -74,10 +88,15 @@ export function issues(event: Checkable, now = Date.now()): Issue[] {
   if (event.registration === "eventbrite" && !event.capacity) {
     need("inscripcion", "Poné el cupo: Eventbrite lo pide para las entradas");
   }
+  // The picker is in Revisar, right under this list
   if (event.responders.length < respondersNeeded(event.capacity)) {
-    need("inscripcion", `Nombrá 2 responsables de conducta (más de ${TWO_RESPONDERS_ABOVE} lugares)`);
+    need("revisar", `Nombrá 2 responsables de conducta (más de ${TWO_RESPONDERS_ABOVE} lugares)`);
   } else if (event.responders.length === 0) {
-    could("inscripcion", "Nombrá a alguien responsable de conducta, a quien acudir si algo no está bien");
+    could("revisar", "Nombrá a alguien responsable de conducta, a quien acudir si algo no está bien");
+  }
+
+  for (const field of event.staleFields ?? []) {
+    could(STALE_STEP[field], `Revisá ${STALE_LABEL[field]}: viene del evento anterior`);
   }
 
   return list;

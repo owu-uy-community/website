@@ -65,6 +65,16 @@ describe(issues, () => {
       required(60, ["ana"]),
       required(null, []),
     ]).toStrictEqual([["required"], [], ["recommended"], [], ["recommended"]]);
-    expect(stepState("inscripcion", issues({ ...ready, capacity: 120, responders: [] }, NOW))).toBe("required");
+    // The picker lives in Revisar, so that's where "Resolver" lands
+    expect(stepState("revisar", issues({ ...ready, capacity: 120, responders: [] }, NOW))).toBe("required");
+  });
+
+  test("fields copied from the last event suggest a look, on the step where they're edited", () => {
+    const list = issues({ ...ready, staleFields: ["name", "rsvpClosesAt"] }, NOW);
+
+    expect(list).toStrictEqual([
+      { step: "datos", text: "Revisá el nombre: viene del evento anterior", level: "recommended" },
+      { step: "inscripcion", text: "Revisá el cierre de inscripción: viene del evento anterior", level: "recommended" },
+    ]);
   });
 });
