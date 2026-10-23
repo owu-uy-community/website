@@ -45,7 +45,10 @@ export function TalkCall() {
     staleTime: 5 * 60_000,
     select: (all) => all.filter((item) => item.listed).map(({ id, name }) => ({ id, name })),
   });
-  const current = draft ?? emptyDraft(user?.name ?? "");
+  // A new account's name can reach the session after they start typing: fill the name until they write one
+  const current = draft
+    ? { ...draft, speakerName: draft.speakerName || user?.name || "" }
+    : emptyDraft(user?.name ?? "");
 
   const goToForm = () => document.getElementById("proponer-form")?.scrollIntoView({ behavior: "smooth" });
   const proposeFor = (request: TalkRequest) => {
