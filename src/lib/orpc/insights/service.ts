@@ -1,4 +1,19 @@
-import { and, asc, count, eq, gt, inArray, isNotNull, lt, max, ne, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  lt,
+  max,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { Effect } from "effect";
 
 import { dayKey } from "../../community/time";
@@ -265,10 +280,11 @@ function summarize(raw: Raw, now = Date.now()) {
   };
 }
 
+/** People who follow the community (or any, for OWU) */
 const followerCount = (communityId: string | null) =>
   query((db) =>
     db
-      .select({ value: count() })
+      .select({ value: countDistinct(communityFollowers.userId) })
       .from(communityFollowers)
       .where(communityId ? eq(communityFollowers.communityId, communityId) : undefined)
   ).pipe(Effect.map(([row]) => row?.value ?? 0));
