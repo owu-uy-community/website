@@ -5,6 +5,8 @@ import { expectAccessible, HOUR, makeOrganizer, makePublishedEvent, makeRegistra
 // One event: 36 people with a seat (two bring a +1), one seat offered, six waiting.
 // Every surface says the same: 39 de 40 lugares · 36 personas anotadas · 6 en espera.
 test("Resumen, Inscriptos, Emails, Ajustes and the public page agree on the numbers", async ({ page, pageFor }) => {
+  // Six surfaces, each checked with axe, over 45 seeded people
+  test.slow();
   const { community } = await makeOrganizer();
   const admin = await makeMember(community.id, "admin");
   const event = await makePublishedEvent(community.id, { capacity: 40 });
