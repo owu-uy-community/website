@@ -14,7 +14,9 @@ import type { CreatePollInput, Poll } from "./schemas";
 
 type PollRow = typeof datePolls.$inferSelect;
 
-const notFound = new NotFound({ entity: "poll", message: "Esa encuesta no existe" });
+const notFound = new NotFound({ entity: "poll", message: "Esa votación no existe" });
+const chosen = new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
+const closed = new Conflict({ reason: "closed", message: "La votación está cerrada: ya no se puede cambiar" });
 
 /** Polls as a community sees them: everyone's answers, by community and day. */
 const viewOf = (polls: PollRow[], communityId: string) =>
@@ -58,6 +60,7 @@ const viewOf = (polls: PollRow[], communityId: string) =>
       })),
       chosenDay: poll.chosenDay,
       eventId: poll.eventId,
+      closedAt: poll.closedAt?.toISOString() ?? null,
       createdAt: poll.createdAt.toISOString(),
     }));
   });
@@ -69,7 +72,12 @@ export const list = Effect.gen(function* () {
     db
       .select()
       .from(datePolls)
-      .where(or(eq(datePolls.communityId, communityId), arrayContains(datePolls.invited, [communityId])))
+      .where(
+        and(
+          isNull(datePolls.deletedAt),
+          or(eq(datePolls.communityId, communityId), arrayContains(datePolls.invited, [communityId]))
+        )
+      )
       .orderBy(desc(datePolls.createdAt))
       .limit(20)
   );
@@ -154,10 +162,18 @@ export const create = (input: Omit<CreatePollInput, "communityId">) =>
 const pollFor = (pollId: string, communityId: string) =>
   Effect.gen(function* () {
     const [poll] = yield* query((db) => db.select().from(datePolls).where(eq(datePolls.id, pollId)).for("update"));
-    if (!poll || (poll.communityId !== communityId && !poll.invited.includes(communityId))) return yield* notFound;
+    if (!poll || poll.deletedAt || (poll.communityId !== communityId && !poll.invited.includes(communityId))) {
+      return yield* notFound;
+    }
 
     return poll;
   });
+
+/** A poll this community asked (only the asker closes, deletes or picks). */
+const ownPoll = (pollId: string, communityId: string) =>
+  Effect.flatMap(pollFor(pollId, communityId), (poll) =>
+    poll.communityId === communityId ? Effect.succeed(poll) : Effect.fail(notFound)
+  );
 
 /** This community's answers (any of its organizers can change them until a date is picked). */
 export const vote = (input: { pollId: string; votes: { day: string; answer: "yes" | "maybe" | "no" }[] }) =>
@@ -166,7 +182,8 @@ export const vote = (input: { pollId: string; votes: { day: string; answer: "yes
       const { communityId } = yield* CommunityScope;
       const actor = yield* Effect.serviceOption(CurrentUser);
       const poll = yield* pollFor(input.pollId, communityId);
-      if (poll.chosenDay) return yield* new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
+      if (poll.chosenDay) return yield* chosen;
+      if (poll.closedAt) return yield* closed;
       if (input.votes.some((entry) => !poll.days.includes(entry.day))) {
         return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
       }
@@ -196,9 +213,9 @@ export const choose = (input: { pollId: string; day: string }) =>
   transaction(
     Effect.gen(function* () {
       const { communityId } = yield* CommunityScope;
-      const poll = yield* pollFor(input.pollId, communityId);
-      if (poll.communityId !== communityId) return yield* notFound;
-      if (poll.chosenDay) return yield* new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
+      const poll = yield* ownPoll(input.pollId, communityId);
+      if (poll.chosenDay) return yield* chosen;
+      if (poll.closedAt) return yield* closed;
       if (!poll.days.includes(input.day)) return yield* new Invalid({ message: "Esa fecha no está en la encuesta" });
 
       const [claimed] = yield* query((db) =>
@@ -208,7 +225,7 @@ export const choose = (input: { pollId: string; day: string }) =>
           .where(and(eq(datePolls.id, poll.id), isNull(datePolls.chosenDay)))
           .returning()
       );
-      if (!claimed) return yield* new Conflict({ reason: "closed", message: "Ya eligieron la fecha" });
+      if (!claimed) return yield* chosen;
       const held = yield* hold({
         communityId,
         day: input.day,
@@ -244,3 +261,51 @@ export const choose = (input: { pollId: string; day: string }) =>
       return { poll: (yield* viewOf([chosen ?? claimed], communityId))[0], eventId: held.id };
     })
   );
+
+/** Stop the answers without picking a date (the asker only). It stays listed as closed. */
+export const close = (input: { pollId: string }) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const poll = yield* ownPoll(input.pollId, communityId);
+      if (poll.chosenDay) return yield* chosen;
+      const [row] = poll.closedAt
+        ? [poll]
+        : yield* query((db) =>
+            db.update(datePolls).set({ closedAt: new Date() }).where(eq(datePolls.id, poll.id)).returning()
+          );
+
+      return (yield* viewOf([row], communityId))[0];
+    })
+  );
+
+/**
+ * Delete a poll (the asker only): it disappears for every community, answers included, until
+ * `restore` brings it back. A reserved date stays as its own draft.
+ */
+export const remove = (input: { pollId: string }) =>
+  transaction(
+    Effect.gen(function* () {
+      const { communityId } = yield* CommunityScope;
+      const poll = yield* ownPoll(input.pollId, communityId);
+      yield* query((db) => db.update(datePolls).set({ deletedAt: new Date() }).where(eq(datePolls.id, poll.id)));
+
+      return { id: poll.id };
+    })
+  );
+
+/** Undo a delete: the poll is back as it was. */
+export const restore = (input: { pollId: string }) =>
+  Effect.gen(function* () {
+    const { communityId } = yield* CommunityScope;
+    const [row] = yield* query((db) =>
+      db
+        .update(datePolls)
+        .set({ deletedAt: null })
+        .where(and(eq(datePolls.id, input.pollId), eq(datePolls.communityId, communityId)))
+        .returning()
+    );
+    if (!row) return yield* notFound;
+
+    return (yield* viewOf([row], communityId))[0];
+  });

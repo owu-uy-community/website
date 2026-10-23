@@ -1859,6 +1859,10 @@ export const datePolls = pgTable(
     /** The day picked: the poll is closed and the date reserved */
     chosenDay: text("chosenDay"),
     eventId: text("eventId"),
+    /** The asker stopped it without picking a date: no more answers, still listed */
+    closedAt: ts("closedAt"),
+    /** The asker deleted it: hidden everywhere, and back with "Deshacer" */
+    deletedAt: ts("deletedAt"),
     createdById: text("createdById"),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },

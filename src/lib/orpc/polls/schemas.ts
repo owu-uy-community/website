@@ -38,6 +38,8 @@ export const PollSchema = z.object({
   communities: z.array(z.object({ id: z.string(), name: z.string(), answers: z.record(z.string(), PollAnswerSchema) })),
   chosenDay: z.string().nullable(),
   eventId: z.string().nullable(),
+  /** The asker closed it without picking a date: no more answers */
+  closedAt: z.string().nullable(),
   createdAt: z.string(),
 });
 

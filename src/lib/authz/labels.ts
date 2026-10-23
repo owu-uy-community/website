@@ -103,7 +103,7 @@ export const COMMUNITY_PERMISSION_LABELS: Labels<CommunityStatements> = {
   venue: { label: "Espacios", actions: { requests: "Ver pedidos", read: "Ver espacios", request: "Pedir espacio" } },
   survey: { label: "Encuestas", actions: { read: "Ver resultados", write: "Armar" } },
   poll: {
-    label: "Votaciones de fecha",
+    label: "Votar fecha",
     actions: { read: "Ver", create: "Crear", vote: "Votar", choose: "Elegir fecha" },
   },
   talk: { label: "Charlas", actions: { read: "Ver las propuestas", claim: "Tomar una charla" } },

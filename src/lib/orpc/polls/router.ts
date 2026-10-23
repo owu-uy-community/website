@@ -4,7 +4,7 @@ import * as z from "zod";
 
 import { authed, inCommunity, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
-import { ChooseSchema, CreatePollSchema, PollListSchema, PollSchema, VoteSchema } from "./schemas";
+import { ChooseSchema, CreatePollSchema, PollListSchema, PollRefSchema, PollSchema, VoteSchema } from "./schemas";
 import * as Polls from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Date polls"], summary });
@@ -52,5 +52,33 @@ export const pollsRouter = {
     .output(z.object({ poll: PollSchema, eventId: z.string() }))
     .effect(function* ({ input }) {
       return yield* Polls.choose(input);
+    }),
+
+  // Closing and deleting are the asker's call, like picking the date: the same permission
+  close: authed
+    .meta(docs("Stop the answers without picking a date (the asking community only)"))
+    .input(PollRefSchema)
+    .use(inCommunity("poll:choose"))
+    .output(PollSchema)
+    .effect(function* ({ input }) {
+      return yield* Polls.close(input);
+    }),
+
+  remove: authed
+    .meta(docs("Delete a poll for every community (the asking community only); restore undoes it"))
+    .input(PollRefSchema)
+    .use(inCommunity("poll:choose"))
+    .output(z.object({ id: z.string() }))
+    .effect(function* ({ input }) {
+      return yield* Polls.remove(input);
+    }),
+
+  restore: authed
+    .meta(docs("Bring back a deleted poll, as it was"))
+    .input(PollRefSchema)
+    .use(inCommunity("poll:choose"))
+    .output(PollSchema)
+    .effect(function* ({ input }) {
+      return yield* Polls.restore(input);
     }),
 };
