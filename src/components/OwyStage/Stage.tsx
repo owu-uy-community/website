@@ -42,7 +42,7 @@ export const StageContext = createContext<{
   preview: boolean;
   bg: StageBackground;
   canvas: StageCanvas;
-  /** Fewer frames, same behaviour: the admin's monitors (thumbnails are throttled by `preview`). */
+  /** Fewer frames, same behaviour: the admin's monitors (see useStageFrame). */
   throttle: boolean;
 }>({
   preview: false,
@@ -143,24 +143,31 @@ export function Stage({
 
 /**
  * Per-frame callback on motion's shared frameloop. `dt` is clamped so a
- * throttled tab (CEF, background) catches up instead of teleporting physics;
- * previews and the admin's monitors run at ~15 fps to stay cheap.
+ * throttled tab (CEF, background) catches up instead of teleporting physics.
+ * Thumbnails run at ~15 fps. The admin's monitors share the desk's main thread
+ * (same-origin iframes), so they get at most 60 fps (a 120 Hz screen would
+ * pay double for nothing at that size) and fewer when the scene is heavy for
+ * the device: a frame may cost a monitor about a sixth of the time between frames.
  */
 export function useStageFrame(callback: (t: number, dt: number) => void) {
-  const { throttle } = useContext(StageContext);
+  const { preview, throttle } = useContext(StageContext);
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
   const last = useRef(0);
+  /** Moving average of what one frame of this scene costs here, in ms. */
+  const cost = useRef(0);
 
   useAnimationFrame(
     useCallback(
       (t: number) => {
         const elapsed = t - last.current;
-        if (throttle && elapsed < 66) return;
+        if (elapsed < (preview ? 66 : throttle ? Math.max(12, cost.current * 6) : 0)) return;
+        const start = performance.now();
         callbackRef.current(t, Math.min(last.current ? elapsed : 16, 100));
+        cost.current = cost.current * 0.9 + (performance.now() - start) * 0.1;
         last.current = t;
       },
-      [throttle]
+      [preview, throttle]
     )
   );
 }
