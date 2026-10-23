@@ -11,7 +11,9 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 
 /**
@@ -159,6 +161,14 @@ export const communities = pgTable("communities", {
   reviewedAt: date("reviewedAt", { mode: "string" }),
   /** Shown in the public directory. OWU itself and demo tenants stay unlisted. */
   listed: boolean("listed").notNull().default(false),
+  /** "Nuestro día" (the 2nd Thursday at 19:00): a soft layer on every calendar and a nudge 6 weeks before */
+  recurringSlot: jsonb("recurringSlot").$type<RecurringSlot>(),
+  /** A declared pause (`status` = pausa): back on this day. Paused communities don't count as dormant. */
+  pausedUntil: date("pausedUntil", { mode: "string" }),
+  /** A friendly note to people who missed two events without freeing their seat. Off unless the team turns it on. */
+  noShowNudge: boolean("noShowNudge").notNull().default(false),
+  /** Its yearly numbers (events, people, first-timers) may appear on OWU's public impact page. */
+  publicStats: boolean("publicStats").notNull().default(false),
   createdAt: ts("createdAt").notNull().defaultNow(),
   updatedAt: ts("updatedAt")
     .notNull()
@@ -168,6 +178,8 @@ export const communities = pgTable("communities", {
 
 export type CommunityStatus = "activa" | "pausa" | "busca-organizadores";
 export type CommunityLinks = { website?: string; linkedin?: string; instagram?: string; meetup?: string };
+/** `nth`: 1–4, or -1 for the last one of the month. `weekday`: 0 = Sunday … 6 = Saturday. */
+export type RecurringSlot = { weekday: number; nth: number; time: string; durationMin: number };
 
 /** Someone asking to organize a directory community; site staff decide. */
 export const communityClaims = pgTable(
@@ -182,6 +194,8 @@ export const communityClaims = pgTable(
     relation: text("relation").$type<"organizo" | "coorganizo" | "retomar">().notNull(),
     message: text("message").notNull().default(""),
     link: text("link"),
+    /** The community wasn't in the directory: it was proposed with this claim, and approving lists it. */
+    proposed: boolean("proposed").notNull().default(false),
     status: text("status").$type<"pending" | "approved" | "rejected">().notNull().default("pending"),
     reviewedById: text("reviewedById"),
     reviewedAt: ts("reviewedAt"),
@@ -495,6 +509,20 @@ export const events = pgTable(
     reminderNote: text("reminderNote"),
     /** Recordings, slides and links, shown on the public page once the event is over */
     materials: jsonb("materials").$type<EventMaterial[]>().notNull().default([]),
+    /** Why it was cancelled: the attendees' email and the public page say it */
+    cancelReason: text("cancelReason").notNull().default(""),
+    /** A second "¿Seguís viniendo?" 24 h before, only to people who haven't confirmed */
+    confirmPing: boolean("confirmPing").notNull().default(true),
+    /** Copied from another event and not reviewed yet ("Revisá"): cleared field by field as they're edited */
+    staleFields: text("staleFields").array().notNull().default([]),
+    /** The hands it asks attendees for (recepción, puerta, fotos…); empty asks for none */
+    volunteerRoles: text("volunteerRoles").array().$type<VolunteerRole[]>().notNull().default([]),
+    /** Code-of-conduct responders: team members named on the page and on the welcome slide */
+    responders: text("responders").array().notNull().default([]),
+    /** The team went through the close-out (who came, survey, thanks) */
+    closedOutAt: ts("closedOutAt"),
+    /** The recap went to the host space */
+    hostRecapSentAt: ts("hostRecapSentAt"),
     /** Bumped on every change attendees should hear about, so calendar invites update in place. */
     icsSequence: integer("icsSequence").notNull().default(0),
     /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
@@ -528,7 +556,15 @@ export type EventMode = "presencial" | "online" | "hibrido";
 export type SizeBucket = "hasta-30" | "30-60" | "60-120" | "120+";
 export type EventTalk = { title: string; speaker: string };
 export type EventAnnouncement = { channels?: ("slack" | "telegram")[] };
-export type RsvpQuestion = { id: string; label: string; required: boolean };
+/** `preset` questions get special handling: `ci` is sensitive (admins only, purged a week after). */
+export type RsvpQuestion = {
+  id: string;
+  label: string;
+  required: boolean;
+  preset?: "dieta" | "accesibilidad" | "foto" | "ci";
+  options?: string[];
+};
+export type VolunteerRole = "recepcion" | "puerta" | "comida" | "fotos" | "mc" | "cierre";
 export type EventMaterial = { kind: "grabacion" | "slides" | "link"; title: string; url: string };
 
 /** @deprecated transition alias — use `events`. */
@@ -938,6 +974,8 @@ export const staffTasks = pgTable(
     statusUpdatedById: text("statusUpdatedById").references(() => user.id, { onDelete: "set null" }),
     /** Tie-breaker among tasks sharing the same start time. */
     sortOrder: integer("sortOrder").notNull().default(0),
+    /** Made from an Organizá template ("charlas:lugar"): applying it again doesn't duplicate it */
+    templateKey: text("templateKey"),
     createdAt: ts("createdAt").notNull().defaultNow(),
     updatedAt: ts("updatedAt")
       .notNull()
@@ -1063,7 +1101,11 @@ export const incidents = pgTable(
     assigneeId: text("assigneeId").references(() => user.id, { onDelete: "set null" }),
     reporterId: text("reporterId").references(() => user.id, { onDelete: "set null" }),
     /** How it arrived: the admin, a staff phone, or Owy (Telegram/Slack). */
-    source: text("source").$type<"admin" | "phone" | "owy">().notNull().default("admin"),
+    source: text("source").$type<"admin" | "phone" | "owy" | "public">().notNull().default("admin"),
+    /** A public report: how to reach the reporter, if they left a way (it can be anonymous) */
+    reporterContact: text("reporterContact"),
+    /** The report names someone on the team: it goes to OWU's conduct team only */
+    involvesOrganizer: boolean("involvesOrganizer").notNull().default(false),
     /** Code-of-conduct reports: only organizers (community admin+) and the people on it see them. */
     sensitive: boolean("sensitive").notNull().default(false),
     /** A compressed JPEG data URL from the reporter's phone. */
@@ -1187,6 +1229,14 @@ export const attendees = pgTable(
     /** Eventbrite's `changed`, the cursor for the next `changed_since` read. */
     changedAt: ts("changedAt"),
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    /** They answered "Voy" to the reminder */
+    confirmedAt: ts("confirmedAt"),
+    /** When they freed their seat (or it was cancelled): late releases tell apart from no-shows */
+    cancelledAt: ts("cancelledAt"),
+    /** They told the team they couldn't come: never counted as a no-show */
+    excusedAt: ts("excusedAt"),
+    /** The hands they offered on the RSVP */
+    volunteerRoles: text("volunteerRoles").array().$type<VolunteerRole[]>().notNull().default([]),
     updatedAt: ts("updatedAt")
       .notNull()
       .defaultNow()
@@ -1464,6 +1514,19 @@ export const emailSuppressions = pgTable(
 // ---------------------------------------------------------------------------
 
 export type VenueAmenity = "proyector" | "microfono" | "wifi" | "accesible" | "comida";
+export type VenueFacts = {
+  stepFree?: boolean;
+  elevator?: boolean;
+  accessibleRestroom?: boolean;
+  genderNeutralRestroom?: boolean;
+  parking?: string;
+  transit?: string;
+  /** The building asks for a list of names/IDs, this many hours before */
+  idRequired?: boolean;
+  idDeadlineHours?: number;
+  foodRules?: string;
+  avNotes?: string;
+};
 
 /**
  * A space that hosts meetups. `requestable` ones take requests through OWU (their contact
@@ -1495,6 +1558,8 @@ export const venues = pgTable(
     addressVisibility: text("addressVisibility").$type<"public" | "attendees">().notNull().default("attendees"),
     logoUrl: text("logoUrl"),
     notes: text("notes").notNull().default(""),
+    /** Access, restrooms, transport, ID at the door, food and AV: shown on event pages there */
+    facts: jsonb("facts").$type<VenueFacts>().notNull().default({}),
     status: text("status").$type<"pending" | "active" | "archived">().notNull().default("pending"),
     requestable: boolean("requestable").notNull().default(false),
     /** The "Plan B" space (CIE · ORT): always offered, last */
@@ -1528,6 +1593,14 @@ export const venueContacts = pgTable(
     /** When they agreed to receive requests from organizers (Ley 18.331) */
     consentAt: ts("consentAt").notNull(),
     consentNote: text("consentNote").notNull().default(""),
+    /** What they do there ("Office manager", "CTO") */
+    role: text("role").notNull().default(""),
+    /** They last said they still take requests (the yearly check, an answered request) */
+    lastConfirmedAt: ts("lastConfirmedAt"),
+    /** Mail to them bounced */
+    bouncedAt: ts("bouncedAt"),
+    /** An organizer or staff marked them as gone from the company */
+    leftAt: ts("leftAt"),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },
   (t) => [
@@ -1558,9 +1631,13 @@ export const venueRequests = pgTable(
     expectedAttendees: integer("expectedAttendees").notNull(),
     message: text("message").notNull().default(""),
     status: text("status")
-      .$type<"pending" | "accepted" | "declined" | "expired" | "cancelled">()
+      .$type<"pending" | "accepted" | "declined" | "expired" | "cancelled" | "proposed">()
       .notNull()
       .default("pending"),
+    /** The host's other dates, when they answered "proponer otra fecha" */
+    counterOptions: jsonb("counterOptions").$type<VenueRequestOption[]>().notNull().default([]),
+    /** One "Buscamos espacio" sent to several spaces: the first to accept takes it */
+    broadcastId: text("broadcastId"),
     /** Which option the host took */
     chosenOption: integer("chosenOption"),
     /** Access notes, a counter-proposal or the reason, from the host */
@@ -1574,6 +1651,7 @@ export const venueRequests = pgTable(
   (t) => [
     index("venue_requests_venueId_status_idx").on(t.venueId, t.status),
     index("venue_requests_communityId_idx").on(t.communityId),
+    index("venue_requests_broadcastId_idx").on(t.broadcastId),
     foreignKey({ name: "venue_requests_venueId_fk", columns: [t.venueId], foreignColumns: [venues.id] }).onDelete(
       "cascade"
     ),
@@ -1702,6 +1780,8 @@ export const communityFollowers = pgTable(
   {
     communityId: text("communityId").notNull(),
     userId: text("userId").notNull(),
+    /** Each new event as it's published, or one weekly digest across what they follow */
+    digest: text("digest").$type<"each" | "weekly">().notNull().default("each"),
     createdAt: ts("createdAt").notNull().defaultNow(),
   },
   (t) => [
@@ -1818,6 +1898,267 @@ export const datePollVotes = pgTable(
     ),
   ]
 );
+
+// ---------------------------------------------------------------------------
+// Organizá v2: messages to attendees, a community's accounts, staff outreach, talks
+// ---------------------------------------------------------------------------
+
+/** Who a message to an event's people goes to: by where they stand, and after the event by whether they came. */
+export type EventMessageAudience = "attending" | "waitlisted" | "pending" | "came" | "missed" | "waitlist-left";
+
+/** A message the team wrote to an event's people: sent now or at `sendAt`, and kept as the event's log. */
+export const eventMessages = pgTable(
+  "event_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    eventId: text("eventId").notNull(),
+    audience: text("audience").$type<EventMessageAudience>().notNull(),
+    subject: text("subject").notNull(),
+    body: text("body").notNull(),
+    sendAt: ts("sendAt").notNull().defaultNow(),
+    status: text("status").$type<"scheduled" | "sending" | "sent" | "cancelled">().notNull().default("scheduled"),
+    /** How many it went to, once sent */
+    recipients: integer("recipients").notNull().default(0),
+    createdById: text("createdById"),
+    sentAt: ts("sentAt"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("event_messages_eventId_idx").on(t.eventId),
+    index("event_messages_status_sendAt_idx").on(t.status, t.sendAt),
+    foreignKey({ name: "event_messages_eventId_fk", columns: [t.eventId], foreignColumns: [events.id] }).onDelete(
+      "cascade"
+    ),
+    foreignKey({ name: "event_messages_createdById_fk", columns: [t.createdById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+/**
+ * The accounts a community runs elsewhere (its Meetup group, Slack channel, Instagram…) and who
+ * holds the keys, so a handover never loses one. Never passwords. Read by the community's admins.
+ */
+export const communityAssets = pgTable(
+  "community_assets",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId").notNull(),
+    platform: text("platform").notNull(),
+    /** The handle or URL ("meetup.com/montevideojs") */
+    label: text("label").notNull().default(""),
+    holderUserId: text("holderUserId"),
+    /** Someone outside the team holds it */
+    holderName: text("holderName").notNull().default(""),
+    backupUserId: text("backupUserId"),
+    note: text("note").notNull().default(""),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("community_assets_communityId_idx").on(t.communityId),
+    foreignKey({
+      name: "community_assets_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "community_assets_holderUserId_fk",
+      columns: [t.holderUserId],
+      foreignColumns: [user.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "community_assets_backupUserId_fk",
+      columns: [t.backupUserId],
+      foreignColumns: [user.id],
+    }).onDelete("set null"),
+  ]
+);
+
+export type OutreachReason = "en-riesgo" | "dormida" | "un-organizador" | "contacto-viejo" | "pedido-sin-respuesta";
+
+/** Staff working the outreach queue: a reason a community needs a hand, marked done or snoozed. */
+export const communityOutreach = pgTable(
+  "community_outreach",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId").notNull(),
+    reason: text("reason").$type<OutreachReason>().notNull(),
+    status: text("status").$type<"done" | "snoozed">().notNull().default("done"),
+    note: text("note").notNull().default(""),
+    snoozedUntil: ts("snoozedUntil"),
+    byId: text("byId"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("community_outreach_communityId_idx").on(t.communityId),
+    foreignKey({
+      name: "community_outreach_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "community_outreach_byId_fk", columns: [t.byId], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+export type TalkFormat = "relampago" | "corta" | "larga" | "taller";
+export type TalkLevel = "inicial" | "intermedio" | "avanzado";
+
+/**
+ * A talk someone offers (from /dar-una-charla): to one or several communities, or to any of OWU's
+ * when `communityIds` is empty. Organizers claim it for an event; one claim at a time.
+ */
+export const talkProposals = pgTable(
+  "talk_proposals",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    speakerUserId: text("speakerUserId").notNull(),
+    /** As it should read on the event page */
+    speakerName: text("speakerName").notNull(),
+    title: text("title").notNull(),
+    abstract: text("abstract").notNull().default(""),
+    format: text("format").$type<TalkFormat>().notNull().default("corta"),
+    level: text("level").$type<TalkLevel>().notNull().default("inicial"),
+    topics: text("topics").array().notNull().default([]),
+    language: text("language").notNull().default("es"),
+    /** Their first talk: organizers can offer a dry run */
+    firstTime: boolean("firstTime").notNull().default(false),
+    recordingOk: boolean("recordingOk").notNull().default(true),
+    communityIds: text("communityIds").array().notNull().default([]),
+    /** Anything for the organizers (dates that suit, what they need) */
+    notes: text("notes").notNull().default(""),
+    status: text("status").$type<"open" | "withdrawn" | "archived">().notNull().default("open"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index("talk_proposals_status_idx").on(t.status),
+    foreignKey({
+      name: "talk_proposals_speakerUserId_fk",
+      columns: [t.speakerUserId],
+      foreignColumns: [user.id],
+    }).onDelete("cascade"),
+  ]
+);
+
+/** A community taking a proposed talk, and the event it goes to once it's on a date. */
+export const talkClaims = pgTable(
+  "talk_claims",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    proposalId: text("proposalId").notNull(),
+    communityId: text("communityId").notNull(),
+    eventId: text("eventId"),
+    status: text("status").$type<"claimed" | "scheduled" | "given" | "released">().notNull().default("claimed"),
+    claimedById: text("claimedById"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    // One live claim per talk: two communities can't book the same speaker for the same talk
+    uniqueIndex("talk_claims_live_proposalId_key")
+      .on(t.proposalId)
+      .where(sql`${t.status} in ('claimed', 'scheduled')`),
+    index("talk_claims_communityId_idx").on(t.communityId),
+    foreignKey({
+      name: "talk_claims_proposalId_fk",
+      columns: [t.proposalId],
+      foreignColumns: [talkProposals.id],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "talk_claims_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "talk_claims_eventId_fk", columns: [t.eventId], foreignColumns: [events.id] }).onDelete(
+      "set null"
+    ),
+    foreignKey({ name: "talk_claims_claimedById_fk", columns: [t.claimedById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+/** "Buscamos charla sobre X": a community asking for a talk, shown on /dar-una-charla until closed. */
+export const talkRequests = pgTable(
+  "talk_requests",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    communityId: text("communityId").notNull(),
+    topic: text("topic").notNull(),
+    details: text("details").notNull().default(""),
+    createdById: text("createdById"),
+    closedAt: ts("closedAt"),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [
+    index("talk_requests_communityId_idx").on(t.communityId),
+    foreignKey({
+      name: "talk_requests_communityId_fk",
+      columns: [t.communityId],
+      foreignColumns: [communities.id],
+    }).onDelete("cascade"),
+    foreignKey({ name: "talk_requests_createdById_fk", columns: [t.createdById], foreignColumns: [user.id] }).onDelete(
+      "set null"
+    ),
+  ]
+);
+
+/** A speaker's profile: what they talk about. Public only if they say so. */
+export const speakerProfiles = pgTable(
+  "speaker_profiles",
+  {
+    userId: text("userId").primaryKey(),
+    bio: text("bio").notNull().default(""),
+    topics: text("topics").array().notNull().default([]),
+    languages: text("languages").array().notNull().default(["es"]),
+    formats: text("formats").array().$type<TalkFormat[]>().notNull().default([]),
+    links: jsonb("links").$type<{ website?: string; github?: string; linkedin?: string }>().notNull().default({}),
+    /** Open to helping first-time speakers */
+    mentor: boolean("mentor").notNull().default(false),
+    public: boolean("public").notNull().default(false),
+    updatedAt: ts("updatedAt")
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    foreignKey({ name: "speaker_profiles_userId_fk", columns: [t.userId], foreignColumns: [user.id] }).onDelete(
+      "cascade"
+    ),
+  ]
+);
+
+export type EventMessageRow = typeof eventMessages.$inferSelect;
+export type CommunityAssetRow = typeof communityAssets.$inferSelect;
+export type CommunityOutreachRow = typeof communityOutreach.$inferSelect;
+export type TalkProposalRow = typeof talkProposals.$inferSelect;
+export type TalkClaimRow = typeof talkClaims.$inferSelect;
+export type TalkRequestRow = typeof talkRequests.$inferSelect;
+export type SpeakerProfileRow = typeof speakerProfiles.$inferSelect;
 
 export type IntegrationConnectionRow = typeof integrationConnections.$inferSelect;
 export type EventPublicationRow = typeof eventPublications.$inferSelect;

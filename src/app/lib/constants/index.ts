@@ -93,7 +93,8 @@ export const EXTERNAL_SERVICES = {
       "https://docs.google.com/spreadsheets/d/1GPhu-OIcZbIZE3x4xmQvpL0j_rqPfr6wqDwiYdgcC1U/export?format=csv",
   },
   googleTagManager: "https://www.googletagmanager.com/gtag/js?id=G-RVTWHW4J21",
-  meetupBot: "https://meetup-bot.marpo60.xyz/json",
+  /** MEETUP_BOT_URL points tests and local runs at a mock (server side only; the browser never reads it). */
+  meetupBot: process.env.MEETUP_BOT_URL ?? "https://meetup-bot.marpo60.xyz/json",
 } as const;
 
 // Maps and Location URLs

@@ -106,6 +106,7 @@ export const COMMUNITY_PERMISSION_LABELS: Labels<CommunityStatements> = {
     label: "Votaciones de fecha",
     actions: { read: "Ver", create: "Crear", vote: "Votar", choose: "Elegir fecha" },
   },
+  talk: { label: "Charlas", actions: { read: "Ver las propuestas", claim: "Tomar una charla" } },
   room: { label: "Salas", actions: { "set-status": "Cambiar el estado de una sala" } },
   calendar: { label: "Calendario", actions: { read: "Ver el calendario compartido" } },
   activity: { label: "Actividad", actions: { read: "Ver la actividad" } },

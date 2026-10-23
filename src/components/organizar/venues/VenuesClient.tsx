@@ -75,6 +75,7 @@ const STATUS: Record<
   declined: { label: "No puede", variant: "destructive" },
   expired: { label: "Venció", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "secondary" },
+  proposed: { label: "Propuso otra fecha", variant: "warning" },
 };
 
 const normalize = (value: string) =>

@@ -32,7 +32,7 @@ export const IncidentSchema = z.object({
   location: z.string().nullable(),
   assignee: PersonSchema.nullable(),
   reporter: PersonSchema.nullable(),
-  source: z.enum(["admin", "phone", "owy"]),
+  source: z.enum(["admin", "phone", "owy", "public"]),
   sensitive: z.boolean(),
   hasPhoto: z.boolean(),
   createdAt: z.string(),

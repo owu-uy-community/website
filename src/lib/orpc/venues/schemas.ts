@@ -71,7 +71,7 @@ export const RequestVenueSchema = z.object({
   message: z.string().trim().max(1000).default(""),
 });
 
-export const RequestStatusSchema = z.enum(["pending", "accepted", "declined", "expired", "cancelled"]);
+export const RequestStatusSchema = z.enum(["pending", "accepted", "declined", "expired", "cancelled", "proposed"]);
 const Option = z.object({ start: z.string(), end: z.string() });
 
 /** A request as its community sees it; the address and contact only once accepted. */

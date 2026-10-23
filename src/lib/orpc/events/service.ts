@@ -37,11 +37,10 @@ import { can, principalOf } from "../../authz/principal";
 import { notifyCancelled, optionalMail, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
+import { HOLD_DAYS, MAX_HOLDS } from "../../organizar/rules";
 
-/** How long a date stays reserved; renewing starts the count again. */
-export const HOLD_DAYS = 14;
-/** Live holds a community can keep at once: enough to compare dates, not to squat a season. */
-export const MAX_HOLDS = 8;
+export { HOLD_DAYS, MAX_HOLDS };
+
 const DAY_MS = 86_400_000;
 
 export const toOrganizerEvent = (row: EventRow): OrganizerEvent => ({
