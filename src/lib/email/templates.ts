@@ -42,7 +42,7 @@ export function otpEmail(code: string): Omit<Email, "to"> {
 /** A link into this deployment (owu.uy in production, the preview's own URL elsewhere). */
 export const appUrl = (path: string) => new URL(path, process.env.NEXT_PUBLIC_BASE_URL ?? SITE_URL).toString();
 
-const button = (href: string, label: string) =>
+export const button = (href: string, label: string) =>
   `<a href="${esc(href)}" style="display:inline-block;background:#F5BB03;color:#18181b;font-weight:600;text-decoration:none;padding:10px 18px;border-radius:8px">${esc(label)}</a>`;
 
 const ROLE: Record<string, string> = {

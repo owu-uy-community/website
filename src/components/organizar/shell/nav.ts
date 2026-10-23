@@ -1,4 +1,16 @@
-import { CalendarDays, House, MapPin, PlugZap, Ticket, UserRound, Users, Vote, type LucideIcon } from "lucide-react";
+import {
+  ChartColumn,
+  CalendarDays,
+  House,
+  MapPin,
+  Mic,
+  PlugZap,
+  Ticket,
+  UserRound,
+  Users,
+  Vote,
+  type LucideIcon,
+} from "lucide-react";
 
 export type PanelNavKey =
   | "inicio"
@@ -6,8 +18,10 @@ export type PanelNavKey =
   | "encuestas"
   | "eventos"
   | "espacios"
+  | "charlas"
   | "perfil"
   | "equipo"
+  | "numeros"
   | "integraciones";
 
 export type PanelNavItem = {
@@ -27,9 +41,11 @@ export const PANEL_NAV: { key: string; label?: string; items: PanelNavItem[] }[]
     label: "Organizar",
     items: [
       { key: "calendario", title: "Calendario", path: "calendario", icon: CalendarDays, go: "c" },
-      { key: "encuestas", title: "Encuestas", path: "encuestas", icon: Vote },
+      // The path stays "encuestas": the date_poll emails already sent link there
+      { key: "encuestas", title: "Votar fecha", path: "encuestas", icon: Vote },
       { key: "eventos", title: "Eventos", path: "eventos", icon: Ticket, go: "e" },
       { key: "espacios", title: "Espacios", path: "espacios", icon: MapPin, go: "s" },
+      { key: "charlas", title: "Charlas", path: "charlas", icon: Mic, go: "h" },
     ],
   },
   {
@@ -38,6 +54,7 @@ export const PANEL_NAV: { key: string; label?: string; items: PanelNavItem[] }[]
     items: [
       { key: "perfil", title: "Perfil", path: "perfil", icon: UserRound },
       { key: "equipo", title: "Equipo", path: "equipo", icon: Users },
+      { key: "numeros", title: "Números", path: "numeros", icon: ChartColumn },
       { key: "integraciones", title: "Integraciones", path: "integraciones", icon: PlugZap },
     ],
   },
