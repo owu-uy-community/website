@@ -38,11 +38,14 @@ export function ArrivalsFeed({
   error,
   onRetry,
   timezone,
+  organizar = false,
 }: {
   entries: RecentEntry[] | undefined;
   error: Error | null;
   onRetry: () => void;
   timezone: string;
+  /** Organizá's Puerta tab: its glossary, and the whole list in the page (no inner scroll box) */
+  organizar?: boolean;
 }) {
   const alerts = entries?.filter((entry) => entry.kind !== "in").length ?? 0;
 
@@ -51,7 +54,7 @@ export function ArrivalsFeed({
       <PanelHead
         icon={DoorOpen}
         meta={alerts > 0 ? `${alerts} ${alerts === 1 ? "aviso" : "avisos"}` : undefined}
-        title="Llegadas"
+        title={organizar ? "Entraron" : "Llegadas"}
       />
       {entries === undefined && error ? (
         <div className="p-3">
@@ -73,14 +76,20 @@ export function ArrivalsFeed({
       ) : entries.length === 0 ? (
         <EmptyState
           compact
-          description="Cuando Organizer o el escáner acrediten a alguien, aparece acá."
+          description={
+            organizar
+              ? "Cuando alguien entre por la puerta, aparece acá."
+              : "Cuando Organizer o el escáner acrediten a alguien, aparece acá."
+          }
           icon={DoorOpen}
           title="Todavía no entró nadie"
         />
       ) : (
         <ol
-          aria-label="Últimas llegadas"
-          className="max-h-[360px] scrollbar-thin divide-y divide-border overflow-y-auto"
+          aria-label={organizar ? "Los últimos que entraron" : "Últimas llegadas"}
+          className={
+            organizar ? "divide-y divide-border" : "max-h-[360px] scrollbar-thin divide-y divide-border overflow-y-auto"
+          }
         >
           {entries.map((entry) => {
             const { title, detail } = describe(entry, timezone);
