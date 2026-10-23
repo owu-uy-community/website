@@ -6,6 +6,7 @@ import { outboundMessages } from "../db/schema";
 import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
 import { sendDigests } from "../orpc/communities/digest";
+import { nudgeEmptySlots } from "../orpc/communities/recurring";
 import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
 import { sendScheduled } from "../orpc/events/messages";
@@ -64,6 +65,7 @@ const SWEEPS: Record<string, (deadline: number, options: TickOptions) => Effect.
     feedback: () => sendFeedback,
     noShowNudges: () => sendNoShowNudges,
     holds: () => remindExpiringHolds,
+    slots: () => nudgeEmptySlots,
     venues: () => expireRequests,
     hostDays: () => sendHostDaySheets,
     speakers: () => sendSpeakerEmails,

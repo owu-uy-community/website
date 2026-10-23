@@ -24,9 +24,16 @@ import { Input } from "components/shared/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
+import { dayKey } from "lib/community/time";
 import { TOPICS } from "lib/community/topics";
+import { NTH_OPTIONS, WEEKDAY_NAMES } from "lib/organizar/recurring";
+import { DEFAULT_DURATION, DEFAULT_START, durationLabel, durationsWith, TIME_STEP_SECONDS } from "lib/organizar/times";
 import { orpc } from "lib/orpc/client";
 import type { Community } from "lib/orpc/communities/schemas";
+
+/** Monday first, as the calendar reads */
+const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const NO_SLOT = "ninguno";
 
 const STATUS = [
   { value: "activa", label: "Activa", hint: "Hace eventos." },
@@ -61,6 +68,13 @@ const profileSchema = z.object({
     z.literal(""),
     z.string().regex(/^#?[a-z0-9][a-z0-9_-]{0,79}$/, "El nombre del canal: minúsculas, números, - o _"),
   ]),
+  /** "" while paused without a date */
+  pausedUntil: z.string(),
+  /** NO_SLOT, or the weekday 0–6 */
+  slotWeekday: z.string(),
+  slotNth: z.string(),
+  slotTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Usá HH:MM, como 19:00"),
+  slotDuration: z.number(),
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -76,7 +90,14 @@ const toForm = (community: Community): ProfileForm => ({
   linkedin: community.links.linkedin ?? "",
   instagram: community.links.instagram ?? "",
   slackChannel: community.slackChannel ?? "",
+  pausedUntil: community.pausedUntil ?? "",
+  slotWeekday: community.recurringSlot ? String(community.recurringSlot.weekday) : NO_SLOT,
+  slotNth: String(community.recurringSlot?.nth ?? 2),
+  slotTime: community.recurringSlot?.time ?? DEFAULT_START,
+  slotDuration: community.recurringSlot?.durationMin ?? DEFAULT_DURATION,
 });
+
+const SLOT_FIELDS = ["slotWeekday", "slotNth", "slotTime", "slotDuration"] as const;
 
 /** The community's public profile and directory card, as its admins edit it. Editors see it read-only. */
 export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity: Community; canEdit: boolean }) {
@@ -104,6 +125,7 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
   } = form;
   const dirtyCount = countDirty(dirtyFields);
   const logoUrl = watch("logoUrl");
+  const slotWeekday = watch("slotWeekday");
 
   const update = useMutation(
     orpc.communities.update.mutationOptions({
@@ -127,6 +149,20 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
       data.links = Object.fromEntries(LINKS.flatMap(({ key }) => (next[key] ? [[key, next[key]]] : [])));
     }
     if (dirtyFields.slackChannel) data.slackChannel = next.slackChannel.replace(/^#/, "") || null;
+    if (dirtyFields.pausedUntil || (dirtyFields.status && next.status === "pausa")) {
+      data.pausedUntil = next.status === "pausa" && next.pausedUntil ? next.pausedUntil : null;
+    }
+    if (SLOT_FIELDS.some((key) => dirtyFields[key])) {
+      data.recurringSlot =
+        next.slotWeekday === NO_SLOT
+          ? null
+          : {
+              weekday: Number(next.slotWeekday),
+              nth: Number(next.slotNth) as 1 | 2 | 3 | 4 | -1,
+              time: next.slotTime,
+              durationMin: next.slotDuration,
+            };
+    }
     update.mutate({ communityId: community.id, data });
   });
 
@@ -174,7 +210,7 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
             <SettingsRow
               dirty={Boolean(dirtyFields.logoUrl)}
               error={errors.logoUrl?.message}
-              hint="Una imagen cuadrada; sin logo se usan las iniciales."
+              hint="El link https de una imagen cuadrada (PNG, SVG o JPG) que ya esté en la web: el de tu Meetup o tu sitio sirve. Sin logo se usan las iniciales."
               htmlFor="profile-logo"
               label="Logo"
             >
@@ -199,7 +235,16 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
               control={control}
               name="status"
               render={({ field }) => (
-                <SettingsRow dirty={Boolean(dirtyFields.status)} htmlFor="profile-status" label="Estado">
+                <SettingsRow
+                  dirty={Boolean(dirtyFields.status || dirtyFields.pausedUntil)}
+                  hint={
+                    field.value === "pausa"
+                      ? "Mientras está en pausa, no le avisamos que hace mucho que no hace eventos."
+                      : undefined
+                  }
+                  htmlFor="profile-status"
+                  label="Estado"
+                >
                   <Select disabled={field.disabled} value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger className="w-56" id="profile-status">
                       <SelectValue />
@@ -213,6 +258,18 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
                       ))}
                     </SelectContent>
                   </Select>
+                  {field.value === "pausa" ? (
+                    <label className="mt-2 flex flex-col gap-1.5 text-meta text-muted-foreground">
+                      Volvemos el (opcional)
+                      <Input
+                        className="w-56 font-terminal tabular-nums"
+                        id="profile-paused-until"
+                        min={dayKey(new Date())}
+                        type="date"
+                        {...register("pausedUntil")}
+                      />
+                    </label>
+                  ) : null}
                 </SettingsRow>
               )}
             />
@@ -225,7 +282,7 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
                   hint="Hasta 5. Filtran el directorio y el calendario los usa para avisar choques."
                   label="Temas"
                 >
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex scroll-mt-28 flex-wrap gap-1.5 md:scroll-mt-6" id="temas">
                     {TOPICS.map((topic) => {
                       const on = field.value.includes(topic.value);
 
@@ -258,6 +315,93 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
           </SettingsCard>
         </SettingsSection>
 
+        <SettingsSection id="nuestro-dia" title="Nuestro día">
+          <SettingsCard>
+            <SettingsRow
+              dirty={SLOT_FIELDS.some((key) => dirtyFields[key])}
+              error={errors.slotTime?.message}
+              hint="Si siempre se juntan el mismo día del mes, el calendario se lo muestra a las otras comunidades para que lo eviten, y 6 semanas antes les avisamos si todavía no armaron nada."
+              htmlFor="profile-slot-weekday"
+              label="Suelen juntarse"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Controller
+                  control={control}
+                  name="slotNth"
+                  render={({ field }) => (
+                    <Select
+                      disabled={field.disabled || slotWeekday === NO_SLOT}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <SelectTrigger aria-label="Qué semana del mes" className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {NTH_OPTIONS.map((option) => (
+                          <SelectItem key={option.value} value={String(option.value)}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="slotWeekday"
+                  render={({ field }) => (
+                    <Select disabled={field.disabled} value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger aria-label="Día de la semana" className="w-40" id="profile-slot-weekday">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_SLOT}>Sin día fijo</SelectItem>
+                        {WEEKDAY_ORDER.map((weekday) => (
+                          <SelectItem key={weekday} value={String(weekday)}>
+                            {WEEKDAY_NAMES[weekday]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <Input
+                  aria-invalid={Boolean(errors.slotTime)}
+                  aria-label="Hora de inicio"
+                  className="w-28 font-terminal tabular-nums"
+                  disabled={!canEdit || slotWeekday === NO_SLOT}
+                  step={TIME_STEP_SECONDS}
+                  type="time"
+                  {...register("slotTime")}
+                />
+                <Controller
+                  control={control}
+                  name="slotDuration"
+                  render={({ field }) => (
+                    <Select
+                      disabled={field.disabled || slotWeekday === NO_SLOT}
+                      value={String(field.value)}
+                      onValueChange={(value) => field.onChange(Number(value))}
+                    >
+                      <SelectTrigger aria-label="Duración" className="w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {durationsWith(field.value).map((minutes) => (
+                          <SelectItem key={minutes} value={String(minutes)}>
+                            {durationLabel(minutes)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </SettingsRow>
+          </SettingsCard>
+        </SettingsSection>
+
         <SettingsSection id="links" title="Dónde encontrarla">
           <SettingsCard>
             <SettingsRow
@@ -271,7 +415,7 @@ export function ProfileClient({ initialCommunity, canEdit }: { initialCommunity:
                 aria-invalid={Boolean(errors.slackChannel)}
                 autoComplete="off"
                 id="profile-slack"
-                placeholder="montevideo-js"
+                placeholder={community.slug}
                 {...register("slackChannel")}
               />
             </SettingsRow>

@@ -46,6 +46,8 @@ const toCommunity = (row: CommunityRow): Community => ({
   links: row.links,
   slackChannel: row.slackChannel,
   listed: row.listed,
+  recurringSlot: (row.recurringSlot as Community["recurringSlot"]) ?? null,
+  pausedUntil: row.pausedUntil,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
@@ -126,17 +128,36 @@ export const createCommunity = (input: { slug: string; name: string; description
     );
   });
 
-/** Edit a community; its public pages (directory, profile, home, agenda) show it on their next visit. */
+/**
+ * Edit a community; its public pages (directory, profile, home, agenda) show it on their next visit.
+ * A return date only means something during a pause: leaving the pause drops it.
+ */
 export const updateCommunity = (
   communityId: string,
   data: Partial<
     Pick<
       CommunityRow,
-      "name" | "description" | "logoUrl" | "isActive" | "status" | "topics" | "links" | "slackChannel" | "noShowNudge"
+      | "name"
+      | "description"
+      | "logoUrl"
+      | "isActive"
+      | "status"
+      | "topics"
+      | "links"
+      | "slackChannel"
+      | "noShowNudge"
+      | "recurringSlot"
+      | "pausedUntil"
     >
   >
 ) =>
-  query((db) => db.update(communities).set(data).where(eq(communities.id, communityId)).returning()).pipe(
+  query((db) =>
+    db
+      .update(communities)
+      .set(data.status && data.status !== "pausa" ? { ...data, pausedUntil: null } : data)
+      .where(eq(communities.id, communityId))
+      .returning()
+  ).pipe(
     Effect.flatMap(([row]) => (row ? Effect.succeed(toCommunity(row)) : Effect.fail(communityNotFound))),
     Effect.tap((community) =>
       Effect.sync(() => {
