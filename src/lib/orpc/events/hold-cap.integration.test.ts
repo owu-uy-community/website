@@ -36,6 +36,17 @@ describe("the hold cap", () => {
     expect(renewed).toMatchObject({ id: held[0].id, status: "draft", dateChosen: true });
   });
 
+  test("two holds at once can't both take the last free place", async () => {
+    const community = await makeCommunity({ name: "Comunidad apurada" });
+    const editor = await makeMember(community.id, "editor");
+    for (let index = 0; index < 7; index++) await hold(community.id, editor, { day: `2029-10-0${index + 1}` });
+
+    const results = await Promise.allSettled(
+      ["2029-10-20", "2029-10-21", "2029-10-22"].map((day) => hold(community.id, editor, { day }))
+    );
+    expect(results.map((result) => result.status).toSorted()).toStrictEqual(["fulfilled", "rejected", "rejected"]);
+  });
+
   test("a Saturday workshop from 10:00 for 6 hours is a date like any other", async () => {
     const community = await makeCommunity({ name: "Comunidad de talleres" });
     const editor = await makeMember(community.id, "editor");

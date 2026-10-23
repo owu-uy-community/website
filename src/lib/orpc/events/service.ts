@@ -184,9 +184,19 @@ export const liveHolds = (communityId: string) =>
       .where(and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date())))
   ).pipe(Effect.map(([row]) => row?.live ?? 0));
 
+/**
+ * Holds are counted, then made: the community's row is locked for the rest of the transaction, so
+ * two at once can't both see 7 and both make the 8th and 9th. Call it inside a transaction.
+ */
+export const lockHoldCount = (communityId: string) =>
+  query((db) =>
+    db.select({ id: communities.id }).from(communities).where(eq(communities.id, communityId)).for("update")
+  );
+
 /** A community keeps at most MAX_HOLDS live holds: a new one (or dating a draft that isn't held) waits. */
 const capHolds = (communityId: string) =>
   Effect.gen(function* () {
+    yield* lockHoldCount(communityId);
     const live = yield* liveHolds(communityId);
     if (live >= MAX_HOLDS) {
       return yield* new Conflict({

@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { CI_ID } from "../../organizar/presets";
 
 import { STALE_FIELDS } from "../../organizar/repeat";
 import { TEMPLATES } from "../../organizar/task-templates";
@@ -102,15 +103,21 @@ export const AnnouncementSchema = z.object({
     .optional(),
 });
 
-export const QuestionSchema = z.object({
-  id: z.string().min(1).max(20),
-  label: z.string().trim().min(1).max(200),
-  required: z.boolean(),
-  /** One Organizá reads (lib/organizar/presets): diet for the food, photos at the door, the ID (sensitive) */
-  preset: z.enum(["dieta", "accesibilidad", "foto", "ci"]).optional(),
-  /** Pick one of these instead of typing */
-  options: z.array(z.string().trim().min(1).max(60)).max(8).optional(),
-});
+export const QuestionSchema = z
+  .object({
+    id: z.string().min(1).max(20),
+    label: z.string().trim().min(1).max(200),
+    required: z.boolean(),
+    /** One Organizá reads (lib/organizar/presets): diet for the food, photos at the door, the ID (sensitive) */
+    preset: z.enum(["dieta", "accesibilidad", "foto", "ci"]).optional(),
+    /** Pick one of these instead of typing */
+    options: z.array(z.string().trim().min(1).max(60)).max(8).optional(),
+  })
+  // The ID's answers are found (masked, purged) by their key: only the ID question may use it
+  .refine((question) => (question.id === CI_ID) === (question.preset === "ci"), {
+    message: "La pregunta de la cédula es la única con ese identificador",
+    path: ["id"],
+  });
 
 /** The hands an event asks attendees for */
 export const VolunteerRoleSchema = z.enum(["recepcion", "puerta", "comida", "fotos", "mc", "cierre"]);

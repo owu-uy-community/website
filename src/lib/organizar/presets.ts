@@ -34,9 +34,15 @@ export const presetQuestion = (preset: QuestionPreset): RsvpQuestion => ({
   ...(PRESETS[preset].options ? { options: PRESETS[preset].options } : {}),
 });
 
-/** The questions whose answers only community admins see (and nobody, a week after the event). */
-export const sensitiveIds = (questions: RsvpQuestion[]) =>
-  questions.filter((question) => question.preset === "ci").map((question) => question.id);
+/**
+ * The answer key of the ID: the "ci" preset always uses it, and no other question may. Masking and
+ * the purge go by the key, never by how the question reads now, so editing or removing the
+ * question can't unmask the answers or keep them past the week.
+ */
+export const CI_ID = "ci";
+
+/** The answers only community admins see (and nobody, a week after the event). */
+export const sensitiveIds = (_questions?: RsvpQuestion[]) => [CI_ID];
 
 const answerTo = (questions: RsvpQuestion[], answers: Record<string, string>, preset: QuestionPreset) => {
   const question = questions.find((item) => item.preset === preset);

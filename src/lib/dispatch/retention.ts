@@ -2,7 +2,7 @@ import { and, eq, gt, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import { attendees, emailDeliveries, events } from "../db/schema";
-import { sensitiveIds } from "../organizar/presets";
+import { CI_ID } from "../organizar/presets";
 import { query } from "../orpc/db";
 
 const DAY = 86_400_000;
@@ -28,34 +28,40 @@ export const retention = (now = new Date()) =>
         )
         .returning({ id: emailDeliveries.id })
     );
-    // Events that asked for the ID and ended over a week ago (within the year the rest is kept)
-    const asked = yield* query((db) =>
+    // The ID, a week after the event: by its answer key, whether or not the event still asks for it
+    const sensitive = yield* query((db) =>
       db
-        .select({ id: events.id, questions: events.questions })
-        .from(events)
+        .update(attendees)
+        .set({ answers: sql`${attendees.answers} - ${CI_ID}::text` })
         .where(
           and(
-            lt(events.endDate, new Date(now.getTime() - SENSITIVE_DAYS * DAY)),
-            gt(events.endDate, new Date(now.getTime() - 400 * DAY)),
-            sql`${events.questions} @> '[{"preset":"ci"}]'::jsonb`
+            sql`${attendees.answers} ? ${CI_ID}::text`,
+            inArray(
+              attendees.eventId,
+              db
+                .select({ id: events.id })
+                .from(events)
+                .where(lt(events.endDate, new Date(now.getTime() - SENSITIVE_DAYS * DAY)))
+            )
+          )
+        )
+        .returning({ id: attendees.id })
+    );
+    const purged = sensitive.length;
+    // The ID lists mailed to the host carry the same numbers: their copy in the outbox goes too
+    yield* query((db) =>
+      db
+        .update(emailDeliveries)
+        .set({ html: "", text: "", attachments: [] })
+        .where(
+          and(
+            eq(emailDeliveries.kind, "venue_id_list"),
+            inArray(emailDeliveries.status, ["sent", "failed"]),
+            ne(emailDeliveries.text, ""),
+            lt(emailDeliveries.createdAt, new Date(now.getTime() - (SENSITIVE_DAYS + 1) * DAY))
           )
         )
     );
-    let purged = 0;
-    for (const event of asked) {
-      const ids = sql`array[${sql.join(
-        sensitiveIds(event.questions).map((id) => sql`${id}`),
-        sql`, `
-      )}]::text[]`;
-      const rows = yield* query((db) =>
-        db
-          .update(attendees)
-          .set({ answers: sql`${attendees.answers} - ${ids}` })
-          .where(and(eq(attendees.eventId, event.id), sql`${attendees.answers} ?| ${ids}`))
-          .returning({ id: attendees.id })
-      );
-      purged += rows.length;
-    }
     const anonymized = yield* query((db) =>
       db
         .update(attendees)

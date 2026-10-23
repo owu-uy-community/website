@@ -296,7 +296,8 @@ export const sendHostDaySheets = Effect.gen(function* () {
   let sheets = 0;
   let lists = 0;
   for (const { event, venue, community } of upcoming) {
-    const contacts = yield* activeContactsOf(venue.id);
+    // Names, CIs and the organizer's contact: never to someone an organizer reported gone
+    const contacts = (yield* activeContactsOf(venue.id)).filter((contact) => !contact.leftReportedAt);
     if (contacts.length === 0) continue;
     const start = event.startDate.getTime();
     const facts: VenueFactsInput = venue.facts;
@@ -454,6 +455,8 @@ export const checkAnswer = (input: { token: string; answer: "yes" | "pause" | "l
   transaction(
     Effect.gen(function* () {
       const { contact, venue } = yield* contactFromCheck(input.token);
+      // Gone (they said so, or staff confirmed it): the link that went to them can't bring them back
+      if (contact.leftAt) return yield* checkNotFound;
       const now = new Date();
       yield* query((db) =>
         db

@@ -102,6 +102,31 @@ describe("proposing", () => {
     ]);
   });
 
+  test("editing the communities again and again tells at most eight of them in all", async () => {
+    const speaker = await makeUser();
+    const named = await Promise.all(
+      Array.from({ length: 12 }, (_, index) => makeCommunity({ name: `Comunidad ${index}` }))
+    );
+    await Promise.all(named.map((community) => makeMember(community.id, "editor")));
+    const { id } = await propose(speaker, { communityIds: named.slice(0, 4).map((community) => community.id) });
+
+    for (const slice of [
+      [4, 8],
+      [8, 12],
+    ]) {
+      await call(
+        router.talks.update,
+        { ...fields({ communityIds: named.slice(...slice).map((community) => community.id) }), proposalId: id },
+        by(speaker)
+      );
+    }
+    const told = await db
+      .selectDistinct({ key: emailDeliveries.dedupeKey })
+      .from(emailDeliveries)
+      .where(like(emailDeliveries.dedupeKey, `talk_proposed:${id}:%`));
+    expect(new Set(told.map(({ key }) => key.split(":")[2])).size).toBe(8);
+  });
+
   test("five a day per person", async () => {
     const speaker = await makeUser();
     for (let index = 0; index < 5; index++) await propose(speaker, { title: `Charla número ${index}` });

@@ -387,6 +387,11 @@ describe("the agenda", () => {
       code: "CONFLICT",
       data: { reason: "desk_rundown" },
     });
+    // Its GO puts scenes on air and posts to Telegram: the stage desk's, never MC mode's
+    await expect(call(router.events.agendaGo, ref(conf.id), by(editor))).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "desk_rundown" },
+    });
   });
 
   test("saving reorders and resizes; MC's Siguiente starts the next moment", async () => {

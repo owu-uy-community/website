@@ -40,6 +40,12 @@ const proposeLimit = ratelimit({
   key: ({ context }: { context: AuthedContext }) => context.user.id,
 });
 
+/** Editing a proposal can email newly named communities: a few dozen edits a day per person. */
+const updateLimit = ratelimit({
+  limiter: limiter({ prefix: "talk-update:", maxRequests: 30, window: 86_400_000 }),
+  key: ({ context }: { context: AuthedContext }) => context.user.id,
+});
+
 /**
  * Talks: the rolling call for talks on /dar-una-charla, the pool every community's Charlas page
  * reads, claims ("La queremos"), talk requests, speaker profiles and share cards.
@@ -57,6 +63,7 @@ export const talksRouter = {
   update: authed
     .meta(docs("Edit one of your open proposals"))
     .input(UpdateProposalSchema)
+    .use(updateLimit)
     .output(Id)
     .effect(function* ({ input }) {
       return yield* Talks.update(input);

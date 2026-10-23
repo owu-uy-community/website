@@ -46,7 +46,7 @@ import { listTasks } from "../staff-tasks/service";
 import { CommunityScope, CurrentUser } from "../services";
 import { acceptedCohosts } from "./cohosts";
 import type { Slides, Volunteer } from "./schemas";
-import { editableOf, headsUp, liveHolds, responderNames } from "./service";
+import { editableOf, headsUp, liveHolds, lockHoldCount, responderNames } from "./service";
 import { taskDay } from "./tasks";
 
 const DAY_MS = 86_400_000;
@@ -138,6 +138,7 @@ export const repeat = (sourceId: string, title?: string) =>
       const date = yield* repeatDate(source);
       const startDate = new Date(montevideoIso(`${date.day}T${date.startTime}`));
       const shift = startDate.getTime() - source.startDate.getTime();
+      yield* lockHoldCount(communityId);
       const held = (yield* liveHolds(communityId)) < MAX_HOLDS;
       const team = yield* query((db) =>
         db
@@ -773,6 +774,9 @@ export const saveAgenda = (input: { eventId: string; items: { id?: string; title
 export const agendaGo = (input: { eventId: string; itemId?: string }) =>
   Effect.gen(function* () {
     yield* eventIn(input.eventId);
+    // A guion with cues or Owy messages is the stage desk's: its GO puts scenes on air and posts to
+    // Telegram, which takes the platform's runOfShow permission, not an organizer's
+    if (deskMade(yield* itemsOf(input.eventId))) return yield* deskConflict;
     yield* RunOfShow.go(input);
 
     return yield* RunOfShow.listRunOfShow(input.eventId);

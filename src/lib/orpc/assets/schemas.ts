@@ -42,7 +42,7 @@ export const AssetSchema = z.object({
 });
 
 /** Passwords never go here: "clave: …" or "password=…" in a note is refused. */
-const NO_SECRETS = /(contraseñ|password|passwd|clave|pass)\s*[:=]/i;
+export const NO_SECRETS = /(contraseñ\w*|password|passwd|clave|pass(word)?|pwd)\s*[:=]/i;
 const free = (max: number) =>
   z
     .string()

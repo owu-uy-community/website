@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { Effect } from "effect";
 
 import {
@@ -161,7 +161,8 @@ export const getToday = (eventId: string) =>
             .from(incidents)
             .leftJoin(rooms, eq(rooms.id, incidents.roomId))
             .leftJoin(user, eq(user.id, incidents.assigneeId))
-            .where(eq(incidents.eventId, eventId))
+            // Public reports belong to the conduct page (its responders and OWU's staff), never this screen
+            .where(and(eq(incidents.eventId, eventId), ne(incidents.source, "public")))
             .orderBy(desc(incidents.createdAt))
         ),
         query((db) =>

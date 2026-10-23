@@ -9,7 +9,7 @@ import { appUrl } from "../../email/templates";
 import { refreshEvent } from "../../revalidate";
 import { allowed } from "../authz";
 import { query, transaction } from "../db";
-import { Forbidden, Invalid, NotFound } from "../errors";
+import { Conflict, Forbidden, Invalid, NotFound } from "../errors";
 import { memberRole } from "../scope";
 import { CommunityScope, CurrentUser } from "../services";
 import type { ConductReports, ReportInput } from "./schemas";
@@ -46,9 +46,29 @@ export const team = (eventId: string) =>
 export const setResponders = (input: { eventId: string; userIds: string[] }) =>
   Effect.gen(function* () {
     const { communityId } = yield* CommunityScope;
-    const { candidates } = yield* team(input.eventId);
+    const { candidates, responders } = yield* team(input.eventId);
     if (input.userIds.some((id) => !candidates.some((candidate) => candidate.userId === id))) {
       return yield* new Invalid({ message: "Solo se puede nombrar a gente del equipo con rol de editor o más" });
+    }
+    // Responders read every report of the event: once there are reports, a new one would read what
+    // was told to others. Removing someone is fine; adding goes through OWU's conduct team
+    const added = input.userIds.filter((id) => !responders.includes(id));
+    if (added.length > 0 && !(yield* allowed("incident:confidential"))) {
+      const [reported] = yield* query((db) =>
+        db
+          .select({ id: incidents.id })
+          .from(incidents)
+          .where(
+            and(eq(incidents.eventId, input.eventId), eq(incidents.source, "public"), eq(incidents.category, "conduct"))
+          )
+          .limit(1)
+      );
+      if (reported) {
+        return yield* new Conflict({
+          reason: "reports_exist",
+          message: `Este evento ya tiene reportes de conducta: para sumar responsables, escribile a ${CONDUCT_EMAIL}. Quitar a alguien sí se puede.`,
+        });
+      }
     }
     const [row] = yield* query((db) =>
       db

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ne, or, sql } from "drizzle-orm";
 import { Effect } from "effect";
 
 import {
@@ -74,7 +74,14 @@ type Viewer = Effect.Success<typeof viewer>;
  */
 export const visibleTo = (who: Pick<Viewer, "id" | "organizer"> & { staff?: boolean }) =>
   and(
-    who.staff ? undefined : ne(incidents.source, "public"),
+    who.staff
+      ? // …except a report that names the team, if they're on the event's community team themselves
+        or(
+          ne(incidents.source, "public"),
+          eq(incidents.involvesOrganizer, false),
+          sql`not exists (select 1 from "community_members" cm join "open_spaces" e on e."communityId" = cm."communityId" where e."id" = ${incidents.eventId} and cm."userId" = ${who.id})`
+        )
+      : ne(incidents.source, "public"),
     who.organizer
       ? undefined
       : or(eq(incidents.sensitive, false), eq(incidents.reporterId, who.id), eq(incidents.assigneeId, who.id))

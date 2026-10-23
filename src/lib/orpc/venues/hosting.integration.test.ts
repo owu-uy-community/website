@@ -174,6 +174,22 @@ describe("the host-day sheet and the ID list", () => {
       { text: expect.stringContaining("Lista para seguridad") },
     ]);
   });
+
+  test("a contact an organizer reported gone gets neither the sheet nor the ID list", async () => {
+    const { community } = await setup();
+    const venue = await makeVenue({ facts: { idRequired: true, idDeadlineHours: 24 } });
+    await db.update(venueContacts).set({ leftReportedAt: new Date() }).where(eq(venueContacts.venueId, venue.id));
+    const ci = { id: "ci", label: "Cédula (se la pasamos al edificio)", required: true, preset: "ci" as const };
+    const event = await eventAt(community.id, venue.id, 20 * HOUR, { questions: [ci] });
+    await makeRsvp(event.id, { answers: { ci: "1.234.567-8" } });
+
+    await run(sendHostDaySheets);
+
+    const sent = await Promise.all(
+      ["venue_day_sheet", "venue_id_list"].map((kind) => mail(venue.contact?.email ?? "", kind))
+    );
+    expect(sent.map((rows) => rows.length)).toStrictEqual([0, 0]);
+  });
 });
 
 describe("the yearly check", () => {
@@ -247,6 +263,16 @@ describe("the yearly check", () => {
     await expect(venueRow()).resolves.toMatchObject([{ requestable: false }]);
 
     await call(router.venues.checkAnswer, { token, answer: "left" }, by(null));
+    await expect(contactRow()).resolves.toMatchObject([{ leftAt: expect.any(Date) }]);
+  });
+
+  test("once gone, the same link can't bring them back", async () => {
+    const { token, contactRow } = await asked();
+    await call(router.venues.checkAnswer, { token, answer: "left" }, by(null));
+
+    await expect(call(router.venues.checkAnswer, { token, answer: "yes" }, by(null))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
     await expect(contactRow()).resolves.toMatchObject([{ leftAt: expect.any(Date) }]);
   });
 

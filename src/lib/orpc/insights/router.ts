@@ -1,7 +1,9 @@
 import { openapi } from "@orpc/openapi";
+import { ratelimit } from "@orpc/ratelimit";
 import * as z from "zod";
 
-import { authed, inCommunity, platform, pub } from "../base";
+import { authed, inCommunity, platform, pub, type BaseContext } from "../base";
+import { limiter } from "../ratelimit";
 import {
   CommunityRefSchema,
   ExportSchema,
@@ -14,6 +16,19 @@ import {
 import * as Insights from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Insights"], summary });
+
+/**
+ * The impact page is cached for hours; the public procedure behind it reads every attendee, so a
+ * caller hitting it directly gets a few a minute, not a way to load the database.
+ */
+const impactLimit = ratelimit({
+  limiter: limiter({ prefix: "insights-impact:", maxRequests: 10, window: 60_000 }),
+  key: ({ context }: { context: BaseContext }) => {
+    const headers = context.requestHeaders;
+
+    return headers?.get("x-real-ip") ?? headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "server";
+  },
+});
 
 // A community's numbers for its team; OWU's for staff; the public impact page for anyone.
 // Aggregates only: no procedure here names a person who came.
@@ -45,6 +60,7 @@ export const insightsRouter = {
 
   impact: pub
     .meta(docs("OWU's yearly totals, and each community's that chose to show them"))
+    .use(impactLimit)
     .output(ImpactSchema)
     .effect(function* () {
       return yield* Insights.impact;

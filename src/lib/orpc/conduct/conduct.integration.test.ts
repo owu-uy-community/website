@@ -174,6 +174,40 @@ describe("conduct reports", () => {
     });
   });
 
+  test("once there are reports, adding a responder takes OWU's conduct team; removing one doesn't", async () => {
+    const { community, editor, responder, second, event } = await setup();
+    const set = (userIds: string[], actor = editor) =>
+      call(router.conduct.setResponders, { eventId: event.id, userIds }, by(actor));
+    await set([responder.id]);
+    await report(community, event);
+
+    // A responder named now would read what was told to the first one
+    await expect(set([responder.id, editor.id])).rejects.toMatchObject({
+      code: "CONFLICT",
+      data: { reason: "reports_exist" },
+    });
+    await expect(set([])).resolves.toMatchObject({ responders: [] });
+    await expect(set([second.id], await makeSiteAdmin())).resolves.toMatchObject({ responders: [second.id] });
+  });
+
+  test("staff on the community's team don't read a report that names it from /admin's incidents either", async () => {
+    const { community, editor, responder, event } = await setup();
+    await call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id] }, by(editor));
+    await report(community, event, { involvesOrganizer: true });
+    const incident = await lastIncident(event.id);
+    const [staff, staffOnTeam] = await Promise.all([makeSiteAdmin(), makeSiteAdmin()]);
+    await db.insert(communityMembers).values({ communityId: community.id, userId: staffOnTeam.id, role: "editor" });
+
+    const listed = await Promise.all(
+      [staff, staffOnTeam].map((person) =>
+        call(router.incidents.list, { eventId: event.id }, by(person)).then((rows) =>
+          rows.some((row) => row.id === incident.id)
+        )
+      )
+    );
+    expect(listed).toStrictEqual([true, false]);
+  });
+
   test("responders and staff read reports; another editor, the admin and the owner can't", async () => {
     const { community, editor, admin, owner, responder, event } = await setup();
     await call(router.conduct.setResponders, { eventId: event.id, userIds: [responder.id] }, by(editor));

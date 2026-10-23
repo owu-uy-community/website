@@ -126,6 +126,9 @@ const activeCommunities = (ids: string[]) =>
     return unique;
   });
 
+/** A proposal names at most this many communities (ProposalFieldsSchema), and emails no more than that. */
+const MAX_ADDRESSED = 8;
+
 /** Tell the editors of each community a proposal names (OWU-wide ones wait in the pool). Deduped. */
 const notifyAddressed = (proposal: TalkProposalRow) =>
   Effect.gen(function* () {
@@ -207,7 +210,23 @@ export const update = (input: ProposalFields & { proposalId: string }) =>
           .where(eq(talkProposals.id, proposalId))
           .returning()
       );
-      yield* notifyAddressed(proposal);
+      // Only communities never told before, and never more than a proposal can name: swapping the
+      // list over and over must not turn one proposal into mail for every community
+      const told = yield* query((db) =>
+        db
+          .selectDistinct({ key: emailDeliveries.dedupeKey })
+          .from(emailDeliveries)
+          .where(
+            and(
+              eq(emailDeliveries.kind, "talk_proposed"),
+              sql`${emailDeliveries.dedupeKey} like ${`talk_proposed:${proposal.id}:%`}`
+            )
+          )
+      );
+      const toldCommunities = new Set(told.map(({ key }) => key.split(":")[2]));
+      const room = Math.max(0, MAX_ADDRESSED - toldCommunities.size);
+      const fresh = communityIds.filter((id) => !toldCommunities.has(id)).slice(0, room);
+      if (fresh.length > 0) yield* notifyAddressed({ ...proposal, communityIds: fresh });
 
       return { id: proposal.id };
     })
