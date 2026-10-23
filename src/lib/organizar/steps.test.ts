@@ -17,6 +17,7 @@ const ready: Checkable = {
   registration: "owu",
   registrationUrl: null,
   capacity: 60,
+  responders: ["responder"],
 };
 const NOW = Date.parse("2029-11-01T00:00:00Z");
 
@@ -49,5 +50,21 @@ describe(issues, () => {
     const list = issues({ ...ready, registration: "external", startDate: "2029-10-01T22:00:00.000Z" }, NOW);
 
     expect(list.map((issue) => issue.text)).toStrictEqual(["La fecha ya pasó", "Poné el link de inscripción"]);
+  });
+
+  test("code-of-conduct responders: two are required past 60 lugares, one is recommended below", () => {
+    const required = (capacity: number | null, responders: string[]) =>
+      issues({ ...ready, capacity, responders }, NOW)
+        .filter((issue) => issue.text.includes("conducta"))
+        .map((issue) => issue.level);
+
+    expect([
+      required(61, ["ana"]),
+      required(61, ["ana", "beto"]),
+      required(60, []),
+      required(60, ["ana"]),
+      required(null, []),
+    ]).toStrictEqual([["required"], [], ["recommended"], [], ["recommended"]]);
+    expect(stepState("inscripcion", issues({ ...ready, capacity: 120, responders: [] }, NOW))).toBe("required");
   });
 });

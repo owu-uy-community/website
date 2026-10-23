@@ -185,6 +185,8 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
       status: z.enum(["invited", "accepted", "declined"]),
     })
   ),
+  /** Code-of-conduct responders: team members' ids (conduct.setResponders changes them) */
+  responders: z.array(z.string()),
 });
 
 /** What autosave sends: any subset, checked loosely (publishing checks the rest). */
@@ -323,6 +325,8 @@ export const PublicEventSchema = z.object({
   going: z.array(z.string()),
   /** The talks, those with a title */
   talks: z.array(TalkSchema),
+  /** Code-of-conduct responders, as "Ana G." */
+  responders: z.array(z.string()),
 });
 
 export const CohostInvitationSchema = z.object({

@@ -29,9 +29,19 @@ export type Checkable = {
   registration: "none" | "owu" | "external" | "eventbrite";
   registrationUrl: string | null;
   capacity: number | null;
+  /** Code-of-conduct responders (team members' ids) */
+  responders: string[];
 };
 
 export type Issue = { step: StepKey; text: string; level: "required" | "recommended" };
+
+/** Events for more people than this need two code-of-conduct responders to publish; one is recommended below. */
+export const TWO_RESPONDERS_ABOVE = 60;
+export const MAX_RESPONDERS = 3;
+export const RESPONDERS_RULE = `Para eventos de más de ${TWO_RESPONDERS_ABOVE} lugares hacen falta 2.`;
+/** How many responders an event needs to be published */
+export const respondersNeeded = (capacity: number | null) =>
+  capacity !== null && capacity > TWO_RESPONDERS_ABOVE ? 2 : 0;
 
 /** The name a draft starts with: not a name yet. */
 export const UNTITLED = "Evento sin título";
@@ -63,6 +73,11 @@ export function issues(event: Checkable, now = Date.now()): Issue[] {
   if (event.registration === "owu" && !event.capacity) could("inscripcion", "Sin cupo: se puede anotar cualquiera");
   if (event.registration === "eventbrite" && !event.capacity) {
     need("inscripcion", "Poné el cupo: Eventbrite lo pide para las entradas");
+  }
+  if (event.responders.length < respondersNeeded(event.capacity)) {
+    need("inscripcion", `Nombrá 2 responsables de conducta (más de ${TWO_RESPONDERS_ABOVE} lugares)`);
+  } else if (event.responders.length === 0) {
+    could("inscripcion", "Nombrá a alguien responsable de conducta, a quien acudir si algo no está bien");
   }
 
   return list;

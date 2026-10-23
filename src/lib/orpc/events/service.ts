@@ -410,6 +410,7 @@ const editableOf = (eventId: string) =>
       cancelReason: event.cancelReason,
       materials: event.materials,
       cohosts: yield* cohostsOf(event.id),
+      responders: event.responders,
     } satisfies EditableEvent;
   });
 
@@ -865,6 +866,14 @@ export const cancel = (input: { eventId: string; reason: string }) =>
 // The public page
 // ---------------------------------------------------------------------------
 
+/** Code-of-conduct responders as the public page names them ("Ana G."), in the order the team named them. */
+const responderNames = (ids: string[]) =>
+  ids.length === 0
+    ? Effect.succeed([])
+    : query((db) => db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, ids))).pipe(
+        Effect.map((rows) => ids.flatMap((id) => rows.filter((row) => row.id === id).map((row) => shortName(row.name))))
+      );
+
 const toPublic = (eventId: string) =>
   Effect.gen(function* () {
     const [row] = yield* query((db) =>
@@ -968,6 +977,7 @@ const toPublic = (eventId: string) =>
           .orderBy(asc(attendees.registeredAt))
           .limit(12)
       )).map((row) => shortName(row.name)),
+      responders: yield* responderNames(event.responders),
     } satisfies PublicEvent;
   });
 

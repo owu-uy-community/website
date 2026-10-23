@@ -5,7 +5,9 @@ import { attendeesRouter } from "./attendees/router";
 import { calendarRouter } from "./calendar/router";
 import { castRouter } from "./cast/router";
 import { commsRouter } from "./comms/router";
+import { assetsRouter } from "./assets/router";
 import { communitiesRouter } from "./communities/router";
+import { conductRouter } from "./conduct/router";
 import { companionRouter } from "./companion/router";
 import { confRouter } from "./conf/router";
 import { countdownRouter } from "./countdown/router";
@@ -14,6 +16,7 @@ import { doorRouter } from "./door/router";
 import { eventbriteRouter } from "./eventbrite/router";
 import { eventsRouter } from "./events/router";
 import { incidentsRouter } from "./incidents/router";
+import { insightsRouter } from "./insights/router";
 import { integrationsRouter } from "./integrations/router";
 import { obsControlRouter, obsCueRouter } from "./obs-control/router";
 import { obsQueueRouter } from "./obs-queue/router";
@@ -21,6 +24,7 @@ import { ocrRouter } from "./ocr/router";
 import { pollsRouter } from "./polls/router";
 import { salarySurveyRouter } from "./salary-survey/router";
 import { openSpacesRouter } from "./open-spaces/router";
+import { outreachRouter } from "./outreach/router";
 import { owyStageRouter } from "./owy-stage/router";
 import { panelRouter } from "./panel/router";
 import { roomsRouter } from "./rooms/router";
@@ -55,6 +59,11 @@ export const router = {
 
   // Communities (tenants) and their event-day staff coordination
   communities: communitiesRouter,
+  // A community's health: its accounts elsewhere, its numbers, staff's outreach, the code of conduct
+  assets: assetsRouter,
+  insights: insightsRouter,
+  outreach: outreachRouter,
+  conduct: conductRouter,
 
   // Organizá: the shared calendar, and events as organizers make them (drafts, date holds)
   panel: panelRouter,
