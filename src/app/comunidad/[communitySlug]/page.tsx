@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNotNull, lt } from "drizzle-orm";
+import { cacheLife } from "next/cache";
 import { notFound } from "next/navigation";
 
 import { landingFor } from "components/community-landings/registry";
@@ -6,28 +7,33 @@ import { CommunityProfile } from "components/community/profile/CommunityProfile"
 import { SiteChrome } from "components/community/SiteChrome";
 import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
+import { communityParams } from "lib/community/static-params";
 import { ORGANIZAR_ON } from "lib/community/flags";
 import { db } from "lib/db";
-import { communities, communityMembers, eventHosts, events, user, venues } from "lib/db/schema";
-import { getCommunityBySlug, listCommunityEvents } from "lib/tenant-server";
+import { communities, communityMembers, eventHosts, events, user, venues, type CommunityRow } from "lib/db/schema";
+import { listCommunityEvents, publicCommunity } from "lib/tenant-server";
 
-// What's next and the counts change; an hour is fresh enough (publishing refreshes event pages)
-export const revalidate = 3600;
+// Every listed community is prerendered; one listed later renders on its first visit
+export const generateStaticParams = communityParams;
 
-// No paths at build: each one renders on its first visit and is then served from the cache.
-// Without this a dynamic route ignores `revalidate` and renders on every request.
-export async function generateStaticParams() {
-  return [];
-}
+// Fully static, and a slug that isn't prerendered waits for its complete render: a community that doesn't exist answers a real 404 instead of a shell. The build fails if request-time work sneaks in.
+export const ensureStatic = "navigation";
 
 /**
  * A community's page: a bespoke landing from the registry when it has one, otherwise its profile
  * with what's next (OWU's events and its Meetup ones), what it did and who hosted it.
  */
 export default async function CommunityHomePage({ params }: { params: Promise<{ communitySlug: string }> }) {
-  const { communitySlug } = await params;
-  const community = await getCommunityBySlug(communitySlug);
+  const community = await publicCommunity((await params).communitySlug);
   if (!community) notFound();
+
+  return <CommunityHome community={community} />;
+}
+
+async function CommunityHome({ community }: { community: CommunityRow }) {
+  "use cache";
+  // What's next and the counts change; an hour is fresh enough (publishing refreshes it sooner)
+  cacheLife("hours");
 
   const all = await listCommunityEvents(community.id);
   const Landing = landingFor(community.slug);

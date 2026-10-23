@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
@@ -8,23 +9,21 @@ import { EventAgenda } from "components/displays/EventAgenda";
 import { LiveAgenda } from "components/displays/LiveAgenda";
 import { CommunityMark } from "components/shared/CommunityMark";
 import { publicCaller } from "lib/orpc/server";
-import { getEventBySlugs } from "lib/tenant-server";
+import { openSpaceParams } from "lib/community/static-params";
+import type { CommunityRow, EventRow } from "lib/db/schema";
+import { publicEvent } from "lib/tenant-server";
 
 type Params = Promise<{ communitySlug: string; eventSlug: string }>;
 
-// The board changes constantly while the event runs; LiveAgenda pushes updates,
-// this only bounds how stale a cold visit can be.
-export const revalidate = 60;
+// Every open space is prerendered; one added later renders on its first visit
+export const generateStaticParams = openSpaceParams;
 
-// No paths at build: each one renders on its first visit and is then served from the cache.
-// Without this a dynamic route ignores `revalidate` and renders on every request.
-export async function generateStaticParams() {
-  return [];
-}
+// Fully static; an open space that doesn't exist answers a real 404 (see the community page)
+export const ensureStatic = "navigation";
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { communitySlug, eventSlug } = await params;
-  const resolved = await getEventBySlugs(communitySlug, eventSlug);
+  const resolved = await publicEvent(communitySlug, eventSlug);
   if (!resolved) return {};
 
   const title = `Agenda · ${resolved.event.name}`;
@@ -59,10 +58,18 @@ function eventStatus(start: Date, end: Date): { label: string; live: boolean } {
 
 export default async function EventOpenSpacePage({ params }: { params: Params }) {
   const { communitySlug, eventSlug } = await params;
-  const resolved = await getEventBySlugs(communitySlug, eventSlug);
+  const resolved = await publicEvent(communitySlug, eventSlug);
   if (!resolved) notFound();
 
-  const { community, event } = resolved;
+  return <OpenSpaceAgenda community={resolved.community} event={resolved.event} />;
+}
+
+async function OpenSpaceAgenda({ community, event }: { community: CommunityRow; event: EventRow }) {
+  "use cache";
+  // The board changes constantly while the event runs; LiveAgenda pushes updates,
+  // this only bounds how stale a cold visit can be.
+  cacheLife("minutes");
+
   const [rooms, schedules, tracks] = await Promise.all([
     // Public procedures through the anonymous caller: reading the session would make the page dynamic
     publicCaller.rooms.getByOpenSpace({ openSpaceId: event.id }),

@@ -1,29 +1,32 @@
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
 
 import { EventPage } from "components/community/event/EventPage";
 import { RsvpCard } from "components/community/event/RsvpCard";
 import { SiteChrome } from "components/community/SiteChrome";
 import Footer from "components/shared/Footer";
 import { SITE_URL } from "lib/community/site";
+import { eventParams } from "lib/community/static-params";
 import { publicCaller } from "lib/orpc/server";
 
 type Params = Promise<{ communitySlug: string; eventSlug: string }>;
 
-// Seats left and who's going change; a minute old is fine
-export const revalidate = 60;
+// Every published event is prerendered; one published later renders on its first visit
+export const generateStaticParams = eventParams;
 
-// No paths at build: each one renders on its first visit and is then served from the cache.
-// Without this a dynamic route ignores `revalidate` and renders on every request.
-export async function generateStaticParams() {
-  return [];
+// Fully static; an event that doesn't exist answers a real 404 (see the community page)
+export const ensureStatic = "navigation";
+
+// Shared by the metadata and the page. Seats left and who's going change; a minute old is fine
+async function load(communitySlug: string, eventSlug: string) {
+  "use cache";
+  cacheLife("minutes");
+
+  return publicCaller.events.public({ communitySlug, eventSlug }).catch(() => null);
 }
 
-// Shared by the metadata and the page: one lookup per render
-const load = cache((communitySlug: string, eventSlug: string) =>
-  publicCaller.events.public({ communitySlug, eventSlug }).catch(() => null)
-);
+type PublicEvent = NonNullable<Awaited<ReturnType<typeof load>>>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { communitySlug, eventSlug } = await params;
@@ -50,13 +53,16 @@ export default async function EventRootPage({ params }: { params: Params }) {
     redirect(`/comunidad/${communitySlug}/events/${eventSlug}/openspace`);
   }
 
+  return <EventView event={event} url={`${SITE_URL}/comunidad/${communitySlug}/events/${eventSlug}`} />;
+}
+
+async function EventView({ event, url }: { event: PublicEvent; url: string }) {
+  "use cache";
+  cacheLife("minutes");
+
   return (
     <SiteChrome>
-      <EventPage
-        event={event}
-        rsvp={<RsvpCard event={event} />}
-        url={`${SITE_URL}/comunidad/${communitySlug}/events/${eventSlug}`}
-      />
+      <EventPage event={event} rsvp={<RsvpCard event={event} />} url={url} />
       <Footer />
     </SiteChrome>
   );

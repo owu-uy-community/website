@@ -6,8 +6,6 @@ import { WebhookSchema } from "lib/orpc/eventbrite/schemas";
 import { connectionByWebhookKey } from "lib/orpc/integrations/service";
 import { liveServices } from "lib/orpc/services";
 
-export const runtime = "nodejs";
-
 /**
  * Webhooks from a community's own Eventbrite account. Eventbrite can't sign them, so the path
  * carries a secret per connection; what the call names is read back with that account's token

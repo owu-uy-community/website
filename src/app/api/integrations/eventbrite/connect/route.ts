@@ -10,8 +10,6 @@ import { signLink } from "lib/links";
 import { adminCommunity, authorizeUrl, eventbriteApp } from "lib/orpc/integrations/service";
 import { liveServices } from "lib/orpc/services";
 
-export const runtime = "nodejs";
-
 /** Where the OAuth state lives while the admin is on Eventbrite. */
 const STATE_COOKIE = "eventbrite_oauth";
 

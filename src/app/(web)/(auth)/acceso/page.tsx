@@ -6,6 +6,9 @@ import { AccessClient } from "./AccessClient";
 
 export const metadata: Metadata = { title: "Acceso | OWU Uruguay" };
 
+// Behind the session: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 /**
  * Where people without access to the dashboard land (requireDashboardAccess sends them here): their
  * OWU Slack, a request for access, their Telegram for the Owy bot.

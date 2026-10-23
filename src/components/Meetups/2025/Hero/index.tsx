@@ -13,6 +13,8 @@ import { useTicketRelease } from "contexts/TicketReleaseContext";
 import classNames from "classnames";
 
 type HeroProps = {
+  /** Whether the ticket deadline passed, read by the (cached) page: a prerendered client can't read the clock */
+  pastDeadline: boolean;
   sponsors?: readonly {
     readonly name: string;
     readonly image: string;
@@ -20,19 +22,15 @@ type HeroProps = {
   }[];
 };
 
-export default function Hero({ sponsors }: HeroProps) {
-  // Check if current date is past the ticket deadline
-  const now = new Date();
-  const deadline = EVENT_DATES.ticketDeadline;
-
+export default function Hero({ sponsors, pastDeadline }: HeroProps) {
   // Check if tickets are released using centralized hook
   const { isReleased: areTicketsReleased, ticketUrl } = useTicketRelease();
 
   return (
     <section
       className={classNames("relative flex w-full flex-1 flex-col items-center justify-center", {
-        "min-h-[calc(100dvh-126px)]": now < deadline,
-        "min-h-[calc(100dvh-56px)]": now >= deadline,
+        "min-h-[calc(100dvh-126px)]": !pastDeadline,
+        "min-h-[calc(100dvh-56px)]": pastDeadline,
       })}
       id="inicio"
     >

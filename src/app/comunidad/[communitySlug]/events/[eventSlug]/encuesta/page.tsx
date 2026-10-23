@@ -11,8 +11,9 @@ import { SurveyForm } from "./SurveyForm";
 
 type Params = Promise<{ communitySlug: string; eventSlug: string }>;
 
-// It opens and closes while people answer, and `?sala=` changes what it says.
-export const dynamic = "force-dynamic";
+// It opens and closes while people answer, and `?sala=` changes what it says: rendered per request,
+// allowed to block (Cache Components).
+export const instant = false;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { communitySlug, eventSlug } = await params;

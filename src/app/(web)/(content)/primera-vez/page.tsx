@@ -1,5 +1,6 @@
 import { Gift, Languages, UserRoundPlus } from "lucide-react";
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
@@ -22,9 +23,6 @@ import { getUpcomingEvents } from "lib/community/events";
 import { pageMetadata } from "lib/community/metadata";
 import { PAGES, SLACK_CHANNELS } from "lib/community/site";
 import { dateParts } from "lib/community/time";
-
-// The terminal card shows the next real event from the feed
-export const revalidate = 3600;
 
 export const metadata = pageMetadata({
   title: "¿Primera vez?",
@@ -76,6 +74,10 @@ const EVENING = [
 const linkClass = "text-zinc-200 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400";
 
 export default async function FirstTimePage() {
+  "use cache";
+  // The terminal card shows the next real event from the feed
+  cacheLife("hours");
+
   const [next] = await getUpcomingEvents();
   const when = next ? dateParts(next.start) : null;
 

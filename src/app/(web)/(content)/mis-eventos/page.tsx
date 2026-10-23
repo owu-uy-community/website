@@ -13,7 +13,8 @@ import { callerFor } from "lib/orpc/server";
 
 import { DeleteAccount } from "./DeleteAccount";
 
-export const dynamic = "force-dynamic";
+// Each visitor's own sign-ups: rendered per request, allowed to block (Cache Components)
+export const instant = false;
 export const metadata = {
   ...pageMetadata({
     title: "Mis eventos",

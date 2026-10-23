@@ -263,6 +263,9 @@ function OpenData({ slug, datasetHref }: { slug: string; datasetHref: string }) 
   );
 }
 
+// Whether the visitor already answered, and the edition in the URL: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function SalarySurveyPage({ searchParams }: { searchParams: Promise<{ edicion?: string }> }) {
   const [{ survey: current, answered, slack }, editions, { edicion }] = await Promise.all([
     caller.salarySurvey.current(),

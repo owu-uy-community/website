@@ -3,11 +3,11 @@ import type React from "react";
 import { notFound } from "next/navigation";
 
 import { AppProviders } from "components/providers/AppProviders";
-import { getCommunityBySlug } from "lib/tenant-server";
+import { publicCommunity } from "lib/tenant-server";
 
 export async function generateMetadata({ params }: { params: Promise<{ communitySlug: string }> }): Promise<Metadata> {
   const { communitySlug } = await params;
-  const community = await getCommunityBySlug(communitySlug);
+  const community = await publicCommunity(communitySlug);
 
   return {
     title: community ? `${community.name} | owu.uy` : "Comunidad",
@@ -23,7 +23,7 @@ export default async function CommunityLayout({
   params: Promise<{ communitySlug: string }>;
 }) {
   const { communitySlug } = await params;
-  const community = await getCommunityBySlug(communitySlug);
+  const community = await publicCommunity(communitySlug);
 
   if (!community || !community.isActive) {
     notFound();

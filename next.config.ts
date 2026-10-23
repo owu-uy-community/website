@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
   // Allow hitting the dev server via 127.0.0.1 (separate cookie jar from localhost)
   allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
+  // Cache Components: data is fetched per request unless a page or function says "use cache" (with
+  // its cacheLife), and every route ships a prerendered static shell that request-time parts stream
+  // into. Partial Prefetching: links prefetch one App Shell per route instead of one per link.
+  cacheComponents: true,
+  partialPrefetching: true,
   images: {
     // AVIF first (~20% smaller than WebP) for browsers that take it
     formats: ["image/avif", "image/webp"],

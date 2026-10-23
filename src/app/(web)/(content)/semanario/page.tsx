@@ -1,5 +1,6 @@
 import { ArrowRight, Rss } from "lucide-react";
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import CopyField from "components/community/CopyField";
@@ -20,9 +21,6 @@ import { pageMetadata } from "lib/community/metadata";
 import { SITE_URL, SLACK_CHANNELS } from "lib/community/site";
 
 import { excerpt, getIssues, longDate, SEMANARIO_EMOJI, weekRange } from "./data";
-
-// Published issues re-render on publish; this is the fallback
-export const revalidate = 3600;
 
 export const metadata = pageMetadata({
   title: "Semanario OWU",
@@ -89,6 +87,10 @@ function Subscribe() {
 }
 
 export default async function SemanarioPage() {
+  "use cache";
+  // Published issues re-render on publish; this is the fallback
+  cacheLife("hours");
+
   const issues = await getIssues();
   const [latest, ...archive] = issues;
 

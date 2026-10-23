@@ -1,14 +1,12 @@
 import { and, eq, exists, ne, not, or } from "drizzle-orm";
 import type { MetadataRoute } from "next";
+import { cacheLife } from "next/cache";
 
 import { getBlogPosts } from "app/(web)/(content)/blog/(posts)/posts";
 import { CONF_URL, PUBLIC_ROUTES, SITE_URL } from "lib/community/site";
 import { db } from "lib/db";
 import { communities, events, schedules } from "lib/db/schema";
 import { eventPagePath } from "lib/revalidate";
-
-// Rebuilt hourly: community profiles and event pages come from the database
-export const revalidate = 3600;
 
 // Past editions' archives, which aren't in the site navigation
 const ARCHIVE_ROUTES = [
@@ -65,6 +63,10 @@ async function communityPages(): Promise<MetadataRoute.Sitemap> {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  "use cache";
+  // Rebuilt hourly: community profiles and event pages come from the database
+  cacheLife("hours");
+
   const [posts, community] = await Promise.all([getBlogPosts(), communityPages()]);
   const mainRoutes = [...new Set([...PUBLIC_ROUTES.map((page) => page.href), ...ARCHIVE_ROUTES])];
 

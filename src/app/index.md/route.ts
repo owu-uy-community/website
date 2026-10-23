@@ -1,11 +1,13 @@
+import { cacheLife } from "next/cache";
 import { getCommunities, getLanding, getTalks } from "lib/community/content";
 import { getUpcomingEvents } from "lib/community/events";
 import { homeMarkdown } from "lib/community/markdown";
 
 // The home page's Markdown twin (src/proxy.ts serves it for `Accept: text/markdown` on /), as fresh as the page
-export const revalidate = 3600;
+async function render() {
+  "use cache";
+  cacheLife("hours");
 
-export async function GET() {
   const [landing, events, communities, talks] = await Promise.all([
     getLanding(),
     getUpcomingEvents(),
@@ -24,5 +26,9 @@ export async function GET() {
     talks,
   });
 
-  return new Response(body, { headers: { "Content-Type": "text/markdown; charset=utf-8", Vary: "Accept" } });
+  return body;
+}
+
+export async function GET() {
+  return new Response(await render(), { headers: { "Content-Type": "text/markdown; charset=utf-8", Vary: "Accept" } });
 }

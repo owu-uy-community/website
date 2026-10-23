@@ -15,6 +15,9 @@ const ICONS = {
   telegram: FaTelegram,
 };
 
+// Read once, when the server loads the module (each deploy): a prerendered page can't read the clock
+const YEAR = new Date().getFullYear();
+
 export default function Footer() {
   return (
     <footer className="relative w-full overflow-hidden border-t border-white/[0.07]">
@@ -77,7 +80,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-16 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[13px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
+          <span>© {YEAR} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
           <a
             className="inline-flex items-center gap-1 transition-colors hover:text-zinc-200"
             href={REPO_URL}

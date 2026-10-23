@@ -4,8 +4,6 @@ import { principalFromRequest } from "app/lib/auth-helpers";
 import { can } from "lib/authz/principal";
 import { connectSpotify, spotifyOrigin } from "lib/owy-stage/spotify";
 
-export const runtime = "nodejs";
-
 /** Spotify sends the code here; we swap it for a refresh token and go back to the director. */
 export async function GET(request: Request) {
   if (!(await can(await principalFromRequest(request.headers), "stage:operate")))

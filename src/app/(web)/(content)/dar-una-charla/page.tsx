@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { ArrowRight, ArrowUpRight, Compass, LayoutGrid, Lightbulb, MessagesSquare, Mic, Send } from "lucide-react";
 import Link from "next/link";
 
@@ -68,6 +69,10 @@ const TIPS = [
 /* Places that hosted community events, from the meetup feed and past editions */
 
 export default async function DarUnaCharlaPage() {
+  "use cache";
+  // Talks and the next events come from the content and the agenda
+  cacheLife("hours");
+
   const communities = await getCommunities();
 
   const rows = TOPICS.map((topic) => ({

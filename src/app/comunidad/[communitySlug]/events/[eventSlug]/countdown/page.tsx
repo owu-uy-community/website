@@ -4,6 +4,9 @@ import { ScreenBeacon } from "components/Admin/screens/ScreenBeacon";
 import CountdownDisplayClient from "components/displays/countdown/CountdownDisplayClient";
 import { getEventBySlugs } from "lib/tenant-server";
 
+// A live screen that follows the admin: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function EventCountdownPage({
   params,
 }: {

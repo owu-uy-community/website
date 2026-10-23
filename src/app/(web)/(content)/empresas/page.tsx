@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { Briefcase, Building2, Sparkles } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
@@ -21,9 +22,6 @@ import { getUpcomingEvents } from "lib/community/events";
 import { ORGANIZAR_ON } from "lib/community/flags";
 import { pageMetadata } from "lib/community/metadata";
 import { CONF_URL, issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
-
-// Community and event counts come from the live agenda
-export const revalidate = 3600;
 
 export const metadata = pageMetadata({
   title: "Para empresas",
@@ -86,6 +84,10 @@ const JOB_RULES = [
 const formatCount = (value: number) => new Intl.NumberFormat("es-UY").format(value);
 
 export default async function EmpresasPage() {
+  "use cache";
+  // Community and event counts come from the live agenda
+  cacheLife("hours");
+
   const [landing, communities, events] = await Promise.all([getLanding(), getCommunities(), getUpcomingEvents()]);
   const stat = (title: string, subtitle: string) =>
     landing?.stats?.find((entry) => entry.title === title && entry.subtitle === subtitle)?.count ?? null;

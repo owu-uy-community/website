@@ -21,3 +21,10 @@ export function refreshEvent(communitySlug: string, eventSlug: string) {
     refreshPage(path);
   }
 }
+
+/**
+ * generateStaticParams under Cache Components must return at least one path. A build without data
+ * (CI builds against an empty database) gets a placeholder that renders the 404, so the route still
+ * builds; real paths missing from the list render on their first visit and are cached after it.
+ */
+export const withPlaceholder = <T>(params: T[], placeholder: T): T[] => (params.length > 0 ? params : [placeholder]);

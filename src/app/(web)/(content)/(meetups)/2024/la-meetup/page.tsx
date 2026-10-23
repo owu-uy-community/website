@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { createReader } from "@keystatic/core/reader";
 import { cache } from "react";
 
@@ -30,6 +31,10 @@ export const metadata = {
 };
 
 export default async function LaMeetup2024Page() {
+  "use cache";
+  // A past edition: its content only changes with a deploy
+  cacheLife("max");
+
   const laMeetup = await reader().collections.laMeetup2024.read("la-meetup");
 
   if (!laMeetup) return null;

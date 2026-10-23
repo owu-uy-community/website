@@ -4,8 +4,6 @@ import { NextResponse } from "next/server";
 import { callerFor } from "lib/orpc/server";
 import { presetLabel } from "lib/owy-stage/scenes";
 
-export const runtime = "nodejs";
-
 /**
  * The desk's presets over plain HTTP, for what can't speak oRPC: Bitfocus
  * Companion / Stream Deck (Generic HTTP module), curl. Same rules as

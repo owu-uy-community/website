@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 
 import { CONF_DATES, SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
@@ -61,9 +62,6 @@ import {
 import { dateParts } from "lib/community/time";
 
 import { PUBLISHER_LOGO, serializeJsonLd } from "../blog/(posts)/post-metadata";
-
-// The event feed refreshes hourly; the rest is content that ships with the deploy
-export const revalidate = 3600;
 
 // Title, description and social image come from the root layout. Agents asking for
 // `Accept: text/markdown` get the Markdown twin (src/proxy.ts), also listed here.
@@ -122,6 +120,10 @@ const SITE_JSON_LD = {
 const formatCount = (value: number) => new Intl.NumberFormat("es-UY").format(value);
 
 export default async function Landing() {
+  "use cache";
+  // The event feed refreshes hourly; the rest is content that ships with the deploy
+  cacheLife("hours");
+
   const [landing, events, communities, talks] = await Promise.all([
     getLanding(),
     getUpcomingEvents(),

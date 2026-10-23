@@ -7,8 +7,9 @@ import { AppProviders } from "components/providers/AppProviders";
 
 import { panelAccess } from "./access";
 
-// Behind a session, and every page reads who is looking: nothing to prerender.
-export const dynamic = "force-dynamic";
+// Behind a session, and every page reads who is looking: rendered per request, allowed to block
+// (Cache Components).
+export const instant = false;
 
 export const metadata: Metadata = {
   title: "Organizá · OWU",

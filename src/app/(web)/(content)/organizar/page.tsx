@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import {
   Building2,
   CalendarCheck,
@@ -107,6 +108,10 @@ const JOIN = [
 ];
 
 export default async function OrganizarPage() {
+  "use cache";
+  // The communities and their counts come from the directory; an hour is fresh enough
+  cacheLife("hours");
+
   const [communities, landing] = await Promise.all([getCommunities(), getLanding()]);
   const partners = communities.filter((community) => community.confPartner);
   const people = landing?.stats?.find((stat) => stat.title === "Personas" && stat.subtitle === "conectadas")?.count;

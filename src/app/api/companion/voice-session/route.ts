@@ -10,7 +10,6 @@ import {
   voiceResponse,
 } from "lib/companion/voice-bridge.server";
 
-export const runtime = "nodejs";
 export const maxDuration = 20;
 const quota = new VoiceQuota();
 export async function POST(request: Request) {

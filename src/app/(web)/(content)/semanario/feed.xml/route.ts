@@ -1,9 +1,7 @@
+import { cacheLife } from "next/cache";
 import { SITE_URL } from "lib/community/site";
 
 import { excerpt, getIssues, weekRange } from "../data";
-
-// Re-rendered on publish; this is the fallback
-export const revalidate = 3600;
 
 function escapeXml(value: string) {
   return value
@@ -14,7 +12,11 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-export async function GET() {
+// Re-rendered on publish; this is the fallback
+async function render() {
+  "use cache";
+  cacheLife("hours");
+
   const issues = await getIssues();
 
   const items = issues
@@ -48,7 +50,11 @@ export async function GET() {
     "</channel>" +
     "</rss>";
 
-  return new Response(xml, {
+  return xml;
+}
+
+export async function GET() {
+  return new Response(await render(), {
     headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
   });
 }

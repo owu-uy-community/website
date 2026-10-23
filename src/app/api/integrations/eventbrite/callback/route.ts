@@ -9,8 +9,6 @@ import { readLink } from "lib/links";
 import { adminCommunity, connect, pushSoon } from "lib/orpc/integrations/service";
 import { liveServices } from "lib/orpc/services";
 
-export const runtime = "nodejs";
-
 const STATE_COOKIE = "eventbrite_oauth";
 
 /**
