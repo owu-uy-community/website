@@ -63,7 +63,13 @@ export function EventsClient({ community }: { community: CalendarCommunity }) {
   const input = { communityId: community.id };
 
   const events = useQuery(orpc.events.list.queryOptions({ input }));
-  const counts = useQuery(orpc.panel.headcounts.queryOptions({ input }));
+  // Once there's a published event to count: drafts have nobody signed up
+  const counts = useQuery(
+    orpc.panel.headcounts.queryOptions({
+      input,
+      enabled: events.data?.some((event) => event.status === "published") ?? false,
+    })
+  );
   const remove = useMutation(
     orpc.events.remove.mutationOptions({
       onSuccess: () => {

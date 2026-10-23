@@ -386,45 +386,31 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
     <Panel>
       <PanelHead
         actions={
-          <span className="flex items-center gap-1.5">
-            {chosen ? (
-              <Badge variant="success">
-                <Check aria-hidden />
-                {dayLabel(poll.chosenDay ?? "")}
-              </Badge>
-            ) : !open ? (
-              <Badge variant="secondary">
-                <Lock aria-hidden />
-                Cerrada
-              </Badge>
-            ) : poll.mine ? (
-              <Badge variant="info">Elegís vos</Badge>
-            ) : (
-              <Badge variant="secondary">Pregunta {poll.asker.name}</Badge>
-            )}
-            {poll.mine && open ? (
-              <Button disabled={close.isPending} size="xs" variant="ghost" onClick={() => close.mutate(ref)}>
-                <Ban aria-hidden />
-                Cerrar
-              </Button>
-            ) : null}
-            {poll.mine ? (
-              <Button
-                aria-label={`Borrar la votación «${poll.title}»`}
-                disabled={remove.isPending}
-                size="icon-sm"
-                variant="ghost"
-                onClick={() => remove.mutate(ref)}
-              >
-                <Trash2 aria-hidden />
-              </Button>
-            ) : null}
-          </span>
+          chosen ? (
+            <Badge variant="success">
+              <Check aria-hidden />
+              {dayLabel(poll.chosenDay ?? "")}
+            </Badge>
+          ) : !open ? (
+            <Badge variant="secondary">
+              <Lock aria-hidden />
+              Cerrada
+            </Badge>
+          ) : poll.mine ? (
+            <Badge variant="info">Elegís vos</Badge>
+          ) : (
+            <Badge variant="secondary">Pregunta {poll.asker.name}</Badge>
+          )
         }
         icon={Vote}
         meta={<span className="font-terminal tabular-nums">{poll.startTime}</span>}
         title={poll.title}
       />
+      {poll.days.length > 1 ? (
+        <p className="px-4 pt-2 text-meta text-muted-foreground sm:hidden">
+          Deslizá la tabla para ver las {poll.days.length} fechas.
+        </p>
+      ) : null}
       <div className="overflow-x-auto">
         <table className="w-full min-w-max border-collapse text-ui">
           <thead>
@@ -478,7 +464,7 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
                         <span
                           className={cn(
                             "inline-flex h-7 min-w-24 items-center justify-center gap-1 rounded-md border px-2 text-meta",
-                            shown?.className ?? "border-border text-faint"
+                            shown?.className ?? "border-border text-muted-foreground"
                           )}
                         >
                           <Icon aria-hidden className="size-3.5" />
@@ -521,16 +507,38 @@ function PollCard({ community, poll }: { community: CalendarCommunity; poll: Pol
           </tbody>
         </table>
       </div>
-      {poll.mine && poll.eventId ? (
-        <p className="border-t border-border px-4 py-3 text-meta text-muted-foreground">
-          Reservada como borrador:{" "}
-          <Link
-            className="text-foreground underline underline-offset-2"
-            href={`/organizar/panel/${community.slug}/eventos/${poll.eventId}/editar`}
+      {poll.mine ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2.5">
+          <p className="mr-auto text-meta text-muted-foreground">
+            {poll.eventId ? (
+              <>
+                Reservada como borrador:{" "}
+                <Link
+                  className="text-foreground underline underline-offset-2"
+                  href={`/organizar/panel/${community.slug}/eventos/${poll.eventId}/editar`}
+                >
+                  seguir armando el evento
+                </Link>
+              </>
+            ) : null}
+          </p>
+          {open ? (
+            <Button disabled={close.isPending} size="sm" variant="ghost" onClick={() => close.mutate(ref)}>
+              <Ban aria-hidden />
+              Cerrar
+            </Button>
+          ) : null}
+          <Button
+            aria-label={`Borrar la votación «${poll.title}»`}
+            disabled={remove.isPending}
+            size="sm"
+            variant="ghost"
+            onClick={() => remove.mutate(ref)}
           >
-            seguir armando el evento
-          </Link>
-        </p>
+            <Trash2 aria-hidden />
+            Borrar
+          </Button>
+        </div>
       ) : null}
       <AlertDialog open={picking !== null} onOpenChange={(next) => !next && !choose.isPending && setPicking(null)}>
         <AlertDialogContent>
