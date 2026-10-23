@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import { ConfirmDialog, Notice } from "components/Admin/panel";
+import { Notice } from "components/Admin/panel";
 import { HeaderActions } from "components/Admin/shell/HeaderActions";
 import { KeyHint, useShortcuts } from "components/Admin/shell/shortcuts";
 import { MicroLabel, PageContainer, PageHeader } from "components/Admin/ui/page";
@@ -42,6 +42,7 @@ import { DraftPatchSchema, type DraftPatch, type EditableEvent } from "lib/orpc/
 import { isStep, issues, STEPS, stepState, UNTITLED, type StepKey } from "lib/organizar/steps";
 
 import type { CalendarCommunity } from "../calendar/CalendarClient";
+import { CancelEventDialog } from "../events/NotifyDialog";
 import { usePanel } from "../shell/context";
 import {
   StepDatos,
@@ -75,6 +76,7 @@ const EDITABLE = [
   "guestsAllowed",
   "rsvpClosesAt",
   "questions",
+  "volunteerRoles",
   "externalLinks",
   "sizeBucket",
   "needs",
@@ -296,17 +298,8 @@ export function EventWizard({
       onError: (error) => toast.error("Todavía no se puede publicar", error.message),
     })
   );
-  const cancel = useMutation(
-    orpc.events.cancel.mutationOptions({
-      onSuccess: (result) => {
-        saved.current = result;
-        setDraft(result);
-        setCancelling(false);
-        toast.success("Evento cancelado", "Sigue en la agenda como cancelado.");
-      },
-      onError: (error) => toast.error("No se pudo cancelar", error.message),
-    })
-  );
+  // Who a cancellation emails: everyone signed up (read when the dialog opens)
+  const signedUp = useQuery(orpc.events.stats.queryOptions({ input, enabled: cancelling }));
 
   useShortcuts([
     {
@@ -539,14 +532,15 @@ export function EventWizard({
         </SheetContent>
       </Sheet>
       <ShareDialog path={published} onClose={() => setPublished(null)} name={draft.name} />
-      <ConfirmDialog
-        confirmLabel="Cancelar el evento"
-        description="Queda en la agenda como cancelado y quienes se anotaron reciben un aviso."
+      <CancelEventDialog
+        event={draft}
+        input={input}
+        notified={signedUp.data ? signedUp.data.attending + signedUp.data.waiting + signedUp.data.pending : 0}
         open={cancelling}
-        pending={cancel.isPending}
-        pendingLabel="Cancelando…"
-        title={`¿Cancelar «${draft.name}»?`}
-        onConfirm={() => cancel.mutate({ ...input, reason: "" })}
+        onCancelled={(result) => {
+          saved.current = result;
+          setDraft(result);
+        }}
         onOpenChange={setCancelling}
       />
     </PageContainer>

@@ -56,6 +56,9 @@ import type { CalendarCommunity } from "../calendar/CalendarClient";
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
 import { RequestComposer, RequestList, VenueCard } from "../venues/VenuesClient";
 import { DatePicker } from "./DatePicker";
+import { QuestionPresets, useCapacityHint, VolunteerRoles } from "./SignupExtras";
+import { FEEDBACK_TIMING, RSVP_CLOSE_HINT } from "lib/organizar/rules";
+import { suggestedCloseAt } from "lib/organizar/rsvp-state";
 
 /** A change to the draft; `schedule` (a published event's new date) is sent at once, not kept. */
 export type DraftChange = Partial<EditableEvent> & {
@@ -646,29 +649,11 @@ const REGISTRATIONS: {
   { value: "none", title: "Sin inscripción", hint: "Entrada libre, sin anotarse", icon: CircleCheck },
 ];
 
-const PRESETS = [
-  "¿Es tu primera vez en un evento de la comunidad?",
-  "Empresa o institución",
-  "¿Necesitás algo para participar?",
-];
-
 /** "18:30" on Montevideo's clock, for a time input */
 const clockOf = (iso: string) => shortWhen(iso).split(" · ")[1] ?? "19:00";
 
-/** The capacity hint, from how many of this community's people actually come */
-function useShowUpHint(communityId: string) {
-  const showUp = useQuery({ ...orpc.events.showUp.queryOptions({ input: { communityId } }), staleTime: 10 * 60_000 });
-  const rate = showUp.data?.rate;
-  if (rate === null || rate === undefined) {
-    return "A los eventos gratis falta cerca de un tercio de quienes se anotan: si entran 50, abrí unos 70.";
-  }
-  const percent = Math.round(rate * 100);
-
-  return `A tus eventos vino el ${percent} % de los anotados: si entran 50, abrí unos ${Math.round(50 / rate / 5) * 5}.`;
-}
-
 export function StepInscripcion({ draft, set, errors, community }: StepProps) {
-  const showUpHint = useShowUpHint(community.id);
+  const showUpHint = useCapacityHint(community.id);
   const closes = draft.rsvpClosesAt;
   const question = (index: number, change: Partial<EditableEvent["questions"][number]>) =>
     set({ questions: draft.questions.map((item, at) => (at === index ? { ...item, ...change } : item)) });
@@ -750,7 +735,9 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
           </SettingsRow>
           <SettingsRow
             error={errors.rsvpClosesAt}
-            hint={closes ? "Después de esa hora ya no se anota nadie." : "Sin cierre: se anotan hasta que empieza."}
+            hint={
+              closes ? "Después de esa hora ya no se anota nadie; quien llegue entra en la puerta." : RSVP_CLOSE_HINT
+            }
             htmlFor="rsvp-closes"
             label="Cierre de inscripción"
           >
@@ -769,7 +756,7 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
                   }
                 />
                 <Button
-                  aria-label="Sin cierre"
+                  aria-label="Que cierre cuando empieza"
                   size="icon-sm"
                   variant="ghost"
                   onClick={() => set({ rsvpClosesAt: null })}
@@ -781,12 +768,10 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
               <Button
                 size="xs"
                 variant="outline"
-                onClick={() =>
-                  set({ rsvpClosesAt: new Date(Date.parse(draft.startDate) - 2 * 3_600_000).toISOString() })
-                }
+                onClick={() => set({ rsvpClosesAt: suggestedCloseAt(draft.startDate) })}
               >
                 <Plus />
-                Poner un cierre
+                Otro horario de cierre
               </Button>
             )}
           </SettingsRow>
@@ -810,51 +795,66 @@ export function StepInscripcion({ draft, set, errors, community }: StepProps) {
               </SelectContent>
             </Select>
           </SettingsRow>
-          <SettingsRow hint="Hasta 5, cortas. Nada sensible (salud, documento)." label="Preguntas">
+          <SettingsRow
+            hint="Hasta 5, cortas. «Primera vez» no hace falta: lo sabemos por la asistencia."
+            label="Preguntas"
+          >
             <div className="flex flex-col gap-2">
               {draft.questions.map((item, index) => (
-                <div key={item.id} className="flex items-center gap-2">
-                  <Input
-                    aria-label={`Pregunta ${index + 1}`}
-                    maxLength={200}
-                    value={item.label}
-                    onChange={(event) => question(index, { label: event.target.value })}
-                  />
-                  <label className="flex shrink-0 items-center gap-1.5 text-meta text-muted-foreground">
-                    <Switch checked={item.required} onCheckedChange={(required) => question(index, { required })} />
-                    Obligatoria
-                  </label>
-                  <Button
-                    aria-label={`Quitar la pregunta ${index + 1}`}
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={() => set({ questions: draft.questions.filter((_, at) => at !== index) })}
-                  >
-                    <Trash2 />
-                  </Button>
+                <div key={item.id} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      aria-label={`Pregunta ${index + 1}`}
+                      maxLength={200}
+                      value={item.label}
+                      onChange={(event) => question(index, { label: event.target.value })}
+                    />
+                    <label className="flex shrink-0 items-center gap-1.5 text-meta text-muted-foreground">
+                      <Switch
+                        aria-label={`Pregunta ${index + 1} obligatoria`}
+                        checked={item.required}
+                        onCheckedChange={(required) => question(index, { required })}
+                      />
+                      Obligatoria
+                    </label>
+                    <Button
+                      aria-label={`Quitar la pregunta ${index + 1}`}
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={() => set({ questions: draft.questions.filter((_, at) => at !== index) })}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                  {item.options?.length ? (
+                    <p className="text-meta text-muted-foreground">Opciones: {item.options.join(" · ")}</p>
+                  ) : null}
+                  {item.preset === "ci" ? (
+                    <p className="text-meta text-warning-foreground">
+                      Dato sensible: lo ven solo quienes administran la comunidad y se borra a la semana del evento.
+                    </p>
+                  ) : null}
                 </div>
               ))}
               {draft.questions.length < 5 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  <Button size="xs" variant="outline" onClick={() => add()}>
+                <div className="flex flex-col gap-1.5">
+                  <Button className="self-start" size="xs" variant="outline" onClick={() => add()}>
                     <Plus />
                     Pregunta
                   </Button>
-                  {PRESETS.filter((preset) => !draft.questions.some((item) => item.label === preset)).map((preset) => (
-                    <Button key={preset} size="xs" variant="ghost" onClick={() => add(preset)}>
-                      {preset}
-                    </Button>
-                  ))}
+                  <QuestionPresets draft={draft} set={set} />
                 </div>
               ) : null}
             </div>
           </SettingsRow>
+          <VolunteerRoles draft={draft} set={set} />
           <SettingsRow hint="Lo mandamos solos; no hace falta hacer nada." label="Mails">
             <ul className="flex flex-col gap-1 text-meta text-muted-foreground">
               <li>Confirmación al anotarse, con la invitación para el calendario</li>
-              <li>Recordatorio 48 h antes, con «No puedo ir» para liberar el lugar</li>
+              <li>Recordatorio 48 h antes, con «Voy ✅» y «No puedo ir» para liberar el lugar</li>
+              <li>Un segundo aviso 24 h antes a quien no confirmó, si hay cupo o lista de espera</li>
               <li>Cómo llegar, 2 h antes</li>
-              <li>Feedback, al día siguiente</li>
+              <li>La encuesta. {FEEDBACK_TIMING}</li>
             </ul>
           </SettingsRow>
         </SettingsCard>
