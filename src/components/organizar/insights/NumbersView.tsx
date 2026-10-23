@@ -25,7 +25,11 @@ function Tile({
   part?: { value: number; of: number; label: string };
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border bg-card p-3.5 shadow-edge">
+    <div
+      aria-label={label}
+      className="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border bg-card p-3.5 shadow-edge"
+      role="group"
+    >
       <MicroLabel>{label}</MicroLabel>
       <p className="font-display text-[22px] leading-7 font-semibold text-foreground tabular-nums">{value}</p>
       {part ? <Meter label={part.label} max={Math.max(1, part.of)} value={part.value} /> : null}
@@ -112,7 +116,7 @@ export function NumbersView({ numbers, empty }: { numbers: Numbers; empty?: Reac
               : "Ninguno usó la puerta: sin ella no sabemos quiénes vinieron, contamos a quienes tenían lugar."}
           </p>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-ui">
+            <table className="w-full min-w-[34rem] text-left text-ui">
               <thead className="text-meta text-muted-foreground">
                 <tr className="border-b border-border">
                   <th className="px-3.5 py-2 font-medium" scope="col">
@@ -134,7 +138,7 @@ export function NumbersView({ numbers, empty }: { numbers: Numbers; empty?: Reac
                   <tr key={event.id} className="border-b border-border last:border-0">
                     <th className="max-w-56 px-3.5 py-2.5 font-normal" scope="row">
                       <span className="block truncate text-foreground">{event.name}</span>
-                      <span className="block font-terminal text-meta text-muted-foreground tabular-nums">
+                      <span className="block font-terminal text-meta whitespace-nowrap text-muted-foreground tabular-nums">
                         {shortWhen(event.startDate)}
                       </span>
                     </th>
@@ -173,7 +177,7 @@ export function NumbersView({ numbers, empty }: { numbers: Numbers; empty?: Reac
         <p className="px-3.5 py-3 text-ui text-foreground">
           {speakers.speakers === 0
             ? "Ningún evento con charlas cargadas en el último año."
-            : `${plural(speakers.speakers, "persona dio", "personas dieron")} charlas: ${speakers.new} por primera vez y ${speakers.repeat} que repiten.`}
+            : `${plural(speakers.speakers, "persona dio", "personas dieron")} charlas: ${speakers.new} por primera vez acá y ${speakers.repeat} que ya habían dado otra.`}
         </p>
       </Panel>
     </div>

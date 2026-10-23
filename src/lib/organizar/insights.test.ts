@@ -67,14 +67,15 @@ describe(visitStats, () => {
 });
 
 describe(speakerStats, () => {
-  test("new speakers are the ones never seen in the community before the window", () => {
+  test("a speaker repeats once they gave a second talk in the community; one talk is new", () => {
     const events = [
       { start: ago(300), speakers: ["Ana Pérez"] },
       { start: ago(30), speakers: ["ana  perez", "Beto Gómez"] },
       { start: ago(10), speakers: ["Beto Gómez", "Caro Ruiz", ""] },
     ];
 
-    expect(speakerStats(events, NOW - 182 * DAY)).toStrictEqual({ speakers: 3, new: 2, repeat: 1 });
+    // Ana spoke before and again; Beto twice in the window; Caro once
+    expect(speakerStats(events, NOW - 182 * DAY)).toStrictEqual({ speakers: 3, new: 1, repeat: 2 });
   });
 });
 

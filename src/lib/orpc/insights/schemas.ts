@@ -40,7 +40,7 @@ export const InsightsSchema = z.object({
   secondVisit: z.object({ firstTimers: z.number(), returned: z.number() }),
   /** People who came in the last 6 months and how many had come before */
   returning: z.object({ people: z.number(), before: z.number() }),
-  /** Who gave talks in the last 12 months, new to the community or back */
+  /** Who gave talks in the last 12 months: their only talk here (new), or not the first (repeat) */
   speakers: z.object({ speakers: z.number(), new: z.number(), repeat: z.number() }),
   publicStats: z.boolean(),
 });

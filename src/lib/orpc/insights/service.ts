@@ -531,12 +531,12 @@ export const exportData = (communityId: string) =>
       };
     });
     const stamp = dayKey(new Date(now));
-    const file = (name: string) => `${community.slug}-${name}-${stamp}`;
+    const file = (name: string, extension = "csv") => `${community.slug}-${name}-${stamp}.${extension}`;
 
     return {
       csv: [
         {
-          filename: file("eventos.csv"),
+          filename: file("eventos"),
           content: csv([
             ["Fecha", "Evento", "Estado", "Formato", "Modalidad", "Lugar", "Cupo", "Charlas"],
             ...rows.map((row) => [
@@ -552,7 +552,7 @@ export const exportData = (communityId: string) =>
           ]),
         },
         {
-          filename: file("asistencia.csv"),
+          filename: file("asistencia"),
           content: csv([
             ["Fecha", "Evento", "Anotados", "En espera", "Entraron", "Primera vez", "NPS de la encuesta", "Respuestas"],
             ...rows.map((row) => [
@@ -568,14 +568,14 @@ export const exportData = (communityId: string) =>
           ]),
         },
         {
-          filename: file("equipo.csv"),
+          filename: file("equipo"),
           content: csv([
             ["Nombre", "Email", "Rol", "Desde"],
             ...team.map((member) => [member.name, member.email, member.role, member.since.toISOString()]),
           ]),
         },
         {
-          filename: file("seguidores.csv"),
+          filename: file("seguidores"),
           content: csv([
             ["Seguidores", "Cada evento", "Resumen semanal"],
             [followers.total, followers.eachEvent, followers.weekly],
@@ -583,7 +583,7 @@ export const exportData = (communityId: string) =>
         },
       ],
       json: {
-        filename: file("datos.json"),
+        filename: file("datos", "json"),
         content: JSON.stringify(
           {
             community: community.name,

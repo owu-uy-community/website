@@ -98,7 +98,8 @@ describe("insights.community", () => {
       // Ana, Beto and Caro were new before the last event; Ana and Caro came back
       secondVisit: { firstTimers: 3, returned: 2 },
       returning: { people: 4, before: 2 },
-      speakers: { speakers: 2, new: 2, repeat: 0 },
+      // Speaker Uno twice, Speaker Dos once
+      speakers: { speakers: 2, new: 1, repeat: 1 },
       publicStats: false,
     });
     expect(numbers.events).toStrictEqual([
@@ -141,7 +142,7 @@ describe("insights.export", () => {
 
     const data = await call(router.insights.export, { communityId: community.id }, by(admin));
 
-    expect(data.csv.map((file) => file.filename.replace(/-\d{4}-\d{2}-\d{2}/, ""))).toStrictEqual([
+    expect(data.csv.map((file) => file.filename.replace(/-\d{4}-\d{2}-\d{2}\./, "."))).toStrictEqual([
       `${community.slug}-eventos.csv`,
       `${community.slug}-asistencia.csv`,
       `${community.slug}-equipo.csv`,

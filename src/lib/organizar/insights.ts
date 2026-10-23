@@ -81,22 +81,24 @@ const speakerKey = (name: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
-/** Who gave talks since `since`, and how many of them for the first time in the community. */
+/**
+ * Who gave talks since `since`: those for whom it was their only talk in the community (new), and
+ * those who had given another (they repeat, like a second visit).
+ */
 export function speakerStats(events: { start: Date | string; speakers: string[] }[], since: number) {
-  const firstSeen = new Map<string, number>();
+  const talks = new Map<string, number>();
   const recent = new Set<string>();
-  for (const event of events.toSorted((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())) {
-    const at = new Date(event.start).getTime();
+  for (const event of events) {
     for (const name of event.speakers) {
       const key = speakerKey(name);
       if (!key) continue;
-      if (!firstSeen.has(key)) firstSeen.set(key, at);
-      if (at >= since) recent.add(key);
+      talks.set(key, (talks.get(key) ?? 0) + 1);
+      if (new Date(event.start).getTime() >= since) recent.add(key);
     }
   }
-  const fresh = [...recent].filter((key) => (firstSeen.get(key) ?? 0) >= since).length;
+  const repeat = [...recent].filter((key) => (talks.get(key) ?? 0) > 1).length;
 
-  return { speakers: recent.size, new: fresh, repeat: recent.size - fresh };
+  return { speakers: recent.size, new: recent.size - repeat, repeat };
 }
 
 /** "T4 2026": the calendar quarter a moment falls in, in Montevideo. */
