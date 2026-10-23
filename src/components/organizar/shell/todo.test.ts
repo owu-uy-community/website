@@ -35,6 +35,7 @@ const summary = (overrides: Partial<PanelSummary>): PanelSummary => ({
   closeOut: [],
   seats: {},
   myTasks: [],
+  talkInbox: 0,
   ahead: [],
   drafts: [],
   nextSeats: null,
@@ -189,6 +190,20 @@ describe(todoItems, () => {
 
   test("a new community gets its checklist, not to-dos about events it never had", () => {
     expect(kinds(summary({ lastEventAt: null, team: { size: 1, activeOrganizers: 0 } }))).toStrictEqual([]);
+  });
+
+  test("talks proposed to the community are one item that leads to Charlas", () => {
+    const items = todoItems(summary({ talkInbox: 3 }), "c", NOW);
+
+    expect(items.find((item) => item.kind === "talks")).toStrictEqual({
+      id: "talks",
+      kind: "talks",
+      text: "3 charlas propuestas para ustedes",
+      href: "/organizar/panel/c/charlas",
+    });
+    expect(todoItems(summary({ talkInbox: 1 }), "c", NOW).find((item) => item.kind === "talks")?.text).toBe(
+      "1 charla propuesta para ustedes"
+    );
   });
 });
 

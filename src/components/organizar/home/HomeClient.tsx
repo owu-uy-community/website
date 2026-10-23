@@ -63,6 +63,7 @@ const GO_RESOLVE: Record<TodoKind, string> = {
   cohost: "Responder",
   date: "Elegir fecha",
   slot: "Reservar",
+  talks: "Ver las charlas",
   health: "Buscar fecha",
   team: "Sumar a alguien",
   first: "Buscar fecha",

@@ -23,6 +23,7 @@ export type TodoKind =
   | "cohost"
   | "date"
   | "slot"
+  | "talks"
   | "health"
   | "team"
   | "first";
@@ -196,6 +197,16 @@ export function todoItems(summary: PanelSummary | undefined, slug: string, now =
             kind: "slot" as const,
             text: `Tu ${occurrenceName(slotDay)} no tiene evento: ¿lo armamos, lo cedemos o hacemos algo liviano?`,
             href: `${panelHref(slug, "calendario")}?dia=${slotDay}&hora=${recurringSlot.time}&dur=${recurringSlot.durationMin}`,
+          },
+        ]
+      : []),
+    ...(summary.talkInbox > 0
+      ? [
+          {
+            id: "talks",
+            kind: "talks" as const,
+            text: `${summary.talkInbox === 1 ? "1 charla propuesta" : `${summary.talkInbox} charlas propuestas`} para ustedes`,
+            href: panelHref(slug, "charlas"),
           },
         ]
       : []),
