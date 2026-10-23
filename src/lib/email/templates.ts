@@ -211,8 +211,13 @@ export function venueRequestEmail(input: {
   message: string;
   until: string;
   link: string;
+  /** Asked of several spaces at once: the first to accept takes it */
+  broadcast?: boolean;
 }): Omit<Email, "to"> {
   const who = input.organizer ? `${input.organizer}, de ${input.community},` : input.community;
+  const several = input.broadcast
+    ? "Le preguntaron a varios espacios a la vez: el primero que acepta se lo queda, y a los demás les avisamos."
+    : "";
   const dates = input.options.map((option, index) => `${index + 1}. ${option}`);
 
   return {
@@ -222,11 +227,12 @@ export function venueRequestEmail(input: {
       body: `<p style="margin:0 0 16px">${esc(who)} pregunta si pueden hacer su meetup en ${esc(input.venue)}, para unas <strong>${input.expectedAttendees} personas</strong>. Estas fechas, en orden de preferencia:</p>
 <p style="margin:0 0 16px;font-family:'Geist Mono',ui-monospace,Menlo,monospace">${dates.map(esc).join("<br>")}</p>
 ${input.message ? `<p style="margin:0 0 16px;padding:12px;background:#f4f4f5;border-radius:8px">«${esc(input.message)}»</p>` : ""}
+${several ? `<p style="margin:0 0 16px">${esc(several)}</p>` : ""}
 <p style="margin:0 0 16px">Respondé desde el link, sin crear cuenta: podés elegir una fecha, proponer otra o decir que esta vez no. Tu mail les llega solo si aceptás.</p>
 <p style="margin:0 0 8px">${button(input.link, "Ver el pedido")}</p>
 <p style="margin:16px 0 0;color:#71717a;font-size:13px">El pedido vence el ${esc(input.until)}.</p>`,
     }),
-    text: `${who} pregunta si pueden hacer su meetup en ${input.venue}, para unas ${input.expectedAttendees} personas.\n\n${dates.join("\n")}\n${input.message ? `\n«${input.message}»\n` : ""}\nRespondé desde el link (vence el ${input.until}): ${input.link}`,
+    text: `${who} pregunta si pueden hacer su meetup en ${input.venue}, para unas ${input.expectedAttendees} personas.\n\n${dates.join("\n")}\n${input.message ? `\n«${input.message}»\n` : ""}${several ? `\n${several}\n` : ""}\nRespondé desde el link (vence el ${input.until}): ${input.link}`,
   };
 }
 

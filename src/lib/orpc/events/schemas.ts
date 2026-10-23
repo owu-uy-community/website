@@ -1,5 +1,18 @@
 import * as z from "zod";
 
+import { VenueFactsSchema } from "../../organizar/venue-facts";
+
+const PublicVenueFactsSchema = VenueFactsSchema.pick({
+  stepFree: true,
+  elevator: true,
+  accessibleRestroom: true,
+  genderNeutralRestroom: true,
+  parking: true,
+  transit: true,
+  idRequired: true,
+  foodRules: true,
+});
+
 export const DaySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Usá AAAA-MM-DD")
@@ -107,7 +120,16 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   topics: z.array(z.string()),
   mode: ModeSchema,
   venueId: z.string().nullable(),
-  venue: z.object({ id: z.string(), name: z.string(), neighbourhood: z.string(), address: z.string() }).nullable(),
+  venue: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      neighbourhood: z.string(),
+      address: z.string(),
+      /** Access and AV notes, for the team */
+      facts: VenueFactsSchema,
+    })
+    .nullable(),
   placeName: z.string().nullable(),
   placeAddress: z.string().nullable(),
   venueMapUrl: z.string().nullable(),
@@ -239,6 +261,8 @@ export const PublicEventSchema = z.object({
       /** Null when the host shows it only to attendees */
       address: z.string().nullable(),
       mapUrl: z.string().nullable(),
+      /** A directory space's access and ID facts (see publicFacts); null for other places */
+      facts: PublicVenueFactsSchema.nullable(),
     })
     .nullable(),
   registration: RegistrationSchema,

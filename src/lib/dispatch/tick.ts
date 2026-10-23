@@ -8,6 +8,7 @@ import * as Comms from "../orpc/comms/service";
 import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
 import { expireOffers, sendFeedback, sendReminders, sendUpdates } from "../orpc/rsvps/service";
+import { sendHostDaySheets, sendYearlyChecks } from "../orpc/venues/hosting";
 import { expireRequests } from "../orpc/venues/service";
 import { query } from "../orpc/db";
 import { liveServices, type AppServices } from "../orpc/services";
@@ -48,18 +49,24 @@ const SWEEPS: Record<string, (deadline: number) => Effect.Effect<unknown, unknow
   feedback: () => sendFeedback,
   holds: () => remindExpiringHolds,
   venues: () => expireRequests,
+  hostDays: () => sendHostDaySheets,
   publications: (deadline: number) => pushDue({ deadline }),
   // Last, so what the sweeps above queued goes out in the same tick
   email: (deadline: number) => drainEmail({ deadline }),
 };
 
-/** `daily`: the once-a-day cron also runs retention and checks who left the OWU Slack. */
+/** `daily`: the once-a-day cron also runs retention, checks who left the OWU Slack and asks spaces' contacts if they still host. */
 export async function tick(budgetMs: number, { daily = false } = {}) {
   const deadline = Date.now() + budgetMs;
   const results: Record<string, unknown> = {};
   const run = Effect.runPromiseWith(liveServices);
   const sweeps = daily
-    ? { ...SWEEPS, retention: () => retention(), slack: () => Effect.promise(() => syncOwuSlack()) }
+    ? {
+        ...SWEEPS,
+        retention: () => retention(),
+        slack: () => Effect.promise(() => syncOwuSlack()),
+        venueChecks: () => sendYearlyChecks,
+      }
     : SWEEPS;
 
   for (const [name, sweep] of Object.entries(sweeps)) {

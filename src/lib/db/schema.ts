@@ -1644,6 +1644,8 @@ export const venueRequests = pgTable(
     hostMessage: text("hostMessage"),
     /** The host agreed to share their contact with the organizer */
     shareContact: boolean("shareContact").notNull().default(false),
+    /** The contact whose link answered: the one organizers see, and mark as gone */
+    answeredById: text("answeredById"),
     respondedAt: ts("respondedAt"),
     expiresAt: ts("expiresAt").notNull(),
     createdAt: ts("createdAt").notNull().defaultNow(),
@@ -1667,6 +1669,11 @@ export const venueRequests = pgTable(
       name: "venue_requests_requestedById_fk",
       columns: [t.requestedById],
       foreignColumns: [user.id],
+    }).onDelete("set null"),
+    foreignKey({
+      name: "venue_requests_answeredById_fk",
+      columns: [t.answeredById],
+      foreignColumns: [venueContacts.id],
     }).onDelete("set null"),
   ]
 );

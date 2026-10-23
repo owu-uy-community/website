@@ -95,3 +95,35 @@ export const rankVenues = <T extends { fallback: boolean; fit: Fit }>(venues: T[
       Number(a.fit.blockers.length > 0) - Number(b.fit.blockers.length > 0) ||
       b.fit.score - a.fit.score
   );
+
+/** "Buscamos espacio" goes to at most this many spaces at once. */
+export const BROADCAST_MAX = 5;
+/**
+ * The least fit a space needs to get one: a requestable space covering every need scores 25–40, one
+ * missing a need or that rarely answers falls under it.
+ */
+export const BROADCAST_MIN_SCORE = 25;
+
+/**
+ * Who an open request goes to: requestable spaces that work for every date asked (no blockers),
+ * aren't the Plan B and fit well enough; the best `BROADCAST_MAX`.
+ */
+export const broadcastPicks = <T extends { fallback: boolean; requestable: boolean; fit: Fit }>(venues: T[]) =>
+  rankVenues(venues)
+    .filter(
+      (venue) =>
+        venue.requestable &&
+        !venue.fallback &&
+        venue.fit.blockers.length === 0 &&
+        venue.fit.score >= BROADCAST_MIN_SCORE
+    )
+    .slice(0, BROADCAST_MAX);
+
+/** Fair rotation in words: how much a space hosted this year, or how long since it did. */
+export function rotationLabel(hostedThisYear: number, lastHostedAt: string | null, now: number) {
+  if (hostedThisYear > 0) return `Recibió ${hostedThisYear === 1 ? "1 meetup" : `${hostedThisYear}`} este año`;
+  if (!lastHostedAt) return "Todavía no recibió meetups";
+  const months = Math.floor((now - Date.parse(lastHostedAt)) / (30 * DAY_MS));
+
+  return months >= 12 ? "No recibe hace más de un año" : `No recibe hace ${months} ${months === 1 ? "mes" : "meses"}`;
+}

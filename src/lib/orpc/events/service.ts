@@ -38,6 +38,7 @@ import { notifyCancelled, optionalMail, seatsChanged } from "../rsvps/service";
 import { CommunityScope, CurrentUser, liveServices } from "../services";
 import type { DraftPatch, EditableEvent, HoldInput, OrganizerEvent, PublicEvent } from "./schemas";
 import { HOLD_DAYS, MAX_HOLDS } from "../../organizar/rules";
+import { publicFacts } from "../../organizar/venue-facts";
 
 export { HOLD_DAYS, MAX_HOLDS };
 
@@ -171,10 +172,27 @@ const headsUp = (row: EventRow) =>
     return told.size;
   });
 
+/** A community keeps at most MAX_HOLDS live holds: a new one (or dating a draft that isn't held) waits. */
+const capHolds = (communityId: string) =>
+  Effect.gen(function* () {
+    const [{ live }] = yield* query((db) =>
+      db
+        .select({ live: count() })
+        .from(events)
+        .where(and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date())))
+    );
+    if (live >= MAX_HOLDS) {
+      return yield* new Conflict({
+        reason: "too_many_holds",
+        message: `Ya tenés ${MAX_HOLDS} fechas reservadas: liberá alguna para reservar otra`,
+      });
+    }
+  });
+
 /**
  * Reserve a date for 14 days: date an existing draft, or make one for it. Every organizer sees the
  * hold on the calendar (another community's, without its title), and similar communities with
- * something that day get an email.
+ * something that day get an email. A space accepting a draft's request dates it through here too.
  */
 export const hold = (input: HoldInput) =>
   transaction(
@@ -188,6 +206,8 @@ export const hold = (input: HoldInput) =>
       let row: EventRow;
       if (input.eventId) {
         const draft = yield* draftOf(communityId, input.eventId);
+        // Moving a live hold doesn't add one; dating a draft that isn't held does
+        if (!draft.heldUntil || draft.heldUntil <= new Date()) yield* capHolds(communityId);
         // A scheduled publish stays only while it comes before the new date, and keeps it held until then
         const scheduled = draft.publishAt && draft.publishAt < startDate ? draft.publishAt : null;
         [row] = yield* query((db) =>
@@ -204,20 +224,7 @@ export const hold = (input: HoldInput) =>
             .returning()
         );
       } else {
-        const [{ live }] = yield* query((db) =>
-          db
-            .select({ live: count() })
-            .from(events)
-            .where(
-              and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date()))
-            )
-        );
-        if (live >= MAX_HOLDS) {
-          return yield* new Conflict({
-            reason: "too_many_holds",
-            message: `Ya tenés ${MAX_HOLDS} fechas reservadas: liberá alguna para reservar otra`,
-          });
-        }
+        yield* capHolds(communityId);
         const name = input.title ?? "Evento sin título";
         const slug = yield* freeSlug(communityId, slugify(name));
         [row] = yield* query((db) =>
@@ -350,7 +357,13 @@ const editableOf = (eventId: string) =>
       mode: event.mode,
       venueId: event.venueId,
       venue: venue
-        ? { id: venue.id, name: venue.name, neighbourhood: venue.neighbourhood, address: venue.address }
+        ? {
+            id: venue.id,
+            name: venue.name,
+            neighbourhood: venue.neighbourhood,
+            address: venue.address,
+            facts: venue.facts,
+          }
         : null,
       placeName: event.placeName,
       placeAddress: event.placeAddress,
@@ -869,9 +882,10 @@ const toPublic = (eventId: string) =>
               area: [venue.neighbourhood, venue.city].filter(Boolean).join(", ") || null,
               address: venue.addressVisibility === "public" ? venue.address || null : null,
               mapUrl: venue.addressVisibility === "public" ? venue.mapUrl : null,
+              facts: publicFacts(venue.facts, venue.addressVisibility),
             }
           : event.placeName
-            ? { name: event.placeName, area: null, address: event.placeAddress, mapUrl: event.venueMapUrl }
+            ? { name: event.placeName, area: null, address: event.placeAddress, mapUrl: event.venueMapUrl, facts: null }
             : null;
 
     return {

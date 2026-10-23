@@ -4,22 +4,35 @@ import * as z from "zod";
 
 import { authed, inCommunity, platform, pub, type AuthedContext } from "../base";
 import { limiter } from "../ratelimit";
+import * as Hosting from "./hosting";
 import {
+  AcceptProposalSchema,
+  BroadcastPreviewSchema,
+  BroadcastSchema,
+  CheckAnswerSchema,
+  CheckViewSchema,
+  ContactLeftSchema,
+  EventRefSchema,
   HostViewSchema,
   ManagedVenueSchema,
   RankedVenueSchema,
+  RecapSchema,
   RequestRefSchema,
   RequestVenueSchema,
   RespondSchema,
+  SendRecapSchema,
   SubmitVenueSchema,
   TokenSchema,
+  UnansweredSchema,
+  UpdateContactSchema,
   UpdateVenueSchema,
   VenueIdSchema,
   VenueListSchema,
   VenueRequestSchema,
-  VenueSchema,
 } from "./schemas";
 import * as Venues from "./service";
+
+const VenueRefSchema = z.object({ id: z.string(), name: z.string() });
 
 const docs = (summary: string) => openapi({ tags: ["Venues"], summary });
 const byUser = ({ context }: { context: AuthedContext }) => context.user.id;
@@ -54,6 +67,25 @@ export const venuesRouter = {
       return yield* Venues.request(input);
     }),
 
+  broadcastPreview: authed
+    .meta(docs("The spaces a request to several at once would reach, for these dates and needs"))
+    .input(BroadcastPreviewSchema)
+    .use(inCommunity("venue:request"))
+    .output(z.array(VenueRefSchema))
+    .effect(function* ({ input }) {
+      return yield* Venues.broadcastPreview(input);
+    }),
+
+  broadcast: authed
+    .meta(docs("Ask every space that fits at once (Buscamos espacio): the first to accept takes it"))
+    .input(BroadcastSchema)
+    .use(inCommunity("venue:request"))
+    .use(requestLimit)
+    .output(z.object({ broadcastId: z.string(), venues: z.array(VenueRefSchema) }))
+    .effect(function* ({ input }) {
+      return yield* Venues.broadcast(input);
+    }),
+
   requests: authed
     .meta(docs("The community's requests; the address and contact show once accepted"))
     .input(VenueListSchema)
@@ -70,6 +102,76 @@ export const venuesRouter = {
     .output(z.object({ id: z.string() }))
     .effect(function* ({ input }) {
       return yield* Venues.cancel(input.requestId);
+    }),
+
+  reopenRequest: authed
+    .meta(docs("Undo a cancel: the request waits for the host again"))
+    .input(RequestRefSchema)
+    .use(inCommunity("venue:request"))
+    .output(VenueRequestSchema)
+    .effect(function* ({ input }) {
+      return yield* Venues.reopen(input.requestId);
+    }),
+
+  acceptProposal: authed
+    .meta(docs("Take one of the dates a host proposed; it's held for the event"))
+    .input(AcceptProposalSchema)
+    .use(inCommunity("venue:request"))
+    .output(VenueRequestSchema)
+    .effect(function* ({ input }) {
+      return yield* Venues.acceptProposal(input);
+    }),
+
+  declineProposal: authed
+    .meta(docs("None of the host's dates work: close the request and thank the host"))
+    .input(RequestRefSchema)
+    .use(inCommunity("venue:request"))
+    .output(z.object({ id: z.string() }))
+    .effect(function* ({ input }) {
+      return yield* Venues.declineProposal(input.requestId);
+    }),
+
+  contactLeft: authed
+    .meta(docs("Esta persona ya no está: the contact is marked gone and the request goes to the space's others"))
+    .input(ContactLeftSchema)
+    .use(inCommunity("venue:request"))
+    .output(z.object({ remaining: z.number() }))
+    .effect(function* ({ input }) {
+      return yield* Venues.contactLeft(input);
+    }),
+
+  recapPreview: authed
+    .meta(docs("The host's recap for a past event, numbers only, to review before sending"))
+    .input(EventRefSchema)
+    .use(inCommunity("venue:request"))
+    .output(RecapSchema)
+    .effect(function* ({ input }) {
+      return yield* Hosting.recapPreview(input.eventId);
+    }),
+
+  sendRecap: authed
+    .meta(docs("Send the recap to the space's contacts, once"))
+    .input(SendRecapSchema)
+    .use(inCommunity("venue:request"))
+    .output(RecapSchema)
+    .effect(function* ({ input }) {
+      return yield* Hosting.sendRecap(input);
+    }),
+
+  checkByToken: pub
+    .meta(docs("The yearly check as its contact's link shows it"))
+    .input(TokenSchema)
+    .output(CheckViewSchema)
+    .effect(function* ({ input }) {
+      return yield* Hosting.checkByToken(input.token);
+    }),
+
+  checkAnswer: pub
+    .meta(docs("The contact's yearly answer: still hosting, paused, or gone"))
+    .input(CheckAnswerSchema)
+    .output(z.object({ answer: z.enum(["yes", "pause", "left"]), requestable: z.boolean() }))
+    .effect(function* ({ input }) {
+      return yield* Hosting.checkAnswer(input);
     }),
 
   byToken: pub
@@ -111,6 +213,21 @@ export const venuesRouter = {
       .output(z.object({ id: z.string() }))
       .effect(function* ({ input }) {
         return yield* Venues.manageUpdate(input.venueId, input.data);
+      }),
+
+    updateContact: platform("venue:manage")
+      .meta(docs("Mark a contact's mail as bouncing or the person as gone, or undo it"))
+      .input(UpdateContactSchema)
+      .output(z.object({ id: z.string() }))
+      .effect(function* ({ input }) {
+        return yield* Venues.manageContact(input.contactId, input.data);
+      }),
+
+    unanswered: platform("venue:manage")
+      .meta(docs("Requests that went 72 h without an answer, this last month"))
+      .output(z.array(UnansweredSchema))
+      .effect(function* () {
+        return yield* Venues.manageUnanswered;
       }),
 
     remove: platform("venue:manage")
