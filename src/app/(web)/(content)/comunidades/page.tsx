@@ -53,7 +53,7 @@ export default async function CommunitiesPage() {
           </>
         }
         eyebrow="Directorio"
-        title="Las comunidades de OWU"
+        title="Comunidades amigas de OWU"
       />
 
       <section className="py-12 sm:py-16">
