@@ -7,6 +7,7 @@ import { drainEmail } from "../email/outbox";
 import * as Comms from "../orpc/comms/service";
 import { sendDigests } from "../orpc/communities/digest";
 import { nudgeEmptySlots } from "../orpc/communities/recurring";
+import { sendTaskNudges } from "../orpc/events/lifecycle";
 import { publishDue, remindExpiringHolds } from "../orpc/events/service";
 import { pushDue } from "../orpc/integrations/service";
 import { sendScheduled } from "../orpc/events/messages";
@@ -69,6 +70,8 @@ const SWEEPS: Record<string, (deadline: number, options: TickOptions) => Effect.
     venues: () => expireRequests,
     hostDays: () => sendHostDaySheets,
     speakers: () => sendSpeakerEmails,
+    // From 09:00, the template tasks due today, to whoever took them (once per task, day and person)
+    tasks: () => sendTaskNudges,
     publications: (deadline: number) => pushDue({ deadline }),
     // Mondays from 09:00 (or now, when the cron asks): the weekly digest for followers who chose it
     digest: (_deadline, { digestNow }) => sendDigests({ force: digestNow }),

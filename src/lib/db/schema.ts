@@ -523,6 +523,10 @@ export const events = pgTable(
     closedOutAt: ts("closedOutAt"),
     /** The recap went to the host space */
     hostRecapSentAt: ts("hostRecapSentAt"),
+    /** "Repetir": the event this draft was copied from (its space and co-hosts are offered again) */
+    copiedFromId: text("copiedFromId"),
+    /** The welcome slides' wifi and access notes: organizers only, never the public page */
+    slideNotes: jsonb("slideNotes").$type<SlideNotes>(),
     /** Bumped on every change attendees should hear about, so calendar invites update in place. */
     icsSequence: integer("icsSequence").notNull().default(0),
     /** The sequence attendees last heard about: changes wait 10 minutes, then go out once */
@@ -546,6 +550,9 @@ export const events = pgTable(
     foreignKey({ name: "open_spaces_venueId_fk", columns: [t.venueId], foreignColumns: [venues.id] }).onDelete(
       "set null"
     ),
+    foreignKey({ name: "open_spaces_copiedFromId_fk", columns: [t.copiedFromId], foreignColumns: [t.id] }).onDelete(
+      "set null"
+    ),
   ]
 );
 
@@ -566,6 +573,8 @@ export type RsvpQuestion = {
 };
 export type VolunteerRole = "recepcion" | "puerta" | "comida" | "fotos" | "mc" | "cierre";
 export type EventMaterial = { kind: "grabacion" | "slides" | "link"; title: string; url: string };
+/** What the welcome slides say about getting in and online; wifi too, since only organizers see it */
+export type SlideNotes = { wifiName?: string; wifiPassword?: string; access?: string };
 
 /** @deprecated transition alias — use `events`. */
 export const openSpaces = events;

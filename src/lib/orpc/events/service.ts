@@ -20,7 +20,9 @@ import { enqueueEmail } from "../../email/outbox";
 import { appUrl, conflictHeadsUpEmail, holdExpiringEmail } from "../../email/templates";
 import { dayKey, montevideoIso, shortWhen } from "../../community/time";
 import { announcementText, slackSafe } from "../../organizar/announcement";
+import { STALE_FIELDS, stillStale, type StaleField } from "../../organizar/repeat";
 import { issues, UNTITLED } from "../../organizar/steps";
+import { moveTemplateTasks } from "./tasks";
 import { eventPagePath, refreshEvent } from "../../revalidate";
 import { owyChannels } from "../../owy/messaging";
 import { LEGACY_COMMUNITY_SLUG } from "../../tenant";
@@ -111,7 +113,7 @@ const draftOf = (communityId: string, eventId: string) =>
  * Tell organizers with a similar audience that this date was taken the same day as theirs (an event
  * or a hold), once per date. Meetups only on the meetup-bot feed have nobody here to tell.
  */
-const headsUp = (row: EventRow) =>
+export const headsUp = (row: EventRow) =>
   Effect.gen(function* () {
     const day = dayKey(row.startDate);
     const dayStart = new Date(montevideoIso(`${day}T00:00`));
@@ -173,15 +175,19 @@ const headsUp = (row: EventRow) =>
     return told.size;
   });
 
+/** How many dates the community holds right now */
+export const liveHolds = (communityId: string) =>
+  query((db) =>
+    db
+      .select({ live: count() })
+      .from(events)
+      .where(and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date())))
+  ).pipe(Effect.map(([row]) => row?.live ?? 0));
+
 /** A community keeps at most MAX_HOLDS live holds: a new one (or dating a draft that isn't held) waits. */
 const capHolds = (communityId: string) =>
   Effect.gen(function* () {
-    const [{ live }] = yield* query((db) =>
-      db
-        .select({ live: count() })
-        .from(events)
-        .where(and(eq(events.communityId, communityId), eq(events.status, "draft"), gt(events.heldUntil, new Date())))
-    );
+    const live = yield* liveHolds(communityId);
     if (live >= MAX_HOLDS) {
       return yield* new Conflict({
         reason: "too_many_holds",
@@ -223,6 +229,7 @@ export const hold = (input: HoldInput) =>
             .where(eq(events.id, input.eventId ?? ""))
             .returning()
         );
+        yield* moveTemplateTasks(row.id, row.startDate);
       } else {
         yield* capHolds(communityId);
         const name = input.title ?? "Evento sin título";
@@ -334,7 +341,7 @@ export const remindExpiringHolds = Effect.gen(function* () {
 
 const PROVISIONAL_DAYS = 28;
 
-const editableOf = (eventId: string) =>
+export const editableOf = (eventId: string) =>
   Effect.gen(function* () {
     const [row] = yield* query((db) =>
       db
@@ -410,7 +417,37 @@ const editableOf = (eventId: string) =>
       materials: event.materials,
       cohosts: yield* cohostsOf(event.id),
       responders: event.responders,
+      staleFields: event.staleFields.filter((field): field is StaleField =>
+        (STALE_FIELDS as readonly string[]).includes(field)
+      ),
+      copiedFrom: event.copiedFromId ? yield* copiedFromOf(event.copiedFromId, event.communityId) : null,
+      notifyPending: event.status === "published" && event.icsSequence > event.notifiedSequence,
+      closedOutAt: event.closedOutAt?.toISOString() ?? null,
+      hostRecapSentAt: event.hostRecapSentAt?.toISOString() ?? null,
+      slideNotes: event.slideNotes ?? {},
     } satisfies EditableEvent;
+  });
+
+/** The event a draft repeats, with what it offers again: its space and the other communities. */
+const copiedFromOf = (sourceId: string, communityId: string) =>
+  Effect.gen(function* () {
+    const [row] = yield* query((db) =>
+      db
+        .select({ id: events.id, name: events.name, venueId: venues.id, venueName: venues.name })
+        .from(events)
+        .leftJoin(venues, eq(venues.id, events.venueId))
+        .where(and(eq(events.id, sourceId), eq(events.communityId, communityId)))
+    );
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      venue: row.venueId && row.venueName ? { id: row.venueId, name: row.venueName } : null,
+      cohosts: (yield* cohostsOf(row.id))
+        .filter((cohost) => cohost.status !== "declined")
+        .map((cohost) => ({ id: cohost.id, name: cohost.name })),
+    };
   });
 
 /** One event of the scoped community, as the wizard edits it. */
@@ -431,26 +468,17 @@ const belongs = (eventId: string, communityId: string) =>
   ).pipe(Effect.map((rows) => rows.length > 0));
 
 /**
- * A new draft, with a provisional date four weeks out (reserving one makes it real), optionally
- * starting from a previous event's texts and settings. A mutation, never a GET: prefetching a
- * link must not make drafts.
+ * A new draft from scratch, with a provisional date four weeks out (reserving one makes it real).
+ * Copies of an earlier event go through `repeat` (lifecycle.ts). A mutation, never a GET:
+ * prefetching a link must not make drafts.
  */
-export const createDraft = (input: { title?: string; copyFrom?: string }) =>
+export const createDraft = (input: { title?: string }) =>
   transaction(
     Effect.gen(function* () {
       const { communityId } = yield* CommunityScope;
-      const [source] = input.copyFrom
-        ? yield* query((db) =>
-            db
-              .select()
-              .from(events)
-              .where(and(eq(events.id, input.copyFrom ?? ""), eq(events.communityId, communityId)))
-          )
-        : [];
       const startDate = new Date(Date.now() + PROVISIONAL_DAYS * DAY_MS);
       startDate.setUTCHours(22, 0, 0, 0);
-      const length = source ? source.endDate.getTime() - source.startDate.getTime() : 2 * 3_600_000;
-      const name = input.title ?? (source ? source.name : UNTITLED);
+      const name = input.title ?? UNTITLED;
       const slug = yield* freeSlug(communityId, slugify(name === UNTITLED ? "borrador" : name));
       const [row] = yield* query((db) =>
         db
@@ -461,24 +489,8 @@ export const createDraft = (input: { title?: string; copyFrom?: string }) =>
             slug,
             status: "draft",
             startDate,
-            endDate: new Date(startDate.getTime() + length),
-            ...(source
-              ? {
-                  summary: source.summary,
-                  description: source.description,
-                  format: source.format,
-                  topics: source.topics,
-                  mode: source.mode,
-                  registration: source.registration,
-                  approval: source.approval,
-                  capacity: source.capacity,
-                  waitlist: source.waitlist,
-                  guestsAllowed: source.guestsAllowed,
-                  questions: source.questions,
-                  sizeBucket: source.sizeBucket,
-                  needs: source.needs,
-                }
-              : { registration: "owu" as const }),
+            endDate: new Date(startDate.getTime() + 2 * 3_600_000),
+            registration: "owu",
           })
           .returning({ id: events.id })
       );
@@ -487,7 +499,7 @@ export const createDraft = (input: { title?: string; copyFrom?: string }) =>
         verb: "event.drafted",
         entityType: "event",
         entityId: row.id,
-        summary: source ? `empezó un evento a partir de «${source.name}»` : "empezó un evento nuevo",
+        summary: "empezó un evento nuevo",
       });
 
       return yield* editableOf(row.id);
@@ -536,7 +548,14 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
         });
       }
 
-      const { schedule, rsvpClosesAt, cohosts, ...fields } = input.patch;
+      const { schedule, rsvpClosesAt, cohosts, reviewed, ...fields } = input.patch;
+      // A copied field stops saying "Revisá" once it changes, or when someone says it's fine as it is
+      const changed = STALE_FIELDS.filter((field) =>
+        field === "rsvpClosesAt"
+          ? rsvpClosesAt !== undefined && rsvpClosesAt !== (row.rsvpClosesAt?.toISOString() ?? null)
+          : fields[field] !== undefined && JSON.stringify(fields[field]) !== JSON.stringify(row[field])
+      );
+      const staleFields = stillStale(row.staleFields, changed, reviewed);
       const moved =
         row.status === "published" && schedule
           ? (() => {
@@ -561,10 +580,12 @@ export const save = (input: { eventId: string; expectedUpdatedAt: string; patch:
             ...(rsvpClosesAt !== undefined ? { rsvpClosesAt: rsvpClosesAt ? new Date(rsvpClosesAt) : null } : {}),
             ...moved,
             ...(dateChanged || placeChanged ? { icsSequence: row.icsSequence + 1 } : {}),
+            ...(staleFields.length !== row.staleFields.length ? { staleFields } : {}),
           })
           .where(eq(events.id, row.id))
           .returning()
       );
+      if (dateChanged && moved) yield* moveTemplateTasks(row.id, moved.startDate);
       // After the update, so an invitation going out carries the name and date just saved
       if (cohosts) yield* setCohosts(updated ?? row, cohosts);
       if (dateChanged && moved) {
@@ -866,7 +887,7 @@ export const cancel = (input: { eventId: string; reason: string }) =>
 // ---------------------------------------------------------------------------
 
 /** Code-of-conduct responders as the public page names them ("Ana G."), in the order the team named them. */
-const responderNames = (ids: string[]) =>
+export const responderNames = (ids: string[]) =>
   ids.length === 0
     ? Effect.succeed([])
     : query((db) => db.select({ id: user.id, name: user.name }).from(user).where(inArray(user.id, ids))).pipe(

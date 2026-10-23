@@ -1,6 +1,10 @@
 import * as z from "zod";
 
+import { STALE_FIELDS } from "../../organizar/repeat";
+import { TEMPLATES } from "../../organizar/task-templates";
 import { VenueFactsSchema } from "../../organizar/venue-facts";
+import { RunOfShowSchema } from "../run-of-show/schemas";
+import { StaffTaskSchema } from "../staff-tasks/schemas";
 
 const PublicVenueFactsSchema = VenueFactsSchema.pick({
   stepFree: true,
@@ -111,6 +115,15 @@ export const QuestionSchema = z.object({
 /** The hands an event asks attendees for */
 export const VolunteerRoleSchema = z.enum(["recepcion", "puerta", "comida", "fotos", "mc", "cierre"]);
 
+/** The welcome slides' second page: how to get online and in. Organizers only (see events.slides). */
+export const SlideNotesSchema = z.object({
+  wifiName: z.string().trim().max(80).optional(),
+  wifiPassword: z.string().trim().max(80).optional(),
+  access: z.string().trim().max(200).optional(),
+});
+
+export const StaleFieldSchema = z.enum(STALE_FIELDS);
+
 /** A recording, slides or a link, for the public page once the event is over. */
 export const MaterialSchema = z.object({
   kind: z.enum(["grabacion", "slides", "link"]),
@@ -187,6 +200,23 @@ export const EditableEventSchema = OrganizerEventSchema.extend({
   ),
   /** Code-of-conduct responders: team members' ids (conduct.setResponders changes them) */
   responders: z.array(z.string()),
+  /** Copied from an earlier event and not reviewed yet: the wizard says "Revisá" next to each */
+  staleFields: z.array(StaleFieldSchema),
+  /** The event this draft repeats: its space and co-hosts, offered again (never asked or invited by themselves) */
+  copiedFrom: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      venue: z.object({ id: z.string(), name: z.string() }).nullable(),
+      cohosts: z.array(z.object({ id: z.string(), name: z.string() })),
+    })
+    .nullable(),
+  /** A change attendees haven't heard about yet (it goes 10 minutes after the last one) */
+  notifyPending: z.boolean(),
+  /** The team went through the close-out */
+  closedOutAt: z.string().nullable(),
+  hostRecapSentAt: z.string().nullable(),
+  slideNotes: SlideNotesSchema,
 });
 
 /** What autosave sends: any subset, checked loosely (publishing checks the rest). */
@@ -233,6 +263,9 @@ export const DraftPatchSchema = z
     cohosts: z.array(z.string().min(1)).max(3),
     /** Published events move their date here (drafts reserve one instead) */
     schedule: z.object({ day: DaySchema, startTime: ClockSchema, durationMin: DurationSchema }),
+    /** Copied fields someone looked at and left as they are: they stop saying "Revisá" */
+    reviewed: z.array(StaleFieldSchema).max(STALE_FIELDS.length),
+    slideNotes: SlideNotesSchema,
   })
   .partial();
 
@@ -467,3 +500,92 @@ export const EventMessageSchema = z.object({
 });
 
 export type EventMessage = z.infer<typeof EventMessageSchema>;
+
+// ---------------------------------------------------------------------------
+// The event from end to end: repeat it, its tasks, its agenda, the day, the close-out
+// ---------------------------------------------------------------------------
+
+/** "Repetir": the date a copy would get. Without `eventId`, from the community's last published event. */
+export const NextDateInputSchema = z.object({ communityId: z.string().min(1), eventId: z.string().min(1).optional() });
+
+export const NextDateSchema = z
+  .object({
+    source: z.object({ id: z.string(), name: z.string() }),
+    day: z.string(),
+    startTime: z.string(),
+    durationMin: z.number(),
+    /** How the calendar sees that day for this community */
+    level: z.enum(["libre", "cuidado", "choca", "bloqueado"]),
+  })
+  .nullable();
+
+export const CloseOutSchema = EventRefSchema.extend({ done: z.boolean().default(true) });
+
+export const TemplateNameSchema = z.enum(TEMPLATES);
+
+export const EventTasksSchema = z.object({
+  tasks: z.array(StaffTaskSchema.extend({ templateKey: z.string().nullable() })),
+  /** The template that fits this event (online, the format, co-organized) */
+  suggested: TemplateNameSchema,
+  /** One person did more than 70% of the done tasks of the community's last 3 events */
+  load: z.object({ name: z.string(), share: z.number() }).nullable(),
+});
+
+export const ApplyTemplateSchema = EventRefSchema.extend({ template: TemplateNameSchema });
+
+/** Someone who offered a hand on the RSVP card, and the job the team gave them */
+export const VolunteerSchema = z.object({
+  attendeeId: z.string(),
+  name: z.string(),
+  offered: z.array(VolunteerRoleSchema),
+  assigned: VolunteerRoleSchema.nullable(),
+  checkedIn: z.boolean(),
+});
+
+export const AssignVolunteerSchema = EventRefSchema.extend({
+  attendeeId: z.string().min(1),
+  /** null takes the job back (no email) */
+  role: VolunteerRoleSchema.nullable(),
+});
+
+/** The meetup's agenda, edited as a whole: the order, titles and lengths; starts follow from the event's start */
+export const SaveAgendaSchema = EventRefSchema.extend({
+  items: z
+    .array(
+      z.object({
+        id: z.string().min(1).optional(),
+        title: z.string().trim().min(1, "Poné un título").max(200),
+        durationMin: z.number().int().min(0).max(240),
+      })
+    )
+    .max(40),
+});
+
+/** MC mode's "Siguiente": the moment shown ends and this one starts (the next one without it) */
+export const AgendaGoSchema = EventRefSchema.extend({ itemId: z.string().min(1).optional() });
+
+export const AgendaSchema = RunOfShowSchema;
+
+/** Everything the welcome slides show, for the organizers who present them */
+export const SlidesSchema = z.object({
+  name: z.string(),
+  summary: z.string().nullable(),
+  startDate: z.string(),
+  endDate: z.string(),
+  community: z.object({ name: z.string(), logoUrl: z.string().nullable() }),
+  notes: SlideNotesSchema,
+  reminderNote: z.string().nullable(),
+  /** Responders as the public page names them ("Ana G.") */
+  responders: z.array(z.string()),
+  reportUrl: z.string(),
+  venue: z.object({ name: z.string(), logoUrl: z.string().nullable() }).nullable(),
+  cohosts: z.array(z.string()),
+  agenda: z.array(z.object({ title: z.string(), plannedStart: z.string() })),
+  next: z.object({ name: z.string(), startDate: z.string(), url: z.string() }).nullable(),
+  /** The post-event survey, when there's one */
+  surveyUrl: z.string().nullable(),
+});
+
+export type EventTasks = z.infer<typeof EventTasksSchema>;
+export type Volunteer = z.infer<typeof VolunteerSchema>;
+export type Slides = z.infer<typeof SlidesSchema>;

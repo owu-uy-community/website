@@ -25,6 +25,7 @@ import { query } from "../db";
 import { invitations } from "../events/cohosts";
 import { list, showUp, stats } from "../events/service";
 import { list as listPolls } from "../polls/service";
+import { talkInboxCount } from "../talks/service";
 import { CommunityScope, CurrentUser } from "../services";
 import type { PanelSummary } from "./schemas";
 
@@ -184,6 +185,7 @@ export const summary = Effect.gen(function* () {
     closing,
     seats,
     tasks,
+    talkInbox,
   ] = yield* Effect.all(
     [
       ahead[0] ? stats(ahead[0].id) : Effect.succeed(null),
@@ -279,6 +281,7 @@ export const summary = Effect.gen(function* () {
         Option.isSome(viewer) ? viewer.value.id : null,
         new Date(montevideoIso(`${addDays(today, 2)}T00:00`))
       ),
+      talkInboxCount(communityId),
     ],
     { concurrency: "unbounded" }
   );
@@ -296,6 +299,7 @@ export const summary = Effect.gen(function* () {
     closeOut: closing.map((event) => ({ ...event, endDate: event.endDate.toISOString() })),
     seats,
     myTasks: tasks,
+    talkInbox,
     ahead,
     drafts,
     nextSeats: nextSeats ? { taken: nextSeats.taken, waiting: nextSeats.waiting } : null,

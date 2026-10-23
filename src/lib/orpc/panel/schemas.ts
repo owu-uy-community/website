@@ -41,6 +41,8 @@ export const PanelSummarySchema = z.object({
       day: z.string(),
     })
   ),
+  /** Talks proposed to this community (named, not to all of OWU) that nobody took yet */
+  talkInbox: z.number(),
   /** Published and still ahead, soonest first */
   ahead: z.array(OrganizerEventSchema),
   /** Every draft: the live holds, the lapsed ones, the ones without a date */
