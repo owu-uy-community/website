@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Ban, TriangleAlert, Users } from "lucide-react";
+import { Ban, Presentation, ShieldCheck, TriangleAlert, Users } from "lucide-react";
 
 import { Notice } from "components/Admin/panel";
 import { DateTimeInput } from "components/Admin/settings/event-fields";
@@ -29,12 +29,23 @@ import { ConductSection } from "./ConductSection";
 import { CancelEventDialog } from "./NotifyDialog";
 import { StaleNotice, useEventSave, type EventInput } from "./save";
 
-type Form = Pick<EditableEvent, "capacity" | "waitlist" | "approval" | "guestsAllowed" | "rsvpClosesAt">;
-const FIELDS = ["capacity", "waitlist", "approval", "guestsAllowed", "rsvpClosesAt"] as const;
+type Form = Pick<EditableEvent, "capacity" | "waitlist" | "approval" | "guestsAllowed" | "rsvpClosesAt" | "slideNotes">;
+const FIELDS = ["capacity", "waitlist", "approval", "guestsAllowed", "rsvpClosesAt", "slideNotes"] as const;
 
 const SECTIONS = [
   { id: "inscripcion", label: "Inscripción", icon: Users },
+  { id: "conducta", label: "Conducta", icon: ShieldCheck },
+  { id: "presentacion", label: "Presentación", icon: Presentation },
   { id: "peligro", label: "Zona peligrosa", icon: TriangleAlert },
+];
+const NOTES: { key: keyof EditableEvent["slideNotes"]; label: string; placeholder: string }[] = [
+  { key: "wifiName", label: "Nombre del wifi", placeholder: "Invitados" },
+  { key: "wifiPassword", label: "Contraseña del wifi", placeholder: "bienvenidos2026" },
+  {
+    key: "access",
+    label: "Cómo entrar y moverse",
+    placeholder: "Baños al fondo a la izquierda; la terraza cierra a las 21",
+  },
 ];
 
 /** A Montevideo day and time as the ISO instant the API keeps */
@@ -60,7 +71,7 @@ export function SettingsTab({
   const [edits, setEdits] = useState<Partial<Form>>({});
   const [cancelling, setCancelling] = useState(false);
   const form: Form = { ...event, ...edits };
-  const dirty = FIELDS.filter((key) => key in edits && edits[key] !== event[key]);
+  const dirty = FIELDS.filter((key) => key in edits && JSON.stringify(edits[key]) !== JSON.stringify(event[key]));
   const set = (change: Partial<Form>) => setEdits((current) => ({ ...current, ...change }));
   const capacityError = DraftPatchSchema.shape.capacity.safeParse(form.capacity).success
     ? undefined
@@ -83,7 +94,7 @@ export function SettingsTab({
   const closes = form.rsvpClosesAt ? new Date(form.rsvpClosesAt) : null;
 
   return (
-    <SettingsLayout label="Ajustes" sections={canCancel && !cancelled ? SECTIONS : SECTIONS.slice(0, 1)}>
+    <SettingsLayout label="Ajustes" sections={canCancel && !cancelled ? SECTIONS : SECTIONS.slice(0, -1)}>
       <div className="max-w-3xl space-y-7 md:pl-6">
         <StaleNotice
           show={stale}
@@ -232,6 +243,38 @@ export function SettingsTab({
         </SettingsSection>
 
         <ConductSection event={event} />
+
+        <SettingsSection id="presentacion" title="Datos para la presentación">
+          <SettingsCard>
+            {NOTES.map((note) => (
+              <SettingsRow
+                key={note.key}
+                dirty={
+                  dirty.includes("slideNotes") &&
+                  (form.slideNotes[note.key] ?? "") !== (event.slideNotes[note.key] ?? "")
+                }
+                hint={
+                  note.key === "wifiName"
+                    ? "Van en la presentación de bienvenida, que solo abren ustedes. Nunca en la página del evento."
+                    : undefined
+                }
+                htmlFor={`slide-${note.key}`}
+                label={note.label}
+              >
+                <Input
+                  disabled={cancelled}
+                  id={`slide-${note.key}`}
+                  maxLength={note.key === "access" ? 200 : 80}
+                  placeholder={note.placeholder}
+                  value={form.slideNotes[note.key] ?? ""}
+                  onChange={(change) =>
+                    set({ slideNotes: { ...form.slideNotes, [note.key]: change.target.value || undefined } })
+                  }
+                />
+              </SettingsRow>
+            ))}
+          </SettingsCard>
+        </SettingsSection>
 
         {canCancel && !cancelled ? (
           <SettingsSection id="peligro" title="Zona peligrosa">

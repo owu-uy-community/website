@@ -242,7 +242,8 @@ export const DraftPatchSchema = z
     questions: z.array(QuestionSchema).max(5),
     externalLinks: z.object({
       meetup: HttpsUrl.refine(
-        (url) => /^(www\.)?meetup\.com$/.test(new URL(url).hostname),
+        // Runs on half-typed links too: one that isn't a URL yet is just not Meetup's
+        (url) => URL.canParse(url) && /^(www\.)?meetup\.com$/.test(new URL(url).hostname),
         "Pegá el link del evento en meetup.com"
       ).optional(),
     }),

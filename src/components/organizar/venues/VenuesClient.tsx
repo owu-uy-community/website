@@ -42,6 +42,7 @@ import { toast } from "components/shared/ui/toast-utils";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import { addDays, daysBetween } from "lib/calendar/holidays";
 import { clockTime, dayKey, shortWhen } from "lib/community/time";
+import { DEFAULT_DURATION, DEFAULT_START, isStartTime, TIME_STEP_SECONDS } from "lib/organizar/times";
 import { factLines } from "lib/organizar/venue-facts";
 import { rotationLabel, type SizeBucket } from "lib/organizar/venue-fit";
 import { plural } from "lib/organizar/words";
@@ -837,7 +838,8 @@ export function RequestComposer({
     if (venue.hostDays.includes(new Date(`${fallback}T12:00:00Z`).getUTCDay())) break;
     fallback = addDays(fallback, 1);
   }
-  const rows = options.length > 0 ? options : [{ day: fallback, startTime: "19:00", durationMin: 120 }];
+  const rows =
+    options.length > 0 ? options : [{ day: fallback, startTime: DEFAULT_START, durationMin: DEFAULT_DURATION }];
   const update = (index: number, change: Partial<OptionDraft>) =>
     setOptions(rows.map((row, at) => (at === index ? { ...row, ...change } : row)));
   function pickEvent(id: string) {
@@ -863,7 +865,7 @@ export function RequestComposer({
     return null;
   });
   const people = Number(attendees) || 0;
-  const valid = rows.every((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && /^\d{2}:\d{2}$/.test(row.startTime));
+  const valid = rows.every((row) => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && isStartTime(row.startTime));
   const reach = useQuery({
     ...orpc.venues.broadcastPreview.queryOptions({
       input: {
@@ -962,7 +964,7 @@ export function RequestComposer({
                       aria-label={`Hora ${index + 1}`}
                       className="w-[104px] font-terminal tabular-nums"
                       required
-                      step={900}
+                      step={TIME_STEP_SECONDS}
                       type="time"
                       value={row.startTime}
                       onChange={(event) => update(index, { startTime: event.target.value })}

@@ -46,7 +46,7 @@ function VolunteerLink({ input, linked }: { input: EventInput; linked: boolean }
   );
 
   return (
-    <Panel>
+    <Panel className="scroll-mt-20" id="puerta-link" tabIndex={-1}>
       <PanelHead icon={QrIcon} title="Link para quienes ayudan en la puerta" />
       <div className="flex flex-col gap-4 p-4">
         <p className="text-ui text-muted-foreground">
@@ -217,6 +217,7 @@ export function DoorTab({
   startDate,
   linked,
   registration,
+  primary = true,
 }: {
   input: EventInput;
   base: string;
@@ -224,6 +225,8 @@ export function DoorTab({
   /** A volunteer link is out (made earlier, not revoked) */
   linked: boolean;
   registration: EditableEvent["registration"];
+  /** The scanner is this view's yellow button; inside the day view, "Abrir la puerta" is */
+  primary?: boolean;
 }) {
   const { can } = usePanel();
   const { eventId } = input;
@@ -251,7 +254,7 @@ export function DoorTab({
                 internet, guarda los escaneos y los manda al volver.
                 {registration === "eventbrite" ? " Lo que entra por acá no llega a Eventbrite." : ""}
               </p>
-              <Button asChild>
+              <Button asChild variant={primary ? "default" : "outline"}>
                 <Link href={`${base}/puerta/escanear`}>
                   <ScanLine />
                   Abrir el escáner

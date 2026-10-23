@@ -39,7 +39,7 @@ export const headingClassName = {
 
 /** A short label above a title: use it once per page, where the title needs context. (`dot` is accepted for older callers and ignored.) */
 export function Eyebrow({ children, className }: { children: ReactNode; dot?: boolean; className?: string }) {
-  return <p className={cn("text-[13px] font-medium text-zinc-500", className)}>{children}</p>;
+  return <p className={cn("text-[13px] font-medium text-zinc-400", className)}>{children}</p>;
 }
 
 /** OWU's yellow bar under a title */

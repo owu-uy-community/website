@@ -82,6 +82,7 @@ export function Composer({
   event,
   stats,
   ids,
+  preset,
   onSent,
 }: {
   input: EventInput;
@@ -89,6 +90,8 @@ export function Composer({
   stats?: EventStats;
   /** Write to exactly these people instead (a selection in Inscriptos) */
   ids?: string[];
+  /** A message to start from ("Cambió la sala"): the organizer completes it */
+  preset?: { subject: string; body: string };
   onSent?: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -98,8 +101,8 @@ export function Composer({
   const audiences = audiencesFor(event, stats, over);
   const [chosen, setChosen] = useState<Audience | null>(null);
   const to = chosen ?? audiences[0]?.key ?? "attending";
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState(preset?.subject ?? "");
+  const [body, setBody] = useState(preset?.body ?? "");
   const [preview, setPreview] = useState(false);
   const [later, setLater] = useState<{ day: string; time: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -525,12 +528,16 @@ function Cadence({ input, event, stats }: { input: EventInput; event: EditableEv
             void reload();
           }}
         />
-        <label className="flex flex-col gap-1.5">
-          <span className="flex items-baseline justify-between">
-            <MicroLabel>Nota en los recordatorios</MicroLabel>
+        <label className="flex flex-col gap-1.5" htmlFor="recordatorio">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <MicroLabel>Nota en los recordatorios</MicroLabel>
+              {event.staleFields.includes("reminderNote") ? <Badge variant="warning">Revisá</Badge> : null}
+            </span>
             <span className="font-terminal text-2xs text-muted-foreground tabular-nums">{shown.length}/500</span>
           </span>
           <Textarea
+            id="recordatorio"
             maxLength={500}
             placeholder="Entrada por la puerta lateral. Traé tu cédula para el edificio."
             rows={3}
@@ -538,7 +545,22 @@ function Cadence({ input, event, stats }: { input: EventInput; event: EditableEv
             onChange={(change) => setNote(change.target.value)}
           />
         </label>
-        <p className="text-meta text-muted-foreground">Va en la reconfirmación y en el mail de logística.</p>
+        <p className="text-meta text-muted-foreground">
+          Va en la reconfirmación y en el mail de logística.
+          {event.staleFields.includes("reminderNote") ? " Viene del evento anterior: fijate que siga valiendo." : ""}
+        </p>
+        {event.staleFields.includes("reminderNote") && note === null ? (
+          <Button
+            className="self-end"
+            disabled={saving}
+            size="sm"
+            type="button"
+            variant="ghost"
+            onClick={() => void save({ reviewed: ["reminderNote"] })}
+          >
+            Está bien así
+          </Button>
+        ) : null}
         <Button
           className="self-end"
           disabled={saving || note === null || shown.trim() === (event.reminderNote ?? "")}

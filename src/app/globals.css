@@ -147,6 +147,8 @@
   /* The settings save bar, while it's up: toasts rise above it instead of covering "Guardar". */
   :root:has([data-save-bar]) {
     --admin-savebar-h: 4rem;
+    /* A field reached with Tab scrolls clear of the bar instead of hiding under it (WCAG 2.4.11) */
+    scroll-padding-bottom: calc(var(--admin-tabbar-h, 0px) + var(--admin-savebar-h));
   }
   /* An editor panel's footer (its Guardar), while one is open: the same for toasts. */
   :root:has([data-editor-footer]) {

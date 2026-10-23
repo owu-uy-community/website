@@ -7,6 +7,7 @@ import { dayKey } from "lib/community/time";
 import { panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Espacios · Organizá" };
+export const instant = false;
 
 export default async function VenuesPage({ params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;

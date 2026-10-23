@@ -1,9 +1,8 @@
 "use client";
 
 import type * as React from "react";
-import Link from "next/link";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { CircleCheck, Copy, ListChecks, Pizza, Share2, Users } from "lucide-react";
+import { Copy, Pizza, Share2, Users } from "lucide-react";
 import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
 
 import { cn } from "app/lib/utils";
@@ -12,18 +11,26 @@ import { Countdown } from "components/Admin/hoy/PrepView";
 import { AreaChart } from "components/Admin/ui/charts";
 import { Meter, MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
 import { ErrorState } from "components/Admin/ui/states";
+import { useNow } from "components/Admin/ui/time";
 import { Button } from "components/shared/ui/button";
+import { copyText } from "components/shared/ui/copy-text";
 import { Skeleton } from "components/shared/ui/skeleton";
-import { toast } from "components/shared/ui/toast-utils";
 import { SITE_URL } from "lib/community/site";
-import { dateParts, MONTEVIDEO_TZ } from "lib/community/time";
-import { FEEDBACK_TIMING } from "lib/organizar/rules";
+import { clockTime, dateParts, MONTEVIDEO_TZ } from "lib/community/time";
+import { eventChecklist } from "lib/organizar/checklist";
+import { eventPhase } from "lib/organizar/rules";
 import { headcount, plural } from "lib/organizar/words";
 import type { EditableEvent, EventStats } from "lib/orpc/events/schemas";
 import { orpc } from "lib/orpc/client";
 
 import { usePanel } from "../shell/context";
+import { AgendaPanel } from "./AgendaPanel";
+import { CloseOut } from "./CloseOut";
+import { DayView } from "./DayView";
 import type { Tab } from "./EventDashboard";
+import { ReadyList } from "./ReadyList";
+import type { EventInput } from "./save";
+import { VolunteersPanel } from "./VolunteersPanel";
 
 /** A stat card: micro label, a big mono figure, then a meter or a line under it. */
 function Stat({
@@ -57,117 +64,8 @@ const outOf = (value: number, total: number | null) =>
     value
   );
 
-type Todo = { key: string; title: string; meta: string; done: boolean; go?: Tab; href?: string };
-
-/** What an event should have before its day, each with where to fix it. */
-function todos(event: EditableEvent, stats: EventStats, surveyOpen: boolean | null, base: string): Todo[] {
-  const place = event.venue?.name ?? event.placeName;
-  const hasPlace = Boolean(event.venue ?? event.placeName);
-  const signUp = event.registration === "owu" || event.registration === "eventbrite";
-  const list: (Todo | false)[] = [
-    event.mode !== "online" && {
-      key: "lugar",
-      title: "Lugar confirmado",
-      meta: hasPlace ? (place ?? "") : "Elegí un espacio o poné la dirección",
-      done: hasPlace,
-      href: `${base}/editar?paso=espacio`,
-    },
-    event.mode !== "presencial" && {
-      key: "online",
-      title: "Link para conectarse",
-      meta: event.onlineUrl ? "Le llega a quien confirma" : "Falta el link de la transmisión",
-      done: Boolean(event.onlineUrl),
-      href: `${base}/editar?paso=espacio`,
-    },
-    event.registration === "owu" && {
-      key: "recordatorios",
-      title: "Recordatorios con tu nota",
-      meta: event.reminderNote
-        ? "Salen solos 48 h y 2 h antes"
-        : "Salen solos 48 h y 2 h antes: sumales cómo entrar o qué traer",
-      done: Boolean(event.reminderNote),
-      go: "emails",
-    },
-    signUp &&
-      event.mode !== "online" && {
-        key: "puerta",
-        title: "Link de la puerta",
-        meta: stats.doorLink ? "Ya lo tiene quien acredita" : "Para quienes ayudan a acreditar, sin cuenta",
-        done: stats.doorLink,
-        go: "puerta",
-      },
-    {
-      key: "encuesta",
-      title: "Encuesta lista",
-      meta: surveyOpen ? `Abierta. ${FEEDBACK_TIMING}` : surveyOpen === false ? "Creada, sin abrir" : "Sin encuesta",
-      done: Boolean(surveyOpen),
-      go: "feedback",
-    },
-    {
-      key: "meetup",
-      title: "También en Meetup",
-      meta: event.externalLinks.meetup ? "Enlazado" : "Publicalo ahí y pegá el link",
-      done: Boolean(event.externalLinks.meetup),
-      go: "publicaciones",
-    },
-  ];
-
-  return list.filter((item) => item !== false);
-}
-
-function Checklist({ items, onGo }: { items: Todo[]; onGo: (tab: Tab) => void }) {
-  const { can } = usePanel();
-  const done = items.filter((item) => item.done).length;
-  // Puerta and Emails need their own permission: without it, what's missing shows without the way there
-  const reachable = (item: Todo) =>
-    item.href ?? (item.go === "puerta" ? can("event:door-link") : item.go === "emails" ? can("event:message") : true);
-
-  return (
-    <Panel>
-      <PanelHead
-        actions={<Meter className="w-28" label="Antes del evento" max={items.length} value={done} />}
-        icon={ListChecks}
-        meta={`${done} de ${items.length}`}
-        title="Para hacer"
-      />
-      <ul className="divide-y divide-border">
-        {items.map((item) => (
-          <li key={item.key} className="flex items-center gap-3 px-4 py-2.5">
-            {item.done ? (
-              <CircleCheck aria-label="Listo" className="size-[18px] shrink-0 text-success" />
-            ) : (
-              <span
-                aria-label="Pendiente"
-                className="size-[18px] shrink-0 rounded-full border-[1.5px] border-dashed border-faint"
-                role="img"
-              />
-            )}
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className={cn("truncate text-ui", item.done ? "text-muted-foreground" : "text-foreground")}>
-                {item.title}
-              </p>
-              <p className="truncate text-meta text-faint">{item.meta}</p>
-            </div>
-            {!item.done && reachable(item) ? (
-              item.href ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={item.href}>Resolver</Link>
-                </Button>
-              ) : (
-                <Button size="sm" variant="outline" onClick={() => item.go && onGo(item.go)}>
-                  Resolver
-                </Button>
-              )
-            ) : null}
-          </li>
-        ))}
-      </ul>
-    </Panel>
-  );
-}
-
 /** The event's link to copy, its QR, and WhatsApp and LinkedIn ready to post. */
-function ShareBox({ url, name }: { url: string; name: string }) {
+export function ShareBox({ url, name }: { url: string; name: string }) {
   return (
     <Panel>
       <PanelHead icon={Share2} title="Compartir" />
@@ -176,16 +74,7 @@ function ShareBox({ url, name }: { url: string; name: string }) {
           <span className="min-w-0 flex-1 truncate font-terminal text-meta text-foreground">
             {url.replace(/^https?:\/\//, "")}
           </span>
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() =>
-              void navigator.clipboard.writeText(url).then(
-                () => toast.success("Link copiado"),
-                () => toast.error("No se pudo copiar", "Seleccioná el link y copialo a mano.")
-              )
-            }
-          >
+          <Button size="xs" variant="outline" onClick={() => void copyText(url, "Link copiado")}>
             <Copy />
             Copiar
           </Button>
@@ -221,27 +110,30 @@ function ShareBox({ url, name }: { url: string; name: string }) {
   );
 }
 
-/**
- * The event at a glance: the countdown, sign-ups against the cupo, who will likely come, what's
- * still missing before the day, and its link to share.
- */
+/** "Comida para ~34: 11 pizzas (3 veggie), 68 bebidas" */
+export const foodLine = (stats: EventStats) => {
+  const { food, likely } = { food: stats.turnout.food, likely: stats.turnout.likely };
+  const extras = [food.veggie ? `${food.veggie} veggie` : "", food.glutenFree ? `${food.glutenFree} sin TACC` : ""]
+    .filter(Boolean)
+    .join(", ");
+
+  return `Para ~${likely}: ${plural(food.pizzas, "pizza", "pizzas")}${extras ? ` (${extras})` : ""}, ${food.drinks} bebidas`;
+};
+
 /**
  * "Cuántos esperamos" and "Comida para ~N": a range, never a bare number, each with its n and why
  * (the community's own show rate, or the default for free meetups).
  */
 function Turnout({ stats }: { stats: EventStats }) {
   const { turnout } = stats;
-  const { food, diets } = turnout;
+  const { diets } = turnout;
   const people = stats.attending + stats.guests;
   const why = turnout.fromHistory
     ? `Con el ${Math.round(turnout.rate * 100)} % que vino a ${plural(turnout.events, "evento", "eventos")} con puerta de la comunidad`
     : `Con el ${Math.round(turnout.rate * 100)} % que suele venir a un meetup gratis: la comunidad todavía no tiene 3 eventos con puerta`;
-  const extras = [food.veggie ? `${food.veggie} veggie` : "", food.glutenFree ? `${food.glutenFree} sin TACC` : ""]
-    .filter(Boolean)
-    .join(", ");
 
   return (
-    <Panel>
+    <Panel id="comida" tabIndex={-1}>
       <PanelHead icon={Pizza} title="Cuántos esperamos" />
       <div className="grid gap-4 p-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
@@ -258,11 +150,7 @@ function Turnout({ stats }: { stats: EventStats }) {
         </div>
         <div className="flex flex-col gap-1.5">
           <p className="text-ui text-foreground">
-            Comida para ~{turnout.likely}:{" "}
-            <span className="font-medium">
-              {plural(food.pizzas, "pizza", "pizzas")}
-              {extras ? ` (${extras})` : ""}, {food.drinks} bebidas
-            </span>
+            Comida <span className="font-medium">{foodLine(stats).replace(/^Para/, "para")}</span>
           </p>
           <p className="text-meta text-muted-foreground">
             2,5 porciones por persona y 10 % de más; al menos un cuarto veggie y 1 sin TACC cada 50.
@@ -276,16 +164,10 @@ function Turnout({ stats }: { stats: EventStats }) {
   );
 }
 
-export function SummaryTab({
-  base,
-  event,
-  stats,
-  days,
-  eventbrite,
-  onGo,
-}: {
+type HoyProps = {
   /** The event's path in the panel */
   base: string;
+  input: EventInput;
   event: EditableEvent;
   stats: UseQueryResult<EventStats>;
   /** Days until the event: 0 is today, negative once it passed */
@@ -293,10 +175,28 @@ export function SummaryTab({
   /** How its publication on Eventbrite is going, when people sign up there */
   eventbrite: React.ReactNode;
   onGo: (tab: Tab) => void;
-}) {
+};
+
+/**
+ * "Hoy", the event's first page, changes with its phase: getting ready (what's missing, the
+ * tasks, who helps, the agenda), the day itself from an hour before (the door first), and the
+ * close-out from two hours after the end.
+ */
+export function HoyTab(props: HoyProps) {
+  const now = useNow(60_000);
+  const phase = props.event.status === "cancelled" ? "antes" : eventPhase(props.event, now || Date.now());
+  if (phase === "dia") return <DayView {...props} />;
+  if (phase === "despues") return <CloseOut event={props.event} input={props.input} stats={props.stats} />;
+
+  return <Antes {...props} />;
+}
+
+/** Before the day: the countdown and sign-ups, who's likely to come, what's missing, the tasks. */
+function Antes({ base, input, event, stats, days, eventbrite, onGo }: HoyProps) {
   const { can } = usePanel();
   const signUp = event.registration === "owu" || event.registration === "eventbrite";
   const survey = useQuery(orpc.surveys.get.queryOptions({ input: { eventId: event.id }, staleTime: 30_000 }));
+  const tasks = useQuery(orpc.events.tasks.queryOptions({ input, enabled: can("event:read") }));
   const url = new URL(
     `/comunidad/${event.communitySlug}/events/${event.slug}`,
     process.env.NEXT_PUBLIC_BASE_URL ?? SITE_URL
@@ -305,6 +205,7 @@ export function SummaryTab({
   const data = stats.data;
   const count = data ? headcount(data, data.capacity) : null;
   const place = event.mode === "online" ? "Online" : (event.venue?.name ?? event.placeName);
+  const food = tasks.data?.tasks.find((task) => task.templateKey?.endsWith(":comida"));
 
   return (
     <div className="flex flex-col gap-4">
@@ -364,21 +265,7 @@ export function SummaryTab({
               note={`${data.confirmed} confirmaron · ${Math.max(0, data.attending - data.confirmed)} sin respuesta`}
               value={outOf(data.confirmed, data.attending || null)}
             />
-            <Stat
-              label="Entraron"
-              meter={
-                days <= 0 ? (
-                  <Meter
-                    label="Entraron"
-                    max={data.attending || data.checkedIn || 1}
-                    tone="success"
-                    value={data.checkedIn}
-                  />
-                ) : undefined
-              }
-              note={days > 0 ? "Se cuentan el día del evento" : undefined}
-              value={days > 0 ? "–" : outOf(data.checkedIn, data.attending || null)}
-            />
+            <Stat label="Entraron" note="Se cuentan el día del evento" value="–" />
           </div>
         ) : stats.isError ? (
           <ErrorState onRetry={() => void stats.refetch()} title="No pudimos traer los números" />
@@ -395,19 +282,37 @@ export function SummaryTab({
           <p className="flex-1 text-ui text-foreground">
             {data.pending === 1 ? "Una persona espera" : `${data.pending} personas esperan`} que la apruebes.
           </p>
-          <Button size="sm" variant="outline" onClick={() => onGo("inscriptos")}>
+          <Button size="sm" variant="outline" onClick={() => onGo("personas")}>
             Revisar
           </Button>
         </Panel>
       ) : null}
 
-      <div className={cn("grid gap-4", upcoming ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "max-w-md")}>
+      <div className={cn("grid items-start gap-4", upcoming ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "max-w-md")}>
         {upcoming ? (
-          data ? (
-            <Checklist items={todos(event, data, survey.data?.isOpen ?? null, base)} onGo={onGo} />
-          ) : (
-            <Skeleton className="h-64 rounded-lg" />
-          )
+          <div className="flex min-w-0 flex-col gap-4">
+            {data ? (
+              <ReadyList
+                input={input}
+                rows={eventChecklist(
+                  {
+                    event,
+                    doorLink: data.doorLink,
+                    surveyOpen: survey.data?.isOpen ?? null,
+                    foodDone: food ? food.status === "done" : null,
+                    food: event.registration === "owu" ? foodLine(data) : null,
+                  },
+                  base
+                )}
+              />
+            ) : (
+              <Skeleton className="h-64 rounded-lg" />
+            )}
+            {can("attendee:read") && (event.volunteerRoles.length > 0 || event.registration === "owu") ? (
+              <VolunteersPanel input={input} />
+            ) : null}
+            <AgendaPanel base={base} input={input} start={clockTime(event.startDate)} />
+          </div>
         ) : null}
         <ShareBox name={event.name} url={url} />
       </div>

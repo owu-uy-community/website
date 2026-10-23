@@ -13,8 +13,8 @@ import { PANEL_NAV_ITEMS, activePanelItem, panelHref } from "./nav";
 
 const TABS = ["inicio", "calendario", "eventos"] as const;
 
-/** Full-screen steps with their own action bar: the wizard and the door scanner. */
-const OWN_BAR = /\/(editar|puerta\/escanear)(\/|$)/;
+/** Full-screen steps with their own action bar: the wizard, the door scanner, MC mode and the slides. */
+const OWN_BAR = /\/(editar|puerta\/escanear|mc|presentacion)(\/|$)/;
 
 /** Whether the phone tab bar shows on this page (on phones): then its «Más» is the menu. */
 export const hasTabBar = (pathname: string | null, inCommunity: boolean) =>

@@ -9,6 +9,7 @@ import { events } from "lib/db/schema";
 import { holds, panelCommunity } from "../../../../../access";
 
 export const metadata: Metadata = { title: "Escáner · Organizá" };
+export const instant = false;
 
 /**
  * OWU's door scanner for the event's admins, signed in (it reads names and emails). Members and

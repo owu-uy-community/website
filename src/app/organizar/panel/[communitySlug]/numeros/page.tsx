@@ -8,6 +8,7 @@ import { NumbersClient } from "components/organizar/insights/NumbersClient";
 import { holds, panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Números · Organizá" };
+export const instant = false;
 
 /** The community's numbers for its team (editors and up), its data to download (admins). */
 export default async function NumbersPage({ params }: { params: Promise<{ communitySlug: string }> }) {

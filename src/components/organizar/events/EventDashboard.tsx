@@ -1,14 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, FilePen } from "lucide-react";
+import { ArrowLeft, ChevronDown, ExternalLink, FilePen } from "lucide-react";
 
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { ScrollCue } from "components/Admin/ui/scroll-cue";
 import { ErrorState } from "components/Admin/ui/states";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "components/shared/ui/dropdown-menu";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { cn } from "app/lib/utils";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
@@ -21,32 +29,67 @@ import type { CommunityPermission } from "lib/authz/catalog";
 import type { CalendarCommunity } from "../calendar/CalendarClient";
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
 import { usePanel } from "../shell/context";
+import { DespuesTab } from "./DespuesTab";
 import { DoorTab } from "./DoorTab";
 import { EmailsTab } from "./EmailsTab";
-import { FeedbackTab } from "./FeedbackTab";
+import { HoyTab } from "./HoyTab";
 import { PeopleTab } from "./PeopleTab";
 import { PublicationsTab } from "./PublicationsTab";
 import { SettingsTab } from "./SettingsTab";
-import { SummaryTab } from "./SummaryTab";
 
-/** The dashboard's tabs; `requires` hides one from whoever holds none of those permissions. */
+/** The dashboard's sections; `requires` hides one from whoever holds none of those permissions. */
 const TABS = [
-  { key: "resumen", title: "Resumen" },
+  { key: "hoy", title: "Hoy" },
   // The whole list (attendee:read), or just who waits for approval (rsvp:review, editors)
-  { key: "inscriptos", title: "Inscriptos", requires: ["attendee:read", "rsvp:review"] },
-  { key: "puerta", title: "Puerta", requires: ["event:door-link"] },
-  { key: "emails", title: "Emails", requires: ["event:message"] },
-  { key: "publicaciones", title: "Publicaciones" },
-  { key: "feedback", title: "Feedback" },
+  { key: "personas", title: "Personas", requires: ["attendee:read", "rsvp:review"] },
+  { key: "mensajes", title: "Mensajes", requires: ["event:message"] },
+  { key: "difusion", title: "Difusión" },
+  { key: "despues", title: "Después" },
   { key: "ajustes", title: "Ajustes" },
 ] as const satisfies readonly { key: string; title: string; requires?: readonly CommunityPermission[] }[];
-export type Tab = (typeof TABS)[number]["key"];
-/** Tabs that changed name: their old links still land */
-const RENAMED: Record<string, Tab> = { mensajes: "emails", encuesta: "feedback" };
+/** The door, opened from Hoy (its link, the scanner, letting people in by name): a page of Hoy, not a tab */
+export type Tab = (typeof TABS)[number]["key"] | "puerta";
+/** Sections that changed name: their old links still land */
+const RENAMED: Record<string, Tab> = {
+  resumen: "hoy",
+  inscriptos: "personas",
+  emails: "mensajes",
+  publicaciones: "difusion",
+  feedback: "despues",
+  encuesta: "despues",
+};
+/** On phones the strip is "Hoy · Personas · Más ▾" */
+const UP_FRONT: Tab[] = ["hoy", "personas"];
+
+/** Focus what a deep link names (`#recordatorio`) once it's on the page, so the next key works there. */
+function useFocusHash(tab: Tab, ready: boolean) {
+  useEffect(() => {
+    if (!ready) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      const target = document.getElementById(id);
+      tries += 1;
+      if (!target && tries < 40) return;
+      window.clearInterval(timer);
+      if (!target) return;
+      target.scrollIntoView({ block: "center" });
+      const field = target.matches("input, textarea, select, button, a, [tabindex]")
+        ? target
+        : (target.querySelector<HTMLElement>("input, textarea, select, button") ?? target);
+      if (field === target && !target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+      field.focus({ preventScroll: true });
+    }, 100);
+
+    return () => window.clearInterval(timer);
+  }, [tab, ready]);
+}
 
 /**
- * A published event, run from the panel: how it's going, who's coming, the door, emails, where
- * it's published, feedback and its settings. Names and emails are for the community's admins.
+ * A published event, run from the panel: Hoy changes with the event's phase (getting ready, the
+ * day, the close-out); then its people, messages, where it's announced, what stays after, and
+ * its settings. Names and emails are for the community's admins.
  */
 export function EventDashboard({
   community,
@@ -67,15 +110,22 @@ export function EventDashboard({
   const asked = params.get("tab") ?? "";
   const requested = RENAMED[asked] ?? asked;
   const visible = TABS.filter((tab) => !("requires" in tab) || tab.requires.some((permission) => can(permission)));
-  const tab: Tab = visible.find((item) => item.key === requested)?.key ?? "resumen";
+  const tab: Tab =
+    requested === "puerta" && can("event:door-link")
+      ? "puerta"
+      : (visible.find((item) => item.key === requested)?.key ?? "hoy");
+  // The strip marks Hoy while the door (a page of Hoy) is open
+  const current = tab === "puerta" ? "hoy" : tab;
   const go = (key: Tab) => {
     const next = new URLSearchParams(params.toString());
     next.set("tab", key);
     window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
   };
+  useFocusHash(tab, Boolean(event.data));
 
   // Check-ins, sign-ups and seat changes ping the event's ops channel: read the counts again
   useRealtimeChannel(eventChannel(eventId, "ops"), (topic) => {
+    if (topic === "rundown") void queryClient.invalidateQueries({ queryKey: orpc.events.agenda.key() });
     if (topic !== "checkins") return;
     void queryClient.invalidateQueries({ queryKey: orpc.events.stats.key() });
     void queryClient.invalidateQueries({ queryKey: orpc.attendees.key() });
@@ -100,6 +150,23 @@ export function EventDashboard({
   const days = daysBetween(today, dayKey(data.startDate));
   const pagePath = `/comunidad/${data.communitySlug}/events/${data.slug}`;
   const base = `/organizar/panel/${community.slug}/eventos/${eventId}`;
+  const more = visible.filter((item) => !UP_FRONT.includes(item.key));
+  const inMore = more.find((item) => item.key === current);
+  const tabButton = (item: (typeof TABS)[number], className?: string) => (
+    <button
+      key={item.key}
+      aria-current={current === item.key ? "page" : undefined}
+      className={cn(
+        "relative shrink-0 font-medium whitespace-nowrap transition-colors",
+        current === item.key ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+        className
+      )}
+      type="button"
+      onClick={() => go(item.key)}
+    >
+      {item.title}
+    </button>
+  );
 
   return (
     <PageContainer size="large">
@@ -133,28 +200,59 @@ export function EventDashboard({
         title={data.name}
       />
 
-      <nav
-        aria-label="Secciones del evento"
-        className="mb-5 flex [scrollbar-width:none] gap-5 overflow-x-auto border-b border-border"
-      >
-        {visible.map((item) => (
-          <button
-            key={item.key}
-            aria-current={tab === item.key ? "page" : undefined}
-            className={cn(
-              "relative h-9 shrink-0 text-ui font-medium whitespace-nowrap transition-colors after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full",
-              tab === item.key ? "text-foreground after:bg-primary" : "text-muted-foreground hover:text-foreground"
+      <nav aria-label="Secciones del evento" className="mb-5 max-sm:hidden">
+        <ScrollCue className="border-b border-border">
+          <div className="flex gap-5">
+            {visible.map((item) =>
+              tabButton(
+                item,
+                cn(
+                  "h-9 text-ui after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full",
+                  current === item.key && "after:bg-primary"
+                )
+              )
             )}
-            type="button"
-            onClick={() => go(item.key)}
-          >
-            {item.title}
-          </button>
-        ))}
+          </div>
+        </ScrollCue>
+      </nav>
+      <nav aria-label="Secciones del evento" className="mb-5 sm:hidden">
+        <div className="grid auto-cols-fr grid-flow-col gap-1 rounded-lg border border-border bg-raised/40 p-1">
+          {visible
+            .filter((item) => UP_FRONT.includes(item.key))
+            .map((item) =>
+              tabButton(item, cn("h-11 rounded-md text-ui", current === item.key && "bg-card shadow-edge"))
+            )}
+          {more.length > 0 ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-current={inMore ? "page" : undefined}
+                className={cn(
+                  "flex h-11 items-center justify-center gap-1 rounded-md text-ui font-medium whitespace-nowrap",
+                  inMore ? "bg-card text-foreground shadow-edge" : "text-muted-foreground"
+                )}
+              >
+                {inMore ? inMore.title : "Más"}
+                <ChevronDown aria-hidden className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-44">
+                {more.map((item) => (
+                  <DropdownMenuItem
+                    key={item.key}
+                    aria-current={current === item.key ? "page" : undefined}
+                    className="min-h-11 text-ui"
+                    onSelect={() => go(item.key)}
+                  >
+                    {item.title}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
       </nav>
 
-      {tab === "resumen" ? (
-        <SummaryTab
+      {tab === "hoy" ? (
+        <HoyTab
           base={base}
           days={days}
           event={data}
@@ -168,23 +266,30 @@ export function EventDashboard({
               />
             ) : null
           }
+          input={input}
           stats={stats}
           onGo={go}
         />
       ) : null}
-      {tab === "inscriptos" ? <PeopleTab event={data} input={input} /> : null}
       {tab === "puerta" ? (
-        <DoorTab
-          base={base}
-          input={input}
-          linked={stats.data?.doorLink ?? false}
-          registration={data.registration}
-          startDate={data.startDate}
-        />
+        <div className="flex flex-col gap-3">
+          <Button className="self-start" size="sm" variant="ghost" onClick={() => go("hoy")}>
+            <ArrowLeft />
+            Volver a Hoy
+          </Button>
+          <DoorTab
+            base={base}
+            input={input}
+            linked={stats.data?.doorLink ?? false}
+            registration={data.registration}
+            startDate={data.startDate}
+          />
+        </div>
       ) : null}
-      {tab === "emails" ? <EmailsTab event={data} input={input} stats={stats.data} /> : null}
-      {tab === "publicaciones" ? <PublicationsTab base={base} community={community} event={data} /> : null}
-      {tab === "feedback" ? <FeedbackTab event={data} input={input} /> : null}
+      {tab === "personas" ? <PeopleTab event={data} input={input} /> : null}
+      {tab === "mensajes" ? <EmailsTab event={data} input={input} stats={stats.data} /> : null}
+      {tab === "difusion" ? <PublicationsTab community={community} event={data} input={input} /> : null}
+      {tab === "despues" ? <DespuesTab event={data} input={input} /> : null}
       {tab === "ajustes" ? (
         <SettingsTab canCancel={can("event:cancel")} event={data} input={input} stats={stats.data} />
       ) : null}

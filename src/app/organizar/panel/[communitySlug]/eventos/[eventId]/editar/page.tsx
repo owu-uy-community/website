@@ -8,6 +8,7 @@ import { dayKey } from "lib/community/time";
 import { panelCommunity } from "../../../../access";
 
 export const metadata: Metadata = { title: "Evento · Organizá" };
+export const instant = false;
 
 export default async function EditEventPage({
   params,

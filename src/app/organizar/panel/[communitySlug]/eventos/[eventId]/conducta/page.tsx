@@ -9,6 +9,7 @@ import { events } from "lib/db/schema";
 import { panelCommunity } from "../../../../access";
 
 export const metadata: Metadata = { title: "Conducta · Organizá" };
+export const instant = false;
 
 /** The event's code-of-conduct reports: its responders and OWU's conduct staff read them here. */
 export default async function ConductPage({ params }: { params: Promise<{ communitySlug: string; eventId: string }> }) {
