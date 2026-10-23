@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
 import { Notice } from "components/Admin/panel";
@@ -9,7 +9,7 @@ import { PageContainer, PageHeader } from "components/Admin/ui/page";
 import { ProfileOptIn } from "components/organizar/community/ProfileOptIn";
 import { TeamCare } from "components/organizar/community/TeamCare";
 import { db } from "lib/db";
-import { communityMembers } from "lib/db/schema";
+import { communityMembers, events, rooms } from "lib/db/schema";
 
 import { holds, panelCommunity } from "../../access";
 import { LeaveTeam } from "./LeaveTeam";
@@ -26,10 +26,20 @@ export default async function TeamPage({ params }: { params: Promise<{ community
   if (!access) notFound();
   const { id, name, permissions } = access.community;
   // Site staff without a membership have nothing to show on the profile, nor a team to leave
-  const [membership] = await db
-    .select({ showOnProfile: communityMembers.showOnProfile })
-    .from(communityMembers)
-    .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, access.session.user.id)));
+  const [[membership], [conf]] = await Promise.all([
+    db
+      .select({ showOnProfile: communityMembers.showOnProfile })
+      .from(communityMembers)
+      .where(and(eq(communityMembers.communityId, id), eq(communityMembers.userId, access.session.user.id))),
+    // An open space, or any event with rooms: then rooms, tasks and the incident desk mean something
+    db
+      .select({ id: events.id })
+      .from(events)
+      .leftJoin(rooms, eq(rooms.openSpaceId, events.id))
+      .where(and(eq(events.communityId, id), or(eq(events.format, "open-space"), isNotNull(rooms.id))))
+      .limit(1),
+  ]);
+  const meetup = !conf;
 
   return (
     <PageContainer className="pb-6" size="small">
@@ -40,14 +50,14 @@ export default async function TeamPage({ params }: { params: Promise<{ community
         </div>
       ) : null}
       {holds(access.community, "member:read") ? (
-        <MembersSection communityId={id} communityName={name} permissions={permissions} />
+        <MembersSection communityId={id} communityName={name} meetup={meetup} permissions={permissions} />
       ) : (
         <Notice tone="info">Solo quienes administran la comunidad ven y cambian el equipo.</Notice>
       )}
       <TeamCare communityId={id} />
       {holds(access.community, "role:read") ? (
         <div className="mt-8">
-          <CommunityRolesSection communityId={id} permissions={permissions} />
+          <CommunityRolesSection communityId={id} meetup={meetup} permissions={permissions} />
         </div>
       ) : null}
       {membership ? <LeaveTeam communityId={id} communityName={name} /> : null}

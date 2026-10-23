@@ -30,7 +30,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "c
 import { toast } from "components/shared/ui/toast-utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "components/shared/ui/tooltip";
 import { COMMUNITY_ROLE_GRANTS } from "lib/authz/catalog";
-import { ROLE_LABELS, roleLabel } from "lib/authz/labels";
+import { MEETUP_ROLE_HINTS, ROLE_LABELS, roleLabel } from "lib/authz/labels";
 import { orpc } from "lib/orpc";
 import type { CommunityMember } from "lib/orpc/communities/schemas";
 
@@ -124,10 +124,13 @@ export function MembersSection({
   communityId,
   communityName,
   permissions,
+  meetup = false,
 }: {
   communityId: string;
   communityName: string;
   permissions?: readonly string[];
+  /** A community that only runs meetups: roles described without the conference's staff of the day */
+  meetup?: boolean;
 }) {
   const can = (permission: string) => permissions?.includes(permission) ?? true;
   const [canAdd, canUpdate, canDelete] = [can("member:create"), can("member:update"), can("member:delete")];
@@ -150,7 +153,10 @@ export function MembersSection({
       ? `Su rol deja de contar el ${format(deadline, "d 'de' MMMM", { locale: es })} si no entra con el Slack de OWU.`
       : "Su rol no cuenta hasta que entre con el Slack de OWU.";
 
-  const allRoles: RoleOption[] = roles.data ?? BUILT_IN_ROLES;
+  const allRoles: RoleOption[] = (roles.data ?? BUILT_IN_ROLES).map((option) => ({
+    ...option,
+    description: (meetup ? MEETUP_ROLE_HINTS[option.role] : null) ?? option.description,
+  }));
   const nameOf = (role: string) => allRoles.find((option) => option.role === role)?.label ?? roleLabel(role);
   // Naming or changing owners and admins takes its own permission (the API checks escalation too).
   const guarded = (role: string) =>
@@ -642,7 +648,11 @@ export function MembersSection({
 
       <ConfirmDialog
         confirmLabel="Quitar"
-        description={`Deja de ver el staff, las tareas y los anuncios de ${communityName}. Podés volver a sumarla cuando quieras.`}
+        description={
+          meetup
+            ? `Deja de ser parte del equipo de ${communityName}. Podés volver a sumarla cuando quieras.`
+            : `Deja de ver el staff, las tareas y los anuncios de ${communityName}. Podés volver a sumarla cuando quieras.`
+        }
         open={pendingRemove !== null}
         pending={remove.isPending}
         title={`¿Quitar a ${pendingRemove?.name ?? ""} de ${communityName}?`}
