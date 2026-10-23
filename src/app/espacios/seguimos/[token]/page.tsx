@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 import { HostCheck } from "components/organizar/venues/HostCheck";
 import { HostShell, LinkTrouble } from "components/organizar/venues/HostShell";
@@ -14,6 +15,8 @@ export const metadata: Metadata = {
 
 /** The yearly check a space's contact opens from the email. Opening it changes nothing; each answer is a POST. */
 export default async function HostCheckPage({ params }: { params: Promise<{ token: string }> }) {
+  // Per request, before anything reads the clock (a link lapses with time)
+  await connection();
   const { token } = await params;
   const result = await publicCaller.venues.checkByToken({ token }).then(
     (view) => ({ view, failed: false }),

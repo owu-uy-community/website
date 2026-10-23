@@ -248,7 +248,6 @@ export function VenuesClient({ community, today }: { community: CalendarCommunit
             return (
               <ToggleGroupItem
                 key={amenity}
-                aria-label={AMENITY_LABEL[amenity]}
                 className="h-8 gap-1.5 rounded-md border border-dashed border-input px-2.5 text-meta data-[state=on]:border-solid data-[state=on]:border-primary/50 data-[state=on]:bg-primary-surface"
                 title={AMENITY_LABEL[amenity]}
                 value={amenity}
@@ -581,33 +580,30 @@ export function RequestList({
                   <span aria-hidden className="size-1.5 rounded-full bg-info" />
                   Enviado <span className="font-terminal tabular-nums">{shortWhen(request.createdAt)}</span>
                 </li>
-                <li aria-hidden className="h-px w-4 bg-border" />
-                <li className="flex items-center gap-1.5">
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      request.status === "accepted"
-                        ? "bg-success"
-                        : request.status === "declined"
-                          ? "bg-live"
-                          : request.status === "pending" || request.status === "proposed"
-                            ? "animate-pulse bg-warning"
-                            : "bg-faint"
-                    )}
-                  />
-                  {request.status === "pending" ? (
-                    <>
-                      vence <span className="font-terminal tabular-nums">{shortWhen(request.expiresAt)}</span>
-                    </>
-                  ) : request.respondedAt ? (
-                    <>
-                      Respondió <span className="font-terminal tabular-nums">{shortWhen(request.respondedAt)}</span>
-                    </>
-                  ) : (
-                    status.label
-                  )}
-                </li>
+                {request.status === "pending" || request.respondedAt ? (
+                  <>
+                    <li aria-hidden className="h-px w-4 bg-border" />
+                    <li className="flex items-center gap-1.5">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          request.status === "accepted"
+                            ? "bg-success"
+                            : request.status === "declined"
+                              ? "bg-live"
+                              : request.status === "pending" || request.status === "proposed"
+                                ? "animate-pulse bg-warning"
+                                : "bg-faint"
+                        )}
+                      />
+                      {request.status === "pending" ? "vence " : "Respondió "}
+                      <span className="font-terminal tabular-nums">
+                        {shortWhen(request.status === "pending" ? request.expiresAt : (request.respondedAt ?? ""))}
+                      </span>
+                    </li>
+                  </>
+                ) : null}
               </ol>
               <ol aria-label="Fechas pedidas" className="flex flex-wrap gap-1.5">
                 {request.options.map((option, index) => (

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 import { HostResponse } from "components/organizar/venues/HostResponse";
 import { HostShell, LinkTrouble } from "components/organizar/venues/HostShell";
@@ -15,6 +16,8 @@ export const metadata: Metadata = {
 
 /** Where a host answers a community's request, from the emailed link, without an account. */
 export default async function HostRequestPage({ params }: { params: Promise<{ token: string }> }) {
+  // Per request, before anything reads the clock (a request lapses with time)
+  await connection();
   const { token } = await params;
   // A bad or lapsed link is NOT_FOUND; anything else is us failing to load, said differently
   const result = await publicCaller.venues.byToken({ token }).then(
