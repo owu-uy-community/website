@@ -54,7 +54,7 @@ export default function Footer() {
           <nav aria-label="Pie de página" className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">
             {FOOTER_COLUMNS.map(({ title, links }) => (
               <div key={title}>
-                <Eyebrow>{title}</Eyebrow>
+                <Eyebrow className="text-zinc-400">{title}</Eyebrow>
                 <ul className="mt-5 flex flex-col gap-3">
                   {links.map(({ href, label, external }) => (
                     <li key={href}>
@@ -79,7 +79,7 @@ export default function Footer() {
           </nav>
         </div>
 
-        <div className="mt-16 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[13px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[13px] text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
           <span>© {YEAR} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
           <a
             className="inline-flex items-center gap-1 transition-colors hover:text-zinc-200"
@@ -92,12 +92,11 @@ export default function Footer() {
           </a>
         </div>
       </Container>
-      <p
+      {/* A watermark, not text: drawn as generated content so contrast checks and readers skip it */}
+      <div
         aria-hidden
-        className="pointer-events-none -mb-[0.2em] text-center font-title text-[21vw] leading-none font-extrabold tracking-[-0.05em] text-white/[0.025] select-none"
-      >
-        owu.uy
-      </p>
+        className="pointer-events-none -mb-[0.2em] text-center font-title text-[21vw] leading-none font-extrabold tracking-[-0.05em] text-white/[0.025] select-none before:content-['owu.uy']"
+      />
     </footer>
   );
 }

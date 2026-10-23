@@ -211,7 +211,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
 
   // Phones read top to bottom: "Para hacer" right under the next event (it's in the side column on desktop)
   const todoPanel = (className: string) => (
-    <Panel className={className}>
+    <Panel aria-label="Para hacer" className={className}>
       <PanelHead icon={ListChecks} meta={todo.length || undefined} title="Para hacer" />
       {!data ? (
         <Skeleton className="m-3.5 h-16" />
@@ -265,7 +265,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
             {fresh ? <FirstSteps steps={steps} /> : null}
 
             {fresh ? null : (
-              <Panel className="order-1">
+              <Panel aria-label="Próximo evento" className="order-1">
                 <PanelHead icon={CalendarDays} title="Próximo evento" />
                 {!data ? (
                   <Skeleton className="m-3.5 h-20" />
@@ -291,7 +291,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
             )}
 
             {fresh && holds.length === 0 ? null : (
-              <Panel className="order-3">
+              <Panel aria-label="Tus reservas" className="order-3">
                 <PanelHead icon={Bookmark} meta={holds.length || undefined} title="Tus reservas" />
                 {!data ? (
                   <Skeleton className="m-3.5 h-20" />
@@ -356,7 +356,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
             )}
 
             {data && fresh ? null : (
-              <Panel className="order-5">
+              <Panel aria-label="Actividad del equipo" className="order-5">
                 <PanelHead icon={Activity} meta="últimos cambios" title="Actividad del equipo" />
                 {!data ? (
                   <Skeleton className="m-3.5 h-16" />
@@ -382,9 +382,9 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
                             ) : null}
                             {item.summary}
                           </p>
-                          <p className="truncate text-2xs text-faint">{item.eventName}</p>
+                          <p className="truncate text-2xs text-muted-foreground">{item.eventName}</p>
                         </div>
-                        <RelativeTime className="shrink-0 text-2xs text-faint" date={item.createdAt} />
+                        <RelativeTime className="shrink-0 text-2xs text-muted-foreground" date={item.createdAt} />
                       </li>
                     ))}
                   </ul>
@@ -397,7 +397,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
             {todoPanel("max-lg:hidden")}
 
             {data && fresh ? null : (
-              <Panel className="p-4">
+              <Panel aria-label="Próximos hitos" className="p-4">
                 <MicroLabel className="mb-3 block">Próximos hitos</MicroLabel>
                 {!data ? (
                   <Skeleton className="h-16" />
@@ -433,7 +433,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
                             <span
                               className={cn(
                                 "shrink-0 font-terminal text-2xs tabular-nums",
-                                index === 0 ? "text-primary" : "text-faint"
+                                index === 0 ? "text-primary" : "text-muted-foreground"
                               )}
                             >
                               {shortWhen(milestone.at)}
@@ -448,7 +448,7 @@ export function HomeClient({ community, today }: { community: CalendarCommunity;
               </Panel>
             )}
 
-            <Panel>
+            <Panel aria-label="En OWU las próximas 3 semanas">
               <PanelHead icon={Users} meta={around.length || undefined} title="En OWU las próximas 3 semanas" />
               {plans.some((plan) => plan.isError) ? (
                 <ErrorState
@@ -490,7 +490,7 @@ function FirstSteps({ steps }: { steps: ReturnType<typeof onboarding> }) {
   const done = steps.filter((step) => step.done).length;
 
   return (
-    <Panel className="order-first">
+    <Panel aria-label="Primeros pasos" className="order-first">
       <PanelHead
         icon={Rocket}
         meta={<span className="font-terminal tabular-nums">{`${done} de ${steps.length} listos`}</span>}
