@@ -3,11 +3,15 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  ClipboardCheck,
+  Flag,
   HeartHandshake,
   LayoutGrid,
   Megaphone,
   MessagesSquare,
+  QrCode,
   ShieldCheck,
+  Ticket,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,11 +35,12 @@ import { getCommunities, getLanding } from "lib/community/content";
 import { ORGANIZAR_ON, RESOURCES_ON } from "lib/community/flags";
 import { pageMetadata } from "lib/community/metadata";
 import { issueFormUrl, PAGES, SLACK_CHANNELS } from "lib/community/site";
+import { HOLD_DAYS } from "lib/organizar/rules";
 
 export const metadata = pageMetadata({
   title: "Organizá con OWU",
   description:
-    "Qué le da OWU a una comunidad que organiza meetups, qué le pide, cómo sumarse al directorio y el programa de comunidades aliadas de OWU CONF.",
+    "Qué le da OWU a una comunidad que organiza meetups: un panel para armar cada evento, de la fecha a la puerta, el calendario compartido, espacios que reciben meetups y difusión. Qué le pide, cómo sumarse y el programa de comunidades aliadas de OWU CONF.",
   path: "/organizar",
 });
 
@@ -59,8 +64,10 @@ const GIVES = [
   },
   {
     icon: Building2,
-    title: "Contactos de lugares",
-    body: `Las empresas que reciben meetups están en el canvas de #${SLACK_CHANNELS.organizers}, para que no arranques de cero.`,
+    title: "Espacios que reciben meetups",
+    body: ORGANIZAR_ON
+      ? "Las empresas que prestan su espacio, con capacidad y lo que tienen. Les pedís lugar desde el panel y te contestan por mail."
+      : `Las empresas que reciben meetups, para que no arranques de cero: preguntá en #${SLACK_CHANNELS.organizers}.`,
   },
   {
     icon: LayoutGrid,
@@ -95,17 +102,69 @@ const ASKS = [
   },
 ];
 
-const JOIN = [
+/** What the organizer panel does today, in the order a meetup needs it. Only what's built. */
+const PANEL = [
   {
-    title: "Completá el formulario",
-    body: "Nombre, logo, de qué se trata, dónde se juntan y quién organiza. Es un formulario de GitHub, sin código.",
+    icon: Flag,
+    title: "Reclamá o proponé tu comunidad",
+    body: "Buscala entre las comunidades de OWU y pedí organizarla. ¿No está? Proponela desde el mismo lugar. El staff confirma y te avisa por mail.",
   },
-  { title: "Lo revisamos", body: "Alguien del staff sube tu ficha al directorio y te avisa." },
   {
-    title: "Arrancá",
-    body: "Si tu comunidad está en Meetup.com, la sumamos al bot de la agenda (o abrís vos un PR a su repo) y tus eventos aparecen solos.",
+    icon: CalendarDays,
+    title: "Reservá la fecha",
+    body: `El calendario muestra los eventos y las reservas de todas las comunidades, los feriados y lo que anuncian en Meetup, y te sugiere días que no chocan. Una reserva dura ${HOLD_DAYS} días y todas la ven. Para un evento con otras comunidades, votan la fecha juntas.`,
+  },
+  {
+    icon: Building2,
+    title: "Pedí espacio",
+    body: "Elegí entre los espacios que reciben meetups y mandá el pedido con tus fechas. La empresa contesta desde un link, sin crear cuenta.",
+  },
+  {
+    icon: Ticket,
+    title: "Publicá",
+    body: "La página del evento en owu.uy, con inscripción: cupo, lista de espera y recordatorios dos días y dos horas antes. También en Eventbrite, si lo conectás, y los textos listos para copiar a Meetup.",
+  },
+  {
+    icon: QrCode,
+    title: "La puerta",
+    body: "Cada persona anotada tiene su entrada con QR. La escaneás con el celular, o le pasás un link a quien te ayude en la puerta, sin cuenta. Si se cae la señal, sigue andando.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Después",
+    body: "Si abrís la encuesta, les llega sola a los anotados. En la página del evento quedan las slides y la grabación.",
   },
 ];
+
+const JOIN = ORGANIZAR_ON
+  ? [
+      {
+        title: "Entrá con el Slack de OWU",
+        body: "Con tu cuenta del Slack de OWU: el rol de quien organiza va con esa cuenta.",
+      },
+      {
+        title: "Buscá tu comunidad",
+        body: "Si ya está en OWU, pedí organizarla. Si no, proponela: nombre, dónde se la ve y de qué temas.",
+      },
+      {
+        title: "Lo confirmamos",
+        body: "El staff de OWU la revisa y te avisa por mail. Desde ese momento tenés el panel para armar tus eventos.",
+      },
+    ]
+  : [
+      {
+        title: "Completá el formulario",
+        body: "Nombre, logo, de qué se trata, dónde se juntan y quién organiza. Es un formulario de GitHub, sin código.",
+      },
+      { title: "Lo revisamos", body: "Alguien del staff sube tu ficha al directorio y te avisa." },
+      {
+        title: "Arrancá",
+        body: "Si tu comunidad está en Meetup.com, la sumamos al bot de la agenda (o abrís vos un PR a su repo) y tus eventos aparecen solos.",
+      },
+    ];
+
+/** Where "Sumá tu comunidad" leads: the panel's proposal form, or the GitHub form before Organizá launches */
+const JOIN_HREF = ORGANIZAR_ON ? "/organizar/panel/reclamar?proponer" : issueFormUrl("sumar-comunidad");
 
 export default async function OrganizarPage() {
   "use cache";
@@ -126,12 +185,7 @@ export default async function OrganizarPage() {
                 Abrí el panel
               </ButtonLink>
             ) : null}
-            <ButtonLink
-              arrow
-              href={issueFormUrl("sumar-comunidad")}
-              utm="organizar-header"
-              variant={ORGANIZAR_ON ? "secondary" : "primary"}
-            >
+            <ButtonLink arrow href={JOIN_HREF} utm="organizar-header" variant={ORGANIZAR_ON ? "secondary" : "primary"}>
               Sumá tu comunidad
             </ButtonLink>
             <ButtonLink href={SOCIAL_LINKS.slack} utm="organizar-header" variant="secondary">
@@ -143,6 +197,36 @@ export default async function OrganizarPage() {
         eyebrow="Organizá"
         title="Organizá con OWU"
       />
+
+      {ORGANIZAR_ON ? (
+        <Section
+          description="Un panel para cada comunidad, gratis, que acompaña el meetup de la fecha a la puerta."
+          eyebrow="El panel de Organizá"
+          id="panel"
+          title="De la fecha a la puerta, en un solo lugar"
+        >
+          <Reveal>
+            <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {PANEL.map(({ icon: Icon, title, body }, index) => (
+                <li key={title} className={cardClassName(false, "flex flex-col gap-5 p-6 sm:p-7")}>
+                  <div className="flex items-start justify-between">
+                    <span className="flex size-11 items-center justify-center rounded-xl bg-yellow-400/10 text-yellow-400">
+                      <Icon aria-hidden className="size-5" />
+                    </span>
+                    <span aria-hidden className="font-title text-3xl leading-none font-extrabold text-white/[0.08]">
+                      {index + 1}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className={headingClassName.h3}>{title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-400">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
+        </Section>
+      ) : null}
 
       <Section eyebrow="Lo que te da OWU" title="Todo lo que no es organizar la charla">
         <Cells className="sm:grid-cols-2 lg:grid-cols-3">
@@ -192,14 +276,18 @@ export default async function OrganizarPage() {
 
       <Section
         actions={
-          <ButtonLink arrow href={issueFormUrl("sumar-comunidad")} size="sm" utm="organizar-sumar">
-            Abrir el formulario
+          <ButtonLink arrow href={JOIN_HREF} size="sm" utm="organizar-sumar">
+            {ORGANIZAR_ON ? "Sumá tu comunidad" : "Abrir el formulario"}
           </ButtonLink>
         }
-        description={`¿No usás GitHub? Escribinos en #${SLACK_CHANNELS.organizers} y lo cargamos por vos.`}
+        description={
+          ORGANIZAR_ON
+            ? `¿Dudas? Escribinos en #${SLACK_CHANNELS.organizers}.`
+            : `¿No usás GitHub? Escribinos en #${SLACK_CHANNELS.organizers} y lo cargamos por vos.`
+        }
         eyebrow="Sumá tu comunidad"
         id="sumar"
-        title="Cómo entrar al directorio"
+        title={ORGANIZAR_ON ? "Cómo sumar tu comunidad" : "Cómo entrar al directorio"}
       >
         <Reveal>
           <ol className="grid gap-8 md:grid-cols-3 md:gap-6">

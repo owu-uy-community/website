@@ -570,7 +570,7 @@ export const LA_MEETUP = {
     conductCodeConsequences:
       "Los organizadores de la meetup se reservan el derecho de tomar medidas disciplinarias apropiadas en respuesta a comportamientos inaceptables. Esto puede incluir advertencias, expulsión de la meetup o prohibición de futuras participaciones.",
     conductCodeParticipationAgreement:
-      "Al participar en esta meetup, aceptas seguir este código de conducta y las decisiones de los organizadores.",
+      "Al participar en esta meetup, aceptás seguir este código de conducta y las decisiones de los organizadores.",
     conductCodeScope: "Este código de conducta se aplica a todos los eventos y canales relacionados con la meetup.",
   },
   seo: {

@@ -44,3 +44,29 @@ describe("resources launch flag", () => {
     expect(isHiddenPost(["guias"])).toBe(false);
   });
 });
+
+describe("Organizá launch flag", () => {
+  const loadFlags = async (value: string | undefined) => {
+    vi.resetModules();
+    vi.stubEnv("NEXT_PUBLIC_FLAG_ORGANIZAR", value);
+
+    return import("./flags");
+  };
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test.each([
+    ["1", true],
+    ["true", true],
+    ["", false],
+    ["0", false],
+    ["yes", false],
+    [undefined, false],
+  ])("NEXT_PUBLIC_FLAG_ORGANIZAR=%s → %s", async (value, on) => {
+    const { ORGANIZAR_ON } = await loadFlags(value);
+
+    expect(ORGANIZAR_ON).toBe(on);
+  });
+});
