@@ -12,7 +12,7 @@ import { LEGACY_COMMUNITY_SLUG } from "lib/tenant";
 
 import { getCommunities, getManualEvents, type Community, type ManualEvent } from "./content";
 import { OWU_FEED_NAMES } from "./site";
-import { montevideoIso } from "./time";
+import { dayKey, montevideoIso } from "./time";
 
 export type CommunityEvent = {
   id: string;
@@ -191,19 +191,29 @@ export function mergeEvents(feed: FeedMeetup[], manual: ManualEvent[], communiti
     ];
   });
 
-  const fromOwn = own.map((event): CommunityEvent => ({
-    id: `owu-${event.id}`,
-    title: event.name,
-    group: event.communityName,
-    communitySlug: event.communitySlug,
-    start: event.start,
-    end: event.end,
-    venue: event.place,
-    url: `/comunidad/${event.communitySlug}/events/${event.slug}`,
-    source: "owu",
-    isOwu: event.communitySlug === LEGACY_COMMUNITY_SLUG,
-    ...(event.cancelled ? { cancelled: true } : {}),
-  }));
+  // OWU's own event (the CONF's, made for the admin) shows once when the bot lists an OWU event that
+  // day: the bot's is the public one, with the ticket link and the public start time
+  const owuDaysInFeed = new Set(
+    feed.filter((meetup) => isOwuName(meetup.name)).map((meetup) => dayKey(montevideoIso(meetup.datetime)))
+  );
+  const listedByBot = (event: OwnEvent) =>
+    event.communitySlug === LEGACY_COMMUNITY_SLUG && owuDaysInFeed.has(dayKey(event.start));
+
+  const fromOwn = own
+    .filter((event) => !listedByBot(event))
+    .map((event): CommunityEvent => ({
+      id: `owu-${event.id}`,
+      title: event.name,
+      group: event.communityName,
+      communitySlug: event.communitySlug,
+      start: event.start,
+      end: event.end,
+      venue: event.place,
+      url: `/comunidad/${event.communitySlug}/events/${event.slug}`,
+      source: "owu",
+      isOwu: event.communitySlug === LEGACY_COMMUNITY_SLUG,
+      ...(event.cancelled ? { cancelled: true } : {}),
+    }));
 
   const fromManual = manual.flatMap((event): CommunityEvent[] => {
     if (!WebUrl.safeParse(event.url).success) return [];
