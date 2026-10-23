@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 
 import { PanelShell } from "components/organizar/shell/PanelShell";
+import { AppProviders } from "components/providers/AppProviders";
 
 import { panelAccess } from "./access";
 
@@ -22,8 +23,10 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const sidebar = jar.get("sidebar:state")?.value;
 
   return (
-    <PanelShell communities={communities} defaultOpen={sidebar ? sidebar !== "false" : true} isStaff={isStaff}>
-      {children}
-    </PanelShell>
+    <AppProviders>
+      <PanelShell communities={communities} defaultOpen={sidebar ? sidebar !== "false" : true} isStaff={isStaff}>
+        {children}
+      </PanelShell>
+    </AppProviders>
   );
 }

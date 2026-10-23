@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
-import { QueryProvider } from "components/providers/QueryProvider";
-import { Toaster } from "components/shared/ui/sonner";
 import { fontVariables } from "./fonts";
 import { SiteAnalytics } from "./SiteAnalytics";
 
@@ -31,10 +29,8 @@ export default function RootLayout({
     <html className={fontVariables} data-scroll-behavior="smooth" lang="es">
       <SiteAnalytics />
       <body>
-        <QueryProvider>
-          {children}
-          <Toaster />
-        </QueryProvider>
+        {/* React Query and the toaster live in the layouts that use them (components/providers/AppProviders) */}
+        {children}
       </body>
     </html>
   );

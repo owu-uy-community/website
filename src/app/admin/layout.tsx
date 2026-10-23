@@ -1,6 +1,7 @@
 import type React from "react";
 
 import { requireDashboardAccess } from "app/lib/auth-helpers";
+import { AppProviders } from "components/providers/AppProviders";
 
 /**
  * Pass-through for the chrome (it lives in (dashboard)/layout.tsx so a fullscreen admin surface can
@@ -10,5 +11,5 @@ import { requireDashboardAccess } from "app/lib/auth-helpers";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireDashboardAccess();
 
-  return children;
+  return <AppProviders>{children}</AppProviders>;
 }

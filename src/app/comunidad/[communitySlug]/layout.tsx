@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type React from "react";
 import { notFound } from "next/navigation";
 
+import { AppProviders } from "components/providers/AppProviders";
 import { getCommunityBySlug } from "lib/tenant-server";
 
 export async function generateMetadata({ params }: { params: Promise<{ communitySlug: string }> }): Promise<Metadata> {
@@ -28,5 +29,6 @@ export default async function CommunityLayout({
     notFound();
   }
 
-  return children;
+  // Follow buttons, RSVPs, tickets, surveys and the open-space screens all use React Query
+  return <AppProviders>{children}</AppProviders>;
 }
