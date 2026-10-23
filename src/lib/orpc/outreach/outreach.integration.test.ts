@@ -81,10 +81,11 @@ describe("outreach.list", () => {
       .set({ leftAt: ago(2) })
       .where(eq(venueContacts.venueId, venue.id));
 
+    // The most urgent first
     expect((await queueFor(row.id)).map((item) => item.reason)).toStrictEqual([
-      "un-organizador",
       "pedido-sin-respuesta",
       "contacto-viejo",
+      "un-organizador",
     ]);
   });
 
