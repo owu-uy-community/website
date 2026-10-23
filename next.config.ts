@@ -40,8 +40,12 @@ const nextConfig: NextConfig = {
     "/keystatic": ["./content/**/*"],
     "/api/keystatic/[...params]": ["./content/**/*"],
     "/la-meetup": ["./content/**/*"],
-    // Event covers render on demand with OWU's cover fonts and logo (lib/og/cover)
+    // Event covers render on demand with OWU's cover fonts and logo (lib/og/cover), the site's image too
     "/comunidad/[communitySlug]/events/[eventSlug]/opengraph-image": [
+      "./src/app/(web)/(content)/blog/og/*.ttf",
+      "./src/app/(web)/(content)/charlas/og/owu-logo.png",
+    ],
+    "/opengraph-image": [
       "./src/app/(web)/(content)/blog/og/*.ttf",
       "./src/app/(web)/(content)/charlas/og/owu-logo.png",
     ],
