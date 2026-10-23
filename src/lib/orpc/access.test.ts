@@ -88,6 +88,7 @@ const EXPECTED: Record<string, Access> = {
   "communities.members.showOnProfile": "community:member:show-on-profile",
   "communities.members.updateRole": "community:member:update",
   "communities.mine": "authed",
+  "communities.propose": "authed",
   "communities.requests.decide": "community:member:create",
   "communities.requests.list": "community:member:read",
   "communities.roles.create": "community:role:create",

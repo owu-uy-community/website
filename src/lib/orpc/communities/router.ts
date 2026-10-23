@@ -16,6 +16,7 @@ import {
   DecideClaimSchema,
   MineSchema,
   MyClaimSchema,
+  ProposeCommunitySchema,
   CommunityMemberSchema,
   CommunityOverviewSchema,
   CommunitySchema,
@@ -153,6 +154,15 @@ export const communitiesRouter = {
     .output(MyClaimSchema)
     .effect(function* ({ input }) {
       return yield* Communities.claim(input);
+    }),
+
+  propose: authed
+    .meta(docs("Propose a community that isn't in the directory, with a claim to organize it; site staff decide"))
+    .input(ProposeCommunitySchema)
+    .use(claimLimit)
+    .output(MyClaimSchema)
+    .effect(function* ({ input }) {
+      return yield* Communities.propose(input);
     }),
 
   claims: {

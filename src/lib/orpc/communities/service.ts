@@ -12,8 +12,10 @@ import {
   invitations,
   user,
   type CommunityClaimRow,
+  type CommunityLinks,
   type CommunityRow,
 } from "../../db/schema";
+import { isValidCommunitySlug } from "../../tenant";
 import { enqueueEmail } from "../../email/outbox";
 import { refreshPage } from "../../revalidate";
 import { accessInviteEmail, claimDecidedEmail } from "../../email/templates";
@@ -520,13 +522,128 @@ export const claim = (input: {
     } satisfies MyClaim;
   });
 
+const normalizeName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "");
+
+/** A free /comunidad/<slug> for a proposed name ("Rust Uruguay" → rust-uruguay, rust-uruguay-2…). */
+const freeCommunitySlug = (name: string) =>
+  Effect.gen(function* () {
+    let base = name
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 40)
+      .replace(/-$/, "");
+    if (!isValidCommunitySlug(base)) base = `${base || "comunidad"}-uy`.replace(/^-/, "");
+    const taken = new Set(
+      (yield* query((db) =>
+        db
+          .select({ slug: communities.slug })
+          .from(communities)
+          .where(sql`${communities.slug} like ${`${base}%`}`)
+      )).map((row) => row.slug)
+    );
+    for (let index = 1; ; index++) {
+      const candidate = index === 1 ? base : `${base}-${index}`;
+      if (!taken.has(candidate) && isValidCommunitySlug(candidate)) return candidate;
+    }
+  });
+
+/** Which of a community's links a URL is: its Meetup, LinkedIn, Instagram, or its site. */
+const linkKey = (url: string): keyof CommunityLinks => {
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  if (host.endsWith("meetup.com")) return "meetup";
+  if (host.endsWith("linkedin.com")) return "linkedin";
+  if (host.endsWith("instagram.com")) return "instagram";
+
+  return "website";
+};
+
+/**
+ * Propose a community that isn't in the directory, with a claim to organize it, in one step: it
+ * stays unlisted and inactive until site staff approve the claim, which lists it and makes the
+ * person its owner. A name the directory already has is pointed there instead.
+ */
+export const propose = (input: {
+  name: string;
+  relation: CommunityClaimRow["relation"];
+  links: string[];
+  topics: string[];
+  message: string;
+}) =>
+  transaction(
+    Effect.gen(function* () {
+      const me = yield* CurrentUser;
+      const wanted = normalizeName(input.name);
+      const existing = (yield* query((db) =>
+        db.select({ id: communities.id, name: communities.name, isActive: communities.isActive }).from(communities)
+      )).find((community) => normalizeName(community.name) === wanted);
+      if (existing?.isActive) {
+        return yield* new Conflict({
+          reason: "already_listed",
+          message: `${existing.name} ya está en OWU: buscala en la lista y pedí organizarla`,
+        });
+      }
+      if (existing) {
+        return yield* new Conflict({
+          reason: "already_proposed",
+          message: `Alguien ya propuso ${existing.name}: el staff de OWU la está revisando`,
+        });
+      }
+
+      const links: CommunityLinks = {};
+      for (const url of input.links) links[linkKey(url)] ??= url;
+      const slug = yield* freeCommunitySlug(input.name);
+      const [community] = yield* query((db) =>
+        db
+          .insert(communities)
+          .values({ name: input.name, slug, topics: input.topics, links, isActive: false, listed: false })
+          .returning({ id: communities.id, name: communities.name })
+      );
+      const [claim] = yield* query((db) =>
+        db
+          .insert(communityClaims)
+          .values({
+            communityId: community.id,
+            userId: me.id,
+            relation: input.relation,
+            message: input.message,
+            link: input.links[0] ?? null,
+            proposed: true,
+          })
+          .returning()
+      );
+      yield* recordActivity({
+        eventId: null,
+        verb: "community.proposed",
+        entityType: "community",
+        entityId: community.id,
+        summary: `propuso sumar ${community.name}`,
+      });
+
+      return {
+        id: claim.id,
+        communityId: community.id,
+        communityName: community.name,
+        status: claim.status,
+        createdAt: claim.createdAt.toISOString(),
+      } satisfies MyClaim;
+    })
+  );
+
 /** Pending claims first, then the last decided ones, for site staff. */
 export const listClaims = () =>
   query((db) =>
     db
       .select({
         claim: communityClaims,
-        community: { id: communities.id, slug: communities.slug, name: communities.name },
+        community: { id: communities.id, slug: communities.slug, name: communities.name, topics: communities.topics },
         user: { id: user.id, name: user.name, email: user.email, image: user.image },
         owners: sql<number>`(select count(*)::int from ${communityMembers} where ${communityMembers.communityId} = ${communities.id} and ${communityMembers.role} = 'owner')`,
       })
@@ -544,6 +661,7 @@ export const listClaims = () =>
         link: row.claim.link,
         status: row.claim.status,
         createdAt: row.claim.createdAt.toISOString(),
+        proposed: row.claim.proposed,
         community: { ...row.community, hasOwner: row.owners > 0 },
         user: row.user,
       }))
@@ -552,7 +670,8 @@ export const listClaims = () =>
 
 /**
  * Approve or reject a claim. Approving adds the person to the community: as owner when it has
- * none yet, as editor otherwise, unless staff pick a role.
+ * none yet, as editor otherwise, unless staff pick a role. A proposed community is listed and
+ * activated with it (rejected, it stays out of sight).
  */
 export const decideClaim = (input: { claimId: string; decision: "approve" | "reject"; role?: CommunityRole }) =>
   transaction(
@@ -577,6 +696,16 @@ export const decideClaim = (input: { claimId: string; decision: "approve" | "rej
       );
 
       let role: CommunityRole | null = null;
+      if (status === "approved" && row.proposed) {
+        const [listed] = yield* query((db) =>
+          db
+            .update(communities)
+            .set({ isActive: true, listed: true })
+            .where(eq(communities.id, row.communityId))
+            .returning({ slug: communities.slug })
+        );
+        if (listed) for (const path of ["/comunidades", `/comunidad/${listed.slug}`]) refreshPage(path);
+      }
       if (status === "approved") {
         const offered = input.role ?? ((yield* ownerCount(row.communityId)) === 0 ? "owner" : "editor");
         // Never lowers a role they got meanwhile (approving used to demote a sole owner to editor)

@@ -68,7 +68,15 @@ export const panelAccess = cache(async (next = "/organizar/panel") => {
     });
   }
 
-  return { session, principal, isStaff, communities, claims: mine.claims };
+  return {
+    session,
+    principal,
+    isStaff,
+    communities,
+    claims: mine.claims,
+    /** Where they hold a role themselves (staff see every community, but organize only these) */
+    memberIds: mine.communities.map((community) => community.id),
+  };
 });
 
 /** The community in the URL, or a 404 for someone who doesn't organize it. */
