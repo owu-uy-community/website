@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -43,7 +44,11 @@ const TOPICS = [
   { title: "IA & Datos", description: "Inteligencia artificial, machine learning y datos en la práctica." },
 ];
 
-export default function CallForProposalsPage() {
+export default async function CallForProposalsPage() {
+  "use cache";
+  // The deadline is checked hourly (it used to freeze at build time)
+  cacheLife("hours");
+
   const isOpen = Date.now() < Date.parse(CONF_DATES.cfpDeadline);
 
   return (

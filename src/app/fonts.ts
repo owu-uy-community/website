@@ -1,4 +1,4 @@
-import { Geist_Mono, Inter, Open_Sans, Poppins, Press_Start_2P } from "next/font/google";
+import { Geist_Mono, Inter, Open_Sans, Poppins } from "next/font/google";
 
 /**
  * The site's fonts, self-hosted by next/font: downloaded at build time, preloaded, no requests to
@@ -22,13 +22,12 @@ export const geistMono = Geist_Mono({
   display: "swap",
 });
 
-export const openSans = Open_Sans({ subsets: ["latin"], variable: "--font-open-sans", display: "swap" });
-
-export const pressStart = Press_Start_2P({
+// Only the Owy stage scenes use it: not preloaded, so the public pages don't download it
+export const openSans = Open_Sans({
   subsets: ["latin"],
-  weight: "400",
-  variable: "--font-press-start",
+  variable: "--font-open-sans",
   display: "swap",
+  preload: false,
 });
 
-export const fontVariables = [inter, poppins, geistMono, openSans, pressStart].map((font) => font.variable).join(" ");
+export const fontVariables = [inter, poppins, geistMono, openSans].map((font) => font.variable).join(" ");

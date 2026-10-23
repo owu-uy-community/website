@@ -1,11 +1,14 @@
 import { http, HttpResponse } from "msw";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 import { describe, expect, test, vi } from "vitest";
 
 import { NOT_FOUND_MARKDOWN } from "lib/community/markdown";
 import { server } from "test/msw/server";
 
-import { proxy } from "./proxy";
+import { LEGACY_REDIRECTS } from "lib/tenant";
+
+import { config, proxy } from "./proxy";
 
 const SITE = "https://www.owu.uy";
 
@@ -139,5 +142,56 @@ describe("the existence check stays on this site", () => {
     await get("//evil.example/x", { accept: "text/markdown" });
 
     expect(seen.map((request) => new URL(request.url).host)).toStrictEqual(["www.owu.uy"]);
+  });
+});
+
+describe("where the proxy runs", () => {
+  const BROWSER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+  const runs = (path: string, headers: Record<string, string> = { accept: BROWSER, host: "owu.uy" }) =>
+    unstable_doesMiddlewareMatch({ config, url: `https://${headers.host ?? "owu.uy"}${path}`, headers });
+
+  test("a browser asking for a public page skips it", () => {
+    const paths = ["/", "/eventos", "/comunidad/js-montevideo", "/charlas", "/blog/feed.xml", "/api/search"];
+
+    expect(paths.filter((path) => runs(path))).toStrictEqual([]);
+  });
+
+  test("every redirect, the launch flag and the sign-in bounces still go through it", () => {
+    const paths = [
+      ...Object.keys(LEGACY_REDIRECTS),
+      "/conf",
+      "/conf/sponsors",
+      "/c",
+      "/c/js-montevideo",
+      "/semanario",
+      "/semanario/3",
+      "/encuesta-sueldos/datos.csv",
+      "/admin",
+      "/admin/acceso",
+      "/keystatic",
+      "/organizar/panel/js-montevideo",
+      "/acceso",
+      "/login",
+      "/registro",
+    ];
+
+    expect(paths.filter((path) => !runs(path))).toStrictEqual([]);
+  });
+
+  test("every page on conf.owu.uy goes through it, its assets don't", () => {
+    const conf = { accept: BROWSER, host: "conf.owu.uy" };
+
+    expect(runs("/", conf)).toBe(true);
+    expect(runs("/sponsors", conf)).toBe(true);
+    expect(runs("/2024/la-meetup", conf)).toBe(true);
+    expect(runs("/_next/static/chunks/app.js", conf)).toBe(false);
+  });
+
+  test("agents asking for Markdown reach the negotiation on any page; a client without HTML, on the home page", () => {
+    expect(runs("/eventos", { accept: "text/markdown", host: "owu.uy" })).toBe(true);
+    expect(runs("/", { accept: "text/markdown, text/html;q=0.5", host: "owu.uy" })).toBe(true);
+    expect(runs("/", { accept: "application/json", host: "owu.uy" })).toBe(true);
+    expect(runs("/", { host: "owu.uy" })).toBe(true);
+    expect(runs("/", { accept: "*/*", host: "owu.uy" })).toBe(false);
   });
 });

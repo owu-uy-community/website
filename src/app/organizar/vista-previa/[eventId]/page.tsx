@@ -11,7 +11,8 @@ import { events } from "lib/db/schema";
 import { SITE_URL } from "lib/community/site";
 import { callerFor } from "lib/orpc/server";
 
-export const dynamic = "force-dynamic";
+// An organizer's draft, behind their session: rendered per request, allowed to block (Cache Components)
+export const instant = false;
 export const metadata: Metadata = { title: "Vista previa · Organizá", robots: { index: false, follow: false } };
 
 /** A draft (or any event) as its public page will show it, for its organizers only. */

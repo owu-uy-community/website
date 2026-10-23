@@ -2,6 +2,7 @@
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowUpRight, Menu, X } from "lucide-react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
@@ -39,8 +40,7 @@ export default function MobileNav() {
         >
           <div aria-hidden className="owu-furnace pointer-events-none absolute inset-x-0 top-0 h-80" />
           <div className="relative flex h-16 shrink-0 items-center justify-between px-5">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img alt="OWU Uruguay" className="h-8 w-auto" height={32} src="/images/logos/owu.webp" width={75} />
+            <Image alt="OWU Uruguay" className="h-8 w-auto" height={32} src="/images/logos/owu.webp" width={75} />
             <Dialog.Title className="sr-only">Menú</Dialog.Title>
             <Dialog.Close
               aria-label="Cerrar menú"

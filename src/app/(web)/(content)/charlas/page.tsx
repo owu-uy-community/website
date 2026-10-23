@@ -1,8 +1,9 @@
+import { cacheLife } from "next/cache";
 import { ArrowUpRight, FilePlus2, Plus } from "lucide-react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import TalkCard, { talkEventLabel } from "components/community/TalkCard";
 import {
   ButtonLink,
@@ -23,9 +24,6 @@ import { dateParts } from "lib/community/time";
 import { TOPICS } from "lib/community/topics";
 
 import { FilterGroup, FilterItem, TalkFilters, type FilterableTalk } from "./TalkFilters";
-
-// Talks change by PR; the open space sessions come from the database once a day
-export const revalidate = 86400;
 
 export const metadata = pageMetadata({
   title: "Charlas",
@@ -63,6 +61,10 @@ function groupByEvent(talks: Talk[]) {
 const pluralize = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export default async function CharlasPage() {
+  "use cache";
+  // Talks change by PR; the open space sessions come from the database once a day
+  cacheLife("days");
+
   const [talks, editions] = await Promise.all([getTalks(), getOpenSpaceSessions()]);
 
   // Talks join the archive once their date has passed

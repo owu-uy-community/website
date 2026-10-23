@@ -1,13 +1,12 @@
 "use client";
 
-import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
+import { AnimatePresence, m, useInView, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { randomArraySort } from "app/lib/utils";
 import { initials } from "components/community/ui";
-import { useMounted } from "hooks/useMounted";
 
 type Tile = { slug: string; name: string; logo: string | null };
 
@@ -39,15 +38,21 @@ const ORDER = [2, 5, 0, 7, 3, 6, 1, 4];
  */
 export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
   const ref = useRef<HTMLDivElement>(null);
-  const mounted = useMounted();
-  const [deck] = useState(() => randomArraySort(tiles).sort((a, b) => Number(!!b.logo) - Number(!!a.logo)));
-  const [shown, setShown] = useState(() => deck.slice(0, SLOTS.length));
+  // Shuffled in the browser: a prerendered page can't use Math.random, and the tiles only show after hydration
+  const [deck, setDeck] = useState<Tile[]>([]);
+  const [shown, setShown] = useState<Tile[]>([]);
   const [hovered, setHovered] = useState(false);
   const inView = useInView(ref, { amount: 0.2 });
   const reduceMotion = useReducedMotion();
   const cursor = useRef({ next: SLOTS.length, turn: 0 });
   const shownRef = useRef(shown);
   shownRef.current = shown;
+
+  useEffect(() => {
+    const shuffled = randomArraySort(tiles).sort((a, b) => Number(!!b.logo) - Number(!!a.logo));
+    setDeck(shuffled);
+    setShown(shuffled.slice(0, SLOTS.length));
+  }, [tiles]);
 
   useEffect(() => {
     const node = ref.current;
@@ -97,7 +102,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
   return (
     <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 hidden xl:block">
       {SLOTS.map((slot, index) => {
-        const tile = mounted ? shown[index] : undefined;
+        const tile = shown[index];
 
         if (!tile) return null;
 
@@ -109,7 +114,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
           >
             {/* The leaving tile shrinks away; the one arriving plays the same entrance as on load */}
             <AnimatePresence initial={false} mode="wait">
-              <motion.div key={tile.slug} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.3 }}>
+              <m.div key={tile.slug} exit={{ opacity: 0, scale: 0.6 }} transition={{ duration: 0.3 }}>
                 <Link
                   className="owu-orbit-drift pointer-events-auto relative flex items-center justify-center overflow-hidden rounded-[22%] border border-white/10 bg-white shadow-[0_18px_40px_-18px_rgba(0,0,0,0.9)] transition-[filter,scale] duration-300 hover:scale-110"
                   href={`/comunidad/${tile.slug}`}
@@ -136,7 +141,7 @@ export default function HeroOrbit({ tiles }: { tiles: Tile[] }) {
                     <span className="font-title text-lg font-bold text-zinc-900">{initials(tile.name)}</span>
                   )}
                 </Link>
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         );

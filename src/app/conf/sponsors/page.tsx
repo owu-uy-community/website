@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -51,7 +52,11 @@ const REASONS = [
   },
 ];
 
-export default function SponsorsFormPage() {
+export default async function SponsorsFormPage() {
+  "use cache";
+  // The deadline is checked hourly (it used to freeze at build time)
+  cacheLife("hours");
+
   const isOpen = Date.now() < Date.parse(CONF_DATES.sponsorsDeadline);
 
   return (

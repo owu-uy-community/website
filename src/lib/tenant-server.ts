@@ -2,6 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { and, desc, eq, ne } from "drizzle-orm";
+import { cacheLife } from "next/cache";
 
 import { db } from "./db";
 import { communities, events, type CommunityRow, type EventRow } from "./db/schema";
@@ -38,3 +39,24 @@ export const listCommunityEvents = cache(async (communityId: string): Promise<Ev
     .where(and(eq(events.communityId, communityId), eq(events.isActive, true), ne(events.status, "draft")))
     .orderBy(desc(events.startDate));
 });
+
+/*
+ * The same lookups for the public community pages, cached (Cache Components): pages built on them
+ * prerender, refresh on their cacheLife, and publishing refreshes them sooner (revalidatePath). The
+ * API and the per-request screens keep reading the database directly.
+ */
+
+export async function publicCommunity(slug: string): Promise<CommunityRow | null> {
+  "use cache";
+  cacheLife("hours");
+
+  return getCommunityBySlug(slug);
+}
+
+export async function publicEvent(communitySlug: string, eventSlug: string) {
+  "use cache";
+  // Seats left and who's going change; a minute old is fine
+  cacheLife("minutes");
+
+  return getEventBySlugs(communitySlug, eventSlug);
+}

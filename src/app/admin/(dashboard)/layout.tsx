@@ -5,11 +5,6 @@ import { cookies } from "next/headers";
 import { AdminShell } from "components/Admin/shell/AdminShell";
 import { URGENT_COOKIE } from "components/Admin/shell/nav-config";
 
-// Every page here is behind a session and reads the working scope from the
-// URL, so there is nothing worth prerendering — and prerendering the shell
-// would fail on the client-side `useSearchParams` it depends on.
-export const dynamic = "force-dynamic";
-
 /**
  * The admin installs as its own app, "OWU Ops" (home screen on iOS and Android, a window on a
  * desktop). Installed, it runs edge to edge under a translucent status bar: the shell's header,

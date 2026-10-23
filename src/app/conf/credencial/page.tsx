@@ -46,6 +46,9 @@ function titleFor(design: ShareDesign, name: string) {
   return design === "venis" ? `${name} te invita a OWU CONF 2026` : `${name} va a OWU CONF 2026`;
 }
 
+// Each shared badge comes from its URL: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { name, design } = await read(searchParams);
   const title = titleFor(design, name);

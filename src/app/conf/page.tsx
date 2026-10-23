@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import type { Metadata } from "next";
 
 import getEvents from "app/(web)/(content)/(meetups)/2024/la-meetup/services/getEvents";
@@ -76,6 +77,10 @@ const EVENT_JSON_LD = {
 };
 
 export default async function ConfPage() {
+  "use cache";
+  // The sponsor deadline and the speakers are checked hourly
+  cacheLife("hours");
+
   const events = await getEvents().catch(() => []);
 
   return (

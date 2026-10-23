@@ -5,7 +5,8 @@ import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 
 import { addUtmParams, cn } from "app/lib/utils";
 
-import { CountUp, Reveal, Stagger } from "./motion";
+import { CountUp } from "./motion";
+import { Reveal, Stagger } from "./reveal";
 
 /*
  * The community site's building blocks. A near-black base, soft translucent

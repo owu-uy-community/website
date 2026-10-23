@@ -2,10 +2,11 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, MessagesSquare } from "lucide-reac
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { EventList } from "components/community/events";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   Badge,
   ButtonLink,
@@ -22,19 +23,22 @@ import { RichText } from "components/shared/RichText";
 import type { CommunityEvent } from "lib/community/events";
 import { pageMetadata } from "lib/community/metadata";
 import { PAGES, SLACK_CHANNELS } from "lib/community/site";
+import { withPlaceholder } from "lib/revalidate";
 
 import { excerpt, getIssue, getIssues, longDate, SEMANARIO_EMOJI, weekRange } from "../data";
-
-export const revalidate = 3600;
 
 type Props = { params: Promise<{ numero: string }> };
 
 const parseNumber = (value: string) => (/^\d{1,5}$/.test(value) ? Number(value) : null);
 
+// Every published issue is prerendered ("0" is never an issue: a build without the database)
 export async function generateStaticParams() {
   const issues = await getIssues();
 
-  return issues.map((issue) => ({ numero: String(issue.number) }));
+  return withPlaceholder(
+    issues.map((issue) => ({ numero: String(issue.number) })),
+    { numero: "0" }
+  );
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -53,7 +57,16 @@ const plural = (count: number, one: string, many: string) => `${count} ${count =
 
 const navLabel = "block text-xs font-semibold tracking-[0.14em] text-zinc-500 uppercase";
 
-export default async function SemanarioIssuePage({ params }: Props) {
+// An issue published after the deploy renders on its first visit; the header frames it meanwhile
+export default function SemanarioIssuePage({ params }: Props) {
+  return (
+    <Suspense fallback={<PageHeader eyebrow="Semanario OWU" title="Semanario" />}>
+      <Issue params={params} />
+    </Suspense>
+  );
+}
+
+async function Issue({ params }: Props) {
   const number = parseNumber((await params).numero);
   const issue = number ? await getIssue(number) : null;
   if (!issue) notFound();

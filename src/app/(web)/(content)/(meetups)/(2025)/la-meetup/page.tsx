@@ -1,7 +1,10 @@
 import { createReader } from "@keystatic/core/reader";
 import { cache } from "react";
 import { type Metadata } from "next";
+import { cacheLife } from "next/cache";
 
+import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
+import { EVENT_DATES } from "app/lib/constants";
 import Hero from "components/Meetups/2025/Hero";
 import Footer from "components/shared/Footer";
 import Intro from "components/Meetups/2025/Intro";
@@ -33,6 +36,10 @@ export const metadata: Metadata = {
 };
 
 export default async function LaMeetup2025() {
+  "use cache";
+  // A past edition: its content ships with the deploy (the banner checks its dates daily)
+  cacheLife("days");
+
   const laMeetup = await reader().collections.laMeetup2025.read("la-meetup");
 
   if (!laMeetup) return null;
@@ -68,7 +75,10 @@ export default async function LaMeetup2025() {
     <>
       <CallForProposalBanner />
       <div className="container flex w-full flex-col items-center justify-center gap-2 self-center">
-        <Hero />
+        {/* The only page that reads the ticket release (its own 1s timer, not every route) */}
+        <TicketReleaseProvider>
+          <Hero pastDeadline={Date.now() >= EVENT_DATES.ticketDeadline.getTime()} />
+        </TicketReleaseProvider>
         <Intro />
         {/* <CallForProposals /> */}
         <AgendaSection agenda={transformedAgenda} />

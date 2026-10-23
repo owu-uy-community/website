@@ -5,7 +5,8 @@ import { EmptyState } from "components/Admin/ui/states";
 import { DoorClient } from "components/organizar/door/DoorClient";
 import { publicCaller } from "lib/orpc/server";
 
-export const dynamic = "force-dynamic";
+// A door link's own check-in list: rendered per request, allowed to block (Cache Components)
+export const instant = false;
 export const metadata: Metadata = {
   title: "Puerta · OWU",
   robots: { index: false, follow: false },

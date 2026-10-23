@@ -7,8 +7,6 @@ import { applyWebhook } from "lib/orpc/attendees/service";
 import { WebhookSchema } from "lib/orpc/eventbrite/schemas";
 import { liveServices } from "lib/orpc/services";
 
-export const runtime = "nodejs";
-
 /**
  * Eventbrite's webhooks (`attendee.checked_in`, `attendee.updated`, `order.placed`): each one
  * names an API URL; we read it with our key and mirror what it points at. Eventbrite can't

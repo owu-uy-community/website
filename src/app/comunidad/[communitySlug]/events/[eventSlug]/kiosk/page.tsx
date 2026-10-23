@@ -5,6 +5,9 @@ import OpenSpaceKioskClient from "components/displays/OpenSpaceKioskClient";
 import { caller } from "lib/orpc/server";
 import { getEventBySlugs } from "lib/tenant-server";
 
+// A live screen at the venue: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function EventKioskPage({
   params,
 }: {

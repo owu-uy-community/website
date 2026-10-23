@@ -1,22 +1,25 @@
 "use client";
 
 import { ArrowUpRight, Search } from "lucide-react";
-import { motion } from "motion/react";
+import { m } from "motion/react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
-import { signOut, useSession } from "app/lib/auth-client";
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
 import { useCommandPalette } from "components/community/CommandPalette";
 import { ButtonLink, Kbd, SmartLink } from "components/community/ui";
-import { UserAvatarMenu } from "components/shared/ui/user-avatar-menu";
-import { platformRolesOf } from "lib/authz/catalog";
 import { NAV_LINKS } from "lib/community/site";
 
 import MobileNav from "./mobileNav";
+
+// The session (auth client, avatar dropdown) loads after the page: the menu only exists client-side
+// and for signed-in visitors, so it has no business in every page's first bundle
+const SessionMenu = dynamic(() => import("./SessionMenu"), { ssr: false });
 
 export const isActivePath = (pathname: string, href: string) =>
   href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
@@ -30,7 +33,6 @@ const SOCIALS = [
 
 function Navbar() {
   const pathname = usePathname();
-  const { data: session, isPending } = useSession();
   const { open } = useCommandPalette();
   const [scrolled, setScrolled] = useState(false);
   const [isMac, setIsMac] = useState(true);
@@ -57,11 +59,12 @@ function Navbar() {
           )}
         >
           <Link aria-label="OWU Uruguay, inicio" className="flex shrink-0 items-center" href="/">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            {/* The source is 3114px wide; next/image sends a few KB at the size it shows */}
+            <Image
               alt="OWU Uruguay"
               className="h-8 w-auto transition-transform duration-300 hover:scale-105 lg:h-9"
               height={36}
+              loading="eager"
               src="/images/logos/owu.webp"
               width={85}
             />
@@ -87,7 +90,7 @@ function Navbar() {
                       {external ? <ArrowUpRight aria-hidden className="size-3.5 text-zinc-500" /> : null}
                       {active ? (
                         // OWU's marker: the yellow bar at the top of the current page, sliding between items
-                        <motion.span
+                        <m.span
                           aria-hidden
                           className="absolute inset-x-3 top-0 h-[3px] rounded-b-full bg-yellow-400"
                           layoutId="nav-active"
@@ -139,13 +142,7 @@ function Navbar() {
             <ButtonLink className="hidden sm:inline-flex" href={SOCIAL_LINKS.slack} size="sm" utm="navbar">
               Sumate al Slack
             </ButtonLink>
-            {session?.user && !isPending ? (
-              <UserAvatarMenu
-                showAdminSettings={platformRolesOf(session.user.role).some((role) => role !== "user")}
-                user={session.user}
-                onSignOut={() => signOut()}
-              />
-            ) : null}
+            <SessionMenu />
             <MobileNav />
           </div>
         </div>

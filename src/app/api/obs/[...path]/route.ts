@@ -4,8 +4,6 @@ import { NextResponse } from "next/server";
 import type { Command } from "lib/orpc/obs-control/schemas";
 import { callerFor } from "lib/orpc/server";
 
-export const runtime = "nodejs";
-
 /**
  * Plain HTTP for things that cannot speak oRPC: Bitfocus Companion / Stream
  * Deck (Generic HTTP module), curl, shortcuts. Every path calls the same

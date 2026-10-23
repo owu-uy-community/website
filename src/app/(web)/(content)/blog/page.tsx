@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { Newspaper, Rss } from "lucide-react";
 import { Suspense } from "react";
 
@@ -11,8 +12,6 @@ import PostsExplorer from "./components/PostsExplorer";
 import PostsGrid from "./components/PostsGrid";
 import SearchField from "./components/SearchField";
 import TagChips from "./components/TagChips";
-
-export const dynamic = "force-static";
 
 function blogJsonLd(posts: BlogPost[]) {
   const organization = {
@@ -74,6 +73,11 @@ function PostsFallback({ posts, tags }: { posts: BlogPost[]; tags: string[] }) {
 }
 
 export default async function BlogPage() {
+  "use cache";
+  // The posts ship with the deploy, and their files only exist at build: a year, so it never regenerates
+  // between deploys (the way `dynamic = "force-static"` behaved)
+  cacheLife({ stale: 300, revalidate: 31_536_000, expire: 31_536_000 });
+
   const posts = await getBlogPosts();
   const tags = collectTags(posts);
 

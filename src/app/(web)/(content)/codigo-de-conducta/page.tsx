@@ -1,6 +1,6 @@
 import { Ban, Check, Mail, MessageCircle, Phone, ShieldCheck } from "lucide-react";
 
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   ButtonLink,
   Card,

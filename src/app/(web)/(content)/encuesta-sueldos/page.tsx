@@ -4,7 +4,8 @@ import Link from "next/link";
 import { SOCIAL_LINKS } from "app/lib/constants";
 import { cn } from "app/lib/utils";
 import CopyField from "components/community/CopyField";
-import { CountUp, Reveal } from "components/community/motion";
+import { CountUp } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import {
   Badge,
   ButtonLink,
@@ -261,6 +262,9 @@ function OpenData({ slug, datasetHref }: { slug: string; datasetHref: string }) 
     </div>
   );
 }
+
+// Whether the visitor already answered, and the edition in the URL: rendered per request, allowed to block (Cache Components)
+export const instant = false;
 
 export default async function SalarySurveyPage({ searchParams }: { searchParams: Promise<{ edicion?: string }> }) {
   const [{ survey: current, answered, slack }, editions, { edicion }] = await Promise.all([

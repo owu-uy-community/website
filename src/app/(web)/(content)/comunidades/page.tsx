@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { ButtonLink, Container, Freshness, PageHeader } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getCommunities } from "lib/community/content";
@@ -6,9 +7,6 @@ import { pageMetadata } from "lib/community/metadata";
 import { issueFormUrl, PAGES, sourceUrl } from "lib/community/site";
 
 import CommunitiesExplorer from "./CommunitiesExplorer";
-
-// Each group's next date comes from the hourly events feed
-export const revalidate = 3600;
 
 export const metadata = pageMetadata({
   title: "Comunidades",
@@ -20,6 +18,10 @@ export const metadata = pageMetadata({
 const reviewedFormat = new Intl.DateTimeFormat("es-UY", { month: "long", year: "numeric", timeZone: "UTC" });
 
 export default async function CommunitiesPage() {
+  "use cache";
+  // Each group's next date comes from the hourly events feed
+  cacheLife("hours");
+
   const [communities, events] = await Promise.all([getCommunities(), getUpcomingEvents()]);
   const nextEvents = Object.fromEntries(nextEventByCommunity(events));
   const lastReview = communities

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { ORPCError } from "@orpc/server";
-import { cache } from "react";
+import { cacheLife } from "next/cache";
 
 import { publicCaller } from "lib/orpc/server";
 import type { SemanarioSummary } from "lib/orpc/semanario/schemas";
@@ -17,17 +17,24 @@ const isBuild = () => process.env.NEXT_PHASE === "phase-production-build";
  * without the database renders the empty archive instead of failing the whole
  * site; at runtime an error throws, so a revalidation keeps the last good page.
  */
-export const getIssues = cache(async (): Promise<SemanarioSummary[]> => {
+export async function getIssues(): Promise<SemanarioSummary[]> {
+  "use cache";
+  // Publishing refreshes the archive (revalidatePath); the hour is the fallback
+  cacheLife("hours");
+
   try {
     return await publicCaller.semanario.list();
   } catch (error) {
     if (isBuild()) return [];
     throw error;
   }
-});
+}
 
 /** A published issue, or null when that number doesn't exist (or isn't published) */
-export const getIssue = cache(async (number: number) => {
+export async function getIssue(number: number) {
+  "use cache";
+  cacheLife("hours");
+
   try {
     return await publicCaller.semanario.get({ number });
   } catch (error) {
@@ -35,7 +42,7 @@ export const getIssue = cache(async (number: number) => {
     if (isBuild()) return null;
     throw error;
   }
-});
+}
 
 const dayMonth = new Intl.DateTimeFormat("es-UY", { timeZone: MONTEVIDEO_TZ, day: "numeric", month: "short" });
 const dayMonthYear = new Intl.DateTimeFormat("es-UY", {

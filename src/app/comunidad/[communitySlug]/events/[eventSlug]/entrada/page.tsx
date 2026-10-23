@@ -8,7 +8,8 @@ import { TicketView } from "components/community/event/TicketView";
 import { SiteChrome } from "components/community/SiteChrome";
 import { callerFor, publicCaller } from "lib/orpc/server";
 
-export const dynamic = "force-dynamic";
+// The visitor's own ticket: rendered per request, allowed to block (Cache Components)
+export const instant = false;
 export const metadata: Metadata = {
   title: "Tu entrada · OWU",
   robots: { index: false, follow: false },

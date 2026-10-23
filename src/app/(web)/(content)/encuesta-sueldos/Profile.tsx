@@ -1,4 +1,4 @@
-import { Stagger } from "components/community/motion";
+import { Stagger } from "components/community/reveal";
 import { cardClassName } from "components/community/ui";
 import type { ProfileDimension } from "lib/orpc/salary-survey/schemas";
 

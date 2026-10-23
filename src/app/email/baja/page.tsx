@@ -23,6 +23,9 @@ const COPY: Record<UnsubscribeScope, { ask: string; what: string; done: string }
 };
 
 /** The emails' "Dejá de recibirlos": a confirm button, so a link opened by a scanner changes nothing. */
+// The link's own token: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function UnsubscribePage({
   searchParams,
 }: {

@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import "./globals.css";
-import { TicketReleaseProvider } from "contexts/TicketReleaseContext";
-import { QueryProvider } from "components/providers/QueryProvider";
-import { Toaster } from "components/shared/ui/sonner";
 import { fontVariables } from "./fonts";
 import { SiteAnalytics } from "./SiteAnalytics";
 
@@ -30,12 +28,13 @@ export default function RootLayout({
     // Smooth in-page scrolling (anchors, the settings index), but a new page starts at the top
     // instead of gliding there from wherever the last one was scrolled.
     <html className={fontVariables} data-scroll-behavior="smooth" lang="es">
-      <SiteAnalytics />
       <body>
-        <QueryProvider>
-          <TicketReleaseProvider>{children}</TicketReleaseProvider>
-          <Toaster />
-        </QueryProvider>
+        {/* It reads the pathname, which a prerendered shell doesn't know yet: the scripts stream in */}
+        <Suspense>
+          <SiteAnalytics />
+        </Suspense>
+        {/* React Query and the toaster live in the layouts that use them (components/providers/AppProviders) */}
+        {children}
       </body>
     </html>
   );

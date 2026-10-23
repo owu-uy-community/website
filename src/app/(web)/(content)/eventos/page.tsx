@@ -1,8 +1,9 @@
 import { CalendarX } from "lucide-react";
 import Link from "next/link";
+import { cacheLife } from "next/cache";
 
 import CalendarSubscribe from "components/community/CalendarSubscribe";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import { ButtonLink, cardClassName, Container, Eyebrow, PageHeader, TitleBar } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { getUpcomingEvents } from "lib/community/events";
@@ -10,9 +11,6 @@ import { pageMetadata } from "lib/community/metadata";
 import { issueFormUrl, MEETUP_BOT_REPO, PAGES, SLACK_CHANNELS } from "lib/community/site";
 
 import AgendaExplorer from "./AgendaExplorer";
-
-// meetup-bot is polled hourly; hand-added events ship with the deploy
-export const revalidate = 3600;
 
 export const metadata = pageMetadata({
   title: "Eventos",
@@ -22,6 +20,10 @@ export const metadata = pageMetadata({
 });
 
 export default async function EventsPage() {
+  "use cache";
+  // meetup-bot is polled hourly; hand-added events ship with the deploy
+  cacheLife("hours");
+
   const events = await getUpcomingEvents();
 
   return (

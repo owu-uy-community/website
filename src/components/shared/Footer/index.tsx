@@ -1,4 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { FaGithub, FaInstagram, FaLinkedin, FaSlack, FaTelegram, FaYoutube } from "react-icons/fa6";
 
@@ -14,6 +15,9 @@ const ICONS = {
   telegram: FaTelegram,
 };
 
+// Read once, when the server loads the module (each deploy): a prerendered page can't read the clock
+const YEAR = new Date().getFullYear();
+
 export default function Footer() {
   return (
     <footer className="relative w-full overflow-hidden border-t border-white/[0.07]">
@@ -21,8 +25,7 @@ export default function Footer() {
         <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-16">
           <div className="flex max-w-sm flex-col gap-6">
             <Link aria-label="OWU Uruguay, inicio" className="w-fit" href="/">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
+              <Image alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
             </Link>
             <p className="text-[15px] leading-relaxed text-zinc-400">
               La comunidad tech de Uruguay desde 2014. Un Slack, decenas de comunidades y una conferencia, hechos por
@@ -77,7 +80,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-16 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[13px] text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-          <span>© {new Date().getFullYear()} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
+          <span>© {YEAR} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
           <a
             className="inline-flex items-center gap-1 transition-colors hover:text-zinc-200"
             href={REPO_URL}

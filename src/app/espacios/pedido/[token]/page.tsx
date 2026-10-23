@@ -6,8 +6,9 @@ import { EmptyState } from "components/Admin/ui/states";
 import { HostResponse } from "components/organizar/venues/HostResponse";
 import { publicCaller } from "lib/orpc/server";
 
-// The token is the only key: never cached, never indexed, never sent on as a referrer.
-export const dynamic = "force-dynamic";
+// The token is the only key: never cached (nothing here says "use cache"), never indexed, never sent on
+// as a referrer. Rendered per request, allowed to block (Cache Components).
+export const instant = false;
 export const metadata: Metadata = {
   title: "Pedido de espacio · OWU",
   robots: { index: false, follow: false },

@@ -40,7 +40,8 @@ test("a moderator suspends someone from Acceso and their session stops working a
   await makeMember(community.id, "owner");
   const theirs = await pageFor(person);
   await theirs.goto("/acceso");
-  await expect(theirs.getByRole("heading", { name: "Acceso" })).toBeVisible();
+  // Their access, loaded (the skeleton's "Acceso" heading matched only until it was)
+  await expect(theirs.getByRole("heading", { level: 1, name: "Pedí acceso" })).toBeVisible();
 
   const page = await pageFor(moderator);
   await page.goto("/admin/acceso?tab=personas");

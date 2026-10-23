@@ -1,11 +1,13 @@
+import { cacheLife } from "next/cache";
 import { getFeedEvents } from "lib/community/events";
 import { buildIcs } from "lib/community/ics";
 import { SITE_URL } from "lib/community/site";
 
 // Calendar apps poll this; it follows the same hourly refresh as /eventos
-export const revalidate = 3600;
+async function render() {
+  "use cache";
+  cacheLife("hours");
 
-export async function GET() {
   const events = (await getFeedEvents()).map((event) => ({
     ...event,
     url: new URL(event.url, SITE_URL).toString(),
@@ -27,7 +29,11 @@ export async function GET() {
     }
   );
 
-  return new Response(body, {
+  return body;
+}
+
+export async function GET() {
+  return new Response(await render(), {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'inline; filename="owu-eventos.ics"',

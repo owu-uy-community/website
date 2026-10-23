@@ -14,6 +14,9 @@ export const metadata = pageMetadata({
   path: "/empresas/espacio",
 });
 
+// The form knows who is signed in: rendered per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function OfferVenuePage() {
   const session = await auth.api.getSession({ headers: await headers() });
 

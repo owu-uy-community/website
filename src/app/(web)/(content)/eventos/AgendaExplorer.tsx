@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { cn } from "app/lib/utils";
 import { EventList } from "components/community/events";
-import { Reveal } from "components/community/motion";
+import { Reveal } from "components/community/reveal";
 import { buttonClassName, cardClassName } from "components/community/ui";
 import type { CommunityEvent } from "lib/community/events";
 import { dateParts, monthKey } from "lib/community/time";
