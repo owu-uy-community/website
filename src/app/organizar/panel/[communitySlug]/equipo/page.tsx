@@ -16,6 +16,9 @@ import { LeaveTeam } from "./LeaveTeam";
 
 export const metadata: Metadata = { title: "Equipo · Organizá" };
 
+// Who is looking decides what renders: per request, allowed to block (Cache Components)
+export const instant = false;
+
 /**
  * Who runs the community with what role; admins add people by email or OWU Slack, answer requests
  * to join and define the community's own roles. Members may leave.

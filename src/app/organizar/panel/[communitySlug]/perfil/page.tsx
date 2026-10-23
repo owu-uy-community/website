@@ -9,6 +9,9 @@ import { holds, panelCommunity } from "../../access";
 
 export const metadata: Metadata = { title: "Perfil · Organizá" };
 
+// Who is looking decides what renders: per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function ProfilePage({ params }: { params: Promise<{ communitySlug: string }> }) {
   const { communitySlug } = await params;
   const access = await panelCommunity(communitySlug);

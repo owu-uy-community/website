@@ -8,6 +8,10 @@ import { communities } from "lib/db/schema";
 import { panelAccess, panelCommunity } from "../access";
 import { NoAccess } from "./NoAccess";
 
+// Per request, allowed to block (Cache Components). Pages under it need their own: segment config
+// doesn't carry down, and without it dev warns of uncached data outside <Suspense>.
+export const instant = false;
+
 /**
  * Only the community's organizers (editor and up) and site staff get past here. Anyone else signed
  * in sees why and can ask for access; a community that doesn't exist is a 404.

@@ -10,6 +10,9 @@ import { plural } from "lib/organizar/words";
 
 import { panelAccess } from "./access";
 
+// Per request, allowed to block (Cache Components)
+export const instant = false;
+
 /**
  * The panel opens on the community used last on this device, else the first one you organize. Site
  * staff who organize none pick one (they can open any); everyone else is asked which they organize.

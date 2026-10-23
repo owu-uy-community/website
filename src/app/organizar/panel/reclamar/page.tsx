@@ -8,6 +8,9 @@ import { panelAccess } from "../access";
 
 export const metadata = { title: "Organizar una comunidad · OWU" };
 
+// Who is looking decides what renders: per request, allowed to block (Cache Components)
+export const instant = false;
+
 export default async function ClaimPage({ searchParams }: { searchParams: Promise<{ proponer?: string }> }) {
   const { claims, memberIds } = await panelAccess("/organizar/panel/reclamar");
   const [directory, { proponer }] = await Promise.all([callerFor(await headers()).communities.list(), searchParams]);
