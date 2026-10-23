@@ -10,7 +10,42 @@ type Connection = {
   /** Asked on every private subscribe and publish (memoized by the caller), so a revoked role stops the socket too. */
   canPublish: () => Promise<boolean>;
   channels: Set<string>;
+  /** It has published: its heartbeat keeps `canPublish` fresh, so its next publish doesn't wait on it. */
+  publishes: boolean;
 };
+
+/**
+ * A permission check for a socket's lifetime: answered at most `ttlMs` ago, and asked again ahead
+ * of time. Past `refreshMs` the answer in hand still counts while a fresh one comes in, so with
+ * someone calling it on every heartbeat (25 s) a publish never waits on the lookup — a session
+ * read that, after a quiet minute, can need a new database connection. A press on the launchpad
+ * paid exactly that before reaching the speakers.
+ */
+export function cachedCheck(check: () => Promise<boolean>, ttlMs = 30_000, refreshMs = 20_000) {
+  type Answer = { at: number; allowed: Promise<boolean> };
+  let current: Answer | null = null;
+  let next: Answer | null = null;
+  const ask = (): Answer => ({ at: Date.now(), allowed: check().catch(() => false) });
+
+  return () => {
+    const age = current ? Date.now() - current.at : Infinity;
+    if (!current || age > ttlMs) {
+      // Too old to use: wait for an answer, the one already on its way if there is one.
+      current = next ?? ask();
+      next = null;
+    } else if (age > refreshMs && !next) {
+      const fresh = ask();
+      next = fresh;
+      void fresh.allowed.then(() => {
+        if (next !== fresh) return;
+        current = fresh;
+        next = null;
+      });
+    }
+
+    return current.allowed;
+  };
+}
 
 type BackplaneEnvelope = {
   ch: string;
@@ -49,7 +84,7 @@ class RealtimeHub {
     // sent (a server-side write, or a client on a different instance).
     void this.ensureRedis();
 
-    const connection: Connection = { ws, canPublish: options.canPublish, channels: new Set() };
+    const connection: Connection = { ws, canPublish: options.canPublish, channels: new Set(), publishes: false };
 
     ws.on("message", (data: unknown) => {
       const frame = parseFrame<ClientFrame>(typeof data === "string" ? data : String(data));
@@ -86,12 +121,14 @@ class RealtimeHub {
 
               return;
             }
+            connection.publishes = true;
             await this.publish(frame.ch, frame.ev, frame.pl, frame.sid);
           })();
           break;
         }
         case "ping": {
           this.sendFrame(ws, { t: "pong" });
+          if (connection.publishes) void connection.canPublish();
           break;
         }
       }
