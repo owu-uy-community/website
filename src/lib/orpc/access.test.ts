@@ -57,6 +57,7 @@ const EXPECTED: Record<string, Access> = {
   "comms.cadence": "platform:comms:read",
   "comms.cancel": "platform:comms:schedule",
   "comms.channels": "platform:comms:read",
+  "comms.feed": "public",
   "comms.dispatchDue": "platform:comms:dispatch",
   "comms.list": "platform:comms:read",
   "comms.markSent": "platform:comms:schedule",

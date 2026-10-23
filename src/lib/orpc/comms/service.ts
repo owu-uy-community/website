@@ -267,6 +267,52 @@ export const list = (eventId: string) =>
     return yield* messagesWhere(eq(outboundMessages.eventId, eventId));
   });
 
+/** Slack gets <, > and & escaped (organizar/announcement.ts); the board shows what people read. */
+const slackUnescaped = (text: string) => text.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&amp;", "&");
+
+/**
+ * What Owy told attendees, for the public live board: sent Telegram and Slack posts only — never
+ * staff DMs, nor the record of an email someone sent by hand. Newest first.
+ */
+export const feed = (eventId: string) =>
+  query((db) =>
+    db
+      .select({
+        id: outboundMessages.id,
+        channel: outboundMessages.channel,
+        body: outboundMessages.body,
+        sentAt: outboundMessages.sentAt,
+        editedAt: outboundMessages.editedAt,
+      })
+      .from(outboundMessages)
+      .where(
+        and(
+          eq(outboundMessages.eventId, eventId),
+          eq(outboundMessages.status, "sent"),
+          inArray(outboundMessages.channel, ["telegram", "slack"])
+        )
+      )
+      .orderBy(desc(outboundMessages.sentAt))
+      .limit(40)
+  ).pipe(
+    Effect.map((rows) => {
+      const seen = new Set<string>();
+
+      return rows
+        .flatMap((row) => {
+          const body = row.channel === "slack" ? slackUnescaped(row.body) : row.body;
+          // ponytail: same text = one notice (it went to both channels); a deliberate repeat collapses too
+          if (!row.sentAt || seen.has(body)) return [];
+          seen.add(body);
+
+          return [
+            { id: row.id, body, sentAt: row.sentAt.toISOString(), editedAt: row.editedAt?.toISOString() ?? null },
+          ];
+        })
+        .slice(0, 20);
+    })
+  );
+
 /** Which channels Owy can write to from the site. */
 export const channels = (): Channels => ({ ...owyChannels(), telegramHandle: telegramHandle() });
 
