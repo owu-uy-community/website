@@ -7,6 +7,8 @@ export const FONTS_DIR = path.join(process.cwd(), "src", "app", "(web)", "(conte
 export const LOGO = path.join(process.cwd(), "src", "app", "(web)", "(content)", "charlas", "og", "owu-logo.png");
 
 export const COVER_SIZE = { width: 1200, height: 630 };
+/** Share cards to post: a square for feeds, a 9:16 story */
+export const CARD_SIZES = { cuadrada: { width: 1080, height: 1080 }, historia: { width: 1080, height: 1920 } } as const;
 
 // Deterministic star positions, like the blog covers (a nod to the site's starfield)
 export const STARS = [
@@ -27,8 +29,9 @@ export const STARS = [
 ] as const;
 
 /**
- * OWU's 1200×630 cover: logo and a pill on top, the title under the yellow bar, a two-line
- * footer and up to two chips. Talks and events share it, so every share looks like OWU.
+ * OWU's cover: logo and a pill on top, the title under the yellow bar, a two-line footer and up to
+ * two chips. Talks and events share it, so every share looks like OWU. 1200×630 unless `size` says
+ * otherwise (the square and story cards scale the type up).
  */
 export async function renderCover({
   tag,
@@ -37,6 +40,8 @@ export async function renderCover({
   footer,
   chips = [],
   dimmed = false,
+  subtitle,
+  size = COVER_SIZE,
 }: {
   tag: string;
   title: string;
@@ -45,6 +50,9 @@ export async function renderCover({
   chips?: string[];
   /** A cancelled event: the title struck through */
   dimmed?: boolean;
+  /** A line under the title (a date) */
+  subtitle?: string;
+  size?: { width: number; height: number };
 }) {
   const [bold, medium, logo] = await Promise.all([
     fs.readFile(path.join(FONTS_DIR, "poppins-bold.ttf")),
@@ -52,7 +60,9 @@ export async function renderCover({
     fs.readFile(LOGO),
   ]);
   const logoSrc = `data:image/png;base64,${logo.toString("base64")}`;
-  const titleSize = title.length > 70 ? 50 : title.length > 42 ? 58 : 68;
+  // Taller cards read from further away: bigger type
+  const k = size.height > size.width ? 1.4 : size.height === size.width ? 1.15 : 1;
+  const titleSize = Math.round((title.length > 70 ? 50 : title.length > 42 ? 58 : 68) * k);
 
   return new ImageResponse(
     <div
@@ -62,7 +72,7 @@ export async function renderCover({
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
-        padding: "64px 72px",
+        padding: `${Math.round(64 * k)}px 72px`,
         backgroundColor: "#0c0c0f",
         backgroundImage:
           "radial-gradient(ellipse 80% 70% at 85% -10%, rgba(250,204,21,0.16), rgba(12,12,15,0) 60%), radial-gradient(ellipse 70% 80% at 0% 110%, #2b3110, rgba(12,12,15,0) 65%)",
@@ -114,18 +124,33 @@ export async function renderCover({
             fontWeight: 700,
             lineHeight: 1.12,
             letterSpacing: -1.5,
-            maxWidth: 1040,
+            maxWidth: size.width - 160,
             textDecoration: dimmed ? "line-through" : "none",
           }}
         >
           {title}
         </div>
+        {subtitle ? (
+          <div style={{ display: "flex", color: "#facc15", fontSize: Math.round(30 * k), fontWeight: 500 }}>
+            {subtitle}
+          </div>
+        ) : null}
       </div>
 
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 32 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 820 }}>
-          <div style={{ display: "flex", color: "#71717a", fontSize: 22, fontWeight: 500 }}>{footerLabel}</div>
-          <div style={{ display: "flex", color: "#e4e4e7", fontSize: 32, fontWeight: 500, lineHeight: 1.2 }}>
+          <div style={{ display: "flex", color: "#71717a", fontSize: Math.round(22 * k), fontWeight: 500 }}>
+            {footerLabel}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              color: "#e4e4e7",
+              fontSize: Math.round(32 * k),
+              fontWeight: 500,
+              lineHeight: 1.2,
+            }}
+          >
             {footer}
           </div>
         </div>
@@ -150,7 +175,7 @@ export async function renderCover({
       </div>
     </div>,
     {
-      ...COVER_SIZE,
+      ...size,
       fonts: [
         { name: "Poppins", data: bold, weight: 700 },
         { name: "Poppins", data: medium, weight: 500 },

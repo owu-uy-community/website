@@ -2,14 +2,18 @@
 
 import type * as React from "react";
 import Link from "next/link";
-import { ArrowUpRight, Megaphone } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowUpRight, Images, Megaphone } from "lucide-react";
 
 import { Panel, PanelHead } from "components/Admin/ui/page";
 import { StatusDot, type Tone } from "components/Admin/ui/status";
 import { shortWhen } from "lib/community/time";
+import { orpc } from "lib/orpc/client";
 import type { EditableEvent } from "lib/orpc/events/schemas";
 
 import { EventbriteStatus } from "../integrations/EventbriteStatus";
+import { usePanel } from "../shell/context";
+import { CardLink } from "../talks/parts";
 
 type Place = {
   key: string;
@@ -146,20 +150,57 @@ export function PublicationsTab({
   ];
 
   return (
+    <div className="flex flex-col gap-4">
+      <Panel>
+        <PanelHead icon={Megaphone} title="Dónde está publicado" />
+        <ul className="divide-y divide-border">
+          {places.map((place) => (
+            <Row key={place.key} place={place}>
+              {place.key === "eventbrite" && event.registration === "eventbrite" ? (
+                <EventbriteStatus
+                  communityId={community.id}
+                  communitySlug={community.slug}
+                  draft={false}
+                  eventId={event.id}
+                />
+              ) : null}
+            </Row>
+          ))}
+        </ul>
+      </Panel>
+      {cancelled ? null : <ShareCards communityId={community.id} eventId={event.id} />}
+    </div>
+  );
+}
+
+/** Square and story PNGs to post: the event's, and one per talk taken from Charlas that goes to it. */
+function ShareCards({ communityId, eventId }: { communityId: string; eventId: string }) {
+  const { can } = usePanel();
+  const talks = useQuery(
+    orpc.talks.claimedFor.queryOptions({
+      input: { communityId },
+      enabled: can("talk:read"),
+      select: (claims) => claims.filter((claim) => claim.event?.id === eventId),
+    })
+  );
+
+  return (
     <Panel>
-      <PanelHead icon={Megaphone} title="Dónde está publicado" />
+      <PanelHead icon={Images} title="Tarjetas para compartir" />
       <ul className="divide-y divide-border">
-        {places.map((place) => (
-          <Row key={place.key} place={place}>
-            {place.key === "eventbrite" && event.registration === "eventbrite" ? (
-              <EventbriteStatus
-                communityId={community.id}
-                communitySlug={community.slug}
-                draft={false}
-                eventId={event.id}
-              />
-            ) : null}
-          </Row>
+        <li className="flex flex-wrap items-center gap-2 px-4 py-3.5">
+          <span className="mr-auto text-ui font-medium text-foreground">El evento</span>
+          <CardLink format="cuadrada" id={eventId} kind="evento" label="Cuadrada" />
+          <CardLink format="historia" id={eventId} kind="evento" label="Historia" />
+        </li>
+        {(talks.data ?? []).map((talk) => (
+          <li key={talk.id} className="flex flex-wrap items-center gap-2 px-4 py-3.5">
+            <span className="mr-auto min-w-0 text-ui text-foreground">
+              {talk.title} <span className="text-muted-foreground">· {talk.speakerName}</span>
+            </span>
+            <CardLink format="cuadrada" id={talk.id} kind="charla" label="Cuadrada" />
+            <CardLink format="historia" id={talk.id} kind="charla" label="Historia" />
+          </li>
         ))}
       </ul>
     </Panel>
