@@ -1,6 +1,7 @@
 /**
  * Loopback control surface for the bridge operator at the venue, bound to
- * 127.0.0.1 and unauthenticated on purpose (no secrets, only audio routing):
+ * 127.0.0.1 (`COMPANION_BIND_HOST`; in Docker, published on the host's loopback
+ * only) and unauthenticated on purpose (no secrets, only audio routing):
  *
  *   GET  /            one-page UI (per device: mic / audio output, browser attached?)
  *   *    /rpc/…       the typed oRPC router (`web/rpc.ts`) — what the Next.js
@@ -84,7 +85,7 @@ export function startSettingsServer(
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(config.COMPANION_SETTINGS_PORT, "127.0.0.1", () => {
+    server.listen(config.COMPANION_SETTINGS_PORT, config.COMPANION_BIND_HOST, () => {
       const url = `http://127.0.0.1:${config.COMPANION_SETTINGS_PORT}/`;
       resolve({ url, rpcUrl: `${url}rpc`, close: () => new Promise((done) => server.close(() => done())) });
     });

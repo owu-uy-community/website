@@ -1,0 +1,13 @@
+# Allowlist: the build context is the whole repo, the image needs a handful of paths.
+*
+!owy/package.json
+!owy/pnpm-lock.yaml
+!owy/pnpm-workspace.yaml
+!owy/tsconfig.json
+!owy/agent
+!owy/companion/bridge/src
+!owy/companion/bridge/prompts
+!public/companion-audio/clips/manifest.json
+**/node_modules
+**/.env*
+**/secrets.yaml

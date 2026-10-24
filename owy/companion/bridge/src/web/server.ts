@@ -8,7 +8,7 @@ import { createStageMirror } from "../stage";
 import { BrowserDevice } from "./device";
 import { matchesSecret, toolDenial, WebTickets, WEB_SESSION_MS, type WebGrant } from "./tickets";
 
-export type WebBridgeOptions = { port: number; origins: string[]; secret?: string; publicUrl?: string };
+export type WebBridgeOptions = { port: number; host?: string; origins: string[]; secret?: string; publicUrl?: string };
 /** A browser attached as a device's laptop audio stays for the whole open space, not five minutes. */
 export const ATTACHED_SESSION_MS = 6 * 60 * 60_000;
 const silent: Logger = {
@@ -309,7 +309,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(options.port, "127.0.0.1", () => {
+    server.listen(options.port, options.host ?? "127.0.0.1", () => {
       server.off("error", reject);
       resolve();
     });

@@ -317,6 +317,25 @@ voz suya, p. ej. `marin`), `COMPANION_BRAIN` (`eve` | `local`; ver [Cerebro](#ce
 p. ej. en el REPL), `COMPANION_LOG_LEVEL`, `COMPANION_WEB_DEBUG=1` (loguea también las sesiones
 del navegador, que por defecto son mudas).
 
+### Docker
+
+Para levantar el bridge sin instalar Node ni pnpm en la máquina del venue:
+
+```bash
+pnpm -C owy companion:docker                               # = docker compose -f owy/companion/bridge/compose.yaml up -d --build
+docker compose -f owy/companion/bridge/compose.yaml logs -f
+docker compose -f owy/companion/bridge/compose.yaml down
+```
+
+Lee las mismas variables de `owy/.env.local` y monta `firmware/secrets.yaml` (solo lectura) para
+`#secrets`; la imagen no lleva ni uno ni otro. Arranca solo con Docker (`restart: unless-stopped`).
+Dentro del contenedor `localhost` es el contenedor: usá IPs en `COMPANION_DEVICES` (los nombres
+`.local` no resuelven) y `http://host.docker.internal:<puerto>` para `eve dev` o el sitio corriendo en
+la misma máquina. El web bridge (3312) y la página de ajustes (3313) escuchan en `0.0.0.0` dentro del
+contenedor (`COMPANION_BIND_HOST`) y se publican sólo en el `127.0.0.1` del host, así que el sitio y
+el navegador de la laptop los usan igual que sin Docker. El audio de laptop sigue siendo un navegador
+en esa máquina.
+
 ### Cerebro: eve o local
 
 El modelo realtime siempre es **oídos y boca**. Quién *piensa* lo decide `COMPANION_BRAIN`
