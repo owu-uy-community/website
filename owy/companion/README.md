@@ -329,6 +329,8 @@ docker compose -f owy/companion/bridge/compose.yaml down
 
 Lee las mismas variables de `owy/.env.local` y monta `firmware/secrets.yaml` (solo lectura) para
 `#secrets`; la imagen no lleva ni uno ni otro. Arranca solo con Docker (`restart: unless-stopped`).
+Las variables del shell no llegan al contenedor: `COMPANION_DEVICES` tiene que estar en
+`owy/.env.local` (o, para una prueba, `docker compose -f … run -d --service-ports -e COMPANION_DEVICES=… bridge`).
 Dentro del contenedor `localhost` es el contenedor: usá IPs en `COMPANION_DEVICES` (los nombres
 `.local` no resuelven) y `http://host.docker.internal:<puerto>` para `eve dev` o el sitio corriendo en
 la misma máquina. El web bridge (3312) y la página de ajustes (3313) escuchan en `0.0.0.0` dentro del
