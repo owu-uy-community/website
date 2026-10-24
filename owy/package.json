@@ -19,6 +19,7 @@
     "typecheck": "tsc --noEmit",
     "companion:dev": "tsx watch companion/bridge/src/main.ts",
     "companion:start": "tsx companion/bridge/src/main.ts",
+    "companion:docker": "docker compose -f companion/bridge/compose.yaml up -d --build",
     "companion:text": "tsx companion/bridge/src/cli/text.ts",
     "companion:test": "vitest run --config companion/bridge/vitest.config.ts",
     "companion:tools": "tsx companion/bridge/src/cli/tools.ts",
@@ -36,13 +37,13 @@
     "ai": "^7.0.107",
     "esphome-client": "2.0.0",
     "eve": "^0.63.0",
+    "tsx": "^4.23.13",
     "ws": "^8.21.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "24.x",
     "@types/ws": "^8.18.1",
-    "tsx": "^4.23.13",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"
   }

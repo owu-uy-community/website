@@ -26,6 +26,9 @@ importers:
       eve:
         specifier: ^0.63.0
         version: 0.63.0(ai@7.0.107(zod@4.6.5))
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
       ws:
         specifier: ^8.21.3
         version: 8.21.3
@@ -39,9 +42,6 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
-      tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

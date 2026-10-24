@@ -97,6 +97,8 @@ const EnvSchema = z.object({
   COMPANION_MIC_SOURCE: z.enum(["device", "laptop"]).default("device"),
   COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
+  /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */
+  COMPANION_BIND_HOST: z.string().default("127.0.0.1"),
   COMPANION_LOG_DIR: z.string().optional(),
   COMPANION_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });

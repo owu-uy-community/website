@@ -24,6 +24,7 @@ async function main(): Promise<void> {
   const web = config.COMPANION_WEB_BRIDGE
     ? await startWebBridge(shared, {
         port: config.COMPANION_WEB_PORT,
+        host: config.COMPANION_BIND_HOST,
         origins: config.COMPANION_WEB_ORIGINS.split(",")
           .map((v) => v.trim())
           .filter(Boolean),
