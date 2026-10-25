@@ -30,6 +30,7 @@
     "jobs:schedule": "tsx scripts/schedule-jobs.ts",
     "ocr:bench": "tsx scripts/ocr-bench.ts",
     "slot:replay": "tsx scripts/slot-replay.ts",
+    "timeline:build": "tsx scripts/timeline/build.ts",
     "remotion": "remotion studio src/app/lib/videos/remotion/index.ts",
     "render": "remotion render",
     "start": "next start",

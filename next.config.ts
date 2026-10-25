@@ -23,7 +23,17 @@ const nextConfig: NextConfig = {
     // Images under /public keep their file names, so an optimized copy can live a month
     // (replace a photo under a new name to refresh it)
     minimumCacheTTL: 2_678_400,
-    remotePatterns: [{ protocol: "http", hostname: "localhost" }],
+    remotePatterns: [
+      { protocol: "http", hostname: "localhost" },
+      // /timeline photos stay where they are published; these sources only come in one size, so
+      // they're resized here (Flickr serves its own sizes and skips the optimizer)
+      { protocol: "https", hostname: "**.meetupstatic.com" },
+      { protocol: "https", hostname: "raw.githubusercontent.com" },
+      { protocol: "https", hostname: "web.archive.org", pathname: "/web/**" },
+      { protocol: "https", hostname: "wiki.flisol.uy" },
+      // Only for a page's largest photo (AVIF instead of Flickr's JPEG)
+      { protocol: "https", hostname: "live.staticflickr.com" },
+    ],
   },
   // The English paths people and agents guess, to the Spanish pages that answer them
   async redirects() {

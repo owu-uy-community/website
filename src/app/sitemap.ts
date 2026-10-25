@@ -7,6 +7,8 @@ import { CONF_URL, PUBLIC_ROUTES, SITE_URL } from "lib/community/site";
 import { db } from "lib/db";
 import { communities, events, schedules } from "lib/db/schema";
 import { eventPagePath } from "lib/revalidate";
+import { getTimeline } from "lib/timeline/data";
+import { getPhotoCommunities } from "lib/timeline/photos";
 
 // Past editions' archives, which aren't in the site navigation
 const ARCHIVE_ROUTES = [
@@ -75,5 +77,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...CONF_ROUTES.map((route) => ({ url: `${CONF_URL}${route}` })),
     ...posts.map((post) => ({ url: `${SITE_URL}/blog/${post.slug}`, lastModified: post.updated ?? post.date })),
     ...community,
+    // Every event of the history, past ones included
+    ...getTimeline().events.map((event) => ({ url: `${SITE_URL}/timeline/${event.slug}` })),
+    // Each community's photos in one place
+    { url: `${SITE_URL}/timeline/fotos` },
+    ...getPhotoCommunities().map(({ slug }) => ({ url: `${SITE_URL}/timeline/fotos/${slug}` })),
   ];
 }

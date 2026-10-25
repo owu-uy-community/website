@@ -1,0 +1,860 @@
+/* eslint-disable no-console */
+/**
+ * Builds the /timeline dataset (content/timeline/) from the harvested sources:
+ * meetup.com (groups + every past event, live and deleted groups), GitHub community
+ * archives, the conference catalog and the milestones list.
+ *
+ * Usage:
+ *   pnpm timeline:build --raw <dir>
+ *
+ * <dir> holds the harvest output (meetup/data, github/data, conferences/data). Flickr albums
+ * are expanded to direct photo URLs once and cached under <dir>/.cache/flickr.
+ * Re-runnable: the output only depends on the inputs, content/timeline/overrides.json and
+ * the community directory.
+ */
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
+
+import { createReader } from "@keystatic/core/reader";
+
+import keystaticConfig from "../../keystatic.config";
+import type { TimelineCommunity, TimelineEvent, TimelineKind, TimelinePhoto } from "../../src/lib/timeline/types";
+
+const args = process.argv.slice(2);
+const rawArg = args.includes("--raw") ? args[args.indexOf("--raw") + 1] : undefined;
+if (!rawArg) {
+  console.error("Usage: pnpm timeline:build --raw <dir with meetup/, github/ and conferences/ data>");
+  process.exit(1);
+}
+const RAW = path.resolve(rawArg);
+const OUT = path.resolve("content/timeline");
+const CACHE = path.join(RAW, ".cache/flickr");
+
+const readJson = <T>(file: string): T => JSON.parse(readFileSync(path.join(RAW, file), "utf8")) as T;
+
+// ---------------------------------------------------------------- raw shapes
+
+type MeetupPhoto = { highResUrl: string; isGroupDefault?: boolean } | null;
+type MeetupEvent = {
+  id: string;
+  group: string;
+  title: string;
+  dateTime: string;
+  endTime?: string | null;
+  status: string;
+  eventType: "PHYSICAL" | "ONLINE" | "HYBRID";
+  eventUrl: string;
+  waybackUrl?: string;
+  venue?: { name?: string; city?: string } | null;
+  rsvps?: number;
+  featuredPhoto: MeetupPhoto;
+  displayPhoto: MeetupPhoto;
+  photoAlbum?: { photoCount?: number; photos?: string[] } | null;
+  description?: string | null;
+};
+type MeetupGroup = {
+  urlname: string;
+  currentUrlname?: string;
+  requestedAs?: string[];
+  name: string;
+  activity: "active" | "dormant" | "dead";
+  flag?: { tech: "tech" | "borderline" | "no"; name?: string };
+  pastEvents: number;
+  link?: string;
+  foundedDate?: string;
+  members?: number;
+};
+type GithubEvent = {
+  date: string;
+  end_date?: string | null;
+  date_precision?: "day" | "month" | "year";
+  title: string;
+  community: string;
+  kind: string;
+  venue?: string | null;
+  city?: string | null;
+  talks?: { title: string; speakers?: string[]; slides?: string | null; video?: string | null }[];
+  photos?: (string | { url: string })[];
+  links?: string[];
+  source_repo: string;
+  source_path?: string;
+  attendees?: number;
+  status?: string;
+  upcoming?: boolean;
+};
+type Edition = {
+  series: string;
+  series_slug: string;
+  category: string;
+  edition?: string;
+  year: number;
+  start_date?: string | null;
+  end_date?: string | null;
+  city?: string | null;
+  venue?: string | null;
+  organizers?: string[];
+  /** A number, or how the source put it ("600+ (Montevideo)") */
+  attendees?: number | string | null;
+  talks?: number | null;
+  official_url?: string | null;
+  url_alive?: boolean;
+  wayback_url?: string | null;
+  photos?: { url: string; kind?: string; license?: string; note?: string }[];
+  videos?: { url: string; kind?: string }[];
+  confidence?: "high" | "medium" | "low";
+  date_source?: string | null;
+  notes?: string | null;
+  flags?: string[] | string;
+};
+/** content/timeline/hitos.json: curated, in Spanish */
+type Milestone = {
+  date: string;
+  type: "first" | "founding" | "other" | "ended" | "rename";
+  /** A timeline community slug, or "hitos" for the scene at large */
+  community: string;
+  title: string;
+  description?: string;
+  layer: "community" | "ecosystem";
+  source?: string;
+  confidence?: "medium" | "low";
+};
+type Overrides = {
+  /** Event ids (or slugs) that never render */
+  hide?: string[];
+  /** Meetup urlname → community slug, for groups that are the same community under another name */
+  groupCommunity?: Record<string, string>;
+  /** Community slug → layer */
+  layer?: Record<string, "community" | "ecosystem">;
+  /** Extra photos for an event id, e.g. Wayback captures */
+  photos?: Record<string, TimelinePhoto[]>;
+};
+
+// ---------------------------------------------------------------- helpers
+
+// Combining accents (U+0300–U+036F), built from char codes so the formatter can't inline them invisibly
+const COMBINING_MARKS = new RegExp(`[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`, "g");
+
+const slugify = (value: string) =>
+  value
+    .replace(/æ/gi, "ae")
+    .normalize("NFD")
+    .replace(COMBINING_MARKS, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const dayOf = (value: string) => value.slice(0, 10);
+
+const clean = (value: string | null | undefined, max: number) => {
+  if (!value) return undefined;
+  const text = value
+    .replace(/\r/g, "")
+    .replace(/\\([*_#[\]()-])/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
+};
+
+const tokens = (value: string) =>
+  new Set(
+    slugify(value)
+      .split("-")
+      .filter((t) => t.length > 2 && !/^\d+$/.test(t) && !STOP.has(t))
+  );
+const STOP = new Set(["the", "and", "del", "las", "los", "con", "para", "meetup", "montevideo", "uruguay", "edicion"]);
+const similarity = (a: string, b: string) => {
+  const x = tokens(a);
+  const y = tokens(b);
+  // Titles made only of short or stop words ("La Meetup 2024") compare whole
+  if (!x.size || !y.size) return slugify(a).startsWith(slugify(b)) || slugify(b).startsWith(slugify(a)) ? 1 : 0;
+  let shared = 0;
+  for (const t of x) if (y.has(t)) shared++;
+  return shared / Math.min(x.size, y.size);
+};
+
+const FLICKR_LICENSES: Record<number, string> = {
+  0: "Todos los derechos reservados",
+  1: "CC BY-NC-SA 2.0",
+  2: "CC BY-NC 2.0",
+  3: "CC BY-NC-ND 2.0",
+  4: "CC BY 2.0",
+  5: "CC BY-SA 2.0",
+  6: "CC BY-ND 2.0",
+  7: "Sin derechos conocidos",
+  9: "CC0",
+  10: "Dominio público",
+  11: "CC BY 4.0",
+  12: "CC BY-SA 4.0",
+  13: "CC BY-ND 4.0",
+  14: "CC BY-NC 4.0",
+  15: "CC BY-NC-SA 4.0",
+  16: "CC BY-NC-ND 4.0",
+};
+
+/** One Flickr album page (first ~100 photos) as direct live.staticflickr.com URLs, cached on disk */
+async function flickrAlbum(url: string): Promise<TimelinePhoto[]> {
+  const id = /albums\/(\d+)/.exec(url)?.[1];
+  if (!id) return [];
+  const cached = path.join(CACHE, `${id}.json`);
+  if (existsSync(cached)) return JSON.parse(readFileSync(cached, "utf8")) as TimelinePhoto[];
+
+  const response = await fetch(url.replace(/\/?$/, "/"), {
+    headers: { "user-agent": "Mozilla/5.0 (owu.uy timeline)" },
+  });
+  if (!response.ok) {
+    console.warn(`  flickr ${id}: HTTP ${response.status}`);
+    return [];
+  }
+  const html = await response.text();
+  const start = html.indexOf("{", html.indexOf("modelExport:"));
+  let depth = 0;
+  let end = start;
+  for (; end < html.length; end++) {
+    if (html[end] === "{") depth++;
+    else if (html[end] === "}" && --depth === 0) break;
+  }
+  type Size = { data: { url: string; width: number; height: number } };
+  type FlickrPhoto = {
+    data: {
+      id: string;
+      title?: string;
+      license?: number;
+      sizes: { data: Record<string, Size> };
+      owner?: { data?: { nsid?: string } };
+    };
+  };
+  const model = JSON.parse(html.slice(start, end + 1)) as {
+    main: {
+      "set-models": {
+        data: {
+          owner: { data: { nsid?: string; pathAlias?: string; realname?: string; username?: string } };
+          photoPageList: { data: { _data: (FlickrPhoto | null)[] } };
+        };
+      }[];
+    };
+  };
+  const set = model.main["set-models"][0].data;
+  const owner = set.owner.data;
+  const by = owner.realname || owner.username || undefined;
+  const photos = set.photoPageList.data._data.flatMap((entry): TimelinePhoto[] => {
+    if (!entry) return [];
+    const sizes = entry.data.sizes.data;
+    const size = sizes.b ?? sizes.c ?? sizes.z ?? sizes.m;
+    if (!size) return [];
+    return [
+      {
+        src: `https:${size.data.url}`,
+        w: size.data.width,
+        h: size.data.height,
+        page: `https://www.flickr.com/photos/${owner.pathAlias ?? owner.nsid}/${entry.data.id}/`,
+        by,
+        source: "Flickr",
+        license: FLICKR_LICENSES[entry.data.license ?? 0],
+      },
+    ];
+  });
+  mkdirSync(CACHE, { recursive: true });
+  writeFileSync(cached, JSON.stringify(photos));
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  return photos;
+}
+
+// ---------------------------------------------------------------- communities
+
+/** How people call them: the sources' names carry subtitles, parentheses and English */
+const DISPLAY_NAME: Record<string, string> = {
+  "genexus-meeting": "Encuentro GeneXus",
+  "icann-montevideo": "ICANN en Montevideo",
+  jiap: "JIAP",
+  "ingenieria-demuestra": "Ingeniería deMuestra",
+  "oracle-tour-montevideo": "Oracle User Group Tour",
+  "segurinfo-uruguay": "Segurinfo Uruguay",
+  "ubuntu-uy-events": "Ubuntu Uruguay",
+  "juegarte-san-carlos": "JuegArte",
+  cigras: "CIGRAS",
+  "pyday-uy": "PyDay Uruguay",
+  "dal-uruguay": "Desarrollando América Latina",
+  "sharing-the-point-montevideo": "Sharing the Point",
+  "lacnic-montevideo": "LACNIC en Montevideo",
+  "devfest-montevideo": "DevFest Uruguay",
+  "owasp-appsec-montevideo": "OWASP AppSec",
+  condatos: "ConDatos",
+  oktoberdatafest: "OktoberDATAFEST",
+  jsconfuy: "JSConf Uruguay",
+  dateidea: "DateIdea",
+  clei: "CLEI",
+  "netconf-uy": ".NET Conf UY",
+  "agiles-latam": "Ágiles",
+  "hackathon-agro": "Hackathon Agro",
+  "girls-in-tech-uruguay": "Girls in Tech Uruguay",
+  "24h-innovacion-uruguay": "24 horas de innovación",
+  "level-uy": "LEVEL UY",
+  "jovenes-a-programar": "Jóvenes a Programar",
+  "cafe-de-data": "Café de Data",
+  "techy-por-el-dia": "Techy por el día",
+  khipu: "KHIPU",
+  latinr: "LatinR",
+  "jam2jam-winter-jam": "Jam2Jam",
+  mitconf: "MITConf",
+  "owu-la-meetup": "La Meetup",
+  "campus-party-uruguay": "Campus Party Uruguay",
+  "owu-codepop": "CODE Pop",
+  "gdg-montevideo-hackathons": "Hackatón GDG",
+  "io-extended-montevideo": "Google I/O Extended",
+  "space-apps-uruguay": "NASA Space Apps Uruguay",
+  "wordcamp-montevideo": "WordCamp Montevideo",
+  "jsday-uruguay": "JSDay Uruguay",
+  "percona-university": "Percona University",
+  "uruguay-salesforce-developer-group": "Uruguay Salesforce Developer Group",
+  "proyecto-kanban": "Proyecto Kanban",
+  "maldonado-new-technology-meetup": "Maldonado New Technology Meetup",
+};
+/** A display name that a source spelled with extras, to its plain form */
+const plainName = (name: string) =>
+  name
+    .replace(/\s*\((?:MontevideoSDG\.com|later [^)]*|Mujeres IT)\)\s*$/, "")
+    .replace(/^Colaboradores en Gestión de Proyectos -> /, "")
+    .trim();
+
+const reader = createReader(process.cwd(), keystaticConfig);
+const directory = await reader.collections.communities.all();
+const directoryByMeetup = new Map<string, string>();
+for (const { slug, entry } of directory) {
+  const urlname = /meetup\.com\/([^/?#]+)/.exec(entry.meetup ?? "")?.[1];
+  if (urlname) directoryByMeetup.set(urlname.toLowerCase(), slug);
+}
+
+const overrides: Overrides = existsSync(path.join(OUT, "overrides.json"))
+  ? (JSON.parse(readFileSync(path.join(OUT, "overrides.json"), "utf8")) as Overrides)
+  : {};
+
+const communities = new Map<string, TimelineCommunity>();
+const addCommunity = (community: TimelineCommunity) => {
+  const existing = communities.get(community.slug);
+  if (existing) {
+    existing.aliases = [...new Set([...(existing.aliases ?? []), ...(community.aliases ?? []), community.name])].filter(
+      (alias) => alias !== existing.name
+    );
+    existing.meetup ??= community.meetup;
+    if (existing.status !== "activa" && community.status === "activa") existing.status = "activa";
+    return existing;
+  }
+  communities.set(community.slug, community);
+  return community;
+};
+
+const fromDirectory = (slug: string, fallback: Omit<TimelineCommunity, "slug">): TimelineCommunity => {
+  const entry = directory.find((d) => d.slug === slug)?.entry;
+  if (!entry) return { slug, ...fallback };
+  return {
+    ...fallback,
+    slug,
+    name: entry.name,
+    directory: true,
+    logo: entry.picture ?? undefined,
+    topics: entry.topics.length ? [...entry.topics] : fallback.topics,
+    website: entry.website ?? fallback.website,
+  };
+};
+
+const TOPIC_RULES: [RegExp, string][] = [
+  [/ladies|mujer|girls|nahual|women|rails girls/i, "diversidad"],
+  [/owasp|secur|segur|red team|wazuh|hack(er)?s? \/|cigras/i, "seguridad"],
+  [/test|qa\b|abstracta/i, "testing"],
+  [
+    /data|datos|ia\b|\bai\b|intelig|machine|deep|mlops|\br\b|r-ladies|latinr|khipu|connectia|elastic|databricks|neuro/i,
+    "data-ia",
+  ],
+  [
+    /aws|azure|cloud|devops|docker|openstack|kubernetes|red hat|linux|sysarmy|mysql|dba|sql|percona|powershell/i,
+    "cloud",
+  ],
+  [/flutter|mobile|ios|android|swift|xamarin|react native|apple/i, "mobile"],
+  [
+    /\bjs\b|javascript|jsconf|angular|react|vue|ember|front|web|wordpress|drupal|ux|design|ixda|dribbble|sketch|meteor/i,
+    "web",
+  ],
+  [
+    /ruby|python|py|elixir|rust|scala|php|laravel|symfony|java|\.net|grails|clojure|go en|zig|genexus|gug|salesforce/i,
+    "lenguajes",
+  ],
+  [/agile|agil|kanban|product|leadership|soft skills|lean|scrum|freelanc|remote/i, "carrera"],
+];
+const guessTopics = (name: string) => {
+  const hit = TOPIC_RULES.find(([pattern]) => pattern.test(name));
+  return [hit ? hit[1] : "general"];
+};
+
+// Meetup groups: the tech ones are communities, the borderline ones (crypto, startups, network re-posts) the ecosystem
+const groups = readJson<MeetupGroup[]>("meetup/data/groups.json").filter(
+  (group) => group.flag && group.flag.tech !== "no" && group.pastEvents > 0
+);
+const GROUP_COMMUNITY: Record<string, string> = {
+  pyladiesuy: "pyladies-uruguay",
+  "maldonado-new-technology-meetup": "maldonado-new-technology-meetup",
+  "colaboradores-en-gestion-de-proyectos": "proyecto-kanban",
+  "uruguay-salesforce-developer-user-group": "uruguay-salesforce-developer-group",
+  gdgmontevideo: "gdg-montevideo",
+  gdguruguay: "gdg-montevideo",
+  "testing-uy": "testinguy",
+  ...overrides.groupCommunity,
+};
+const communityOfGroup = new Map<string, string>();
+for (const group of groups) {
+  const names = [group.urlname, group.currentUrlname, ...(group.requestedAs ?? [])]
+    .filter(Boolean)
+    .map((n) => n!.toLowerCase());
+  const mapped = names.map((n) => GROUP_COMMUNITY[n] ?? directoryByMeetup.get(n)).find(Boolean);
+  const name = plainName(group.flag?.name && !/^(nuevo|new)$/i.test(group.flag.name) ? group.flag.name : group.name);
+  const slug = mapped ?? slugify(name);
+  const community = addCommunity(
+    fromDirectory(slug, {
+      name,
+      kind: "grupo",
+      layer: group.flag?.tech === "borderline" ? "ecosystem" : "community",
+      status: group.activity === "active" ? "activa" : group.activity === "dormant" ? "en-pausa" : "cerrada",
+      topics: guessTopics(name),
+      meetup: group.activity === "dead" ? undefined : (group.link ?? `https://www.meetup.com/${group.urlname}/`),
+    })
+  );
+  communityOfGroup.set(group.urlname, community.slug);
+}
+
+// Conference series: their own lane, unless a community runs them
+const SERIES_COMMUNITY: Record<string, string> = {
+  "owasp-day-uruguay": "owasp-uruguay",
+  "owasp-latamtour-montevideo": "owasp-uruguay",
+  "owasp-appsec-montevideo": "owasp-uruguay",
+  "owasp-uruguay-other": "owasp-uruguay",
+  connectia: "connectia",
+  "owu-la-meetup": "owu",
+  "owu-codepop": "owu",
+  "owu-conf": "owu",
+  "devfest-montevideo": "gdg-montevideo",
+  "io-extended-montevideo": "gdg-montevideo",
+  "gdg-montevideo-hackathons": "gdg-montevideo",
+  "girls-in-tech-uruguay": "girls-in-tech-uruguay",
+  testinguy: "testinguy",
+};
+const ECOSYSTEM_SERIES = new Set([
+  "punta-tech-meetup",
+  "punta-tech-week",
+  "lacnic-montevideo",
+  "icann-montevideo",
+  "cigras",
+  "segurinfo-uruguay",
+  "sharing-the-point-montevideo",
+  "24h-innovacion-uruguay",
+  "campus-party-uruguay",
+  "hackathon-agro",
+  "dateidea",
+  "jovenes-a-programar",
+]);
+const flagsOf = (edition: Edition) =>
+  Array.isArray(edition.flags) ? edition.flags : edition.flags ? edition.flags.split(",") : [];
+const isEcosystemEdition = (edition: Edition) =>
+  ECOSYSTEM_SERIES.has(edition.series_slug) ||
+  ["vendor-conference", "institutional", "graduation"].includes(edition.category) ||
+  flagsOf(edition).some((flag) => flag === "vendor" || flag === "institutional");
+
+const editions = readJson<Edition[]>("conferences/data/editions.json");
+for (const edition of editions) {
+  const slug = SERIES_COMMUNITY[edition.series_slug] ?? edition.series_slug;
+  if (communities.has(slug)) continue;
+  addCommunity(
+    fromDirectory(slug, {
+      name: DISPLAY_NAME[slug] ?? edition.series,
+      kind: "serie",
+      layer: isEcosystemEdition(edition) ? "ecosystem" : "community",
+      status: "cerrada",
+      topics: guessTopics(edition.series),
+      website: edition.url_alive ? (edition.official_url ?? undefined) : undefined,
+    })
+  );
+}
+addCommunity({
+  slug: "owu",
+  name: "OWU",
+  kind: "grupo",
+  layer: "community",
+  status: "activa",
+  topics: ["general"],
+  website: "https://www.owu.uy",
+});
+
+// GitHub archives name their community in prose
+const GITHUB_COMMUNITY: Record<string, string> = {
+  "OWASP Uruguay": "owasp-uruguay",
+  "TechMeetup UY": "techmeetup-uy",
+  "DevOpsDays Montevideo": "devopsdays-montevideo",
+  "Ember Montevideo": "group:ember-montevideo",
+  "JSConf Uruguay": "jsconfuy",
+  "R-Ladies Montevideo": "group:rladies-montevideo",
+  "RubyConf Uruguay": "rubyconf-uy",
+  "Ruby Montevideo": "group:ruby-montevideo",
+  "Neo / Coderetreat": "coderetreat-montevideo",
+  "PHP Montevideo (PHPmvd)": "group:PHPmvd",
+  "Mobile UY": "group:MobileDayUY",
+  "Angular MVD": "group:angular-mvd",
+  "ReactJS Uruguay": "group:ReactJS-Uruguay",
+  "js.uy": "jsday-uruguay",
+  "WordPress Uruguay": "wordcamp-montevideo",
+  "ConnectIA / Data Science UY": "connectia",
+  "GDG Montevideo": "gdg-montevideo",
+  "Rust Latam": "rust-latam",
+  Percona: "percona-university",
+  "OWU (Elixir MVD, Ruby UY, Python MVD)": "owu",
+};
+const githubCommunity = (label: string) => {
+  const target = GITHUB_COMMUNITY[label] ?? slugify(label);
+  return target.startsWith("group:") ? (communityOfGroup.get(target.slice(6)) ?? slugify(target.slice(6))) : target;
+};
+
+// ---------------------------------------------------------------- events
+
+type Candidate = TimelineEvent & { origin: "conference" | "meetup" | "github" | "milestone" };
+const candidates: Candidate[] = [];
+const now = new Date();
+
+// meetup.com
+const meetupGroupNames = new Map(
+  groups.map((group) => [group.urlname, communities.get(communityOfGroup.get(group.urlname)!)!.name])
+);
+for (const event of readJson<MeetupEvent[]>("meetup/data/events.json")) {
+  const community = communityOfGroup.get(event.group);
+  if (!community || event.status !== "PAST") continue;
+  const group = meetupGroupNames.get(event.group) ?? event.group;
+  const photos: TimelinePhoto[] = [];
+  const credit = { source: "Meetup", by: group, page: event.eventUrl };
+  for (const photo of [event.featuredPhoto, event.displayPhoto]) {
+    if (photo?.highResUrl && !photo.isGroupDefault) photos.push({ src: photo.highResUrl, ...credit });
+  }
+  for (const src of event.photoAlbum?.photos ?? []) photos.push({ src, ...credit });
+  const title = event.title.replace(/^\[EXTERNAL\]\s*/i, "").trim();
+  candidates.push({
+    origin: "meetup",
+    id: `meetup:${event.id}`,
+    slug: "",
+    title,
+    start: event.dateTime,
+    end: event.endTime ?? undefined,
+    kind: /hackat[oó]n|hackathon/i.test(title)
+      ? "hackaton"
+      : /taller|workshop|bootcamp|coding dojo/i.test(title)
+        ? "taller"
+        : "meetup",
+    layer: communities.get(community)!.layer,
+    online: event.eventType === "ONLINE" || undefined,
+    community,
+    venue: event.eventType === "ONLINE" ? undefined : (event.venue?.name ?? undefined),
+    city: event.eventType === "ONLINE" ? undefined : (event.venue?.city ?? undefined),
+    rsvps: event.rsvps || undefined,
+    url: event.waybackUrl ? undefined : event.eventUrl,
+    wayback: event.waybackUrl,
+    description: clean(event.description, 900),
+    photos: dedupePhotos(photos),
+    photoCount: event.photoAlbum?.photoCount || undefined,
+    sources: [{ label: "Meetup", url: event.waybackUrl ?? event.eventUrl }],
+  });
+}
+
+// GitHub archives
+for (const file of readdirSync(path.join(RAW, "github/data")).filter((f) => f.startsWith("events-"))) {
+  for (const event of readJson<GithubEvent[]>(`github/data/${file}`)) {
+    if (event.kind === "series" || event.upcoming || event.status === "cancelled") continue;
+    const community = githubCommunity(event.community);
+    if (!communities.has(community)) {
+      addCommunity(
+        fromDirectory(community, {
+          name: DISPLAY_NAME[community] ?? event.community,
+          kind: "grupo",
+          layer: community === "percona-university" ? "ecosystem" : "community",
+          status: "cerrada",
+          topics: guessTopics(event.community),
+        })
+      );
+    }
+    const repo = `https://github.com/${event.source_repo}`;
+    candidates.push({
+      origin: "github",
+      id: `github:${event.source_repo}:${event.date}:${slugify(event.title).slice(0, 40)}`,
+      slug: "",
+      title: event.title.trim(),
+      start: event.date,
+      end: event.end_date ?? undefined,
+      precision: event.date_precision === "day" ? undefined : event.date_precision,
+      kind: event.kind === "conference" ? "conferencia" : event.kind === "workshop" ? "taller" : "meetup",
+      layer: communities.get(community)!.layer,
+      community,
+      venue: event.venue ?? undefined,
+      city: event.city ?? undefined,
+      rsvps: event.attendees || undefined,
+      talks: event.talks?.length
+        ? event.talks.map((talk) => ({
+            title: talk.title,
+            speakers: talk.speakers?.length ? talk.speakers : undefined,
+            slides: talk.slides ?? undefined,
+            video: talk.video ?? undefined,
+          }))
+        : undefined,
+      photos: dedupePhotos(
+        (event.photos ?? []).map((photo) => ({
+          src: typeof photo === "string" ? photo : photo.url,
+          source: "GitHub",
+          by: event.source_repo,
+          page: repo,
+        }))
+      ),
+      links: (event.links ?? [])
+        .filter((url) => !url.includes("meetup.com"))
+        .map((url) => ({ label: linkLabel(url), url })),
+      sources: [
+        {
+          label: `GitHub · ${event.source_repo}`,
+          url: event.source_path ? `${repo}/blob/HEAD/${event.source_path}` : repo,
+        },
+      ],
+    });
+  }
+}
+
+// Conference catalog
+const KIND_OF_CATEGORY: Record<string, TimelineKind> = { hackathon: "hackaton", "game-jam": "jam", workshop: "taller" };
+const horizon = new Date(now.getTime() + 120 * 86_400_000).toISOString();
+for (const edition of editions) {
+  if (!edition.start_date || edition.start_date > horizon) continue;
+  const flags = flagsOf(edition);
+  if (flags.includes("cancelled")) continue;
+  const community = SERIES_COMMUNITY[edition.series_slug] ?? edition.series_slug;
+  const layer = isEcosystemEdition(edition) ? "ecosystem" : "community";
+  const photos: TimelinePhoto[] = [];
+  const links: { label: string; url: string }[] = [];
+  for (const photo of edition.photos ?? []) {
+    if (/flickr\.com\/photos\/[^/]+\/albums\/\d+/.test(photo.url))
+      photos.push(...(await flickrAlbum(photo.url)).slice(0, 60));
+    else if (/\.(jpe?g|png|webp)(\?|$)/i.test(photo.url) || photo.url.includes("raw.githubusercontent"))
+      photos.push({ src: photo.url, source: sourceName(photo.url), page: photo.url, license: photo.license });
+    else links.push({ label: `Fotos · ${sourceName(photo.url)}`, url: photo.url });
+  }
+  for (const video of edition.videos ?? []) links.push({ label: `Videos · ${sourceName(video.url)}`, url: video.url });
+  if (edition.official_url)
+    links.unshift({
+      label: edition.url_alive ? "Sitio oficial" : "Sitio original (ya no está)",
+      url: edition.url_alive ? edition.official_url : (edition.wayback_url ?? edition.official_url),
+    });
+  const series = DISPLAY_NAME[edition.series_slug] ?? edition.series.replace(/\s*\(.*\)\s*$/, "").split(" / ")[0];
+  const title = /\d{4}/.test(series) ? series : `${series} ${edition.year}`;
+  const upcoming = new Date(edition.start_date) > now;
+  candidates.push({
+    origin: "conference",
+    id: `conf:${edition.series_slug}:${edition.start_date}`,
+    slug: "",
+    title,
+    start: edition.start_date,
+    end: edition.end_date && edition.end_date !== edition.start_date ? edition.end_date : undefined,
+    precision: /^\d{4}$/.test(edition.start_date)
+      ? "year"
+      : /^\d{4}-\d{2}$/.test(edition.start_date)
+        ? "month"
+        : undefined,
+    kind: KIND_OF_CATEGORY[edition.category] ?? "conferencia",
+    layer,
+    online: flags.includes("online") || flags.includes("moved-online") || undefined,
+    community,
+    venue: edition.venue ?? undefined,
+    city: edition.city ?? undefined,
+    rsvps: typeof edition.attendees === "number" ? edition.attendees : undefined,
+    attendance: typeof edition.attendees === "string" ? edition.attendees : undefined,
+    talkCount: edition.talks ?? undefined,
+    organizers: edition.organizers?.length ? edition.organizers : undefined,
+    photos: dedupePhotos(photos),
+    links,
+    sources: [
+      edition.date_source ? { label: "Fuente de la fecha", url: edition.date_source } : null,
+      edition.wayback_url ? { label: "Wayback Machine", url: edition.wayback_url } : null,
+    ].filter((s): s is { label: string; url: string } => Boolean(s)),
+    confidence: edition.confidence === "high" ? undefined : edition.confidence,
+    upcoming: upcoming || undefined,
+  });
+}
+
+// Milestones: the ones that happened at an event become a highlight on it, the rest are their own entries
+for (const milestone of JSON.parse(readFileSync(path.join(OUT, "hitos.json"), "utf8")) as Milestone[]) {
+  const community = communities.has(milestone.community) ? milestone.community : "hitos";
+  candidates.push({
+    origin: "milestone",
+    id: `hito:${milestone.date}:${slugify(milestone.title).slice(0, 40)}`,
+    slug: "",
+    title: milestone.title,
+    start: milestone.date,
+    precision: milestone.date.length === 4 ? "year" : milestone.date.length === 7 ? "month" : undefined,
+    kind: "hito",
+    milestoneType: milestone.type,
+    layer: milestone.layer,
+    community,
+    description: milestone.description,
+    sources: milestone.source ? [{ label: "Fuente", url: milestone.source }] : [],
+    confidence: milestone.confidence,
+  });
+}
+addCommunity({
+  slug: "hitos",
+  name: "Hitos de la escena",
+  kind: "serie",
+  layer: "community",
+  status: "activa",
+  topics: ["general"],
+});
+
+// ---------------------------------------------------------------- dedupe
+
+function dedupePhotos(photos: TimelinePhoto[]) {
+  const seen = new Set<string>();
+  return photos.filter((photo) => {
+    const key = photo.src.replace(/(highres|600|thumb)_/, "");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+function sourceName(url: string) {
+  const host = new URL(url).hostname.replace(/^www\./, "");
+  if (host.includes("flickr")) return "Flickr";
+  if (host.includes("youtube") || host.includes("youtu.be")) return "YouTube";
+  if (host.includes("github")) return "GitHub";
+  if (host.includes("archive.org")) return "Wayback Machine";
+  if (host.includes("facebook")) return "Facebook";
+  if (host.includes("instagram")) return "Instagram";
+  if (host.includes("twitter") || host === "x.com") return "X";
+  return host;
+}
+function linkLabel(url: string) {
+  if (/slides|speakerdeck|slideshare|docs\.google|drive\.google/.test(url)) return "Slides";
+  if (/youtube|youtu\.be|vimeo/.test(url)) return "Video";
+  return sourceName(url);
+}
+
+const PRIORITY = { conference: 3, meetup: 2, github: 1, milestone: 0 } as const;
+const within = (day: string, event: Candidate) => {
+  const start = dayOf(event.start);
+  const end = event.end ? dayOf(event.end) : start;
+  return start.length === 10 && day >= start && day <= end;
+};
+
+function merge(base: Candidate, other: Candidate) {
+  base.photos = dedupePhotos([...(base.photos ?? []), ...(other.photos ?? [])]);
+  if (!base.photos.length) delete base.photos;
+  if ((other.talks?.length ?? 0) > (base.talks?.length ?? 0)) base.talks = other.talks;
+  base.links = [...(base.links ?? []), ...(other.links ?? [])].filter(
+    (link, i, all) => all.findIndex((l) => l.url === link.url) === i
+  );
+  if (!base.links.length) delete base.links;
+  base.sources = [...base.sources, ...other.sources].filter(
+    (source, i, all) => all.findIndex((s) => s.url === source.url) === i
+  );
+  base.rsvps = Math.max(base.rsvps ?? 0, other.rsvps ?? 0) || undefined;
+  base.venue ??= other.venue;
+  base.city ??= other.city;
+  base.url ??= other.url;
+  base.wayback ??= other.wayback;
+  base.description ??= other.description;
+  base.photoCount = Math.max(base.photoCount ?? 0, other.photoCount ?? 0) || undefined;
+  base.mergedIds = [...(base.mergedIds ?? []), other.id, ...(other.mergedIds ?? [])];
+}
+
+const hidden = new Set(overrides.hide);
+const events: Candidate[] = [];
+const ordered = candidates
+  .filter((candidate) => !hidden.has(candidate.id))
+  .sort((a, b) => PRIORITY[b.origin] - PRIORITY[a.origin] || a.start.localeCompare(b.start));
+
+for (const candidate of ordered) {
+  const day = dayOf(candidate.start);
+  // Same community, same day (or inside a multi-day edition): one event, unless both are distinct Meetup events
+  const sameCommunity =
+    day.length === 10
+      ? events.filter((e) => e.community === candidate.community && (within(day, e) || dayOf(e.start) === day))
+      : [];
+  let target = sameCommunity.find((e) => !(e.origin === "meetup" && candidate.origin === "meetup"));
+  if (candidate.origin === "milestone") {
+    // A day-precise milestone on an event's day, or the "first" of a series in the year/month it names
+    target =
+      sameCommunity.find((e) => e.kind !== "hito") ??
+      (candidate.milestoneType === "first" && day.length < 10
+        ? events.find((e) => e.community === candidate.community && e.kind !== "hito" && e.start.startsWith(day))
+        : undefined);
+  }
+  // A conference that a group also posted on Meetup (La Meetup in PHP MVD's group, a DevFest in GDG's…)
+  if (!target && day.length === 10 && candidate.origin !== "milestone") {
+    target = events.find(
+      (e) => e.kind === "conferencia" && within(day, e) && similarity(e.title, candidate.title) >= 0.5
+    );
+  }
+  if (target) {
+    if (candidate.origin === "milestone") {
+      target.highlights = [...(target.highlights ?? []), candidate.title];
+      target.sources.push(...candidate.sources);
+    } else merge(target, candidate);
+    continue;
+  }
+  events.push(candidate);
+}
+
+for (const [id, photos] of Object.entries(overrides.photos ?? {})) {
+  const event = events.find((e) => e.id === id || e.mergedIds?.includes(id));
+  if (event) event.photos = dedupePhotos([...photos, ...(event.photos ?? [])]);
+}
+
+// ---------------------------------------------------------------- slugs, stats, write
+
+events.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+const slugs = new Set<string>();
+for (const event of events) {
+  const base = `${dayOf(event.start).replace(/-$/, "")}-${slugify(event.title).slice(0, 60).replace(/-+$/, "")}`;
+  let slug = base;
+  if (slugs.has(slug)) slug = `${base}-${event.community}`;
+  for (let n = 2; slugs.has(slug); n++) slug = `${base}-${n}`;
+  slugs.add(slug);
+  event.slug = slug;
+}
+
+for (const community of communities.values()) {
+  const own = events.filter((e) => e.community === community.slug && e.kind !== "hito");
+  community.events = own.length;
+  community.first = own[0]?.start.slice(0, 10);
+  community.last = own.at(-1)?.start.slice(0, 10);
+  community.photos = own.reduce((sum, e) => sum + Math.max(e.photos?.length ?? 0, e.photoCount ?? 0), 0);
+  // A series with an edition in the last two years is still running
+  if (community.kind === "serie" && community.last && community.last >= `${now.getFullYear() - 2}`)
+    community.status = "activa";
+}
+for (const [slug, community] of communities) {
+  if (DISPLAY_NAME[slug]) community.name = DISPLAY_NAME[slug];
+  if (!community.events && slug !== "hitos") communities.delete(slug);
+  if (overrides.layer?.[slug]) community.layer = overrides.layer[slug];
+}
+
+const lines = (rows: unknown[]) => `[\n${rows.map((row) => JSON.stringify(row)).join(",\n")}\n]\n`;
+rmSync(path.join(OUT, "events"), { recursive: true, force: true });
+mkdirSync(path.join(OUT, "events"), { recursive: true });
+const years = new Map<string, TimelineEvent[]>();
+for (const { origin: _origin, ...event } of events) {
+  const year = event.start.slice(0, 4);
+  years.set(year, [...(years.get(year) ?? []), event]);
+}
+for (const [year, rows] of years) writeFileSync(path.join(OUT, "events", `${year}.json`), lines(rows));
+writeFileSync(
+  path.join(OUT, "communities.json"),
+  lines(
+    [...communities.values()].sort(
+      (a, b) => (a.first ?? "9").localeCompare(b.first ?? "9") || a.name.localeCompare(b.name, "es")
+    )
+  )
+);
+
+const photoTotal = events.reduce((sum, e) => sum + (e.photos?.length ?? 0), 0);
+console.log(
+  `✓ ${events.length} events (${candidates.length} candidates) · ${communities.size} communities · ${photoTotal} photos · ${years.size} years → ${path.relative(process.cwd(), OUT)}`
+);
