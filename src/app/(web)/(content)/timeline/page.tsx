@@ -15,13 +15,13 @@ import { pageMetadata } from "lib/community/metadata";
 import { issueFormUrl, PRIVACY_EMAIL, sourceUrl } from "lib/community/site";
 import { getArchive, getStats, getStory, getTimeline, isCommunityEvent } from "lib/timeline/data";
 import { photoSources } from "lib/timeline/image";
-import { laneLayout } from "lib/timeline/lanes";
+import { communityActivity } from "lib/timeline/activity";
 
+import Activity from "./Activity";
 import ArchiveGate from "./ArchiveGate";
 import { YearBars } from "./Charts";
 import HeroTiles from "./HeroTiles";
 import StatsSection from "./stats/StatsSection";
-import Lanes from "./Lanes";
 import SectionNav from "./SectionNav";
 import StoryRail from "./StoryRail";
 
@@ -44,11 +44,12 @@ const MOSAIC = [
   ["2025-11-01-la-meetup-2025", 0],
 ] as const;
 
-/** The lanes up front (names and lines) for the server to draw before the dots arrive */
-function lanePreview() {
+/** The communities grid, drawn by the server: the busiest 24 up front, the rest a click away */
+function ActivityGrid({ to }: { to: number }) {
   const { rows, communities } = getArchive();
-  const { lanes, top, info } = laneLayout(rows, communities, 36);
-  return { lanes: lanes.filter((c) => top.has(c.slug)).map(info), more: lanes.length - top.size };
+  const { top, rest } = communityActivity(rows, communities, 24);
+  const from = Math.min(...top.map((row) => row.first), ...rest.map((row) => row.first));
+  return <Activity from={from} rest={rest} to={to} top={top} />;
 }
 
 function HeroMosaic() {
@@ -145,8 +146,8 @@ export default async function TimelinePage() {
         <Section
           description={
             <>
-              Cada fila es una comunidad, de su primer evento al último; cada punto, un evento. Se ve el boom de 2014 a
-              2019, el corte de 2020 y la vuelta desde 2022.
+              Cada fila es una comunidad y cada casillero, un año de su vida: cuanto más brilla, más eventos hizo. Se ve
+              el boom de 2014 a 2019, el corte de 2020 y la vuelta desde 2022.
             </>
           }
           className="scroll-mt-36"
@@ -165,7 +166,7 @@ export default async function TimelinePage() {
                 };
               })}
             />
-            <Lanes from={2007} preview={lanePreview()} to={thisYear} />
+            <ActivityGrid to={thisYear} />
           </div>
         </Section>
 
