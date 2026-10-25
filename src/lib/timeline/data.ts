@@ -155,7 +155,7 @@ export type ArchiveCommunity = Pick<TimelineCommunity, "slug" | "name" | "status
   photos?: number;
 };
 
-/** The archive's data (/timeline/archivo.json), also what the server renders the lanes' preview from */
+/** The archive's data (/timeline/archivo.json), also what the server draws the communities grid from */
 export const getArchive = cache(() => {
   const rows = getArchiveRows();
   const counts = new Map<string, number>();

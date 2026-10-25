@@ -6,13 +6,13 @@ import { cn } from "app/lib/utils";
 
 /*
  * Events per year in plain HTML; the bars grow into view. One validated hue for event marks
- * (#b8860b on the ink surface, dataviz palette check; the lanes use it too), online told apart by
+ * (#b8860b on the ink surface, dataviz palette check), online told apart by
  * texture, never by color alone.
  */
 
 export type YearCount = { year: number; inPerson: number; online: number };
 
-export const MARK = "#b8860b";
+const MARK = "#b8860b";
 const HATCH = `repeating-linear-gradient(135deg, ${MARK} 0 2px, transparent 2px 5px)`;
 
 export function YearBars({ years }: { years: YearCount[] }) {

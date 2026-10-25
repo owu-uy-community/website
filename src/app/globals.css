@@ -779,14 +779,3 @@ html:has(.owu-site) body {
   --lifeline-font: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   font-family: var(--lifeline-font);
 }
-
-/* /timeline swimlanes: one fill for every mark, a surface ring so overlapping dots stay apart */
-.owu-lane circle {
-  fill: #b8860b;
-  stroke: #09090b;
-  stroke-width: 1.5;
-  transition: r 0.15s;
-}
-.owu-lane circle:hover {
-  r: 6;
-}

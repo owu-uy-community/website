@@ -26,7 +26,7 @@ const IN_VIEW = { once: true, amount: "some" } as const;
 /* ---------------------------------------------------------------- heatmap */
 
 // One hue (OWU's yellow) stepping up in opacity over the ink: more events, brighter cell
-const LEVELS = [
+export const LEVELS = [
   "rgba(255,255,255,0.04)",
   "rgba(234,179,8,0.2)",
   "rgba(234,179,8,0.36)",
