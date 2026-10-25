@@ -531,8 +531,9 @@ for (const event of readJson<MeetupEvent[]>("meetup/data/events.json")) {
   const group = meetupGroupNames.get(event.group) ?? event.group;
   const photos: TimelinePhoto[] = [];
   const credit = { source: "Meetup", by: group, page: event.eventUrl };
+  // The event's own image is its flyer almost always; the album has the photos people took
   for (const photo of [event.featuredPhoto, event.displayPhoto]) {
-    if (photo?.highResUrl && !photo.isGroupDefault) photos.push({ src: photo.highResUrl, ...credit });
+    if (photo?.highResUrl && !photo.isGroupDefault) photos.push({ src: photo.highResUrl, ...credit, banner: true });
   }
   for (const src of event.photoAlbum?.photos ?? []) photos.push({ src, ...credit });
   const title = event.title.replace(/^\[EXTERNAL\]\s*/i, "").trim();
@@ -840,6 +841,8 @@ type Enrichment = Partial<
   >
 > & { sources: TimelineEvent["sources"] };
 const dedupeLinks = (links: TimelineEvent["sources"]) => [...new Map(links.map((link) => [link.url, link])).values()];
+const NOT_A_PHOTO =
+  /\b(flyer|afiche|banner|logo|logotipo|placa|pieza gráfica|gráfica|captura|screenshot|póster|poster|portada|miniatura|thumbnail|isotipo)\b/i;
 const ENRICHMENT = path.join(OUT, "enrichment");
 for (const file of existsSync(ENRICHMENT) ? readdirSync(ENRICHMENT).filter((name) => name.endsWith(".json")) : []) {
   const entries = JSON.parse(readFileSync(path.join(ENRICHMENT, file), "utf8")) as Record<string, Enrichment>;
@@ -859,10 +862,29 @@ for (const file of existsSync(ENRICHMENT) ? readdirSync(ENRICHMENT).filter((name
     event.city = extra.city ?? event.city;
     // A researched list replaces the catalog's (joining them repeated people under two spellings)
     if (extra.organizers?.length) event.organizers = extra.organizers;
-    if (extra.photos?.length) event.photos = dedupePhotos([...(event.photos ?? []), ...extra.photos]);
+    // The research says in each alt what a picture is: flyers, logos and captures aren't photos of the event
+    if (extra.photos?.length)
+      event.photos = dedupePhotos([
+        ...(event.photos ?? []),
+        ...extra.photos.map((photo) =>
+          NOT_A_PHOTO.test(photo.alt ?? "") ? { ...photo, banner: true as const } : photo
+        ),
+      ]);
     if (extra.links?.length) event.links = dedupeLinks([...(event.links ?? []), ...extra.links]);
     event.sources = dedupeLinks([...event.sources, ...extra.sources]);
   }
+}
+
+// Pictures looked at one by one (contact sheets of every candidate) that aren't photos of the event:
+// flyers inside albums, speaker cards, logos, slides as files, screen captures
+const notPhotos = new Set<string>(
+  existsSync(path.join(OUT, "not-photos.json"))
+    ? (JSON.parse(readFileSync(path.join(OUT, "not-photos.json"), "utf8")) as { src: string[] }).src
+    : []
+);
+for (const event of events) {
+  if (event.photos)
+    event.photos = event.photos.map((photo) => (notPhotos.has(photo.src) ? { ...photo, banner: true } : photo));
 }
 
 const inSpanish = (value: string | undefined) => (value && overrides.spanish?.[value]) || value;

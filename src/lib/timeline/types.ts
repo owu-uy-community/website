@@ -18,6 +18,8 @@ export type TimelinePhoto = {
   source?: string;
   license?: string;
   alt?: string;
+  /** The event's image (a flyer, a banner, a logo, a stream capture), not a photo of the event */
+  banner?: true;
 };
 
 export type TimelineLink = { label: string; url: string };
