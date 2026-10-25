@@ -609,7 +609,7 @@ function RowView({
           </TimelineContent>
         </TimelineHeader>
         {thumb ? (
-          // The cover at thumbnail size (Flickr's own squares, or resized by the optimizer)
+          // The cover at thumbnail size, straight from Meetup's or Flickr's own small sizes
           <img
             alt=""
             className="hidden h-[54px] w-[72px] shrink-0 rounded-lg bg-zinc-900 object-cover ring-1 ring-white/10 sm:block"
