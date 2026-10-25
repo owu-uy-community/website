@@ -54,4 +54,18 @@ export const formatTime = (start: string) => (start.length > 10 ? start.slice(11
 const COMBINING_MARKS = new RegExp(`[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`, "g");
 
 /** Plain-text search: accent and case insensitive */
+/** A Markdown description as plain text: for meta tags, structured data and search */
+export const plainText = (markdown: string) =>
+  markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/<(https?:\/\/[^>\s]+)>/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^\s*(?:[-*+]|\d+\.)\s+/gm, "")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/(^|\W)[*_]([^*_\s][^*_]*?)[*_](?=\W|$)/g, "$1$2")
+    .replace(/\\([\\`*_{}[\]()#+\-.!>])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+
 export const normalize = (value: string) => value.toLowerCase().normalize("NFD").replace(COMBINING_MARKS, "");

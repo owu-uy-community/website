@@ -47,7 +47,10 @@ export type TimelineEvent = {
   url?: string;
   /** An archived copy, for groups and sites that are gone */
   wayback?: string;
+  /** As its source announced it (Meetup's are Markdown) */
   description?: string;
+  /** What it was, written for the timeline from the sources listed (Markdown) */
+  summary?: string;
   talks?: TimelineTalk[];
   talkCount?: number;
   organizers?: string[];

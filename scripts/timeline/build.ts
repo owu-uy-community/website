@@ -127,6 +127,14 @@ type Overrides = {
   layer?: Record<string, "community" | "ecosystem">;
   /** Extra photos for an event id, e.g. Wayback captures */
   photos?: Record<string, TimelinePhoto[]>;
+  /**
+   * Event id → what research corrected: the date it really happened (a source announced another,
+   * or only gave the month) and the title that goes with it. Applied before events merge, so a
+   * corrected date can land on the same event from another source and join it.
+   */
+  fix?: Record<string, Partial<Pick<TimelineEvent, "start" | "end" | "title">>>;
+  /** The conference catalog's notes in English (attendance, venues, organizers) → how the page says them */
+  spanish?: Record<string, string>;
 };
 
 // ---------------------------------------------------------------- helpers
@@ -145,17 +153,12 @@ const slugify = (value: string) =>
 
 const dayOf = (value: string) => value.slice(0, 10);
 
-const clean = (value: string | null | undefined, max: number) => {
-  if (!value) return undefined;
-  const text = value
-    .replace(/\r/g, "")
-    .replace(/\\([*_#[\]()-])/g, "$1")
+// A description whole, as Markdown: the site renders it (escapes included), so it's only tidied
+const clean = (value: string | null | undefined) =>
+  value
+    ?.replace(/\r/g, "")
     .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
-};
+    .trim() || undefined;
 
 const tokens = (value: string) =>
   new Set(
@@ -553,7 +556,7 @@ for (const event of readJson<MeetupEvent[]>("meetup/data/events.json")) {
     rsvps: event.rsvps || undefined,
     url: event.waybackUrl ? undefined : event.eventUrl,
     wayback: event.waybackUrl,
-    description: clean(event.description, 900),
+    description: clean(event.description),
     photos: dedupePhotos(photos),
     photoCount: event.photoAlbum?.photoCount || undefined,
     sources: [{ label: "Meetup", url: event.waybackUrl ?? event.eventUrl }],
@@ -667,7 +670,9 @@ for (const edition of editions) {
     city: edition.city ?? undefined,
     rsvps: typeof edition.attendees === "number" ? edition.attendees : undefined,
     attendance: typeof edition.attendees === "string" ? edition.attendees : undefined,
-    talkCount: edition.talks ?? undefined,
+    // The catalog's "talks" is a count, or a research note in English ("8 games (…)", "Workshops Dec 6…"):
+    // only a count makes "N charlas"
+    talkCount: typeof edition.talks === "number" ? edition.talks : undefined,
     organizers: edition.organizers?.length ? edition.organizers : undefined,
     photos: dedupePhotos(photos),
     links,
@@ -710,9 +715,18 @@ addCommunity({
 
 // ---------------------------------------------------------------- dedupe
 
+// A DokuWiki "_detail" link is the photo's page (HTML); the file itself is under "_media".
+// A declaration, like dedupePhotos: both run before this part of the file is reached
+function asFile(photo: TimelinePhoto): TimelinePhoto {
+  const detail = /\/_detail\/([^?#]+)(?:[?#].*)?$/;
+  return detail.test(photo.src)
+    ? { ...photo, src: photo.src.replace(detail, "/_media/$1"), page: photo.page ?? photo.src }
+    : photo;
+}
+
 function dedupePhotos(photos: TimelinePhoto[]) {
   const seen = new Set<string>();
-  return photos.filter((photo) => {
+  return photos.map(asFile).filter((photo) => {
     const key = photo.src.replace(/(highres|600|thumb)_/, "");
     if (seen.has(key)) return false;
     seen.add(key);
@@ -764,6 +778,15 @@ function merge(base: Candidate, other: Candidate) {
   base.mergedIds = [...(base.mergedIds ?? []), other.id, ...(other.mergedIds ?? [])];
 }
 
+for (const candidate of candidates) {
+  const fix = overrides.fix?.[candidate.id];
+  if (!fix) continue;
+  Object.assign(candidate, fix);
+  if (fix.start && !fix.end) delete candidate.end;
+  // A corrected date is a day
+  if (fix.start?.length === 10) delete candidate.precision;
+}
+
 const hidden = new Set(overrides.hide);
 const events: Candidate[] = [];
 const ordered = candidates
@@ -805,6 +828,49 @@ for (const candidate of ordered) {
 for (const [id, photos] of Object.entries(overrides.photos ?? {})) {
   const event = events.find((e) => e.id === id || e.mergedIds?.includes(id));
   if (event) event.photos = dedupePhotos([...photos, ...(event.photos ?? [])]);
+}
+
+// Research done event by event (content/timeline/enrichment/*.json, keyed by event id): what the
+// sources above left out of editions they barely list. It fills gaps; what a source says stays.
+// Its "description" is a summary written for the timeline, kept apart from the announcement.
+type Enrichment = Partial<
+  Pick<
+    TimelineEvent,
+    "description" | "talks" | "attendance" | "rsvps" | "venue" | "city" | "organizers" | "photos" | "links"
+  >
+> & { sources: TimelineEvent["sources"] };
+const dedupeLinks = (links: TimelineEvent["sources"]) => [...new Map(links.map((link) => [link.url, link])).values()];
+const ENRICHMENT = path.join(OUT, "enrichment");
+for (const file of existsSync(ENRICHMENT) ? readdirSync(ENRICHMENT).filter((name) => name.endsWith(".json")) : []) {
+  const entries = JSON.parse(readFileSync(path.join(ENRICHMENT, file), "utf8")) as Record<string, Enrichment>;
+  for (const [id, extra] of Object.entries(entries)) {
+    const event = events.find((e) => e.id === id || e.mergedIds?.includes(id));
+    if (!event) {
+      console.warn(`enrichment/${file}: no event ${id}`);
+      continue;
+    }
+    // Written from the sources, so it's the event's summary, not its announcement
+    event.summary ??= clean(extra.description);
+    if (!event.talks?.length && extra.talks?.length) event.talks = extra.talks;
+    // Researched attendance is in Spanish and checked; the catalog's is a note in English
+    event.attendance = extra.attendance ?? event.attendance;
+    event.rsvps ??= extra.rsvps;
+    event.venue = extra.venue ?? event.venue;
+    event.city = extra.city ?? event.city;
+    // A researched list replaces the catalog's (joining them repeated people under two spellings)
+    if (extra.organizers?.length) event.organizers = extra.organizers;
+    if (extra.photos?.length) event.photos = dedupePhotos([...(event.photos ?? []), ...extra.photos]);
+    if (extra.links?.length) event.links = dedupeLinks([...(event.links ?? []), ...extra.links]);
+    event.sources = dedupeLinks([...event.sources, ...extra.sources]);
+  }
+}
+
+const inSpanish = (value: string | undefined) => (value && overrides.spanish?.[value]) || value;
+for (const event of events) {
+  event.attendance = inSpanish(event.attendance);
+  event.venue = inSpanish(event.venue);
+  event.city = inSpanish(event.city);
+  if (event.organizers) event.organizers = event.organizers.map((name) => inSpanish(name)!);
 }
 
 // ---------------------------------------------------------------- slugs, stats, write

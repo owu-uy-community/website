@@ -137,7 +137,7 @@ export function getArchiveRows(): ArchiveRow[] {
       ...(n ? { n } : {}),
       ...(event.highlights?.length ? { h: event.highlights[0] } : {}),
       ...(event.photos?.length ? { p: event.photos.length } : {}),
-      ...(event.description ? { l: event.description.length } : {}),
+      ...((event.summary ?? event.description) ? { l: (event.summary ?? event.description)!.length } : {}),
       ...(event.talks?.length ? { tk: event.talks.length } : {}),
       ...(event.attendance && !event.rsvps ? { a: event.attendance } : {}),
       ...(event.confidence ? { q: event.confidence } : {}),

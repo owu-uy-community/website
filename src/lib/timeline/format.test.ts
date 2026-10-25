@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { formatDate, formatTime } from "./format";
+import { formatDate, formatTime, plainText } from "./format";
 
 describe(formatDate, () => {
   test("reads the day off the string, never shifting it through a timezone", () => {
@@ -21,5 +21,17 @@ describe(formatDate, () => {
   test("gives the time only when the source has one", () => {
     expect(formatTime("2012-02-09T19:00:00-02:00")).toBe("19:00");
     expect(formatTime("2012-02-09")).toBeNull();
+  });
+});
+
+describe(plainText, () => {
+  test("reads a Meetup description as plain text", () => {
+    expect(
+      plainText(
+        "**¡OWASP UY te invita a su próximo Meetup!**\n\nCharlas:\n- *API Security* · [Matías](https://x.y)\n- Más en <https://owasp.org>\n\n## Lugar\nSinergia\\_Faro"
+      )
+    ).toBe(
+      "¡OWASP UY te invita a su próximo Meetup! Charlas: API Security · Matías Más en https://owasp.org Lugar Sinergia_Faro"
+    );
   });
 });
