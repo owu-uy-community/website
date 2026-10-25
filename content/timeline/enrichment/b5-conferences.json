@@ -1,0 +1,4276 @@
+{
+  "conf:rubyconf-uy:2010-10-29": {
+    "description": "La primera **RubyConf Uruguay** fue una conferencia regional de dos días sobre Ruby, Rails y metodologías ágiles. La organizaron voluntarios del Grupo de Usuarios de Ruby de Uruguay, con el apoyo de Cubox y WyeWorks, y se hizo el 29 y 30 de octubre de 2010 en el auditorio de la Torre de las Telecomunicaciones de Antel, en Montevideo.\n\nFue de un solo track, de 9 a 20 horas, pensada para desarrolladores de la región de todos los niveles. La entrada incluía el almuerzo y en preventa costaba USD 35 para estudiantes y USD 45 para el resto.\n\nEl programa tuvo 21 charlas y juntó a figuras internacionales del mundo Ruby —Charles Nutter (JRuby), Aaron Patterson (fibers en Ruby 1.9), Brian Ford (Rubinius), Blake Mizerany (Sinatra), David Chelimsky, Scott Chacon (tutorial de Git), Tim Bray (Ruby en Android) y Blaine Cook— con desarrolladores de la región como Luis Lavena, Santiago Pastorino, Emilio Tagua, Federico Brubacher y Michel Martens. Evan Henshaw-Plath dio el keynote del segundo día.",
+    "talks": [
+      {
+        "title": "Tutorial: Ruby en Windows",
+        "speakers": [
+          "Luis Lavena"
+        ]
+      },
+      {
+        "title": "TreeTop",
+        "speakers": [
+          "Juan Maiz"
+        ]
+      },
+      {
+        "title": "Dry Code",
+        "speakers": [
+          "David Chelimsky"
+        ]
+      },
+      {
+        "title": "Introduction to Sinatra",
+        "speakers": [
+          "Blake Mizerany"
+        ]
+      },
+      {
+        "title": "Ohm / Redis",
+        "speakers": [
+          "Michel Martens"
+        ]
+      },
+      {
+        "title": "Rubinius",
+        "speakers": [
+          "Brian Ford"
+        ]
+      },
+      {
+        "title": "Node.js",
+        "speakers": [
+          "Federico Romero"
+        ]
+      },
+      {
+        "title": "SCRUM: Getting Started Kit",
+        "speakers": [
+          "Gabriel Ledesma"
+        ]
+      },
+      {
+        "title": "Fun with Fibers in Ruby 1.9",
+        "speakers": [
+          "Aaron Patterson"
+        ]
+      },
+      {
+        "title": "Tutorial: Git",
+        "speakers": [
+          "Scott Chacon"
+        ]
+      },
+      {
+        "title": "Clojure vs Ruby",
+        "speakers": [
+          "Federico Brubacher"
+        ]
+      },
+      {
+        "title": "Identity Map en ActiveRecord",
+        "speakers": [
+          "Emilio Tagua"
+        ]
+      },
+      {
+        "title": "The Hashrocket Way",
+        "speakers": [
+          "Leo Soto"
+        ]
+      },
+      {
+        "title": "HTML5, Websockets & Ruby",
+        "speakers": [
+          "Ismael Celis"
+        ]
+      },
+      {
+        "title": "jRuby",
+        "speakers": [
+          "Charles Nutter"
+        ]
+      },
+      {
+        "title": "Patterns en Ruby",
+        "speakers": [
+          "Ignacio Facello"
+        ]
+      },
+      {
+        "title": "Mi viaje por RSpec",
+        "speakers": [
+          "Carmen Diaz Echauri"
+        ]
+      },
+      {
+        "title": "Metaprogramming",
+        "speakers": [
+          "Santiago Pastorino"
+        ]
+      },
+      {
+        "title": "Social Software for Robots",
+        "speakers": [
+          "Blaine Cook"
+        ]
+      },
+      {
+        "title": "Ruby (and others) on Android",
+        "speakers": [
+          "Tim Bray"
+        ]
+      },
+      {
+        "title": "Keynote",
+        "speakers": [
+          "Evan Henshaw-Plath"
+        ]
+      }
+    ],
+    "venue": "Auditorio de la Torre de las Telecomunicaciones (Antel)",
+    "city": "Montevideo",
+    "organizers": [
+      "Grupo de Usuarios de Ruby de Uruguay (voluntarios)",
+      "Cubox (apoyo)",
+      "WyeWorks (apoyo)"
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/1050/5156706402_db8298f2e7_b.jpg",
+        "alt": "El auditorio de la Torre de las Telecomunicaciones con el público frente al escenario y la pantalla durante una charla",
+        "by": "Evan Henshaw-Plath (rabble)",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/rabble/5156706402/"
+      },
+      {
+        "src": "https://live.staticflickr.com/1410/5130116941_796c1eca7d_b.jpg",
+        "alt": "Un orador habla desde el atril del auditorio",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130116941/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/4153/5130114381_4017c5ba15_b.jpg",
+        "alt": "Vista desde arriba del hall de la Torre de las Telecomunicaciones lleno de asistentes",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130114381/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/1372/5130113765_4b774844bb_b.jpg",
+        "alt": "Asistentes entrando por las puertas de vidrio del edificio",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130113765/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/4037/5130717062_5fd782be9c_b.jpg",
+        "alt": "Tres asistentes con sus credenciales en el hall",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130717062/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/4026/5130717434_861aa1a655_b.jpg",
+        "alt": "El hall lleno de gente durante un corte entre charlas",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130717434/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/1068/5130718102_ea744c07ed_b.jpg",
+        "alt": "Un orador en el atril del auditorio, con la sala a oscuras",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130718102/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/1204/5130718578_08193e2d44_b.jpg",
+        "alt": "Un orador señala al público desde el atril",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130718578/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/4057/5130113305_09fb20ca6d_b.jpg",
+        "alt": "Asistentes en el acceso exterior del complejo de la Torre",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130113305/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/1048/5130117487_c1689275c9_b.jpg",
+        "alt": "Asistentes conversando en el hall",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130117487/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/1056/5156708088_24f72bfa17_b.jpg",
+        "alt": "Cupcakes que forman el logo de Cubox, una de las empresas que apoyaron la conferencia",
+        "by": "Evan Henshaw-Plath (rabble)",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/rabble/5156708088/"
+      },
+      {
+        "src": "https://live.staticflickr.com/1427/5130726944_e000b5968c_b.jpg",
+        "alt": "Participantes posan en una mesa larga durante la cena de la conferencia",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130726944/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/4035/5130118475_466ee32b4a_b.jpg",
+        "alt": "Mesas largas llenas de participantes en un restaurante durante la cena",
+        "by": "Nacho Facello",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/nachof/5130118475/",
+        "license": "CC BY-SA 2.0"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20101028120112/http://rubyconfuruguay.org/en"
+      },
+      {
+        "label": "Programa y charlas en RubyEvents",
+        "url": "https://www.rubyevents.org/events/rubyconf-uruguay-2010"
+      },
+      {
+        "label": "Fotos en Flickr",
+        "url": "https://www.flickr.com/search/?text=RubyConf%20Uruguay%202010"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio oficial de RubyConf Uruguay 2010 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20101028120112/http://rubyconfuruguay.org/en"
+      },
+      {
+        "label": "RubyEvents · RubyConf Uruguay 2010 (datos en GitHub)",
+        "url": "https://github.com/rubyevents/rubyevents/blob/main/data/rubyconf-uruguay/rubyconf-uruguay-2010/videos.yml"
+      },
+      {
+        "label": "ruby-lang.org · Anuncio de RubyConf Uruguay",
+        "url": "https://www.ruby-lang.org/es/news/2010/08/23/RubyConf-Uruguay"
+      },
+      {
+        "label": "Tim Bray · Rubyconf Uruguay",
+        "url": "https://www.tbray.org/ongoing/When/201x/2010/10/12/Rubyconf-Uruguay"
+      }
+    ]
+  },
+  "conf:pyday-uy:2011-08-20": {
+    "description": "El primer **Python Day Uruguay** (PyDay) fue una jornada gratuita organizada por la Comunidad Python Uruguay (PyUy) para difundir el lenguaje y fomentar proyectos y negocios basados en él. Se hizo el sábado 20 de agosto de 2011 en el Club del Expositor del LATU (Av. Italia 6201), en Montevideo, y estaba pensada para estudiantes, desarrolladores, administradores de sistemas y empresarios.\n\nSegún Tryolabs, que fue coorganizadora y sponsor, asistieron más de 200 personas, sobre todo de Uruguay y Argentina. Hubo 18 charlas, entre presentaciones de 30 minutos y charlas relámpago, sobre introducción a Python, Scrapy, NLTK, CDPedia, Unicode, bioinformática, ReportLab, Python en la educación, videojuegos, web2py, Django y D-Bus, entre otros temas.\n\nEntre los sponsors y apoyos figuraban empresas como Globant, Tryolabs, Cubox e Insophia, y organizaciones como la Facultad de Ingeniería de la UdelaR, el grupo de usuarios de Linux UYLUG y Ceibal Jam. El éxito de la jornada impulsó a PyUy a organizar la primera PyCon Uruguay al año siguiente.",
+    "attendance": "más de 200 personas",
+    "venue": "Club del Expositor del LATU, Av. Italia 6201",
+    "city": "Montevideo",
+    "organizers": [
+      "Comunidad Python Uruguay (PyUy)",
+      "Tryolabs (coorganizadora)"
+    ],
+    "photos": [
+      {
+        "src": "https://web.archive.org/web/20130514025442im_/http://tryolabs.com/static/images/Blog/martin-pyday.jpg",
+        "alt": "Vista del auditorio con el público durante la charla de Martín, de Tryolabs",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/2012/http://www.tryolabs.com/Blog/2011/08/22/first-python-day-uruguay/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130514013939im_/http://tryolabs.com/static/images/Blog/raul-pyday.JPG",
+        "alt": "Raúl, de Tryolabs, en el escenario durante su charla sobre NLTK, con la diapositiva «NLTK: Herramientas» en pantalla",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/2012/http://www.tryolabs.com/Blog/2011/08/22/first-python-day-uruguay/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130514001047im_/http://tryolabs.com/static/images/Blog/team-pyday.JPG",
+        "alt": "Parte del equipo organizador del PyDay en el escenario",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/2012/http://www.tryolabs.com/Blog/2011/08/22/first-python-day-uruguay/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento en Eventioz (archivada)",
+        "url": "https://web.archive.org/web/20110812182929/https://eventioz.com/events/python-day-uruguay-2011"
+      },
+      {
+        "label": "Crónica de Tryolabs (archivada)",
+        "url": "https://web.archive.org/web/2012/http://www.tryolabs.com/Blog/2011/08/22/first-python-day-uruguay/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Eventioz · Python Day Uruguay 2011 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20110812182929/https://eventioz.com/events/python-day-uruguay-2011"
+      },
+      {
+        "label": "Tryolabs · We were personal co-organizers of the First Python Day Uruguay (Wayback Machine)",
+        "url": "https://web.archive.org/web/2012/http://www.tryolabs.com/Blog/2011/08/22/first-python-day-uruguay/"
+      },
+      {
+        "label": "PyCon Uruguay 2012 · Acerca de (Wayback Machine)",
+        "url": "https://web.archive.org/web/20121113080246/http://uy.pycon.org/es/acerca-de"
+      }
+    ]
+  },
+  "conf:startup-weekend-montevideo:2011-11-25": {
+    "description": "El primer **Startup Weekend Montevideo** se hizo del viernes 25 al domingo 27 de noviembre de 2011 en la incubadora Ingenio, en el Parque Tecnológico del LATU. Siguió el formato global de Startup Weekend: el viernes, micrófono abierto para presentar ideas y armar equipos; el sábado y el domingo, trabajo para validar la idea con clientes y construir un producto mínimo viable; el domingo de tarde, presentación de los prototipos ante un jurado. La inscripción costaba 500 pesos. Según la agenda, los pitches arrancaban el viernes a las 19:45, las presentaciones finales eran el domingo a las 18:00 y los ganadores se anunciaban a las 20:00.\n\nLo organizaron Martín Larre, Pablo Salomón, Martín Alcalá Rubí, Enrique González e Ignacio Oliveri. La charla principal estuvo a cargo de Evan Henshaw-Plath y el jurado lo integraron Sara Goldberg, Nicolás Jodal y Pablo Garfinkel. Más de diez mentores acompañaron a los equipos, y los principales sponsors fueron Ingenio, ANII, Microsoft y la Universidad Católica.\n\nGanó **Stayhoo**, con menciones especiales para **Lexiona** y **Webrocket**. Según los organizadores, durante el fin de semana se publicaron más de 500 tweets sobre el evento.",
+    "sources": [
+      {
+        "label": "Sitio de Startup Weekend Montevideo 2011 (archivado)",
+        "url": "https://web.archive.org/web/20111028182548/http://montevideo.startupweekend.org/"
+      },
+      {
+        "label": "Startup Weekend Montevideo: «El primer Startup Weekend Montevideo fue todo un éxito» (archivado)",
+        "url": "https://web.archive.org/web/20120122030920/http://montevideo.startupweekend.org/2011/11/30/el-primer-startup-weekend-montevideo-fue-todo-un-exito/"
+      },
+      {
+        "label": "Startup Weekend Montevideo: panel de jueces (archivado)",
+        "url": "https://web.archive.org/web/20111108063438/http://montevideo.startupweekend.org/judges-panel/"
+      },
+      {
+        "label": "Startup Weekend Montevideo: información y agenda del evento (archivado)",
+        "url": "https://web.archive.org/web/20111110125557/http://montevideo.startupweekend.org/event/"
+      }
+    ]
+  },
+  "conf:startup-weekend-montevideo:2012-09-14": {
+    "description": "Segunda edición de **Startup Weekend Montevideo**, del 14 al 16 de setiembre de 2012 en las oficinas de la incubadora Ingenio, en el LATU (Av. Italia 6201). Mantuvo el formato de la primera: ideas presentadas el viernes, equipos que trabajan todo el fin de semana para validar el negocio y armar un prototipo, y presentación final ante un jurado el domingo.\n\nLa organizaron Martín Larre, Pablo Salomón, Martín Alcalá Rubí y Matías Colotuzzo. Las charlas estuvieron a cargo de Gabriel López y de Patrick Vlaskovits, el jurado lo formaron Sara Goldberg, Pablo Brenner y Santiago Gallinal, y entre los mentores anunciados estaban Eduardo Mangarelli, Pablo Correa, Javier Vázquez, José Gordin y Santiago Pehar. Gracias a Vlaskovits, cada participante recibió un código para descargar gratis su libro *The Entrepreneur’s Guide to Customer Development*, escrito con Brant Cooper.\n\nEl premio fue para **Kefke**, una plataforma web pensada para que estudiantes universitarios de cualquier parte del mundo resolvieran problemas reales de organizaciones como proyectos con valor académico.",
+    "sources": [
+      {
+        "label": "Startup Weekend Montevideo: «Se acerca la segunda edición» (archivado)",
+        "url": "https://web.archive.org/web/20120824005448/http://montevideo.startupweekend.org/2012/08/17/se-acerca-la-segunda-edicion-startup-weekend-montevideo/"
+      },
+      {
+        "label": "Startup Weekend Montevideo: mentores 2012 (archivado)",
+        "url": "https://web.archive.org/web/20120825022407/http://montevideo.startupweekend.org/mentors/"
+      },
+      {
+        "label": "Startup Weekend Montevideo: «E-Book gratuito para todos los participantes» (archivado)",
+        "url": "https://web.archive.org/web/20121104000742/http://montevideo.startupweekend.org/2012/09/11/e-book-gratuito-para-todos-los-participantes/"
+      },
+      {
+        "label": "InfoNegocios: «Se viene la tercera… setiembre trae otro Startup Weekend Mvd» (2013)",
+        "url": "https://infonegocios.biz/plus/se-viene-la-tercera-setiembre-trae-otro-startup-weekend-mvd-organizan-cuti-e-ingenio"
+      }
+    ]
+  },
+  "conf:pycon-uy:2012-11-10": {
+    "description": "La primera **PyCon Uruguay** se hizo el 10 y 11 de noviembre de 2012 en el auditorio del LATU, en Montevideo. La organizó el grupo de usuarios de Python de Uruguay (PyUy), animado por el éxito del PyDay de 2011, y la inscripción fue gratuita gracias al trabajo de voluntarios y sponsors. El sitio web lo construyó y alojó Sophilabs.\n\nEl sábado 10 hubo 14 charlas, charlas relámpago y una mesa redonda sobre emprender con Python, con oradores de Uruguay, Argentina, Brasil y Dinamarca. Los temas fueron de Python para programadores PHP y sistemas distribuidos a Biopython, aprendizaje automático, GNU Health sobre Tryton y APIs con Django y Tastypie. Érico Andrei, de la Plone Foundation, contó cómo Brasil construye una nación digital con software libre y Python, y Andrea Gavana, de Maersk Oil, mostró el uso de Python en la ingeniería de reservorios petroleros. El domingo 11 quedó para sprints y talleres prácticos.\n\nEl equipo organizador lo formaron Enrique González, Ernesto Rodríguez, Federico Wagner, Marcello Farías, Marcelo Zunino, Martín Alcalá, Martín Prunell, Miguel Paolino, Pablo Ricco, Raúl Garreta, Sebastián Sassi y Yesica Benítez. La Universidad Católica del Uruguay fue el sponsor principal (Diamond), y entre los demás figuraron New Context, la Django Software Foundation, Seibo Software Studios, SendGrid, Tryolabs, Heroku, WyeWorks, Ingenio y CUTI.",
+    "talks": [
+      {
+        "title": "Python para programadores PHP",
+        "speakers": [
+          "Diego Cañizares"
+        ],
+        "video": "https://www.youtube.com/watch?v=JY-_0ELB4Z4"
+      },
+      {
+        "title": "Sistemas Distribuidos en Python",
+        "speakers": [
+          "Michael Cetrulo"
+        ],
+        "video": "https://www.youtube.com/watch?v=u6QB0jsUn_4"
+      },
+      {
+        "title": "RaspberryPi: una plataforma simpática",
+        "speakers": [
+          "Eduardo Roldan"
+        ],
+        "video": "https://www.youtube.com/watch?v=UJXWCUKBymQ"
+      },
+      {
+        "title": "Aprendizaje Automático con Python",
+        "speakers": [
+          "Raúl Garreta"
+        ],
+        "video": "https://www.youtube.com/watch?v=j2C6YSaZhmI"
+      },
+      {
+        "title": "Desarrollando en Producción",
+        "speakers": [
+          "Sebastián Sassi"
+        ],
+        "video": "https://www.youtube.com/watch?v=D1G7YezRhVg"
+      },
+      {
+        "title": "Cómo curar las \"malicias\" de las arquitecturas \"enterprise\" con python + REST",
+        "speakers": [
+          "Daniel Rodriguez Larreta"
+        ],
+        "video": "https://www.youtube.com/watch?v=JzG7wM56hQI"
+      },
+      {
+        "title": "GNU Health sobre Tryton platform",
+        "speakers": [
+          "Ignacio Parszyk"
+        ],
+        "video": "https://www.youtube.com/watch?v=6jAfwsScPLc"
+      },
+      {
+        "title": "Creando aplicaciones client-side con Django y Backbone.js",
+        "speakers": [
+          "Francisco Silvera"
+        ],
+        "video": "https://www.youtube.com/watch?v=_-Eh2-3DHBI"
+      },
+      {
+        "title": "How Brazil is building a digital nation with Open Source and Python",
+        "speakers": [
+          "Érico Andrei"
+        ],
+        "video": "https://www.youtube.com/watch?v=O7EMUV9ql1U"
+      },
+      {
+        "title": "Mesa redonda: Emprender con Python",
+        "speakers": [],
+        "video": "https://www.youtube.com/watch?v=efq4ae6v4sM"
+      },
+      {
+        "title": "Un vista rápida de Biopython",
+        "speakers": [
+          "Pablo DeJuan"
+        ],
+        "video": "https://www.youtube.com/watch?v=NiYibqQC3Yw"
+      },
+      {
+        "title": "Stack Geográfico en Python",
+        "speakers": [
+          "Aníbal Pacheco"
+        ],
+        "video": "https://www.youtube.com/watch?v=q5NA6yjjg4Q"
+      },
+      {
+        "title": "Desarrollo de APIs con Django y Tastypie",
+        "speakers": [
+          "Francisco Silvera"
+        ],
+        "video": "https://www.youtube.com/watch?v=It8VvG1ynMU"
+      },
+      {
+        "title": "Oily Python: a Reservoir Engineering Perspective",
+        "speakers": [
+          "Andrea Gavana"
+        ],
+        "video": "https://www.youtube.com/watch?v=MpSxzEpWjjA"
+      }
+    ],
+    "venue": "Auditorio del LATU, Av. Italia 6201",
+    "city": "Montevideo",
+    "organizers": [
+      "PyUy (Grupo de Usuarios de Python en Uruguay)",
+      "Enrique González",
+      "Ernesto Rodríguez",
+      "Federico Wagner",
+      "Marcello Farías",
+      "Marcelo Zunino",
+      "Martín Alcalá",
+      "Martín Prunell",
+      "Miguel Paolino",
+      "Pablo Ricco",
+      "Raúl Garreta",
+      "Sebastián Sassi",
+      "Yesica Benítez"
+    ],
+    "photos": [
+      {
+        "src": "https://web.archive.org/web/20130720210753im_/http://www.tryolabs.com/static/images/Blog/pycon_uy_2012/auditorium.jpg",
+        "alt": "El público en las butacas del auditorio del LATU",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130514043417im_/http://tryolabs.com/static/images/Blog/pycon_uy_2012/raul_garreta.jpg",
+        "alt": "Raúl Garreta, de Tryolabs, habla sobre aprendizaje automático junto a la pantalla",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130513233326im_/http://tryolabs.com/static/images/Blog/pycon_uy_2012/erico_andrei.jpg",
+        "alt": "Érico Andrei, de la Plone Foundation, en el atril durante su charla sobre software libre y la comunidad Python en Brasil",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130513194408im_/http://tryolabs.com/static/images/Blog/pycon_uy_2012/andrea_gavana.jpg",
+        "alt": "Andrea Gavana, de Maersk Oil, presenta el uso de Python en la industria petrolera",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130720233856im_/http://www.tryolabs.com/static/images/Blog/pycon_uy_2012/francisco_silvera.jpg",
+        "alt": "Francisco Silvera, de Devsar, habla desde el atril sobre Django, Backbone.js y Tastypie",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "src": "https://web.archive.org/web/20130720210627im_/http://www.tryolabs.com/static/images/Blog/pycon_uy_2012/organization_team.jpg",
+        "alt": "El equipo organizador de PyCon Uruguay 2012 en el escenario del auditorio",
+        "by": "Tryolabs",
+        "source": "Sitio de Tryolabs (archivado)",
+        "page": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20121113080246/http://uy.pycon.org/es/acerca-de"
+      },
+      {
+        "label": "Agenda (archivada)",
+        "url": "https://web.archive.org/web/20121113080257/http://uy.pycon.org/es/schedule"
+      },
+      {
+        "label": "Crónica de Tryolabs (archivada)",
+        "url": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "label": "Videos de las charlas (YouTube, canal PyConUy)",
+        "url": "https://www.youtube.com/@PyConUy/videos"
+      }
+    ],
+    "sources": [
+      {
+        "label": "PyCon Uruguay 2012 · Acerca de (Wayback Machine)",
+        "url": "https://web.archive.org/web/20121113080246/http://uy.pycon.org/es/acerca-de"
+      },
+      {
+        "label": "PyCon Uruguay 2012 · Agenda (Wayback Machine)",
+        "url": "https://web.archive.org/web/20121113080257/http://uy.pycon.org/es/schedule"
+      },
+      {
+        "label": "PyCon Uruguay 2012 · Sponsors (Wayback Machine)",
+        "url": "https://web.archive.org/web/20121103225814/http://uy.pycon.org/en/sponsors"
+      },
+      {
+        "label": "Tryolabs · PyCon Uruguay 2012 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20130507011005/http://tryolabs.com/Blog/2012/11/27/pycon-uruguay-2012/"
+      },
+      {
+        "label": "YouTube · canal PyConUy",
+        "url": "https://www.youtube.com/@PyConUy/videos"
+      }
+    ]
+  },
+  "conf:startup-weekend-montevideo:2013-09-20": {
+    "description": "Tercera edición de **Startup Weekend Montevideo**, del 20 al 22 de setiembre de 2013. La organizaron la Cámara Uruguaya de Tecnologías de la Información (CUTI) y la incubadora Ingenio, con el formato habitual de 54 horas para pasar de una idea a un modelo de negocio.\n\nGanó **VitalTec**, una solución de monitoreo de salud que avisaba ante un percance y permitía consultar en tiempo real los signos vitales de un familiar. El equipo lo integraron Gonzalo Acosta, Juan Manuel Aguirre, Matías Curbelo, Víctor Macadar, Karina Pita, David Rivero, Santiago Rodríguez, Andrés Romero, Roberto Valdomir y Diego Ventura.",
+    "organizers": [
+      "CUTI",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://fi.ort.edu.uy/innovaportal/file/11766/1/startup-weekend-20131.jpg",
+        "alt": "Banner de la tercera edición de Startup Weekend Montevideo 2013 (imagen promocional, no es una foto del evento)",
+        "by": "Universidad ORT Uruguay",
+        "source": "Sitio de Universidad ORT Uruguay",
+        "page": "https://fi.ort.edu.uy/11766/33/startup-weekend-montevideo-2013.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Universidad ORT Uruguay: «Startup Weekend Montevideo 2013»",
+        "url": "https://fi.ort.edu.uy/11766/33/startup-weekend-montevideo-2013.html"
+      },
+      {
+        "label": "InfoNegocios: «Se viene la tercera… setiembre trae otro Startup Weekend Mvd (organizan Cuti e Ingenio)»",
+        "url": "https://infonegocios.biz/plus/se-viene-la-tercera-setiembre-trae-otro-startup-weekend-mvd-organizan-cuti-e-ingenio"
+      }
+    ]
+  },
+  "conf:oktoberdatafest:2013-10": {
+    "description": "En octubre de 2013 la asociación civil DATA (Datos, Acceso a la Información y Transparencia) convirtió su hackatón anual en un mes entero de actividades sobre datos abiertos en Montevideo: el primer **OktoberDATAFEST**. El programa incluyó *data expeditions* —equipos que exploran juntos conjuntos de datos públicos y presentan lo que encontraron— y el *apps challenge* de Desarrollando América Latina 2013, la tercera edición de ese concurso regional de aplicaciones con impacto social que se corrió en simultáneo en 12 países.\n\nSegún los mensajes que DATA publicó durante el mes, la expedición de datos estaba en marcha el 12 de octubre y el 19 fue el día de la hackatón, con la idea de construir prototipos de aplicaciones con fines sociales a partir de datos abiertos. AGESIC apoyó la organización con hasta 500 dólares.",
+    "organizers": [
+      "DATA (Datos, Acceso a la Información y Transparencia)"
+    ],
+    "sources": [
+      {
+        "label": "AGESIC, Resolución N° 41/013 (apoyo al Oktober DATAFEST 2013)",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-41013-16102013-cdh"
+      },
+      {
+        "label": "GovFresh: D.A.T.A., opening Uruguay",
+        "url": "https://govfresh.com/signal/d-t-opening-uruguay"
+      },
+      {
+        "label": "Global Voices: This weekend at Developing Latin America 2013 apps challenge (part II)",
+        "url": "https://globalvoices.org/2013/10/24/this-weekend-at-developing-latin-america-2013-apps-challenge-part-ii/"
+      },
+      {
+        "label": "Global Voices: Developing Latin America, winners of the regional acceleration event",
+        "url": "https://globalvoices.org/2014/02/21/developing-latin-america-winners-of-the-regional-acceleration-event/"
+      }
+    ]
+  },
+  "conf:pycon-uy:2013-11-01": {
+    "description": "La segunda **PyCon Uruguay** se hizo el 1 y 2 de noviembre de 2013 en el auditorio de la Torre de las Telecomunicaciones de Antel, en Montevideo. La organizó de nuevo PyUy, la comunidad uruguaya de Python, con inscripción gratuita gracias a voluntarios y sponsors; el sitio web lo construyó y alojó Sophilabs.\n\nEl invitado principal fue Jacob Kaplan-Moss, co-BDFL de Django, que dio el keynote «Python Everywhere» y la charla «The Future of Django». El viernes de tarde y el sábado hubo charlas sobre big data con Hadoop, cómo construir una empresa alrededor de un proyecto de código abierto, PyQt, python-social-auth, Python en la educación universitaria, Sugar Labs, el MOOC brasileño «Python for Zombies», caching y NINJA-IDE, además de charlas relámpago abiertas a cualquiera. Cada jornada cerró con sorteos.\n\nEntre los sponsors estuvieron Expand, Neo, Seibo Software Studios, TCC, BIOS, Sophilabs, GitHub, Scrapinghub y ANII, con el apoyo de Antel. Las charlas se grabaron y se pueden ver en el canal de YouTube de PyConUy.",
+    "talks": [
+      {
+        "title": "Big data, hadoop, python y otros nombres raros",
+        "speakers": [
+          "Fernando Doglio"
+        ],
+        "video": "https://www.youtube.com/watch?v=GzorUnKdwb4"
+      },
+      {
+        "title": "The Future of Django",
+        "speakers": [
+          "Jacob Kaplan-Moss"
+        ],
+        "video": "https://www.youtube.com/watch?v=a1zi-N94-Fk"
+      },
+      {
+        "title": "Build a company around your open source project",
+        "speakers": [
+          "Pablo Hoffman"
+        ],
+        "video": "https://www.youtube.com/watch?v=9YSAonos9Rc"
+      },
+      {
+        "title": "Introducción a PyQt",
+        "speakers": [
+          "Diego Sarmentero"
+        ],
+        "video": "https://www.youtube.com/watch?v=WlAgJtBEdGU"
+      },
+      {
+        "title": "Keynote: Python Everywhere",
+        "speakers": [
+          "Jacob Kaplan-Moss"
+        ],
+        "video": "https://www.youtube.com/watch?v=fnY2yIbLHFA"
+      },
+      {
+        "title": "django-social-auth is dead, long live to python-social-auth",
+        "speakers": [
+          "Matías Aguirre",
+          "Martín Santos"
+        ],
+        "video": "https://www.youtube.com/watch?v=fIzqLpzlDwk"
+      },
+      {
+        "title": "Python en la educación universitaria",
+        "speakers": [
+          "Rodolfo Roballo",
+          "Thomas Schwarz"
+        ],
+        "video": "https://www.youtube.com/watch?v=QkhAC79B58s"
+      },
+      {
+        "title": "From a Python beginner to a Django developer in 6 months",
+        "speakers": [
+          "Hannes Hapke"
+        ],
+        "video": "https://www.youtube.com/watch?v=1F5e6Nf7bQ8"
+      },
+      {
+        "title": "Workflow de trabajo con Emacs y Django",
+        "speakers": [
+          "Fabián Gallina"
+        ],
+        "video": "https://www.youtube.com/watch?v=JD8s3Uc5Mpk"
+      },
+      {
+        "title": "Python for Zombies: 5000 enrolled in the first Python Brazilian MOOC",
+        "speakers": [
+          "Fernando Masanori"
+        ],
+        "video": "https://www.youtube.com/watch?v=cLPz6cI2t4Q"
+      },
+      {
+        "title": "Sugar Labs: Una plataforma educativa basada en Python",
+        "speakers": [
+          "Daniel Francis"
+        ],
+        "video": "https://www.youtube.com/watch?v=h1RBAq6GN7o"
+      },
+      {
+        "title": "Caching para hordas y estampidas",
+        "speakers": [
+          "Claudio Freire"
+        ],
+        "video": "https://www.youtube.com/watch?v=mb68Y8AkL7c"
+      },
+      {
+        "title": "NINJA-IDE, un IDE especialmente diseñado para Python",
+        "speakers": [
+          "Diego Sarmentero"
+        ],
+        "video": "https://www.youtube.com/watch?v=jgTa8PbSBvc"
+      },
+      {
+        "title": "Charla relámpago: Documentor",
+        "speakers": [
+          "Diego Sarmentero"
+        ],
+        "video": "https://www.youtube.com/watch?v=n7mmQ3JIQoU"
+      }
+    ],
+    "venue": "Auditorio de la Torre de las Telecomunicaciones (Antel)",
+    "city": "Montevideo",
+    "organizers": [
+      "PyUy (comunidad uruguaya de Python)",
+      "Sophilabs (sitio web)"
+    ],
+    "photos": [
+      {
+        "src": "https://i.ytimg.com/vi/a1zi-N94-Fk/sddefault.jpg",
+        "alt": "Jacob Kaplan-Moss en el escenario del auditorio de la Torre Antel durante «The Future of Django» (cuadro del video de la charla)",
+        "by": "PyConUy",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=a1zi-N94-Fk"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/GzorUnKdwb4/sddefault.jpg",
+        "alt": "Fernando Doglio habla junto al banner de Antel en su charla sobre big data (cuadro del video de la charla)",
+        "by": "PyConUy",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=GzorUnKdwb4"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/jgTa8PbSBvc/sddefault.jpg",
+        "alt": "Diego Sarmentero en el escenario durante su charla sobre NINJA-IDE (cuadro del video de la charla)",
+        "by": "PyConUy",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=jgTa8PbSBvc"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20131206185840/http://uy.pycon.org/en/about"
+      },
+      {
+        "label": "Agenda (archivada)",
+        "url": "https://web.archive.org/web/20131207101420/http://uy.pycon.org/en/schedule"
+      },
+      {
+        "label": "Videos de las charlas (YouTube, canal PyConUy)",
+        "url": "https://www.youtube.com/@PyConUy/videos"
+      },
+      {
+        "label": "Videos en pyvideo.org",
+        "url": "https://pyvideo.org/events/pycon-uy-2013.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "PyCon Uruguay 2013 · About (Wayback Machine)",
+        "url": "https://web.archive.org/web/20131206185840/http://uy.pycon.org/en/about"
+      },
+      {
+        "label": "PyCon Uruguay 2013 · Schedule (Wayback Machine)",
+        "url": "https://web.archive.org/web/20131207101420/http://uy.pycon.org/en/schedule"
+      },
+      {
+        "label": "PyCon Uruguay 2013 · Sponsors (Wayback Machine)",
+        "url": "https://web.archive.org/web/20131207121840/http://uy.pycon.org/en/sponsors"
+      },
+      {
+        "label": "PyCon Uruguay 2013 · Blog: Confirmed: Jacob Kaplan-Moss (Wayback Machine)",
+        "url": "https://web.archive.org/web/20131203211011/http://uy.pycon.org/en/blog"
+      },
+      {
+        "label": "pyvideo.org · PyCon UY 2013 (datos en GitHub)",
+        "url": "https://github.com/pyvideo/data/tree/main/pycon-uy-2013"
+      },
+      {
+        "label": "YouTube · canal PyConUy",
+        "url": "https://www.youtube.com/@PyConUy/videos"
+      }
+    ]
+  },
+  "github:TechMeetupUY/landing2013v2:2013-11-23:techmeetup-uy-2013": {
+    "description": "La **techMeetup UY v2013** fue la segunda edición de la conferencia anual que las comunidades de desarrolladores de Uruguay organizaban bajo el nombre meetup.uy (la primera había sido en 2012). Se hizo el sábado 23 de noviembre de 2013 en la Torre de las Telecomunicaciones de Antel, con tres objetivos declarados: potenciar las comunidades locales, impulsar a los estudiantes de IT y ofrecer un día de actualización profesional y networking.\n\nEl track principal tuvo 10 charlas a cargo de 11 oradores —infraestructura de desarrollo en MercadoLibre, Redis, diseño para desarrolladores, monitoreo de sistemas distribuidos, Git, robótica, REST y seguridad en la nube—, una ronda de lightning talks de cinco minutos y un cierre de Alan Cyment sobre delivery continuo y kaizen, seguido de un drinkup. En paralelo, las comunidades dieron seis workshops de una hora con 30 cupos cada uno: Ruby on Rails (Ruby MVD), testing con BDD y TDD (PHP MVD), escalar MySQL (MySQL Meetup), apps para Windows 8.1 y Windows Phone con Azure (.NetUY), Scala y programación reactiva (Scala Meetup) y Visual Story Mapping (AgileUY).\n\nSegún los organizadores, fueron más de 320 personas y 28 empresas apoyaron el evento. Lo organizaron Nicolás Bianchi, Martín Cabrera, Martín Loy, Ignacio Nin y Diego Sapriza, junto a una docena de comunidades (Agile, DevOps, PHP, Ruby, .NET, Scala, MySQL, JavaScript, Python, Automation, IxDA y GDG). Todas las charlas quedaron grabadas y están en YouTube.",
+    "talks": [
+      {
+        "title": "Estructura, Infra. y Método para Desarrollo Ágil en MercadoLibre",
+        "speakers": [
+          "Diego Cabrera",
+          "Pablo De Natale"
+        ],
+        "video": "https://www.youtube.com/watch?v=6GWwLEMFJJo"
+      },
+      {
+        "title": "Redis: la herramienta indicada",
+        "speakers": [
+          "Fernando Pardo"
+        ],
+        "video": "https://www.youtube.com/watch?v=M8lPr5Rf290"
+      },
+      {
+        "title": "Diseño para desarrolladores",
+        "speakers": [
+          "Lucía Guedes"
+        ],
+        "video": "https://www.youtube.com/watch?v=DCJW6lHdNwU"
+      },
+      {
+        "title": "Sistemas distribuidos observables",
+        "speakers": [
+          "Guillermo Winkler"
+        ],
+        "video": "https://www.youtube.com/watch?v=QFGfIZ36OAk"
+      },
+      {
+        "title": "Un sprint con Git",
+        "speakers": [
+          "Marcelo Domínguez"
+        ],
+        "video": "https://www.youtube.com/watch?v=IgV4Xu3rKcg"
+      },
+      {
+        "title": "Skynet son los padres",
+        "speakers": [
+          "Bruno Aguirre"
+        ],
+        "video": "https://www.youtube.com/watch?v=b9Vm6gH6d1o"
+      },
+      {
+        "title": "Resolviendo problemas imposibles",
+        "speakers": [
+          "Andrés Pagella"
+        ],
+        "video": "https://www.youtube.com/watch?v=YFheBztojZA"
+      },
+      {
+        "title": "Viviendo en la nube",
+        "speakers": [
+          "Mauro Flores"
+        ],
+        "video": "https://www.youtube.com/watch?v=gVXgl3fYsAM"
+      },
+      {
+        "title": "Simplemente REST",
+        "speakers": [
+          "Gabriel Fagúndez"
+        ],
+        "video": "https://www.youtube.com/watch?v=NXtMM7Wmn8M"
+      },
+      {
+        "title": "Delivery continuo, kaizen y lunes como la gente",
+        "speakers": [
+          "Alan Cyment"
+        ],
+        "video": "https://www.youtube.com/watch?v=Q9lgmqxt2eE"
+      }
+    ],
+    "attendance": "más de 320 personas",
+    "organizers": [
+      "Nicolás Bianchi",
+      "Martín Cabrera",
+      "Martín Loy",
+      "Ignacio Nin",
+      "Diego Sapriza"
+    ],
+    "links": [
+      {
+        "label": "Videos de las charlas",
+        "url": "https://www.youtube.com/playlist?list=PLgJwmkWpD_oOBH0PRudIDlaO3FL2Y88Je"
+      },
+      {
+        "label": "Resumen en video",
+        "url": "https://www.youtube.com/watch?v=tkuR03Gr3a4"
+      },
+      {
+        "label": "Código del sitio de la v2013",
+        "url": "https://github.com/TechMeetupUY/landing2013v2"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de la techMeetup UY v2013 (código en GitHub)",
+        "url": "https://github.com/TechMeetupUY/landing2013v2/blob/HEAD/site/index.php"
+      },
+      {
+        "label": "Sitio de la TechMeetup 2014, sección «Lo que pasó en 2013» (código en GitHub)",
+        "url": "https://github.com/TechMeetupUY/landing2014/blob/HEAD/src/frontend/index.php"
+      },
+      {
+        "label": "Lista de reproducción v2013 en YouTube (meetupuy)",
+        "url": "https://www.youtube.com/playlist?list=PLgJwmkWpD_oOBH0PRudIDlaO3FL2Y88Je"
+      },
+      {
+        "label": "Universidad ORT: techMeetup UY v2013",
+        "url": "https://www.ort.edu.uy/en/news/techmeetup-uy-v2013-14050"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://raw.githubusercontent.com/TechMeetupUY/landing2014/HEAD/src/frontend/assets/images/2013.jpg",
+        "alt": "Un organizador con la remera de @meetupUY de espaldas frente al auditorio lleno de la Torre de las Telecomunicaciones",
+        "by": "Mauricio Stekl",
+        "source": "Sitio de TechMeetup UY",
+        "page": "https://github.com/TechMeetupUY/landing2014/blob/HEAD/src/frontend/assets/images/2013.jpg"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/TechMeetupUY/landing2013v2/HEAD/site/images/team.jpg",
+        "alt": "Los organizadores con las remeras de la v2013 en la escalinata de la Torre de las Telecomunicaciones",
+        "by": "TechMeetup UY",
+        "source": "Sitio de TechMeetup UY",
+        "page": "https://github.com/TechMeetupUY/landing2013v2/blob/HEAD/site/images/team.jpg"
+      },
+      {
+        "src": "https://raw.githubusercontent.com/TechMeetupUY/landing2013v2/HEAD/site/images/collage_2013.jpg",
+        "alt": "Collage de la jornada: oradores en el escenario, el público en el auditorio y los workshops",
+        "by": "TechMeetup UY",
+        "source": "Sitio de TechMeetup UY",
+        "page": "https://github.com/TechMeetupUY/landing2013v2/blob/HEAD/site/images/collage_2013.jpg"
+      }
+    ]
+  },
+  "conf:oktoberdatafest:2014-09-27": {
+    "description": "La segunda edición del **OktoberDATAFEST**, organizada por la asociación civil DATA (Datos, Acceso a la Información y Transparencia), fue un mes de actividades en Montevideo para crear aplicaciones sociales con datos abiertos. El programa tenía cuatro etapas: un café de DATA para armar equipos y elegir temas, una «expedición» de datos y visualización para conseguir los insumos de cada proyecto, una hackatón de catorce horas y un demo day para presentar las aplicaciones y elegir ganadores, con un representante de AGESIC en el jurado.\n\nLas fotos que DATA publicó del sábado 27 de setiembre de 2014 muestran la jornada de lluvia de ideas y formación de equipos; en la pizarra quedaron temas como transporte, Parlamento, bibliotecas, compras estatales, accidentes, salud y carpooling. Los proyectos se registraron en un tablero de HackDash que reunió 17 propuestas, entre ellas un mapa de bibliotecas públicas, «Cruces peligrosos» (las esquinas con más accidentes de tránsito), visualizaciones de la actividad parlamentaria, *PasandoFactura* (en qué gasta el Estado), *SaluDatos* (comparativa de mutualistas), un mapa de árboles frutales en espacios públicos y *Streetart.uy*, un mapa de arte urbano.\n\nAGESIC apoyó la edición con hasta 500 dólares para el coffee break.",
+    "organizers": [
+      "DATA (Datos, Acceso a la Información y Transparencia)"
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/3883/15394491692_68130b6f70_b.jpg",
+        "alt": "Varios grupos de participantes conversan sentados en un jardín durante la jornada de arranque del OktoberDATAFEST 2014",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15394491692/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/2947/15394832695_389f5733c3_b.jpg",
+        "alt": "Participantes reunidos en ronda en el jardín, con laptops y mate, eligiendo temas para sus proyectos",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15394832695/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/2950/15207995237_ac96fba07e_b.jpg",
+        "alt": "Pizarra con los temas propuestos (mapas, transporte, Parlamento, bibliotecas, accidentes, salud, carpooling) y las direcciones del evento",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15207995237/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/2942/15391387241_a340134e90_b.jpg",
+        "alt": "Sala llena alrededor de una mesa larga durante la presentación de ideas",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15391387241/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/2943/15394226662_4870dd2dbc_b.jpg",
+        "alt": "Un participante de pie presenta una propuesta ante el resto del grupo en la sala",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15394226662/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3838/15207772329_395bc9dda4_b.jpg",
+        "alt": "Una persona anota en la pizarra los temas propuestos y sus votos",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15207772329/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/2942/15207985410_79585a0b5a_b.jpg",
+        "alt": "Un equipo discute alrededor de una mesa de madera en el jardín",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15207985410/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3854/15394403312_87b1068324_b.jpg",
+        "alt": "Mesa en el jardín con laptops, termos y un equipo trabajando",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15394403312/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/2945/15394777145_7a8b970f55_b.jpg",
+        "alt": "Participantes alrededor de una mesa al aire libre durante la formación de equipos",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15394777145/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3865/15207880429_fc0fe97d16_b.jpg",
+        "alt": "Jóvenes sentados frente a un mural de grafiti escuchan una propuesta",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15207880429/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3860/15371728086_cf613088c3_b.jpg",
+        "alt": "Tres participantes conversan junto a una laptop en una mesa del jardín",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15371728086/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3908/15207918530_d287ee0138_b.jpg",
+        "alt": "Participantes sentados alrededor de una mesa en la sala interior",
+        "by": "Data Uruguay",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/datauy/15207918530/",
+        "license": "CC BY-SA 2.0"
+      }
+    ],
+    "links": [
+      {
+        "label": "Proyectos en HackDash",
+        "url": "https://hackdash.org/dashboards/oktober"
+      },
+      {
+        "label": "Fotos en Flickr (Data Uruguay)",
+        "url": "https://www.flickr.com/photos/tags/oktoberdatafest"
+      }
+    ],
+    "sources": [
+      {
+        "label": "AGESIC, Resolución N° 34/014 (apoyo a la segunda edición del Oktober DATAFEST)",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-34014-24092014-cdh"
+      },
+      {
+        "label": "Tablero «OktoberDATAFEST 2014» en HackDash",
+        "url": "https://hackdash.org/dashboards/oktober"
+      },
+      {
+        "label": "Proyectos del tablero (API de HackDash)",
+        "url": "https://hackdash.org/api/v2/oktober/projects"
+      },
+      {
+        "label": "Fotos de Data Uruguay con la etiqueta oktoberdatafest",
+        "url": "https://www.flickr.com/photos/tags/oktoberdatafest"
+      }
+    ]
+  },
+  "conf:netconf-uy:2014-10-01": {
+    "description": "La primera **.NET Conf UY** fue una conferencia de cinco días sobre tecnologías Microsoft armada por la comunidad .NET de Uruguay, con un equipo de organización encabezado por Fabián Fernández. Arrancó el 1 de octubre de 2014 con un workshop en la Universidad ORT y siguió el 2 con dos talleres en Infocorp, uno de desarrollo para Windows Phone 8.1 y otro de ASP.NET MVC.\n\nEl 3 y el 4 de octubre fueron los días de conferencia en el Auditorio Antel de la Torre de las Telecomunicaciones, con cupo para 350 personas. Abrió la keynote de Eduardo Mangarelli (Microsoft Latinoamérica) y siguieron charlas sobre Azure, Xamarin, Roslyn, el futuro de ASP.NET, machine learning, metodologías ágiles, Internet de las cosas con placas Intel Galileo y Netduino, y robots LEGO Mindstorms manejados desde Windows Phone. También hubo un panel virtual por Skype, \"Uruguayos en Redmond\", con uruguayos que trabajaban en la sede central de Microsoft.\n\nSegún la Universidad ORT participaron más de 300 personas y 20 oradores de Uruguay, Argentina, Estados Unidos y Canadá, con el apoyo de 39 instituciones; el Ministerio de Educación y Cultura la declaró de interés. El segundo día de conferencia terminó con un after party en Infocorp y el programa cerraba el 5 de octubre con un paseo junto a los speakers por Piriápolis y Punta del Este. Las charlas, y entrevistas a varios oradores, quedaron grabadas en el canal de YouTube de la conferencia.",
+    "attendance": "más de 300 personas",
+    "venue": "Auditorio Antel, Torre de las Telecomunicaciones (workshops en la Universidad ORT e Infocorp)",
+    "city": "Montevideo",
+    "organizers": [
+      "Fabián Fernández",
+      "Bruno Bologna",
+      "Leonardo Botta",
+      "José Erosa",
+      "Silvana Alberti",
+      "Berch Gularte",
+      "Daniel Pardo"
+    ],
+    "talks": [
+      {
+        "title": "Keynote: Microsoft Platform Vision",
+        "speakers": [
+          "Eduardo Mangarelli"
+        ],
+        "video": "https://www.youtube.com/watch?v=15YWvTg4tcY",
+        "slides": "https://www.slideshare.net/netconfuy/microsoft-platform-vision-by-eduardo-mangarelli"
+      },
+      {
+        "title": "Arquitectura para Windows Azure: Pienso, luego existo",
+        "speakers": [
+          "Fernando Machado"
+        ],
+        "video": "https://www.youtube.com/watch?v=lYYAnHJeZdo",
+        "slides": "https://www.slideshare.net/netconfuy/arquitectura-para-windows-azure-pienso-luego-existo-by-fernando-machado"
+      },
+      {
+        "title": "Desarrollo ágil en 45 minutos",
+        "speakers": [
+          "Carlos Peix",
+          "Martín Salías"
+        ],
+        "video": "https://www.youtube.com/watch?v=TKQvxlIvE_4",
+        "slides": "https://github.com/carlospeix/NetConfUy"
+      },
+      {
+        "title": "Tips & tricks for sharing C# code on iOS, Android and Windows Phone",
+        "speakers": [
+          "Jaime Rodriguez"
+        ],
+        "video": "https://www.youtube.com/watch?v=doj1pA85L5o",
+        "slides": "https://www.slideshare.net/netconfuy/tips-tricks-for-sharing-c-code-on-ios-android-and-windows-phone-by-jaime-rodriguez"
+      },
+      {
+        "title": "Machine Learning: Inteligencia Artificial no es sólo un tema de Ciencia Ficción",
+        "speakers": [
+          "Raúl Garreta"
+        ],
+        "video": "https://www.youtube.com/watch?v=i4zB-YJ0gsw",
+        "slides": "https://www.slideshare.net/netconfuy/machine-learning-inteligencia-artificial-no-es-slo-un-tema-de-ciencia-ficcin-by-raul-garreta"
+      },
+      {
+        "title": "Extendiendo SharePoint, Project y Office 2013 con el nuevo modelo de Apps",
+        "speakers": [
+          "Fabián Imaz"
+        ],
+        "video": "https://www.youtube.com/watch?v=hRoPjVhht-E",
+        "slides": "https://www.slideshare.net/netconfuy/extendiendo-sharepoint-project-y-office-2013-con-el-nuevo-modelo-de-apps-by-fabian-imaz"
+      },
+      {
+        "title": "Uruguayos en Redmond (panel)",
+        "speakers": [
+          "Verónica Giaudrone",
+          "Alexander Sklar",
+          "Marcelo Guerra"
+        ],
+        "video": "https://www.youtube.com/watch?v=2l_4pAYFyVo"
+      },
+      {
+        "title": "Introduction to Aspect Oriented Programming",
+        "speakers": [
+          "Donald Belcham"
+        ],
+        "video": "https://www.youtube.com/watch?v=I4IAhhuGYJo",
+        "slides": "https://www.slideshare.net/netconfuy/introduction-to-aspect-oriented-programming-by-donald-belcham"
+      },
+      {
+        "title": "Roslyn: el futuro de C# y VB.NET",
+        "speakers": [
+          "Rodolfo Finochietti"
+        ],
+        "video": "https://www.youtube.com/watch?v=n38iwt_K6Hs",
+        "slides": "https://www.slideshare.net/netconfuy/roslyn-el-futuro-de-c-y-vbnet-by-rodolfo-finochietti"
+      },
+      {
+        "title": "Emprendiendo un futuro",
+        "speakers": [
+          "Gabriel Camargo"
+        ],
+        "video": "https://www.youtube.com/watch?v=0TEzNEHOyIQ",
+        "slides": "https://www.slideshare.net/netconfuy/emprendiendo-un-futuro-by-gabriel-camargo"
+      },
+      {
+        "title": "Azure: un parque de diversiones en la nube para el desarrollador moderno",
+        "speakers": [
+          "Ariel Schapiro"
+        ],
+        "video": "https://www.youtube.com/watch?v=ZDzm_b_rdcY",
+        "slides": "https://www.slideshare.net/netconfuy/ariel-schapiroazure"
+      },
+      {
+        "title": "Code Smells y Refactoring o haciendo que nuestro código huela (y se vea) mejor",
+        "speakers": [
+          "Mariano Sánchez"
+        ],
+        "video": "https://www.youtube.com/watch?v=tXDgc9aCh3U",
+        "slides": "https://www.slideshare.net/netconfuy/code-smells-y-refactoring-o-haciendo-que-nuestro-codigo-huela-y-se-vea-mejor-by-mariano-sanchez"
+      },
+      {
+        "title": "Metodologías ¿Ágiles o productivas? Una visión desde la trinchera",
+        "speakers": [
+          "Marcos Ezquerra"
+        ],
+        "video": "https://www.youtube.com/watch?v=aBgjyifH4-M",
+        "slides": "https://www.slideshare.net/netconfuy/metodologas-giles-o-productivas-una-visin-desde-la-trinchera-by-marcos-ezquerra"
+      },
+      {
+        "title": "El futuro de ASP.NET, Katana y ASP.NET vNext",
+        "speakers": [
+          "Pablo Cibraro"
+        ],
+        "video": "https://www.youtube.com/watch?v=JJMeCE3jP_o",
+        "slides": "https://www.slideshare.net/netconfuy/el-futuro-de-aspnet-katana-y-aspnet-vnext-by-pablo-cibraro"
+      },
+      {
+        "title": "Fun with .NET: Windows Phone, LEGO Mindstorms and Azure",
+        "speakers": [
+          "Dan Fernandez"
+        ],
+        "video": "https://www.youtube.com/watch?v=T4276A_a8PE",
+        "slides": "https://www.slideshare.net/netconfuy/fun-with-net-windows-phone-lego-mindstorms-and-azure-by-dan-fernandez"
+      },
+      {
+        "title": "RESTful para todos",
+        "speakers": [
+          "Diego Sapriza"
+        ],
+        "video": "https://www.youtube.com/watch?v=DWedzq8o5TU",
+        "slides": "https://www.slideshare.net/netconfuy/restful-para-todos-by-diego-sapriza"
+      },
+      {
+        "title": "I just met you, and \"this\" is crazy, but here's my NaN, so call(me), maybe?",
+        "speakers": [
+          "Rachel Appel"
+        ],
+        "video": "https://www.youtube.com/watch?v=ZPh5TsmxrG4",
+        "slides": "https://www.slideshare.net/netconfuy/i-just-met-you-and-this-is-crazy-but-heres-my-nan-so-callme-maybe-by-rachel-appel"
+      },
+      {
+        "title": "Windows y .NET en la Internet of Things",
+        "speakers": [
+          "Pablo García"
+        ],
+        "video": "https://www.youtube.com/watch?v=n0yE10ze39U",
+        "slides": "https://www.slideshare.net/netconfuy/windows-y-net-en-la-internet-of-things-by-pablo-garcia"
+      },
+      {
+        "title": "Opportunities to Improve System Reliability and Resilience",
+        "speakers": [
+          "Donald Belcham"
+        ],
+        "video": "https://www.youtube.com/watch?v=7w_brIkDJPs",
+        "slides": "https://www.slideshare.net/netconfuy/opportunities-to-improve-system-reliability-and-resilience-by-donald-belcham"
+      },
+      {
+        "title": "Workshop: Getting Ahead of Delivery Issues with Deep SDLC Analysis",
+        "speakers": [
+          "Donald Belcham"
+        ],
+        "slides": "https://www.slideshare.net/netconfuy/getting-ahead-of-delivery-issues-with-deep-sdlc-analysis-by-donald-belcham"
+      },
+      {
+        "title": "Workshop: Windows Phone 8.1 App Development",
+        "speakers": [
+          "Rodolfo Finochietti",
+          "Mariano Sánchez"
+        ]
+      },
+      {
+        "title": "Workshop: Build an ASP.NET Web App",
+        "speakers": [
+          "Rachel Appel"
+        ],
+        "slides": "https://www.slideshare.net/netconfuy/build-an-aspnet-web-app-by-rachel-appel"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://web.archive.org/web/20170314102234im_/http://netconf.uy/Content/images/demo/slide.2014.2.jpg",
+        "alt": "Un orador sentado en el escenario del Auditorio Antel, con una diapositiva sobre Universal Apps y el banner de sponsors de .NET Conf UY",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805151116im_/http://netconf.uy/Content/images/demo/conference/07.jpg",
+        "alt": "Público con credenciales en las butacas del Auditorio Antel durante la conferencia",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805115634im_/http://netconf.uy/Content/images/demo/conference/01.jpg",
+        "alt": "Charla en el escenario del Auditorio Antel, con el atril y el banner de .NET Conf UY",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805120041im_/http://netconf.uy/Content/images/demo/conference/09.jpg",
+        "alt": "Panel por Skype proyectado en la pantalla del auditorio, con el público mirando desde las butacas",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814043938im_/http://netconf.uy/Content/images/demo/conference/03.jpg",
+        "alt": "Robot de LEGO Mindstorms sobre el piso del escenario",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805142649im_/http://netconf.uy/Content/images/demo/conference/12.jpg",
+        "alt": "Placa Intel Galileo cableada a una protoboard, en una demo de Internet de las cosas",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805132655im_/http://netconf.uy/Content/images/demo/conference/08.jpg",
+        "alt": "Asistentes junto a la rueda de premios de .NET Conf UY en el hall",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814044454im_/http://netconf.uy/Content/images/demo/conference/02.jpg",
+        "alt": "Asistentes conversando en el hall durante un corte",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814043908im_/http://netconf.uy/Content/images/demo/conference/04.jpg",
+        "alt": "Dos asistentes posan con sus credenciales en el hall del auditorio",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805172638im_/http://netconf.uy/Content/images/demo/conference/05.jpg",
+        "alt": "Un asistente prueba un equipo en el stand de una escuela de sistemas en el hall",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814043743im_/http://netconf.uy/Content/images/demo/workshops/01.jpg",
+        "alt": "Asistentes con sus notebooks durante uno de los workshops",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814043628im_/http://netconf.uy/Content/images/demo/workshops/02.jpg",
+        "alt": "Sala llena de notebooks en uno de los workshops",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20170314111839im_/http://netconf.uy/Content/images/demo/slide.2014.3.jpg",
+        "alt": "Grupo de participantes posando con cervezas en el after party",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150805125204im_/http://netconf.uy/Content/images/demo/afterparty/03.jpg",
+        "alt": "Participantes en una mesa con pizza durante el after party",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814044335im_/http://netconf.uy/Content/images/demo/afterparty/07.jpg",
+        "alt": "Gente conversando en el after party",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814043929im_/http://netconf.uy/Content/images/demo/recreation/03.jpg",
+        "alt": "Un participante sentado sobre La Mano de Punta del Este durante el paseo con los speakers",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "src": "https://web.archive.org/web/20150814043814im_/http://netconf.uy/Content/images/demo/recreation/04.jpg",
+        "alt": "Participantes del paseo junto a la estatua de un toro",
+        "by": ".NET Conf UY",
+        "source": "Sitio de .NET Conf UY (archivado)",
+        "page": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "label": "Videos de las charlas",
+        "url": "https://www.youtube.com/playlist?list=PLX15MdVP0ce930pbL8hcIxPHHdg6mohzW"
+      },
+      {
+        "label": "Resumen del evento en video",
+        "url": "https://www.youtube.com/watch?v=Sf_b_Jl95LM"
+      },
+      {
+        "label": "Slides en SlideShare",
+        "url": "https://www.slideshare.net/netconfuy"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de .NET Conf UY v2014 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20150429055453/http://netconf.uy/es/2014/"
+      },
+      {
+        "label": "Universidad ORT: El mayor evento sobre tecnologías Microsoft en Uruguay",
+        "url": "https://www.ort.edu.uy/en/news/el-mayor-evento-sobre-tecnologias-microsoft-en-uruguay-30346"
+      },
+      {
+        "label": "JetBrains: patrocinio de .NET Conf UY 2014",
+        "url": "https://blog.jetbrains.com/pt-br/2014/08/18/jetbrains-patrocinando-net-conf-en-uruguay-con-descuentos-para-participantes/"
+      },
+      {
+        "label": "YouTube: lista .NET Conf UY v2014",
+        "url": "https://www.youtube.com/playlist?list=PLX15MdVP0ce930pbL8hcIxPHHdg6mohzW"
+      }
+    ]
+  },
+  "conf:startup-weekend-mujeres-montevideo:2014-10-03": {
+    "description": "Primer **Startup Weekend Mujeres** en Montevideo, del 3 al 5 de octubre de 2014 en Ingenio (LATU). Lo organizó el programa Más Emprendedoras de Endeavor Uruguay, financiado por el Fondo Multilateral de Inversiones (FOMIN) del BID, con la idea de fomentar el emprendimiento femenino.\n\nReunió a más de 50 mujeres que formaron equipos para crear una empresa en un fin de semana, con la guía de 20 coaches. El domingo de tarde presentaron sus proyectos ante un jurado formado por Gabriel Rozman, María Noel Ache y Sara Goldberg.\n\n- **1.er premio:** MVD Food Truck, un camión de comida sana que recorre lugares de trabajo.\n- **2.º premio:** Vísteme, un probador virtual de ropa femenina.\n- **3.er premio:** Tu Nanny Express, una aplicación para encontrar niñera ante imprevistos.\n- **Mención especial:** Grandiosas, un e-commerce de ropa en talles grandes para mujeres.",
+    "attendance": "más de 50 participantes y 20 coaches",
+    "sources": [
+      {
+        "label": "NetUruguay: «Llegó la primera edición del Startup Weekend Mujeres a Montevideo»",
+        "url": "https://neturuguay.com/2014/10/13/llego-la-primera-edicion-del-startup-weekend-mujeres-montevideo/"
+      },
+      {
+        "label": "Universidad ORT Uruguay: «Una iniciativa pensada para mujeres» (anuncio, 2014)",
+        "url": "https://fi.ort.edu.uy/20377/33/una-iniciativa-pensada-para-mujeres.html"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://fi.ort.edu.uy/innovaportal/file/20377/1/startupweekendmujeres.jpg",
+        "alt": "Logo de Startup Weekend Montevideo Mujeres 2014 (imagen promocional, no es una foto del evento)",
+        "by": "Universidad ORT Uruguay",
+        "source": "Sitio de Universidad ORT Uruguay",
+        "page": "https://fi.ort.edu.uy/20377/33/una-iniciativa-pensada-para-mujeres.html"
+      }
+    ]
+  },
+  "github:TechMeetupUY/landing2014:2014-11-14:techmeetup-uy-2014": {
+    "description": "La tercera edición de la **TechMeetup UY** se hizo el 14 y 15 de noviembre de 2014 en la Torre de las Telecomunicaciones de Antel y, por primera vez, ocupó dos días: el viernes 14 fue entero de workshops de dos horas y el sábado 15 quedó para el track de charlas. Las entradas se agotaron.\n\nHubo diez workshops, la mayoría a cargo de comunidades: testing de apps móviles (Abstracta), iOS desde cero (AppleMVD), Arduino (MVDRobotics), Node.js para principiantes (MVDjs, con el equipo de JSConfUY), herramientas para desarrolladores PHP (PHPmvd), programación concurrente en Go, procesamiento de datos con Scala (Scala Meetup), OpenStack (DevOps Meetup), cálculos tipo map-reduce en MySQL (MySQL Meetup) y Agile Inception.\n\nEl sábado hubo charlas sobre drones (Victoria Alonsoperez y Martín García), cómo un navegador renderiza una página (Gabriel Chertok), machine learning con Python y los datos del Titanic (Guillermo Moncecchi), Internet de las cosas, backends como servicio, el nuevo rol del *infrastructure developer* y qué valoran afuera de los desarrolladores uruguayos (Álvaro Videla). La organizaron Diego Sapriza, Gustavo Armagno, Ignacio Nin, Martín Cabrera, Martín Loy, Fabián Fernández y Nicolás Bianchi, con más de 30 empresas patrocinadoras y el apoyo en la difusión de universidades, CUTI y el MEC.",
+    "talks": [
+      {
+        "title": "Drones: la industria del futuro",
+        "speakers": [
+          "Victoria Alonsoperez",
+          "Martín García"
+        ],
+        "video": "https://www.youtube.com/watch?v=L_okkmuLyIY"
+      },
+      {
+        "title": "Alice in browserland",
+        "speakers": [
+          "Gabriel Chertok"
+        ],
+        "video": "https://www.youtube.com/watch?v=MKuN1RIDjgg",
+        "slides": "https://speakerdeck.com/cherta/alice-in-browserland"
+      },
+      {
+        "title": "How to become an Infrastructure Developer",
+        "speakers": [
+          "Luis Vinay",
+          "Diego Woitasen"
+        ],
+        "video": "https://www.youtube.com/watch?v=a4qM3-7Kofw"
+      },
+      {
+        "title": "Backends-as-a-Service (BaaS) y el sueño de pegarla con tu nueva app",
+        "speakers": [
+          "Diego Cibils"
+        ],
+        "video": "https://www.youtube.com/watch?v=Jd-ey8ZxrYs"
+      },
+      {
+        "title": "¿Qué puedo hacer si el producto que desarrollo no está claro?",
+        "speakers": [
+          "Gabriel Ledesma"
+        ],
+        "video": "https://www.youtube.com/watch?v=2C-SzYWuphg"
+      },
+      {
+        "title": "Machine Learning, Python y el Titanic",
+        "speakers": [
+          "Guillermo Moncecchi"
+        ],
+        "video": "https://www.youtube.com/watch?v=6MZFsZ9HINE"
+      },
+      {
+        "title": "Internet of Things: el límite es el cielo",
+        "speakers": [
+          "Max Patissier",
+          "Maximiliano Pérez"
+        ],
+        "video": "https://www.youtube.com/watch?v=azTHp0p5rcQ"
+      },
+      {
+        "title": "Uruguayos campeones: ni muy muy, ni tan tan",
+        "speakers": [
+          "Álvaro Videla"
+        ],
+        "video": "https://www.youtube.com/watch?v=qDwrjhVdEIM"
+      }
+    ],
+    "attendance": "entradas agotadas",
+    "organizers": [
+      "Diego Sapriza",
+      "Gustavo Armagno",
+      "Ignacio Nin",
+      "Martín Cabrera",
+      "Martín Loy",
+      "Fabián Fernández",
+      "Nicolás Bianchi"
+    ],
+    "links": [
+      {
+        "label": "Videos de las charlas",
+        "url": "https://www.youtube.com/playlist?list=PLgJwmkWpD_oO4aE3AIKdE9D5HtC1lavzo"
+      },
+      {
+        "label": "Resumen en video",
+        "url": "https://www.youtube.com/watch?v=_EjBk_pdjBw"
+      },
+      {
+        "label": "Código del sitio de la v2014",
+        "url": "https://github.com/TechMeetupUY/landing2014"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de la TechMeetup 2014 (código en GitHub)",
+        "url": "https://github.com/TechMeetupUY/landing2014/blob/HEAD/src/frontend/index.php"
+      },
+      {
+        "label": "Oradores y sponsors de la v2014 (data.php)",
+        "url": "https://github.com/TechMeetupUY/landing2014/blob/HEAD/src/frontend/data.php"
+      },
+      {
+        "label": "Workshops de la v2014 (workshops.php)",
+        "url": "https://github.com/TechMeetupUY/landing2014/blob/HEAD/src/frontend/workshops.php"
+      },
+      {
+        "label": "Lista de reproducción v2014 en YouTube (meetupuy)",
+        "url": "https://www.youtube.com/playlist?list=PLgJwmkWpD_oO4aE3AIKdE9D5HtC1lavzo"
+      }
+    ]
+  },
+  "conf:jsconfuy:2015-04-24": {
+    "description": "La segunda edición de **JSConf Uruguay** se hizo el 24 y 25 de abril de 2015 en el auditorio de Antel, en Montevideo. Fueron dos días con un track de charlas y otro de talleres; la entrada incluía los dos días, desayuno, almuerzo, coffee breaks y una remera. La organizaron Pablo Ricco, Gabriel Chertok, Pablo Dejuan, Rodrigo Espinosa, Luis Cal, Sebastián Sassi, Martín Prunell y Guillermo Cura, y el pie del sitio oficial enlazaba a Open Web Uruguay.\n\nLos keynotes estuvieron a cargo de Alex Sexton (Stripe), que abrió con «Build Your Own Bootstrap», Jeremy Morrell (Facebook), con Flux en aplicaciones grandes, James Halliday (Browserify), con la web distribuida y offline, y Julián Duque (NodeSource), que cerró con «io.js: The Future of Node». También hablaron Mathias Bynens (Opera) sobre JavaScript y Unicode, Eric Schoffstall, creador de Gulp, Angelina Fabbro (DigitalOcean), Valeri Karpov (MongoDB), Jean-Charles Sisk (PayPal) y Matthew Podwysocki (Microsoft), junto a desarrolladores de Uruguay, Argentina, Brasil y Colombia.\n\nEn paralelo hubo talleres de WebSockets, Meteor, Node e Internet de las cosas, Ember, Ionic y WebGL con Three.js, y cada noche terminó con un DrinkUp.",
+    "talks": [
+      {
+        "title": "Keynote: Build Your Own Bootstrap",
+        "speakers": [
+          "Alex Sexton"
+        ]
+      },
+      {
+        "title": "Sass Maps: working with responsive breakpoints.",
+        "speakers": [
+          "Lourdes Montano"
+        ]
+      },
+      {
+        "title": "Taller: WebSockets for Real - Real Time",
+        "speakers": [
+          "Michael Cetrulo"
+        ]
+      },
+      {
+        "title": "Getting over Moore's Law: Parallelization using JavaScript in the browser",
+        "speakers": [
+          "Damian Schenkelman"
+        ]
+      },
+      {
+        "title": "Descentralizing the web: the REAL backendless apps",
+        "speakers": [
+          "Martin Gontovnikas"
+        ]
+      },
+      {
+        "title": "Patterns for Growth and Scale",
+        "speakers": [
+          "Chris Miller"
+        ]
+      },
+      {
+        "title": "Support an Army",
+        "speakers": [
+          "Jean-Charles Sisk"
+        ]
+      },
+      {
+        "title": "Taller: Meteor. Isomorphic JS, the easy way",
+        "speakers": [
+          "Pablo Chiappetti"
+        ]
+      },
+      {
+        "title": "High Performance in the Critical Rendering Path",
+        "speakers": [
+          "Nicolas Bevacqua"
+        ]
+      },
+      {
+        "title": "To 3D and beyond: WebGL & WebVR for fun and profit",
+        "speakers": [
+          "Martin Naumann"
+        ]
+      },
+      {
+        "title": "Gulp JS",
+        "speakers": [
+          "Eric Schoffstall"
+        ]
+      },
+      {
+        "title": "Taller: Node and the Internet of Things",
+        "speakers": [
+          "Julián Duque"
+        ]
+      },
+      {
+        "title": "JavaScript ♥ Unicode",
+        "speakers": [
+          "Mathias Bynens"
+        ]
+      },
+      {
+        "title": "The awesomeness of Angular 2",
+        "speakers": [
+          "Ciro Nunes"
+        ]
+      },
+      {
+        "title": "Functional reactive programming for web apps",
+        "speakers": [
+          "Sergio Gianazza",
+          "Leonardo Garcia Crespo"
+        ]
+      },
+      {
+        "title": "Keynote: Flux in large applications",
+        "speakers": [
+          "Jeremy Morrell"
+        ]
+      },
+      {
+        "title": "Keynote: The offline distributed web",
+        "speakers": [
+          "James Halliday"
+        ]
+      },
+      {
+        "title": "Taller: Ember bootcamp: create your first Ember app!",
+        "speakers": [
+          "Santiago Ferreira",
+          "Adrián Mugnolo"
+        ]
+      },
+      {
+        "title": "Recreating a dialup modem in JavaScript",
+        "speakers": [
+          "Sam Saccone"
+        ]
+      },
+      {
+        "title": "OSX Automation using JavaScript",
+        "speakers": [
+          "Angelina Fabbro"
+        ]
+      },
+      {
+        "title": "Signal Processing with JavaScript",
+        "speakers": [
+          "Rafael Specht"
+        ]
+      },
+      {
+        "title": "Writing a MongoDB Shell in NodeJS",
+        "speakers": [
+          "Valeri Karpov"
+        ]
+      },
+      {
+        "title": "Say my name (JavaScript)",
+        "speakers": [
+          "Jaydson Gomes"
+        ]
+      },
+      {
+        "title": "ES6 in production",
+        "speakers": [
+          "Guillermo Paz"
+        ]
+      },
+      {
+        "title": "Taller: Hybrid Apps with Ionic Framework",
+        "speakers": [
+          "Agustin Haller",
+          "Dayana Jabif"
+        ]
+      },
+      {
+        "title": "When <<Inheritance>> is not enough. <<Mixins>> and others ways to reuse code.",
+        "speakers": [
+          "Maximiliano Fierro"
+        ]
+      },
+      {
+        "title": "Enabling developers to build next-generation app the easy way",
+        "speakers": [
+          "Adolfo Builes"
+        ]
+      },
+      {
+        "title": "JavaScript Transducers",
+        "speakers": [
+          "Matias Volpe"
+        ]
+      },
+      {
+        "title": "Taller: WebGL and Three.js",
+        "speakers": [
+          "Martin Naumann"
+        ]
+      },
+      {
+        "title": "TypeScript and the JavaScript of tomorrow",
+        "speakers": [
+          "Mathias Rodriguez"
+        ]
+      },
+      {
+        "title": "Reactive Programming at Netflix",
+        "speakers": [
+          "Matthew Podwysocki"
+        ]
+      },
+      {
+        "title": "Keynote: io.js: The Future of Node",
+        "speakers": [
+          "Julián Duque"
+        ]
+      }
+    ],
+    "venue": "Auditorio de la Torre de las Telecomunicaciones (Antel)",
+    "city": "Montevideo",
+    "organizers": [
+      "Pablo Ricco",
+      "Gabriel Chertok",
+      "Pablo Dejuan",
+      "Rodrigo Espinosa",
+      "Luis Cal",
+      "Sebastián Sassi",
+      "Martín Prunell",
+      "Guillermo Cura"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20151215015426/http://2015.jsconf.uy/"
+      },
+      {
+        "label": "Agenda (archivada)",
+        "url": "https://web.archive.org/web/20151217081750/http://2015.jsconf.uy/schedule"
+      }
+    ],
+    "sources": [
+      {
+        "label": "JSConf Uruguay 2015 · Sitio oficial (Wayback Machine)",
+        "url": "https://web.archive.org/web/20151215015426/http://2015.jsconf.uy/"
+      },
+      {
+        "label": "JSConf Uruguay 2015 · Schedule (Wayback Machine)",
+        "url": "https://web.archive.org/web/20151217081750/http://2015.jsconf.uy/schedule"
+      }
+    ]
+  },
+  "conf:netconf-uy:2015-09-30": {
+    "description": "La segunda **.NET Conf UY** (v2015) volvió a durar cinco días, del 30 de setiembre al 4 de octubre de 2015, con la conferencia en el Auditorio Antel de la Torre de las Telecomunicaciones y cupo para 350 personas. La organizó la comunidad .NET local, con Fabián Fernández, Leonardo Botta, José Erosa y Daniel Pardo al frente, y fue declarada de interés por el Ministerio de Educación y Cultura.\n\nEl 30 de setiembre se hizo el **.NET Tour UY**, una actividad de inclusión social con el bachillerato tecnológico Ánima y Microsoft para acercar a jóvenes a la tecnología. El 1 de octubre hubo cuatro workshops en Infocorp: una kata de principios SOLID, Azure Mobile Services, un dojo de type providers de F# y desarrollo de apps para Windows 10.\n\nLos días de conferencia fueron el viernes 2 y el sábado 3 de octubre. Eduardo Mangarelli (Microsoft Latinoamérica) abrió con una keynote sobre la plataforma de desarrollo de Microsoft y Magdalena Rodríguez, socia fundadora de GPS Gay, dio la del segundo día sobre mujeres en tecnología. Entre los oradores estuvieron Rachel Reese (Jet), Matt Milner, Donald Belcham, Damián Schenkelman (Auth0), Johnny Halife y Juli Racca (Mural.ly), con charlas sobre .NET en Linux y Mac, F#, Xamarin, C# 6, Azure Machine Learning y DevOps. El sábado cerró con un after party y el domingo 4 hubo un paseo a Colonia con los speakers.",
+    "venue": "Auditorio Antel, Torre de las Telecomunicaciones (workshops en Infocorp)",
+    "city": "Montevideo",
+    "organizers": [
+      "Fabián Fernández",
+      "Leonardo Botta",
+      "José Erosa",
+      "Daniel Pardo"
+    ],
+    "talks": [
+      {
+        "title": "Keynote: Microsoft Development platform hoy",
+        "speakers": [
+          "Eduardo Mangarelli"
+        ],
+        "video": "https://www.youtube.com/watch?v=aTsjZruOLd0"
+      },
+      {
+        "title": ".NET Multiplataforma (Linux y Mac OS)",
+        "speakers": [
+          "Andrés Vettori"
+        ],
+        "video": "https://www.youtube.com/watch?v=qBD4jR32CeA"
+      },
+      {
+        "title": "Building Reactive Services using Functional Programming",
+        "speakers": [
+          "Rachel Reese"
+        ],
+        "video": "https://www.youtube.com/watch?v=l1tZ8She768",
+        "slides": "https://github.com/rachelreese/Current-Talks/tree/master/Reactive%20Services"
+      },
+      {
+        "title": "Single Page Apps con AngularJS y WebAPI",
+        "speakers": [
+          "Juan Emilio Inzaurraga"
+        ]
+      },
+      {
+        "title": "ÁNIMA, una nueva propuesta de formación tecnológica para jóvenes",
+        "speakers": [
+          "Ximena Sommer"
+        ],
+        "video": "https://www.youtube.com/watch?v=5CrB5j4Fd_Y"
+      },
+      {
+        "title": "Stairway to heaven, hybrid environments with SharePoint Server 2016",
+        "speakers": [
+          "Fabián Imaz"
+        ]
+      },
+      {
+        "title": "Construyendo cosas que valen la pena",
+        "speakers": [
+          "Johnny Halife"
+        ]
+      },
+      {
+        "title": "Understanding Xamarin Development",
+        "speakers": [
+          "Matt Milner"
+        ]
+      },
+      {
+        "title": "¿Cómo es un desarrollador ágil \"full stack\"?",
+        "speakers": [
+          "Carlos Peix"
+        ],
+        "slides": "http://www.slideshare.net/kleer_la/como-es-un-desarrollador-agil-full-stack"
+      },
+      {
+        "title": "Universal Windows Platform: Programming for everything",
+        "speakers": [
+          "Mariano Sánchez"
+        ]
+      },
+      {
+        "title": "Keynote: Women in Tech",
+        "speakers": [
+          "Magdalena Rodríguez"
+        ]
+      },
+      {
+        "title": "Dev/Ops on the cloud with Microsoft Azure",
+        "speakers": [
+          "Carolina Romero",
+          "Fernando Machado"
+        ]
+      },
+      {
+        "title": "Azure, Internet of Things and BBQ",
+        "speakers": [
+          "Donald Belcham"
+        ]
+      },
+      {
+        "title": "Machine Learning: buscándole el sentido a nuestros datos con Microsoft Azure",
+        "speakers": [
+          "Mariano Vázquez",
+          "Diego Poza"
+        ]
+      },
+      {
+        "title": "C# 6: ¿qué hay de nuevo?",
+        "speakers": [
+          "Mariano Sánchez"
+        ]
+      },
+      {
+        "title": "Team Building: comentarios y técnicas para formar un gran equipo de trabajo",
+        "speakers": [
+          "Marcos Ezquerra"
+        ],
+        "slides": "http://www.slideshare.net/mezquerra2/net-conf-uy-2015-team-building"
+      },
+      {
+        "title": "The dirty secrets of building large, highly available, scalable HTTP APIs",
+        "speakers": [
+          "Damián Schenkelman"
+        ],
+        "slides": "https://github.com/dschenkelman/api-secrets-talk"
+      },
+      {
+        "title": "Age of Azure: Machine Learning Revolution",
+        "speakers": [
+          "Pablo Maceiras"
+        ]
+      },
+      {
+        "title": "Building Awesome Native Apps with C# (Xamarin & Universal Apps)",
+        "speakers": [
+          "Juli Racca",
+          "Johnny Halife"
+        ]
+      },
+      {
+        "title": "How we use Hadoop and R to crack complex problems of IoT, Agriculture, Mining and Smart Cities in Chile",
+        "speakers": [
+          "Pablo García"
+        ]
+      },
+      {
+        "title": "Get the Best of Web Technologies and Native Features with Apache Cordova and Visual Studio",
+        "speakers": [
+          "Matt Milner"
+        ]
+      },
+      {
+        "title": "Workshop: SOLID principles code kata",
+        "speakers": [
+          "Donald Belcham"
+        ]
+      },
+      {
+        "title": "Workshop: Azure Mobile Services Jumpstart",
+        "speakers": [
+          "Matt Milner"
+        ]
+      },
+      {
+        "title": "Workshop: Type Provider Treasure Hunt Dojo",
+        "speakers": [
+          "Rachel Reese"
+        ],
+        "slides": "https://github.com/rachelreese/Current-Talks/tree/master/TypeProviderTrasureHunt-Dojo-Slides"
+      },
+      {
+        "title": "Workshop: Desarrollo de aplicaciones para Windows 10",
+        "speakers": [
+          "Mariano Sánchez"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://i.ytimg.com/vi/5CrB5j4Fd_Y/maxresdefault.jpg",
+        "alt": "Ximena Sommer habla en el escenario del Auditorio Antel sobre Ánima (fotograma del video de la charla)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=5CrB5j4Fd_Y"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/aTsjZruOLd0/maxresdefault.jpg",
+        "alt": "Eduardo Mangarelli en el escenario durante la keynote, junto a su diapositiva (fotograma del video de la charla)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=aTsjZruOLd0"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/l1tZ8She768/maxresdefault.jpg",
+        "alt": "Rachel Reese en el atril de .NET Conf UY v2015 al empezar su charla sobre programación funcional (fotograma del video)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=l1tZ8She768"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/qBD4jR32CeA/maxresdefault.jpg",
+        "alt": "Andrés Vettori en el escenario presentando .NET multiplataforma (fotograma del video de la charla)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=qBD4jR32CeA"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20160512094253/http://netconf.uy/en/2015"
+      },
+      {
+        "label": "Videos de las charlas",
+        "url": "https://www.youtube.com/playlist?list=PLX15MdVP0ce9Shi4plbT0o7p1lAQsYVpz"
+      },
+      {
+        "label": "Resumen del evento en video",
+        "url": "https://www.youtube.com/watch?v=EL9NmwVwW5M"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de .NET Conf UY v2015 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20160512094253/http://netconf.uy/en/2015"
+      },
+      {
+        "label": "Universidad ORT: El mayor evento sobre tecnologías Microsoft en Uruguay",
+        "url": "https://www.ort.edu.uy/en/news/el-mayor-evento-sobre-tecnologias-microsoft-en-uruguay-30346"
+      },
+      {
+        "label": "YouTube: lista .NET Conf UY v2015",
+        "url": "https://www.youtube.com/playlist?list=PLX15MdVP0ce9Shi4plbT0o7p1lAQsYVpz"
+      }
+    ]
+  },
+  "conf:agiles-latam:2015-10-22": {
+    "description": "**Ágiles 2015** fueron las VIII Jornadas Latinoamericanas de Metodologías Ágiles, el encuentro anual de la Comunidad Latinoamericana de Metodologías Ágiles. Se hicieron del 22 al 24 de octubre de 2015 en el Hotel Radisson Montevideo Victoria Plaza, con conferencias, workshops, un Open Space y una muestra comercial. Las entradas se agotaron; los organizadores habían anunciado más de 400 asistentes y más de 200 visitantes del exterior.\n\nLos dos primeros días, además de keynotes e invitados especiales, hubo 49 sesiones de oradores de 11 países repartidas en cinco salas y tres ejes —24 de gestión, 16 técnicas y 9 de temas complementarios—: introducciones a Scrum y Kanban, TDD, DevOps, LeSS, Lean Startup, UX y más. Abrieron Mary y Tom Poppendieck con la keynote «Friction»; Miguel Brechner habló de qué tienen en común el Plan Ceibal y el Lean Management, y Alan Cyment cerró con «El último keynote que deberías escuchar (si todo sale bien)». Ángel Medinilla, Agustín Villena y Héctor Otheguy (INVAP) dieron las charlas de invitados especiales. El sábado 24 fue entero de Open Space.\n\nAGESIC patrocinó las jornadas pagando el alquiler de salas, y el Ministerio de Turismo y Deporte las declaró de interés ministerial y turístico.",
+    "talks": [
+      {
+        "title": "Friction (keynote)",
+        "speakers": [
+          "Mary Poppendieck",
+          "Tom Poppendieck"
+        ]
+      },
+      {
+        "title": "Hackeando la cultura para gestionar el cambio",
+        "speakers": [
+          "Ángel Medinilla"
+        ],
+        "video": "https://www.youtube.com/watch?v=W6U9LAqnMCs",
+        "slides": "https://es.slideshare.net/slideshow/hackeando-la-cultura-para-gestionar-el-cambio-en-la-empresa/54272798"
+      },
+      {
+        "title": "En busca de la Agilidad Esencial",
+        "speakers": [
+          "Agustín Villena"
+        ]
+      },
+      {
+        "title": "¿Qué tienen en común Plan Ceibal y Lean Management? (keynote)",
+        "speakers": [
+          "Miguel Brechner"
+        ]
+      },
+      {
+        "title": "Fábrica de tecnología y cultura empresarial",
+        "speakers": [
+          "Héctor Otheguy"
+        ]
+      },
+      {
+        "title": "El último keynote que deberías escuchar (si todo sale bien)",
+        "speakers": [
+          "Alan Cyment"
+        ]
+      }
+    ],
+    "attendance": "entradas agotadas (los organizadores anunciaban más de 400 asistentes)",
+    "organizers": [
+      "Comunidad Latinoamericana de Metodologías Ágiles"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20151006133251/http://agiles2015.agiles.org/es/"
+      },
+      {
+        "label": "Agenda completa en Sched",
+        "url": "https://viiijornadaslatinoamericana2015.sched.com/"
+      },
+      {
+        "label": "Video: «Hackeando la cultura para gestionar el cambio», de Ángel Medinilla",
+        "url": "https://www.youtube.com/watch?v=W6U9LAqnMCs"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de Ágiles 2015 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20151006133251/http://agiles2015.agiles.org/es/"
+      },
+      {
+        "label": "«Publicamos la Agenda!» (Wayback Machine)",
+        "url": "https://web.archive.org/web/2015/http://agiles2015.agiles.org/es/?page_id=1943"
+      },
+      {
+        "label": "Noticias de Ágiles 2015 (Wayback Machine)",
+        "url": "https://web.archive.org/web/2016/http://agiles2015.agiles.org/es/?cat=3"
+      },
+      {
+        "label": "Agenda en Sched",
+        "url": "https://viiijornadaslatinoamericana2015.sched.com/"
+      },
+      {
+        "label": "AGESIC, Resolución N° 11/015",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-11015-20052015-cdh"
+      },
+      {
+        "label": "INVAP en las VIII Jornadas Latinoamericanas de Metodologías Ágiles",
+        "url": "https://www.invap.com.ar/en/invap-took-part-in-the-viii-latin-american-conference-on-agile-methodologies/"
+      }
+    ]
+  },
+  "conf:jsconfuy:2016-04-15": {
+    "description": "La tercera **JSConf Uruguay** se hizo el 15 y 16 de abril de 2016 en el auditorio de Antel (Guatemala 1075), en Montevideo, otra vez con un track de charlas y otro de talleres. Hubo charlas en inglés y en español, con servicio de traducción al español. La organizaron Pablo Ricco, Pablo Dejuan, Sebastián Sassi y Martín Prunell, y la portada del sitio invitaba a sumarse al Slack de Open Web Uruguay.\n\nLos keynotes fueron de Guillermo Rauch (ZEIT, creador de socket.io), con «Programming The JavaScript Future», de Guy Bedford, sobre las decisiones de diseño de jspm, y de Rod Vagg (NodeSource, presidente del comité técnico de Node.js), que cerró la conferencia con «How the Node Project Works». Entre los oradores estuvieron Soledad Penadés (Mozilla), Ruth John, David Neal, Ben Vinegar, Mike Taylor y Myles Borins, además de uruguayos como Leonardo Val, Federico Kereki y Luis Cal.\n\nLos talleres cubrieron React Native, Angular 2, Ember 2, Electron y testing de performance. El primer día cerró con un DrinkUp y el segundo con una fiesta de despedida.",
+    "talks": [
+      {
+        "title": "The !future of Javascript",
+        "speakers": [
+          "Alejandro Oviedo"
+        ]
+      },
+      {
+        "title": "Let’s talk about MIDI",
+        "speakers": [
+          "Ruth John"
+        ]
+      },
+      {
+        "title": "Taller: React Native 101",
+        "speakers": [
+          "Luis Cal"
+        ]
+      },
+      {
+        "title": "Cross-Platform Desktop Apps using Electron",
+        "speakers": [
+          "David Neal"
+        ]
+      },
+      {
+        "title": "Effective JavaScript Debugging with Chrome’s Developer Tools",
+        "speakers": [
+          "Matt Zeunert"
+        ]
+      },
+      {
+        "title": "Lateralus: A distributed relay system in JavaScript",
+        "speakers": [
+          "Raul Pino"
+        ]
+      },
+      {
+        "title": "Real time front-end alchemy",
+        "speakers": [
+          "Soledad Penadés"
+        ]
+      },
+      {
+        "title": "Taller: Angular 2.0",
+        "speakers": [
+          "Santiago Ferreira",
+          "Iran Reyes"
+        ]
+      },
+      {
+        "title": "Why Johnny can't collect browser errors",
+        "speakers": [
+          "Ben Vinegar"
+        ]
+      },
+      {
+        "title": "Taking on Genetically Evolving Cellular Automata with JavaScript",
+        "speakers": [
+          "Irina Shestak"
+        ]
+      },
+      {
+        "title": "OpenComponents as microservices in the front-end world",
+        "speakers": [
+          "Matteo Figus"
+        ]
+      },
+      {
+        "title": "Keynote: Programming The JavaScript Future",
+        "speakers": [
+          "Guillermo Rauch"
+        ]
+      },
+      {
+        "title": "Keynote: Design Decisions in jspm",
+        "speakers": [
+          "Guy Bedford"
+        ]
+      },
+      {
+        "title": "Taller: Ember 2.0",
+        "speakers": [
+          "Santiago Ferreira",
+          "Adrián Mugnolo"
+        ]
+      },
+      {
+        "title": "Statistical Programming with JavaScript",
+        "speakers": [
+          "David Simons"
+        ]
+      },
+      {
+        "title": "elm => javascript, How to Enjoy Functional Programming in ES5",
+        "speakers": [
+          "Juan Caicedo"
+        ]
+      },
+      {
+        "title": "Building Graphical Command Line Applications in JavaScript",
+        "speakers": [
+          "Patrick Kettner"
+        ]
+      },
+      {
+        "title": "Scientific computing with JavaScript",
+        "speakers": [
+          "Leonardo Val"
+        ]
+      },
+      {
+        "title": "Taller: Create an app using Electron",
+        "speakers": [
+          "David Neal"
+        ]
+      },
+      {
+        "title": "Isomorphic Universal Javascript",
+        "speakers": [
+          "Federico Kereki"
+        ]
+      },
+      {
+        "title": "Code at the Speed of Light: Content Delivery Networks for JavaScripters",
+        "speakers": [
+          "Clay Smith"
+        ]
+      },
+      {
+        "title": "Taller: Performance testing and optimization",
+        "speakers": [
+          "Diego Cardozo"
+        ]
+      },
+      {
+        "title": "Web Compatible JavaScript and CSS",
+        "speakers": [
+          "Mike Taylor"
+        ]
+      },
+      {
+        "title": "ReactJS: Tips and Tricks to create accessible SVG components",
+        "speakers": [
+          "Alan Souza"
+        ]
+      },
+      {
+        "title": "Node.js Releases, how do they work?",
+        "speakers": [
+          "Myles Borins"
+        ]
+      },
+      {
+        "title": "Keynote: How the Node Project Works",
+        "speakers": [
+          "Rod Vagg"
+        ]
+      }
+    ],
+    "venue": "Auditorio de la Torre de las Telecomunicaciones (Antel), Guatemala 1075",
+    "city": "Montevideo",
+    "organizers": [
+      "Pablo Ricco",
+      "Pablo Dejuan",
+      "Sebastián Sassi",
+      "Martín Prunell"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20160401/https://jsconf.uy/"
+      },
+      {
+        "label": "Agenda (archivada)",
+        "url": "https://web.archive.org/web/20160529041745/https://jsconf.uy/schedule"
+      }
+    ],
+    "sources": [
+      {
+        "label": "JSConf Uruguay 2016 · Sitio oficial (Wayback Machine)",
+        "url": "https://web.archive.org/web/20160401/https://jsconf.uy/"
+      },
+      {
+        "label": "JSConf Uruguay 2016 · Schedule (Wayback Machine)",
+        "url": "https://web.archive.org/web/20160529041745/https://jsconf.uy/schedule"
+      },
+      {
+        "label": "Soledad Penadés · In Uruguay",
+        "url": "https://soledadpenades.com/posts/2016/in-uruguay/"
+      }
+    ]
+  },
+  "conf:startup-weekend-punta-del-este:2016-05-06": {
+    "description": "Primer **Startup Weekend de la Región Este**, del 6 al 8 de mayo de 2016 en StartUp M3, el primer espacio de cowork de Punta del Este, en la zona del puerto. Se hizo dentro de **Vamos el Este**, un proyecto presentado en 2015 a la ANII para promover el emprendimiento y la innovación en Maldonado, Rocha, Lavalleja y Treinta y Tres, que impulsaban el Centro Universitario Regional del Este (CURE), StartUp M3 y la Red de Emprendedurismo de la Universidad de la República (EMPRENUR). Lo apoyaron, entre otros, la Universidad Católica, la Universidad de Montevideo, la incubadora Idear, CUTI, ANII y el MIEM.\n\nEl formato fue el clásico: el viernes se presentan ideas y se eligen las mejores, durante el fin de semana los equipos las validan con ayuda de mentores, y el domingo de tarde se muestran los resultados. Entre los mentores y jurados anunciados estaban Martín Espósito, Ariel Pfeffer, Gabriel Colla, María Messina, Daniel Goldman, Estela Delgado, Federico Astiz, Catherine Krauss, Gabriel López y Enrique Topolansky. Los organizadores esperaban unos 50 participantes y 20 mentores, y la entrada costaba 600 pesos.",
+    "venue": "StartUp M3 (cowork), Puerto de Punta del Este",
+    "organizers": [
+      "Vamos el Este",
+      "CURE (UdelaR)",
+      "StartUp M3",
+      "EMPRENUR (UdelaR)"
+    ],
+    "photos": [
+      {
+        "src": "https://cms.puntadelesteinternacional.com/wp-content/uploads/2016/05/startup1.jpg",
+        "alt": "Fachada de StartUp M3, el cowork del puerto de Punta del Este que fue sede del evento (foto del lugar publicada al anunciarlo, no del evento)",
+        "by": "PuntaDelEsteInternacional.com",
+        "source": "Sitio de PuntaDelEsteInternacional.com",
+        "page": "https://puntadelesteinternacional.com/primer-startup-weekend-en-punta-del-este"
+      }
+    ],
+    "links": [
+      {
+        "label": "Presentación del evento (PDF, Facultad de Ingeniería)",
+        "url": "https://www.fing.edu.uy/sites/default/files/noticias/2016/3/25262/Presentacion%20START%20UP%20WEEKEND%20-%20FIN%20DE%20SEMANA%20EMPRENDEDOR%20ESTE%202016.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Facultad de Ingeniería (UdelaR): «Startup Weekend de Región Este»",
+        "url": "https://www.fing.edu.uy/es/noticias/area-de-comunicaci%C3%B3n/startup-weekend-de-regi%C3%B3n-este"
+      },
+      {
+        "label": "Vamos el Este: presentación del Startup Weekend Este 2016 (PDF)",
+        "url": "https://www.fing.edu.uy/sites/default/files/noticias/2016/3/25262/Presentacion%20START%20UP%20WEEKEND%20-%20FIN%20DE%20SEMANA%20EMPRENDEDOR%20ESTE%202016.pdf"
+      },
+      {
+        "label": "CCI: «Primer Startup Weekend de la Región Este»",
+        "url": "https://www.cci.edu.uy/node/175"
+      },
+      {
+        "label": "PuntaDelEsteInternacional.com: «Primer Startup Weekend en Punta del Este»",
+        "url": "https://puntadelesteinternacional.com/primer-startup-weekend-en-punta-del-este"
+      }
+    ]
+  },
+  "conf:startup-weekend-montevideo:2016-07-22": {
+    "description": "Quinta edición del **Startup Weekend Montevideo**, organizada por la Cámara Uruguaya de Tecnologías de la Información (CUTI) y la incubadora Ingenio del LATU. Del viernes 22 al domingo 24 de julio de 2016, en el edificio Los Naranjos del Parque Tecnológico del LATU, más de 60 emprendedores (programación, diseño, publicidad, marketing, finanzas) presentaron ideas, votaron las mejores y armaron equipos multidisciplinarios para convertirlas en un modelo de negocio en 54 horas, acompañados por 16 coaches y dos facilitadores.\n\nEl viernes abrió con una charla de Luis Ara (Dispel) y el sábado hubo un taller de design thinking a cargo de Gabriela Retamosa y Sebastián Vergara, de IBM Uruguay. El domingo los equipos presentaron ante un jurado formado por Álvaro Lamé (presidente de CUTI), Sara Goldberg (ANII) y Gabriel Colla (Infocorp).\n\nEl proyecto más destacado fue **SparKids**, una plataforma de apoyo a niños con altas capacidades que, en una primera etapa, buscaba conectar a sus familias con profesionales especializados. También se destacaron:\n- **Reunidos**, una forma inteligente de hacer donaciones\n- **BetChallenge**, apuestas entre personas\n- **#InvestMeUp**, para conectar startups con inversores\n\nMuchos de los proyectos apuntaban a temas sociales. El evento tuvo el apoyo de IBM Uruguay, Indra y Tryolabs.",
+    "attendance": "más de 60 emprendedores, 16 coaches y dos facilitadores",
+    "venue": "Incubadora Ingenio, Edificio Los Naranjos, Parque Tecnológico del LATU (Av. Italia 6201)",
+    "organizers": [
+      "CUTI",
+      "Ingenio (incubadora del LATU)",
+      "Pablo Salomón",
+      "Rafael García",
+      "Guzmán Cabrera"
+    ],
+    "links": [
+      {
+        "label": "Página del evento en Techstars (archivada)",
+        "url": "https://web.archive.org/web/20200201185721/https://communities.techstars.com/uruguay/montevideo/startup-weekend/9338"
+      },
+      {
+        "label": "Crónica de CUTI: SparKids, el proyecto más destacado",
+        "url": "https://cuti.org.uy/institucionales/sparkids-fue-el-proyecto-mas-destacado-del-startup-weekend-montevideo-2016/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI — Sparkids fue el proyecto más destacado del Startup Weekend Montevideo 2016",
+        "url": "https://cuti.org.uy/institucionales/sparkids-fue-el-proyecto-mas-destacado-del-startup-weekend-montevideo-2016/"
+      },
+      {
+        "label": "Techstars — Startup Weekend Montevideo, 22 al 24 de julio de 2016 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20200201185721/https://communities.techstars.com/uruguay/montevideo/startup-weekend/9338"
+      },
+      {
+        "label": "CUTI — Startup Weekend Montevideo (convocatoria 2016)",
+        "url": "https://cuti.org.uy/noticias/de-interes/startup-weekend-montevideo/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://cuti.org.uy/wp-content/uploads/2020/12/dsc-1240.jpg",
+        "alt": "Equipos premiados con sus diplomas junto a organizadores con remeras de Startup Weekend Montevideo 2016; atrás, un papelógrafo con la lista de proyectos",
+        "by": "CUTI",
+        "source": "Sitio de CUTI",
+        "page": "https://cuti.org.uy/institucionales/sparkids-fue-el-proyecto-mas-destacado-del-startup-weekend-montevideo-2016/"
+      }
+    ]
+  },
+  "conf:girls-in-tech-uruguay:2016-09-08": {
+    "description": "Girls in Tech Uruguay, capítulo local de la organización global sin fines de lucro que había empezado a armarse en marzo de 2016, convocó a una **hackatón para liceales** el 8 de setiembre de 2016, de 9 a 18 horas, con apoyo de la Intendencia de Montevideo. La consigna era **ciudades inteligentes**: cada equipo tenía que elegir un problema de la ciudad en movilidad, calidad ambiental o higiene y convivencia, prototipar una solución tecnológica y defenderla en un pitch breve ante un jurado que elegía al equipo ganador.\n\nSegún la convocatoria, los equipos se formaban con seis estudiantes de 3.º, 4.º o 5.º de liceo, mitad chicas y mitad chicos, y un docente responsable; no hacía falta saber programar. La idea era promover la equidad de género trabajando en equipos mixtos desde temprana edad. El programa incluía un caso de negocio sobre ciudades inteligentes y un taller de prototipado (Inzol), un taller de pitch (Innmentor) y mentoría en comunicación y creatividad. El primer premio sumaba cursos de Coderhouse, becas de inglés de Uruguay XXI, un trofeo impreso en 3D por Sinergia Tech y un mes de membresía en Sinergia Tech para seguir desarrollando el prototipo.",
+    "organizers": [
+      "Girls in Tech Uruguay",
+      "Intendencia de Montevideo (apoyo)"
+    ],
+    "links": [
+      {
+        "label": "Nota de El Observador (convocatoria)",
+        "url": "https://www.elobservador.com.uy/nota/hackaton-para-despertar-el-espiritu-emprendedor-en-adolescentes-201682418300"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador — Hackatón para despertar el espíritu emprendedor en adolescentes (24/8/2016)",
+        "url": "https://www.elobservador.com.uy/nota/hackaton-para-despertar-el-espiritu-emprendedor-en-adolescentes-201682418300"
+      },
+      {
+        "label": "CUTI — Hackatón para despertar el espíritu emprendedor en adolescentes",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/hackaton-para-despertar-el-espiritu-emprendedor-en-adolescentes/"
+      },
+      {
+        "label": "CUTI — Llegó Girls in Tech a Uruguay (3/3/2016)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/llego-girls-in-tech-a-uruguay/"
+      }
+    ]
+  },
+  "conf:netconf-uy:2016-09-29": {
+    "description": "La tercera **.NET Conf UY** (v2016) se hizo del 29 de setiembre al 1 de octubre de 2016 en Montevideo, organizada por la comunidad .NET local, con Pablo Terevinto, Fabián Fernández, Daniel Pardo y José Erosa al frente. Fue declarada de interés nacional por el Ministerio de Educación y Cultura, y la organización la presentaba como la mayor conferencia de tecnologías Microsoft organizada por la comunidad en Sudamérica.\n\nEl jueves 29 fue el día de workshops, en dos tracks simultáneos, con talleres de Xamarin Forms, Ember con .NET Core, Ruby on Rails en Azure, Arduino, React con ASP.NET, Angular 2, apps universales de Windows, analizadores de C# con Roslyn a cargo de Kevin Pilch (Microsoft) y ASP.NET Core en Linux.\n\nEl viernes 30 y el sábado 1 fueron los días de conferencia en el Auditorio de las Telecomunicaciones de Antel, también en dos tracks y con más de 35 charlas. Eduardo Mangarelli (Microsoft Latinoamérica) abrió con la keynote \"El futuro que es hoy\" y Álvaro Lamé, presidente de la CUTI, dio la del segundo día sobre economía digital. Hubo charlas sobre HoloLens, bots, Cognitive Services, Docker, ASP.NET Core, el futuro de C#, Azure Functions, Power BI y análisis político con analytics, entre otras. El programa incluyó una actividad de inclusión social con cincuenta estudiantes del bachillerato tecnológico Ánima y cerró con un after party.",
+    "venue": "Auditorio de las Telecomunicaciones, Antel",
+    "city": "Montevideo",
+    "organizers": [
+      "Pablo Terevinto",
+      "Fabián Fernández",
+      "Daniel Pardo",
+      "José Erosa"
+    ],
+    "talks": [
+      {
+        "title": "Keynote: El futuro que es hoy",
+        "speakers": [
+          "Eduardo Mangarelli"
+        ]
+      },
+      {
+        "title": "Hololens para proyectos de educación militar",
+        "speakers": [
+          "Gabriel Cor"
+        ]
+      },
+      {
+        "title": "Un paseo por Azure Search",
+        "speakers": [
+          "Matías Quaranta"
+        ]
+      },
+      {
+        "title": "Transform your Startup into an Exponential Organization through the power of Azure and IoT",
+        "speakers": [
+          "Pablo Maceiras"
+        ]
+      },
+      {
+        "title": "Cognitive Services: Creando aplicaciones mas inteligentes y atractivas",
+        "speakers": [
+          "Diego Poza"
+        ]
+      },
+      {
+        "title": "Industria 4.0: ¿La revolución de las maquinas o de la información?",
+        "speakers": [
+          "Marcos Ezquerra"
+        ]
+      },
+      {
+        "title": "My business 365: productivity and enterprise mobility",
+        "speakers": [
+          "Miguel Llorca"
+        ]
+      },
+      {
+        "title": "Conociendo TypeScript",
+        "speakers": [
+          "Mariano Sánchez"
+        ]
+      },
+      {
+        "title": "The Future of C#",
+        "speakers": [
+          "Kevin Pilch"
+        ]
+      },
+      {
+        "title": "Performance en la nube",
+        "speakers": [
+          "Diego Cardozo"
+        ]
+      },
+      {
+        "title": "Construye tu propio Chat Bot",
+        "speakers": [
+          "Fernando Machado",
+          "Fabián Alves"
+        ]
+      },
+      {
+        "title": "Introducción al desarrollo de aplicaciones en Xamarin",
+        "speakers": [
+          "Sebastián Pérez"
+        ]
+      },
+      {
+        "title": "Controlando Robots y dispositivos con Azure IoT Hub",
+        "speakers": [
+          "Rodolfo Finochietti"
+        ]
+      },
+      {
+        "title": "Creando una SPA con Angular 2 y ASP.NET Core",
+        "speakers": [
+          "Nicolás Bello"
+        ]
+      },
+      {
+        "title": "Machine Learning en Azure y SQL 2016",
+        "speakers": [
+          "Pablo García"
+        ]
+      },
+      {
+        "title": "Azure Stream Analytics: Análisis de datos en tiempo real",
+        "speakers": [
+          "Leonardo Micheloni"
+        ]
+      },
+      {
+        "title": "¿Estamos preparados para la economía digital?",
+        "speakers": [
+          "Álvaro Lamé"
+        ]
+      },
+      {
+        "title": "Programando con Hololens",
+        "speakers": [
+          "Diego González",
+          "Lucas Pallarés"
+        ]
+      },
+      {
+        "title": "Recorriendo SQL 2016",
+        "speakers": [
+          "Maximiliano Accotto"
+        ]
+      },
+      {
+        "title": "Let's microservice all the things",
+        "speakers": [
+          "Mariano Vázquez"
+        ]
+      },
+      {
+        "title": "Modern day C# development in Visual Studio \"15\"",
+        "speakers": [
+          "Kevin Pilch"
+        ]
+      },
+      {
+        "title": "DevOps, PowerShell and Windows containers",
+        "speakers": [
+          "Víctor Silva"
+        ]
+      },
+      {
+        "title": "Redes Sociales Corporativas, en la tierra como en la nube",
+        "speakers": [
+          "Fabián Imaz"
+        ]
+      },
+      {
+        "title": "Política en Uruguay: entendiendo el juego con Analytics y Computación Cognitiva",
+        "speakers": [
+          "Daniel Yankelevich"
+        ]
+      },
+      {
+        "title": "Big data en Azure: Azure Data Lake",
+        "speakers": [
+          "Guillermo Bellmann"
+        ]
+      },
+      {
+        "title": "Power BI in Action",
+        "speakers": [
+          "Gastón Cruz",
+          "Bruno Torterolo"
+        ]
+      },
+      {
+        "title": "Ánima - Be someone's StackOverflow",
+        "speakers": [
+          "Andrés González"
+        ]
+      },
+      {
+        "title": "Docker for People Who Think Docker Is This Weird Linux Thing That Doesn't Impact Them",
+        "speakers": [
+          "Kyle Baley"
+        ]
+      },
+      {
+        "title": "Cómo asegurar la performance de aplicaciones móviles tanto en el device como en el servidor",
+        "speakers": [
+          "Federico Toledo",
+          "Fabián Baptista"
+        ]
+      },
+      {
+        "title": "Xamarin Forms: Máximizando la productividad del desarrollo móvil",
+        "speakers": [
+          "Sorey García"
+        ]
+      },
+      {
+        "title": "Desarrollo de aplicaciones en plataformas no Microsoft",
+        "speakers": [
+          "Juan Carlos Ruiz"
+        ]
+      },
+      {
+        "title": "Que es ASP.NET Core 1.0, y por que lo necesitamos",
+        "speakers": [
+          "Rodolfo Finochietti"
+        ]
+      },
+      {
+        "title": "Serverless computing con Azure Functions",
+        "speakers": [
+          "Hernán Guzmán"
+        ]
+      },
+      {
+        "title": "Workshop: Prototipado de aplicaciones Moviles con Xamarin Forms",
+        "speakers": [
+          "Sorey García"
+        ]
+      },
+      {
+        "title": "Workshop: EmberJS and .NET Core from scratch",
+        "speakers": [
+          "Santiago Ferreira",
+          "Federico Kauffman"
+        ]
+      },
+      {
+        "title": "Workshop: Ruby on Rails en Azure",
+        "speakers": [
+          "Santiago Pastorino",
+          "Emilio Cristalli"
+        ]
+      },
+      {
+        "title": "Workshop: IoT para principiantes: Mis primeros pasos con Arduino",
+        "speakers": [
+          "Leonardo Micheloni"
+        ]
+      },
+      {
+        "title": "Workshop: ASP.NET & ReactJS",
+        "speakers": [
+          "Mariano Vázquez"
+        ]
+      },
+      {
+        "title": "Workshop: Build more reliable and scalable .NET systems",
+        "speakers": [
+          "Kyle Baley"
+        ]
+      },
+      {
+        "title": "Workshop: Introducción a ASP.NET Core con Angular 2",
+        "speakers": [
+          "Nicolás Bello"
+        ]
+      },
+      {
+        "title": "Workshop: Developing Universal Windows Platform Apps",
+        "speakers": [
+          "Mariano Sánchez"
+        ]
+      },
+      {
+        "title": "Workshop: Building C# Analyzers and Quick Fixes with \"Roslyn\"",
+        "speakers": [
+          "Kevin Pilch"
+        ]
+      },
+      {
+        "title": "Workshop: ASP.NET Core 1.0 en linux",
+        "speakers": [
+          "Rodolfo Finochietti"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20161004150733/http://netconf.uy/es/2016/Index"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de .NET Conf UY v2016 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20161004150733/http://netconf.uy/es/2016/Index"
+      },
+      {
+        "label": "CUTI: el mayor foro sobre tecnologías de Microsoft de Sudamérica",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/mayor-foro-sobre-tecnologias-de-microsoft-de-sudamerica/"
+      }
+    ]
+  },
+  "meetup:234592932": {
+    "description": "Segunda meetup de **ReactJS Uruguay**, un grupo creado en Meetup a fines de setiembre de 2016 para cualquier persona interesada en React y tecnologías relacionadas, con la idea de aprender unos de otros y compartir experiencias. Igual que la primera, del 20 de octubre, fue un encuentro informal en La Chopería de 21 de Setiembre 2650, el jueves 17 de noviembre de 2016 desde las 19:30, con 27 personas anotadas.\n\nCon el tiempo el grupo fijó sus encuentros el tercer jueves de cada mes en La Chopería y siguió reuniéndose hasta 2018, con una vuelta en 2023.",
+    "venue": "La Chopería, 21 de Setiembre 2650",
+    "rsvps": 27,
+    "links": [
+      {
+        "label": "Evento en Meetup",
+        "url": "https://www.meetup.com/reactjs-uruguay/events/234592932/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Learn and share React experiences (17/11/2016)",
+        "url": "https://www.meetup.com/reactjs-uruguay/events/234592932/"
+      },
+      {
+        "label": "Meetup: eventos pasados de ReactJS Uruguay",
+        "url": "https://www.meetup.com/reactjs-uruguay/events/past/"
+      },
+      {
+        "label": "Sitio de ReactJS Uruguay (Wayback Machine)",
+        "url": "https://web.archive.org/web/20190825013332/https://reactjsuy.now.sh/"
+      }
+    ]
+  },
+  "github:js-uy/newsletter:2017-06-15:reactjs-uruguay-meetup": {
+    "description": "Meetup mensual de **ReactJS Uruguay**. El newsletter de la comunidad JavaScript uruguaya (js.uy) la anunciaba en su agenda de junio para el jueves 15 de junio de 2017, pero según Meetup el encuentro se hizo el jueves 22 de junio en las oficinas de Ingenious Softworks (Torre Libertad, Plaza Cagancha 1335), con 30 personas anotadas. El grupo se coordinaba en el Slack de Open Web Uruguay, donde cada meetup tenía su canal.\n\nLa convocatoria anunciaba dos charlas sobre manejo de estado y side effects en React: una introducción a Redux de Nicolás Barrera y una charla de Ernesto Cruz sobre redux-loop. El resumen del newsletter de julio registró las charlas de Redux (Nicolás Barrera) y Sagas (Ernesto Cruz), más el repaso de novedades del mes a cargo de Diego Cáceres.",
+    "venue": "Ingenious Softworks, Plaza Cagancha 1335 of. 1002 (Torre Libertad)",
+    "city": "Montevideo",
+    "rsvps": 30,
+    "talks": [
+      {
+        "title": "Redux",
+        "speakers": [
+          "Nicolás Barrera"
+        ]
+      },
+      {
+        "title": "Sagas",
+        "speakers": [
+          "Ernesto Cruz"
+        ]
+      },
+      {
+        "title": "Novedades del mes",
+        "speakers": [
+          "Diego Cáceres"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Evento en Meetup",
+        "url": "https://www.meetup.com/reactjs-uruguay/events/240845248/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Learn and share React experiences (22/06/2017)",
+        "url": "https://www.meetup.com/reactjs-uruguay/events/240845248/"
+      },
+      {
+        "label": "js.uy newsletter, issue #2 (junio 2017)",
+        "url": "https://github.com/js-uy/newsletter/blob/HEAD/_posts/2017-06-01-issue-2.md"
+      },
+      {
+        "label": "js.uy newsletter, issue #3 (julio 2017)",
+        "url": "https://github.com/js-uy/newsletter/blob/HEAD/_posts/2017-07-01-issue-3.md"
+      }
+    ]
+  },
+  "conf:startup-weekend-montevideo:2017-07-28": {
+    "description": "Edición 2017 del **Startup Weekend Montevideo**: 54 horas, del viernes 28 al domingo 30 de julio, en la Incubadora Ingenio del Parque Tecnológico del LATU. La organizó un equipo de voluntarios junto a Girls in Tech Uruguay e Ingenio, con Guzmán Cabrera como facilitador. Para sumar más emprendedoras, la inscripción tuvo una promoción de dos amigas al precio de una.\n\nEl formato fue el de siempre: pitches de ideas el viernes, votación y armado de equipos, dos días de trabajo con mentores y presentaciones finales el domingo de tarde ante el jurado. La charla de apertura estuvo a cargo de Claudia Fernández, cofundadora de Manentia, y el sábado hubo talleres de Gabriela Retamosa (IBM Uruguay), sobre cómo definir el problema y comunicar una idea, y de Daniel Goldman (InnMentor), sobre el producto mínimo viable.\n\nEl jurado lo integraron Pablo Salomón (Inetsat, ex presidente de CUTI), Paula Gallotti (DVelop) y Martín Larre (Sinergia). El proyecto premiado fue **Traelo App**, una aplicación de servicios de cadetería, y hubo una mención especial para **Roboprok**, una escuela de programación y robótica, por su valor educativo.\n\nEntre los mentores estuvieron Álvaro Ballester, Daniel Giosa, Paula Mosera (Socialab), Aníbal Gonda (GeneXus), Gabriela Retamosa (IBM), Sergio Delgado (Fundación da Vinci), Daniel Schwed (Intersys Networks), Fernando Panizza y Antonio de los Campos (Bantotal).",
+    "venue": "Incubadora Ingenio, Edificio Los Naranjos, Parque Tecnológico del LATU (Av. Italia 6201)",
+    "organizers": [
+      "Girls in Tech Uruguay",
+      "Ingenio (incubadora del LATU)",
+      "Natalia Rehermann",
+      "Julieta Cayre",
+      "Rafael García",
+      "Guzmán Cabrera"
+    ],
+    "links": [
+      {
+        "label": "Página del evento en Techstars (archivada)",
+        "url": "https://web.archive.org/web/20170812234857/https://communities.techstars.com/uruguay/montevideo/startup-weekend/10905"
+      },
+      {
+        "label": "Crónica del LATU",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-montevideo-2017"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LATU — Startup Weekend Montevideo 2017 (crónica)",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-montevideo-2017"
+      },
+      {
+        "label": "LATU — Startup Weekend Montevideo 2017: un fin de semana para convertir ideas en negocios",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-montevideo-2017-un-fin-de-semana-para-convertir-ideas-en-negocios"
+      },
+      {
+        "label": "Techstars — Startup Weekend Montevideo, 28 al 30 de julio de 2017 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20170812234857/https://communities.techstars.com/uruguay/montevideo/startup-weekend/10905"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://images.prismic.io/latu/2efed75e-5046-42fd-8fb4-3b49be50043c_swmvd2017.jpg?auto=compress,format",
+        "alt": "Foto grupal de participantes, mentores y organizadores del Startup Weekend Montevideo 2017 en Ingenio, algunos con diplomas",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-montevideo-2017"
+      }
+    ]
+  },
+  "conf:startup-weekend-punta-del-este:2018-05-04": {
+    "description": "Tercera edición del **Startup Weekend Punta del Este**, del viernes 4 al domingo 6 de mayo de 2018 en el Startup Cowork Café (calle 18 esquina 28). Como en todo Startup Weekend, quienes tenían una idea la presentaban en un minuto el viernes, se votaban los proyectos, se armaban equipos y durante el fin de semana trabajaban con mentores para validar la idea y presentarla el domingo de tarde.\n\nDaniel Goldman (InnMentor) y Enrique Topolansky (Centro de Innovación y Emprendimientos de la Universidad ORT) fueron los oradores, y hubo charlas sobre propuesta de valor y validación, atributos y comunicación efectiva. El jurado lo formaron Federico Astiz (Grupo Oxean y StartUp M3), Diego Echeverría (secretario general de la Intendencia de Maldonado), Giselle Della Mea, Mauro Costa (ANDE) y Gabriel Colla (Infocorp).\n\nEntre los mentores hubo referentes del Centro Ithaka de la UCU, Socialab, la Fundación da Vinci, San Diego Labs, el MIEM y Jóvenes Emprendedores de UTU. Organizaron Ana Inés Sánchez, Cecilia de Soto y Gabriela Rodríguez, con Belén Fernández (AgilMentor) como facilitadora.",
+    "venue": "Startup Cowork Café, calle 18 esquina calle 28, Punta del Este",
+    "city": "Punta del Este",
+    "organizers": [
+      "Ana Inés Sánchez",
+      "Cecilia de Soto",
+      "Gabriela Rodríguez"
+    ],
+    "photos": [
+      {
+        "src": "https://www.uruguayemprendedor.uy/uploads/evento/8a3ed4529fb4d6395570a681ba35a1ed37aa2506.jpg",
+        "alt": "Banner de difusión (no es una foto del evento): Startup Weekend Punta del Este, 4 al 6 de mayo de 2018, tercera edición",
+        "by": "Startup Weekend Punta del Este",
+        "source": "Sitio de Uruguay Emprendedor",
+        "page": "https://www.uruguayemprendedor.uy/evento/startup-weekend-punta-del-este-1/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento en Techstars (archivada)",
+        "url": "https://web.archive.org/web/20190916064502/http://communities.techstars.com/uruguay/este/startup-weekend/12741"
+      },
+      {
+        "label": "Ficha en Uruguay Emprendedor",
+        "url": "https://www.uruguayemprendedor.uy/evento/startup-weekend-punta-del-este-1/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Techstars — Startup Weekend Punta del Este, 4 al 6 de mayo de 2018 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20190916064502/http://communities.techstars.com/uruguay/este/startup-weekend/12741"
+      },
+      {
+        "label": "Uruguay Emprendedor — Startup Weekend Punta del Este",
+        "url": "https://www.uruguayemprendedor.uy/evento/startup-weekend-punta-del-este-1/"
+      }
+    ]
+  },
+  "conf:startup-weekend-montevideo:2018-05-11": {
+    "description": "Séptima edición del **Startup Weekend Montevideo**, del viernes 11 al domingo 13 de mayo de 2018 en la Incubadora Ingenio del Parque Tecnológico del LATU. Esta vez la organizaron Ingenio, Girls in Tech Uruguay, CUTI y UTEC, con IBM como sponsor y Guzmán Cabrera —coorganizador de los primeros Startup Weekend del país— como facilitador.\n\nLa charla de apertura, *Emprender desde la pasión*, la dio Krikor Attarian (AZ Sportech), y el sábado Daniel Goldman (InnMentor) hizo un taller sobre fijaciones mentales e innovación. Según la crónica de CUTI, vinieron más mujeres que el año anterior y hubo varios participantes extranjeros: tres de Venezuela, una de Brasil y una de Argentina que viajó especialmente.\n\nDel fin de semana salieron cuatro startups:\n- **Chef al Toque**, la ganadora: un marketplace que conecta chefs con personas que quieren que les cocinen en casa para eventos, cumpleaños o cenas especiales; también se llevó la mención especial de los mentores\n- **Quiero Ver**, una plataforma de canales a demanda\n- **AGSAT**, procesamiento de imágenes satelitales para usar mejor los terrenos\n- **Intercambia.com**, una plataforma web para enseñar y aprender\n\nEl jurado lo integraron Claudia Fernández (cofundadora de Manentia), Diego Piuma (FrameALIVE) y Marcelo Estapé (IBM Uruguay).",
+    "venue": "Incubadora Ingenio, Edificio Los Naranjos, Parque Tecnológico del LATU (Av. Italia 6201)",
+    "organizers": [
+      "Ingenio (incubadora del LATU)",
+      "Girls in Tech Uruguay",
+      "CUTI",
+      "UTEC",
+      "Natalia Rehermann",
+      "Rafael García",
+      "Carol Ponczek"
+    ],
+    "links": [
+      {
+        "label": "Página del evento en Techstars (archivada)",
+        "url": "https://web.archive.org/web/20180706062104/http://communities.techstars.com/uruguay/montevideo/startup-weekend/12930"
+      },
+      {
+        "label": "Crónica en CUTI",
+        "url": "https://cuti.org.uy/noticias/de-interes/startup-weekend-montevideo-2018/"
+      },
+      {
+        "label": "Crónica y fotos del LATU",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LATU — Startup Weekend 2018",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      },
+      {
+        "label": "CUTI — Startup weekend Montevideo 2018 (fuente: Uruguay Emprendedor)",
+        "url": "https://cuti.org.uy/noticias/de-interes/startup-weekend-montevideo-2018/"
+      },
+      {
+        "label": "Techstars — Startup Weekend Montevideo, 11 al 13 de mayo de 2018 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20180706062104/http://communities.techstars.com/uruguay/montevideo/startup-weekend/12930"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://images.prismic.io/latu/e400a76d-d3a8-4b12-b149-1b1374a7cae4_DSC_1185.jpeg?auto=compress,format&w=1600",
+        "alt": "Foto grupal de participantes, mentores y organizadores al cierre del Startup Weekend Montevideo 2018 en Ingenio",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      },
+      {
+        "src": "https://images.prismic.io/latu/b4cbe4fb-106a-4961-bc9f-8c033632e4be_DSC_0939.jpg?auto=compress,format&w=1600",
+        "alt": "Bienvenida del viernes: un organizador frente a la pantalla con el logo de Startup Weekend Montevideo 2018",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      },
+      {
+        "src": "https://images.prismic.io/latu/aecd4653-7da6-4ee3-97c6-72260eb5de3f_DSC_0994-copia.jpg?auto=compress,format&w=1600",
+        "alt": "Participantes de pie alrededor de mesas con papelógrafos, discutiendo ideas para armar los equipos",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      },
+      {
+        "src": "https://images.prismic.io/latu/53e7544c-bce3-4ada-8b81-e09222a02edb_DSC_1056.jpg?auto=compress,format&w=1600",
+        "alt": "Cuatro integrantes de la organización con remeras de Startup Weekend Montevideo 2018",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      },
+      {
+        "src": "https://images.prismic.io/latu/3e321389-08d0-4bbb-a81b-96cfa038d36d_DSC_1136.jpg?auto=compress,format&w=1600",
+        "alt": "Pitch final de Chef al Toque: en pantalla, la propuesta de una plataforma que cruce cocineros independientes con personas ocupadas",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      },
+      {
+        "src": "https://images.prismic.io/latu/01a6d5ff-3c99-43a6-af7e-fa1ebcca39f0_DSC_1183.jpg?auto=compress,format&w=1600",
+        "alt": "Entrega de diplomas a un equipo durante el cierre del domingo",
+        "by": "LATU",
+        "source": "Sitio del LATU",
+        "page": "https://www.latu.org.uy/noticias/startup-weekend-2018"
+      }
+    ]
+  },
+  "conf:startup-weekend-fray-bentos:2018-07-27": {
+    "description": "Primer **Startup Weekend** realizado en Fray Bentos —hasta entonces solo se había hecho en Montevideo y Punta del Este—, del viernes 27 al domingo 29 de julio de 2018 en el Instituto Tecnológico Regional Suroeste de la UTEC, en el Barrio Anglo. Lo organizaron Ingenio (la incubadora del LATU), la UTEC, Girls in Tech Uruguay y CUTI, con el patrocinio de IBM, Montes del Plata, la Embajada de Estados Unidos y Tryolabs, y el apoyo del CETP-UTU, su programa Jóvenes Emprendedores y la ANDE.\n\nEl formato fue el clásico de 54 horas: pitches el viernes, votación de las mejores ideas, armado de equipos, trabajo con mentores el sábado y el domingo, y presentaciones finales ante un jurado que elegía un ganador. Los oradores fueron Carlos Trinidad, del IBM Innovation Lab e integrante del equipo ganador del Startup Weekend Montevideo de ese año, y Daniel Goldman (InnMentor); Guzmán Cabrera estuvo como coach.\n\nSegún la cuenta oficial de Startup Weekend Uruguay en X, el jurado —Ivy Sabatovich, Andrés Moller y Rocío Gallarza— le dio el primer premio al equipo **LinkingDreams**. La UTEC publicó un video que resume el fin de semana, en el que participaron estudiantes de la universidad y de otras instituciones.",
+    "venue": "ITR Suroeste (UTEC), Barrio Anglo, Fray Bentos",
+    "city": "Fray Bentos",
+    "organizers": [
+      "Ingenio (incubadora del LATU)",
+      "UTEC",
+      "Girls in Tech Uruguay",
+      "CUTI",
+      "Natalia Rehermann",
+      "Rafael García",
+      "Antonella Montesdeoca"
+    ],
+    "photos": [
+      {
+        "src": "https://i.ytimg.com/vi/8o-at0isjuw/maxresdefault.jpg",
+        "alt": "Fotograma del video de la UTEC: dos participantes con remeras celestes siguen una presentación durante el Startup Weekend Fray Bentos",
+        "by": "UTEC - Universidad Tecnológica",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=8o-at0isjuw"
+      },
+      {
+        "src": "https://www.uruguayemprendedor.uy/uploads/evento/9ffe38976d4ab41d5a39a0ce0e947fc3cfb21489.jpg",
+        "alt": "Flyer de difusión (no es una foto del evento): Startup Weekend Fray Bentos 2018, 27 al 29 de julio en el ITR Suroeste, con los logos de organizadores y apoyos",
+        "by": "Startup Weekend Fray Bentos",
+        "source": "Sitio de Uruguay Emprendedor",
+        "page": "https://www.uruguayemprendedor.uy/evento/startup-weekend-fray-bentos/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento en Techstars (archivada)",
+        "url": "https://web.archive.org/web/20180716125249/http://communities.techstars.com/uruguay/fray-bentos-uruguay/startup-weekend/13223"
+      },
+      {
+        "label": "Ficha en Uruguay Emprendedor",
+        "url": "https://www.uruguayemprendedor.uy/evento/startup-weekend-fray-bentos/"
+      },
+      {
+        "label": "Video resumen de la UTEC",
+        "url": "https://www.youtube.com/watch?v=8o-at0isjuw"
+      },
+      {
+        "label": "Nota del LATU",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-por-primera-vez-en-fray-bentos"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay Emprendedor — Startup Weekend Fray Bentos",
+        "url": "https://www.uruguayemprendedor.uy/evento/startup-weekend-fray-bentos/"
+      },
+      {
+        "label": "Techstars — Startup Weekend Fray Bentos, 27 al 29 de julio de 2018 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20180716125249/http://communities.techstars.com/uruguay/fray-bentos-uruguay/startup-weekend/13223"
+      },
+      {
+        "label": "LATU — Startup Weekend por primera vez en Fray Bentos",
+        "url": "https://www.latu.org.uy/noticias/startup-weekend-por-primera-vez-en-fray-bentos"
+      },
+      {
+        "label": "UTEC en YouTube — StartUp Weekend FB 2018",
+        "url": "https://www.youtube.com/watch?v=8o-at0isjuw"
+      },
+      {
+        "label": "Startup Weekend UY (@swmontevideo) en X",
+        "url": "https://x.com/swmontevideo"
+      }
+    ]
+  },
+  "conf:netconf-uy:2018-11-15": {
+    "description": "La quinta **.NET Conf UY** (v2018) se hizo del 15 al 17 de noviembre de 2018: dos días de conferencia en dos tracks en el Auditorio Antel y un día de workshops. La organizó la comunidad local, con Fabián Fernández, Federico Bernasconi, Fabián Imaz, Brian Hardy y Nicolás Bonora como organizadores locales, más un equipo de colaboradores.\n\nEl jueves 15 abrió con una keynote de Fabián Fernández y Fabián Imaz sobre cómo generar más talento en TI y cultura emprendedora en Uruguay, y el viernes 16 la keynote fue de Pablo Brenner sobre el impacto de la disrupción tecnológica. Entre los oradores estuvieron Mete Atamel, Rafael dos Santos, Bradley Irby, Santiago Pastorino, Rodolfo Finochietti, Maximiliano Accotto y Germán Küber, con temas como contenedores y microservicios, Istio, blockchain, realidad aumentada con Xamarin, Rust, Go en Azure, SQL Server en Linux y machine learning. El viernes cerró con un after party.\n\nEl sábado 17 fue el día de workshops: bots para Microsoft Teams con Dynamics 365, una primera API web para la blockchain RSK, diseño de apps móviles, Xamarin.Forms, una solución de BI paso a paso y Azure Cloud Shell. Según el sitio oficial las entradas se agotaron, y las charlas quedaron grabadas en el canal de YouTube de la conferencia.",
+    "venue": "Auditorio Antel",
+    "city": "Montevideo",
+    "organizers": [
+      "Fabián Fernández",
+      "Federico Bernasconi",
+      "Fabián Imaz",
+      "Brian Hardy",
+      "Nicolás Bonora"
+    ],
+    "talks": [
+      {
+        "title": "Keynote: Cómo podemos generar más talento en TI? Cómo mejorar la cultura emprendedora? Por qué esto es importante?",
+        "speakers": [
+          "Fabián Fernández",
+          "Fabián Imaz"
+        ],
+        "video": "https://www.youtube.com/watch?v=crbYbXJ8__w"
+      },
+      {
+        "title": "Migrating Legacy Applications to the Cloud",
+        "speakers": [
+          "Rafael dos Santos"
+        ],
+        "video": "https://www.youtube.com/watch?v=GDkI2mg7FxU"
+      },
+      {
+        "title": "Microsoft Bizz Apps",
+        "speakers": [
+          "Mayra Badillo"
+        ],
+        "video": "https://www.youtube.com/watch?v=EALnCtLooks"
+      },
+      {
+        "title": "Google Home meets .NET containers",
+        "speakers": [
+          "Mete Atamel"
+        ],
+        "video": "https://www.youtube.com/watch?v=KzsDd_dAA4M"
+      },
+      {
+        "title": "Adding Augmented Reality to your Xamarin App",
+        "speakers": [
+          "Roygar Briceño"
+        ],
+        "video": "https://www.youtube.com/watch?v=bJ5tJqjHocE"
+      },
+      {
+        "title": "Event Driven Architecture – Enabling Microservices",
+        "speakers": [
+          "Bradley Irby"
+        ],
+        "video": "https://www.youtube.com/watch?v=LgfmyoyVSLg"
+      },
+      {
+        "title": "Programación de Sistemas con Rust",
+        "speakers": [
+          "Santiago Pastorino"
+        ],
+        "video": "https://www.youtube.com/watch?v=IDpe6k_IIfU"
+      },
+      {
+        "title": "Handling Real Time Analytics Scenarios: IoT + Power BI",
+        "speakers": [
+          "Gastón Cruz",
+          "Bruno Torterolo"
+        ],
+        "video": "https://www.youtube.com/watch?v=PxmbO69aOfA"
+      },
+      {
+        "title": "Conocé HTTP/2",
+        "speakers": [
+          "Sebastián Passaro"
+        ],
+        "video": "https://www.youtube.com/watch?v=M2YdeviNidU"
+      },
+      {
+        "title": "Introducing Dapps: Blockchain in your fingertips",
+        "speakers": [
+          "Sebastián Leonardo Pérez"
+        ],
+        "video": "https://www.youtube.com/watch?v=owdqh9GdbKA"
+      },
+      {
+        "title": "Integrá fácilmente login social con Azure B2C y .NET",
+        "speakers": [
+          "Fernando Sonego"
+        ],
+        "video": "https://www.youtube.com/watch?v=aDIzh3TsZZU"
+      },
+      {
+        "title": "Guía de supervivencia mobile para el desarrollador .NET",
+        "speakers": [
+          "Nicolás Milcoff"
+        ],
+        "video": "https://www.youtube.com/watch?v=U3cCZVcATmM"
+      },
+      {
+        "title": "Inteligencia Artificial y el desarrollo de software",
+        "speakers": [
+          "Diego González"
+        ],
+        "video": "https://www.youtube.com/watch?v=WN7z7GE-j4c"
+      },
+      {
+        "title": "Human hacking",
+        "speakers": [
+          "Enrique Dutra"
+        ],
+        "video": "https://www.youtube.com/watch?v=Jey0skoG0MU"
+      },
+      {
+        "title": "Diseño guiado por el dominio",
+        "speakers": [
+          "Yoelvis Mulen"
+        ],
+        "video": "https://www.youtube.com/watch?v=sQw5vnjdLok"
+      },
+      {
+        "title": "Istio Service Mesh",
+        "speakers": [
+          "Mete Atamel"
+        ],
+        "video": "https://www.youtube.com/watch?v=sh0F7FMFVSI"
+      },
+      {
+        "title": "Azure DevTest Labs: un espacio ideal para equipos de Desarrollo",
+        "speakers": [
+          "Pablo Di Loreto"
+        ],
+        "video": "https://www.youtube.com/watch?v=EyVKF-o32ao"
+      },
+      {
+        "title": "Keynote: Reflexiones sobre el impacto de la Disrupción Tecnológica",
+        "speakers": [
+          "Pablo Brenner"
+        ],
+        "video": "https://www.youtube.com/watch?v=fr3wLg1cIPE"
+      },
+      {
+        "title": "Microsoft Machine Learning",
+        "speakers": [
+          "Maximiliano Accotto"
+        ],
+        "video": "https://www.youtube.com/watch?v=ofgyz9MsYp0"
+      },
+      {
+        "title": "Azure DevOps Projects: equipos de trabajo ágiles sobre una plataforma robusta",
+        "speakers": [
+          "Florencia Nodar",
+          "Sabrina Orué"
+        ],
+        "video": "https://www.youtube.com/watch?v=Qw_V1RCgCU8"
+      },
+      {
+        "title": "Cómputo en la nube, diferentes sabores para todas nuestras necesidades",
+        "speakers": [
+          "Guillermo Bellmann"
+        ],
+        "video": "https://www.youtube.com/watch?v=ZEPngBVAbIw"
+      },
+      {
+        "title": "Messaging in Azure",
+        "speakers": [
+          "David Revoledo"
+        ],
+        "video": "https://www.youtube.com/watch?v=lWBlDiTUWyI"
+      },
+      {
+        "title": "Why not F#?",
+        "speakers": [
+          "Diego Bonilla"
+        ],
+        "video": "https://www.youtube.com/watch?v=neAN0aTW1uA"
+      },
+      {
+        "title": "Usabilidad: El Software, como la comida, entra por los ojos",
+        "speakers": [
+          "Lisandra Armas Águila"
+        ],
+        "video": "https://www.youtube.com/watch?v=LXa-mTeCGFQ"
+      },
+      {
+        "title": "Mobile Wars",
+        "speakers": [
+          "Esteban Yañez"
+        ],
+        "video": "https://www.youtube.com/watch?v=DM3BuDGdIO4"
+      },
+      {
+        "title": "Containers everywhere!",
+        "speakers": [
+          "Sebastián Gómez"
+        ],
+        "video": "https://www.youtube.com/watch?v=7r639oKPT_Y"
+      },
+      {
+        "title": "TypeScript ❤ ReactJS",
+        "speakers": [
+          "Mariano Vázquez"
+        ],
+        "video": "https://www.youtube.com/watch?v=P3CIalM0NG8"
+      },
+      {
+        "title": "Microservicios .NET: Arquitectura para Aplicaciones .NET Contenerizadas",
+        "speakers": [
+          "Germán Küber"
+        ],
+        "video": "https://www.youtube.com/watch?v=EBVkRXAK70I"
+      },
+      {
+        "title": "Corriendo aplicaciones Go en Azure",
+        "speakers": [
+          "Rodolfo Finochietti"
+        ],
+        "video": "https://www.youtube.com/watch?v=gjZ9-tYLJ6w"
+      },
+      {
+        "title": "Infrastructure as Code on Azure",
+        "speakers": [
+          "Víctor Silva"
+        ],
+        "video": "https://www.youtube.com/watch?v=Skdq9gc_cyc"
+      },
+      {
+        "title": "Disaster Recovery Strategy for APIs - How to survive to Failures",
+        "speakers": [
+          "Rafael dos Santos"
+        ],
+        "video": "https://www.youtube.com/watch?v=o2KLO2cLgp4"
+      },
+      {
+        "title": "La evolucion de SQL Server como Servicio - SQL Azure Managed Instance",
+        "speakers": [
+          "Javier Villegas"
+        ],
+        "video": "https://www.youtube.com/watch?v=ViElbPAVxTk"
+      },
+      {
+        "title": "Conozca su nuevo entorno SQL Server-Linux",
+        "speakers": [
+          "Rodrigo Crespi"
+        ],
+        "video": "https://www.youtube.com/watch?v=c1k2H-phzbA"
+      },
+      {
+        "title": "Workshop: Construyendo un BOT para Teams disponible con usuarios Dynamics 365",
+        "speakers": [
+          "Mayra Badillo"
+        ]
+      },
+      {
+        "title": "Workshop: Develop your first web API for RSK",
+        "speakers": [
+          "Jonathan Smirnoff"
+        ]
+      },
+      {
+        "title": "Workshop: Kit de Supervivencia para el diseño de aplicaciones móviles",
+        "speakers": [
+          "Martín Loskin",
+          "Joanna Arnaiz"
+        ]
+      },
+      {
+        "title": "Workshop: Introducción a Xamarin.Forms",
+        "speakers": [
+          "Esteban Yañez"
+        ]
+      },
+      {
+        "title": "Workshop: Armando una solución de BI paso a paso",
+        "speakers": [
+          "Maximiliano Accotto"
+        ]
+      },
+      {
+        "title": "Workshop: Azure Cloud Shell",
+        "speakers": [
+          "Víctor Silva"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://i.ytimg.com/vi/fr3wLg1cIPE/maxresdefault.jpg",
+        "alt": "Pablo Brenner da la keynote sobre disrupción tecnológica en el escenario del Auditorio Antel (fotograma del video)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=fr3wLg1cIPE"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/KzsDd_dAA4M/maxresdefault.jpg",
+        "alt": "Mete Atamel en el escenario durante su charla sobre Google Home y contenedores .NET (fotograma del video)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=KzsDd_dAA4M"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/Qw_V1RCgCU8/maxresdefault.jpg",
+        "alt": "Florencia Nodar y Sabrina Orué durante su charla sobre Azure DevOps Projects (fotograma del video)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=Qw_V1RCgCU8"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/IDpe6k_IIfU/maxresdefault.jpg",
+        "alt": "Santiago Pastorino con el micrófono durante su charla sobre Rust (fotograma del video)",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=IDpe6k_IIfU"
+      },
+      {
+        "src": "https://i.ytimg.com/vi/PM5gSqx1LCM/hqdefault.jpg",
+        "alt": "Collage de speakers en el escenario, del video resumen de la edición 2018",
+        "by": ".NET Conf UY",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=PM5gSqx1LCM"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20190226100715/http://uy.netconf.global/en/2018/"
+      },
+      {
+        "label": "Videos de las charlas",
+        "url": "https://www.youtube.com/playlist?list=PLX15MdVP0ce--PxhtLJ8zPxNuXRV8E652"
+      },
+      {
+        "label": "Resumen del evento en video",
+        "url": "https://www.youtube.com/watch?v=PM5gSqx1LCM"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de .NET Conf UY v2018 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20190226100715/http://uy.netconf.global/en/2018/"
+      },
+      {
+        "label": "YouTube: lista .NET Conf UY v2018",
+        "url": "https://www.youtube.com/playlist?list=PLX15MdVP0ce--PxhtLJ8zPxNuXRV8E652"
+      }
+    ]
+  },
+  "conf:khipu:2019-11-11": {
+    "description": "KHIPU 2019 fue la primera edición del **Latin American Meeting in Artificial Intelligence**, un encuentro de cinco días que se hizo del 11 al 15 de noviembre de 2019 en la Facultad de Ingeniería de la Universidad de la República, en Montevideo. Con un formato inspirado en el Deep Learning Indaba, combinó clases intensivas de machine learning (fundamentos, redes convolucionales y recurrentes, aprendizaje por refuerzo), charlas de investigadores de la región, paneles y sesiones de pósters, con el objetivo de formar talento latinoamericano en IA y conectar a la comunidad regional con la internacional.\n\nHubo 1.030 postulaciones y 332 participantes de 13 países de América Latina: 203 personas seleccionadas, 37 oradores, 17 organizadores y 75 representantes de patrocinadores y socios. La inscripción fue gratuita para estudiantes y académicos, y se otorgaron 156 becas de viaje y alojamiento. Se presentaron 141 pósters y todo el encuentro se transmitió en vivo; según el informe final, gente de 73 países siguió el streaming.\n\nEntre los oradores estuvieron Yoshua Bengio, Jeff Dean, Nando de Freitas, Oriol Vinyals, Chelsea Finn, Kyunghyun Cho y Martín Abadi; el keynote lo dio Guillermo Sapiro, sobre el uso de IA para detectar autismo de forma temprana. Hubo paneles sobre IA para el bien social y sobre la vida de una startup de machine learning, y un encuentro *Women in AI* organizado por Google. En su charla, Jeff Dean anunció acceso gratuito a TPUs en la nube para los participantes; con ese recurso, un grupo de asistentes entrenó BETO, un modelo BERT solo con textos en español.",
+    "attendance": "332 participantes de 13 países (1.030 postulaciones)",
+    "venue": "Facultad de Ingeniería, Universidad de la República",
+    "organizers": [
+      "KHIPU.AI",
+      "Facultad de Ingeniería (UdelaR), sede local"
+    ],
+    "talks": [
+      {
+        "title": "Keynote: ML Challenges and Opportunities of Computational Behavioral Phenotyping in Developmental Health",
+        "speakers": [
+          "Guillermo Sapiro"
+        ],
+        "video": "https://www.youtube.com/watch?v=KOK1-kmMk1E"
+      },
+      {
+        "title": "Machine Learning Fundamentals",
+        "speakers": [
+          "Luciana Ferrer"
+        ],
+        "video": "https://www.youtube.com/watch?v=mLmFhC2WsC8",
+        "slides": "https://drive.google.com/file/d/1j7lykMniKwBh1lQJFCbW77PjOQEaXqHM/view"
+      },
+      {
+        "title": "Deep Learning Fundamentals",
+        "speakers": [
+          "René Vidal"
+        ],
+        "video": "https://www.youtube.com/watch?v=ib_jKxUU-UQ"
+      },
+      {
+        "title": "Convolutional Neural Networks I",
+        "speakers": [
+          "Enzo Ferrante"
+        ],
+        "video": "https://www.youtube.com/watch?v=9TWz1NYBOss",
+        "slides": "https://drive.google.com/file/d/1DGQOyNvwUVC6BSQjNMdQJbTK3ys6b8BX/view"
+      },
+      {
+        "title": "Convolutional Neural Networks II",
+        "speakers": [
+          "Juan Carlos Niebles"
+        ],
+        "video": "https://www.youtube.com/watch?v=M7hbxCVNlVk",
+        "slides": "https://drive.google.com/file/d/1y24uU96D2OJq2IK9x6RGybJqDqiBqCqP/view"
+      },
+      {
+        "title": "Recurrent Neural Networks",
+        "speakers": [
+          "Kyunghyun Cho"
+        ],
+        "video": "https://www.youtube.com/watch?v=XK0PaAu33FI",
+        "slides": "https://drive.google.com/file/d/1wo789FDt9-l8S2qhwQOoYV0TsKl17qho/view"
+      },
+      {
+        "title": "Machine Learning for Healthcare",
+        "speakers": [
+          "Danielle Belgrave"
+        ],
+        "video": "https://www.youtube.com/watch?v=tFoeK5sD7Rg"
+      },
+      {
+        "title": "Perspectives on AI",
+        "speakers": [
+          "Yoshua Bengio"
+        ],
+        "video": "https://www.youtube.com/watch?v=xhLPUMxB5i8"
+      },
+      {
+        "title": "Reinforcement Learning",
+        "speakers": [
+          "Nando de Freitas"
+        ],
+        "video": "https://www.youtube.com/watch?v=ZU7MHDFyXpc",
+        "slides": "https://drive.google.com/file/d/1svTRtXbSTw-fa44YIbo97YliZmeFJ0ly/view"
+      },
+      {
+        "title": "Climate and Artificial Intelligence",
+        "speakers": [
+          "Claire Monteleoni"
+        ],
+        "video": "https://www.youtube.com/watch?v=FN8E_9AvUdc"
+      },
+      {
+        "title": "Robotics and Continuous Control",
+        "speakers": [
+          "Chelsea Finn"
+        ],
+        "video": "https://www.youtube.com/watch?v=a8edFgaTs6s",
+        "slides": "https://drive.google.com/file/d/13Y2pdqCcd_iTrUEQDbDx3LddE0IkcLqE/view"
+      },
+      {
+        "title": "Causality and Generalization",
+        "speakers": [
+          "David Lopez-Paz"
+        ],
+        "video": "https://www.youtube.com/watch?v=eIGqUSBJEK4",
+        "slides": "https://drive.google.com/file/d/1IS26HUB20vDKuRGCUGGnukdMxqskRUJ9/view"
+      },
+      {
+        "title": "Modeling the Space of Natural Images: History and Applications",
+        "speakers": [
+          "Pablo Musé"
+        ],
+        "video": "https://www.youtube.com/watch?v=7DCatdBdGVk"
+      },
+      {
+        "title": "Microdata Anonymization for Learning Analytics",
+        "speakers": [
+          "Lorena Etcheverry"
+        ],
+        "video": "https://www.youtube.com/watch?v=MzQtckMgy6o",
+        "slides": "https://drive.google.com/file/d/1pY-gdaEq3wBmXNwS7b2EYJBENT7xAJRH/view"
+      },
+      {
+        "title": "Privacy and Security in Machine Learning",
+        "speakers": [
+          "Martín Abadi"
+        ],
+        "video": "https://www.youtube.com/watch?v=zRBGYIOmKL4"
+      },
+      {
+        "title": "AlphaStar: StarCraft II using multi-agent RL",
+        "speakers": [
+          "Oriol Vinyals"
+        ],
+        "video": "https://www.youtube.com/watch?v=cBMjS6p2k44"
+      },
+      {
+        "title": "Machine Learning for Subsurface Characterization",
+        "speakers": [
+          "Bianca Zadrozny"
+        ],
+        "video": "https://www.youtube.com/watch?v=wZa1O-Zd0fU",
+        "slides": "https://drive.google.com/file/d/1UsNufnYqJ2n340-7HoRw-a0yGj4vuqDc/view"
+      },
+      {
+        "title": "Deep Learning to Solve Challenging Problems",
+        "speakers": [
+          "Jeff Dean"
+        ],
+        "video": "https://www.youtube.com/watch?v=w0-AwmM_d1I",
+        "slides": "https://drive.google.com/file/d/1Xd40Wfw2iX3pE6EpR4Kq1-yCeWtuggI_/view"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2026/01/KHIPU-2019-group-photo.jpg",
+        "alt": "Foto grupal de los participantes de KHIPU 2019 al aire libre, bajo los árboles, en Montevideo",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/khipu-2019-group-photo/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2023/02/IMG_20191112_130826.jpg",
+        "alt": "Participantes conversando frente a los pósters durante una sesión de pósters de KHIPU 2019",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/img_20191112_130826/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2023/02/khipu2019_a.jpg",
+        "alt": "Equipo con credenciales de KHIPU posando frente al stand de Tryolabs",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/khipu2019_a/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2023/02/khipu2019_b.jpg",
+        "alt": "Equipo de MercadoLibre posando en su stand de patrocinador en KHIPU 2019",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/khipu2019_b/"
+      },
+      {
+        "src": "https://i0.wp.com/khipu.ai/wp-content/uploads/2023/02/khipu2019_c.jpg?fit=1024%2C768&ssl=1",
+        "alt": "Grupo de personas con credenciales de KHIPU en uno de los stands de patrocinadores",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/khipu2019_c/"
+      },
+      {
+        "src": "https://i0.wp.com/khipu.ai/wp-content/uploads/2023/02/khipu_2019_stand_03.jpg?fit=1024%2C1024&ssl=1",
+        "alt": "Área de stands de patrocinadores (Globant, Antel, MercadoLibre) armada para KHIPU 2019",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/khipu_2019_stand_03/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de KHIPU 2019",
+        "url": "https://khipu.ai/khipu2019/"
+      },
+      {
+        "label": "Programa, videos y slides",
+        "url": "https://khipu.ai/khipu2019/2019program/"
+      },
+      {
+        "label": "Informe de resultados (PDF, en inglés)",
+        "url": "https://khipu.ai/wp-content/uploads/2021/03/khipu_2019_report.pdf"
+      },
+      {
+        "label": "Videos de las charlas principales",
+        "url": "https://www.youtube.com/playlist?list=PL7_piSasXIU-lHScpZryqf51xHQK6ztiF"
+      },
+      {
+        "label": "Videos de la sesión AI for Social Good",
+        "url": "https://www.youtube.com/playlist?list=PL7_piSasXIU9b_GmfisOI0EBIcpqI7ZCN"
+      },
+      {
+        "label": "Videos de la sesión Advanced NLP",
+        "url": "https://www.youtube.com/playlist?list=PL7_piSasXIU_5jRRiPluFWMLRcnQ1Hzh9"
+      }
+    ],
+    "sources": [
+      {
+        "label": "KHIPU 2019 — sitio oficial",
+        "url": "https://khipu.ai/khipu2019/"
+      },
+      {
+        "label": "KHIPU 2019 — videos y presentaciones",
+        "url": "https://khipu.ai/khipu2019/2019program/"
+      },
+      {
+        "label": "Strengthening Artificial Intelligence in Latin America — informe de KHIPU 2019 (PDF)",
+        "url": "https://khipu.ai/wp-content/uploads/2021/03/khipu_2019_report.pdf"
+      },
+      {
+        "label": "CUTI — KHIPU, Latin American Meeting in Artificial Intelligence",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/khipu-latin-american-meeting-in-artificial-intelligence/"
+      },
+      {
+        "label": "KHIPU AI en YouTube — Khipu 2019 main track",
+        "url": "https://www.youtube.com/playlist?list=PL7_piSasXIU-lHScpZryqf51xHQK6ztiF"
+      }
+    ]
+  },
+  "conf:latinr:2020-10-07": {
+    "description": "La tercera edición de LatinR, la **Conferencia Latinoamericana sobre Uso de R en Investigación + Desarrollo**, estaba anunciada para Montevideo del 7 al 9 de octubre de 2020, después de Buenos Aires (2018) y Santiago de Chile (2019). En mayo de 2020, por la pandemia, el equipo organizador canceló el encuentro presencial en Montevideo y decidió hacer una actividad en línea en las mismas fechas.\n\nLa edición virtual tuvo como chairs a Natalia da Silva (Instituto de Estadística de la FCEA, UdelaR, y R-Ladies Montevideo), Riva Quiroga, Yanina Bellini Saibene y María Florencia D'Andrea. Entre el 29 de septiembre y el 10 de octubre hubo nueve talleres en español y portugués, organizados junto a capítulos de R-Ladies y grupos de usuarios de toda la región (expresiones regulares, Shiny, R Markdown, tidymodels, learnr, entre otros). El 7 de octubre se abrió el track único con la charla plenaria de **Alison Hill**, *Learning without a net*, y siguieron sesiones de minería de textos, datos espaciales, desarrollo de paquetes, Shiny y visualización, y datos educativos y políticas sociales; **Maëlle Salmon** dio una charla-taller sobre blogs con R Markdown.\n\nEl 8 de octubre se hizo un **ReproHack**, una hackatón de reproducibilidad científica organizada con la comunidad ReproHack, en la que participaron personas de una docena de países, entre ellos Uruguay. Los trabajos presentados se publicaron en un libro de actas.",
+    "organizers": [
+      "LatinR",
+      "Natalia da Silva (chair)",
+      "Riva Quiroga (chair)",
+      "Yanina Bellini Saibene (chair)",
+      "María Florencia D'Andrea (chair)"
+    ],
+    "talks": [
+      {
+        "title": "Learning without a net",
+        "speakers": [
+          "Alison Hill"
+        ],
+        "slides": "https://alison.netlify.app/latinr-learn/#1"
+      },
+      {
+        "title": "Blogueo con R Markdown",
+        "speakers": [
+          "Maëlle Salmon"
+        ],
+        "video": "https://youtu.be/UYvSv8StDa8?t=800",
+        "slides": "https://bloguearrr.netlify.app/intro/slides/#/"
+      },
+      {
+        "title": "geouy: Acceso a las geometrías de Uruguay",
+        "speakers": [
+          "Richard Detomasi"
+        ],
+        "slides": "https://github.com/LatinR/presentaciones-LatinR2020/blob/main/trabajos/LatinR2020_envio_7.pdf"
+      },
+      {
+        "title": "ReproHack: ¿Por qué es importante la reproducibilidad computacional?",
+        "speakers": [
+          "Daniela Ballari"
+        ]
+      },
+      {
+        "title": "ReproHack: Contribuyendo al código libre en R",
+        "speakers": [
+          "Juan Cruz Rodríguez"
+        ]
+      },
+      {
+        "title": "ReproHack: Cómo escribir manuscritos reproducibles",
+        "speakers": [
+          "Francisco Rodríguez-Sánchez"
+        ]
+      },
+      {
+        "title": "ReproHack: Reproducibilidad en torno a una aplicación web",
+        "speakers": [
+          "Pablo Bernabeu"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://2020.latinr.org/img/posts/reprohack_latinr.png",
+        "alt": "Flyer del ReproHack de LatinR 2020 (8 de octubre) con las charlas programadas; el evento fue virtual y no hay fotos",
+        "by": "LatinR",
+        "source": "Sitio de LatinR",
+        "page": "https://2020.latinr.org/blog/reprohack"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de LatinR 2020",
+        "url": "https://2020.latinr.org/"
+      },
+      {
+        "label": "Cronograma",
+        "url": "https://2020.latinr.org/cronograma/"
+      },
+      {
+        "label": "Charlas, trabajos y actas (GitHub)",
+        "url": "https://github.com/LatinR/presentaciones-LatinR2020"
+      },
+      {
+        "label": "Videos del ReproHack",
+        "url": "https://www.youtube.com/watch?v=TKhV3w467RI&list=PL9-E3cL2KgKliN3DFBWfUAUNXco_NOAMQ"
+      },
+      {
+        "label": "Talleres 2020",
+        "url": "https://github.com/LatinR/talleres-2020"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LatinR 2020 — sitio oficial",
+        "url": "https://2020.latinr.org/"
+      },
+      {
+        "label": "LatinR 2020 será virtual! (blog, 14/5/2020)",
+        "url": "https://2020.latinr.org/blog/virtual"
+      },
+      {
+        "label": "LatinR 2020 — Equipo organizador",
+        "url": "https://2020.latinr.org/equipo/"
+      },
+      {
+        "label": "LatinR 2020 — Cronograma",
+        "url": "https://2020.latinr.org/cronograma/"
+      },
+      {
+        "label": "ReproHack en LatinR 2020 (blog)",
+        "url": "https://2020.latinr.org/blog/reprohack"
+      },
+      {
+        "label": "GitHub · LatinR/presentaciones-LatinR2020",
+        "url": "https://github.com/LatinR/presentaciones-LatinR2020"
+      }
+    ]
+  },
+  "conf:agiles-latam:2020-11-08": {
+    "description": "Las XIII Jornadas Latinoamericanas de Agilidad, **Ágiles 2020**, iban a hacerse en Uruguay: así lo habían decidido las comunidades agilistas reunidas en Rosario (Argentina) en setiembre de 2019, y un equipo local empezó a prepararlas. La pandemia obligó a abandonar la idea del encuentro presencial y la edición se rehízo como un evento en línea, sin país anfitrión, bajo el lema «Conectando personas, lugares y experiencias».\n\nSe extendió del 8 al 14 de noviembre de 2020 por Zoom: el domingo 8 hubo apertura y actividades de conexión; de lunes a viernes, un programa de sesiones organizado en cinco tracks y cuatro espacios de tiempo, y el sábado 14 cerró con una desconferencia en la que los participantes armaron la agenda del día. Entre las personas invitadas estuvieron Jeff Patton, Rebecca Wirfs-Brock, Ken Rubin, Joakim Sundén, Sandro Mancuso, Roman Pichler, Heidi Helfand, Tobias Mayer, Paulo Caroli y Alan Cyment.\n\nSegún un informe de BBVA, uno de los patrocinadores, hubo más de 250 charlas, talleres y sesiones, 289 oradores y 2.078 asistentes de distintos países.",
+    "attendance": "2.078 asistentes (según BBVA, patrocinador)",
+    "organizers": [
+      "Comunidad Latinoamericana de Agilidad"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial (archivado)",
+        "url": "https://web.archive.org/web/20201025044104/http://agiles2020.agiles.org/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de Ágiles 2020 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20201025044104/http://agiles2020.agiles.org/"
+      },
+      {
+        "label": "«Ágiles 2020: conectando personas, lugares y experiencias» (Wayback Machine)",
+        "url": "https://web.archive.org/web/20201025055208/http://agiles2020.agiles.org/agiles-2020-conectando-personas-lugares-y-experiencias/"
+      },
+      {
+        "label": "BBVA: BBVA acompaña la transformación agile en Latinoamérica",
+        "url": "https://www.bbva.com/es/ar/innovacion/bbva-acompana-la-transformacion-agile-en-latinoamerica/"
+      }
+    ]
+  },
+  "conf:khipu:2023-03-06": {
+    "description": "KHIPU 2023 fue la segunda edición presencial del **Latin American Meeting in Artificial Intelligence**, y volvió a Montevideo: se hizo del 6 al 10 de marzo de 2023 en la Facultad de Ingeniería de la Universidad de la República. Durante cinco días combinó clases de fundamentos (machine learning, deep learning, visión por computadora, procesamiento de lenguaje natural, aprendizaje por refuerzo), charlas de investigación, sesiones paralelas, sesiones de pósters y prácticas de programación con JAX, para una audiencia de más de 300 estudiantes, investigadores y profesionales de América Latina y otras regiones.\n\nEntre los más de 20 oradores estuvieron Nando de Freitas, Kyunghyun Cho, Samy Bengio, Doina Precup, Joan Bruna, Sara Hooker, Guillermo Sapiro, Luciana Ferrer y Nayat Sánchez-Pi. El jueves 9 hubo un encuentro *Women in AI* con Paula Martínez, Aiala Rosá, Magdalena Fuentes y Sara Hooker, y el lunes 6 la Facultad de Ingeniería organizó la actividad **Chicas TIC** para chicas de 12 a 14 años, sobre sesgos en sistemas de IA.\n\nEl cierre, el viernes 10, fue en el **Teatro Solís**, abierto al público: historias de IA desde América Latina y desde afuera, un keynote de **Peter Norvig** y una mesa redonda sobre cómo fomentar la IA en la región. Allí se presentó la *Declaración de Montevideo sobre Inteligencia Artificial*, escrita y firmada por participantes del encuentro, que pide que la IA esté al servicio del bien común y que América Latina participe en su desarrollo. La inscripción fue gratuita y el evento cubrió viaje para 115 participantes y alojamiento para 126, todos de América Latina.",
+    "attendance": "más de 300 personas",
+    "organizers": [
+      "KHIPU.AI",
+      "Facultad de Ingeniería (UdelaR)"
+    ],
+    "talks": [
+      {
+        "title": "ML Fundamentals",
+        "speakers": [
+          "Luciana Ferrer"
+        ]
+      },
+      {
+        "title": "DL Fundamentals",
+        "speakers": [
+          "Joan Bruna"
+        ]
+      },
+      {
+        "title": "Computer Vision",
+        "speakers": [
+          "Jorge Sánchez"
+        ]
+      },
+      {
+        "title": "Research talk",
+        "speakers": [
+          "Guillermo Sapiro"
+        ]
+      },
+      {
+        "title": "Natural Language Processing",
+        "speakers": [
+          "Kyunghyun Cho"
+        ]
+      },
+      {
+        "title": "Large Multimodal Models",
+        "speakers": [
+          "Nando de Freitas"
+        ]
+      },
+      {
+        "title": "Graph Neural Networks I",
+        "speakers": [
+          "Alejandro Ribeiro"
+        ]
+      },
+      {
+        "title": "Graph Neural Networks II",
+        "speakers": [
+          "Gonzalo Mateos"
+        ]
+      },
+      {
+        "title": "Reinforcement Learning I",
+        "speakers": [
+          "Pablo Samuel Castro"
+        ]
+      },
+      {
+        "title": "Reinforcement Learning II",
+        "speakers": [
+          "Doina Precup"
+        ]
+      },
+      {
+        "title": "Ethics and Fairness",
+        "speakers": [
+          "Sara Hooker"
+        ]
+      },
+      {
+        "title": "Generative Models",
+        "speakers": [
+          "Ruben Villegas"
+        ]
+      },
+      {
+        "title": "Research talk: Optimal Transport",
+        "speakers": [
+          "Marco Cuturi"
+        ]
+      },
+      {
+        "title": "Research talk",
+        "speakers": [
+          "Rachel Ward"
+        ]
+      },
+      {
+        "title": "Research talk",
+        "speakers": [
+          "Samy Bengio"
+        ]
+      },
+      {
+        "title": "Research talk",
+        "speakers": [
+          "Helena Caseli"
+        ]
+      },
+      {
+        "title": "Research talk: IA y cambio climático",
+        "speakers": [
+          "Nayat Sánchez-Pi"
+        ]
+      },
+      {
+        "title": "Keynote de cierre en el Teatro Solís",
+        "speakers": [
+          "Peter Norvig"
+        ],
+        "video": "https://www.youtube.com/watch?v=mPV8GuSGH8s"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2026/01/KHIPU-2023-group-photo.jpg",
+        "alt": "Foto grupal de los participantes de KHIPU 2023 en la escalinata del Teatro Solís, con banderas de KHIPU entre las columnas",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/khipu-2023-group-photo/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2026/01/IMG_20230306_093721.jpg",
+        "alt": "Auditorio lleno durante una de las clases del primer día de KHIPU 2023",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/img_20230306_093721/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2026/01/IMG_20230306_132310.jpg",
+        "alt": "Escenario con letras de KHIPU y un khipu de cuerdas de colores colgado como decoración",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/img_20230306_132310/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2026/01/20230309-1924-001.jpg",
+        "alt": "Panelistas sentadas en banquetas frente al público en el encuentro Women in AI de KHIPU 2023",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/20230309-1924-001/"
+      },
+      {
+        "src": "https://khipu.ai/wp-content/uploads/2026/01/IMG_20230305_170812.jpg",
+        "alt": "Credenciales con cintas naranjas de KHIPU 2023 listas para la acreditación",
+        "by": "KHIPU",
+        "source": "Sitio de KHIPU",
+        "page": "https://khipu.ai/img_20230305_170812/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de KHIPU 2023",
+        "url": "https://khipu.ai/khipu2023/"
+      },
+      {
+        "label": "Cronograma",
+        "url": "https://khipu.ai/khipu2023/khipu-2023-schedule/"
+      },
+      {
+        "label": "Videos de cada jornada",
+        "url": "https://khipu.ai/khipu2023/khipu-2023-video/"
+      },
+      {
+        "label": "Videos en YouTube",
+        "url": "https://www.youtube.com/playlist?list=PL7_piSasXIU9BV-9CZyozVyQ60PY1P4hl"
+      },
+      {
+        "label": "Informe de resultados (PDF, en inglés)",
+        "url": "https://khipu.ai/wp-content/uploads/2025/04/KHIPU-2023-Outcomes-Report.pdf"
+      },
+      {
+        "label": "Declaración de Montevideo sobre Inteligencia Artificial",
+        "url": "https://doi.org/10.5281/zenodo.8208793"
+      }
+    ],
+    "sources": [
+      {
+        "label": "KHIPU 2023 — sitio oficial",
+        "url": "https://khipu.ai/khipu2023/"
+      },
+      {
+        "label": "KHIPU 2023 — cronograma",
+        "url": "https://khipu.ai/khipu2023/khipu-2023-schedule/"
+      },
+      {
+        "label": "KHIPU 2023 — Women in AI",
+        "url": "https://khipu.ai/khipu2023/khipu-2023-women-in-ai/"
+      },
+      {
+        "label": "KHIPU 2023 — evento de cierre",
+        "url": "https://khipu.ai/khipu2023/khipu-2023-closing_event/"
+      },
+      {
+        "label": "Outcomes of KHIPU 2023 (PDF)",
+        "url": "https://khipu.ai/wp-content/uploads/2025/04/KHIPU-2023-Outcomes-Report.pdf"
+      },
+      {
+        "label": "Portal Innova — Inria Chile participó de Khipu 2023",
+        "url": "https://portalinnova.cl/?p=35771"
+      }
+    ]
+  },
+  "conf:girls-in-tech-uruguay:2023-09-02": {
+    "description": "**Jugar Mundos** fue una jornada gratuita para niñas y niños que organizó Girls in Tech Uruguay el sábado 2 de setiembre de 2023, de 15:00 a 18:30, en el Colegio North Schools de Ciudad de la Costa (Canelones). Volvía tras la edición de 2022 y reunía más de una decena de actividades de ciencia, tecnología, ingeniería, artes y matemáticas (STEAM) a cargo de instituciones del área, con el objetivo de despertar el interés por estas disciplinas desde temprana edad y promover la equidad de género.\n\nContó con el apoyo del Ministerio de Educación y Cultura, el Ministerio de Desarrollo Social, el Instituto Interamericano del Niño, la Niña y Adolescentes (OEA), la OEI y la UNESCO. La entrada era libre, con inscripción previa por cupos limitados. Mikaela Pisani, codirectora de Girls in Tech Uruguay, lo describió como \"una semilla\" que sigue después del evento.",
+    "venue": "Colegio North Schools",
+    "city": "Ciudad de la Costa (Canelones)",
+    "organizers": [
+      "Girls in Tech Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Nota de El Observador",
+        "url": "https://www.elobservador.com.uy/nota/realizan-un-evento-en-uruguay-que-busca-fomentar-el-interes-en-la-ciencia-y-la-tecnologia-en-ninos-202381695059"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador — Realizan un evento en Uruguay que busca fomentar el interés en la ciencia y la tecnología en niños y niñas (16/8/2023)",
+        "url": "https://www.elobservador.com.uy/nota/realizan-un-evento-en-uruguay-que-busca-fomentar-el-interes-en-la-ciencia-y-la-tecnologia-en-ninos-202381695059"
+      }
+    ]
+  },
+  "conf:latinr:2023-10-18": {
+    "description": "LatinR, la **Conferencia Latinoamericana sobre Uso de R en Investigación + Desarrollo**, tuvo su primera edición presencial en Montevideo del 18 al 20 de octubre de 2023, en la Facultad de Ciencias Económicas y de Administración (FCEA) de la Universidad de la República. Después de Buenos Aires (2018), Santiago de Chile (2019) y tres ediciones virtuales (2020–2022), la comunidad de R de América Latina volvió a encontrarse cara a cara. Las charlas fueron en español, portugués o inglés.\n\nLa coordinación general estuvo a cargo de Natalia da Silva (Instituto de Estadística de la FCEA y R-Ladies Montevideo), Riva Quiroga y Yanina Bellini Saibene. El miércoles 18 se dedicó a tutoriales en el Aulario del Área Social y Artística, frente a la facultad: machine learning con tidymodels (Hannah Frick y Max Kuhn), data.table (Toby Dylan Hocking), visualización e inferencia (Dianne Cook), reportes reproducibles con Quarto (Riva Quiroga) y buenas prácticas en Shiny. El 19 y el 20 hubo charlas en el Aula Magna y en los salones 6 a 9.\n\nLas cuatro charlas plenarias fueron de **Dianne Cook**, **Hannah Frick**, **Fabrizio Scrollini** y **Max Kuhn**, y el repositorio de la edición reúne 69 trabajos contribuidos, en temas como desarrollo de paquetes, enseñanza, Shiny, datos abiertos, datos espaciales y reproducibilidad. Integrantes de R-Ladies de toda la región se sacaron una foto colectiva durante el encuentro.",
+    "venue": "Facultad de Ciencias Económicas y de Administración (FCEA), UdelaR — Av. Gonzalo Ramírez 1926; tutoriales en el Aulario del Área Social y Artística",
+    "organizers": [
+      "LatinR",
+      "Natalia da Silva (chair)",
+      "Riva Quiroga (chair)",
+      "Yanina Bellini Saibene (chair)"
+    ],
+    "talks": [
+      {
+        "title": "How do we know what we don't know?",
+        "speakers": [
+          "Dianne Cook"
+        ],
+        "video": "https://www.youtube.com/watch?v=6B5vKjPg8r8"
+      },
+      {
+        "title": "Cognition: Programming Edition!",
+        "speakers": [
+          "Hannah Frick"
+        ],
+        "video": "https://www.youtube.com/watch?v=1o-UoIF9vIc",
+        "slides": "https://hfrick.github.io/2023-latinr"
+      },
+      {
+        "title": "El poder de lo abierto, ¿aún vigente?",
+        "speakers": [
+          "Fabrizio Scrollini"
+        ],
+        "video": "https://www.youtube.com/watch?v=6sRsyE6_QkU"
+      },
+      {
+        "title": "Introduction to tidymodels",
+        "speakers": [
+          "Max Kuhn"
+        ],
+        "video": "https://www.youtube.com/watch?v=weqWXjGvYp4"
+      },
+      {
+        "title": "Tutorial: Introduction to Machine Learning with tidymodels",
+        "speakers": [
+          "Hannah Frick",
+          "Max Kuhn"
+        ]
+      },
+      {
+        "title": "Tutorial: Using and contributing to the data.table package for efficient big data analysis",
+        "speakers": [
+          "Toby Dylan Hocking"
+        ]
+      },
+      {
+        "title": "Tutorial: Creating data plots for effective decision-making using statistical inference with R",
+        "speakers": [
+          "Dianne Cook"
+        ],
+        "slides": "https://dicook.github.io/LatinR/"
+      },
+      {
+        "title": "Tutorial: Creación de reportes reproducibles con Quarto",
+        "speakers": [
+          "Riva Quiroga"
+        ]
+      },
+      {
+        "title": "Tutorial: Introducción a Shiny - Buenas prácticas en un entorno de producción",
+        "speakers": [
+          "Agustín Pérez Santangelo",
+          "Oriol Senan",
+          "Federico Rivadeneira"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/268/733/683/466/553/original/dcc1f7005b8aa58d.jpeg",
+        "alt": "Las tres chairs de LatinR 2023, Natalia, Riva y Yanina, abriendo la conferencia en el escenario de la FCEA",
+        "by": "Hannah Frick",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@hfrick/111268745644666274"
+      },
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/274/555/383/671/213/original/2a3afde4bcc369d6.jpeg",
+        "alt": "Una oradora en el atril del Aula Magna de la FCEA, junto al banner de LatinR",
+        "by": "Natalia da Silva",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@pacocuak/111274561838363976"
+      },
+      {
+        "src": "https://cdn.fosstodon.org/media_attachments/files/111/263/737/039/462/326/original/38c4e92ade9321fd.png",
+        "alt": "Hannah Frick en el escenario durante su charla plenaria Cognition: Programming Edition!",
+        "by": "Yanina Bellini Saibene",
+        "source": "Mastodon",
+        "page": "https://fosstodon.org/@yabellini/111263739757949161"
+      },
+      {
+        "src": "https://cdn.fosstodon.org/media_attachments/files/111/267/264/140/144/533/original/e13682f43cb640f9.png",
+        "alt": "Fabrizio Scrollini en el escenario al comenzar su charla plenaria",
+        "by": "Yanina Bellini Saibene",
+        "source": "Mastodon",
+        "page": "https://fosstodon.org/@yabellini/111267272391226355"
+      },
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/263/917/833/209/990/original/6778e66ff781e0da.jpg",
+        "alt": "Dos presentadoras frente al público en la sesión de comunidades y experiencias de enseñanza",
+        "by": "Andrea",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@me_andre/111263959496956905"
+      },
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/274/556/528/433/854/original/8a3079606c210691.jpeg",
+        "alt": "Sala llena de asistentes con sus laptops durante una sesión de LatinR 2023",
+        "by": "Natalia da Silva",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@pacocuak/111274561838363976"
+      },
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/274/555/949/887/747/original/8b43e35297c3136d.jpeg",
+        "alt": "Público siguiendo una presentación en uno de los salones de la FCEA",
+        "by": "Natalia da Silva",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@pacocuak/111274561838363976"
+      },
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/274/561/119/360/966/original/600f8592c392b9ae.jpeg",
+        "alt": "Asistentes de pie en el Aula Magna de la FCEA durante LatinR 2023",
+        "by": "Natalia da Silva",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@pacocuak/111274561838363976"
+      },
+      {
+        "src": "https://media.hachyderm.io/media_attachments/files/111/330/068/124/019/404/original/1597019f8b2ec902.jpeg",
+        "alt": "Foto grupal de integrantes de R-Ladies de América Latina en LatinR 2023",
+        "by": "RLadies+ Global",
+        "source": "Mastodon",
+        "page": "https://hachyderm.io/@RLadiesGlobal/111330068400408493"
+      },
+      {
+        "src": "https://media.hachyderm.io/media_attachments/files/111/330/067/974/293/733/original/33c5cc68a58c924b.jpeg",
+        "alt": "Integrantes de R-Ladies posando en las escaleras de la facultad durante LatinR 2023",
+        "by": "RLadies+ Global",
+        "source": "Mastodon",
+        "page": "https://hachyderm.io/@RLadiesGlobal/111330068400408493"
+      },
+      {
+        "src": "https://files.mastodon.social/media_attachments/files/111/269/303/460/903/055/original/9b4d8077e1f4ea6d.jpg",
+        "alt": "Natalia da Silva en el escenario durante el cierre de LatinR 2023",
+        "by": "Elio Campitelli",
+        "source": "Mastodon",
+        "page": "https://mastodon.social/@eliocamp/111269305990554157"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de LatinR 2023",
+        "url": "https://2023.latinr.org/"
+      },
+      {
+        "label": "Charlas, tutoriales y trabajos (GitHub)",
+        "url": "https://github.com/LatinR/presentaciones-LatinR2023"
+      },
+      {
+        "label": "Videos en el canal de LatinR",
+        "url": "https://www.youtube.com/@LatinR"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LatinR 2023 — sitio oficial",
+        "url": "https://2023.latinr.org/"
+      },
+      {
+        "label": "LatinR 2023 — Lugar",
+        "url": "https://2023.latinr.org/cronograma/lugar/index.html"
+      },
+      {
+        "label": "LatinR 2023 — Equipo organizador",
+        "url": "https://2023.latinr.org/sobre/equipo/index.html"
+      },
+      {
+        "label": "LatinR 2023 — Tutoriales",
+        "url": "https://2023.latinr.org/cronograma/tutoriales/index.html"
+      },
+      {
+        "label": "LatinR 2023 — Conferencistas",
+        "url": "https://2023.latinr.org/cronograma/conferencistas/index.html"
+      },
+      {
+        "label": "GitHub · LatinR/presentaciones-LatinR2023",
+        "url": "https://github.com/LatinR/presentaciones-LatinR2023"
+      },
+      {
+        "label": "R-bloggers / R Consortium — A Continental Movement: LatinR Event is Face-to-Face in Montevideo",
+        "url": "https://www.r-bloggers.com/2023/09/a-continental-movement-latinr-event-is-face-to-face-in-montevideo-uruguay-this-year/"
+      },
+      {
+        "label": "Yanina Bellini Saibene en Mastodon — títulos de las charlas plenarias",
+        "url": "https://fosstodon.org/@yabellini/111267028710686296"
+      }
+    ]
+  },
+  "conf:owu-la-meetup:2023-11-25": {
+    "description": "Primera edición de **La Meetup** (La Meetup I), el encuentro que OWU arma para juntar a las comunidades tecnológicas de Uruguay. Fue el sábado 25 de noviembre de 2023 en Sinergia Faro (Víctor Soliño 349, Montevideo), con 16 comunidades aliadas —entre ellas Montevideo JS, Python Montevideo, Ruby Montevideo, GDG Montevideo, OWASP Uruguay, Girls in Tech, Mujeres IT y Sysarmy UY— y un equipo de organización de 19 personas de la comunidad.\n\nLa jornada empezó con un desayuno y siguió con un **open space** de 10:00 a 13:30: la agenda no estaba armada de antemano, sino que la proponían los propios participantes en el mercado de ideas y después se repartían en sesiones simultáneas. El almuerzo corría por cuenta de cada uno.\n\nDe tarde hubo tres charlas: Federico Toledo, cofundador de Abstracta, sobre testing de sistemas basados en LLMs; Elizabeth Lofredo y Agustina Chaer sobre accesibilidad en el desarrollo web, y elcuervo con «HDP: Historias de Pandemia». El formato de open space más charlas se repitió en las ediciones siguientes, y en 2026 La Meetup pasó a llamarse OWU CONF.",
+    "talks": [
+      {
+        "title": "Testing de sistemas basados en LLMs",
+        "speakers": [
+          "Federico Toledo"
+        ]
+      },
+      {
+        "title": "Construyendo para todos: accesibilidad en el desarrollo web",
+        "speakers": [
+          "Elizabeth Lofredo",
+          "Agustina Chaer"
+        ]
+      },
+      {
+        "title": "HDP: Historias de Pandemia",
+        "speakers": [
+          "elcuervo"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "La Meetup I en owu.uy (agenda, speakers, comunidades y equipo)",
+        "url": "https://owu.uy/2023/la-meetup"
+      },
+      {
+        "label": "OWU CONF: de La Meetup a conferencia",
+        "url": "https://owu.uy/conf"
+      }
+    ]
+  },
+  "conf:owu-la-meetup:2025-11-01": {
+    "description": "Tercera edición de **La Meetup** (La Meetup III), el encuentro anual de las comunidades tecnológicas de Uruguay que organiza OWU. Fue el sábado 1 de noviembre de 2025 en Sinergia Faro (Víctor Soliño 349, Montevideo), con un equipo de once organizadores voluntarios y el apoyo de una veintena de empresas e instituciones sponsors.\n\nDespués de la acreditación y el desayuno, la mañana fue un **open space** de 10:00 a 13:30, facilitado por el agile coach Juan Mello: en el mercado de ideas cada asistente podía proponer un tema y después las sesiones autogestionadas corrían en varios espacios a la vez. El almuerzo quedó libre, en la plaza de comidas del shopping.\n\nDe tarde hubo tres charlas: Carlos Martinez (LACNIC) y Nicolas Antoniello (ICANN) explicaron cómo funciona Internet, el DNS y los registros regionales; Johana Rios y Gastón Cabana hablaron de los «bugs organizacionales» en los equipos de software, y Mauro Eldritch y Santiago Pérez presentaron **LockSkin**, un ransomware educativo para bioimplantes NFC y RFID. Después del cierre, el after fue en MBC Punta Carretas.\n\nFue la última edición con ese nombre: en 2026 La Meetup se convirtió en OWU CONF.",
+    "talks": [
+      {
+        "title": "¿Internet funciona? ¿Cómo? ¿… Y es segura?",
+        "speakers": [
+          "Carlos Martinez",
+          "Nicolas Antoniello"
+        ]
+      },
+      {
+        "title": "Debugging organizacional: cuando el problema no es el código",
+        "speakers": [
+          "Johana Rios",
+          "Gastón Cabana"
+        ]
+      },
+      {
+        "title": "LockSkin: un ransomware para bioimplantes",
+        "speakers": [
+          "Mauro Eldritch",
+          "Santiago Pérez"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "La Meetup III en owu.uy (agenda, charlas y facilitación)",
+        "url": "https://owu.uy/la-meetup"
+      },
+      {
+        "label": "Datos de la edición en el repositorio del sitio de OWU",
+        "url": "https://github.com/owu-uy-community/website/blob/main/content/la-meetup-2025/la-meetup/index.yaml"
+      },
+      {
+        "label": "OWU CONF: de La Meetup a conferencia",
+        "url": "https://owu.uy/conf"
+      }
+    ]
+  },
+  "conf:owu-conf:2026-11-07": {
+    "description": "Primera edición de **OWU CONF**, la conferencia de la comunidad tecnológica uruguaya que organiza OWU. Es la continuación de La Meetup, que se hizo de 2023 a 2025, ahora en formato de conferencia y con el mismo espíritu. Está prevista para el sábado 7 de noviembre de 2026 en Sinergia Faro (Víctor Soliño 349, Montevideo), de 14:30 a 20:40. Las entradas se liberaron el miércoles 14 de octubre a las 11:00.\n\nEl programa anunciado arranca con acreditación y bienvenida, y sigue con un **open space**: a las 15:15 el mercado de ideas, donde cualquiera puede proponer un tema, y de 16:00 a 18:25 cinco bloques de sesiones simultáneas. Después del coffee break vienen dos charlas de cierre, la foto de toda la comunidad y un after:\n\n- **Retrieval Augmented Gaslight**, de Sebastián Passaro (OWASP Uruguay), sobre cómo un solo documento envenenado alcanza para engañar a un chatbot con RAG y cómo defenderse con herramientas open source.\n- **Kingdom Rush Battles: del lanzamiento al live ops**, de Juan Pais y Ciro Mondueri (Ironhide Game Studio), sobre cómo llevaron Kingdom Rush a su primer juego multijugador y de operación continua.",
+    "talks": [
+      {
+        "title": "Retrieval Augmented Gaslight",
+        "speakers": [
+          "Sebastián Passaro"
+        ]
+      },
+      {
+        "title": "Kingdom Rush Battles: del lanzamiento al live ops",
+        "speakers": [
+          "Juan Pais",
+          "Ciro Mondueri"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "OWU CONF en owu.uy (programa, speakers y entradas)",
+        "url": "https://owu.uy/conf"
+      }
+    ]
+  }
+}

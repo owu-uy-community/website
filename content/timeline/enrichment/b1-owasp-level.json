@@ -1,0 +1,2662 @@
+{
+  "conf:owasp-day-uruguay:2011-07-26": {
+    "description": "El **2.º OWASP Day Uruguay** fue una jornada gratuita que el capítulo OWASP Uruguay organizó junto con la Universidad ORT Uruguay el martes 26 de julio de 2011, de 19:00 a 22:00, en el auditorio de la sede Cuareim (Cuareim 1451). Fue además la parada montevideana del OWASP Latam Tour 2011, la gira con la que OWASP recorría América Latina para difundir la seguridad de aplicaciones.\n\nLa jornada repasó los proyectos de OWASP más maduros y listos para usar en empresas, y estaba pensada para desarrolladores, analistas, responsables de seguridad, auditores y líderes técnicos. Mateo Martínez abrió con una charla sobre para qué sirven las herramientas de OWASP; Fabio Cerullo (OWASP Irlanda) presentó WebGoat, WebScarab y ESAPI Swingset, y Mauro Flores habló de OWASP y PCI. En la gira se sortearon entradas para AppSec Latam 2011, en Porto Alegre.\n\nEl comité organizador lo integraron Mateo Martínez y Mauro Flores (OWASP Uruguay), Fabio Cerullo (OWASP Irlanda), Roberto Ambrosoni (Universidad ORT Uruguay) y Kate Hartmann (OWASP). Según el capítulo, el auditorio se llenó.",
+    "talks": [
+      {
+        "title": "¿Para qué me sirven las OWASP Tools?",
+        "speakers": [
+          "Mateo Martínez"
+        ]
+      },
+      {
+        "title": "OWASP WebGoat Project",
+        "speakers": [
+          "Fabio Cerullo"
+        ],
+        "slides": "https://wiki.owasp.org/images/5/55/OWASP_WebGoat.ppt"
+      },
+      {
+        "title": "OWASP WebScarab Project",
+        "speakers": [
+          "Fabio Cerullo"
+        ],
+        "slides": "https://wiki.owasp.org/images/d/d8/Owasp-training-2010-webscarab-slides.pdf"
+      },
+      {
+        "title": "OWASP PCI",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "OWASP ESAPI Swingset",
+        "speakers": [
+          "Fabio Cerullo"
+        ]
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay",
+      "Universidad ORT Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Página del evento en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/OWASP_Day_Uruguay_2011"
+      },
+      {
+        "label": "Agenda del OWASP Latam Tour 2011",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2011"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: OWASP Day Uruguay 2011",
+        "url": "https://wiki.owasp.org/index.php/OWASP_Day_Uruguay_2011"
+      },
+      {
+        "label": "Wiki de OWASP: OWASP Latam Tour 2011 (Montevideo)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2011"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-latamtour-montevideo:2012-05-16": {
+    "description": "La parada uruguaya del **OWASP Latam Tour 2012** fue una jornada gratuita el miércoles 16 de mayo de 2012, desde las 18:00, en el 2.º piso del módulo A del Aulario, junto a la Facultad de Ingeniería de la UdelaR. La organizó el capítulo OWASP Uruguay como parte de la gira regional de OWASP, que ese año también pasó por Buenos Aires, Florianópolis, Santiago, Lima, Quito y Caracas.\n\nMauro Flores presentó OWASP y el capítulo uruguayo; Felipe Zipitría, el proyecto OWASP Top 10, y Mateo Martínez habló de seguridad en el ciclo de vida del desarrollo de software. La charla central fue «80/20 in Web Application Security», del argentino Hernán M. Racciatti, con demostraciones en vivo. Cerró una ronda de preguntas con todos los expositores.",
+    "talks": [
+      {
+        "title": "Presentación de OWASP y de OWASP Uruguay",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "OWASP Top 10",
+        "speakers": [
+          "Felipe Zipitría"
+        ]
+      },
+      {
+        "title": "Seguridad en el ciclo de vida de desarrollo de software",
+        "speakers": [
+          "Mateo Martínez"
+        ]
+      },
+      {
+        "title": "80/20 in Web Application Security",
+        "speakers": [
+          "Hernán M. Racciatti"
+        ]
+      }
+    ],
+    "venue": "2.º piso del módulo A del Aulario, Facultad de Ingeniería (UdelaR)",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Montevideo en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2012_URU_Agenda"
+      },
+      {
+        "label": "OWASP Latam Tour 2012 (todas las ciudades)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2012"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: agenda del Latam Tour 2012 en Uruguay",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2012_URU_Agenda"
+      },
+      {
+        "label": "Wiki de OWASP: OWASP Latam Tour 2012",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2012"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-appsec-montevideo:2012-11-18": {
+    "description": "Del 18 al 21 de noviembre de 2012, el capítulo OWASP Uruguay fue anfitrión de **OWASP AppSec Latam 2012**, la conferencia global de OWASP para América Latina. Se hizo en el complejo de ANTEL, en el auditorio y la sala interactiva que están junto a la Torre de las Telecomunicaciones: dos días de capacitaciones (18 y 19) y dos días de charlas en dos salas (20 y 21).\n\nLa apertura estuvo a cargo de Carolina Cosse, presidenta de ANTEL, y José Clastornik, de AGESIC. Las charlas principales fueron de Jerry Hoff (WhiteHat Security), sobre seguridad incorporada en los frameworks; Juliano Rizzo, que contó su investigación sobre ataques criptográficos contra protocolos web («From FUN to CRIME»); Cristian Borghello (Segu-Info) y Hernán M. Racciatti. Entre las capacitaciones hubo un curso de desarrollo seguro en Java con OWASP ESAPI, a cargo de Fabio Cerullo, y uno de testing de aplicaciones web con OWASP WTE, a cargo de Matt Tesauro.\n\nSegún OWASP, la conferencia reunió a casi 200 asistentes de seis países.",
+    "talks": [
+      {
+        "title": "Apertura",
+        "speakers": [
+          "Carolina Cosse",
+          "José Clastornik"
+        ]
+      },
+      {
+        "title": "OWASP Board Kickoff",
+        "speakers": [
+          "Matt Tesauro"
+        ]
+      },
+      {
+        "title": "Building Security Into Frameworks: Who is doing it right (keynote)",
+        "speakers": [
+          "Jerry Hoff"
+        ]
+      },
+      {
+        "title": "Assessing Application Security Risk",
+        "speakers": [
+          "Alex Bauert"
+        ]
+      },
+      {
+        "title": "Reducing Web Application Attack Surface with a HMAC based protocol",
+        "speakers": [
+          "Breno Silva"
+        ]
+      },
+      {
+        "title": "Your Website: a weapon for cybercrime",
+        "speakers": [
+          "Sebastián Bortnik"
+        ]
+      },
+      {
+        "title": "Don't try to block out the sun with your fingers! Information harvesting with test-driven development tools and understanding how to avoid it",
+        "speakers": [
+          "Nicolás Rodríguez"
+        ]
+      },
+      {
+        "title": "Tainted variables to find Potentially Vulnerable Functions (PVF) (keynote)",
+        "speakers": [
+          "Cristian Borghello"
+        ]
+      },
+      {
+        "title": "Using PASTA as a core ingredient to web application threat modeling",
+        "speakers": [
+          "Tony UcedaVélez"
+        ]
+      },
+      {
+        "title": "Malware on Mobile Devices",
+        "speakers": [
+          "Sebastián Bortnik"
+        ]
+      },
+      {
+        "title": "Password Security Policies: Lessons Learned from Recent Password Leaks",
+        "speakers": [
+          "Flavio de Cristofaro",
+          "Brian Sutton"
+        ]
+      },
+      {
+        "title": "How dynamic have been static checking?",
+        "speakers": [
+          "Felipe Zipitría"
+        ]
+      },
+      {
+        "title": "From FUN to CRIME (keynote)",
+        "speakers": [
+          "Juliano Rizzo"
+        ]
+      },
+      {
+        "title": "Criteria for Institutionalizing Security in Software Development Processes",
+        "speakers": [
+          "Francisco Nunes"
+        ]
+      },
+      {
+        "title": "Understanding HTML5 Security",
+        "speakers": [
+          "Andrés Riancho"
+        ]
+      },
+      {
+        "title": "A real ZAP Story",
+        "speakers": [
+          "Mateo Martínez"
+        ]
+      },
+      {
+        "title": "Resource Certification: Implementation Challenges",
+        "speakers": [
+          "Gerardo Rada"
+        ]
+      },
+      {
+        "title": "The security of your company will be compromised (keynote)",
+        "speakers": [
+          "Hernán M. Racciatti"
+        ]
+      },
+      {
+        "title": "OWASP Mobile Top 10",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "DNSSEC: Securing the Web Starting with the Foundations",
+        "speakers": [
+          "Carlos Martínez-Cagnazzo"
+        ]
+      },
+      {
+        "title": "Developing Secure Apps with ESAPI",
+        "speakers": [
+          "Fabio Cerullo"
+        ]
+      },
+      {
+        "title": "OWASP O2 Case Study",
+        "speakers": [
+          "Michael Hidalgo"
+        ]
+      }
+    ],
+    "attendance": "casi 200 asistentes de seis países",
+    "venue": "Auditorio y sala interactiva del complejo de ANTEL, junto a la Torre de las Telecomunicaciones (Guatemala 1075)",
+    "organizers": [
+      "Capítulo OWASP Uruguay",
+      "OWASP Foundation"
+    ],
+    "links": [
+      {
+        "label": "Sitio del evento en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/AppSecLatam2012"
+      },
+      {
+        "label": "Agenda del martes 20",
+        "url": "https://wiki.owasp.org/index.php/AppSecLatam2012/Schedule_Tuesday_Nov_20,_2012"
+      },
+      {
+        "label": "Agenda del miércoles 21",
+        "url": "https://wiki.owasp.org/index.php/AppSecLatam2012/Schedule_Wednesday_Nov_21,_2012"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: AppSec Latam 2012",
+        "url": "https://wiki.owasp.org/index.php/AppSecLatam2012"
+      },
+      {
+        "label": "Wiki de OWASP: agenda del 20 de noviembre",
+        "url": "https://wiki.owasp.org/index.php/AppSecLatam2012/Schedule_Tuesday_Nov_20,_2012"
+      },
+      {
+        "label": "Wiki de OWASP: agenda del 21 de noviembre",
+        "url": "https://wiki.owasp.org/index.php/AppSecLatam2012/Schedule_Wednesday_Nov_21,_2012"
+      },
+      {
+        "label": "OWASP: AppSec Latam 2013 Sponsorship (balance de la edición 2012)",
+        "url": "https://wiki.owasp.org/images/c/cc/AppSec_LATAM_2013_Sponsorship.pdf"
+      }
+    ]
+  },
+  "conf:owasp-latamtour-montevideo:2013-04-02": {
+    "description": "La parada montevideana del **OWASP Latam Tour 2013** se hizo en la Universidad Católica del Uruguay. El martes 2 de abril hubo dos talleres en los salones 201 y 202 del edificio Anexo: desarrollo seguro con OWASP ESAPI, con Fabio Cerullo, y «OWASP para pentesters», con Cristian Borghello. El miércoles 3 fue la conferencia, gratuita, en el Aula Magna (Av. 8 de Octubre 2738).\n\nDespués de la presentación del capítulo OWASP Uruguay hubo charlas sobre PCI para desarrolladores (Fabio Cerullo), hacking en la nube (Matías Katz), la OWASP Testing Guide (Paola Rodríguez), trucos de criptografía para los desarrollos (Cristian Borghello), la infraestructura como código detrás de w3af.org (Andrés Riancho), rainbow tables para revisiones de seguridad (Maximiliano Alonzo) y lo aprendido al llevar la seguridad a una software house (Gerardo Canedo). Simon Bennetts, líder del proyecto OWASP ZAP, presentó la herramienta en una sesión remota desde el Reino Unido.",
+    "talks": [
+      {
+        "title": "PCI para desarrolladores",
+        "speakers": [
+          "Fabio Cerullo"
+        ],
+        "slides": "https://prezi.com/bstoidp9nanx/pci-para-desarrolladores/"
+      },
+      {
+        "title": "Hacking the Cloud",
+        "speakers": [
+          "Matías Katz"
+        ]
+      },
+      {
+        "title": "OWASP Testing Guide",
+        "speakers": [
+          "Paola Rodríguez"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1o2c1BGTQnxcO0caiO27pBDPbJreaHgH3/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true"
+      },
+      {
+        "title": "Zed Attack Proxy (ZAP)",
+        "speakers": [
+          "Simon Bennetts"
+        ]
+      },
+      {
+        "title": "Trucos para jugar con la criptografía en los desarrollos",
+        "speakers": [
+          "Cristian Borghello"
+        ],
+        "slides": "https://drive.google.com/file/d/1-TlWuhk4Rgcgp9nAt5C1vr8Ez_TiP-72/view?usp=sharing"
+      },
+      {
+        "title": "Secure infrastructure as code: How I built w3af.org",
+        "speakers": [
+          "Andrés Riancho"
+        ]
+      },
+      {
+        "title": "Rainbow tables para revisiones de seguridad",
+        "speakers": [
+          "Maximiliano Alonzo"
+        ],
+        "slides": "https://drive.google.com/file/d/1k8e9o68S7HhLi6BUdEMpNHb10_SvBVkR/view?usp=sharing"
+      },
+      {
+        "title": "Lecciones aprendidas: llevando la seguridad al siguiente nivel en una software house",
+        "speakers": [
+          "Gerardo Canedo"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1-nzCiMwIpssUnFRP160e4C4_-kqfxe-F/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true"
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Montevideo en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2013_URU_Agenda"
+      },
+      {
+        "label": "OWASP Latam Tour 2013 (todas las ciudades)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2013"
+      },
+      {
+        "label": "El evento en el sitio de OWASP Uruguay",
+        "url": "https://owasp-uruguay.github.io/eventos/2013-04-04-latam-tour-2013/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: agenda del Latam Tour 2013 en Montevideo",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2013_URU_Agenda"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io (charlas y presentaciones)",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2013-04-04-latam-tour-2013/index.mdx"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2013-04-04:owasp-latam-tour-2013": {
+    "description": "La parada montevideana del **OWASP Latam Tour 2013** se hizo en la Universidad Católica del Uruguay. El capítulo OWASP Uruguay la anunció para el 4 y el 5 de abril, pero la agenda publicada en la wiki de OWASP ubica los talleres el martes 2 y la conferencia gratuita el miércoles 3 de abril, en el Aula Magna (Av. 8 de Octubre 2738). Los talleres fueron de desarrollo seguro con OWASP ESAPI, con Fabio Cerullo, y «OWASP para pentesters», con Cristian Borghello.\n\nEn la conferencia hubo charlas sobre PCI para desarrolladores (Fabio Cerullo), hacking en la nube (Matías Katz), la OWASP Testing Guide (Paola Rodríguez), trucos de criptografía para los desarrollos (Cristian Borghello), la infraestructura como código detrás de w3af.org (Andrés Riancho), rainbow tables para revisiones de seguridad (Maximiliano Alonzo) y lo aprendido al llevar la seguridad a una software house (Gerardo Canedo). Simon Bennetts, líder del proyecto OWASP ZAP, presentó la herramienta en una sesión remota desde el Reino Unido.",
+    "talks": [
+      {
+        "title": "PCI para desarrolladores",
+        "speakers": [
+          "Fabio Cerullo"
+        ],
+        "slides": "https://prezi.com/bstoidp9nanx/pci-para-desarrolladores/"
+      },
+      {
+        "title": "Hacking the Cloud",
+        "speakers": [
+          "Matías Katz"
+        ]
+      },
+      {
+        "title": "OWASP Testing Guide",
+        "speakers": [
+          "Paola Rodríguez"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1o2c1BGTQnxcO0caiO27pBDPbJreaHgH3/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true"
+      },
+      {
+        "title": "Zed Attack Proxy (ZAP)",
+        "speakers": [
+          "Simon Bennetts"
+        ]
+      },
+      {
+        "title": "Trucos para jugar con la criptografía en los desarrollos",
+        "speakers": [
+          "Cristian Borghello"
+        ],
+        "slides": "https://drive.google.com/file/d/1-TlWuhk4Rgcgp9nAt5C1vr8Ez_TiP-72/view?usp=sharing"
+      },
+      {
+        "title": "Secure infrastructure as code: How I built w3af.org",
+        "speakers": [
+          "Andrés Riancho"
+        ]
+      },
+      {
+        "title": "Rainbow tables para revisiones de seguridad",
+        "speakers": [
+          "Maximiliano Alonzo"
+        ],
+        "slides": "https://drive.google.com/file/d/1k8e9o68S7HhLi6BUdEMpNHb10_SvBVkR/view?usp=sharing"
+      },
+      {
+        "title": "Lecciones aprendidas: llevando la seguridad al siguiente nivel en una software house",
+        "speakers": [
+          "Gerardo Canedo"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1-nzCiMwIpssUnFRP160e4C4_-kqfxe-F/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true"
+      }
+    ],
+    "venue": "Universidad Católica del Uruguay (talleres: edificio Anexo; conferencia: Aula Magna, Av. 8 de Octubre 2738)",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Montevideo en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2013_URU_Agenda"
+      },
+      {
+        "label": "El evento en el sitio de OWASP Uruguay",
+        "url": "https://owasp-uruguay.github.io/eventos/2013-04-04-latam-tour-2013/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2013-04-04-latam-tour-2013/index.mdx"
+      },
+      {
+        "label": "Wiki de OWASP: agenda del Latam Tour 2013 en Montevideo",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2013_URU_Agenda"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-day-uruguay:2013-07-09": {
+    "description": "El **OWASP Day Uruguay** del 9 de julio de 2013 fue una jornada libre y gratuita que el capítulo OWASP Uruguay organizó con la Universidad ORT Uruguay, de 18:00 a 21:00, en el auditorio de la sede Cuareim (Cuareim 1451). Según la convocatoria, era el cuarto evento de OWASP en el país.\n\nDespués de la acreditación y la presentación del capítulo, Felipe Zipitría presentó el **OWASP Top 10 2013**, la edición de ese año de la lista de los riesgos más críticos en aplicaciones web. Tras un café siguieron dos charlas más: una sobre el OWASP Mobile Top 10 y otra sobre cómo explotar aplicaciones «seguras».",
+    "talks": [
+      {
+        "title": "OWASP Top 10 2013",
+        "speakers": [
+          "Felipe Zipitría"
+        ],
+        "slides": "https://wiki.owasp.org/images/0/0a/OWASP_Top_Ten_2013_-_Uruguay.odp"
+      },
+      {
+        "title": "OWASP Mobile Top 10"
+      },
+      {
+        "title": "¿Cómo explotar aplicaciones seguras?"
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay",
+      "Universidad ORT Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Página del evento en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/OWASP_Day_Uruguay_2013_ORT"
+      },
+      {
+        "label": "El evento en el sitio de OWASP Uruguay",
+        "url": "https://owasp-uruguay.github.io/eventos/2013-07-09-owasp-day-ort/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: OWASP Day Uruguay 2013 ORT",
+        "url": "https://wiki.owasp.org/index.php/OWASP_Day_Uruguay_2013_ORT"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-latamtour-montevideo:2014-04-29": {
+    "description": "El **OWASP Latam Tour 2014** pasó por Montevideo el 29 y el 30 de abril. El martes 29, Cristian Borghello dictó en el Parque Tecnológico y de Eventos del LATU (Av. Italia 6201) el taller pago «OWASP para pentesters», de ocho horas, para que desarrolladores y pentesters aprendieran a probar y corregir cada riesgo del OWASP Top 10. El miércoles 30 fue la conferencia gratuita en el Auditorio Massera de la Facultad de Ingeniería (UdelaR).\n\nLa bienvenida estuvo a cargo de Mateo Martínez (OWASP Uruguay) y Fabio Cerullo, del board de OWASP. Andrés Riancho abrió con una charla central sobre DevOps, despliegue continuo, PaaS y seguridad, y Cristian Borghello dio la otra, sobre cómo probar WebSockets con OWASP ZAP. También hablaron Gerardo Canedo (cómo mitigar el OWASP Top 10 en aplicaciones hechas con GeneXus), Mateo Martínez (el proyecto abierto Open Cyber Security Framework), Fabio Cerullo (el estado de la seguridad de aplicaciones, con técnicas de hackeo de autos incluidas) y Matías Katz (HTExploit combinado con Shodan y GitHub). Hubo además una presentación de (ISC)² y una del CERTuy sobre ciberseguridad.",
+    "talks": [
+      {
+        "title": "Conferencia de bienvenida",
+        "speakers": [
+          "Mateo Martínez",
+          "Fabio Cerullo"
+        ]
+      },
+      {
+        "title": "DevOps, continuous deployment, PaaS y... ¿seguridad? (keynote)",
+        "speakers": [
+          "Andrés Riancho"
+        ]
+      },
+      {
+        "title": "Mitigando vulnerabilidades del OWASP Top 10 con GeneXus",
+        "speakers": [
+          "Gerardo Canedo"
+        ]
+      },
+      {
+        "title": "Open Cyber Security Framework Project",
+        "speakers": [
+          "Mateo Martínez"
+        ],
+        "slides": "https://wiki.owasp.org/images/e/e8/Ciberseguridad_-_OWASP_2014_v2.pdf"
+      },
+      {
+        "title": "Seguridad en aplicaciones: ¡al infinito… y más allá!",
+        "speakers": [
+          "Fabio Cerullo"
+        ],
+        "slides": "https://wiki.owasp.org/images/d/dd/Cycubix_latam_tour.pdf"
+      },
+      {
+        "title": "Presentación de (ISC)²",
+        "speakers": [
+          "Matías Katz"
+        ]
+      },
+      {
+        "title": "Testing de WebSockets con OWASP ZAP (keynote)",
+        "speakers": [
+          "Cristian Borghello"
+        ],
+        "slides": "https://wiki.owasp.org/images/e/ed/OWASPLatamTour-WebSocket.pdf"
+      },
+      {
+        "title": "HTExploit Revenge, ahora con Shodan y GitHub",
+        "speakers": [
+          "Matías Katz"
+        ]
+      },
+      {
+        "title": "Ciberseguridad",
+        "speakers": [
+          "CERTuy"
+        ]
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Montevideo en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2014_URU_Agenda"
+      },
+      {
+        "label": "OWASP Latam Tour 2014 (todas las ciudades)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2014"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: agenda del Latam Tour 2014 en Uruguay",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2014_URU_Agenda"
+      },
+      {
+        "label": "Wiki de OWASP: OWASP Latam Tour 2014",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2014"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2014-04-29-latam-tour-2014/index.mdx"
+      }
+    ]
+  },
+  "conf:owasp-latamtour-montevideo:2015-04-15": {
+    "description": "La parada uruguaya del **OWASP Latam Tour 2015** fue una conferencia gratuita el miércoles 15 de abril de 2015, de 17:30 a 22:00, en la Sala Bauzá de la Universidad Católica del Uruguay (Av. 8 de Octubre 2738). Al día siguiente, en la misma universidad, Cristian Borghello dictó un training pago de hacking de aplicaciones web basado en el OWASP Top 10. Montevideo fue una de las diez paradas de la gira de ese año, entre Santiago, Patagonia, Bucaramanga, Lima, Santa Cruz, San José, Guatemala, Buenos Aires y Caracas.\n\nHablaron Cristian Borghello (seguridad en certificados digitales y *certificate pinning*), Edgar Salazar (inseguridad en aplicaciones móviles), Carlos Eduardo Santiago («(IN)secure Development», sobre trampas comunes del desarrollo web), Ricardo Supo Picón (cómo escalar en dominios Windows hasta obtener un administrador, con la herramienta Domainator) y Viviana Basso (por qué es tan importante la seguridad en el software). El cierre incluyó un sorteo de premios.",
+    "talks": [
+      {
+        "title": "Seguridad en certificados digitales: certificate pinning",
+        "speakers": [
+          "Cristian Borghello"
+        ],
+        "slides": "https://drive.google.com/file/d/1gCKjKJT1lV6pc_B1sqN-2AzCOaSh78Tq/view?usp=sharing"
+      },
+      {
+        "title": "Inseguridad en aplicaciones móviles",
+        "speakers": [
+          "Edgar Salazar"
+        ]
+      },
+      {
+        "title": "(IN)secure Development",
+        "speakers": [
+          "Carlos Eduardo Santiago"
+        ]
+      },
+      {
+        "title": "Hacking efectivo",
+        "speakers": [
+          "Ricardo Supo Picón"
+        ]
+      },
+      {
+        "title": "¿Por qué la seguridad en software es tan importante?",
+        "speakers": [
+          "Viviana Basso"
+        ]
+      }
+    ],
+    "venue": "Sala Bauzá, Universidad Católica del Uruguay (Av. 8 de Octubre 2738)",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Uruguay en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2015#URUGUAY"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: OWASP Latam Tour 2015 (pestaña Uruguay)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2015"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-appsec-montevideo:2015-12-01": {
+    "description": "**OWASP AppSec Río de la Plata 2015** fue la conferencia regional de seguridad de aplicaciones que el capítulo OWASP Uruguay organizó en el auditorio de la Torre de las Comunicaciones de ANTEL, en Montevideo. El martes 1.º de diciembre hubo un training de Metasploit («From 0 to Ninja with Metasploit»), a cargo de Jacobo Tibaquirá, de DragonJar, y el 2 y el 3 fueron las jornadas de charlas, con 26 oradores de la región y una capacidad de 300 lugares.\n\nAbrió Mateo Martínez con una presentación de OWASP. Las charlas principales fueron «Attacking the Attackers», de Jacobo Tibaquirá, sobre contramedidas ante un atacante dentro de la red, y «We are all Ashley Madison», de Cristian Borghello (Segu-Info), sobre el papel de la revisión de código. El programa incluyó temas como el mercado negro de registros médicos (Matías Katz), delitos informáticos (María José Viega, de AGESIC), seguridad en la nube (Mauro Flores), estaciones base GSM falsas (Elvin Mollinedo), evasión de antivirus (Sheila Ayelén Berta), pentesting de apps móviles (Gustavo Sorondo), control de acceso en GeneXus (Pablo Alzuri), XSS (Diego Cotelo) y ataques a redes Windows (Ricardo Supo). El equipo voluntario lo formaron, entre otros, Mateo Martínez, Mauro Flores, Felipe Zipitría, Alberto Hill, Maximiliano Alonzo y Gerardo Canedo.",
+    "talks": [
+      {
+        "title": "Welcome and Introduction to OWASP",
+        "speakers": [
+          "Mateo Martínez"
+        ]
+      },
+      {
+        "title": "Attacking the Attackers (keynote)",
+        "speakers": [
+          "Jacobo Tibaquirá"
+        ]
+      },
+      {
+        "title": "Mercado negro de registros médicos",
+        "speakers": [
+          "Matías Katz"
+        ]
+      },
+      {
+        "title": "Webapp pentesting",
+        "speakers": [
+          "Gastón Toth"
+        ]
+      },
+      {
+        "title": "Root the Enemy",
+        "speakers": [
+          "Andrés Gómez"
+        ]
+      },
+      {
+        "title": "We are all Ashley Madison (keynote)",
+        "speakers": [
+          "Cristian Borghello"
+        ]
+      },
+      {
+        "title": "¿Has cometido algún delito informático?",
+        "speakers": [
+          "María José Viega"
+        ]
+      },
+      {
+        "title": "Cloud Security",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "Creating Fake GSM Radio Bases with BTS Attacks",
+        "speakers": [
+          "Elvin Mollinedo"
+        ]
+      },
+      {
+        "title": "Where is my money? Real crime stories",
+        "speakers": [
+          "Camilo Fernández"
+        ]
+      },
+      {
+        "title": "Information Security Survey 2015",
+        "speakers": [
+          "Reynaldo de la Fuente"
+        ]
+      },
+      {
+        "title": "Threat Not Found",
+        "speakers": [
+          "Sheila Ayelén Berta"
+        ]
+      },
+      {
+        "title": "Mobile Apps and how to pentest them",
+        "speakers": [
+          "Gustavo Sorondo"
+        ]
+      },
+      {
+        "title": "Javascript Static Code Analyzer",
+        "speakers": [
+          "Héctor Quartino"
+        ]
+      },
+      {
+        "title": "El pasaje gratis de los desarrolladores, la seguridad en aplicaciones y otros cuentos cortos",
+        "speakers": [
+          "Diego Bruno"
+        ]
+      },
+      {
+        "title": "SSL & TLS... a long horror story",
+        "speakers": [
+          "Javier Antúnez"
+        ]
+      },
+      {
+        "title": "NLTK Syntax Analysis",
+        "speakers": [
+          "Cristian Amicelli"
+        ]
+      },
+      {
+        "title": "Nuts & Bolts of Function Level Access Control with GeneXus",
+        "speakers": [
+          "Pablo Alzuri"
+        ]
+      },
+      {
+        "title": "XSS: from alert to pwnage",
+        "speakers": [
+          "Diego Cotelo"
+        ]
+      },
+      {
+        "title": "Hacking Windows Networks",
+        "speakers": [
+          "Ricardo Supo"
+        ]
+      },
+      {
+        "title": "Vamonos Pest",
+        "speakers": [
+          "Edgar Salazar",
+          "Jorge Salazar"
+        ]
+      },
+      {
+        "title": "Continuous Security Testing",
+        "speakers": [
+          "Martín Tartarelli"
+        ]
+      },
+      {
+        "title": "OWASP Top 10",
+        "speakers": [
+          "John Vargas"
+        ]
+      }
+    ],
+    "venue": "Auditorio de la Torre de las Comunicaciones de ANTEL (Guatemala 1075)",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Sitio original (archivado)",
+        "url": "https://web.archive.org/web/20160109143720/http://appsecriodelaplata.org/"
+      },
+      {
+        "label": "Página del evento en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/AppSecRiodelaPlata"
+      }
+    ],
+    "sources": [
+      {
+        "label": "appsecriodelaplata.org (Wayback Machine, enero de 2016)",
+        "url": "https://web.archive.org/web/20160109143720/http://appsecriodelaplata.org/"
+      },
+      {
+        "label": "Wiki de OWASP: AppSec Río de la Plata 2015",
+        "url": "https://wiki.owasp.org/index.php/AppSecRiodelaPlata"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-latamtour-montevideo:2016-04-21": {
+    "description": "La parada uruguaya del **OWASP Latam Tour 2016** fue una conferencia gratuita el jueves 21 de abril de 2016, de 19:00 a 22:30, en el Auditorio Principal de la Universidad ORT Uruguay (Cuareim 1451). La organizó el capítulo OWASP Uruguay, con registro abierto en Eventbrite.\n\nEl programa tuvo tres oradores de la región. El brasileño Flávio K. Shiga presentó «¿Cuánto quiere pagar?», una investigación sobre cómo interceptar la comunicación entre comercios electrónicos y pasarelas de pago para cambiar el precio de una compra. Héctor Aguirre, de Paraguay, armó un laboratorio de ethical hacking con herramientas de código abierto, y el argentino Carlos Loyo habló de qué información queda registrada en los dispositivos Android y cómo analizarla con herramientas libres. Cerró con un sorteo de premios.",
+    "talks": [
+      {
+        "title": "¿Cuánto quiere pagar?",
+        "speakers": [
+          "Flávio K. Shiga"
+        ]
+      },
+      {
+        "title": "Seguridad de hoy en día",
+        "speakers": [
+          "Héctor Aguirre"
+        ]
+      },
+      {
+        "title": "catch on Android: en búsqueda de logs",
+        "speakers": [
+          "Carlos Loyo"
+        ]
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Uruguay en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2016#tab=URUGUAY"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: OWASP Latam Tour 2016 (pestaña Uruguay)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2016"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-uruguay-other:2016-09-22": {
+    "description": "**Builders & Defenders 101 (B&D101)** fue un evento práctico del capítulo OWASP Uruguay para la comunidad de desarrollo y de administración de sistemas, el jueves 22 de setiembre de 2016, de 18:30 a 21:30, en las oficinas de AGESIC (Andes y 18 de Julio, piso 7, Montevideo).\n\nLa idea era aprender principios básicos de seguridad informática con trabajo práctico en lugar de largas exposiciones: había que llevar la laptop y sumarse a un desafío. El registro era gratuito, con 50 cupos.",
+    "venue": "Oficinas de AGESIC, Andes y 18 de Julio, piso 7",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Registro en Eventbrite (ya no está)",
+        "url": "https://www.eventbrite.com/e/builders-defenders-101-bd101-tickets-27423701028"
+      },
+      {
+        "label": "El evento en el sitio de OWASP Uruguay",
+        "url": "https://owasp-uruguay.github.io/eventos/2016-09-22-builders-defenders-101/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos 2016",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2016-09-22-builders-defenders-101/index.mdx"
+      }
+    ]
+  },
+  "conf:owasp-appsec-montevideo:2016-12-01": {
+    "description": "**OWASP AppSec Río de la Plata 2016** fue la segunda edición en Montevideo de la conferencia regional de seguridad de aplicaciones del capítulo OWASP Uruguay. Se hizo el 1.º y el 2 de diciembre de 2016 en el Auditorio Principal de la Torre de las Comunicaciones de ANTEL, con entrada a 50 dólares, capacidad para 300 personas y un training de seguridad móvil.\n\nMateo Martínez abrió con la presentación de OWASP. En el programa hubo charlas sobre seguridad en aplicaciones Node (Walter Riveros), OpenSAMM y la seguridad en el ciclo de desarrollo (Mauricio Campiglia), *threat intelligence* aplicada al pentesting (Carlos Eduardo Santiago), la anatomía de un ataque a Struts (Cristóbal del Pino), denegación de servicio con expresiones regulares (Michael Hidalgo, OWASP Costa Rica), ransomware (Fernando Cocaro), biohacking con un chip NFC implantado (Cristian Amicelli), cifrado para proteger datos personales después de una brecha (Julián Murguía Hughes) y gestión segura de versiones (Maximiliano Alonzo).",
+    "talks": [
+      {
+        "title": "Welcome and Introduction to OWASP",
+        "speakers": [
+          "Mateo Martínez"
+        ]
+      },
+      {
+        "title": "Talking about security in Node applications",
+        "speakers": [
+          "Walter Riveros"
+        ]
+      },
+      {
+        "title": "Seguridad en el SDLC, el último orejón del tarro",
+        "speakers": [
+          "Mauricio Campiglia"
+        ]
+      },
+      {
+        "title": "Web app little mistakes, big problems",
+        "speakers": [
+          "Gastón Toth"
+        ]
+      },
+      {
+        "title": "Improving your Penetration Testing with Threat Intelligence",
+        "speakers": [
+          "Carlos Eduardo Santiago"
+        ]
+      },
+      {
+        "title": "Struts: anatomía de un ataque",
+        "speakers": [
+          "Cristóbal del Pino"
+        ]
+      },
+      {
+        "title": "Conditions of Binary search algorithm for being an optimization of sequential inference algorithms to audit the risk of SQL injections in web environments",
+        "speakers": [
+          "Alexis M. Taborda"
+        ]
+      },
+      {
+        "title": "Mobile Security Warnings!",
+        "speakers": [
+          "Alejandro Parodi"
+        ]
+      },
+      {
+        "title": "Regular expression Denial of Service (ReDoS): An overlooked Application Security Problem",
+        "speakers": [
+          "Michael Hidalgo"
+        ]
+      },
+      {
+        "title": "No negociamos con secuestradores",
+        "speakers": [
+          "Fernando Cocaro"
+        ]
+      },
+      {
+        "title": "Las buenas prácticas del SDLC basado en OWASP",
+        "speakers": [
+          "Gustavo Nieves"
+        ]
+      },
+      {
+        "title": "Biohacking y no morir en el intento",
+        "speakers": [
+          "Cristian Amicelli"
+        ]
+      },
+      {
+        "title": "¿Por qué exponemos nuestra información privada tan fácilmente?",
+        "speakers": [
+          "Pablo Torres Correa"
+        ]
+      },
+      {
+        "title": "Privacy Beyond Security: Keeping the Personally Identifiable Information private after the security has been breached",
+        "speakers": [
+          "Julián Murguía Hughes"
+        ]
+      },
+      {
+        "title": "Secure Release Management",
+        "speakers": [
+          "Maximiliano Alonzo"
+        ]
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Sitio original (archivado)",
+        "url": "https://web.archive.org/web/20170416172855/http://appsecriodelaplata.org/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "appsecriodelaplata.org (Wayback Machine, abril de 2017)",
+        "url": "https://web.archive.org/web/20170416172855/http://appsecriodelaplata.org/"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos 2016",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-latamtour-montevideo:2017-04-05": {
+    "description": "El **OWASP Latam Tour 2017** pasó por Montevideo el 5 y el 6 de abril. El miércoles 5, Gerardo Canedo, Mateo Martínez y Maximiliano Alonzo, del capítulo OWASP Uruguay, dictaron en el Hotel Ibis el training pago «OWASP Top 10 Hands On», de ocho horas, basado en el OWASP Top 10 y en OWASP Juice Shop. El jueves 6 fue la conferencia gratuita en el Auditorio Massera de la Facultad de Ingeniería (UdelaR).\n\nTras la bienvenida de Mateo Martínez, Andrés Riancho mostró casos de vulnerabilidades web poco comunes; Edgar Salazar presentó OWASP Security Knowledge Framework; Santiago Vázquez (Paraguay), técnicas de hacking con ZAP; Alberto Hill repasó los incidentes de seguridad en la historia de las criptomonedas; Felipe Zipitría habló de testing de seguridad en equipos ágiles y Gerardo Canedo contó su experiencia usando OWASP ASVS como requerimientos de seguridad.\n\nDespués del evento, el capítulo liberó con descarga gratuita el material del training.",
+    "talks": [
+      {
+        "title": "Presentación de OWASP y proyectos",
+        "speakers": [
+          "Mateo Martínez"
+        ]
+      },
+      {
+        "title": "Esoteric Web Application Vulnerabilities",
+        "speakers": [
+          "Andrés Riancho"
+        ],
+        "slides": "https://speakerdeck.com/andresriancho/esoteric-web-application-vulnerabilities-1"
+      },
+      {
+        "title": "OWASP Security Knowledge Framework",
+        "speakers": [
+          "Edgar Salazar"
+        ]
+      },
+      {
+        "title": "Hacking con ZAP",
+        "speakers": [
+          "Santiago Vázquez"
+        ]
+      },
+      {
+        "title": "Hacking and Bitcoins (not hacking BITCOINS)",
+        "speakers": [
+          "Alberto Hill"
+        ]
+      },
+      {
+        "title": "(fr)Agile Security Testing",
+        "speakers": [
+          "Felipe Zipitría"
+        ]
+      },
+      {
+        "title": "OWASP ASVS: cómo me puede servir",
+        "speakers": [
+          "Gerardo Canedo"
+        ]
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Uruguay en la wiki de OWASP",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2017#tab=URUGUAY"
+      },
+      {
+        "label": "Material del training OWASP Top 10 Hands On",
+        "url": "https://drive.google.com/drive/folders/0B6zv033D1iK9eTJId2RhZkJFTlk?usp=sharing"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Wiki de OWASP: OWASP Latam Tour 2017 (pestaña Uruguay)",
+        "url": "https://wiki.owasp.org/index.php/LatamTour2017"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos 2017",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:owasp-day-uruguay:2017-08-29": {
+    "description": "El **OWASP Day 2017** fue una jornada gratuita sobre seguridad de aplicaciones que el capítulo OWASP Uruguay organizó el martes 29 de agosto de 2017, de 18:00 a 21:00, en la Facultad de Ingeniería de la Universidad de Montevideo (UM). El registro se hacía en Eventbrite, a nombre de la OWASP Foundation.\n\nNo encontramos publicada la agenda de charlas de esa edición.",
+    "venue": "Facultad de Ingeniería, Universidad de Montevideo",
+    "organizers": [
+      "Capítulo OWASP Uruguay",
+      "Universidad de Montevideo"
+    ],
+    "links": [
+      {
+        "label": "Registro en Eventbrite (archivado)",
+        "url": "https://web.archive.org/web/20190723085303/https://www.eventbrite.com/e/owasp-day-tickets-37112982931"
+      },
+      {
+        "label": "El evento en el sitio de OWASP Uruguay",
+        "url": "https://owasp-uruguay.github.io/eventos/2017-08-29-owasp-day-um/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Eventbrite: OWASP DAY, 29 de agosto de 2017 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20190723085303/https://www.eventbrite.com/e/owasp-day-tickets-37112982931"
+      },
+      {
+        "label": "Wiki de OWASP: capítulo Uruguay, eventos 2017",
+        "url": "https://wiki.owasp.org/index.php/Uruguay"
+      }
+    ]
+  },
+  "conf:level-uy:2017-12-06": {
+    "description": "**LEVEL UY Gamedev Summit 2017** fue la primera edición de LEVEL UY, el encuentro anual de la industria uruguaya del videojuego. Lo organizó la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI) junto con el MIEM, ANTEL y Uruguay XXI, en la Torre de las Telecomunicaciones de ANTEL. El 6 de diciembre hubo talleres y un área de negocios para pedir reuniones con empresas; el 7, charlas y paneles, el Indie Showroom de entrada libre y la entrega de premios, y el 8, las actividades de cierre.\n\nEntre los invitados estuvieron los hermanos Sam y Seth Coster (Butterscotch Shenanigans), Ricardo Carretero (King), el especialista en UX Jason Schklar, Luke Icenhower (Raw Fury) y Lévan Sardjeveladze, presidente de la asociación francesa de desarrolladores de videojuegos. Según Press Over, hubo representantes de Brasil, Chile, Colombia, Bolivia y Argentina, y en la muestra se destacaron juegos como *Arena Gods*, *Pixel Cup Soccer 17*, *Mechs Kaijus*, *Lila's Tale* y *Puppet Kings*. Según Uruguay XXI, participaron más de 400 personas.\n\nEn el cierre, LEVEL UY entregó su Premio de Honor a Iron Byte, el equipo uruguayo que en 1989 hizo *Narco Police*. También se premió el 12.º Concurso Nacional de Videojuegos: *Super Scaloni* ganó en móviles y *Alchemist Defender VR*, de TreeView Studios, en PC, web y consolas. El jurado internacional eligió *Arena Gods* (Supertype, Brasil) como el mejor juego de la muestra.",
+    "talks": [
+      {
+        "title": "What is the best multiplatform strategy for launching your indie game (panel)",
+        "speakers": [
+          "Sam Coster",
+          "Seth Coster",
+          "Saulo Camarotti",
+          "Christian Lykawka",
+          "Jesús Fabre"
+        ],
+        "video": "https://www.youtube.com/watch?v=zVR0fpaGgdk"
+      },
+      {
+        "title": "Desafíos haciendo arte para videojuegos",
+        "speakers": [
+          "Mariana Castro",
+          "Gabriela Thobias",
+          "Kao Valer"
+        ],
+        "video": "https://www.youtube.com/watch?v=miaKhv_2dkg"
+      },
+      {
+        "title": "LEVEL UY Honor Award 2017: Iron Byte, creadores de Narco Police",
+        "speakers": [
+          "Iron Byte"
+        ],
+        "video": "https://www.youtube.com/watch?v=poVrKjCSnGo"
+      },
+      {
+        "title": "Taller: Iteración, feedback y cultura: mejorando la experiencia de usuario en tu estudio",
+        "speakers": [
+          "Jason Schklar"
+        ]
+      },
+      {
+        "title": "Taller de diseño: hoja de ruta para un juego F2P",
+        "speakers": [
+          "Ricardo Carretero"
+        ]
+      },
+      {
+        "title": "Taller: Marketing 101: cómo promocionar un juego correctamente",
+        "speakers": [
+          "Luke Icenhower"
+        ]
+      },
+      {
+        "title": "Taller: Creando y descubriendo tus IPs originales",
+        "speakers": [
+          "Sam Coster",
+          "Seth Coster"
+        ]
+      }
+    ],
+    "attendance": "más de 400 personas",
+    "venue": "Torre de las Telecomunicaciones de ANTEL (auditorio Mario Benedetti)",
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "ANTEL",
+      "Uruguay XXI"
+    ],
+    "photos": [
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/noticia/b299dd7d2a1ad63aa9a59cd926c8e85ce590db61.jpg",
+        "alt": "Un panel de cinco desarrolladores en el escenario, con el cartel #LEVEL en primer plano",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-el-mayor-encuentro-local-sobre-videojuegos-vuelve-a-reunir-a-referentes-del-sector/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/25188745_1800135913622130_2080513723403951374_o.jpg",
+        "alt": "Vista del escenario durante un panel, con la pantalla de LEVEL UY Game Dev Summit '17 y los banners de los organizadores",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-el-mayor-encuentro-local-sobre-videojuegos-vuelve-a-reunir-a-referentes-del-sector/"
+      },
+      {
+        "src": "https://pressover.news/wp-content/uploads/2017/12/leveluy2017.jpg",
+        "alt": "Foto grupal de participantes en el escenario, detrás del cartel #LEVELUY",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/level-uy-2017-imagenes/"
+      },
+      {
+        "src": "https://pressover.news/wp-content/uploads/2017/12/DQewW8EWkAI_np_.jpg",
+        "alt": "Un equipo recibe su premio en el escenario durante la ceremonia del Concurso Nacional de Videojuegos",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/los-premios-de-level-uy-2017/"
+      },
+      {
+        "src": "https://pressover.news/wp-content/uploads/2018/12/25188833_1800115666957488_6164930735154258579_o.jpg",
+        "alt": "Participantes de un taller alrededor de una mesa con un juego de mesa",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/se-viene-level-uy-2018/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2017 (archivado)",
+        "url": "https://web.archive.org/web/20190627074824/http://leveluy.com:80/2017.php/"
+      },
+      {
+        "label": "Videos de las charlas en YouTube",
+        "url": "https://www.youtube.com/@level_uygamedevsummit7260"
+      },
+      {
+        "label": "Cobertura en video de Press Over",
+        "url": "https://www.youtube.com/watch?v=SYbjoOxr3OQ"
+      },
+      {
+        "label": "Fotos de Press Over",
+        "url": "https://pressover.news/noticias/level-uy-2017-imagenes/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI: El evento de los videojuegos (7/12/2017)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/el-evento-de-los-videojuegos/"
+      },
+      {
+        "label": "leveluy.com, edición 2017 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20190627074824/http://leveluy.com:80/2017.php/"
+      },
+      {
+        "label": "Press Over: Los premios de LEVEL UY 2017",
+        "url": "https://pressover.news/noticias/los-premios-de-level-uy-2017/"
+      },
+      {
+        "label": "Press Over: Cronograma de LEVEL UY 2017",
+        "url": "https://pressover.news/noticias/cronograma-level-uy-2017/"
+      },
+      {
+        "label": "Universidad ORT Uruguay: ganadores del Concurso Nacional de Videojuegos",
+        "url": "https://www.ort.edu.uy/en/news/graduados-y-estudiantes-avanzados-fueron-premiados-en-el-concurso-nacional-de-videojuegos-66899"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY Summit 2018 (balance de la edición anterior)",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-summit-2018/"
+      },
+      {
+        "label": "YouTube: LEVEL UY Honor Award 2017",
+        "url": "https://www.youtube.com/watch?v=poVrKjCSnGo"
+      },
+      {
+        "label": "Press Over: Level UY 2017, imágenes",
+        "url": "https://pressover.news/noticias/level-uy-2017-imagenes/"
+      }
+    ]
+  },
+  "conf:level-uy:2018-12-10": {
+    "description": "La segunda edición de **LEVEL UY** se hizo del 10 al 13 de diciembre de 2018, organizada por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI) con MIEM-Dinatel, Uruguay XXI, ANTEL e Ingenio. Los talleres pagos fueron en el LATU: diseño de juegos de puzzles con Daniel Benmergui (10 y 11), y el 13, un taller de publicación independiente con Adam y Rebekah Saltsman (Finji) y otro de arte para videojuegos con Juan Pedro Salvo (Pomelo Games). La jornada central, gratuita, fue el miércoles 12 en el auditorio Mario Benedetti de la Torre de las Telecomunicaciones de ANTEL, con exposición de juegos uruguayos y rondas de networking.\n\nAbrieron el presidente de ANTEL, Andrés Tolosa; el director de Uruguay XXI, Antonio Carámbula; el director nacional de Telecomunicaciones, Rodrigo Díaz, y el presidente de la CAVI, Álvaro Azofra. Hablaron, entre otros, Rebekah y Adam Saltsman, John Watson (Stoic, *The Banner Saga*), Rebecca Cohen-Palacios (Pixelles) sobre iniciativas de diversidad, Sandro Manfredini (Aquiris), Antonio Uribe (HyperBeard), Mariana Montaldo (Plan Ceibal) y un equipo de Etermax. La ministra de Industria, Carolina Cosse, entregó los premios del MIEM.\n\nEn el 13.º Concurso Nacional de Videojuegos ganaron *Mechs v Kaijus* (PC, web y consolas) y *Road Lights*, de Piedra Alta Games (móviles); los dos se llevaron un viaje a la GDC 2019. Los segundos puestos fueron *Anti-Jump-Man*, de Pío Riela, y *Knight Quest*, de Golden Bite Games.",
+    "talks": [
+      {
+        "title": "Videojuegos en educación: una mirada desde Plan Ceibal",
+        "speakers": [
+          "Mariana Montaldo"
+        ]
+      },
+      {
+        "title": "Mecánicas del personaje principal en Planet Alpha",
+        "speakers": [
+          "Fernando Castillo Coello"
+        ]
+      },
+      {
+        "title": "Del hobby al negocio: cosas que nadie te dice sobre llevar adelante un estudio",
+        "speakers": [
+          "Mariano Obeid"
+        ]
+      },
+      {
+        "title": "Lo que aprendimos a las piñas del mundo free-to-play",
+        "speakers": [
+          "Fernando Sarmiento"
+        ]
+      },
+      {
+        "title": "¿Cómo se cocina un juego mobile?",
+        "speakers": [
+          "Matías Saravia",
+          "Ulises Uno",
+          "Valeria Colombo"
+        ]
+      },
+      {
+        "title": "The Finji Way: How Past Projects Create the Framework for Healthy Production Practices",
+        "speakers": [
+          "Rebekah Saltsman"
+        ]
+      },
+      {
+        "title": "Building the Banner Saga",
+        "speakers": [
+          "John Watson"
+        ]
+      },
+      {
+        "title": "Deciding what to make: A Greenlight Process for Commercial Indies",
+        "speakers": [
+          "Adam Saltsman"
+        ]
+      },
+      {
+        "title": "Ripple Effect: How Diversity Initiatives Make a Difference",
+        "speakers": [
+          "Rebecca Cohen-Palacios"
+        ]
+      },
+      {
+        "title": "Aquiris: 12 years and counting",
+        "speakers": [
+          "Sandro Manfredini"
+        ]
+      },
+      {
+        "title": "5 años de HyperBeard, un postmortem",
+        "speakers": [
+          "Antonio Uribe"
+        ]
+      },
+      {
+        "title": "Charla de Unity (Universidad ORT)",
+        "speakers": [
+          "Alexandre Kikuchi"
+        ]
+      },
+      {
+        "title": "Mesa redonda de diversidad y comunidad LGBT+ en videojuegos",
+        "speakers": [
+          "Rebecca Cohen-Palacios"
+        ]
+      },
+      {
+        "title": "Taller: Diseño de juegos de puzzles",
+        "speakers": [
+          "Daniel Benmergui"
+        ]
+      },
+      {
+        "title": "Taller: The Indie Publishing Workshop",
+        "speakers": [
+          "Adam Saltsman",
+          "Rebekah Saltsman"
+        ]
+      },
+      {
+        "title": "Taller: Fuerte y claro: arte para videojuegos",
+        "speakers": [
+          "Juan Pedro Salvo"
+        ]
+      }
+    ],
+    "venue": "Charlas: auditorio Mario Benedetti, Torre de las Telecomunicaciones de ANTEL (12/12); talleres: LATU (10, 11 y 13/12)",
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Uruguay XXI",
+      "ANTEL",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://pressover.news/wp-content/uploads/2018/12/48376361_2085975688371483_6984969579080450048_n.jpg",
+        "alt": "Entrega del primer premio del Concurso Nacional de Videojuegos a Mechs V Kaijus, de Doble Punch, en el escenario",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/ganadores-de-level-uy-2018/"
+      },
+      {
+        "src": "https://pressover.news/wp-content/uploads/2022/10/48962098_2085972435038475_4939166726307708928_n.jpg",
+        "alt": "Dos asistentes miran un juego en un celular durante la exposición",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/level-uy-2022-que-esperar-expo-videojuegos-uruguaya/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2018 (archivado)",
+        "url": "https://web.archive.org/web/20191009055642/http://leveluy.com/2018/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "leveluy.com, edición 2018 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20191009055642/http://leveluy.com/2018/"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY Summit 2018",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-summit-2018/"
+      },
+      {
+        "label": "Uruguay XXI: Level UY vuelve a reunir a referentes del sector",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-el-mayor-encuentro-local-sobre-videojuegos-vuelve-a-reunir-a-referentes-del-sector/"
+      },
+      {
+        "label": "Press Over: Ganadores de Level UY 2018",
+        "url": "https://pressover.news/noticias/ganadores-de-level-uy-2018/"
+      },
+      {
+        "label": "Press Over: Se viene Level UY 2018",
+        "url": "https://pressover.news/noticias/se-viene-level-uy-2018/"
+      }
+    ]
+  },
+  "conf:level-uy:2019-12-02": {
+    "description": "La tercera edición de **LEVEL UY** se hizo el 2 y el 3 de diciembre de 2019 en la Torre de las Telecomunicaciones de ANTEL, organizada por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI) junto con Uruguay XXI, MIEM-Dinatel y ANTEL. Participaron referentes de Uruguay y de países como Australia, México, Brasil y Argentina.\n\nEl lunes 2 hubo cuatro talleres pagos en el piso 4 del edificio José Pepe D'Elía: marketing de videojuegos con Vernon Vrolijk (Good Shepherd Entertainment), primeros pasos en comercialización con Martina Santoro (Rovio's Hatch), gestión de proyectos con Mayara Fortin (Webcore Games) y gestión de estudios con Kim Allom (Blushbox Collective), además de rondas de negocios. El martes 3, con entrada libre, hubo exposición de juegos uruguayos por la mañana y, después de la apertura institucional, charlas de Etermax, Google, Purple Tree (*Golazo!*), Pixelnacho, HyperBeard y João Brant, que presentó el postmortem de *Dandara*. Cerró el resumen anual de la CAVI.",
+    "talks": [
+      {
+        "title": "Disciplinas orientadas al producto",
+        "speakers": [
+          "Juan Rodríguez",
+          "Rodrigo Rearden"
+        ]
+      },
+      {
+        "title": "De la idea al negocio",
+        "speakers": [
+          "Lucía Amor",
+          "Ana Zapiola"
+        ]
+      },
+      {
+        "title": "De browsers al Golazo de consolas",
+        "speakers": [
+          "Ezequiel Heyn"
+        ]
+      },
+      {
+        "title": "Pixelart para todos",
+        "speakers": [
+          "Nacho Rodríguez"
+        ]
+      },
+      {
+        "title": "Relaciones públicas en videojuegos",
+        "speakers": [
+          "Adolfo Aguirre"
+        ]
+      },
+      {
+        "title": "Postmortem Dandara",
+        "speakers": [
+          "João Brant"
+        ]
+      },
+      {
+        "title": "When to Give a F*CK: A Blushbox Collective Manifesto",
+        "speakers": [
+          "Kim Allom"
+        ]
+      },
+      {
+        "title": "Taller: Building Your Marketing Roadmap",
+        "speakers": [
+          "Vernon Vrolijk"
+        ]
+      },
+      {
+        "title": "Taller: Comercialización, primeros pasos",
+        "speakers": [
+          "Martina Santoro"
+        ]
+      },
+      {
+        "title": "Taller: Herramientas y metodologías para una buena gestión de proyecto",
+        "speakers": [
+          "Mayara Fortin"
+        ]
+      },
+      {
+        "title": "Taller: Choose Your Own Adventure: Studio Management",
+        "speakers": [
+          "Kim Allom"
+        ]
+      }
+    ],
+    "organizers": [
+      "CAVI",
+      "Uruguay XXI",
+      "MIEM-Dinatel",
+      "ANTEL"
+    ],
+    "photos": [
+      {
+        "src": "https://www.gub.uy/presidencia/sites/presidencia/files/imagenes/noticias/de19b1f53c9486c7c6b4478e3bfbc7d3.jpg",
+        "alt": "Afiche «Save the date» de LEVEL UY Game Dev Summit '19 (no encontramos fotos publicadas del evento)",
+        "by": "Presidencia de la República",
+        "source": "Presidencia (gub.uy)",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/montevideo-sera-sede-del-evento-nacional-relevante-industria-del-videojuego"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2019 (archivado)",
+        "url": "https://web.archive.org/web/20191208134424/http://leveluy.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "leveluy.com, edición 2019 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20191208134424/http://leveluy.com/"
+      },
+      {
+        "label": "Presidencia: Montevideo será sede del evento nacional más relevante de la industria del videojuego",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/montevideo-sera-sede-del-evento-nacional-relevante-industria-del-videojuego"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY (evento 2019)",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy/"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2020-08-15:owasp-latam-home-2020": {
+    "description": "**OWASP LATAM@Home 2020** fue la versión virtual del OWASP LATAM Tour, que ese año se canceló por la pandemia de COVID-19. Los capítulos de OWASP de América Latina armaron en conjunto una semana de charlas y talleres online, del 4 al 8 de mayo de 2020: las conferencias se transmitieron por YouTube y los talleres se dictaron en Google Classroom, con registro en Eventbrite. Hubo además un CTF.\n\nEl capítulo uruguayo participó en la organización: Mateo Martínez, fundador del capítulo, estuvo entre los coordinadores, y Martín Marsicano, entre los colaboradores. La lista de reproducción del evento reúne más de 25 charlas en español, sobre temas como OWASP ASVS, Security Knowledge Framework, bug bounty, threat modeling, OSINT y MITRE ATT&CK.",
+    "organizers": [
+      "Capítulos de OWASP de América Latina",
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Sitio del evento (archivado)",
+        "url": "https://web.archive.org/web/20260903091014/https://owasp.org/www-event-2020-latam-at-home/"
+      },
+      {
+        "label": "Charlas en YouTube",
+        "url": "https://www.youtube.com/playlist?list=PLiooNakZQW8qrTERT0oq7n_4zmq79Y8WU"
+      },
+      {
+        "label": "El evento en Meetup (OWASP Uruguay)",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/270416887/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GitHub · OWASP/www-event-2020-latam-at-home (portada y equipo)",
+        "url": "https://github.com/OWASP/www-event-2020-latam-at-home"
+      },
+      {
+        "label": "Meetup: OWASP LATAM at Home (OWASP Uruguay)",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/270416887/"
+      },
+      {
+        "label": "YouTube: lista OWASP LATAM HOME 2020",
+        "url": "https://www.youtube.com/playlist?list=PLiooNakZQW8qrTERT0oq7n_4zmq79Y8WU"
+      }
+    ]
+  },
+  "conf:level-uy:2020-12-09": {
+    "description": "Por la pandemia, la cuarta edición de **LEVEL UY** fue una jornada de talleres online el 9 de diciembre de 2020, pensada para estudiantes, perfiles junior y entusiastas. La organizaron la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, el Ministerio de Educación y Cultura, Uruguay XXI, ANTEL e Ingenio.\n\nHubo cuatro talleres: «CV Gamedev: cómo potenciar tu perfil», con Luján Mackinnon (Ironhide Game Studio); «Introducción a TileMaps: ventajas y buenas prácticas», con Matías Sniadower (Ironhide); «Diseño de personajes para videojuegos: ilustrando emociones», con Macarena Campos (Pomelo Games), y «Starter pack para idear y crear la música de tu videojuego», con el compositor Gonzalo Varela.\n\nSegún el MIEM, participaron 135 personas de siete países de América Latina, de entre 15 y 62 años, y un 20 % de quienes hicieron los talleres fueron mujeres.",
+    "talks": [
+      {
+        "title": "Taller: CV Gamedev: cómo potenciar tu perfil",
+        "speakers": [
+          "Luján Mackinnon"
+        ]
+      },
+      {
+        "title": "Taller: Introducción a TileMaps: ventajas y buenas prácticas",
+        "speakers": [
+          "Matías Sniadower"
+        ]
+      },
+      {
+        "title": "Taller: Diseño de personajes para videojuegos: ilustrando emociones",
+        "speakers": [
+          "Macarena Campos"
+        ]
+      },
+      {
+        "title": "Taller: Starter pack para idear y crear la música de tu videojuego",
+        "speakers": [
+          "Gonzalo Varela"
+        ]
+      }
+    ],
+    "attendance": "135 participantes de siete países",
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Ministerio de Educación y Cultura",
+      "Uruguay XXI",
+      "ANTEL",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/noticia/e711aeda47509549a5c106bf8fe39a953501e769.jpg",
+        "alt": "Afiche de LEVEL UY Gamedev Workshops 2020 (no hay fotos: la edición fue online)",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-celebro-una-nueva-edicion-de-capacitacion-virtual/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video resumen de la edición",
+        "url": "https://www.youtube.com/watch?v=G151T_TCW-8"
+      },
+      {
+        "label": "Sitio de la edición 2020 (archivado)",
+        "url": "https://web.archive.org/web/20201215170828/http://leveluy.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "MIEM: Se realizó Level Uy (2020)",
+        "url": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos"
+      },
+      {
+        "label": "Uruguay XXI: Level UY celebró una nueva edición de capacitación virtual",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-celebro-una-nueva-edicion-de-capacitacion-virtual/"
+      },
+      {
+        "label": "leveluy.com, edición 2020 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20201215170828/http://leveluy.com/"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2020-12-15:jornada-de-colaboracion-owasp-antisamy": {
+    "description": "La primera **jornada de colaboración** del capítulo OWASP Uruguay fue online, el sábado 12 de diciembre de 2020, de 9:00 a 12:00. A diferencia de las meetups, no hubo charlas ni talleres: la idea era juntarse a aportar a un proyecto de OWASP. Esta vez el elegido fue AntiSamy, que el capítulo había presentado en su workshop anterior, y se podía colaborar con la versión Java, con la versión .NET o con la traducción al español.\n\nEl resultado fue un pull request para que la versión Java de AntiSamy validara con XSD los archivos XML de reglas, algo que ya existía en la versión .NET gracias a Sebastián Passaro (OWASP Uruguay). Participaron Gerardo Canedo, Martín Marsicano y Sebastián Passaro.",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Branch del pull request en GitHub",
+        "url": "https://github.com/OWASP-Uruguay/antisamy/tree/1.6.0"
+      },
+      {
+        "label": "OWASP AntiSamy",
+        "url": "https://owasp.org/www-project-antisamy/"
+      },
+      {
+        "label": "La jornada en Meetup",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/275106769/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Evento especial: Jornada de Colaboración",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/275106769/"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2020-12-15-jornada-antisamy/index.mdx"
+      },
+      {
+        "label": "OWASP Uruguay: eventos (tab_eventos.md)",
+        "url": "https://github.com/OWASP/www-chapter-uruguay/blob/master/tab_eventos.md"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2021-04-15:jornada-de-colaboracion-traduccion-de-ow": {
+    "description": "En esta **jornada de colaboración** online, el capítulo OWASP Uruguay se juntó a traducir al español OWASP SAMM, el modelo de madurez para programas de seguridad de software. Primero se explicó cómo funciona el proceso de traducción de SAMM y se presentó Crowdin, la plataforma donde se hace; después el grupo tradujo algunos archivos y fue armando un glosario común para que la traducción quedara coherente.\n\nLa grabación se publicó en el canal de OWASP Uruguay el 20 de marzo de 2021. Participaron Domingo Mendivil, Martín Marsicano, Patricia Duarte, Rommel Oramas y Sebastián Passaro.",
+    "talks": [
+      {
+        "title": "Introducción a SAMM, el proceso de traducción y Crowdin",
+        "slides": "https://docs.google.com/presentation/d/1Fh7ocdC8_SnFk2HrVyP88JaIcvkPMFDKNc9qjqmod60/edit?usp=sharing",
+        "video": "https://www.youtube.com/watch?v=zIxhgMO6IY4"
+      }
+    ],
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Grabación en YouTube",
+        "url": "https://www.youtube.com/watch?v=zIxhgMO6IY4"
+      },
+      {
+        "label": "Glosario de la traducción",
+        "url": "https://docs.google.com/document/d/1d-XjUCz-SLRKmjRjipP9O3IIFl7uY8PYoOvc8U_gE3Q/edit?usp=sharing"
+      },
+      {
+        "label": "OWASP SAMM en español, en Crowdin",
+        "url": "https://crowdin.com/project/owasp-samm/es-ES"
+      }
+    ],
+    "sources": [
+      {
+        "label": "YouTube: Jornada de Colaboración OWASP SAMM i18n y explicación Crowdin",
+        "url": "https://www.youtube.com/watch?v=zIxhgMO6IY4"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2021-04-15-jornada-samm-i18n/index.mdx"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2021-07-15:owasp-latam-home-2021": {
+    "description": "**OWASP LATAM@Home 2021** fue la segunda edición virtual del evento que organizan en conjunto los capítulos de OWASP de América Latina, entre ellos el de Uruguay, que lo difundió en su grupo de Meetup. Se hizo del 3 al 5 de agosto de 2021, con talleres en Google Classroom y charlas transmitidas por YouTube, en el idioma de cada orador y con subtítulos en español, portugués e inglés.\n\nLos talleres fueron una introducción a Burp Suite con Web Security Academy, automatización de OWASP ZAP con Python y desarrollo seguro con autenticación segura en Java. Entre las charlas grabadas hay temas como Same-Origin Policy y CORS, ataques a WebViews de Android, seguridad en Kubernetes, threat modeling, seguridad continua en pipelines y OWASP Nettacker, además de una presentación de Andrew van der Stock, director ejecutivo de OWASP, sobre cómo participar en proyectos y capítulos.",
+    "organizers": [
+      "Capítulos de OWASP de América Latina"
+    ],
+    "links": [
+      {
+        "label": "Sitio del evento (archivado)",
+        "url": "https://web.archive.org/web/20260903091008/https://owasp.org/www-event-2021-latam-at-home/"
+      },
+      {
+        "label": "Charlas en YouTube",
+        "url": "https://www.youtube.com/playlist?list=PLiooNakZQW8pgLea7Ke7byyuKDH8AfFp1"
+      },
+      {
+        "label": "El evento en Meetup (OWASP Uruguay)",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/279826619/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GitHub · OWASP/www-event-2021-latam-at-home",
+        "url": "https://github.com/OWASP/www-event-2021-latam-at-home"
+      },
+      {
+        "label": "Meetup: OWASP LATAM@Home 2021 (OWASP Uruguay)",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/279826619/"
+      },
+      {
+        "label": "YouTube: lista OWASP LATAM@Home 2021",
+        "url": "https://www.youtube.com/playlist?list=PLiooNakZQW8pgLea7Ke7byyuKDH8AfFp1"
+      }
+    ]
+  },
+  "conf:level-uy:2021-11-22": {
+    "description": "La quinta edición de **LEVEL UY** fue online, del 22 al 26 de noviembre de 2021, organizada por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, Uruguay XXI, el Ministerio de Educación y Cultura e Ingenio. Laia Barboza, directiva de la CAVI, la presentó como una forma de mostrarles a las familias que en Uruguay se puede vivir de hacer videojuegos.\n\nDurante la semana hubo talleres y charlas con invitados como Jessica Mulligan, Lars Janssen (Koch Media), Anastasiya True (META Publishing), Kit Grande (Redhill Games), Mario Valle (Altered Ventures), Martina Santoro (Epic Games), Mari Carril y Enrique Fuentes (Teravision Games), además de Juan Pedro Salvo (Pomelo Games), Ruben Garat y Gabriel Artus (Ironhide), Matías Lima y Juan Rodríguez (Etermax) y el compositor Gonzalo Varela. Hubo también un **Pitch Day**, para que estudios que buscaban financiación presentaran sus proyectos a posibles compradores, y un **Interview Day** con entrevistas laborales en empresas del país, organizado con Smart Talent de Uruguay XXI.\n\nEl cierre fue el **LEVEL UY Showcase**, un programa en streaming conducido por Facundo Macchi, con juegos y estudios uruguayos, oferta educativa y la premiación del Concurso Nacional de Videojuegos.",
+    "talks": [
+      {
+        "title": "Taller: Introducción a C++ en Unreal Engine",
+        "speakers": [
+          "Sebastián Hernández"
+        ]
+      },
+      {
+        "title": "Entrevista: acceso a financiación, tendencias y futuro",
+        "speakers": [
+          "Mario Valle Reyes"
+        ]
+      },
+      {
+        "title": "Unreal en Latinoamérica",
+        "speakers": [
+          "Martina Santoro"
+        ]
+      },
+      {
+        "title": "Taller: How to create a marketing analysis of your game in one day",
+        "speakers": [
+          "Anastasiya True"
+        ]
+      },
+      {
+        "title": "The Slow-Motion Car Wreck: The 5 Things You Need To Know About Leading Game Development Teams",
+        "speakers": [
+          "Jessica Mulligan"
+        ]
+      },
+      {
+        "title": "Experimentar, arriesgar y aprender en la industria de videojuegos",
+        "speakers": [
+          "Matías Lima"
+        ],
+        "video": "https://www.youtube.com/watch?v=Etg8eIYnLvY"
+      },
+      {
+        "title": "Taller: Do's and don'ts when working with a Publisher",
+        "speakers": [
+          "Lars Janssen"
+        ]
+      },
+      {
+        "title": "Panel: Buenas prácticas para equipos felices de desarrollo de videojuegos",
+        "speakers": [
+          "Mari Carril",
+          "Enrique Fuentes",
+          "Juan Pedro Salvo",
+          "Gabriel Artus"
+        ]
+      },
+      {
+        "title": "No alcanza con poder hacer «música buena»: decisiones estéticas en la música de Fight'N Rage",
+        "speakers": [
+          "Gonzalo Varela"
+        ]
+      },
+      {
+        "title": "Taller: Cómo mejorar tu portfolio de ArtStation",
+        "speakers": [
+          "Kit Grande"
+        ]
+      },
+      {
+        "title": "Panel: Crecimiento y desarrollo profesional de un programador",
+        "speakers": [
+          "Gonzalo Ordeix",
+          "Juan Rodríguez",
+          "Ruben Garat"
+        ]
+      },
+      {
+        "title": "LEVEL UY Showcase",
+        "speakers": [
+          "Facundo Macchi"
+        ],
+        "video": "https://www.youtube.com/watch?v=zdi_kJP6oxQ"
+      }
+    ],
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Uruguay XXI",
+      "Ministerio de Educación y Cultura",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://pressover.news/wp-content/uploads/2021/11/LEVEL-UY-2021.png",
+        "alt": "Afiche de LEVEL UY Gamedev Summit 2021, del 22 al 26 de noviembre en formato online (no hay fotos: la edición fue virtual)",
+        "by": "LEVEL UY",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/level-uy-2021-evento-uruguayo-desarrollo-videojuegos/"
+      }
+    ],
+    "links": [
+      {
+        "label": "LEVEL UY Showcase (transmisión completa)",
+        "url": "https://www.youtube.com/watch?v=zdi_kJP6oxQ"
+      },
+      {
+        "label": "Sitio de la edición 2021 (archivado)",
+        "url": "https://web.archive.org/web/20211210081829/http://leveluy.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "leveluy.com, edición 2021 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20211210081829/http://leveluy.com/"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY 2021",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy-2/"
+      },
+      {
+        "label": "El Observador: Level Uy, un evento para mostrar que se puede vivir de esta industria",
+        "url": "https://www.elobservador.com.uy/nota/level-uy-un-evento-de-videojuegos-para-mostrar-que-se-puede-vivir-de-esta-industria-en-uruguay-2021112217232"
+      },
+      {
+        "label": "Press Over: Level UY 2021",
+        "url": "https://pressover.news/noticias/level-uy-2021-evento-uruguayo-desarrollo-videojuegos/"
+      }
+    ]
+  },
+  "conf:owasp-day-uruguay:2022-06": {
+    "description": "Con este **OWASP Day**, el jueves 28 de julio de 2022, el capítulo OWASP Uruguay volvió a los eventos presenciales: fue en Sinergia Faro (Víctor Soliño 349, el ex hotel Sheraton) y también se transmitió en vivo. En Meetup se anotaron 58 personas.\n\nMartín Marsicano abrió con una introducción a OWASP, sus proyectos y la membresía, y a lo que hace el capítulo uruguayo. Sebastián Passaro presentó el OWASP Top 10 2021 —qué se agregó, qué se quitó y para qué usarlo— y la traducción al español que coordinó el capítulo. Cerró Pablo Alzuri con una nueva charla del ciclo «SDLC con OWASP», sobre requerimientos de seguridad, con un mini laboratorio de OWASP Security Knowledge Framework (SKF).",
+    "talks": [
+      {
+        "title": "Introducción a OWASP y al capítulo Uruguay",
+        "speakers": [
+          "Martín Marsicano"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1hewyySSf84gfYu2HoM3IkXDviXqRwZxvIVP5hCLlkAI/edit?usp=sharing",
+        "video": "https://www.youtube.com/watch?v=fBmVoGkJ40M"
+      },
+      {
+        "title": "OWASP Top 10 2021",
+        "speakers": [
+          "Sebastián Passaro"
+        ],
+        "slides": "https://docs.google.com/presentation/d/15ezSTDBnptGUskhFZmTrJ-9EtgaE-okH/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true",
+        "video": "https://www.youtube.com/watch?v=fBmVoGkJ40M&t=416s"
+      },
+      {
+        "title": "SDLC con OWASP: requerimientos y laboratorio SKF",
+        "speakers": [
+          "Pablo Alzuri"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1-8DRib2D8cfThOvTduMM2OtFOb4CZX7w/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true",
+        "video": "https://www.youtube.com/watch?v=fBmVoGkJ40M&t=3648s"
+      }
+    ],
+    "rsvps": 58,
+    "venue": "Sinergia Faro (Víctor Soliño 349), con transmisión en vivo",
+    "city": "Montevideo",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Grabación en YouTube",
+        "url": "https://www.youtube.com/watch?v=fBmVoGkJ40M"
+      },
+      {
+        "label": "El evento en Meetup",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/287126677/"
+      },
+      {
+        "label": "El evento en el sitio de OWASP Uruguay",
+        "url": "https://owasp-uruguay.github.io/eventos/2022-06-15-owasp-day-top-10-2021/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: OWASP Day! OWASP Top 10 2021 y continuación SDLC con OWASP",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/287126677/"
+      },
+      {
+        "label": "YouTube: grabación del OWASP Day (28 de julio de 2022)",
+        "url": "https://www.youtube.com/watch?v=fBmVoGkJ40M"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2022-06-15-owasp-day-top-10-2021/index.mdx"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2022-06-15:owasp-day-2022-owasp-top-10-2021-y-sdlc-": {
+    "description": "Con este **OWASP Day**, el jueves 28 de julio de 2022, el capítulo OWASP Uruguay volvió a los eventos presenciales: fue en Sinergia Faro (Víctor Soliño 349, el ex hotel Sheraton) y también se transmitió en vivo. En Meetup se anotaron 58 personas.\n\nMartín Marsicano abrió con una introducción a OWASP, sus proyectos y la membresía, y a lo que hace el capítulo uruguayo. Sebastián Passaro presentó el OWASP Top 10 2021 —qué se agregó, qué se quitó y para qué usarlo— y la traducción al español que coordinó el capítulo. Cerró Pablo Alzuri con una nueva charla del ciclo «SDLC con OWASP», sobre requerimientos de seguridad, con un mini laboratorio de OWASP Security Knowledge Framework (SKF).",
+    "talks": [
+      {
+        "title": "Introducción a OWASP y al capítulo Uruguay",
+        "speakers": [
+          "Martín Marsicano"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1hewyySSf84gfYu2HoM3IkXDviXqRwZxvIVP5hCLlkAI/edit?usp=sharing",
+        "video": "https://www.youtube.com/watch?v=fBmVoGkJ40M"
+      },
+      {
+        "title": "OWASP Top 10 2021",
+        "speakers": [
+          "Sebastián Passaro"
+        ],
+        "slides": "https://docs.google.com/presentation/d/15ezSTDBnptGUskhFZmTrJ-9EtgaE-okH/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true",
+        "video": "https://www.youtube.com/watch?v=fBmVoGkJ40M&t=416s"
+      },
+      {
+        "title": "SDLC con OWASP: requerimientos y laboratorio SKF",
+        "speakers": [
+          "Pablo Alzuri"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1-8DRib2D8cfThOvTduMM2OtFOb4CZX7w/edit?usp=sharing&ouid=115130829364614950585&rtpof=true&sd=true",
+        "video": "https://www.youtube.com/watch?v=fBmVoGkJ40M&t=3648s"
+      }
+    ],
+    "rsvps": 58,
+    "venue": "Sinergia Faro (Víctor Soliño 349), con transmisión en vivo",
+    "city": "Montevideo",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Grabación en YouTube",
+        "url": "https://www.youtube.com/watch?v=fBmVoGkJ40M"
+      },
+      {
+        "label": "El evento en Meetup",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/287126677/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: OWASP Day! OWASP Top 10 2021 y continuación SDLC con OWASP",
+        "url": "https://www.meetup.com/owasp-uruguay-chapter/events/287126677/"
+      },
+      {
+        "label": "YouTube: grabación del OWASP Day (28 de julio de 2022)",
+        "url": "https://www.youtube.com/watch?v=fBmVoGkJ40M"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2022-06-15-owasp-day-top-10-2021/index.mdx"
+      }
+    ]
+  },
+  "conf:level-uy:2022-10-28": {
+    "description": "Con **LEVEL UY 2022** la industria uruguaya del videojuego volvió a reunirse en persona: fue el viernes 28 de octubre de 2022, organizado por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, Uruguay XXI, el Ministerio de Educación y Cultura, ANTEL e Ingenio. A la mañana hubo talleres pagos en la Universidad ORT —entre ellos, testeo para validar (Ángeles Koiman, Etermax), UX y UI (Fernando Picún, Nimble Giant), escritura narrativa (Camila Bentancur) y sustentabilidad de equipos indies (Anahit Fernández, Navegante)— y desde las 13:00, la jornada gratuita en Sinergia Palermo, con charlas, exposición de juegos y premiación.\n\nEntre los oradores estuvieron Jarryd Huntley (Team OFK), Isabel Tallos (Everguild), Alessandro Biollo (Xsolla) y Matías Lima (Etermax). En la expo hubo desde equipos de dos o tres personas hasta estudios como Nimble Giant, Pixowl e Ironhide.\n\nEn la premiación, *Iron Marines Invasion*, de Ironhide Game Studio, fue elegido juego del año y además se llevó el premio de Xsolla; *Tourist Trap* ganó como mejor debut, *Cisma* (de estudiantes de la Universidad ORT) como mejor juego de estudiantes y *Greak: Memories of Azur* como mejor juego internacional. La Embajada de Francia le dio un premio a la trayectoria a Sofía Battegazzore, fundadora de Powerful Robot Games y pionera de la industria en la región.",
+    "talks": [
+      {
+        "title": "Taller: Testear para validar",
+        "speakers": [
+          "Ángeles Koiman"
+        ]
+      },
+      {
+        "title": "Taller: UX y UI, desde el diseño al videojuego",
+        "speakers": [
+          "Fernando Picún"
+        ]
+      },
+      {
+        "title": "Taller de escritura para narrativa de videojuegos",
+        "speakers": [
+          "Camila Bentancur"
+        ]
+      },
+      {
+        "title": "Taller: Sustentabilidad y crecimiento de equipos indies",
+        "speakers": [
+          "Anahit Fernández"
+        ]
+      },
+      {
+        "title": "Finding The Footing for Your Indie Team",
+        "speakers": [
+          "Jarryd Huntley"
+        ]
+      },
+      {
+        "title": "8 años de Everguild: creación, desarrollo y venta de una empresa de videojuegos",
+        "speakers": [
+          "Isabel Tallos"
+        ]
+      }
+    ],
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Uruguay XXI",
+      "Ministerio de Educación y Cultura",
+      "ANTEL",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://pbs.twimg.com/media/FgLhcy3X0AAbLHE.jpg?name=large",
+        "alt": "Matías Lima, de Etermax, en el escenario de LEVEL UY 2022 junto a la presentadora",
+        "by": "Press Over (@PressOverNews)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/PressOverNews/status/1586077919008493573"
+      },
+      {
+        "src": "https://pbs.twimg.com/media/FgLhcy_WAAEnbzu.jpg?name=large",
+        "alt": "Una desarrolladora presenta un juego en el escenario, frente a una pantalla con los logos de PlayStation, Switch, Xbox y Steam",
+        "by": "Press Over (@PressOverNews)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/PressOverNews/status/1586077919008493573"
+      },
+      {
+        "src": "https://pbs.twimg.com/media/FgLhczBWAAMubV_.jpg?name=large",
+        "alt": "El equipo de Nimble Giant posa junto a su stand en la exposición",
+        "by": "Press Over (@PressOverNews)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/PressOverNews/status/1586077919008493573"
+      },
+      {
+        "src": "https://pbs.twimg.com/media/FgMEnTvXoAAcEeS.jpg?name=large",
+        "alt": "Sofía Battegazzore muestra la placa de su premio a la trayectoria",
+        "by": "Gonzalo Frasca (@frascafrasca)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/frascafrasca/status/1586116578831368194"
+      },
+      {
+        "src": "https://pbs.twimg.com/media/FgMKFmJWQAI0lAz.jpg?name=large",
+        "alt": "El equipo de Ironhide Game Studio celebra con el trofeo al juego del año por Iron Marines Invasion",
+        "by": "Press Over (@PressOverNews)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/PressOverNews/status/1586122599306002434"
+      },
+      {
+        "src": "https://pressover.news/wp-content/uploads/2022/11/Ff3hZMhWIAAMgON.jpg",
+        "alt": "Los trofeos del Concurso Nacional de Videojuegos sobre el escenario",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/level-uy-2022-videojuegos-ganadores-y-cronica-del-evento-uruguayo/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video resumen de la edición",
+        "url": "https://www.youtube.com/watch?v=Vavjz8-Hnpo"
+      },
+      {
+        "label": "Nota de TV Ciudad en el evento",
+        "url": "https://www.youtube.com/watch?v=4YaDHk5AkAA"
+      },
+      {
+        "label": "Sitio de la edición 2022 (archivado)",
+        "url": "https://web.archive.org/web/20221010211035/http://leveluy.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Press Over: Level UY 2022, ganadores y crónica",
+        "url": "https://pressover.news/noticias/level-uy-2022-videojuegos-ganadores-y-cronica-del-evento-uruguayo/"
+      },
+      {
+        "label": "leveluy.com, edición 2022 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20221010211035/http://leveluy.com/"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY 2022",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy-2022/"
+      }
+    ]
+  },
+  "conf:level-uy:2023-10-26": {
+    "description": "La séptima edición de **LEVEL UY** se hizo el 26 y el 27 de octubre de 2023, organizada por las instituciones de la Mesa de Videojuegos: la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, Uruguay XXI, la Agencia del Cine y el Audiovisual del Uruguay (ACAU), la Dirección Nacional de Cultura del MEC, ANTEL e Ingenio. El jueves 26 hubo workshops en el LATU sobre producción, dirección de arte y comercialización de videojuegos; además, el consultor canadiense Jason Della Rocca, invitado por Uruguay XXI, dio un Business Bootcamp y mentorías. El viernes 27, con entrada libre, la jornada fue en la Alianza Francesa de Montevideo, con exposición de juegos nacionales.\n\nEse día hubo un postmortem de *Evil Wizard*, *JunkWorld* y *Outlanders* con Rubber Duck Games, Ironhide y Pomelo Games, moderado por Juan Lomanto (Press Over); Martina Santoro habló del ecosistema de Epic y Fortnite; Verónica Nin, de videojuegos en contextos educativos; Camila Gormaz, de *serious games* y el estallido social chileno; Frani Esquenazi, de cooperativas de desarrollo, y Della Rocca dio «Discoverability by Design». También se presentaron las fundadoras de la recién creada Women in Games Uruguay, y Uruguay XXI organizó con la CAVI un Interview Day de simulacros de entrevistas laborales.\n\nEn el cierre, el MIEM premió a Fireborne Games y TragicoMedia por los proyectos de su Convocatoria Videojuegos, la Embajada de Francia le dio el Premio Sofía a Eva Correa (Pomelo Games) como mujer destacada de la industria y se entregó el Concurso Nacional de Videojuegos: *Evil Wizard*, de Rubber Duck Games, fue el juego del año; *Loss*, de Melisa Benítez Staffani, el mejor juego de estudiantes, y *Cleanup Crew* (Magical Beast Games) y *Airborne Arena* (Fireborne Games) compartieron el premio a mejor indie, con viaje a la GDC 2024.",
+    "talks": [
+      {
+        "title": "Postmortem de videojuegos nacionales (panel)",
+        "speakers": [
+          "Banki Martínez",
+          "Leonardo Clavijo",
+          "Rodrigo Pérez",
+          "Eva Correa",
+          "Juan Lomanto"
+        ]
+      },
+      {
+        "title": "Ecosistema de Epic y su nueva plataforma de distribución: Fortnite",
+        "speakers": [
+          "Martina Santoro"
+        ]
+      },
+      {
+        "title": "Algunas certezas e incógnitas sobre videojuegos en contextos educativos",
+        "speakers": [
+          "Verónica Nin"
+        ]
+      },
+      {
+        "title": "La intersección entre animación, cine y videojuegos (panel)",
+        "speakers": [
+          "Joaquín Tomé",
+          "Diego «Parker» Fernández",
+          "Martina Santoro"
+        ]
+      },
+      {
+        "title": "Serious games: los videojuegos como herramienta de cambio",
+        "speakers": [
+          "Camila Gormaz"
+        ]
+      },
+      {
+        "title": "Cooperativas: una forma más equitativa de trabajar en equipo",
+        "speakers": [
+          "Frani Esquenazi"
+        ]
+      },
+      {
+        "title": "Discoverability by Design: Turning Your Game Into a Contagious Commercial Success",
+        "speakers": [
+          "Jason Della Rocca"
+        ]
+      }
+    ],
+    "venue": "Workshops: LATU (26/10); charlas y expo: Alianza Francesa de Montevideo, Bv. Gral. Artigas 1271 (27/10)",
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Uruguay XXI",
+      "ACAU",
+      "Dirección Nacional de Cultura (MEC)",
+      "ANTEL",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1730_0.jpg",
+        "alt": "Entrada de LEVEL UY 2023, con banners y el cronograma del día",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1753.jpg",
+        "alt": "Público sentado en la sala durante una charla",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1738.jpg",
+        "alt": "Una oradora habla de estudios cooperativos frente a una pantalla con logos de estudios de videojuegos",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1763.jpg",
+        "alt": "Un orador da una charla ante el público, con una diapositiva de un juego en pantalla",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1707.jpg",
+        "alt": "Asistentes prueban un juego frente a un televisor en la exposición, bajo un cartel de neón de LEVEL UY",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1715.jpg",
+        "alt": "Un joven prueba un juego con visor y controles de realidad virtual",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1773.jpg",
+        "alt": "Panel de cierre de las instituciones organizadoras en el escenario de la ceremonia de cierre",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1817.jpg",
+        "alt": "Eva Correa recibe la placa del Premio Sofía 2023",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1822.jpg",
+        "alt": "Integrantes de un estudio muestran el reconocimiento de la Convocatoria Videojuegos 2023 del MIEM",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://www.gub.uy/ministerio-industria-energia-mineria/sites/ministerio-industria-energia-mineria/files/imagenes/noticias/DSC_1831.jpg",
+        "alt": "Entrega de otro de los reconocimientos de la Convocatoria Videojuegos 2023 del MIEM",
+        "by": "MIEM",
+        "source": "Sitio del MIEM (gub.uy)",
+        "page": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "src": "https://pbs.twimg.com/media/F9dMCV4XoAAObYv.jpg?name=large",
+        "alt": "Primer panel del día, el postmortem de videojuegos uruguayos, ante una sala llena",
+        "by": "Laia Bee (@Laiabee)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/Laiabee/status/1717925402771902843"
+      },
+      {
+        "src": "https://pbs.twimg.com/media/F9eLtPlWwAAGjhm.jpg?name=large",
+        "alt": "Las fundadoras de Women in Games Uruguay, sentadas juntas",
+        "by": "Press Over (@PressOverNews)",
+        "source": "X (Twitter)",
+        "page": "https://x.com/PressOverNews/status/1717995409639960955"
+      },
+      {
+        "src": "https://pressover.news/wp-content/uploads/2024/11/F90KPh5WMAARQmx.jpeg",
+        "alt": "Ganadores de un premio con viaje a la GDC 2024 posan con el cartel en el escenario",
+        "by": "Press Over",
+        "source": "Press Over",
+        "page": "https://pressover.news/noticias/todo-sobre-level-uy-2024-el-encuentro-de-videojuegos-uruguayos/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/noticia/234b4ffbb9841fc4b2d2cf12cddff2264977f495.jpg",
+        "alt": "Una sesión con desarrolladores sentados frente a un orador, en una sala de paredes de colores",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/jason-della-roca-estoy-impresionado-con-la-alta-calidad-de-los-videojuegos-uruguayos/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/LEVEL%20UY/LEVELUY_20%20%281%29.jpg",
+        "alt": "Público en una sala durante una presentación",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/jason-della-roca-estoy-impresionado-con-la-alta-calidad-de-los-videojuegos-uruguayos/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video resumen de la edición",
+        "url": "https://www.youtube.com/watch?v=Dkco7zDFK_4"
+      },
+      {
+        "label": "Cobertura en video de Press Over",
+        "url": "https://www.youtube.com/watch?v=5pL8wM7UIjc"
+      },
+      {
+        "label": "Premio Sofía 2023: Eva Correa (video)",
+        "url": "https://www.youtube.com/watch?v=hbkMKm64AGo"
+      },
+      {
+        "label": "Cronograma de la edición (archivado)",
+        "url": "https://web.archive.org/web/20231202122237/https://www.leveluy.com/cronograma2023"
+      }
+    ],
+    "sources": [
+      {
+        "label": "MIEM: Se realizó Level Uy (2023)",
+        "url": "https://www.gub.uy/ministerio-industria-energia-mineria/comunicacion/noticias/se-realizo-level-evento-nacional-relevante-industria-videojuegos-0"
+      },
+      {
+        "label": "Uruguay XXI: Jason Della Rocca en Level UY",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/jason-della-roca-estoy-impresionado-con-la-alta-calidad-de-los-videojuegos-uruguayos/"
+      },
+      {
+        "label": "Press Over: Level UY 2023, ganadores",
+        "url": "https://pressover.news/noticias/level-uy-2023-ganadores-y-la-importancia-de-las-mujeres-en-los-videojuegos-uruguayos/"
+      },
+      {
+        "label": "leveluy.com, cronograma 2023 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20231202122237/https://www.leveluy.com/cronograma2023"
+      }
+    ]
+  },
+  "github:OWASP-Uruguay/owasp-uruguay.github.io:2024-05-25:it-builders-live-2024": {
+    "description": "El capítulo OWASP Uruguay participó de **IT Builders Live 2024**, en el Antel Arena, con dos espacios propios: una charla y un espacio meetup, una ronda de presentación con intercambio mano a mano entre los asistentes.\n\nLa charla, «Potenciales problemas de seguridad en LLMs», la dio Sebastián Passaro, co-líder del capítulo. Explicó por qué los modelos de lenguaje integrados a aplicaciones traen riesgos de seguridad propios y cómo el OWASP Top 10 para LLM ayuda a abordarlos, con ejemplos de ataques y contramedidas.",
+    "talks": [
+      {
+        "title": "Potenciales problemas de seguridad en LLMs",
+        "speakers": [
+          "Sebastián Passaro"
+        ],
+        "slides": "https://docs.google.com/presentation/d/1jSAoBNPg668e4JuxKnJm93vBDVQkb9DGc_dM1BEws6w/",
+        "video": "https://www.youtube.com/watch?v=xDTzXccq9QY"
+      }
+    ],
+    "venue": "Antel Arena",
+    "city": "Montevideo",
+    "organizers": [
+      "IT Builders"
+    ],
+    "photos": [
+      {
+        "src": "https://i.ytimg.com/vi/xDTzXccq9QY/maxresdefault.jpg",
+        "alt": "Sebastián Passaro da la charla «Potenciales problemas de seguridad en LLMs» en IT Builders Live (miniatura del video, con el título sobreimpreso)",
+        "by": "IT Builders",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=xDTzXccq9QY"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video de la charla",
+        "url": "https://www.youtube.com/watch?v=xDTzXccq9QY"
+      },
+      {
+        "label": "Presentación de la charla",
+        "url": "https://docs.google.com/presentation/d/1jSAoBNPg668e4JuxKnJm93vBDVQkb9DGc_dM1BEws6w/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "YouTube: Potenciales problemas de seguridad en LLMs (IT Builders)",
+        "url": "https://www.youtube.com/watch?v=xDTzXccq9QY"
+      },
+      {
+        "label": "OWASP Uruguay: eventos (tab_eventos.md)",
+        "url": "https://github.com/OWASP/www-chapter-uruguay/blob/master/tab_eventos.md"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/events/2024-05-25-it-builders-live/index.mdx"
+      }
+    ]
+  },
+  "conf:level-uy:2024-11-14": {
+    "description": "La octava edición de **LEVEL UY Gamedev Summit** se hizo el 14 y el 15 de noviembre de 2024 en la Torre de las Telecomunicaciones de ANTEL, organizada por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, Uruguay XXI, la Agencia del Cine y el Audiovisual del Uruguay (ACAU), la Dirección Nacional de Cultura del MEC, ANTEL e Ingenio. El viernes 15 fue la jornada abierta: exposición de juegos uruguayos todo el día en la sala Idea Vilariño, la presentación de Maquinitas —la sección de videojuegos de Ventana Sur, que en diciembre llegaba por primera vez a Uruguay— y charlas de Alexis Biro (análisis de mercados), Women in Games Uruguay (diversidad), Jorge Lorenzon («Los 7 pecados capitales del desarrollo indie»), Estevão de Mello Motta (Akupara Games), Lucía Gómez (el lanzamiento de *Outlanders* en Steam, de Pomelo Games) y Loïc Roger (Blumgi Games).\n\nEn el cierre hubo una mesa interinstitucional sobre el apoyo público al sector; la Embajada de Francia entregó el Premio Sofía a Kao Valer, el MIEM reconoció los proyectos terminados de su Convocatoria Videojuegos 2023 y se premió el Concurso Nacional de Videojuegos. *Wings of Endless*, de Isoca Games, se llevó el premio de Uruguay XXI al mejor juego indie del año: un viaje a la GDC 2025.",
+    "talks": [
+      {
+        "title": "Presentación de Maquinitas en Ventana Sur: un nuevo mercado de videojuegos en Uruguay"
+      },
+      {
+        "title": "Análisis de mercados: cómo preparar tu juego para una audiencia internacional",
+        "speakers": [
+          "Alexis Biro"
+        ]
+      },
+      {
+        "title": "Derribando barreras: herramientas para impulsar la diversidad en la comunidad de los videojuegos",
+        "speakers": [
+          "Women in Games Uruguay"
+        ]
+      },
+      {
+        "title": "Los 7 pecados capitales del desarrollo indie",
+        "speakers": [
+          "Jorge Lorenzon"
+        ]
+      },
+      {
+        "title": "From dev to deal: navigating the publisher greenlight process",
+        "speakers": [
+          "Estevão de Mello Motta"
+        ]
+      },
+      {
+        "title": "Publicando Outlanders en Steam: review de éxitos y fracasos",
+        "speakers": [
+          "Lucía Gómez"
+        ]
+      },
+      {
+        "title": "The secret power of simple games",
+        "speakers": [
+          "Loïc Roger"
+        ]
+      }
+    ],
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Uruguay XXI",
+      "ACAU",
+      "Dirección Nacional de Cultura (MEC)",
+      "ANTEL",
+      "Ingenio"
+    ],
+    "photos": [
+      {
+        "src": "https://www.xn--lamaana-7za.uy/wp-content/uploads/2025/09/level_uy_2024.jpg",
+        "alt": "Foto grupal de participantes en el escenario del auditorio, bajo la pantalla de Gamedev Summit, 14 y 15 de noviembre",
+        "by": "La Mañana",
+        "source": "La Mañana",
+        "page": "https://www.xn--lamaana-7za.uy/opinion/del-joystick-al-empleo-como-los-videojuegos-estan-redefiniendo-el-futuro-laboral/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/noticia/54a0875db0b1fd8fae5ccde3300328d175416f32.jpg",
+        "alt": "Entrega del premio al mejor juego indie del año a Wings of Endless, de Isoca Games, con viaje a la GDC 2025",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/wings-of-endless-el-mejor-juego-indie-del-ano-en-level-uy-viajara-a-la-gdc-de-la-mano-de-uruguay-xxi/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/Level%20UY%202024.jpg",
+        "alt": "La entrega del premio de Uruguay XXI y la pantalla con Wings of Endless, de Isoca Games",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/wings-of-endless-el-mejor-juego-indie-del-ano-en-level-uy-viajara-a-la-gdc-de-la-mano-de-uruguay-xxi/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/Level%20UY%202024%202.jpg",
+        "alt": "Collage de la exposición: asistentes probando juegos y el stand de Uruguay Video Games",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/wings-of-endless-el-mejor-juego-indie-del-ano-en-level-uy-viajara-a-la-gdc-de-la-mano-de-uruguay-xxi/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/Level%20UY%202024%203.jpg",
+        "alt": "La mesa interinstitucional sentada en el escenario",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/wings-of-endless-el-mejor-juego-indie-del-ano-en-level-uy-viajara-a-la-gdc-de-la-mano-de-uruguay-xxi/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video resumen de la edición",
+        "url": "https://www.youtube.com/watch?v=NxpNDSUju0o"
+      },
+      {
+        "label": "Premio Sofía 2024: Kao Valer (video)",
+        "url": "https://www.youtube.com/watch?v=97K50HllaDM"
+      },
+      {
+        "label": "Nota de Canal 4 antes del evento",
+        "url": "https://www.youtube.com/watch?v=yjojJp5rhAE"
+      },
+      {
+        "label": "Cronograma de la edición (archivado)",
+        "url": "https://web.archive.org/web/20241206034836/https://www.leveluy.com/cronograma"
+      }
+    ],
+    "sources": [
+      {
+        "label": "leveluy.com, cronograma 2024 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20241206034836/https://www.leveluy.com/cronograma"
+      },
+      {
+        "label": "Uruguay XXI: Wings of Endless, el mejor juego indie del año en Level UY",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/wings-of-endless-el-mejor-juego-indie-del-ano-en-level-uy-viajara-a-la-gdc-de-la-mano-de-uruguay-xxi/"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY Gamedev Summit 2024",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy-gamedev-summit-2024/"
+      },
+      {
+        "label": "Press Over: Todo sobre Level UY 2024",
+        "url": "https://pressover.news/noticias/todo-sobre-level-uy-2024-el-encuentro-de-videojuegos-uruguayos/"
+      }
+    ]
+  },
+  "conf:level-uy:2025-11-27": {
+    "description": "La novena edición de **LEVEL UY Gamedev Summit** se hizo el 27 y el 28 de noviembre de 2025 en la Torre de las Telecomunicaciones de ANTEL, organizada por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, la Agencia del Cine y el Audiovisual del Uruguay (ACAU), la Dirección Nacional de Cultura, ANTEL, Ingenio y Uruguay XXI. El viernes 28, con entrada libre, hubo exposición de videojuegos uruguayos y charlas y paneles con invitados como Richard Lemarchand (USC Games, saga *Uncharted*), el artista uruguayo Yamandú Orce (CD Projekt Red), Florencia Orsetti y Julián Cordero.\n\nCordero, invitado por Uruguay XXI, dio la conferencia «Despelote: cómo capturamos el sentimiento de un país», sobre su juego autobiográfico que recrea el Quito de su infancia durante las eliminatorias al Mundial 2002, y participó de una mesa sobre game design. Uruguay XXI tuvo un stand de Uruguay Video Games, con asesoramiento sobre exportación y registro de software.\n\nEl cierre reunió en un panel a las instituciones organizadoras y terminó con el Concurso Nacional de Videojuegos: *Down the Darkest Pit*, de Hipocampo Game Studio, ganó el premio de Uruguay XXI al mejor juego indie del año, con un lugar en la delegación uruguaya a Gamescom 2026 o Gamescom Latam. Valeria Sarro recibió el Premio Sofía 2025.",
+    "talks": [
+      {
+        "title": "Despelote: cómo capturamos el sentimiento de un país",
+        "speakers": [
+          "Julián Cordero"
+        ]
+      },
+      {
+        "title": "Taller: A Playful Production Process: The Power of Preproduction",
+        "speakers": [
+          "Richard Lemarchand"
+        ]
+      },
+      {
+        "title": "Mesa sobre game design",
+        "speakers": [
+          "Julián Cordero"
+        ]
+      }
+    ],
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "ACAU",
+      "Dirección Nacional de Cultura (MEC)",
+      "ANTEL",
+      "Ingenio",
+      "Uruguay XXI"
+    ],
+    "photos": [
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/noticia/ea73502677b82f7d8078a85b34b89713115812f3.jpg",
+        "alt": "El panel final de las instituciones organizadoras, sentado frente a la pantalla de LEVEL UY Gamedev Summit 2025",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-2025-confirma-el-dinamismo-del-sector-de-videojuegos-en-uruguay/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/LEVEL%20UY/2025/Im%C3%A1genes%20noticia%20WB%20%281000%20x%20500%20px%29%20%2833%29.jpg",
+        "alt": "Julián Cordero en el atril durante su conferencia y, al lado, el stand de Uruguay Video Games",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-2025-confirma-el-dinamismo-del-sector-de-videojuegos-en-uruguay/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/LEVEL%20UY/2025/Im%C3%A1genes%20noticia%20WB%20%281000%20x%20500%20px%29%20%2832%29.jpg",
+        "alt": "Entrega de un premio en el escenario, frente a la pantalla de LEVEL UY Gamedev Summit 2025",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-2025-confirma-el-dinamismo-del-sector-de-videojuegos-en-uruguay/"
+      },
+      {
+        "src": "https://www.uruguayxxi.gub.uy/uploads/estatico/LEVEL%20UY/2025/Im%C3%A1genes%20noticia%20WB%20%281000%20x%20500%20px%29%20%2839%29.jpg",
+        "alt": "Julián Cordero conversa con desarrolladores en una sala con mesas",
+        "by": "Uruguay XXI",
+        "source": "Sitio de Uruguay XXI",
+        "page": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/lo-local-como-ventaja-global-las-lecciones-de-despelote-para-los-videojuegos-uruguayos/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video resumen de la edición",
+        "url": "https://www.youtube.com/watch?v=oPIUIWcGOFo"
+      },
+      {
+        "label": "Finalistas del Concurso Nacional de Videojuegos 2025 (video)",
+        "url": "https://www.youtube.com/watch?v=Vhp1MVhGsS8"
+      },
+      {
+        "label": "Premio Sofía 2025: Valeria Sarro (video)",
+        "url": "https://www.youtube.com/watch?v=wKx8W_4hG2s"
+      },
+      {
+        "label": "Nota de TV Ciudad",
+        "url": "https://www.youtube.com/watch?v=VJdXBFP55Ss"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay XXI: Level UY 2025 confirma el dinamismo del sector",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/level-uy-2025-confirma-el-dinamismo-del-sector-de-videojuegos-en-uruguay/"
+      },
+      {
+        "label": "Uruguay XXI: Lo local como ventaja global, las lecciones de Despelote",
+        "url": "https://www.uruguayxxi.gub.uy/es/noticias/articulo/lo-local-como-ventaja-global-las-lecciones-de-despelote-para-los-videojuegos-uruguayos/"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY Gamedev Summit 2025",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy-gamedev-summit-2025/"
+      },
+      {
+        "label": "leveluy.com, edición 2025 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20251205000000/https://www.leveluy.com/"
+      },
+      {
+        "label": "Prensa Mercosur: Expertos internacionales llegan a Uruguay",
+        "url": "https://prensamercosur.org/2025/11/26/expertos-internacionales-llegan-a-uruguay-para-fortalecer-el-ecosistema-de-videojuegos/"
+      }
+    ]
+  },
+  "conf:level-uy:2026-11-20": {
+    "description": "La décima edición de **LEVEL UY Gamedev Summit** está anunciada para el 20 y el 21 de noviembre de 2026 en la Torre de las Telecomunicaciones de ANTEL, organizada por la Cámara Uruguaya de Desarrolladores de Videojuegos (CAVI), MIEM-Dinatel, Uruguay XXI, la Agencia del Cine y el Audiovisual del Uruguay (ACAU), la Dirección Nacional de Cultura (MEC), ANTEL e Ingenio. Como en ediciones anteriores, el programa incluye workshops y mesas redondas, una exposición de videojuegos nacionales y, al cierre, la ceremonia del Concurso Nacional de Videojuegos, que se celebra desde hace 19 años.\n\nLos primeros invitados anunciados son Daniel Schumacher y Hjalte Tagmose (Half of Bird Gang Games), Mer Grazzini (Storyteller) y el diseñador de sonido uruguayo Álvaro Riet.",
+    "organizers": [
+      "CAVI",
+      "MIEM-Dinatel",
+      "Uruguay XXI",
+      "ACAU",
+      "Dirección Nacional de Cultura (MEC)",
+      "ANTEL",
+      "Ingenio"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.leveluy.com"
+      },
+      {
+        "label": "LEVEL UY Gamedev Summit 2026 en Uruguay XXI",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy-gamedev-summit-2026/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "leveluy.com",
+        "url": "https://www.leveluy.com"
+      },
+      {
+        "label": "Uruguay XXI: LEVEL UY Gamedev Summit 2026",
+        "url": "https://www.uruguayxxi.gub.uy/es/eventos/articulo/level-uy-gamedev-summit-2026/"
+      }
+    ]
+  },
+  "conf:owasp-day-uruguay:2026-11-30": {
+    "description": "El capítulo OWASP Uruguay prepara **OWASP Meetup+ Uruguay 2026**, una jornada abierta y gratuita sobre seguridad de aplicaciones para el lunes 30 de noviembre de 2026, de 9:00 a 18:00, en el Auditorio Mario Benedetti de la Torre de las Telecomunicaciones de ANTEL (Guatemala 1075).\n\nEstá pensada para quien desarrolla, prueba, opera o protege software: desarrolladores, QA, DevOps, equipos de seguridad, estudiantes y curiosos. El llamado a charlas —de 40 minutos, en español o inglés, sobre temas como seguridad web y móvil, APIs, cloud, DevSecOps, criptografía o IA— cerró el 19 de octubre; la grilla de oradores todavía no se publicó. El registro es gratuito, en Eventbrite.",
+    "venue": "Auditorio Mario Benedetti, Torre de las Telecomunicaciones de ANTEL (Guatemala 1075)",
+    "organizers": [
+      "Capítulo OWASP Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Sitio del evento",
+        "url": "https://owasp-uruguay.github.io/owasp-meetup-plus-2026/"
+      },
+      {
+        "label": "Registro en Eventbrite",
+        "url": "https://www.eventbrite.com/e/owasp-uruguay-meetup-2026-tickets-2003456388991"
+      }
+    ],
+    "sources": [
+      {
+        "label": "OWASP Uruguay: OWASP Meetup+ Uruguay 2026",
+        "url": "https://owasp-uruguay.github.io/owasp-meetup-plus-2026/"
+      },
+      {
+        "label": "GitHub · OWASP-Uruguay/owasp-uruguay.github.io (datos del evento)",
+        "url": "https://github.com/OWASP-Uruguay/owasp-uruguay.github.io/blob/HEAD/src/content/owasp-day-2026/event.yaml"
+      },
+      {
+        "label": "Eventbrite: OWASP Uruguay Meetup+ 2026",
+        "url": "https://www.eventbrite.com/e/owasp-uruguay-meetup-2026-tickets-2003456388991"
+      }
+    ]
+  }
+}

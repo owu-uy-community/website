@@ -1,0 +1,2299 @@
+{
+  "conf:abrelatam:2013-06-24": {
+    "description": "ABRELATAM fue la primera desconferencia regional sobre datos abiertos de América Latina. La organizaron **DATA Uruguay** y la organización chilena **Ciudadano Inteligente** el 24 y 25 de junio de 2013, en el **Centro Cultural de España** de Montevideo. Fue uno de los pre-eventos de la primera Conferencia Regional de Datos Abiertos para América Latina y el Caribe (ConDatos).\n\nComo en toda desconferencia, la agenda la armaron los propios participantes: activistas, expertos, desarrolladores y curiosos de distintos países. Compartieron experiencias, estrategias y desafíos sobre transparencia, participación, libertades civiles y datos abiertos, y buscaron oportunidades de colaboración regional. Las fotos muestran sesiones en ronda, papelógrafos y paredes de post-its con la agenda.\n\nDesde entonces ABRELATAM se hace cada año en un país distinto, a cargo de organizaciones locales. En 2023 volvió a Montevideo para celebrar sus diez años. La edición 2013 fue elegida mejor evento latinoamericano en «Lo Mejor del Infoactivismo LATAM 2013».",
+    "organizers": [
+      "DATA Uruguay",
+      "Ciudadano Inteligente (Chile)"
+    ],
+    "links": [
+      {
+        "label": "ABRELATAM en el sitio de DATA Uruguay",
+        "url": "https://data.org.uy/proyectos/abrelatam/"
+      },
+      {
+        "label": "Fotos de ABRELATAM 2013 en Flickr",
+        "url": "https://www.flickr.com/photos/abrelatam/albums/72177720311884639"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Invitación a ABRE LATAM (lista okfn-br, mayo de 2013)",
+        "url": "https://lists-archive.okfn.org/pipermail/okfn-br/2013-May/025986.html"
+      },
+      {
+        "label": "DATA Uruguay: ABRELATAM",
+        "url": "https://data.org.uy/proyectos/abrelatam/"
+      },
+      {
+        "label": "Álbum «ABRELATAM 2013 - Montevideo» en Flickr",
+        "url": "https://www.flickr.com/photos/abrelatam/albums/72177720311884639"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/7340/9737490235_e58a200b3a_b.jpg",
+        "alt": "El banner de ABRE LATAM y los primeros asistentes en el hall",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737490235/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7454/9739683846_3337a0cf90_b.jpg",
+        "alt": "Acreditación: voluntarias entregan los materiales a los participantes",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9739683846/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7310/9737835069_6524110958_b.jpg",
+        "alt": "El hall del Centro Cultural de España lleno de participantes, visto desde arriba",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737835069/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7399/9737566457_12ec75fce7_b.jpg",
+        "alt": "Una sala grande con participantes sentados en el piso",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737566457/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7287/9739814898_46f2a6b694_b.jpg",
+        "alt": "Una ronda de conversación sentada en el piso",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9739814898/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7457/9737567195_9bd502f8e3_b.jpg",
+        "alt": "Una sesión en ronda de sillas junto al banner del evento",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737567195/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7307/9737559737_4a0b9087ef_b.jpg",
+        "alt": "Sesión frente a una pared de post-its con la agenda de la desconferencia",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737559737/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7413/9739761472_8011648550_b.jpg",
+        "alt": "Participantes sostienen un papelógrafo con las conclusiones de una sesión",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9739761472/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7281/9737564503_2c44e6ef91_b.jpg",
+        "alt": "Un participante habla de pie ante un grupo sentado en almohadones",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737564503/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/7360/9737837759_56c6c75006_b.jpg",
+        "alt": "Participantes conversando frente a un vitral",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737837759/in/album-72177720311884639/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7432/9737836343_08f44d8e20_b.jpg",
+        "alt": "Participantes con laptops en un sillón rojo",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9737836343/in/album-72177720311884639/",
+        "license": "CC BY-SA 2.0"
+      }
+    ]
+  },
+  "conf:agile-open-space-uy:2013-05-04": {
+    "description": "El sábado 4 de mayo de 2013 la comunidad ágil de Uruguay organizó **Agile Open UY**, un encuentro en formato *Open Space* en Montevideo. La idea era fortalecer la comunidad ágil local y compartir experiencias y desafíos con personas y empresas que habían cambiado con éxito su forma de trabajar.\n\nEn un Open Space no hay agenda previa: cualquier participante podía proponer un tema, las propuestas se votaban y las más votadas entraban en la agenda del día. El mural que el dibujante pablitux empezó en la apertura y fue completando a lo largo de la jornada resume el espíritu del encuentro: «compartir experiencias y conocimientos», los principios del Open Space (como la «regla de los dos pies») y temas como testing, Scrum, equipos, estimación, clientes y contratos.",
+    "organizers": [
+      "Comunidad Agile de Uruguay"
+    ],
+    "links": [
+      {
+        "label": "Nota de la Universidad ORT",
+        "url": "https://www.ort.edu.uy/en/news/agile-is-in-the-air---open-space-9432"
+      },
+      {
+        "label": "Mural del evento en Flickr",
+        "url": "https://www.flickr.com/photos/pablolfc/8711426199/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Universidad ORT Uruguay: «Agile is in the Air - Open Space» (abril de 2013)",
+        "url": "https://www.ort.edu.uy/en/news/agile-is-in-the-air---open-space-9432"
+      },
+      {
+        "label": "pablitux en Flickr: «Agile Open Uruguay (4-Mayo-2013)»",
+        "url": "https://www.flickr.com/photos/pablolfc/8711426199/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/8409/8711426199_6dd608f480_b.jpg",
+        "alt": "Mural dibujado durante el evento: «Agile Open UY, Montevideo, 4 de mayo de 2013», con los principios del Open Space y los temas de la jornada",
+        "by": "pablitux",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/pablolfc/8711426199/",
+        "license": "CC BY-NC-SA 2.0"
+      }
+    ]
+  },
+  "conf:app-circus-montevideo:2013-11-21": {
+    "description": "App Circus es una serie de eventos que se hace en distintas ciudades del mundo para desarrollar aplicaciones móviles. La edición de Montevideo, con el patrocinio de Movistar, se hizo en **Ingenio**, la incubadora de empresas de la avenida Italia 6201.\n\nLa jornada final fue el jueves 21 de noviembre de 2013, de 17:30 a 22:00. A pedido de Movistar, la comunidad de Mozilla en Uruguay dio ese día un taller de una hora sobre desarrollo de aplicaciones para **Firefox OS**. Lo dictó Pablo Cuadrado, con la ayuda de Guillermo Movia, representante de Mozilla, y de otros integrantes de la comunidad.",
+    "venue": "Ingenio, incubadora de empresas (Av. Italia 6201)",
+    "city": "Montevideo",
+    "links": [
+      {
+        "label": "Ficha del evento en Mozilla Reps (archivo)",
+        "url": "https://mozilla.github.io/reps-archive/e/app-circus-montevideo-uruguay/index.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mozilla Reps: App Circus Montevideo - Uruguay",
+        "url": "https://mozilla.github.io/reps-archive/e/app-circus-montevideo-uruguay/index.html"
+      }
+    ]
+  },
+  "meetup:273117649": {
+    "description": "Primer evento del grupo **Arquitectura de Software - Montevideo**, el miércoles 23 de septiembre de 2020 de 18:00 a 20:00. El título anunciaba los ejes de la jornada: arquitectura de software, FinOps (la gestión financiera de la nube), Red Hat e Ingenia.\n\nEl grupo era privado en Meetup, así que el detalle de las charlas no es público. La página del evento registró 59 asistentes.",
+    "rsvps": 59,
+    "links": [
+      {
+        "label": "Evento en Meetup (archivado)",
+        "url": "https://web.archive.org/web/20201106193752/https://www.meetup.com/Arquitectura-de-Software-Montevideo/events/273117649/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: PRIMER EVENTO #ARQUITECTURASOFTWARE #FINOPS #REDHAT #INGENIA (Wayback Machine)",
+        "url": "https://web.archive.org/web/20201106193752/https://www.meetup.com/Arquitectura-de-Software-Montevideo/events/273117649/"
+      },
+      {
+        "label": "Meetup: página del evento",
+        "url": "https://www.meetup.com/arquitectura-de-software-montevideo/events/273117649/"
+      }
+    ]
+  },
+  "meetup:208096202": {
+    "description": "Segunda juntada de **BeerJS Uruguay**, el grupo de la comunidad JavaScript de Montevideo cuyo lema era «Beer && JavaScript (in that order)», un encuentro informal en un bar. Fue el jueves 18 de septiembre de 2014 a las 21 en Bitácora Bar (Sarmiento y Luis de la Torre). La convocó Pablo Ricco, que organizaba el grupo con Rodrigo Espinosa.\n\nTres personas confirmaron por Meetup. La primera BeerJS, el 2 de mayo de 2014 en Seven Bar, había reunido a 16. El grupo se había creado en marzo de 2014 y al año siguiente tenía 143 miembros.",
+    "rsvps": 3,
+    "venue": "Bitácora Bar (Sarmiento y Luis de la Torre)",
+    "organizers": [
+      "Pablo Ricco",
+      "Rodrigo Espinosa"
+    ],
+    "links": [
+      {
+        "label": "Grupo BeerJS Uruguay en Meetup (archivado)",
+        "url": "https://web.archive.org/web/20151023100135/http://www.meetup.com/beerjsuy/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: BeerJS - 18Sep14 (datos del evento)",
+        "url": "https://www.meetup.com/3bc1988e-f0c4-4f36-aaef-5c825b077a92/events/208096202/"
+      },
+      {
+        "label": "Grupo BeerJS Uruguay en Meetup (Wayback Machine, 2015)",
+        "url": "https://web.archive.org/web/20151023100135/http://www.meetup.com/beerjsuy/"
+      }
+    ]
+  },
+  "conf:connectia:2026-10-31": {
+    "description": "Tercera edición de **ConnectIA**, la conferencia gratuita de inteligencia artificial y ciencia de datos de Uruguay, pensada para profesionales, académicos y estudiantes. Está anunciada para el sábado 31 de octubre de 2026 en el **Auditorio del LATU**, en Montevideo: una jornada completa de charlas magistrales, casos de uso reales y networking, con entrada libre previa inscripción.\n\nEl llamado a charlas estuvo abierto en Sessionize del 12 de agosto al 20 de septiembre de 2026. Se pedían casos de estudio, modelos en producción, LLMs y agentes, MLOps, ética e investigación, en charlas de 30 minutos más 10 de preguntas y sin contenido comercial. La organización iba a anunciar la grilla de oradores después de evaluar las propuestas.\n\nLa sostienen sponsors como GeneXus Consulting, Blend360, Marvik, SunnyData, Xmartlabs, Ingenio, la Universidad de Montevideo y la Universidad ORT Uruguay. Las ediciones anteriores, en 2024 y 2025, tuvieron charlas sobre evaluación de LLMs, IA en diagnóstico médico, agricultura, educación y sistemas de recomendación. La primera superó los 300 asistentes.",
+    "venue": "Auditorio del LATU",
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://connectia.uy/"
+      },
+      {
+        "label": "Llamado a charlas en Sessionize",
+        "url": "https://sessionize.com/connectia2026/"
+      },
+      {
+        "label": "Ediciones anteriores",
+        "url": "https://connectia.uy/ediciones-anteriores.html"
+      },
+      {
+        "label": "Meetup de la comunidad",
+        "url": "https://www.meetup.com/montevideo-applied-data-science-and-big-data/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio oficial de ConnectIA 2026",
+        "url": "https://connectia.uy/"
+      },
+      {
+        "label": "Sessionize: ConnectIA 2026 Call for Speakers",
+        "url": "https://sessionize.com/connectia2026/"
+      },
+      {
+        "label": "ConnectIA: ediciones anteriores",
+        "url": "https://connectia.uy/ediciones-anteriores.html"
+      }
+    ]
+  },
+  "conf:databootcamp-uruguay:2014-03-12": {
+    "description": "El primer DataBootCamp de Uruguay, un «campamento de alfabetización en el uso de datos», se hizo del 12 al 14 de marzo de 2014 en el **Hotel Cottage** de Carrasco (Miraflores 1360). Ofrecía lugares gratuitos para 25 periodistas, 25 desarrolladores y 25 creativos digitales que quisieran ayudar a reinventar la forma en que trabajan los medios.\n\nDurante tres días los participantes aprendieron a encontrar, extraer y analizar datos públicos para contar mejores historias periodísticas. En equipos, construyeron aplicaciones de noticias y sitios de participación cívica. Los mejores proyectos podían ganar premios de US$ 1.000 a US$ 2.000 para convertir sus prototipos en productos reales. Entre los expertos invitados estuvieron Friedrich Lindenberg (OpenSpending), Andrew Leimdorfer (equipo interactivo de BBC News), Mariano Blejman (ICFJ) y Manuel Aristarán (desarrollador de Tabula).\n\nLos equipos registraron sus proyectos en Hackdash. Entre ellos:\n\n- «Sé lo que compraste UY», sobre las compras del Estado.\n- «¿Quién paga? La ruta del dinero en la campaña electoral».\n- «¿Cero falta?», un medidor del presentismo de los legisladores.\n- «La inflación por casa».\n- Mapas de denuncias de delitos y de accidentes de tránsito.\n- Un medidor del sentimiento político en Twitter.\n- El «Marihuanómetro».\n\nEl d|bootcamp era parte del programa *ujuzi digital skills* y lo implementó Code for Africa, junto a co-organizadores como el Instituto del Banco Mundial y el International Center for Journalists (ICFJ).",
+    "attendance": "cupos gratuitos para 75 participantes (25 periodistas, 25 desarrolladores y 25 creativos digitales)",
+    "venue": "Hotel Cottage (Miraflores 1360, Carrasco)",
+    "organizers": [
+      "Code for Africa",
+      "Instituto del Banco Mundial (WBI)",
+      "International Center for Journalists (ICFJ)"
+    ],
+    "links": [
+      {
+        "label": "Sitio original (archivado)",
+        "url": "https://web.archive.org/web/20171017112442/http://uruguay.dbootcamp.org/"
+      },
+      {
+        "label": "Proyectos en Hackdash",
+        "url": "https://hackdash.org/dashboards/dbootcamp"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay Data Bootcamp (sitio archivado en Wayback Machine)",
+        "url": "https://web.archive.org/web/20171017112442/http://uruguay.dbootcamp.org/"
+      },
+      {
+        "label": "Mozilla Reps: DataBootCamp Uruguay",
+        "url": "https://mozilla.github.io/reps-archive/e/databootcamp-uruguay/index.html"
+      },
+      {
+        "label": "Hackdash: dashboard dbootcamp",
+        "url": "https://hackdash.org/dashboards/dbootcamp"
+      },
+      {
+        "label": "Hackdash: «Sé lo que compraste UY»",
+        "url": "https://hackdash.org/projects/5321a531087bc3db30000001"
+      }
+    ]
+  },
+  "conf:devopsdays-montevideo:2019-08-21": {
+    "description": "DevOpsDays llegó por primera vez a Uruguay el miércoles 21 y el jueves 22 de agosto de 2019, en el **Hotel NH Montevideo Columbia**, sobre la rambla. DevOpsDays es una serie de conferencias técnicas que se hace en todo el mundo sobre desarrollo de software, infraestructura y operaciones de TI. La edición local la organizó un grupo de voluntarios uruguayos y se presentó como «la DevOpsDays más austral del planeta».\n\nEl formato combinó charlas elegidas por convocatoria abierta, charlas cortas tipo *ignite* y espacios abiertos autoorganizados. Los temas: automatización, testing, seguridad y cultura organizacional. Entre los oradores internacionales estuvieron **Donovan Brown** y **Jessica Deen**, de Microsoft, **Karthik Gaekwad**, de Oracle, y **Andrés Plaza**, SRE de Twitter. La apertura fue un panel de bienvenida con Pablo Brenner.\n\nSegún Montevideo Portal, las entradas se agotaron.",
+    "attendance": "entradas agotadas",
+    "venue": "Hotel NH Montevideo Columbia (Rambla Gran Bretaña 473)",
+    "organizers": [
+      "Juan Andrés Antoniuk",
+      "Miguel Castro",
+      "Genry Leyva González",
+      "Pablo Nessi",
+      "Jorge Pais",
+      "Guillermo Talento",
+      "Enrique Verdes",
+      "Xavier Verdino"
+    ],
+    "talks": [
+      {
+        "title": "Opening & Welcome Panel",
+        "speakers": [
+          "Pablo Brenner"
+        ]
+      },
+      {
+        "title": "Enterprise transformation (and you can too)",
+        "speakers": [
+          "Donovan Brown"
+        ]
+      },
+      {
+        "title": "From Zero to DevOps Superhero: The Container Edition",
+        "speakers": [
+          "Jessica Deen"
+        ]
+      },
+      {
+        "title": "10 Years of Devops",
+        "speakers": [
+          "Karthik Gaekwad"
+        ]
+      },
+      {
+        "title": "Como se hace #resiliencia en Twitter",
+        "speakers": [
+          "Andres Plaza"
+        ]
+      },
+      {
+        "title": "Play a video game. Lose. Learn about DevOps.",
+        "speakers": [
+          "Shlomo Swidler"
+        ]
+      },
+      {
+        "title": "BeerDevSecOps - Our route to digital transformation",
+        "speakers": [
+          "Bruno Gurgel"
+        ]
+      },
+      {
+        "title": "PedidosYa Hearts DevOps",
+        "speakers": [
+          "Gonzalo López Grassi"
+        ]
+      },
+      {
+        "title": "Just Accelerate",
+        "speakers": [
+          "Gastón Milano"
+        ]
+      },
+      {
+        "title": "Testing como parte de la cultura DevOps",
+        "speakers": [
+          "Abel Quintana Lopez",
+          "Oscar Calderin"
+        ]
+      },
+      {
+        "title": "Adoptando DevOps",
+        "speakers": [
+          "Adrián Toledo"
+        ]
+      },
+      {
+        "title": "System Status: OK?",
+        "speakers": [
+          "Camila Serena",
+          "Rodrigo Sastre"
+        ]
+      },
+      {
+        "title": "Automatizar o NO desde el principio, ese es el dilema...",
+        "speakers": [
+          "Enrique Carbonell"
+        ]
+      },
+      {
+        "title": "DeadOps: ¿Y si la cultura no cambia?",
+        "speakers": [
+          "Ernesto R. Corona"
+        ]
+      },
+      {
+        "title": "DevSecOps - Evolucionando las respuestas a los riesgos existentes",
+        "speakers": [
+          "Federico Dadalt",
+          "Matias Davyt"
+        ]
+      },
+      {
+        "title": "Dificultades y Estrategias de Adopción DevOps en un Organismo del Estado",
+        "speakers": [
+          "Fernando Maidana"
+        ]
+      },
+      {
+        "title": "La Observabilidad en tiempos modernos y Elasticsearch",
+        "speakers": [
+          "Gabriel Moskovicz"
+        ]
+      },
+      {
+        "title": "The IOs app for my daughter",
+        "speakers": [
+          "Gastón Larrañaga"
+        ]
+      },
+      {
+        "title": "El camino Infrastructure as Code para aplicaciones basadas en contenedores",
+        "speakers": [
+          "Guillermo Chao"
+        ]
+      },
+      {
+        "title": "Che vos, junior!! No estas solo, sumate a NahualUY",
+        "speakers": [
+          "Johana Rios"
+        ]
+      },
+      {
+        "title": "DesignOps - Incrementando el valor",
+        "speakers": [
+          "Lucía Bustamante"
+        ]
+      },
+      {
+        "title": "Síndrome del impostor en DevSecOps",
+        "speakers": [
+          "María Emilia Irrazabal"
+        ]
+      },
+      {
+        "title": "How stuff works – Containers edition!",
+        "speakers": [
+          "Ricardo Medina"
+        ]
+      },
+      {
+        "title": "Blue-green container deployment with docker",
+        "speakers": [
+          "Rodolfo Pilas"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://devopsdays.org/events/2019-montevideo/"
+      },
+      {
+        "label": "Programa",
+        "url": "https://devopsdays.org/events/2019-montevideo/program"
+      },
+      {
+        "label": "Fotos en Montevideo Portal",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/-Fue-un-exito-Llego-por-primera-vez-el-evento-DevOpsDays-a-Uruguay-uc727891"
+      }
+    ],
+    "sources": [
+      {
+        "label": "devopsdays.org: programa de Montevideo 2019",
+        "url": "https://devopsdays.org/events/2019-montevideo/program"
+      },
+      {
+        "label": "GitHub · devopsdays/devopsdays-web (datos del evento)",
+        "url": "https://github.com/devopsdays/devopsdays-web/tree/main/content/events/2019-montevideo"
+      },
+      {
+        "label": "CUTI: «Llega a Uruguay la primera edición de DevOpsDays» (mayo de 2019)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/llega-a-uruguay-la-primera-edicion-de-devopsdays/"
+      },
+      {
+        "label": "Montevideo Portal: «¡Fue un éxito! Llegó por primera vez el evento DevOpsDays a Uruguay»",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/-Fue-un-exito-Llego-por-primera-vez-el-evento-DevOpsDays-a-Uruguay-uc727891"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/201908/_W1200/702774.JPG",
+        "alt": "El salón del Hotel NH Columbia lleno durante una charla, con el orador en el escenario",
+        "by": "Juan Manuel López",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Negocios-y-Tendencias/-Fue-un-exito-Llego-por-primera-vez-el-evento-DevOpsDays-a-Uruguay-uc727891"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/201908/_W1200/702771.JPG",
+        "alt": "El hall con los stands de sponsors y el coffee break lleno de asistentes",
+        "by": "Juan Manuel López",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Negocios-y-Tendencias/-Fue-un-exito-Llego-por-primera-vez-el-evento-DevOpsDays-a-Uruguay-uc727891"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/201908/_W1200/702772.JPG",
+        "alt": "Asistentes atentos a una charla",
+        "by": "Juan Manuel López",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Negocios-y-Tendencias/-Fue-un-exito-Llego-por-primera-vez-el-evento-DevOpsDays-a-Uruguay-uc727891"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/201908/_W1200/702775.JPG",
+        "alt": "Asistentes con credenciales siguiendo una presentación",
+        "by": "Juan Manuel López",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Negocios-y-Tendencias/-Fue-un-exito-Llego-por-primera-vez-el-evento-DevOpsDays-a-Uruguay-uc727891"
+      }
+    ]
+  },
+  "conf:elixirconf-uy:2022-11-11": {
+    "description": "ElixirConf UY 2022 fue la primera conferencia dedicada al lenguaje Elixir en Uruguay. La organizó la empresa de software uruguaya **WyeWorks** en el **World Trade Center de Montevideo**, en noviembre de 2022, con talleres y charlas.\n\nEncabezaron el cartel **José Valim**, creador de Elixir, y **Andrea Leopardi**, del equipo central del lenguaje. Completaron el cartel:\n\n- **Lau Taarnskov**, autor de las bibliotecas `tzdata` y Calendar, que había fundado el primer meetup de Elixir en Uruguay.\n- **Todd Resudek**, del equipo central de Hex.\n- **Elaine Watanabe**.\n- **Yuri Oliveira**.\n- **Alberto Pardo** y **Marcos Viera**, docentes e investigadores de la Facultad de Ingeniería (UdelaR).\n- **Jorge Bejar** e **Ignacio Aguirrezabal**, de WyeWorks.\n- **Marcelo Domínguez** y **Kevin Expósito**, de Mimiquate.\n\nEntre los sponsors estuvieron The RealReal, Mimiquate y Fairing.",
+    "venue": "World Trade Center Montevideo",
+    "organizers": [
+      "WyeWorks"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://elixirconf.uy/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio oficial de ElixirConf UY 2022",
+        "url": "https://elixirconf.uy/"
+      },
+      {
+        "label": "Elixir School: calendario de conferencias",
+        "url": "https://elixirschool.com/en/conferences"
+      }
+    ]
+  },
+  "meetup:234348096": {
+    "description": "Reunión de septiembre de 2016 del **Maldonado Tech Meetup** (MTM), la comunidad de profesionales, estudiantes y aficionados a las tecnologías de la información del departamento de Maldonado. El grupo buscaba un espacio horizontal para intercambiar conocimientos y experiencias, y posicionar a Maldonado como proveedor de servicios tecnológicos para el resto del país y el exterior.\n\nEl encuentro fue el viernes 30 de septiembre a las 19:30 en el CEI (Arturo Santana esquina San Carlos), con Francisco Villegas como anfitrión. Se anotaron 17 personas por Meetup. El temario de la reunión no quedó publicado.",
+    "rsvps": 17,
+    "venue": "CEI (Arturo Santana esq. San Carlos)",
+    "organizers": [
+      "Francisco Villegas"
+    ],
+    "links": [
+      {
+        "label": "Grupo Maldonado Tech Meetup (archivado)",
+        "url": "https://web.archive.org/web/20211205094340/https://www.meetup.com/Maldonado-New-Technology-Meetup/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Meetup Septiembre (datos del evento)",
+        "url": "https://www.meetup.com/70e2520e-3848-4bba-ba15-a85bf335264e/events/234348096/"
+      },
+      {
+        "label": "Grupo Maldonado Tech Meetup en Meetup (Wayback Machine)",
+        "url": "https://web.archive.org/web/20211205094340/https://www.meetup.com/Maldonado-New-Technology-Meetup/"
+      }
+    ]
+  },
+  "conf:mitconf:2023-04-29": {
+    "description": "Segunda edición de **MITConf**, la conferencia latinoamericana de mujeres en tecnología que organiza la comunidad uruguaya **Mujeres IT**. La hacen enteramente mujeres voluntarias. Fue el sábado 29 de abril de 2023, de 10:00 a 14:30 (hora de Uruguay). La entrada costaba USD 2 para integrantes del Directorio de Mujeres IT y USD 10 para el público general.\n\nEl primer bloque empezó con la bienvenida de Lucía Massa, cofundadora de Mujeres IT, y una charla de Nancy Salazar sobre tecnologías emergentes. Siguió un *open mic* en el que referentes contaron cómo es trabajar en UX, liderar operaciones en una empresa de tecnología, ser arquitecta de software en la nube, y dedicarse a la ciberseguridad, la ciencia de datos o la automatización de pruebas.\n\nEl segundo bloque abordó los despidos masivos en la industria tecnológica y su impacto en mujeres y diversidades, con la investigadora Vivian Couto y Lorena Marotta. Cerró una conversación de las directoras de la comunidad sobre los próximos pasos, con sorteos. Las charlas están grabadas en YouTube.\n\nLa primera MITConf, en 2022, había tenido 9 charlas y un conversatorio de comunidades de IT de América Latina.",
+    "organizers": [
+      "Mujeres IT"
+    ],
+    "talks": [
+      {
+        "title": "Bienvenida y presentación de la conferencia",
+        "speakers": [
+          "Lucía Massa"
+        ],
+        "video": "https://www.youtube.com/watch?v=gef2WzDomGg"
+      },
+      {
+        "title": "¿Qué se viene? Nuevas tecnologías",
+        "speakers": [
+          "Nancy Salazar"
+        ],
+        "video": "https://www.youtube.com/watch?v=SLJZBHAhtNo"
+      },
+      {
+        "title": "¿Cómo es trabajar en UX?",
+        "speakers": [
+          "Teresita Ambrosio"
+        ],
+        "video": "https://www.youtube.com/watch?v=L8F-5vOW5Fo"
+      },
+      {
+        "title": "Liderazgo en IT",
+        "speakers": [
+          "Alejandra Viglietti"
+        ],
+        "video": "https://www.youtube.com/watch?v=a3E538_vTh4"
+      },
+      {
+        "title": "Arquitectura de Software, Clouds e IA",
+        "speakers": [
+          "Carmen Pedrique"
+        ],
+        "video": "https://www.youtube.com/watch?v=RzRq4I69P1I"
+      },
+      {
+        "title": "Ciberseguridad",
+        "speakers": [
+          "Eliana Sanabria"
+        ],
+        "video": "https://www.youtube.com/watch?v=ZtOj6pYYMgw"
+      },
+      {
+        "title": "Data science",
+        "speakers": [
+          "Nindiri Armenta"
+        ],
+        "video": "https://www.youtube.com/watch?v=DXl95fZRfcA"
+      },
+      {
+        "title": "QA Automation",
+        "speakers": [
+          "Maria Laura Gayo"
+        ],
+        "video": "https://www.youtube.com/watch?v=2m7Xx0Yfbn4"
+      },
+      {
+        "title": "Layoffs en la industria tecnológica: ¿de qué se trata y cómo impacta a mujeres y diversidades?",
+        "speakers": [
+          "Vivian Couto",
+          "Lorena Marotta"
+        ],
+        "video": "https://www.youtube.com/watch?v=nYFR-xpT1RE"
+      },
+      {
+        "title": "Mujeres IT ¿y ahora?",
+        "speakers": [
+          "Victoria Perez",
+          "Yerimar Noguera",
+          "Natalia Ermini"
+        ],
+        "video": "https://www.youtube.com/watch?v=Gmr5sIZViXY"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de MITConf",
+        "url": "https://mujeresit.com/mitconf/"
+      },
+      {
+        "label": "Videos de las charlas en YouTube",
+        "url": "https://www.youtube.com/watch?v=gef2WzDomGg"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mujeres IT: MITConf (agenda y contenido de la edición 2023)",
+        "url": "https://mujeresit.com/mitconf/"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2009-01": {
+    "description": "El primer Punta Tech Meetup fue una reunión informal en el fondo de la casa de **Sergio Fogel**, en Punta del Este, con cerveza y empanadas. Fueron unas 70 personas del mundo de la tecnología que pasaban el verano en la zona.\n\nLo armaron tres emprendedores uruguayos: Sergio Fogel (Uniotel), **Pablo Brenner** (Globant) y **Ariel Pfeffer** (Trillonario). La idea era juntar a la comunidad tech que llega a Punta del Este cada verano. Esa reunión entre conocidos fue el punto de partida de un encuentro que creció año a año.\n\nLas fuentes no coinciden en el año de esa primera reunión. Algunas notas la ubican en 2009 y otras en 2007 o 2008, con unas 50 personas.",
+    "attendance": "unas 70 personas",
+    "venue": "Casa de Sergio Fogel",
+    "city": "Punta del Este",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Un clásico esteño» (enero de 2014)",
+        "url": "https://www.elobservador.com.uy/nota/un-clasico-esteno-201411717110"
+      },
+      {
+        "label": "CUTI / El Observador: «Punta Tech Meetup reunió a 1.000 emprendedores» (enero de 2016)",
+        "url": "https://cuti.org.uy/noticias/de-socios/punta-tech-meetup-reunio-a-1-000-emprendedores/"
+      },
+      {
+        "label": "El Observador: «Tecnología de punta» (enero de 2012)",
+        "url": "https://www.elobservador.com.uy/nota/tecnologia-de-punta-20121911330"
+      },
+      {
+        "label": "CUTI / El Observador: «Diez años de Punta Tech Meetup» (enero de 2018)",
+        "url": "https://cuti.org.uy/noticias/de-interes/diez-anos-de-punta-tech-meetup/"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2010-01": {
+    "description": "Segunda edición del Punta Tech Meetup. Ese año se sumó a la organización **Pablo Larguía**, director de La Red Innova. Larguía había propuesto hacer un encuentro en Punta del Este durante un evento parecido en Chile. Con esa alianza llegaron empresarios del exterior y creció la convocatoria, que hasta entonces era una reunión entre conocidos.\n\nSegún el sitio oficial del evento, desde 2010 la producción está a cargo de Lucero Comunicación y Producción, que la sigue organizando junto a los fundadores Pablo Brenner, Sergio Fogel y Ariel Pfeffer.",
+    "city": "Punta del Este",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Pablo Larguía (La Red Innova)",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Tecnología de punta» (enero de 2012)",
+        "url": "https://www.elobservador.com.uy/nota/tecnologia-de-punta-20121911330"
+      },
+      {
+        "label": "Sitio oficial 2017 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20170118000117/http://puntameetup.com/"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2011-01": {
+    "description": "En su tercer verano, el Punta Tech Meetup se hizo en la **Fundación Pablo Atchugarry**, con sponsors y la producción de Lucero. Fueron unas 200 personas.\n\nLos fundadores, Sergio Fogel, Pablo Brenner y Ariel Pfeffer, lo crearon para juntar a la comunidad tecnológica que veranea en Punta del Este. La fundación fue la sede del evento durante buena parte de los años siguientes.",
+    "attendance": "unas 200 personas",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Tecnología de punta» (enero de 2012)",
+        "url": "https://www.elobservador.com.uy/nota/tecnologia-de-punta-20121911330"
+      },
+      {
+        "label": "El Observador: «Un clásico esteño» (enero de 2014)",
+        "url": "https://www.elobservador.com.uy/nota/un-clasico-esteno-201411717110"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2012-01": {
+    "description": "Cuarta edición, otra vez en la **Fundación Pablo Atchugarry**. Fueron más de 300 emprendedores, inversores y empresarios de México, Estados Unidos, España, Chile, Brasil, Argentina y Uruguay. Varios bloggers argentinos viajaron especialmente. Globant y Riverwood Capital se sumaron como sponsors.\n\nAl atardecer, junto al lago, tres startups hicieron un *elevator pitch* de cinco minutos. Después vinieron las charlas principales:\n\n- **Michael Marks**, cofundador de Riverwood Capital.\n- **Oliver Flögel**, secretario de Desarrollo Digital del gobierno chileno, sobre inclusión digital y emprendimiento en Chile.\n- **Martín Migoya**, CEO y fundador de Globant.\n\nEl networking siguió hasta la medianoche. Un año después, El Observador contó que la venta de la startup uruguaya Crovat a Batanga Media había empezado con un contacto hecho en esta edición.",
+    "attendance": "más de 300 personas",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Tecnología de punta» (enero de 2012)",
+        "url": "https://www.elobservador.com.uy/nota/tecnologia-de-punta-20121911330"
+      },
+      {
+        "label": "El Observador: «Martin Sorrell: esta es la década de Latinoamérica» (enero de 2013)",
+        "url": "https://www.elobservador.com.uy/nota/martin-sorrell-esta-es-la-decada-de-latinoamerica--201311411390"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://media.elobservador.com.uy/p/665b0b609c55345960a37c10b73315c9/adjuntos/362/imagenes/100/107/0100107789/1000x0/smart/el-socio-fundador-riverwoos-capitals-michel-marks-capto-la-atencion-los-emprendedores.webp",
+        "alt": "Michael Marks, cofundador de Riverwood Capital, habla ante los emprendedores en la edición 2012",
+        "by": "El Observador",
+        "source": "El Observador",
+        "page": "https://www.elobservador.com.uy/nota/tecnologia-de-punta-20121911330"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2013-01-08": {
+    "description": "La edición 2013 se hizo el martes 8 de enero en la **Fundación Atchugarry**, en Manantiales, con más de 400 participantes. Más de 110 eran CEOs. Hubo gente de Uruguay, Argentina, Chile, Perú, México, Inglaterra, Estados Unidos y Australia, y casi todas las presentaciones fueron en inglés. Riverwood Capital acompañaba la organización desde el año anterior.\n\nLa figura central fue **Martin Sorrell**, CEO de WPP, que habló casi 40 minutos al aire libre. Su frase más citada fue «esta es la década de Latinoamérica». También habló el emprendedor uruguayo **Santiago Pehar**, que contó cómo vendió su empresa Crovat a Batanga Media gracias a un contacto hecho en el Punta Tech de 2012.\n\nAdemás se definió el **Latin America Startup Challenge**, con más de 500 postulaciones y cinco finalistas: Workana, Clicksign, Nevoa Networks, 4vets y Zoop. Ganaron **4vets** y **Zoop**, que se llevaron US$ 100.000 cada una, entre otros premios.",
+    "attendance": "más de 400 personas",
+    "venue": "Fundación Pablo Atchugarry (Manantiales)",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Riverwood Capital",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos de jikatu en Flickr",
+        "url": "https://www.flickr.com/photos/jikatu/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Martin Sorrell: esta es la década de Latinoamérica» (enero de 2013)",
+        "url": "https://www.elobservador.com.uy/nota/martin-sorrell-esta-es-la-decada-de-latinoamerica--201311411390"
+      },
+      {
+        "label": "El Observador: «Un clásico esteño» (enero de 2014)",
+        "url": "https://www.elobservador.com.uy/nota/un-clasico-esteno-201411717110"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/8222/8366363914_50cf55afab_b.jpg",
+        "alt": "Escultura roja y metálica reflejada en el lago de la Fundación Pablo Atchugarry, sede de la edición 2013",
+        "by": "jikatu",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/jikatu/8366363914/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/8501/8366362840_5247eb8166_b.jpg",
+        "alt": "El lago y los jardines de la Fundación Pablo Atchugarry, en Manantiales, el día del Punta Tech Meetup 2013",
+        "by": "jikatu",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/jikatu/8366362840/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/8221/8366367784_462e2d3c22_b.jpg",
+        "alt": "Atardecer sobre la Fundación Pablo Atchugarry, con la estructura del escenario a la derecha",
+        "by": "jikatu",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/jikatu/8366367784/",
+        "license": "CC BY-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/8503/8363529661_24dd1f0705_z.jpg",
+        "alt": "«Puntatech on fire»: asistentes recortados contra el atardecer anaranjado durante el Punta Tech 2013",
+        "by": "nanoel",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/marianoburstein/8363529661/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2014-01-13": {
+    "description": "Sexta edición, el lunes 13 de enero en la **Fundación Pablo Atchugarry**. Fueron casi 700 personas, más o menos el doble que el año anterior. Más de 100 vinieron del exterior, sobre todo ejecutivos de Brasil, Argentina y Chile, y también hubo CEOs de Estados Unidos y Europa.\n\nEl formato: primero networking, después no más de dos horas de charlas, y al final cena y tragos. Hablaron **Isaiah Arkin**, bioquímico y vicepresidente de Desarrollo de la Universidad Hebrea de Jerusalén, sobre los avances tecnológicos de esa universidad, y **Anand Giridharadas**, columnista de The New York Times. Giridharadas cerró la noche hablando a los «líderes del mundo en desarrollo» y presentó su «teoría sushi del progreso».",
+    "attendance": "casi 700 personas",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/114575979@N08/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Un clásico esteño» (enero de 2014)",
+        "url": "https://www.elobservador.com.uy/nota/un-clasico-esteno-201411717110"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://media.elobservador.com.uy/p/1891f968b40b1f3499c69d727fa85950/adjuntos/362/imagenes/100/140/0100140467/1000x0/smart/los-organizadores-pablo-brenner-segio-fogel-y-ariel-pfeffer.webp",
+        "alt": "Los organizadores Pablo Brenner, Sergio Fogel y Ariel Pfeffer",
+        "by": "El Observador",
+        "source": "El Observador",
+        "page": "https://www.elobservador.com.uy/nota/un-clasico-esteno-201411717110"
+      },
+      {
+        "src": "https://live.staticflickr.com/3725/11981539154_2c820c2bdd_b.jpg",
+        "alt": "Asistentes en el jardín frente al edificio de la Fundación Pablo Atchugarry",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/11981539154/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/3834/11968796273_84235e6b4b_b.jpg",
+        "alt": "Asistentes en las carpas de acreditación, ordenadas alfabéticamente",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/11968796273/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7298/11968779953_30b73e2842_b.jpg",
+        "alt": "Filas de sillas en el césped frente al escenario, antes de las charlas",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/11968779953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/3682/11965375814_3b7605ac46_b.jpg",
+        "alt": "El público reunido en el jardín al caer la tarde, frente a la pantalla del escenario",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/11965375814/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/2836/11981221615_27d0e356b6_b.jpg",
+        "alt": "Un orador en el atril junto a la pantalla de PuntaTech meetup 2014",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/11981221615/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5509/11964450685_a6bc859bdc_b.jpg",
+        "alt": "Un orador habla desde el atril blanco, con el logo de PuntaTech meetup 2014 detrás",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/11964450685/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7358/12091585474_1f4407fb0d_b.jpg",
+        "alt": "El edificio de la fundación iluminado de azul durante la noche del evento",
+        "by": "PuntaTech meetup 2014",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/114575979@N08/12091585474/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2015-01": {
+    "description": "Séptima edición del Punta Tech Meetup, el encuentro de networking tecnológico que se hace cada verano en Punta del Este desde que Pablo Brenner, Sergio Fogel y Ariel Pfeffer lo empezaron como una reunión entre conocidos. La cartelería de la edición, con la leyenda «7a edición», aparece en las fotos de la cuenta oficial del evento en Flickr, que están fechadas el 12 de enero de 2015.\n\nEn esas fotos se ven stands de sponsors, una barra, música en vivo y cientos de asistentes conversando dentro y fuera de la sede.",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/puntatech2015/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Fotos oficiales de PuntaTech Meetup 2015 en Flickr",
+        "url": "https://www.flickr.com/photos/puntatech2015/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/7507/16106998829_85e0a77201_b.jpg",
+        "alt": "Cartel de la «7a edición» de PuntaTech meetup sobre el público",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16106998829/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7476/16132090577_425f4f233c_b.jpg",
+        "alt": "El hall lleno de asistentes, visto desde arriba, con un piano de cola en primer plano",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16132090577/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7526/16318003555_1c444acbd1_b.jpg",
+        "alt": "Asistentes conversando en el salón principal",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16318003555/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/8564/16317063282_f2f629f047_b.jpg",
+        "alt": "Grupo de asistentes alrededor de un stand con dispositivos",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16317063282/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7477/16316150741_b2919296d6_b.jpg",
+        "alt": "Un músico toca la guitarra eléctrica en la terraza",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16316150741/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7543/16291955696_3cb228b4da_b.jpg",
+        "alt": "Asistentes conversando bajo una carpa con guirnaldas de luces, de noche",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16291955696/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7495/16132048597_e10c987fcd_b.jpg",
+        "alt": "El patio exterior lleno de gente durante la noche",
+        "by": "PuntaTech Meetup 2015",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2015/16132048597/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2016-01-11": {
+    "description": "Octava edición, el lunes 11 de enero en la **Fundación Atchugarry**. Fueron alrededor de 1.000 emprendedores, con una edad promedio menor a 35 años, una cifra récord para el evento hasta ese momento. Como siempre, el foco estuvo en el networking entre emprendedores, posibles clientes e inversores. La conversación siguió hasta cerca de la medianoche.\n\nOradores:\n\n- **Antonio Carámbula**, director ejecutivo de Uruguay XXI, sobre inversión extranjera.\n- **Dario Meli**, cofundador de HootSuite: «hay que saber lo que la gente necesita».\n- **Yuval Noah Harari**, autor de *Sapiens*, el orador principal, sobre el trabajo del futuro y la competencia entre humanos y máquinas.\n- **Mariano Amartino**, director global de Wayra y Telefónica Open Future, en formato entrevista.\n- **Claudio Bessa**, de IBM América Latina, que cerró con nube e internet de las cosas.",
+    "attendance": "alrededor de 1.000 personas",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos de Uruguay XXI en Flickr",
+        "url": "https://www.flickr.com/photos/uruguayxxi/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI / El Observador: «Punta Tech Meetup reunió a 1.000 emprendedores» (enero de 2016)",
+        "url": "https://cuti.org.uy/noticias/de-socios/punta-tech-meetup-reunio-a-1-000-emprendedores/"
+      },
+      {
+        "label": "CUTI / Montevideo Portal: «Punta Tech 2017» (enero de 2017)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/punta-tech-2017/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/1673/24395542145_08bf70c304_b.jpg",
+        "alt": "Un orador en el escenario al aire libre y el público sentado en el jardín de la Fundación Atchugarry",
+        "by": "Uruguay XXI",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/uruguayxxi/24395542145/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/1484/23767337894_77cb26c47f_b.jpg",
+        "alt": "El público sentado en el césped durante las charlas",
+        "by": "Uruguay XXI",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/uruguayxxi/23767337894/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/1597/24369317846_4c8f822ce5_b.jpg",
+        "alt": "Un orador frente a la pantalla de PuntaTech al atardecer",
+        "by": "Uruguay XXI",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/uruguayxxi/24369317846/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/1561/24369316196_75d0d1e56a_b.jpg",
+        "alt": "Antonio Carámbula, director ejecutivo de Uruguay XXI, habla desde el atril",
+        "by": "Uruguay XXI",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/uruguayxxi/24369316196/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/1637/24369318176_23caeaf853_b.jpg",
+        "alt": "Dos personas en el atril con el cartel de PuntaTech meetup 2016 detrás",
+        "by": "Uruguay XXI",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/uruguayxxi/24369318176/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2017-01-16": {
+    "description": "Novena edición, el lunes 16 de enero desde las 18 horas. Iba a hacerse en la Fundación Atchugarry, pero el mal tiempo obligó a mudarla al **Centro de Convenciones de Punta del Este**. Fue también el primer año con venta de entradas al público, a US$ 70, y la convocatoria superó las 1.200 personas.\n\nEl programa: networking desde las 18, charlas a las 20, y cena y cóctel a las 22. Los oradores:\n\n- **Marvin Liao**, socio de 500 Startups.\n- **Rami Efrati**, fundador de Firmitas y ex jefe de la división civil de la Oficina Nacional de Ciberseguridad de Israel.\n- **Mauro Flores**, líder de ciberseguridad en Deloitte Uruguay y del capítulo uruguayo de OWASP.\n\nEl día anterior, en el Grand Hotel, Liao dio un taller a ocho startups uruguayas y se hizo la tercera edición del *Investor Speed Dating*. Ahí un grupo de startups seleccionadas presentó sus proyectos a fondos de inversión. Las dos actividades eran solo por invitación.",
+    "attendance": "más de 1.200 personas",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial 2017 (archivado)",
+        "url": "https://web.archive.org/web/20170118000117/http://puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/puntameetup2017/albums/72177720296111682"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio oficial 2017 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20170118000117/http://puntameetup.com/"
+      },
+      {
+        "label": "Montevideo Portal: «Ya están a la venta las entradas para el Punta Tech Meetup» (enero de 2017)",
+        "url": "https://www.montevideo.com.uy/Ciencia-y-Tecnologia/Ya-estan-a-la-venta-las-entradas-para-el-Punta-Tech-Meetup-uc331215"
+      },
+      {
+        "label": "CUTI / Montevideo Portal: «Punta Tech 2017» (enero de 2017)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/punta-tech-2017/"
+      },
+      {
+        "label": "CUTI / El Observador: «Diez años de Punta Tech Meetup» (enero de 2018)",
+        "url": "https://cuti.org.uy/noticias/de-interes/diez-anos-de-punta-tech-meetup/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/777/31592506613_c092eb16b5_b.jpg",
+        "alt": "Asistentes llegando al gran salón blanco del Centro de Convenciones de Punta del Este",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/31592506613/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/489/31592505203_9d96dec1eb_b.jpg",
+        "alt": "Fila de acreditación con asistentes registrándose en laptops",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/31592505203/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/606/31592506023_039394ee13_b.jpg",
+        "alt": "Una instalación de madera con forma de túnel y bicicletas en el hall del Centro de Convenciones",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/31592506023/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/473/31592507433_ec7e232a56_b.jpg",
+        "alt": "Asistentes conversando en livings de sillones blancos",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/31592507433/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/434/31592510043_85fbcb49b8_b.jpg",
+        "alt": "Un asistente prueba lentes de realidad virtual en el stand «Uruguay 360»",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/31592510043/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/259/32026222640_7af8252e1a_b.jpg",
+        "alt": "El salón iluminado de azul y lleno de asistentes durante la noche",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/32026222640/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/583/32283090561_153d88c5d4_b.jpg",
+        "alt": "Grupos de asistentes conversando de pie bajo la luz azul",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/32283090561/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/478/32364173336_69929b64d9_b.jpg",
+        "alt": "Un DJ pasa música detrás de una barra cubierta de plantas iluminadas de verde",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/32364173336/in/album-72177720296111682/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2018-01-14": {
+    "description": "Décima edición, el domingo 14 de enero en la **Fundación Atchugarry**. Para festejar la década se armó una gran carpa, y más de 1.000 personas fueron a pesar de la lluvia constante. Según el sitio oficial, la asistencia superó las 1.200. A diferencia de otros años, no hubo un tema central, y las entradas generales se vendieron a US$ 70.\n\nOradores:\n\n- **Antonio Carámbula**, director ejecutivo de Uruguay XXI, que abrió las charlas presentando a Uruguay como destino de inversión tecnológica.\n- **Luis Alberto Moreno**, presidente del BID: América Latina «perdió» la revolución industrial y tiene que subirse a la tecnológica.\n- **Mariano Mayer**, secretario de Emprendedores y PyMEs de Argentina, con el plan «Argentina Emprende».\n- **Zachary Aron**, director de Deloitte en Estados Unidos, sobre tendencias tecnológicas.\n- **Diego Oppenheimer**, fundador y CEO de Algorithmia, entrevistado sobre su emprendimiento.\n- **Aharon Aharon**, de la autoridad de innovación de Israel, sobre el peso de la industria high-tech en la economía israelí.",
+    "attendance": "más de 1.000 personas (más de 1.200 según la organización)",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Ariel Pfeffer",
+      "Lucero Comunicación y Producción"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/puntatech2018/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI / El Observador: «Diez años de Punta Tech Meetup» (enero de 2018)",
+        "url": "https://cuti.org.uy/noticias/de-interes/diez-anos-de-punta-tech-meetup/"
+      },
+      {
+        "label": "CUTI / Montevideo Portal: «10 años de Punta Tech con foco en la innovación» (enero de 2018)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/10-anos-de-punta-tech-con-foco-en-la-innovacion/"
+      },
+      {
+        "label": "Presidencia de la República: Uruguay XXI en la décima edición (enero de 2018)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/uruguay-consolida-presencia-internacional-industria-tecnologia-informacion"
+      },
+      {
+        "label": "Sitio oficial 2019 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20181228035506/http://puntameetup.com/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/4667/28113237269_e7b468723a_b.jpg",
+        "alt": "Asistentes en mesas bajo la gran carpa transparente armada para la décima edición",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/28113237269/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4656/39894238851_16704e5627_b.jpg",
+        "alt": "Antonio Carámbula, director ejecutivo de Uruguay XXI, en el escenario",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/39894238851/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4715/39746817232_aa208bd5a9_b.jpg",
+        "alt": "Panel en el escenario frente a la pantalla de la décima edición de PuntaTech meetup",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/39746817232/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4711/39746813012_2b26f239c8_b.jpg",
+        "alt": "Charla informal «Crypto & Beer» en el escenario",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/39746813012/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4716/38879774245_13fd80540d_b.jpg",
+        "alt": "El público sentado bajo la carpa durante las charlas",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/38879774245/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4709/26020503298_9b4fa876aa_b.jpg",
+        "alt": "La carpa de día, con asistentes de pie entre mesas altas",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/26020503298/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4768/38879782795_e87b946aa4_b.jpg",
+        "alt": "Asistentes conversando bajo la carpa iluminada",
+        "by": "Punta Tech 2018",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntatech2018/38879782795/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2019-01-14": {
+    "description": "Undécima edición, el lunes 14 de enero en el **Centro de Convenciones de Punta del Este**. Fueron más de 1.200 personas, entre ellas inversores internacionales. El tema fueron las «tecnologías exponenciales», y el programa se amplió a la biotecnología.\n\nOradores:\n\n- **Kevin Esvelt**, profesor del MIT Media Lab y pionero de los *gene drives* con CRISPR.\n- **Driss Temsamani**, director de canales digitales de Citi para América Latina.\n- **Evelyn Landman**, cofundadora de Mellanox y de Proteantecs.\n- **Verónica Melián**, socia de Deloitte y líder de Capital Humano para las Américas.\n\nTambién hubo un panel sobre criptomonedas. Según los álbumes oficiales, la víspera hubo una cena de bienvenida y actividades paralelas como un *speed dating* de Citi y una sesión sobre computación cuántica. Antonio Carámbula, de Uruguay XXI, presentó el evento como una de las vitrinas del país para atraer negocios. Pablo Brenner recordó que había empezado con unas 60 personas.",
+    "attendance": "más de 1.200 personas",
+    "venue": "Centro de Convenciones de Punta del Este",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind (Lucero)",
+      "Bruno Gadea (Lucero)"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial 2019 (archivado)",
+        "url": "https://web.archive.org/web/20181228035506/http://puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/163399121@N05/albums/72157704383486911"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio oficial 2019 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20181228035506/http://puntameetup.com/"
+      },
+      {
+        "label": "Uruguay XXI: PuntaTech Meetup 2019",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/puntatech-meetup-2019/"
+      },
+      {
+        "label": "CUTI / Montevideo Portal: «Finalizó con éxito Punta Tech Meetup» (enero de 2019)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/finalizo-con-exito-punta-tech-meetup-evento-internacional-de-tecnologia-en-punta-del-este/"
+      },
+      {
+        "label": "Álbumes oficiales de PTM2019 en Flickr",
+        "url": "https://www.flickr.com/photos/163399121@N05/albums"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/7922/45852753575_cff4c90ba9_b.jpg",
+        "alt": "Letras de PUNTATECH frente al Centro de Convenciones de Punta del Este",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/45852753575/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4823/31826355067_15a4146050_b.jpg",
+        "alt": "Asistentes llegando por la galería del Centro de Convenciones",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/31826355067/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7890/45852752845_7f524b0673_b.jpg",
+        "alt": "Staff preparando las credenciales en la acreditación",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/45852752845/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4868/31826347877_3c33a22cca_b.jpg",
+        "alt": "Asistentes descansando en puffs rosados en el hall",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/31826347877/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7887/46715042062_1ab679d233_b.jpg",
+        "alt": "El hall principal lleno de asistentes",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/46715042062/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7866/46715041692_a42b68b681_b.jpg",
+        "alt": "Asistentes conversando entre los stands",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/46715041692/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4849/31826353967_24210c6891_b.jpg",
+        "alt": "Una entrevista filmada frente a un panel de Uruguay",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/31826353967/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/4857/31826353307_b422160eac_b.jpg",
+        "alt": "Asistentes jugando al pinball y al futbolito",
+        "by": "Punta Tech Meetup 2019",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/163399121@N05/31826353307/in/album-72157704383486911/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2020-01-13": {
+    "description": "Duodécima edición, el lunes 13 de enero en el **Centro de Convenciones de Punta del Este**. Fueron más de 1.500 personas. Antes del evento principal, los organizadores hicieron una *Welcoming Dinner* con amigos y sponsors.\n\nOradores:\n\n- **Dan Ariely**, economista conductual, por videoconferencia.\n- **Daniel Rudasevski**, cofundador y CEO de Selina.\n- **Stephen Attenborough**, director comercial de Virgin Galactic.\n\nTambién hubo un panel sobre fintech. Lo organizaron Pablo Brenner, Sergio Fogel, Carolina Kind y Bruno Gadea.",
+    "attendance": "más de 1.500 personas",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos del evento principal en Flickr",
+        "url": "https://www.flickr.com/photos/186463886@N02/albums/72157712682631633"
+      },
+      {
+        "label": "Fotos de la Welcoming Dinner en Flickr",
+        "url": "https://www.flickr.com/photos/186463886@N02/albums/72157712682754522"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Álbum oficial «Punta Tech Meetup 2020 | Main event» en Flickr",
+        "url": "https://www.flickr.com/photos/186463886@N02/albums/72157712682631633"
+      },
+      {
+        "label": "Álbum oficial «Punta Tech Meetup | Welcoming Dinner» en Flickr",
+        "url": "https://www.flickr.com/photos/186463886@N02/albums/72157712682754522"
+      },
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2020",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/101"
+      },
+      {
+        "label": "Sitio oficial 2020 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20191205160508/http://puntameetup.com/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/65535/49389742181_62deb0c5e2_b.jpg",
+        "alt": "La entrada al Centro de Convenciones, con filas para acreditarse",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389742181/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389267768_12e6120612_b.jpg",
+        "alt": "Panel con los logos de los sponsors de la edición 2020",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389267768/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389742696_6b07b1e797_b.jpg",
+        "alt": "Cuatro asistentes conversando en el hall",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389742696/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389742836_35fdb81221_b.jpg",
+        "alt": "Un asistente señala algo mientras conversa con un grupo",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389742836/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389935697_c2c0645ea0_b.jpg",
+        "alt": "Asistentes conversando sentados en puffs blancos",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389935697/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389249138_1d61f95bbb_b.jpg",
+        "alt": "Tarjetas en una pared donde los asistentes anotaban qué buscaban y en qué podían ayudar",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389249138/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389743921_5639cd7679_b.jpg",
+        "alt": "Un asistente juega al ping-pong en el área de networking",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389743921/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389248918_bf01b72159_b.jpg",
+        "alt": "Asistentes con credenciales conversando bajo la luz azul del salón",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389248918/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/49389940017_c8ac45f95e_b.jpg",
+        "alt": "Una cantante y músicos con laptops en el escenario iluminado de violeta",
+        "by": "Punta Tech Meetup 2020",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/186463886@N02/49389940017/in/album-72157712682631633/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2022-01-10": {
+    "description": "Después de una edición 2021 reinventada por la pandemia, con *meetups* simultáneos en varias ciudades y transmisión por YouTube, el Punta Tech Meetup volvió a reunirse en un solo lugar el lunes 10 de enero de 2022, en su 14.ª edición. La sede fue el **Centro de Convenciones de Punta del Este**. Como antesala, en octubre de 2021 se había hecho un pequeño *Spring Networking Event*.\n\nPor los protocolos sanitarios, el acceso fue solo por invitación y para 600 personas, con una transmisión abierta en línea. Los oradores principales:\n\n- **Noam Bardin**, CEO de Waze entre 2009 y 2021, que llevó a la startup hasta su compra por Google.\n- **Sumita Pandit**, COO de dLocal.\n- **Angela Strange**, socia general de Andreessen Horowitz (a16z), enfocada en fintech.\n- **Luis Valdich**, director general de Citi Ventures.",
+    "attendance": "600 personas, solo por invitación, más la transmisión en línea",
+    "venue": "Centro de Convenciones de Punta del Este",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/puntameetup2017/albums/72177720296116175"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2022",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/punta-tech-1"
+      },
+      {
+        "label": "Sitio oficial 2022 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20220107213733/http://puntameetup.com/"
+      },
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2021",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/punta-tech/"
+      },
+      {
+        "label": "Álbum oficial «Punta Tech Meetup 2022» en Flickr",
+        "url": "https://www.flickr.com/photos/puntameetup2017/albums/72177720296116175"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/65535/51834505600_d9fb8a142f_b.jpg",
+        "alt": "Cartel de neón «PuntaTECH meetup» sobre el lounge del Centro de Convenciones",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51834505600/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/51832828782_dd7ae057d7_b.jpg",
+        "alt": "Pared con los logos de los sponsors de la edición 2022",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51832828782/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/51833769236_36a3af93e5_b.jpg",
+        "alt": "Lounge con sillones blancos y luces rojas, antes de la llegada del público",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51833769236/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/51834504855_303b7e08d2_b.jpg",
+        "alt": "Escenario y filas de sillas rojas para las charlas",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51834504855/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/51833765691_bd01f73045_b.jpg",
+        "alt": "Asistentes con tapabocas y credenciales en el hall",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51833765691/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/51834501620_df5642a7a0_b.jpg",
+        "alt": "Asistentes con tapabocas juegan al ping-pong",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51834501620/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/51834501515_5b6338ce1f_b.jpg",
+        "alt": "Dos asistentes conversando de pie entre el público",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/51834501515/in/album-72177720296116175/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2023-01-09": {
+    "description": "Edición de los 15 años, el lunes 9 de enero de 18:30 a 23:00 en el **Centro de Convenciones de Punta del Este**. Llegaron emprendedores de la región y del resto del mundo. Los oradores anunciados:\n\n- **Shai Reshef**, fundador de University of the People.\n- **Deborah Palacios Wanzo**, presidenta y cofundadora de Tuvis.\n- **Matías de Tezanos**, fundador de Hoteles.com y de PeopleFund.\n\nEse año se hizo la primera **W Meetup**, una red que busca reconocer y promover el desarrollo de las mujeres en la tecnología. También hubo una **Prompt Battle**: siete duelos en vivo con herramientas de inteligencia artificial que generan imágenes a partir de texto, y el público votaba la propuesta más creativa. Hubo además un cóctel en la playa (*Cocktail on the Beach*) organizado por Punta Tech.",
+    "venue": "Centro de Convenciones de Punta del Este",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos oficiales en Flickr",
+        "url": "https://www.flickr.com/photos/puntameetup2017/albums/72177720305204933"
+      },
+      {
+        "label": "Fotos de la W Meetup 2023 en Flickr",
+        "url": "https://www.flickr.com/photos/puntameetup2017/albums/72177720305188462"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2023",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/punta-tech-meetup-2023"
+      },
+      {
+        "label": "Sitio oficial 2023 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20221126230512/http://puntameetup.com/"
+      },
+      {
+        "label": "LifeWatch ERIC: Punta Tech Meetup 2023",
+        "url": "https://lifewatch.eu/?p=29102"
+      },
+      {
+        "label": "Álbum oficial «Punta Tech Meetup 2023» en Flickr",
+        "url": "https://www.flickr.com/photos/puntameetup2017/albums/72177720305204933"
+      },
+      {
+        "label": "Montevideo Portal: «Punta Tech Meetup 2026: vuelve el evento de networking…» (noviembre de 2025)",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Punta-Tech-Meetup-2026-vuelve-el-evento-de-networking-mas-importante-de-America-Latina-uc942419"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/65535/52623695805_a94cf5283f_b.jpg",
+        "alt": "Estructura con el cartel «Punta Tech» y «Bienvenidos» contra el cielo azul",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623695805/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52623506374_b34336dd5a_b.jpg",
+        "alt": "Banner de los «15 años de meetup»",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623506374/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52623261691_51458834d5_b.jpg",
+        "alt": "Muestra de fotos en blanco y negro montada en estructuras de madera",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623261691/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52622745787_100f67458b_b.jpg",
+        "alt": "Stand «Sandbox» en el salón del Centro de Convenciones",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52622745787/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52623514249_7bac7b62ab_b.jpg",
+        "alt": "Grupo de asistentes en un stand",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623514249/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52623261311_75bfcae71e_b.jpg",
+        "alt": "Asistentes llegando a pie al Centro de Convenciones",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623261311/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52623739568_ef964a990c_b.jpg",
+        "alt": "Grupo de asistentes posando con sus credenciales",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623739568/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/52623693855_2ab58c5513_b.jpg",
+        "alt": "Una asistente con auriculares prueba una demo en un stand",
+        "by": "Punta Tech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/puntameetup2017/52623693855/in/album-72177720305204933/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2024-01-15": {
+    "description": "La edición 2024 se hizo el 15 de enero en el **Museo de Arte Contemporáneo Atchugarry (MACA)**, en Manantiales, sobre la ruta 104. Fue la primera vez que el evento se hizo en el museo.\n\nEl formato siguió centrado en el networking entre emprendedores, inversores y ejecutivos. Oradores:\n\n- **Eva Alonso**, inversora de Ribbit Capital.\n- **Suzy Ferreira**, fundadora de la fintech brasileña Dinie.\n- **Héctor Sepúlveda**, cofundador del fondo Nazca.\n\nAdemás del evento principal hubo un cóctel de bienvenida y una nueva edición de la **W Meetup**, el encuentro de mujeres en tecnología. Las fotos oficiales muestran a los asistentes recorriendo las salas de esculturas del museo y traslados en carritos por el parque.",
+    "venue": "Museo de Arte Contemporáneo Atchugarry (MACA), Manantiales",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos del evento principal en Flickr",
+        "url": "https://www.flickr.com/photos/199958519@N06/albums/72177720314297749"
+      },
+      {
+        "label": "Fotos de la W Meetup 2024 en Flickr",
+        "url": "https://www.flickr.com/photos/199958519@N06/albums/72177720314298469"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2024",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/punta-tech-meetup-2024/"
+      },
+      {
+        "label": "Sitio oficial 2024 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20231204153756/http://puntameetup.com/"
+      },
+      {
+        "label": "Álbum oficial «Main Event PTM 2024» en Flickr",
+        "url": "https://www.flickr.com/photos/199958519@N06/albums/72177720314297749"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/65535/53479378062_3b3145840c_b.jpg",
+        "alt": "Credenciales «General Pass» del Punta Tech Meetup 2024",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53479378062/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/53479378052_2a51d787e1_b.jpg",
+        "alt": "Staff de remera amarilla en las mesas de acreditación",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53479378052/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/53480683175_86f650d1f9_b.jpg",
+        "alt": "Asistentes trasladándose en un carrito eléctrico por el parque del MACA",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53480683175/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/53480690825_d532f8b43c_b.jpg",
+        "alt": "Asistentes entre las esculturas de la sala principal del MACA",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53480690825/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/53480690560_d2c8321352_b.jpg",
+        "alt": "Un grupo escucha una explicación junto a las esculturas",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53480690560/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/53480276926_64df0616ac_b.jpg",
+        "alt": "Asistentes conversando en uno de los espacios del museo",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53480276926/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/53480589634_941b3477d3_b.jpg",
+        "alt": "La barra llena de asistentes",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/53480589634/in/album-72177720314297749/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2025-01-13": {
+    "description": "Decimoséptima edición, el lunes 13 de enero en el **Museo de Arte Contemporáneo Atchugarry (MACA)**, en Manantiales. Según la organización, reunió a más de 2.000 participantes de distintos países. La organización presentó la edición como la de los «17 años ininterrumpidos». La oradora anunciada fue la periodista española **Marta Peirano**, columnista de El País y autora de *El pequeño libro rojo del activista en la red* y *Contra el futuro*, en su primera presentación en América Latina.\n\nAdemás del evento principal hubo un cóctel de bienvenida y la **W Meetup** de mujeres en tecnología. Ese año se hizo también la primera **Punta Tech Week**, una semana de actividades paralelas organizadas por sponsors y aliados, como torneos de tenis, desayunos temáticos, demostraciones de tecnología y *afters*. Las fotos oficiales muestran el escenario al aire libre en el parque de esculturas del museo.",
+    "attendance": "más de 2.000 personas",
+    "venue": "Museo de Arte Contemporáneo Atchugarry (MACA), Manantiales",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Fotos del evento principal en Flickr",
+        "url": "https://www.flickr.com/photos/199958519@N06/albums/72177720323329945"
+      },
+      {
+        "label": "Fotos de la W Meetup 2025 en Flickr",
+        "url": "https://www.flickr.com/photos/199958519@N06/albums/72177720323347653"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2025",
+        "url": "https://uruguayxxi.gub.uy/en/events/article/punta-tech-meetup-2025"
+      },
+      {
+        "label": "Sitio oficial 2025 (Wayback Machine)",
+        "url": "https://web.archive.org/web/20241222151235/http://puntameetup.com/"
+      },
+      {
+        "label": "Montevideo Portal: «Punta Tech Meetup 2026: vuelve el evento de networking…» (noviembre de 2025)",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Punta-Tech-Meetup-2026-vuelve-el-evento-de-networking-mas-importante-de-America-Latina-uc942419"
+      },
+      {
+        "label": "Sitio oficial de Punta Tech Meetup",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Álbum oficial «Main Event PTM 2025» en Flickr",
+        "url": "https://www.flickr.com/photos/199958519@N06/albums/72177720323329945"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/65535/54281421829_58d803b9ea_b.jpg",
+        "alt": "El arco de entrada con la marca «punta tech meetup '25» a contraluz",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281421829/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281421959_cc2bdb07c0_b.jpg",
+        "alt": "La estructura del escenario al aire libre con las pantallas del evento",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281421959/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281178481_c08d2770e9_b.jpg",
+        "alt": "Una fila de asistentes cruza el parque del MACA",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281178481/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281178461_4ec159b84d_b.jpg",
+        "alt": "Asistentes en la terraza del MACA, con el parque de esculturas detrás",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281178461/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281609285_8e46bd94af_b.jpg",
+        "alt": "Mesas de acreditación con credenciales y lanyards",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281609285/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281422019_974191f1f5_b.jpg",
+        "alt": "Una periodista entrevista a asistentes con micrófono en mano",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281422019/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281429753_8994b9fa77_b.jpg",
+        "alt": "Un DJ pasa música al aire libre",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281429753/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/65535/54281180046_6e1bb56968_b.jpg",
+        "alt": "Un orador habla con micrófono en el escenario al aire libre",
+        "by": "PuntaTech Meetup",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/199958519@N06/54281180046/in/album-72177720323329945/",
+        "license": "Todos los derechos reservados"
+      }
+    ]
+  },
+  "conf:punta-tech-meetup:2026-01-12": {
+    "description": "Edición número 18, el lunes 12 de enero en el **Museo de Arte Contemporáneo Atchugarry (MACA)**, con el lema *Let's Tech Together!*. Según la organización fueron más de 2.000 personas de más de 30 países, desde estudiantes hasta fondos como Riverwood Capital y Kaszek. Alrededor del día central hubo unas 40 actividades satélite en distintos puntos de Punta del Este.\n\nEn el escenario hablaron:\n\n- **Paula Bellizia**, vicepresidenta de Amazon Web Services para América Latina, que destacó a dLocal y Akua como ejemplos de negocios basados en IA.\n- **Gabriel Oddone**, ministro de Economía y Finanzas, entrevistado por el periodista de la BBC Elliott Gotkine sobre el acuerdo UE–Mercosur y el impacto de la automatización.\n\nAsistió la vicepresidenta Carolina Cosse. Pablo Brenner lo resumió así: «cumplimos la mayoría de edad». En paralelo se hicieron PUNTABiotech, la W Meetup y sesiones de networking de Uruguay XXI.",
+    "attendance": "más de 2.000 personas",
+    "venue": "Museo de Arte Contemporáneo Atchugarry (MACA), Manantiales",
+    "organizers": [
+      "Pablo Brenner",
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://www.puntameetup.com/"
+      },
+      {
+        "label": "Galería de fotos en Montevideo Portal",
+        "url": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Forbes Argentina: «Punta Tech Meetup: la edición nº 18 reunió más de 2.000 emprendedores» (enero de 2026)",
+        "url": "https://www.forbesargentina.com/innovacion/punta-tech-meetup-edicion-n-18-reunio-mas-2000-emprendedores-una-experiencia-comunidad-global-n84785"
+      },
+      {
+        "label": "Uruguay XXI: Uruguay se posiciona a través de Punta Tech Meetup (enero de 2026)",
+        "url": "https://www.uruguayxxi.gub.uy/en/news/article/uruguay-positions-itself-globally-through-punta-tech-meetup-as-a-business-and-innovation-hub-in-latin-america/"
+      },
+      {
+        "label": "Montevideo Portal: «Así se vivió en imágenes el Punta Tech Meetup 2026»",
+        "url": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "label": "Montevideo Portal: «Punta Tech Meetup 2026: vuelve el evento de networking…» (noviembre de 2025)",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Punta-Tech-Meetup-2026-vuelve-el-evento-de-networking-mas-importante-de-America-Latina-uc942419"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://statics.forbesargentina.com/2026/01/crop/6968f25edf4a1__980x549.webp",
+        "alt": "Sergio Fogel, Pablo Brenner, Carolina Kind y Bruno Gadea, organizadores del Punta Tech Meetup",
+        "by": "Gentileza Punta Tech Meetup",
+        "source": "Forbes Argentina",
+        "page": "https://www.forbesargentina.com/innovacion/punta-tech-meetup-edicion-n-18-reunio-mas-2000-emprendedores-una-experiencia-comunidad-global-n84785"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943448.JPG",
+        "alt": "Grupo de asistentes bajo el arco «Let's tech together» en el parque del MACA",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943457.JPG",
+        "alt": "Asistentes entre las carpas blancas del parque",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943452.JPG",
+        "alt": "Paula Bellizia, vicepresidenta de AWS para América Latina, en el escenario",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943459.JPG",
+        "alt": "Una entrevista en el escenario, en sillones frente a la pantalla «Together»",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943461.JPG",
+        "alt": "El público sigue una entrevista frente a la pantalla de Punta Tech",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943467.JPG",
+        "alt": "Asistentes conversando bajo una carpa iluminada de violeta",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943473.JPG",
+        "alt": "El edificio del MACA iluminado al anochecer, con las letras «Punta Tech» en el césped",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943474.JPG",
+        "alt": "El escenario de noche, con luces y público",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      }
+    ]
+  },
+  "conf:rails-girls-montevideo:2014-05-21": {
+    "description": "Rails Girls llegó por primera vez a Montevideo el miércoles 21 y el jueves 22 de mayo de 2014. Fue un taller gratuito de dos días, en español, para que mujeres sin experiencia previa en programación aprendieran a crear aplicaciones web con Ruby on Rails, con la ayuda de coaches voluntarios. Bastaba con llevar una laptop. Se hizo en las oficinas de **Neo** (Bulevar España 2529), con la colaboración de Neo y ThoughtWorks.\n\nEl miércoles a la noche hubo:\n\n- registro;\n- charlas relámpago de mujeres en TI que contaron sus historias y desafíos;\n- una *installation party* para dejar Ruby on Rails instalado en cada computadora;\n- una cena para conocerse.\n\nEl jueves fue el día de trabajo: introducción a Ruby, primeros pasos con una aplicación y una tarde entera construyendo apps, que se presentaron a las 18.",
+    "venue": "Oficinas de Neo, Bulevar España 2529",
+    "organizers": [
+      "Pamela Canchanya",
+      "Tania Silva",
+      "Letícia Figueira",
+      "Tania Gonzales",
+      "Lucía Escanellas",
+      "Jaime Dávila",
+      "Rossina Simonelli",
+      "Gustavo Armagno",
+      "Rodrigo Viva"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "http://railsgirls.com/montevideo"
+      },
+      {
+        "label": "Rails Girls Montevideo en Facebook",
+        "url": "https://www.facebook.com/railsgirlsmvd"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Rails Girls Montevideo, 21-22 de mayo de 2014 (railsgirls.com)",
+        "url": "http://railsgirls.com/montevideo"
+      }
+    ]
+  },
+  "conf:sqlsaturday-montevideo:2017-12-02": {
+    "description": "El SQLSaturday #691 se hizo el sábado 2 de diciembre de 2017 en el **Auditorio de la Torre Antel** (Guatemala 1075). SQLSaturday es una serie internacional de jornadas comunitarias sobre SQL Server y la plataforma de datos de Microsoft, y cada edición lleva un número.\n\nEl programa tuvo ocho sesiones, en español y en inglés, repartidas en tracks de análisis avanzado, BI, administración de bases de datos y desarrollo en la nube. Se habló de Machine Learning Services para ejecutar R y Python desde SQL Server 2017, de bases de grafos, de Cognitive Services, de Power BI y de Azure Analysis Services. Los oradores:\n\n- **Patricio Cofre**, MVP de Data Platform y líder del grupo PASS de Chile.\n- **Eduardo Castro**, MVP de Data Platform.\n- **Javier Villegas**, MVP de Data Platform.\n- **Patrick LeBlanc**, de Microsoft y coautor del canal *Guy in a Cube*, que hizo una sesión de preguntas y respuestas.",
+    "venue": "Auditorio Torre Antel (Guatemala 1075)",
+    "talks": [
+      {
+        "title": "Usando R y Python desde SQL Server",
+        "speakers": [
+          "Patricio Cofre"
+        ]
+      },
+      {
+        "title": "Creación de un Sistema Recomendador basado en Grafos",
+        "speakers": [
+          "Patricio Cofre"
+        ]
+      },
+      {
+        "title": "Cognitive Computing con Microsoft",
+        "speakers": [
+          "Eduardo Castro"
+        ]
+      },
+      {
+        "title": "Data Analytics: Clustering, Regression and Machine Learning con Power BI",
+        "speakers": [
+          "Eduardo Castro"
+        ]
+      },
+      {
+        "title": "SQL Server 2017 - Community-driven enhancements",
+        "speakers": [
+          "Javier Villegas"
+        ]
+      },
+      {
+        "title": "Tecnicas Avanzadas de Monitoreo",
+        "speakers": [
+          "Javier Villegas"
+        ]
+      },
+      {
+        "title": "Guy in a Cube unplugged",
+        "speakers": [
+          "Patrick LeBlanc"
+        ]
+      },
+      {
+        "title": "Introduction to Azure Analysis Services",
+        "speakers": [
+          "Patrick LeBlanc"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento en sqlsaturday.com",
+        "url": "https://sqlsaturday.com/2017-12-02-SQLSat-0691/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "SQLSaturday #691 - Montevideo 2017 (datos históricos del evento)",
+        "url": "https://sqlsaturday.com/2017-12-02-SQLSat-0691/"
+      },
+      {
+        "label": "SQLSaturday: agenda de la edición #691",
+        "url": "https://sqlsaturday.com/events/2017-12-2-SQLSat-0691.html"
+      }
+    ]
+  },
+  "conf:testinguy:2021-08-02": {
+    "description": "La séptima edición de TestingUy, la conferencia uruguaya de testing y calidad de software, se hizo del 2 al 7 de agosto de 2021, totalmente en línea. Hubo más de 55 oradores de todo el mundo y participantes de 28 países. El programa tuvo 19 charlas, 12 charlas relámpago y 12 talleres gratuitos, en español y en inglés, y sumó más de 5.000 conexiones.\n\nLas charlas cubrieron automatización, inteligencia artificial aplicada al testing, accesibilidad, performance, IoT, BDD y testing en equipos ágiles. Abrió con una charla sobre lo aprendido al probar la agenda de vacunación contra el Covid-19 en Uruguay.\n\nEse año se estrenó el **Desafío TestingUy**: 24 horas, del viernes 6 al sábado 7 de agosto, para probar un sistema real y encontrar sus problemas más importantes. Participaron 420 personas en 140 equipos de 14 países, y 28 expertos en testing evaluaron las entregas. Los tres primeros equipos recibieron premios. La ANII declaró la edición de interés.",
+    "attendance": "participantes de 28 países; más de 5.000 conexiones a charlas y talleres",
+    "venue": "En línea",
+    "city": "En línea",
+    "organizers": [
+      "Claudia Badell",
+      "Guillermo Skrilec",
+      "Gustavo Guimerans"
+    ],
+    "talks": [
+      {
+        "title": "¿Qué aprendimos probando la agenda de vacunación contra el Covid-19 en Uruguay?",
+        "speakers": [
+          "Guillermo Skrilec"
+        ]
+      },
+      {
+        "title": "Inteligencia Artificial Aplicada a Automatización de Software",
+        "speakers": [
+          "Franco Santi",
+          "Leonardo Pace"
+        ]
+      },
+      {
+        "title": "Calidad de código en el desarrollo y la integración continua",
+        "speakers": [
+          "Beatriz Pérez Lamancha"
+        ]
+      },
+      {
+        "title": "Testing de accesibilidad web, lo que necesitas saber",
+        "speakers": [
+          "Karen Amaro",
+          "Nicolás Marioni"
+        ]
+      },
+      {
+        "title": "El testeo en los Sistemas de Conducción Asistida o Conducción Autónoma",
+        "speakers": [
+          "José Luis Velázquez Jacobo"
+        ]
+      },
+      {
+        "title": "SmartSelectors: Machine Learning al Servicio del Testing",
+        "speakers": [
+          "Damián Pereira"
+        ]
+      },
+      {
+        "title": "Common Strategy to Test IoT for Different Industries",
+        "speakers": [
+          "Vipin Jain"
+        ]
+      },
+      {
+        "title": "Shift Left your Performance Tests",
+        "speakers": [
+          "Hari Krishnan"
+        ]
+      },
+      {
+        "title": "8 Web Testing Automation Challenges That the Internet Never Told You",
+        "speakers": [
+          "Melody Lin"
+        ]
+      },
+      {
+        "title": "Do Bugs Speak?",
+        "speakers": [
+          "Mesut Durukal"
+        ]
+      },
+      {
+        "title": "¿Cómo mejorar la calidad de tus pruebas automatizadas?",
+        "speakers": [
+          "Federico Toledo",
+          "Matías Fornara"
+        ]
+      },
+      {
+        "title": "Testabilidad y Arquitectura de Pruebas",
+        "speakers": [
+          "Nicolás Paez"
+        ]
+      },
+      {
+        "title": "Hablemos el mismo idioma: BDD para todos",
+        "speakers": [
+          "Victoria de los Ángeles Afonso"
+        ]
+      },
+      {
+        "title": "Fruitful Design Patterns in Test Automation",
+        "speakers": [
+          "Varuna Srivastava"
+        ]
+      },
+      {
+        "title": "Web Page Accessibility and How to Test it Manually and Through Test Automation",
+        "speakers": [
+          "Sonali Das"
+        ]
+      },
+      {
+        "title": "Gaining Confidence with Cypress Tests",
+        "speakers": [
+          "Rob Richardson"
+        ]
+      },
+      {
+        "title": "Testing beyond your project",
+        "speakers": [
+          "Emna Ayadi"
+        ]
+      },
+      {
+        "title": "API Testing en la Bancarización",
+        "speakers": [
+          "Ariagna Albuerne",
+          "Ginny Ferraz"
+        ]
+      },
+      {
+        "title": "¡Tengamos criterio!",
+        "speakers": [
+          "Gabriela Alcarraz"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2021",
+        "url": "https://testinguy.org/edicion-2021/"
+      },
+      {
+        "label": "Sitio de la edición 2021 (archivado)",
+        "url": "http://web.archive.org/web/20210422211911/https://testinguy.org/edicion-2021/"
+      },
+      {
+        "label": "Canal de YouTube de TestingUy",
+        "url": "https://www.youtube.com/@TestingChannelTV"
+      }
+    ],
+    "sources": [
+      {
+        "label": "TestingUy: Edición 2021",
+        "url": "https://testinguy.org/edicion-2021/"
+      },
+      {
+        "label": "CUTI: «Vuelve TestingUy»",
+        "url": "https://cuti.org.uy/en/destacados/vuelve-testinguy/"
+      }
+    ]
+  }
+}

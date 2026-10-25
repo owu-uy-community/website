@@ -8,10 +8,11 @@ import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
 import { PRIVACY_EMAIL, SITE_URL } from "lib/community/site";
 import { getTimeline, photoCount } from "lib/timeline/data";
-import { formatDate, formatTime, KIND_LABEL, STATUS_LABEL } from "lib/timeline/format";
+import { formatDate, formatTime, KIND_LABEL, plainText, STATUS_LABEL } from "lib/timeline/format";
 import { photoSources } from "lib/timeline/image";
 import type { TimelineEvent, TimelinePhoto } from "lib/timeline/types";
 
+import Markdown from "../Markdown";
 import EventNav from "./EventNav";
 import Gallery, { type GalleryPhoto } from "./Gallery";
 
@@ -47,7 +48,9 @@ export async function generateMetadata({ params }: Props) {
 
   return pageMetadata({
     title: event.title,
-    description: event.description?.slice(0, 160) ?? describe(event, community.get(event.community)?.name ?? ""),
+    description:
+      plainText(event.summary ?? event.description ?? "").slice(0, 160) ||
+      describe(event, community.get(event.community)?.name ?? ""),
     path: `/timeline/${slug}`,
   });
 }
@@ -116,6 +119,9 @@ async function EventView({ slug }: { slug: string }) {
     // The original file, as published (an absolute URL either way)
     ...(event.photos?.[0] ? { image: [new URL(event.photos[0].src, SITE_URL).href] } : {}),
     url: `${SITE_URL}/timeline/${slug}`,
+    ...((event.summary ?? event.description)
+      ? { description: plainText(event.summary ?? event.description!).slice(0, 500) }
+      : {}),
   };
 
   return (
@@ -159,7 +165,7 @@ async function EventView({ slug }: { slug: string }) {
               <h1 className={`${headingClassName.h1} mt-5`}>{event.title}</h1>
               <TitleBar className="mt-6" />
               {event.kind === "hito" && event.description ? (
-                <p className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-300">{event.description}</p>
+                <Markdown className="mt-6 max-w-2xl text-lg leading-relaxed text-zinc-300" text={event.description} />
               ) : null}
             </div>
 
@@ -287,6 +293,15 @@ async function EventView({ slug }: { slug: string }) {
 
         <Container className="grid gap-12 py-12 sm:py-16 lg:grid-cols-[1fr_20rem]">
           <div className="flex min-w-0 flex-col gap-10">
+            {event.summary ? (
+              <section aria-labelledby="que-fue">
+                <h2 className={headingClassName.h3} id="que-fue">
+                  Qué fue
+                </h2>
+                <Markdown className="mt-4 max-w-2xl leading-relaxed text-zinc-300" text={event.summary} />
+              </section>
+            ) : null}
+
             {event.talks?.length ? (
               <section aria-labelledby="charlas">
                 <h2 className={headingClassName.h3} id="charlas">
@@ -339,7 +354,7 @@ async function EventView({ slug }: { slug: string }) {
                 <h2 className={headingClassName.h3} id="descripcion">
                   Cómo lo anunciaron
                 </h2>
-                <p className="mt-4 max-w-2xl leading-relaxed whitespace-pre-line text-zinc-400">{event.description}</p>
+                <Markdown className="mt-4 max-w-2xl leading-relaxed text-zinc-400" text={event.description} />
               </section>
             ) : null}
 

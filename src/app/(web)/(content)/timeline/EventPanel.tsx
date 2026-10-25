@@ -16,6 +16,7 @@ import type { TimelineEvent, TimelineKind } from "lib/timeline/types";
 import type { GalleryPhoto } from "./[slug]/Gallery";
 import { rememberReturn } from "./archive-data";
 import type { EventDetail } from "./[slug]/datos.json/route";
+import Markdown from "./Markdown";
 import { Line } from "./Skeletons";
 
 // Its own (empty) Suspense boundary: without a `loading`, the first open suspends up to the
@@ -265,11 +266,15 @@ function Description({ text }: { text: string }) {
   const long = text.length > FOLD;
   return (
     <div>
-      <p
-        className={cn("text-[14px] leading-relaxed whitespace-pre-line text-zinc-300", !open && long && "line-clamp-6")}
+      {/* Folded to exactly 6 lines (what its skeleton holds), fading out at the fold */}
+      <div
+        className={cn(
+          "text-[14px] leading-relaxed text-zinc-300",
+          !open && long && "max-h-[6lh] overflow-hidden [mask-image:linear-gradient(to_bottom,#000_60%,transparent)]"
+        )}
       >
-        {text}
-      </p>
+        <Markdown className="space-y-2" text={text} />
+      </div>
       {long ? (
         <button
           className="mt-1 text-[13px] text-yellow-300 hover:underline"
@@ -365,7 +370,7 @@ function Body({ view, detail, row }: { view: View; detail: EventDetail | null; r
         <>
           <Photos detail={detail} />
           {event.talks?.length ? <Talks talks={event.talks} /> : null}
-          {event.description ? <Description text={event.description} /> : null}
+          {(event.summary ?? event.description) ? <Description text={(event.summary ?? event.description)!} /> : null}
         </>
       ) : (
         <Pending row={row} />
