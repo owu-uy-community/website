@@ -9,10 +9,13 @@ export const metadata = pageMetadata({
   path: "/timeline/descubrir",
 });
 
-/** The history as a deck of cards, one event at a time; it fills the screen under the navbar */
+/**
+ * The history as a deck of cards, one event at a time; it fills the screen under the navbar. A thrown
+ * card flies past the screen's edge, so the page clips it: otherwise it grows a scrollbar mid-throw.
+ */
 export default function DiscoverPage() {
   return (
-    <main className="h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-72px)]">
+    <main className="h-[calc(100dvh-4rem)] overflow-clip lg:h-[calc(100dvh-72px)]">
       <h1 className="sr-only">Descubrí la historia, evento por evento</h1>
       <DeckGate />
     </main>
