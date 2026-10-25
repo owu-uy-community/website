@@ -8,8 +8,9 @@ import { cn } from "app/lib/utils";
 import type { ArchiveRow } from "lib/timeline/data";
 import { formatDate, KIND_LABEL, STATUS_LABEL } from "lib/timeline/format";
 import { thumbSources } from "lib/timeline/image";
+import { type LaneInfo, laneLayout } from "lib/timeline/lanes";
 
-import { type ArchiveCommunity, useArchiveData, useNear } from "./archive-data";
+import { useArchiveData, useNear } from "./archive-data";
 import { MARK } from "./Charts";
 
 /*
@@ -33,14 +34,15 @@ const yearOf = (value: string) => {
 type Hover = { row: ArchiveRow; x: number; y: number };
 
 function LaneView({
-  community,
+  lane: community,
   rows,
   from,
   span,
   order,
 }: {
-  community: ArchiveCommunity;
-  rows: ArchiveRow[];
+  lane: LaneInfo;
+  /** Its events: until they arrive, the lane is its line alone */
+  rows?: ArchiveRow[];
   from: number;
   span: number;
   /** Its place in the chart: lanes draw in one after another */
@@ -70,8 +72,8 @@ function LaneView({
           transition={{ delay, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           viewport={{ once: true }}
           whileInView={{ pathLength: 1 }}
-          x1={x(rows[0].d)}
-          x2={x(rows.at(-1)!.d)}
+          x1={x(community.first)}
+          x2={x(community.last)}
           y1="50%"
           y2="50%"
         />
@@ -81,7 +83,7 @@ function LaneView({
           viewport={{ once: true }}
           whileInView={{ opacity: 1 }}
         >
-          {rows.map((row, index) => (
+          {rows?.map((row, index) => (
             <circle
               key={row.s}
               className={row.o ? "opacity-50" : undefined}
@@ -134,7 +136,18 @@ function Tooltip({ hover, community }: { hover: Hover; community?: string }) {
   );
 }
 
-export default function Lanes({ from, to, shown = 36 }: { from: number; to: number; shown?: number }) {
+export default function Lanes({
+  from,
+  to,
+  shown = 36,
+  preview,
+}: {
+  from: number;
+  to: number;
+  shown?: number;
+  /** The lanes up front and how many more there are, drawn by the server: lines first, dots after */
+  preview: { lanes: LaneInfo[]; more: number };
+}) {
   // Close, not early: on phones the story above is short, and 1000px rendered the ~2,700 nodes at load
   const [root, near] = useNear<HTMLElement>("300px");
   const data = useArchiveData(near);
@@ -142,105 +155,84 @@ export default function Lanes({ from, to, shown = 36 }: { from: number; to: numb
   const [hover, setHover] = useState<Hover | null>(null);
   const span = to + 1 - from;
 
-  const { lanes, top, byCommunity, names } = useMemo(() => {
-    const byCommunity = new Map<string, ArchiveRow[]>();
-    for (const row of data?.rows ?? []) {
-      if (row.x || row.k === "hito") continue;
-      byCommunity.set(row.c, [...(byCommunity.get(row.c) ?? []), row]);
-    }
-    const lanes = (data?.communities ?? [])
-      .filter((community) => community.layer === "community" && (byCommunity.get(community.slug)?.length ?? 0) >= 3)
-      .sort((a, b) => (a.first ?? "").localeCompare(b.first ?? ""));
-    // The busiest ones up front, in the order they were born; the rest one click away
-    const top = new Set(
-      [...lanes].sort((a, b) => byCommunity.get(b.slug)!.length - byCommunity.get(a.slug)!.length).slice(0, shown)
-    );
-    const names = new Map((data?.communities ?? []).map((c) => [c.slug, c.name]));
-    return { lanes, top, byCommunity, names };
-  }, [data, shown]);
+  const { front, rest, byCommunity, names } = useMemo(() => {
+    if (!data) return { front: preview.lanes, rest: null, byCommunity: null, names: null };
+    const { lanes, top, byCommunity, info } = laneLayout(data.rows, data.communities, shown);
+    return {
+      front: lanes.filter((c) => top.has(c.slug)).map(info),
+      rest: lanes.filter((c) => !top.has(c.slug)).map(info),
+      byCommunity,
+      names: new Map(data.communities.map((c) => [c.slug, c.name])),
+    };
+  }, [data, shown, preview]);
 
   // The dot under the pointer, if any
   const rowAt = (target: EventTarget) => {
     if (!(target instanceof SVGCircleElement)) return null;
     const lane = target.closest("svg")?.dataset.lane;
     const index = Number(target.dataset.i);
-    return lane ? (byCommunity.get(lane)?.[index] ?? null) : null;
+    return lane ? (byCommunity?.get(lane)?.[index] ?? null) : null;
   };
 
-  const lane = (community: ArchiveCommunity, order: number) => (
-    <Lane
-      key={community.slug}
-      community={community}
-      from={from}
-      order={order}
-      rows={byCommunity.get(community.slug)!}
-      span={span}
-    />
+  const lane = (info: LaneInfo, order: number) => (
+    <Lane key={info.slug} from={from} lane={info} order={order} rows={byCommunity?.get(info.slug)} span={span} />
   );
-  // Rendered once per data load: the tooltip's state changes don't touch the 2,000 marks
+  // The same tree before and after the dots arrive: the lines stay put and the dots join them
   const chart = useMemo(
     () => (
       <>
-        <ul className="mt-2 flex flex-col gap-1">{lanes.filter((c) => top.has(c)).map(lane)}</ul>
-        {lanes.length > shown ? (
+        <ul className="mt-2 flex flex-col gap-1">{front.map(lane)}</ul>
+        {preview.more ? (
           <details className="group/more mt-1">
             <summary className="ml-[10.25rem] cursor-pointer list-none py-2 text-sm text-zinc-300 transition-colors hover:text-yellow-300 sm:ml-[12.75rem] [&::-webkit-details-marker]:hidden">
-              <span className="group-open/more:hidden">Ver {lanes.length - shown} comunidades más</span>
+              <span className="group-open/more:hidden">Ver {rest?.length ?? preview.more} comunidades más</span>
               <span className="hidden group-open/more:inline">Ver menos</span>
             </summary>
-            <ul className="flex flex-col gap-1">{lanes.filter((c) => !top.has(c)).map(lane)}</ul>
+            <ul className="flex flex-col gap-1">{rest?.map(lane)}</ul>
           </details>
         ) : null}
       </>
     ),
     // oxlint-disable-next-line react/exhaustive-deps -- `lane` closes over the same inputs
-    [lanes, top, shown, byCommunity, from, span]
+    [front, rest, byCommunity, from, span, preview.more]
   );
 
   const ticks = Array.from({ length: span }, (_, i) => from + i).filter((year) => year % 2 === 0);
 
   return (
-    <figure ref={root} className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
-      {!data ? (
-        <div aria-busy className="flex flex-col gap-2" style={{ minHeight: shown * 24 + 40 }}>
-          {Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className="h-5 animate-pulse rounded bg-white/[0.04]" />
-          ))}
-        </div>
-      ) : (
-        <div
-          className="min-w-[44rem] [&_circle]:cursor-pointer"
-          onClick={(event) => {
-            const row = rowAt(event.target);
-            if (row) router.push(`/timeline/${row.s}`);
-          }}
-          onPointerLeave={() => setHover(null)}
-          onPointerMove={(event) => {
-            if (event.pointerType !== "mouse") return;
-            const row = rowAt(event.target);
-            if (!row) return hover && setHover(null);
-            if (row !== hover?.row) router.prefetch(`/timeline/${row.s}`);
-            setHover({ row, x: event.clientX, y: event.clientY });
-          }}
-        >
-          <div aria-hidden className={COLUMNS}>
-            <span />
-            <div className="relative h-5 font-terminal text-[10px] text-zinc-400 tabular-nums">
-              {ticks.map((year) => (
-                <span
-                  key={year}
-                  className="absolute -translate-x-1/2"
-                  style={{ left: `${((year - from) / span) * 100}%` }}
-                >
-                  {year}
-                </span>
-              ))}
-            </div>
+    <figure ref={root} aria-busy={!data} className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0">
+      <div
+        className="min-w-[44rem] [&_circle]:cursor-pointer"
+        onClick={(event) => {
+          const row = rowAt(event.target);
+          if (row) router.push(`/timeline/${row.s}`);
+        }}
+        onPointerLeave={() => setHover(null)}
+        onPointerMove={(event) => {
+          if (event.pointerType !== "mouse") return;
+          const row = rowAt(event.target);
+          if (!row) return hover && setHover(null);
+          if (row !== hover?.row) router.prefetch(`/timeline/${row.s}`);
+          setHover({ row, x: event.clientX, y: event.clientY });
+        }}
+      >
+        <div aria-hidden className={COLUMNS}>
+          <span />
+          <div className="relative h-5 font-terminal text-[10px] text-zinc-400 tabular-nums">
+            {ticks.map((year) => (
+              <span
+                key={year}
+                className="absolute -translate-x-1/2"
+                style={{ left: `${((year - from) / span) * 100}%` }}
+              >
+                {year}
+              </span>
+            ))}
           </div>
-          {chart}
         </div>
-      )}
-      {hover ? <Tooltip community={names.get(hover.row.c)} hover={hover} /> : null}
+        {chart}
+      </div>
+      {hover ? <Tooltip community={names?.get(hover.row.c)} hover={hover} /> : null}
       <figcaption className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-zinc-300">
         <span className="inline-flex items-center gap-2">
           <span className="size-[5px] rounded-full" style={{ background: MARK }} /> Meetup o taller

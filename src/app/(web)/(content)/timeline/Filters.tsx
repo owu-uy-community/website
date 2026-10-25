@@ -57,6 +57,7 @@ import {
   SORTS,
   type Sort,
 } from "./filter-state";
+import { CONTROL_BOX, COUNT_PX, FIELD, FIELD_LABEL, KIND_PILL, Line, SWITCH_ROW } from "./Skeletons";
 
 const KIND_ICON: Record<TimelineKind, ReactNode> = {
   meetup: <Users aria-hidden />,
@@ -69,8 +70,7 @@ const KIND_ICON: Record<TimelineKind, ReactNode> = {
 
 const ALL = "todas";
 const number = new Intl.NumberFormat("es-UY");
-const control =
-  "h-10 rounded-xl border border-white/10 bg-white/[0.04] text-[14px] text-zinc-100 hover:border-white/20 focus-visible:border-yellow-400/50";
+const control = cn(CONTROL_BOX, "text-[14px] text-zinc-100 hover:border-white/20 focus-visible:border-yellow-400/50");
 
 type Props = {
   state: ArchiveFilters;
@@ -80,6 +80,8 @@ type Props = {
   /** First and last year with events */
   range: [number, number];
   total: number;
+  /** The rows are still on their way: counts show as bars, not as zeros */
+  loading?: boolean;
 };
 
 /** Communities, searchable, several at once; the busiest first and the chosen ones on top */
@@ -161,8 +163,8 @@ function CommunityPicker({ state, set, communities }: Pick<Props, "state" | "set
 
 function Field({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col gap-2", className)}>
-      <span className="text-[12px] font-medium tracking-wide text-zinc-400 uppercase">{label}</span>
+    <div className={cn(FIELD, className)}>
+      <span className={FIELD_LABEL}>{label}</span>
       {children}
     </div>
   );
@@ -182,10 +184,7 @@ function SwitchRow({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <label
-      className="flex cursor-pointer items-center justify-between gap-3 py-1 text-[14px] text-zinc-200"
-      htmlFor={id}
-    >
+    <label className={cn(SWITCH_ROW, "cursor-pointer text-zinc-200")} htmlFor={id}>
       <span>
         {label}
         {hint ? <span className="block text-[12px] text-zinc-400">{hint}</span> : null}
@@ -196,7 +195,7 @@ function SwitchRow({
 }
 
 /** Type, topic, city, years, the switches and the order: inline on large screens, in a sheet on phones */
-function MoreFilters({ state, set, rows, range, communities }: Omit<Props, "total">) {
+function MoreFilters({ state, set, rows, range, communities, loading }: Omit<Props, "total">) {
   const cities = useMemo(() => cityOptions(rows), [rows]);
   // How many events each type would add under the other filters: the dead ends show before the click
   const byKind = useMemo(() => {
@@ -222,15 +221,22 @@ function MoreFilters({ state, set, rows, range, communities }: Omit<Props, "tota
               <ToggleGroupItem
                 key={kind}
                 aria-label={`${KIND_LABEL[kind]}: ${byKind.get(kind) ?? 0}`}
-                className="h-8 rounded-full border border-white/10 px-3 text-[13px] text-zinc-300 data-[state=on]:border-yellow-400/50 data-[state=on]:bg-yellow-400/15 data-[state=on]:text-yellow-200 [&_svg]:size-3.5"
-                disabled={!byKind.get(kind) && !state.tipo.includes(kind)}
+                className={cn(
+                  KIND_PILL,
+                  "text-zinc-300 data-[state=on]:border-yellow-400/50 data-[state=on]:bg-yellow-400/15 data-[state=on]:text-yellow-200 [&_svg]:size-3.5"
+                )}
+                disabled={!loading && !byKind.get(kind) && !state.tipo.includes(kind)}
                 value={kind}
               >
                 {KIND_ICON[kind]}
                 {KIND_LABEL[kind]}
-                <span className="font-terminal text-[11px] tabular-nums opacity-70">
-                  {number.format(byKind.get(kind) ?? 0)}
-                </span>
+                {loading ? (
+                  <Line className="animate-pulse font-terminal text-[11px]" w="1.4rem" />
+                ) : (
+                  <span className="font-terminal text-[11px] tabular-nums opacity-70">
+                    {number.format(byKind.get(kind) ?? 0)}
+                  </span>
+                )}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -460,11 +466,15 @@ export default function Filters(props: Props) {
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <p aria-live="polite" className="text-sm text-zinc-300">
-            <span className="font-semibold text-white tabular-nums">{number.format(total)}</span>{" "}
-            {total === 1 ? "evento" : "eventos"}
-            {!state.online ? <span className="text-zinc-400"> · sin los online</span> : null}
-          </p>
+          {props.loading ? (
+            <Line className="animate-pulse text-sm" w={COUNT_PX} />
+          ) : (
+            <p aria-live="polite" className="text-sm text-zinc-300">
+              <span className="font-semibold text-white tabular-nums">{number.format(total)}</span>{" "}
+              {total === 1 ? "evento" : "eventos"}
+              {!state.online ? <span className="text-zinc-400"> · sin los online</span> : null}
+            </p>
+          )}
           <ActiveChips {...props} />
         </div>
         <SortSelect set={set} state={state} />

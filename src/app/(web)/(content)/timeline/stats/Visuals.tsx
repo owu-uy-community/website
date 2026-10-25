@@ -10,6 +10,7 @@ import { formatDate } from "lib/timeline/format";
 import type { Rank, TimelineStats } from "lib/timeline/stats";
 
 import { useNear } from "../archive-data";
+import { ChartSkeleton } from "../Skeletons";
 import type { ChartSpec } from "./Charts";
 
 /*
@@ -246,7 +247,11 @@ export function BiggestList({ items }: { items: TimelineStats["biggest"] }) {
 /* --------------------------------------------------------- lazy charts */
 
 // recharts stays out of the page's bundle: it loads with the first chart that comes near the screen
-const Charts = dynamic(() => import("./Charts"), { ssr: false });
+const Charts = dynamic(() => import("./Charts"), { ssr: false, loading: Frame });
+
+function Frame() {
+  return <ChartSkeleton />;
+}
 
 /** A fixed-height slot (nothing shifts) that mounts its chart once it is within reach */
 export function LazyChart({ spec, height }: { spec: ChartSpec; height: number }) {
@@ -254,7 +259,7 @@ export function LazyChart({ spec, height }: { spec: ChartSpec; height: number })
 
   return (
     <div ref={ref} aria-hidden className="w-full" style={{ height }}>
-      {near ? <Charts spec={spec} /> : <div className="h-full w-full animate-pulse rounded-xl bg-white/[0.03]" />}
+      {near ? <Charts spec={spec} /> : <ChartSkeleton legend={spec.kind !== "attendance"} />}
     </div>
   );
 }

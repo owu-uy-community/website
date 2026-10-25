@@ -2,7 +2,19 @@
 
 import { Camera, MousePointerClick, Sparkles } from "lucide-react";
 import { m } from "motion/react";
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
+import {
+  type CSSProperties,
+  memo,
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { cn } from "app/lib/utils";
 import { Kbd } from "components/community/ui";
@@ -26,6 +38,20 @@ import { type ArchiveCommunity, settleOn, takeReturn, useArchiveData, useNear } 
 import EventPanel from "./EventPanel";
 import Filters from "./Filters";
 import { filterRows, sortRows, useArchiveFilters } from "./filter-state";
+import {
+  ArchiveListSkeleton,
+  MONTH,
+  ROW_BUTTON,
+  ROW_DATE,
+  ROW_DOT,
+  ROW_ITEM,
+  ROW_META,
+  ROW_RAIL,
+  ROW_THUMB,
+  ROW_TITLE,
+  YEAR_COUNT,
+  YEAR_HEAD,
+} from "./Skeletons";
 
 const BIG = new Set<TimelineKind>(["conferencia", "hackaton", "jam"]);
 const number = new Intl.NumberFormat("es-UY");
@@ -44,10 +70,125 @@ const MONTHS = [
   "diciembre",
 ];
 
-/** Rows a year (or the ranked list) shows before "Ver más", and their height before they render */
+/** Rows a year (or the ranked list) shows before "Ver más" */
 const FIRST = 40;
-const ROW_PX = 96;
-const MONTH_PX = 44;
+
+/* ------------------------------------------------- a year's height, ahead */
+
+/*
+ * A year renders its rows when it nears the screen; until then a block of the height they will
+ * take holds the place, so nothing above or below moves when they arrive. The height is worked
+ * out row by row with the classes' own numbers (px): the paddings and the date line, the title's
+ * lines and the meta line's (wrapped like flex-wrap), measured in the rows' fonts at the list's
+ * width, plus the month headers and the "Ver más" button.
+ */
+const ROW_FIXED = 20 + 4 + 4; // py-2.5, the date's mb-1, the meta's mt-1
+const TITLE_LH = 20.625; // 15px, leading-snug
+const META_LH = 19.5;
+const CHIP_PX = 22; // the milestone chip makes its line a little taller
+const ROW_GAP = 8; // pb-2, except under a month's last row
+const MONTH_PX = 54; // 30, mt-4, mb-2
+const MORE_PX = 52; // mt-4, h-9
+
+type ListLayout = { width: number; family: string; wide: boolean };
+
+let pen: CanvasRenderingContext2D | null = null;
+const textWidth = (text: string, font: string) => {
+  pen ??= document.createElement("canvas").getContext("2d");
+  if (!pen) return text.length * 7;
+  pen.font = font;
+  return pen.measureText(text).width;
+};
+
+/** Lines `text` takes at `width`, wrapped at spaces */
+function lineCount(text: string, width: number, font: string) {
+  const space = textWidth(" ", font);
+  let count = 1;
+  let line = 0;
+  for (const word of text.split(/\s+/)) {
+    const w = textWidth(word, font);
+    if (line && line + space + w > width) {
+      count += 1;
+      line = w;
+    } else line += (line ? space : 0) + w;
+  }
+  return count;
+}
+
+function rowHeight(row: ArchiveRow, name: string, { width, family, wide }: ListLayout) {
+  // ms-10, px-3 and, from sm, the 72px cover with its gap-4
+  const text = width - 40 - 24 - (wide && row.i ? 88 : 0);
+  const meta = `13px ${family}`;
+  const items = [{ w: textWidth(name, meta), h: META_LH }];
+  if (row.v) items.push({ w: Math.min(256, textWidth(row.v, meta)), h: META_LH });
+  if (row.r) items.push({ w: textWidth(`${number.format(row.r)} anotados`, meta), h: META_LH });
+  if (row.n) items.push({ w: 18 + textWidth(` ${number.format(row.n)}`, meta), h: META_LH });
+  if (row.h) items.push({ w: 32 + textWidth(` ${row.h}`, `12px ${family}`), h: CHIP_PX });
+  let metaHeight = 0;
+  let line = 0;
+  let lineHeight = 0;
+  for (const item of items) {
+    if (line && line + 12 + item.w > text) {
+      metaHeight += lineHeight + 4;
+      line = item.w;
+      lineHeight = item.h;
+    } else {
+      line += (line ? 12 : 0) + item.w;
+      lineHeight = Math.max(lineHeight, item.h);
+    }
+  }
+  const title = lineCount(row.t, text, `600 15px ${family}`) * TITLE_LH;
+  return ROW_FIXED + (wide ? 18 : 16) + title + metaHeight + lineHeight;
+}
+
+/** The height a year's first rows will take, grouped by month as YearSection groups them */
+function yearHeight(items: ArchiveRow[], names: Map<string, ArchiveCommunity>, layout: ListLayout) {
+  const groups = new Map<string, ArchiveRow[]>();
+  for (const row of items.slice(0, FIRST)) {
+    const month = row.d.slice(5, 7) || "00";
+    groups.set(month, [...(groups.get(month) ?? []), row]);
+  }
+  let height = items.length > FIRST ? MORE_PX : 0;
+  for (const rows of groups.values()) {
+    height += MONTH_PX + (rows.length - 1) * ROW_GAP;
+    for (const row of rows) height += rowHeight(row, names.get(row.c)?.name ?? row.c, layout);
+  }
+  return height;
+}
+
+/** The list's width and font, kept current as the window resizes */
+function useListLayout() {
+  const [layout, setLayout] = useState<ListLayout | null>(null);
+  const [element, setElement] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (!element) return;
+    const read = () =>
+      setLayout({
+        width: element.clientWidth,
+        family: getComputedStyle(element).fontFamily,
+        wide: window.matchMedia("(min-width: 640px)").matches,
+      });
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+  return [setElement, layout] as const;
+}
+
+// A quiet list drawn behind a year that hasn't rendered yet: a dot, a date, a title, a meta line
+// every 94px, with CSS alone (no elements to lay out)
+const ROW_PATTERN: CSSProperties = {
+  backgroundImage: [
+    "radial-gradient(circle at 12px 22px, rgb(255 255 255 / 0.07) 5px, transparent 6px)",
+    "linear-gradient(rgb(255 255 255 / 0.05) 0 9px, transparent 9px)",
+    "linear-gradient(rgb(255 255 255 / 0.06) 0 13px, transparent 13px)",
+    "linear-gradient(rgb(255 255 255 / 0.04) 0 10px, transparent 10px)",
+  ].join(","),
+  backgroundSize: "24px 94px, 7.5rem 94px, 55% 94px, 30% 94px",
+  backgroundPosition: "0 54px, 52px 68px, 52px 90px, 52px 116px",
+  backgroundRepeat: "repeat-y",
+};
 
 const useDesktop = () =>
   useSyncExternalStore(
@@ -77,7 +218,16 @@ const groupByYear = (rows: ArchiveRow[]): Year[] => {
  * Rows load when the archive gets near the screen and each year renders when it does, so the
  * page stays light whatever the size of the history. All of it lives in the URL.
  */
+/** The URL is the filters' store; the adapter lives here, with the only code that reads it, client-side */
 export default function Archive() {
+  return (
+    <NuqsAdapter>
+      <ArchiveView />
+    </NuqsAdapter>
+  );
+}
+
+function ArchiveView() {
   const [root, rootNear] = useNear<HTMLDivElement>("1500px");
   // A link straight into the archive (a year, a selected event, filters) can't wait for the
   // reader to scroll near it: its anchor only exists once the rows are in
@@ -97,6 +247,7 @@ export default function Archive() {
   const [state, set] = useArchiveFilters();
   const query = useDeferredValue(state.q);
   const desktop = useDesktop();
+  const [measureList, listLayout] = useListLayout();
   const { rows, communities } = data ?? { rows: [], communities: [] };
   const byCommunity = useMemo(() => new Map(communities.map((c) => [c.slug, c])), [communities]);
   const range = useMemo((): [number, number] => {
@@ -215,6 +366,7 @@ export default function Archive() {
     selected && index >= 0 ? (
       <EventPanel
         direction={direction}
+        preview={{ row: ordered[index], community: byCommunity.get(ordered[index].c) }}
         next={toNeighbour(ordered[index + 1])}
         onMove={(slug, dir) => {
           select(slug, dir);
@@ -236,21 +388,18 @@ export default function Archive() {
         rows={rows}
         set={set}
         state={state}
+        loading={!data}
         total={data ? ordered.length : 0}
       />
 
       {!data ? (
-        <div aria-busy className="mt-8 flex flex-col gap-4">
-          {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-white/[0.04]" />
-          ))}
-        </div>
+        <ArchiveListSkeleton />
       ) : ordered.length ? (
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] xl:grid-cols-[4rem_minmax(0,1fr)_minmax(0,26rem)]">
           {chronological ? <YearIndex years={years} /> : <span className="hidden xl:block" />}
 
           {/* --------------------------------------------------------- list */}
-          <div className="min-w-0" onKeyDown={onKeyDown} role="presentation">
+          <div ref={measureList} className="min-w-0" onKeyDown={onKeyDown} role="presentation">
             {chronological ? (
               <div className="flex flex-col gap-12">
                 {years.map(([year, items]) => (
@@ -259,6 +408,7 @@ export default function Archive() {
                     key={`${year}|${filterKey}`}
                     focus={focus}
                     items={items}
+                    layout={listLayout}
                     names={byCommunity}
                     onSelect={select}
                     selected={selected}
@@ -426,7 +576,8 @@ function YearSection({
   selected,
   focus,
   onSelect,
-}: ListProps & { year: string; items: ArchiveRow[] }) {
+  layout,
+}: ListProps & { year: string; items: ArchiveRow[]; layout: ListLayout | null }) {
   const [ref, near] = useNear<HTMLElement>("800px");
   const focusIndex = focus ? items.findIndex((row) => row.s === focus) : -1;
   const [limit, setLimit] = useState(FIRST);
@@ -444,12 +595,9 @@ function YearSection({
 
   return (
     <section ref={ref} aria-labelledby={`anio-${year}-h`} className="scroll-mt-36" id={`anio-${year}`}>
-      <h3
-        className="flex items-baseline gap-3 border-b border-white/[0.08] pb-3 font-title text-3xl font-extrabold tracking-tight text-white sm:text-4xl"
-        id={`anio-${year}-h`}
-      >
+      <h3 className={YEAR_HEAD} id={`anio-${year}-h`}>
         {year}
-        <span className="font-sans text-sm font-normal tracking-normal text-zinc-400">
+        <span className={YEAR_COUNT}>
           {number.format(items.length)} {items.length === 1 ? "evento" : "eventos"}
         </span>
       </h3>
@@ -457,7 +605,7 @@ function YearSection({
         <>
           {months.map(([month, rows]) => (
             <div key={month}>
-              <p className="sticky top-[8.3rem] z-10 -mx-2 mt-4 mb-2 bg-zinc-950/90 px-2 py-1.5 text-[12px] font-medium tracking-wide text-zinc-400 uppercase backdrop-blur">
+              <p className={MONTH}>
                 {month === "00" ? "Sin mes" : MONTHS[Number(month) - 1]}
                 <span className="ml-2 font-terminal tracking-normal normal-case">{rows.length}</span>
               </p>
@@ -487,13 +635,27 @@ function YearSection({
           ) : null}
         </>
       ) : (
-        <div
-          aria-hidden
-          style={{ height: Math.min(items.length, FIRST) * ROW_PX + Math.min(12, items.length) * MONTH_PX }}
-        />
+        <Placeholder items={items} layout={layout} names={names} />
       )}
     </section>
   );
+}
+
+/** A year before its rows: as tall as they will be, with a skeleton list drawn in */
+function Placeholder({
+  items,
+  names,
+  layout,
+}: {
+  items: ArchiveRow[];
+  names: Map<string, ArchiveCommunity>;
+  layout: ListLayout | null;
+}) {
+  const height = useMemo(
+    () => (layout ? yearHeight(items, names, layout) : Math.min(items.length, FIRST) * 100),
+    [items, names, layout]
+  );
+  return <div aria-hidden style={{ ...ROW_PATTERN, height }} />;
 }
 
 /** Ranked by attendance or by photos: one list with its place on each row */
@@ -551,16 +713,12 @@ function RowView({
   const thumb = row.i ? thumbSources(row.i, 72) : null;
 
   return (
-    <TimelineItem
-      // Room above and below when ↑/↓ scroll a row into view: it never lands under the headers or on the edge
-      className="scroll-mt-48 scroll-mb-24 group-data-[orientation=vertical]/timeline:ms-10 group-data-[orientation=vertical]/timeline:not-last:pb-2"
-      id={`e-${row.s}`}
-      step={1}
-    >
-      <TimelineSeparator className="bg-white/10 group-data-[orientation=vertical]/timeline:-left-7 group-data-[orientation=vertical]/timeline:h-[calc(100%-1rem)] group-data-[orientation=vertical]/timeline:translate-y-5" />
+    // scroll-m (in ROW_ITEM): room above and below when ↑/↓ scroll a row into view
+    <TimelineItem className={ROW_ITEM} id={`e-${row.s}`} step={1}>
+      <TimelineSeparator className={ROW_RAIL} />
       <TimelineIndicator
         className={cn(
-          "size-3 rounded-full border-0 bg-zinc-800 ring-1 ring-white/20 transition-transform group-data-[orientation=vertical]/timeline:top-4 group-data-[orientation=vertical]/timeline:-left-7",
+          ROW_DOT,
           BIG.has(row.k) && "bg-[#b8860b] ring-[#b8860b]/50",
           row.k === "hito" && "bg-yellow-400 ring-yellow-300",
           selected && "scale-125 bg-yellow-400 ring-yellow-300"
@@ -570,7 +728,8 @@ function RowView({
         animate={{ opacity: 1, y: 0 }}
         aria-current={selected ? "true" : undefined}
         className={cn(
-          "flex w-full items-start gap-4 rounded-xl px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:outline-none",
+          ROW_BUTTON,
+          "transition-colors focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:outline-none",
           selected ? "bg-yellow-400/[0.07] ring-1 ring-yellow-400/40" : "hover:bg-white/[0.035]"
         )}
         initial={{ opacity: 0, y: 6 }}
@@ -579,19 +738,17 @@ function RowView({
         type="button"
       >
         <TimelineHeader className="min-w-0 flex-1">
-          <TimelineDate className="font-terminal text-[12px] font-normal text-zinc-400">
+          <TimelineDate className={ROW_DATE}>
             {rank ? <span className="mr-2 text-yellow-300">#{rank}</span> : null}
             {formatDate({ start: row.d, end: row.e })}
             <span className="ml-2">· {KIND_LABEL[row.k]}</span>
             {row.x ? <span className="ml-2">· Ecosistema</span> : null}
             {row.o ? <span className="ml-2">· Online</span> : null}
           </TimelineDate>
-          <TimelineTitle
-            className={cn("text-[15px] leading-snug font-semibold", selected ? "text-yellow-100" : "text-zinc-100")}
-          >
+          <TimelineTitle className={cn(ROW_TITLE, selected ? "text-yellow-100" : "text-zinc-100")}>
             {row.t}
           </TimelineTitle>
-          <TimelineContent className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-zinc-400">
+          <TimelineContent className={ROW_META}>
             <span className="text-zinc-300">{name}</span>
             {stat ? <span className="text-yellow-200">{stat}</span> : null}
             {row.v ? <span className="max-w-[16rem] truncate">{row.v}</span> : null}
@@ -612,7 +769,7 @@ function RowView({
           // The cover at thumbnail size, straight from Meetup's or Flickr's own small sizes
           <img
             alt=""
-            className="hidden h-[54px] w-[72px] shrink-0 rounded-lg bg-zinc-900 object-cover ring-1 ring-white/10 sm:block"
+            className={cn(ROW_THUMB, "bg-zinc-900 object-cover ring-1 ring-white/10")}
             decoding="async"
             height={54}
             loading="lazy"

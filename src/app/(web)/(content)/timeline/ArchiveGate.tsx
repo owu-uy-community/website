@@ -4,14 +4,12 @@ import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 
 import { returnPending, useNear } from "./archive-data";
+import { ArchiveSkeleton } from "./Skeletons";
 
 function Placeholder() {
   return (
-    <div aria-busy className="flex flex-col gap-4">
-      <div className="h-14 rounded-2xl bg-white/[0.03]" />
-      {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="h-16 rounded-xl bg-white/[0.03]" />
-      ))}
+    <div aria-busy>
+      <ArchiveSkeleton />
     </div>
   );
 }

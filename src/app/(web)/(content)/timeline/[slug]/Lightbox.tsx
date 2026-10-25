@@ -4,7 +4,9 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ArrowLeft, ArrowRight, ArrowUpRight, X } from "lucide-react";
 import { m } from "motion/react";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import { cn } from "app/lib/utils";
 
 import type { GalleryPhoto } from "./Gallery";
 
@@ -29,6 +31,8 @@ export default function Lightbox({
   const photo = photos[index];
   const step = (by: number) => onChange((index + by + photos.length) % photos.length);
   const swipe = useRef<number | null>(null);
+  const [loaded, setLoaded] = useState<string | null>(null);
+  const ready = loaded === photo.full.src;
 
   useEffect(() => {
     for (const neighbor of [photos[index + 1], photos[index - 1]]) {
@@ -64,19 +68,39 @@ export default function Lightbox({
           <Dialog.Description className="sr-only">
             Foto {index + 1} de {photos.length}
           </Dialog.Description>
-          <m.img
-            key={photo.full.src}
-            alt={photo.alt}
-            animate={{ opacity: 1, scale: 1 }}
-            className="max-h-[78vh] max-w-full rounded-lg object-contain shadow-2xl select-none"
-            initial={{ opacity: 0, scale: 0.985 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            decoding="async"
-            draggable={false}
-            sizes="100vw"
-            src={photo.full.src}
-            srcSet={photo.full.srcSet}
-          />
+          {/* A fixed box: the caption and the arrows stay still from one photo to the next. The
+              tile it was opened from is already in the cache, so it shows at once, softened, and
+              the full photo fades in over it */}
+          <div className="relative h-[68dvh] w-full sm:h-[76vh]">
+            <img
+              key={photo.tile.src}
+              alt=""
+              aria-hidden
+              className={cn(
+                "absolute inset-0 size-full object-contain blur-[2px] transition-opacity duration-300 select-none",
+                ready && "opacity-0"
+              )}
+              decoding="async"
+              draggable={false}
+              sizes={photo.tile.sizes}
+              src={photo.tile.src}
+              srcSet={photo.tile.srcSet}
+            />
+            <m.img
+              key={photo.full.src}
+              alt={photo.alt}
+              animate={{ opacity: ready ? 1 : 0, scale: ready ? 1 : 0.995 }}
+              className="absolute inset-0 size-full object-contain select-none"
+              decoding="async"
+              draggable={false}
+              initial={{ opacity: 0, scale: 0.995 }}
+              onLoad={() => setLoaded(photo.full.src)}
+              sizes="100vw"
+              src={photo.full.src}
+              srcSet={photo.full.srcSet}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </div>
           <div className="flex w-full max-w-4xl flex-wrap items-center justify-between gap-3 text-sm text-zinc-400">
             {photo.event ? (
               <Link
