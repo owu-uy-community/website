@@ -4,9 +4,11 @@ import { photoSources, thumbSources } from "./image";
 
 const FLICKR = "https://live.staticflickr.com/6113/6336036326_f2102b3f2b_c.jpg";
 const MEETUP = "https://secure.meetupstatic.com/photos/event/2/c/8/0/highres_96191392.jpeg";
+const GITHUB = "https://raw.githubusercontent.com/ember-montevideo/meetups/master/fotos/01.jpg";
+const at = (prefix: string) => `https://secure.meetupstatic.com/photos/event/2/c/8/0/${prefix}96191392.webp`;
 
 describe(photoSources, () => {
-  test("lists Flickr's own sizes, so Flickr photos skip the optimizer", () => {
+  test("lists Flickr's own sizes", () => {
     const sources = photoSources(FLICKR, "50vw");
     expect(sources.src).toBe("https://live.staticflickr.com/6113/6336036326_f2102b3f2b_z.jpg");
     expect(sources.srcSet).toBe(
@@ -21,11 +23,23 @@ describe(photoSources, () => {
     expect(sources.sizes).toBe("50vw");
   });
 
-  test("sends single-size sources through the optimizer, at every width", () => {
+  test("lists Meetup's own sizes, as WebP, straight from its CDN", () => {
     const sources = photoSources(MEETUP, "100vw");
-    expect(sources.src).toContain("/_next/image?url=" + encodeURIComponent(MEETUP));
-    expect(sources.srcSet).toContain("w=640");
-    expect(sources.srcSet).toContain("w=1920");
+    expect(sources.src).toBe(at("highres_"));
+    expect(sources.srcSet).toBe(
+      [
+        `${at("thumb_")} 80w`,
+        `${at("global_")} 180w`,
+        `${at("event_")} 360w`,
+        `${at("600_")} 600w`,
+        `${at("highres_")} 1200w`,
+      ].join(", ")
+    );
+    expect(sources.srcSet).not.toContain("/_next/image");
+  });
+
+  test("leaves single-size sources as they are", () => {
+    expect(photoSources(GITHUB, "100vw")).toStrictEqual({ src: GITHUB });
   });
 });
 
@@ -35,16 +49,18 @@ describe(thumbSources, () => {
     expect(thumbSources(FLICKR, 72).src).toBe("https://live.staticflickr.com/6113/6336036326_f2102b3f2b_q.jpg");
   });
 
-  test("asks the optimizer for a small file, sharp on 2x screens", () => {
-    const sources = thumbSources(MEETUP, 72);
-    expect(sources.src).toContain("/_next/image?url=");
-    expect(sources.srcSet).toMatch(/1x, .* 2x$/);
+  test("picks Meetup sizes that cover the square, sharp on 2x screens", () => {
+    expect(thumbSources(MEETUP, 72)).toStrictEqual({
+      src: at("global_"),
+      srcSet: `${at("global_")} 1x, ${at("event_")} 2x`,
+    });
+    expect(thumbSources(MEETUP, 160)).toStrictEqual({
+      src: at("event_"),
+      srcSet: `${at("event_")} 1x, ${at("600_")} 2x`,
+    });
   });
-});
 
-describe("photoSources with optimize", () => {
-  test("sends Flickr's largest size through the optimizer", () => {
-    const sources = photoSources(FLICKR, "100vw", true);
-    expect(sources.src).toContain(encodeURIComponent("https://live.staticflickr.com/6113/6336036326_f2102b3f2b_b.jpg"));
+  test("leaves single-size sources as they are", () => {
+    expect(thumbSources(GITHUB, 72)).toStrictEqual({ src: GITHUB });
   });
 });

@@ -86,9 +86,7 @@ async function EventView({ slug }: { slug: string }) {
       photo.src,
       index === 0
         ? "(min-width: 1024px) 576px, (min-width: 640px) 66vw, 100vw"
-        : "(min-width: 1024px) 288px, (min-width: 640px) 33vw, 50vw",
-      // The big first tile is the page's largest paint: the smallest file wins
-      index === 0
+        : "(min-width: 1024px) 288px, (min-width: 640px) 33vw, 50vw"
     ),
     full: photoSources(photo.src, "100vw"),
     alt: photo.alt ?? `Foto de ${event.title}`,

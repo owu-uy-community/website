@@ -1,47 +1,71 @@
 import { getImageProps } from "next/image";
 
 /*
- * Timeline photos stay where they are published; this only picks the bytes. Flickr serves good
- * JPEGs at fixed widths, so its own sizes go in the srcset. Meetup's CDN has none (its "600" is a
- * 400px PNG of ~350 KB), and GitHub, the Wayback Machine and the repo's own files have one size,
- * so those go through the image optimizer: AVIF/WebP at the width each screen needs.
+ * Timeline photos are served straight from where they are published: the reader's browser gets
+ * them from Meetup, Flickr or GitHub, and nothing is copied or resized on our side. Meetup (asked
+ * for .webp) and Flickr publish each photo at several sizes, so the srcset lets every screen take
+ * the one it needs; GitHub's come in one size. Only the site's own files (community logos under
+ * /public) go through the image optimizer.
  */
 
 export type PhotoSources = { src: string; srcSet?: string; sizes?: string };
 
-const FLICKR_WIDTHS = [
+type Ladder = (readonly [width: number, url: string])[];
+
+// By their longest side. Flickr's _s/_q are squares, for thumbnails
+const FLICKR = [
   [320, "_n"],
   [400, "_w"],
   [640, "_z"],
   [800, "_c"],
   [1024, "_b"],
 ] as const;
+// highres_ is the original upload, usually 1,200–1,600px
+const MEETUP = [
+  [80, "thumb_"],
+  [180, "global_"],
+  [360, "event_"],
+  [600, "600_"],
+  [1200, "highres_"],
+] as const;
 
 const isFlickr = (src: string) => src.includes("staticflickr.com/");
 const flickrAt = (src: string, suffix: string) => src.replace(/(_[a-z])?\.jpg$/, `${suffix}.jpg`);
+// Asked for .jpeg, some sizes come back as heavy PNGs; .webp is a real WebP at every size
+const meetupAt = (src: string, prefix: string) => src.replace(/\/[a-z0-9]+_(\d+)\.\w+$/, `/${prefix}$1.webp`);
 
-/**
- * A responsive photo: `sizes` says how wide it shows, the browser picks the file. `optimize` sends
- * even a Flickr photo through the optimizer (AVIF is about a third of its JPEG): for the one photo
- * that is a page's largest paint.
- */
-export function photoSources(src: string, sizes: string, optimize = false): PhotoSources {
-  if (isFlickr(src) && optimize) src = flickrAt(src, "_b");
-  else if (isFlickr(src)) {
-    return {
-      src: flickrAt(src, "_z"),
-      srcSet: FLICKR_WIDTHS.map(([width, suffix]) => `${flickrAt(src, suffix)} ${width}w`).join(", "),
-      sizes,
-    };
-  }
-  const { props } = getImageProps({ src, alt: "", fill: true, sizes });
-  return { src: props.src, srcSet: props.srcSet, sizes: props.sizes };
+function ladder(src: string): Ladder | null {
+  if (isFlickr(src)) return FLICKR.map(([width, suffix]) => [width, flickrAt(src, suffix)]);
+  if (src.includes("meetupstatic.com/")) return MEETUP.map(([width, prefix]) => [width, meetupAt(src, prefix)]);
+  return null;
 }
 
-/** A fixed-size thumbnail (CSS px), sharp on 2x screens */
+/** The smallest size at least `px` wide, or the largest there is */
+const atLeast = (sizes: Ladder, px: number) => (sizes.find(([width]) => width >= px) ?? sizes.at(-1)!)[1];
+
+/** A responsive photo: `sizes` says how wide it shows, the browser picks the file */
+export function photoSources(src: string, sizes: string): PhotoSources {
+  if (src.startsWith("/")) {
+    const { props } = getImageProps({ src, alt: "", fill: true, sizes });
+    return { src: props.src, srcSet: props.srcSet, sizes: props.sizes };
+  }
+  const steps = ladder(src);
+  if (!steps) return { src };
+  return { src: atLeast(steps, 640), srcSet: steps.map(([width, url]) => `${url} ${width}w`).join(", "), sizes };
+}
+
+/** A thumbnail that covers a `px` square (CSS px), sharp on 2x screens */
 export function thumbSources(src: string, px: number): PhotoSources {
+  if (src.startsWith("/")) {
+    const { props } = getImageProps({ src, alt: "", width: px, height: px });
+    return { src: props.src, srcSet: props.srcSet };
+  }
   // Flickr's squares: 75px (_s) and 150px (_q)
   if (isFlickr(src)) return { src: flickrAt(src, px * 2 <= 75 ? "_s" : "_q") };
-  const { props } = getImageProps({ src, alt: "", width: px, height: px });
-  return { src: props.src, srcSet: props.srcSet };
+  const steps = ladder(src);
+  if (!steps) return { src };
+  // Most photos are 16:9, so covering the square takes a width of 16/9 of its side
+  const one = atLeast(steps, (px * 16) / 9);
+  const two = atLeast(steps, (px * 32) / 9);
+  return one === two ? { src: one } : { src: one, srcSet: `${one} 1x, ${two} 2x` };
 }

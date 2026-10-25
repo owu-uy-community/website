@@ -156,7 +156,7 @@
       ["Data Science UY pasa a ser ConnectIA y hace ", ["su primera conferencia", "2024-09-14-connectia-2024"], "."],
       [["La Meetup II", "2024-10-19-la-meetup-2024"], ", vuelve ", ["AppSec Río de la Plata", "2024-12-12-owasp-appsec-2024"], " y nace AWS Girls UG Uruguay."]
     ],
-    "photos": [{ "event": "2024-10-19-la-meetup-2024", "n": 0 }, { "event": "2024-09-14-connectia-2024", "n": 1 }],
+    "photos": [{ "event": "2024-10-19-la-meetup-2024", "n": 0 }],
     "badges": ["aws-girls-ug-uruguay"]
   },
   {
