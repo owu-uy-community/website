@@ -418,9 +418,11 @@ export default function EventPanel({
   }, [previous, next]);
 
   return (
-    <div className="flex h-full flex-col">
-      {/* In the phone's sheet this is what scrolls (the sheet has a fixed height); on desktop, the panel around it */}
-      <div className="relative min-h-0 flex-1 overflow-x-hidden" data-reader>
+    // At least as tall as the sheet, so the buttons sit at its bottom; what scrolls is the sheet or the
+    // panel around it, never this. `clip` cuts the sliding content without making a second scroller
+    // (`hidden` on one axis turns the other into `auto`, and a subpixel of overflow drew a scrollbar)
+    <div className="flex min-h-full flex-col">
+      <div className="relative grow overflow-clip">
         <AnimatePresence custom={direction} initial={false} mode="popLayout">
           <m.div
             key={slug}
