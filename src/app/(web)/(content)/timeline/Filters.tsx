@@ -483,4 +483,4 @@ export default function Filters(props: Props) {
   );
 }
 
-export { KIND_ICON };
+export { CommunityPicker, KIND_ICON, MoreFilters };

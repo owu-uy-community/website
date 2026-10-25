@@ -92,6 +92,10 @@ export default async function TimelinePage() {
               <ButtonLink arrow href="#archivo">
                 Ver todos los eventos
               </ButtonLink>
+              {/* The deck is made for a phone: there it's one tap away */}
+              <ButtonLink className="sm:hidden" href="/timeline/descubrir" variant="secondary">
+                Deslizá los eventos
+              </ButtonLink>
               <ButtonLink href="#sumar" variant="secondary">
                 ¿Falta algo? Sumalo
               </ButtonLink>
