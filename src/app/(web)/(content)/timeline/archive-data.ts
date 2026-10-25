@@ -2,14 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import type { ArchiveRow } from "lib/timeline/data";
-import type { TimelineCommunity } from "lib/timeline/types";
+import type { ArchiveCommunity, ArchiveRow } from "lib/timeline/data";
 
-export type ArchiveCommunity = Pick<TimelineCommunity, "slug" | "name" | "status" | "layer" | "first"> & {
-  events: number;
-  /** Its first topic, for the topic filter */
-  topic: string;
-};
+export type { ArchiveCommunity };
 export type ArchiveData = { rows: ArchiveRow[]; communities: ArchiveCommunity[] };
 
 const EMPTY: ArchiveData = { rows: [], communities: [] };
@@ -51,8 +46,10 @@ export function useNear<T extends Element>(margin = "1200px") {
     (element: T | null) => {
       if (!element) return;
       const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (!entry?.isIntersecting) return;
+        (entries) => {
+          // The last entry is the current state: a jump (a link to a year) can queue an older
+          // "not near" ahead of it in the same batch, and reading only the first missed the arrival
+          if (!entries.at(-1)?.isIntersecting) return;
           setNear(true);
           observer.disconnect();
         },

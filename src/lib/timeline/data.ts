@@ -101,6 +101,16 @@ export type ArchiveRow = {
   n?: number;
   /** first milestone that happened there */
   h?: string;
+  /*
+   * What the reading panel needs to hold the exact shape of an event while it loads: how many
+   * photos it has (as files), its description's length, how many talks, the attendance when
+   * there's no RSVP count, and a date's confidence when it isn't firm
+   */
+  p?: number;
+  l?: number;
+  tk?: number;
+  a?: string;
+  q?: TimelineEvent["confidence"];
 };
 
 export function getArchiveRows(): ArchiveRow[] {
@@ -126,9 +136,46 @@ export function getArchiveRows(): ArchiveRow[] {
       ...(cover ? { i: cover.src } : {}),
       ...(n ? { n } : {}),
       ...(event.highlights?.length ? { h: event.highlights[0] } : {}),
+      ...(event.photos?.length ? { p: event.photos.length } : {}),
+      ...(event.description ? { l: event.description.length } : {}),
+      ...(event.talks?.length ? { tk: event.talks.length } : {}),
+      ...(event.attendance && !event.rsvps ? { a: event.attendance } : {}),
+      ...(event.confidence ? { q: event.confidence } : {}),
     };
   });
 }
+
+/** A community as the archive lists it, its event count taken from the rows (milestones included) */
+export type ArchiveCommunity = Pick<TimelineCommunity, "slug" | "name" | "status" | "layer" | "first"> & {
+  events: number;
+  /** Its first topic, for the topic filter */
+  topic: string;
+  logo?: string;
+  /** Photo count, when it has any */
+  photos?: number;
+};
+
+/** The archive's data (/timeline/archivo.json), also what the server renders the lanes' preview from */
+export const getArchive = cache(() => {
+  const rows = getArchiveRows();
+  const counts = new Map<string, number>();
+  for (const row of rows) counts.set(row.c, (counts.get(row.c) ?? 0) + 1);
+  const communities: ArchiveCommunity[] = getTimeline()
+    .communities.filter((community) => counts.has(community.slug))
+    .map(({ slug, name, status, layer, first, topics, logo, photos }) => ({
+      slug,
+      name,
+      events: counts.get(slug)!,
+      status,
+      layer,
+      first,
+      topic: topics[0] ?? "general",
+      ...(logo ? { logo } : {}),
+      ...(photos ? { photos } : {}),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  return { rows, communities };
+});
 
 type StoryYear = {
   year: number;

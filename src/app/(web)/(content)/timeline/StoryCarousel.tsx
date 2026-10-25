@@ -14,6 +14,8 @@ import type { GalleryPhoto } from "./[slug]/Gallery";
 
 // Its own (empty) Suspense boundary: without a `loading`, the first open suspends up to the
 // nearest one above (the archive, the page) and blanks it while the chunk loads, losing the scroll
+const CARD_SIZES = "(max-width: 767px) 80vw, 1px";
+
 const Lightbox = dynamic(() => import("./[slug]/Lightbox"), { loading: () => null });
 
 /**
@@ -37,9 +39,13 @@ export default function StoryCarousel({ markers }: { markers: LifelineMarker[] }
     };
   }, [api]);
 
-  // The chip of the year in view stays in view too
+  // The chip of the year in view stays centered in its row. Only the row scrolls: scrollIntoView
+  // also scrolled the page, which jumped to the story on load and fought links into the archive
   useEffect(() => {
-    chips.current?.children[current]?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+    const row = chips.current;
+    const chip = row?.children[current] as HTMLElement | undefined;
+    if (!row || !chip) return;
+    row.scrollTo({ left: chip.offsetLeft - (row.clientWidth - chip.offsetWidth) / 2, behavior: "smooth" });
   }, [current]);
 
   return (
@@ -48,7 +54,7 @@ export default function StoryCarousel({ markers }: { markers: LifelineMarker[] }
         <CarouselContent className="-ml-3 px-5">
           {markers.map((marker, index) => {
             const gallery: GalleryPhoto[] = (marker.photos ?? []).map((photo) => ({
-              tile: { src: photo.src, srcSet: photo.srcSet, sizes: "80vw" },
+              tile: { src: photo.src, srcSet: photo.srcSet, sizes: CARD_SIZES },
               full: { src: photo.src, srcSet: photo.srcSet, sizes: "100vw" },
               alt: photo.alt,
             }));
@@ -114,7 +120,7 @@ export default function StoryCarousel({ markers }: { markers: LifelineMarker[] }
                             className="size-full object-cover"
                             decoding="async"
                             loading="lazy"
-                            sizes="(max-width: 767px) 80vw, 1px"
+                            sizes={CARD_SIZES}
                             src={photo.tile.src}
                             srcSet={photo.tile.srcSet}
                           />
@@ -141,7 +147,8 @@ export default function StoryCarousel({ markers }: { markers: LifelineMarker[] }
         </button>
         <ol
           ref={chips}
-          className="flex min-w-0 flex-1 [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden"
+          // Positioned: the chips measure their offsets from it
+          className="relative flex min-w-0 flex-1 [scrollbar-width:none] gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden"
         >
           {markers.map((marker, index) => (
             <li key={marker.id}>

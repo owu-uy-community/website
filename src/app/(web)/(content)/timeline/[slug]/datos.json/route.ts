@@ -1,6 +1,6 @@
 import { cacheLife } from "next/cache";
 
-import { getTimeline } from "lib/timeline/data";
+import { getArchive, getTimeline } from "lib/timeline/data";
 import type { TimelineCommunity, TimelineEvent } from "lib/timeline/types";
 
 /** What the archive's detail panel shows for one event: the event, its community and its neighbours there */
@@ -32,7 +32,8 @@ async function render(slug: string) {
           name: community.name,
           logo: community.logo,
           status: community.status,
-          events: community.events,
+          // The archive's count, so the panel says the same before and after it loads
+          events: getArchive().communities.find((c) => c.slug === community.slug)?.events ?? community.events,
           directory: community.directory,
           photos: community.photos,
         }

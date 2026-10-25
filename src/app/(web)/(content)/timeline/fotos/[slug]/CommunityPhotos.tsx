@@ -4,7 +4,9 @@ import { Camera } from "lucide-react";
 import { m } from "motion/react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { type CSSProperties, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+
+import { cn } from "app/lib/utils";
 
 import { photoSources } from "lib/timeline/image";
 import type { PhotoGroup } from "lib/timeline/photos";
@@ -19,12 +21,13 @@ const loadLightbox = () => import("../../[slug]/Lightbox");
 const Lightbox = dynamic(loadLightbox, { loading: () => null });
 
 const TILE_SIZES = "(min-width: 1024px) 288px, (min-width: 640px) 33vw, 50vw";
+const GRID = "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4";
+const TILE = "aspect-[4/3] rounded-xl";
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 /**
- * One event's photos: its header stays pinned while they scroll by; the tiles render once the
- * group gets near the screen, a block of the same aspect holding its place until then (2, 3 or
- * 4 columns of 4:3 tiles, so the page doesn't jump).
+ * One event's photos: its header stays pinned while they scroll by; the photos render once the
+ * group gets near the screen, empty tiles of the same grid holding their places until then.
  */
 function Group({
   group,
@@ -41,12 +44,6 @@ function Group({
   first: boolean;
 }) {
   const [ref, near] = useNear<HTMLElement>("900px");
-  const rows = (columns: number) => Math.ceil(group.photos.length / columns);
-  const placeholder = {
-    "--a2": `8 / ${3 * rows(2)}`,
-    "--a3": `12 / ${3 * rows(3)}`,
-    "--a4": `16 / ${3 * rows(4)}`,
-  } as CSSProperties;
 
   return (
     <section
@@ -72,7 +69,7 @@ function Group({
         </p>
       </header>
       {near || first ? (
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className={GRID}>
           {group.photos.map((photo, index) => {
             const sources = photoSources(photo.src, TILE_SIZES);
             return (
@@ -84,7 +81,10 @@ function Group({
               >
                 <button
                   aria-label={`Ver la foto ${index + 1} de ${group.photos.length} de ${group.title}`}
-                  className="group relative block aspect-[4/3] w-full overflow-hidden rounded-xl bg-zinc-900 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:outline-none"
+                  className={cn(
+                    TILE,
+                    "group relative block w-full overflow-hidden bg-zinc-900 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:outline-none"
+                  )}
                   onClick={() => onOpen(offset + index)}
                   type="button"
                 >
@@ -104,11 +104,12 @@ function Group({
           })}
         </ul>
       ) : (
-        <div
-          aria-hidden
-          className="aspect-[var(--a2)] sm:aspect-[var(--a3)] lg:aspect-[var(--a4)]"
-          style={placeholder}
-        />
+        // The same grid with empty tiles, one per photo: as tall as the photos will be, last row included
+        <ul aria-hidden className={cn(GRID, "animate-pulse")}>
+          {group.photos.map((photo) => (
+            <li key={photo.src} className={cn(TILE, "bg-zinc-900")} />
+          ))}
+        </ul>
       )}
     </section>
   );
@@ -127,7 +128,7 @@ export default function CommunityPhotos({ groups, community }: { groups: PhotoGr
       const event = { title: group.title, when: group.when, href: `/timeline/${group.slug}` };
       for (const photo of group.photos) {
         all.push({
-          tile: { src: photo.src },
+          tile: photoSources(photo.src, TILE_SIZES),
           full: photoSources(photo.src, "100vw"),
           alt: photo.alt ?? "",
           credit: photo.credit,

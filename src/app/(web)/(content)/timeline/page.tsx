@@ -1,6 +1,4 @@
 import { cacheLife } from "next/cache";
-import { NuqsAdapter } from "nuqs/adapters/next/app";
-import { Suspense } from "react";
 
 import {
   ButtonLink,
@@ -15,8 +13,9 @@ import {
 import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
 import { issueFormUrl, PRIVACY_EMAIL, sourceUrl } from "lib/community/site";
-import { getStats, getStory, getTimeline, isCommunityEvent } from "lib/timeline/data";
+import { getArchive, getStats, getStory, getTimeline, isCommunityEvent } from "lib/timeline/data";
 import { photoSources } from "lib/timeline/image";
+import { laneLayout } from "lib/timeline/lanes";
 
 import ArchiveGate from "./ArchiveGate";
 import { YearBars } from "./Charts";
@@ -44,6 +43,13 @@ const MOSAIC = [
   ["2024-10-19-la-meetup-2024", 0],
   ["2025-11-01-la-meetup-2025", 0],
 ] as const;
+
+/** The lanes up front (names and lines) for the server to draw before the dots arrive */
+function lanePreview() {
+  const { rows, communities } = getArchive();
+  const { lanes, top, info } = laneLayout(rows, communities, 36);
+  return { lanes: lanes.filter((c) => top.has(c.slug)).map(info), more: lanes.length - top.size };
+}
 
 function HeroMosaic() {
   const { bySlug } = getTimeline();
@@ -159,7 +165,7 @@ export default async function TimelinePage() {
                 };
               })}
             />
-            <Lanes from={2007} to={thisYear} />
+            <Lanes from={2007} preview={lanePreview()} to={thisYear} />
           </div>
         </Section>
 
@@ -180,12 +186,8 @@ export default async function TimelinePage() {
           id="archivo"
           title="Todos los eventos"
         >
-          <NuqsAdapter>
-            {/* useQueryStates reads the URL: the static shell renders the unfiltered list's header meanwhile */}
-            <Suspense fallback={<p className="text-sm text-zinc-400">Cargando el archivo…</p>}>
-              <ArchiveGate />
-            </Suspense>
-          </NuqsAdapter>
+          {/* The static HTML carries the archive's skeleton; the archive (and its URL state) is client-only */}
+          <ArchiveGate />
         </Section>
 
         {/* ------------------------------------------------------------ closing */}
