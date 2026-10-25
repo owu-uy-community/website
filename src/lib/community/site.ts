@@ -13,8 +13,9 @@ export const CONDUCT_EMAIL = "conducta@owu.uy";
 export const PRIVACY_EMAIL = "privacidad@owu.uy";
 
 /** A prefilled GitHub issue form in the website repo (.github/ISSUE_TEMPLATE/<template>.yml) */
-export const issueFormUrl = (template: "sumar-comunidad" | "publicar-evento" | "ofrecer-espacio") =>
-  `${REPO_URL}/issues/new?template=${template}.yml`;
+export const issueFormUrl = (
+  template: "sumar-comunidad" | "publicar-evento" | "ofrecer-espacio" | "sumar-a-la-historia"
+) => `${REPO_URL}/issues/new?template=${template}.yml`;
 
 /** "Editá esta página": the source of a route in the repo */
 export const sourceUrl = (path: string) => `${REPO_URL}/tree/main/${path}`;
@@ -42,6 +43,11 @@ export const PAGES = {
     description: "Todo lo que se habló en La Meetup, OWU CONF y los open spaces",
   },
   blog: { href: "/blog", label: "Blog", description: "Guías, recaps y novedades" },
+  historia: {
+    href: "/timeline",
+    label: "Historia",
+    description: "Cada meetup, conferencia y hackatón de las comunidades tech de Uruguay, desde 2007",
+  },
   semanario: { href: "/semanario", label: "Semanario", description: "Lo que pasó en el Slack, cada lunes" },
   primeraVez: {
     href: "/primera-vez",
@@ -123,7 +129,7 @@ export const FOOTER_COLUMNS: { title: string; links: SiteLink[] }[] = [
   },
   {
     title: "Leer",
-    links: [PAGES.charlas, PAGES.blog, PAGES.semanario, PAGES.encuesta],
+    links: [PAGES.historia, PAGES.charlas, PAGES.blog, PAGES.semanario, PAGES.encuesta],
   },
   {
     title: "Empresas",
