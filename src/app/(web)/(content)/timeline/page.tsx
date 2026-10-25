@@ -1,3 +1,4 @@
+import { Info } from "lucide-react";
 import { cacheLife } from "next/cache";
 
 import {
@@ -86,6 +87,25 @@ export default async function TimelinePage() {
   return (
     <>
       <main>
+        <Container className="pt-6">
+          <p
+            className="flex items-start gap-2.5 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] px-4 py-2.5 text-[13px] leading-relaxed text-zinc-300"
+            role="note"
+          >
+            <Info aria-hidden className="mt-[3px] size-4 shrink-0 text-yellow-300" />
+            <span>
+              OWU solo indexa contenido público y no aloja las fotos: se ven desde su fuente original. ¿Querés que
+              saquemos algo? Escribinos a{" "}
+              <a
+                className="text-zinc-100 underline decoration-white/25 underline-offset-4 hover:decoration-yellow-400"
+                href={`mailto:${PRIVACY_EMAIL}?subject=Contenido%20en%20la%20historia`}
+              >
+                {PRIVACY_EMAIL}
+              </a>
+              .
+            </span>
+          </p>
+        </Container>
         <PageHeader
           actions={
             <>
