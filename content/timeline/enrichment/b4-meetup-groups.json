@@ -1496,5 +1496,52 @@
     "url": "https://www.ort.edu.uy/en/news/phpday-web-technology-day-31185"
    }
   ]
+ },
+ "meetup:239386263": {
+  "description": "La primera juntada de **Tacuarembó Desarrolla**, un grupo creado en Meetup en marzo de 2017 para reunir a la comunidad de desarrolladores de software de Tacuarembó: conocerse, ayudar a quienes recién arrancan, intercambiar información y pasar un buen rato. La organizaron Gabriel Roldán y Santiago Ferreira el sábado 29 de abril en **Living** (Treinta y Tres 156), y la anunciaron con charlas, sorpresas y regalos.\n\nEl grupo llegó a 22 miembros y se juntó cuatro veces en 2017, siempre un sábado de tarde: el 29 de abril, el 3 de junio, el 22 de julio y el 28 de octubre.",
+  "organizers": [
+   "Gabriel Roldán",
+   "Santiago Ferreira"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ },
+ "meetup:239829708": {
+  "organizers": [
+   "Gabriel Roldán"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ },
+ "meetup:241001996": {
+  "organizers": [
+   "Gabriel Roldán"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ },
+ "meetup:244315150": {
+  "description": "La cuarta y última juntada de **Tacuarembó Desarrolla**, el grupo de desarrolladores de software de Tacuarembó. El recordatorio que mandó Meetup el día antes la ubicaba en **Living** (Treinta y Tres 156), como las anteriores; la página del evento terminó marcando el **Hotel Tacuarembó** (18 de Julio 133).",
+  "organizers": [
+   "Gabriel Roldán"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
  }
 }
