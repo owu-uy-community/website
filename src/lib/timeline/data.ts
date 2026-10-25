@@ -108,9 +108,17 @@ export type ArchiveRow = {
    */
   p?: number;
   l?: number;
+  /** Its first real photo (not a flyer, a banner or a logo), for the deck that only shows those */
+  f?: string;
   tk?: number;
   a?: string;
   q?: TimelineEvent["confidence"];
+};
+
+/** An event's first real photo, one not served by the Wayback Machine if it has any (those load slowly, or not) */
+const firstPhoto = (event: TimelineEvent) => {
+  const real = (event.photos ?? []).filter((photo) => !photo.banner);
+  return (real.find((photo) => !photo.src.includes("web.archive.org")) ?? real[0])?.src;
 };
 
 export function getArchiveRows(): ArchiveRow[] {
@@ -137,6 +145,7 @@ export function getArchiveRows(): ArchiveRow[] {
       ...(n ? { n } : {}),
       ...(event.highlights?.length ? { h: event.highlights[0] } : {}),
       ...(event.photos?.length ? { p: event.photos.length } : {}),
+      ...(firstPhoto(event) ? { f: firstPhoto(event) } : {}),
       ...((event.summary ?? event.description) ? { l: (event.summary ?? event.description)!.length } : {}),
       ...(event.talks?.length ? { tk: event.talks.length } : {}),
       ...(event.attendance && !event.rsvps ? { a: event.attendance } : {}),

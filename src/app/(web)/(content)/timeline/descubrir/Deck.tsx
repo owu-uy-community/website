@@ -19,7 +19,8 @@ import { activeCount, filterRows, useArchiveFilters } from "../filter-state";
 import type { EventDetail } from "../[slug]/datos.json/route";
 
 /*
- * The history one event at a time, as a stack of cards: drag the top one away in any direction
+ * The history one event at a time, as a stack of cards (the events with real photos of them, not
+ * just their flyer): drag the top one away in any direction
  * (or use the buttons, or ←/→) for the next; tap its sides to go through its photos, its middle
  * for the whole event. The order is shuffled, but with a seed kept for the session, so coming
  * back from an event finds the same deck at the same card. The archive's filters apply.
@@ -101,7 +102,10 @@ function Card({
     };
   }, [row.s, depth]);
 
-  const photos = detail?.event.photos?.length ? detail.event.photos.map((p) => p.src) : [row.i!];
+  // Only photos taken at the event: flyers, banners and logos stay out of the deck
+  const real = detail?.event.photos?.filter((p) => !p.banner).map((p) => p.src) ?? [];
+  // The one the card opened with stays first, so the picture doesn't change as the rest arrive
+  const photos = [row.f!, ...real.filter((src) => src !== row.f)];
   const current = photoSources(photos[Math.min(photo, photos.length - 1)], CARD_SIZES);
   const summary = detail ? plainText(detail.event.summary ?? detail.event.description ?? "") : "";
   const top = depth === 0;
@@ -219,7 +223,7 @@ function DeckView() {
   const cards = useMemo(
     () =>
       data
-        ? filterRows(data.rows, { ...state, q: "" }, byCommunity).filter((row) => row.k !== "hito" && row.i && row.l)
+        ? filterRows(data.rows, { ...state, q: "" }, byCommunity).filter((row) => row.k !== "hito" && row.f && row.l)
         : [],
     // oxlint-disable-next-line react/exhaustive-deps -- the selected event and the order aren't the deck's
     [
