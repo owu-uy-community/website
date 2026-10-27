@@ -10,11 +10,13 @@ import { PRIVACY_EMAIL, SITE_URL } from "lib/community/site";
 import { getTimeline, photoCount } from "lib/timeline/data";
 import { formatDate, formatTime, KIND_LABEL, plainText, STATUS_LABEL } from "lib/timeline/format";
 import { photoSources } from "lib/timeline/image";
+import { venueHref } from "lib/timeline/map";
 import { organizersOf } from "lib/timeline/people";
+import { getVenues } from "lib/timeline/venues";
 import type { TimelineEvent, TimelinePhoto } from "lib/timeline/types";
 
 import Markdown from "../Markdown";
-import Organizers from "../Organizers";
+import Organizers, { SpeakerNames } from "../Organizers";
 import EventNav from "./EventNav";
 import Gallery, { type GalleryPhoto } from "./Gallery";
 
@@ -31,6 +33,7 @@ export function generateStaticParams() {
 export const ensureStatic = "navigation";
 
 const number = new Intl.NumberFormat("es-UY");
+const decimal = new Intl.NumberFormat("es-UY", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 const describe = (event: TimelineEvent, community: string) =>
   [
@@ -77,6 +80,8 @@ async function EventView({ slug }: { slug: string }) {
 
   const community = communities.get(event.community);
   const name = community?.name ?? event.community;
+  // The place's page, when it held other events too
+  const place = getVenues().ofEvent.get(slug);
   const sameCommunity = events.filter((e) => e.community === event.community);
   const index = sameCommunity.indexOf(event);
   const previous = sameCommunity[index - 1];
@@ -116,7 +121,12 @@ async function EventView({ slug }: { slug: string }) {
     eventStatus: "https://schema.org/EventScheduled",
     location: event.online
       ? { "@type": "VirtualLocation", url: sourceUrl ?? `${SITE_URL}/timeline/${slug}` }
-      : { "@type": "Place", name: event.venue ?? event.city ?? "Uruguay", address: event.city ?? "Uruguay" },
+      : {
+          "@type": "Place",
+          name: event.venue ?? event.city ?? "Uruguay",
+          address: event.city ?? "Uruguay",
+          ...(event.geo ? { geo: { "@type": "GeoCoordinates", latitude: event.geo[0], longitude: event.geo[1] } } : {}),
+        },
     organizer: { "@type": "Organization", name },
     // The original file, as published (an absolute URL either way)
     ...(event.photos?.[0] ? { image: [new URL(event.photos[0].src, SITE_URL).href] } : {}),
@@ -195,7 +205,18 @@ async function EventView({ slug }: { slug: string }) {
                     <dd className="flex gap-3 text-zinc-100">
                       <MapPin aria-hidden className="mt-0.5 size-4 shrink-0 text-zinc-400" />
                       <span>
-                        {event.online ? "Online" : event.venue}
+                        {event.online ? (
+                          "Online"
+                        ) : place ? (
+                          <Link
+                            className="underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
+                            href={venueHref(place)}
+                          >
+                            {event.venue}
+                          </Link>
+                        ) : (
+                          event.venue
+                        )}
                         {event.city && event.city !== event.venue ? (
                           <span className="block text-zinc-400">{event.city}</span>
                         ) : null}
@@ -223,6 +244,14 @@ async function EventView({ slug }: { slug: string }) {
                       {community ? (
                         <span className="block text-xs text-zinc-400">
                           {community.events} eventos · {STATUS_LABEL[community.status]}
+                          {community.members ? ` · ${number.format(community.members)} miembros` : null}
+                          {community.rating && (community.ratings ?? 0) >= 20 ? (
+                            <span
+                              title={`Promedio de ${number.format(community.ratings!)} calificaciones de sus eventos en Meetup`}
+                            >
+                              {" · "}★ {decimal.format(community.rating)}
+                            </span>
+                          ) : null}
                           {community.directory ? (
                             <>
                               {" · "}
@@ -326,7 +355,9 @@ async function EventView({ slug }: { slug: string }) {
                       <div>
                         <p className="text-zinc-100">{talk.title}</p>
                         {talk.speakers?.length ? (
-                          <p className="text-sm text-zinc-400">{talk.speakers.join(", ")}</p>
+                          <p className="text-sm text-zinc-400">
+                            <SpeakerNames speakers={talk.speakers} />
+                          </p>
                         ) : null}
                       </div>
                       <div className="flex shrink-0 gap-3 text-sm">

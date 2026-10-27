@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { cardClassName, Section } from "components/community/ui";
@@ -12,6 +13,7 @@ import { BiggestList, ColumnBars, Heatmap, LazyChart, RankBars } from "./Visuals
  */
 
 const number = new Intl.NumberFormat("es-UY");
+const decimal = new Intl.NumberFormat("es-UY", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const pct = (part: number, whole: number) => Math.round((part / whole) * 100);
 const MONTH_NAMES = [
   "enero",
@@ -217,7 +219,17 @@ export default function StatsSection() {
               lugar. El {pct(montevideo, placed)}% fue en Montevideo.
             </>
           }
-          note="Los nombres de un mismo lugar se unificaron (por ejemplo, «Oficina de Pyxis» y «Pyxis»)."
+          note={
+            <>
+              Los nombres de un mismo lugar se unificaron (por ejemplo, «Oficina de Pyxis» y «Pyxis»).{" "}
+              <Link
+                className="text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
+                href="/timeline/lugares"
+              >
+                Todos, en un mapa
+              </Link>
+            </>
+          }
           title="¿Dónde?"
         >
           <div className="grid gap-8 sm:grid-cols-[3fr_2fr] lg:grid-cols-1 xl:grid-cols-[3fr_2fr]">
@@ -287,6 +299,32 @@ export default function StatsSection() {
             rows={stats.attendance.map((row) => [row.year, row.median, row.meetups])}
           />
         </Card>
+
+        {stats.sizes.length ? (
+          <Card
+            className="lg:col-span-2"
+            headline={
+              <>
+                {stats.sizes[0].name} tiene {number.format(stats.sizes[0].count)} miembros en Meetup, la comunidad más
+                grande hoy.
+                {stats.rating ? (
+                  <>
+                    {" "}
+                    Quienes fueron califican sus eventos con {decimal.format(stats.rating.average)} sobre 5, en{" "}
+                    {number.format(stats.rating.ratings)} calificaciones.
+                  </>
+                ) : null}
+              </>
+            }
+            note="Miembros del grupo de cada comunidad en Meetup hoy: gente que se sumó alguna vez, no que va siempre."
+            title="¿Cuántos son?"
+          >
+            <div className="grid gap-x-10 gap-y-2 lg:grid-cols-2">
+              <RankBars items={stats.sizes.slice(0, 6)} max={stats.sizes[0].count} />
+              <RankBars items={stats.sizes.slice(6)} max={stats.sizes[0].count} />
+            </div>
+          </Card>
+        ) : null}
 
         <Card
           className="lg:col-span-2"

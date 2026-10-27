@@ -6,6 +6,8 @@ import { topicLabel } from "lib/community/topics";
 
 import { getTimeline, isCommunityEvent } from "./data";
 import type { TimelineCommunity, TimelineEvent } from "./types";
+import { venueHref } from "./map";
+import { getVenues, plain, venueKey } from "./venues";
 
 /*
  * The "En números" section of /timeline: small aggregates over the dataset, computed on the server
@@ -14,7 +16,7 @@ import type { TimelineCommunity, TimelineEvent } from "./types";
  * people met".
  */
 
-export type Rank = { name: string; count: number };
+export type Rank = { name: string; count: number; href?: string };
 
 export type TimelineStats = {
   from: number;
@@ -36,38 +38,11 @@ export type TimelineStats = {
   /** Median RSVPs per meetup, for years with at least five meetups with RSVPs */
   attendance: { year: number; median: number; meetups: number }[];
   biggest: { slug: string; title: string; start: string; community: string; people: number }[];
+  /** The biggest communities today: members of their Meetup group */
+  sizes: Rank[];
+  /** What the people who went rated their events on Meetup, averaged over every rating */
+  rating: { average: number; ratings: number } | null;
 };
-
-const COMBINING_MARKS = new RegExp(`[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`, "g");
-const plain = (value: string) =>
-  value.toLowerCase().normalize("NFD").replace(COMBINING_MARKS, "").replace(/\s+/g, " ").trim();
-
-/** The same place under the names people typed: [pattern on the plain name, display name] */
-const VENUE_ALIASES: [RegExp, string][] = [
-  [/^torre (antel|de las telecomunicaciones)/, "Torre de las Telecomunicaciones"],
-  [/^case uy/, "CASE UY"],
-  [/^co-?work (uy|uruguay)/, "Co-Work Uruguay"],
-  [/^coworkingmvd/, "CoworkingMVD"],
-  [/^sinergia/, "Sinergia"],
-  [/^rootstrap/, "Rootstrap"],
-  [/^qubika/, "Qubika"],
-  [/^(universidad ort|ort uruguay)/, "Universidad ORT"],
-  [/^(facultad de ingenieria|fing)\b/, "Facultad de Ingeniería (UdelaR)"],
-  [/^(universidad catolica|ucu)\b/, "Universidad Católica"],
-];
-const NOT_A_PLACE = /^(online|virtual|zoom|tbd|a confirmar|a definir|meetup)$/;
-
-/** "Oficina de Pyxis" and "Pyxis (via Cubox)" are Pyxis */
-function venueKey(venue: string) {
-  const name = plain(venue)
-    .replace(/^oficinas? de /, "")
-    .replace(/\s*\(via [^)]*\)$/, "");
-  if (!name || NOT_A_PLACE.test(name)) return null;
-  const alias = VENUE_ALIASES.find(([pattern]) => pattern.test(name));
-  return alias
-    ? { key: alias[1], display: alias[1] }
-    : { key: name, display: venue.replace(/^Oficinas? de /i, "").replace(/\s*\(via [^)]*\)$/i, "") };
-}
 
 const DEPARTMENTS: [RegExp, string][] = [
   [/montevideo|buceo|carrasco|pocitos|cordon|malvin/, "Montevideo"],
@@ -200,6 +175,15 @@ export function computeStats(events: TimelineEvent[], communities: TimelineCommu
       people: event.rsvps!,
     }));
 
+  // Today: each community's Meetup group, its members and how its events were rated
+  const onMeetup = communities.filter((c) => c.layer === "community" && c.members);
+  const sizes = onMeetup
+    .toSorted((a, b) => b.members! - a.members!)
+    .slice(0, 12)
+    .map((c) => ({ name: c.name, count: c.members!, href: `/timeline?comunidad=${c.slug}#archivo` }));
+  const rated = onMeetup.filter((c) => c.rating && c.ratings);
+  const ratings = rated.reduce((sum, c) => sum + c.ratings!, 0);
+
   return {
     from,
     to,
@@ -217,10 +201,19 @@ export function computeStats(events: TimelineEvent[], communities: TimelineCommu
     places: ranked(places, 12),
     attendance,
     biggest,
+    sizes,
+    rating: ratings ? { average: rated.reduce((sum, c) => sum + c.rating! * c.ratings!, 0) / ratings, ratings } : null,
   };
 }
 
 export const getTimelineStats = cache(() => {
   const { events, communities } = getTimeline();
-  return computeStats(events, communities);
+  const stats = computeStats(events, communities);
+  // Each place links to its page
+  const { byKey } = getVenues();
+  for (const venue of stats.venues) {
+    const page = byKey.get(venueKey(venue.name)?.key ?? "");
+    if (page) venue.href = venueHref(page.slug);
+  }
+  return stats;
 });

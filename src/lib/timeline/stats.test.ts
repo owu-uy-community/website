@@ -83,3 +83,20 @@ describe(computeStats, () => {
     expect(stats.biggest.map((b) => b.slug)).toStrictEqual(["a", "b"]);
   });
 });
+
+describe("community sizes", () => {
+  test("ranks by Meetup members and averages the ratings by how many there are", () => {
+    const stats = computeStats(
+      [event("a", "2013-01-10T19:00:00-03:00")],
+      [
+        { ...ruby, members: 900, rating: 5, ratings: 300 },
+        { ...ember, members: 1200, rating: 4, ratings: 100 },
+      ]
+    );
+    expect(stats.sizes.map(({ name, count }) => [name, count])).toStrictEqual([
+      ["Ember", 1200],
+      ["Ruby Montevideo", 900],
+    ]);
+    expect(stats.rating).toStrictEqual({ average: 4.75, ratings: 400 });
+  });
+});

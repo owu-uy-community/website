@@ -2,14 +2,42 @@ import Link from "next/link";
 import { Fragment } from "react";
 
 import { cn } from "app/lib/utils";
-import type { TimelinePersonChip } from "lib/timeline/types";
+import type { TimelinePersonChip, TimelineSpeaker } from "lib/timeline/types";
 
 import Avatar from "./Avatar";
 
 // Faces shown before a "+N"
 const STACK = 8;
 
-export const personHref = (slug: string) => `/timeline/organizadores/${slug}`;
+export const personHref = (slug: string) => `/timeline/personas/${slug}`;
+
+const NAME_LINK =
+  "underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400";
+
+/** A talk's speakers, each linked to their profile when they have one ("A, B") */
+export function SpeakerNames({
+  speakers,
+  except,
+  onNavigate,
+}: {
+  speakers: TimelineSpeaker[];
+  /** The profile being read: named, not linked to itself */
+  except?: string;
+  onNavigate?: () => void;
+}) {
+  return speakers.map((speaker, i) => (
+    <Fragment key={`${speaker.name}-${i}`}>
+      {i ? ", " : null}
+      {speaker.person && speaker.person !== except ? (
+        <Link className={NAME_LINK} href={personHref(speaker.person)} onClick={onNavigate}>
+          {speaker.name}
+        </Link>
+      ) : (
+        speaker.name
+      )}
+    </Fragment>
+  ));
+}
 
 /**
  * Who organized an event: their faces in a row (32px tall, always one row), then their names.
@@ -53,11 +81,7 @@ export default function Organizers({
         {people.map((person, i) => (
           <Fragment key={person.slug}>
             {i ? ", " : null}
-            <Link
-              className="underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400"
-              href={personHref(person.slug)}
-              onClick={onNavigate}
-            >
+            <Link className={NAME_LINK} href={personHref(person.slug)} onClick={onNavigate}>
               {person.name}
             </Link>
           </Fragment>

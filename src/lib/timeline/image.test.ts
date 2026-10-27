@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { avatarSources, photoSources, thumbSources } from "./image";
+import { avatarSources, photoSources, thumbSources, youtubeId } from "./image";
 
 const FLICKR = "https://live.staticflickr.com/6113/6336036326_f2102b3f2b_c.jpg";
 const MEETUP = "https://secure.meetupstatic.com/photos/event/2/c/8/0/highres_96191392.jpeg";
@@ -76,5 +76,15 @@ describe(avatarSources, () => {
       srcSet: `${member("thumb_")} 1x, ${member("member_")} 2x`,
     });
     expect(avatarSources(MEMBER, 112)).toStrictEqual({ src: member("member_") });
+  });
+});
+
+describe(youtubeId, () => {
+  test("reads the id off every YouTube URL shape, and nothing off other hosts or playlists", () => {
+    expect(youtubeId("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://www.youtube.com/embed/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
+    expect(youtubeId("https://www.youtube.com/playlist?list=PL123")).toBeNull();
+    expect(youtubeId("https://tube.undernet.uy/w/abc")).toBeNull();
   });
 });

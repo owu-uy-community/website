@@ -9,6 +9,8 @@ import { communities, events, schedules } from "lib/db/schema";
 import { eventPagePath } from "lib/revalidate";
 import { getTimeline } from "lib/timeline/data";
 import { getPhotoCommunities } from "lib/timeline/photos";
+import { venueHref } from "lib/timeline/map";
+import { getVenues } from "lib/timeline/venues";
 
 // Past editions' archives, which aren't in the site navigation
 const ARCHIVE_ROUTES = [
@@ -83,7 +85,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/timeline/fotos` },
     { url: `${SITE_URL}/timeline/descubrir` },
     ...getPhotoCommunities().map(({ slug }) => ({ url: `${SITE_URL}/timeline/fotos/${slug}` })),
-    { url: `${SITE_URL}/timeline/organizadores` },
-    ...getTimeline().people.map(({ slug }) => ({ url: `${SITE_URL}/timeline/organizadores/${slug}` })),
+    { url: `${SITE_URL}/timeline/personas` },
+    ...getTimeline().people.map(({ slug }) => ({ url: `${SITE_URL}/timeline/personas/${slug}` })),
+    { url: `${SITE_URL}/timeline/lugares` },
+    ...getVenues().venues.map(({ slug }) => ({ url: `${SITE_URL}${venueHref(slug)}` })),
+    { url: `${SITE_URL}/timeline/charlas` },
   ];
 }
