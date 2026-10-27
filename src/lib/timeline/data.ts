@@ -8,6 +8,7 @@ import { cache } from "react";
 import type { LifelineEventSegment, LifelineMarker } from "components/lifeline/types";
 import { PHOTOS } from "components/community/home/photos";
 
+import { photoCredit } from "./format";
 import { photoSources, thumbSources } from "./image";
 import type { TimelineCommunity, TimelineEvent, TimelineKind, TimelinePerson, TimelinePhoto } from "./types";
 
@@ -255,6 +256,7 @@ export const getStory = cache((): LifelineMarker[] => {
             // Cards are 190px wide (160px in the phone layout)
             ...photoSources(photo.src, "(max-width: 767px) 160px, 190px"),
             alt: photo.alt ?? event.title,
+            credit: photoCredit(photo),
             width: 190,
             x: i ? 0.38 : 0.02,
             y: below + i * 64,

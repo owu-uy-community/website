@@ -660,12 +660,15 @@ for (const file of readdirSync(path.join(RAW, "github")).filter((f) => f.startsW
       links: (event.links ?? [])
         .filter((url) => !url.includes("meetup.com"))
         .map((url) => ({ label: linkLabel(url), url })),
-      sources: [
-        {
-          label: `GitHub · ${event.source_repo}`,
-          url: event.source_path ? `${repo}/blob/HEAD/${event.source_path}` : repo,
-        },
-      ],
+      // Its files ("index.php, data.php", "main.yml + content/…"), one link each; "index.html@87aa131 (2024-05-20)"
+      // is a file at a commit
+      sources: (event.source_path?.split(/,\s*|\s\+\s/) ?? [""]).map((entry, i) => {
+        const [file, ref = "HEAD"] = entry.replace(/\s*\(.*\)$/, "").split("@");
+        return {
+          label: i ? `GitHub · ${file}` : `GitHub · ${event.source_repo}`,
+          url: file ? `${repo}/blob/${ref}/${encodeURI(file)}` : repo,
+        };
+      }),
     });
   }
 }
@@ -724,9 +727,9 @@ for (const edition of editions) {
     photos: dedupePhotos(photos),
     links,
     sources: [
-      edition.date_source ? { label: "Fuente de la fecha", url: edition.date_source } : null,
-      edition.wayback_url ? { label: "Wayback Machine", url: edition.wayback_url } : null,
-    ].filter((s): s is { label: string; url: string } => Boolean(s)),
+      ...sourceLinks("Fuente de la fecha", edition.date_source),
+      ...sourceLinks("Wayback Machine", edition.wayback_url),
+    ],
     confidence: edition.confidence === "high" ? undefined : edition.confidence,
     upcoming: upcoming || undefined,
   });
@@ -747,7 +750,7 @@ for (const milestone of JSON.parse(readFileSync(path.join(OUT, "hitos.json"), "u
     layer: milestone.layer,
     community,
     description: milestone.description,
-    sources: milestone.source ? [{ label: "Fuente", url: milestone.source }] : [],
+    sources: sourceLinks("Fuente", milestone.source),
     confidence: milestone.confidence,
   });
 }
@@ -791,6 +794,15 @@ function sourceName(url: string) {
   if (host.includes("twitter") || host === "x.com") return "X";
   return host;
 }
+/**
+ * A source as the catalogs wrote it can hold several URLs ("… ; …") or a note after one
+ * ("https://owu.uy (landing …)"): one link each, the first under `label`, the rest named by their site
+ */
+function sourceLinks(label: string, text: string | null | undefined) {
+  const urls = (text ?? "").match(/https?:\/\/[^\s;]+/g) ?? [];
+  return urls.map((url, i) => ({ label: i ? sourceName(url) : label, url: url.replace(/[,.)]+$/, "") }));
+}
+
 function linkLabel(url: string) {
   if (/slides|speakerdeck|slideshare|docs\.google|drive\.google/.test(url)) return "Slides";
   if (/youtube|youtu\.be|vimeo/.test(url)) return "Video";

@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { cn } from "app/lib/utils";
 import { CommunityLogo, Kbd } from "components/community/ui";
 import type { ArchiveCommunity, ArchiveRow } from "lib/timeline/data";
-import { formatDate, formatTime, KIND_LABEL, STATUS_LABEL } from "lib/timeline/format";
+import { formatDate, formatTime, KIND_LABEL, photoCredit as credit, STATUS_LABEL } from "lib/timeline/format";
 import { photoSources } from "lib/timeline/image";
 import type { TimelineEvent, TimelineKind } from "lib/timeline/types";
 
@@ -18,6 +18,7 @@ import { rememberReturn } from "./archive-data";
 import type { EventDetail } from "./[slug]/datos.json/route";
 import Markdown from "./Markdown";
 import Organizers, { SpeakerNames } from "./Organizers";
+import { pageLine, takedownHref } from "./Provenance";
 import { Line } from "./Skeletons";
 
 // Its own (empty) Suspense boundary: without a `loading`, the first open suspends up to the
@@ -54,9 +55,6 @@ function useDetail(slug: string) {
 }
 
 /* ---------------------------------------------------------------- pieces */
-
-const credit = (photo: EventDetail["event"]["photos"] extends (infer P)[] | undefined ? P : never) =>
-  photo.by ? `Foto: ${photo.by}${photo.source && photo.source !== photo.by ? ` · ${photo.source}` : ""}` : photo.source;
 
 const PILL = "rounded-full bg-white/[0.07] px-2.5 py-0.5 text-[12px] text-zinc-200";
 const BUTTON = "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px]";
@@ -194,6 +192,7 @@ function Photos({ detail }: { detail: EventDetail }) {
   const photos: GalleryPhoto[] = (detail.event.photos ?? []).map((photo) => ({
     tile: photoSources(photo.src, "(min-width: 1024px) 140px, 33vw"),
     full: photoSources(photo.src, "100vw"),
+    src: photo.src,
     alt: photo.alt ?? `Foto de ${detail.event.title}`,
     credit: credit(photo),
     page: photo.page,
@@ -409,6 +408,15 @@ function Body({ view, detail, row }: { view: View; detail: EventDetail | null; r
         <Pending row={row} />
       )}
       <Buttons source={event ? (event.url ?? event.wayback ?? null) : undefined} view={view} />
+      <p className="text-[12px] leading-relaxed text-zinc-500">
+        OWU solo indexa este evento: todo enlaza a su fuente y cada foto, a la original.{" "}
+        <a
+          className="underline underline-offset-2 hover:text-zinc-300"
+          href={takedownHref(`Sacar algo de la historia: ${view.title}`, [pageLine(`/timeline/${view.slug}`)])}
+        >
+          Pedí que saquemos algo
+        </a>
+      </p>
     </div>
   );
 }

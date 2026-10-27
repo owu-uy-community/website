@@ -3,8 +3,8 @@ import "server-only";
 import { cache } from "react";
 
 import { getTimeline } from "./data";
-import { formatDate } from "./format";
-import type { TimelineCommunity, TimelinePhoto } from "./types";
+import { formatDate, photoCredit } from "./format";
+import type { TimelineCommunity } from "./types";
 
 /*
  * Every photo of a community in one place (/timeline/fotos/<slug>). The pages get the photos as
@@ -23,9 +23,6 @@ export type PhotoGroup = {
   year: string;
   photos: CommunityPhoto[];
 };
-
-export const photoCredit = (photo: TimelinePhoto) =>
-  photo.by ? `Foto: ${photo.by}${photo.source && photo.source !== photo.by ? ` · ${photo.source}` : ""}` : photo.source;
 
 /** Each community's events that have photos, oldest first */
 const getGroups = cache(() => {

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { cn } from "app/lib/utils";
 
+import { pageLine, takedownHref } from "../Provenance";
 import type { GalleryPhoto } from "./Gallery";
 
 /** A photo, and when it comes from a list of several events (a community's photos), which one */
@@ -73,7 +74,7 @@ export default function Lightbox({
               the full photo fades in over it */}
           <div className="relative h-[68dvh] w-full sm:h-[76vh]">
             <img
-              key={photo.tile.src}
+              key={`tile:${photo.tile.src}`}
               alt=""
               aria-hidden
               className={cn(
@@ -117,16 +118,28 @@ export default function Lightbox({
               {photo.credit ? <span className="ml-3">{photo.credit}</span> : null}
               {photo.license ? <span className="ml-2">· {photo.license}</span> : null}
             </p>
-            {photo.page ? (
+            <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              {photo.page ? (
+                <a
+                  className="inline-flex items-center gap-1 text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
+                  href={photo.page}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Ver la original <ArrowUpRight aria-hidden className="size-3.5" />
+                </a>
+              ) : null}
               <a
-                className="inline-flex items-center gap-1 text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
-                href={photo.page}
-                rel="noopener noreferrer"
-                target="_blank"
+                className="underline decoration-white/20 underline-offset-4 hover:text-zinc-200 hover:decoration-yellow-400"
+                href={takedownHref(`Sacar una foto: ${photo.event?.title ?? title}`, [
+                  `Foto: ${photo.src ?? photo.full.src}`,
+                  // Only ever rendered in the browser, once a photo is opened
+                  pageLine(photo.event?.href ?? location.pathname),
+                ])}
               >
-                Ver la original <ArrowUpRight aria-hidden className="size-3.5" />
+                ¿Aparecés? Pedí que la saquemos
               </a>
-            ) : null}
+            </p>
           </div>
           {photos.length > 1 ? (
             <>

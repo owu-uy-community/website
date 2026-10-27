@@ -6,6 +6,7 @@ import { pageMetadata } from "lib/community/metadata";
 import { getTimeline } from "lib/timeline/data";
 import type { GivenTalk } from "lib/timeline/people";
 
+import Provenance from "../Provenance";
 import Talks from "../Talks";
 
 export const metadata = pageMetadata({
@@ -73,6 +74,10 @@ export default async function TalksPage() {
               </section>
             ))}
           </div>
+          <Provenance className="mt-16" path="/timeline/charlas" subject="Sacar una charla de la historia">
+            Las charlas salen de cómo anunció cada evento en Meetup y de los programas de cada conferencia; los videos y
+            las slides se ven desde donde los publicaron. Cada charla lleva a su evento, que dice de dónde salió.
+          </Provenance>
         </Container>
       </main>
       <Footer />
