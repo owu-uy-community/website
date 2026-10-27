@@ -9,6 +9,7 @@ import { ROLE_LABEL, yearSpan } from "lib/timeline/format";
 
 import Avatar from "../Avatar";
 import { personHref } from "../Organizers";
+import Provenance from "../Provenance";
 
 export const metadata = pageMetadata({
   title: "Quienes hacen la comunidad tech uruguaya",
@@ -110,6 +111,10 @@ export default async function PeoplePage() {
               </li>
             ))}
           </ul>
+          <Provenance className="mt-16" path="/timeline/personas" subject="Sacar mi página de la historia">
+            Las personas salen de quién figura como anfitrión de cada evento en Meetup, el equipo de cada grupo hoy y lo
+            que dicen los sitios y programas de cada conferencia; las fotos de perfil se ven desde Meetup.
+          </Provenance>
         </Container>
       </main>
       <Footer />

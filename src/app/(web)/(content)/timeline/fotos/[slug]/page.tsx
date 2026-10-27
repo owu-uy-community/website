@@ -6,9 +6,9 @@ import { notFound } from "next/navigation";
 import { CommunityLogo, Container, headingClassName, TitleBar } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
-import { PRIVACY_EMAIL } from "lib/community/site";
 import { getCommunityPhotos, getPhotoCommunities } from "lib/timeline/photos";
 
+import Provenance from "../../Provenance";
 import CommunityPhotos from "./CommunityPhotos";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -114,17 +114,18 @@ async function PhotosView({ slug }: { slug: string }) {
 
         <Container className="pb-16">
           <CommunityPhotos community={community.name} groups={groups} />
-          <p className="mt-10 text-xs leading-relaxed text-zinc-400">
-            Cada foto se ve desde donde está publicada (Meetup, Flickr, GitHub, el Wayback Machine) y el visor dice de
-            quién es. ¿Aparecés en una y preferís que no esté?{" "}
-            <a
-              className="underline underline-offset-2 hover:text-zinc-300"
-              href={`mailto:${PRIVACY_EMAIL}?subject=${encodeURIComponent(`Foto de ${community.name}`)}`}
-            >
-              Escribinos
-            </a>
-            .
-          </p>
+          <Provenance
+            className="mt-10"
+            path={`/timeline/fotos/${community.slug}`}
+            sources={[
+              ...(community.meetup ? [{ label: `${community.name} en Meetup`, url: community.meetup }] : []),
+              ...(community.website ? [{ label: "Su sitio", url: community.website }] : []),
+            ]}
+            subject={`Sacar una foto de ${community.name}`}
+          >
+            Las fotos son de quienes las sacaron y están publicadas en Meetup, Flickr, GitHub o el Wayback Machine: el
+            visor dice de quién es cada una, lleva a la original y tiene cómo pedir que la saquemos.
+          </Provenance>
         </Container>
       </main>
       <Footer />

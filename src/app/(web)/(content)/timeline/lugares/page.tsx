@@ -10,6 +10,7 @@ import { venueHref } from "lib/timeline/map";
 import { dotsOn, getMaps, getVenues } from "lib/timeline/venues";
 
 import { eventsLabel } from "../EventLists";
+import Provenance from "../Provenance";
 import VenueMap from "./VenueMap";
 
 export const metadata = pageMetadata({
@@ -127,6 +128,10 @@ export default async function VenuesPage() {
               </li>
             ))}
           </ol>
+          <Provenance className="mt-16" path="/timeline/lugares" subject="Sacar un lugar de la historia">
+            Los lugares y dónde quedan salen de cómo anotó cada evento quien lo organizó en Meetup. Cada lugar lleva a
+            sus eventos, y cada evento dice de dónde salió.
+          </Provenance>
         </Container>
       </main>
       <Footer />

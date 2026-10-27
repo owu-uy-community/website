@@ -1,6 +1,10 @@
-import type { TimelineEvent, TimelineKind } from "./types";
+import type { TimelineEvent, TimelineKind, TimelinePhoto } from "./types";
 
 /** Shared by the server pages and the archive's client filters */
+
+/** "Foto: Ana Pérez · Meetup": who took it and where it's published */
+export const photoCredit = (photo: TimelinePhoto) =>
+  photo.by ? `Foto: ${photo.by}${photo.source && photo.source !== photo.by ? ` · ${photo.source}` : ""}` : photo.source;
 
 export const KIND_LABEL: Record<TimelineKind, string> = {
   meetup: "Meetup",

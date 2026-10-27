@@ -23,6 +23,7 @@ import Activity from "./Activity";
 import ArchiveGate from "./ArchiveGate";
 import { YearBars } from "./Charts";
 import HeroTiles from "./HeroTiles";
+import { pageLine, takedownHref } from "./Provenance";
 import StatsSection from "./stats/StatsSection";
 import SectionNav from "./SectionNav";
 import StoryRail from "./StoryRail";
@@ -101,7 +102,7 @@ export default async function TimelinePage() {
                 saquemos algo? Escribinos a{" "}
                 <a
                   className="text-zinc-200 underline decoration-white/25 underline-offset-4 hover:decoration-yellow-400"
-                  href={`mailto:${PRIVACY_EMAIL}?subject=Contenido%20en%20la%20historia`}
+                  href={takedownHref("Sacar algo de la historia", [pageLine("/timeline")])}
                 >
                   {PRIVACY_EMAIL}
                 </a>
@@ -264,7 +265,7 @@ export default async function TimelinePage() {
                 un link a la original. ¿Aparecés en una y preferís que no esté? Escribinos a{" "}
                 <a
                   className="text-zinc-200 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
-                  href={`mailto:${PRIVACY_EMAIL}?subject=Foto%20en%20la%20historia`}
+                  href={takedownHref("Sacar una foto de la historia", [pageLine("/timeline")])}
                 >
                   {PRIVACY_EMAIL}
                 </a>{" "}

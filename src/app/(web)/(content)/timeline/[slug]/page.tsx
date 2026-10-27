@@ -6,17 +6,25 @@ import { notFound } from "next/navigation";
 import { Badge, CommunityLogo, Container, headingClassName, Kbd, TitleBar } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
-import { PRIVACY_EMAIL, SITE_URL } from "lib/community/site";
+import { SITE_URL } from "lib/community/site";
 import { getTimeline, photoCount } from "lib/timeline/data";
-import { formatDate, formatTime, KIND_LABEL, plainText, STATUS_LABEL } from "lib/timeline/format";
+import {
+  formatDate,
+  formatTime,
+  KIND_LABEL,
+  photoCredit as credit,
+  plainText,
+  STATUS_LABEL,
+} from "lib/timeline/format";
 import { photoSources } from "lib/timeline/image";
 import { venueHref } from "lib/timeline/map";
 import { organizersOf } from "lib/timeline/people";
 import { getVenues } from "lib/timeline/venues";
-import type { TimelineEvent, TimelinePhoto } from "lib/timeline/types";
+import type { TimelineEvent } from "lib/timeline/types";
 
 import Markdown from "../Markdown";
 import Organizers, { SpeakerNames } from "../Organizers";
+import Provenance, { pageLine, takedownHref } from "../Provenance";
 import EventNav from "./EventNav";
 import Gallery, { type GalleryPhoto } from "./Gallery";
 
@@ -60,9 +68,6 @@ export async function generateMetadata({ params }: Props) {
   });
 }
 
-const credit = (photo: TimelinePhoto) =>
-  photo.by ? `Foto: ${photo.by}${photo.source && photo.source !== photo.by ? ` · ${photo.source}` : ""}` : photo.source;
-
 export default async function TimelineEventPage({ params }: Props) {
   const { slug } = await params;
   if (!getTimeline().bySlug.has(slug)) notFound();
@@ -99,6 +104,7 @@ async function EventView({ slug }: { slug: string }) {
         : "(min-width: 1024px) 288px, (min-width: 640px) 33vw, 50vw"
     ),
     full: photoSources(photo.src, "100vw"),
+    src: photo.src,
     alt: photo.alt ?? `Foto de ${event.title}`,
     credit: credit(photo),
     page: photo.page,
@@ -316,15 +322,15 @@ async function EventView({ slug }: { slug: string }) {
               </h2>
               <Gallery photos={photos} title={event.title} />
               <p className="mt-6 text-xs leading-relaxed text-zinc-400">
-                {credits.join(" · ")}. Cada foto se ve desde donde está publicada. ¿Aparecés en una y preferís que no
-                esté?{" "}
+                {credits.join(" · ")}. Cada foto se ve desde donde está publicada y lleva a la original. ¿Aparecés en
+                una y preferís que no esté?{" "}
                 <a
                   className="underline underline-offset-2 hover:text-zinc-300"
-                  href={`mailto:${PRIVACY_EMAIL}?subject=Foto%20en%20${encodeURIComponent(event.title)}`}
+                  href={takedownHref(`Sacar una foto: ${event.title}`, [pageLine(`/timeline/${event.slug}`)])}
                 >
-                  Escribinos
+                  Pedí que la saquemos
                 </a>
-                .
+                , o tocala y pedilo desde ahí.
               </p>
             </Container>
           </section>
@@ -399,13 +405,13 @@ async function EventView({ slug }: { slug: string }) {
               </section>
             ) : null}
 
-            {event.links?.length || event.sources.length ? (
-              <section aria-labelledby="fuentes">
-                <h2 className={headingClassName.h3} id="fuentes">
-                  Links y fuentes
+            {event.links?.length ? (
+              <section aria-labelledby="links">
+                <h2 className={headingClassName.h3} id="links">
+                  Links
                 </h2>
                 <ul className="mt-4 flex flex-col gap-2 text-sm">
-                  {[...(event.links ?? []), ...event.sources].map((link) => (
+                  {event.links.map((link) => (
                     <li key={`${link.label}-${link.url}`}>
                       <a
                         className="inline-flex items-center gap-1 text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
@@ -420,6 +426,14 @@ async function EventView({ slug }: { slug: string }) {
                 </ul>
               </section>
             ) : null}
+
+            <Provenance
+              path={`/timeline/${event.slug}`}
+              sources={event.sources}
+              subject={`Sacar algo de la historia: ${event.title}`}
+            >
+              Lo que dice esta página sale de estas fuentes{photos.length ? ", y cada foto, de quien la sacó" : ""}.
+            </Provenance>
           </div>
 
           <aside className="flex flex-col gap-8">

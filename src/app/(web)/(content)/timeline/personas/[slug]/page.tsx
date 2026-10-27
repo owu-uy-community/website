@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import { Container, headingClassName, TitleBar } from "components/community/ui";
 import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
-import { PRIVACY_EMAIL } from "lib/community/site";
 import { getTimeline } from "lib/timeline/data";
 import { ROLE_LABEL, yearSpan } from "lib/timeline/format";
 import { getPersonPage } from "lib/timeline/people";
@@ -14,6 +13,7 @@ import { getPersonPage } from "lib/timeline/people";
 import Avatar from "../../Avatar";
 import { CommunityList, EventsByYear, eventsLabel, PhotoStrip } from "../../EventLists";
 import { personHref } from "../../Organizers";
+import Provenance from "../../Provenance";
 import Talks from "../../Talks";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -200,19 +200,16 @@ async function ProfileView({ slug }: { slug: string }) {
         </Container>
 
         <Container className="pb-16">
-          <p className="max-w-2xl text-xs leading-relaxed text-zinc-400">
-            Esta página junta lo que ya está publicado: quién figura como anfitrión de cada evento en Meetup (con su
-            foto de perfil, que se ve desde Meetup), el equipo de cada grupo hoy, y lo que dicen los sitios y programas
-            de cada conferencia sobre quién la organizó y quién dio cada charla. ¿Sos vos y querés corregir algo, sacar
-            la foto o la página?{" "}
-            <a
-              className="underline underline-offset-2 hover:text-zinc-300"
-              href={`mailto:${PRIVACY_EMAIL}?subject=${encodeURIComponent(`Mi página en la historia: ${person.name}`)}`}
-            >
-              Escribinos
-            </a>
-            .
-          </p>
+          <Provenance
+            path={personHref(person.slug)}
+            sources={person.meetup ? [{ label: "Su perfil en Meetup", url: person.meetup }] : undefined}
+            subject={`Mi página en la historia: ${person.name}`}
+          >
+            Esta página junta quién figura como anfitrión de cada evento en Meetup (con su foto de perfil, que se ve
+            desde Meetup), el equipo de cada grupo hoy y lo que dicen los sitios y programas de cada conferencia sobre
+            quién la organizó y quién dio cada charla; cada evento dice de dónde salió. Si sos vos, también podés pedir
+            que corrijamos algo o que saquemos solo la foto.
+          </Provenance>
         </Container>
       </main>
       <Footer />

@@ -166,7 +166,12 @@ describes. Research it, then write:
 ## Takedown requests
 
 Someone asks (usually to the privacy email) to remove themselves or a photo. Do it before anything
-else, don't argue the request, and ship it on its own (below).
+else, don't argue the request, and ship it on its own (below). Every page promises it within 72 hours.
+
+The site's "Pedí que lo saquemos" links prefill the mail: `Página: https://www.owu.uy/timeline/…`
+names the page, and from a photo's viewer `Foto: <url>` names the photo. That URL is the photo's
+`src` as published (an `overrides.json` `hidePhotos` entry as is), except from the story rail,
+where it's a resized copy: match it to the event's photo by its Meetup or Flickr id.
 
 **1. Find what to name.** A profile is named by its slug (the end of `/timeline/personas/<slug>`)
 **and** its Meetup profile URL (its `meetup` field), both: the URL keeps matching if a renamed

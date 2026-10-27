@@ -27,6 +27,8 @@ export interface LifelineEventImage {
   sizes?: string;
   /** Optional mp4/webm — hover shows this (muted, looping) with src as fallback. */
   video?: string;
+  /** Who took it and where it's published; the lightbox shows it under the media */
+  credit?: string;
 }
 
 /**

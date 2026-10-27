@@ -12,6 +12,7 @@ import { project, venueHref } from "lib/timeline/map";
 import { dotsOn, getMaps, getVenues } from "lib/timeline/venues";
 
 import { CommunityList, EventsByYear, eventsLabel, PhotoStrip } from "../../EventLists";
+import Provenance from "../../Provenance";
 import VenueMap from "../VenueMap";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -33,6 +34,12 @@ export async function generateMetadata({ params }: Props) {
     path: venueHref(venue.slug),
   });
 }
+
+// The map's own sources, credited wherever it's drawn
+const MAP_SOURCES = [
+  { label: "Mapa: geoBoundaries", url: "https://www.geoboundaries.org" },
+  { label: "© colaboradores de OpenStreetMap", url: "https://www.openstreetmap.org/copyright" },
+];
 
 export default async function VenuePage({ params }: Props) {
   const { slug } = await params;
@@ -115,14 +122,18 @@ async function VenueView({ slug }: { slug: string }) {
         </Container>
 
         <Container className="pb-16">
-          <p className="max-w-2xl text-xs leading-relaxed text-zinc-400">
-            El lugar de cada evento, como lo anotó quien lo organizó; los nombres de un mismo lugar se unificaron
-            («Oficina de Pyxis» y «Pyxis»). ¿Algo está mal?{" "}
+          <Provenance
+            path={venueHref(venue.slug)}
+            sources={venue.geo ? MAP_SOURCES : undefined}
+            subject={`Sacar algo de la historia: ${venue.name}`}
+          >
+            El lugar de cada evento, como lo anotó quien lo organizó en Meetup; los nombres de un mismo lugar se
+            unificaron («Oficina de Pyxis» y «Pyxis») y cada evento dice de dónde salió. ¿Algo está mal?{" "}
             <Link className="underline underline-offset-2 hover:text-zinc-300" href="/contacto">
               Avisanos
             </Link>
             .
-          </p>
+          </Provenance>
         </Container>
       </main>
       <Footer />

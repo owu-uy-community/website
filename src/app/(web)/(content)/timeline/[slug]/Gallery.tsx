@@ -11,6 +11,8 @@ export type GalleryPhoto = {
   tile: PhotoSources;
   /** The lightbox, at screen width */
   full: PhotoSources;
+  /** As published: what a takedown names (overrides.json hidePhotos) */
+  src?: string;
   alt: string;
   /** "Foto: …" */
   credit?: string;

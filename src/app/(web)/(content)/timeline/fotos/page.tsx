@@ -5,6 +5,7 @@ import Footer from "components/shared/Footer";
 import { pageMetadata } from "lib/community/metadata";
 import { getPhotoCommunities } from "lib/timeline/photos";
 
+import Provenance from "../Provenance";
 import PhotoIndex from "./PhotoIndex";
 
 export const metadata = pageMetadata({
@@ -44,6 +45,10 @@ export default async function PhotosIndexPage() {
         />
         <Container className="pb-16">
           <PhotoIndex communities={communities} />
+          <Provenance className="mt-16" path="/timeline/fotos" subject="Sacar una foto de la historia">
+            Las fotos son de quienes las sacaron y están publicadas en Meetup, Flickr, GitHub o el Wayback Machine: el
+            visor dice de quién es cada una y lleva a la original.
+          </Provenance>
         </Container>
       </main>
       <Footer />

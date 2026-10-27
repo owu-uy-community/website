@@ -285,6 +285,17 @@ export function LifelineLightbox({
       >
         <LightboxMedia photo={photo} playing={settled} mediaTime={start.mediaTime} />
       </figure>
+      {photo.credit ? (
+        <p
+          className={cn(
+            "pointer-events-none absolute text-center text-xs text-white/80 transition-opacity",
+            settled && entered ? "opacity-100" : "opacity-0"
+          )}
+          style={{ left, top: top + height + 10, width }}
+        >
+          {photo.credit}
+        </p>
+      ) : null}
     </div>,
     document.body
   );

@@ -57,6 +57,7 @@ export default function StoryCarousel({ markers }: { markers: LifelineMarker[] }
               tile: { src: photo.src, srcSet: photo.srcSet, sizes: CARD_SIZES },
               full: { src: photo.src, srcSet: photo.srcSet, sizes: "100vw" },
               alt: photo.alt,
+              credit: photo.credit,
             }));
             return (
               <CarouselItem key={marker.id} className="basis-[86%] items-start justify-start pl-3">

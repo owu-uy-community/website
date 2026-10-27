@@ -130,6 +130,7 @@ export default function CommunityPhotos({ groups, community }: { groups: PhotoGr
         all.push({
           tile: photoSources(photo.src, TILE_SIZES),
           full: photoSources(photo.src, "100vw"),
+          src: photo.src,
           alt: photo.alt ?? "",
           credit: photo.credit,
           page: photo.page,
