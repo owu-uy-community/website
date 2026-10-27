@@ -176,9 +176,14 @@ export function ColumnBars({
 /* ------------------------------------------------------- horizontal ranks */
 
 /** A ranked list whose bars sweep in from the left; name and count are always written out */
-export function RankBars({ items }: { items: Rank[] }) {
-  const max = Math.max(...items.map((item) => item.count));
-
+/** Bars by count; `max` sets the scale when a list is split in columns */
+export function RankBars({
+  items,
+  max = Math.max(...items.map((item) => item.count)),
+}: {
+  items: Rank[];
+  max?: number;
+}) {
   return (
     <ol className="flex flex-col gap-2">
       {items.map((item, i) => (
@@ -186,9 +191,19 @@ export function RankBars({ items }: { items: Rank[] }) {
           key={item.name}
           className="grid grid-cols-[minmax(0,9rem)_1fr_2.5rem] items-center gap-3 text-[13px] sm:grid-cols-[minmax(0,11rem)_1fr_2.5rem]"
         >
-          <span className="truncate text-zinc-200" title={item.name}>
-            {item.name}
-          </span>
+          {item.href ? (
+            <Link
+              className="truncate text-zinc-200 underline decoration-white/15 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400"
+              href={item.href}
+              title={item.name}
+            >
+              {item.name}
+            </Link>
+          ) : (
+            <span className="truncate text-zinc-200" title={item.name}>
+              {item.name}
+            </span>
+          )}
           <span aria-hidden className="h-2.5 rounded-full bg-white/[0.04]">
             <m.span
               className="block h-full origin-left rounded-full"

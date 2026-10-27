@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { GalleryHorizontalEnd, Images, Users } from "lucide-react";
+import { GalleryHorizontalEnd, Images, MapPin, Play, Users } from "lucide-react";
 import { m } from "motion/react";
 import Link from "next/link";
 
@@ -16,6 +16,15 @@ const SECTIONS = [
   { id: "numeros", label: "Números" },
   { id: "archivo", label: "Archivo" },
 ] as const;
+
+/** The history's other pages */
+const PAGES = [
+  { href: "/timeline/fotos", label: "Fotos", Icon: Images },
+  { href: "/timeline/personas", label: "Personas", Icon: Users },
+  { href: "/timeline/lugares", label: "Lugares", Icon: MapPin },
+  { href: "/timeline/charlas", label: "Charlas", Icon: Play },
+  { href: "/timeline/descubrir", label: "Deslizá", Icon: GalleryHorizontalEnd },
+];
 
 /**
  * The page's own nav, pinned under the site's: its three parts with the current one lit, and a
@@ -74,24 +83,15 @@ export default function SectionNav({ years }: { years: number[] }) {
             <span className="relative">{label}</span>
           </a>
         ))}
-        <Link
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white sm:px-3.5"
-          href="/timeline/fotos"
-        >
-          <Images aria-hidden className="size-3.5" /> Fotos
-        </Link>
-        <Link
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white sm:px-3.5"
-          href="/timeline/organizadores"
-        >
-          <Users aria-hidden className="size-3.5" /> Organizadores
-        </Link>
-        <Link
-          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white sm:px-3.5"
-          href="/timeline/descubrir"
-        >
-          <GalleryHorizontalEnd aria-hidden className="size-3.5" /> Deslizá
-        </Link>
+        {PAGES.map(({ href, label, Icon }) => (
+          <Link
+            key={href}
+            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white sm:px-3.5"
+            href={href}
+          >
+            <Icon aria-hidden className="size-3.5" /> {label}
+          </Link>
+        ))}
         <label className="relative">
           <span className="sr-only">Ir a un año del archivo</span>
           <select

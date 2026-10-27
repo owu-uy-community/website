@@ -17,7 +17,7 @@ import type { GalleryPhoto } from "./[slug]/Gallery";
 import { rememberReturn } from "./archive-data";
 import type { EventDetail } from "./[slug]/datos.json/route";
 import Markdown from "./Markdown";
-import Organizers from "./Organizers";
+import Organizers, { SpeakerNames } from "./Organizers";
 import { Line } from "./Skeletons";
 
 // Its own (empty) Suspense boundary: without a `loading`, the first open suspends up to the
@@ -242,7 +242,7 @@ const More = ({ count }: { count: number }) => (
   </span>
 );
 
-function Talks({ talks }: { talks: NonNullable<EventDetail["event"]["talks"]> }) {
+function Talks({ talks, slug }: { talks: NonNullable<EventDetail["event"]["talks"]>; slug: string }) {
   return (
     <section aria-label="Charlas">
       <h4 className="mb-2 text-[12px] font-medium tracking-wide text-zinc-400 uppercase">Charlas</h4>
@@ -250,7 +250,12 @@ function Talks({ talks }: { talks: NonNullable<EventDetail["event"]["talks"]> })
         {talks.slice(0, 8).map((talk) => (
           <li key={talk.title} className="text-[14px]">
             <span className="text-zinc-100">{talk.title}</span>
-            {talk.speakers?.length ? <span className="text-zinc-400"> · {talk.speakers.join(", ")}</span> : null}
+            {talk.speakers?.length ? (
+              <span className="text-zinc-400">
+                {" · "}
+                <SpeakerNames onNavigate={() => rememberReturn(slug)} speakers={talk.speakers} />
+              </span>
+            ) : null}
           </li>
         ))}
         {talks.length > 8 ? <li className="text-[13px] text-zinc-400">y {talks.length - 8} más</li> : null}
@@ -396,7 +401,7 @@ function Body({ view, detail, row }: { view: View; detail: EventDetail | null; r
       {detail && event ? (
         <>
           <Photos detail={detail} />
-          {event.talks?.length ? <Talks talks={event.talks} /> : null}
+          {event.talks?.length ? <Talks slug={event.slug} talks={event.talks} /> : null}
           {detail.organizers.length ? <Organized detail={detail} /> : null}
           {(event.summary ?? event.description) ? <Description text={(event.summary ?? event.description)!} /> : null}
         </>

@@ -24,12 +24,15 @@ export type TimelinePhoto = {
 
 export type TimelineLink = { label: string; url: string };
 
-export type TimelineTalk = { title: string; speakers?: string[]; slides?: string; video?: string };
+/** Someone who gave a talk, as the event names them, and their profile when the name is a person's */
+export type TimelineSpeaker = { name: string; person?: string };
+
+export type TimelineTalk = { title: string; speakers?: TimelineSpeaker[]; slides?: string; video?: string };
 
 /** Someone who organized an event, as that event names them, and their profile (people.json) */
 export type TimelineOrganizer = { name: string; person: string };
 
-/** A profile at /timeline/organizadores/<slug>: a person, or an organization that ran events */
+/** A profile at /timeline/personas/<slug>: someone who organized events or gave talks (a person, or an organization) */
 export type TimelinePerson = {
   slug: string;
   name: string;
@@ -37,8 +40,10 @@ export type TimelinePerson = {
   photo?: string;
   /** Their Meetup profile */
   meetup?: string;
-  /** Events they organized; a group's team today may not have hosted any yet */
+  /** Events they organized; a group's team today, or a speaker, may not have organized any */
   events: number;
+  /** Talks they gave */
+  talks?: number;
   first?: string;
   last?: string;
   /** Community slugs, most events first */
@@ -65,6 +70,8 @@ export type TimelineEvent = {
   community: string;
   venue?: string;
   city?: string;
+  /** Where the venue is, [lat, lon], when Meetup has it */
+  geo?: [number, number];
   /** RSVPs on Meetup, or attendance when the source states it */
   rsvps?: number;
   /** Attendance as the source put it, when it isn't a single number */
@@ -114,4 +121,8 @@ export type TimelineCommunity = {
   last?: string;
   events?: number;
   photos?: number;
+  /** Its Meetup group today: members, and the average of its events' ratings (1–5) over how many */
+  members?: number;
+  rating?: number;
+  ratings?: number;
 };

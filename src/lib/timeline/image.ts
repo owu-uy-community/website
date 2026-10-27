@@ -77,3 +77,11 @@ export function thumbSources(src: string, px: number): PhotoSources {
   const two = atLeast(steps, (px * 32) / 9);
   return one === two ? { src: one } : { src: one, srcSet: `${one} 1x, ${two} 2x` };
 }
+
+/** A YouTube video's id, for its thumbnail (i.ytimg.com); other hosts (PeerTube, Drive) have none to ask for */
+export function youtubeId(url: string) {
+  const { hostname, pathname, searchParams } = new URL(url);
+  if (hostname === "youtu.be") return pathname.slice(1) || null;
+  if (!hostname.endsWith("youtube.com")) return null;
+  return searchParams.get("v") ?? /\/(?:embed|live|shorts)\/([\w-]+)/.exec(pathname)?.[1] ?? null;
+}

@@ -24,6 +24,7 @@ import type {
   TimelineKind,
   TimelinePerson,
   TimelinePhoto,
+  TimelineTalk,
 } from "../../src/lib/timeline/types";
 
 const args = process.argv.slice(2);
@@ -52,7 +53,7 @@ type MeetupEvent = {
   eventType: "PHYSICAL" | "ONLINE" | "HYBRID";
   eventUrl: string;
   waybackUrl?: string;
-  venue?: { name?: string; city?: string } | null;
+  venue?: { name?: string; city?: string; country?: string; lat?: number; lon?: number } | null;
   rsvps?: number;
   featuredPhoto: MeetupPhoto;
   displayPhoto: MeetupPhoto;
@@ -415,6 +416,10 @@ const GROUP_COMMUNITY: Record<string, string> = {
   "testing-uy": "testinguy",
   ...overrides.groupCommunity,
 };
+type GroupStats = Record<string, { members: number | null; rating: number | null; ratings: number }>;
+const groupStats: GroupStats = existsSync(path.join(RAW, "meetup/data/group_stats.json"))
+  ? readJson<GroupStats>("meetup/data/group_stats.json")
+  : {};
 const communityOfGroup = new Map<string, string>();
 for (const group of groups) {
   const names = [group.urlname, group.currentUrlname, ...(group.requestedAs ?? [])]
@@ -434,6 +439,13 @@ for (const group of groups) {
     })
   );
   communityOfGroup.set(group.urlname, community.slug);
+  // Its size and rating today; a community with two groups goes by its bigger one
+  const today = groupStats[group.urlname];
+  if (today?.members && today.members > (community.members ?? 0)) {
+    community.members = today.members;
+    community.rating = today.rating ?? undefined;
+    community.ratings = today.ratings || undefined;
+  }
 }
 
 // Conference series: their own lane, unless a community runs them
@@ -530,15 +542,30 @@ const githubCommunity = (label: string) => {
 
 // Organizers are names until the end, and Meetup's hosts stay apart from them: a researched list
 // replaces the catalog's, not the hosts
-type Candidate = Omit<TimelineEvent, "organizers"> & {
+// Speakers too: names until the end
+type RawTalk = Omit<TimelineTalk, "speakers"> & { speakers?: string[] };
+type Candidate = Omit<TimelineEvent, "organizers" | "talks"> & {
   origin: "conference" | "meetup" | "github" | "milestone";
   organizers?: string[];
   hosts?: MeetupHost[];
+  talks?: RawTalk[];
 };
 const candidates: Candidate[] = [];
 const now = new Date();
 
 // meetup.com
+// A venue's coordinates, when it's in Uruguay (Buenos Aires is inside a box around it) and they
+// are too (an online event's, or a venue left blank, are somewhere else)
+const geoOf = (venue: MeetupEvent["venue"]): [number, number] | undefined =>
+  venue?.country?.toLowerCase() === "uy" &&
+  venue.lat &&
+  venue.lon &&
+  venue.lat < -30 &&
+  venue.lat > -35.1 &&
+  venue.lon < -53 &&
+  venue.lon > -58.6
+    ? [Math.round(venue.lat * 1e4) / 1e4, Math.round(venue.lon * 1e4) / 1e4]
+    : undefined;
 const meetupGroupNames = new Map(
   groups.map((group) => [group.urlname, communities.get(communityOfGroup.get(group.urlname)!)!.name])
 );
@@ -571,6 +598,7 @@ for (const event of readJson<MeetupEvent[]>("meetup/data/events.json")) {
     community,
     venue: event.eventType === "ONLINE" ? undefined : (event.venue?.name ?? undefined),
     city: event.eventType === "ONLINE" ? undefined : (event.venue?.city ?? undefined),
+    geo: event.eventType === "ONLINE" ? undefined : geoOf(event.venue),
     rsvps: event.rsvps || undefined,
     url: event.waybackUrl ? undefined : event.eventUrl,
     wayback: event.waybackUrl,
@@ -790,6 +818,7 @@ function merge(base: Candidate, other: Candidate) {
   base.rsvps = Math.max(base.rsvps ?? 0, other.rsvps ?? 0) || undefined;
   base.venue ??= other.venue;
   base.city ??= other.city;
+  if (base.venue === other.venue) base.geo ??= other.geo;
   base.url ??= other.url;
   base.wayback ??= other.wayback;
   base.description ??= other.description;
@@ -854,8 +883,8 @@ for (const [id, photos] of Object.entries(overrides.photos ?? {})) {
 // sources above left out of editions they barely list. It fills gaps; what a source says stays.
 // Its "description" is a summary written for the timeline, kept apart from the announcement.
 type Enrichment = Partial<
-  Pick<TimelineEvent, "description" | "talks" | "attendance" | "rsvps" | "venue" | "city" | "photos" | "links">
-> & { organizers?: string[]; sources: TimelineEvent["sources"] };
+  Pick<TimelineEvent, "description" | "attendance" | "rsvps" | "venue" | "city" | "photos" | "links">
+> & { organizers?: string[]; talks?: RawTalk[]; sources: TimelineEvent["sources"] };
 const dedupeLinks = (links: TimelineEvent["sources"]) => [...new Map(links.map((link) => [link.url, link])).values()];
 const NOT_A_PHOTO =
   /\b(flyer|afiche|banner|logo|logotipo|placa|pieza gráfica|gráfica|captura|screenshot|póster|poster|portada|miniatura|thumbnail|isotipo)\b/i;
@@ -874,6 +903,8 @@ for (const file of existsSync(ENRICHMENT) ? readdirSync(ENRICHMENT).filter((name
     // Researched attendance is in Spanish and checked; the catalog's is a note in English
     event.attendance = extra.attendance ?? event.attendance;
     event.rsvps ??= extra.rsvps;
+    // Somewhere else than Meetup says: its coordinates were the other place's
+    if (extra.venue && extra.venue !== event.venue) delete event.geo;
     event.venue = extra.venue ?? event.venue;
     event.city = extra.city ?? event.city;
     // A researched list replaces the catalog's (joining them repeated people under two spellings)
@@ -990,11 +1021,19 @@ for (const event of events) {
   entriesOf.set(event, entries);
 }
 
-type Person = { key: string; names: string[]; members: string[]; events: Candidate[]; roles: TimelinePerson["roles"] };
+type Person = {
+  key: string;
+  names: string[];
+  members: string[];
+  events: Candidate[];
+  /** The event of each talk they gave */
+  talks: Candidate[];
+  roles: TimelinePerson["roles"];
+};
 const persons = new Map<string, Person>();
 const personOf = (key: string) => {
   let person = persons.get(key);
-  if (!person) persons.set(key, (person = { key, names: [], members: [], events: [], roles: [] }));
+  if (!person) persons.set(key, (person = { key, names: [], members: [], events: [], talks: [], roles: [] }));
   return person;
 };
 const memberKey = new Map<string, string>();
@@ -1031,6 +1070,52 @@ for (const [urlname, team] of Object.entries(meetupPeople.leaders)) {
   }
 }
 
+/*
+ * Speakers: the same people, by the same names. "A & B" is two people, "Name (Company)" and
+ * "Name - Company" are Name. A first name alone is someone only when the same event names one
+ * person it starts ("Santiago" next to "Santiago Ferreira"); a group of people ("Alumnos de…"),
+ * a company or a handle ("IBM", "elcuervo") stays a name without a profile.
+ */
+const NOT_A_PERSON = /^(varios|alumnos|docentes|maestros|estudiantes|equipo)\b/i;
+const speakerName = (name: string) =>
+  withoutNote(name)
+    .replace(/\s+[-–]\s+.*$/, "")
+    .trim();
+const speakersOf = (talk: RawTalk) =>
+  (talk.speakers ?? [])
+    .flatMap((name) => name.split(/\s+&\s+/))
+    .map((name) => name.trim())
+    // A placeholder the source left
+    .filter((name) => name && !/^(todo|tbd)$/i.test(name));
+const speakerKeys = new Map<RawTalk, (string | undefined)[]>();
+for (const event of events) {
+  const fullKeys = new Set([
+    ...(entriesOf.get(event) ?? [])
+      .map((entry) => entry.key)
+      .filter((key) => key.includes("-") && !key.includes("-meetup-")),
+    ...(event.talks ?? [])
+      .flatMap(speakersOf)
+      .map((name) => slugify(speakerName(name)))
+      .filter((key) => key.includes("-")),
+  ]);
+  for (const talk of event.talks ?? []) {
+    const keys = speakersOf(talk).map((name) => {
+      const key = slugify(speakerName(name));
+      if (!key || NOT_A_PERSON.test(name)) return undefined;
+      if (key.includes("-")) return key;
+      const full = [...fullKeys].filter((other) => other.startsWith(`${key}-`));
+      return full.length === 1 ? full[0] : undefined;
+    });
+    speakerKeys.set(talk, keys);
+    speakersOf(talk).forEach((name, i) => {
+      if (!keys[i]) return;
+      const person = personOf(keys[i]);
+      person.names.push(speakerName(name));
+      person.talks.push(event);
+    });
+  }
+}
+
 // The name a profile goes by: without a note, the fullest, accented, the most used. Named only
 // with notes, and different ones ("Cubox (apoyo)", "Cubox (Gabriela Rodríguez…)"), it's the name alone
 const nameOf = (person: Person) => {
@@ -1054,8 +1139,8 @@ const profiles = new Map<string, TimelinePerson>();
 const slugOfPerson = new Map<string, string>();
 const ranked = [...persons.values()].sort(
   (a, b) =>
-    b.events.length - a.events.length ||
-    (a.events[0]?.start ?? "9").localeCompare(b.events[0]?.start ?? "9") ||
+    b.events.length + b.talks.length - (a.events.length + a.talks.length) ||
+    (a.events[0]?.start ?? a.talks[0]?.start ?? "9").localeCompare(b.events[0]?.start ?? b.talks[0]?.start ?? "9") ||
     a.key.localeCompare(b.key)
 );
 for (const person of ranked) {
@@ -1066,7 +1151,8 @@ for (const person of ranked) {
   slugOfPerson.set(person.key, slug);
   if (hiddenPeople.has(base)) continue;
   const account = person.members.map((id) => meetupPeople.members[id]).find((member) => member?.photo);
-  const own = [...person.events].sort((a, b) => a.start.localeCompare(b.start));
+  // Organized or spoke at, each event once
+  const own = [...new Set([...person.events, ...person.talks])].sort((a, b) => a.start.localeCompare(b.start));
   const counts = new Map<string, number>();
   for (const event of own) counts.set(event.community, (counts.get(event.community) ?? 0) + 1);
   profiles.set(slug, {
@@ -1074,7 +1160,8 @@ for (const person of ranked) {
     name,
     photo: noPhoto.has(slug) ? undefined : (account?.photo ?? undefined),
     meetup: (account ?? meetupPeople.members[person.members[0]])?.url,
-    events: own.length,
+    events: person.events.length,
+    talks: person.talks.length || undefined,
     first: own[0]?.start.slice(0, 10),
     last: own.at(-1)?.start.slice(0, 10),
     communities: [...counts].sort((a, b) => b[1] - a[1]).map(([community]) => community),
@@ -1129,7 +1216,20 @@ mkdirSync(path.join(OUT, "events"), { recursive: true });
 const years = new Map<string, TimelineEvent[]>();
 for (const candidate of events) {
   const { origin: _origin, hosts: _hosts, organizers: _names, ...rest } = candidate;
-  const event: TimelineEvent = { ...rest, organizers: organizersOf.get(candidate) };
+  const event: TimelineEvent = {
+    ...rest,
+    // Replaced where they were, so each file keeps its order
+    talks: rest.talks?.map((talk) => ({
+      ...talk,
+      speakers: speakersOf(talk).length
+        ? speakersOf(talk).map((name, i) => {
+            const slug = slugOfPerson.get(speakerKeys.get(talk)?.[i] ?? "");
+            return slug && profiles.has(slug) ? { name, person: slug } : { name };
+          })
+        : undefined,
+    })),
+    organizers: organizersOf.get(candidate),
+  };
   const year = event.start.slice(0, 4);
   years.set(year, [...(years.get(year) ?? []), event]);
 }
@@ -1150,5 +1250,5 @@ writeFileSync(path.join(OUT, "people.json"), lines([...profiles.values()]));
 
 const photoTotal = events.reduce((sum, e) => sum + (e.photos?.length ?? 0), 0);
 console.log(
-  `✓ ${events.length} events (${candidates.length} candidates) · ${communities.size} communities · ${profiles.size} organizers · ${photoTotal} photos · ${years.size} years → ${path.relative(process.cwd(), OUT)}`
+  `✓ ${events.length} events (${candidates.length} candidates) · ${communities.size} communities · ${profiles.size} people · ${photoTotal} photos · ${years.size} years → ${path.relative(process.cwd(), OUT)}`
 );
