@@ -1,12 +1,13 @@
 import { Info } from "lucide-react";
 import { cacheLife } from "next/cache";
 
+import { cn } from "app/lib/utils";
 import {
   ButtonLink,
   Container,
+  delay,
   Eyebrow,
   headingClassName,
-  PageHeader,
   Section,
   StatStrip,
   TitleBar,
@@ -65,7 +66,8 @@ function HeroMosaic() {
             title: event.title,
             year: event.start.slice(0, 4),
             alt: photo.alt ?? event.title,
-            sources: photoSources(photo.src, "(min-width: 1280px) 112px, 1px"),
+            // Three to a 30rem column on wide screens, 112–128px in the row to swipe
+            sources: photoSources(photo.src, "(min-width: 1280px) 152px, (min-width: 640px) 128px, 112px"),
           },
         ]
       : [];
@@ -87,61 +89,77 @@ export default async function TimelinePage() {
   return (
     <>
       <main>
-        <Container className="pt-6">
-          <p
-            className="flex items-start gap-2.5 rounded-xl border border-yellow-400/20 bg-yellow-400/[0.05] px-4 py-2.5 text-[13px] leading-relaxed text-zinc-300"
-            role="note"
-          >
-            <Info aria-hidden className="mt-[3px] size-4 shrink-0 text-yellow-300" />
-            <span>
-              OWU solo indexa contenido público y no aloja las fotos: se ven desde su fuente original. ¿Querés que
-              saquemos algo? Escribinos a{" "}
-              <a
-                className="text-zinc-100 underline decoration-white/25 underline-offset-4 hover:decoration-yellow-400"
-                href={`mailto:${PRIVACY_EMAIL}?subject=Contenido%20en%20la%20historia`}
+        <header className="relative">
+          <Container className="pt-8 sm:pt-10">
+            <p
+              className="flex w-fit max-w-full items-start gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2 text-[12px] leading-relaxed text-zinc-400 sm:items-center sm:rounded-full"
+              role="note"
+            >
+              <Info aria-hidden className="mt-0.5 size-3.5 shrink-0 text-yellow-300 sm:mt-0" />
+              <span>
+                OWU solo indexa contenido público y no aloja las fotos: se ven desde su fuente original. ¿Querés que
+                saquemos algo? Escribinos a{" "}
+                <a
+                  className="text-zinc-200 underline decoration-white/25 underline-offset-4 hover:decoration-yellow-400"
+                  href={`mailto:${PRIVACY_EMAIL}?subject=Contenido%20en%20la%20historia`}
+                >
+                  {PRIVACY_EMAIL}
+                </a>
+                .
+              </span>
+            </p>
+          </Container>
+
+          <Container className="grid gap-12 pt-14 pb-14 sm:pt-20 sm:pb-16 xl:grid-cols-[minmax(0,1fr)_30rem] xl:items-center xl:gap-20 xl:pt-16">
+            <div className="min-w-0">
+              <div className="owu-rise" style={delay(0)}>
+                <Eyebrow>Historia</Eyebrow>
+              </div>
+              <h1 className={cn(headingClassName.h1, "owu-rise mt-4 max-w-3xl text-balance")} style={delay(80)}>
+                La historia de la comunidad tech uruguaya
+              </h1>
+              <TitleBar className="owu-rise mt-8" />
+              <div className="owu-rise mt-8 max-w-2xl" style={delay(160)}>
+                <p className="text-lg leading-relaxed text-pretty text-zinc-300 sm:text-xl sm:leading-relaxed">
+                  Desde el primer FLISoL en 2007 hasta la OWU CONF: cada meetup, conferencia, hackatón y game jam de las
+                  comunidades tech de Uruguay, con fecha, lugar y fotos.
+                </p>
+                <p className="mt-4 max-w-xl leading-relaxed text-pretty text-zinc-400">
+                  Lo reconstruimos de Meetup, de los repositorios de cada comunidad y de los sitios de cada evento,
+                  también los que ya no existen.
+                </p>
+              </div>
+              <div
+                className="owu-rise mt-10 grid gap-3 sm:flex sm:flex-wrap sm:items-center [&>a]:justify-center"
+                style={delay(240)}
               >
-                {PRIVACY_EMAIL}
-              </a>
-              .
-            </span>
-          </p>
-        </Container>
-        <PageHeader
-          actions={
-            <>
-              <ButtonLink arrow href="#archivo">
-                Ver todos los eventos
-              </ButtonLink>
-              {/* The deck is made for a phone: there it's one tap away */}
-              <ButtonLink className="sm:hidden" href="/timeline/descubrir" variant="secondary">
-                Deslizá los eventos
-              </ButtonLink>
-              <ButtonLink href="#sumar" variant="secondary">
-                ¿Falta algo? Sumalo
-              </ButtonLink>
-            </>
-          }
-          description={
-            <>
-              Desde el primer FLISoL en 2007 hasta la OWU CONF: cada meetup, conferencia, hackatón y game jam que
-              encontramos de las comunidades tech de Uruguay, con fecha, lugar y fotos. Lo reconstruimos de Meetup, de
-              los repositorios de cada comunidad y de los sitios de cada evento, también los que ya no existen.
-            </>
-          }
-          eyebrow="Historia"
-          title="La historia de la comunidad tech uruguaya"
-        >
-          <StatStrip
-            className="mt-12"
-            stats={[
-              { value: number.format(stats.events), label: "eventos de comunidades" },
-              { value: number.format(stats.communities), label: "comunidades, de ayer y de hoy" },
-              { value: number.format(stats.photos), label: "fotos de sus eventos" },
-              { value: thisYear - stats.since, label: `años, desde ${stats.since}` },
-            ]}
-          />
-          <HeroMosaic />
-        </PageHeader>
+                <ButtonLink arrow href="#archivo">
+                  Ver todos los eventos
+                </ButtonLink>
+                {/* The deck is made for a phone: there it's one tap away */}
+                <ButtonLink className="sm:hidden" href="/timeline/descubrir" variant="secondary">
+                  Deslizá los eventos
+                </ButtonLink>
+                <ButtonLink href="#sumar" variant="secondary">
+                  ¿Falta algo? Sumalo
+                </ButtonLink>
+              </div>
+            </div>
+            <HeroMosaic />
+          </Container>
+
+          <Container className="pb-16 sm:pb-24">
+            <StatStrip
+              className="border-t border-white/[0.08] pt-10 sm:pt-12"
+              stats={[
+                { value: number.format(stats.events), label: "eventos de comunidades" },
+                { value: number.format(stats.communities), label: "comunidades, de ayer y de hoy" },
+                { value: number.format(stats.photos), label: "fotos de sus eventos" },
+                { value: thisYear - stats.since, label: `años, desde ${stats.since}` },
+              ]}
+            />
+          </Container>
+        </header>
 
         <SectionNav years={years} />
 
