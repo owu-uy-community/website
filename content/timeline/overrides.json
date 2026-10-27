@@ -34,6 +34,10 @@
     },
     "conf:oracle-tour-montevideo:2010": {
       "start": "2010-10-16"
+    },
+    "conf:agile-open-space-uy:2013-05-04": {
+      "start": "2013-05-04T10:00:00-03:00",
+      "title": "Agile is in the Air - Open Space"
     }
   },
   "spanish": {

@@ -75,7 +75,8 @@ export const activeCount = (state: ArchiveFilters) =>
   (state.ecosistema ? 1 : 0);
 
 export function filterRows(rows: ArchiveRow[], state: ArchiveFilters, communities: Map<string, ArchiveCommunity>) {
-  const term = normalize(state.q.trim());
+  // Spaces don't count: "openspace" finds "Open Space", "agile uy" finds "AgileUY"
+  const term = normalize(state.q).replace(/\s+/g, "");
   const chosen = new Set(state.comunidad);
   const kinds = new Set(state.tipo);
 
@@ -92,7 +93,9 @@ export function filterRows(rows: ArchiveRow[], state: ArchiveFilters, communitie
     if (state.desde !== null && year < state.desde) return false;
     if (state.hasta !== null && year > state.hasta) return false;
     if (!term) return true;
-    return normalize(`${row.t} ${communities.get(row.c)?.name ?? ""} ${row.v ?? ""}`).includes(term);
+    return normalize(`${row.t} ${communities.get(row.c)?.name ?? ""} ${row.v ?? ""}`)
+      .replace(/\s+/g, "")
+      .includes(term);
   });
 }
 
