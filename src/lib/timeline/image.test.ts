@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { photoSources, thumbSources } from "./image";
+import { avatarSources, photoSources, thumbSources } from "./image";
 
 const FLICKR = "https://live.staticflickr.com/6113/6336036326_f2102b3f2b_c.jpg";
 const MEETUP = "https://secure.meetupstatic.com/photos/event/2/c/8/0/highres_96191392.jpeg";
@@ -62,5 +62,19 @@ describe(thumbSources, () => {
 
   test("leaves single-size sources as they are", () => {
     expect(thumbSources(GITHUB, 72)).toStrictEqual({ src: GITHUB });
+  });
+});
+
+describe(avatarSources, () => {
+  const MEMBER = "https://secure.meetupstatic.com/photos/member/3/e/f/8/highres_274396120.jpeg";
+  const member = (prefix: string) => `https://secure.meetupstatic.com/photos/member/3/e/f/8/${prefix}274396120.webp`;
+
+  test("takes Meetup's 80px square while it's sharp, its 240px one past that", () => {
+    expect(avatarSources(MEMBER, 32)).toStrictEqual({ src: member("thumb_") });
+    expect(avatarSources(MEMBER, 44)).toStrictEqual({
+      src: member("thumb_"),
+      srcSet: `${member("thumb_")} 1x, ${member("member_")} 2x`,
+    });
+    expect(avatarSources(MEMBER, 112)).toStrictEqual({ src: member("member_") });
   });
 });

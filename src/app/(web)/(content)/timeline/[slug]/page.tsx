@@ -10,9 +10,11 @@ import { PRIVACY_EMAIL, SITE_URL } from "lib/community/site";
 import { getTimeline, photoCount } from "lib/timeline/data";
 import { formatDate, formatTime, KIND_LABEL, plainText, STATUS_LABEL } from "lib/timeline/format";
 import { photoSources } from "lib/timeline/image";
+import { organizersOf } from "lib/timeline/people";
 import type { TimelineEvent, TimelinePhoto } from "lib/timeline/types";
 
 import Markdown from "../Markdown";
+import Organizers from "../Organizers";
 import EventNav from "./EventNav";
 import Gallery, { type GalleryPhoto } from "./Gallery";
 
@@ -237,6 +239,14 @@ async function EventView({ slug }: { slug: string }) {
                     </span>
                   </dd>
                 </div>
+                {event.organizers?.length ? (
+                  <div className="border-t border-white/[0.06] pt-4">
+                    <dt className="mb-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">Organizaron</dt>
+                    <dd>
+                      <Organizers people={organizersOf(event)} />
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
               {sourceUrl ? (
                 <a
@@ -356,13 +366,6 @@ async function EventView({ slug }: { slug: string }) {
                 </h2>
                 <Markdown className="mt-4 max-w-2xl leading-relaxed text-zinc-400" text={event.description} />
               </section>
-            ) : null}
-
-            {event.organizers?.length ? (
-              <p className="text-sm text-zinc-400">
-                <span className="text-zinc-400">Organizaron: </span>
-                {event.organizers.join(", ")}
-              </p>
             ) : null}
 
             {event.links?.length || event.sources.length ? (

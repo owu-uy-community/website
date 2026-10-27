@@ -54,6 +54,14 @@ export function photoSources(src: string, sizes: string): PhotoSources {
   return { src: atLeast(steps, 640), srcSet: steps.map(([width, url]) => `${url} ${width}w`).join(", "), sizes };
 }
 
+/** A Meetup member photo as a round avatar `px` wide: its 80px square, or its 240px one when that's blurry */
+export function avatarSources(src: string, px: number): PhotoSources {
+  const thumb = meetupAt(src, "thumb_");
+  const member = meetupAt(src, "member_");
+  if (px * 2 <= 80) return { src: thumb };
+  return px <= 80 ? { src: thumb, srcSet: `${thumb} 1x, ${member} 2x` } : { src: member };
+}
+
 /** A thumbnail that covers a `px` square (CSS px), sharp on 2x screens */
 export function thumbSources(src: string, px: number): PhotoSources {
   if (src.startsWith("/")) {

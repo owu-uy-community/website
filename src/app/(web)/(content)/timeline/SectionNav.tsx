@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { GalleryHorizontalEnd, Images } from "lucide-react";
+import { GalleryHorizontalEnd, Images, Users } from "lucide-react";
 import { m } from "motion/react";
 import Link from "next/link";
 
@@ -79,6 +79,12 @@ export default function SectionNav({ years }: { years: number[] }) {
           href="/timeline/fotos"
         >
           <Images aria-hidden className="size-3.5" /> Fotos
+        </Link>
+        <Link
+          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white sm:px-3.5"
+          href="/timeline/organizadores"
+        >
+          <Users aria-hidden className="size-3.5" /> Organizadores
         </Link>
         <Link
           className="inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[13px] whitespace-nowrap text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white sm:px-3.5"
