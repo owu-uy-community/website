@@ -90,5 +90,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/timeline/lugares` },
     ...getVenues().venues.map(({ slug }) => ({ url: `${SITE_URL}${venueHref(slug)}` })),
     { url: `${SITE_URL}/timeline/charlas` },
+    { url: `${SITE_URL}/timeline/red` },
   ];
 }

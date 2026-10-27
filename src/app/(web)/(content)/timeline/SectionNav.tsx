@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { GalleryHorizontalEnd, Images, MapPin, Play, Users } from "lucide-react";
+import { GalleryHorizontalEnd, Images, MapPin, Play, Users, Waypoints } from "lucide-react";
 import { m } from "motion/react";
 import Link from "next/link";
 
@@ -23,6 +23,7 @@ const PAGES = [
   { href: "/timeline/personas", label: "Personas", Icon: Users },
   { href: "/timeline/lugares", label: "Lugares", Icon: MapPin },
   { href: "/timeline/charlas", label: "Charlas", Icon: Play },
+  { href: "/timeline/red", label: "Red", Icon: Waypoints },
   { href: "/timeline/descubrir", label: "Deslizá", Icon: GalleryHorizontalEnd },
 ];
 
