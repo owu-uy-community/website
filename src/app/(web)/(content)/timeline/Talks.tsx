@@ -9,6 +9,8 @@ import type { GivenTalk } from "lib/timeline/people";
 
 import { SpeakerNames } from "./Organizers";
 
+const LINK =
+  "text-zinc-300 underline decoration-white/20 underline-offset-4 transition-colors hover:text-white hover:decoration-yellow-400";
 const BUTTON =
   "inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1 text-[13px] text-zinc-200 transition-colors hover:border-yellow-400/60 hover:text-white";
 
@@ -35,6 +37,7 @@ export default function Talks({
         const id = talk.video ? youtubeId(talk.video) : null;
         // On a profile, the others who gave it with them
         const others = (talk.speakers ?? []).filter((speaker) => !current || speaker.person !== current);
+        const name = community.get(event.community)?.name;
         return (
           <li key={`${event.slug}-${i}`} className="flex gap-4 py-4 first:pt-0">
             {thumbnails ? (
@@ -65,16 +68,24 @@ export default function Talks({
                   </span>
                 </a>
               ) : (
-                <span
+                <Link
                   aria-hidden
-                  className="flex aspect-video w-28 shrink-0 items-center justify-center rounded-lg bg-white/[0.03] text-zinc-500 sm:w-40"
+                  className="flex aspect-video w-28 shrink-0 items-center justify-center rounded-lg bg-white/[0.03] text-zinc-500 transition-colors hover:bg-white/[0.06] hover:text-zinc-300 sm:w-40"
+                  href={`/timeline/${event.slug}#charlas`}
+                  tabIndex={-1}
                 >
                   <Presentation className="size-5" />
-                </span>
+                </Link>
               )
             ) : null}
             <div className="min-w-0 flex-1">
-              <p className="text-zinc-100">{talk.title}</p>
+              {/* The talk, on its event's page: its program, the photos, who organized it */}
+              <Link
+                className="text-zinc-100 transition-colors hover:text-yellow-200"
+                href={`/timeline/${event.slug}#charlas`}
+              >
+                {talk.title}
+              </Link>
               {others.length ? (
                 <p className="mt-0.5 text-sm text-zinc-300">
                   {current ? "Con " : null}
@@ -82,13 +93,18 @@ export default function Talks({
                 </p>
               ) : null}
               <p className="mt-0.5 text-sm text-zinc-400">
-                <Link className="hover:text-zinc-200" href={`/timeline/${event.slug}`}>
+                <Link className={LINK} href={`/timeline/${event.slug}`}>
                   {event.title}
                 </Link>{" "}
                 · {formatDate(event)}
-                {community.get(event.community) && !event.title.includes(community.get(event.community)!.name)
-                  ? ` · ${community.get(event.community)!.name}`
-                  : null}
+                {name && !event.title.includes(name) ? (
+                  <>
+                    {" · "}
+                    <Link className={LINK} href={`/timeline?comunidad=${event.community}#archivo`}>
+                      {name}
+                    </Link>
+                  </>
+                ) : null}
               </p>
               {talk.video || talk.slides ? (
                 <div className="mt-2.5 flex flex-wrap gap-2">

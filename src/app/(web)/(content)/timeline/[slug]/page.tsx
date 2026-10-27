@@ -343,7 +343,7 @@ async function EventView({ slug }: { slug: string }) {
 
             {event.talks?.length ? (
               <section aria-labelledby="charlas">
-                <h2 className={headingClassName.h3} id="charlas">
+                <h2 className={`${headingClassName.h3} scroll-mt-28`} id="charlas">
                   Charlas
                 </h2>
                 <ol className="mt-4 divide-y divide-white/[0.06]">
