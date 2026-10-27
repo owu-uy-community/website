@@ -121,9 +121,19 @@
     ]
   },
   "conf:agile-open-space-uy:2013-05-04": {
-    "description": "El sábado 4 de mayo de 2013 la comunidad ágil de Uruguay organizó **Agile Open UY**, un encuentro en formato *Open Space* en Montevideo. La idea era fortalecer la comunidad ágil local y compartir experiencias y desafíos con personas y empresas que habían cambiado con éxito su forma de trabajar.\n\nEn un Open Space no hay agenda previa: cualquier participante podía proponer un tema, las propuestas se votaban y las más votadas entraban en la agenda del día. El mural que el dibujante pablitux empezó en la apertura y fue completando a lo largo de la jornada resume el espíritu del encuentro: «compartir experiencias y conocimientos», los principios del Open Space (como la «regla de los dos pies») y temas como testing, Scrum, equipos, estimación, clientes y contratos.",
+    "description": "**Agile is in the Air** fue la primera de las dos ediciones del Agile Open Space UY, una conferencia propia de la comunidad ágil uruguaya en formato *Open Space*: gratuita, el sábado 4 de mayo de 2013 desde las 10:00, en el Club del Expositor del LATU. La organizaron once personas, varias de las que después llevaron las meetups de AgileUY. La idea era fortalecer la comunidad ágil local y compartir experiencias y desafíos con personas y empresas que habían cambiado su forma de trabajar.\n\nEn un Open Space no hay agenda previa: cualquiera podía proponer un tema, las propuestas se votaban y las más votadas armaban la agenda del día. El mural que el dibujante pablitux fue completando durante la jornada resume el espíritu: «compartir experiencias y conocimientos», los principios del Open Space (como la «regla de los dos pies») y temas como testing, Scrum, equipos, estimación, clientes y contratos.",
     "organizers": [
-      "Comunidad Agile de Uruguay"
+      "Valeria Viera",
+      "Adrián Stagno",
+      "Jorge Bejar",
+      "Santiago Ferreira",
+      "Gabriel Ledesma",
+      "Martín Mari",
+      "Ariel Erlijman",
+      "Pablo Lischinsky",
+      "Florencia Rossy",
+      "Ariel Ludeña",
+      "Gabriel Montero"
     ],
     "links": [
       {
@@ -133,6 +143,10 @@
       {
         "label": "Mural del evento en Flickr",
         "url": "https://www.flickr.com/photos/pablolfc/8711426199/"
+      },
+      {
+        "label": "Open Space UY en Facebook",
+        "url": "https://www.facebook.com/OpenSpaceUy"
       }
     ],
     "sources": [
@@ -143,6 +157,10 @@
       {
         "label": "pablitux en Flickr: «Agile Open Uruguay (4-Mayo-2013)»",
         "url": "https://www.flickr.com/photos/pablolfc/8711426199/"
+      },
+      {
+        "label": "Open Space UY en Facebook: fecha, lugar y organizadores",
+        "url": "https://www.facebook.com/OpenSpaceUy"
       }
     ],
     "photos": [
@@ -153,6 +171,34 @@
         "source": "Flickr",
         "page": "https://www.flickr.com/photos/pablolfc/8711426199/",
         "license": "CC BY-NC-SA 2.0"
+      }
+    ],
+    "venue": "Club del Expositor, LATU",
+    "city": "Montevideo"
+  },
+  "conf:agile-open-space-uy:2014-05-17": {
+    "description": "El sábado 17 de mayo de 2014 fue la segunda y última edición del **Agile Open Space UY**, en la Universidad Católica del Uruguay. La organizó el mismo grupo de once personas que la de 2013, como una conferencia propia, y la anunció en el grupo de AgileUY en Meetup.\n\nFue gratuita y con comida. La inscripción era por Eventioz, no por Meetup, y la invitación, a preparar una charla o traer un tema para hablar con la comunidad: «No tenés que ser ningún experto». Como en todo Open Space, la agenda la armaban quienes estaban ahí, para compartir e intercambiar ideas.",
+    "organizers": [
+      "Valeria Viera",
+      "Adrián Stagno",
+      "Jorge Bejar",
+      "Santiago Ferreira",
+      "Gabriel Ledesma",
+      "Martín Mari",
+      "Ariel Erlijman",
+      "Pablo Lischinsky",
+      "Florencia Rossy",
+      "Ariel Ludeña",
+      "Gabriel Montero"
+    ],
+    "sources": [
+      {
+        "label": "AgileUY en Meetup: «Agile Open Space UY 2014»",
+        "url": "https://www.meetup.com/agileuy/events/177467782/"
+      },
+      {
+        "label": "Open Space UY en Facebook: fecha, lugar y organizadores",
+        "url": "https://www.facebook.com/OpenSpaceUy"
       }
     ]
   },
