@@ -17,6 +17,7 @@ import type { GalleryPhoto } from "./[slug]/Gallery";
 import { rememberReturn } from "./archive-data";
 import type { EventDetail } from "./[slug]/datos.json/route";
 import Markdown from "./Markdown";
+import Organizers from "./Organizers";
 import { Line } from "./Skeletons";
 
 // Its own (empty) Suspense boundary: without a `loading`, the first open suspends up to the
@@ -258,6 +259,16 @@ function Talks({ talks }: { talks: NonNullable<EventDetail["event"]["talks"]> })
   );
 }
 
+function Organized({ detail }: { detail: EventDetail }) {
+  return (
+    <section aria-label="Organizaron">
+      <h4 className="mb-2 text-[12px] font-medium tracking-wide text-zinc-400 uppercase">Organizaron</h4>
+      {/* Leaving the archive for a profile: back here, the row it was on is centered again */}
+      <Organizers onNavigate={() => rememberReturn(detail.event.slug)} people={detail.organizers} />
+    </section>
+  );
+}
+
 // Past this length the description folds to 6 lines with a "Leer más"
 const FOLD = 360;
 
@@ -320,8 +331,9 @@ function Pending({ row }: { row: ArchiveRow }) {
   const tiles = Math.min(row.p ?? 0, 6);
   const more = Math.max(row.p ?? 0, row.n ?? 0) - tiles;
   const talks = Math.min(row.tk ?? 0, 8);
-  // Folded descriptions take 6 lines; shorter ones about one line per 48 characters of the panel
+  // Folded descriptions take 6 lines; shorter ones (and organizers) about one line per 48 characters of the panel
   const lines = row.l ? (row.l > FOLD ? 6 : Math.max(1, Math.ceil(row.l / 48))) : 0;
+  const organizers = Math.ceil((row.g ?? 0) / 48);
 
   return (
     <>
@@ -344,6 +356,21 @@ function Pending({ row }: { row: ArchiveRow }) {
               <Line key={i} w={["88%", "72%", "94%", "66%"][i % 4]} />
             ))}
             {(row.tk ?? 0) > 8 ? <Line className="text-[13px]" w="4rem" /> : null}
+          </div>
+        </div>
+      ) : null}
+      {organizers ? (
+        <div aria-hidden className="animate-pulse">
+          <Line className="mb-2 text-[12px] font-medium uppercase" w="6.5rem" />
+          <div className="flex h-8 items-center">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className={cn("size-8 rounded-full bg-white/[0.07]", i > 0 && "-ml-2")} />
+            ))}
+          </div>
+          <div className="mt-2 text-[14px]">
+            {Array.from({ length: organizers }, (_, i) => (
+              <Line key={i} w={i < organizers - 1 ? "94%" : `${Math.min(94, (row.g! % 48 || 48) * 2)}%`} />
+            ))}
           </div>
         </div>
       ) : null}
@@ -370,6 +397,7 @@ function Body({ view, detail, row }: { view: View; detail: EventDetail | null; r
         <>
           <Photos detail={detail} />
           {event.talks?.length ? <Talks talks={event.talks} /> : null}
+          {detail.organizers.length ? <Organized detail={detail} /> : null}
           {(event.summary ?? event.description) ? <Description text={(event.summary ?? event.description)!} /> : null}
         </>
       ) : (

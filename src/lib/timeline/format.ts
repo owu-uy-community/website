@@ -13,6 +13,21 @@ export const KIND_LABEL: Record<TimelineKind, string> = {
 
 export const STATUS_LABEL = { activa: "Activa", "en-pausa": "En pausa", cerrada: "Ya no se junta" } as const;
 
+/** Someone's place in a group's team on Meetup, before the group's name: "Co-organiza Montevideo JS" */
+export const ROLE_LABEL = {
+  organizer: "Organiza",
+  coorganizer: "Co-organiza",
+  assistant: "Ayuda a organizar",
+  events: "Organiza eventos de",
+} as const;
+
+/** "2014–2024", or one year */
+export const yearSpan = (first?: string, last?: string) => {
+  const from = first?.slice(0, 4);
+  const to = last?.slice(0, 4);
+  return !from ? "" : !to || from === to ? from : `${from}–${to}`;
+};
+
 const MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "set", "oct", "nov", "dic"];
 const MONTHS_LONG = [
   "enero",

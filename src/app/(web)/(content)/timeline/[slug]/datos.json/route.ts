@@ -1,11 +1,13 @@
 import { cacheLife } from "next/cache";
 
 import { getArchive, getTimeline } from "lib/timeline/data";
-import type { TimelineCommunity, TimelineEvent } from "lib/timeline/types";
+import { organizersOf } from "lib/timeline/people";
+import type { TimelineCommunity, TimelineEvent, TimelinePersonChip } from "lib/timeline/types";
 
-/** What the archive's detail panel shows for one event: the event, its community and its neighbours there */
+/** What the archive's detail panel shows for one event: the event, its organizers, its community and its neighbours there */
 export type EventDetail = {
   event: TimelineEvent;
+  organizers: TimelinePersonChip[];
   community: Pick<TimelineCommunity, "slug" | "name" | "logo" | "status" | "events" | "directory" | "photos"> | null;
   previous: { slug: string; title: string; start: string } | null;
   next: { slug: string; title: string; start: string } | null;
@@ -26,6 +28,7 @@ async function render(slug: string) {
   const pick = (e?: TimelineEvent) => (e ? { slug: e.slug, title: e.title, start: e.start } : null);
   const detail: EventDetail = {
     event,
+    organizers: organizersOf(event),
     community: community
       ? {
           slug: community.slug,

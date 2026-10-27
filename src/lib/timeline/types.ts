@@ -26,6 +26,30 @@ export type TimelineLink = { label: string; url: string };
 
 export type TimelineTalk = { title: string; speakers?: string[]; slides?: string; video?: string };
 
+/** Someone who organized an event, as that event names them, and their profile (people.json) */
+export type TimelineOrganizer = { name: string; person: string };
+
+/** A profile at /timeline/organizadores/<slug>: a person, or an organization that ran events */
+export type TimelinePerson = {
+  slug: string;
+  name: string;
+  /** Their Meetup photo, as published */
+  photo?: string;
+  /** Their Meetup profile */
+  meetup?: string;
+  /** Events they organized; a group's team today may not have hosted any yet */
+  events: number;
+  first?: string;
+  last?: string;
+  /** Community slugs, most events first */
+  communities: string[];
+  /** Their role in a group's team on Meetup today */
+  roles?: { community: string; role: "organizer" | "coorganizer" | "assistant" | "events" }[];
+};
+
+/** Someone as a link shows them: an event's name for them, their profile and their photo */
+export type TimelinePersonChip = Pick<TimelinePerson, "slug" | "name" | "photo">;
+
 export type TimelineEvent = {
   /** Stable source id: meetup:<id>, conf:<series>:<date>, github:<repo>:…, hito:… */
   id: string;
@@ -55,7 +79,7 @@ export type TimelineEvent = {
   summary?: string;
   talks?: TimelineTalk[];
   talkCount?: number;
-  organizers?: string[];
+  organizers?: TimelineOrganizer[];
   photos?: TimelinePhoto[];
   /** How many photos the source album holds, when more than the ones listed */
   photoCount?: number;

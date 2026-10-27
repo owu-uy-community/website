@@ -9,7 +9,7 @@ import type { LifelineEventSegment, LifelineMarker } from "components/lifeline/t
 import { PHOTOS } from "components/community/home/photos";
 
 import { photoSources, thumbSources } from "./image";
-import type { TimelineCommunity, TimelineEvent, TimelineKind, TimelinePhoto } from "./types";
+import type { TimelineCommunity, TimelineEvent, TimelineKind, TimelinePerson, TimelinePhoto } from "./types";
 
 /*
  * The /timeline dataset: content/timeline/events/<year>.json and communities.json (written by
@@ -45,12 +45,16 @@ export const getTimeline = cache(() => {
   }
 
   const communities = read<TimelineCommunity[]>("communities.json");
+  // Who organized what, most events first
+  const people = read<TimelinePerson[]>("people.json");
 
   return {
     events,
     communities,
     community: new Map(communities.map((community) => [community.slug, community])),
     bySlug: new Map(events.map((event) => [event.slug, event])),
+    people,
+    person: new Map(people.map((person) => [person.slug, person])),
   };
 });
 
@@ -103,20 +107,21 @@ export type ArchiveRow = {
   h?: string;
   /*
    * What the reading panel needs to hold the exact shape of an event while it loads: how many
-   * photos it has (as files), its description's length, how many talks, the attendance when
-   * there's no RSVP count, and a date's confidence when it isn't firm
+   * photos it has (as files), its description's length, how many talks, its organizers' line
+   * length, the attendance when there's no RSVP count, and a date's confidence when it isn't firm
    */
   p?: number;
   l?: number;
   /** Its first real photo (not a flyer, a banner or a logo), for the deck that only shows those */
   f?: string;
   tk?: number;
+  g?: number;
   a?: string;
   q?: TimelineEvent["confidence"];
 };
 
 /** An event's first real photo, one not served by the Wayback Machine if it has any (those load slowly, or not) */
-const firstPhoto = (event: TimelineEvent) => {
+export const firstPhoto = (event: TimelineEvent) => {
   const real = (event.photos ?? []).filter((photo) => !photo.banner);
   return (real.find((photo) => !photo.src.includes("web.archive.org")) ?? real[0])?.src;
 };
@@ -148,6 +153,7 @@ export function getArchiveRows(): ArchiveRow[] {
       ...(firstPhoto(event) ? { f: firstPhoto(event) } : {}),
       ...((event.summary ?? event.description) ? { l: (event.summary ?? event.description)!.length } : {}),
       ...(event.talks?.length ? { tk: event.talks.length } : {}),
+      ...(event.organizers?.length ? { g: event.organizers.map((organizer) => organizer.name).join(", ").length } : {}),
       ...(event.attendance && !event.rsvps ? { a: event.attendance } : {}),
       ...(event.confidence ? { q: event.confidence } : {}),
     };

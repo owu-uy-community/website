@@ -83,5 +83,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/timeline/fotos` },
     { url: `${SITE_URL}/timeline/descubrir` },
     ...getPhotoCommunities().map(({ slug }) => ({ url: `${SITE_URL}/timeline/fotos/${slug}` })),
+    { url: `${SITE_URL}/timeline/organizadores` },
+    ...getTimeline().people.map(({ slug }) => ({ url: `${SITE_URL}/timeline/organizadores/${slug}` })),
   ];
 }
