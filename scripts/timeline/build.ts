@@ -1,16 +1,17 @@
 /* eslint-disable no-console */
 /**
- * Builds the /timeline dataset (content/timeline/) from the harvested sources:
- * meetup.com (groups + every past event, live and deleted groups), GitHub community
- * archives, the conference catalog and the milestones list.
+ * Builds the /timeline dataset (content/timeline/) from its sources (scripts/timeline/sources):
+ * meetup.com (groups + every past event, live and deleted groups, kept current by
+ * scripts/timeline/sync.ts), GitHub community archives, the conference catalog and the milestones list.
  *
  * Usage:
- *   pnpm timeline:build --raw <dir>
+ *   pnpm timeline:build [--raw <dir>]
  *
- * <dir> holds the harvest output (meetup/data, github/data, conferences/data). Flickr albums
- * are expanded to direct photo URLs once and cached under <dir>/.cache/flickr.
- * Re-runnable: the output only depends on the inputs, content/timeline/overrides.json and
- * the community directory.
+ * <dir> (scripts/timeline/sources by default) holds meetup/, github/ and conferences/. Flickr
+ * albums are expanded to direct photo URLs once and cached under <dir>/flickr.
+ * Re-runnable: the output only depends on the inputs, content/timeline/overrides.json,
+ * broken-photos.json and the community directory, plus the slugs already published (an event
+ * keeps its URL when its title changes).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -28,14 +29,11 @@ import type {
 } from "../../src/lib/timeline/types";
 
 const args = process.argv.slice(2);
-const rawArg = args.includes("--raw") ? args[args.indexOf("--raw") + 1] : undefined;
-if (!rawArg) {
-  console.error("Usage: pnpm timeline:build --raw <dir with meetup/, github/ and conferences/ data>");
-  process.exit(1);
-}
-const RAW = path.resolve(rawArg);
+const RAW = path.resolve(
+  args.includes("--raw") ? args[args.indexOf("--raw") + 1] : path.join(import.meta.dirname, "sources")
+);
 const OUT = path.resolve("content/timeline");
-const CACHE = path.join(RAW, ".cache/flickr");
+const CACHE = path.join(RAW, "flickr");
 
 const readJson = <T>(file: string): T => JSON.parse(readFileSync(path.join(RAW, file), "utf8")) as T;
 
@@ -147,6 +145,8 @@ type Overrides = {
   spanish?: Record<string, string>;
   /** Profile slugs taken down on request: off every event (hide), or without their photo (noPhoto) */
   people?: { hide?: string[]; noPhoto?: string[] };
+  /** Photo URLs taken down on request (someone in it asked): off every event */
+  hidePhotos?: string[];
 };
 
 // ---------------------------------------------------------------- helpers
@@ -403,7 +403,7 @@ const guessTopics = (name: string) => {
 };
 
 // Meetup groups: the tech ones are communities, the borderline ones (crypto, startups, network re-posts) the ecosystem
-const groups = readJson<MeetupGroup[]>("meetup/data/groups.json").filter(
+const groups = readJson<MeetupGroup[]>("meetup/groups.json").filter(
   (group) => group.flag && group.flag.tech !== "no" && group.pastEvents > 0
 );
 const GROUP_COMMUNITY: Record<string, string> = {
@@ -417,8 +417,8 @@ const GROUP_COMMUNITY: Record<string, string> = {
   ...overrides.groupCommunity,
 };
 type GroupStats = Record<string, { members: number | null; rating: number | null; ratings: number }>;
-const groupStats: GroupStats = existsSync(path.join(RAW, "meetup/data/group_stats.json"))
-  ? readJson<GroupStats>("meetup/data/group_stats.json")
+const groupStats: GroupStats = existsSync(path.join(RAW, "meetup/group-stats.json"))
+  ? readJson<GroupStats>("meetup/group-stats.json")
   : {};
 const communityOfGroup = new Map<string, string>();
 for (const group of groups) {
@@ -485,7 +485,7 @@ const isEcosystemEdition = (edition: Edition) =>
   ["vendor-conference", "institutional", "graduation"].includes(edition.category) ||
   flagsOf(edition).some((flag) => flag === "vendor" || flag === "institutional");
 
-const editions = readJson<Edition[]>("conferences/data/editions.json");
+const editions = readJson<Edition[]>("conferences/editions.json");
 for (const edition of editions) {
   const slug = SERIES_COMMUNITY[edition.series_slug] ?? edition.series_slug;
   if (communities.has(slug)) continue;
@@ -569,7 +569,7 @@ const geoOf = (venue: MeetupEvent["venue"]): [number, number] | undefined =>
 const meetupGroupNames = new Map(
   groups.map((group) => [group.urlname, communities.get(communityOfGroup.get(group.urlname)!)!.name])
 );
-for (const event of readJson<MeetupEvent[]>("meetup/data/events.json")) {
+for (const event of readJson<MeetupEvent[]>("meetup/events.json")) {
   const community = communityOfGroup.get(event.group);
   if (!community || event.status !== "PAST") continue;
   const group = meetupGroupNames.get(event.group) ?? event.group;
@@ -611,8 +611,8 @@ for (const event of readJson<MeetupEvent[]>("meetup/data/events.json")) {
 }
 
 // GitHub archives
-for (const file of readdirSync(path.join(RAW, "github/data")).filter((f) => f.startsWith("events-"))) {
-  for (const event of readJson<GithubEvent[]>(`github/data/${file}`)) {
+for (const file of readdirSync(path.join(RAW, "github")).filter((f) => f.startsWith("events-"))) {
+  for (const event of readJson<GithubEvent[]>(`github/${file}`)) {
     if (event.kind === "series" || event.upcoming || event.status === "cancelled") continue;
     const community = githubCommunity(event.community);
     if (!communities.has(community)) {
@@ -837,6 +837,9 @@ for (const candidate of candidates) {
 }
 
 const hidden = new Set(overrides.hide);
+for (const id of hidden)
+  if (!candidates.some((candidate) => candidate.id === id))
+    console.warn(`overrides.json hide: no event has the id "${id}"`);
 const events: Candidate[] = [];
 const ordered = candidates
   .filter((candidate) => !hidden.has(candidate.id))
@@ -929,9 +932,27 @@ const notPhotos = new Set<string>(
     ? (JSON.parse(readFileSync(path.join(OUT, "not-photos.json"), "utf8")) as { src: string[] }).src
     : []
 );
+// Pictures that stopped loading (scripts/timeline/photos.ts found them gone twice): photos,
+// profile pictures, and talks whose video was taken down
+const broken = new Set([
+  ...Object.keys(
+    existsSync(path.join(OUT, "broken-photos.json"))
+      ? (JSON.parse(readFileSync(path.join(OUT, "broken-photos.json"), "utf8")) as Record<string, unknown>)
+      : {}
+  ),
+  // Taken down on request: gone the same way
+  ...(overrides.hidePhotos ?? []),
+]);
+const shownPhotos = new Set(events.flatMap((event) => (event.photos ?? []).map((photo) => photo.src)));
+for (const src of overrides.hidePhotos ?? [])
+  if (!shownPhotos.has(src)) console.warn(`overrides.json hidePhotos: no event shows ${src}`);
 for (const event of events) {
   if (event.photos)
-    event.photos = event.photos.map((photo) => (notPhotos.has(photo.src) ? { ...photo, banner: true } : photo));
+    event.photos = event.photos
+      .filter((photo) => !broken.has(photo.src))
+      .map((photo) => (notPhotos.has(photo.src) ? { ...photo, banner: true } : photo));
+  if (!event.photos?.length) delete event.photos;
+  for (const talk of event.talks ?? []) if (talk.video && broken.has(talk.video)) delete talk.video;
 }
 
 const inSpanish = (value: string | undefined) => (value && overrides.spanish?.[value]) || value;
@@ -960,8 +981,8 @@ type MeetupPeople = {
   members: Record<string, { name: string; url?: string; photo?: string | null }>;
   leaders: Record<string, { id: string; role: string }[]>;
 };
-const meetupPeople: MeetupPeople = existsSync(path.join(RAW, "meetup/data/people.json"))
-  ? readJson<MeetupPeople>("meetup/data/people.json")
+const meetupPeople: MeetupPeople = existsSync(path.join(RAW, "meetup/people.json"))
+  ? readJson<MeetupPeople>("meetup/people.json")
   : { members: {}, leaders: {} };
 const ROLE: Record<string, NonNullable<TimelinePerson["roles"]>[number]["role"]> = {
   ORGANIZER: "organizer",
@@ -1135,6 +1156,16 @@ const nameOf = (person: Person) => {
 };
 const hiddenPeople = new Set(overrides.people?.hide);
 const noPhoto = new Set(overrides.people?.noPhoto);
+// A takedown names a profile by its slug, its Meetup profile URL, or both: the URL still matches
+// after a renamed account moves the slug. The entries that matched someone, to flag the ones that didn't
+const matched = new Set<string>();
+const takenDown = (list: Set<string>, slug: string, person: Person) => {
+  const hits = [slug, ...person.members.map((id) => meetupPeople.members[id]?.url)].filter(
+    (key): key is string => !!key && list.has(key)
+  );
+  for (const key of hits) matched.add(key);
+  return hits.length > 0;
+};
 const profiles = new Map<string, TimelinePerson>();
 const slugOfPerson = new Map<string, string>();
 const ranked = [...persons.values()].sort(
@@ -1149,7 +1180,7 @@ for (const person of ranked) {
   let slug = base;
   for (let n = 2; profiles.has(slug) || hiddenPeople.has(slug); n++) slug = `${base}-${n}`;
   slugOfPerson.set(person.key, slug);
-  if (hiddenPeople.has(base)) continue;
+  if (takenDown(hiddenPeople, base, person)) continue;
   const account = person.members.map((id) => meetupPeople.members[id]).find((member) => member?.photo);
   // Organized or spoke at, each event once
   const own = [...new Set([...person.events, ...person.talks])].sort((a, b) => a.start.localeCompare(b.start));
@@ -1158,7 +1189,8 @@ for (const person of ranked) {
   profiles.set(slug, {
     slug,
     name,
-    photo: noPhoto.has(slug) ? undefined : (account?.photo ?? undefined),
+    photo:
+      takenDown(noPhoto, slug, person) || broken.has(account?.photo ?? "") ? undefined : (account?.photo ?? undefined),
     meetup: (account ?? meetupPeople.members[person.members[0]])?.url,
     events: person.events.length,
     talks: person.talks.length || undefined,
@@ -1168,6 +1200,11 @@ for (const person of ranked) {
     roles: person.roles?.length ? person.roles : undefined,
   });
 }
+for (const entry of [...hiddenPeople, ...noPhoto])
+  if (!matched.has(entry))
+    console.warn(
+      `overrides.json people: "${entry}" matches no one (a typo, or a slug that moved: name their Meetup profile URL too)`
+    );
 const organizersOf = new Map<Candidate, TimelineEvent["organizers"]>();
 for (const [event, entries] of entriesOf) {
   const list = entries
@@ -1184,8 +1221,22 @@ for (const [event, entries] of entriesOf) {
 // ---------------------------------------------------------------- slugs, stats, write
 
 events.sort((a, b) => a.start.localeCompare(b.start) || a.title.localeCompare(b.title));
+// Each event's URL as already published: a title edited on Meetup doesn't move it
+const published = new Map<string, string>();
+for (const file of existsSync(path.join(OUT, "events")) ? readdirSync(path.join(OUT, "events")) : [])
+  for (const event of JSON.parse(readFileSync(path.join(OUT, "events", file), "utf8")) as TimelineEvent[])
+    for (const id of [event.id, ...(event.mergedIds ?? [])]) published.set(id, event.slug);
 const slugs = new Set<string>();
 for (const event of events) {
+  const kept = [event.id, ...(event.mergedIds ?? [])].map((id) => published.get(id)).find(Boolean);
+  if (kept && !slugs.has(kept)) {
+    slugs.add(kept);
+    event.slug = kept;
+    continue;
+  }
+}
+for (const event of events) {
+  if (event.slug) continue;
   const base = `${dayOf(event.start).replace(/-$/, "")}-${slugify(event.title).slice(0, 60).replace(/-+$/, "")}`;
   let slug = base;
   if (slugs.has(slug)) slug = `${base}-${event.community}`;
