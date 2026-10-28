@@ -14,7 +14,7 @@ export default function Speakers() {
         {TALKS.map(({ title, description, speakers }) => (
           <article key={title} className="grid items-start gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
             <ul className="flex justify-center gap-6">
-              {speakers.map(({ name, picture, role, linkedin }, i) => (
+              {speakers.map(({ name, picture, reveal, role, linkedin }, i) => (
                 <li key={name} className="w-full max-w-[240px] flex-1">
                   <Reveal amount={0.3} delay={i * 0.09} scale={0.93} y={34}>
                     <PersonCard
@@ -22,6 +22,7 @@ export default function Speakers() {
                       name={name}
                       picture={picture}
                       placement="speakers-linkedin"
+                      reveal={reveal}
                       role={role}
                     />
                   </Reveal>
