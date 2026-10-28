@@ -15,39 +15,31 @@ import { Rise } from "./parts";
 
 const names = (talk: Talk) => talk.speakers.map(({ name }) => name).join(" y ");
 
-const SHAPE_FILL: Record<Speaker["shape"], string> = {
-  flag: BRAND.yellow,
-  circle: BRAND.cream,
-  triangle: BRAND.blue,
-};
-
-/* The site portraits' shapes, drawn over each cutout's box in the site's 640 coordinates. The circle floats above the head
-   instead of behind it: Ciro's cutout fades out at the top (his photo crops the hair) and that fade must land on black. */
-const SHAPES: Record<Speaker["shape"], { origin: string; node: React.ReactNode }> = {
-  flag: {
-    origin: "71% 33%",
-    node: <polygon fill={BRAND.yellow} points="285,43 621,43 621,378 453,210 285,378" />,
-  },
-  circle: { origin: "85% 16%", node: <circle cx="545" cy="105" fill={BRAND.cream} r="90" /> },
-  triangle: { origin: "26% 39%", node: <polygon fill={BRAND.blue} points="52,49 52,450 447,250" /> },
+/* The site portraits' shapes, drawn over each cutout's box in the portraits' 1080 coordinates. Their visible edges are
+   traced from the portraits; the edges hidden behind the person run deep enough under them to stay hidden while drifting. */
+const SHAPES: Record<Speaker["shape"], { origin: string; points: string }> = {
+  yellow: { origin: "14% 62%", points: "0,431.5 299,259 299,1080 70,1080 0,905" },
+  blue: { origin: "80% 66%", points: "640,350.5 1080,531.5 1080,1080 640,1080" },
+  cream: { origin: "23% 41%", points: "85,8.5 500,226 500,1100 85,868.5" },
 };
 
 /** A speaker's slot in the 1920 frame: square box, bottom-anchored, measured from the right edge */
 type Slot = { size: number; right: number };
 
 /* Two people share the frame shoulder to shoulder, one gets it to themself. Portraits sit on the right so
-   cutouts cropped at their right edge (Ciro's) end off-frame. */
+   cutouts cropped at their right edge end off-frame; the left slot starts past the text column, since Juan's
+   shape sits at the left edge of his portrait. */
 const LAYOUTS: Record<number, Slot[]> = {
   1: [{ size: 980, right: -40 }],
   2: [
-    { size: 800, right: 394 },
+    { size: 800, right: 260 },
     { size: 800, right: -20 },
   ],
 };
 
 /** Assembles in, then keeps drifting. */
 function ShapeLayer({ shape, slot, delay }: { shape: Speaker["shape"]; slot: Slot; delay: number }) {
-  const { origin, node } = SHAPES[shape];
+  const { origin, points } = SHAPES[shape];
 
   return (
     <span
@@ -61,8 +53,8 @@ function ShapeLayer({ shape, slot, delay }: { shape: Speaker["shape"]; slot: Slo
       }}
     >
       <span className="block h-full w-full animate-drift" style={{ animationDelay: `${delay + 0.7}s` }}>
-        <svg aria-hidden="true" className="h-full w-full" viewBox="0 0 640 640">
-          {node}
+        <svg aria-hidden="true" className="h-full w-full" viewBox="0 0 1080 1080">
+          <polygon fill={BRAND[shape]} points={points} />
         </svg>
       </span>
     </span>
@@ -130,10 +122,7 @@ export function TalkIntro(props: SceneProps<"talk-intro">) {
               initial={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.6, delay: 0.9 + i * 0.15, ease: EASE_OUT }}
             >
-              <span
-                className="mt-3 h-[26px] w-[26px] shrink-0 rounded-full"
-                style={{ background: SHAPE_FILL[shape] }}
-              />
+              <span className="mt-3 h-[26px] w-[26px] shrink-0 rounded-full" style={{ background: BRAND[shape] }} />
               <span>
                 <span className="block text-[50px] leading-none font-extrabold text-[#F5BB03] uppercase">{name}</span>
                 <span className="mt-2 block text-[30px] text-[#FBF5E7]/70">{role}</span>
@@ -181,7 +170,7 @@ export function Speakers({ params }: SceneProps<"speakers">) {
                   animate={{ scale: 1, rotate: 0 }}
                   className={`h-[210px] w-[210px] overflow-hidden rounded-full ring-[8px] ring-black ${j ? "-ml-10" : ""}`}
                   initial={{ scale: 0, rotate: -25 }}
-                  style={{ background: SHAPE_FILL[shape] }}
+                  style={{ background: BRAND[shape] }}
                   transition={{ type: "spring", stiffness: 140, damping: 14, delay: 0.55 + i * 0.2 + j * 0.12 }}
                 >
                   <img alt={name} className="h-full w-full object-cover" src={picture} />

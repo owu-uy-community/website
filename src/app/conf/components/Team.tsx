@@ -99,22 +99,32 @@ export const TEAM_2026: TeamMember[] = [
 type PersonCardProps = {
   name: string;
   picture: string;
+  /** Crossfades in over `picture` on hover or keyboard focus */
+  reveal?: string;
   role: string;
   linkedin?: string;
   placement: ConfLinkPlacement;
 };
 
 /* Portrait, name and role; links to LinkedIn when there is one. Shared with Speakers. */
-export function PersonCard({ name, picture, role, linkedin, placement }: PersonCardProps) {
+export function PersonCard({ name, picture, reveal, role, linkedin, placement }: PersonCardProps) {
   const tile = (
     <>
       <div className="relative mx-auto aspect-square w-full max-w-[240px]">
         <img
           alt={`Fotografía de ${name}`}
-          className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+          className={`h-full w-full object-contain transition duration-300 group-hover:scale-[1.03] ${reveal ? "group-hover:opacity-0 group-focus-visible:opacity-0" : ""}`}
           loading="lazy"
           src={picture}
         />
+        {reveal && (
+          <img
+            alt=""
+            className="absolute inset-0 h-full w-full object-contain opacity-0 transition duration-300 group-hover:scale-[1.03] group-hover:opacity-100 group-focus-visible:opacity-100"
+            loading="lazy"
+            src={reveal}
+          />
+        )}
       </div>
       <p className="mt-5 text-center font-display text-base leading-none font-bold text-[#F5BB03] uppercase">{name}</p>
       <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{role}</p>

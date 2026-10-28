@@ -2,10 +2,12 @@ export type Speaker = {
   name: string;
   /** Cutout composited over its brand shape, like the team portraits */
   picture: string;
-  /** The person alone in a bottom-anchored square, for Owy Stage to animate apart from the shape */
+  /** The real face behind a disguised `picture`: the site crossfades to it on hover */
+  reveal?: string;
+  /** The person alone, framed like `picture`, for Owy Stage to animate apart from the shape */
   cutout: string;
-  /** The brand shape baked into `picture` */
-  shape: "flag" | "circle" | "triangle";
+  /** Colour of the brand shape baked into `picture` (each speaker's is drawn in speakers.tsx) */
+  shape: "yellow" | "blue" | "cream";
   role: string;
   linkedin: string;
 };
@@ -31,9 +33,10 @@ export const TALKS: Talk[] = [
     speakers: [
       {
         name: "Sebastián Passaro",
-        picture: "/images/conf/speakers/sebastian-passaro.webp",
+        picture: "/images/conf/speakers/sebastian-passaro-durazno.webp",
+        reveal: "/images/conf/speakers/sebastian-passaro.webp",
         cutout: "/images/conf/speakers/sebastian-passaro-cutout.webp",
-        shape: "triangle",
+        shape: "cream",
         role: "Cybersecurity Specialist, Qubika",
         linkedin: "https://www.linkedin.com/in/sebastian-passaro/",
       },
@@ -51,7 +54,7 @@ export const TALKS: Talk[] = [
         name: "Juan Pais",
         picture: "/images/conf/speakers/juan-pais.webp",
         cutout: "/images/conf/speakers/juan-pais-cutout.webp",
-        shape: "flag",
+        shape: "yellow",
         role: "Producer, Ironhide Game Studio",
         linkedin: "https://www.linkedin.com/in/juan-pais/",
       },
@@ -59,7 +62,7 @@ export const TALKS: Talk[] = [
         name: "Ciro Mondueri",
         picture: "/images/conf/speakers/ciro-mondueri.webp",
         cutout: "/images/conf/speakers/ciro-mondueri-cutout.webp",
-        shape: "circle",
+        shape: "blue",
         role: "Game Programmer, Ironhide Game Studio",
         linkedin: "https://uy.linkedin.com/in/ciro-mondueri-465624256",
       },
