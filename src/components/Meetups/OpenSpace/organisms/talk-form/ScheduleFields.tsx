@@ -18,22 +18,23 @@ interface ScheduleFieldsProps {
 
 export function ScheduleFields({ control, note, rooms, timeSlots }: ScheduleFieldsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground" htmlFor="room">
-          Lugar
+    // The block reads "16:30 - 16:55" in mono: give it the wider half.
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-2">
+      <div className="min-w-0 space-y-1.5">
+        <Label className="text-meta text-muted-foreground" htmlFor="room">
+          Sala
         </Label>
         <Controller
           control={control}
           name="room"
           render={({ field }) => (
             <Select key={`room-${note?.id || "new"}-${field.value}`} value={field.value} onValueChange={field.onChange}>
-              <SelectTrigger id="room">
-                <SelectValue placeholder="Seleccioná el lugar" />
+              <SelectTrigger className="min-w-0 [&>span]:truncate" id="room">
+                <SelectValue placeholder="Elegí la sala" />
               </SelectTrigger>
               <SelectContent>
                 {rooms.map((room) => (
-                  <SelectItem key={room} value={room}>
+                  <SelectItem key={room} className="break-words pointer-coarse:min-h-11" value={room}>
                     {room}
                   </SelectItem>
                 ))}
@@ -43,9 +44,9 @@ export function ScheduleFields({ control, note, rooms, timeSlots }: ScheduleFiel
         />
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground" htmlFor="timeSlot">
-          Horario
+      <div className="min-w-0 space-y-1.5">
+        <Label className="text-meta text-muted-foreground" htmlFor="timeSlot">
+          Bloque
         </Label>
         <Controller
           control={control}
@@ -56,12 +57,12 @@ export function ScheduleFields({ control, note, rooms, timeSlots }: ScheduleFiel
               value={field.value}
               onValueChange={field.onChange}
             >
-              <SelectTrigger className="font-terminal tabular-nums" id="timeSlot">
-                <SelectValue placeholder="Seleccioná el horario" />
+              <SelectTrigger className="min-w-0 font-terminal tabular-nums [&>span]:truncate" id="timeSlot">
+                <SelectValue placeholder="Elegí el bloque" />
               </SelectTrigger>
               <SelectContent>
                 {timeSlots.map((slot) => (
-                  <SelectItem key={slot} className="font-terminal tabular-nums" value={slot}>
+                  <SelectItem key={slot} className="font-terminal tabular-nums pointer-coarse:min-h-11" value={slot}>
                     {slot}
                   </SelectItem>
                 ))}

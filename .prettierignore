@@ -1,7 +1,0 @@
-node_modules
-.next
-.vercel
-public
-dist
-src/admin/migrations/
-src/admin/types/

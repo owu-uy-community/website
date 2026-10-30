@@ -17,18 +17,18 @@
     "calibration_page",
     "help_page"
   ],
-  "objects": 120,
-  "sceneHash": "474ae823fd91fbfe1ea9e613ab35b0c73f9c1a1e8966a2203f8aa4d41b553d1c",
-  "fontsHash": "84612a17b9d270fc087537a5c7ddedb904275498545faef80f3cea3f18bc433d",
+  "objects": 210,
+  "sceneHash": "21685f6e9403b9287b6d202a39a9a9f7a030f6f3c1c9dcc110c929f284d78b42",
+  "fontsHash": "49d1d6d4be92e886f9d496b396402084f2c4f084a28249148381f14c12c3d381",
   "sourceHashes": {
-    "companion_model.h": "f40e7ea588cd0cafc6848e8137557f7f576c8448d794c8c03c085f4342f8f840",
+    "companion_model.h": "bdd2b66a8a35c79755f3db82a3f4af482e32617fb575d7144a238bbd36278302",
     "companion_motion.h": "91cb07a936be6db2d3dde2ebce8ad664fe18569b245c8f93a1d0af55acec89ba",
-    "companion_lvgl.h": "e3eb36cd227e85be68bcc0257f87c219acf160a022d08a6249df0827994ea0fe",
+    "companion_lvgl.h": "d937bc1904cd67538a68c1b5faaa000d1c1407352730459943a468f4d5c86be1",
     "companion_sound.h": "7606317ae9d927a233dc7ed25c11b01b00ffdd67c5b23c84ecb81c70424faca3",
-    "packages/face.yaml": "0b454a5405f360a7966e18575e5afcd145687875ea7de23209a3e5a1ab149971",
-    "packages/companion.yaml": "7789e2e31e2a573280fab895861404fcb0ce7265753afe8e62138e9f885110d3",
-    "packages/voice.yaml": "824c7b7ae0c37e9c470f6c3b9137438b71bcddeb3cc895826d303c566dc15ff4",
-    "packages/controls.yaml": "db568b36e9d4268431e2cdfefd7a31d7d45fff0713a3952f795233ea624e1367"
+    "packages/face.yaml": "0ed7f8476d7a98a5cbe4e8bbe827cf07238168914714346fa3cceb281a0bb632",
+    "packages/companion.yaml": "033872ee5ea2b0282b74d3d9faf179e007dc515f5ebd1acf5668434c26d54acc",
+    "packages/voice.yaml": "567a92b90ba906ae68b9288ff9216a102d830732cfed751fb22abfa1dd7998ff",
+    "packages/controls.yaml": "ddd955accc7e35be53ded5159accb34d29d62256ea629d73364641526c543ec3"
   },
-  "version": "2a2f2af4327efb98"
+  "version": "0bdc7ebe7eac4914"
 }

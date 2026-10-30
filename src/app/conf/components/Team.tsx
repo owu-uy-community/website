@@ -1,4 +1,4 @@
-import { confUtm } from "../utm";
+import { confUtm, type ConfLinkPlacement } from "../utm";
 
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -12,10 +12,11 @@ type TeamMember = {
 };
 
 /*
- * OWU CONF 2026 team, alphabetical by first name. Background-removed portraits
- * live in public/images/conf/staff/ (identities validated against the designer mockup).
+ * OWU CONF 2026 team, alphabetical by first name. Portraits live in
+ * public/images/conf/staff/ with the brand shape already composited in, so the
+ * tile renders the image alone.
  */
-const TEAM_2026: TeamMember[] = [
+export const TEAM_2026: TeamMember[] = [
   {
     firstname: "Agustín",
     lastname: "Tornielli",
@@ -42,6 +43,7 @@ const TEAM_2026: TeamMember[] = [
     lastname: "García",
     picture: "/images/conf/staff/javier-garcia.webp",
     jobTitle: "Product Designer",
+    linkedin: "https://www.linkedin.com/in/javiergarciacedres/",
   },
   {
     firstname: "Javier",
@@ -94,27 +96,54 @@ const TEAM_2026: TeamMember[] = [
   },
 ];
 
-const SHAPE_VARIANTS = ["blue", "yellow", "cream"] as const;
+type PersonCardProps = {
+  name: string;
+  picture: string;
+  /** Crossfades in over `picture` on hover or keyboard focus */
+  reveal?: string;
+  role: string;
+  linkedin?: string;
+  placement: ConfLinkPlacement;
+};
 
-/* Sizes are % of the tile (not fixed px) so the shapes scale with the cell on narrow grids */
-function TileShape({ variant }: { variant: (typeof SHAPE_VARIANTS)[number] }) {
-  if (variant === "blue") {
-    return (
-      <svg aria-hidden="true" className="absolute -left-[2%] top-[22%] w-[86%]" fill="none" viewBox="0 0 190 96">
-        <polygon fill="#0162C8" points="0,0 190,0 95,96" />
-      </svg>
-    );
-  }
+/* Portrait, name and role; links to LinkedIn when there is one. Shared with Speakers. */
+export function PersonCard({ name, picture, reveal, role, linkedin, placement }: PersonCardProps) {
+  const tile = (
+    <>
+      <div className="relative mx-auto aspect-square w-full max-w-[240px]">
+        <img
+          alt={`Fotografía de ${name}`}
+          className={`h-full w-full object-contain transition duration-300 group-hover:scale-[1.03] ${reveal ? "group-hover:opacity-0 group-focus-visible:opacity-0" : ""}`}
+          loading="lazy"
+          src={picture}
+        />
+        {reveal && (
+          <img
+            alt=""
+            className="absolute inset-0 h-full w-full object-contain opacity-0 transition duration-300 group-hover:scale-[1.03] group-hover:opacity-100 group-focus-visible:opacity-100"
+            loading="lazy"
+            src={reveal}
+          />
+        )}
+      </div>
+      <p className="mt-5 text-center font-display text-base leading-none font-bold text-[#F5BB03] uppercase">{name}</p>
+      <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{role}</p>
+    </>
+  );
 
-  if (variant === "yellow") {
-    return (
-      <svg aria-hidden="true" className="absolute -right-[2%] top-[13%] h-[80%]" fill="none" viewBox="0 0 100 200">
-        <polygon fill="#F5BB03" points="100,0 100,200 0,100" />
-      </svg>
-    );
-  }
-
-  return <div aria-hidden="true" className="absolute -left-[2%] -top-[2%] h-[84%] w-[40%] bg-[#FBF5E7]" />;
+  return linkedin ? (
+    <a
+      aria-label={`Perfil de LinkedIn de ${name}`}
+      className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+      href={confUtm(linkedin, placement)}
+      rel="noopener"
+      target="_blank"
+    >
+      {tile}
+    </a>
+  ) : (
+    <div className="group">{tile}</div>
+  );
 }
 
 export default function Team() {
@@ -123,7 +152,7 @@ export default function Team() {
       <SectionHeader eyebrow="¿QUIÉNES ESTÁN DETRÁS?" title="EQUIPO" />
 
       <Reveal delay={0.12} y={22}>
-        <p className="mt-6 max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
+        <p className="mt-6 max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
           El equipo de voluntarios de la comunidad que organiza La Meetup desde 2023.
         </p>
       </Reveal>
@@ -131,42 +160,17 @@ export default function Team() {
       <ul className="mt-12 grid grid-cols-2 gap-x-6 gap-y-14 sm:grid-cols-3 lg:grid-cols-4">
         {TEAM_2026.map(({ firstname, lastname, picture, jobTitle, linkedin }, i) => {
           const fullName = `${firstname} ${lastname}`;
-          const variant = SHAPE_VARIANTS[i % SHAPE_VARIANTS.length];
-
-          const tile = (
-            <>
-              <div className="relative mx-auto aspect-[22/25] w-full max-w-[220px]">
-                <TileShape variant={variant} />
-                <img
-                  alt={`Fotografía de ${fullName}`}
-                  className="absolute inset-x-0 bottom-0 mx-auto h-[92%] w-[91%] object-contain object-bottom transition-transform duration-300 group-hover:scale-[1.03]"
-                  loading="lazy"
-                  src={picture}
-                />
-              </div>
-              <p className="mt-5 text-center font-display text-base font-bold uppercase leading-none text-[#F5BB03]">
-                {fullName}
-              </p>
-              <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{jobTitle}</p>
-            </>
-          );
 
           return (
             <li key={fullName}>
               <Reveal amount={0.3} delay={(i % 4) * 0.09} scale={0.93} y={34}>
-                {linkedin ? (
-                  <a
-                    aria-label={`Perfil de LinkedIn de ${fullName}`}
-                    className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-                    href={confUtm(linkedin, "team-linkedin")}
-                    rel="noopener"
-                    target="_blank"
-                  >
-                    {tile}
-                  </a>
-                ) : (
-                  <div className="group">{tile}</div>
-                )}
+                <PersonCard
+                  linkedin={linkedin}
+                  name={fullName}
+                  picture={picture}
+                  placement="team-linkedin"
+                  role={jobTitle}
+                />
               </Reveal>
             </li>
           );

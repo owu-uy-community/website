@@ -13,6 +13,8 @@ import { useTicketRelease } from "contexts/TicketReleaseContext";
 import classNames from "classnames";
 
 type HeroProps = {
+  /** Whether the ticket deadline passed, read by the (cached) page: a prerendered client can't read the clock */
+  pastDeadline: boolean;
   sponsors?: readonly {
     readonly name: string;
     readonly image: string;
@@ -20,25 +22,21 @@ type HeroProps = {
   }[];
 };
 
-export default function Hero({ sponsors }: HeroProps) {
-  // Check if current date is past the ticket deadline
-  const now = new Date();
-  const deadline = EVENT_DATES.ticketDeadline;
-
+export default function Hero({ sponsors, pastDeadline }: HeroProps) {
   // Check if tickets are released using centralized hook
   const { isReleased: areTicketsReleased, ticketUrl } = useTicketRelease();
 
   return (
     <section
       className={classNames("relative flex w-full flex-1 flex-col items-center justify-center", {
-        "min-h-[calc(100dvh-126px)]": now < deadline,
-        "min-h-[calc(100dvh-56px)]": now >= deadline,
+        "min-h-[calc(100dvh-126px)]": !pastDeadline,
+        "min-h-[calc(100dvh-56px)]": pastDeadline,
       })}
       id="inicio"
     >
       <div className="flex w-full flex-row flex-wrap-reverse items-center justify-center gap-8 xl:flex-nowrap">
         <div className="flex w-full max-w-[650px] flex-col items-center justify-center lg:min-h-[calc(100dvh-165px)]">
-          <h1 className="mb-12 text-center text-7xl font-black uppercase italic leading-none text-primary text-yellow-400 xl:mb-2 xl:text-[80px]">
+          <h1 className="mb-12 text-center text-7xl leading-none font-black text-primary text-yellow-400 uppercase italic xl:mb-2 xl:text-[80px]">
             LA
             <span className="block text-7xl uppercase lg:text-8xl xl:text-9xl">MEETUP</span>
           </h1>

@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import { createReader } from "@keystatic/core/reader";
 import { cache } from "react";
 
@@ -9,7 +10,6 @@ import Footer from "components/shared/Footer";
 import Staff from "components/Meetups/2024/Staff";
 import CommunitiesCarousel from "components/Meetups/2024/Communities";
 import Introduction from "components/Meetups/2024/Introduction";
-import { SectionKey } from "components/shared/Navbar/navSections";
 import Gallery from "components/Meetups/2024/Gallery";
 
 import {
@@ -31,7 +31,11 @@ export const metadata = {
 };
 
 export default async function LaMeetup2024Page() {
-  const laMeetup = await reader().collections.laMeetup2024.read(SectionKey.MeetupEvent);
+  "use cache";
+  // A past edition: its content only changes with a deploy
+  cacheLife("max");
+
+  const laMeetup = await reader().collections.laMeetup2024.read("la-meetup");
 
   if (!laMeetup) return null;
 

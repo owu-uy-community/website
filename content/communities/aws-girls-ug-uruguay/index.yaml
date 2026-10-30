@@ -1,0 +1,13 @@
+name: "AWS Girls UG Uruguay"
+picture: /images/communities/aws-girls-ug-uruguay/picture.webp
+description: "Comunidad de usuarias de AWS que impulsa a mujeres en cloud."
+topics:
+  - cloud
+  - diversidad
+status: activa
+linkedin: https://www.linkedin.com/company/aws-girls-user-group-uy/
+instagram: https://www.instagram.com/aws_girlsuguy/
+meetup: https://www.meetup.com/aws-girls-ug-uy/
+feedNames:
+  - "AWS Girls UG Uruguay"
+confPartner: false

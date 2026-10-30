@@ -167,7 +167,7 @@ test("permission denial ends cleanly without requesting a provider token", async
   await voice.start();
   assert.equal(tokens, 0);
   assert.equal(voice.status.stage, "error");
-  assert.match(voice.status.message, /permission/);
+  assert.match(voice.status.message, /permiso/);
   voice.stop();
 });
 test("ending while permission is pending stops a late microphone stream", async () => {
@@ -230,6 +230,109 @@ test("duplicate Resume does not acquire twice; Mute cancels pending reacquisitio
   assert.equal(requests, 1);
   assert.equal(stops, 1);
   assert.equal(voice.status.stage, "muted");
+  voice.stop();
+});
+
+test("attached to a physical device, the virtual Owy's start/stop stay local: the bridge closes the socket on a stray start", async () => {
+  const sent = [];
+  const voice = new WebVoice(
+    () => {},
+    () => {},
+    () => {},
+    {
+      context,
+      media: async () => {
+        throw Error("no microphone");
+      },
+      ticket: async () => {},
+      socket: () => {},
+    }
+  );
+  voice.ctx = context();
+  voice.stopped = false;
+  voice.bridgeReady = true;
+  voice.attachTo = "owy-knob";
+  voice.socket = { readyState: 1, bufferedAmount: 0, send: (data) => sent.push(JSON.parse(data)), close() {} };
+  voice.receive({ type: "attached", deviceId: "owy-knob", run: 0 });
+  assert.equal(voice.status.stage, "standby");
+  await voice.resume(); // the virtual Owy was tapped ("start")
+  voice.mute(); // …or its privacy switch flipped ("stop")
+  assert.deepEqual(sent, []);
+  assert.equal(voice.status.stage, "standby");
+  voice.stop();
+});
+
+test("a pitch run never commits on its own: the person (or the bridge) ends it", async () => {
+  const sent = [];
+  const commands = [];
+  const voice = new WebVoice(
+    () => {},
+    () => {},
+    () => {},
+    {
+      context,
+      media: async () => {
+        throw Error("Unexpected mic acquisition");
+      },
+      ticket: async () => {},
+      socket: () => {},
+    },
+    (command) => commands.push(command)
+  );
+  const track = { enabled: true, readyState: "live", stop() {} };
+  voice.ctx = context();
+  voice.gain = {};
+  voice.stopped = false;
+  voice.bridgeReady = true;
+  voice.stream = { getAudioTracks: () => [track], getTracks: () => [track] };
+  voice.socket = { readyState: 1, bufferedAmount: 0, send: (data) => sent.push(typeof data === "string" ? JSON.parse(data) : data), close() {} };
+  await voice.resume("pitch");
+  assert.deepEqual(sent.at(-1), { type: "start", mode: "pitch" });
+  voice.receive({ type: "accepted", run: 1 });
+  assert.equal(voice.status.pitch, true);
+  const loud = new ArrayBuffer(640);
+  new Int16Array(loud).fill(8000);
+  for (let i = 0; i < 3; i++) voice.microphone(loud);
+  // The speech-then-silence rule that ends a normal turn does not apply to a pitch.
+  voice.speechAt = performance.now() - 5000;
+  voice.microphone(new ArrayBuffer(640));
+  assert.equal(sent.some((m) => m.type === "commit"), false);
+  assert.equal(voice.status.stage, "listening");
+  // The person ends it.
+  voice.finishTurn();
+  assert.deepEqual(sent.at(-1), { type: "commit", run: 1 });
+  // Cues and the name invitation reach the virtual device as screen commands.
+  voice.receive({ type: "screen", run: 1, command: { kind: "clip", id: "pitch-listen" } });
+  voice.receive({ type: "screen", run: 1, command: { kind: "pitchPrompt", prompt: "name" } });
+  assert.deepEqual(commands.at(-2), { kind: "clip", id: "pitch-listen" });
+  assert.deepEqual(commands.at(-1), { kind: "pitchPrompt", prompt: "name" });
+  voice.stop();
+  assert.equal(voice.status.pitch, false);
+});
+
+test("a plain resume keeps the old start shape and no pitch flag", async () => {
+  const sent = [];
+  const voice = new WebVoice(
+    () => {},
+    () => {},
+    () => {},
+    {
+      context,
+      media: async () => {
+        throw Error("Unexpected mic acquisition");
+      },
+      ticket: async () => {},
+      socket: () => {},
+    }
+  );
+  const track = { enabled: false, readyState: "live", stop() {} };
+  voice.ctx = context();
+  voice.stopped = false;
+  voice.stream = { getAudioTracks: () => [track], getTracks: () => [track] };
+  voice.socket = { readyState: 1, bufferedAmount: 0, send: (data) => sent.push(JSON.parse(data)), close() {} };
+  await voice.resume();
+  assert.deepEqual(sent.at(-1), { type: "start" });
+  assert.equal(voice.status.pitch, false);
   voice.stop();
 });
 

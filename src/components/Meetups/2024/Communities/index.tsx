@@ -26,7 +26,7 @@ export default function Communities({ title, subtitle, communities = [] }: Commu
         <h2 className="text-center text-5xl font-bold text-yellow-400">{title}</h2>
         <p className="mt-2 text-center text-lg font-[400] text-white">{subtitle}</p>
       </span>
-      <div className="relative h-full w-full max-w-[1200px] overflow-hidden py-8 [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-200px),transparent_100%)]">
+      <div className="relative h-full w-full max-w-[1200px] overflow-hidden [mask-image:_linear-gradient(to_right,transparent_0,_black_128px,_black_calc(100%-200px),transparent_100%)] py-8">
         <motion.div
           animate={{
             x: ["0%", "-100%"],

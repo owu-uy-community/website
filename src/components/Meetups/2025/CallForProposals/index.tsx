@@ -64,7 +64,7 @@ export default function CallForProposals() {
           <p className="mx-auto max-w-3xl text-xl leading-relaxed text-gray-300">
             <strong className="text-yellow-400">¡Lo pidieron, los escuchamos!</strong>
           </p>
-          <p className="mx-auto mt-2 max-w-3xl text-balance text-base leading-relaxed text-gray-300 lg:text-lg">
+          <p className="mx-auto mt-2 max-w-3xl text-base leading-relaxed text-balance text-gray-300 lg:text-lg">
             ¡Por primera vez, abrimos Call for Proposals para las charlas de La Meetup!
           </p>
         </div>
@@ -85,14 +85,14 @@ export default function CallForProposals() {
             </span>
 
             {timeLeft.total === 0 ? (
-              <div className="ml-2 inline-flex w-full max-w-[260px] skew-x-[-21deg] cursor-not-allowed items-center justify-center border-2 border-red-500 bg-red-500/10 px-2 py-2.5 text-base font-semibold uppercase text-red-500">
+              <div className="ml-2 inline-flex w-full max-w-[260px] skew-x-[-21deg] cursor-not-allowed items-center justify-center border-2 border-red-500 bg-red-500/10 px-2 py-2.5 text-base font-semibold text-red-500 uppercase">
                 <span className="inline-flex skew-x-[21deg] items-center justify-center text-center">
                   Postulaciones Cerradas
                 </span>
               </div>
             ) : (
               <Link
-                className="ml-2 inline-flex w-full max-w-[260px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-yellow-400 px-2 py-2.5 text-base font-semibold uppercase text-yellow-400 ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-yellow-400 hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
+                className="ml-2 inline-flex w-full max-w-[260px] skew-x-[-21deg] cursor-pointer items-center justify-center border-2 border-yellow-400 px-2 py-2.5 text-base font-semibold text-yellow-400 uppercase ease-in before:absolute before:-inset-0.5 before:origin-right before:scale-x-0 before:bg-yellow-400 hover:scale-110 hover:text-black hover:before:origin-left hover:before:scale-x-100 aria-disabled:pointer-events-none aria-disabled:border-[#666] aria-disabled:bg-[#666] aria-disabled:text-[#111] motion-safe:transition-[color,transform] motion-safe:before:transition-transform motion-safe:before:duration-300 motion-safe:before:ease-in motion-safe:hover:delay-100 motion-safe:hover:ease-out motion-safe:hover:before:delay-100 motion-safe:hover:before:ease-out"
                 href={addUtmParams(EXTERNAL_SERVICES.googleForms.callForProposals)}
                 target="_blank"
                 rel="noopener noreferrer"

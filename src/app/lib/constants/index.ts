@@ -8,14 +8,9 @@ export const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET!;
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 export const USE_SECURE_COOKIES = IS_PRODUCTION;
 
-// Allowed emails for authentication (comma-separated in env variable)
-// Example: ALLOWED_EMAILS=user1@example.com,user2@example.com,admin@company.com
-export const ALLOWED_EMAILS = process.env.ALLOWED_EMAILS
-  ? process.env.ALLOWED_EMAILS.split(",").map((email) => email.trim().toLowerCase())
-  : [];
-
 // Eventbrite Constants
-export const EVENTBRITE_API_URL = "https://www.eventbriteapi.com/v3";
+/** Overridable for the e2e's fake Eventbrite (scripts/mock-eventbrite.mjs); server-side only. */
+export const EVENTBRITE_API_URL = process.env.EVENTBRITE_API_URL ?? "https://www.eventbriteapi.com/v3";
 export const EVENTBRITE_API_KEY = process.env.EVENTBRITE_API_KEY!;
 export const EVENTBRITE_EVENT_ID = process.env.NEXT_PUBLIC_EVENTBRITE_EVENT_ID ?? "";
 
@@ -30,7 +25,18 @@ export const EVENT_DATES = {
 export const CONF_DATES = {
   cfpDeadline: "2026-09-15T23:59:59-03:00",
   sponsorsDeadline: "2026-09-15T23:59:59-03:00",
+  ticketsRelease: "2026-10-14T11:00:00-03:00",
   event: "2026-11-07T14:30:00-03:00",
+} as const;
+
+/**
+ * The event whose open space board backs conf.owu.uy/openspace. Until a board exists under this
+ * community/slug pair the page shows how the afternoon will go instead (it never 404s);
+ * `pnpm db:seed` creates a matching board locally.
+ */
+export const CONF_EVENT = {
+  communitySlug: "owu",
+  eventSlug: "owu-conf-2026",
 } as const;
 
 // OpenSpace Room Colors
@@ -69,7 +75,9 @@ export const SOCIAL_LINKS = {
   instagram: "https://www.instagram.com/owu__uy/",
   linkedin: "https://www.linkedin.com/company/owu-uruguay/",
   slack: "https://slack.owu.uy/",
-  telegram: "https://t.me/MeetupsOWU"
+  telegram: "https://t.me/MeetupsOWU",
+  github: "https://github.com/owu-uy-community",
+  youtube: "https://www.youtube.com/@owu-uruguay",
 } as const;
 
 // External Service URLs
@@ -95,7 +103,8 @@ export const EXTERNAL_SERVICES = {
       "https://docs.google.com/spreadsheets/d/1GPhu-OIcZbIZE3x4xmQvpL0j_rqPfr6wqDwiYdgcC1U/export?format=csv",
   },
   googleTagManager: "https://www.googletagmanager.com/gtag/js?id=G-RVTWHW4J21",
-  meetupBot: "https://meetup-bot.marpo60.xyz/json",
+  /** MEETUP_BOT_URL points tests and local runs at a mock (server side only; the browser never reads it). */
+  meetupBot: process.env.MEETUP_BOT_URL ?? "https://meetup-bot.marpo60.xyz/json",
 } as const;
 
 // Maps and Location URLs
@@ -128,6 +137,7 @@ export const INTERNAL_ROUTES = {
     current: "/conf",
     callForProposals: "/conf/call-for-proposals",
     sponsors: "/conf/sponsors",
+    openspace: "/conf/openspace",
   },
 } as const;
 
@@ -354,82 +364,82 @@ export const LA_MEETUP = {
     communitiesList: [
       {
         name: "Mujeres IT",
-        logo: "/images/communities/mujeres_it.webp",
+        logo: "/images/communities/mujeres-it/picture.webp",
         url: "https://mujeresit.com/",
       },
       {
         name: "Girls in tech",
-        logo: "/images/communities/girls_in_tech.webp",
+        logo: "/images/communities/girls-in-tech-uruguay/picture.webp",
         url: "https://uruguay.girlsintech.org/",
       },
       {
         name: "Angular Mvd",
-        logo: "/images/communities/angular_mvd.webp",
+        logo: "/images/communities/angular-mvd/picture.webp",
         url: "https://www.meetup.com/angular-mvd/",
       },
       {
         name: "Montevideo JS",
-        logo: "/images/communities/montevideo_js.webp",
+        logo: "/images/communities/montevideo-js/picture.webp",
         url: "https://www.meetup.com/es/montevideojs/",
       },
       {
         name: "Ruby Montevideo",
-        logo: "/images/communities/ruby_montevideo.webp",
+        logo: "/images/communities/ruby-montevideo/picture.webp",
         url: "https://www.meetup.com/es/ruby-montevideo/",
       },
       {
         name: "AWS UG Montevideo",
-        logo: "/images/communities/aws_ug_montevideo.webp",
+        logo: "/images/communities/aws-ug-montevideo/picture.webp",
         url: "https://www.meetup.com/aws-ug-montevideo/",
       },
       {
         name: "Owasp Uruguay",
-        logo: "/images/communities/owasp_uruguay.webp",
+        logo: "/images/communities/owasp-uruguay/picture.webp",
         url: "https://www.meetup.com/es/owasp-uruguay-chapter/",
       },
       {
         name: "GDG Montevideo",
-        logo: "/images/communities/gdg_montevideo.webp",
+        logo: "/images/communities/gdg-montevideo/picture.webp",
         url: "https://gdg.community.dev/gdg-montevideo/",
       },
       {
         name: "PHP Montevideo",
-        logo: "/images/communities/php_montevideo.webp",
+        logo: "/images/communities/php-montevideo/picture.webp",
         url: "https://www.meetup.com/es/phpmvd/",
       },
       {
         name: "Data Science UY",
-        logo: "/images/communities/data_science_uy.webp",
+        logo: "/images/communities/data-science-uy/picture.webp",
         url: "https://data-science-uy.github.io/",
       },
       {
         name: "Sysarmy UY",
-        logo: "/images/communities/sysarmy_uy.webp",
+        logo: "/images/communities/sysarmy-uy/picture.webp",
         url: "https://sysarmy.uy/",
       },
       {
         name: "AI for Devs",
-        logo: "/images/communities/ai4devs.webp",
+        logo: "/images/communities/ai-for-devs/picture.webp",
         url: "https://www.meetup.com/ai-for-devs-montevideo/",
       },
       {
         name: "MLOps Uruguay",
-        logo: "/images/communities/mlops_uruguay.webp",
+        logo: "/images/communities/mlops-uruguay/picture.webp",
         url: "https://www.meetup.com/mlops-uruguay/",
       },
       {
         name: "Python Montevideo",
-        logo: "/images/communities/python_mvd.webp",
+        logo: "/images/communities/python-montevideo/picture.webp",
         url: "https://www.meetup.com/py-mvd/",
       },
       {
         name: "Elixir Montevideo",
-        logo: "/images/communities/elixir_mvd.webp",
+        logo: "/images/communities/elixir-montevideo/picture.webp",
         url: "https://www.meetup.com/elixir-montevideo/photos/27949971/",
       },
       {
         name: "Web Developers",
-        logo: "/images/communities/montevideo_web_developers.webp",
+        logo: "/images/communities/montevideo-web-developers/picture.webp",
         url: "https://www.meetup.com/montevideo-web-developers/",
       },
     ],
@@ -571,7 +581,7 @@ export const LA_MEETUP = {
     conductCodeConsequences:
       "Los organizadores de la meetup se reservan el derecho de tomar medidas disciplinarias apropiadas en respuesta a comportamientos inaceptables. Esto puede incluir advertencias, expulsión de la meetup o prohibición de futuras participaciones.",
     conductCodeParticipationAgreement:
-      "Al participar en esta meetup, aceptas seguir este código de conducta y las decisiones de los organizadores.",
+      "Al participar en esta meetup, aceptás seguir este código de conducta y las decisiones de los organizadores.",
     conductCodeScope: "Este código de conducta se aplica a todos los eventos y canales relacionados con la meetup.",
   },
   seo: {

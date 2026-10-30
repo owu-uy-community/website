@@ -1,0 +1,32 @@
+# Owy Companion bridge in a container: `pnpm -C owy companion:docker`, or from the repo root
+#   docker compose -f owy/companion/bridge/compose.yaml up -d --build
+#   docker compose -f owy/companion/bridge/compose.yaml logs -f
+# Same variables as a local run, from owy/.env.local. Inside the container `localhost` is the
+# container: point COMPANION_EVE_URL / OWU_API_URL at http://host.docker.internal:<port> for
+# servers running on this machine, and use IPs in COMPANION_DEVICES (`.local` names don't resolve).
+name: owy-companion
+
+services:
+  bridge:
+    build:
+      context: ../../..
+      dockerfile: owy/companion/bridge/Dockerfile
+    image: owy-companion-bridge
+    restart: unless-stopped
+    env_file:
+      - path: ../../.env.local
+        required: false
+    ports:
+      # Web bridge (laptop audio, site tickets) and settings UI/oRPC: this machine only.
+      - "127.0.0.1:3312:3312"
+      - "127.0.0.1:3313:3313"
+    volumes:
+      # `#secrets` in COMPANION_DEVICES reads the boards' api_key from here.
+      - type: bind
+        source: ../firmware/secrets.yaml
+        target: /app/owy/companion/firmware/secrets.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

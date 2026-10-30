@@ -93,7 +93,8 @@ export class FixtureBridge {
         clock: this.clock,
         logger: this.log,
         conversationId: "fixture",
-        timers: { noSpeechMs: this.hung ? 0 : 8000 },
+        // A pitch (modo pitch) has pauses: the bridge's recorder owns its limits, not the silent window.
+        timers: { noSpeechMs: this.hung || state.settings.pitch ? 0 : 8000 },
         link: {
           isPlaybackReady: () => this.state.phase === 3 && !this.readyFault,
           sendEvent: (kind, data) => {
@@ -110,6 +111,11 @@ export class FixtureBridge {
       this.turn.start();
       if (this.replies > 0)
         this.outputTimer = this.clock.setTimeout(() => this.speech(this.replies, this.replyMs), 800);
+    }
+    if (state.phase === 3 && this.turn && !this.turn.finished && this.turn.phase === "listening") {
+      // The device sent the pitch (its second tap): the bridge closes listening and answers once.
+      this.trace("bridge.pitch_submit");
+      this.speech(1, this.replyMs);
     }
     if (
       (state.phase === 0 ||

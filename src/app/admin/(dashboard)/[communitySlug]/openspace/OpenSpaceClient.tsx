@@ -7,9 +7,9 @@ import Link from "next/link";
 import {
   DndContext,
   DragOverlay,
+  KeyboardSensor,
   MouseSensor,
   TouchSensor,
-  pointerWithin,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -17,36 +17,54 @@ import {
   type DragStartEvent,
   type DropAnimation,
 } from "@dnd-kit/core";
-import { ArrowUpRight, CalendarX2, Plus, SearchX, Tv } from "lucide-react";
+import { ArrowLeftRight, LayoutGrid, Plus, Search, SearchX } from "lucide-react";
 
-import { TimeGrid } from "components/Meetups/OpenSpace/organisms/TimeGrid";
-import { StickyNoteGhost } from "components/Meetups/OpenSpace/molecules/StickyNoteCard";
-import { TalkFormModal } from "components/Meetups/OpenSpace/organisms/TalkFormModal";
-import { ScheduleFormModal } from "components/Meetups/OpenSpace/organisms/ScheduleFormModal";
-import { ResourceWarningDialog } from "components/Meetups/OpenSpace/organisms/ResourceWarningDialog";
-import { SearchInput } from "components/Meetups/OpenSpace/atoms/SearchInput";
-import { RealtimeIndicator } from "components/Meetups/OpenSpace/atoms/RealtimeIndicator";
-import { OpenSpaceSkeleton } from "components/Meetups/OpenSpace/organisms/OpenSpaceSkeleton";
-import { CountdownControls } from "components/Meetups/OpenSpace/organisms/CountdownControls";
+import { AgendaHeader, VIEW_OPTIONS } from "components/Admin/agenda/AgendaHeader";
+import { AgendaInspector, type InspectorTab } from "components/Admin/agenda/AgendaInspector";
+import { AgendaList } from "components/Admin/agenda/AgendaList";
+import { slotPhase, useAgendaView, useInspectorFits, useWallClock } from "components/Admin/agenda/agenda-state";
+import {
+  boardAnnouncements,
+  boardCollisions,
+  boardInstructions,
+  boardKeyboardCodes,
+  cellKeyboardCoordinates,
+} from "components/Admin/agenda/board-a11y";
+import { ConfirmDialog } from "components/Admin/panel";
 import { RoomFormModal } from "components/Admin/rooms/RoomFormModal";
-import { Button } from "components/shared/ui/button";
-import { Empty } from "components/shared/ui/empty";
-import { Label } from "components/shared/ui/label";
-import { Switch } from "components/shared/ui/switch";
-import type { Room, Schedule } from "lib/orpc";
-import { client } from "lib/orpc";
-
-import { BOARD_EASE } from "components/Meetups/OpenSpace/utils/constants";
-import { eventChannel } from "lib/realtime/channels";
+import { useCommands } from "components/Admin/shell/commands";
+import { usePresence, usePresenceFocus } from "components/Admin/shell/presence";
+import { useShortcuts } from "components/Admin/shell/shortcuts";
+import { useShell } from "components/Admin/shell/use-shell-status";
+import { EmptyState, ErrorState } from "components/Admin/ui/states";
+import { StickyNoteGhost } from "components/Meetups/OpenSpace/molecules/StickyNoteCard";
+import { OpenSpaceSkeleton } from "components/Meetups/OpenSpace/organisms/OpenSpaceSkeleton";
+import { ResourceWarningDialog } from "components/Meetups/OpenSpace/organisms/ResourceWarningDialog";
+import { ScheduleFormModal } from "components/Meetups/OpenSpace/organisms/ScheduleFormModal";
+import { StructurePanel } from "components/Meetups/OpenSpace/organisms/StructurePanel";
+import { TalkFormModal } from "components/Meetups/OpenSpace/organisms/TalkFormModal";
+import { TimeGrid } from "components/Meetups/OpenSpace/organisms/TimeGrid";
+import type { TalkSave } from "components/Meetups/OpenSpace/organisms/talk-form/types";
+import { useTalkForm } from "components/Meetups/OpenSpace/organisms/talk-form/use-talk-form";
 import { filterNotes, findNoteInCell } from "components/Meetups/OpenSpace/utils/calculations";
+import { BOARD_EASE } from "components/Meetups/OpenSpace/utils/constants";
+import { Button } from "components/shared/ui/button";
+import { toast } from "components/shared/ui/toast-utils";
+import { useAutoHighlight } from "hooks/useAutoHighlight";
+import { useNoteManagement } from "hooks/useNoteManagement";
 import { useOpenSpaceNotesORPC, type StickyNote } from "hooks/useOpenSpaceNotesORPC";
 import { useOpenSpaceSetup } from "hooks/useOpenSpaceSetup";
-import { toast } from "components/shared/ui/toast-utils";
-import { orpc } from "lib/orpc";
 import { useRealtimeBroadcastWithInvalidation } from "hooks/useRealtimeBroadcast";
+import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { useRoomManagement } from "hooks/useRoomManagement";
 import { useScheduleManagement } from "hooks/useScheduleManagement";
-import { useNoteManagement } from "hooks/useNoteManagement";
-import { useAutoHighlight } from "hooks/useAutoHighlight";
+import type { Room, Schedule } from "lib/orpc";
+import { client, orpc } from "lib/orpc";
+import { eventChannel } from "lib/realtime/channels";
+
+const slotLabel = (schedule: Schedule) => `${schedule.startTime} - ${schedule.endTime}`;
+
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 const DROP_ANIMATION: DropAnimation = {
   duration: 200,
@@ -56,33 +74,49 @@ const DROP_ANIMATION: DropAnimation = {
   // visible copy while it glides into place.
 };
 
+/**
+ * Wait for the command palette to finish closing before taking focus: the dialog hands focus back
+ * to whatever had it when it unmounts, which would undo ours.
+ */
+function focusAfterPalette(target: () => HTMLElement | null, attempt = 0) {
+  if (document.querySelector("[cmdk-root]") && attempt < 20) {
+    window.setTimeout(() => focusAfterPalette(target, attempt + 1), 50);
+    return;
+  }
+  window.setTimeout(() => target()?.focus(), 0);
+}
+
 export default function OpenSpaceClient({
   eventId,
-  eventName,
   eventHref,
   kioskHref,
 }: {
   eventId: string;
-  eventName: string;
   /** Admin detail page of the event (for the empty-state CTA). */
   eventHref?: string;
   /** Public kiosk grid of the event, for the venue screen. */
   kioskHref?: string;
 }) {
   const queryClient = useQueryClient();
+  const { status } = useShell();
+  const { peers } = usePresence();
+  const [view, setView] = useAgendaView();
+  const inspectorFits = useInspectorFits();
+  const wall = useWallClock(status?.event.timezone);
+
   // Fetch data
   const {
     notes,
     loading: notesLoading,
     error: dbError,
+    isError: notesFailed,
     createNote,
     updateNote,
     deleteNote,
     swapNotes,
+    refreshNotes,
     isCreating,
     isUpdating,
-    isDeleting,
-    isConnected,
     recentlyUpdatedIds,
   } = useOpenSpaceNotesORPC({ openSpaceId: eventId, enableRealtime: true });
 
@@ -90,10 +124,13 @@ export default function OpenSpaceClient({
     rooms,
     roomColors,
     roomIcons,
+    roomsByName,
     roomsData,
     timeSlots,
     schedulesData,
     isLoading: setupLoading,
+    loadFailed: setupFailed,
+    retry: retrySetup,
     findIdsForPosition,
   } = useOpenSpaceSetup(eventId);
 
@@ -115,9 +152,19 @@ export default function OpenSpaceClient({
 
   // UI state
   const [searchTerm, setSearchTerm] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [editingNote, setEditingNote] = useState<StickyNote | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  /** The sheet was opened from "Sugerir con IA": it places the talk once it has a title. */
+  const [formSuggest, setFormSuggest] = useState(false);
   const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
+
+  // The inspector (wide screens): which talk, which tab.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("charla");
+  /** What to do once unsaved inspector changes are confirmed as discarded. */
+  const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
 
   // Drag state (dnd-kit owns the gesture; this is only what the UI needs)
   const [activeNote, setActiveNote] = useState<StickyNote | null>(null);
@@ -134,13 +181,18 @@ export default function OpenSpaceClient({
   // cutting to the final spot.
   const flipRects = useRef(new Map<string, { left: number; top: number }>());
 
-  // Restore the persisted cast state so the toggle reflects reality after reloads
+  // Restore the persisted cast state so the toggle reflects reality after reloads,
+  // then follow it: ⌘K or another screen can cast too.
   useEffect(() => {
     client.cast
-      .getState({})
+      .getState({ eventId })
       .then((state) => setHighlightedNoteId(state.trackId))
       .catch(() => undefined);
-  }, []);
+  }, [eventId]);
+  useRealtimeChannel(eventChannel(eventId, "cast"), (event, payload) => {
+    if (event === "note_highlighted")
+      setHighlightedNoteId((payload as { note: StickyNote | null } | null)?.note?.id ?? null);
+  });
 
   // Resource warning for drag-and-drop (the move is NOT applied until confirmed)
   const [resourceWarning, setResourceWarning] = useState<{
@@ -154,6 +206,11 @@ export default function OpenSpaceClient({
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [isRoomFormOpen, setIsRoomFormOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
+  const [isStructureOpen, setIsStructureOpen] = useState(false);
+  // A room or slot that holds talks: deleting it waits for this confirmation.
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: "room"; room: Room; talks: number } | { kind: "slot"; schedule: Schedule; talks: number } | null
+  >(null);
 
   // ============ Custom Hooks ============
 
@@ -182,6 +239,8 @@ export default function OpenSpaceClient({
       broadcastScheduleChange,
     });
 
+  const { deleteRoom, reorderRooms, setRoomActive, isDeletingRoom } = useRoomManagement(eventId);
+
   // Note management
   const {
     handleNotesChange: handleNotesChangeBase,
@@ -205,12 +264,87 @@ export default function OpenSpaceClient({
     }
   }, [dbError]);
 
+  // ============ The inspector ============
+
+  const showInspector = inspectorOpen && inspectorFits;
+  const selectedNote = useMemo(
+    () => (selectedId ? (notes.find((note) => note.id === selectedId) ?? null) : null),
+    [notes, selectedId]
+  );
+  const selectedSchedule = selectedNote
+    ? schedulesData.find((schedule) => schedule.id === selectedNote.scheduleId)
+    : undefined;
+
+  const saveSelected = useCallback(
+    async (noteData: TalkSave) => {
+      if (selectedNote) await handleSaveNoteBase(noteData, selectedNote, rooms, timeSlots, eventId);
+    },
+    [handleSaveNoteBase, selectedNote, rooms, timeSlots, eventId]
+  );
+
+  // Owned here, not by the inspector, so the header's "Sugerir con IA" can place the open talk.
+  const inspectorForm = useTalkForm({
+    open: showInspector && selectedNote != null,
+    openSpaceId: eventId,
+    note: selectedNote,
+    notes,
+    rooms,
+    roomsData,
+    timeSlots,
+    onSave: saveSelected,
+  });
+  const inspectorDirty = showInspector && selectedNote != null && inspectorForm.isDirty;
+
+  /** Leaving the open talk (another card, a new talk, closing): ask first if it has unsaved changes. */
+  const leaveInspectorThen = useCallback(
+    (next: () => void) => {
+      if (inspectorDirty) setPendingLeave(() => next);
+      else next();
+    },
+    [inspectorDirty]
+  );
+
+  const closeInspector = useCallback(
+    () =>
+      leaveInspectorThen(() => {
+        setInspectorOpen(false);
+        setSelectedId(null);
+      }),
+    [leaveInspectorThen]
+  );
+
+  // Others see who has which talk open; so do I.
+  usePresenceFocus(
+    showInspector && selectedNote ? selectedNote.id : isFormOpen && editingNote?.id ? editingNote.id : null
+  );
+  const editors = useMemo(
+    () =>
+      new Map(
+        peers.flatMap((peer) => (peer.focus ? [[peer.focus, { name: peer.name, image: peer.image }] as const] : []))
+      ),
+    [peers]
+  );
+
   // ============ Drag and drop (dnd-kit) ============
 
   const sensors = useSensors(
     // 6px of travel before a drag starts — a plain click opens the editor.
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+    // Space picks a card up; the arrows carry it cell by cell.
+    useSensor(KeyboardSensor, { coordinateGetter: cellKeyboardCoordinates, keyboardCodes: boardKeyboardCodes })
+  );
+
+  const notesRef = useRef(notes);
+  useEffect(() => {
+    notesRef.current = notes;
+  }, [notes]);
+  const announcements = useMemo(
+    () =>
+      boardAnnouncements(
+        (cell, exceptId) => findNoteInCell(notesRef.current, cell.room, cell.timeSlot, exceptId)?.title ?? null
+      ),
+    []
   );
 
   const handleDragStart = useCallback(({ active }: DragStartEvent) => {
@@ -327,7 +461,7 @@ export default function OpenSpaceClient({
   // ============ Note CRUD handlers ============
 
   const handleSaveNote = useCallback(
-    async (noteData: Partial<StickyNote>) => {
+    async (noteData: TalkSave) => {
       await handleSaveNoteBase(noteData, editingNote, rooms, timeSlots, eventId);
       setEditingNote(null);
       setIsFormOpen(false);
@@ -335,24 +469,58 @@ export default function OpenSpaceClient({
     [handleSaveNoteBase, editingNote, rooms, timeSlots, eventId]
   );
 
+  // Gone at once; the toast that follows offers "Deshacer" (errors roll back and toast in the hook).
   const handleDeleteNoteWrapper = useCallback(
-    async (noteId: string) => {
-      await handleDeleteNote(noteId);
-      setEditingNote(null);
+    (noteId: string) => {
       setIsFormOpen(false);
+      setEditingNote(null);
+      if (noteId === selectedId) {
+        setInspectorOpen(false);
+        setSelectedId(null);
+      }
+      void handleDeleteNote(noteId).catch(() => undefined);
     },
-    [handleDeleteNote]
+    [handleDeleteNote, selectedId]
   );
 
-  const addNewNote = useCallback((prefilledData?: { room?: string; timeSlot?: string }) => {
-    setEditingNote(prefilledData ? ({ id: "", title: "", speaker: "", ...prefilledData } as StickyNote) : null);
-    setIsFormOpen(true);
-  }, []);
+  const addNewNote = useCallback(
+    (prefilledData?: { room?: string; timeSlot?: string }, suggest = false) =>
+      leaveInspectorThen(() => {
+        // One talk form at a time: the inspector's fields share their ids with the sheet's.
+        setInspectorOpen(false);
+        setSelectedId(null);
+        setEditingNote(prefilledData ? ({ id: "", title: "", speaker: "", ...prefilledData } as StickyNote) : null);
+        setFormSuggest(suggest);
+        setIsFormOpen(true);
+      }),
+    [leaveInspectorThen]
+  );
 
-  const openNote = useCallback((note: StickyNote) => {
-    setEditingNote(note);
-    setIsFormOpen(true);
-  }, []);
+  /** A card or a row: in the inspector on wide screens, in the sheet on narrow ones. */
+  const openNote = useCallback(
+    (note: StickyNote) => {
+      if (!inspectorFits) {
+        setEditingNote(note);
+        setFormSuggest(false);
+        setIsFormOpen(true);
+        return;
+      }
+      if (note.id === selectedId && inspectorOpen) {
+        setInspectorTab("charla");
+        return;
+      }
+      leaveInspectorThen(() => {
+        setSelectedId(note.id);
+        setInspectorTab("charla");
+        setInspectorOpen(true);
+      });
+    },
+    [inspectorFits, selectedId, inspectorOpen, leaveInspectorThen]
+  );
+
+  // The sheet edits the talk as it is now, not as it was when it opened: an edit or a move from
+  // another screen has to reach the form, or saving it would undo them.
+  const sheetNote = editingNote?.id ? (notes.find((note) => note.id === editingNote.id) ?? editingNote) : editingNote;
 
   // Handle modal close - clear editing note state
   const handleFormOpenChange = useCallback((open: boolean) => {
@@ -364,49 +532,97 @@ export default function OpenSpaceClient({
 
   // ============ Schedule handlers ============
 
-  const handleTimeDoubleClick = useCallback(
-    (timeIndex: number) => {
-      const schedule = schedulesData[timeIndex];
-      if (!schedule) return;
-      setEditingSchedule(schedule);
-      setIsScheduleFormOpen(true);
-    },
-    [schedulesData]
-  );
+  const openRoomEditor = useCallback((room: Room | null) => {
+    setEditingRoom(room);
+    setIsRoomFormOpen(true);
+  }, []);
 
-  const handleAddScheduleClick = useCallback(() => {
-    setEditingSchedule(null);
+  const openSlotEditor = useCallback((schedule: Schedule | null) => {
+    setEditingSchedule(schedule);
     setIsScheduleFormOpen(true);
   }, []);
 
-  const handleAddRoomClick = useCallback(() => {
-    setEditingRoom(null);
-    setIsRoomFormOpen(true);
-  }, []);
+  const handleEditSchedule = useCallback(
+    (timeIndex: number) => {
+      const schedule = schedulesData[timeIndex];
+      if (schedule) openSlotEditor(schedule);
+    },
+    [schedulesData, openSlotEditor]
+  );
+
+  const handleAddScheduleClick = useCallback(() => openSlotEditor(null), [openSlotEditor]);
+
+  const handleAddRoomClick = useCallback(() => openRoomEditor(null), [openRoomEditor]);
 
   // Room headers are the natural place to fix a room: click the column.
   const handleEditRoomClick = useCallback(
     (roomName: string) => {
       const room = roomsData.find((candidate) => candidate.name === roomName);
-      if (!room) return;
-
-      setEditingRoom(room);
-      setIsRoomFormOpen(true);
+      if (room) openRoomEditor(room);
     },
+    [roomsData, openRoomEditor]
+  );
+
+  const inactiveRooms = useMemo(
+    () => new Set(roomsData.filter((room) => !room.isActive).map((room) => room.name)),
     [roomsData]
   );
 
-  const handleDeleteScheduleFromModal = useCallback(async () => {
-    if (!editingSchedule) return;
-    const timeSlot = `${editingSchedule.startTime} - ${editingSchedule.endTime}`;
-    await handleDeleteSchedule(editingSchedule.id, timeSlot);
-  }, [editingSchedule, handleDeleteSchedule]);
+  // ============ Deletes ============
+  // An empty room or slot goes at once; one holding talks asks first, naming how many go with it.
+
+  const requestDeleteRoom = useCallback(
+    (room: Room) => {
+      setIsRoomFormOpen(false);
+      const talks = notes.filter((note) => note.roomId === room.id).length;
+      if (talks > 0) setPendingDelete({ kind: "room", room, talks });
+      else void deleteRoom(room).catch(() => undefined);
+    },
+    [notes, deleteRoom]
+  );
+
+  const requestDeleteSlot = useCallback(
+    (schedule: Schedule) => {
+      setIsScheduleFormOpen(false);
+      const talks = notes.filter((note) => note.scheduleId === schedule.id).length;
+      if (talks > 0) setPendingDelete({ kind: "slot", schedule, talks });
+      else void handleDeleteSchedule(schedule.id, slotLabel(schedule)).catch(() => undefined);
+    },
+    [notes, handleDeleteSchedule]
+  );
+
+  const confirmPendingDelete = useCallback(async () => {
+    if (!pendingDelete) return;
+    try {
+      if (pendingDelete.kind === "room") await deleteRoom(pendingDelete.room);
+      else await handleDeleteSchedule(pendingDelete.schedule.id, slotLabel(pendingDelete.schedule));
+    } catch {
+      // Rolled back and toasted by the mutation.
+    } finally {
+      setPendingDelete(null);
+    }
+  }, [pendingDelete, deleteRoom, handleDeleteSchedule]);
+
+  /** Times through the usual save; the kiosk star (one row at a time) through its own toggle. */
+  const handleSaveScheduleForm = useCallback(
+    async (data: { startTime: string; endTime: string; scheduleId?: string; highlightInKiosk: boolean }) => {
+      const current = data.scheduleId ? schedulesData.find((schedule) => schedule.id === data.scheduleId) : null;
+      if (!current || current.startTime !== data.startTime || current.endTime !== data.endTime) {
+        await handleSaveSchedule(data);
+      }
+      if (current && current.highlightInKiosk !== data.highlightInKiosk) {
+        await handleToggleScheduleHighlight(current.id);
+      }
+    },
+    [schedulesData, handleSaveSchedule, handleToggleScheduleHighlight]
+  );
 
   const handleToggleScheduleHighlightWrapper = useCallback(
     (timeIndex: number) => {
-      void handleToggleScheduleHighlight(timeIndex, timeSlots);
+      const schedule = schedulesData[timeIndex];
+      if (schedule) void handleToggleScheduleHighlight(schedule.id);
     },
-    [handleToggleScheduleHighlight, timeSlots]
+    [handleToggleScheduleHighlight, schedulesData]
   );
 
   // Cast to screen functionality (persisted server-side + broadcast over WebSockets)
@@ -415,11 +631,11 @@ export default function OpenSpaceClient({
       try {
         // Toggle: if already highlighted, clear it
         if (highlightedNoteId === note.id) {
-          await client.cast.setHighlightedNote({ trackId: null });
+          await client.cast.setHighlightedNote({ eventId, trackId: null });
           setHighlightedNoteId(null);
           toast.info("Pantalla limpiada", "La pantalla de notas quedó libre.");
         } else {
-          await client.cast.setHighlightedNote({ trackId: note.id });
+          await client.cast.setHighlightedNote({ eventId, trackId: note.id });
           setHighlightedNoteId(note.id);
           toast.success("Enviado a pantalla", `"${note.title}" se está mostrando en la pantalla de notas.`);
         }
@@ -428,7 +644,7 @@ export default function OpenSpaceClient({
         toast.error("No se pudo enviar", "Probá nuevamente en unos segundos.");
       }
     },
-    [highlightedNoteId]
+    [eventId, highlightedNoteId]
   );
 
   const filteredNotes = useMemo(() => filterNotes(notes, searchTerm), [notes, searchTerm]);
@@ -457,163 +673,326 @@ export default function OpenSpaceClient({
   const noResults = searchTerm.length > 0 && filteredNotes.length === 0;
   // A talk needs a cell to land in, so it stays disabled until both axes exist.
   const isGridReady = rooms.length > 0 && timeSlots.length > 0;
+  const nowSlot = wall ? (schedulesData.find((schedule) => slotPhase(schedule, wall) === "now") ?? null) : null;
+  const onBoard = useMemo(() => new Set(notes.map((note) => note.id)), [notes]);
+
+  const places = rooms.length * timeSlots.length;
+  const free = Math.max(0, places - notes.length);
+  const summary =
+    places === 0
+      ? plural(notes.length, "charla", "charlas")
+      : `${plural(notes.length, "charla", "charlas")} · ${
+          free === 0 ? "sin lugares libres" : plural(free, "lugar libre", "lugares libres")
+        }`;
+
+  /** "Sugerir con IA": re-place the open talk, or start a new one the AI places once it has a title. */
+  const suggestWithAi = useCallback(() => {
+    if (showInspector && selectedNote) {
+      setInspectorTab("charla");
+      void inspectorForm.handleAiSuggest();
+    } else {
+      addNewNote(undefined, true);
+    }
+  }, [showInspector, selectedNote, inspectorForm, addNewNote]);
+
+  const focusSearch = useCallback(() => focusAfterPalette(() => searchRef.current), []);
+
+  // ============ Keyboard and ⌘K ============
+
+  useShortcuts([
+    {
+      id: "agenda.new",
+      keys: "n",
+      label: "Nueva charla",
+      group: "Agenda",
+      run: () => {
+        if (isGridReady) addNewNote();
+      },
+    },
+    {
+      id: "agenda.search",
+      keys: "/",
+      label: "Buscar charla",
+      group: "Agenda",
+      run: () => searchRef.current?.focus(),
+    },
+    {
+      id: "agenda.cast",
+      keys: "c",
+      label: "Mandar la charla abierta a la pantalla",
+      group: "Agenda",
+      run: () => {
+        if (showInspector && selectedNote) void handleCastToScreen(selectedNote);
+      },
+    },
+    ...(showInspector
+      ? [{ id: "agenda.close", keys: "escape", label: "Cerrar el panel", group: "Agenda", run: closeInspector }]
+      : []),
+    ...(inspectorDirty
+      ? [
+          {
+            id: "agenda.save",
+            keys: "mod+s",
+            label: "Guardar la charla",
+            group: "Agenda",
+            allowInInputs: true,
+            run: () => void inspectorForm.submitForm(),
+          },
+        ]
+      : []),
+  ]);
+
+  useCommands(
+    "agenda",
+    "page",
+    [
+      {
+        id: "agenda.new",
+        title: "Nueva charla",
+        icon: Plus,
+        shortcut: "n",
+        keywords: ["agregar", "crear", "talk"],
+        perform: { type: "run", run: () => addNewNote() },
+      },
+      {
+        id: "agenda.search",
+        title: "Buscar charla",
+        icon: Search,
+        shortcut: "/",
+        keywords: ["filtrar", "orador"],
+        perform: { type: "run", run: focusSearch },
+      },
+      ...VIEW_OPTIONS.map(({ value, label, icon }) => ({
+        id: `agenda.view.${value}`,
+        title: `Ver como ${label}`,
+        subtitle: view === value ? "la vista de ahora" : undefined,
+        icon,
+        keywords: ["vista", "grilla", "tabla"],
+        perform: { type: "run" as const, run: () => setView(value) },
+      })),
+    ],
+    "Agenda"
+  );
 
   // Loading state
   if (notesLoading || setupLoading) {
     return <OpenSpaceSkeleton />;
   }
 
-  return (
-    <div className="space-y-4 p-4 md:p-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Open Space</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {eventName} — arrastrá las tarjetas para organizar la grilla
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {kioskHref ? (
-            <Button asChild size="sm" variant="outline">
-              <a href={kioskHref} rel="noreferrer" target="_blank">
-                <Tv />
-                Kiosco
-                <ArrowUpRight className="text-muted-foreground" />
-              </a>
+  // A failed load must not look like an empty board.
+  if (setupFailed || (notesFailed && notes.length === 0)) {
+    return (
+      <div className="mx-auto w-full max-w-xl px-4 pt-10">
+        <ErrorState
+          description="Revisá la conexión y probá de nuevo: las charlas siguen guardadas."
+          title="No se pudo cargar la agenda"
+          onRetry={() => {
+            retrySetup();
+            void refreshNotes();
+          }}
+        />
+      </div>
+    );
+  }
+
+  const board = !isGridReady ? (
+    <EmptyState
+      action={
+        <>
+          <Button onClick={() => setIsStructureOpen(true)}>
+            <LayoutGrid />
+            Salas y horarios
+          </Button>
+          {eventHref ? (
+            <Button asChild variant="outline">
+              <Link href={eventHref}>Ajustes del evento</Link>
             </Button>
           ) : null}
-          <RealtimeIndicator isConnected={isConnected} />
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchInput value={searchTerm} onChange={setSearchTerm} />
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex h-9 items-center gap-2 rounded-md border border-border px-3">
-            <Switch
-              checked={autoHighlightEnabled}
-              disabled={openSpaceLoading || updateOpenSpaceMutation.isPending}
-              id="auto-highlight"
-              onCheckedChange={() => handleToggleAutoHighlight()}
-            />
-            <Label className="cursor-pointer text-xs text-muted-foreground" htmlFor="auto-highlight">
-              Resaltado automático
-            </Label>
-          </div>
-          <CountdownControls eventId={eventId} />
-          <Button size="sm" variant="outline" onClick={handleAddRoomClick}>
-            <Plus />
-            Sala
-          </Button>
-          <Button size="sm" variant="outline" onClick={handleAddScheduleClick}>
-            <Plus />
-            Slot
-          </Button>
-          <Button disabled={!isGridReady} size="sm" onClick={() => addNewNote()}>
+        </>
+      }
+      className="m-4 md:m-6"
+      description={
+        rooms.length === 0
+          ? "Las salas son las columnas de la grilla y los bloques sus filas. Empezá por las salas."
+          : `Ya hay ${plural(rooms.length, "sala", "salas")}. Faltan los bloques: son las filas donde van las charlas.`
+      }
+      icon={LayoutGrid}
+      title="La grilla todavía no está armada"
+    />
+  ) : noResults ? (
+    <EmptyState
+      action={
+        <Button variant="outline" onClick={() => setSearchTerm("")}>
+          Limpiar la búsqueda
+        </Button>
+      }
+      className="m-4 md:m-6"
+      description="Probá con otro título u orador."
+      icon={SearchX}
+      title={`Sin resultados para «${searchTerm}»`}
+    />
+  ) : view === "list" ? (
+    notes.length === 0 ? (
+      <EmptyState
+        action={
+          <Button onClick={() => addNewNote()}>
             <Plus />
             Charla
           </Button>
-        </div>
+        }
+        className="m-4 md:m-6"
+        description="Las que agregue el staff, Owy o el lector de fotos aparecen acá."
+        icon={LayoutGrid}
+        title="Todavía no hay charlas"
+      />
+    ) : (
+      <div
+        aria-label="Lista de charlas"
+        className="openspace-surface min-h-0 min-w-0 flex-1 overflow-auto"
+        role="region"
+        tabIndex={0}
+      >
+        <AgendaList
+          notes={filteredNotes}
+          roomColors={roomColors}
+          rooms={roomsData}
+          schedules={schedulesData}
+          selectedId={showInspector ? selectedId : null}
+          wall={wall}
+          onOpen={openNote}
+        />
+      </div>
+    )
+  ) : (
+    <DndContext
+      accessibility={{ announcements, screenReaderInstructions: boardInstructions }}
+      collisionDetection={boardCollisions}
+      sensors={sensors}
+      onDragCancel={handleDragCancel}
+      onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDragStart={handleDragStart}
+    >
+      {rooms.length > 1 && (
+        <p
+          className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-1.5 text-meta text-muted-foreground md:hidden"
+          id="board-scroll-hint"
+        >
+          <ArrowLeftRight aria-hidden className="size-3.5 shrink-0" />
+          Deslizá la grilla para ver todas las salas.
+        </p>
+      )}
+      <div
+        aria-describedby={rooms.length > 1 ? "board-scroll-hint" : undefined}
+        aria-label="Grilla de charlas"
+        className="openspace-surface min-h-0 min-w-0 flex-1 overflow-auto"
+        role="region"
+        tabIndex={0}
+      >
+        <TimeGrid
+          activeNote={activeNote}
+          editors={editors}
+          flipRects={flipRects}
+          getNotesForCell={getNotesForCell}
+          highlightedNoteId={highlightedNoteId}
+          inactiveRooms={inactiveRooms}
+          lastDragEndAt={lastDragEndAt}
+          nowSlot={nowSlot ? slotLabel(nowSlot) : null}
+          recentlyUpdatedIds={recentlyUpdatedIds}
+          roomColors={roomColors}
+          roomIcons={roomIcons}
+          rooms={rooms}
+          roomsByName={roomsByName}
+          schedulesData={schedulesData}
+          selectedNoteId={showInspector ? selectedId : null}
+          settlingId={settlingId}
+          swapPreviewId={swapPreviewNote?.id ?? null}
+          swapPreviewOffset={swapPreviewOffset}
+          timeSlots={timeSlots}
+          variant={view}
+          onCastNote={handleCastToScreen}
+          onEditRoom={handleEditRoomClick}
+          onEditSchedule={handleEditSchedule}
+          onEmptyCellClick={(room, timeSlot) => addNewNote({ room, timeSlot })}
+          onOpenNote={openNote}
+          onToggleScheduleHighlight={handleToggleScheduleHighlightWrapper}
+        />
       </div>
 
-      {/* Board. The grid renders as soon as there is one room — an event being
-          set up shows its columns right away, and the missing piece is asked
-          for inline instead of replacing the whole page with an empty state. */}
-      {rooms.length === 0 ? (
-        <Empty
-          action={
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button size="sm" onClick={handleAddRoomClick}>
-                <Plus />
-                Crear la primera sala
-              </Button>
-              {eventHref ? (
-                <Button asChild size="sm" variant="outline">
-                  <Link href={eventHref}>Ajustes del evento</Link>
-                </Button>
-              ) : null}
-            </div>
-          }
-          className="py-16"
-          description="Las salas son las columnas de la grilla. Creá la primera para empezar a armarla."
-          icon={CalendarX2}
-          title="Todavía no hay salas"
-        />
-      ) : noResults ? (
-        <Empty
-          className="py-16"
-          description="Probá con otro título u orador."
-          icon={SearchX}
-          title={`Sin resultados para “${searchTerm}”`}
-        />
-      ) : (
-        <DndContext
-          collisionDetection={pointerWithin}
-          sensors={sensors}
-          onDragCancel={handleDragCancel}
-          onDragEnd={handleDragEnd}
-          onDragOver={handleDragOver}
-          onDragStart={handleDragStart}
-        >
-          <div className="openspace-surface max-h-[calc(100dvh-13.5rem)] overflow-auto rounded-lg border border-border bg-card">
-            <TimeGrid
-              activeNote={activeNote}
-              getNotesForCell={getNotesForCell}
-              highlightedNoteId={highlightedNoteId}
-              flipRects={flipRects}
-              lastDragEndAt={lastDragEndAt}
-              recentlyUpdatedIds={recentlyUpdatedIds}
-              roomColors={roomColors}
-              roomIcons={roomIcons}
-              rooms={rooms}
-              schedulesData={schedulesData}
-              settlingId={settlingId}
-              swapPreviewId={swapPreviewNote?.id ?? null}
-              swapPreviewOffset={swapPreviewOffset}
-              timeSlots={timeSlots}
-              onCastNote={handleCastToScreen}
-              onEmptyCellClick={(room, timeSlot) => addNewNote({ room, timeSlot })}
-              onOpenNote={openNote}
-              onTimeDoubleClick={handleTimeDoubleClick}
-              onEditRoom={handleEditRoomClick}
-              onToggleScheduleHighlight={handleToggleScheduleHighlightWrapper}
-            />
+      <DragOverlay dropAnimation={DROP_ANIMATION} zIndex={50}>
+        {activeNote ? (
+          <StickyNoteGhost color={roomColors?.[activeNote.room] ?? "#a1a1aa"} note={activeNote} variant={view} />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
 
-            {/* Rooms but no slots yet: the columns are already visible above,
-                so ask for the missing rows right where they would appear. */}
-            {timeSlots.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 border-t border-border/60 px-4 py-12 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Falta el horario: los slots son las filas donde se ubican las charlas.
-                </p>
-                <Button size="sm" onClick={handleAddScheduleClick}>
-                  <Plus />
-                  Crear el primer slot
-                </Button>
-              </div>
-            ) : null}
-          </div>
+  return (
+    // On desktop the scroller's own height, so an urgent banner above doesn't push the board's bottom off screen.
+    <div className="flex h-(--admin-content-h) min-h-0 flex-col md:h-full">
+      <AgendaHeader
+        autoHighlight={{
+          enabled: autoHighlightEnabled,
+          disabled: openSpaceLoading || updateOpenSpaceMutation.isPending,
+          toggle: () => void handleToggleAutoHighlight(),
+        }}
+        eventId={eventId}
+        kioskHref={kioskHref}
+        ready={isGridReady}
+        search={searchTerm}
+        searchRef={searchRef}
+        summary={summary}
+        view={view}
+        onNew={() => addNewNote()}
+        onSearchChange={setSearchTerm}
+        onStructure={() => setIsStructureOpen(true)}
+        onSuggest={suggestWithAi}
+        onViewChange={setView}
+      />
 
-          <DragOverlay dropAnimation={DROP_ANIMATION} zIndex={50}>
-            {activeNote ? (
-              <StickyNoteGhost color={roomColors?.[activeNote.room] ?? "#a1a1aa"} note={activeNote} />
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+      {/* Size containment: the board and the inspector scroll inside this row, so their content
+          must not stretch the page around them. */}
+      <div className="flex min-h-0 flex-1 contain-size">
+        <div className="flex min-w-0 flex-1 flex-col">{board}</div>
+
+        {showInspector ? (
+          <AgendaInspector
+            color={selectedNote ? (roomColors[selectedNote.room] ?? "#a1a1aa") : "#a1a1aa"}
+            controller={inspectorForm}
+            eventId={eventId}
+            isCast={selectedNote != null && highlightedNoteId === selectedNote.id}
+            isSaving={isUpdating}
+            note={selectedNote}
+            rooms={rooms}
+            roomsData={roomsData}
+            schedule={selectedSchedule}
+            tab={inspectorTab}
+            timeSlots={timeSlots}
+            wall={wall}
+            onBoard={onBoard}
+            onCast={() => selectedNote && void handleCastToScreen(selectedNote)}
+            onClose={closeInspector}
+            onDelete={() => selectedNote && handleDeleteNoteWrapper(selectedNote.id)}
+            onSelect={(id) => {
+              const note = notes.find((candidate) => candidate.id === id);
+              if (note) openNote(note);
+            }}
+            onTabChange={setInspectorTab}
+            onToggleKiosk={() => selectedNote && void handleToggleScheduleHighlight(selectedNote.scheduleId)}
+          />
+        ) : null}
+      </div>
 
       {/* Talk form */}
       <TalkFormModal
-        isDeleting={isDeleting}
         isSaving={editingNote?.id ? isUpdating : isCreating}
-        note={editingNote}
+        note={sheetNote}
         notes={notes}
         open={isFormOpen}
         openSpaceId={eventId}
         rooms={rooms}
         roomsData={roomsData}
+        suggest={formSuggest}
         timeSlots={timeSlots}
         onDelete={editingNote?.id ? () => handleDeleteNoteWrapper(editingNote.id) : undefined}
         onOpenChange={handleFormOpenChange}
@@ -630,31 +1009,79 @@ export default function OpenSpaceClient({
         onConfirm={() => void confirmResourceMove()}
       />
 
-      {/* Schedule Form Modal */}
+      {/* Slot editor */}
       <ScheduleFormModal
-        hasTracksInSlot={
-          editingSchedule
-            ? notes.some((note) => note.timeSlot === `${editingSchedule.startTime} - ${editingSchedule.endTime}`)
-            : false
-        }
-        isDeleting={deleteScheduleMutation.isPending}
         isSaving={createScheduleMutation.isPending || updateScheduleMutation.isPending}
+        open={isScheduleFormOpen}
         schedule={editingSchedule}
         schedules={schedulesData}
-        talksInSlot={
-          editingSchedule
-            ? notes.filter((note) => note.timeSlot === `${editingSchedule.startTime} - ${editingSchedule.endTime}`)
-                .length
-            : 0
-        }
-        open={isScheduleFormOpen}
-        onDelete={editingSchedule ? handleDeleteScheduleFromModal : undefined}
+        talksInSlot={editingSchedule ? notes.filter((note) => note.scheduleId === editingSchedule.id).length : 0}
+        onDelete={editingSchedule ? () => requestDeleteSlot(editingSchedule) : undefined}
         onOpenChange={setIsScheduleFormOpen}
-        onSave={handleSaveSchedule}
+        onSave={handleSaveScheduleForm}
       />
 
-      {/* Room Form Modal — same dialog the event settings page uses */}
-      <RoomFormModal open={isRoomFormOpen} openSpaceId={eventId} room={editingRoom} onOpenChange={setIsRoomFormOpen} />
+      {/* Room editor — same one the event settings page uses */}
+      <RoomFormModal
+        open={isRoomFormOpen}
+        openSpaceId={eventId}
+        room={editingRoom}
+        onDelete={requestDeleteRoom}
+        onOpenChange={setIsRoomFormOpen}
+      />
+
+      <StructurePanel
+        notes={notes}
+        open={isStructureOpen}
+        rooms={roomsData}
+        schedules={schedulesData}
+        onAddRoom={handleAddRoomClick}
+        onAddSlot={handleAddScheduleClick}
+        onDeleteRoom={requestDeleteRoom}
+        onDeleteSlot={requestDeleteSlot}
+        onEditRoom={openRoomEditor}
+        onEditSlot={openSlotEditor}
+        onOpenChange={setIsStructureOpen}
+        onReorderRooms={reorderRooms}
+        onSetRoomActive={setRoomActive}
+        onToggleSlotHighlight={(schedule) => void handleToggleScheduleHighlight(schedule.id)}
+      />
+
+      <ConfirmDialog
+        confirmLabel={pendingDelete?.kind === "slot" ? "Eliminar horario" : "Eliminar sala"}
+        description={
+          pendingDelete
+            ? `${pendingDelete.talks === 1 ? "La charla" : `Las ${plural(pendingDelete.talks, "charla", "charlas")}`} de ${
+                pendingDelete.kind === "room" ? "esta sala" : "este bloque"
+              } también se ${pendingDelete.talks === 1 ? "elimina" : "eliminan"}. Esta acción no se puede deshacer.`
+            : ""
+        }
+        open={Boolean(pendingDelete)}
+        pending={isDeletingRoom || deleteScheduleMutation.isPending}
+        title={
+          pendingDelete?.kind === "room"
+            ? `¿Eliminar la sala “${pendingDelete.room.name}”?`
+            : pendingDelete?.kind === "slot"
+              ? `¿Eliminar el horario ${slotLabel(pendingDelete.schedule)}?`
+              : ""
+        }
+        onConfirm={() => void confirmPendingDelete()}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      />
+
+      <ConfirmDialog
+        confirmLabel="Descartar"
+        description={`Los cambios a «${selectedNote?.title ?? "la charla"}» no se guardaron.`}
+        open={pendingLeave !== null}
+        title="¿Descartar los cambios?"
+        onConfirm={() => {
+          const next = pendingLeave;
+          setPendingLeave(null);
+          inspectorForm.discardChanges();
+          next?.();
+        }}
+        onOpenChange={(open) => !open && setPendingLeave(null)}
+      />
     </div>
   );
 }

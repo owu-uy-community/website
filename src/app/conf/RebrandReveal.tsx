@@ -146,7 +146,7 @@ export default function RebrandReveal() {
               />
               <span className="ml-2 font-terminal text-[0.65rem] tracking-tight text-white/35">owu@conf: ~/2026</span>
             </div>
-            <p className="flex items-center gap-2 px-4 py-2.5 font-terminal text-xs lowercase text-white/55 sm:text-sm">
+            <p className="flex items-center gap-2 px-4 py-2.5 font-terminal text-xs text-white/55 lowercase sm:text-sm">
               <span className="text-[#F5BB03]">$</span>
               <span className="tracking-wide text-white/85">{typed || " "}</span>
               <span
@@ -164,10 +164,10 @@ export default function RebrandReveal() {
 
       {!sponsorOpen && (
         <div className={`${reveal} flex flex-col items-center gap-1 [animation-delay:0.45s]`}>
-          <p className="font-display text-2xl font-extrabold uppercase leading-none tracking-wide text-[#F5BB03] sm:text-3xl">
+          <p className="font-display text-2xl leading-none font-extrabold tracking-wide text-[#F5BB03] uppercase sm:text-3xl">
             7 Noviembre 2026
           </p>
-          <p className="font-display text-sm font-medium uppercase tracking-[0.18em] text-white/75 sm:text-base">
+          <p className="font-display text-sm font-medium tracking-[0.18em] text-white/75 uppercase sm:text-base">
             Sinergia Faro — Montevideo, Uruguay
           </p>
         </div>
@@ -184,7 +184,7 @@ export default function RebrandReveal() {
             <button
               type="button"
               onClick={() => runViewTransition(() => setSponsorOpen(true))}
-              className="group relative inline-flex h-[54px] items-center gap-2.5 overflow-hidden rounded-full border-2 border-[#F5BB03] bg-[#F5BB03] px-8 font-display text-base font-extrabold uppercase tracking-wide text-black outline-hidden transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#0162C8] hover:shadow-[0_12px_34px_-8px_rgba(245,187,3,0.55)] focus-visible:ring-2 focus-visible:ring-[#F5BB03] focus-visible:ring-offset-2 focus-visible:ring-offset-black active:translate-y-0 sm:text-lg"
+              className="group relative inline-flex h-[54px] items-center gap-2.5 overflow-hidden rounded-full border-2 border-[#F5BB03] bg-[#F5BB03] px-8 font-display text-base font-extrabold tracking-wide text-black uppercase outline-hidden transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[#0162C8] hover:shadow-[0_12px_34px_-8px_rgba(245,187,3,0.55)] focus-visible:ring-2 focus-visible:ring-[#F5BB03] focus-visible:ring-offset-2 focus-visible:ring-offset-black active:translate-y-0 sm:text-lg"
             >
               <span
                 aria-hidden="true"

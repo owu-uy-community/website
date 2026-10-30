@@ -1,0 +1,11 @@
+name: "Flutter Montevideo"
+picture: /images/communities/flutter-montevideo/picture.webp
+description: "Meetups de Flutter y desarrollo multiplataforma: apps móviles, web y de escritorio con un mismo código."
+topics:
+  - mobile
+status: activa
+meetup: https://www.meetup.com/flutter-montevideo/
+slackChannel: flutter
+feedNames:
+  - "Flutter Montevideo"
+confPartner: false

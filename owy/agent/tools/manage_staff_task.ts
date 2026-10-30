@@ -63,11 +63,11 @@ export default defineTool({
     status: z.enum(["pending", "in_progress", "done", "blocked"]).optional().describe("Para set_status"),
     person: z.string().optional().describe("Para assign/unassign: nombre o userId de la persona"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("task:manage", { inEvent: true }),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "task:manage", (await resolveActiveEvent()).id);
     const event = await resolveActiveEvent();
-    const api = owuApi();
+    const api = owuApi(ctx);
     const eventId = event.id;
 
     if (input.action === "create") {

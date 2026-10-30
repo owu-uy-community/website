@@ -1,7 +1,17 @@
 import { pcmLevel } from "../../../public/companion-audio/pcm.mjs";
 
 export type VoiceStage =
-  "off" | "requesting" | "connecting" | "listening" | "thinking" | "speaking" | "idle" | "muted" | "error";
+  | "off"
+  | "requesting"
+  | "connecting"
+  | "listening"
+  | "thinking"
+  | "speaking"
+  | "idle"
+  | "muted"
+  | "error"
+  /** Attached as a physical device's laptop audio: mic + speakers follow that device's turns. */
+  | "standby";
 export type BridgeInfo = {
   model: string;
   voice: string;
@@ -19,6 +29,10 @@ export type VoiceStatus = {
   bridge?: BridgeInfo;
   tools?: ToolActivity[];
   blocked?: boolean;
+  /** Device id this browser is attached to as laptop audio (mic + speakers). */
+  attached?: string;
+  /** The current turn records a pitch (modo pitch): no auto-commit, the person ends it. */
+  pitch?: boolean;
 };
 export type VoiceVisual = { phase: number; mic: number; speaker: number };
 export type VoiceScopes = { writes: boolean; staff: boolean; marketplace: boolean };
@@ -27,8 +41,14 @@ export type DeviceCommand =
   | { kind: "text"; text: string }
   | { kind: "qr"; url: string; caption?: string }
   | { kind: "face"; state: string }
+  /** What Owy's face feels while a sentence plays (bridge expression.ts). */
+  | { kind: "expression"; expression: string; leadMs: number; strength: number }
   | { kind: "volume"; value: number }
-  | { kind: "bridgeEvent"; event: string; run: number };
+  | { kind: "bridgeEvent"; event: string; run: number }
+  /** A pre-rendered cue to play (public/companion-audio/clips/<id>.wav); the browser plays it itself. */
+  | { kind: "clip"; id: string }
+  /** Modo pitch: "name" invites a tap to say one's name, "idle" clears it. */
+  | { kind: "pitchPrompt"; prompt: string };
 type Ticket = { token: string; url: string; model: string; expiresAt: number; protocol: number };
 type Dependencies = {
   media: () => Promise<MediaStream>;
@@ -54,7 +74,7 @@ const defaults: Dependencies = {
       signal,
     });
     const data = await r.json();
-    if (!r.ok) throw Error(data.error || "Unable to start voice.");
+    if (!r.ok) throw Error(data.error || "No se pudo iniciar la voz.");
     return data;
   },
 };
@@ -65,7 +85,7 @@ const phase = (stage: VoiceStage) =>
  * The browser owns microphone/playback only; no provider prompts/tools/protocol here.
  */
 export class WebVoice {
-  status: VoiceStatus = { stage: "off", message: "Ready when you are.", input: "", output: "" };
+  status: VoiceStatus = { stage: "off", message: "Cuando quieras.", input: "", output: "" };
   private epoch = 0;
   private captureEpoch = 0;
   private resuming = false;
@@ -97,6 +117,9 @@ export class WebVoice {
   private run = 0;
   private bridgeReady = false;
   private deviceBlocked = false;
+  private attachTo: string | null = null;
+  private pitch = false;
+  private sessionTimer?: ReturnType<typeof setTimeout>;
   private messageChain: Promise<void> = Promise.resolve();
   constructor(
     private changed: (state: VoiceStatus) => void,
@@ -133,11 +156,17 @@ export class WebVoice {
   setContinuous(value: boolean) {
     this.continuous = value;
   }
-  async start(scopes: VoiceScopes = { writes: false, staff: false, marketplace: false }) {
+  /**
+   * `attachTo`: instead of running its own conversation, this browser becomes
+   * that physical device's microphone and speakers (laptop mode). The device
+   * keeps the trigger, the face and the captions; turns arrive as `accepted`.
+   */
+  async start(scopes: VoiceScopes = { writes: false, staff: false, marketplace: false }, attachTo?: string) {
     this.stop();
     this.stopped = false;
+    this.attachTo = attachTo ?? null;
     const epoch = ++this.epoch;
-    this.status = { stage: "requesting", message: "Allow the microphone to talk to Owy.", input: "", output: "" };
+    this.status = { stage: "requesting", message: "Permití el micrófono para hablar con Owy.", input: "", output: "" };
     this.changed(this.status);
     this.abort = new AbortController();
     try {
@@ -152,9 +181,11 @@ export class WebVoice {
       this.gain.connect(this.analyser).connect(ctx.destination);
       await ctx.audioWorklet.addModule("/companion-audio/capture.worklet.js");
       if (epoch !== this.epoch) return;
-      await this.acquire(epoch);
+      // As a device's laptop audio the browser may only be its speakers (the
+      // device keeps its own mic): never block attaching on the mic prompt.
+      if (!this.attachTo) await this.acquire(epoch);
       if (epoch !== this.epoch) return;
-      this.update("connecting", "Connecting securely to Owy…");
+      this.update("connecting", "Conectando con Owy…");
       const ticket = await this.deps.ticket(this.abort.signal, scopes);
       if (epoch !== this.epoch) return;
       if (
@@ -176,9 +207,9 @@ export class WebVoice {
         throw Error("Invalid bridge address.");
       const socket = (this.socket = this.deps.socket(url.href));
       socket.binaryType = "arraybuffer";
-      this.watchdog = this.later(() => this.fail("Bridge connection timed out. Please try again."), 20000);
-      this.later(
-        () => this.stop("The five-minute session ended. Start again when you're ready."),
+      this.watchdog = this.later(() => this.fail("El bridge no respondió a tiempo. Probá de nuevo."), 20000);
+      this.sessionTimer = this.later(
+        () => this.stop("Terminaron los cinco minutos de sesión. Empezá otra cuando quieras."),
         Math.max(0, Math.min(300000, ticket.expiresAt - Date.now()))
       );
       socket.onopen = () => {
@@ -190,23 +221,23 @@ export class WebVoice {
             if (epoch !== this.epoch) return;
             if ((typeof data === "string" ? data.length : data.byteLength) > 64 * 1024)
               throw Error("Voice message exceeded its limit.");
-            if (typeof data === "string") this.receive(JSON.parse(data));
+            if (typeof data === "string") await this.receive(JSON.parse(data));
             else if (data instanceof ArrayBuffer) this.play(data);
             else throw Error("Invalid bridge audio");
           })
           .catch(() => {
-            if (epoch === this.epoch) this.fail("The voice stream could not be read. Please reconnect.");
+            if (epoch === this.epoch) this.fail("No se pudo leer el stream de voz. Reconectá.");
           });
       };
       socket.onerror = () => {
-        if (epoch === this.epoch) this.fail("Voice connection failed. Check your network and try again.");
+        if (epoch === this.epoch) this.fail("Falló la conexión de voz. Revisá la red y probá de nuevo.");
       };
       socket.onclose = (event) => {
         if (epoch === this.epoch)
           this.stop(
             event.code === 1000
-              ? "Bridge session ended. Start again when ready."
-              : "Bridge disconnected. Microphone off; start again to reconnect."
+              ? "La sesión del bridge terminó. Empezá otra cuando quieras."
+              : `El bridge se desconectó${event.reason ? ` (${event.reason})` : ""}. Micrófono apagado; empezá de nuevo para reconectar.`
           );
       };
       const samples = new Float32Array(256);
@@ -221,12 +252,12 @@ export class WebVoice {
       const name = error instanceof Error ? error.name : "";
       this.fail(
         name === "NotAllowedError"
-          ? "Microphone permission was denied. Allow it in your browser, then try again."
+          ? "Sin permiso de micrófono. Permitilo en el navegador y probá de nuevo."
           : name === "NotFoundError"
-            ? "No microphone was found. Connect one and try again."
+            ? "No se encontró un micrófono. Conectá uno y probá de nuevo."
             : error instanceof Error
               ? error.message
-              : "Voice could not start."
+              : "La voz no pudo arrancar."
       );
     }
   }
@@ -241,12 +272,12 @@ export class WebVoice {
     for (const track of stream.getAudioTracks()) {
       track.enabled = false;
       track.onended = () => {
-        if (!this.stopped) this.stop("Microphone disconnected.");
+        if (!this.stopped) this.stop("Micrófono desconectado.");
       };
     }
     this.source = this.ctx.createMediaStreamSource(stream);
     this.capture = new AudioWorkletNode(this.ctx, "owy-capture");
-    this.capture.onprocessorerror = () => this.fail("Microphone processing stopped. Please reconnect.");
+    this.capture.onprocessorerror = () => this.fail("Se detuvo el procesamiento del micrófono. Reconectá.");
     this.silent = this.ctx.createGain();
     this.silent.gain.value = 0;
     this.source.connect(this.capture).connect(this.silent).connect(this.ctx.destination);
@@ -257,7 +288,7 @@ export class WebVoice {
   private send(message: unknown) {
     if (this.socket?.readyState !== 1) return;
     if (this.socket.bufferedAmount > 128 * 1024) {
-      this.fail("Your connection is too slow for live audio. Please reconnect.");
+      this.fail("La conexión es muy lenta para audio en vivo. Reconectá.");
       return;
     }
     this.socket.send(JSON.stringify(message));
@@ -278,20 +309,23 @@ export class WebVoice {
     new DataView(packet.buffer).setUint32(0, this.run, true);
     packet.set(new Uint8Array(bytes), 4);
     if ((this.socket?.bufferedAmount ?? 0) > 128 * 1024) {
-      this.fail("Audio upload is too slow. Reconnect.");
+      this.fail("La subida de audio es muy lenta. Reconectá.");
       return;
     }
     if (this.socket?.readyState === 1) this.socket.send(packet);
-    if (this.speech && now - this.speechAt > 700) this.finishTurn();
+    // Attached: the device's pipeline (server VAD) ends the capture, so keep
+    // streaming the trailing silence it needs instead of committing locally.
+    // A pitch has pauses in it: the person ends it (or the bridge, after a long silence).
+    if (!this.attachTo && !this.pitch && this.speech && now - this.speechAt > 700) this.finishTurn();
   }
   finishTurn() {
-    if (this.status.stage !== "listening") return;
+    if (this.status.stage !== "listening" || this.attachTo) return;
     this.clear(this.idleTimer);
     this.gate(false);
     this.send({ type: "commit", run: this.run });
-    this.update("thinking", "Owy is thinking…");
+    this.update("thinking", "Owy está pensando…");
     this.clear(this.watchdog);
-    this.watchdog = this.later(() => this.fail("Owy took too long to reply. Please start again."), 30000);
+    this.watchdog = this.later(() => this.fail("Owy tardó demasiado en responder. Empezá de nuevo."), 30000);
   }
   private gate(enabled: boolean) {
     this.stream?.getAudioTracks().forEach((t) => (t.enabled = enabled));
@@ -315,8 +349,11 @@ export class WebVoice {
     this.stream = undefined;
     this.micLevel = 0;
   }
-  async resume() {
-    if (this.resuming || this.deviceBlocked || this.stopped || this.socket?.readyState !== 1) return;
+  /** `mode: "pitch"`: the turn records a talk proposal (modo pitch) instead of a conversation. */
+  async resume(mode?: "pitch") {
+    // Attached, the physical device starts the turns (`accepted`): a `start` from here (the
+    // virtual Owy's tap or follow-up) makes the bridge close the socket.
+    if (this.attachTo || this.resuming || this.deviceBlocked || this.stopped || this.socket?.readyState !== 1) return;
     this.resuming = true;
     const epoch = this.epoch;
     const captureEpoch = ++this.captureEpoch;
@@ -330,17 +367,23 @@ export class WebVoice {
       this.speechAt = 0;
       this.speechFrames = 0;
       this.discard = false;
-      this.update("connecting", "Preparing the gadget's bridge turn…");
-      this.send({ type: "start" });
-      this.watchdog = this.later(() => this.fail("The bridge did not accept the turn. Please reconnect."), 20000);
+      this.pitch = mode === "pitch";
+      this.status.pitch = this.pitch;
+      this.update("connecting", this.pitch ? "Preparando el pitch…" : "Preparando el turno en el bridge…");
+      this.send({ type: "start", ...(this.pitch ? { mode: "pitch" } : {}) });
+      this.watchdog = this.later(() => this.fail("El bridge no aceptó el turno. Reconectá."), 20000);
     } catch {
       if (epoch === this.epoch && captureEpoch === this.captureEpoch)
-        this.fail("The microphone could not restart. Please reconnect.");
+        this.fail("El micrófono no pudo reiniciarse. Reconectá.");
     } finally {
       if (captureEpoch === this.captureEpoch) this.resuming = false;
     }
   }
   mute() {
+    // Attached: the virtual Owy's privacy, power and cancel are not the physical device's.
+    if (this.attachTo) return;
+    this.pitch = false;
+    this.status.pitch = false;
     ++this.captureEpoch;
     this.resuming = false;
     this.discard = true;
@@ -349,7 +392,7 @@ export class WebVoice {
     this.clear(this.watchdog);
     this.send({ type: "stop" });
     this.releaseInput();
-    this.update("muted", "Microphone off. Resume when you're ready.");
+    this.update("muted", "Micrófono apagado. Seguí cuando quieras.");
   }
   interrupt() {
     this.send({ type: "stop" });
@@ -378,10 +421,10 @@ export class WebVoice {
           : "Microphone off: turn off privacy in device settings to resume.";
       if (this.status.message !== message) this.update("muted", message);
     } else if (wasBlocked && !this.deviceBlocked && this.status.stage === "muted") {
-      this.update("muted", "Microphone off. Device ready; Resume when you're ready.");
+      this.update("muted", "Micrófono apagado. El dispositivo está listo; seguí cuando quieras.");
     }
   }
-  private receive(message: any) {
+  private async receive(message: any) {
     if (!message || typeof message.type !== "string") throw Error("Invalid bridge message");
     if (message.type === "ready") {
       if (message.protocol !== 1 || message.sampleRate !== 16000 || !Array.isArray(message.tools))
@@ -390,28 +433,71 @@ export class WebVoice {
       this.status.bridge = message;
       this.setVolume(this.volume * 100);
       this.clear(this.watchdog);
-      void this.resume();
+      if (this.attachTo) {
+        this.update("connecting", `Conectando este navegador como el audio de ${this.attachTo}…`);
+        this.send({ type: "attach", deviceId: this.attachTo });
+        this.watchdog = this.later(() => this.fail("El bridge no aceptó la conexión."), 10000);
+      } else void this.resume();
+      return;
+    }
+    if (message.type === "attached") {
+      this.clear(this.watchdog);
+      this.clear(this.sessionTimer); // the bridge keeps attached peers for the whole open space
+      this.status.attached = String(message.deviceId);
+      this.update("standby", `Este navegador es los parlantes de ${message.deviceId}. Esperando un turno…`);
+      // Ask for the microphone now (not on the first turn), but in the background:
+      // it is only needed when the device's Mic is set to "laptop".
+      const epoch = this.epoch;
+      this.acquire(epoch)
+        .then(() => {
+          if (epoch === this.epoch && this.status.stage === "standby" && this.stream)
+            this.update(
+              "standby",
+              `Este navegador es el micrófono y los parlantes de ${message.deviceId}. Esperando un turno…`
+            );
+        })
+        .catch(() => {});
+      return;
+    }
+    if (message.type === "detached") {
+      this.status.attached = undefined;
+      this.gate(false);
+      this.update("idle", "Desconectado. El dispositivo vuelve a su propio audio.");
       return;
     }
     if (message.type === "accepted") {
-      if (this.status.stage !== "connecting" || !Number.isSafeInteger(message.run) || message.run <= this.run) return;
+      // Attached, the device owns the turns: its follow-up can open while the
+      // last words of the previous reply are still playing here.
+      const idle = ["connecting", "standby"].includes(this.status.stage);
+      const live = this.attachTo && ["listening", "thinking", "speaking"].includes(this.status.stage);
+      if ((!idle && !live) || !Number.isSafeInteger(message.run) || message.run <= this.run) return;
       this.run = message.run;
       this.discard = false;
       this.clear(this.watchdog);
-      this.update("listening", "I'm listening through the gadget's bridge.");
+      this.update(
+        "listening",
+        this.attachTo
+          ? `Te escucho para ${this.attachTo} con este micrófono.`
+          : this.pitch
+            ? "Grabando tu pitch. Tocá de nuevo (o Terminé el pitch) para mandarlo."
+            : "Te escucho a través del bridge del gadget."
+      );
       this.cue();
       this.later(() => {
         if (this.status.stage === "listening" && this.run === message.run) this.gate(true);
       }, 180);
       // The real VoiceTurn owns the 8-second silence deadline. This is only a
-      // transport/liveness fallback and a maximum continuous input bound.
-      this.watchdog = this.later(() => {
-        if (this.status.stage === "listening") this.finishTurn();
-      }, 60000);
+      // transport/liveness fallback and a maximum continuous input bound (a pitch may run two minutes).
+      this.watchdog = this.later(
+        () => {
+          if (this.status.stage === "listening") this.finishTurn();
+        },
+        this.pitch ? 125_000 : 60_000
+      );
       return;
     }
     if (message.type === "declined") {
-      this.fail("The bridge couldn't connect to the model. Try again.");
+      this.fail("El bridge no pudo conectar con el modelo. Probá de nuevo.");
       return;
     }
     if (message.run !== this.run || this.discard) return;
@@ -425,8 +511,10 @@ export class WebVoice {
         { name: String(message.name).slice(0, 80), status: message.status, ms: message.ms, detail: message.detail },
       ].slice(-40);
       this.changed({ ...this.status });
-    } else if (message.type === "screen") this.deviceCommand(message.command);
-    else if (message.type === "volume") {
+    } else if (message.type === "screen") {
+      if (message.command?.kind === "clip") void this.playClip(String(message.command.id));
+      this.deviceCommand(message.command);
+    } else if (message.type === "volume") {
       this.setVolume(message.value);
       this.deviceCommand({ kind: "volume", value: message.value });
     } else if (message.type === "event") {
@@ -434,22 +522,39 @@ export class WebVoice {
       switch (message.event) {
         case "STT_END":
           this.gate(false);
-          this.update("thinking", "Owy is thinking…");
+          this.update("thinking", "Owy está pensando…");
           this.send({ type: "playbackReady", run: this.run });
           this.clear(this.watchdog);
-          this.watchdog = this.later(() => this.fail("The bridge response timed out. Reconnect."), 35000);
+          this.watchdog = this.later(() => this.fail("La respuesta del bridge tardó demasiado. Reconectá."), 35000);
           break;
         case "ERROR":
-          this.fail("The bridge reported a voice-turn error. Please reconnect.");
+          if (this.attachTo) {
+            // The device recovers on its own; this browser just goes back to standby.
+            this.clear(this.watchdog);
+            this.gate(false);
+            this.stopPlayback();
+            this.update("standby", `El turno terminó con un error en ${this.attachTo}. Esperando el próximo…`);
+          } else this.fail("El bridge reportó un error en el turno de voz. Reconectá.");
           break;
         case "RUN_END":
           this.clear(this.watchdog);
           if (this.status.stage === "speaking") {
             this.complete = true;
             this.afterPlayback();
+          } else if (this.attachTo && ["listening", "thinking"].includes(this.status.stage)) {
+            this.gate(false);
+            this.update("standby", `Esperando el próximo turno en ${this.attachTo}…`);
           } else if (["listening", "thinking"].includes(this.status.stage)) {
+            const pitched = this.pitch;
+            this.pitch = false;
+            this.status.pitch = false;
             this.releaseInput();
-            this.update("idle", "The bridge closed the listening window. Tap Resume for a new conversation.");
+            this.update(
+              "idle",
+              pitched
+                ? "El pitch terminó sin una charla. Tocá Seguir para probar de nuevo."
+                : "El bridge cerró la ventana de escucha. Tocá Seguir para una conversación nueva."
+            );
           }
           break;
       }
@@ -465,8 +570,8 @@ export class WebVoice {
     this.clear(this.idleTimer);
     this.clear(this.watchdog);
     this.complete = false;
-    this.watchdog = this.later(() => this.fail("The reply stalled. Please reconnect."), 30000);
-    if (this.status.stage !== "speaking") this.update("speaking", "Owy is speaking. You can interrupt.");
+    this.watchdog = this.later(() => this.fail("La respuesta se trabó. Reconectá."), 30000);
+    if (this.status.stage !== "speaking") this.update("speaking", "Owy está hablando. Podés interrumpir.");
     const buffer = this.ctx.createBuffer(1, (packet.byteLength - 4) / 2, 16000),
       channel = buffer.getChannelData(0);
     for (let i = 0; i < channel.length; i++) {
@@ -490,10 +595,40 @@ export class WebVoice {
     if (!this.complete || this.queue.size || this.stopped || this.discard || this.status.stage !== "speaking") return;
     this.complete = false;
     this.nextAudio = 0;
-    if (this.continuous) void this.resume();
+    const pitched = this.pitch;
+    this.pitch = false;
+    this.status.pitch = false;
+    if (this.attachTo) {
+      // The device decides whether a follow-up window opens; it will send `accepted` again.
+      this.gate(false);
+      this.update("standby", `Respuesta reproducida. Esperando el próximo turno en ${this.attachTo}…`);
+    } else if (this.continuous && !pitched) void this.resume();
     else {
       this.releaseInput();
-      this.update("idle", "Reply finished. Tap Resume to speak again.");
+      this.update(
+        "idle",
+        pitched
+          ? "Pitch cargado. Tocá el dispositivo para otro."
+          : "Respuesta terminada. Tocá Seguir para hablar otra vez."
+      );
+    }
+  }
+
+  /** A pre-rendered cue (public/companion-audio/clips/<id>.wav) through the same gain, whatever the stage. */
+  private async playClip(id: string) {
+    const ctx = this.ctx;
+    const gain = this.gain;
+    if (!ctx || !gain || !/^[\w-]{1,40}$/.test(id)) return;
+    try {
+      const bytes = await (await fetch(`/companion-audio/clips/${id}.wav`, { cache: "force-cache" })).arrayBuffer();
+      if (ctx !== this.ctx) return;
+      const source = ctx.createBufferSource();
+      source.buffer = await ctx.decodeAudioData(bytes);
+      source.connect(gain);
+      source.onended = () => source.disconnect();
+      source.start();
+    } catch {
+      // No clip on this build: the bridge speaks the line instead.
     }
   }
   private stopPlayback() {
@@ -508,10 +643,14 @@ export class WebVoice {
     this.nextAudio = 0;
     this.complete = false;
   }
-  stop(message = "Conversation ended. Microphone off.") {
+  stop(message = "Conversación terminada. Micrófono apagado.") {
     this.stopped = true;
     this.bridgeReady = false;
     this.run = 0;
+    this.attachTo = null;
+    this.pitch = false;
+    this.status.attached = undefined;
+    this.status.pitch = false;
     ++this.captureEpoch;
     this.resuming = false;
     ++this.epoch;
@@ -529,6 +668,8 @@ export class WebVoice {
       socket.onerror = null;
       socket.onmessage = null;
       socket.onopen = null;
+      // Tell the bridge why this browser leaves: its log is where a drop at the venue gets debugged.
+      if (socket.readyState === 1) socket.send(JSON.stringify({ type: "detach", reason: message.slice(0, 200) }));
       socket.close();
     }
     void this.ctx?.close().catch(() => {});
@@ -540,7 +681,7 @@ export class WebVoice {
     this.update("off", message);
   }
   private fail(message: string) {
-    this.stop();
+    this.stop(message);
     this.update("error", message);
   }
 }

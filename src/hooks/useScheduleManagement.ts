@@ -97,8 +97,8 @@ export function useScheduleManagement({
    * Uses optimistic updates for instant UI feedback
    */
   const handleToggleScheduleHighlight = useCallback(
-    async (timeIndex: number, timeSlots: string[]) => {
-      const schedule = schedulesData[timeIndex];
+    async (scheduleId: string) => {
+      const schedule = schedulesData.find((candidate) => candidate.id === scheduleId);
       if (!schedule) return;
 
       const willBeHighlighted = !schedule.highlightInKiosk;
@@ -157,7 +157,7 @@ export function useScheduleManagement({
           queryClient.setQueryData(schedulesKey, previousSchedules);
         }
 
-        toast.error("Error", `No se pudo resaltar el horario "${timeSlots[timeIndex]}".`);
+        toast.error("Error", `No se pudo resaltar el horario "${schedule.startTime} - ${schedule.endTime}".`);
       }
     },
     [schedulesData, updateScheduleMutation, queryClient, broadcastScheduleChange, openSpaceId, schedulesKey]
@@ -259,15 +259,12 @@ export function useScheduleManagement({
               void queryClient.invalidateQueries({ queryKey: orpc.tracks.list.key({ input: { openSpaceId } }) });
             });
         } else {
-          // Create new schedule
-          const now = new Date();
-          const currentDate = now.toISOString().split("T")[0];
-
+          // Create new schedule (the server dates it on the event's day)
           const newScheduleData = {
-            name: `Time Slot ${schedulesData.length + 1}`,
+            // Read out by the activity log, Hoy and the run of show ("Bloque 3 · 17:00 – 17:25").
+            name: `Bloque ${schedulesData.length + 1}`,
             startTime: data.startTime,
             endTime: data.endTime,
-            date: `${currentDate}T00:00:00.000Z`,
             isActive: true,
             highlightInKiosk: false,
             openSpaceId,
@@ -279,7 +276,7 @@ export function useScheduleManagement({
             name: newScheduleData.name,
             startTime: newScheduleData.startTime,
             endTime: newScheduleData.endTime,
-            date: newScheduleData.date,
+            date: schedulesData[0]?.date ?? "",
             isActive: newScheduleData.isActive,
             highlightInKiosk: newScheduleData.highlightInKiosk,
             createdAt: new Date().toISOString(),

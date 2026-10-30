@@ -1,11 +1,19 @@
-"use server";
+import { cacheLife } from "next/cache";
+import { Suspense } from "react";
 
-import { fetchEpgServer } from "components/Meetups/2024/OpenSpace/helpers/common";
+import epg from "components/Meetups/2024/OpenSpace/helpers/epg_server";
 
 import OpenSpaceClient from "./component";
 
 export default async function OpenSpaceAgendaServer() {
-  const epg = await fetchEpgServer();
+  "use cache";
+  // A past edition's agenda: it only changes with a deploy
+  cacheLife("max");
 
-  return <OpenSpaceClient initialEpg={epg} />;
+  // The timeline library reads the clock as it renders, so it renders per visit instead of in the shell
+  return (
+    <Suspense>
+      <OpenSpaceClient initialEpg={await epg()} />
+    </Suspense>
+  );
 }

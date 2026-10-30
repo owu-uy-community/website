@@ -12,6 +12,8 @@ const HEARTBEAT_INTERVAL_MS = 25_000;
 const STALE_CONNECTION_MS = 70_000;
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
+/** A socket that lasted this long was recycled, not refused: it comes back at once. */
+const RECYCLED_AFTER_MS = 10_000;
 
 function defaultUrl(): string {
   if (typeof window === "undefined") return "";
@@ -48,6 +50,7 @@ class RealtimeClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastMessageAt = 0;
+  private openedAt = 0;
   private statusListeners = new Set<(status: RealtimeStatus) => void>();
   private explicitlyClosed = false;
 
@@ -113,6 +116,7 @@ class RealtimeClient {
 
     this.socket.addEventListener("open", () => {
       this.reconnectAttempt = 0;
+      this.openedAt = Date.now();
       this.lastMessageAt = Date.now();
       this.setStatus("open");
 
@@ -143,7 +147,11 @@ class RealtimeClient {
     this.socket.addEventListener("close", () => {
       this.stopHeartbeat();
       this.setStatus("closed");
-      if (!this.explicitlyClosed) this.scheduleReconnect();
+      // Vercel ends every socket at the function's maxDuration (5 min). Waiting out the backoff
+      // then left a second or more in which a sound board's output missed every press.
+      const recycled = this.openedAt > 0 && Date.now() - this.openedAt > RECYCLED_AFTER_MS;
+      this.openedAt = 0;
+      if (!this.explicitlyClosed) this.scheduleReconnect(recycled);
     });
 
     this.socket.addEventListener("error", () => {
@@ -167,16 +175,18 @@ class RealtimeClient {
     }
   }
 
-  private scheduleReconnect(): void {
+  private scheduleReconnect(rightAway = false): void {
     if (this.reconnectTimer || typeof window === "undefined") return;
     if (this.handlers.size === 0) return; // nothing to reconnect for
 
-    const delay = Math.min(RECONNECT_BASE_MS * 2 ** this.reconnectAttempt, RECONNECT_MAX_MS);
-    this.reconnectAttempt += 1;
+    const delay = rightAway
+      ? 0
+      : Math.min(RECONNECT_BASE_MS * 2 ** this.reconnectAttempt, RECONNECT_MAX_MS) + Math.random() * 250;
+    if (!rightAway) this.reconnectAttempt += 1;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.ensureConnected();
-    }, delay + Math.random() * 250);
+    }, delay);
   }
 
   private startHeartbeat(): void {

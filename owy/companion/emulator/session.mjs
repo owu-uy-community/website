@@ -18,6 +18,8 @@ const settings = new Set([
   "volume",
   "brightness",
   "marketplace",
+  "pitch",
+  "pitch_reacts",
 ]);
 const pages = new Set(["face", "quick", "help", "qr", "pin", "calibration"]); // staff only through fixture PIN
 const kinds = {
@@ -43,7 +45,10 @@ const kinds = {
   card: 20,
   pet: 21,
   transport: 22,
+  expression: 37,
 };
+/** owy::EXPRESSION_NAMES order (companion_model.h). */
+const expressions = ["neutral", "happy", "excited", "curious", "thinking", "empathetic", "playful", "surprised"];
 export function validateEvent(event) {
   if (!event || typeof event !== "object" || Array.isArray(event)) throw Error("Invalid input event");
   if (!Number.isSafeInteger(event.t) || event.t < 0 || event.t > MAX_TIME)
@@ -77,6 +82,7 @@ export function validateEvent(event) {
     power: 1,
     mood: 1,
     transport: 2,
+    expression: 3,
   };
   if (values.length !== (lengths[event.type] ?? 0)) throw Error("Wrong number of input values");
   if (
@@ -148,6 +154,10 @@ export class Session {
     if (this.mode === "live")
       for (const e of events) {
         if (e.event === "voice.request") this.commands.push("start");
+        // Modo pitch: a tap records a pitch (the name step re-tags it), the second tap sends it.
+        if (e.event === "voice.request.pitch") this.commands.push("start:pitch");
+        if (e.event === "voice.request.pitch_name") this.commands.push("start:pitch-name");
+        if (e.event === "pitch.submit") this.commands.push("commit");
         if (["voice.cancelled", "calibration.started", "power.off", "fixture.reboot"].includes(e.event))
           this.commands.push("stop");
       }
@@ -260,6 +270,7 @@ export class Session {
         "power",
         "mood",
         "pet",
+        "expression",
       ].includes(e.type)
     )
       throw Error("This input is fixture-only");
@@ -290,9 +301,21 @@ export class Session {
       this.raw(36, [0], url);
       this.raw(36, [1], text(command.caption));
     } else if (command.kind === "volume" && Number.isFinite(command.value)) this.raw(3, [command.value], "volume");
-    else if (command.kind === "face") {
+    else if (command.kind === "expression") {
+      // The bridge's per-sentence face (expression.ts): name, ms until heard, strength 0..100.
+      const index = expressions.indexOf(command.expression);
+      if (index >= 0 && Number.isFinite(command.leadMs) && Number.isFinite(command.strength))
+        this.raw(37, [
+          index,
+          Math.max(-2000, Math.min(5000, command.leadMs)),
+          Math.max(0, Math.min(100, command.strength)),
+        ]);
+    } else if (command.kind === "face") {
       const moods = { idle: 0, happy: 4, error: 5, offline: 6 };
       if (Object.hasOwn(moods, command.state)) this.raw(18, [moods[command.state]]);
+    } else if (command.kind === "pitchPrompt") {
+      // The bridge asks who speaks: the rim invites one more tap for 20 s ("name"), or stops ("idle").
+      this.raw(38, [command.prompt === "name" ? 1 : 0]);
     }
     this.observe();
   }

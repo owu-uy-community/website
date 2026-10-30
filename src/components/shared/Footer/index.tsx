@@ -1,102 +1,102 @@
+import { ArrowUpRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
-import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
+import { FaGithub, FaInstagram, FaLinkedin, FaSlack, FaTelegram, FaYoutube } from "react-icons/fa6";
 
-import { addUtmParams } from "app/lib/utils";
-import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
+import { Container, Eyebrow, SmartLink } from "components/community/ui";
+import { FOOTER_COLUMNS, REPO_URL, SOCIALS } from "lib/community/site";
+
+const ICONS = {
+  slack: FaSlack,
+  github: FaGithub,
+  youtube: FaYoutube,
+  linkedin: FaLinkedin,
+  instagram: FaInstagram,
+  telegram: FaTelegram,
+};
+
+// Read once, when the server loads the module (each deploy): a prerendered page can't read the clock
+const YEAR = new Date().getFullYear();
 
 export default function Footer() {
-  const LINKS = [
-    {
-      href: SOCIAL_LINKS.slack,
-      label: "Sumate a la comunidad",
-      external: true,
-    },
-    // Enable FAQS when the pages are ready :)
-    // {
-    //   href: "/la-meetup/faqs",
-    //   label: "Preguntas frecuentes",
-    // },
-    // {
-    //   href: "/la-meetup/#codigo-conducta",
-    //   label: "Código de conducta",
-    // },
-    {
-      href: INTERNAL_ROUTES.meetups.meetup2023,
-      label: "La Meetup I",
-    },
-    {
-      href: INTERNAL_ROUTES.meetups.meetup2024,
-      label: "La Meetup II",
-    },
-    {
-      href: INTERNAL_ROUTES.meetups.meetup2025,
-      label: "La Meetup III",
-    },
-  ];
-
   return (
-    <footer className="w-full border-t border-white/10 px-4 sm:px-6 lg:px-8 xl:px-0">
-      <div className="flex flex-col items-center justify-between gap-6 py-10 text-center text-white lg:flex-row lg:gap-4">
-        <ul className="flex flex-col gap-4 text-sm font-[550] sm:text-base lg:flex-row lg:gap-6 lg:text-left">
-          {LINKS.map(({ href, label, external }) => (
-            <li key={href} className="hover:text-yellow-400">
-              <Link
-                key={href}
-                href={external ? addUtmParams(href) : href}
-                rel={external ? "noopener" : undefined}
-                target={external ? "_blank" : undefined}
-              >
-                {label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+    <footer className="relative w-full overflow-hidden border-t border-white/[0.07]">
+      <Container className="relative py-16 sm:py-20">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_2fr] lg:gap-16">
+          <div className="flex max-w-sm flex-col gap-6">
+            <Link aria-label="OWU Uruguay, inicio" className="w-fit" href="/">
+              <Image alt="OWU Uruguay" className="h-9 w-auto" height={36} src="/images/logos/owu.webp" width={85} />
+            </Link>
+            <p className="text-[15px] leading-relaxed text-zinc-400">
+              La comunidad tech de Uruguay desde 2014. Un Slack, decenas de comunidades y una conferencia, hechos por
+              gente que se da una mano.
+            </p>
+            <ul className="flex flex-wrap gap-1">
+              {SOCIALS.map(({ key, label, href }) => {
+                const Icon = ICONS[key];
 
-        <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-end gap-4">
-          <div className="flex items-center justify-center gap-4">
-            <Link
-              key="instagram-link"
-              className="font-light hover:text-yellow-400"
-              href={addUtmParams(SOCIAL_LINKS.instagram)}
-              rel="noopener"
-              target="_blank"
-            >
-              <FaInstagram size={20} />
-            </Link>
-            <Link
-              key="linkedin-link"
-              className="font-light hover:text-yellow-400"
-              href={addUtmParams(SOCIAL_LINKS.linkedin)}
-              rel="noopener"
-              target="_blank"
-            >
-              <FaLinkedin size={20} />
-            </Link>
-            <Link
-              key="slack-link"
-              className="font-light hover:text-yellow-400"
-              href={addUtmParams(SOCIAL_LINKS.slack)}
-              rel="noopener"
-              target="_blank"
-            >
-              <FaSlack size={20} />
-            </Link>
-            <Link
-              key="telegram-link"
-              className="font-light hover:text-yellow-400"
-              href={addUtmParams(SOCIAL_LINKS.telegram)}
-              rel="noopener"
-              target="_blank"
-            >
-              <FaTelegram size={20} />
-            </Link>
+                return (
+                  <li key={key}>
+                    <SmartLink
+                      aria-label={label}
+                      className="inline-flex size-10 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-yellow-400"
+                      href={href}
+                      utm="footer"
+                    >
+                      <Icon aria-hidden className="size-[18px]" />
+                    </SmartLink>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
-          <Link className="font-light hover:text-yellow-400" href={addUtmParams("/")}>
-            © OWU Uruguay
-          </Link>
+          <nav aria-label="Pie de página" className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-4">
+            {FOOTER_COLUMNS.map(({ title, links }) => (
+              <div key={title}>
+                <Eyebrow className="text-zinc-400">{title}</Eyebrow>
+                <ul className="mt-5 flex flex-col gap-3">
+                  {links.map(({ href, label, external }) => (
+                    <li key={href}>
+                      <SmartLink
+                        className="group inline-flex items-center gap-1 text-[15px] text-zinc-400 transition-colors hover:text-white"
+                        href={href}
+                        utm="footer"
+                      >
+                        {label}
+                        {external ? (
+                          <ArrowUpRight
+                            aria-hidden
+                            className="size-3.5 text-zinc-600 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                          />
+                        ) : null}
+                      </SmartLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
         </div>
-      </div>
-    </footer >
+
+        <div className="mt-16 flex flex-col gap-3 border-t border-white/[0.07] pt-6 text-[13px] text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
+          <span>© {YEAR} OWU Uruguay · Hecho por la comunidad, con código abierto</span>
+          <a
+            className="inline-flex items-center gap-1 transition-colors hover:text-zinc-200"
+            href={REPO_URL}
+            rel="noopener"
+            target="_blank"
+          >
+            ¿Ves algo para mejorar? Mandá un PR
+            <ArrowUpRight aria-hidden className="size-3.5" />
+          </a>
+        </div>
+      </Container>
+      {/* A watermark, not text: drawn as generated content so contrast checks and readers skip it */}
+      <div
+        aria-hidden
+        className="pointer-events-none -mb-[0.2em] text-center font-title text-[21vw] leading-none font-extrabold tracking-[-0.05em] text-white/[0.025] select-none before:content-['owu.uy']"
+      />
+    </footer>
   );
 }

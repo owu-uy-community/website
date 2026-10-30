@@ -22,6 +22,13 @@ export const scenarios = [
     events: [e(500, "wake"), e(1500, "speech", [3, 1200])],
   },
   {
+    id: "pitch",
+    name: "Un pitch en el mercado",
+    detail: "Modo pitch: tap, fourteen seconds of pitch with pauses, tap. No silent-window guard, no follow-up.",
+    duration: 20000,
+    events: [e(0, "setting", [1], "pitch"), e(500, "boot", [100]), e(14500, "boot", [100])],
+  },
+  {
     id: "calibration",
     name: "Find my center",
     detail: "An off-center pose with 2°/s gyro bias. Measure and retain neutral.",

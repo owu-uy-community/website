@@ -26,16 +26,16 @@ export default defineTool({
       .optional()
       .describe("Día afectado (default: hoy en Uruguay)"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("task:manage", { inEvent: true }),
   async execute({ fromTime, deltaMinutes, day }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "task:manage", (await resolveActiveEvent()).id);
     const event = await resolveActiveEvent();
     const dayDate = day ?? eventToday();
 
-    await owuApi().staffTasks.shiftFrom({ eventId: event.id, dayDate, fromTime, deltaMinutes });
+    await owuApi(ctx).staffTasks.shiftFrom({ eventId: event.id, dayDate, fromTime, deltaMinutes });
 
     // Read back so the reply states what actually moved.
-    const tasks = await owuApi().staffTasks.list({ eventId: event.id });
+    const tasks = await owuApi(ctx).staffTasks.list({ eventId: event.id });
     const affected = tasks.filter((task) => task.dayDate.slice(0, 10) === dayDate && task.startTime !== null);
 
     return {

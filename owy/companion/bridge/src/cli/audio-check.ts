@@ -20,8 +20,10 @@ async function main() {
   let heldFrames: Buffer[] = [];
   const stopOutput = () => {
     if (transportTimer) clearTimeout(transportTimer);
-    transportTimer = null; heldFrames = [];
-    pacer?.stop(); turn?.finish();
+    transportTimer = null;
+    heldFrames = [];
+    pacer?.stop();
+    turn?.finish();
   };
   let requests = 0;
   let stops = 0;
@@ -30,7 +32,8 @@ async function main() {
   let chimes = 0;
   let feedbackCues = 0;
   let feedbackAccepted = 0;
-  let lastFrameAt = 0, maxFrameGap = 0;
+  let lastFrameAt = 0,
+    maxFrameGap = 0;
   let followUpReplies = 0;
   let idleGuards = 0;
   let mode: "reply" | "silence" | "hung" | "follow-up" | "cancel-listening" | "cancel-speaking" | "decline" = "reply";
@@ -63,68 +66,101 @@ async function main() {
     }
   };
   const connect = async () => {
-    device = await CompanionDevice.connect(spec, {
-      onRequestStart: () => {
-        requests++;
-        micBytes = 0;
-        if (mode === "decline") return device.declineRequest();
-        device.acceptRequest();
-        const current = new VoiceTurn({
-          link: device, logger: log, conversationId: "audio-regression",
-          timers: { noSpeechMs: mode === "hung" ? 0 : mode === "silence" ? 700 : mode === "follow-up" ? 8000 : 4000 },
-          onPhase: p => { if (p === "finished") pacer?.stop(); },
-          onNoSpeech: () => log.info(`Silent window completed; ${micBytes} microphone bytes received`),
-        });
-        turn = current;
-        current.start();
-        if (mode === "silence" || mode === "hung" || mode === "cancel-listening" || (mode === "follow-up" && followUpReplies-- <= 0)) return;
-        current.markSpeechStarted();
-        void sleep(450).then(() => {
-          if (turn !== current || current.finished) return;
-          current.endListening("Prueba de audio");
-          current.beginSpeaking("Prueba de audio");
-          lastFrameAt = maxFrameGap = 0;
-          let injectedStall = false;
-          const transportStallMs = Number(process.env.COMPANION_CHECK_TRANSPORT_STALL_MS ?? 0);
-          pacer = new PacedSpeaker(frame => {
-            const now = performance.now();
-            const gap = lastFrameAt ? now - lastFrameAt : 0;
-            maxFrameGap = Math.max(maxFrameGap, gap);
-            if (gap > 150) log.warn(`host audio send gap: ${Math.round(gap)}ms`);
-            lastFrameAt = now;
-            if (transportTimer) { heldFrames.push(frame); return; }
-            if (!injectedStall && transportStallMs > 0 && current.audioBytesSent >= 32000) {
-              injectedStall = true;
-              heldFrames.push(frame);
-              log.info(`injecting ${transportStallMs}ms transport stall after pacing`);
-              transportTimer = setTimeout(() => {
-                transportTimer = null;
-                const buffered = heldFrames; heldFrames = [];
-                if (turn === current && !current.finished) {
-                  log.info(`releasing transport burst: ${buffered.reduce((n, f) => n + f.length, 0)}B`);
-                  for (const held of buffered) current.pushAudio(held);
-                }
-              }, Math.min(2000, transportStallMs));
-            } else current.pushAudio(frame);
-          }, {
-            bytesPerSecond: 32000, leadMs: 100, isReady: () => current.phase === "speaking",
+    device = await CompanionDevice.connect(
+      spec,
+      {
+        onRequestStart: () => {
+          requests++;
+          micBytes = 0;
+          if (mode === "decline") return device.declineRequest();
+          device.acceptRequest();
+          const current = new VoiceTurn({
+            link: device,
+            logger: log,
+            conversationId: "audio-regression",
+            timers: { noSpeechMs: mode === "hung" ? 0 : mode === "silence" ? 700 : mode === "follow-up" ? 8000 : 4000 },
+            onPhase: (p) => {
+              if (p === "finished") pacer?.stop();
+            },
+            onNoSpeech: () => log.info(`Silent window completed; ${micBytes} microphone bytes received`),
           });
-          const pcm = tone(durationMs);
-          for (let i = 0; i < pcm.length; i += 1024) pacer.push(pcm.subarray(i, i + 1024));
-          pacer.finish(() => current.endSpeaking());
-        });
+          turn = current;
+          current.start();
+          if (
+            mode === "silence" ||
+            mode === "hung" ||
+            mode === "cancel-listening" ||
+            (mode === "follow-up" && followUpReplies-- <= 0)
+          )
+            return;
+          current.markSpeechStarted();
+          void sleep(450).then(() => {
+            if (turn !== current || current.finished) return;
+            current.endListening("Prueba de audio");
+            current.beginSpeaking("Prueba de audio");
+            lastFrameAt = maxFrameGap = 0;
+            let injectedStall = false;
+            const transportStallMs = Number(process.env.COMPANION_CHECK_TRANSPORT_STALL_MS ?? 0);
+            pacer = new PacedSpeaker(
+              (frame) => {
+                const now = performance.now();
+                const gap = lastFrameAt ? now - lastFrameAt : 0;
+                maxFrameGap = Math.max(maxFrameGap, gap);
+                if (gap > 150) log.warn(`host audio send gap: ${Math.round(gap)}ms`);
+                lastFrameAt = now;
+                if (transportTimer) {
+                  heldFrames.push(frame);
+                  return;
+                }
+                if (!injectedStall && transportStallMs > 0 && current.audioBytesSent >= 32000) {
+                  injectedStall = true;
+                  heldFrames.push(frame);
+                  log.info(`injecting ${transportStallMs}ms transport stall after pacing`);
+                  transportTimer = setTimeout(
+                    () => {
+                      transportTimer = null;
+                      const buffered = heldFrames;
+                      heldFrames = [];
+                      if (turn === current && !current.finished) {
+                        log.info(`releasing transport burst: ${buffered.reduce((n, f) => n + f.length, 0)}B`);
+                        for (const held of buffered) current.pushAudio(held);
+                      }
+                    },
+                    Math.min(2000, transportStallMs)
+                  );
+                } else current.pushAudio(frame);
+              },
+              {
+                bytesPerSecond: 32000,
+                leadMs: 100,
+                isReady: () => current.phase === "speaking",
+              }
+            );
+            const pcm = tone(durationMs);
+            for (let i = 0; i < pcm.length; i += 1024) pacer.push(pcm.subarray(i, i + 1024));
+            pacer.finish(() => current.endSpeaking());
+          });
+        },
+        onRequestStop: () => {
+          stops++;
+          stopOutput();
+        },
+        onAudio: (chunk) => {
+          micBytes += chunk.data.length;
+        },
       },
-      onRequestStop: () => {
-        stops++;
-        stopOutput();
-      },
-      onAudio: chunk => { micBytes += chunk.data.length; },
-    }, log, { retryForMs: 5000 });
+      log,
+      { retryForMs: 5000 }
+    );
     // ESPHome uses CONFIG=4, DEBUG=5; esphome-client 2.0's DEBUG constant is 4.
     device.client.subscribeToLogs(5);
-    device.client.on("log", event => {
+    device.client.on("log", (event) => {
       if (process.env.COMPANION_LOG_LEVEL === "debug") log.info(`device: ${JSON.stringify(event)}`);
-      if (/Parent bus is busy|Driver failed to start|Cannot receive audio|recovery timed out|mic-channel-stalled/i.test(event.message)) {
+      if (
+        /Parent bus is busy|Driver failed to start|Cannot receive audio|recovery timed out|mic-channel-stalled/i.test(
+          event.message
+        )
+      ) {
         failures.push(event.message);
       }
       if (event.message.includes("Playback complete;")) playbackCompletions++;
@@ -139,17 +175,20 @@ async function main() {
   };
 
   await connect();
-  // Match the real bridge's visual-envelope cadence during every paced reply.
-  let animationTick = 0;
-  const visualEnvelope = setInterval(() => {
-    if (state() === "speaking") device.setSpeakLevel([.25, .5, 1, .75][animationTick++ % 4]!);
-    else device.setSpeakLevel(0);
-  }, 300);
+  // The device lip-syncs from its own speaker tap at the face's frame rate:
+  // every paced reply below exercises that render load against playback.
   const metrics = setInterval(() => {
-    const sample = Object.fromEntries([
-      "motion_poll_rate", "motion_maximum_gap", "animation_tick_rate",
-      "internal_free_memory", "internal_largest_block",
-    ].map(name => [name, device.client.latest(entityId("sensor", name))?.state]));
+    const sample = Object.fromEntries(
+      [
+        "motion_poll_rate",
+        "motion_maximum_gap",
+        "animation_tick_rate",
+        "render_time",
+        "render_time_max",
+        "internal_free_memory",
+        "internal_largest_block",
+      ].map((name) => [name, device.client.latest(entityId("sensor", name))?.state])
+    );
     log.info(`metrics (last published samples): ${JSON.stringify({ audio: state(), ...sample })}`);
   }, 5000);
   let originalWake: boolean | undefined;
@@ -157,14 +196,23 @@ async function main() {
   const verifyLongReply = async () => {
     mode = "reply";
     durationMs = 20000;
-    const completed = playbackCompletions, cancelled = stops;
+    const completed = playbackCompletions,
+      cancelled = stops;
     device.client.command(talkId, {});
     await waitFor("long reply playing", () => state() === "speaking");
     try {
-      await waitFor("20-second physical playback completion", () => {
-        assert.equal(stops, cancelled, "Long reply cancelled by device input; leave screen/BOOT untouched during this check");
-        return playbackCompletions > completed;
-      }, 25000);
+      await waitFor(
+        "20-second physical playback completion",
+        () => {
+          assert.equal(
+            stops,
+            cancelled,
+            "Long reply cancelled by device input; leave screen/BOOT untouched during this check"
+          );
+          return playbackCompletions > completed;
+        },
+        25000
+      );
       await waitFor("20-second reply complete", () => state() === "wake_word", 25000);
       assert.equal(stops, cancelled, "Long reply was cancelled, not completed");
       assert.equal(turn!.audioBytesSent, 640000, "Long reply lost output bytes");
@@ -174,12 +222,21 @@ async function main() {
     log.info("PASS 20-second paced reply without receive-buffer overflow");
   };
   try {
-    assert(device.client.getEntitiesWithIds().some(e => e.id === stateId), "Flash the audio-lifecycle firmware first");
+    assert(
+      device.client.getEntitiesWithIds().some((e) => e.id === stateId),
+      "Flash the audio-lifecycle firmware first"
+    );
     await waitFor("initial state", () => switchState(wakeId) !== undefined);
     originalWake = switchState(wakeId);
-    const hasCompanion = device.client.getEntitiesWithIds().some(e => e.id === privacyId);
-    const hasFeedback = device.client.getEntitiesWithIds().some(e => e.id === feedbackId);
-    for (const id of [continuousId, chimeId, quietId, ...(hasCompanion ? [privacyId, motionId, reducedId] : []), ...(hasFeedback ? [effectsId] : [])]) {
+    const hasCompanion = device.client.getEntitiesWithIds().some((e) => e.id === privacyId);
+    const hasFeedback = device.client.getEntitiesWithIds().some((e) => e.id === feedbackId);
+    for (const id of [
+      continuousId,
+      chimeId,
+      quietId,
+      ...(hasCompanion ? [privacyId, motionId, reducedId] : []),
+      ...(hasFeedback ? [effectsId] : []),
+    ]) {
       await waitFor(`switch ${id}`, () => switchState(id) !== undefined);
       restoreSwitches.set(id, switchState(id)!);
     }
@@ -187,7 +244,10 @@ async function main() {
       device.client.command(privacyId, { state: false });
       device.client.command(motionId, { state: true });
       device.client.command(reducedId, { state: false });
-      await waitFor("IMU readings", () => device.client.latest(entityId("binary_sensor", "motion_sensor_ready"))?.state === true);
+      await waitFor(
+        "IMU readings",
+        () => device.client.latest(entityId("binary_sensor", "motion_sensor_ready"))?.state === true
+      );
       log.info(`PASS real IMU online; power=${device.client.latest(entityId("text_sensor", "power_status"))?.state}`);
     }
     device.client.command(continuousId, { state: false });
@@ -205,7 +265,7 @@ async function main() {
 
     if (hasCompanion) {
       const calibrationId = entityId("text_sensor", "motion_calibration");
-      if (device.client.getEntitiesWithIds().some(e => e.id === calibrationId)) {
+      if (device.client.getEntitiesWithIds().some((e) => e.id === calibrationId)) {
         const calibration = () => device.client.latest(calibrationId)?.state;
         device.client.command(entityId("button", "calibrate_motion"), {});
         await waitFor("calibration starts", () => calibration() === "settling" || calibration() === "collecting");
@@ -231,14 +291,19 @@ async function main() {
         if (scenario !== "idle") {
           const beforeRequests = requests;
           device.client.command(talkId, {});
-          await waitFor("exclusive voice ownership (stop companion:dev before audio-check)", () => requests > beforeRequests, 2500);
+          await waitFor(
+            "exclusive voice ownership (stop companion:dev before audio-check)",
+            () => requests > beforeRequests,
+            2500
+          );
           await waitFor(`privacy before ${scenario}`, () => state() === scenario);
         }
         device.client.command(privacyId, { state: true });
         await waitFor(`privacy stops ${scenario}`, () => state() === "privacy");
         if (scenario !== "idle") await waitFor("privacy cancellation delivered", () => stops > beforeStops);
         await sleep(300); // drain any already-in-flight API audio packets
-        const beforeRequests = requests, beforeBytes = micBytes;
+        const beforeRequests = requests,
+          beforeBytes = micBytes;
         device.client.command(talkId, {});
         device.client.command(wakeId, { state: false });
         device.client.command(wakeId, { state: true });
@@ -250,9 +315,11 @@ async function main() {
         await waitFor("privacy off restores wake", () => state() === "wake_word");
         log.info(`PASS privacy from ${scenario}: capture stops, tap/re-arm blocked, wake restored`);
       }
-      log.info(`memory: free=${device.client.latest(entityId("sensor", "internal_free_memory"))?.state}, largest=${device.client.latest(entityId("sensor", "internal_largest_block"))?.state}`);
+      log.info(
+        `memory: free=${device.client.latest(entityId("sensor", "internal_free_memory"))?.state}, largest=${device.client.latest(entityId("sensor", "internal_largest_block"))?.state}`
+      );
       const pageId = entityId("text_sensor", "interface_page");
-      if (device.client.getEntitiesWithIds().some(e => e.id === pageId)) {
+      if (device.client.getEntitiesWithIds().some((e) => e.id === pageId)) {
         const staffBefore = device.isStaffMode();
         device.client.command(entityId("button", "quick_controls"), {});
         await waitFor("quick controls page", () => device.client.latest(pageId)?.state === "controls");
@@ -278,7 +345,11 @@ async function main() {
       assert.equal(feedbackCues, before + 1, "Interaction sound bypassed cooldown");
       log.info("PASS interaction cue drains, re-arms wake, rejects rapid repeats");
       await sleep(4000);
-      for (const [id, value, label] of [[effectsId, false, "effects disabled"], [quietId, true, "quiet"], [reducedId, true, "reduced motion"]] as const) {
+      for (const [id, value, label] of [
+        [effectsId, false, "effects disabled"],
+        [quietId, true, "quiet"],
+        [reducedId, true, "reduced motion"],
+      ] as const) {
         device.client.command(id, { state: value });
         await waitFor(label, () => switchState(id) === value);
         const accepted = feedbackAccepted;
@@ -407,7 +478,10 @@ async function main() {
     await verifyLongReply();
 
     durationMs = 600;
-    for (const [id, value, label] of [[chimeId, false, "chime disabled"], [quietId, true, "quiet mode"]] as const) {
+    for (const [id, value, label] of [
+      [chimeId, false, "chime disabled"],
+      [quietId, true, "quiet mode"],
+    ] as const) {
       device.client.command(chimeId, { state: true });
       device.client.command(id, { state: value });
       await waitFor(label, () => switchState(id) === value);
@@ -434,7 +508,6 @@ async function main() {
     assert.deepEqual(failures, []);
     log.info("PASS all hardware lifecycle checks (acoustic wake-word recognition still needs a spoken test)");
   } finally {
-    clearInterval(visualEnvelope);
     clearInterval(metrics);
     stopOutput();
     if (originalWake !== undefined) {
@@ -451,9 +524,12 @@ function tone(ms: number): Buffer {
   const out = Buffer.alloc(samples * 2);
   for (let i = 0; i < samples; i++) {
     const envelope = Math.min(1, i / 160, (samples - 1 - i) / 160);
-    out.writeInt16LE(Math.round(3500 * envelope * Math.sin(2 * Math.PI * 660 * i / 16000)), i * 2);
+    out.writeInt16LE(Math.round(3500 * envelope * Math.sin((2 * Math.PI * 660 * i) / 16000)), i * 2);
   }
   return out;
 }
 
-main().catch(error => { console.error(error); process.exitCode = 1; });
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

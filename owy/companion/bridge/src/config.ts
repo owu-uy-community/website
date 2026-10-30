@@ -28,11 +28,44 @@ export const DeviceSpecSchema = z.object({
 export type DeviceSpec = z.infer<typeof DeviceSpecSchema>;
 
 const EnvSchema = z.object({
-  // --- Realtime model ---
-  COMPANION_REALTIME_MODEL: z.string().default("google:gemini-3.1-flash-live-preview"),
+  // --- Realtime model (ears + mouth) ---
+  COMPANION_REALTIME_MODEL: z.string().default("gateway:google/gemini-3.8-live"),
   COMPANION_VOICE: z.string().default("Kore"),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
   AI_GATEWAY_API_KEY: z.string().optional(),
+
+  // --- Brain ---
+  /**
+   * `eve`: every turn goes to the eve Owy (agent/channels/companion.ts) — same
+   * memory, tools and staff gating as Slack/Telegram; the realtime model only
+   * transcribes and speaks. `local`: the realtime model is the brain, with the
+   * agent's tools run in-process (the original mode; no eve deployment needed).
+   * Defaults to `eve` when COMPANION_EVE_URL is set.
+   */
+  COMPANION_BRAIN: z.enum(["eve", "local"]).optional(),
+  COMPANION_EVE_URL: z.string().url().optional(),
+  /** Seconds of silence after which the device's eve conversation is retired (next visitor starts fresh). */
+  COMPANION_EVE_IDLE_RESET_S: z.coerce.number().int().min(10).default(180),
+  /** Laptop audio: ms from a frame leaving the pacer to it being heard in the browser (mouth sync). */
+  COMPANION_MOUTH_LATENCY_MS: z.coerce.number().int().min(0).max(2000).default(250),
+  /** Faces while Owy talks: `jev` (TypeSafe on the AI Gateway, local guess as fallback), `guess` (local only), `off`. */
+  COMPANION_EXPRESSIONS: z.enum(["jev", "guess", "off"]).default("jev"),
+  COMPANION_EXPRESSION_MODEL: z.string().default("typesafe-ai/jev"),
+  /** Shown to the agent as where the device stands. */
+  COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
+
+  // --- Modo pitch (the open space's marketplace: tap, pitch a talk, tap → a card on the board) ---
+  /** Fallbacks for boards without `switch.pitch_mode` / `switch.pitch_reacts` (web lab, text REPL). */
+  COMPANION_PITCH_MODE: boolFromEnv,
+  COMPANION_PITCH_REACTS: boolFromEnv,
+  /** Audio → card, one multimodal call through the gateway. */
+  COMPANION_PITCH_MODEL: z.string().default("google/gemini-3.8-flash"),
+  /** Seconds of silence after speech that end a pitch on their own, and the hard cap. */
+  COMPANION_PITCH_SILENCE_S: z.coerce.number().min(3).max(60).default(10),
+  COMPANION_PITCH_MAX_S: z.coerce.number().min(20).max(300).default(120),
+  /** RMS a 20 ms mic frame must exceed (three in a row) to count as speech. */
+  // ponytail: the knob's mic has AGC; calibrate on the device if the ring never lights, or lights on room noise.
+  COMPANION_PITCH_VAD_RMS: z.coerce.number().min(0.001).max(0.2).default(0.012),
 
   // --- Devices ---
   /**
@@ -60,6 +93,12 @@ const EnvSchema = z.object({
   /** Seconds a person must wait between two proposals from the same device (staff exempt). */
   COMPANION_PROPOSAL_COOLDOWN_S: z.coerce.number().int().nonnegative().default(60),
   /** Directory for opt-in JSONL transcripts; unset = no transcript persisted. */
+  // --- Audio routing defaults (a board's mic_source / audio_output selects win) ---
+  COMPANION_MIC_SOURCE: z.enum(["device", "laptop"]).default("device"),
+  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
+  COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
+  /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */
+  COMPANION_BIND_HOST: z.string().default("127.0.0.1"),
   COMPANION_LOG_DIR: z.string().optional(),
   COMPANION_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });

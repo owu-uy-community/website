@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve, join } from "node:path";
 import { createRequire } from "node:module";
@@ -25,6 +25,22 @@ await build({
   outfile: join(output, "voice-server.mjs"),
 });
 const voice = await import(pathToFileURL(join(output, "voice-server.mjs")).href);
+// The audio-routing procedures (preview-rpc.ts) and the site's real stylesheet.
+await build({
+  entryPoints: [join(here, "preview-rpc.ts")],
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  outfile: join(output, "rpc-server.mjs"),
+});
+const rpc = await import(pathToFileURL(join(output, "rpc-server.mjs")).href);
+{
+  const tailwind = require("@tailwindcss/postcss");
+  const postcss = createRequire(require.resolve("@tailwindcss/postcss"))("postcss");
+  const from = join(root, "src/app/globals.css");
+  const css = await postcss([tailwind({ base: root })]).process(readFileSync(from, "utf8"), { from });
+  writeFileSync(join(output, "preview.css"), css.css);
+}
 const quota = new voice.VoiceQuota();
 const html =
   '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Owy · Companion lab (local fixtures)</title><link rel="stylesheet" href="/preview.css"><style>body{margin:0}button,input,select{color:inherit}</style><div id="root"></div><script src="/preview.js"></script></html>';
@@ -76,6 +92,34 @@ const server = createServer(async (req, res) => {
     res.end(await response.text());
     return;
   }
+  // Only the workbench's audio-routing calls (AudioRoutingCard), proxied to the
+  // bridge's loopback settings API like the site does. Same opt-in as voice.
+  if (path.startsWith("/api/orpc/") && process.env.COMPANION_WEB_VOICE === "1") {
+    // Same gate as the voice ticket: only this page may call its own API. A page
+    // from another site in the same browser could otherwise change the knob's routing.
+    if (!req.headers.origin || req.headers.origin !== `http://${req.headers.host}`) {
+      res.writeHead(403).end("Same-origin request required.");
+      req.resume();
+      return;
+    }
+    let body = "";
+    for await (const chunk of req) {
+      body += chunk.toString();
+      if (body.length > 16384) {
+        res.writeHead(413).end();
+        return;
+      }
+    }
+    const request = new Request(`http://${req.headers.host}${req.url}`, {
+      method: req.method,
+      headers: new Headers(Object.entries(req.headers).filter(([, v]) => typeof v === "string")),
+      body: req.method === "GET" || req.method === "HEAD" ? undefined : body,
+    });
+    const response = (await rpc.handleRpc(request)) ?? new Response("Not found", { status: 404 });
+    res.writeHead(response.status, Object.fromEntries(response.headers));
+    res.end(Buffer.from(await response.arrayBuffer()));
+    return;
+  }
   if (req.method !== "GET") {
     res.writeHead(405).end();
     return;
@@ -84,7 +128,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" }).end(html);
     return;
   }
-  // Fixed allowlist: no arbitrary filesystem paths and no API proxy.
+  // Fixed allowlist: no arbitrary filesystem paths.
   const files = {
     "/preview.js": [join(output, "preview.js"), "text/javascript"],
     "/preview.css": [join(output, "preview.css"), "text/css"],

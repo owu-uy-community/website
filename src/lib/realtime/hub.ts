@@ -7,9 +7,45 @@ import { isPublicChannel, parseFrame, type ClientFrame, type ServerFrame } from 
 
 type Connection = {
   ws: WebSocket;
-  canPublish: boolean;
+  /** Asked on every private subscribe and publish (memoized by the caller), so a revoked role stops the socket too. */
+  canPublish: () => Promise<boolean>;
   channels: Set<string>;
+  /** It has published: its heartbeat keeps `canPublish` fresh, so its next publish doesn't wait on it. */
+  publishes: boolean;
 };
+
+/**
+ * A permission check for a socket's lifetime: answered at most `ttlMs` ago, and asked again ahead
+ * of time. Past `refreshMs` the answer in hand still counts while a fresh one comes in, so with
+ * someone calling it on every heartbeat (25 s) a publish never waits on the lookup — a session
+ * read that, after a quiet minute, can need a new database connection. A press on the launchpad
+ * paid exactly that before reaching the speakers.
+ */
+export function cachedCheck(check: () => Promise<boolean>, ttlMs = 30_000, refreshMs = 20_000) {
+  type Answer = { at: number; allowed: Promise<boolean> };
+  let current: Answer | null = null;
+  let next: Answer | null = null;
+  const ask = (): Answer => ({ at: Date.now(), allowed: check().catch(() => false) });
+
+  return () => {
+    const age = current ? Date.now() - current.at : Infinity;
+    if (!current || age > ttlMs) {
+      // Too old to use: wait for an answer, the one already on its way if there is one.
+      current = next ?? ask();
+      next = null;
+    } else if (age > refreshMs && !next) {
+      const fresh = ask();
+      next = fresh;
+      void fresh.allowed.then(() => {
+        if (next !== fresh) return;
+        current = fresh;
+        next = null;
+      });
+    }
+
+    return current.allowed;
+  };
+}
 
 type BackplaneEnvelope = {
   ch: string;
@@ -20,6 +56,8 @@ type BackplaneEnvelope = {
 };
 
 const REDIS_CHANNEL = "owu:realtime";
+/** After a failed connection, how long until the next publish tries Redis again. */
+const REDIS_RETRY_MS = 30_000;
 
 function redisUrl(): string | undefined {
   return process.env.REDIS_URL ?? process.env.KV_URL;
@@ -35,11 +73,10 @@ class RealtimeHub {
   readonly instanceId = createId();
 
   private channels = new Map<string, Set<Connection>>();
-  private redisReady: Promise<{ pub: { publish: (ch: string, msg: string) => Promise<unknown> } } | null> | null =
-    null;
+  private redisReady: Promise<{ pub: { publish: (ch: string, msg: string) => Promise<unknown> } } | null> | null = null;
   private warnedNoBackplane = false;
 
-  attach(ws: WebSocket, options: { canPublish: boolean }): void {
+  attach(ws: WebSocket, options: { canPublish: () => Promise<boolean> }): void {
     // Join the backplane as soon as a socket lands here. Redis is what carries
     // publishes between function instances, and `ensureRedis` is where this
     // instance SUBSCRIBES — an instance that only holds sockets never
@@ -47,7 +84,7 @@ class RealtimeHub {
     // sent (a server-side write, or a client on a different instance).
     void this.ensureRedis();
 
-    const connection: Connection = { ws, canPublish: options.canPublish, channels: new Set() };
+    const connection: Connection = { ws, canPublish: options.canPublish, channels: new Set(), publishes: false };
 
     ws.on("message", (data: unknown) => {
       const frame = parseFrame<ClientFrame>(typeof data === "string" ? data : String(data));
@@ -55,19 +92,21 @@ class RealtimeHub {
 
       switch (frame.t) {
         case "sub": {
-          if (!isPublicChannel(frame.ch) && !options.canPublish) {
-            this.sendFrame(ws, { t: "err", msg: "forbidden", ch: frame.ch });
+          void (async () => {
+            if (!isPublicChannel(frame.ch) && !(await connection.canPublish())) {
+              this.sendFrame(ws, { t: "err", msg: "forbidden", ch: frame.ch });
 
-            return;
-          }
-          connection.channels.add(frame.ch);
-          let set = this.channels.get(frame.ch);
-          if (!set) {
-            set = new Set();
-            this.channels.set(frame.ch, set);
-          }
-          set.add(connection);
-          this.sendFrame(ws, { t: "ok", ch: frame.ch });
+              return;
+            }
+            connection.channels.add(frame.ch);
+            let set = this.channels.get(frame.ch);
+            if (!set) {
+              set = new Set();
+              this.channels.set(frame.ch, set);
+            }
+            set.add(connection);
+            this.sendFrame(ws, { t: "ok", ch: frame.ch });
+          })();
           break;
         }
         case "unsub": {
@@ -76,16 +115,20 @@ class RealtimeHub {
           break;
         }
         case "pub": {
-          if (!connection.canPublish) {
-            this.sendFrame(ws, { t: "err", msg: "publish requires authentication", ch: frame.ch });
+          void (async () => {
+            if (!(await connection.canPublish())) {
+              this.sendFrame(ws, { t: "err", msg: "publish requires authentication", ch: frame.ch });
 
-            return;
-          }
-          void this.publish(frame.ch, frame.ev, frame.pl, frame.sid);
+              return;
+            }
+            connection.publishes = true;
+            await this.publish(frame.ch, frame.ev, frame.pl, frame.sid);
+          })();
           break;
         }
         case "ping": {
           this.sendFrame(ws, { t: "pong" });
+          if (connection.publishes) void connection.canPublish();
           break;
         }
       }
@@ -121,7 +164,13 @@ class RealtimeHub {
 
     const redis = await this.ensureRedis();
     if (redis) {
-      const envelope: BackplaneEnvelope = { ch: channel, ev: event, pl: payload, sid: senderId, origin: this.instanceId };
+      const envelope: BackplaneEnvelope = {
+        ch: channel,
+        ev: event,
+        pl: payload,
+        sid: senderId,
+        origin: this.instanceId,
+      };
       await redis.pub.publish(REDIS_CHANNEL, JSON.stringify(envelope)).catch(() => undefined);
     } else if (!this.warnedNoBackplane && process.env.NODE_ENV === "production") {
       this.warnedNoBackplane = true;
@@ -151,10 +200,10 @@ class RealtimeHub {
       const url = redisUrl();
       if (!url) return null;
 
+      const { default: Redis } = await import("ioredis");
+      const pub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
+      const sub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
       try {
-        const { default: Redis } = await import("ioredis");
-        const pub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
-        const sub = new Redis(url, { maxRetriesPerRequest: 2, lazyConnect: true });
         await Promise.all([pub.connect(), sub.connect()]);
 
         await sub.subscribe(REDIS_CHANNEL);
@@ -171,7 +220,13 @@ class RealtimeHub {
 
         return { pub };
       } catch (error) {
-        console.error("[realtime] Redis backplane unavailable:", error);
+        console.error("[realtime] Redis backplane unavailable, trying again later:", error);
+        pub.disconnect();
+        sub.disconnect();
+        // Local-only until then, not for the rest of this instance's life.
+        setTimeout(() => {
+          this.redisReady = null;
+        }, REDIS_RETRY_MS).unref();
 
         return null;
       }

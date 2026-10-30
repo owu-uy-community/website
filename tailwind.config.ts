@@ -20,12 +20,22 @@ const config = {
     },
     extend: {
       fontFamily: {
-        pixel: ['"Press Start 2P"', "monospace"],
-        display: ["Poppins", "sans-serif"],
-        title: ["Poppins", "sans-serif"],
-        terminal: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        display: ["var(--font-poppins)", "sans-serif"],
+        title: ["var(--font-poppins)", "sans-serif"],
+        terminal: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        open: ["var(--font-open-sans)", "sans-serif"],
       },
       colors: {
+        // Community site surfaces (owu.uy public pages): near-black ink and white hairlines
+        ink: {
+          DEFAULT: "#09090b",
+          elev: "#0f0f11",
+          card: "#131316",
+        },
+        line: {
+          DEFAULT: "rgb(255 255 255 / 0.08)",
+          strong: "rgb(255 255 255 / 0.14)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -34,6 +44,31 @@ const config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          surface: "hsl(var(--primary-surface))",
+        },
+        app: "hsl(var(--app))",
+        raised: "hsl(var(--raised))",
+        subtle: "hsl(var(--subtle))",
+        faint: "hsl(var(--faint))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          surface: "hsl(var(--success-surface))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          surface: "hsl(var(--warning-surface))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+          surface: "hsl(var(--info-surface))",
+        },
+        live: {
+          DEFAULT: "hsl(var(--live))",
+          foreground: "hsl(var(--live-foreground))",
+          surface: "hsl(var(--live-surface))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -84,6 +119,20 @@ const config = {
       },
       blur: {
         "4xl": "128px",
+      },
+      /* The admin's dense type scale: 13px interface text, 12px meta, then labels. */
+      fontSize: {
+        ui: ["13px", { lineHeight: "20px" }],
+        meta: ["12px", { lineHeight: "16px" }],
+        "2xs": ["11px", { lineHeight: "14px" }],
+        "3xs": ["10px", { lineHeight: "12px" }],
+      },
+      boxShadow: {
+        /* A 1px top highlight: surfaces read as lit from above. */
+        edge: "inset 0 1px 0 rgb(255 255 255 / 0.04)",
+        "edge-primary": "inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4)",
+        overlay:
+          "0 24px 80px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.04)",
       },
       keyframes: {
         "accordion-down": {
@@ -140,6 +189,50 @@ const config = {
           from: { opacity: "0", transform: "scale(0.3) rotate(-35deg)" },
           to: { opacity: "1", transform: "scale(1) rotate(0deg)" },
         },
+        /* OWU CONF agenda: per-icon hover cues + the live "AHORA" marker */
+        "agenda-steam": {
+          "0%, 100%": { transform: "translateY(0) scaleY(1)", opacity: "1" },
+          "50%": { transform: "translateY(-2px) scaleY(1.12)", opacity: "0.75" },
+        },
+        "agenda-tap": {
+          "0%, 100%": { transform: "rotate(0deg)" },
+          "30%": { transform: "rotate(-12deg)" },
+          "65%": { transform: "rotate(8deg)" },
+        },
+        "agenda-flash": {
+          "0%, 100%": { filter: "brightness(1)" },
+          "45%": { filter: "brightness(2.4)" },
+        },
+        "agenda-tilt": {
+          "0%, 100%": { transform: "rotate(0deg) translateY(0)" },
+          "35%": { transform: "rotate(-18deg) translateY(-1px)" },
+          "70%": { transform: "rotate(10deg)" },
+        },
+        "agenda-glow": {
+          "0%, 100%": { filter: "drop-shadow(0 0 0 rgba(245,187,3,0))" },
+          "50%": { filter: "drop-shadow(0 0 6px rgba(245,187,3,0.9))" },
+        },
+        "agenda-pop": {
+          "0%, 100%": { transform: "scale(1)" },
+          "45%": { transform: "scale(1.18)" },
+        },
+        "agenda-now": {
+          "0%, 100%": { opacity: "1", transform: "scale(1)" },
+          "50%": { opacity: "0.35", transform: "scale(0.82)" },
+        },
+        /* Idle hint that a collapsed row opens, without needing hover */
+        "agenda-nudge": {
+          "0%, 72%, 100%": { transform: "translateX(0)", opacity: "0.55" },
+          "82%": { transform: "translateX(3px)", opacity: "1" },
+        },
+        "agenda-confetti": {
+          from: { opacity: "1", transform: "translate(0, 0) rotate(0deg)" },
+          to: { opacity: "0", transform: "translate(var(--dx), var(--dy)) rotate(var(--dr))" },
+        },
+        "agenda-note": {
+          from: { opacity: "0", transform: "translateY(-6px) rotate(-4deg) scale(0.94)" },
+          to: { opacity: "1", transform: "translateY(0) rotate(-1.5deg) scale(1)" },
+        },
         drift: {
           "0%, 100%": { transform: "translateY(0) rotate(0deg)" },
           "50%": { transform: "translateY(-12px) rotate(3deg)" },
@@ -164,6 +257,11 @@ const config = {
           "12%, 88%": { opacity: "1" },
           "100%": { transform: "translateY(130%)", opacity: "0" },
         },
+        /* Admin "needs you" signal: two discrete states, so it never repaints between them. */
+        "blink-step": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -174,10 +272,21 @@ const config = {
         "fade-up": "fade-up 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) forwards",
         glitch: "glitch 0.4s linear infinite",
         assemble: "assemble 0.7s cubic-bezier(0.2, 0.9, 0.25, 1.25) both",
+        "agenda-steam": "agenda-steam 1.6s ease-in-out infinite",
+        "agenda-tap": "agenda-tap 0.5s ease-in-out",
+        "agenda-flash": "agenda-flash 0.7s ease-in-out",
+        "agenda-tilt": "agenda-tilt 0.6s ease-in-out",
+        "agenda-glow": "agenda-glow 1.4s ease-in-out infinite",
+        "agenda-pop": "agenda-pop 0.45s ease-in-out",
+        "agenda-now": "agenda-now 1.6s ease-in-out infinite",
+        "agenda-nudge": "agenda-nudge 3.2s ease-in-out infinite",
+        "agenda-confetti": "agenda-confetti 1.1s cubic-bezier(0.2, 0.6, 0.4, 1) forwards",
+        "agenda-note": "agenda-note 0.28s cubic-bezier(0.2, 0.9, 0.25, 1.2) both",
         drift: "drift 7s ease-in-out infinite",
         "terminal-pulse": "terminal-pulse 0.55s ease-out",
         sheen: "sheen 6s ease-in-out infinite",
         "barcode-scan": "barcode-scan 2.4s ease-in-out infinite",
+        "blink-step": "blink-step 1.4s steps(1, end) infinite",
       },
     },
   },

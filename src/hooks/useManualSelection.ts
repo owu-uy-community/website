@@ -104,7 +104,3 @@ export function useManualSelection({
     manualSelection,
   };
 }
-
-
-
-

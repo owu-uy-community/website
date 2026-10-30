@@ -1,0 +1,9 @@
+title: "LockSkin: un ransomware para bioimplantes"
+speakers:
+  - "Mauro Eldritch"
+  - "Santiago Pérez"
+event: la-meetup-2025
+date: 2025-11-01
+summary: "Un ransomware educativo que escribe la nota de rescate directamente en un chip NFC/RFID implantado."
+topics:
+  - seguridad

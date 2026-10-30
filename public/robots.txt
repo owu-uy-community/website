@@ -1,6 +1,9 @@
 # *
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /keystatic
+Disallow: /api/
 
 # Host
 Host: https://www.owu.uy

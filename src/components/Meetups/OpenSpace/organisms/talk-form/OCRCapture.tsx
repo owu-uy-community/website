@@ -1,9 +1,10 @@
 "use client";
 
 import type { RefObject } from "react";
-import { AlertTriangle, Camera, Check, Loader2, RefreshCw, RotateCcw } from "lucide-react";
+import { Camera, Check, Loader2, RefreshCw, RotateCcw } from "lucide-react";
 import Image from "next/image";
 
+import { Notice } from "components/Admin/panel";
 import { Button } from "components/shared/ui/button";
 
 interface OCRCaptureProps {
@@ -36,23 +37,32 @@ export function OCRCapture({
   onRetakeImage,
 }: OCRCaptureProps) {
   return (
-    <div className="rounded-lg border border-border bg-muted/30 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">Capturar la tarjeta (OCR)</h3>
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-ui font-semibold text-foreground">Foto de la tarjeta</h3>
         {capturedImage && (
           <Button size="sm" type="button" variant="outline" onClick={onResetOCR}>
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw />
             Resetear
           </Button>
         )}
       </div>
 
-      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md bg-muted/60">
+      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md bg-background">
         {cameraActive ? (
           <>
             <video ref={videoRef} autoPlay className="absolute inset-0 h-full w-full object-cover" playsInline />
+            {/* The whole frame is what gets sent, so the guide is only framing advice: a card
+                that fills it is sharp enough to read. */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-[5%] rounded-sm border-2 border-dashed border-white/70"
+            />
+            <p className="absolute inset-x-0 bottom-2 text-center text-meta text-white drop-shadow">
+              Encuadrá la tarjeta dentro del marco
+            </p>
             {permissionMessage && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-sm text-foreground">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-ui text-foreground">
                 <p>{permissionMessage}</p>
               </div>
             )}
@@ -61,15 +71,17 @@ export function OCRCapture({
           <Image fill alt="Tarjeta capturada" className="object-cover" src={capturedImage} />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2">
-            <Camera className="h-10 w-10 text-muted-foreground/60" />
-            <p className="text-sm text-muted-foreground">Capturá la tarjeta de la charla</p>
+            <Camera aria-hidden className="size-10 text-muted-foreground/60" />
+            <p className="text-ui text-muted-foreground">
+              Sacale una foto a la tarjeta: la IA la lee y sugiere el lugar.
+            </p>
           </div>
         )}
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap pointer-coarse:[&>button]:h-11">
         {!cameraActive && !capturedImage && (
           <Button className="flex-1" type="button" onClick={onStartCamera}>
             <Camera />
@@ -98,18 +110,18 @@ export function OCRCapture({
         )}
       </div>
 
-      {isProcessingImage && (
-        <div className="mt-3 rounded-md border border-primary/30 bg-primary/[0.06] p-3 text-center text-sm text-foreground">
-          Extrayendo la información y buscando el mejor lugar…
-        </div>
-      )}
-
-      {ocrError && (
-        <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <p className="text-sm text-foreground">{ocrError}</p>
-        </div>
-      )}
+      <div className="mt-3 space-y-2 empty:hidden">
+        {/* Over the video while the camera asks; down here once it couldn't start. */}
+        <Notice show={!cameraActive && Boolean(permissionMessage)} tone="danger">
+          {permissionMessage}
+        </Notice>
+        <Notice show={isProcessingImage} tone="info">
+          Leyendo la tarjeta…
+        </Notice>
+        <Notice show={Boolean(ocrError)} tone="danger">
+          {ocrError}
+        </Notice>
+      </div>
     </div>
   );
 }

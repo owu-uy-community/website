@@ -2,9 +2,15 @@
 
 import * as React from "react";
 
+import type { RoomStatus } from "lib/orpc/rooms/schemas";
+
+import { RoomStatusBadge } from "./RoomStatusBadge";
+
 interface LocationArrowProps {
   color: string;
   locationName: string;
+  /** Set by the room's host: a full or evacuated room says so under the arrow. */
+  status?: RoomStatus;
 }
 
 /**
@@ -12,7 +18,7 @@ interface LocationArrowProps {
  * The name fades in on every cycle (CSS keyed animation), in sync with
  * the header.
  */
-export const LocationArrow = React.memo(({ color, locationName }: LocationArrowProps) => {
+export const LocationArrow = React.memo(({ color, locationName, status = "open" }: LocationArrowProps) => {
   return (
     <div
       className="absolute right-2 z-20 flex flex-col items-center gap-2 sm:right-3 sm:gap-4 md:gap-6"
@@ -31,7 +37,7 @@ export const LocationArrow = React.memo(({ color, locationName }: LocationArrowP
       >
         <span
           key={locationName}
-          className="font-display text-3xl font-bold uppercase tracking-tight text-white duration-300 animate-in fade-in sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]"
+          className="font-display text-3xl font-bold tracking-tight text-white uppercase duration-300 animate-in fade-in sm:text-5xl md:text-6xl lg:text-7xl xl:text-[80px]"
         >
           {locationName}
         </span>
@@ -47,6 +53,7 @@ export const LocationArrow = React.memo(({ color, locationName }: LocationArrowP
           <path d="M60 40L0 0L0 80L60 40Z" fill={color} style={{ transition: "fill 300ms ease" }} />
         </svg>
       </div>
+      <RoomStatusBadge status={status} wall />
     </div>
   );
 });

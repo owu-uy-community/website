@@ -1,6 +1,8 @@
+import { cacheLife } from "next/cache";
 import type { Metadata } from "next";
 
 import getEvents from "app/(web)/(content)/(meetups)/2024/la-meetup/services/getEvents";
+import { SITE_URL } from "lib/community/site";
 
 import About from "./components/About";
 import Footer from "./components/Footer";
@@ -10,10 +12,13 @@ import Meetups from "./components/Meetups";
 import Moments from "./components/Moments";
 import MotionRoot from "./components/MotionRoot";
 import Navbar from "./components/Navbar";
+import OpenSpace from "./components/OpenSpace";
+import Program from "./components/Program";
 import Reveal from "./components/Reveal";
 import Speakers from "./components/Speakers";
 import Sponsors from "./components/Sponsors";
 import Team from "./components/Team";
+import Tickets from "./components/Tickets";
 
 const DESCRIPTION =
   "OWU CONF: la conferencia de la comunidad tecnológica de Uruguay. Sábado 07 de noviembre de 2026 en Sinergia Faro, Montevideo. Una jornada de charlas, open space y comunidad.";
@@ -47,8 +52,8 @@ const EVENT_JSON_LD = {
   name: "OWU CONF 2026",
   description: DESCRIPTION,
   url: "https://conf.owu.uy",
-  startDate: "2026-11-07",
-  endDate: "2026-11-07",
+  startDate: "2026-11-07T14:30:00-03:00",
+  endDate: "2026-11-07T20:40:00-03:00",
   eventStatus: "https://schema.org/EventScheduled",
   eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   image: [OG_IMAGE],
@@ -62,14 +67,21 @@ const EVENT_JSON_LD = {
       addressCountry: "UY",
     },
   },
+  // Same @id as the Organization on www.owu.uy, so search engines tie the event to the community
   organizer: {
     "@type": "Organization",
-    name: "OWU — Open Web Uruguay",
-    url: "https://owu.uy",
+    "@id": `${SITE_URL}/#organization`,
+    name: "OWU Uruguay",
+    alternateName: "OWU — Open Web Uruguay",
+    url: SITE_URL,
   },
 };
 
 export default async function ConfPage() {
+  "use cache";
+  // The sponsor deadline and the speakers are checked hourly
+  cacheLife("hours");
+
   const events = await getEvents().catch(() => []);
 
   return (
@@ -80,20 +92,20 @@ export default async function ConfPage() {
         type="application/ld+json"
       />
       <div className="min-h-[100dvh] w-full overflow-x-clip bg-black">
-        <Navbar />
+        <Navbar home />
         <main>
           <Hero />
           <Reveal amount={0.3} delay={0.5} duration={0.8} y={28}>
             <Marquee className="mt-[42px]" />
           </Reveal>
+          <Tickets />
           <About />
           {/* Yellow divider band between sections */}
           <Reveal grow="x" amount={0.9} className="mt-16 h-10 w-full bg-[#F5BB03]" duration={0.9} />
-          {/*
-           * PROGRAMACIÓN section is hidden while the schedule is tentative. To bring it
-           * back, mount <Program /> here and uncomment the PROGRAMA link in the Navbar.
-           */}
+          <Program />
           <Speakers />
+          {/* What the agenda calls the open space, explained for people who have never been to one */}
+          <OpenSpace />
           <Moments />
           <Sponsors />
           <Team />

@@ -26,36 +26,36 @@ function EventCard({ title, name, datetime, event_url, index }: MeetupEvent & { 
   return (
     <li>
       <Reveal amount={0.4} delay={index * 0.09} x={-32} y={0}>
-      <Link
-        className="group flex items-center gap-5 border-2 border-[#FBF5E7]/15 p-4 transition-colors hover:border-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:gap-6 sm:p-5"
-        href={confUtm(event_url, "meetups-agenda")}
-        rel="noopener"
-        target="_blank"
-      >
-        <time
-          className="flex h-16 w-16 shrink-0 flex-col items-center justify-center bg-[#F5BB03] text-black"
-          dateTime={datetime}
+        <Link
+          className="group flex items-center gap-5 border-2 border-[#FBF5E7]/15 p-4 transition-colors hover:border-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03] sm:gap-6 sm:p-5"
+          href={confUtm(event_url, "meetups-agenda")}
+          rel="noopener"
+          target="_blank"
         >
-          <span className="font-display text-2xl font-extrabold leading-none">{format(date, "dd")}</span>
-          <span className="mt-1 font-display text-xs font-bold uppercase tracking-[0.14em]">
-            {format(date, "MMM", { locale: es })}
-          </span>
-        </time>
+          <time
+            className="flex h-16 w-16 shrink-0 flex-col items-center justify-center bg-[#F5BB03] text-black"
+            dateTime={datetime}
+          >
+            <span className="font-display text-2xl leading-none font-extrabold">{format(date, "dd")}</span>
+            <span className="mt-1 font-display text-xs font-bold tracking-[0.14em] uppercase">
+              {format(date, "MMM", { locale: es })}
+            </span>
+          </time>
 
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-display text-base font-semibold leading-snug text-[#FBF5E7] transition-colors group-hover:text-[#F5BB03] sm:text-lg">
-            {title}
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-display text-base leading-snug font-semibold text-[#FBF5E7] transition-colors group-hover:text-[#F5BB03] sm:text-lg">
+              {title}
+            </span>
+            <span className="mt-1 block truncate text-sm text-[#FBF5E7]/60">{name}</span>
           </span>
-          <span className="mt-1 block truncate text-sm text-[#FBF5E7]/60">{name}</span>
-        </span>
 
-        <span
-          aria-hidden="true"
-          className="hidden text-xl text-[#FBF5E7]/40 transition-all group-hover:translate-x-1 group-hover:text-[#F5BB03] sm:block"
-        >
-          →
-        </span>
-      </Link>
+          <span
+            aria-hidden="true"
+            className="hidden text-xl text-[#FBF5E7]/40 transition-all group-hover:translate-x-1 group-hover:text-[#F5BB03] sm:block"
+          >
+            →
+          </span>
+        </Link>
       </Reveal>
     </li>
   );
@@ -73,7 +73,7 @@ export default function Meetups({ events }: MeetupsProps) {
         />
 
         <Reveal delay={0.12} y={22}>
-          <p className="mt-6 max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
+          <p className="mt-6 max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
             Sumate a alguna de las meetups que forman parte de nuestra comunidad, así entrás en clima.
           </p>
         </Reveal>

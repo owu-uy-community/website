@@ -11,7 +11,8 @@
  *   DATABASE_URL=... pnpm db:backfill-communities [--dry-run]
  *
  * Prod cutover order: apply phase-a additive SQL → run this → apply phase-c
- * SET NOT NULL SQL → deploy. Safe to re-run: every step is an upsert/no-op.
+ * SET NOT NULL SQL → deploy. Safe to re-run: every step is an upsert/no-op, and memberships are
+ * only seeded the first time.
  */
 import { eq, isNull, sql } from "drizzle-orm";
 
@@ -97,7 +98,9 @@ async function main() {
             countdownSoundEnabled: globalCountdown?.soundEnabled ?? false,
           })
           .onConflictDoNothing({ target: eventLiveState.eventId });
-        console.log(`  ✓ event_live_state seeded for ${legacyEvent.id} (countdown ${globalCountdown ? "copied" : "defaulted"})`);
+        console.log(
+          `  ✓ event_live_state seeded for ${legacyEvent.id} (countdown ${globalCountdown ? "copied" : "defaulted"})`
+        );
 
         // 4. Out-of-band highlighted_note (may not exist as a table) ----------
         const reg = await tx.execute(sql`SELECT to_regclass('public.highlighted_note') AS reg`);
@@ -105,8 +108,7 @@ async function main() {
         if (hasTable) {
           const noteResult = await tx.execute(sql`SELECT * FROM highlighted_note WHERE id = 1 LIMIT 1`);
           const note = noteResult.rows[0] as Record<string, unknown> | undefined;
-          const trackId =
-            (note?.trackId as string | undefined) ?? (note?.track_id as string | undefined) ?? undefined;
+          const trackId = (note?.trackId as string | undefined) ?? (note?.track_id as string | undefined) ?? undefined;
           if (trackId) {
             const [track] = await tx.select({ id: tracks.id }).from(tracks).where(eq(tracks.id, trackId));
             if (track) {
@@ -138,14 +140,25 @@ async function main() {
       console.log("  ✓ Palette colors assigned to color-less rooms");
 
       // 5. Memberships --------------------------------------------------------
-      const users = await tx.select({ id: user.id, role: user.role }).from(user);
-      for (const row of users) {
-        await tx
-          .insert(communityMembers)
-          .values({ communityId: owuId, userId: row.id, role: row.role === "admin" ? "owner" : "member" })
-          .onConflictDoNothing({ target: [communityMembers.communityId, communityMembers.userId] });
+      // Only on the first run: since then, roles are given on purpose (a membership is access), and
+      // a re-run would make everyone who ever signed in a member of OWU.
+      const [seeded] = await tx
+        .select({ id: communityMembers.id })
+        .from(communityMembers)
+        .where(eq(communityMembers.communityId, owuId))
+        .limit(1);
+      if (seeded) {
+        console.log("  ✓ Memberships already seeded: left as they are");
+      } else {
+        const users = await tx.select({ id: user.id, role: user.role }).from(user);
+        for (const row of users) {
+          await tx
+            .insert(communityMembers)
+            .values({ communityId: owuId, userId: row.id, role: row.role === "admin" ? "owner" : "member" })
+            .onConflictDoNothing({ target: [communityMembers.communityId, communityMembers.userId] });
+        }
+        console.log(`  ✓ Memberships seeded for ${users.length} users`);
       }
-      console.log(`  ✓ Memberships ensured for ${users.length} users`);
 
       // 6. Eventbrite pin → event column --------------------------------------
       const eventbriteId = process.env.NEXT_PUBLIC_EVENTBRITE_EVENT_ID;
@@ -161,12 +174,10 @@ async function main() {
       const [{ orphanCount }] = (
         await tx.execute(sql`SELECT count(*)::int AS "orphanCount" FROM open_spaces WHERE "communityId" IS NULL`)
       ).rows as [{ orphanCount: number }];
-      const [{ communityCount }] = (
-        await tx.execute(sql`SELECT count(*)::int AS "communityCount" FROM communities`)
-      ).rows as [{ communityCount: number }];
-      const [{ memberCount }] = (
-        await tx.execute(sql`SELECT count(*)::int AS "memberCount" FROM community_members`)
-      ).rows as [{ memberCount: number }];
+      const [{ communityCount }] = (await tx.execute(sql`SELECT count(*)::int AS "communityCount" FROM communities`))
+        .rows as [{ communityCount: number }];
+      const [{ memberCount }] = (await tx.execute(sql`SELECT count(*)::int AS "memberCount" FROM community_members`))
+        .rows as [{ memberCount: number }];
 
       console.log(`\n  Verification: communities=${communityCount} members=${memberCount} orphanEvents=${orphanCount}`);
       if (orphanCount > 0) throw new Error(`Backfill incomplete: ${orphanCount} open_spaces rows still orphaned`);

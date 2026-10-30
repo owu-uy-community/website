@@ -1,18 +1,16 @@
+import { adminClient, emailOTPClient, inferAdditionalFields } from "better-auth/client/plugins";
 import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields } from "better-auth/client/plugins";
+
+import { platformAc, platformRoles } from "lib/authz/catalog";
+
+import type { auth } from "./auth";
 
 export const authClient = createAuthClient({
+  // `role`, `banned` and the account's Slack workspace come straight from the server config.
   plugins: [
-    inferAdditionalFields({
-      user: {
-        role: {
-          type: "string",
-        },
-        status: {
-          type: "string",
-        },
-      },
-    }),
+    inferAdditionalFields<typeof auth>(),
+    emailOTPClient(),
+    adminClient({ ac: platformAc, roles: platformRoles }),
   ],
 });
 

@@ -1,77 +1,85 @@
 /**
- * Staff allowlist checks.
+ * Who may do what through Owy. The OWU site decides: roles and permissions live there
+ * (src/lib/authz/catalog.ts), managed from /admin/acceso, not in env vars.
  *
- * Sensitive tools call `requireStaff(ctx)` themselves (authorization lives in
- * the tool, not only in the channel — someone who can start a turn must not
- * automatically get write access).
+ * Every call made for someone carries who they are (`owuApi(ctx)`: their Slack or Telegram id, or
+ * "anonymous" at the companion's kiosk), and the API authorizes that person, never beyond Owy's
+ * key. Sensitive tools also ask first (`may`), so the model gets a clear "no" instead of an API
+ * error, and the approval policy denies before the tool runs.
  *
- * - Slack principals carry `authenticator: "slack-webhook"` and the Slack user
- *   id in `attributes.user_id` → matched against OWY_STAFF_SLACK_IDS.
- * - Telegram principals carry `authenticator: "telegram-webhook"` and the
- *   numeric user id in `attributes.user_id` → matched against OWY_STAFF_TELEGRAM_IDS.
- * - The eve HTTP channel in local dev (`local-dev`) or behind the operator's
- *   basic-auth credential (`http-basic`) counts as staff: only the deployer
- *   holds those credentials.
- * - The physical companion (`owy/companion`) sends `companion` (attendees,
- *   never staff) or `companion-staff` (unlocked with the on-device PIN).
+ * Owy acting as itself (its operator over the eve channel, the companion unlocked with its PIN, the
+ * weekly schedule) has no person behind it: its key's permissions decide.
  */
+import { resolveActiveEvent } from "./board";
+import { actorOf, owuApi, type ActorCtx } from "./owu-api";
 
-interface SessionAuthCurrent {
-  principalId?: string;
-  principalType?: string;
-  authenticator?: string;
-  issuer?: string;
-  attributes?: Record<string, unknown>;
-}
-
-export interface ToolSessionCtx {
+export type ToolSessionCtx = ActorCtx & {
   session: {
     auth: {
-      current?: SessionAuthCurrent | null;
+      current?: {
+        principalId?: string;
+        principalType?: string;
+        authenticator?: string;
+        issuer?: string;
+        attributes?: Record<string, unknown>;
+      } | null;
     };
   };
+};
+
+/** Permissions as the site names them ("program:manage", "task:manage"…). */
+export type Permission = string;
+
+const TTL = 60_000;
+const decided = new Map<string, { at: number; allowed: Promise<boolean> }>();
+
+/**
+ * Does the person behind `ctx` (or Owy itself) hold `permission`? Asked once a minute per person,
+ * permission and event. `eventId` scopes community permissions (staff tasks, rooms) to the event's
+ * community.
+ */
+export function may(ctx: ToolSessionCtx, permission: Permission, eventId?: string): Promise<boolean> {
+  const authenticator = ctx.session?.auth?.current?.authenticator;
+  // The companion's kiosk is anyone in front of it: never staff. Unlocked with its PIN it's the
+  // device's staff mode, and the device's own key (scoped to its tools) caps every call it makes.
+  if (authenticator === "companion") return Promise.resolve(false);
+  if (authenticator === "companion-staff") return Promise.resolve(true);
+  const actor = actorOf(ctx);
+  const key = `${actor ?? "owy"}|${permission}|${eventId ?? ""}`;
+  const hit = decided.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.allowed;
+
+  const allowed = owuApi(ctx)
+    .access.check({ permissions: [permission], ...(eventId ? { eventId } : {}) })
+    .then((result) => result.allowed[permission] === true)
+    .catch(() => false);
+  // ponytail: a process-wide map; it holds one entry per person and permission asked in a minute
+  decided.set(key, { at: Date.now(), allowed });
+  if (decided.size > 2000) decided.clear();
+
+  return allowed;
 }
 
-function parseIdList(raw: string | undefined): Set<string> {
-  return new Set(
-    (raw ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter((id) => id.length > 0)
-  );
+/** The app principal eve uses for scheduled runs (no person behind the turn). */
+export function isScheduledRun(ctx: ToolSessionCtx): boolean {
+  return ctx.session?.auth?.current?.authenticator === "app";
 }
 
-export function isStaff(ctx: ToolSessionCtx): boolean {
-  const auth = ctx.session?.auth?.current;
-  if (!auth) return false;
-
-  const userId = auth.attributes?.user_id;
-
-  switch (auth.authenticator) {
-    case "slack-webhook":
-      return userId !== undefined && parseIdList(process.env.OWY_STAFF_SLACK_IDS).has(String(userId));
-    case "telegram-webhook":
-      return userId !== undefined && parseIdList(process.env.OWY_STAFF_TELEGRAM_IDS).has(String(userId));
-    // The physical companion (owy/companion) runs Owy's tools outside eve with a
-    // context shim. "companion" is the public kiosk (never staff);
-    // "companion-staff" is the same device after staff unlocked it from the
-    // PIN page on the touchscreen (auto-expires on the device).
-    case "companion-staff":
-    case "local-dev":
-    case "http-basic":
-      return true;
-    default:
-      return false;
-  }
+/** The companion unlocked with its on-device PIN (staff mode of the device). */
+export function isCompanionStaff(ctx: ToolSessionCtx): boolean {
+  return ctx.session?.auth?.current?.authenticator === "companion-staff";
 }
 
-/** Throws a friendly (Spanish) error when the caller is not staff. */
-export function requireStaff(ctx: ToolSessionCtx): void {
-  if (!isStaff(ctx)) {
-    throw new Error(
-      "Esta acción es solo para el staff de la organización 🧉. Si necesitás un cambio, pedilo en el canal del staff o en la mesa de acreditación."
-    );
-  }
+const NOT_ALLOWED =
+  "Esta acción es solo para el staff de la organización 🧉. Si necesitás un cambio, pedilo en el canal del staff o en la mesa de acreditación.";
+
+/** Throws a friendly (Spanish) error when the person can't do this. */
+export async function requireStaff(ctx: ToolSessionCtx, permission: Permission, eventId?: string): Promise<void> {
+  if (!(await may(ctx, permission, eventId))) throw new Error(NOT_ALLOWED);
+}
+
+export async function requireStaffOrSchedule(ctx: ToolSessionCtx, permission: Permission): Promise<void> {
+  if (!isScheduledRun(ctx)) await requireStaff(ctx, permission);
 }
 
 interface ApprovalPolicyCtx extends ToolSessionCtx {
@@ -80,27 +88,32 @@ interface ApprovalPolicyCtx extends ToolSessionCtx {
   toolInput?: unknown;
 }
 
-/**
- * Gate for staff-only tools, used as a tool's `approval` policy.
- *
- * Non-staff callers are denied outright — the model gets the reason and the
- * tool never runs. Staff execute immediately: no human-in-the-loop button.
- * The safety net is conversational (the instructions and skills tell Owy to
- * confirm before mutating) plus `requireStaff` inside every `execute`.
- *
- * To bring the buttons back, return "user-approval" here for the calls that
- * should pause — Slack needs Interactivity enabled for them to resolve.
- */
-export function staffOnly() {
-  return (ctx: ApprovalPolicyCtx) => {
-    if (!isStaff(ctx)) {
-      return {
-        type: "denied" as const,
-        reason:
-          "Acción denegada: la gestión del evento es solo para el staff. Explicale a la persona que lo pida en el canal del staff.",
-      };
-    }
+const DENIED = {
+  type: "denied" as const,
+  reason:
+    "Acción denegada: la gestión del evento es solo para el staff. Explicale a la persona que lo pida en el canal del staff.",
+};
 
-    return "not-applicable" as const;
+/**
+ * Gate for staff-only tools, used as a tool's `approval` policy: whoever can't do `permission`
+ * is denied outright (the model gets the reason and the tool never runs). Staff execute
+ * immediately; the API checks the same permission again on every call.
+ *
+ * To bring the buttons back, return "user-approval" here for the calls that should pause — Slack
+ * needs Interactivity enabled for them to resolve.
+ */
+export function staffOnly(permission: Permission, options: { inEvent?: boolean } = {}) {
+  return async (ctx: ApprovalPolicyCtx) => {
+    // Community permissions (staff tasks, rooms) count in the active event's community
+    const eventId = options.inEvent ? await resolveActiveEvent().then((event) => event.id, () => undefined) : undefined;
+
+    return (await may(ctx, permission, eventId)) ? ("not-applicable" as const) : DENIED;
   };
+}
+
+/** Like `staffOnly`, but the weekly schedule (the app principal) may also run the tool. */
+export function staffOrSchedule(permission: Permission) {
+  const staffPolicy = staffOnly(permission);
+
+  return (ctx: ApprovalPolicyCtx) => (isScheduledRun(ctx) ? ("not-applicable" as const) : staffPolicy(ctx));
 }

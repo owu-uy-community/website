@@ -89,7 +89,12 @@ class FakeSocket implements WebSocketLike {
   }
 }
 
-function setup(options: { onToolCall?: (call: { name: string; args: unknown }) => unknown } = {}) {
+function setup(
+  options: {
+    onToolCall?: (call: { name: string; args: unknown }) => unknown;
+    providerOptions?: Record<string, unknown>;
+  } = {}
+) {
   const sockets: FakeSocket[] = [];
   const getToken = vi.fn(async () => ({ token: `tok${sockets.length + 1}`, url: "wss://fake" }));
   const provider: RealtimeProvider = {
@@ -102,7 +107,7 @@ function setup(options: { onToolCall?: (call: { name: string; args: unknown }) =
   const events: RealtimeServerEvent[] = [];
   const session = new NodeRealtimeSession({
     provider,
-    sessionConfig: { instructions: "hola", providerOptions: { sessionResumption: {} } },
+    sessionConfig: { instructions: "hola", providerOptions: options.providerOptions ?? { sessionResumption: {} } },
     logger: createLogger("test", "error"),
     onToolCall: options.onToolCall ?? (() => ({ ok: true })),
     onEvent: (event) => events.push(event),
@@ -193,6 +198,14 @@ describe("NodeRealtimeSession", () => {
     expect(session.goAwayPending).toBe(false);
     expect(sockets[1].sent[0]).toEqual({ setup: { providerOptions: { sessionResumption: { handle: "h-42" } } } });
     expect(session.isConnected).toBe(true);
+  });
+
+  it("never resumes when the config did not ask for it (the gateway closes 1008 on a handle)", async () => {
+    const { session, sockets } = setup({ providerOptions: {} });
+    await session.connect();
+    sockets[0].receive({ sessionResumptionUpdate: { newHandle: "h-7", resumable: true } });
+    await session.reconnect();
+    expect(sockets[1].sent[0]).toEqual({ setup: { providerOptions: {} } });
   });
 
   it("drops queued microphone audio when an aborted turn starts a fresh session", async () => {

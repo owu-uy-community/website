@@ -1,4 +1,5 @@
 # Owy Companion — ESPHome firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75C
+# (the Knob 1.8B variant is owy-knob.yaml; both share packages/, hardware in packages/boards/).
 #
 # ESPHome with a local I2S startup-race fix: the voice pipeline is the regular
 # `voice_assistant` + `micro_wake_word`, served by `companion/bridge` on a
@@ -63,8 +64,8 @@ external_components:
     components: [i2s_audio, voice_assistant]
 
 packages:
-  board: !include packages/board.yaml
-  display: !include packages/display.yaml
+  mcu: !include packages/mcu.yaml
+  hardware: !include packages/boards/amoled175c.yaml
   audio: !include packages/audio.yaml
   voice: !include packages/voice.yaml
   face: !include packages/face.yaml

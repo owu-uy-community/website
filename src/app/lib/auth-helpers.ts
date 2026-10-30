@@ -1,54 +1,82 @@
-import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import "server-only";
+
+import { cookies, headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+import { cache } from "react";
+
+import { type Permission } from "lib/authz/catalog";
+import { can, canSomewhere, principalFor, type Principal } from "lib/authz/principal";
+
 import { auth } from "./auth";
 
 /**
- * Validates that the user is authenticated and has admin role.
- * Redirects to /login if not authenticated.
- * Redirects to / if user is not an admin.
- *
- * @returns The validated session with admin user
+ * The session behind a request, read past Better Auth's cookie cache: a revoked session, a ban or a
+ * role taken away counts on the very next request.
  */
-export async function requireAdmin() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+export const sessionFor = (requestHeaders: Headers) =>
+  auth.api.getSession({ headers: requestHeaders, query: { disableCookieCache: true } }).catch(() => null);
 
-  // If no session, redirect to login
-  if (!session) {
-    redirect("/login");
-  }
+/** Who is calling a route handler, as the permission checks see them. */
+export const principalFromRequest = async (requestHeaders: Headers): Promise<Principal | null> =>
+  principalFor(await sessionFor(requestHeaders), requestHeaders);
 
-  // Check if user has admin role
-  // @ts-expect-error - role is defined in auth config additionalFields,
-  // better-auth type definitions are broken for this use case
-  if (session.user.role !== "admin") {
-    redirect("/");
-  }
+/** Who is rendering this page; one lookup per request. */
+export const currentPrincipal = cache(async (): Promise<Principal | null> => principalFromRequest(await headers()));
 
-  return session;
+/** The session of the page being rendered, fresh (see sessionFor). */
+export const currentSession = cache(async () => sessionFor(await headers()));
+
+/**
+ * Off to sign in, and back to `next` afterwards. A cookie whose session ended on the server
+ * (revoked, suspended) is cleared first: the proxy bounces anyone with that cookie away from /login,
+ * straight back here.
+ */
+export async function signInAgain(next?: string): Promise<never> {
+  const query = next ? `?next=${encodeURIComponent(next)}` : "";
+  const stale = (await cookies()).getAll().some((cookie) => cookie.name.endsWith("better-auth.session_token"));
+
+  redirect(stale ? `/api/session/expired${query}` : `/login${query}`);
+}
+
+/** Signed in, or off to the login page (and back here afterwards, when `next` is given). */
+export async function requireSignedIn(next?: string) {
+  const [session, principal] = await Promise.all([currentSession(), currentPrincipal()]);
+  if (!session || !principal || principal.banned) return signInAgain(next);
+
+  return { session, principal };
 }
 
 /**
- * Staff pages (e.g. /admin/tareas): any authenticated user may enter — the
- * real authorization is event resolution (site staff sees every event,
- * community members see their communities' events, everyone else gets an
- * empty list).
+ * The page needs `permission`: on the platform, or in `communityId` when given. Anyone signed in
+ * without it goes to the admin's front door (which sends community staff to their own day and
+ * everyone else to the site), or gets a 404 when `hide` says the page shouldn't even be known.
  */
-export async function requireStaffSession() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
-
-  if (!session) {
-    redirect("/login");
+export async function requirePermission(
+  permission: Permission,
+  options: { communityId?: string | null; hide?: boolean } = {}
+) {
+  const signedIn = await requireSignedIn();
+  if (!(await can(signedIn.principal, permission, options.communityId))) {
+    if (options.hide) notFound();
+    redirect("/admin");
   }
 
-  return session;
+  return signedIn;
 }
 
-/** True when the user is site staff (full admin). */
-export function isSiteAdmin(session: NonNullable<Awaited<ReturnType<typeof auth.api.getSession>>>): boolean {
-  // @ts-expect-error - role comes from Better Auth additionalFields
-  return session.user.role === "admin";
+/** True when the page's viewer holds `permission` (in `communityId`, when given). */
+export const hasPermission = async (permission: Permission, communityId?: string | null) =>
+  can(await currentPrincipal(), permission, communityId);
+
+/**
+ * The dashboard's front door: anyone with a platform role or any community role. Everyone else is
+ * offered to ask for access (the waitlist).
+ */
+export async function requireDashboardAccess() {
+  const signedIn = await requireSignedIn("/admin");
+  const { principal } = signedIn;
+  const access = principal.roles.some((role) => role !== "user") || (await canSomewhere(principal, "event:list"));
+  if (!access) redirect("/acceso");
+
+  return signedIn;
 }

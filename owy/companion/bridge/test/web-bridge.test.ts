@@ -16,6 +16,7 @@ vi.mock("../src/realtime/session", () => ({
     isConnected = true;
     goAwayPending = false;
     sendAudio = vi.fn();
+    sendText = vi.fn();
     commitAudio = vi.fn();
     resetConversation = vi.fn();
     close = vi.fn();
@@ -39,6 +40,24 @@ afterEach(async () => {
 function runtime() {
   const write = vi.fn(async (_input: unknown, _ctx: any) => ({ ok: true }));
   const read = vi.fn(async () => ({ matches: [] }));
+  // Modo pitch fakes: the gateway extractor and the site's place-and-create.
+  const extract = {
+    card: vi.fn(async () => ({
+      transcript: "Quiero proponer una charla sobre Effect",
+      isPitch: true,
+      title: "Effect en producción",
+      speaker: null,
+      needsTV: false,
+      needsWhiteboard: false,
+      description: null,
+      topics: ["effect"],
+    })),
+    name: vi.fn(async () => ({ name: "Ana" })),
+  };
+  const placed = vi.fn(async (input: { title: string; speaker?: string }) => ({
+    note: { id: "t1", title: input.title, speaker: input.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" },
+    placement: { room: "Cueva", timeSlot: "15:00 - 15:45", reasoning: "Vacío", degraded: false, missing: [], skipped: [] },
+  }));
   const shared: SharedRuntime = {
     config: loadConfig({}),
     provider: { provider: "google", spec: "google:test" } as SharedRuntime["provider"],
@@ -49,8 +68,14 @@ function runtime() {
     instructions: "Shared production prompt for both transports",
     gridUrl: "https://owu.uy/conf",
     logger: createLogger("web-test", "error"),
+    pitch: {
+      extract,
+      api: { tracks: { createPlaced: placed, update: vi.fn() } } as unknown as NonNullable<SharedRuntime["pitch"]>["api"],
+      openSpaceId: async () => "e1",
+      clips: {},
+    },
   };
-  return { shared, write, read };
+  return { shared, write, read, extract, placed };
 }
 async function server() {
   const r = runtime();
@@ -186,6 +211,44 @@ it("sends real PCM and commit into the shared session and waits for playback-rea
   await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted" && m.run === 2)).toBe(true));
   expect(r.model.resetConversation).not.toHaveBeenCalled();
 });
+it("a pitch over the web is recorded, not streamed; commit hands it to the extractor and the card lands", async () => {
+  const r = await browser({ writes: true });
+  // The browser's first (normal) turn is cancelled; the next start is a pitch.
+  r.send({ type: "stop" });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  r.send({ type: "start", mode: "pitch" });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted" && m.run === 2)).toBe(true));
+  const frame = Buffer.alloc(644);
+  frame.writeUInt32LE(2, 0);
+  for (let i = 0; i < 320; i++) frame.writeInt16LE(Math.round(Math.sin(i / 3) * 6000), 4 + i * 2);
+  // 2.4 s of voice, paced under the 64 kB/s mic budget.
+  for (let i = 0; i < 60; i++) r.ws.send(frame);
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "STT_VAD_START")).toBe(true));
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  for (let i = 0; i < 60; i++) r.ws.send(frame);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(r.model.sendAudio).not.toHaveBeenCalled();
+  r.send({ type: "commit", run: 2 });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "STT_END")).toBe(true));
+  r.send({ type: "playbackReady", run: 2 });
+  await vi.waitFor(() => expect(r.extract.card).toHaveBeenCalledOnce());
+  await vi.waitFor(() => expect(r.placed).toHaveBeenCalledOnce());
+  expect(r.placed.mock.calls[0][0]).toMatchObject({ openSpaceId: "e1", title: "Effect en producción", source: "companion" });
+  await vi.waitFor(() =>
+    expect(r.messages.some((m) => m.type === "screen" && m.command?.kind === "card" && m.command.card.room === "Cueva")).toBe(true)
+  );
+  await vi.waitFor(() => expect(r.model.sendText).toHaveBeenCalledOnce());
+  expect(r.model.sendText.mock.calls[0][0]).toMatch(/^\[GUION\] ¡Listo! Tu charla «Effect en producción» queda en Cueva a las 15:00\. ¿Cómo te llamás\?/);
+  // The model speaks the script through the normal pipeline; the name invitation follows the announcement.
+  r.model.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.model.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.messages.filter((m) => m.type === "event" && m.event === "RUN_END")).toHaveLength(2));
+  expect(r.audio.length).toBeGreaterThan(0);
+  await vi.waitFor(() =>
+    expect(r.messages.some((m) => m.type === "screen" && m.command?.kind === "pitchPrompt" && m.command.prompt === "name")).toBe(true)
+  );
+});
+
 it("executes shared read/screen/volume tools and blocks real writes without consent", async () => {
   const r = await browser();
   const call = (name: string, args: unknown) => r.model.options.onToolCall({ callId: name, name, args });
@@ -236,4 +299,113 @@ it("cancel prevents old audio and tool completions from changing a new turn", as
   current.writeUInt32LE(2, 0);
   r.ws.send(current);
   await vi.waitFor(() => expect(r.model.sendAudio).toHaveBeenCalledTimes(1));
+});
+
+// ── Laptop audio: a browser attached as a physical device's mic + speakers ──
+function fakeKnob(routes: { mic: "device" | "laptop"; output: "device" | "laptop" }) {
+  const handlers: { current?: import("../src/device/esphome").DeviceHandlers } = {};
+  const events: string[] = [];
+  const deviceAudio: Buffer[] = [];
+  const transport = {
+    acceptRequest: vi.fn(),
+    declineRequest: vi.fn(),
+    sendEvent: (event: number) => events.push(String(event)),
+    sendAudio: (data: Buffer) => deviceAudio.push(data),
+    isPlaybackReady: () => true,
+    setFace: vi.fn(),
+    setSpeakLevel: vi.fn(),
+    showCard: vi.fn(),
+    showQr: vi.fn(),
+    showText: vi.fn(),
+    isStaffMode: () => false,
+    isMarketplaceOpen: () => false,
+    getVolume: () => 50,
+    setVolume: vi.fn(),
+    close: vi.fn(),
+    getMicSource: () => routes.mic,
+    getAudioOutput: () => routes.output,
+    setAudioRoute: vi.fn(),
+  };
+  return { transport, handlers, events, deviceAudio, routes };
+}
+async function attached(routes: { mic: "device" | "laptop"; output: "device" | "laptop" }) {
+  const r = await server();
+  const knob = fakeKnob(routes);
+  const session = new DeviceSession({ id: "owy-knob", host: "virtual", port: 1, psk: null }, r.shared, {
+    connectDevice: async (_spec, handlers) => {
+      knob.handlers.current = handlers;
+      return knob.transport;
+    },
+  });
+  r.shared.sessions = new Map([[session.id, session]]);
+  await session.start();
+  cleanup.push(() => session.stop());
+  const knobModel = models.at(-1);
+  const { data } = await ticket(r.bridge);
+  const ws = new WebSocket(data.url, { origin: grant.origin });
+  cleanup.push(() => ws.terminate());
+  const messages: any[] = [];
+  const audio: Buffer[] = [];
+  ws.on("message", (bytes, binary) =>
+    binary ? audio.push(Buffer.from(bytes as Buffer)) : messages.push(JSON.parse(bytes.toString()))
+  );
+  await once(ws, "open");
+  ws.send(JSON.stringify({ type: "auth", protocol: 1, token: data.token }));
+  await vi.waitFor(() => expect(messages.some((m) => m.type === "ready")).toBe(true));
+  ws.send(JSON.stringify({ type: "attach", deviceId: "owy-knob" }));
+  await vi.waitFor(() => expect(messages.some((m) => m.type === "attached" && m.deviceId === "owy-knob")).toBe(true));
+  expect(session.hasPeer).toBe(true);
+  return { ...r, knob, session, knobModel, ws, messages, audio, send: (m: object) => ws.send(JSON.stringify(m)) };
+}
+
+it("attached browser mirrors the knob's turn: its mic feeds the model and the reply plays in the browser", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" });
+  // The knob taps → the bridge accepts on the device AND mirrors `accepted` to the browser.
+  await r.knob.handlers.current!.onRequestStart({ start: true } as any);
+  expect(r.knob.transport.acceptRequest).toHaveBeenCalledOnce();
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted" && m.run === 1)).toBe(true));
+  // Device mic frames are ignored; browser frames (run-tagged) reach the model.
+  r.knob.handlers.current!.onAudio({ data: Buffer.alloc(640), end: false });
+  const frame = Buffer.alloc(644);
+  frame.writeUInt32LE(1, 0);
+  r.ws.send(frame);
+  await vi.waitFor(() => expect(r.knobModel.sendAudio).toHaveBeenCalledOnce());
+  expect(r.knobModel.sendAudio.mock.calls[0][0].length).toBe(640);
+  // Model answers: PCM goes to the browser, not the device; events reach both.
+  r.knobModel.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.knobModel.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  expect(r.audio.reduce((sum, b) => sum + b.length - 4, 0)).toBe(3200);
+  expect(r.knob.deviceAudio).toHaveLength(0);
+  expect(r.knob.events.length).toBeGreaterThan(0);
+  // The browser may not start its own turns while attached.
+  r.send({ type: "start" });
+  await once(r.ws, "close");
+});
+
+it("device mic + browser output, and detaching falls back to device audio", async () => {
+  const r = await attached({ mic: "device", output: "laptop" });
+  await r.knob.handlers.current!.onRequestStart({ start: true } as any);
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted")).toBe(true));
+  const frame = Buffer.alloc(644);
+  frame.writeUInt32LE(1, 0);
+  r.ws.send(frame); // browser mic ignored in this mode
+  r.knob.handlers.current!.onAudio({ data: Buffer.alloc(640), end: false });
+  await vi.waitFor(() => expect(r.knobModel.sendAudio).toHaveBeenCalledOnce());
+  r.knobModel.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.knobModel.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.audio.length).toBeGreaterThan(0));
+  expect(r.knob.deviceAudio).toHaveLength(0);
+  await vi.waitFor(() => expect(r.knob.events.length).toBeGreaterThan(3));
+  // Detach: laptop routes are no longer honoured; the device plays.
+  r.send({ type: "detach" });
+  await vi.waitFor(() => expect(r.session.hasPeer).toBe(false));
+  r.audio.length = 0;
+  await r.knob.handlers.current!.onRequestStart({ start: true } as any);
+  r.knob.handlers.current!.onAudio({ data: Buffer.alloc(640), end: false });
+  await vi.waitFor(() => expect(r.knobModel.sendAudio).toHaveBeenCalledTimes(2));
+  r.knobModel.options.onEvent({ type: "audio-delta", responseId: "r2", itemId: "i2", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.knobModel.options.onEvent({ type: "response-done", responseId: "r2", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.knob.deviceAudio.length).toBeGreaterThan(0));
+  expect(r.audio).toHaveLength(0);
 });

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Slack de OWU
+    url: https://slack.owu.uy/
+    about: Preguntas, ideas y charla con la comunidad.
+  - name: Reportar un problema de conducta
+    url: https://www.owu.uy/codigo-de-conducta#reportar
+    about: Los reportes son confidenciales. No uses issues públicos para esto.

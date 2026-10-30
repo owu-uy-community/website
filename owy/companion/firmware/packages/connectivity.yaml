@@ -9,7 +9,7 @@ wifi:
   power_save_mode: none
   # Fallback hotspot + captive portal when the venue Wi-Fi is not configured yet.
   ap:
-    ssid: Owy Companion
+    ssid: ${friendly_name}
     password: !secret ap_password
 
 captive_portal:

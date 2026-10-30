@@ -81,24 +81,24 @@ function PhotoStrip({ moments, reverse = false, paused, onOpen }: PhotoStripProp
               key={`${src}-${i}`}
               aria-hidden={isClone || undefined}
               aria-label={`Ampliar foto: ${alt}`}
-              className="group/item relative shrink-0 cursor-zoom-in overflow-hidden transition-opacity duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#F5BB03] group-hover/strip:opacity-40 hover:!opacity-100"
+              className="group/item relative shrink-0 cursor-zoom-in overflow-hidden transition-opacity duration-300 group-hover/strip:opacity-40 hover:!opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#F5BB03]"
               tabIndex={isClone ? -1 : undefined}
               type="button"
               onClick={(event) => onOpen({ src, alt }, event.currentTarget.querySelector("img"))}
             >
               <img
                 alt={isClone ? "" : alt}
-                className="h-[200px] w-auto object-cover transition-transform duration-500 ease-out group-hover/item:scale-105 sm:h-[240px] min-[1440px]:h-[280px]"
+                className="h-[200px] w-auto object-cover transition-transform duration-500 ease-out group-hover/item:scale-105 min-[1440px]:h-[280px] sm:h-[240px]"
                 loading="lazy"
                 src={src}
               />
-<span
+              <span
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover/item:opacity-100"
               />
               <span
                 aria-hidden="true"
-                className="pointer-events-none absolute bottom-3 right-3 flex h-8 w-8 translate-y-2 items-center justify-center rounded-full bg-[#F5BB03] opacity-0 transition-all duration-300 group-hover/item:translate-y-0 group-hover/item:opacity-100"
+                className="pointer-events-none absolute right-3 bottom-3 flex h-8 w-8 translate-y-2 items-center justify-center rounded-full bg-[#F5BB03] opacity-0 transition-all duration-300 group-hover/item:translate-y-0 group-hover/item:opacity-100"
               >
                 <ZoomIcon />
               </span>
@@ -137,7 +137,7 @@ export default function Moments() {
         <SectionHeader eyebrow="COMUNIDAD" title="ASÍ SE VIVIÓ LA MEETUP III" />
 
         <Reveal delay={0.12} y={22}>
-          <p className="mt-6 max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
+          <p className="mt-6 max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
             Charlas, open space, stickers y after: la tercera edición de La Meetup fue la antesala de OWU CONF.
           </p>
         </Reveal>

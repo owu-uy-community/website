@@ -48,6 +48,9 @@ const READ_TOOLS = new Set([
   "event_now",
   "show_on_screen",
   "set_volume",
+  // eve brain: talking to the agent is the conversation itself; the read-only
+  // lab still reaches eve as a non-staff visitor with the marketplace closed.
+  "hablar_con_owy",
 ]);
 export function toolDenial(grant: WebGrant, name: string): string | null {
   return grant.writes || READ_TOOLS.has(name)

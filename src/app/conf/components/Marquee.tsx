@@ -13,12 +13,7 @@ const LOOP = [...SPONSORS_2026, ...SPONSORS_2026];
 
 export default function Marquee({ className }: MarqueeProps) {
   return (
-    <div
-      className={classNames(
-        "group/marquee flex h-[89px] w-full items-center overflow-hidden bg-black",
-        className
-      )}
-    >
+    <div className={classNames("group/marquee flex h-[89px] w-full items-center overflow-hidden bg-black", className)}>
       <div
         className="animate-marquee flex w-max items-center group-hover/marquee:[animation-play-state:paused] [&:has(a:focus-visible)]:[animation-play-state:paused]"
         style={{ animationDuration: "40s" }}
@@ -32,7 +27,7 @@ export default function Marquee({ className }: MarqueeProps) {
                 <a
                   key={`${name}-${i}`}
                   aria-label={isClone ? undefined : `Sitio de ${name}`}
-                  className="flex h-[40px] w-[148px] shrink-0 items-center justify-center opacity-80 transition-[opacity,transform] duration-300 hover:scale-110 hover:!opacity-100 focus-visible:scale-110 focus-visible:!opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[#F5BB03] group-hover/marquee:opacity-40"
+                  className="flex h-[40px] w-[148px] shrink-0 items-center justify-center opacity-80 transition-[opacity,transform] duration-300 group-hover/marquee:opacity-40 hover:scale-110 hover:!opacity-100 focus-visible:scale-110 focus-visible:!opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-8 focus-visible:outline-[#F5BB03]"
                   href={confUtm(website, "sponsor-marquee")}
                   rel="noopener"
                   tabIndex={isClone ? -1 : undefined}

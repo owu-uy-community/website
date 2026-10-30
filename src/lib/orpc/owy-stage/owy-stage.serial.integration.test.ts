@@ -1,0 +1,531 @@
+import { call } from "@orpc/server";
+import { sql } from "drizzle-orm";
+import { http, HttpResponse } from "msw";
+import { describe, expect, test, vi } from "vitest";
+
+import { EXTERNAL_SERVICES } from "app/lib/constants";
+import { db } from "lib/db";
+import { router } from "lib/orpc/router";
+import { hub } from "lib/realtime/hub";
+import { by, type RouterInputs } from "test/context";
+import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { server } from "test/msw/server";
+
+/** The wall is one global row, so every test starts with nothing on air. */
+async function setup() {
+  await db.execute(sql`TRUNCATE owy_stage_state, owy_stage_inputs CASCADE`);
+  const staff = await makeSiteAdmin();
+  const putOnAir = (input: RouterInputs["owyStage"]["setScene"]) => call(router.owyStage.setScene, input, by(staff));
+
+  return { staff, putOnAir };
+}
+
+describe("the wall", () => {
+  test("nothing on air reads as the black scene with no round", async () => {
+    await setup();
+
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "black",
+      round: "",
+    });
+  });
+
+  test("taking a scene persists it, mints a round and tells every stage", async () => {
+    const { putOnAir } = await setup();
+    const publish = vi.spyOn(hub, "publish");
+
+    const state = await putOnAir({ scene: "now-playing", params: { song: "Ella", artist: "Bebe" } });
+    const read = await call(router.owyStage.getState, undefined, by(null));
+
+    expect(state.round).not.toBe("");
+    expect(read).toMatchObject({ scene: "now-playing", round: state.round, params: { song: "Ella", artist: "Bebe" } });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ round: state.round }));
+  });
+
+  test("editing what is on air keeps the round; a restart starts a new one", async () => {
+    const { putOnAir } = await setup();
+    const first = await putOnAir({ scene: "now-playing" });
+
+    const edited = await putOnAir({ scene: "now-playing", params: { song: "Otra" } });
+    const restarted = await putOnAir({ scene: "now-playing", restart: true });
+
+    expect(edited.round).toBe(first.round);
+    expect(restarted.round).not.toBe(first.round);
+  });
+
+  test("only site staff take scenes", async () => {
+    await setup();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.setScene, { scene: "black" }, by(user))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    await expect(call(router.owyStage.fireEffect, { effect: "confetti" }, by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+
+  test("#14 scene params that don't fit the scene are a BAD_REQUEST", async () => {
+    const { putOnAir } = await setup();
+
+    await expect(putOnAir({ scene: "now-playing", params: { song: "x".repeat(200) } })).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      data: { issues: [expect.objectContaining({ path: ["song"] })] },
+    });
+  });
+
+  test("#11 a restart is never undone by an edit landing at the same time", async () => {
+    const { staff, putOnAir } = await setup();
+    const first = await putOnAir({ scene: "now-playing" });
+    // A connection ready for each call, so they really overlap.
+    await Promise.all(Array.from({ length: 6 }, () => call(router.owyStage.getState, undefined, by(staff))));
+
+    await Promise.all([
+      ...Array.from({ length: 5 }, (_, i) => putOnAir({ scene: "now-playing", params: { song: `Tema ${i}` } })),
+      putOnAir({ scene: "now-playing", restart: true }),
+    ]);
+
+    const { round } = await call(router.owyStage.getState, undefined, by(null));
+    expect(round).not.toBe(first.round);
+  });
+
+  test("#13 pointing the wall at an unknown event is NOT_FOUND", async () => {
+    const { putOnAir } = await setup();
+
+    await expect(putOnAir({ scene: "black", eventId: "no-existe" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("the rundown round-trips", async () => {
+    const { staff } = await setup();
+    const steps = [
+      { id: "s1", scene: "logo" as const, params: {}, sec: 10 },
+      { id: "s2", scene: "now-playing" as const, params: { song: "Tema" }, sec: 0 },
+    ];
+
+    await call(router.owyStage.saveRundown, { steps }, by(staff));
+
+    await expect(call(router.owyStage.getRundown, undefined, by(staff))).resolves.toMatchObject(steps);
+  });
+
+  test("effects and Owy's face are broadcast as they are", async () => {
+    const { staff } = await setup();
+    const publish = vi.spyOn(hub, "publish");
+
+    await call(router.owyStage.fireEffect, { effect: "caption", payload: { text: "¡Hola!" } }, by(staff));
+    await call(router.owyStage.setFace, { state: "speaking", transcript: { who: "output", text: "Hola" } }, by(staff));
+
+    expect(publish).toHaveBeenCalledWith("owy-stage", "effect", { effect: "caption", payload: { text: "¡Hola!" } });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "face", {
+      state: "speaking",
+      transcript: { who: "output", text: "Hola" },
+    });
+  });
+
+  test("now playing only touches the wall while the now-playing scene is up, and only on a new song", async () => {
+    const { staff, putOnAir } = await setup();
+    const report = (song: string) => call(router.owyStage.nowPlaying, { song, artist: "Drexler" }, by(staff));
+
+    await expect(report("Movimiento")).resolves.toStrictEqual({ applied: false });
+    await putOnAir({ scene: "now-playing" });
+
+    expect([await report("Movimiento"), await report("Movimiento")]).toStrictEqual([
+      { applied: true },
+      { applied: false },
+    ]);
+  });
+});
+
+describe("the desk", () => {
+  const step = (id: string, scene: "logo" | "message" | "program", params: Record<string, unknown> = {}) => ({
+    id,
+    scene,
+    params,
+    from: "pick" as const,
+  });
+
+  const preset = (id: string, scene: "logo" | "message", params: Record<string, unknown> = {}, name = "") => ({
+    id,
+    name,
+    scene,
+    params,
+  });
+
+  test("it round-trips and tells the other admin devices on a private channel", async () => {
+    const { staff } = await setup();
+    const publish = vi.spyOn(hub, "publish");
+    const desk = { preview: step("p", "message"), queue: [step("q1", "logo")], presets: [preset("a", "logo")] };
+
+    await call(router.owyStage.saveDesk, { desk }, by(staff));
+
+    // `favorites` (the presets' scenes) is for desk tabs opened before presets existed.
+    const sent = { ...desk, favorites: ["logo"] };
+    await expect(call(router.owyStage.getDesk, undefined, by(staff))).resolves.toStrictEqual(sent);
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", sent);
+  });
+
+  test("a step whose scene left the registry is dropped on read", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: null, queue: [step("q1", "logo")] } }, by(staff));
+    await db.execute(
+      sql`UPDATE owy_stage_state SET desk = jsonb_set(desk, '{queue}', desk->'queue' || '[{"id":"x","scene":"gone"}]')`
+    );
+
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(desk.queue.map((item) => item.id)).toStrictEqual(["q1"]);
+  });
+
+  test("TAKE puts the preview on air from scratch and moves the queue up", async () => {
+    const { staff, putOnAir } = await setup();
+    const before = await putOnAir({ scene: "message", params: { title: "Hola" } });
+    await call(
+      router.owyStage.saveDesk,
+      {
+        desk: { preview: step("p", "message", { title: "Chau" }), queue: [step("q1", "program"), step("q2", "logo")] },
+      },
+      by(staff)
+    );
+    const publish = vi.spyOn(hub, "publish");
+
+    const { state, desk } = await call(
+      router.owyStage.take,
+      { step: step("p", "message", { title: "Chau" }) },
+      by(staff)
+    );
+    const read = await call(router.owyStage.getState, undefined, by(null));
+
+    expect(state.round).not.toBe(before.round);
+    expect(read).toMatchObject({ scene: "message", params: { title: "Chau" }, round: state.round });
+    expect(desk).toMatchObject({ preview: { id: "q1", scene: "program", from: "queue" }, queue: [{ id: "q2" }] });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ round: state.round }));
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", desk);
+  });
+
+  test("with nothing queued, TAKE brings back what left the air, so TAKE again undoes", async () => {
+    const { staff, putOnAir } = await setup();
+    await putOnAir({ scene: "logo" });
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "message") } }, by(staff));
+
+    const first = await call(router.owyStage.take, { step: step("p", "message") }, by(staff));
+    const back = first.desk.preview;
+    const second = await call(router.owyStage.take, { step: back! }, by(staff));
+
+    expect(back).toMatchObject({ scene: "logo", from: "swap" });
+    expect(second.state.scene).toBe("logo");
+    expect(second.desk.preview).toMatchObject({ scene: "message", from: "swap" });
+  });
+
+  test("a CUT goes out like a TAKE, telling the walls to skip the wipe", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo") } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const { state } = await call(router.owyStage.take, { step: step("p", "logo"), transition: "cut" }, by(staff));
+
+    expect(state).toMatchObject({ scene: "logo", transition: "cut" });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ transition: "cut" }));
+    // The transition only rides on the broadcast: a wall that loads later just shows the scene.
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.not.toHaveProperty("transition");
+  });
+
+  test("a TAKE keeps the presets", async () => {
+    const { staff } = await setup();
+    const presets = [preset("a", "message")];
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo"), presets } }, by(staff));
+
+    const { desk } = await call(router.owyStage.take, { step: step("p", "logo") }, by(staff));
+
+    expect(desk.presets).toStrictEqual(presets);
+  });
+
+  test("a desk tab opened before presets saves without them, and the stored ones stay", async () => {
+    const { staff } = await setup();
+    const presets = [preset("a", "message", { title: "Volvemos" }, "Volvemos")];
+    await call(router.owyStage.saveDesk, { desk: { presets } }, by(staff));
+
+    // What such a tab sends: its favorites (unknown now, dropped) and no presets.
+    const old = { desk: { queue: [step("q1", "logo")], favorites: [] } } as RouterInputs["owyStage"]["saveDesk"];
+    await call(router.owyStage.saveDesk, old, by(staff));
+
+    await expect(call(router.owyStage.getDesk, undefined, by(staff))).resolves.toMatchObject({
+      queue: [{ id: "q1" }],
+      presets,
+    });
+  });
+
+  test("a queue edit only touches the preview and the queue: presets saved meanwhile stay", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { presets: [preset("a", "logo")] } }, by(staff));
+    // Another device adds a preset while this one, which never saw it, edits the queue.
+    await call(
+      router.owyStage.saveDesk,
+      { desk: { presets: [preset("a", "logo"), preset("b", "message")] } },
+      by(staff)
+    );
+
+    const saved = await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo") } }, by(staff));
+
+    expect(saved.presets.map((item) => item.id)).toStrictEqual(["a", "b"]);
+    expect(saved.preview).toMatchObject({ id: "p" });
+  });
+
+  test("a desk stored with favorites reads them as presets with the scene's defaults", async () => {
+    const { staff } = await setup();
+    await db.execute(
+      sql`INSERT INTO owy_stage_state (id, desk) VALUES ('global', '{"preview":null,"queue":[],"favorites":["logo","message"]}')`
+    );
+
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(desk.presets).toStrictEqual([preset("fav-logo", "logo"), preset("fav-message", "message")]);
+  });
+
+  test("a preset fired by its number lands in preview, remembering where it came from", async () => {
+    const { staff } = await setup();
+    const presets = [preset("a", "logo"), preset("b", "message", { title: "Volvemos" })];
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo"), presets } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const fired = await call(router.owyStage.firePreset, { preset: "2" }, by(staff));
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(fired).toStrictEqual({ preset: presets[1], to: "preview" });
+    expect(desk.preview).toMatchObject({ scene: "message", params: { title: "Volvemos" }, preset: "b" });
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", desk);
+    // Nothing went on air: TAKE does that.
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({ scene: "black" });
+  });
+
+  test("a preset fired by its id goes straight on air, with its params, from scratch", async () => {
+    const { staff, putOnAir } = await setup();
+    const before = await putOnAir({ scene: "message", params: { title: "Antes" } });
+    await call(
+      router.owyStage.saveDesk,
+      { desk: { presets: [preset("b", "message", { title: "Volvemos" })] } },
+      by(staff)
+    );
+
+    await call(router.owyStage.firePreset, { preset: "b", to: "air" }, by(staff));
+    const read = await call(router.owyStage.getState, undefined, by(null));
+
+    expect(read).toMatchObject({ scene: "message", params: { title: "Volvemos" } });
+    expect(read.round).not.toBe(before.round);
+  });
+
+  test("a preset that isn't there is NOT_FOUND; only site staff fire them", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { presets: [preset("a", "logo")] } }, by(staff));
+
+    await expect(call(router.owyStage.firePreset, { preset: "2" }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(call(router.owyStage.firePreset, { preset: "zz", to: "air" }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(call(router.owyStage.firePreset, { preset: "1" }, by(await makeUser()))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  test("only site staff read or write the desk", async () => {
+    await setup();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.getDesk, undefined, by(user))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.owyStage.take, { step: step("p", "logo") }, by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
+describe("phone inputs", () => {
+  test("answers count only for the round on air; `once` keeps the first answer", async () => {
+    const { putOnAir } = await setup();
+    const { round } = await putOnAir({ scene: "now-playing" });
+    const send = (value: string, overrides: Record<string, string> = {}) =>
+      call(router.owyStage.submit, { round, key: "voto", value, voter: "tel-1", mode: "once", ...overrides }, by(null));
+
+    await send("primera");
+    await send("segunda");
+    const stale = await send("tarde", { round: "ronda-vieja" });
+    const inputs = await call(router.owyStage.inputs, { round }, by(null));
+
+    expect(stale).toStrictEqual({ ok: false });
+    expect(inputs.map((input) => [input.voter, input.value])).toStrictEqual([["tel-1", "primera"]]);
+  });
+
+  test("#15 one phone can't flood the wall", async () => {
+    const { putOnAir } = await setup();
+    const { round } = await putOnAir({ scene: "now-playing" });
+
+    const results = await Promise.allSettled(
+      Array.from({ length: 60 }, (_, i) =>
+        call(router.owyStage.submit, { round, key: "k", value: `v${i}`, voter: "spam", mode: "multi" }, by(null))
+      )
+    );
+
+    expect(
+      results.some(
+        (result) => result.status === "rejected" && (result.reason as { code: string }).code === "TOO_MANY_REQUESTS"
+      )
+    ).toBe(true);
+  });
+});
+
+describe("Q&A moderation", () => {
+  /** Questions on the wall, one from a phone, plus a vote for it. */
+  async function questions() {
+    const { staff, putOnAir } = await setup();
+    const { round } = await putOnAir({ scene: "live-questions" });
+    const ask = (value: string, voter: string) =>
+      call(router.owyStage.submit, { round, key: "question", value, voter, mode: "multi" }, by(null));
+    const { id } = await ask("¿Cuándo es la próxima?", "tel-1");
+    const vote = await call(router.owyStage.submit, { round, key: `up:${id}`, value: "1", voter: "tel-2" }, by(null));
+    const moderate = (inputId: string, moderation: "" | "hidden" | "pinned" | "answered") =>
+      call(router.owyStage.moderate, { inputId, moderation }, by(staff));
+
+    return { round, id: id ?? "", voteId: vote.id ?? "", moderate };
+  }
+
+  test("pinning a question tells every wall and phone, and the round's read carries it", async () => {
+    const { round, id, moderate } = await questions();
+    const publish = vi.spyOn(hub, "publish");
+
+    await expect(moderate(id, "pinned")).resolves.toStrictEqual({ id, round, moderation: "pinned" });
+
+    expect(publish).toHaveBeenCalledWith("owy-stage", "moderation", { id, round, moderation: "pinned" });
+    const inputs = await call(router.owyStage.inputs, { round }, by(null));
+    expect(inputs.map((input) => [input.key, input.moderation])).toStrictEqual([
+      ["question", "pinned"],
+      [`up:${id}`, ""],
+    ]);
+  });
+
+  test("a hidden question can come back", async () => {
+    const { round, id, moderate } = await questions();
+
+    await moderate(id, "hidden");
+    await moderate(id, "");
+
+    const [question] = await call(router.owyStage.inputs, { round }, by(null));
+    expect(question).toMatchObject({ id, moderation: "" });
+  });
+
+  test("only questions are moderated: a vote, or a question that is gone, is NOT_FOUND", async () => {
+    const { voteId, moderate } = await questions();
+
+    await expect(moderate(voteId, "hidden")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(moderate("no-such-question", "hidden")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("only site staff moderate", async () => {
+    const { id } = await questions();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.moderate, { inputId: id, moderation: "hidden" }, by(user))).rejects.toMatchObject(
+      {
+        code: "FORBIDDEN",
+      }
+    );
+    await expect(call(router.owyStage.moderate, { inputId: id, moderation: "hidden" }, by(null))).rejects.toMatchObject(
+      {
+        code: "UNAUTHORIZED",
+      }
+    );
+  });
+});
+
+describe("data-driven scenes", () => {
+  test("the pulse counts an event's ideas and active rooms", async () => {
+    await setup();
+    const { event, rooms, slots } = await makeBoard();
+    await makeRoom(event.id, { isActive: false });
+    await makeTrack({ eventId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id });
+
+    await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toStrictEqual({
+      tickets: null,
+      board: { ideas: 1, rooms: 2 },
+    });
+  });
+
+  test("meetups are the next eight, soonest first; a feed outage is an empty list", async () => {
+    await setup();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T12:00:00.000Z"));
+    const meetup = (day: number) => ({
+      name: "OWU",
+      title: `Meetup ${day}`,
+      datetime: `2026-11-${String(day).padStart(2, "0")}T21:00:00.000Z`,
+      venue: null,
+      event_url: `https://meetup.com/${day}`,
+    });
+    server.use(
+      http.get(EXTERNAL_SERVICES.meetupBot, () =>
+        HttpResponse.json({ meetups: [meetup(20), meetup(2), ...[3, 4, 5, 6, 7, 8, 9, 10].map(meetup)] })
+      )
+    );
+
+    const meetups = await call(router.owyStage.getMeetups, undefined, by(null));
+    server.use(http.get(EXTERNAL_SERVICES.meetupBot, () => new HttpResponse(null, { status: 502 })));
+
+    expect(meetups.map((m) => m.title)).toStrictEqual([2, 3, 4, 5, 6, 7, 8, 9].map((d) => `Meetup ${d}`));
+    await expect(call(router.owyStage.getMeetups, undefined, by(null))).resolves.toStrictEqual([]);
+  });
+
+  test("the weather is the current reading plus the next six hours; an outage is null", async () => {
+    await setup();
+    const hours = Array.from({ length: 10 }, (_, i) => `2026-11-07T${String(10 + i).padStart(2, "0")}:00`);
+    server.use(
+      http.get("https://api.open-meteo.com/v1/forecast", () =>
+        HttpResponse.json({
+          current: {
+            time: "2026-11-07T11:30",
+            temperature_2m: 22,
+            apparent_temperature: 23,
+            weather_code: 1,
+            wind_speed_10m: 15,
+          },
+          hourly: {
+            time: hours,
+            temperature_2m: hours.map((_, i) => 20 + i),
+            precipitation_probability: hours.map(() => 10),
+            weather_code: hours.map(() => 2),
+          },
+        })
+      )
+    );
+
+    const weather = await call(router.owyStage.getWeather, undefined, by(null));
+    server.use(http.get("https://api.open-meteo.com/v1/forecast", () => new HttpResponse(null, { status: 500 })));
+
+    expect(weather).toMatchObject({ temp: 22, feels: 23, wind: 15 });
+    expect(weather?.hours.map((hour) => hour.time)).toStrictEqual([
+      "12:00",
+      "13:00",
+      "14:00",
+      "15:00",
+      "16:00",
+      "17:00",
+    ]);
+    await expect(call(router.owyStage.getWeather, undefined, by(null))).resolves.toBeNull();
+  });
+
+  test("past speakers come from the content folder, without the placeholder entries", async () => {
+    await setup();
+
+    const speakers = await call(router.owyStage.getSpeakers, undefined, by(null));
+
+    expect(speakers.length).toBeGreaterThan(0);
+    expect(speakers.map((speaker) => speaker.slug)).not.toContain("openspace");
+  });
+
+  test("without Spotify configured the wall shows no track and the status says so", async () => {
+    const { staff } = await setup();
+
+    await expect(call(router.owyStage.getSpotify, undefined, by(null))).resolves.toBeNull();
+    await expect(call(router.owyStage.spotifyStatus, undefined, by(staff))).resolves.toStrictEqual({
+      configured: false,
+      account: null,
+    });
+  });
+});

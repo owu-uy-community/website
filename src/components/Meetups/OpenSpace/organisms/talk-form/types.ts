@@ -3,15 +3,19 @@ import * as z from "zod";
 import type { StickyNote } from "lib/orpc";
 
 export const talkFormSchema = z.object({
-  title: z.string().min(1, "El título es requerido"),
+  title: z.string().trim().min(1, "Escribí el título"),
   speaker: z.string(),
-  room: z.string().min(1, "La sala es requerida"),
-  timeSlot: z.string().min(1, "El horario es requerido"),
+  description: z.string(),
+  room: z.string().min(1, "Elegí la sala"),
+  timeSlot: z.string().min(1, "Elegí el bloque"),
   needsTV: z.boolean(),
   needsWhiteboard: z.boolean(),
 });
 
 export type TalkFormData = z.infer<typeof talkFormSchema>;
+
+/** What a save sends up: the talk, plus whether the staffer insisted on the room and where it came from. */
+export type TalkSave = Partial<StickyNote> & { skipResourceValidation?: boolean; origin?: "photo" | "undo" };
 
 export interface RoomWithResources {
   id: string;
@@ -26,19 +30,17 @@ export interface SuggestionAlternative {
   reasoning: string;
 }
 
-export interface SwapSuggestion {
-  shouldSwap: boolean;
-  talkToSwap?: string;
-  swapReasoning?: string;
-}
-
 export interface SuggestionEntry {
   room: string;
   timeSlot: string;
   reasoning: string;
   alternatives?: SuggestionAlternative[];
-  swapSuggestion?: SwapSuggestion;
+  /** The AI call failed and this is just the first free cell — say so instead of pretending. */
+  degraded?: boolean;
 }
+
+/** A form field the OCR flagged as hard to read, so the staffer checks it before saving. */
+export type ReviewableField = "speaker" | "title" | "requisito";
 
 export interface ScheduleSlot {
   room: string;
@@ -54,8 +56,10 @@ export interface TalkFormModalProps {
   rooms: string[];
   roomsData: RoomWithResources[];
   timeSlots: string[];
-  onSave: (noteData: Partial<StickyNote> & { skipResourceValidation?: boolean }) => void;
+  onSave: (noteData: TalkSave) => void | Promise<void>;
+  /** Deletes at once; the toast that follows offers to undo it. */
   onDelete?: () => void;
   isSaving?: boolean;
-  isDeleting?: boolean;
+  /** Opened from "Sugerir con IA": the AI places the talk as soon as it has a title. */
+  suggest?: boolean;
 }

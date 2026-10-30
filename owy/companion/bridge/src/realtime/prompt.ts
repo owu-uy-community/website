@@ -16,6 +16,12 @@ const HERE = import.meta.dirname;
 export const AGENT_DIR = path.resolve(HERE, "../../../../agent");
 export const KNOWLEDGE_DIR = path.join(AGENT_DIR, "sandbox/workspace/knowledge");
 export const COMPANION_PROMPT_PATH = path.resolve(HERE, "../../prompts/companion.md");
+export const VOICE_OF_OWY_PROMPT_PATH = path.resolve(HERE, "../../prompts/voice-of-owy.md");
+
+/** eve-brain mode: the realtime model is only Owy's voice; persona, knowledge and tools live in the agent. */
+export async function loadVoiceOfOwyPrompt(vars: PromptVariables = {}): Promise<string> {
+  return interpolate(await readFile(VOICE_OF_OWY_PROMPT_PATH, "utf8"), vars);
+}
 
 export interface PromptBundle {
   instructions: string;

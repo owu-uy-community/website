@@ -1,16 +1,17 @@
 import { createInterface } from "node:readline";
 import { experimental_getRealtimeToolDefinitions } from "ai";
 import { loadConfig } from "../config";
-import { buildSessionConfig, loadSharedRuntime } from "../index";
+import { buildSessionConfig, isAudioOnlyModel, loadSharedRuntime } from "../index";
 import { createLogger } from "../log";
 import { NodeRealtimeSession } from "../realtime/session";
 import { buildCompanionToolSet, executeToolByName, type ScreenCommand, type ToolRuntime } from "../realtime/tools";
 
 /**
  * Text REPL: the same persona, knowledge and tools as the device, but typed.
- * Gemini Live sessions are single-modality, so this opens a text-output
- * session (no audio, no device) — perfect for checking the marketplace
- * script and staff gating before touching hardware.
+ * Realtime sessions are single-modality, so this opens a text-output session
+ * (no audio, no device) — perfect for checking the marketplace script and
+ * staff gating before touching hardware. Gemini 3.8 Live is audio-only: there
+ * the session runs in audio mode and the REPL prints the output transcript.
  *
  *   COMPANION_STAFF_MODE=1 COMPANION_MARKETPLACE_OPEN=1 pnpm companion:text
  */
@@ -35,7 +36,7 @@ async function main(): Promise<void> {
     instructions: shared.instructions,
     voice: config.COMPANION_VOICE,
     tools: await experimental_getRealtimeToolDefinitions({ tools }),
-    modality: "text",
+    modality: isAudioOnlyModel(shared.provider.modelId) ? "audio" : "text",
   });
 
   let responding = false;
@@ -52,6 +53,7 @@ async function main(): Promise<void> {
     onEvent: (event) => {
       switch (event.type) {
         case "text-delta":
+        case "audio-transcript-delta":
           if (!responding) {
             process.stdout.write("owy> ");
             responding = true;

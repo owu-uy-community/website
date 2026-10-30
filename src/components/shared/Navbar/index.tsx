@@ -1,112 +1,154 @@
 "use client";
 
-import classNames from "classnames";
+import { ArrowUpRight, Search } from "lucide-react";
+import { m } from "motion/react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { FaInstagram, FaLinkedin, FaSlack, FaTelegram } from "react-icons/fa6";
 
-import { addUtmParams } from "app/lib/utils";
-import { SOCIAL_LINKS, INTERNAL_ROUTES } from "app/lib/constants";
+import { SOCIAL_LINKS } from "app/lib/constants";
+import { cn } from "app/lib/utils";
+import { useCommandPalette } from "components/community/CommandPalette";
+import { ButtonLink, Kbd, SmartLink } from "components/community/ui";
+import { NAV_LINKS } from "lib/community/site";
 
 import MobileNav from "./mobileNav";
-import { signOut, useSession } from "app/lib/auth-client";
-import { UserAvatarMenu } from "components/shared/ui/user-avatar-menu";
-import { useNavigationContext } from "./navigationProvider";
-import { navSections, SectionKey } from "./navSections";
 
-export interface NavItemProps {
-  title: string;
-  link: string;
-  isActive?: boolean;
-}
+// The session (auth client, avatar dropdown) loads after the page: the menu only exists client-side
+// and for signed-in visitors, so it has no business in every page's first bundle
+const SessionMenu = dynamic(() => import("./SessionMenu"), { ssr: false });
 
-function NavItem({ title, link, isActive }: NavItemProps) {
-  return (
-    <Link
-      className={classNames(
-        "block border-[6px] border-transparent py-4 font-medium transition-colors ease-out hover:bg-yellow-400/5 lg:rounded-b-xl lg:pb-2 lg:pt-3",
-        {
-          "border-l-yellow-400 font-bold lg:border-l-transparent lg:border-t-yellow-400": isActive,
-        }
-      )}
-      href={link}
-    >
-      {title}
-    </Link>
-  );
-}
+export const isActivePath = (pathname: string, href: string) =>
+  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+
+const SOCIALS = [
+  { label: "Instagram", href: SOCIAL_LINKS.instagram, Icon: FaInstagram },
+  { label: "LinkedIn", href: SOCIAL_LINKS.linkedin, Icon: FaLinkedin },
+  { label: "Slack", href: SOCIAL_LINKS.slack, Icon: FaSlack },
+  { label: "Telegram", href: SOCIAL_LINKS.telegram, Icon: FaTelegram },
+];
 
 function Navbar() {
-  const { activeSection } = useNavigationContext();
-  const { data: session, isPending } = useSession();
+  const pathname = usePathname();
+  const { open } = useCommandPalette();
+  const [scrolled, setScrolled] = useState(false);
+  const [isMac, setIsMac] = useState(true);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    setIsMac(/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
+
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <nav
-      className="sticky top-[-1px] z-[60] mx-auto flex h-full max-h-[56px] w-full bg-gradient-to-b from-[#1d1e1757] via-transparent to-transparent py-4 backdrop-blur-lg backdrop-filter"
-      id="site-menu"
-    >
-      <div className="container flex flex-row items-center justify-between">
-        <div className="flex h-full min-w-[140px] items-center">
-          <Link className="flex h-full flex-col justify-center" href={navSections[SectionKey.Hero].link}>
-            <h1 className="hidden">OWU URUGUAY</h1>
-            <img
+    <header className="sticky top-0 z-[60] w-full" id="site-menu">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center px-3 sm:px-5 lg:h-[72px]">
+        {/* Transparent over the hero; once the page scrolls it becomes a floating glass bar */}
+        <div
+          className={cn(
+            "relative flex h-14 w-full items-center gap-6 rounded-2xl border px-3 transition-[background-color,border-color,box-shadow] duration-300 sm:px-4",
+            scrolled
+              ? "border-white/[0.08] bg-[#19191d]/70 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.8),inset_0_1px_0_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
+              : "border-transparent bg-transparent"
+          )}
+        >
+          <Link aria-label="OWU Uruguay, inicio" className="flex shrink-0 items-center" href="/">
+            {/* The source is 3114px wide; next/image sends a few KB at the size it shows */}
+            <Image
               alt="OWU Uruguay"
-              className="max-h-[32px] w-auto object-contain transition-all duration-300 hover:scale-105"
+              className="h-8 w-auto transition-transform duration-300 hover:scale-105 lg:h-9"
+              height={36}
+              loading="eager"
               src="/images/logos/owu.webp"
+              width={85}
             />
           </Link>
-        </div>
-        <ul className="hidden w-full max-w-[700px] md:text-base lg:flex lg:justify-center lg:self-center lg:py-0 xl:flex">
-          {Object.values(navSections).map(({ link, title, id }) => {
-            return (
-              <li key={link} className="text-base text-white lg:flex-1 lg:text-center">
-                <NavItem isActive={activeSection === id} link={link} title={title} />
-              </li>
-            );
-          })}
-        </ul>
-        <div className="flex h-full items-center lg:hidden">
-          <MobileNav />
-        </div>
-        <div className="hidden items-center justify-center gap-4 lg:flex">
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.instagram)}
-            rel="noopener"
-            target="_blank"
-          >
-            <FaInstagram size={20} />
-          </Link>
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.linkedin)}
-            rel="noopener"
-            target="_blank"
-          >
-            <FaLinkedin size={20} />
-          </Link>
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.slack)}
-            target="_blank"
-          >
-            <FaSlack size={20} />
-          </Link>
-          <Link
-            className="font-light text-white hover:text-yellow-400"
-            href={addUtmParams(SOCIAL_LINKS.telegram)}
-            target="_blank"
-          >
-            <FaTelegram size={20} />
-          </Link>
-          {session?.user && !isPending ? (
-            <UserAvatarMenu
-              user={session.user}
-              onSignOut={() => signOut()}
-              showAdminSettings={session.user.role === "admin"}
-            />
-          ) : null}
+
+          <nav aria-label="Principal" className="hidden h-full flex-1 lg:block">
+            <ul className="flex h-full items-center justify-center gap-1">
+              {NAV_LINKS.map(({ href, label, external }) => {
+                const active = !external && isActivePath(pathname, href);
+
+                return (
+                  <li key={href} className="h-full">
+                    <SmartLink
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "relative flex h-full items-center gap-1 px-3.5 text-[15px] font-medium whitespace-nowrap transition-colors",
+                        active ? "text-white" : "text-zinc-300 hover:text-white"
+                      )}
+                      href={href}
+                      utm="navbar"
+                    >
+                      {label}
+                      {external ? <ArrowUpRight aria-hidden className="size-3.5 text-zinc-500" /> : null}
+                      {active ? (
+                        // OWU's marker: the yellow bar at the top of the current page, sliding between items
+                        <m.span
+                          aria-hidden
+                          className="absolute inset-x-3 top-0 h-[3px] rounded-b-full bg-yellow-400"
+                          layoutId="nav-active"
+                          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                        />
+                      ) : null}
+                    </SmartLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-2.5">
+            {/* The name holds what shows (the shortcut, and "Buscar" on wide screens): WCAG 2.5.3 */}
+            <button
+              aria-label={`Buscar ${isMac ? "⌘K" : "Ctrl K"}`}
+              className="hidden h-9 items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] pr-1.5 pl-3 text-sm text-zinc-400 transition-colors hover:border-white/20 hover:text-zinc-200 md:inline-flex"
+              type="button"
+              onClick={open}
+            >
+              <Search aria-hidden className="size-4" />
+              <span className="hidden pr-5 2xl:inline">Buscar</span>
+              <Kbd>{isMac ? "⌘K" : "Ctrl K"}</Kbd>
+            </button>
+            <button
+              aria-label="Buscar"
+              className="inline-flex size-10 items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white md:hidden"
+              type="button"
+              onClick={open}
+            >
+              <Search aria-hidden className="size-5" />
+            </button>
+
+            <ul className="hidden items-center xl:flex">
+              {SOCIALS.map(({ label, href, Icon }) => (
+                <li key={label}>
+                  <SmartLink
+                    aria-label={label}
+                    className="flex size-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-white/[0.06] hover:text-yellow-400"
+                    href={href}
+                    utm="navbar"
+                  >
+                    <Icon aria-hidden className="size-[18px]" />
+                  </SmartLink>
+                </li>
+              ))}
+            </ul>
+
+            <ButtonLink className="hidden sm:inline-flex" href={SOCIAL_LINKS.slack} size="sm" utm="navbar">
+              Sumate al Slack
+            </ButtonLink>
+            <SessionMenu />
+            <MobileNav />
+          </div>
         </div>
       </div>
-    </nav>
+    </header>
   );
 }
 

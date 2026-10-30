@@ -9,6 +9,12 @@ const src = readFileSync(new URL("../components/voice_assistant/voice_assistant.
 const capacity = src.match(/static const size_t SPEAKER_BUFFER_SIZE = (\d+) \* RECEIVE_SIZE;/)?.[1];
 assert.equal(capacity, "32");
 assert(src.includes("speaker_allocator(RAMAllocator<uint8_t>::ALLOC_EXTERNAL)"), "No internal-SRAM fallback for enlarged receive buffer");
+{
+  // A stale "stream ended" from an earlier run must not end the next reply.
+  const start = src.indexOf("case api::enums::VOICE_ASSISTANT_TTS_STREAM_START:");
+  const startCase = src.slice(start, src.indexOf("break;", start));
+  assert(/this->stream_ended_ = false;/.test(startCase), "TTS_STREAM_START must clear stream_ended_");
+}
 const begin = src.indexOf("void VoiceAssistant::on_audio(");
 const end = src.indexOf("void VoiceAssistant::on_timer_event(", begin);
 assert(begin > 0 && end > begin);

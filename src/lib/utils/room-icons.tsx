@@ -70,7 +70,3 @@ export function getRoomIconName(room: string): string {
       return "square";
   }
 }
-
-
-
-

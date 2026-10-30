@@ -91,6 +91,16 @@ function isToolDefinition(value: unknown): value is OwyToolDefinition {
   );
 }
 
+function isDynamicDefinition(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "events" in value &&
+    typeof (value as { events: unknown }).events === "object" &&
+    !("execute" in value)
+  );
+}
+
 export async function loadOwyToolDefinitions(dir = TOOLS_DIR): Promise<Map<string, OwyToolDefinition>> {
   const files = (await readdir(dir)).filter((file) => file.endsWith(".ts") && !file.endsWith(".d.ts"));
   const definitions = new Map<string, OwyToolDefinition>();
@@ -99,6 +109,9 @@ export async function loadOwyToolDefinitions(dir = TOOLS_DIR): Promise<Map<strin
     const name = file.slice(0, -3);
     if (SKIPPED_TOOLS.has(name)) continue;
     const module = (await import(pathToFileURL(path.join(dir, file)).href)) as { default?: unknown };
+    // `defineDynamic` resolvers (per-channel tools such as agent/tools/companion.ts)
+    // only make sense inside eve; the local brain has its own `propose_talk`.
+    if (isDynamicDefinition(module.default)) continue;
     if (!isToolDefinition(module.default)) {
       throw new Error(`agent/tools/${file} no exporta un defineTool por defecto`);
     }

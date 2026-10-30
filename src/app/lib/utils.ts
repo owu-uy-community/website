@@ -1,5 +1,11 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// The config's custom scales (tailwind.config.ts): without them `text-ui` would merge as a colour
+// and silently drop `text-foreground`.
+const twMerge = extendTailwindMerge({
+  extend: { theme: { text: ["ui", "meta"], shadow: ["edge", "edge-primary", "overlay"] } },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

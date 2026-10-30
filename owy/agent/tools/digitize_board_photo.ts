@@ -1,10 +1,11 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { getBoard } from "../lib/board";
+import { resolveActiveEvent } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
 import { requireStaff } from "../lib/staff";
 
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+/** Base64 adds a third: this keeps the photo under the 4 MB the site accepts in one request. */
+const MAX_IMAGE_BYTES = 2_900_000;
 
 const MEDIA_TYPES: Record<string, string> = {
   jpg: "image/jpeg",
@@ -21,7 +22,7 @@ function mediaTypeFor(path: string): string {
 
 export default defineTool({
   description:
-    "SOLO STAFF: digitaliza la foto de una card física del open space (post-it/pizarra). Lee la imagen adjunta al mensaje (queda en /workspace/attachments/...), extrae título/speaker/requisitos con el OCR del sitio y sugiere sala+horario libre según la grilla actual. NO crea la card: mostrale el resultado al staff, confirmá, y recién ahí usá create_track (o swap_tracks si sugiere intercambio).",
+    "SOLO STAFF: digitaliza la foto de una card física del open space (post-it/pizarra). Lee la imagen adjunta al mensaje (queda en /workspace/attachments/...), extrae título/speaker/requisitos con el OCR del sitio y sugiere sala+horario libre según la grilla actual. NO crea la card: mostrale el resultado al staff, confirmá, y recién ahí usá create_track.",
   inputSchema: z.object({
     imagePath: z
       .string()
@@ -33,7 +34,7 @@ export default defineTool({
       .describe("Contexto extra para la sugerencia de ubicación (ej: 'preferís bloque de la tarde')"),
   }),
   async execute({ imagePath, additionalContext }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
 
     const sandbox = await ctx.getSandbox();
     const bytes = await sandbox.readBinaryFile({ path: imagePath });
@@ -43,30 +44,16 @@ export default defineTool({
       );
     }
     if (bytes.byteLength > MAX_IMAGE_BYTES) {
-      throw new Error("La foto pesa más de 8MB; pedí que la manden más liviana.");
+      throw new Error("La foto pesa más de 2,9 MB; pedí que la manden más liviana.");
     }
 
-    const board = await getBoard();
+    const event = await resolveActiveEvent();
     const imageData = `data:${mediaTypeFor(imagePath)};base64,${Buffer.from(bytes).toString("base64")}`;
 
-    const result = await owuApi().ocr.processImageWithSuggestion({
+    // The site reads the event's board itself.
+    const result = await owuApi(ctx).ocr.processImageWithSuggestion({
+      eventId: event.id,
       imageData,
-      existingNotes: board.cards.map((card) => ({
-        id: card.id,
-        title: card.title,
-        speaker: card.speaker,
-        room: card.room ?? card.roomId,
-        timeSlot: card.timeSlot ?? card.scheduleId,
-        needsTV: card.needsTV,
-        needsWhiteboard: card.needsWhiteboard,
-      })),
-      roomsWithResources: board.rooms.map((room) => ({
-        name: room.name,
-        hasTV: room.hasTV ?? false,
-        hasWhiteboard: room.hasWhiteboard ?? false,
-      })),
-      availableRooms: board.rooms.map((room) => room.name),
-      availableTimeSlots: board.schedules.map((schedule) => `${schedule.startTime} - ${schedule.endTime}`),
       ...(additionalContext ? { additionalContext } : {}),
     });
 
@@ -76,16 +63,20 @@ export default defineTool({
         speaker: result.speaker,
         needsTV: result.needsTV,
         needsWhiteboard: result.needsWhiteboard,
+        requisito: result.requisito ?? null,
       },
+      /** Campos que el OCR leyó con dudas: preguntá por estos, no por todos. */
+      revisar: result.revisar ?? [],
       suggestion: {
         room: result.suggestedRoom,
         timeSlot: result.suggestedTimeSlot,
         reasoning: result.reasoning,
+        /** Si es true, no hubo sugerencia: es el primer lugar libre. Avisale al staff. */
+        degraded: result.degraded ?? false,
       },
-      swapSuggestion: result.swapSuggestion ?? null,
       alternatives: result.alternatives ?? [],
       nextStep:
-        "Confirmá con el staff los datos extraídos y la ubicación; después creá la card con create_track (la sala y el horario sugeridos van como room/timeSlot).",
+        "Confirmá con el staff los datos extraídos (empezando por los de `revisar`) y la ubicación; después creá la card con create_track (la sala y el horario sugeridos van como room/timeSlot).",
     };
   },
 });

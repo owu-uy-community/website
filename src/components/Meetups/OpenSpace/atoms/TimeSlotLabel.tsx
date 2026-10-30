@@ -11,43 +11,63 @@ interface TimeSlotLabelProps {
   timeSlot: string;
   /** Row starred to highlight in the kiosk. */
   isHighlighted?: boolean;
-  onDoubleClick: () => void;
+  /** The block on now, on the event's clock. */
+  isNow?: boolean;
+  onEdit: () => void;
   onToggleHighlight?: () => void;
 }
 
+/** The board's time rail: start and end in mono, and "AHORA" under the block that is on. */
 export function TimeSlotLabel({
   timeSlot,
   isHighlighted = false,
-  onDoubleClick,
+  isNow = false,
+  onEdit,
   onToggleHighlight,
 }: TimeSlotLabelProps) {
   const [start, end] = timeSlot.split(" - ");
 
   return (
-    <div
-      className="group/time sticky left-0 z-10 flex h-28 cursor-pointer flex-col items-center justify-center border-b border-r border-border/60 bg-card px-1 md:h-32"
-      title="Doble click para editar el horario"
-      onDoubleClick={onDoubleClick}
-    >
-      {/* Star tint as an overlay so the sticky background stays opaque. */}
-      {isHighlighted && <div aria-hidden className="pointer-events-none absolute inset-0 bg-primary/[0.08]" />}
+    <div className="group/time sticky left-0 z-10 h-32 bg-background">
+      {/* Tint and rail as overlays, so the sticky background stays opaque over the cards. */}
+      {isNow ? (
+        <>
+          <div aria-hidden className="pointer-events-none absolute inset-0 bg-primary/[0.06]" />
+          <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-0.5 bg-primary" />
+        </>
+      ) : null}
 
-      <span className="relative font-terminal text-xs font-medium tabular-nums text-foreground md:text-sm">
-        {start}
-      </span>
-      {end && (
-        <span className="relative font-terminal text-[10px] tabular-nums text-muted-foreground md:text-xs">{end}</span>
-      )}
+      <button
+        aria-label={`Editar horario ${timeSlot}`}
+        className="relative flex h-full w-full flex-col items-start px-3 pt-2.5 text-left transition-colors hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:outline-hidden focus-visible:ring-inset"
+        type="button"
+        onClick={onEdit}
+      >
+        <span
+          className={cn("font-terminal text-ui font-medium tabular-nums", isNow ? "text-foreground" : "text-subtle")}
+        >
+          {start}
+        </span>
+        {end ? <span className="font-terminal text-2xs text-muted-foreground tabular-nums">{end}</span> : null}
+        {isNow ? (
+          <span className="mt-2 rounded-[5px] bg-primary px-1.5 py-px font-terminal text-3xs font-semibold tracking-[0.12em] text-primary-foreground uppercase">
+            Ahora
+          </span>
+        ) : null}
+      </button>
 
+      {/* The kiosk features one block at a time, so the mark lives here, once per row. */}
       {onToggleHighlight && (
         <Button
           className={cn(
-            "absolute right-0.5 top-0.5 h-6 w-6 transition-opacity",
+            "absolute bottom-1.5 left-2 transition-opacity",
             isHighlighted
-              ? "text-primary opacity-100 hover:text-primary"
-              : "text-muted-foreground opacity-0 focus-visible:opacity-100 group-hover/time:opacity-100"
+              ? "gap-1 px-1.5 text-primary opacity-100 hover:text-primary"
+              : "text-muted-foreground opacity-100 group-hover/time:opacity-100 focus-visible:opacity-100 pointer-fine:md:opacity-0"
           )}
-          size="icon"
+          size={isHighlighted ? "xs" : "icon-xs"}
+          aria-label={isHighlighted ? "Quitar del kiosco" : "Resaltar en el kiosco"}
+          aria-pressed={isHighlighted}
           title={isHighlighted ? "Quitar del kiosco" : "Resaltar en el kiosco"}
           variant="ghost"
           onClick={(e) => {
@@ -55,7 +75,8 @@ export function TimeSlotLabel({
             onToggleHighlight();
           }}
         >
-          <Star className={cn("h-3.5 w-3.5", isHighlighted && "fill-current")} />
+          <Star className={cn(isHighlighted && "fill-current")} />
+          {isHighlighted ? "Kiosco" : null}
         </Button>
       )}
     </div>

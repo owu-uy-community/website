@@ -1,7 +1,11 @@
+import { owuApi } from "../../../agent/lib/owu-api";
 import { loadConfig } from "./config";
+import { CompanionDevice } from "./device/esphome";
 import { DeviceSession, loadSharedRuntime } from "./index";
 import { createLogger } from "./log";
+import { createStageMirror } from "./stage";
 import { startWebBridge } from "./web/server";
+import { startSettingsServer } from "./web/settings";
 import { mkdir, writeFile, chmod } from "node:fs/promises";
 import path from "node:path";
 
@@ -16,9 +20,11 @@ async function main(): Promise<void> {
   }
 
   const shared = await loadSharedRuntime(config, logger);
+  shared.sessions = new Map();
   const web = config.COMPANION_WEB_BRIDGE
     ? await startWebBridge(shared, {
         port: config.COMPANION_WEB_PORT,
+        host: config.COMPANION_BIND_HOST,
         origins: config.COMPANION_WEB_ORIGINS.split(",")
           .map((v) => v.trim())
           .filter(Boolean),
@@ -36,7 +42,26 @@ async function main(): Promise<void> {
     await chmod(file, 0o600);
     logger.info(`web virtual-device transport ready at ${web.url}; same DeviceSession, prompts and tools`);
   }
-  const sessions = config.devices.map((spec) => new DeviceSession(spec, shared));
+  // Each gadget mirrors its face and captions onto the video wall (/owy/stage).
+  const sessions = config.devices.map((spec) => {
+    const mirror = createStageMirror({
+      api: config.OWY_API_KEY ? owuApi() : null,
+      logger: logger.child(spec.id),
+      source: spec.id,
+    });
+    return new DeviceSession(spec, shared, {
+      connectDevice: async (...args) => mirror.wrap(await CompanionDevice.connect(...args)),
+      onFace: mirror.face,
+      onTranscript: mirror.transcript,
+      onExpression: mirror.expression,
+    });
+  });
+  for (const session of sessions) shared.sessions.set(session.id, session);
+  const settings = await startSettingsServer(sessions, config, logger).catch((error) => {
+    logger.warn(`settings UI not started: ${error instanceof Error ? error.message : String(error)}`);
+    return null;
+  });
+  if (settings) logger.info(`settings UI at ${settings.url} · oRPC at ${settings.rpcUrl} (audio routing per device)`);
   await Promise.all(sessions.map((session) => session.start()));
 
   let stopping = false;
@@ -45,6 +70,7 @@ async function main(): Promise<void> {
     stopping = true;
     logger.info("shutting down");
     await web?.close();
+    await settings?.close();
     await Promise.all(sessions.map((session) => session.stop()));
     process.exit(0);
   };

@@ -1,90 +1,16 @@
-# Audio: ES7210 ADC (dual MEMS mics) in, ES8311 DAC + NS4150B amp out.
-#
-# ONE I2S bus that carries MCLK, time-shared by mic and speaker. ESPHome's I2S
-# bus is a mutex (mic and speaker never run at once) and voice is half-duplex
-# anyway, so a single bus is exactly what every working ES7210+ES8311 config
-# uses (ESP32-S3-BOX-3, the community AMOLED-1.75 voice satellites).
-#
-# Do NOT split this into two buses sharing pins (the devices.esphome.io
-# example does): the ES7210 is an I2S slave that needs MCLK on its pin, and
-# with two buses only the speaker port drives MCLK — the mic then streams
-# pure silence except right after the speaker played (seen on hardware).
-# Do NOT set `timeout: never` on the speaker either: it would hold the bus
-# forever and the mic could never take it ("Parent bus is busy").
-
-i2s_audio:
-  - id: i2s_bus
-    i2s_lrclk_pin:
-      number: GPIO45
-      ignore_strapping_warning: true
-    i2s_bclk_pin: GPIO9
-    i2s_mclk_pin: ${i2s_mclk_pin}
-
-audio_adc:
-  - platform: es7210
-    id: mic_adc
-    i2c_id: bus_a
-    address: 0x40
-    bits_per_sample: 16bit
-    sample_rate: ${audio_sample_rate}
-    mic_gain: 30db
-
-microphone:
-  - platform: i2s_audio
-    id: mic
-    i2s_audio_id: i2s_bus
-    adc_type: external
-    i2s_din_pin: GPIO10
-    sample_rate: ${audio_sample_rate}
-    bits_per_sample: 16bit
-    # Both MEMS mics come interleaved on SDOUT1; voice_assistant and
-    # micro_wake_word take channel 0 (their default).
-    channel: stereo
-    pdm: false
-    on_data:
-      - lambda: id(companion).audio(x.data(), x.size(), millis());
-
-audio_dac:
-  - platform: es8311
-    id: speaker_dac
-    i2c_id: bus_a
-    address: 0x18
-    bits_per_sample: 16bit
-    sample_rate: ${audio_sample_rate}
-
-speaker:
-  - platform: i2s_audio
-    id: va_speaker
-    i2s_audio_id: i2s_bus
-    dac_type: external
-    i2s_dout_pin: GPIO8
-    audio_dac: speaker_dac
-    sample_rate: ${audio_sample_rate}
-    bits_per_sample: 16bit
-    channel: left
-    # Jitter headroom is in the PSRAM voice receive buffer, not this shared-bus
-    # driver ring. Keep the low-latency ring and original release behavior.
-    buffer_duration: 100ms
-    # timeout left at its default (500ms) on purpose: the speaker must release
-    # the shared bus after playback so the mic can start.
+# Local sounds shared by every board: listening chime, interaction cue, test
+# tone. The I2S hardware (mic, DAC/speaker, amp) lives in packages/boards/*;
+# every cue caller MUST own the audio bus (see voice.yaml).
 
 esphome:
   on_boot:
     # number.volume only calls speaker.volume_set on change; without this the
-    # ES8311 stays at its hardware default (near silent) until someone moves it.
+    # DAC (or the software gain) stays at its default until someone moves it.
     - priority: 200
       then:
         - speaker.volume_set:
             id: va_speaker
             volume: !lambda return std::min(80.0f, id(volume).state) / 100.0f;
-
-switch:
-  - platform: gpio
-    id: amp_enable
-    name: Amplificador
-    internal: true
-    pin: GPIO46
-    restore_mode: RESTORE_DEFAULT_ON
 
 globals:
   - id: listening_chime_ok

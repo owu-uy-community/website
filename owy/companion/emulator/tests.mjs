@@ -52,6 +52,32 @@ test("live bridge screen commands use the actual card/text/QR LVGL widgets", () 
   s.reset();
   assert.equal(s.events.length, 0);
 });
+test("bridge expression cues reshape the speaking face when their sentence is heard", () => {
+  // The face never holds still (blinks, springs), so compare against the same
+  // deterministic timeline without the cue: any difference is the cue's.
+  const run = (command) => {
+    s.reset();
+    s.beginLive();
+    s.liveVisual(4, 0, 0);
+    s.advance(1500);
+    if (command) s.liveDevice(command);
+    const frames = [];
+    for (const step of [300, 900, 600]) {
+      s.advance(step);
+      frames.push(digest());
+    }
+    assert.equal(s.events.length, 0); // live cues are never recorded for replay
+    s.reset();
+    return frames;
+  };
+  const plain = run();
+  const surprised = run({ kind: "expression", expression: "surprised", leadMs: 600, strength: 100 });
+  assert.equal(surprised[0], plain[0]); // +300 ms: not audible yet
+  assert.notEqual(surprised[1], plain[1]); // +1200 ms: eyes wide, small pupils, brows up
+  assert.notEqual(surprised[2], plain[2]);
+  assert.deepEqual(run({ kind: "expression", expression: "grumpy", leadMs: 0, strength: 100 }), plain); // unknown: ignored
+  assert.deepEqual(run({ kind: "expression", expression: "neutral", leadMs: 0, strength: 100 }), plain);
+});
 test("live touch/BOOT/privacy/calibration route start and stop without synthetic voice or recording", () => {
   s.reset();
   s.beginLive();
@@ -143,12 +169,54 @@ test("modeled power cycle retains explicit calibration and persistent preference
   const neutral = s.snapshot().neutral;
   input("setting", [35], "volume");
   input("setting", [1], "quiet");
+  input("setting", [1], "pitch");
   input("power", [0]);
   input("power", [1]);
   assert.deepEqual(s.snapshot().neutral, neutral);
   assert.equal(s.snapshot().settings.volume, 35);
   assert.equal(s.snapshot().settings.quiet, 0);
   assert.equal(s.snapshot().settings.staff, 0);
+  assert.equal(s.snapshot().settings.pitch, 1); // like the firmware's persisted switch
+  assert.equal(s.snapshot().pitchActive, false);
+});
+test("modo pitch: a tap records past the silent-window guard, the second tap sends it, nothing follows up", () => {
+  s.reset();
+  s.schedule(scenarios.find((x) => x.id === "pitch").events);
+  s.advance(12000);
+  assert.equal(s.snapshot().voice, "recording");
+  assert.equal(s.snapshot().pitchActive, true);
+  s.advance(8000);
+  const events = s.trace.map((x) => x.event);
+  assert(events.includes("pitch.submit") && events.includes("bridge.pitch_submit"));
+  assert.equal(events.filter((x) => x === "tts.started").length, 1);
+  for (const absent of ["guard.local_silence", "conversation.silent_idle", "voice.cancelled", "voice.follow_up.request"])
+    assert(!events.includes(absent), absent);
+  assert.equal(s.snapshot().voice, "idle"); // no wake word in modo pitch
+  assert.equal(s.snapshot().pitchActive, false);
+});
+test("modo pitch live: taps become start:pitch / commit, the bridge's prompt re-tags the next tap and expires", () => {
+  s.reset();
+  s.beginLive();
+  s.liveInput({ type: "setting", values: [1], text: "pitch" });
+  s.liveInput({ type: "boot", values: [100] });
+  assert.deepEqual(s.commands.splice(0), ["start:pitch"]);
+  s.liveVisual(2, 0.4, 0);
+  assert.equal(s.snapshot().voice, "recording");
+  s.liveInput({ type: "boot", values: [100] });
+  assert.deepEqual(s.commands.splice(0), ["commit"]);
+  s.liveVisual(4, 0, 60);
+  s.liveVisual(0, 0, 0);
+  assert.equal(s.snapshot().pitchActive, false);
+  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
+  assert(s.snapshot().promptDeadline > 0);
+  s.liveInput({ type: "boot", values: [100] });
+  assert.deepEqual(s.commands.splice(0), ["start:pitch-name"]);
+  assert.equal(s.snapshot().promptDeadline, 0);
+  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
+  s.advance(21000);
+  assert.equal(s.snapshot().promptDeadline, 0);
+  assert.equal(s.events.length, 0);
+  s.reset();
 });
 test("continuous fixture has three replies and then closes for silence", () => {
   s.reset();

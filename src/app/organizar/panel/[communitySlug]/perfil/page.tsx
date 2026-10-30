@@ -1,0 +1,23 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+
+import { ProfileClient } from "components/organizar/community/ProfileClient";
+import { callerFor } from "lib/orpc/server";
+
+import { holds, panelCommunity } from "../../access";
+
+export const metadata: Metadata = { title: "Perfil · Organizá" };
+
+// Who is looking decides what renders: per request, allowed to block (Cache Components)
+export const instant = false;
+
+export default async function ProfilePage({ params }: { params: Promise<{ communitySlug: string }> }) {
+  const { communitySlug } = await params;
+  const access = await panelCommunity(communitySlug);
+  if (!access) notFound();
+  const community = await callerFor(await headers()).communities.getBySlug({ communitySlug });
+  if (!community) notFound();
+
+  return <ProfileClient canEdit={holds(access.community, "organization:update")} initialCommunity={community} />;
+}

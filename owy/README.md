@@ -14,7 +14,7 @@ Slack / Telegram / HTTP (eve TUI)
    owu.uy  /api/orpc  (openSpaces · schedules · rooms · tracks · obsQueue · countdown · ocr · dashboard · eventbrite)
         │
         └─ el SITIO emite broadcasts server-side tras cada escritura
-           (src/lib/realtime/broadcast.ts, sobre su WebSocket propio) → grilla
+           (servicio Realtime de src/lib/orpc, sobre su WebSocket propio) → grilla
            admin / kiosk / pantalla OBS se actualizan en vivo, venga el cambio
            de donde venga
 ```
@@ -25,7 +25,7 @@ Slack / Telegram / HTTP (eve TUI)
 - **Conocimiento estático** (evento, comunidad, FAQ): `agent/sandbox/workspace/knowledge/*.md` — editá esos markdown para actualizar lo que Owy sabe.
 - **Datos en vivo** (grilla, OBS, countdown, stats): tools en `agent/tools/`.
 - **Fotos → grilla**: el staff manda una foto de la card física y `digitize_board_photo` la pasa por el OCR del sitio + sugerencia de lugar; la creación siempre se confirma y va por `create_track`.
-- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (allowlist por env; quien no es staff queda denegado antes de que la tool corra). Las acciones se ejecutan directo: **no** hay botones de "Approve tool call" (ver `lib/staff.ts` si se quieren volver a activar).
+- **Permisos**: cualquiera puede preguntar; escribir (grilla/OBS/countdown/tareas/avisos), stats y OCR es **solo staff** (lo decide el sitio con los roles de la persona — por su usuario de Slack o su Telegram vinculado —; quien no puede queda denegado antes de que la tool corra, y la API lo vuelve a chequear en cada llamada). Las acciones se ejecutan directo: **no** hay botones de "Approve tool call" (ver `lib/staff.ts` si se quieren volver a activar).
 - **Botones de pregunta**: para desambiguar ("¿cuál de estas tres cards?") o confirmar algo irreversible ("¿borro «X»?"), Owy usa la tool `ask_question` de eve, que Slack dibuja como botones y Telegram como teclado. Siempre con `allowFreeform`, así también se puede contestar escribiendo.
 - **Persona**: `agent/instructions.md` (rioplatense, amable, no inventa datos).
 
@@ -40,7 +40,7 @@ AI_GATEWAY_API_KEY=
 
 # --- API de OWU ---
 OWU_API_URL=https://owu.uy            # local: http://localhost:3000
-OWY_API_KEY=                          # API key de Better Auth; se emite en el sitio con `pnpm owy:key`
+OWY_API_KEY=                          # llave de la cuenta de servicio de Owy; se emite en el sitio (`pnpm owy:key` o /admin/acceso)
 OWY_EVENT_ID=                         # id o slug del evento que maneja Owy (el sitio es multi-tenant).
                                       # Sin esto usa el evento más reciente que puede operar.
 
@@ -53,29 +53,34 @@ TELEGRAM_BOT_TOKEN=                   # de @BotFather
 TELEGRAM_WEBHOOK_SECRET_TOKEN=        # secreto propio, se registra en setWebhook
 TELEGRAM_BOT_USERNAME=owy_bot
 
-# --- Staff (IDs separados por coma) ---
-OWY_STAFF_SLACK_IDS=                  # member IDs de Slack (U0123ABC,U0456DEF)
-OWY_STAFF_TELEGRAM_IDS=               # user IDs numéricos de Telegram
+# Quién es staff ya NO va acá: son roles en el sitio (owu.uy/admin/acceso). El canal HTTP de eve y
+# el del Owy físico (/companion/*) piden una llave de OWU con `owy:operate` (header `x-api-key` o
+# `Authorization: Bearer`), que el sitio verifica: revocarla allá cierra el acceso acá.
 
-# --- Canal HTTP de eve (TUI remota / curl) — cuenta como staff ---
-ROUTE_AUTH_BASIC_USER=
-ROUTE_AUTH_BASIC_PASSWORD=
+# --- Owy físico ---
+COMPANION_PROPOSAL_COOLDOWN_S=60      # segundos entre propuestas de un mismo dispositivo (no staff)
+
+# --- Semanario OWU (cron de los lunes) ---
+OWY_SEMANARIO_EMOJI=semanario         # reacción (sin dos puntos) con la que la gente nomina hilos
+OWY_JOBS_CHANNEL_ID=                  # id del canal de búsquedas (C0123ABC); vacío = el número no las cuenta
 ```
 
 ### Cómo se autentica Owy
 
-Owy usa el **plugin `apiKey` de Better Auth**: manda su key en el header `x-api-key` y el sitio la resuelve a una sesión normal de la cuenta del bot (`owy-bot`, rol `admin`). No hay auth a medida: la API autoriza a Owy como a cualquier otro usuario, y sus escrituras quedan firmadas con su nombre (los avisos al staff aparecen como "Owy").
+Owy usa el **plugin `apiKey` de Better Auth**: manda su llave en el header `x-api-key` y el sitio la resuelve a la **cuenta de servicio** `owy-bot` (rol `service`), con los permisos de la llave como techo.
 
-Emitir la key **en el sitio** (crea la cuenta del bot si no existe y la imprime una sola vez):
+**Actúa por la persona.** Cada llamada que hace por alguien lleva quién es (`x-owu-actor: slack:U…`, `telegram:…` o `anonymous` en el kiosco del Owy físico) y la API autoriza a **esa persona**, nunca más que la llave: alguien del staff puede mover charlas por Owy; un asistente, no; cualquiera puede reportar un incidente. Lo que hace queda en la auditoría del sitio a nombre de la persona, "vía Owy". Sin persona detrás (la consola del operador, el Owy físico desbloqueado con su PIN, el cron del semanario) decide la llave.
+
+**Telegram**: Owy reconoce a alguien por Telegram cuando lo vinculó: en owu.uy/acceso → «Vincular Telegram» y le manda `/vincular <código>` a Owy (tool `link_telegram`).
+
+Emitir la llave **en el sitio** (crea la cuenta de servicio si no existe, vence en un año y se imprime una sola vez), o desde /admin/acceso → Llaves API:
 
 ```bash
-pnpm owy:key                     # o: pnpm owy:key -- --name "owy prod"
-# → OWY_API_KEY=owy...
+pnpm owy:key                     # o: pnpm owy:key -- --name "owy prod" --days 180
+pnpm auth:key -- --owner owy-operador --preset owy-operator --name "consola de Owy"   # para el canal HTTP de eve
 ```
 
-Copiás ese valor al `OWY_API_KEY` del proyecto de Owy. El sitio **no** necesita ninguna variable nueva: la key vive hasheada en la tabla `apikey`.
-
-**Revocar**: deshabilitá (`enabled = false`) o borrá la fila en `apikey` — sin redeploy. Emitir una key nueva no invalida las viejas; borralas si querés rotar. Las keys tienen rate limit (240 req/min) y quedan con registro de último uso.
+Copiás la llave al `OWY_API_KEY` del proyecto de Owy. **Revocar**: /admin/acceso → Llaves API (o borrar la fila en `apikey`) — sin redeploy.
 
 ## Desarrollo local
 
@@ -87,7 +92,7 @@ Copiás ese valor al `OWY_API_KEY` del proyecto de Owy. El sitio **no** necesita
 ```bash
 # --- en la raíz del repo (el sitio; db docker en :5433) ---
 pnpm install
-pnpm owy:key            # una vez: crea la cuenta del bot e imprime su OWY_API_KEY
+pnpm owy:key            # una vez: crea la cuenta de servicio del bot e imprime su OWY_API_KEY
 pnpm dev                # la API en :3000
 pnpm dev:realtime       # (otra terminal) para ver los cambios en vivo en las pantallas
 
@@ -95,7 +100,15 @@ pnpm dev:realtime       # (otra terminal) para ver los cambios en vivo en las pa
 cd owy
 pnpm install
 OWU_API_URL=http://localhost:3000 OWY_API_KEY=owy... pnpm dev   # TUI de eve
+pnpm exec eve dev --no-ui --port 2000                             # sin TUI (p. ej. como cerebro del Owy físico)
+pnpm exec eve invoke --url http://127.0.0.1:2000 "qué es OWU?"    # un turno desde la terminal
 ```
+
+eve está en **0.63** (`eve build` limpio; evals con `t.judge(...)` y el evaluador
+`typesafe-ai/jev` del gateway — los graders `autoevals` ya no existen). Al subir
+de versión, revisar el CHANGELOG del paquete: los saltos suelen traer breaking
+changes en tools de fondo (`defineWorkflowTool`), entrypoints `eve/tools/*` y
+evals.
 
 En la TUI local sos `local-dev` → contás como staff: podés probar todo (grilla, OBS, countdown, stats). Smoke test sugerido:
 
@@ -119,7 +132,7 @@ Chequeos (desde `owy/`): `pnpm typecheck` · `pnpm build` (eve build) · `pnpm e
 ### Slack (app portable)
 
 1. Crear app en https://api.slack.com/apps → **From scratch**, workspace de OWU.
-2. **OAuth & Permissions → Bot Token Scopes**: `app_mentions:read`, `chat:write`, `im:history` (DMs), `files:read` (fotos para digitalizar cards), y para hilos sin re-mención: `channels:history` (+ `groups:history` si se usa en canales privados).
+2. **OAuth & Permissions → Bot Token Scopes**: `app_mentions:read`, `chat:write`, `im:history` (DMs), `files:read` (fotos para digitalizar cards), y para hilos sin re-mención: `channels:history` (+ `groups:history` si se usa en canales privados). Para el Semanario: `channels:read` (además de `channels:history`).
 3. Instalar la app en el workspace → copiar **Bot User OAuth Token** → `SLACK_BOT_TOKEN`. De **Basic Information** copiar el **Signing Secret** → `SLACK_SIGNING_SECRET`.
 4. **Event Subscriptions** → Request URL: `https://<owy-domain>/eve/v1/slack` → suscribir `app_mention` y `message.im` (+ `message.channels` para hilos).
 5. **Interactivity & Shortcuts** → misma URL. **Necesario**: sin esto los botones de `ask_question` se dibujan pero al tocarlos no pasa nada (Slack no tiene a dónde mandar el click). Mientras no esté, la gente puede igual contestar escribiendo la opción.
@@ -143,14 +156,32 @@ curl -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
 
 4. En grupos, Owy responde a `/comandos`, menciones `@owy_bot` o respuestas a sus mensajes. En privado responde siempre. (La privacidad de grupos se maneja en BotFather.)
 
-### IDs de staff
+### Quién es staff
 
-- **Slack**: perfil del usuario → ⋯ → *Copy member ID* (`U…`). Cargarlos en `OWY_STAFF_SLACK_IDS`.
-- **Telegram**: cada uno le escribe a [@userinfobot](https://t.me/userinfobot) (o similar) para conocer su ID numérico. Cargarlos en `OWY_STAFF_TELEGRAM_IDS`.
+Lo deciden los roles del sitio: alguien con un rol que permite la acción (por ejemplo staff de OWU para la grilla, o editor de la comunidad para las tareas) puede pedírsela a Owy. Se dan en **owu.uy/admin/acceso** (o en el Equipo de cada comunidad) y piden el Slack de OWU. Por Telegram, la persona primero vincula su cuenta (ver arriba).
+
+## Semanario OWU (cron de los lunes)
+
+`agent/schedules/semanario.ts` corre los **lunes a las 12:00 UTC** (09:00 en Montevideo; en Hobby puede llegar hasta una hora tarde, da igual para un borrador). Carga la skill `semanario`, junta lo de la semana con `collect_semanario` y deja el borrador en el sitio con `save_semanario_draft`. **Nunca publica**: el sitio rechaza `semanario.publish` desde una API key, y una persona del staff lo revisa y lo publica en `owu.uy/admin/semanario`. El staff también puede pedírselo a mano ("Owy, armá el semanario").
+
+Qué lee y cómo:
+
+- **Hilos**: mensajes de primer nivel de los últimos 7 días, en los **canales públicos donde está Owy** (para sumar o sacar un canal, invitá o sacá a `@Owy`), que tengan la reacción `:semanario:` (o la de `OWY_SEMANARIO_EMOJI`). Se ordenan por cantidad de marcas. Owy ve solo un extracto de 200 caracteres para escribir un título propio de una línea; el mensaje no se guarda ni se publica, y las menciones llegan como "@alguien".
+- **Búsquedas**: cuántos mensajes nuevos hubo en `OWY_JOBS_CHANNEL_ID`.
+- **Agenda**: los eventos de la semana del feed de meetup-bot (la misma fuente que el sitio).
+
+Para activarlo:
+
+1. Scopes extra de la app de Slack: `channels:read` (listar canales públicos) y `channels:history` (ya está si se usan hilos). Reinstalar la app después de agregarlos.
+2. Crear el emoji custom `:semanario:` en el workspace (o poner en `OWY_SEMANARIO_EMOJI` uno que ya exista, como `star`).
+3. Cargar `OWY_JOBS_CHANNEL_ID` y redeployar: el cron aparece en **Settings → Cron Jobs** del proyecto.
+4. En el sitio, la tabla `semanario_issues` tiene que existir en la base (`pnpm db:push`).
+
+Probarlo local sin esperar al lunes: `curl -X POST http://localhost:2000/eve/v1/dev/schedules/semanario`.
 
 ## Anuncios proactivos (pendiente)
 
-Owy **no** tiene crons hoy. Había tres (`apertura`, `bloques`, `cierre` en
+Owy no tiene otros crons hoy (además del Semanario). Había tres (`apertura`, `bloques`, `cierre` en
 `agent/schedules/conf-day/`) pero el plan Hobby de Vercel sólo permite crons
 **una vez por día** y con precisión de **±59 minutos**, así que el anunciador de
 bloques (cada 30') no deploya y los otros dos podrían llegar hasta una hora tarde.
@@ -167,10 +198,17 @@ Mientras tanto Owy responde igual a demanda en Slack y Telegram.
 
 ## Owy físico (companion)
 
-Hay una versión física de Owy para la mesa del mercado de ideas: una Waveshare
-ESP32-S3-Touch-AMOLED-1.75C con cara animada que escucha y habla, y que usa
-**estas mismas tools** (importadas tal cual, con un shim de contexto) a través de
-un bridge Node con Gemini Live. Firmware ESPHome + bridge + runbook en
+Hay dos Owys físicos para la mesa del mercado de ideas (Waveshare AMOLED 1.75C y
+Knob 1.8B) con cara animada que escuchan y hablan a través de un bridge Node con
+un modelo realtime (Gemini 3.8 Live vía AI Gateway). **El cerebro es este agente**:
+el bridge manda cada turno al canal `agent/channels/companion.ts` (una sesión
+durable de eve por dispositivo) y el modelo de voz sólo pronuncia la respuesta.
+`agent/instructions/companion.ts` agrega el "modo voz" a esos turnos y
+`agent/tools/companion.ts` monta `propose_talk` (mercado de ideas) sólo ahí; el
+turno llega con `authenticator: companion | companion-staff` para el gating de
+staff. Rutas: `POST /companion/:deviceId/turns`, `GET /companion/sessions/:id/stream`,
+`POST /companion/:deviceId/{cancel,reset}`, protegidas con la llave de OWU del
+dispositivo (`x-api-key`, preset `companion`; loopback libre en `eve dev`). Firmware ESPHome + bridge + runbook en
 [`companion/README.md`](companion/README.md); scripts `pnpm companion:*`.
 
 ## Mantener el conocimiento
@@ -181,4 +219,4 @@ un bridge Node con Gemini Live. Firmware ESPHome + bridge + runbook en
 
 ## Realtime
 
-Owy no habla con el transporte de realtime: desde que el sitio emite los broadcasts **server-side** en sus services de escritura (`src/lib/realtime/broadcast.ts`, sobre el WebSocket propio del sitio), cualquier escritura por API — del admin, de Owy o de un script — notifica sola a la grilla admin, el kiosk y las pantallas de OBS. No requiere configuración extra en owy; del lado del sitio aplica lo de siempre (`REDIS_URL` para el backplane en producción, sidecar `pnpm dev:realtime` en local).
+Owy no habla con el transporte de realtime: desde que el sitio emite los broadcasts **server-side** en sus services de escritura (el servicio `Realtime` de `src/lib/orpc/services.ts`, sobre el WebSocket propio del sitio), cualquier escritura por API — del admin, de Owy o de un script — notifica sola a la grilla admin, el kiosk y las pantallas de OBS. No requiere configuración extra en owy; del lado del sitio aplica lo de siempre (`REDIS_URL` para el backplane en producción, sidecar `pnpm dev:realtime` en local).

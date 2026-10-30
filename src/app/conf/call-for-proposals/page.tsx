@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -28,7 +29,12 @@ export const metadata: Metadata = {
     type: "website",
     images: [{ url: OG_IMAGE, width: 1800, height: 945, alt: "OWU CONF — 07.11.2026, Sinergia Faro, Montevideo" }],
   },
-  twitter: { card: "summary_large_image", title: "Call for Proposals | OWU CONF", description: DESCRIPTION, images: [OG_IMAGE] },
+  twitter: {
+    card: "summary_large_image",
+    title: "Call for Proposals | OWU CONF",
+    description: DESCRIPTION,
+    images: [OG_IMAGE],
+  },
 };
 
 const TOPICS = [
@@ -38,7 +44,13 @@ const TOPICS = [
   { title: "IA & Datos", description: "Inteligencia artificial, machine learning y datos en la práctica." },
 ];
 
-export default function CallForProposalsPage() {
+export default async function CallForProposalsPage() {
+  "use cache";
+  // The deadline is checked hourly (it used to freeze at build time)
+  cacheLife("hours");
+
+  const isOpen = Date.now() < Date.parse(CONF_DATES.cfpDeadline);
+
   return (
     <MotionRoot>
       <div className="min-h-[100dvh] w-full overflow-x-clip bg-black">
@@ -46,7 +58,7 @@ export default function CallForProposalsPage() {
         <main className="mx-auto w-full max-w-[1440px] px-8 pt-16">
           <Reveal y={16}>
             <Link
-              className="font-display text-sm font-bold uppercase leading-none text-[#FBF5E7]/60 transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+              className="font-display text-sm leading-none font-bold text-[#FBF5E7]/60 uppercase transition-colors hover:text-[#F5BB03] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
               href={INTERNAL_ROUTES.conf.current}
             >
               ← VOLVER A OWU CONF
@@ -79,8 +91,8 @@ export default function CallForProposalsPage() {
 
               <Reveal delay={0.28} y={18}>
                 <p className="mt-6 border-l-2 border-[#F5BB03] pl-5 text-base leading-7 text-[#FBF5E7]/80">
-                  Fecha límite para enviar propuestas:{" "}
-                  <strong className="font-display font-bold uppercase text-[#F5BB03]">15 de septiembre</strong>
+                  {isOpen ? "Fecha límite para enviar propuestas: " : "La convocatoria cerró el "}
+                  <strong className="font-display font-bold text-[#F5BB03] uppercase">15 de septiembre</strong>
                 </p>
               </Reveal>
 
@@ -89,7 +101,7 @@ export default function CallForProposalsPage() {
               </Reveal>
 
               <Reveal delay={0.32} y={20}>
-                <h2 className="mt-10 font-display text-xl font-bold uppercase leading-none text-[#FBF5E7] min-[1440px]:text-2xl">
+                <h2 className="mt-10 font-display text-xl leading-none font-bold text-[#FBF5E7] uppercase min-[1440px]:text-2xl">
                   Temas de interés
                 </h2>
               </Reveal>
@@ -112,8 +124,8 @@ export default function CallForProposalsPage() {
 
               <Reveal delay={0.5} y={20}>
                 <p className="mt-10 border-l-2 border-[#F5BB03] pl-5 text-base leading-7 text-[#FBF5E7]/70">
-                  Las charlas se presentan en un único track, así que buscamos temas lo suficientemente amplios para
-                  una audiencia diversa.
+                  Las charlas se presentan en un único track, así que buscamos temas lo suficientemente amplios para una
+                  audiencia diversa.
                 </p>
               </Reveal>
             </div>
