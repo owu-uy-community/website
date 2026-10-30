@@ -31,6 +31,7 @@ export const SPONSORS_2026: Sponsor[] = [
   { name: "Streaver", logo: "/images/conf/sponsors/streaver.svg", website: "https://www.streaver.com/" },
   { name: "Trupropel", logo: "/images/conf/sponsors/trupropel.svg", website: "https://www.trupropel.com/" },
   { name: "Tryolabs", logo: "/images/conf/sponsors/tryolabs.svg", website: "https://tryolabs.com/" },
+  { name: "Universidad de Montevideo", logo: "/images/conf/sponsors/um.svg", website: "https://www.um.edu.uy/" },
   {
     name: "Universidad ORT Uruguay",
     logo: "/images/conf/sponsors/ort.webp",
