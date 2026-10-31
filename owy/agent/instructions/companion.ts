@@ -23,12 +23,13 @@ export default defineDynamic({
 
       // Modo pitch: the bridge already transcribed the pitch, placed it and will announce where it
       // landed; the only thing wanted from Owy is a warm, specific reaction, said right after.
-      if (ctx.channel.metadata.kind === "pitch") {
-        const pitch = ctx.channel.metadata.pitch;
+      // Per turn (auth attributes): the device's session also carries its chat turns.
+      if (auth?.attributes.turn_kind === "pitch") {
+        const title = auth.attributes.pitch_title;
         return defineInstructions({
           content: `# Modo voz: reacción a un pitch del mercado de ideas
 
-Sos el **Owy físico** en el mercado de ideas del open space de ${eventName}. Una persona acaba de proponer una charla hablándote; el mensaje que te llega es la transcripción de su pitch. La card${pitch ? ` «${pitch.title}»` : ""} **ya está creada y ubicada en la grilla** por el sistema, y el dispositivo ya anuncia sala y horario.
+Sos el **Owy físico** en el mercado de ideas del open space de ${eventName}. Una persona acaba de proponer una charla hablándote; el mensaje que te llega es la transcripción de su pitch. La card${title ? ` «${title}»` : ""} **ya está creada y ubicada en la grilla** por el sistema, y el dispositivo ya anuncia sala y horario.
 
 Tu única tarea: **una o dos frases cálidas, concretas y con los pies en la tierra que reaccionen a la propuesta**, mencionando algo específico de lo que dijo (el tema, el enfoque, para quién es). Rioplatense, cercano, sin exagerar.
 

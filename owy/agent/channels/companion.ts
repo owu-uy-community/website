@@ -23,6 +23,11 @@ import { verifyOwuKey } from "../lib/owu-api";
  * Staff status is per turn: the device toggles staff mode with its PIN page,
  * and `agent/lib/staff.ts` already understands the `companion` /
  * `companion-staff` authenticators.
+ *
+ * Anything that changes from turn to turn travels in the turn's auth
+ * attributes (`session.auth.current`), never in channel state: `send(…, { state })`
+ * only seeds a session when the device has none, and a device's session spans
+ * many taps (until `/reset`).
  */
 
 /** What the bridge already made of a spoken pitch (modo pitch); the card is on the board when this arrives. */
@@ -51,8 +56,6 @@ export interface CompanionState {
   eventName: string | null;
   /** Epoch ms of the last accepted proposal from this device (kiosk cooldown). */
   lastProposalAt: number | null;
-  kind: "chat" | "pitch";
-  pitch: PitchContext | null;
 }
 
 /**
@@ -86,7 +89,7 @@ function ndjson(events: ReadableStream<unknown>): ReadableStream<Uint8Array> {
   );
 }
 
-const initialState: CompanionState = { deviceId: "", eventName: null, lastProposalAt: null, kind: "chat", pitch: null };
+const initialState: CompanionState = { deviceId: "", eventName: null, lastProposalAt: null };
 
 export default defineChannel({
   turnPolicy: "steer",
@@ -104,8 +107,6 @@ export default defineChannel({
       deviceId: state.deviceId,
       eventName: state.eventName,
       lastProposalAt: state.lastProposalAt,
-      kind: state.kind,
-      pitch: state.pitch,
     };
   },
 
@@ -129,15 +130,13 @@ export default defineChannel({
           attributes: {
             device_id: deviceId,
             marketplace_open: body.marketplaceOpen ? "true" : "false",
+            // Per turn: a chat turn and a pitch reaction share the device's session.
+            turn_kind: body.kind,
+            pitch_title: body.kind === "pitch" ? (body.pitch?.title ?? "") : "",
           },
         },
-        state: {
-          deviceId,
-          eventName: body.eventName ?? null,
-          lastProposalAt: null,
-          kind: body.kind,
-          pitch: body.kind === "pitch" ? (body.pitch ?? null) : null,
-        },
+        // Seeds a new session only (an existing one keeps its state, e.g. the proposal cooldown).
+        state: { deviceId, eventName: body.eventName ?? null, lastProposalAt: null },
         title: `Owy físico · ${deviceId}`,
       });
       return Response.json({ sessionId: session.id, streamIndex: session.id === current?.id ? streamIndex : 0 });
