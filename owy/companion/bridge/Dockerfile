@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Owy Companion bridge. Built from the repo root (the pitch clips manifest lives in public/):
+# Owy Companion bridge. Built from the repo root (the pre-rendered clips live in public/):
 #   docker compose -f owy/companion/bridge/compose.yaml up -d --build
 # Only what the bridge reads at runtime gets in (Dockerfile.dockerignore is an allowlist):
 # no .env files, no firmware secrets — compose passes those in at run time.
@@ -20,7 +20,8 @@ COPY owy/package.json owy/tsconfig.json ./
 COPY owy/agent ./agent
 COPY owy/companion/bridge/src ./companion/bridge/src
 COPY owy/companion/bridge/prompts ./companion/bridge/prompts
-COPY public/companion-audio/clips/manifest.json /app/public/companion-audio/clips/manifest.json
+# Pitch cue durations + the fallback lines played through the device when there is no network.
+COPY public/companion-audio/clips /app/public/companion-audio/clips
 # The web bridge writes its local-preview rendezvous file here.
 RUN mkdir -p companion/.eve && chown node:node companion/.eve
 USER node

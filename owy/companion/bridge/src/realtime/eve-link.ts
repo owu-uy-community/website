@@ -22,7 +22,11 @@ export interface EveLinkOptions {
   apiKey?: string | null;
   logger: Logger;
   fetch?: typeof fetch;
-  /** Hard cap for one turn (model + tools) before the bridge gives up. */
+  /**
+   * Hard cap for one turn (POST + model + tools) before the bridge gives up.
+   * Must fit inside the voice turn's thinking window (30 s), so the device hears
+   * an apology instead of timing out on its own.
+   */
   turnTimeoutMs?: number;
 }
 
@@ -77,28 +81,33 @@ export class EveLink {
   constructor(private readonly options: EveLinkOptions) {
     this.fetchImpl = options.fetch ?? fetch;
     this.log = options.logger;
-    this.turnTimeoutMs = options.turnTimeoutMs ?? 90_000;
+    this.turnTimeoutMs = options.turnTimeoutMs ?? 25_000;
     this.base = options.url.replace(/\/+$/, "");
     this.apiKey = options.apiKey ?? null;
   }
 
   async turn(deviceId: string, text: string, options: EveTurnOptions): Promise<EveTurnResult> {
     const started = Date.now();
-    const accepted = (await this.json(`/companion/${encodeURIComponent(deviceId)}/turns`, {
-      text,
-      staff: options.staff,
-      marketplaceOpen: options.marketplaceOpen,
-      eventName: options.eventName,
-      ...(options.kind ? { kind: options.kind } : {}),
-      ...(options.pitch ? { pitch: options.pitch } : {}),
-    })) as { sessionId: string; streamIndex: number };
-
+    // One deadline for the whole turn, the POST included (a slow POST used to add 20 s on top).
     const controller = new AbortController();
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort, { once: true });
     const deadline = setTimeout(() => controller.abort(), options.timeoutMs ?? this.turnTimeoutMs);
 
     try {
+      const accepted = (await this.json(
+        `/companion/${encodeURIComponent(deviceId)}/turns`,
+        {
+          text,
+          staff: options.staff,
+          marketplaceOpen: options.marketplaceOpen,
+          eventName: options.eventName,
+          ...(options.kind ? { kind: options.kind } : {}),
+          ...(options.pitch ? { pitch: options.pitch } : {}),
+        },
+        controller.signal
+      )) as { sessionId: string; streamIndex: number };
+
       const response = await this.fetchImpl(
         `${this.base}/companion/sessions/${encodeURIComponent(accepted.sessionId)}/stream?startIndex=${accepted.streamIndex}`,
         { headers: this.headers(), signal: controller.signal }
@@ -168,12 +177,13 @@ export class EveLink {
     return this.apiKey ? { "x-api-key": this.apiKey } : {};
   }
 
-  private async json(path: string, body: unknown): Promise<unknown> {
+  private async json(path: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
+    const timeout = AbortSignal.timeout(10_000);
     const response = await this.fetchImpl(`${this.base}${path}`, {
       method: "POST",
       headers: { ...this.headers(), "content-type": "application/json" },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(20_000),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
     });
     if (!response.ok) throw new Error(`eve ${path} → ${response.status} ${(await response.text()).slice(0, 200)}`);
     return response.json();

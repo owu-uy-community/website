@@ -30,8 +30,9 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { VoiceTurn, type VoiceLink } from "./device/pipeline";
 import { faceForPhase } from "./face";
 import { createLogger, type Logger } from "./log";
+import { FALLBACK_LINES, gatewayCascade, loadFallbackClips, type Cascade, type FallbackClip } from "./realtime/cascade";
 import { EveLink } from "./realtime/eve-link";
-import { resolveRealtimeProvider, type RealtimeProvider } from "./realtime/models";
+import { parseModelSpecs, resolveRealtimeProvider, type RealtimeProvider } from "./realtime/models";
 import { resolveActiveEvent } from "../../../agent/lib/board";
 import { owuApi, type OwuApi, type PlacedTrackResponse } from "../../../agent/lib/owu-api";
 import {
@@ -47,7 +48,7 @@ import {
   type PitchKind,
 } from "./pitch";
 import { loadPromptBundle, loadVoiceOfOwyPrompt } from "./realtime/prompt";
-import { NodeRealtimeSession } from "./realtime/session";
+import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
 import {
   buildCompanionToolSet,
   executeToolByName,
@@ -69,6 +70,45 @@ import {
  */
 
 const OUTPUT_FRAME_BYTES = bytesForMs(32, DEVICE_SAMPLE_RATE); // 1024 B, the device's own chunk size
+
+/**
+ * How a turn is answered. Fixed when the tap is accepted (a socket that comes
+ * up mid-utterance serves the next turn, never two answers to one), except that
+ * a realtime turn whose socket dies moves to the cascade once.
+ *   realtime: the primary realtime model · fallback: a backup realtime model
+ *   cascade: recorded + transcribed + answered + spoken by plain gateway calls
+ *   offline: not even that worked; a pre-rendered line · pitch: modo pitch
+ */
+export type TurnPath = "realtime" | "fallback" | "cascade" | "offline" | "pitch";
+
+/** A connect already under way gets this long before a physical tap is answered through the cascade instead. */
+const ACCEPT_WAIT_MS = 1_500;
+/** Transcribe + eve/text model + first TTS audio, with room for a slow network. */
+const CASCADE_THINKING_MS = 45_000;
+/** The gateway caps a realtime session at 25 min; renew it between turns well before. */
+const ROTATE_AFTER_MS = 20 * 60_000;
+const KEEP_WARM_EVERY_MS = 30_000;
+/** A voice turn's own recorder: a pause this long ends the utterance (the realtime model has its own VAD). */
+const TURN_LIMITS = { silenceMs: 900, maxMs: 30_000, minSpeechMs: 300 };
+/** Provider errors that are noise, not a broken turn (an OpenAI commit after its server VAD already committed, etc.). */
+const BENIGN_ERROR_CODES = new Set([
+  "input_audio_buffer_commit_empty",
+  "conversation_already_has_active_response",
+  "response_cancel_not_active",
+]);
+/** Cascade TTS has no transcript marks: roughly how fast Owy speaks, to cue faces per sentence. */
+// ponytail: fixed speaking rate; use TTS word timings if a provider streams them.
+const SPOKEN_CHARS_PER_SECOND = 14;
+
+interface CascadeRun {
+  turn: VoiceTurn;
+  epoch: number;
+  abort: AbortController;
+  /** The answer is on its way (submitted once: a pause, the device's end of audio, or eve finishing). */
+  submitted: boolean;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Gemini Live (direct) takes the device's 16 kHz as-is; the AI Gateway's realtime endpoint wants 24 kHz PCM16. */
 export function sessionInputRate(provider: RealtimeProvider | undefined): number {
@@ -157,6 +197,12 @@ export interface SharedRuntime {
   expressions?: { classify?: Classifier };
   /** Modo pitch (the open space's marketplace); absent = a pitch run ends with "sin configurar". */
   pitch?: PitchRuntime;
+  /** Realtime models tried after the primary (COMPANION_REALTIME_FALLBACKS); each device owns its codecs. */
+  createFallbackProviders?: () => RealtimeProvider[];
+  /** The voice loop without a realtime model; absent = a tap with no live model is declined (old behaviour). */
+  cascade?: Cascade;
+  /** Pre-rendered fallback lines, 16 kHz PCM (`pnpm companion:clips`). */
+  fallbackClips?: Partial<Record<FallbackClip, Buffer>>;
 }
 
 export interface PitchRuntime {
@@ -238,6 +284,28 @@ export class DeviceSession {
   private turn: VoiceTurn | null = null;
   private requestEpoch = 0;
   private conversationId: string = randomUUID();
+  /** This turn's microphone, kept until the turn ends: what the cascade answers when the realtime model fails it. */
+  private recorder: PitchRecorder | null = null;
+  private path: TurnPath = "realtime";
+  private lastPath: TurnPath | null = null;
+  /** Last sign of life from the realtime model this turn (an event, or a tool it called finishing); 0 = none yet. */
+  private lastModelAt = 0;
+  /** When the person last paused (the turn recorder's VAD). */
+  private pausedAt = 0;
+  /** Tools the realtime model is waiting on (eve thinking is not the socket going quiet). */
+  private toolsRunning = 0;
+  private watchdog: NodeJS.Timeout | null = null;
+  private cascadeRun: CascadeRun | null = null;
+  private keepWarm: NodeJS.Timeout | null = null;
+  /** The device's native-API link is up (keep-warm only works for a board that can tap). */
+  private linkUp = false;
+  /** Tools the model ran this turn: a turn that already acted is never replayed on another road. */
+  private toolsRan = 0;
+  private turnStartedAt = 0;
+  private listenEndedAt = 0;
+  private firstAudioAt = 0;
+  /** Input transcript per item: google ≥4.0.84 sends the utterance so far (replace), others deltas (append). */
+  private readonly inputItems = new Map<string, string>();
 
   private readonly resampler = new Pcm16Resampler(GEMINI_OUTPUT_SAMPLE_RATE, DEVICE_SAMPLE_RATE);
   private readonly micResampler: Pcm16Resampler;
@@ -251,6 +319,8 @@ export class DeviceSession {
   /** Transcript of this turn's earlier responses (a tool response, then the spoken one). */
   private spokenText = "";
   private inputTranscript = "";
+  /** Shared with the cascade's local brain (its tool calls are authorized like the realtime model's). */
+  private runtime: ToolRuntime | null = null;
   private outputTranscript = "";
   private discardedResponseId: string | null = null;
   private sawAudioThisTurn = false;
@@ -308,6 +378,7 @@ export class DeviceSession {
       },
       logger: this.log,
     };
+    this.runtime = runtime;
     if (this.shared.brain === "eve" && this.shared.eve) {
       // Ears and mouth only: device-local tools + the line to the eve Owy.
       const local = buildCompanionToolSet(new Map(), runtime);
@@ -321,25 +392,37 @@ export class DeviceSession {
     }
 
     const toolDefinitions = await experimental_getRealtimeToolDefinitions({ tools: this.tools });
-    const sessionConfig = buildSessionConfig({
-      provider: this.provider,
-      instructions: this.shared.instructions,
-      voice: this.shared.config.COMPANION_VOICE,
-      tools: toolDefinitions,
-      modality: "audio",
-    });
+    const config = this.shared.config;
+    const configFor = (provider: RealtimeProvider) =>
+      buildSessionConfig({
+        provider,
+        instructions: this.shared.instructions,
+        // Gemini voice names do not exist on other vendors.
+        voice: isGeminiModel(provider.modelId) ? config.COMPANION_VOICE : config.COMPANION_FALLBACK_VOICE,
+        tools: toolDefinitions,
+        modality: "audio",
+      });
+    // The mic resampler is per device, so every tier must take the primary's input rate.
+    const fallbacks = (this.shared.createFallbackProviders?.() ?? [])
+      .filter((provider) => {
+        const same = sessionInputRate(provider) === sessionInputRate(this.provider);
+        if (!same) this.log.warn(`respaldo ${provider.spec} descartado: otra tasa de micrófono que ${this.provider.spec}`);
+        return same;
+      })
+      .map((provider) => ({ provider, sessionConfig: configFor(provider) }));
 
     this.session = new NodeRealtimeSession({
       provider: this.provider,
-      sessionConfig,
+      sessionConfig: configFor(this.provider),
+      fallbacks,
+      tokenTimeoutMs: config.COMPANION_TOKEN_TIMEOUT_MS,
+      connectTimeoutMs: config.COMPANION_REALTIME_CONNECT_MS,
       logger: this.log.child("gemini"),
       onToolCall: ({ callId, name, args }) => this.executeTool(callId, name, args),
       onEvent: (event) => this.onModelEvent(event),
-      onClose: () => {
-        // A dropped socket mid-turn must not leave the device hanging.
-        this.turn?.fail("server_error", "Se cortó la conexión con el modelo");
-      },
-      onError: () => this.turn?.fail("server_error", "No pude conectar con el modelo"),
+      // Only a socket that was connected reports here; failed attempts just move to the next tier.
+      onClose: ({ code, reason }) => this.onRealtimeDropped(`socket cerrado ${code ?? "?"}${reason ? ` ${reason}` : ""}`),
+      onError: (error) => this.onRealtimeDropped(error.message),
     });
 
     this.device = await (this.options.connectDevice ?? CompanionDevice.connect)(
@@ -349,9 +432,14 @@ export class DeviceSession {
         onRequestStop: () => this.onRequestStop(),
         onAudio: (chunk) => this.onDeviceAudio(chunk),
         onPitchSubmit: () => this.submitPitch("submit"),
-        onConnected: () => this.device?.setFace("idle"),
+        onConnected: () => {
+          this.linkUp = true;
+          this.device?.setFace("idle");
+        },
         onDisconnected: () => {
+          this.linkUp = false;
           this.requestEpoch++;
+          this.cancelCascade();
           this.pacer?.stop();
           this.pacer = null;
           this.turn?.finish();
@@ -367,20 +455,40 @@ export class DeviceSession {
       return;
     }
 
+    this.linkUp = true;
     if (this.options.lazyRealtime) void this.ensureSession();
-    else await this.ensureSession();
+    else {
+      await this.ensureSession();
+      // Physical Owys keep a warm session: the gateway closes idle ones at 5 min and caps them at 25.
+      this.keepWarm = setInterval(() => this.warmTick(), KEEP_WARM_EVERY_MS);
+    }
     if (this.stopped) return;
     this.device.setFace("idle");
     this.log.info("ready");
   }
 
-  private async ensureSession(): Promise<void> {
+  /** Between turns: reconnect a dropped session, renew an old one. */
+  private warmTick(): void {
+    const session = this.session;
+    if (this.stopped || !session || !this.linkUp || (this.turn && !this.turn.finished)) return;
+    if (session.status === "connecting") return;
+    const age = session.connectedAt ? Date.now() - session.connectedAt : 0;
+    if (age > ROTATE_AFTER_MS) this.log.info(`realtime: renuevo la sesión (${Math.round(age / 60_000)} min)`);
+    if (!session.isConnected || session.goAwayPending || age > ROTATE_AFTER_MS) void this.ensureSession(age > ROTATE_AFTER_MS);
+  }
+
+  /** A live, connected realtime session that will not go away mid-turn. */
+  private realtimeLive(): boolean {
+    return !!this.session?.isConnected && !this.session.goAwayPending;
+  }
+
+  private async ensureSession(renew = false): Promise<void> {
     if (this.stopped) return;
     const session = this.session;
     if (!session) return;
     // A tap can land while the boot-time connect is still in flight: wait for it.
     if (session.status === "connecting") await session.whenSettled();
-    if (session.isConnected && !session.goAwayPending) return;
+    if (session.isConnected && !session.goAwayPending && !renew) return;
     try {
       if (session.status === "disconnected" || session.status === "error") await session.connect();
       else await session.reconnect();
@@ -400,21 +508,44 @@ export class DeviceSession {
     // The device has already moved to a new run: close ours without telling it.
     if (this.turn && !this.turn.finished) this.turn.finish({ notify: false });
     this.cancelPitch();
+    this.cancelCascade();
     // Modo pitch: recording needs no model; warm it meanwhile for the announcement.
     const kind: PitchKind | null = isPitchRun(request) ? (this.pendingName ? "name" : "pitch") : null;
+    let path: TurnPath = "pitch";
     if (kind) void this.ensureSession();
     else {
-      await this.ensureSession();
+      // Never hold a tap on the model when the cascade can answer: a connect already
+      // under way gets a moment, then the turn starts either way. Browsers (and
+      // bridges without the cascade) still wait for their session, as before.
+      const session = this.session;
+      if (!this.shared.cascade || this.options.lazyRealtime) await this.ensureSession();
+      else if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(ACCEPT_WAIT_MS)]);
       if (epoch !== this.requestEpoch) return;
-      if (!this.session?.isConnected) {
+      const live = this.realtimeLive();
+      if (!live && !this.shared.cascade) {
         this.log.warn("declining pipeline: no realtime session");
         device.declineRequest();
         device.setFace("error");
         return;
       }
+      // Test fakes have no provider and no tiers: they count as the primary.
+      if (live) path = (this.session?.tierSpec ?? this.provider?.spec) === this.provider?.spec ? "realtime" : "fallback";
+      else {
+        path = "cascade";
+        this.log.warn(`sin sesión realtime (${this.session?.status ?? "ninguna"}): este turno va por la cascada`);
+        // Warm for the next turn; this one is already answered without it.
+        void this.ensureSession();
+      }
     }
 
     if (request.conversationId) this.conversationId = request.conversationId;
+    this.path = path;
+    this.lastModelAt = this.pausedAt = 0;
+    this.stopWatchdog();
+    this.toolsRan = this.toolsRunning = 0;
+    this.turnStartedAt = Date.now();
+    this.listenEndedAt = this.firstAudioAt = 0;
+    this.inputItems.clear();
     this.inputTranscript = "";
     this.outputTranscript = "";
     this.discardedResponseId = null;
@@ -442,9 +573,14 @@ export class DeviceSession {
       logger: this.log,
       conversationId: this.conversationId,
       // A pitch gives the person time to start and the bridge time to transcribe and place it.
-      timers: kind ? { noSpeechMs: 15_000, thinkingMs: 60_000 } : undefined,
+      timers: kind
+        ? { noSpeechMs: 15_000, thinkingMs: 60_000 }
+        : path === "cascade"
+          ? { thinkingMs: CASCADE_THINKING_MS }
+          : undefined,
       onPhase: (phase) => {
         this.options.onFace?.(faceForPhase(phase));
+        if (phase === "thinking") this.listenEndedAt = Date.now();
         if (phase === "finished") {
           this.pacer?.stop();
           this.pacer = null;
@@ -452,6 +588,11 @@ export class DeviceSession {
           this.expressions = null;
           this.script = null;
           if (this.pitch?.turn === this.turn) this.cancelPitch();
+          if (this.cascadeRun?.turn === this.turn) this.cancelCascade();
+          this.recorder?.stop();
+          this.recorder = null;
+          this.stopWatchdog();
+          this.logTurn();
           this.promptPendingName();
           // RUN_END precedes physical playback completion. Firmware owns
           // the return to idle and the wake-word indicator.
@@ -472,10 +613,329 @@ export class DeviceSession {
         // prevents a late reply/tool call from being attached to a new turn.
         this.session?.resetConversation();
         this.conversationId = randomUUID();
+        // eve keeps working on a turn nobody waits for, and the next POST would find it busy.
+        this.cancelEveTurn();
+        if (!this.options.lazyRealtime) void this.ensureSession();
       },
     });
     this.turn.start();
     if (kind) this.startPitch(kind, this.turn, epoch);
+    else this.startTurnRecorder(this.turn, epoch);
+  }
+
+  // ── Fallbacks: the turn's recorder, the realtime watchdog, the cascade ───
+
+  /**
+   * Every voice turn is also recorded here (it costs a buffer): when the realtime
+   * model fails the turn, the cascade answers from this audio. On the cascade path
+   * its speech detection is what drives the device (STT_VAD_START, end of utterance).
+   */
+  private startTurnRecorder(turn: VoiceTurn, epoch: number): void {
+    if (!this.shared.cascade) return;
+    if (this.path === "cascade") this.cascadeRun = { turn, epoch, abort: new AbortController(), submitted: false };
+    const recorder = new PitchRecorder({
+      limits: TURN_LIMITS,
+      rmsThreshold: this.shared.config?.COMPANION_PITCH_VAD_RMS,
+      repeatSilence: true,
+      onSpeechStart: () => {
+        // No model VAD on the cascade: the device's idle guard cancels at 9 s without this.
+        if (this.recorder === recorder && this.path === "cascade") turn.markSpeechStarted();
+      },
+      onDone: () => {
+        if (this.recorder === recorder) this.onTurnPause(turn);
+      },
+    });
+    this.recorder = recorder;
+    recorder.start();
+    if (this.path !== "cascade") this.watchdog = setInterval(() => this.checkRealtime(turn), 250);
+  }
+
+  /** The person paused (or hit the cap). */
+  private onTurnPause(turn: VoiceTurn): void {
+    if (turn !== this.turn || turn.finished || turn.phase !== "listening") return;
+    if (this.path === "cascade") return this.submitCascade();
+    this.pausedAt = Date.now();
+  }
+
+  /**
+   * A half-open socket or a stalled gateway looks connected and says nothing.
+   * A live model reacts soon after the person pauses (VAD, transcript, a tool
+   * call, audio) and starts answering soon after the turn is handed over; when
+   * it does not, the turn moves to the cascade. A tool it waits on (eve) stops
+   * the clock: thinking is not silence.
+   */
+  private checkRealtime(turn: VoiceTurn): void {
+    if (turn !== this.turn || turn.finished || this.path === "cascade" || turn.phase === "speaking" || turn.deferred)
+      return this.stopWatchdog();
+    if (this.toolsRunning > 0) return;
+    const ack = this.shared.config?.COMPANION_ACK_MS ?? 2500;
+    const now = Date.now();
+    const quiet = now - Math.max(this.lastModelAt, this.pausedAt, this.listenEndedAt);
+    if (turn.phase === "listening") {
+      if (this.recorder?.pausedAfterSpeech && quiet >= ack) this.degrade(turn, "el modelo no reaccionó a la pausa");
+      // Someone talking for a long while with not one transcript or VAD event: the socket is gone.
+      else if (this.lastModelAt && now - this.lastModelAt >= 6 * ack) this.degrade(turn, "el modelo dejó de dar señales");
+    } else if (turn.phase === "thinking" && quiet >= 2 * ack) this.degrade(turn, "el modelo no empezó a contestar");
+  }
+
+  private stopWatchdog(): void {
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = null;
+  }
+
+  /** A live socket broke (closed, errored) or went silent. */
+  private onRealtimeDropped(reason: string): void {
+    const turn = this.turn;
+    if (!turn || turn.finished || this.path === "cascade") {
+      // Between turns: reconnect now so the next tap finds a warm session.
+      if (!this.options.lazyRealtime && !this.stopped && this.linkUp) void this.ensureSession();
+      return;
+    }
+    if (turn.phase === "speaking" || turn.deferred || this.pacer) return this.finishSpokenSoFar(turn, reason);
+    if (this.pitch?.turn === turn) {
+      if (turn.phase === "thinking") turn.fail("server_error", "Se cortó la conexión con el modelo");
+      return;
+    }
+    this.degrade(turn, reason);
+  }
+
+  /** Owy was already talking when the socket died: end on what arrived, with the full answer as a caption. */
+  private finishSpokenSoFar(turn: VoiceTurn, reason: string): void {
+    this.log.warn(`se cortó el modelo mientras Owy hablaba (${reason}); termino con lo que llegó`);
+    this.stopWatchdog();
+    if (this.eveAnswer) this.pushCaption(this.eveAnswer);
+    this.eveAnswer = null;
+    this.finishSpeaking(turn, this.outputTranscript.trim());
+    this.session?.resetConversation();
+    if (!this.options.lazyRealtime) void this.ensureSession();
+  }
+
+  /** Moves a realtime turn whose model failed it onto the cascade (once). */
+  private degrade(turn: VoiceTurn, reason: string): void {
+    if (turn !== this.turn || turn.finished || this.path === "cascade") return;
+    this.stopWatchdog();
+    // Late replies from the broken session must not reach this turn; warm a new one for the next.
+    this.session?.resetConversation();
+    void this.ensureSession();
+    if (!this.shared.cascade) return turn.fail("server_error", "Se cortó la conexión con el modelo");
+    this.log.warn(`la sesión realtime falló a mitad del turno (${reason}); sigue la cascada`);
+    this.path = "cascade";
+    const run: CascadeRun = { turn, epoch: this.requestEpoch, abort: new AbortController(), submitted: false };
+    this.cascadeRun = run;
+    if (turn.phase === "listening") {
+      // The person may still be talking: answer once they pause.
+      if (this.recorder?.pausedAfterSpeech) this.submitCascade();
+      else if (this.recorder?.heardSpeech) turn.markSpeechStarted();
+      return;
+    }
+    // Thinking: the model already took the words.
+    turn.extendThinking(CASCADE_THINKING_MS);
+    // eve answers without the socket; `hablar_con_owy` speaks its text through the cascade.
+    if (this.eveAbort) return;
+    if (this.eveAnswer) {
+      run.submitted = true;
+      const answer = this.eveAnswer;
+      this.eveAnswer = null;
+      void this.speakText(turn, answer, run.abort.signal, () => this.cascadeIsCurrent(run));
+      return;
+    }
+    // A turn that already acted (a card created…) is never replayed.
+    if (this.toolsRan > 0) {
+      run.submitted = true;
+      void this.speakFallback(run, "retry");
+      return;
+    }
+    this.submitCascade();
+  }
+
+  /** The utterance is complete: transcribe, answer and speak it without a realtime model. */
+  private submitCascade(): void {
+    const run = this.cascadeRun;
+    const turn = this.turn;
+    const recorder = this.recorder;
+    if (!run || !turn || run.turn !== turn || run.submitted || turn.finished) return;
+    if (!recorder?.heardSpeech) {
+      // Nothing was said: end quietly, like the no-speech window.
+      turn.finish();
+      return;
+    }
+    run.submitted = true;
+    recorder.stop();
+    if (turn.phase === "listening") turn.endListening("");
+    turn.extendThinking(CASCADE_THINKING_MS);
+    void this.runCascade(run, recorder.wav()).catch((error: unknown) => {
+      this.log.error("cascada falló", error);
+      if (this.cascadeIsCurrent(run)) void this.speakFallback(run, "offline");
+    });
+  }
+
+  private async runCascade(run: CascadeRun, wav: Buffer): Promise<void> {
+    const cascade = this.shared.cascade;
+    if (!cascade) return;
+    const signal = run.abort.signal;
+    let text: string;
+    try {
+      text = await cascade.transcribe(wav, signal);
+    } catch (error) {
+      if (!this.cascadeIsCurrent(run)) return;
+      this.log.warn("cascada: no pude transcribir", error);
+      return this.speakFallback(run, "offline");
+    }
+    if (!this.cascadeIsCurrent(run)) return;
+    if (!text) return this.speakFallback(run, "retry");
+    this.log.info(`escuché (cascada): "${text}"`);
+    this.inputTranscript = text;
+    this.options.onTranscript?.("input", text);
+    this.expressions?.react(text);
+    run.turn.heard(text);
+
+    let answer: string;
+    try {
+      answer =
+        this.shared.brain === "eve" && this.shared.eve
+          ? await this.askEve(text, signal)
+          : await cascade.answer({ text, instructions: this.shared.instructions, tools: this.cascadeTools(), signal });
+    } catch (error) {
+      if (!this.cascadeIsCurrent(run)) return;
+      this.log.warn("cascada: no hubo respuesta", error);
+      return this.speakFallback(run, "offline");
+    }
+    if (!this.cascadeIsCurrent(run)) return;
+    if (!answer) return this.speakFallback(run, "retry");
+    await this.speakText(run.turn, answer, signal, () => this.cascadeIsCurrent(run));
+  }
+
+  /** The local brain's tools, authorized exactly like the realtime model's calls (browser grants deny writes). */
+  private cascadeTools(): ToolSet {
+    return Object.fromEntries(
+      Object.entries(this.tools).map(([name, definition]) => {
+        const execute = definition.execute;
+        if (!execute) return [name, definition];
+        return [
+          name,
+          {
+            ...definition,
+            execute: async (input: unknown, options: Parameters<typeof execute>[1]) => {
+              const denial = this.options.authorizeTool?.(name);
+              if (denial) return { ok: false, denied: true, error: denial };
+              this.toolsRan++;
+              this.log.info(`tool ${name} (cascada) ${JSON.stringify(input)}`);
+              return execute(input as never, options);
+            },
+          },
+        ];
+      })
+    ) as ToolSet;
+  }
+
+  /** Streams TTS of `text` through the normal speaking path; the text goes on screen if there is no voice. */
+  private async speakText(turn: VoiceTurn, text: string, signal: AbortSignal, isCurrent: () => boolean): Promise<void> {
+    const cascade = this.shared.cascade;
+    if (!isCurrent()) return;
+    this.pushCaption(text);
+    this.options.onTranscript?.("output", text);
+    this.expressions?.write(text, true);
+    let started = false;
+    try {
+      if (!cascade) throw new Error("sin cascada");
+      for await (const pcm of cascade.speak(text, signal)) {
+        if (!isCurrent()) return;
+        if (!started) {
+          started = true;
+          this.startSpeaking(turn, text);
+        }
+        for (const frame of this.chunker.push(pcm)) this.pacer?.push(frame);
+        this.queuedBytes += pcm.length;
+        const chars = Math.round((this.queuedBytes / (DEVICE_SAMPLE_RATE * 2)) * SPOKEN_CHARS_PER_SECOND);
+        this.expressions?.queued(this.queuedBytes, Math.min(text.length, chars));
+      }
+    } catch (error) {
+      if (!isCurrent()) return;
+      this.log.warn("cascada: sin voz; la respuesta va como texto", error);
+      if (!started) return this.showAndFinish(turn, text);
+    }
+    if (!isCurrent()) return;
+    if (!started) return this.showAndFinish(turn, text);
+    this.expressions?.queued(this.queuedBytes, text.length);
+    this.finishSpeaking(turn, text);
+  }
+
+  /** A pre-rendered line when there is one (no network needed), the voice otherwise, the screen at worst. */
+  private async speakFallback(run: CascadeRun, clip: FallbackClip): Promise<void> {
+    if (!this.cascadeIsCurrent(run)) return;
+    const line = FALLBACK_LINES[clip];
+    const pcm = this.shared.fallbackClips?.[clip];
+    if (clip === "offline") this.path = "offline";
+    const showGrid = () => {
+      if (clip === "offline" && this.shared.gridUrl) this.device?.showQr(this.shared.gridUrl, "La grilla, en tu celu");
+    };
+    if (pcm) {
+      this.pushCaption(line);
+      this.startSpeaking(run.turn, line);
+      for (const frame of this.chunker.push(pcm)) this.pacer?.push(frame);
+      this.finishSpeaking(run.turn, line, showGrid);
+      return;
+    }
+    if (clip !== "offline") return this.speakText(run.turn, line, run.abort.signal, () => this.cascadeIsCurrent(run));
+    this.showAndFinish(run.turn, line);
+    showGrid();
+  }
+
+  /** No voice at all: the words go on the screen and the run ends cleanly (no error face). */
+  private showAndFinish(turn: VoiceTurn, text: string): void {
+    if (!this.device?.showCaption) this.device?.showText(text);
+    turn.finish();
+  }
+
+  /** Last audio is queued: close the turn once the pacer has played it. */
+  private finishSpeaking(turn: VoiceTurn, speech: string, after?: () => void): void {
+    const tail = this.chunker.flush();
+    if (tail) this.pacer?.push(tail);
+    const pacer = this.pacer;
+    const end = () => {
+      turn.endSpeaking({ continueConversation: false, speech });
+      this.mouth?.flush();
+      this.mouth = null;
+      if (this.pacer === pacer) this.pacer = null;
+      after?.();
+    };
+    if (pacer) pacer.finish(end);
+    else end();
+  }
+
+  private cascadeIsCurrent(run: CascadeRun): boolean {
+    return (
+      !this.stopped &&
+      this.cascadeRun === run &&
+      run.epoch === this.requestEpoch &&
+      this.turn === run.turn &&
+      !run.turn.finished &&
+      !run.abort.signal.aborted
+    );
+  }
+
+  private cancelCascade(): void {
+    this.cascadeRun?.abort.abort();
+    this.cascadeRun = null;
+  }
+
+  /** One line per turn: which road answered and how fast (the netem matrix reads these). */
+  private logTurn(): void {
+    if (!this.turnStartedAt) return;
+    this.lastPath = this.path;
+    const seconds = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+    const ttfa = this.firstAudioAt && this.listenEndedAt ? seconds(this.firstAudioAt - this.listenEndedAt) : "-";
+    this.log.info(`turn path=${this.path} ttfa=${ttfa} total=${seconds(Date.now() - this.turnStartedAt)}`);
+    this.turnStartedAt = 0;
+  }
+
+  /** For the settings UI: which realtime tier is up and how the last turn was answered. */
+  voiceStatus(): { tier: string | null; realtime: SessionStatus; lastPath: TurnPath | null } {
+    return {
+      tier: this.session?.isConnected ? this.session.tierSpec : null,
+      realtime: this.session?.status ?? "disconnected",
+      lastPath: this.lastPath,
+    };
   }
 
   // ── Audio routing ───────────────────────────────────────────────────────
@@ -553,12 +1013,14 @@ export class DeviceSession {
       this.pitch.recorder.push(pcm16k);
       return;
     }
-    this.session?.sendAudio(this.micResampler.process(pcm16k));
+    this.recorder?.push(pcm16k);
+    if (this.path !== "cascade") this.session?.sendAudio(this.micResampler.process(pcm16k));
   }
 
   private async onRequestStop(): Promise<void> {
     this.cancelEveTurn();
     this.cancelPitch();
+    this.cancelCascade();
     this.requestEpoch++;
     // Tap while speaking (or wake-word "stop"): drop the rest of this reply.
     const turn = this.turn;
@@ -569,6 +1031,8 @@ export class DeviceSession {
       turn.finish();
       this.session?.resetConversation();
       this.conversationId = randomUUID();
+      // The next tap should find a warm session, not a cold handshake.
+      if (!this.options.lazyRealtime) void this.ensureSession();
     }
     this.device?.setFace("idle");
   }
@@ -589,6 +1053,10 @@ export class DeviceSession {
       // The browser's "Terminé el pitch" is the second tap.
       if (this.pitch?.turn === turn) {
         this.submitPitch("submit");
+        return;
+      }
+      if (this.path === "cascade") {
+        this.submitCascade();
         return;
       }
       this.session?.commitAudio();
@@ -848,10 +1316,10 @@ export class DeviceSession {
     this.eveAnswer = text;
     if (this.shared.brain === "eve") this.expressions?.write(text, true);
     if (!this.session?.isConnected) {
-      this.log.warn("pitch: sin modelo para hablar; el texto va a la pantalla");
-      this.device?.showText(text);
-      p.turn.finish();
-      return;
+      this.log.warn("pitch: sin modelo realtime para hablar; va por la voz de la cascada");
+      this.script = null;
+      this.eveAnswer = null;
+      return this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
     }
     this.session.sendText(SCRIPT_PREFIX + text);
   }
@@ -894,20 +1362,33 @@ export class DeviceSession {
 
   private onModelEvent(event: RealtimeServerEvent): void {
     const turn = this.turn;
+    if (turn && !turn.finished) {
+      // The cascade owns this turn now; a reconnecting session has nothing to say in it.
+      if (this.path === "cascade") return;
+      this.lastModelAt = Date.now();
+    }
 
     switch (event.type) {
-      case "input-transcription-completed":
+      case "input-transcription-completed": {
         // Gemini transcription can arrive after VAD/commit or even the first
         // response audio. Keep it visible in the shared debugger/log without
         // reopening capture or changing a turn that has already ended.
         if (!turn || turn.finished) return;
         if (turn.phase === "listening" && event.transcript.trim()) turn.markSpeechStarted();
-        this.inputTranscript += event.transcript;
-        this.options.onTranscript?.("input", event.transcript);
+        // google ≥4.0.84 sends the utterance so far per item (replace); other codecs send deltas (append).
+        const previous = this.inputItems.get(event.itemId) ?? "";
+        const next = event.transcript.startsWith(previous) ? event.transcript : previous + event.transcript;
+        const delta = next.slice(previous.length);
+        if (!delta) return;
+        this.inputItems.set(event.itemId, next);
+        this.inputTranscript = [...this.inputItems.values()].join(" ").replace(/\s{2,}/g, " ");
+        // Listeners (the workbench) append what they receive: only the new words.
+        this.options.onTranscript?.("input", delta);
         // With the eve brain the reaction comes from `hablar_con_owy`'s text.
         if (this.shared.brain !== "eve") this.expressions?.react(this.inputTranscript);
         this.log.info(`escuché: "${this.inputTranscript.trim()}"`);
         return;
+      }
 
       case "speech-started":
         turn?.markSpeechStarted();
@@ -981,7 +1462,12 @@ export class DeviceSession {
       }
 
       case "error":
-        turn?.fail("server_error", event.message);
+        if (BENIGN_ERROR_CODES.has(event.code ?? "")) {
+          this.log.info(`aviso del modelo ignorado: ${event.message} (${event.code})`);
+          return;
+        }
+        if (turn && !turn.finished && this.shared.cascade) this.onRealtimeDropped(`error del modelo: ${event.message}`);
+        else turn?.fail("server_error", event.message);
         return;
 
       default:
@@ -1000,42 +1486,78 @@ export class DeviceSession {
       execute: async ({ texto }) => {
         // A bridge script forwarded anyway: hand it back verbatim, no eve round trip.
         if (this.script) return { respuesta: this.script };
-        this.clearEveIdleReset();
-        this.expressions?.react(texto);
-        this.eveAbort?.abort();
-        const abort = new AbortController();
-        this.eveAbort = abort;
-        this.eveAnswer = null;
-        // A read-only web grant denies every write tool; mirror that in eve by
-        // presenting a plain visitor with the marketplace closed.
-        const writes = !this.options.authorizeTool || this.options.authorizeTool("create_track") === null;
+        let text: string;
         try {
-          const result = await eve.turn(this.spec.id, texto, {
-            staff: writes && runtime.isStaff(),
-            marketplaceOpen: writes && runtime.isMarketplaceOpen(),
-            eventName: this.shared.config.COMPANION_EVENT_NAME,
-            onDelta: (text) => {
-              if (!this.toolIsCurrent()) return;
-              this.scheduleEveCaption(text);
-              this.expressions?.write(text);
-            },
-            onTool: (name) => this.log.info(`owy (eve) usa ${name}`),
-            signal: abort.signal,
-          });
-          if (!this.toolIsCurrent()) return { respuesta: "" };
-          this.eveAnswer = result.text;
-          this.pushCaption(result.text);
-          this.expressions?.write(result.text, true);
-          return { respuesta: result.text };
+          text = await this.askEve(texto, undefined, eve, runtime);
         } catch (error) {
-          if (abort.signal.aborted) return { respuesta: "" };
           this.log.error("eve turn failed", error);
+          // The socket died while eve was thinking: nobody will say the model's apology.
+          const run = this.cascadeTakeover();
+          if (run) void this.speakFallback(run, "retry");
           return { error: "Owy no respondió; disculpate en una frase y pedí que lo repitan." };
-        } finally {
-          if (this.eveAbort === abort) this.eveAbort = null;
         }
+        if (!this.toolIsCurrent()) return { respuesta: "" };
+        // The socket died while eve was thinking: eve's answer goes out through the cascade's voice.
+        const run = this.cascadeTakeover();
+        if (run) void this.speakText(run.turn, text, run.abort.signal, () => this.cascadeIsCurrent(run));
+        else this.eveAnswer = text;
+        return { respuesta: text };
       },
     });
+  }
+
+  /** The cascade took over this turn mid-thinking and waits for eve's text (claimed once). */
+  private cascadeTakeover(): CascadeRun | null {
+    const run = this.cascadeRun;
+    if (!run || this.path !== "cascade" || run.submitted || !this.cascadeIsCurrent(run)) return null;
+    run.submitted = true;
+    return run;
+  }
+
+  /**
+   * One eve turn for what the person said; eve's text is the caption (streamed)
+   * and the answer. "" when the turn was abandoned (tap, newer turn).
+   */
+  private async askEve(
+    texto: string,
+    signal?: AbortSignal,
+    eve: EveLink | undefined = this.shared.eve,
+    runtime: ToolRuntime | null = this.runtime
+  ): Promise<string> {
+    if (!eve || !runtime) throw new Error("sin eve");
+    this.clearEveIdleReset();
+    this.expressions?.react(texto);
+    this.eveAbort?.abort();
+    const abort = new AbortController();
+    this.eveAbort = abort;
+    this.eveAnswer = null;
+    // A read-only web grant denies every write tool; mirror that in eve by
+    // presenting a plain visitor with the marketplace closed.
+    const writes = !this.options.authorizeTool || this.options.authorizeTool("create_track") === null;
+    try {
+      const result = await eve.turn(this.spec.id, texto, {
+        staff: writes && runtime.isStaff(),
+        marketplaceOpen: writes && runtime.isMarketplaceOpen(),
+        eventName: this.shared.config.COMPANION_EVENT_NAME,
+        onDelta: (text) => {
+          if (!this.toolIsCurrent()) return;
+          this.scheduleEveCaption(text);
+          this.expressions?.write(text);
+        },
+        onTool: (name) => this.log.info(`owy (eve) usa ${name}`),
+        signal: signal ? AbortSignal.any([abort.signal, signal]) : abort.signal,
+      });
+      if (!this.toolIsCurrent()) return "";
+      this.pushCaption(result.text);
+      this.expressions?.write(result.text, true);
+      this.armEveIdleReset();
+      return result.text;
+    } catch (error) {
+      if (abort.signal.aborted || signal?.aborted) return "";
+      throw error;
+    } finally {
+      if (this.eveAbort === abort) this.eveAbort = null;
+    }
   }
 
   /** eve writes faster than a 360 px page can repaint: one caption update per 300 ms while it streams. */
@@ -1116,12 +1638,13 @@ export class DeviceSession {
     });
   }
 
-  private startSpeaking(turn: VoiceTurn): void {
+  private startSpeaking(turn: VoiceTurn, text = this.outputTranscript.trim()): void {
     // Multiple Gemini deltas can arrive while firmware is releasing the mic.
     // Keep ONE queue/pacer for the turn; replacing it leaks active pacers that
     // all flush together when readiness arrives and overflow the device.
-    if (this.pacer) return;
-    turn.beginSpeaking(this.outputTranscript.trim());
+    if (this.pacer || turn.finished) return;
+    this.firstAudioAt ||= Date.now();
+    turn.beginSpeaking(text);
     // The device lip-syncs what its own speaker plays; laptop output needs a track.
     const send = this.device?.sendMouthTrack;
     this.mouth =
@@ -1135,7 +1658,11 @@ export class DeviceSession {
         this.playedBytes += frame.length;
         this.expressions?.played(this.playedBytes);
       },
-      { bytesPerSecond: DEVICE_SAMPLE_RATE * 2, leadMs: 100, isReady: () => turn.phase === "speaking" }
+      {
+        bytesPerSecond: DEVICE_SAMPLE_RATE * 2,
+        leadMs: this.shared.config?.COMPANION_PACER_LEAD_MS ?? 100,
+        isReady: () => turn.phase === "speaking",
+      }
     );
   }
 
@@ -1148,6 +1675,8 @@ export class DeviceSession {
     }
     const epoch = this.requestEpoch;
     const at = Date.now();
+    this.toolsRan++;
+    this.toolsRunning++;
     this.options.onTool?.({ name, status: "running" });
     this.log.info(`tool ${name} ${JSON.stringify(args)}`);
     try {
@@ -1166,6 +1695,12 @@ export class DeviceSession {
       if (epoch === this.requestEpoch && !this.stopped)
         this.options.onTool?.({ name, status: "error", ms: Date.now() - at });
       throw error;
+    } finally {
+      // The model answers once it gets the output: the watchdog's clock restarts here.
+      if (epoch === this.requestEpoch) {
+        this.toolsRunning = Math.max(0, this.toolsRunning - 1);
+        this.lastModelAt = Date.now();
+      }
     }
   }
 
@@ -1208,6 +1743,11 @@ export class DeviceSession {
   async stop(): Promise<void> {
     this.stopped = true;
     this.requestEpoch++;
+    if (this.keepWarm) clearInterval(this.keepWarm);
+    this.keepWarm = null;
+    this.stopWatchdog();
+    this.cancelCascade();
+    this.recorder?.stop();
     this.cancelEveTurn();
     this.cancelPitch();
     this.clearPendingName();
@@ -1230,7 +1770,29 @@ function loadExpressions(config: BridgeConfig, logger: Logger): SharedRuntime["e
   return {};
 }
 
-const CLIPS_MANIFEST = path.resolve(import.meta.dirname, "../../../../public/companion-audio/clips/manifest.json");
+const CLIPS_DIR = path.resolve(import.meta.dirname, "../../../../public/companion-audio/clips");
+const CLIPS_MANIFEST = path.join(CLIPS_DIR, "manifest.json");
+
+/** The voice loop without a realtime model: needs the gateway (transcribe, answer, speak). */
+function loadCascade(config: BridgeConfig, logger: Logger): Pick<SharedRuntime, "cascade" | "fallbackClips"> {
+  if (config.COMPANION_CASCADE === "off") return {};
+  if (!config.AI_GATEWAY_API_KEY) {
+    logger.warn("cascada: falta AI_GATEWAY_API_KEY; sin modelo realtime, los toques se rechazan");
+    return {};
+  }
+  return {
+    cascade: gatewayCascade({
+      apiKey: config.AI_GATEWAY_API_KEY,
+      transcribeModels: parseModelSpecs(config.COMPANION_TRANSCRIBE_MODELS),
+      ttsModel: config.COMPANION_TTS_MODEL,
+      ttsVoice: config.COMPANION_TTS_VOICE ?? config.COMPANION_VOICE,
+      textModel: config.COMPANION_TEXT_MODEL,
+      textFallbacks: parseModelSpecs(config.COMPANION_TEXT_FALLBACK_MODELS),
+      logger: logger.child("cascada"),
+    }),
+    fallbackClips: loadFallbackClips(CLIPS_DIR, logger),
+  };
+}
 
 /** Modo pitch needs the gateway (audio → card) and the site (the board); without either, pitches end in words only. */
 function loadPitch(config: BridgeConfig, logger: Logger): SharedRuntime["pitch"] {
@@ -1249,6 +1811,7 @@ function loadPitch(config: BridgeConfig, logger: Logger): SharedRuntime["pitch"]
     extract: gatewayPitchExtractor({
       apiKey: config.AI_GATEWAY_API_KEY,
       model: config.COMPANION_PITCH_MODEL,
+      fallbacks: parseModelSpecs(config.COMPANION_PITCH_FALLBACK_MODELS),
       eventName: config.COMPANION_EVENT_NAME,
     }),
     api: owuApi(),
@@ -1264,12 +1827,25 @@ function loadPitch(config: BridgeConfig, logger: Logger): SharedRuntime["pitch"]
 }
 
 export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): Promise<SharedRuntime> {
-  const createProvider = () =>
-    resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, {
-      googleApiKey: config.GOOGLE_GENERATIVE_AI_API_KEY,
-      gatewayApiKey: config.AI_GATEWAY_API_KEY,
-    });
+  const keys = { googleApiKey: config.GOOGLE_GENERATIVE_AI_API_KEY, gatewayApiKey: config.AI_GATEWAY_API_KEY };
+  const createProvider = () => resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, keys);
   const provider = createProvider();
+  const fallbackSpecs = parseModelSpecs(config.COMPANION_REALTIME_FALLBACKS).filter((spec) => spec !== provider.spec);
+  const createFallbackProviders = () =>
+    fallbackSpecs.flatMap((spec) => {
+      try {
+        return [resolveRealtimeProvider(spec, keys)];
+      } catch (error) {
+        logger.warn(`respaldo realtime ${spec} ignorado: ${error instanceof Error ? error.message : String(error)}`);
+        return [];
+      }
+    });
+  const fallback = { createFallbackProviders, ...loadCascade(config, logger) };
+  logger.info(
+    `respaldos: ${fallbackSpecs.join(", ") || "ninguno"}; cascada ${fallback.cascade ? "lista" : "apagada"}${
+      fallback.cascade ? ` (avisos pregrabados: ${Object.keys(fallback.fallbackClips ?? {}).join(", ") || "ninguno"})` : ""
+    }`
+  );
 
   let gridUrl: string | undefined;
   try {
@@ -1302,6 +1878,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
       eve,
       expressions,
       pitch,
+      ...fallback,
     };
   }
 
@@ -1318,5 +1895,6 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     brain,
     expressions,
     pitch,
+    ...fallback,
   };
 }

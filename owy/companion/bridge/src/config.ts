@@ -34,6 +34,37 @@ const EnvSchema = z.object({
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
   AI_GATEWAY_API_KEY: z.string().optional(),
 
+  // --- Fallbacks (the venue network is unknown) ---
+  /** Realtime models tried in order when the primary cannot connect (comma-separated specs; empty = none). */
+  COMPANION_REALTIME_FALLBACKS: z.string().default("gateway:openai/gpt-realtime-2.1"),
+  /** Voice for non-Gemini fallbacks (Gemini voice names do not exist there). */
+  COMPANION_FALLBACK_VOICE: z.string().default("marin"),
+  /** Per tier: how long a token may take, and the whole handshake. */
+  COMPANION_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(8000),
+  COMPANION_REALTIME_CONNECT_MS: z.coerce.number().int().min(2000).max(60_000).default(12_000),
+  /**
+   * `on`: a tap is never declined because the realtime model is down — the turn is
+   * recorded, transcribed, answered and spoken through plain gateway calls
+   * (needs AI_GATEWAY_API_KEY). `off`: the old behaviour (decline when no model).
+   */
+  COMPANION_CASCADE: z.enum(["on", "off"]).default("on"),
+  /** Transcription models for the cascade, tried in order. */
+  COMPANION_TRANSCRIBE_MODELS: z.string().default("google/gemini-3.5-transcribe,openai/gpt-4o-mini-transcribe"),
+  /** Streaming TTS for the cascade (24 kHz PCM); the voice defaults to COMPANION_VOICE. */
+  COMPANION_TTS_MODEL: z.string().default("google/gemini-3.8-flash-tts"),
+  COMPANION_TTS_VOICE: z.string().optional(),
+  /** Local brain in the cascade: the text model, then gateway model fallbacks (comma-separated). */
+  COMPANION_TEXT_MODEL: z.string().default("google/gemini-3.8-flash"),
+  COMPANION_TEXT_FALLBACK_MODELS: z.string().default("openai/gpt-5-mini"),
+  /**
+   * A realtime model that says nothing this long after the person paused (twice
+   * this once the turn is handed over, tools excluded) is a dead socket or a
+   * stalled gateway: the turn moves to the cascade.
+   */
+  COMPANION_ACK_MS: z.coerce.number().int().min(500).max(20_000).default(2500),
+  /** Audio the pacer keeps ahead of real time; raise it on a jittery venue LAN (calibration knob). */
+  COMPANION_PACER_LEAD_MS: z.coerce.number().int().min(20).max(1000).default(100),
+
   // --- Brain ---
   /**
    * `eve`: every turn goes to the eve Owy (agent/channels/companion.ts) — same
@@ -60,6 +91,8 @@ const EnvSchema = z.object({
   COMPANION_PITCH_REACTS: boolFromEnv,
   /** Audio → card, one multimodal call through the gateway. */
   COMPANION_PITCH_MODEL: z.string().default("google/gemini-3.8-flash"),
+  /** Gateway model fallbacks for the pitch extractor (comma-separated, audio-capable). */
+  COMPANION_PITCH_FALLBACK_MODELS: z.string().default("google/gemini-3.5-flash"),
   /** Seconds of silence after speech that end a pitch on their own, and the hard cap. */
   COMPANION_PITCH_SILENCE_S: z.coerce.number().min(3).max(60).default(10),
   COMPANION_PITCH_MAX_S: z.coerce.number().min(20).max(300).default(120),

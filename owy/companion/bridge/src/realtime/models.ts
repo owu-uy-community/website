@@ -30,6 +30,13 @@ export interface RealtimeProvider {
   readonly provider: "google" | "gateway";
   readonly modelId: string;
   readonly model: Experimental_RealtimeModel;
+  /**
+   * The provider answers session-created before it applied session-update
+   * (OpenAI's protocol), so a rejected config would look connected: the session
+   * waits briefly for session-updated or an error. Gemini's setupComplete
+   * already means the setup was accepted.
+   */
+  readonly confirmsConfig?: boolean;
   /** Mints a fresh short-lived token. Google tokens are single-use: call once per connection. */
   getToken(sessionConfig: Experimental_RealtimeSessionConfig, expiresAfterSeconds?: number): Promise<RealtimeToken>;
 }
@@ -50,6 +57,14 @@ export function parseModelSpec(spec: string): { provider: "google" | "gateway"; 
   return { provider, modelId };
 }
 
+/** `COMPANION_REALTIME_FALLBACKS`: comma-separated specs, tried in order after the primary; empty = none. */
+export function parseModelSpecs(list: string | undefined): string[] {
+  return (list ?? "")
+    .split(",")
+    .map((spec) => spec.trim())
+    .filter((spec) => spec.length > 0);
+}
+
 export function resolveRealtimeProvider(spec: string, options: ResolveModelOptions = {}): RealtimeProvider {
   const { provider, modelId } = parseModelSpec(spec);
 
@@ -65,6 +80,7 @@ export function resolveRealtimeProvider(spec: string, options: ResolveModelOptio
       spec,
       provider,
       modelId,
+      confirmsConfig: false,
       model: google.experimental_realtime(modelId),
       getToken: (sessionConfig, expiresAfterSeconds = 300) =>
         google.experimental_realtime.getToken({ model: modelId, sessionConfig, expiresAfterSeconds }),
@@ -77,6 +93,7 @@ export function resolveRealtimeProvider(spec: string, options: ResolveModelOptio
     spec,
     provider,
     modelId,
+    confirmsConfig: !/(^|\/)gemini-/.test(modelId),
     model: gateway.experimental_realtime(modelId),
     getToken: (sessionConfig, expiresAfterSeconds = 300) =>
       gateway.experimental_realtime.getToken({ model: modelId, sessionConfig, expiresAfterSeconds }),

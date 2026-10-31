@@ -7,7 +7,7 @@
 !owy/agent
 !owy/companion/bridge/src
 !owy/companion/bridge/prompts
-!public/companion-audio/clips/manifest.json
+!public/companion-audio/clips
 **/node_modules
 **/.env*
 **/secrets.yaml

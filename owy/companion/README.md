@@ -370,7 +370,7 @@ queda abierto después de `session.waiting`, cortalo vos).
 
 ### Modelo realtime
 
-El bridge habla con el modelo por el **AI SDK realtime** (`ai` ≥ 7.0.107): el modelo es un
+El bridge habla con el modelo por el **AI SDK realtime** (`ai` ≥ 7.0.158): el modelo es un
 codec (`serializeClientEvent` / `parseServerEvent`) que `realtime/session.ts` maneja sobre un
 `ws` propio, con el token efímero de `experimental_realtime.getToken()`. Es speech-to-speech:
 no hay STT/TTS/VAD locales, sólo remuestreo, ritmo y ruteo (`audio/pcm.ts`). Especificación
@@ -378,9 +378,9 @@ no hay STT/TTS/VAD locales, sólo remuestreo, ritmo y ruteo (`audio/pcm.ts`). Es
 
 | Spec | Key | Notas |
 | --- | --- | --- |
-| `gateway:google/gemini-3.8-live` (default) | `AI_GATEWAY_API_KEY` | Gemini 3.8 Live vía AI Gateway. Audio USD 3 / 12 por M tokens (in/out). El gateway rechaza `turnDetection` y las claves nativas de Gemini (VAD, compresión de contexto): aplican los defaults de Gemini. Sesiones ≤ 25 min, idle 5 min (el bridge reconecta en el próximo tap), 1er mensaje < 30 s. |
+| `gateway:google/gemini-3.8-live` (default) | `AI_GATEWAY_API_KEY` | Gemini 3.8 Live vía AI Gateway. Audio USD 3 / 12 por M tokens (in/out). El gateway rechaza `turnDetection` y las claves nativas de Gemini (VAD, compresión de contexto): aplican los defaults de Gemini. Sesiones ≤ 25 min, idle 5 min (el bridge mantiene una sesión tibia: reconecta al cerrarse y la renueva a los 20 min), 1er mensaje < 30 s. |
 | `gateway:google/gemini-3.8-live-extended-thinking` | idem | Razonamiento en paralelo con la voz; sólo tools `NON_BLOCKING` (el provider manda `thinkingLevel: low`). Más latencia; no probado en el evento. |
-| `gateway:openai/gpt-realtime-2` · `gpt-realtime-2.1` · `gpt-realtime-mini` | idem | Plan B. `voice` de OpenAI (`marin`, `alloy`…). Audio USD 32 / 64 por M tokens (mini: 10 / 20). `turnDetection: server-vad 600 ms`. `gpt-live-1` **no**: GPT-Live es otro protocolo (continuo, server-websocket). |
+| `gateway:openai/gpt-realtime-2` · `gpt-realtime-2.1` · `gpt-realtime-mini` | idem | Respaldo por defecto (`gpt-realtime-2.1`, ver abajo). `voice` de OpenAI (`marin`, `alloy`…). Audio USD 32 / 64 por M tokens (mini: 10 / 20). `turnDetection: server-vad 600 ms`. `gpt-live-1` **no**: GPT-Live es otro protocolo (continuo, server-websocket). |
 | `google:gemini-3.8-live` | `GOOGLE_GENERATIVE_AI_API_KEY` | Directo a Google: mismo modelo, sin límite de 25 min, con `automaticActivityDetection` (600 ms), `contextWindowCompression` y `sessionResumption` (`goAway` manejado). `gemini-3.1-flash-live-preview` quedó *legacy*. |
 
 Gemini 3.8 Live sólo responde audio (`outputModalities: ["text"]` es rechazado): el REPL
@@ -394,6 +394,41 @@ y a 24 kHz al gateway (`sessionInputRate`), la voz vuelve a 24 kHz y se baja a 1
 Prueba sin hardware ni navegador: `WEB_TURN_OUT=/tmp/reply.wav node_modules/.bin/tsx
 companion/scripts/web-turn.mts /tmp/q.wav` (un turno completo por el transporte web:
 transcripciones, tools y el PCM de la respuesta guardado como WAV).
+
+### Respaldos y redes malas
+
+La red del venue es desconocida, así que un tap **nunca se rechaza por el modelo**. Cada turno
+elige su camino al aceptarse (y una sesión que muere a mitad de turno lo pasa a la cascada,
+una sola vez); la línea `turn path=… ttfa=… total=…` del log dice cuál contestó:
+
+| Camino | Cuándo | Latencia |
+| --- | --- | --- |
+| `realtime` | Gemini 3.8 Live conectado (la sesión se mantiene tibia entre turnos) | ~2 s |
+| `fallback` | Gemini no conecta: `COMPANION_REALTIME_FALLBACKS` (default `gateway:openai/gpt-realtime-2.1`, voz `COMPANION_FALLBACK_VOICE=marin`). El AI Gateway no tiene fallbacks para realtime: la sesión prueba los modelos en orden y deja descansar 3 min al que falló | ~2 s |
+| `cascade` | Ningún realtime vivo al tocar, el modelo no da señales ~2,5 s después de que la persona calla (`COMPANION_ACK_MS`: socket medio muerto), o el socket se cae mientras escucha. El bridge graba el turno (su propio VAD), lo transcribe (`COMPANION_TRANSCRIBE_MODELS`), contesta (eve, o el modelo de texto con las tools locales) y lo dice con TTS en streaming (`COMPANION_TTS_MODEL`, voz Kore) | ~4–6 s |
+| `offline` | Ni eso: el aviso pregrabado `offline` sale por el parlante (sin red) y la pantalla muestra el QR de la grilla | instantáneo |
+
+Si el socket se cae mientras Owy ya habla, termina con lo que llegó y deja la respuesta de eve
+como subtítulo; si cae mientras eve piensa, la respuesta de eve sale por la voz de la cascada
+(nunca se repite un turno que ya ejecutó una tool). `COMPANION_CASCADE=off` vuelve al
+comportamiento anterior (rechazar sin modelo). Timeouts: `COMPANION_TOKEN_TIMEOUT_MS` (8 s),
+`COMPANION_REALTIME_CONNECT_MS` (12 s por modelo); eve corta a los 25 s (dentro de los 30 s
+de "pensando"). En redes LAN con jitter, `COMPANION_PACER_LEAD_MS` (100) sube el colchón de
+audio hacia el dispositivo.
+
+- **`pnpm companion:netcheck`** — la mañana del evento, desde la laptop del venue: DNS y HTTPS al
+  gateway, token + handshake de cada modelo realtime, transcripción, primer audio de TTS, eve y el
+  sitio, con los timeouts vigentes. Sale con código 1 si algo falla.
+- **`pnpm companion:clips`** — genera también los avisos `offline` y `retry` (`public/companion-audio/clips`;
+  la imagen Docker los copia). Sin ellos esos avisos van como texto en pantalla.
+- **Laboratorio de redes malas** (Docker): `docker compose -f owy/companion/bridge/compose.yaml -f
+  owy/companion/bridge/compose.netem.yaml up -d --build` y después `pnpm -C owy companion:netem
+  q1.wav q2.wav` (WAV 16 kHz mono **grabados por personas**: la transcripción de voces `say` es
+  inestable). Un sidecar con `tc netem` degrada sólo la salida a internet del bridge (la LAN y el
+  host quedan limpios) en perfiles baseline · congested · bad · terrible · blackhole · flap, y la
+  tabla final dice cuántos turnos pasan, por qué camino y con qué latencia.
+- El panel de ajustes (`/api/settings`, oRPC `settings.get`) muestra por dispositivo `voice.tier`
+  (el modelo realtime conectado), `voice.realtime` y `voice.lastPath`.
 
 ### Espejo en la pantalla grande (Owy Stage)
 
@@ -480,7 +515,9 @@ un long press abre ajustes sin iniciar una conversación al soltar.
 
 ## Checklist del día
 
-- [ ] Wi-Fi del venue 2.4 GHz sin captive portal; si no, hotspot del celular para el dispositivo **y** la laptop.
+- [ ] Router de viaje propio (SSID nuestro, sin aislamiento de clientes, reservas DHCP para las placas) colgado del uplink del venue; hotspot del celular como uplink de respaldo. Si no hay, Wi-Fi del venue 2.4 GHz sin captive portal.
+- [ ] `pnpm companion:netcheck` desde la laptop ya en el venue: todo `ok` (o `lento` con los timeouts ajustados).
+- [ ] `caffeinate -i` corriendo (una Mac en batería que se duerme congela el bridge).
 - [ ] Permiso "Red local" de macOS habilitado para la terminal desde la que corre el bridge (ver "Primer arranque").
 - [ ] `secrets.yaml` con el SSID del venue, reflash OTA la noche anterior.
 - [ ] `pnpm companion:tools` y `pnpm companion:text` contra producción: "¿cuándo es la conf?" y una propuesta de prueba (borrarla después).

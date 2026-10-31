@@ -42,21 +42,42 @@ export interface WebSocketLike {
 
 export type WebSocketFactory = (url: string, protocols?: string[]) => WebSocketLike;
 
+/** One way to reach a realtime model: the provider's codec and the session config it gets. */
+export interface RealtimeTier {
+  provider: RealtimeProvider;
+  sessionConfig: RealtimeSessionConfig;
+}
+
 export interface NodeRealtimeSessionOptions {
   provider: RealtimeProvider;
   sessionConfig: RealtimeSessionConfig;
+  /**
+   * Tried in order when the primary (provider + sessionConfig) cannot connect.
+   * The gateway has no realtime fallbacks of its own (the model is fixed in the
+   * socket URL and tokens are single-use), so failover lives here.
+   */
+  fallbacks?: RealtimeTier[];
+  /** A tier that failed to connect is skipped for this long (unless every tier is down). */
+  tierCooldownMs?: number;
   onToolCall: ToolCallHandler;
   /** Every normalized server event, after the session's own bookkeeping ran. */
   onEvent?: (event: RealtimeServerEvent) => void;
+  /** A *connected* socket broke. Failed connection attempts are not reported here: they move to the next tier. */
   onError?: (error: Error) => void;
+  /** A *connected* socket closed. */
   onClose?: (info: { code?: number; reason?: string }) => void;
   logger: Logger;
   createWebSocket?: WebSocketFactory;
   /** Lifetime requested for each minted token (seconds). */
   tokenTtlSeconds?: number;
-  /** How long `connect()` waits for the provider's session-created handshake. */
+  /** How long minting a token may take; a hung HTTPS call must not hold a tap. */
+  tokenTimeoutMs?: number;
+  /** How long `connect()` waits for the provider's session-created handshake, per tier. */
   connectTimeoutMs?: number;
 }
+
+/** A provider that answers session-created before it applied session-update (OpenAI) gets this long to reject the config. */
+const CONFIG_CONFIRM_GRACE_MS = 1_500;
 
 export type SessionStatus = "disconnected" | "connecting" | "connected" | "error";
 
@@ -64,8 +85,11 @@ const defaultWebSocketFactory: WebSocketFactory = (url, protocols) =>
   new WebSocket(url, protocols) as unknown as WebSocketLike;
 
 export class NodeRealtimeSession {
-  private readonly provider: RealtimeProvider;
-  private readonly baseConfig: RealtimeSessionConfig;
+  private readonly tiers: RealtimeTier[];
+  /** Per tier: until when it is skipped after failing to connect. */
+  private readonly downUntil: number[];
+  private readonly tierCooldownMs: number;
+  private tierIndex = 0;
   private readonly onToolCall: ToolCallHandler;
   private readonly onEvent?: (event: RealtimeServerEvent) => void;
   private readonly onError?: (error: Error) => void;
@@ -73,15 +97,21 @@ export class NodeRealtimeSession {
   private readonly log: Logger;
   private readonly createWebSocket: WebSocketFactory;
   private readonly tokenTtlSeconds: number;
+  private readonly tokenTimeoutMs: number;
   private readonly connectTimeoutMs: number;
 
   private ws: WebSocketLike | null = null;
   private parseServerEvent: (raw: unknown) => RealtimeServerEvent | RealtimeServerEvent[] = (raw) =>
     this.provider.model.parseServerEvent(raw);
   private connectionEpoch = 0;
+  /** Bumped by close(): a connect in flight was cancelled by the caller, not failed by the tier. */
+  private generation = 0;
   private sendQueue: Promise<void> = Promise.resolve();
   private _status: SessionStatus = "disconnected";
   private inflightConnect: Promise<void> | null = null;
+  private _connectedAt = 0;
+  private _lastConnectMs: number | null = null;
+  private confirmTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Provider-side continuity (Gemini `sessionResumptionUpdate` / `goAway`).
   private _resumptionHandle: string | null = null;
@@ -94,8 +124,9 @@ export class NodeRealtimeSession {
   private pendingToolRuns = new Set<Promise<void>>();
 
   constructor(options: NodeRealtimeSessionOptions) {
-    this.provider = options.provider;
-    this.baseConfig = options.sessionConfig;
+    this.tiers = [{ provider: options.provider, sessionConfig: options.sessionConfig }, ...(options.fallbacks ?? [])];
+    this.downUntil = this.tiers.map(() => 0);
+    this.tierCooldownMs = options.tierCooldownMs ?? 180_000;
     this.onToolCall = options.onToolCall;
     this.onEvent = options.onEvent;
     this.onError = options.onError;
@@ -103,7 +134,36 @@ export class NodeRealtimeSession {
     this.log = options.logger;
     this.createWebSocket = options.createWebSocket ?? defaultWebSocketFactory;
     this.tokenTtlSeconds = options.tokenTtlSeconds ?? 300;
+    this.tokenTimeoutMs = options.tokenTimeoutMs ?? 8_000;
     this.connectTimeoutMs = options.connectTimeoutMs ?? 15_000;
+  }
+
+  /** The tier this session is on (or last tried). */
+  get tier(): RealtimeTier {
+    return this.tiers[this.tierIndex];
+  }
+
+  get provider(): RealtimeProvider {
+    return this.tier.provider;
+  }
+
+  private get baseConfig(): RealtimeSessionConfig {
+    return this.tier.sessionConfig;
+  }
+
+  /** `<provider>:<model>` of the current tier, for logs and the settings UI. */
+  get tierSpec(): string {
+    return this.provider.spec;
+  }
+
+  /** When the current socket reached "connected" (ms epoch); 0 when not connected. */
+  get connectedAt(): number {
+    return this._status === "connected" ? this._connectedAt : 0;
+  }
+
+  /** How long the last successful connect took, token included. */
+  get lastConnectMs(): number | null {
+    return this._lastConnectMs;
   }
 
   get status(): SessionStatus {
@@ -156,15 +216,61 @@ export class NodeRealtimeSession {
     return this.inflightConnect;
   }
 
+  /**
+   * Walks the tiers in order, skipping the ones that failed recently (unless
+   * all did: never give up for good), and stays on the first that connects.
+   */
   private async connectInternal(): Promise<void> {
+    const generation = this.generation;
+    const now = Date.now();
+    const all = this.tiers.map((_, index) => index);
+    const ready = all.filter((index) => this.downUntil[index] <= now);
+    const order = ready.length > 0 ? ready : all;
+    let lastError: unknown = new Error("realtime: sin modelos configurados");
+    for (const [position, index] of order.entries()) {
+      const spec = this.tiers[index].provider.spec;
+      const started = Date.now();
+      try {
+        await this.connectTier(index);
+        this.downUntil[index] = 0;
+        this._lastConnectMs = Date.now() - started;
+        if (index > 0) this.log.warn(`realtime: en el respaldo ${spec} (conectó en ${this._lastConnectMs} ms)`);
+        else this.log.info(`realtime: ${spec} conectado en ${this._lastConnectMs} ms`);
+        return;
+      } catch (error) {
+        // The caller closed or reset the session: not this tier's fault.
+        if (generation !== this.generation) throw error;
+        lastError = error;
+        this.teardownSocket();
+        this.downUntil[index] = Date.now() + this.tierCooldownMs;
+        const next = order[position + 1];
+        this.log.warn(
+          `realtime: ${spec} no conectó (${(error instanceof Error ? error.message : String(error)).split("\n")[0]}); ${
+            next === undefined ? "sin más respaldos" : `pruebo ${this.tiers[next].provider.spec}`
+          }`
+        );
+      }
+    }
+    this._status = "error";
+    throw lastError;
+  }
+
+  private async connectTier(index: number): Promise<void> {
     if (this.ws) this.teardownSocket();
     const epoch = ++this.connectionEpoch;
+    // A resumption handle belongs to the tier that issued it.
+    if (index !== this.tierIndex) this._resumptionHandle = null;
+    this.tierIndex = index;
     this._status = "connecting";
     this._goAwayPending = false;
     this.resetToolBookkeeping();
 
     const config = this.currentConfig();
-    const token = await this.provider.getToken(config, this.tokenTtlSeconds);
+    const token = await withTimeout(
+      this.provider.getToken(config, this.tokenTtlSeconds),
+      this.tokenTimeoutMs,
+      `el token tardó más de ${this.tokenTimeoutMs} ms`
+    );
     if (epoch !== this.connectionEpoch) throw new Error("realtime connection cancelled");
     // Optional since provider spec v4.0.15 (server-websocket / WebRTC models skip it).
     const wsConfig = this.provider.model.getWebSocketConfig?.({ token: token.token, url: token.url }) ?? {
@@ -178,20 +284,18 @@ export class NodeRealtimeSession {
 
     await new Promise<void>((resolve, reject) => {
       let settled = false;
-      const timer = setTimeout(() => {
-        if (settled) return;
-        settled = true;
-        this.fail(new Error(`realtime: timeout esperando session-created (${this.connectTimeoutMs} ms)`));
-        reject(new Error("realtime connect timeout"));
-      }, this.connectTimeoutMs);
-
       const settle = (error?: Error) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        this.clearConfirmTimer();
         if (error) reject(error);
         else resolve();
       };
+      const timer = setTimeout(
+        () => settle(new Error(`timeout esperando la sesión (${this.connectTimeoutMs} ms)`)),
+        this.connectTimeoutMs
+      );
       this.connectSettle = settle;
 
       ws.onopen = () => {
@@ -206,22 +310,38 @@ export class NodeRealtimeSession {
       ws.onerror = (event) => {
         if (this.ws !== ws) return;
         const error = event instanceof Error ? event : new Error("realtime: WebSocket error");
-        this.fail(error);
+        // A live socket broke: the caller's turn needs to know. While connecting, the tier just failed.
+        if (this._status === "connected") this.fail(error);
         settle(error);
       };
       ws.onclose = (event) => {
         if (this.ws !== ws) return;
+        const wasConnected = this._status === "connected";
         const reason = typeof event.reason === "string" ? event.reason : event.reason?.toString("utf8");
         this.log.info(`ws closed code=${event.code ?? "?"} reason=${reason ?? ""}`);
         this.ws = null;
         this._status = "disconnected";
-        settle(new Error(`realtime: socket cerrado antes de session-created (${event.code ?? "?"})`));
-        this.onClose?.({ code: event.code, reason });
+        settle(new Error(`socket cerrado antes de conectar (${event.code ?? "?"}${reason ? ` ${reason}` : ""})`));
+        if (wasConnected) this.onClose?.({ code: event.code, reason });
       };
     });
   }
 
   private connectSettle: ((error?: Error) => void) | null = null;
+
+  private markConnected(): void {
+    if (this._status !== "connecting") return;
+    this.clearConfirmTimer();
+    this._status = "connected";
+    this._connectedAt = Date.now();
+    this.connectSettle?.();
+    this.connectSettle = null;
+  }
+
+  private clearConfirmTimer(): void {
+    if (this.confirmTimer) clearTimeout(this.confirmTimer);
+    this.confirmTimer = null;
+  }
 
   /** Closes the socket and reconnects, carrying the resumption handle (Gemini) when available. */
   async reconnect(): Promise<void> {
@@ -232,6 +352,7 @@ export class NodeRealtimeSession {
   }
 
   close(): void {
+    this.generation++;
     this.teardownSocket();
     this._status = "disconnected";
   }
@@ -246,6 +367,7 @@ export class NodeRealtimeSession {
 
   private teardownSocket(): void {
     this.connectionEpoch++;
+    this.clearConfirmTimer();
     this.connectSettle?.(new Error("realtime connection closed"));
     this.connectSettle = null;
     const ws = this.ws;
@@ -300,8 +422,13 @@ export class NodeRealtimeSession {
     void this.send({ type: "input-audio-append", audio: pcm16.toString("base64") });
   }
 
-  /** Marks the end of the current input audio stream (Gemini `audioStreamEnd`). */
+  /**
+   * Marks the end of the current input audio stream (Gemini `audioStreamEnd`).
+   * Not on server-VAD tiers (OpenAI): the server already committed the buffer,
+   * and a second commit is an "empty buffer" error.
+   */
   commitAudio(): void {
+    if (this.baseConfig.turnDetection) return;
     void this.send({ type: "input-audio-commit" });
   }
 
@@ -350,9 +477,17 @@ export class NodeRealtimeSession {
   private handleServerEvent(event: RealtimeServerEvent): void {
     switch (event.type) {
       case "session-created":
-        this._status = "connected";
-        this.connectSettle?.();
-        this.connectSettle = null;
+        if (this._status !== "connecting") break;
+        // OpenAI answers session-created before it applied our session-update: give it a
+        // moment to reject the config (error) or confirm it (session-updated).
+        if (this.provider.confirmsConfig) {
+          this.clearConfirmTimer();
+          this.confirmTimer = setTimeout(() => this.markConnected(), CONFIG_CONFIRM_GRACE_MS);
+        } else this.markConnected();
+        break;
+
+      case "session-updated":
+        this.markConnected();
         break;
 
       case "function-call-arguments-done": {
@@ -375,6 +510,12 @@ export class NodeRealtimeSession {
 
       case "error":
         this.log.warn(`provider error: ${event.message}${event.code ? ` (${event.code})` : ""}`);
+        // During the handshake an error means this tier rejected us (e.g. the config): try the next one.
+        if (this._status === "connecting") {
+          this.connectSettle?.(new Error(`${event.message}${event.code ? ` (${event.code})` : ""}`));
+          this.connectSettle = null;
+          return;
+        }
         break;
 
       default:
@@ -472,4 +613,13 @@ function toText(data: unknown): string | null {
   }
   if (ArrayBuffer.isView(data)) return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("utf8");
   return null;
+}
+
+/** Rejects after `ms`; the slow promise's late outcome is ignored (Promise.race keeps it handled). */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }

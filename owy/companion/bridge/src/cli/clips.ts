@@ -5,6 +5,7 @@ import { loadConfig } from "../config";
 import { buildSessionConfig } from "../index";
 import { createLogger } from "../log";
 import { PITCH_LINES, SCRIPT_PREFIX } from "../pitch";
+import { FALLBACK_LINES } from "../realtime/cascade";
 import { resolveRealtimeProvider } from "../realtime/models";
 import { NodeRealtimeSession } from "../realtime/session";
 
@@ -12,6 +13,8 @@ import { NodeRealtimeSession } from "../realtime/session";
  * Renders the fixed pitch-mode cues in Owy's own voice, once, as static WAV
  * files the laptop browser plays at tap time (no model round trip while a
  * person waits): public/companion-audio/clips/<id>.wav + manifest.json.
+ * The fallback lines (`offline`, `retry`) are what the bridge plays through
+ * the device when there is no network to synthesize anything.
  *
  *   pnpm companion:clips
  */
@@ -19,6 +22,7 @@ const CLIPS: Record<string, string> = {
   "pitch-listen": PITCH_LINES.listen,
   "pitch-name": PITCH_LINES.askName,
   "pitch-empty": PITCH_LINES.empty,
+  ...FALLBACK_LINES,
 };
 
 export const CLIPS_DIR = path.resolve(import.meta.dirname, "../../../../../public/companion-audio/clips");

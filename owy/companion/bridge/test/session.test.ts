@@ -37,6 +37,8 @@ class FakeModel implements RealtimeModel {
     if (frame.goAway) return { type: "custom", rawType: "goAway", raw };
     if (frame.sessionResumptionUpdate) return { type: "custom", rawType: "sessionResumptionUpdate", raw };
     if (frame.audio) return { type: "audio-delta", responseId: "r1", itemId: "i1", delta: frame.audio as string, raw };
+    if (frame.sessionUpdated) return { type: "session-updated", raw };
+    if (frame.error) return { type: "error", message: String(frame.error), raw };
     return { type: "custom", rawType: "unknown", raw };
   }
   serializeClientEvent(event: RealtimeClientEvent): unknown {
@@ -249,5 +251,147 @@ describe("NodeRealtimeSession", () => {
     session.close();
     await rejected;
     expect(session.status).toBe("disconnected");
+  });
+});
+
+/**
+ * Tiers: the gateway has no realtime fallbacks, so the session walks its own
+ * list. Each tier is a fake provider whose sockets behave as `behaviour` says.
+ */
+type Behaviour = "ok" | "hang-token" | "close-1008" | "reject-config" | "confirm-silently";
+
+function tierProvider(spec: string, behaviour: Behaviour, confirmsConfig = false) {
+  const getToken = vi.fn(() =>
+    behaviour === "hang-token" ? new Promise<never>(() => {}) : Promise.resolve({ token: spec, url: `wss://${spec}` })
+  );
+  const provider: RealtimeProvider = {
+    spec,
+    provider: "gateway",
+    modelId: spec,
+    model: new FakeModel(),
+    confirmsConfig,
+    getToken,
+  };
+  return { provider, getToken, behaviour };
+}
+
+function tiered(tiers: ReturnType<typeof tierProvider>[], options: { cooldownMs?: number; connectTimeoutMs?: number } = {}) {
+  const sockets: FakeSocket[] = [];
+  const onClose = vi.fn();
+  const onError = vi.fn();
+  const behaviourOf = (url: string) => tiers.find((tier) => url.includes(tier.provider.spec))!.behaviour;
+  const session = new NodeRealtimeSession({
+    provider: tiers[0].provider,
+    sessionConfig: { instructions: "hola" },
+    fallbacks: tiers.slice(1).map((tier) => ({ provider: tier.provider, sessionConfig: { instructions: "hola" } })),
+    tierCooldownMs: options.cooldownMs ?? 60_000,
+    tokenTimeoutMs: 30,
+    connectTimeoutMs: options.connectTimeoutMs ?? 200,
+    logger: createLogger("test", "error"),
+    onToolCall: () => ({}),
+    onClose,
+    onError,
+    createWebSocket: (url) => {
+      const socket = new FakeSocket(url);
+      sockets.push(socket);
+      const behaviour = behaviourOf(url);
+      queueMicrotask(() => {
+        socket.open();
+        if (behaviour === "close-1008") return socket.onclose?.({ code: 1008, reason: "WebSocket transform rejected frame" });
+        socket.receive({ setupComplete: {} });
+        if (behaviour === "reject-config") socket.receive({ error: "invalid voice" });
+        if (behaviour === "ok" && tiers.find((tier) => url.includes(tier.provider.spec))!.provider.confirmsConfig)
+          socket.receive({ sessionUpdated: true });
+      });
+      return socket;
+    },
+  });
+  return { session, sockets, onClose, onError };
+}
+
+describe("NodeRealtimeSession tiers", () => {
+  it("a token that never comes moves to the next tier", async () => {
+    const primary = tierProvider("gemini", "hang-token");
+    const backup = tierProvider("openai", "ok", true);
+    const { session, onClose, onError } = tiered([primary, backup]);
+    await session.connect();
+    expect(session.isConnected).toBe(true);
+    expect(session.tierSpec).toBe("openai");
+    // Failed attempts are not drops: no turn may fail because a tier did not connect.
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("a 1008 during setup moves on, the failed tier cools down, then it is tried again", async () => {
+    const primary = tierProvider("gemini", "close-1008");
+    const backup = tierProvider("openai", "ok");
+    const { session } = tiered([primary, backup], { cooldownMs: 50 });
+    await session.connect();
+    expect(session.tierSpec).toBe("openai");
+    session.close();
+    await session.connect();
+    expect(primary.getToken).toHaveBeenCalledTimes(1); // still cooling down: skipped
+    session.close();
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    primary.behaviour = "ok";
+    await session.connect();
+    expect(primary.getToken).toHaveBeenCalledTimes(2);
+    expect(session.tierSpec).toBe("gemini");
+    session.close();
+  });
+
+  it("all tiers down: connect rejects, and the next connect still tries them all", async () => {
+    const primary = tierProvider("gemini", "close-1008");
+    const backup = tierProvider("openai", "hang-token");
+    const { session } = tiered([primary, backup]);
+    await expect(session.connect()).rejects.toThrow(/token/);
+    expect(session.status).toBe("error");
+    await expect(session.connect()).rejects.toThrow();
+    expect(primary.getToken).toHaveBeenCalledTimes(2);
+  });
+
+  it("an OpenAI-style tier that rejects the config after session-created is not connected", async () => {
+    const backup = tierProvider("openai", "reject-config", true);
+    const last = tierProvider("mini", "confirm-silently", true);
+    const { session } = tiered([backup, last], { connectTimeoutMs: 3000 });
+    await session.connect();
+    // No session-updated, no error within the grace: the config was accepted.
+    expect(session.tierSpec).toBe("mini");
+    expect(session.isConnected).toBe(true);
+    session.close();
+  });
+
+  it("only a socket that was connected reports its close", async () => {
+    const { session, sockets, onClose } = tiered([tierProvider("gemini", "ok")]);
+    await session.connect();
+    sockets[0].onclose?.({ code: 1006, reason: "" });
+    expect(onClose).toHaveBeenCalledWith({ code: 1006, reason: "" });
+    expect(session.status).toBe("disconnected");
+    expect(session.connectedAt).toBe(0);
+  });
+
+  it("server-VAD tiers never send a second commit", async () => {
+    const provider = tierProvider("openai", "ok").provider;
+    const sockets: FakeSocket[] = [];
+    const session = new NodeRealtimeSession({
+      provider,
+      sessionConfig: { turnDetection: { type: "server-vad" } },
+      logger: createLogger("test", "error"),
+      onToolCall: () => ({}),
+      createWebSocket: (url) => {
+        const socket = new FakeSocket(url);
+        sockets.push(socket);
+        queueMicrotask(() => {
+          socket.open();
+          socket.receive({ setupComplete: {} });
+        });
+        return socket;
+      },
+    });
+    await session.connect();
+    session.commitAudio();
+    await flush();
+    expect(sockets[0].sent.some((m) => JSON.stringify(m).includes("audioStreamEnd"))).toBe(false);
+    session.close();
   });
 });

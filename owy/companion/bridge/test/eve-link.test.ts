@@ -165,3 +165,19 @@ describe("EveLink", () => {
     await expect(pending).rejects.toThrow();
   });
 });
+
+describe("EveLink deadlines", () => {
+  it("a POST that never answers counts toward the turn deadline", async () => {
+    const hanging: typeof fetch = (_input, init) =>
+      new Promise((_, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason)));
+    const link = new EveLink({
+      url: "http://eve.invalid",
+      logger: createLogger("test", "error"),
+      fetch: hanging,
+      turnTimeoutMs: 50,
+    });
+    const started = Date.now();
+    await expect(link.turn("knob", "hola", { staff: false, marketplaceOpen: false })).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+});

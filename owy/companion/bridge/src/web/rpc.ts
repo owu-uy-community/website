@@ -14,6 +14,7 @@ import {
   SettingsSnapshotSchema,
   type PitchSettings,
   type SettingsSnapshot,
+  type VoiceStatus,
 } from "./contract";
 
 export * from "./contract";
@@ -27,6 +28,7 @@ export interface RoutableSession {
   setAudioRouting(which: "mic" | "output", route: AudioRoute): void;
   pitchSettings(): PitchSettings;
   setPitchSetting(which: "mode" | "reacts", on: boolean): void;
+  voiceStatus?(): VoiceStatus;
 }
 
 export interface BridgeRpcContext {
@@ -42,6 +44,7 @@ export function settingsSnapshot(sessions: readonly RoutableSession[]): Settings
       ...session.audioRouting(),
       peer: session.hasPeer,
       pitch: session.pitchSettings(),
+      ...(session.voiceStatus ? { voice: session.voiceStatus() } : {}),
     })),
   };
 }
