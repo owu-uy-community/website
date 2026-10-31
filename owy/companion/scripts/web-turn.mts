@@ -5,6 +5,7 @@
 //
 //   say -v "Flo (Spanish (Spain))" -o /tmp/q.wav --data-format=LEI16@16000 "Hola Owy, ¿qué es OWU?"
 //   WEB_TURN_OUT=/tmp/reply.wav node_modules/.bin/tsx companion/scripts/web-turn.mts /tmp/q.wav   # from owy/, bridge running with COMPANION_WEB_BRIDGE=1
+// WEB_TURN_ONCE=1 exits after the first run ends (netem-matrix.mts drives one turn per process).
 import { readFileSync } from "node:fs";
 import WebSocket from "ws";
 import { writeFileSync } from "node:fs";
@@ -61,7 +62,11 @@ ws.on("message", (raw, binary) => {
       log(`reply audio received: ${replyBytes} B (${(replyBytes / 32000).toFixed(1)} s @16k)`);
       if (process.env.WEB_TURN_OUT) { writeFileSync(process.env.WEB_TURN_OUT, toWav(Buffer.concat(reply), 16000)); log(`reply saved to ${process.env.WEB_TURN_OUT}`); }
       replyBytes = 0; reply.length = 0;
+      if (process.env.WEB_TURN_ONCE) ws.close();
     }
+  } else if (m.type === "declined") {
+    log("declined (no model and no cascade)");
+    if (process.env.WEB_TURN_ONCE) ws.close();
   } else if (m.type === "transcript") log(`transcript ${m.who}: ${m.text}`);
   else if (m.type === "screen") log(`screen ${JSON.stringify(m.command).slice(0, 160)}`);
   else log(`msg ${m.type}`);

@@ -30,6 +30,16 @@ export const SetPitchSchema = z.object({
 });
 export type SetPitchInput = z.infer<typeof SetPitchSchema>;
 
+/** Which road Owy's voice is on: staff see at a glance when it is degraded. */
+export const VoiceStatusSchema = z.object({
+  /** The realtime model the session is on (`gateway:google/gemini-3.8-live`), null when none is connected. */
+  tier: z.string().nullable(),
+  realtime: z.enum(["disconnected", "connecting", "connected", "error"]),
+  /** How the last turn was answered: realtime · fallback (backup realtime model) · cascade · offline · pitch. */
+  lastPath: z.enum(["realtime", "fallback", "cascade", "offline", "pitch"]).nullable(),
+});
+export type VoiceStatus = z.infer<typeof VoiceStatusSchema>;
+
 export const DeviceRoutingSchema = z.object({
   id: z.string(),
   connected: z.boolean(),
@@ -40,6 +50,7 @@ export const DeviceRoutingSchema = z.object({
   /** A browser is attached as this device's laptop audio (mic + speakers). */
   peer: z.boolean(),
   pitch: PitchSettingsSchema,
+  voice: VoiceStatusSchema.optional(),
 });
 
 export const SettingsSnapshotSchema = z.object({ devices: z.array(DeviceRoutingSchema) });

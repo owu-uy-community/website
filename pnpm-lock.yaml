@@ -40,7 +40,7 @@ importers:
         version: 2.0.0-beta.44
       '@orpc/evlog':
         specifier: 2.0.0-beta.44
-        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.158(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))
       '@orpc/experimental-effect':
         specifier: 2.0.0-beta.44
         version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)
@@ -192,8 +192,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
       ai:
-        specifier: 7.0.130
-        version: 7.0.130(zod@4.6.5)
+        specifier: 7.0.158
+        version: 7.0.158(zod@4.6.5)
       atropos:
         specifier: 2.0.2
         version: 2.0.2
@@ -235,7 +235,7 @@ importers:
         version: 8.6.0(react@19.3.0)
       evlog:
         specifier: 2.30.1
-        version: 2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
+        version: 2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.158(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
       ioredis:
         specifier: 6.0.0
         version: 6.0.0
@@ -455,20 +455,20 @@ packages:
   '@adobe/css-tools@4.5.0':
     resolution: {integrity: sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q==}
 
-  '@ai-sdk/gateway@4.0.106':
-    resolution: {integrity: sha512-NprSdFzyVnbEp2SDWtIgsCFIUHFCehOD9S6FQkF/dLrCmnke8w4SOK3KcmUUiEbwtVzlUF8prkaELp+ohcQaQw==}
+  '@ai-sdk/gateway@4.0.131':
+    resolution: {integrity: sha512-3B192DqC0d4kImRqqptKl4yxBbGzZI0niJ6joVW34FrVx+iGO9zdSAFalu+N814m8ChbLaLY8MuDgqsglhOHpQ==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/provider-utils@5.0.56':
-    resolution: {integrity: sha512-F7/U1YpVXEfSxRHbxScm0PVdr9lN6GaUWHnt8ws2UjuGeuxWHqCkV25dGpHAkpDHkuIXoC+aak/OqSylKSJmHw==}
+  '@ai-sdk/provider-utils@5.0.72':
+    resolution: {integrity: sha512-M6QAztI84jWumQSvKcGOL91DxhChsWxn3D3gYtV0/7E1TPQg9BmLdIerOolUC/jghQbMlQrHyzp0hqdIhUZ2Rw==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/provider@4.0.24':
-    resolution: {integrity: sha512-iztFqJTdxNN0ZzqZAAnVPMhRMaL1bfQFa3GIPAffWQ0+dP2FXIkyMD8kHeEI7EpB/C6TR45cqOkrS7YZZ1sATA==}
+  '@ai-sdk/provider@4.0.35':
+    resolution: {integrity: sha512-yBz6fmLS8MSCIzy7NiHEUAq56ZLD4ZA1GR6bpXBxgbwUacP1La7LuwAr/xy9jSzthem4F8Xu2OrhvU/JrE9fYA==}
     engines: {node: '>=22'}
 
   '@alloc/quick-lru@5.2.0':
@@ -5908,8 +5908,8 @@ packages:
     engines: {node: '>=0.4.0'}
     hasBin: true
 
-  ai@7.0.130:
-    resolution: {integrity: sha512-QkBkCogl46jXUg0SrSsdqQlOI2ZVMCjfnbBQS8t3gE21U/SO17oNMVFyjmcC9z20wOoYUA+2O2vsso0maoS7dw==}
+  ai@7.0.158:
+    resolution: {integrity: sha512-aG0m6KTU39e9dWoaepnWcuYhngc/9z8rEjI3rLV+UnzsYMS3F3BzKw/gOKuHNet2GiqdYyG5wrJauAu88b6Nuw==}
     engines: {node: '>=22'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -9441,23 +9441,23 @@ snapshots:
 
   '@adobe/css-tools@4.5.0': {}
 
-  '@ai-sdk/gateway@4.0.106(zod@4.6.5)':
+  '@ai-sdk/gateway@4.0.131(zod@4.6.5)':
     dependencies:
-      '@ai-sdk/provider': 4.0.24
-      '@ai-sdk/provider-utils': 5.0.56(zod@4.6.5)
+      '@ai-sdk/provider': 4.0.35
+      '@ai-sdk/provider-utils': 5.0.72(zod@4.6.5)
       '@vercel/oidc': 3.2.0
       zod: 4.6.5
 
-  '@ai-sdk/provider-utils@5.0.56(zod@4.6.5)':
+  '@ai-sdk/provider-utils@5.0.72(zod@4.6.5)':
     dependencies:
-      '@ai-sdk/provider': 4.0.24
+      '@ai-sdk/provider': 4.0.35
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.1
       undici: 7.30.0
       zod: 4.6.5
 
-  '@ai-sdk/provider@4.0.24':
+  '@ai-sdk/provider@4.0.35':
     dependencies:
       json-schema: 0.4.0
 
@@ -11876,13 +11876,13 @@ snapshots:
       '@orpc/shared': 2.0.0-beta.44
       '@standard-schema/spec': 1.1.0
 
-  '@orpc/evlog@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))':
+  '@orpc/evlog@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.158(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))':
     dependencies:
       '@orpc/client': 2.0.0-beta.44
       '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       '@orpc/shared': 2.0.0-beta.44
       '@standard-server/core': 0.10.3
-      evlog: 2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
+      evlog: 2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.158(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1))
     transitivePeerDependencies:
       - crossws
       - fastify
@@ -15561,11 +15561,11 @@ snapshots:
 
   acorn@8.18.0: {}
 
-  ai@7.0.130(zod@4.6.5):
+  ai@7.0.158(zod@4.6.5):
     dependencies:
-      '@ai-sdk/gateway': 4.0.106(zod@4.6.5)
-      '@ai-sdk/provider': 4.0.24
-      '@ai-sdk/provider-utils': 5.0.56(zod@4.6.5)
+      '@ai-sdk/gateway': 4.0.131(zod@4.6.5)
+      '@ai-sdk/provider': 4.0.35
+      '@ai-sdk/provider-utils': 5.0.72(zod@4.6.5)
       zod: 4.6.5
 
   ajv-formats@2.1.1(ajv@8.17.1):
@@ -16326,10 +16326,10 @@ snapshots:
 
   eventsource-parser@3.1.1: {}
 
-  evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.130(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)):
+  evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.158(zod@4.6.5))(next@16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)):
     optionalDependencies:
       '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
-      ai: 7.0.130(zod@4.6.5)
+      ai: 7.0.158(zod@4.6.5)
       next: 16.4.2(@babel/core@7.26.10)(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       vite: 8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)

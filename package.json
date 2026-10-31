@@ -106,7 +106,7 @@
     "@vercel/analytics": "2.0.1",
     "@vercel/functions": "3.9.3",
     "@vercel/speed-insights": "2.0.0",
-    "ai": "7.0.130",
+    "ai": "7.0.158",
     "atropos": "2.0.2",
     "barcode-detector": "3.2.2",
     "better-auth": "1.7.12",
@@ -194,7 +194,7 @@
   },
   "lint-staged": {
     "*.{js,jsx,mjs,ts,tsx}": [
-      "oxlint --fix",
+      "oxlint --fix --no-error-on-unmatched-pattern",
       "oxfmt --no-error-on-unmatched-pattern"
     ],
     "*.{json,jsonc,css,md,mdx,yml,yaml}": "oxfmt --no-error-on-unmatched-pattern"

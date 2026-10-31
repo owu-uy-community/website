@@ -1,0 +1,25 @@
+# Bad-network lab for the bridge: a sidecar shares the bridge container's network
+# namespace and shapes its egress with `tc netem` (companion/scripts/netem-matrix.mts
+# drives it). Private destinations (the boards on the LAN, the host behind the
+# published ports) stay unshaped; only the internet leg gets the bad network.
+#
+#   docker compose -f owy/companion/bridge/compose.yaml -f owy/companion/bridge/compose.netem.yaml up -d --build
+#   pnpm -C owy companion:netem <question.wav> [more.wav …]
+services:
+  bridge:
+    environment:
+      # The matrix talks to the bridge like the workbench does, and reads each
+      # browser turn's `turn path=… ttfa=…` line from the logs.
+      COMPANION_WEB_BRIDGE: "1"
+      COMPANION_WEB_DEBUG: "1"
+    volumes:
+      # web-bridge.json (URL + secret) for the harness on the host.
+      - type: bind
+        source: ../.eve
+        target: /app/owy/companion/.eve
+  netem:
+    image: alpine:3.22
+    network_mode: "service:bridge"
+    cap_add: [NET_ADMIN]
+    command: ["sh", "-c", "apk add --no-cache iproute2 >/dev/null && sleep infinity"]
+    depends_on: [bridge]

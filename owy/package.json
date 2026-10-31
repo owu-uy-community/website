@@ -24,6 +24,8 @@
     "companion:test": "vitest run --config companion/bridge/vitest.config.ts",
     "companion:tools": "tsx companion/bridge/src/cli/tools.ts",
     "companion:probe": "tsx companion/bridge/src/cli/probe.ts",
+    "companion:netcheck": "tsx companion/bridge/src/cli/netcheck.ts",
+    "companion:netem": "tsx companion/scripts/netem-matrix.mts",
     "companion:audio-check": "tsx companion/bridge/src/cli/audio-check.ts",
     "companion:driver-test": "node companion/firmware/tests/speaker-startup.mjs && node companion/firmware/tests/voice-buffer.mjs",
     "companion:interaction-test": "node companion/firmware/tests/companion.mjs",
@@ -31,10 +33,10 @@
     "companion:clips": "tsx companion/bridge/src/cli/clips.ts"
   },
   "dependencies": {
-    "@ai-sdk/google": "^4.0.76",
+    "@ai-sdk/google": "^4.0.109",
     "@orpc/client": "2.0.0-beta.42",
     "@orpc/server": "2.0.0-beta.42",
-    "ai": "^7.0.107",
+    "ai": "^7.0.158",
     "esphome-client": "2.0.0",
     "eve": "^0.63.0",
     "tsx": "^4.23.13",

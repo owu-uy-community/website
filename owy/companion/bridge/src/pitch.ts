@@ -33,7 +33,8 @@ const SPEECH_FRAMES = 3;
 const BYTES_PER_MS = (DEVICE_SAMPLE_RATE * BYTES_PER_SAMPLE) / 1000;
 
 export interface PitchRecorderOptions {
-  kind: PitchKind;
+  /** Picks the default limits; absent = pass `limits` (a voice turn's recorder). */
+  kind?: PitchKind;
   clock?: RuntimeClock;
   /** RMS (0..1) a 20 ms frame must exceed to count as speech; the knob's mic has AGC. */
   rmsThreshold?: number;
@@ -42,11 +43,16 @@ export interface PitchRecorderOptions {
   ignoreMs?: number;
   /** Someone started talking (once). */
   onSpeechStart(): void;
-  /** The recording ended on its own (once). */
+  /** The recording ended on its own (once), or with `repeatSilence` the person paused (every pause). */
   onDone(reason: "silence" | "cap"): void;
+  /**
+   * A voice turn's recorder: a pause reports `onDone("silence")` but recording
+   * goes on (the person may continue); only the cap or `stop()` ends it.
+   */
+  repeatSilence?: boolean;
 }
 
-/** Buffers 16 kHz PCM16 mic frames and watches for speech, silence and the cap. */
+/** Buffers 16 kHz PCM16 mic frames and watches for speech, silence and the cap (pitches and voice turns). */
 export class PitchRecorder {
   readonly limits: PitchLimits;
   private readonly clock: RuntimeClock;
@@ -56,6 +62,7 @@ export class PitchRecorder {
   private loudFrames = 0;
   private speechBytes = 0;
   private spoke = false;
+  private pausing = false;
   private peakLevel = 0;
   private startedAt = 0;
   private silenceTimer: ClockTimer | null = null;
@@ -65,7 +72,7 @@ export class PitchRecorder {
   constructor(private readonly options: PitchRecorderOptions) {
     this.clock = options.clock ?? systemClock;
     this.threshold = options.rmsThreshold ?? 0.012;
-    this.limits = options.limits ?? PITCH_LIMITS[options.kind];
+    this.limits = options.limits ?? PITCH_LIMITS[options.kind ?? "pitch"];
   }
 
   start(): void {
@@ -90,6 +97,7 @@ export class PitchRecorder {
       this.options.onSpeechStart();
     }
     if (!this.spoke) return;
+    this.pausing = false;
     this.speechBytes += pcm16k.length;
     // Silence is measured from the last frame with a voice in it.
     if (this.silenceTimer) this.clock.clearTimeout(this.silenceTimer);
@@ -121,6 +129,15 @@ export class PitchRecorder {
     }
   }
 
+  /** Someone spoke and has been quiet for `silenceMs` since (or the recording ended). */
+  get pausedAfterSpeech(): boolean {
+    return this.spoke && (this.pausing || this.stopped);
+  }
+
+  get heardSpeech(): boolean {
+    return this.spoke;
+  }
+
   get durationMs(): number {
     return this.bytes / BYTES_PER_MS;
   }
@@ -143,6 +160,12 @@ export class PitchRecorder {
 
   private finish(reason: "silence" | "cap"): void {
     if (this.stopped) return;
+    if (reason === "silence" && this.options.repeatSilence) {
+      this.silenceTimer = null;
+      this.pausing = true;
+      this.options.onDone(reason);
+      return;
+    }
     this.stop();
     this.options.onDone(reason);
   }
