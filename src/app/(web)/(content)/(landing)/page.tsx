@@ -262,6 +262,9 @@ export default async function Landing() {
                 { when: "Nov 2026", title: "OWU CONF 2026", href: CONF_URL, now: confUpcoming, icon: <Rocket /> },
               ]}
             />
+            <ButtonLink arrow className="mt-8" href={PAGES.historia.href} size="sm" variant="secondary">
+              Toda la historia, desde 2007
+            </ButtonLink>
           </div>
         </div>
       </Section>

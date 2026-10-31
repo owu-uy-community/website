@@ -1,0 +1,2898 @@
+{
+ "conf:juegarte-san-carlos:2010-08-26": {
+  "description": "JuegArte 2010 fue la **segunda Muestra Interactiva de Videojuegos** de San Carlos (Maldonado), organizada por Mundo Uno, una organización sin fines de lucro que juntaba objetos vinculados a los videojuegos con la idea de armar un museo interactivo. Fue declarada de interés local y departamental, y el anuncio en Uruguay Gamer la presentaba con un guiño: «para que no digan después que todo pasa en Montevideo».\n\nTuvo dos partes:\n\n- **23 de agosto**, Liceo Nº 1 de San Carlos: charla «Videojuegos y educación» de Gonzalo Frasca, cofundador de Powerful Robot Games, pensada para madres, padres, docentes y público en general.\n- **26 al 28 de agosto**, Casa de la Cultura de San Carlos (de 9 a 21 h): la muestra, donde el público podía jugar videojuegos desde los primeros hasta los más modernos.\n\nEse año se sumaron estudios como expositores: Plastic Dreams (de San Carlos), Powerful Robot Games, Batovi Games y Estudio Egg (de Montevideo). EMI Educa tuvo además un espacio donde sus alumnos mostraban sus propios juegos.",
+  "talks": [
+   {
+    "title": "Videojuegos y educación",
+    "speakers": [
+     "Gonzalo Frasca"
+    ]
+   }
+  ],
+  "organizers": [
+   "Mundo Uno"
+  ],
+  "photos": [
+   {
+    "src": "https://web.archive.org/web/20130411085443im_/http://uruguaygamer.com/wp-content/uploads/2010/07/30493_396551708556_133319138556_4265762_6414604_n.jpg",
+    "alt": "Afiche de JuegArte 2010 con Link de Zelda: «En agosto vuelve JuegArte 2010», Casa de la Cultura de San Carlos, organiza Mundo Uno (afiche, no hay fotos del evento)",
+    "by": "Mundo Uno",
+    "source": "Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=364"
+   },
+   {
+    "src": "https://web.archive.org/web/20121015120411im_/http://uruguaygamer.com/wp-content/uploads/2010/07/juegarteTN.jpg",
+    "alt": "Logo de JuegArte 2010, «2ª Muestra Interactiva de Videojuegos», con Mario y hongos (logo del evento)",
+    "by": "Mundo Uno",
+    "source": "Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=364"
+   }
+  ],
+  "links": [
+   {
+    "label": "Anuncio en Uruguay Gamer (archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=364"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Uruguay Gamer: «2da Muestra Interactiva de Videojuegos en San Carlos» (31/7/2010, archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=364"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2012-01-27": {
+  "description": "Primera edición uruguaya de la **Global Game Jam**, el encuentro mundial en el que equipos crean un videojuego en 48 horas a partir de un tema común. Se hizo del 27 al 29 de enero de 2012 en la Sala Interactiva de la Torre de las Telecomunicaciones, con Antel y la Facultad de Comunicación y Diseño de la Universidad ORT Uruguay como organizadores y el impulso de Uruguay Gamer, el sitio de Rodrigo Fernández (Rod F). Para que la primera vez saliera bien, el cupo se limitó a 30 participantes.\n\nEl viernes 27, antes de la largada de las 17 horas, hubo una conferencia de prensa con Carolina Cosse (presidenta de Antel), Eduardo Hipogrosso (decano de Comunicación y Diseño de ORT) y Gonzalo Frasca, docente de videojuegos en ORT, que además fue uno de los cinco diseñadores de los keynotes mundiales de ese año, junto a Will Wright, Brenda Brathwaite, John Romero y Baiyon. El tema global fue la serpiente que se come la cola (el ouroboros).\n\nEn Montevideo salieron siete juegos:\n- **Boro**\n- **Concéntricos**\n- **Medusa**\n- **Ouroboros Rage Rush**\n- **ParaParaParanoid**\n- **Steamballs**\n- **Wuji-Go!**",
+  "venue": "Sala Interactiva, Torre de las Telecomunicaciones (Antel)",
+  "city": "Montevideo",
+  "organizers": [
+   "Universidad ORT Uruguay (Facultad de Comunicación y Diseño)",
+   "Antel",
+   "Uruguay Gamer (Rodrigo Fernández)"
+  ],
+  "attendance": "cupo de 30 participantes",
+  "photos": [
+   {
+    "src": "https://web.archive.org/web/20120221151201im_/http://uruguaygamer.com/wp-content/uploads/2012/01/430357_10150489246826056_519806055_8852067_1871633473_n.jpg",
+    "alt": "Foto grupal de los participantes de la primera Global Game Jam Uruguay en la Sala Interactiva de la Torre de las Telecomunicaciones, con las computadoras en primer plano",
+    "by": "Uruguay Gamer",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   },
+   {
+    "src": "https://web.archive.org/web/20120221151201im_/http://uruguaygamer.com/wp-content/uploads/2012/01/mzhfdjkl.png",
+    "alt": "Pantalla de presentación del juego Boro, hecho en la Global Game Jam Uruguay 2012 (imagen del juego, no del evento)",
+    "by": "Equipo del juego, vía Uruguay Gamer",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   },
+   {
+    "src": "https://web.archive.org/web/20120221151201im_/http://uruguaygamer.com/wp-content/uploads/2012/01/Ouroboros-Rage-Rush-1_0.png",
+    "alt": "Captura del juego Ouroboros Rage Rush, hecho en la Global Game Jam Uruguay 2012 (imagen del juego, no del evento)",
+    "by": "Equipo del juego, vía Uruguay Gamer",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   },
+   {
+    "src": "https://web.archive.org/web/20120221151201im_/http://uruguaygamer.com/wp-content/uploads/2012/01/Screenshot_1.jpg",
+    "alt": "Captura del juego Steamballs, hecho en la Global Game Jam Uruguay 2012 (imagen del juego, no del evento)",
+    "by": "Equipo del juego, vía Uruguay Gamer",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   },
+   {
+    "src": "https://web.archive.org/web/20120221151201im_/http://uruguaygamer.com/wp-content/uploads/2012/01/Press.png",
+    "alt": "Captura del juego Medusa, hecho en la Global Game Jam Uruguay 2012 (imagen del juego, no del evento)",
+    "by": "Equipo del juego, vía Uruguay Gamer",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   }
+  ],
+  "links": [
+   {
+    "label": "Los juegos creados, en Uruguay Gamer (archivado)",
+    "url": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   },
+   {
+    "label": "Anuncio en Uruguay Gamer (archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=781"
+   },
+   {
+    "label": "Nota de la Universidad ORT",
+    "url": "https://www.ort.edu.uy/en/55821/32/-global-game-jam-uruguay-with-support-from-antel-and-the-university-of-the-republic-ort-in-uruguay.html"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Uruguay Gamer: Global Game Jam – Uruguay! (archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=781"
+   },
+   {
+    "label": "Uruguay Gamer: Hoy arranca la Global Game Jam Uruguay (archivado)",
+    "url": "https://web.archive.org/web/2013/http://uruguaygamer.com/?p=828"
+   },
+   {
+    "label": "Uruguay Gamer: Los juegos creados en 48hs (archivado)",
+    "url": "https://web.archive.org/web/20120221151201/http://uruguaygamer.com/?p=834"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam Uruguay con el apoyo de Antel",
+    "url": "https://www.ort.edu.uy/en/55821/32/-global-game-jam-uruguay-with-support-from-antel-and-the-university-of-the-republic-ort-in-uruguay.html"
+   }
+  ]
+ },
+ "conf:edujam:2012-05-11": {
+  "description": "eduJAM! 2012 fue un encuentro internacional de desarrolladores de **software educativo libre**, el 11 y 12 de mayo de 2012 en el Complejo Torre de las Telecomunicaciones de Antel, en Montevideo. Lo organizó ceibalJAM!, la comunidad de voluntarios que desarrollaba aplicaciones para las ceibalitas, y formó parte de la «semana del 1:1», coordinada con Flor de Ceibo y RAP Ceibal. Lo patrocinaron Activity Central, Antel–Plan Ceibal y OLPC, y fue declarado de interés por el MEC y el Plan Ceibal.\n\nLa idea era fortalecer la comunidad de desarrolladores de la plataforma Sugar y de los despliegues tipo OLPC en América del Sur, pero también abrirse a otros proyectos educativos libres. Entre los asistentes internacionales confirmados estaban Martin Langhoff y Claudia Urrea (OLPC), Gonzalo Odiard, Manuel Quiñones y Manuel Kaufmann (OLPC Argentina / Sugar Labs Argentina), Rafael Ortiz y Rubén Rodríguez (Activity Central), Tony Anderson (Sugar Labs) y gente de la Fundación Quirós Tanzi de Costa Rica, junto a desarrolladores uruguayos como Flavio Danesse, Agustín Zubiaga y Gabriel Eirea.\n\nEl cierre fueron los primeros **Premios Terrón**, con los que ceibalJAM! reconoció a quienes habían hecho aplicaciones para las ceibalitas de forma voluntaria. El jurado incluyó a Walter Bender (Sugar Labs) y a Martin Langhoff, y la entrega fue en el auditorio de Antel. Entre los premiados estuvieron JAMedia y CeibalRadio (Flavio Danesse), Simple Graph (Agustín Zubiaga), Conozco Uruguay (Gabriel Eirea), Conozco América (Alan Aguiar), PlayGo (Andrés Ambrois), Ceibal-Chess (Alejandro Segovia) y JamEdit (Agustín Zubiaga y Daniel Francis). Los primeros puestos se llevaron una XO 1.75 donada por OLPC.\n\nDespués del encuentro, el 13 y 14 de mayo, hubo un **Sugar Code Sprint** en San José 1418 para seguir programando mejoras a Sugar y sus actividades.",
+  "talks": [
+   {
+    "title": "Centro Ceibal (Uruguay)",
+    "speakers": [
+     "Laura Bianchi"
+    ],
+    "slides": "https://drive.google.com/file/d/0B_OBnPx3j6dzdGhsNlBuNXYxSDA/view"
+   },
+   {
+    "title": "Fundación Quirós Tanzi (Costa Rica)",
+    "speakers": [
+     "Daniel Castro"
+    ],
+    "slides": "https://docs.google.com/presentation/d/1dn3iegmyZBHm4k1r1ZPV1X7mVq5sjfc3pK96CbJBQUQ/edit"
+   },
+   {
+    "title": "De la tortuga al robot Butiá: experiencias en el uso de TortugArte en la escuela primaria",
+    "speakers": [
+     "Rosamel Ramírez",
+     "Andrés Aguirre"
+    ],
+    "slides": "https://drive.google.com/file/d/0B_OBnPx3j6dzVDlRcmk2TENHeVU/view"
+   },
+   {
+    "title": "Tortuga y sensores: cómo el hardware y software abierto potencia a los estudiantes y sus comunidades",
+    "speakers": [
+     "Andrés Aguirre",
+     "Federico Andrade",
+     "Guzmán Trinidad"
+    ],
+    "slides": "https://drive.google.com/file/d/0B_OBnPx3j6dzVnlYNWdQdE93VjQ/view"
+   },
+   {
+    "title": "Entrega de los Premios Terrón 2012",
+    "video": "https://www.youtube.com/watch?v=noe4wdjFcdg"
+   }
+  ],
+  "organizers": [
+   "ceibalJAM!",
+   "Flor de Ceibo",
+   "RAP Ceibal"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/noe4wdjFcdg/hqdefault.jpg",
+    "alt": "Entrega de los Premios Terrón en el escenario del auditorio de Antel: un premiado de pie junto al atril y, en la pantalla, la diapositiva «Segundo puesto, voto del jurado» (cuadro del video)",
+    "by": "arandu",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=noe4wdjFcdg"
+   },
+   {
+    "src": "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEgVVHnLmHDyyaJyAc5IcgYYD_W0JnylzlsFhbz6UKdXbGbfk8thqcOAPjxWb5lP3KiK7YgBXFWPPBZDgVwlA0JHpJ8YdQ0x94Ta51qzGRlzzA1PgFppGqscjDWQxPr5kWK_6UNPb6r4pdnl/s1600/Premios+Terron+2012+fdo+negro.jpg",
+    "alt": "Logo de los Premios Terrón 2012: un terrón verde sonriente bajo un reflector (logo, no foto del evento)",
+    "by": "ceibalJAM!",
+    "source": "Sitio de eduJAM! 2012",
+    "page": "http://edujam2012.blogspot.com/p/premios-terron-2012.html"
+   }
+  ],
+  "links": [
+   {
+    "label": "Sitio oficial (blog de eduJAM! 2012)",
+    "url": "http://edujam2012.blogspot.com/"
+   },
+   {
+    "label": "Presentaciones",
+    "url": "http://edujam2012.blogspot.com/p/presentaciones.html"
+   },
+   {
+    "label": "Premios Terrón: ganadores",
+    "url": "http://edujam2012.blogspot.com/p/nominados.html"
+   },
+   {
+    "label": "Video de la entrega de premios",
+    "url": "https://www.youtube.com/watch?v=noe4wdjFcdg"
+   },
+   {
+    "label": "Participantes internacionales (wiki de Sugar Labs)",
+    "url": "https://wiki.sugarlabs.org/go/EduJAM/2012"
+   },
+   {
+    "label": "Sugar Code Sprint (wiki de Sugar Labs)",
+    "url": "https://wiki.sugarlabs.org/go/EduJAM/CodeSprint"
+   }
+  ],
+  "sources": [
+   {
+    "label": "eduJAM! 2012: objetivos del encuentro",
+    "url": "http://edujam2012.blogspot.com/2012/02/objetivos-del-edujam-2012.html"
+   },
+   {
+    "label": "eduJAM! 2012: presentaciones",
+    "url": "http://edujam2012.blogspot.com/p/presentaciones.html"
+   },
+   {
+    "label": "eduJAM! 2012: Premios Terrón 2012",
+    "url": "http://edujam2012.blogspot.com/p/premios-terron-2012.html"
+   },
+   {
+    "label": "eduJAM! 2012: ganadores de los Premios Terrón",
+    "url": "http://edujam2012.blogspot.com/p/nominados.html"
+   },
+   {
+    "label": "eduJAM! 2012: sponsors",
+    "url": "http://edujam2012.blogspot.com/p/sponsors.html"
+   },
+   {
+    "label": "Sugar Labs wiki: EduJAM/2012",
+    "url": "https://wiki.sugarlabs.org/go/EduJAM/2012"
+   },
+   {
+    "label": "Sugar Labs wiki: EduJAM/CodeSprint",
+    "url": "https://wiki.sugarlabs.org/go/EduJAM/CodeSprint"
+   }
+  ]
+ },
+ "conf:juegarte-san-carlos:2012-08-31": {
+  "description": "JuegArte 2012 fue la **cuarta Muestra Interactiva de Videojuegos** que Mundo Uno organizó en San Carlos (Maldonado), del 31 de agosto al 2 de setiembre de 2012, de 9 a 21 h, en la Casa de la Cultura de San Carlos. La entrada era gratuita y el evento fue declarado de interés local y departamental.\n\nSegún el afiche, colaboraron, entre otros, el Municipio de San Carlos, Radio San Carlos y Proanima. Uruguay Gamer difundió la convocatoria, pero no se conservan crónicas ni fotos de lo que pasó en la muestra.",
+  "organizers": [
+   "Mundo Uno"
+  ],
+  "photos": [
+   {
+    "src": "https://web.archive.org/web/20160530124740im_/http://uruguaygamer.com/wp-content/uploads/2012/08/AFICHES-PUBLICIDAD-723x1024.jpg",
+    "alt": "Afiche de JuegArte 2012, «4ª Muestra Interactiva de Videojuegos», del 31 de agosto al 2 de setiembre en la Casa de la Cultura de San Carlos, entrada gratis (afiche, no hay fotos del evento)",
+    "by": "Mundo Uno",
+    "source": "Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=1030"
+   }
+  ],
+  "links": [
+   {
+    "label": "Anuncio en Uruguay Gamer (archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=1030"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Uruguay Gamer: «JuegArte 2012 – Muestra Interactiva de Juegos en San Carlos» (2/8/2012, archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=1030"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2013-01-25": {
+  "description": "Segunda edición uruguaya de la **Global Game Jam**, del 25 al 27 de enero de 2013, ya con dos sedes en Montevideo: la Sala Interactiva de la Torre de las Telecomunicaciones, a cargo de Antel y la Universidad ORT Uruguay, y A+ Escuela de Artes Visuales, coordinada por Fernando Sansberro. Como en todo el mundo, la largada fue el viernes a las 17 horas; ese mismo día hubo en la Torre una conferencia de prensa con Carolina Cosse (Antel), Eduardo Hipogrosso (ORT) y Gonzalo Frasca.\n\nEl tema global fue un sonido: el latido del corazón. Según El Observador participaron 49 personas, y varios equipos pasaron la noche en la sede durmiendo sobre pufs y mesas. Frasca resumió la experiencia con una frase: \"en 48 horas se aprende y se hace más que en años de escuela\".\n\nUruguay Gamer publicó los juegos de las dos sedes:\n- **Torre de las Telecomunicaciones (ORT/Antel):** Bloodville, El Corazón de la Tapera, Duhk, This Is Not Jason, Cannibal Robot from Outer Space y Tole Tole.\n- **A+ Escuela de Artes Visuales:** Lost Heart, Latin Lovers y Call Me Maybe.",
+  "venue": "Sala Interactiva, Torre de las Telecomunicaciones (Antel) y A+ Escuela de Artes Visuales (Bv. Artigas 1133)",
+  "city": "Montevideo",
+  "attendance": "49 participantes (El Observador)",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Antel",
+   "A+ Escuela de Artes Visuales (Fernando Sansberro)",
+   "Uruguay Gamer"
+  ],
+  "photos": [
+   {
+    "src": "https://media.elobservador.com.uy/p/7509f507c10441f86bb4e9f0c896725e/adjuntos/362/imagenes/100/432/0100432401/1200x675/smart/0000343475webp.webp",
+    "alt": "Un participante de la Global Game Jam 2013 en Montevideo, de espaldas, busca referencias de dibujos de botellas en su laptop",
+    "by": "El Observador",
+    "source": "El Observador",
+    "page": "https://www.elobservador.com.uy/nota/el-latir-del-global-game-jam--2013129500"
+   },
+   {
+    "src": "https://web.archive.org/web/20130215191850im_/http://globalgamejam.org/sites/default/files/styles/large/public/screenshots/2013/press_49.jpg",
+    "alt": "Captura del juego Bloodville, hecho en la sede ORT/Antel de la Global Game Jam 2013 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20130215191850/http://uruguaygamer.com/?p=1204"
+   },
+   {
+    "src": "https://web.archive.org/web/20130215191850im_/http://globalgamejam.org/sites/default/files/styles/large/public/screenshots/2013/title_14.png",
+    "alt": "Pantalla de título de This Is Not Jason, hecho en la sede ORT/Antel de la Global Game Jam 2013 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20130215191850/http://uruguaygamer.com/?p=1204"
+   },
+   {
+    "src": "https://web.archive.org/web/20130215191850im_/http://globalgamejam.org/sites/default/files/styles/large/public/screenshots/2013/TitleScreen_0.jpg",
+    "alt": "Pantalla de título de Cannibal Robot from Outer Space, hecho en la sede ORT/Antel de la Global Game Jam 2013 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20130215191850/http://uruguaygamer.com/?p=1204"
+   },
+   {
+    "src": "https://web.archive.org/web/20130215191850im_/http://globalgamejam.org/sites/default/files/styles/large/public/screenshots/2013/Latin_Lovers_001.jpg",
+    "alt": "Captura de Latin Lovers, juego rítmico hecho en la sede de A+ en la Global Game Jam 2013 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Sitio de Uruguay Gamer (archivado)",
+    "page": "https://web.archive.org/web/20130215191850/http://uruguaygamer.com/?p=1204"
+   }
+  ],
+  "links": [
+   {
+    "label": "Los juegos creados, en Uruguay Gamer (archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=1204"
+   },
+   {
+    "label": "El latir del Global Game Jam, en El Observador",
+    "url": "https://www.elobservador.com.uy/nota/el-latir-del-global-game-jam--2013129500"
+   }
+  ],
+  "sources": [
+   {
+    "label": "El Observador: Uruguay jugará con el Global Game Jam",
+    "url": "https://www.elobservador.com.uy/nota/uruguay-jugara-con-el-global-game-jam-201312514300"
+   },
+   {
+    "label": "El Observador: El latir del Global Game Jam",
+    "url": "https://www.elobservador.com.uy/nota/el-latir-del-global-game-jam--2013129500"
+   },
+   {
+    "label": "Uruguay Gamer: Los juegos realizados en 48hs (archivado)",
+    "url": "https://web.archive.org/web/2016/http://uruguaygamer.com/?p=1204"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam 2013 en Uruguay",
+    "url": "https://www.ort.edu.uy/en/56636/32/-iglobal-game-jam-2013-in-uruguay-supported-by-ort-university-uruguay.html"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2014-01-24": {
+  "description": "Tercera edición uruguaya de la **Global Game Jam**, del 24 al 26 de enero de 2014, otra vez con dos sedes en Montevideo. En la Torre de las Telecomunicaciones (Guatemala 1075) la sede #GGJUY la organizaron Antel, la Cátedra de Videojuegos de la Universidad ORT Uruguay y Uruguay Gamer, con 48 jammers anotados. En A+ Escuela de Artes Visuales, coordinada por Fernando Sansberro y con comidas incluidas, se anotaron 20.\n\nEl tema mundial fue la frase \"No vemos las cosas como son, sino como somos\". Ese año la jam se hizo en simultáneo en unas 480 sedes de 70 países.\n\nJuegos hechos en Uruguay:\n- **Torre de las Telecomunicaciones (ORT/Antel):** Boom Island, Gatoso, Grep, Mullet Rollers Keytar Radical!, Paranoia, Retour à la Maison y Waking Nightmares.\n- **A+ Escuela de Artes Visuales:** But I'm not Sleepy!, Ego y Elemenpathy.",
+  "venue": "Torre de las Telecomunicaciones (Guatemala 1075) y A+ Escuela de Artes Visuales (Bv. Artigas 1133)",
+  "city": "Montevideo",
+  "attendance": "48 jammers anotados en la Torre y 20 en A+",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Antel",
+   "Uruguay Gamer (Rod F)",
+   "A+ Escuela de Artes Visuales (Fernando Sansberro)"
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede ORT/Antel en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20211018072736/https://v3.globalgamejam.org/2014/jam-sites/ggjuy-universidad-ortantel/games"
+   },
+   {
+    "label": "Juegos de la sede A+ en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20211018075318/https://v3.globalgamejam.org/2014/jam-sites/escuela-de-artes-visuales/games"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam 2014 en Uruguay",
+    "url": "https://www.ort.edu.uy/en/57093/32/-iglobal-game-jam-2014-in-uruguay-organized-by-ort-university-uruguay.html"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Anuario 2014",
+    "url": "https://www.ort.edu.uy/anuario-2014/70/"
+   },
+   {
+    "label": "Global Game Jam: sede #GGJUY Universidad ORT/Antel (archivado)",
+    "url": "https://web.archive.org/web/20240625012449/https://v3.globalgamejam.org/2014/jam-sites/ggjuy-universidad-ortantel"
+   },
+   {
+    "label": "Global Game Jam: sede A+ Escuela de Artes Visuales (archivado)",
+    "url": "https://web.archive.org/web/20251129062815/https://v3.globalgamejam.org/2014/jam-sites/escuela-de-artes-visuales"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2015-01-23": {
+  "description": "Cuarta edición uruguaya de la **Global Game Jam**, del 23 al 25 de enero de 2015. Antel, la Universidad ORT Uruguay y Uruguay Gamer volvieron a la Torre de las Telecomunicaciones, esta vez en la sala Idea Vilariño, con cupo para 50 personas; A+ Escuela de Artes Visuales abrió su sede con 30 lugares. Según El Observador participaron 73 jóvenes de entre 16 y 28 años.\n\nEl tema mundial, revelado el viernes, fue la pregunta \"What do we do now?\" (¿Y ahora qué hacemos?). Muchos equipos no durmieron para llegar a subir sus juegos antes del cierre del domingo. Fernando Sansberro, director del estudio Batoví y organizador en A+, recordó en 180 que no hay premios ni ganadores: la idea es colaborar y acercarse al desarrollo de videojuegos.\n\nEntre las dos sedes se terminaron diez juegos:\n- **Torre de las Telecomunicaciones (ORT/Antel):** Arcane Rage (un duelo de magos), Eggstinction – High Cholesterol Fun, Free Brawlin', Let's Split Up, Match Me! y Rip in Party.\n- **A+ Escuela de Artes Visuales:** Dinocalypse, el juego de mesa Flame Dames, Life Itself y Pacific Offensive.",
+  "venue": "Torre de las Telecomunicaciones, sala Idea Vilariño (Guatemala 1075) y A+ Escuela de Artes Visuales (Bv. Artigas 1133)",
+  "city": "Montevideo",
+  "attendance": "73 participantes (El Observador)",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Antel",
+   "Uruguay Gamer (Rod F)",
+   "A+ Escuela de Artes Visuales (Fernando Sansberro)"
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede ORT/Antel en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20210919231407/https://v3.globalgamejam.org/2015/jam-sites/ggjuy-universidad-ortantel/games"
+   },
+   {
+    "label": "Nota de 180: 48 horas para hacer un videojuego (PDF)",
+    "url": "https://www.ort.edu.uy/innovaportal/file/26361/1/global-game-jam-2015-ort-180.pdf"
+   },
+   {
+    "label": "Nota de El Observador: Videojuegos contra reloj (PDF)",
+    "url": "https://www.ort.edu.uy/innovaportal/file/26363/1/global-game-jam-2015-ort-elobservador.pdf"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam 2015 en Uruguay",
+    "url": "https://www.ort.edu.uy/en/57865/32/global-game-jam-2015-in-uruguay-organized-by-the-ort-university-of-uruguay.html"
+   },
+   {
+    "label": "180: 48 horas para hacer un videojuego (recorte en PDF)",
+    "url": "https://www.ort.edu.uy/innovaportal/file/26361/1/global-game-jam-2015-ort-180.pdf"
+   },
+   {
+    "label": "El Observador (Cromo): Videojuegos contra reloj (recorte en PDF)",
+    "url": "https://www.ort.edu.uy/innovaportal/file/26363/1/global-game-jam-2015-ort-elobservador.pdf"
+   },
+   {
+    "label": "Global Game Jam: sede #GGJUY Universidad ORT/ANTEL (archivado)",
+    "url": "https://web.archive.org/web/20240916001929/https://v3.globalgamejam.org/2015/jam-sites/ggjuy-universidad-ortantel"
+   }
+  ]
+ },
+ "conf:winterjam-uruguay:2015-07": {
+  "description": "La primera WinterJam se hizo a mediados de julio de 2015, durante un fin de semana, en la incubadora **Ingenio** del LATU. La organizó Rodrigo Fernández, docente de la Universidad ORT Uruguay, con Ingenio, con una idea simple: tener una game jam a mitad de año, entre la Global Game Jam de enero y la entrega del Concurso Nacional de Videojuegos de fin de año.\n\nPasaron entre 50 y 60 personas, que entraban y salían a lo largo del fin de semana, y el sábado se armaron **ocho equipos**, algunos ya conocidos y otros formados ahí mismo. La jam duró 34 horas, contra las 48 de la Global Game Jam. Según el organizador hubo «de todo un poco», con muchos juegos de multijugador local. Destacó uno sobre una serpiente que tenía que proteger una pelota, hecho por un grupo sin experiencia previa en videojuegos.",
+  "attendance": "entre 50 y 60 participantes, 8 equipos",
+  "venue": "Ingenio, incubadora del LATU (Av. Italia 6201)",
+  "organizers": [
+   "Rodrigo Fernández (Universidad ORT Uruguay)",
+   "Ingenio (LATU)"
+  ],
+  "links": [
+   {
+    "label": "Crónica de Ingenio (archivada)",
+    "url": "https://web.archive.org/web/20170728044335/http://www.ingenio.org.uy/index.php/761-winterjam-julio-2015"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Ingenio: «WinterJam - Julio 2015» (23/7/2015, archivado)",
+    "url": "https://web.archive.org/web/20170728044335/http://www.ingenio.org.uy/index.php/761-winterjam-julio-2015"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Winter Jam 2016 (anuncio, menciona la primera edición)",
+    "url": "https://www.ort.edu.uy/novedades/winter-jam-2016"
+   },
+   {
+    "label": "Universidad ORT Uruguay: WinterJam 2017",
+    "url": "https://www.ort.edu.uy/novedades/winter-jam-2017"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2016-01-29": {
+  "description": "Quinta edición uruguaya de la **Global Game Jam**, del 29 al 31 de enero de 2016, organizada por la Universidad ORT Uruguay, Antel y Uruguay Gamer, con apoyo de McDonald's Uruguay. Hubo récord de inscripciones: se duplicó la capacidad, los cupos se llenaron en tres días y quedó lista de espera. El tema se reveló el viernes a las 18 horas en la sala Idea Vilariño de la Torre de las Telecomunicaciones. En la página de la Global Game Jam figuran 56 jammers anotados en la Torre y 32 en A+ Escuela de Artes Visuales, la segunda sede, a cargo de Fernando Sansberro.\n\nEl tema mundial fue *Ritual*. En A+ los participantes podían irse a dormir a sus casas; en la Torre siguieron de largo. Según la cobertura de El País, republicada por CUTI, salieron 12 juegos; uno de los más aplaudidos fue **Morning Ritual**, un *runner* en el que hay que juntar granos de café sin pasarse de cafeína ni quedarse dormido. No hubo premios: como dijo una de las participantes, la recompensa es la experiencia.\n\nJuegos hechos en Uruguay:\n- **Torre de las Telecomunicaciones (ORT/Antel):** Black Cat Ritual III, Cult-Man, Hangry Wizards, High Stew, Jesunicorn – Life and Miracles, Mechamancers, Morning Ritual y Wytches' Brew.\n- **A+ Escuela de Artes Visuales:** Cap Crawler, Sacrifice Mayhem, Totem Garden y Witch Wars.",
+  "venue": "Torre de las Telecomunicaciones, sala Idea Vilariño (Guatemala 1075) y A+ Escuela de Artes Visuales (Bv. Artigas 1133)",
+  "city": "Montevideo",
+  "attendance": "56 jammers anotados en la Torre y 32 en A+",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Antel",
+   "Uruguay Gamer (Rodrigo Alem Fernández)",
+   "A+ Escuela de Artes Visuales (Fernando Sansberro)"
+  ],
+  "photos": [
+   {
+    "src": "https://web.archive.org/web/20240717230217im_/https://v3.globalgamejam.org/sites/default/files/styles/game_listing__wide/public/game/featured_image/bg_home_0.png?itok=sHtJD6FF&timestamp=1454270558",
+    "alt": "Pantalla de inicio de Morning Ritual, hecho en la sede ORT/Antel de la Global Game Jam 2016 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Global Game Jam (archivado)",
+    "page": "https://web.archive.org/web/20240717230217/https://v3.globalgamejam.org/2016/jam-sites/ggjuy-universidad-ortantel/games"
+   },
+   {
+    "src": "https://web.archive.org/web/20240717230217im_/https://v3.globalgamejam.org/sites/default/files/styles/game_listing__wide/public/game/featured_image/inicio_9.png?itok=gAaVBtL9&timestamp=1454271781",
+    "alt": "Pantalla de título de Black Cat Ritual III, hecho en la sede ORT/Antel de la Global Game Jam 2016 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Global Game Jam (archivado)",
+    "page": "https://web.archive.org/web/20240717230217/https://v3.globalgamejam.org/2016/jam-sites/ggjuy-universidad-ortantel/games"
+   },
+   {
+    "src": "https://web.archive.org/web/20240717230217im_/https://v3.globalgamejam.org/sites/default/files/styles/game_listing__wide/public/game/featured_image/maintitlepng.png?itok=bi1777Wo&timestamp=1454296608",
+    "alt": "Pantalla de título de Wytches' Brew, hecho en la sede ORT/Antel de la Global Game Jam 2016 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Global Game Jam (archivado)",
+    "page": "https://web.archive.org/web/20240717230217/https://v3.globalgamejam.org/2016/jam-sites/ggjuy-universidad-ortantel/games"
+   },
+   {
+    "src": "https://web.archive.org/web/20240717230217im_/https://v3.globalgamejam.org/sites/default/files/styles/game_listing__wide/public/game/featured_image/jesunicorn.png?itok=ebxTaej6&timestamp=1454268492",
+    "alt": "Ilustración de Jesunicorn – Life and Miracles, hecho en la sede ORT/Antel de la Global Game Jam 2016 (imagen del juego, no del evento)",
+    "by": "Equipo del juego (globalgamejam.org)",
+    "source": "Global Game Jam (archivado)",
+    "page": "https://web.archive.org/web/20240717230217/https://v3.globalgamejam.org/2016/jam-sites/ggjuy-universidad-ortantel/games"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede ORT/Antel en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20240717230217/https://v3.globalgamejam.org/2016/jam-sites/ggjuy-universidad-ortantel/games"
+   },
+   {
+    "label": "Juegos de la sede A+ en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20240422194154/https://v3.globalgamejam.org/2016/jam-sites/escuela-de-artes-visuales/games"
+   },
+   {
+    "label": "Global Game Jam 2016: videojuegos en 48 horas, en CUTI",
+    "url": "https://cuti.org.uy/noticias/de-socios/global-game-jam-2016-videojuegos-en-48-horas/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam Uruguay 2016",
+    "url": "https://www.ort.edu.uy/novedades/global-game-jam-uruguay-2016"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam 2016 en Uruguay",
+    "url": "https://www.ort.edu.uy/novedades/global-game-jam-2016-en-uruguay"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Anuario 2016",
+    "url": "https://www.ort.edu.uy/anuario-2016/78/"
+   },
+   {
+    "label": "CUTI (vía El País): Global Game Jam 2016, videojuegos en 48 horas",
+    "url": "https://cuti.org.uy/noticias/de-socios/global-game-jam-2016-videojuegos-en-48-horas/"
+   },
+   {
+    "label": "Global Game Jam: sede #GGJUY Universidad ORT/Antel (archivado)",
+    "url": "https://web.archive.org/web/20240913181005/https://v3.globalgamejam.org/2016/jam-sites/ggjuy-universidad-ortantel"
+   },
+   {
+    "label": "Global Game Jam: sede A+ Escuela de Artes Visuales (archivado)",
+    "url": "https://web.archive.org/web/20240424232011/https://v3.globalgamejam.org/2016/jam-sites/escuela-de-artes-visuales"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2016-04-23": {
+  "description": "Edición montevideana del NASA Space Apps Challenge, el hackatón internacional de la NASA, el 23 y 24 de abril de 2016 en la Torre de las Telecomunicaciones de Antel (Guatemala 1075). La propuesta local incluía bootcamps de capacitación en SinergiaTech en los días previos, y la promesa de acompañar durante el año, con un esquema de aceleradora, a los equipos que se destacaran. La participación era gratuita.\n\nColaboraron Antel, IBM, NEXA, CIE-ORT, SinergiaTech y Sophilabs. Según la agenda publicada, el sábado se trabajó desde las 11 h hasta la noche. El domingo hubo lightning talks a primera hora, entrega de proyectos al mediodía, presentaciones a las 17 h y premiación por la noche.\n\nEn la página de la sede quedaron tres proyectos:\n\n- **Hercules**: una máquina de ejercicio con un entorno de carrera en realidad virtual y una app para gamificar rutinas, pensada para el desafío de ejercicio en la Estación Espacial. Fue nominado a la etapa global y llegó a **semifinalista**.\n- **Pastora**: herramientas de información para comunidades de pastores, también nominado a la etapa global.\n- **Olympus Mons**: una herramienta colaborativa para diseñar la infraestructura de una base en Marte.",
+  "venue": "Torre de las Telecomunicaciones de Antel, Guatemala 1075",
+  "organizers": [
+   "Space Apps Challenge – UY"
+  ],
+  "photos": [
+   {
+    "src": "https://s3.amazonaws.com/files.open.nasa.gov/spaceapps/media/e3c2bd47-25d0-483b-8a29-8763ba44d099.jpg",
+    "alt": "La Torre de las Telecomunicaciones de Antel, sede del hackatón (foto de la sede publicada en la página del evento, no del hackatón)",
+    "by": "NASA Space Apps Challenge",
+    "source": "Sitio de NASA Space Apps 2016",
+    "page": "https://2016.spaceappschallenge.org/locations/montevideo-uruguay"
+   }
+  ],
+  "links": [
+   {
+    "label": "Página de la sede en spaceappschallenge.org",
+    "url": "https://2016.spaceappschallenge.org/locations/montevideo-uruguay"
+   },
+   {
+    "label": "Proyecto Hercules",
+    "url": "https://2016.spaceappschallenge.org/challenges/space-station/astrocize/projects/hercules"
+   },
+   {
+    "label": "Proyecto Pastora",
+    "url": "https://2016.spaceappschallenge.org/challenges/earth/emobile-pastoralism/projects/pastora"
+   },
+   {
+    "label": "Proyecto Olympus Mons",
+    "url": "https://2016.spaceappschallenge.org/challenges/mars/space-route-66/projects/olympus-mons"
+   }
+  ],
+  "sources": [
+   {
+    "label": "NASA Space Apps 2016: sede Torre de las Telecomunicaciones ANTEL, Montevideo",
+    "url": "https://2016.spaceappschallenge.org/locations/montevideo-uruguay"
+   }
+  ]
+ },
+ "conf:winterjam-uruguay:2016-08-06": {
+  "description": "Segunda edición de la WinterJam, el sábado 6 y el domingo 7 de agosto de 2016 en el edificio Los Naranjos del LATU, sede de Ingenio. La organizaron la Universidad ORT Uruguay e Ingenio, con entrada gratuita y cupos limitados, y Lo Artesanal puso el almuerzo del domingo. La consigna invitaba a quienes ya tenían un proyecto de la Global Game Jam a seguir trabajándolo, pensando en el Concurso Nacional de Videojuegos.\n\nParticiparon **más de 70 personas**, con muchas caras nuevas. Rodrigo Alem Fernández, docente de la Licenciatura en Animación y Videojuegos de ORT, la describió como la jam más grande hecha en el país hasta ese momento, contando también las Global Game Jam. Para arrancar se usaron premisas de ediciones anteriores de la Global Game Jam, y salieron muchos juegos de multijugador local. Era agosto de 2016 y Pokémon Go estaba en todos lados: el gimnasio Pokémon de Espacio Ciencia fue motivo de más de un combate entre participantes.",
+  "attendance": "más de 70 participantes",
+  "venue": "Ingenio, edificio Los Naranjos, LATU",
+  "organizers": [
+   "Universidad ORT Uruguay (Rodrigo Alem Fernández)",
+   "Ingenio (LATU)"
+  ],
+  "photos": [
+   {
+    "src": "https://fd.ort.edu.uy/innovaportal/file/43057/1/winter_jam.jpg",
+    "alt": "Decenas de participantes reunidos de pie en el hall de Ingenio, en el LATU, durante la WinterJam 2016",
+    "by": "Universidad ORT Uruguay",
+    "source": "Sitio de la Universidad ORT Uruguay",
+    "page": "https://www.ort.edu.uy/novedades/winterjam-2016"
+   },
+   {
+    "src": "https://fi.ort.edu.uy/innovaportal/file/42644/1/winterjam16_tw.png",
+    "alt": "Afiche de la WinterJam 2016: «Llegó el invierno, aceptá el llamado. Ganale al frío haciendo juegos», 6 y 7 de agosto en Ingenio LATU (afiche)",
+    "by": "Universidad ORT Uruguay e Ingenio",
+    "source": "Sitio de la Universidad ORT Uruguay",
+    "page": "https://www.ort.edu.uy/novedades/winter-jam-2016"
+   }
+  ],
+  "links": [
+   {
+    "label": "Crónica de ORT",
+    "url": "https://www.ort.edu.uy/novedades/winterjam-2016"
+   },
+   {
+    "label": "Anuncio de ORT",
+    "url": "https://www.ort.edu.uy/novedades/winter-jam-2016"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: «WinterJam 2016» (8/8/2016)",
+    "url": "https://www.ort.edu.uy/novedades/winterjam-2016"
+   },
+   {
+    "label": "Universidad ORT Uruguay: «Winter Jam 2016» (12/7/2016)",
+    "url": "https://www.ort.edu.uy/novedades/winter-jam-2016"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2017-01-20": {
+  "description": "Sexta edición de la **Global Game Jam** en Uruguay, del 20 al 22 de enero de 2017, y la primera en que la sede de la Universidad ORT Uruguay y Uruguay Gamer dejó la Torre de las Telecomunicaciones para instalarse en Sinergia Cowork, en Palermo. Con 83 participantes fue récord de convocatoria para el país.\n\nEl tema mundial fue *waves* (ondas) y en Sinergia se presentaron 14 juegos. ORT destacó la cantidad de músicos: al menos un cuarto de los juegos incorporó música original o instrumentos dentro de la jugabilidad. A+ Escuela de Artes Visuales volvió a ser sede, para mayores de 18, con 28 jammers anotados; de allí salieron, entre otros, Doom Tune e IS(VR)LE, un juego de realidad virtual.\n\nJuegos de la sede ORT/Sinergia:\n- Alien Conquer\n- Atomus Ex Machina\n- Deterrabbit\n- Escape from Ozzy\n- Hamsterdam\n- PEW: Pro Evolution Waving\n- Ping\n- Pirates of the Silver River\n- Ripple Rivals\n- Sucundún\n- UFO (Unite y Flashea Onda)\n- Wave-A-tron 30xx\n- Wavy Brawl\n- Whale War Drum",
+  "venue": "Sinergia Cowork Palermo (Gonzalo Ramírez 1676) y A+ Escuela de Artes Visuales (Bv. Artigas 1133)",
+  "city": "Montevideo",
+  "attendance": "83 participantes en la sede ORT/Sinergia; 28 jammers anotados en A+",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Uruguay Gamer (Rod F)",
+   "Sinergia Cowork",
+   "A+ Escuela de Artes Visuales (Fernando Sansberro)"
+  ],
+  "photos": [
+   {
+    "src": "https://live.staticflickr.com/668/32460620086_a7e94ea5eb_b.jpg",
+    "alt": "Vista desde el entrepiso de Sinergia Cowork: los equipos de la Global Game Jam 2017 trabajan en la planta baja",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32460620086/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/499/31657876244_9a2473a24a_b.jpg",
+    "alt": "El patio interior de Sinergia Cowork, con su cartel, lleno de mesas de participantes de la jam",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31657876244/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/351/32122538950_f88815d827_b.jpg",
+    "alt": "Vista en picado de las mesas de trabajo de la Global Game Jam 2017 en Sinergia",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32122538950/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/281/32501126135_2de44ea5cb_b.jpg",
+    "alt": "Un participante graba guitarra eléctrica para la música de un juego, con auriculares, junto a su laptop",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32501126135/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/431/32460571556_e11df49ff1_b.jpg",
+    "alt": "Un participante prueba un juego con un casco de realidad virtual mientras otro lo observa",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32460571556/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/685/32349154672_f12d1ffe64_b.jpg",
+    "alt": "Un músico compone en un teclado electrónico junto a la computadora durante la jam",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32349154672/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/546/32460573486_9b71b702c3_b.jpg",
+    "alt": "Varios participantes prueban un juego en una pantalla grande",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32460573486/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/307/32460576356_24570c061b_b.jpg",
+    "alt": "Un equipo discute ideas alrededor de una laptop",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32460576356/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/722/32122527390_c76340c019_b.jpg",
+    "alt": "Bocetos de personajes y ondas dibujados en una pizarra",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32122527390/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/324/32349180722_7fccd158c0_b.jpg",
+    "alt": "La pantalla de título del juego Ping en una laptop",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32349180722/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/701/32349160482_54874177a2_b.jpg",
+    "alt": "Participantes conversan en su mesa de trabajo, rodeados de computadoras",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32349160482/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/747/31689795123_b70af7ab30_b.jpg",
+    "alt": "Un participante con casco de realidad virtual, con el cartel de Sinergia de fondo",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31689795123/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/680/32501129995_526f37de81_b.jpg",
+    "alt": "Un equipo reunido alrededor de una laptop siguiendo el avance del juego",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32501129995/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/506/32349174632_e0acd206b2_b.jpg",
+    "alt": "Una participante trabaja en el arte de un juego en su laptop",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32349174632/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/660/31689791483_9dc5ea6d2e_b.jpg",
+    "alt": "Música de un juego en edición en un secuenciador, en una laptop",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31689791483/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/385/32349186532_820dde7afd_b.jpg",
+    "alt": "Personajes dibujados en pantalla, en pleno trabajo de arte para un juego",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/32349186532/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/369/31657856164_2c3f254412_b.jpg",
+    "alt": "Un participante modela un personaje en 3D, con varias pantallas a la vista",
+    "by": "Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31657856164/in/album-72157679535169715/",
+    "license": "Todos los derechos reservados"
+   }
+  ],
+  "links": [
+   {
+    "label": "Fotos en Flickr (Universidad ORT, Comunicación y Diseño)",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157679535169715"
+   },
+   {
+    "label": "Juegos de la sede en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20240921021111/https://v3.globalgamejam.org/2017/jam-sites/ggjuy-universidad-ortsinergia/games"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: Récord en Global Game Jam 2017",
+    "url": "https://www.ort.edu.uy/novedades/global-game-jam-2017"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam en Uruguay 2017",
+    "url": "https://www.ort.edu.uy/novedades/global-game-jam-uruguay-2017"
+   },
+   {
+    "label": "Global Game Jam: juegos de la sede GGJUY Universidad ORT/Sinergia (archivado)",
+    "url": "https://web.archive.org/web/20240921021111/https://v3.globalgamejam.org/2017/jam-sites/ggjuy-universidad-ortsinergia/games"
+   },
+   {
+    "label": "Álbum de Flickr de la Facultad de Comunicación y Diseño (ORT)",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157679535169715"
+   },
+   {
+    "label": "Global Game Jam: sede #GGJUY Universidad ORT/Sinergia (archivado)",
+    "url": "https://web.archive.org/web/20240917112658/https://v3.globalgamejam.org/2017/jam-sites/ggjuy-universidad-ortsinergia"
+   },
+   {
+    "label": "Global Game Jam: sede A+ Escuela de Artes Visuales (archivado)",
+    "url": "https://web.archive.org/web/20240907211414/https://v3.globalgamejam.org/2017/jam-sites/escuela-de-artes-visuales"
+   }
+  ]
+ },
+ "conf:winterjam-uruguay:2017-08-05": {
+  "description": "Tercera edición de la WinterJam, el sábado 5 y domingo 6 de agosto de 2017 en Ingenio (LATU), edificio Los Naranjos: una jam gratuita para hacer videojuegos en 36 horas, inspirada en la Global Game Jam. Hubo **alrededor de 70 participantes**, de entre veinte y cuarenta años y en su mayoría programadores, artistas y músicos, que trabajaron en equipos de seis o siete personas. La organizaron la Universidad ORT Uruguay e Ingenio.\n\nLos juegos se publicaron en itch.io, donde la jam registra **10 entregas**. Varios tienen tomates como protagonistas:\n\n- Nice to meet you\n- Tom Atom S.O.U.P.\n- Ritual\n- Can you fly?\n- Ministerio Simulator\n- Tomato Go: Escape from Space Robot Warhol Hell\n- Toma-Toss\n- ToMars Protocol\n- Dash N Escape\n- Psychotropic Chef Journey",
+  "attendance": "alrededor de 70 participantes",
+  "venue": "Ingenio, edificio Los Naranjos, LATU",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Ingenio (LATU)"
+  ],
+  "photos": [
+   {
+    "src": "https://live.staticflickr.com/4390/36110426970_8cc261d85e_b.jpg",
+    "alt": "Foto grupal de los participantes de la WinterJam 2017 en Ingenio",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36110426970/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4392/36110426780_d97ec194af_b.jpg",
+    "alt": "Participantes de pie, reunidos en la sala de Ingenio durante la jam",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36110426780/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4406/36110426740_4179d698db_b.jpg",
+    "alt": "Un equipo trabaja con laptops en una mesa de una sala de reuniones",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36110426740/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4409/36369924121_20bf3cb935_b.jpg",
+    "alt": "Integrantes de un equipo conversan alrededor de una mesa",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36369924121/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4379/36369924381_7ae041365d_b.jpg",
+    "alt": "Un equipo concentrado frente a sus computadoras, con auriculares y cuadernos",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36369924381/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4383/36110427000_4f5798c811_b.jpg",
+    "alt": "Dos participantes trabajan en una laptop y una tableta gráfica",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36110427000/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4403/35698736923_69ea85129c_b.jpg",
+    "alt": "Pantalla de «Nice to meet you», un simulador de citas hecho en la jam (imagen del juego, no del evento)",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/35698736923/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4396/36460971526_bda008516c_b.jpg",
+    "alt": "Portada de «Tomato Go: Escape from Space Robot Warhol Hell» (imagen del juego, no del evento)",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36460971526/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4384/36460971606_e54002fa31_b.jpg",
+    "alt": "Pantalla de título de «ToMars Protocol», con un tomate en una arena (imagen del juego, no del evento)",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36460971606/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4376/36370141471_9359ee1f3d_c.jpg",
+    "alt": "Vista cenital de la oficina de «Ministerio Simulator» (imagen del juego, no del evento)",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/36370141471/",
+    "license": "Todos los derechos reservados"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/winterjam-uy-2017/entries"
+   },
+   {
+    "label": "Fotos en Flickr (ORT)",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157684955697183"
+   },
+   {
+    "label": "Capturas de los juegos en Flickr (ORT)",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157684866294084"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: «WinterJam 2017» (11/8/2017)",
+    "url": "https://www.ort.edu.uy/novedades/winter-jam-2017"
+   },
+   {
+    "label": "itch.io: WinterJam UY 2017",
+    "url": "https://itch.io/jam/winterjam-uy-2017"
+   },
+   {
+    "label": "Flickr: álbum «WinterJam-Tercera edición»",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157684955697183"
+   },
+   {
+    "label": "Flickr: álbum «WindJam-Videojuegos»",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157684866294084"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2018-01-26": {
+  "description": "Séptima edición uruguaya de la Global Game Jam, del 26 al 28 de enero de 2018. La sede principal, **#GGJUY ORT/Sinergia Cowork**, funcionó en Sinergia Cowork Palermo (Gonzalo Ramírez 1676) y la organizaron la Cátedra de Videojuegos de la Facultad de Comunicación y Diseño de la Universidad ORT Uruguay y Sinergia Cowork. La página oficial de la sede llegó a 52 jammers registrados y los cupos se completaron antes del evento.\n\nEl tema mundial de ese año fue la **transmisión** (de datos y de información, pero también de virus). En 48 horas, los equipos de la sede ORT/Sinergia hicieron nueve juegos:\n\n- Codename: Centralita\n- Currents War\n- Pox\n- Road Lights – FAM Boss Fight (del estudio montevideano Piedra Alta Games)\n- Roadie Hero\n- Satellite\n- Unicorn blood-drinking Gnomes\n- Wololizer\n- You vs the guy and the fireball she tells you not to worry about\n\nEse año también hubo una sede en Punta del Este, en Startup Cowork Cafe, a cargo de Laia Barboza, con 14 jammers registrados; de ahí salieron juegos como *Halos & Horns* y *Twin Bots*. En todo el mundo la jam se hizo en simultáneo en 108 países y se crearon 8.606 juegos.",
+  "attendance": "52 jammers registrados en la sede ORT/Sinergia y 14 en Punta del Este",
+  "venue": "Sinergia Cowork Palermo, Av. Gonzalo Ramírez 1676 (sede ORT/Sinergia); Startup Cowork Cafe, Punta del Este",
+  "organizers": [
+   "Cátedra de Videojuegos, Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+   "Sinergia Cowork",
+   "Laia Barboza (sede Punta del Este)"
+  ],
+  "photos": [
+   {
+    "src": "https://live.staticflickr.com/4673/40008931321_b4c654caa3_b.jpg",
+    "alt": "Un participante trabaja en el modelo 3D de un personaje en su monitor, el viernes de apertura",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008931321/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4670/39977475622_806b5b6cff_b.jpg",
+    "alt": "Un grupo de participantes reunido alrededor de una mesa discute ideas al comienzo de la jam",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39977475622/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4666/39111316125_53c8113d19_b.jpg",
+    "alt": "Jammers con auriculares trabajando en sus laptops en las mesas de Sinergia",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39111316125/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4616/28230216279_9538d2065c_b.jpg",
+    "alt": "Un participante se acomoda los auriculares frente a un teclado musical para trabajar en el audio de un juego",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/28230216279/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4609/39111316975_e3fd121da6_b.jpg",
+    "alt": "Dos participantes revisan juntos lo que muestra una pantalla",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39111316975/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4747/40008924751_49a05d61fa_b.jpg",
+    "alt": "Dos jammers conversan concentrados durante la jam",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008924751/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4760/39111318385_f09ee87443_b.jpg",
+    "alt": "Un participante piensa frente a su laptop, con un joystick sobre la mesa",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39111318385/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4604/40008929581_57458fd29d_b.jpg",
+    "alt": "Vista desde arriba de un equipo trabajando en una mesa llena de laptops",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008929581/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4632/39977472772_5a75ed9126_b.jpg",
+    "alt": "Una participante dibuja en una tableta gráfica",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39977472772/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4661/40008932431_a40f4c7eda_b.jpg",
+    "alt": "Un participante trabaja con una tableta gráfica",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008932431/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4762/40008928201_362a7b9063_b.jpg",
+    "alt": "Una participante con auriculares compone música con un controlador",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008928201/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4667/40008933441_3d7e226940_b.jpg",
+    "alt": "Un participante hace bocetos en papel junto a su laptop",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008933441/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4707/39977475332_214d77eefa_b.jpg",
+    "alt": "Una participante frente a una pantalla con un motor de juegos abierto",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39977475332/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4723/39111321645_ce11f6841f_b.jpg",
+    "alt": "Tres participantes miran una pantalla",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39111321645/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4628/39111320605_0f3710b446_b.jpg",
+    "alt": "Un equipo trabajando en Sinergia Cowork, uno de ellos con anteojos de sol blancos",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/39111320605/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4658/40008925721_0ee6e9d85c_b.jpg",
+    "alt": "Un participante con auriculares graba guitarra eléctrica para la música de un juego",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/40008925721/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4628/28230214359_e95e95a427_b.jpg",
+    "alt": "Foto grupal de los participantes bajo el cartel de Sinergia Cowork MVD al cierre de la jam",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/28230214359/",
+    "license": "Todos los derechos reservados"
+   }
+  ],
+  "links": [
+   {
+    "label": "Fotos en Flickr (Universidad ORT)",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157692125684514"
+   },
+   {
+    "label": "Sede ORT/Sinergia en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/2024/https://v3.globalgamejam.org/2018/jam-sites/ggjuy-ortsinergia-cowork"
+   },
+   {
+    "label": "Juegos de la sede ORT/Sinergia (archivado)",
+    "url": "https://web.archive.org/web/20251128212240/https://v3.globalgamejam.org/2018/jam-sites/ggjuy-ortsinergia-cowork/games"
+   },
+   {
+    "label": "Sede Punta del Este en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/2024/https://v3.globalgamejam.org/2018/jam-sites/punta-del-este"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: Global Game Jam 2018",
+    "url": "https://www.ort.edu.uy/novedades/global-game-jam-2018"
+   },
+   {
+    "label": "Anuario 2018 de la Universidad ORT Uruguay",
+    "url": "https://www.ort.edu.uy/anuario-2018/72/"
+   },
+   {
+    "label": "globalgamejam.org: sede GGJUY ORT/Sinergia Cowork (archivado)",
+    "url": "https://web.archive.org/web/20240713185931/https://v3.globalgamejam.org/2018/jam-sites/ggjuy-ortsinergia-cowork"
+   },
+   {
+    "label": "globalgamejam.org: juegos de la sede ORT/Sinergia (archivado)",
+    "url": "https://web.archive.org/web/20251128212240/https://v3.globalgamejam.org/2018/jam-sites/ggjuy-ortsinergia-cowork/games"
+   },
+   {
+    "label": "globalgamejam.org: sede Punta del Este (archivado)",
+    "url": "https://web.archive.org/web/20251125122350/https://v3.globalgamejam.org/2018/jam-sites/punta-del-este"
+   },
+   {
+    "label": "Álbum «Global Game Jam - enero 2018» en Flickr",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157692125684514"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2019-01-25": {
+  "description": "Octava edición uruguaya de la Global Game Jam, del 25 al 27 de enero de 2019, el año en que la jam cumplió diez años en el mundo. Hubo cuatro sedes en el país y más de 100 participantes, que en 48 horas hicieron 21 videojuegos y un juego de mesa. La consigna, revelada el viernes en todas las sedes a la vez, fue **«¿Qué significa hogar para ti?»**.\n\n- **#GGJUY Jalea/Universidad ORT**, en Sinergia Cowork Palermo: la organizaron la Cátedra de Videojuegos de la Facultad de Comunicación y Diseño de la Universidad ORT, Sinergia Cowork y Jalea Games. Los cerca de 50 cupos se agotaron diez minutos después de abrir la inscripción y se armaron 10 equipos. Ahí se hizo el primer juego de mesa de esa sede, *Alto Planeta*.\n- **Globant**, en Aguada Park, que se sumaba ese año.\n- **A+ Escuela de Artes Visuales**, en Pocitos, con tres juegos (entre ellos *Homfire*).\n- **Punta del Este**, en Startup Cowork, a cargo de integrantes del estudio Pincer Games: 20 personas en cuatro grupos, con cupos pensados para mujeres y para desarrolladores del interior.\n\nLos juegos de la sede Jalea/ORT fueron *Alto Planeta*, *Andy*, *Behoarder*, *In the land of the Pig*, *Mechangrejo*, *Restless*, *Senior ASDcape*, *Super Will Bros.*, *Teddy-Fiendo* y *Trolltergeist*. De Globant salió *What home means to them*, y en Punta del Este se hicieron *Grandma's Flavor*, *Lazy Shrimp*, *Nomad* y *Poor Doggo*. Esa edición se hizo en simultáneo en 113 países, donde se crearon 9.010 juegos.",
+  "attendance": "más de 100 personas en cuatro sedes (unas 50 en Jalea/ORT y 20 en Punta del Este)",
+  "organizers": [
+   "Cátedra de Videojuegos, Facultad de Comunicación y Diseño, Universidad ORT Uruguay",
+   "Jalea Games",
+   "Sinergia Cowork",
+   "Globant",
+   "A+ Escuela de Artes Visuales",
+   "Pincer Games (Laia Barboza, sede Punta del Este)"
+  ],
+  "photos": [
+   {
+    "src": "https://live.staticflickr.com/7916/46908833351_0cf16e26b2_b.jpg",
+    "alt": "Vista desde el entrepiso del salón de Sinergia Cowork Palermo, con las mesas de los equipos",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/46908833351/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7877/33033566158_95472888d6_b.jpg",
+    "alt": "Participantes trabajando en sus laptops en Sinergia Cowork",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/33033566158/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7817/46908830281_5dd2d5a1c0_b.jpg",
+    "alt": "Jammers trabajando en el salón de Sinergia; en primer plano, un participante con su laptop",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/46908830281/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7887/31967800097_55de87cf48_b.jpg",
+    "alt": "Un equipo posa en su mesa de trabajo, rodeado de laptops",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967800097/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7898/31967800517_41698412c5_b.jpg",
+    "alt": "Un equipo de cinco jammers alrededor de una mesa con monitores y teclados",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967800517/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7840/31967801137_bcdcfc8443_b.jpg",
+    "alt": "Un equipo trabaja con laptops y un teclado MIDI",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967801137/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4856/31967801837_5c368c8e30_b.jpg",
+    "alt": "Un equipo sonríe a cámara desde su mesa de trabajo",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967801837/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4905/31967802637_c21727f9e8_b.jpg",
+    "alt": "Un equipo en una mesa con laptops y un teclado musical",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967802637/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4890/31967803507_55632c745b_b.jpg",
+    "alt": "Un equipo de cinco participantes en una mesa junto a una pared de ladrillo",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967803507/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4819/31967804267_062943c7ff_b.jpg",
+    "alt": "Un equipo trabajando en una mesa larga con laptops",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967804267/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4905/31967799457_f1bf82beb6_b.jpg",
+    "alt": "Un equipo posa sonriente alrededor de su mesa de trabajo",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967799457/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7920/46183899754_6a0529751a_b.jpg",
+    "alt": "Un grupo de participantes conversa de pie junto a las mesas",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/46183899754/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4844/46908826801_b3c5a0b3c7_b.jpg",
+    "alt": "Dos participantes programando en sus laptops",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/46908826801/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4823/46908828341_2294c7379e_b.jpg",
+    "alt": "Una participante dibuja en una tableta mientras otros trabajan a su lado",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/46908828341/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7872/33033590038_08f548878f_b.jpg",
+    "alt": "Un participante dibuja un personaje en una tableta gráfica",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/33033590038/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4888/46183898734_281533072b_b.jpg",
+    "alt": "Una participante dibuja un personaje en una tableta gráfica",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/46183898734/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7879/31967798117_6161bccbb7_b.jpg",
+    "alt": "Boceto en papel de un personaje hecho durante la jam",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967798117/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/7831/31967799807_bcbf2befd4_b.jpg",
+    "alt": "Pantalla con el editor de un juego y un personaje animado",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967799807/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://live.staticflickr.com/4870/31967810567_7918ec285c_b.jpg",
+    "alt": "Vista desde arriba de un equipo trabajando con laptops y tabletas",
+    "by": "Universidad ORT Uruguay – Facultad de Comunicación y Diseño",
+    "source": "Flickr",
+    "page": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/31967810567/",
+    "license": "Todos los derechos reservados"
+   },
+   {
+    "src": "https://media.elobservador.com.uy/p/0d4eb54132676c1225a2edc80ca648c8/adjuntos/362/imagenes/100/461/0100461476/1000x0/smart/1549027154001webp.webp",
+    "alt": "Un equipo presenta su juego «Three and a half beards» frente a una pizarra con el logo de la Global Game Jam dibujado",
+    "by": "El Observador",
+    "source": "El Observador",
+    "page": "https://www.elobservador.com.uy/nota/veintidos-juegos-uruguayos-creados-en-un-fin-de-semana-2019235051"
+   }
+  ],
+  "links": [
+   {
+    "label": "Sede Punta del Este en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20191015115839/https://globalgamejam.org/2019/jam-sites/global-game-jam-punta-del-este-uruguay"
+   },
+   {
+    "label": "Fotos en Flickr (Universidad ORT)",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157704738227201"
+   },
+   {
+    "label": "Sede Jalea/Universidad ORT en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/2024/https://v3.globalgamejam.org/2019/jam-sites/ggjuy-jaleauniversidad-ort"
+   },
+   {
+    "label": "Juegos de la sede Jalea/ORT (archivado)",
+    "url": "https://web.archive.org/web/20240716085347/https://v3.globalgamejam.org/2019/jam-sites/ggjuy-jaleauniversidad-ort/games"
+   },
+   {
+    "label": "Nota en El Observador",
+    "url": "https://www.elobservador.com.uy/nota/veintidos-juegos-uruguayos-creados-en-un-fin-de-semana-2019235051"
+   }
+  ],
+  "sources": [
+   {
+    "label": "globalgamejam.org: sede Punta del Este 2019 (archivado)",
+    "url": "https://web.archive.org/web/20191015115839/https://globalgamejam.org/2019/jam-sites/global-game-jam-punta-del-este-uruguay"
+   },
+   {
+    "label": "globalgamejam.org: juegos de la sede Punta del Este 2019 (archivado)",
+    "url": "https://web.archive.org/web/20191015111421/https://globalgamejam.org/2019/jam-sites/global-game-jam-punta-del-este-uruguay/games"
+   },
+   {
+    "label": "El Observador: Veintidós juegos uruguayos creados en un fin de semana",
+    "url": "https://www.elobservador.com.uy/nota/veintidos-juegos-uruguayos-creados-en-un-fin-de-semana-2019235051"
+   },
+   {
+    "label": "Universidad ORT Uruguay: Los 10 años de GGJ",
+    "url": "https://www.ort.edu.uy/novedades/los-10-anios-de-ggj"
+   },
+   {
+    "label": "Anuario 2019 de la Universidad ORT Uruguay",
+    "url": "https://www.ort.edu.uy/anuario-2019/72/"
+   },
+   {
+    "label": "globalgamejam.org: sede #GGJUY Jalea/Universidad ORT (archivado)",
+    "url": "https://web.archive.org/web/20240718231321/https://v3.globalgamejam.org/2019/jam-sites/ggjuy-jaleauniversidad-ort"
+   },
+   {
+    "label": "globalgamejam.org: juegos de la sede Jalea/ORT (archivado)",
+    "url": "https://web.archive.org/web/20240716085347/https://v3.globalgamejam.org/2019/jam-sites/ggjuy-jaleauniversidad-ort/games"
+   },
+   {
+    "label": "Álbum «Global Game Jam - enero 2019» en Flickr",
+    "url": "https://www.flickr.com/photos/universidad-ort-uruguay-fcd/albums/72157704738227201"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2019-10-18": {
+  "description": "El NASA Space Apps Challenge 2019 tuvo **cuatro sedes en Uruguay**: la Fundación Los Pinos, en Casavalle (Montevideo), y los ITR de UTEC en Durazno, Fray Bentos y Rivera, conectados entre sí. Space Uruguay presenta esta edición como su primera en el país. Entre las cuatro sedes participaron 201 personas en 23 equipos. El tema global fue «Exploring Near and Far».\n\nEn Montevideo la actividad arrancó el viernes 18 de octubre con palabras de representantes de la Embajada de Estados Unidos, del Centro Educativo Los Pinos y de UTEC. El hackatón fue el sábado 19 y el domingo 20, con presentaciones ante el jurado local y premiación el domingo de tarde. La sede de Los Pinos reunió a 148 personas en 11 equipos, y al cierre del sábado había un ómnibus de traslado hasta el Palacio Legislativo.\n\nDos equipos de Montevideo pasaron a la etapa global: **Renovating Our Home** (desafío «Warming Planet, Cool Ideas») y **Feeling the Data** (desafío «Raiders of the Lost Data»), que quedó entre los **finalistas globales**. Contando todas las sedes, Space Uruguay lista seis proyectos nominados a la etapa global: Junkman, Back to the Moon, Renovating Our Home, Feeling the Data, Oxygen on the Space y UnDust.",
+  "attendance": "201 participantes y 23 equipos en 4 sedes (148 personas y 11 equipos en Montevideo)",
+  "venue": "Fundación Los Pinos, Av. San Martín 5654 (Casavalle); también UTEC ITR Centro-Sur (Durazno), ITR Suroeste (Fray Bentos) e ITR Norte (Rivera)",
+  "organizers": [
+   "Fundación Los Pinos",
+   "Embajada de Estados Unidos en Uruguay",
+   "UTEC"
+  ],
+  "photos": [
+   {
+    "src": "https://2019.spaceappschallenge.org/assets/team-photos/CRFXYvW81pEOmeZHixbUqJJUHbg=/11679/fill-618x348.jpeg",
+    "alt": "Las cinco personas del equipo Kepler, con remeras de Space Apps, posan al aire libre durante el hackatón",
+    "by": "Equipo Kepler",
+    "source": "Sitio de NASA Space Apps 2019",
+    "page": "https://2019.spaceappschallenge.org/challenges/earths-oceans/internet-ocean/teams/kepler-2"
+   },
+   {
+    "src": "https://2019.spaceappschallenge.org/assets/team-photos/gJ-plgcN8QEgEATf7YvCi_GMr_c=/8908/fill-618x348.jpeg",
+    "alt": "Integrantes del equipo LiveCommunityProject, con remeras de Space Apps, junto a una maqueta de cohete",
+    "by": "Equipo LiveCommunityProject",
+    "source": "Sitio de NASA Space Apps 2019",
+    "page": "https://2019.spaceappschallenge.org/challenges/our-moon/dust-yourself-and-try-again/teams/livecommunityproject"
+   }
+  ],
+  "links": [
+   {
+    "label": "Sede Montevideo en spaceappschallenge.org",
+    "url": "https://2019.spaceappschallenge.org/locations/montevideo/"
+   },
+   {
+    "label": "Proyecto Feeling the Data (finalista global)",
+    "url": "https://2019.spaceappschallenge.org/challenges/planets-near-and-far/raiders-lost-data/teams/feeling-the-data/project"
+   },
+   {
+    "label": "Edición 2019 en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2019"
+   }
+  ],
+  "sources": [
+   {
+    "label": "NASA Space Apps 2019: sede Montevideo",
+    "url": "https://2019.spaceappschallenge.org/locations/montevideo/"
+   },
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2019",
+    "url": "https://www.spaceuruguay.org/spaceapps/2019"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2020-01-31": {
+  "description": "La Global Game Jam 2020 se hizo del 31 de enero al 2 de febrero, con el tema mundial **«Reparar»** (*Repair*). En Montevideo, la sede **Etermax Montevideo** funcionó en Sinergia Palermo (Av. Gonzalo Ramírez 1676), a cargo de Juancho Rodriguez: abierta las 48 horas, de viernes a las 18:00 a domingo a las 18:00, con comidas incluidas, cupo para 50 personas y 44 jammers registrados en la página oficial de la sede.\n\nFue la primera vez que Etermax, la empresa argentina de juegos para celulares, fue sede de la jam, con sus oficinas de Buenos Aires y de Montevideo. En la sede montevideana se hicieron ocho juegos:\n\n- Blacksmith Rune Defender\n- Cotton Revenge\n- Elon VS Jeff\n- Mind Cleanser\n- One Hell of a Boss\n- Robomancer\n- Robot Rock\n- Roundtable Rival\n\nTambién hubo una sede en Punta del Este, en Startup Cowork Cafe, a cargo de Laia Barboza: cupo para 20 personas, 17 jammers registrados y tres juegos, *Crisis Time*, *Fishpair* y *STAR DUST*.",
+  "attendance": "44 jammers registrados en la sede Etermax Montevideo (cupo de 50) y 17 en Punta del Este",
+  "venue": "Sinergia Palermo, Av. Gonzalo Ramírez 1676 (sede Etermax Montevideo); Startup Cowork Cafe, Punta del Este",
+  "organizers": [
+   "Juancho Rodriguez (sede Etermax Montevideo)",
+   "Etermax",
+   "Laia Barboza (sede Punta del Este)"
+  ],
+  "links": [
+   {
+    "label": "Sede Punta del Este en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20210225192904/https://globalgamejam.org/2020/jam-sites/global-game-jam-punta-del-este-2020"
+   },
+   {
+    "label": "Juegos de la sede Etermax Montevideo (archivado)",
+    "url": "https://web.archive.org/web/20210303082450/https://globalgamejam.org/2020/jam-sites/etermax-montevideo/games"
+   },
+   {
+    "label": "Sede Etermax Montevideo en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/2024/https://v3.globalgamejam.org/2020/jam-sites/etermax-montevideo"
+   }
+  ],
+  "sources": [
+   {
+    "label": "globalgamejam.org: sede Punta del Este 2020 (archivado)",
+    "url": "https://web.archive.org/web/20210225192904/https://globalgamejam.org/2020/jam-sites/global-game-jam-punta-del-este-2020"
+   },
+   {
+    "label": "globalgamejam.org: juegos de la sede Punta del Este 2020 (archivado)",
+    "url": "https://web.archive.org/web/20210225201011/https://globalgamejam.org/2020/jam-sites/global-game-jam-punta-del-este-2020/games"
+   },
+   {
+    "label": "globalgamejam.org: juegos de la sede Etermax Montevideo (archivado)",
+    "url": "https://web.archive.org/web/20210303082450/https://globalgamejam.org/2020/jam-sites/etermax-montevideo/games"
+   },
+   {
+    "label": "globalgamejam.org: sede Etermax Montevideo (archivado)",
+    "url": "https://web.archive.org/web/20240716051904/https://v3.globalgamejam.org/2020/jam-sites/etermax-montevideo"
+   },
+   {
+    "label": "Infobae: Global Game Jam 20 en Argentina, o cómo hacer un videojuego en 48 horas",
+    "url": "https://www.infobae.com/gaming/2020/02/02/global-game-jam-20-en-argentina-o-como-hacer-un-videojuego-en-48-horas/"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2020-10-02": {
+  "description": "Por la pandemia, el NASA Space Apps Challenge 2020 fue **totalmente virtual** en todo el mundo. La sede uruguaya se hizo del 2 al 4 de octubre de 2020, con sesiones por Zoom y salas de trabajo y consultas en Discord. Participaron **441 personas en 62 equipos**, y el tema global fue «Take Action».\n\nLa organizó la Fundación Los Pinos, con el apoyo de la Embajada de Estados Unidos y la colaboración de Rootstrap e IBM. El jueves 1.º hubo un taller previo de introducción a la ciencia de datos, a cargo del Innovation Lab de IBM Uruguay. El viernes dieron la bienvenida Jacqueline Mourot, consejera de Prensa y Cultura de la Embajada, y Gregorio Medina, director del Centro Educativo Los Pinos. Después vino un taller sobre cómo leer los datos de la NASA, con Mikaela Pisani y Marcello Farías, de Rootstrap. El sábado hubo dos puestas en común por Zoom para compartir avances.\n\nSpace Uruguay registra dos proyectos nominados a la etapa global: Space Dreamers 71 y Unnamed.",
+  "attendance": "441 participantes, 62 equipos",
+  "organizers": [
+   "Fundación Los Pinos",
+   "Embajada de Estados Unidos en Uruguay",
+   "Rootstrap",
+   "IBM"
+  ],
+  "talks": [
+   {
+    "title": "Introducción a la ciencia de datos (taller previo)",
+    "speakers": [
+     "Innovation Lab de IBM Uruguay"
+    ]
+   },
+   {
+    "title": "Cómo leer los datos de la NASA: herramientas para resolver los desafíos",
+    "speakers": [
+     "Mikaela Pisani",
+     "Marcello Farías"
+    ]
+   }
+  ],
+  "photos": [
+   {
+    "src": "https://2020.spaceappschallenge.org/assets/team-photos/c8C3VijxhWLeIY9BzXhDMYL4q1M=/21492/fill-618x348.jpeg",
+    "alt": "Captura de una videollamada de Zoom con decenas de participantes y organizadores de la edición virtual 2020",
+    "by": "Equipo «Prueba», sede Montevideo",
+    "source": "Sitio de NASA Space Apps 2020",
+    "page": "https://2020.spaceappschallenge.org/challenges/observe/one-health-approach/teams/prueba-1"
+   }
+  ],
+  "links": [
+   {
+    "label": "Sede Montevideo en spaceappschallenge.org",
+    "url": "https://2020.spaceappschallenge.org/locations/montevideo"
+   },
+   {
+    "label": "Equipos de la sede",
+    "url": "https://2020.spaceappschallenge.org/locations/montevideo/teams"
+   },
+   {
+    "label": "Edición 2020 en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2020"
+   }
+  ],
+  "sources": [
+   {
+    "label": "NASA Space Apps 2020: sede Montevideo",
+    "url": "https://2020.spaceappschallenge.org/locations/montevideo"
+   },
+   {
+    "label": "NASA Space Apps 2020: información y agenda de la sede Montevideo",
+    "url": "https://2020.spaceappschallenge.org/locations/montevideo/event"
+   },
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2020",
+    "url": "https://www.spaceuruguay.org/spaceapps/2020"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2021-01-29": {
+  "description": "Por la pandemia, la Global Game Jam 2021 se hizo en modalidad remota, sin lugares físicos de reunión, con el tema mundial **Lost & Found**. En Uruguay, la sede **GGJUY** —creada por profesionales de la industria que ya habían organizado otras jams, con Juan «Juancho» Rodriguez como responsable— funcionó en Discord y transmitió las ceremonias por YouTube. Aunque la edición mundial arrancaba el 27 de enero, GGJUY mantuvo el horario clásico de fin de semana: apertura el viernes 29 de enero a las 19:00 con la revelación del tema y el armado de equipos, ronda de pitches a las 22:00 y cierre el domingo 31 a las 18:00, donde cada equipo mostró el video de su juego. La sede estaba abierta a cualquier persona de Uruguay desde los 14 años.\n\nSegún el resumen de la organización, 62 jammers hicieron 10 juegos en 48 horas:\n\n- Trash Quest (equipo Mapache de Cartón)\n- Doghost\n- Heavy Pampa\n- LUX\n- Rip and Bear\n- Downfall to Hell (equipo Boomers Doomers)\n- El Deseo de Nina (equipo Espectrograma Gris)\n- STONKS: Weebs & Wolves\n- Astral Kidnapping Experience (equipo Mariano Intercoiffeur)\n- Trinidad (proyecto extra de integrantes de la organización)\n\nEn otras tres sedes uruguayas se hicieron 12 juegos más. Al cierre, el equipo anunció una nueva jam para el invierno.",
+  "attendance": "62 jammers en la sede GGJUY, según la organización",
+  "venue": "En línea (Discord y YouTube)",
+  "city": "Montevideo (en línea)",
+  "organizers": [
+   "Juan Rodriguez",
+   "Clara Ribeiro",
+   "Alvaro Infante",
+   "Joaquin Volonte",
+   "Kao Valer",
+   "Enzo Antonaz",
+   "Nacho Fernandez",
+   "Diego Becco",
+   "Rodrigo Rearden"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/GfG9IOoH6jQ/maxresdefault.jpg",
+    "alt": "Placa de la sede GGJUY para la Global Game Jam 2021 (29 de enero, 18:00), usada como portada de las transmisiones; el evento fue en línea",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=GfG9IOoH6jQ"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/H7wm1Eb166s/maxresdefault.jpg",
+    "alt": "Captura del juego Trash Quest: un mapache bajo un foco de luz en la pantalla de derrota",
+    "by": "Ro",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=H7wm1Eb166s"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/fn9a59rw3QE/maxresdefault.jpg",
+    "alt": "Captura del juego Doghost: un personaje en una habitación de madera en penumbra",
+    "by": "Sebastian Leonardi",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=fn9a59rw3QE"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/WNuhf0HgG50/maxresdefault.jpg",
+    "alt": "Captura del juego LUX: una figura en un claro iluminado en medio de la oscuridad",
+    "by": "Alan Rubinoff",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=WNuhf0HgG50"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/sr3dEi0w0MA/maxresdefault.jpg",
+    "alt": "Captura del juego Rip and Bear: un oso en un nivel de plataformas",
+    "by": "Juan Carlos Mariño",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=sr3dEi0w0MA"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/0HtdtFk7zxY/maxresdefault.jpg",
+    "alt": "Captura del juego Downfall to Hell: un personaje en el interior de una torre de piedra",
+    "by": "Ignacio Fernández",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=0HtdtFk7zxY"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/Z0sx0uGAzH4/maxresdefault.jpg",
+    "alt": "Captura del juego El Deseo de Nina, en blanco y negro",
+    "by": "Bybo Universe",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=Z0sx0uGAzH4"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/4A5y4EgJAfQ/maxresdefault.jpg",
+    "alt": "Pantalla de título del juego STONKS: Weebs & Wolves",
+    "by": "MErmolli",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=4A5y4EgJAfQ"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/HiN07EOdBpE/maxresdefault.jpg",
+    "alt": "Pantalla de título del juego Astral Kidnapping Experience en un celular",
+    "by": "Just DanCold",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=HiN07EOdBpE"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/8klWAfNauPo/maxresdefault.jpg",
+    "alt": "Captura del juego Trinidad: un cielo estrellado con una constelación",
+    "by": "Juan Rodriguez",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=8klWAfNauPo"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20220808221702/https://globalgamejam.org/2021/jam-sites/ggjuy/games"
+   },
+   {
+    "label": "Resumen del evento en el sitio de GGJUY",
+    "url": "http://ggjuy.wikidot.com/resumen"
+   },
+   {
+    "label": "Equipos y juegos",
+    "url": "http://ggjuy.wikidot.com/equipos"
+   },
+   {
+    "label": "Transmisiones del evento en YouTube",
+    "url": "https://www.youtube.com/playlist?list=PL1HbfHls5PqyHSnSVj3UInK6517DSmjZD"
+   },
+   {
+    "label": "Videos de los juegos en YouTube",
+    "url": "https://www.youtube.com/playlist?list=PL1HbfHls5PqxpiXmGHRuzkgG9PDfjCGzO"
+   },
+   {
+    "label": "Sede GGJUY en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/2024/https://v3.globalgamejam.org/2021/jam-sites/ggjuy"
+   }
+  ],
+  "sources": [
+   {
+    "label": "GGJUY: Resumen del evento",
+    "url": "http://ggjuy.wikidot.com/resumen"
+   },
+   {
+    "label": "GGJUY: Plan del evento",
+    "url": "http://ggjuy.wikidot.com/plan"
+   },
+   {
+    "label": "GGJUY: Equipos",
+    "url": "http://ggjuy.wikidot.com/equipos"
+   },
+   {
+    "label": "GGJUY: Inicio",
+    "url": "http://ggjuy.wikidot.com/home"
+   },
+   {
+    "label": "globalgamejam.org: sede GGJUY (archivado)",
+    "url": "https://web.archive.org/web/20240619072213/https://v3.globalgamejam.org/2021/jam-sites/ggjuy"
+   },
+   {
+    "label": "Game Developer: Global Game Jam Online (2021) Impact Report",
+    "url": "https://www.gamedeveloper.com/business/global-game-jam-online-2021-impact-report"
+   }
+  ]
+ },
+ "conf:jam2jam-winter-jam:2021-08-06": {
+  "description": "Primera WinterJam organizada por **Jam2Jam**, del viernes 6 al domingo 8 de agosto de 2021, en formato remoto: la coordinación fue por Discord y los momentos comunes se transmitieron por YouTube. La apertura, el viernes a las 18 h, incluyó la revelación del tema, consejos para trabajar y el armado de equipos de unas seis personas. A las 22 h fue la ronda de pitches, y el domingo a las 18 h cada equipo presentó su juego. El tema fue **«Alcanzar lo inalcanzable»**.\n\nSegún el resumen de los organizadores, en las 48 horas 46 jammers terminaron diez juegos, y se transmitieron más de cinco horas entre preguntas y respuestas, apertura, pitches y presentaciones:\n\n- Wedding Crasher\n- Lost in Tokyo\n- A la Deriva\n- iK-r0\n- Godreach\n- The Edge\n- Bezos The Game\n- No te rindas Pablo\n- Never Gets Old\n- The Hell Route",
+  "attendance": "46 jammers en 10 equipos, según el resumen oficial (la página de la jam habla de unas 60 personas)",
+  "organizers": [
+   "Jam2Jam"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/8KbWHVovWwg/maxres1.jpg",
+    "alt": "Un organizador de Jam2Jam responde preguntas por cámara en la transmisión previa a la WinterJam 2021 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=8KbWHVovWwg"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/8KbWHVovWwg/maxres3.jpg",
+    "alt": "Pregunta de un participante, en pantalla, sobre cómo se iban a armar los equipos durante la sesión de preguntas y respuestas (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=8KbWHVovWwg"
+   },
+   {
+    "src": "https://img.itch.zone/aW1nLzY2NzQ3MTgucG5n/original/OHRpmX.png",
+    "alt": "Placa «Winter Jam 2021 Uruguay» sobre fondo verde cuadriculado (gráfica del evento)",
+    "by": "Jam2Jam",
+    "source": "itch.io",
+    "page": "https://itch.io/jam/winter-jam-2021"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/winter-jam-2021/entries"
+   },
+   {
+    "label": "Resumen en la wiki de Jam2Jam",
+    "url": "http://ggjuy.wikidot.com/resumen-wj21"
+   },
+   {
+    "label": "Equipos e integrantes",
+    "url": "http://ggjuy.wikidot.com/equipos-wj21"
+   },
+   {
+    "label": "Transmisiones en YouTube (lista)",
+    "url": "https://www.youtube.com/playlist?list=PL1HbfHls5PqxVC91Lr2fNZSO1Lm6xZpmF"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Jam2Jam: resumen de la WinterJam 21",
+    "url": "http://ggjuy.wikidot.com/resumen-wj21"
+   },
+   {
+    "label": "Jam2Jam: plan de la WinterJam 21",
+    "url": "http://ggjuy.wikidot.com/plan-wj21"
+   },
+   {
+    "label": "Jam2Jam: temática de la WinterJam 21",
+    "url": "http://ggjuy.wikidot.com/tematica-wj21"
+   },
+   {
+    "label": "Jam2Jam: equipos de la WinterJam 21",
+    "url": "http://ggjuy.wikidot.com/equipos-wj21"
+   },
+   {
+    "label": "itch.io: Winter Jam 2021",
+    "url": "https://itch.io/jam/winter-jam-2021"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2021-10-02": {
+  "description": "La edición 2021 del NASA Space Apps Challenge fue **virtual otra vez** y celebró los diez años del hackatón con el tema «The Power of Ten». En Uruguay hubo cinco sedes virtuales: Montevideo, Canelones (Ciudad de la Costa), Durazno, Rocha y Salto. La de Montevideo funcionó del viernes 1.º al domingo 3 de octubre de 2021.\n\nLa organizó la Fundación Los Pinos, con el apoyo de la Embajada de Estados Unidos y la colaboración de Girls in Tech y Rootstrap. Según la NASA, la sede Montevideo reunió a **261 personas en 22 equipos**, y Space Uruguay suma 40 equipos entre las cinco sedes. Llegaron a la etapa global los proyectos Space Carpinchos, Unnamed, La Hermandad, Ctrl-Y y Elonism.",
+  "attendance": "261 personas y 22 equipos en la sede Montevideo; 40 equipos en las 5 sedes",
+  "venue": "Virtual (sedes Montevideo, Ciudad de la Costa, Durazno, Rocha y Salto)",
+  "organizers": [
+   "Fundación Los Pinos",
+   "Embajada de Estados Unidos en Uruguay",
+   "Girls in Tech Uruguay",
+   "Rootstrap"
+  ],
+  "links": [
+   {
+    "label": "Sede Montevideo en spaceappschallenge.org",
+    "url": "https://2021.spaceappschallenge.org/locations/montevideo-uruguay/"
+   },
+   {
+    "label": "Equipos de la sede Montevideo",
+    "url": "https://2021.spaceappschallenge.org/locations/montevideo-uruguay/teams"
+   },
+   {
+    "label": "Edición 2021 en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2021"
+   }
+  ],
+  "sources": [
+   {
+    "label": "NASA Space Apps 2021: sede Montevideo",
+    "url": "https://2021.spaceappschallenge.org/locations/montevideo-uruguay/"
+   },
+   {
+    "label": "NASA Space Apps 2021: información de la sede Montevideo",
+    "url": "https://2021.spaceappschallenge.org/locations/montevideo-uruguay/event"
+   },
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2021",
+    "url": "https://www.spaceuruguay.org/spaceapps/2021"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2022-01-28": {
+  "description": "En la Global Game Jam 2022, el equipo que había armado la sede GGJUY el año anterior —ya con el nombre **Jam2Jam**— volvió a armar una sede solo virtual para personas de Uruguay mayores de 18 años, con Juan «Juancho» Rodriguez como responsable y el apoyo de Etermax. La página oficial de la sede llegó a 45 jammers registrados.\n\nJam2Jam mantuvo el formato de fin de semana: apertura el viernes 28 de enero a las 19:00 con la revelación del tema, ronda de pitches a las 23:00 y cierre el domingo 30 a las 18:00, con la presentación de los juegos y sorteos, todo transmitido por YouTube y coordinado en Discord. El tema mundial fue **Duality**.\n\nEn la sede se hicieron ocho juegos:\n\n- A Carol of Ruin and Prosperity\n- Che Pibe!\n- Hackerman 98\n- Moon Rush\n- Mr. Maim: El Señor Mimoerte\n- Soulter\n- Staticat\n- uwu im a cultist",
+  "attendance": "45 jammers registrados",
+  "venue": "En línea (Discord y YouTube)",
+  "city": "Montevideo (en línea)",
+  "organizers": [
+   "Jam2Jam: Juan Rodriguez, Clara Ribeiro, Alvaro Infante, Joaquin Volonte, Angie Koiman, Enzo Antonaz, Nacho Fernandez, Diego Becco y Rodrigo Rearden",
+   "Etermax (apoyo)"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/JOsdfC-XcZI/maxresdefault.jpg",
+    "alt": "Placa de la Global Game Jam 2022 de Jam2Jam (28 de enero, 19:00), con Etermax como apoyo, usada como portada de las transmisiones; el evento fue en línea",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=JOsdfC-XcZI"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20220816041705/https://globalgamejam.org/2022/jam-sites/jam2jam/games"
+   },
+   {
+    "label": "Apertura en YouTube",
+    "url": "https://www.youtube.com/watch?v=JOsdfC-XcZI"
+   },
+   {
+    "label": "Ronda de pitches en YouTube",
+    "url": "https://www.youtube.com/watch?v=rp6L2mhkobk"
+   },
+   {
+    "label": "Cierre y presentación de juegos en YouTube",
+    "url": "https://www.youtube.com/watch?v=wOBD7qb4dEc"
+   },
+   {
+    "label": "Plan del evento en el sitio de Jam2Jam",
+    "url": "http://ggjuy.wikidot.com/plan-ggj22"
+   },
+   {
+    "label": "Sede Jam2Jam en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/2024/https://v3.globalgamejam.org/2022/jam-sites/jam2jam"
+   }
+  ],
+  "sources": [
+   {
+    "label": "globalgamejam.org: juegos de la sede Jam2Jam (archivado)",
+    "url": "https://web.archive.org/web/20220816041705/https://globalgamejam.org/2022/jam-sites/jam2jam/games"
+   },
+   {
+    "label": "Jam2Jam: Plan GGJ 2022",
+    "url": "http://ggjuy.wikidot.com/plan-ggj22"
+   },
+   {
+    "label": "Jam2Jam: Temática GGJ 22",
+    "url": "http://ggjuy.wikidot.com/tematica-ggj22"
+   },
+   {
+    "label": "globalgamejam.org: sede Jam2Jam (archivado)",
+    "url": "https://web.archive.org/web/20240714223942/https://v3.globalgamejam.org/2022/jam-sites/jam2jam"
+   },
+   {
+    "label": "YouTube: Global Game Jam 2022 cierre de evento",
+    "url": "https://www.youtube.com/watch?v=wOBD7qb4dEc"
+   }
+  ]
+ },
+ "conf:jam2jam-winter-jam:2022-08-12": {
+  "description": "Segunda WinterJam de **Jam2Jam**, del viernes 12 al domingo 14 de agosto de 2022, otra vez a distancia: la comunicación fue por Discord y la apertura, los pitches y el cierre se transmitieron por YouTube. Arrancó el viernes a las 19 h con la presentación del evento, los equipos y el tema, que fue **«Lenguaje»**. El domingo a las 18 h cada equipo mostró lo que había hecho.\n\nLa página de la jam registra unos 70 jammers en nueve equipos (Jam2Jam contabiliza 94 participantes en esa edición), y estos nueve juegos:\n\n- Pyramid of Babel\n- Echoes from Afar\n- Lose friends by sending emojis\n- Use your words\n- Hotel Blake\n- Word Hunt\n- NO SO' FREESTYLE\n- Classic Revenge\n- Casper Project",
+  "attendance": "unos 70 jammers en 9 equipos (94 participantes según Jam2Jam)",
+  "venue": "En línea (Discord y transmisiones en YouTube)",
+  "organizers": [
+   "Jam2Jam"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/hMefdi8VbdE/maxres2.jpg",
+    "alt": "Dos organizadores de Jam2Jam abren la WinterJam 2022 frente a la cámara (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=hMefdi8VbdE"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/XoTT8ZneIV0/maxres2.jpg",
+    "alt": "Un participante presenta la idea de su equipo por videollamada en la ronda de pitches; abajo a la derecha, los organizadores (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=XoTT8ZneIV0"
+   },
+   {
+    "src": "https://img.itch.zone/aW1nLzk3NzY3NDUucG5n/original/TQGmFr.png",
+    "alt": "Placa «Winter Jam 2022 Uruguay», 12 de agosto, 19 h (gráfica del evento)",
+    "by": "Jam2Jam",
+    "source": "itch.io",
+    "page": "https://itch.io/jam/winterjam-uy-2022"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/winterjam-uy-2022/entries"
+   },
+   {
+    "label": "Plan del evento en la wiki de Jam2Jam",
+    "url": "http://ggjuy.wikidot.com/plan-wj22"
+   }
+  ],
+  "sources": [
+   {
+    "label": "itch.io: Winter Jam 2022",
+    "url": "https://itch.io/jam/winterjam-uy-2022"
+   },
+   {
+    "label": "Jam2Jam: plan de la WinterJam 22",
+    "url": "http://ggjuy.wikidot.com/plan-wj22"
+   },
+   {
+    "label": "YouTube: «Winter Jam 2022 apertura»",
+    "url": "https://www.youtube.com/watch?v=hMefdi8VbdE"
+   },
+   {
+    "label": "Women in Games Uruguay: kit de la Charrúa Game Jam, con participantes por edición de Jam2Jam",
+    "url": "https://wig.uy/cgj"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2022-10-01": {
+  "description": "En 2022 Space Apps **volvió a la presencialidad** en Uruguay, con el tema «Make Space». El hackatón fue el sábado 1.º y el domingo 2 de octubre, en la Fundación Los Pinos (Montevideo) y en North Schools (Ciudad de la Costa), mientras que Salto, Durazno y Rocha participaron en línea por Discord. Lo organizaron la Fundación Los Pinos, North Schools y Girls in Tech Uruguay, con el apoyo de la Embajada de Estados Unidos. Colaboraron, entre otros, Rootstrap, la OEI, Microsoft, Senpai Academy, Universidad ORT, NetLabs, IBM, Mujeres IT y Pyxis.\n\nEl viernes 30 de setiembre hubo un lanzamiento de prensa en Los Pinos. Hablaron la dirección de la fundación, Lauren Holt (consejera adjunta de Prensa y Cultura de la Embajada), Gregorio Medina (director general de North Schools), Lucía Michetti (codirectora de Girls in Tech Uruguay) y Francisco Delgado, organizador de NASA Space Apps Uruguay. Después del fin de semana, los equipos presentaron ante el jurado por Zoom y los ganadores locales se anunciaron el 8 de octubre.\n\nSpace Uruguay contabiliza **61 equipos en cinco sedes**, 29 de ellos en Montevideo. Pasaron a la etapa global Space Carpinchos, Next Generation Space Girls, Unnamed, Capi to the Space y UTECFBSM. Las fotos de la galería oficial muestran una entrega de certificados a participantes, muchos de ellos escolares y liceales, en la Fundación Los Pinos.",
+  "attendance": "61 equipos en 5 sedes (29 en Montevideo)",
+  "venue": "Fundación Los Pinos (Montevideo) y North Schools (Ciudad de la Costa); Salto, Durazno y Rocha en línea",
+  "organizers": [
+   "Fundación Los Pinos",
+   "North Schools",
+   "Girls in Tech Uruguay",
+   "Embajada de Estados Unidos en Uruguay",
+   "Francisco Delgado (NASA Space Apps Uruguay)"
+  ],
+  "talks": [
+   {
+    "title": "Lanzamiento de prensa de NASA Space Apps Uruguay 2022",
+    "speakers": [
+     "Lauren Holt",
+     "Gregorio Medina",
+     "Lucía Michetti",
+     "Francisco Delgado"
+    ]
+   }
+  ],
+  "photos": [
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/20221029_144615.jpg",
+    "alt": "Foto grupal de participantes con sus certificados frente al edificio de la Fundación Los Pinos",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/Nasa10.jpg",
+    "alt": "Público sentado en el hall de la Fundación Los Pinos durante la entrega de certificados",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/Nasa15.jpg",
+    "alt": "Participantes sentados en sillas y en el piso, con certificados apilados sobre una mesa en primer plano",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/Nasa14.jpg",
+    "alt": "Dos chicos levantan la mano entre el público",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/Nasa25.jpg",
+    "alt": "Familias y participantes siguen la ceremonia sentados en el hall",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/20221029_141520.jpg",
+    "alt": "Un grupo de adolescentes muestra sus certificados",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/20221029_141313.jpg",
+    "alt": "Niñas y niños posan con sus certificados junto a dos adultos",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/Nasa28.jpg",
+    "alt": "Niñas con sus certificados junto a adultos, delante de banners de la Fundación Los Pinos y de «¡Trabajá junto a la NASA!»",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2022/Nasa4.jpg",
+    "alt": "Cuatro personas posan juntas, sonrientes, durante la entrega",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2022"
+   }
+  ],
+  "links": [
+   {
+    "label": "Edición 2022 y galería en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "label": "Sede Montevideo en spaceappschallenge.org",
+    "url": "https://2022.spaceappschallenge.org/locations/montevideo"
+   },
+   {
+    "label": "Equipos de la sede Montevideo",
+    "url": "https://2022.spaceappschallenge.org/locations/montevideo/teams"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2022",
+    "url": "https://www.spaceuruguay.org/spaceapps/2022"
+   },
+   {
+    "label": "NASA Space Apps 2022: información y agenda de la sede Montevideo",
+    "url": "https://2022.spaceappschallenge.org/locations/montevideo/event"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2023-02-03": {
+  "description": "La sede uruguaya de la Global Game Jam 2023 (GGJ-Uruguay 2023, #GGJ-UY2023) funcionó en el **Club del Emprendedor del Parque Tecnológico del LATU**. La organizaron la Universidad ORT Uruguay, el estudio Nimble Giant Entertainment, Jam2Jam e Ingenio, la incubadora de empresas del LATU. La convocatoria era abierta a artistas, programadores, diseñadores de juegos y sonidistas, con cupo para 70 personas, comida incluida y 48 horas de trabajo desde el viernes 3 de febrero.\n\nEl tema mundial de ese año fue «raíces». La página de la sede registró **51 jammers** (Jam2Jam contabiliza 92 participantes en esa edición) y **10 juegos**: Back to the Arcades \"Mokey edition\", Cimarron - Roots of Liberty, DIG - Save the trees!, Going Back, Inari's Curse, Plant Ahead, Quest for the Black Yard, Rootrhythm, To The Roots y Treehouse Defenders.\n\nJam2Jam transmitió por YouTube la apertura, la ronda de pitches y el cierre con la presentación de los juegos.",
+  "attendance": "51 jammers registrados en la sede (92 participantes según Jam2Jam)",
+  "venue": "Club del Emprendedor, Parque Tecnológico del LATU (Av. Italia 6201)",
+  "city": "Montevideo",
+  "organizers": [
+   "Universidad ORT Uruguay",
+   "Nimble Giant Entertainment",
+   "Jam2Jam",
+   "Ingenio (LATU)"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/RMzjSZYjjLk/maxres3.jpg",
+    "alt": "Un equipo presenta su idea frente a la pantalla durante la ronda de pitches de la GGJ Uruguay 2023 en el Club del Emprendedor (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=RMzjSZYjjLk"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/RMzjSZYjjLk/maxres2.jpg",
+    "alt": "La sala del Club del Emprendedor con el proyector encendido durante los pitches de la GGJ Uruguay 2023 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=RMzjSZYjjLk"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede en globalgamejam.org (archivado)",
+    "url": "https://web.archive.org/web/20240422224729/https://v3.globalgamejam.org/2023/jam-sites/sinergia-cowork-palermo-ort-ggj-2023/games"
+   },
+   {
+    "label": "Back to the Arcades en itch.io",
+    "url": "https://dancold.itch.io/back-to-the-arcades-mokey-edition-reject-modernity-return-to-the-arcade"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página de la sede GGJ-Uruguay 2023 en globalgamejam.org (archivada)",
+    "url": "https://web.archive.org/web/20240229204933/https://v3.globalgamejam.org/2023/jam-sites/sinergia-cowork-palermo-ort-ggj-2023"
+   },
+   {
+    "label": "Juegos de la sede (archivado)",
+    "url": "https://web.archive.org/web/20240422224729/https://v3.globalgamejam.org/2023/jam-sites/sinergia-cowork-palermo-ort-ggj-2023/games"
+   },
+   {
+    "label": "Jammers de la sede (archivado)",
+    "url": "https://web.archive.org/web/20240422214512/https://v3.globalgamejam.org/2023/jam-sites/sinergia-cowork-palermo-ort-ggj-2023/members"
+   },
+   {
+    "label": "Jam2Jam en YouTube: «Global Game Jam 2023 - Apertura»",
+    "url": "https://www.youtube.com/watch?v=36AKoyCGdok"
+   },
+   {
+    "label": "WIG.UY: Charrúa Game Jam, kit para sponsors (participantes por edición de Jam2Jam)",
+    "url": "https://wig.uy/cgj"
+   },
+   {
+    "label": "Milenio: temas de la Global Game Jam 2023–2025",
+    "url": "https://www.milenio.com/cultura/global-game-jam-espacio-creacion-colectiva-videojuegos"
+   }
+  ]
+ },
+ "conf:jam2jam-winter-jam:2023-08-18": {
+  "description": "Tercera WinterJam de **Jam2Jam**, una jam de 48 horas del viernes 18 al domingo 20 de agosto de 2023 con el tema **«Gatos»**. La apertura, la ronda de pitches y el cierre se transmitieron por YouTube, y los equipos presentaron sus ideas por videollamada. En la apertura se mostraron datos de una encuesta que respondieron 88 inscriptos, la misma cifra de participantes que Jam2Jam registra para esa edición.\n\nSe entregaron diez juegos:\n\n- Ratlast\n- Snack Cattack\n- CAT: Cat Alley Tactics\n- Michi Fortune\n- THE BOX\n- Michion Imposible\n- Felinine\n- Feline Survivor\n- Purrfect Escape\n- Cat Odyssey",
+  "attendance": "88 participantes, según Jam2Jam",
+  "organizers": [
+   "Jam2Jam"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/zL4BOV_fYMs/maxres3.jpg",
+    "alt": "Equipo 1, «Parkour de gatitos», presenta su idea por videollamada en la ronda de pitches (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=zL4BOV_fYMs"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/PmFOrFdGxo8/maxres3.jpg",
+    "alt": "Diapositiva «Algunos datos» de la apertura, con gráficas de la encuesta que respondieron 88 inscriptos (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=PmFOrFdGxo8"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/PmFOrFdGxo8/maxres2.jpg",
+    "alt": "Un organizador de Jam2Jam conduce la apertura de la WinterJam 2023 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=PmFOrFdGxo8"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/winterjam2023/entries"
+   }
+  ],
+  "sources": [
+   {
+    "label": "itch.io: WinterJam 2023",
+    "url": "https://itch.io/jam/winterjam2023"
+   },
+   {
+    "label": "YouTube: «WinterJam 2023 - Apertura»",
+    "url": "https://www.youtube.com/watch?v=PmFOrFdGxo8"
+   },
+   {
+    "label": "Women in Games Uruguay: kit de la Charrúa Game Jam, con participantes por edición de Jam2Jam",
+    "url": "https://wig.uy/cgj"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2023-10-07": {
+  "description": "NASA Space Apps Uruguay 2023 fue el 7 y 8 de octubre, en formato híbrido y con el tema «Explore Open Science Together», una celebración de la ciencia abierta junto a la iniciativa TOPS (Transform to Open Science) de la NASA. Hubo cuatro sedes: la Torre Antel, Los Rosales y la Fundación Los Pinos en Montevideo, y North Schools en Ciudad de la Costa. Participaron **77 equipos**, de hasta seis personas cada uno.\n\nSpace Uruguay registra seis proyectos nominados a la etapa global: JICS3, Petit NASA Explorer, Space Carpinchos, GravityBees, Desπga2 y Experimentadores del Espacio.",
+  "attendance": "77 equipos en 4 sedes",
+  "venue": "Torre Antel, Los Rosales y Fundación Los Pinos (Montevideo); North Schools (Ciudad de la Costa)",
+  "organizers": [
+   "Space Uruguay"
+  ],
+  "links": [
+   {
+    "label": "Edición 2023 en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2023"
+   },
+   {
+    "label": "Desafíos 2023 en spaceappschallenge.org",
+    "url": "https://www.spaceappschallenge.org/2023/challenges/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2023",
+    "url": "https://www.spaceuruguay.org/spaceapps/2023"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2024-01-26": {
+  "description": "En 2024 la sede principal de la Global Game Jam en Uruguay se llamó **Jam2Jam + ORT + Nimble Giant + Ingenio** y volvió al Club del Emprendedor del Parque Tecnológico del LATU, del 26 al 28 de enero. Fue una sede híbrida, gratuita, en español y abierta a artistas, programadores, diseñadores y sonidistas, con comidas y mentores. Jam2Jam contabiliza 90 participantes en esa edición.\n\nEl tema mundial fue «hazme reír» (*Make me laugh*), y se nota en los títulos. La página de la sede registra 10 entradas: Joji's Joyful Jam, Mickey Mouse in Going to Damian's House!!, Make Me Laugh, Aventura en Construcción, MilkShake (cargado dos veces), Dios salve al Bufón, Cancelable (Mi última Jam), Laughter of Madness y Let 'em Eat Cake.\n\nEse año debutó además **Game Dojo UY** como sede online (cupo de 45 personas), donde se hicieron Your Mom! y Laughbyrinth: Quest for the Legendary Joke. Jam2Jam transmitió por YouTube la apertura, los pitches y el cierre.",
+  "attendance": "90 participantes según Jam2Jam",
+  "venue": "Club del Emprendedor, Parque Tecnológico del LATU (Av. Italia 6201), sede híbrida; Game Dojo UY online",
+  "city": "Montevideo",
+  "organizers": [
+   "Jam2Jam (Juancho Rodríguez)",
+   "Universidad ORT Uruguay",
+   "Nimble Giant Entertainment",
+   "Ingenio (LATU)",
+   "Game Dojo UY (sede online)"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/qABuCQtmMNQ/maxres1.jpg",
+    "alt": "Un organizador con micrófono frente a los banners de Nimble Giant, Ingenio y ORT en el cierre de la GGJ Uruguay 2024 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=qABuCQtmMNQ"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/qABuCQtmMNQ/maxres3.jpg",
+    "alt": "Dos personas presentan en el cierre de la GGJ Uruguay 2024, frente a los banners de los organizadores (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=qABuCQtmMNQ"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos de la sede en globalgamejam.org",
+    "url": "https://globalgamejam.org/group/260/games"
+   },
+   {
+    "label": "Juegos de la sede online Game Dojo UY",
+    "url": "https://globalgamejam.org/group/343/games"
+   },
+   {
+    "label": "Make Me Laugh en globalgamejam.org",
+    "url": "https://globalgamejam.org/games/2024/make-me-laugh-8-2"
+   },
+   {
+    "label": "Let 'em Eat Cake en globalgamejam.org",
+    "url": "https://globalgamejam.org/games/2024/let-em-eat-cake-3"
+   },
+   {
+    "label": "Dios salve al Bufón en globalgamejam.org",
+    "url": "https://globalgamejam.org/games/2024/dios-salve-al-bufon-6"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página de la sede Jam2Jam + ORT + Nimble Giant + Ingenio en globalgamejam.org (archivada)",
+    "url": "https://web.archive.org/web/20240807194556/https://globalgamejam.org/jam-sites/2024/jam2jam-ort-ingenio"
+   },
+   {
+    "label": "Juegos de la sede (archivado)",
+    "url": "https://web.archive.org/web/20240911222832/https://globalgamejam.org/group/260/games"
+   },
+   {
+    "label": "Sede online Game Dojo UY en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2024/game-dojo-uy"
+   },
+   {
+    "label": "Jam2Jam en YouTube: «Global Game Jam 2024 - Cierre y presentacion de juegos»",
+    "url": "https://www.youtube.com/watch?v=qABuCQtmMNQ"
+   },
+   {
+    "label": "WIG.UY: Charrúa Game Jam, kit para sponsors (participantes por edición de Jam2Jam)",
+    "url": "https://wig.uy/cgj"
+   },
+   {
+    "label": "Milenio: temas de la Global Game Jam 2023–2025",
+    "url": "https://www.milenio.com/cultura/global-game-jam-espacio-creacion-colectiva-videojuegos"
+   }
+  ]
+ },
+ "conf:jam2jam-winter-jam:2024-08-23": {
+  "description": "WinterJam 2024 de **Jam2Jam**, del viernes 23 al domingo 25 de agosto de 2024, con apertura el viernes a las 19 h. Duró 48 horas y el tema fue **«Exploración»**. La apertura, los pitches y el cierre, donde se mostraron los juegos uno por uno, se transmitieron por YouTube, y los equipos se presentaron por videollamada. Jam2Jam registra 89 participantes para esta edición.\n\nSe entregaron nueve juegos:\n\n- Doors\n- El Recreo\n- petiSOS\n- Echoes from the cosmos\n- Offspring\n- Indiana Bones Artifact Hunter\n- Mansion Alinac\n- Intento de Darwin paparazzi\n- The Secret of Analbis",
+  "attendance": "89 participantes, según Jam2Jam",
+  "organizers": [
+   "Jam2Jam"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/_kp7HbVn6NE/maxres2.jpg",
+    "alt": "Un organizador de Jam2Jam da la bienvenida a la WinterJam 2024, con un banner de Jam2Jam detrás (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=_kp7HbVn6NE"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/_kp7HbVn6NE/maxres3.jpg",
+    "alt": "Diapositiva «Algunos datos» con gráficas de la encuesta que respondieron 89 inscriptos a la Winter Jam 2024 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=_kp7HbVn6NE"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/o6qyx7chs-U/maxres3.jpg",
+    "alt": "El «Equipo Erizo» presenta su idea por videollamada en la ronda de pitches (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=o6qyx7chs-U"
+   },
+   {
+    "src": "https://img.itch.zone/aW1nLzE3NTIyOTk5LnBuZw==/original/SejTRc.png",
+    "alt": "Placa «Winter Jam 2024 Uruguay», 23 al 25 de agosto, 19 h (gráfica del evento)",
+    "by": "Jam2Jam",
+    "source": "itch.io",
+    "page": "https://itch.io/jam/winter-jam-2024"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/winter-jam-2024/entries"
+   }
+  ],
+  "sources": [
+   {
+    "label": "itch.io: Winter Jam 2024",
+    "url": "https://itch.io/jam/winter-jam-2024"
+   },
+   {
+    "label": "petiSOS en itch.io (menciona el tema «Exploration»)",
+    "url": "https://jvolonte.itch.io/petisos"
+   },
+   {
+    "label": "YouTube: «Winter Jam 2024 - Cierre y presentación de los juegos»",
+    "url": "https://www.youtube.com/watch?v=eigdOC3jwfQ"
+   },
+   {
+    "label": "Women in Games Uruguay: kit de la Charrúa Game Jam, con participantes por edición de Jam2Jam",
+    "url": "https://wig.uy/cgj"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2024-10-05": {
+  "description": "NASA Space Apps Uruguay 2024 fue el 5 y 6 de octubre, con el tema «The Sun Touches Everything»: veinte desafíos de heliofísica sobre la influencia del Sol en la Tierra y el espacio, en colaboración con NASA Heliophysics. Fue la edición con más equipos hasta ese momento: **613 participantes, 122 equipos, 119 proyectos entregados y 43 voluntarios**, en cinco sedes. En Montevideo fueron la Escuela y Liceo Elbio Fernández, Los Rosales y Holberton School Uruguay, y además hubo sedes en North Schools (Ciudad de la Costa) y Portal del Bosque (Punta del Este).\n\nHubo ganadores nacionales en dos categorías:\n\n- **Mayores**: Houston, We have a Program y UCUPuntaGen23.\n- **Menores**: El team espacio y The New School 2.\n\nOnce proyectos pasaron a la etapa global, entre ellos Fireflies, Rand(ezvous), Asteroid Girls, Uruastro y Urubots, y quince recibieron menciones.",
+  "attendance": "613 participantes, 122 equipos, 119 proyectos, 43 voluntarios",
+  "venue": "Elbio Fernández, Los Rosales y Holberton School (Montevideo); North Schools (Ciudad de la Costa); Portal del Bosque (Punta del Este)",
+  "organizers": [
+   "Space Uruguay"
+  ],
+  "photos": [
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8439.jpg",
+    "alt": "Foto grupal de participantes, voluntarios y organizadores frente a los banners de Space Apps y de la Embajada de Estados Unidos",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8239.jpg",
+    "alt": "Un gran hall de piso ajedrezado lleno de mesas con equipos trabajando",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8742.jpg",
+    "alt": "Hall colmado de participantes trabajando en mesas durante el hackatón",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8110.jpg",
+    "alt": "Un chico le muestra algo en su laptop a un compañero mientras otros participantes conversan detrás",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8449.jpg",
+    "alt": "Tres chicos trabajan en sus laptops mientras una adulta los observa",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8510.jpg",
+    "alt": "Tres jóvenes discuten una idea frente a una laptop",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8542.jpg",
+    "alt": "Un joven y una joven sonríen mientras trabajan en sus laptops",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8594.jpg",
+    "alt": "Un participante modela un astronauta en 3D en su monitor",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8647.jpg",
+    "alt": "Participantes reunidos alrededor de una pantalla en un stand",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8780.jpg",
+    "alt": "Dos niñas en el stand de la Embajada de Estados Unidos",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8796.jpg",
+    "alt": "Un niño de lentes sonríe frente a su laptop con stickers espaciales",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8808.jpg",
+    "alt": "Un equipo de adolescentes trabaja frente a monitores en una sala con paredes de ladrillo",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8858.jpg",
+    "alt": "Dos chicos anotan ideas en una pizarra blanca",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_8952.jpg",
+    "alt": "Un adolescente escribe «Herramientas» en una pizarra",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2024/IMG_9102.jpg",
+    "alt": "Monitores con imágenes de Marte y una laptop con un gráfico, en el puesto de un equipo",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2024"
+   }
+  ],
+  "links": [
+   {
+    "label": "Edición 2024, ganadores y galería en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2024"
+   },
+   {
+    "label": "Desafíos 2024 en spaceappschallenge.org",
+    "url": "https://www.spaceappschallenge.org/nasa-space-apps-2024/challenges/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2024",
+    "url": "https://www.spaceuruguay.org/spaceapps/2024"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2025-01-24": {
+  "description": "La sede principal de la Global Game Jam 2025 en Uruguay funcionó en el **Club del Emprendedor**, en el Parque Tecnológico del LATU. La organizaron la Licenciatura en Animación y Videojuegos de la Universidad ORT Uruguay, Ingenio y Jam2Jam. Del viernes 24 al domingo 26 de enero, **68 personas en 11 equipos** hicieron juegos en 48 horas sobre el tema de la edición: las burbujas.\n\nLos equipos tuvieron la mentoría de Matías Sniadower (docente de ORT) y Leandro Mesquita, de JamCity; Juan Forno y Juan Pedro Salvo, de Manada; Gerson Da Silva, de Ironhide, y Ariel Copes, también docente de ORT. Al cierre, cada grupo presentó su juego al resto: Pelotero, Our Sheep Laundry, Foh the Foca, Mara la Calamara, Five steps away, Bubble Bee, Akius: the bubble gun game, Laundry Day, Jumpin' Bubble Man, Bubbly Abyss y Alberto no puede saltar.\n\nEse fin de semana hubo otras dos sedes uruguayas: **Globant**, en sus oficinas del World Trade Center Montevideo (BubbleOdysea, Don't Pop The Pomp, Birus, Petri dish, Witch Hunt y Bubble Lobby), y la sede online de **Game Dojo UY**, con 13 entradas, entre ellas Axobuddies, Bubble Brim, Bubblebound y Toro Rush.\n\nPara Juan Rodríguez, fundador de Jam2Jam y docente de ORT, lo principal que la jam le aporta a la industria es «nuevo talento».",
+  "attendance": "68 personas en 11 equipos (sede del LATU)",
+  "venue": "Club del Emprendedor, Parque Tecnológico del LATU (Av. Italia 6201); también Globant (WTC Montevideo) y Game Dojo UY online",
+  "city": "Montevideo",
+  "organizers": [
+   "Universidad ORT Uruguay (Licenciatura en Animación y Videojuegos)",
+   "Ingenio (LATU)",
+   "Jam2Jam (Juan Rodríguez)",
+   "Globant (sede WTC)",
+   "Game Dojo UY (sede online)"
+  ],
+  "photos": [
+   {
+    "src": "https://www.ort.edu.uy/innovaportal/file/155309/1/-una-nueva-edicion-de-global-game-jam-llega-al-latu.jpg",
+    "alt": "Participantes trabajando con sus laptops en mesas compartidas del Club del Emprendedor durante la Global Game Jam 2025",
+    "by": "Universidad ORT Uruguay",
+    "source": "Sitio de Universidad ORT Uruguay",
+    "page": "https://www.ort.edu.uy/novedades/una-nueva-edicion-de-global-game-jam-llega-al-latu"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/8V6ZvbS5btg/maxres2.jpg",
+    "alt": "El Equipo Tiburón presenta su idea en la ronda de pitches, frente a los banners de ORT e Ingenio (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=8V6ZvbS5btg"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/8V6ZvbS5btg/maxres3.jpg",
+    "alt": "El Equipo Lobo en la ronda de pitches de la GGJ Uruguay 2025 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=8V6ZvbS5btg"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/hf7kG7lx4Ec/maxres2.jpg",
+    "alt": "Un organizador abre la sede con micrófono, frente a los banners de Jam2Jam e Ingenio (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=hf7kG7lx4Ec"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/3jdoXbZ2q34/maxres2.jpg",
+    "alt": "Los organizadores conducen el cierre de la GGJ Uruguay 2025 frente a los banners de ORT, Jam2Jam e Ingenio (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=3jdoXbZ2q34"
+   }
+  ],
+  "links": [
+   {
+    "label": "Nota de Universidad ORT Uruguay",
+    "url": "https://www.ort.edu.uy/novedades/una-nueva-edicion-de-global-game-jam-llega-al-latu"
+   },
+   {
+    "label": "Juegos de la sede LATU en globalgamejam.org",
+    "url": "https://globalgamejam.org/group/11743/games"
+   },
+   {
+    "label": "Juegos de la sede Globant Montevideo",
+    "url": "https://globalgamejam.org/group/11984/games"
+   },
+   {
+    "label": "Juegos de la sede online Game Dojo UY",
+    "url": "https://globalgamejam.org/group/12035/games"
+   },
+   {
+    "label": "Pelotero en globalgamejam.org",
+    "url": "https://globalgamejam.org/games/2025/pelotero-7"
+   },
+   {
+    "label": "Our Sheep Laundry en globalgamejam.org",
+    "url": "https://globalgamejam.org/games/2025/our-sheep-laundry-5"
+   },
+   {
+    "label": "Bubbly Abyss en globalgamejam.org",
+    "url": "https://globalgamejam.org/games/2025/bubbly-abyss-6"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Universidad ORT Uruguay: «Una nueva edición de Global Game Jam llega al LATU» (30/01/2025)",
+    "url": "https://www.ort.edu.uy/novedades/una-nueva-edicion-de-global-game-jam-llega-al-latu"
+   },
+   {
+    "label": "Página de la sede Jam2Jam - ORT - Ingenio en globalgamejam.org (archivada)",
+    "url": "https://web.archive.org/web/20251124234703/https://globalgamejam.org/jam-sites/2025/jam2jam-ort-ingenio"
+   },
+   {
+    "label": "Sede Globant - Montevideo en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2025/globant-montevideo"
+   },
+   {
+    "label": "Sede online Game Dojo UY en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2025/game-dojo-uy"
+   },
+   {
+    "label": "Jam2Jam en YouTube: «Global Game Jam 2025 - Cierre»",
+    "url": "https://www.youtube.com/watch?v=3jdoXbZ2q34"
+   }
+  ]
+ },
+ "conf:jam2jam-winter-jam:2025-07-25": {
+  "description": "WinterJam 2025 de **Jam2Jam**, una jam de 48 horas que arrancó el viernes 25 de julio de 2025 a las 19 h y cerró el domingo 27 con la presentación de cada juego, todo transmitido por YouTube. Con **102 participantes**, según las cifras de Jam2Jam, fue su edición más numerosa hasta ese momento.\n\nEn itch.io quedaron diez juegos:\n\n- DinoRanch\n- Mark Invader\n- ¡A secas!\n- Michiaduanas\n- My Last Day On Earth\n- PetroRats Gas&Food\n- T-Minus 24\n- For Carrot's sake!\n- Astro Escape\n- Un Día de Miércoles",
+  "attendance": "102 participantes, según Jam2Jam",
+  "organizers": [
+   "Jam2Jam"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/2hEtVzcerjE/maxres2.jpg",
+    "alt": "Un organizador de Jam2Jam da la bienvenida a la WinterJam 2025 frente a la cámara (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=2hEtVzcerjE"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/7Rxvs5B0wms/maxres2.jpg",
+    "alt": "El organizador conduce el cierre en el que se mostraron los juegos (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=7Rxvs5B0wms"
+   },
+   {
+    "src": "https://img.itch.zone/aW1nLzIyMzUwOTE5LnBuZw==/original/82WsC2.png",
+    "alt": "Placa «Winter Jam 2025 Uruguay», 25 de julio, 19 h (gráfica del evento)",
+    "by": "Jam2Jam",
+    "source": "itch.io",
+    "page": "https://itch.io/jam/winter-jam-2025"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/winter-jam-2025/entries"
+   }
+  ],
+  "sources": [
+   {
+    "label": "itch.io: Winter Jam 2025",
+    "url": "https://itch.io/jam/winter-jam-2025"
+   },
+   {
+    "label": "YouTube: «Winter Jam 2025 - Cierre y presentación de los juegos»",
+    "url": "https://www.youtube.com/watch?v=7Rxvs5B0wms"
+   },
+   {
+    "label": "Women in Games Uruguay: kit de la Charrúa Game Jam, con participantes por edición de Jam2Jam",
+    "url": "https://wig.uy/cgj"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2025-10-04": {
+  "description": "NASA Space Apps Uruguay 2025 fue el 4 y 5 de octubre, con el tema «Learn · Launch · Lead» y formato híbrido. Tuvo sedes en Montevideo (Escuela y Liceo Elbio Fernández, Los Rosales, Holberton School Uruguay y Saint George's School), en North Schools de Ciudad de la Costa y de Punta del Este, y en UTEC Durazno, Rivera y Fray Bentos. La Universidad ORT Uruguay participó como patrocinadora.\n\nParticiparon **482 personas en 110 equipos**, que entregaron 75 proyectos, con 56 voluntarios. Los ganadores nacionales fueron:\n\n- **Mayores**: Gualter, Never be Frog y ucuweather.\n- **Menores**: Petit NASA Explorer y Santi astronomer.\n\nDiez proyectos pasaron a la etapa global, entre ellos Ground Control, UpIT, Spectro y UruBots, y diecisiete recibieron menciones.",
+  "attendance": "482 participantes, 110 equipos, 75 proyectos, 56 voluntarios",
+  "venue": "Elbio Fernández, Los Rosales, Holberton School y Saint George's (Montevideo); North Schools (Ciudad de la Costa y Punta del Este); UTEC Durazno, Rivera y Fray Bentos",
+  "organizers": [
+   "Space Uruguay",
+   "Universidad ORT Uruguay (patrocinador)",
+   "UTEC"
+  ],
+  "photos": [
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/A7302680.jpg",
+    "alt": "Niñas y niños trabajan en mesas junto a un banner de Space Uruguay y Space Apps",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/A7302694.jpg",
+    "alt": "Un hombre de gorra conversa con un equipo",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/A7302733.jpg",
+    "alt": "Cuatro chicos miran juntos la pantalla de una laptop",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/DSC09906.jpg",
+    "alt": "Un niño disfrazado de astronauta lee una hoja",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/DSC09889.jpg",
+    "alt": "Un equipo trabaja con laptops mientras un hombre de pie los acompaña",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/DSC09931.jpg",
+    "alt": "Tres participantes conversan alrededor de una mesa con laptops",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/DSC00125.jpg",
+    "alt": "Dos jóvenes de un equipo; uno hace un gesto a la cámara",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_0415.jpg",
+    "alt": "Dos adolescentes trabajan frente a monitores",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_0428.jpg",
+    "alt": "Un adulto se inclina para ayudar a un grupo de chicas frente a sus pantallas",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_0446.jpg",
+    "alt": "Un chico de lentes trabaja en una laptop cubierta de stickers de la NASA",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_0459.jpg",
+    "alt": "Una participante anota ideas en una pizarra, en una sala de paredes de ladrillo",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_8612.jpg",
+    "alt": "Adolescentes concentrados en sus laptops",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_8652.jpg",
+    "alt": "Un grupo de chicas trabaja en una mesa de un salón de clase",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/IMG_8686.jpg",
+    "alt": "Chicas trabajan con laptops en una mesa compartida",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/North_Schools_CDLC_%252825%2529.jpg",
+    "alt": "Vista general de la sede de North Schools en Ciudad de la Costa, con muchos equipos trabajando",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/North_Schools_CDLC_%252828%2529.jpg",
+    "alt": "Banner del NASA International Space Apps Challenge, «¡Trabajá junto a la NASA!», en la sede de North Schools",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/North_Schools_CDLC_%25283%2529.jpg",
+    "alt": "Un participante junto al banner de Space Apps en la sede de North Schools en Ciudad de la Costa",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "src": "https://res.cloudinary.com/ybeon0td/image/upload/f_auto,q_auto/space-front/assets/images/spaceapps/editions-optimized/2025/North_Schools_CDLC_%252819%2529.jpg",
+    "alt": "Dos participantes se ríen frente a una laptop en North Schools",
+    "by": "Space Uruguay",
+    "source": "Sitio de Space Uruguay",
+    "page": "https://www.spaceuruguay.org/spaceapps/2025"
+   }
+  ],
+  "links": [
+   {
+    "label": "Edición 2025, ganadores y galería en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "label": "Anuncio de la Universidad ORT Uruguay",
+    "url": "https://www.ort.edu.uy/novedades/nasa-space-apps-challenge-uruguay-2025"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2025",
+    "url": "https://www.spaceuruguay.org/spaceapps/2025"
+   },
+   {
+    "label": "Universidad ORT Uruguay: NASA Space Apps Challenge Uruguay 2025 (18/9/2025)",
+    "url": "https://www.ort.edu.uy/novedades/nasa-space-apps-challenge-uruguay-2025"
+   }
+  ]
+ },
+ "conf:global-game-jam-uruguay:2026-01-30": {
+  "description": "La Global Game Jam 2026 tuvo en Uruguay su sede principal en el **Club del Emprendedor del Parque Tecnológico del LATU**, organizada por Jam2Jam, la Universidad ORT Uruguay e Ingenio del 30 de enero al 1.º de febrero. Era gratuita, con cupo para 70 personas, sin experiencia previa requerida y sin competencia: quien se anotaba solo o con un equipo incompleto era asignado a un grupo en la apertura. Jam2Jam festejó ahí sus cinco años organizando jams, con más de 300 jammers y casi 100 juegos acompañados. Según sus números, a esta edición fueron 74 participantes, y en 2026 las mujeres llegaron a un récord del 28 % de sus participantes. La transmisión de apertura muestra como auspiciantes a Ironhide Game Studio, Great Oak, DMoizo y Monster Energy.\n\nEl tema mundial fue «máscara» (*Mask*). En la sede del LATU se hicieron Disguise, Mask Maze, Everyone Needs Faces, BackStage, Buscando a Momo, Michelle, who?, De cara al lago y Chin-Chin!.\n\nHubo además otras sedes uruguayas: **Globant**, en el World Trade Center Montevideo (cupo de 60), con Stencil Scape, Rite of Awakening, Detective Speedrun, Friendly tribes y El secreto de mi abuela; **Game Dojo UY**, online por tercer año, con seis juegos como Masked Heist y Carnival Survivor, y **TRAMA**, una sede GGJ Next para jóvenes de 14 a 18 años en UTEC Minas.",
+  "attendance": "74 participantes en la sede del LATU, según Jam2Jam",
+  "venue": "Club del Emprendedor, Parque Tecnológico del LATU (Av. Italia 6201); también Globant (WTC Montevideo), Game Dojo UY online y UTEC Minas (GGJ Next)",
+  "city": "Montevideo",
+  "organizers": [
+   "Jam2Jam (Juancho Rodríguez)",
+   "Universidad ORT Uruguay",
+   "Ingenio (LATU)",
+   "Globant (sede WTC)",
+   "Game Dojo UY (sede online)",
+   "UTEC (TRAMA, GGJ Next en Minas)"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/sPwpfVNYfCQ/maxres1.jpg",
+    "alt": "La sala del Club del Emprendedor con los equipos trabajando en sus mesas durante la GGJ Uruguay 2026 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=sPwpfVNYfCQ"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/sPwpfVNYfCQ/maxres2.jpg",
+    "alt": "Vista de la sala con los jammers en sus computadoras, el último día de la GGJ Uruguay 2026 (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=sPwpfVNYfCQ"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/2I7eK1nl_uM/maxres3.jpg",
+    "alt": "El Equipo Erizo presenta su idea en la ronda de pitches, frente a los banners de ORT (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=2I7eK1nl_uM"
+   }
+  ],
+  "links": [
+   {
+    "label": "Sede Jam2Jam - ORT - Ingenio en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2026/jam2jam-ort-ingenio"
+   },
+   {
+    "label": "Juegos de la sede LATU en globalgamejam.org",
+    "url": "https://globalgamejam.org/group/31395/games"
+   },
+   {
+    "label": "Juegos de la sede Globant Montevideo",
+    "url": "https://globalgamejam.org/group/31277/games"
+   },
+   {
+    "label": "Juegos de la sede online Game Dojo UY",
+    "url": "https://globalgamejam.org/group/31510/games"
+   },
+   {
+    "label": "Sede TRAMA (GGJ Next) en UTEC Minas",
+    "url": "https://globalgamejam.org/jam-sites/2026/trama-ggj-2026"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página de la sede |GGJ2026| Jam2Jam - ORT - Ingenio en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2026/jam2jam-ort-ingenio"
+   },
+   {
+    "label": "Sede GGJ2026 Globant - Montevideo en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2026/globant-montevideo"
+   },
+   {
+    "label": "Sede Game Dojo GGJ26 en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2026/game-dojo-uy"
+   },
+   {
+    "label": "Sede TRAMA GGJN 2026 en globalgamejam.org",
+    "url": "https://globalgamejam.org/jam-sites/2026/trama-ggj-2026"
+   },
+   {
+    "label": "Jam2Jam en YouTube: «Global Game Jam 2026 - Apertura»",
+    "url": "https://www.youtube.com/watch?v=s7-VCu8ZEI4"
+   },
+   {
+    "label": "Goldsmiths: el tema de la GGJ 2026 fue «Mask»",
+    "url": "https://www.gold.ac.uk/news/2026/global-game-jam-2026/"
+   },
+   {
+    "label": "WIG.UY: Charrúa Game Jam, kit para sponsors (participantes por edición de Jam2Jam)",
+    "url": "https://wig.uy/cgj"
+   }
+  ]
+ },
+ "conf:charrua-game-jam:2026-07-31": {
+  "description": "La Charrúa Game Jam fue la primera edición conjunta de **Women in Games Uruguay (WIG.UY)** y **Jam2Jam**, dos comunidades que hasta entonces organizaban sus jams por separado (la Women Game Jam y las jams de Jam2Jam). Se armó como dos maratones en fines de semana seguidos: una **virtual**, del 31 de julio al 2 de agosto, con el tema «Punk», y una **presencial**, del 7 al 9 de agosto en Ingenio (LATU). Se podía participar en una o en las dos, con equipo propio o pidiendo uno, y no hacía falta experiencia previa.\n\nEn la apertura presencial se mostraron los resultados de una encuesta que respondieron 144 personas inscriptas: el 44 % nunca había participado en una game jam y el 28,5 % nunca había hecho un juego.\n\nEn itch.io quedaron **13 juegos**. Al cierre de la jam virtual se entregaron Paint The System!, Pinketto, Grand Theft Pidgeon: Flock the System, DestroyDataCenter, God Save The Kilombo, Midnight Punk, Surviving Old City y PuNKyzaDo; al de la presencial, Proyecto 7UR1N6, Chisme en la Escuela, AlquimiaTerapia, Keep the dirt away y Mesonigma. Jam2Jam transmitió por YouTube la apertura y el cierre de cada instancia, con la presentación juego por juego.",
+  "venue": "Virtual (31 de julio al 2 de agosto) y presencial en Ingenio, LATU (7 al 9 de agosto)",
+  "city": "Montevideo",
+  "organizers": [
+   "Women in Games Uruguay (WIG.UY)",
+   "Jam2Jam"
+  ],
+  "photos": [
+   {
+    "src": "https://i.ytimg.com/vi/5HgEiUDPOuQ/maxres1.jpg",
+    "alt": "Dos integrantes de la organización abren la jam presencial, junto a una pantalla con el logo de la Charrúa Game Jam y un banner de Jam2Jam (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=5HgEiUDPOuQ"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/ugxwYlZYHjc/maxres3.jpg",
+    "alt": "Participantes de la jam presencial durante el cierre y la presentación de los juegos (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=ugxwYlZYHjc"
+   },
+   {
+    "src": "https://i.ytimg.com/vi/OeIhk5r8DLo/maxres2.jpg",
+    "alt": "Conductores de la transmisión de apertura de la jam virtual, frente a banners de Jam2Jam y WIG.UY (captura de la transmisión)",
+    "by": "Jam2Jam uy",
+    "source": "YouTube",
+    "page": "https://www.youtube.com/watch?v=OeIhk5r8DLo"
+   }
+  ],
+  "links": [
+   {
+    "label": "Juegos en itch.io",
+    "url": "https://itch.io/jam/charrua-game-jam-2026/entries"
+   },
+   {
+    "label": "Página de la jam en itch.io",
+    "url": "https://itch.io/jam/charrua-game-jam-2026"
+   },
+   {
+    "label": "Sitio de Women in Games Uruguay",
+    "url": "https://wig.uy/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Charrua Game Jam 2026 en itch.io (fechas, temas y 13 entregas)",
+    "url": "https://itch.io/jam/charrua-game-jam-2026"
+   },
+   {
+    "label": "WIG.UY: anuncio y kit para sponsors de la Charrúa Game Jam",
+    "url": "https://wig.uy/cgj"
+   },
+   {
+    "label": "Jam2Jam en YouTube: «Charrua Game Jam 2026 - Apertura jam virtual»",
+    "url": "https://www.youtube.com/watch?v=OeIhk5r8DLo"
+   },
+   {
+    "label": "Jam2Jam en YouTube: «Charrua Game Jam 2026 - Apertura jam presencial»",
+    "url": "https://www.youtube.com/watch?v=5HgEiUDPOuQ"
+   }
+  ]
+ },
+ "conf:space-apps-uruguay:2026-11-14": {
+  "description": "Edición anunciada para el **14 y 15 de noviembre de 2026**, con el tema «The Next Frontier» y 14 desafíos de la NASA. En Uruguay hay cinco ciudades confirmadas: Montevideo, Punta del Este, Rivera, Salto y Ciudad de la Costa, y en todas se puede participar en línea.\n\nLa inscripción, la formación de equipos (de hasta seis personas) y la entrega de proyectos se hacen en el sitio oficial de la NASA. La entrega abre el sábado 14 a las 9:00 y cierra el domingo 15 a las 23:59, hora de Uruguay. Hasta el cierre del hackatón se puede elegir o cambiar de ciudad y de equipo.",
+  "venue": "Montevideo, Punta del Este, Rivera, Salto y Ciudad de la Costa (con participación en línea)",
+  "organizers": [
+   "Space Uruguay"
+  ],
+  "links": [
+   {
+    "label": "Edición 2026 en Space Uruguay",
+    "url": "https://www.spaceuruguay.org/spaceapps/2026"
+   },
+   {
+    "label": "Eventos locales 2026 en spaceappschallenge.org",
+    "url": "https://www.spaceappschallenge.org/2026/local-events/"
+   },
+   {
+    "label": "Desafíos 2026",
+    "url": "https://www.spaceappschallenge.org/2026/challenges/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Space Uruguay: NASA Space Apps Uruguay 2026",
+    "url": "https://www.spaceuruguay.org/spaceapps/2026"
+   }
+  ]
+ }
+}

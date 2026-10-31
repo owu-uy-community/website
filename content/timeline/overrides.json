@@ -1,0 +1,139 @@
+{
+  "fix": {
+    "github:OWASP-Uruguay/owasp-uruguay.github.io:2013-04-04:owasp-latam-tour-2013": {
+      "start": "2013-04-02",
+      "end": "2013-04-03"
+    },
+    "github:OWASP-Uruguay/owasp-uruguay.github.io:2020-08-15:owasp-latam-home-2020": {
+      "start": "2020-05-04",
+      "end": "2020-05-08"
+    },
+    "github:OWASP-Uruguay/owasp-uruguay.github.io:2020-12-15:jornada-de-colaboracion-owasp-antisamy": {
+      "start": "2020-12-12"
+    },
+    "github:OWASP-Uruguay/owasp-uruguay.github.io:2021-07-15:owasp-latam-home-2021": {
+      "start": "2021-08-03",
+      "end": "2021-08-05"
+    },
+    "github:OWASP-Uruguay/owasp-uruguay.github.io:2022-06-15:owasp-day-2022-owasp-top-10-2021-y-sdlc-": {
+      "start": "2022-07-28"
+    },
+    "conf:owasp-day-uruguay:2022-06": {
+      "start": "2022-07-28"
+    },
+    "github:js-uy/newsletter:2017-06-15:reactjs-uruguay-meetup": {
+      "start": "2017-06-22"
+    },
+    "github:PHPmvd/phpday-website:2015-07-25:phpday-uruguay-2015-1-edicion": {
+      "start": "2015-08-08"
+    },
+    "conf:genexus-meeting:2002-09-30": {
+      "start": "2003-03-31",
+      "end": "2003-04-02",
+      "title": "Encuentro GeneXus 2003"
+    },
+    "conf:oracle-tour-montevideo:2010": {
+      "start": "2010-10-16"
+    },
+    "conf:agile-open-space-uy:2013-05-04": {
+      "start": "2013-05-04T10:00:00-03:00",
+      "title": "Agile is in the Air - Open Space"
+    }
+  },
+  "spanish": {
+    "~400 visitors": "unos 400 visitantes",
+    "~50-70": "entre 50 y 70 personas",
+    "600+ (Montevideo)": "más de 600 personas (en Montevideo)",
+    "~200": "unas 200 personas",
+    "300+": "más de 300 personas",
+    "~300 per year (announcement)": "unas 300 por año (según el anuncio)",
+    "~700": "unas 700 personas",
+    "48 + 20 jammers registered (two sites)": "48 + 20 jammers inscriptos (dos sedes)",
+    ">200": "más de 200 personas",
+    "70 participants, 12 teams (79 ideas submitted)": "70 participantes en 12 equipos (79 ideas presentadas)",
+    "50+ women, 20 coaches": "más de 50 mujeres y 20 coaches",
+    "42 + 31 jammers registered": "42 + 31 jammers inscriptos",
+    "~220 (80 at workshops)": "unas 220 personas (80 en los talleres)",
+    "~50 people, 8 teams": "unas 50 personas en 8 equipos",
+    "sold out; site pitched '>400 attendees' (sponsor deck), tweet said '>200 visitors from abroad'": "entradas agotadas; el sitio hablaba de más de 400 asistentes y más de 200 visitantes del exterior",
+    "~1,000": "unas 1.000 personas",
+    "~90 (CUTI); 56 + 32 jammers registered": "unas 90 personas según CUTI; 56 + 32 jammers inscriptos",
+    ">150 day 1 (9 workshops), >270 day 2": "más de 150 el primer día (9 talleres) y más de 270 el segundo",
+    "60+": "más de 60 personas",
+    "70+": "más de 70 personas",
+    "1,200+": "más de 1.200 personas",
+    "83 at ORT/Sinergia (record) + 28 at A+": "83 en ORT/Sinergia (récord) + 28 en A+",
+    ">500": "más de 500 personas",
+    "100+ students, 12 teams": "más de 100 estudiantes en 12 equipos",
+    "~70": "unas 70 personas",
+    "52 (ORT/Sinergia) + 32 (A+) + 14 (Punta del Este) jammers registered": "52 (ORT/Sinergia) + 32 (A+) + 14 (Punta del Este) jammers inscriptos",
+    "700 graduates": "700 egresados",
+    ">450 in person + >600 streaming": "más de 450 en persona y más de 600 por streaming",
+    ">1,800 (typical audience)": "más de 1.800 (su público habitual)",
+    ">100 prototypes": "más de 100 prototipos",
+    "110 (anticipated, WordCamp Central)": "110 esperados (según WordCamp Central)",
+    "100+ across 4 sites (52 Jalea/ORT, 41 Globant, 20 Punta del Este registered)": "más de 100 en 4 sedes (inscriptos: 52 en Jalea/ORT, 41 en Globant, 20 en Punta del Este)",
+    ">300 workshops, >100 round table, >380 talks; >1,100 unique streaming views": "más de 300 en los talleres, más de 100 en la mesa redonda y más de 380 en las charlas; más de 1.100 vistas únicas del streaming",
+    "201 participants, 23 teams, 4 sedes (Montevideo: 148 people, 11 teams)": "201 participantes en 23 equipos y 4 sedes (Montevideo: 148 personas, 11 equipos)",
+    "332 (17 organizers, 203 selected applicants, 75 sponsor/partner, 37 speakers); 1,030 applications; 13 LatAm countries": "332 (17 organizadores, 203 seleccionados, 75 de sponsors y aliados, 37 oradores); 1.030 postulaciones de 13 países de América Latina",
+    "340 women graduates in this class": "340 egresadas en esa generación",
+    "44 + 31 + 17 jammers registered": "44 + 31 + 17 jammers inscriptos",
+    "441 participants, 62 teams": "441 participantes en 62 equipos",
+    "2,078 (BBVA report)": "2.078 (según un informe de BBVA)",
+    "GGJUY: 62 jammers; Globant 23; Punta 22 registered": "inscriptos: 62 jammers en GGJUY, 23 en Globant y 22 en Punta del Este",
+    "participants from 28 countries; >5,000 connections": "participantes de 28 países; más de 5.000 conexiones",
+    "46 jammers": "46 jammers",
+    "441 participants, 40 teams (Space Uruguay); NASA page: 261 people / 22 teams for Montevideo, 29 people for Rocha": "según la NASA, 261 personas en 22 equipos en Montevideo y 29 en Rocha (Space Uruguay informó 441 participantes)",
+    "45 jammers registered (Jam2Jam site)": "45 jammers inscriptos (según Jam2Jam)",
+    "61 teams, 5 locations (Montevideo page: 29 teams)": "61 equipos en 5 sedes (29 en Montevideo)",
+    "capacity 70": "cupo de 70 personas",
+    "77 teams, 4 sedes": "77 equipos en 4 sedes",
+    "300+ (Abrelatam+Condatos)": "más de 300 personas (entre AbreLatam y ConDatos)",
+    ">400 in person + >2,000 streaming": "más de 400 en persona y más de 2.000 por streaming",
+    ">300 (connectia.uy)": "más de 300 personas (según connectia.uy)",
+    "613 participants, 122 teams, 119 projects, 43 volunteers": "613 participantes en 122 equipos, 119 proyectos y 43 voluntarios",
+    "2,000+": "más de 2.000 personas",
+    "68 people / 11 teams at LATU": "68 personas en 11 equipos, en el LATU",
+    ">550 in person + >1,100 streaming": "más de 550 en persona y más de 1.100 por streaming",
+    "76 RSVPs on Meetup": "76 anotados en Meetup",
+    "482 participants, 110 teams, 75 projects, 56 volunteers": "482 participantes en 110 equipos, 75 proyectos y 56 voluntarios",
+    "2,000+ from 30+ countries": "más de 2.000 personas de más de 30 países",
+    ">3,000 (online + in person) from 17 countries": "más de 3.000 (en persona y en línea) de 17 países",
+    "20 RSVPs on Meetup": "20 anotados en Meetup",
+    "Casa de la Cultura de San Carlos (talk Aug 23 at Liceo Nº1)": "Casa de la Cultura de San Carlos (la charla del 23 de agosto fue en el Liceo Nº 1)",
+    "Sharing the Point tour": "Gira Sharing the Point",
+    "ANTEL conference auditorium & interactive room (next to Torre Antel)": "Auditorio y sala interactiva de Antel (junto a la Torre de las Telecomunicaciones)",
+    "Universidad Católica del Uruguay (workshops: Anexo salones 201-202; conference: Aula Magna, Av. 8 de Octubre 2738)": "Universidad Católica del Uruguay (talleres en los salones 201 y 202 del Anexo; conferencia en el Aula Magna, Av. 8 de Octubre 2738)",
+    "Sophilabs (site)": "Sophilabs (sede)",
+    "Pamela Mori and Rails Girls Montevideo volunteers": "Pamela Mori y voluntarios de Rails Girls Montevideo",
+    "Auditorio Antel (workshops at Universidad ORT)": "Auditorio de Antel (talleres en la Universidad ORT)",
+    "Universidad Católica (workshops, day 1) + Aulario FING UdelaR (talks, day 2)": "Universidad Católica (talleres, primer día) y Aulario de la FING, UdelaR (charlas, segundo día)",
+    "LATU / Ingenio (assumed)": "Incubadora Ingenio, LATU",
+    "Laia Barboza (Punta del Este site)": "Laia Barboza (sede Punta del Este)",
+    "Torre de Antel (workshops at Antel Edificio Clientes, Paraguay 2097)": "Torre de las Telecomunicaciones de Antel (talleres en el Edificio Clientes de Antel, Paraguay 2097)",
+    "Talks Dec 12 at Torre de las Telecomunicaciones (Antel); workshops Dec 10, 11, 13 at Centro de Capacitación LATU": "Charlas el 12 de diciembre en la Torre de las Telecomunicaciones (Antel); talleres el 10, 11 y 13 en el Centro de Capacitación del LATU",
+    "Workshops: Radisson Victoria Plaza (4th floor); talks: Auditorio Torre de las Telecomunicaciones ANTEL": "Talleres en el Radisson Victoria Plaza (piso 4); charlas en el Auditorio de la Torre de las Telecomunicaciones (Antel)",
+    "Sinergia Palermo (Etermax Montevideo site) + Globant Aguada Park 9th floor + Startup Cowork Cafe (Punta del Este)": "Sinergia Palermo (sede Etermax Montevideo), Globant Aguada Park (piso 9) y Startup Cowork Café (Punta del Este)",
+    "Juancho Rodriguez (Etermax Montevideo site)": "Juancho Rodríguez (sede Etermax Montevideo)",
+    "Online": "En línea",
+    "Online (planned Montevideo)": "En línea (estaba previsto en Montevideo)",
+    "Online (Zoom)": "En línea (Zoom)",
+    "Online (planned Uruguay)": "En línea (estaba previsto en Uruguay)",
+    "Online (Discord/YouTube) — GGJUY, Globant Uruguay, Punta del Este + 1 more": "En línea (Discord y YouTube): sedes GGJUY, Globant Uruguay, Punta del Este y una más",
+    "Online (Discord + YouTube)": "En línea (Discord y YouTube)",
+    "Online (Jam2Jam site)": "En línea (sede Jam2Jam)",
+    "Mixed: 3 in-person meetups (venue sponsors incl. Endava, Globant) + 2 webinars": "Tres encuentros presenciales (en empresas como Endava y Globant) y dos webinars",
+    "Fundación Los Pinos (Montevideo); North Schools (Ciudad de la Costa); Durazno, Rocha, Salto online": "Fundación Los Pinos (Montevideo) y North Schools (Ciudad de la Costa); Durazno, Rocha y Salto en línea",
+    "WyeWorks (likely; site 'Event organized by' logo)": "WyeWorks (según el sitio del evento)",
+    "GDGs/GDSCs of Perú, Argentina, Costa Rica, México, Bolivia": "GDG y GDSC de Perú, Argentina, Costa Rica, México y Bolivia",
+    "Online (4-hour conference)": "En línea (una conferencia de cuatro horas)",
+    "Workshops at LATU (Oct 26); talks at Centro Cultural de España, Rincón 629 (Oct 27)": "Talleres en el LATU (26 de octubre); charlas en el Centro Cultural de España, Rincón 629 (27 de octubre)",
+    "Club del Emprendedor – LATU (hybrid) + Game Dojo UY (online)": "Club del Emprendedor, LATU (híbrido) y Game Dojo UY (en línea)",
+    "Club del Emprendedor – LATU + Globant WTC Montevideo + Game Dojo UY (online)": "Club del Emprendedor (LATU), Globant WTC Montevideo y Game Dojo UY (en línea)",
+    "Jam2Jam-ORT-Ingenio site + Globant WTC Montevideo (cap 60) + Game Dojo (online)": "Sedes Jam2Jam-ORT-Ingenio, Globant WTC Montevideo (cupo de 60) y Game Dojo (en línea)",
+    "Day 1 online; day 2 Torre de las Telecomunicaciones de Antel (Auditorio Mario Benedetti)": "Primer día en línea; segundo día en la Torre de las Telecomunicaciones de Antel (Auditorio Mario Benedetti)",
+    "Virtual jam Jul 31–Aug 2; in-person jam Aug 7–9 at Ingenio (LATU)": "Jam virtual del 31 de julio al 2 de agosto; jam presencial del 7 al 9 de agosto en Ingenio (LATU)",
+    "Sala Idea Vilariño, ANTEL (in-person day 6 Aug); rest virtual": "Sala Idea Vilariño, Antel (jornada presencial el 6 de agosto); el resto, virtual",
+    "Montevideo, Punta del Este, Rivera, Salto, Ciudad de la Costa (online participation allowed)": "Montevideo, Punta del Este, Rivera, Salto y Ciudad de la Costa (también se podía participar en línea)"
+  }
+}
