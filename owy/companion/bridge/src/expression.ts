@@ -1,4 +1,4 @@
-import { createGateway, experimental_evaluate } from "ai";
+import { createGateway, experimental_decide } from "ai";
 
 import type { Logger } from "./log";
 
@@ -38,14 +38,14 @@ const INSTRUCTIONS = {
 
 /** jev through the AI Gateway (same key as the realtime model), with a small cache for repeated lines. */
 export function jevClassifier({ apiKey, model }: { apiKey?: string; model: string }): Classifier {
-  const evaluator = createGateway({ apiKey }).evaluationModel(model);
+  const decider = createGateway({ apiKey }).decisionModel(model);
   const cache = new Map<string, Verdict>();
   return async (text, kind, signal) => {
     const key = `${kind}:${text.trim().toLowerCase()}`;
     const hit = cache.get(key);
     if (hit) return hit;
-    const result = await experimental_evaluate({
-      model: evaluator,
+    const result = await experimental_decide({
+      model: decider,
       state: kind === "line" ? { speaker: SPEAKER, sentence: text } : { listener: SPEAKER, visitorSaid: text },
       questions: { expression: { type: "choice", instructions: INSTRUCTIONS[kind], criteria: EXPRESSIONS } },
       abortSignal: signal,
