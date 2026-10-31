@@ -66,9 +66,8 @@ const AGILES_OS_ROUNDS = "18:15-18:45 | 18:50-19:20 | 19:25-19:55";
 const AGILES_OS_CLOSING =
   "¿Qué te llevás de hoy? | ¿Qué conversación querés continuar? | ¿Con quién querés seguir en contacto? | ¿Qué vas a probar el lunes?";
 
+/** Display order of the full library; Ágiles (01 OCT, already happened) goes last. */
 export const SCENE_CATEGORIES = {
-  agiles: { title: "Ágiles Uruguay 2026" },
-  agilesOpenSpace: { title: "Ágiles · Open space" },
   opening: { title: "Apertura y cierre" },
   programme: { title: "Programa y horarios" },
   talks: { title: "Charlas y escenario" },
@@ -82,6 +81,8 @@ export const SCENE_CATEGORIES = {
   games: { title: "Juegos y humor" },
   visuals: { title: "Visuales y música" },
   utility: { title: "Utilidades" },
+  agiles: { title: "Ágiles Uruguay 2026" },
+  agilesOpenSpace: { title: "Ágiles · Open space" },
 } as const;
 export type SceneCategory = keyof typeof SCENE_CATEGORIES;
 export const SCENE_CATEGORY_IDS = Object.keys(SCENE_CATEGORIES) as SceneCategory[];

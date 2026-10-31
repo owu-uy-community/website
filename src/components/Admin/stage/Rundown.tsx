@@ -3,7 +3,19 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Reorder, useDragControls } from "motion/react";
-import { GripVertical, ListVideo, Pause, Pin, Play, Repeat, SkipBack, SkipForward, Square, X } from "lucide-react";
+import {
+  GripVertical,
+  ListRestart,
+  ListVideo,
+  Pause,
+  Pin,
+  Play,
+  Repeat,
+  SkipBack,
+  SkipForward,
+  Square,
+  X,
+} from "lucide-react";
 
 import { clampValue, cn } from "app/lib/utils";
 import {
@@ -21,6 +33,13 @@ import { tallyChip } from "components/Admin/screen/tally";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { ButtonGroup } from "components/shared/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "components/shared/ui/dropdown-menu";
 import { Empty } from "components/shared/ui/empty";
 import { Input } from "components/shared/ui/input";
 import { Switch } from "components/shared/ui/switch";
@@ -28,12 +47,15 @@ import { toast } from "components/shared/ui/toast-utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "components/shared/ui/tooltip";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc } from "lib/orpc";
+import { CONF_LOOPS } from "lib/owy-stage/conf";
 import { OWY_STAGE_CHANNEL, SCENES, type RundownStep, type SceneId } from "lib/owy-stage/scenes";
 
 import { ActionsMenuButton } from "./menus";
 import { paramText } from "./Queue";
 
 const DEFAULT_SEC = 20;
+type ConfLoop = (typeof CONF_LOOPS)[number];
+const loopSeconds = (loop: ConfLoop) => loop.steps.reduce((sum, [, sec]) => sum + sec, 0);
 const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
 
@@ -109,6 +131,12 @@ export function useRundown(
       clear: () => {
         setPlay(STOPPED);
         write([]);
+      },
+      /** A prepared loop replaces the list, stopped and set to repeat: nothing goes on air until Play. */
+      load: (loop: ConfLoop) => {
+        setPlay(STOPPED);
+        setLoop(true);
+        write(loop.steps.map(([scene, sec, params = {}]) => ({ id: newId(), scene, sec, params })));
       },
     };
   }, [queryClient, mutate]);
@@ -456,6 +484,59 @@ function StepProgress({ rundown }: { rundown: Rundown }) {
   );
 }
 
+/** «Loops»: the day's prepared loops (lib/owy-stage/conf). One replaces the guion, after a confirm if it has steps. */
+function LoopsMenu({ rundown }: { rundown: Rundown }) {
+  const [pending, setPending] = useState<ConfLoop | null>(null);
+  const pick = (loop: ConfLoop) => (rundown.steps.length ? setPending(loop) : rundown.load(loop));
+
+  return (
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button className="h-10 gap-1.5" size="sm" title="Cargar un loop preparado para el día" variant="outline">
+            <ListRestart className="h-4 w-4" /> Loops
+          </Button>
+        </DropdownMenuTrigger>
+        {/* Focus stays off the trigger, so Space keeps meaning TAKE. */}
+        <DropdownMenuContent
+          align="start"
+          className="w-72 pointer-coarse:w-80"
+          onCloseAutoFocus={(event) => event.preventDefault()}
+        >
+          <DropdownMenuLabel className="text-xs text-muted-foreground">Cargar en el guion</DropdownMenuLabel>
+          {CONF_LOOPS.map((loop) => (
+            <DropdownMenuItem
+              key={loop.id}
+              className="flex-col items-start gap-0.5 py-2 pointer-coarse:py-3"
+              onSelect={() => pick(loop)}
+            >
+              <span className="font-medium">{loop.title}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">
+                {loop.when} · {loop.steps.length} pasos · {mmss(loopSeconds(loop))} de vuelta
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AlertDialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cargar el loop «{pending?.title}»?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Reemplaza los {rundown.steps.length} pasos del guion en todos los dispositivos. La pantalla sigue en la
+              escena actual hasta que le des Reproducir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pending && rundown.load(pending)}>Cargar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
 function NowPlaying({ rundown }: { rundown: Rundown }) {
   const { step, next, steps, at, total } = rundown;
   const { left, endsAt } = useRundownClock(rundown);
@@ -557,6 +638,7 @@ function RundownPanelView({
           </TooltipTrigger>
           <TooltipContent>Volver al primer paso al terminar</TooltipContent>
         </Tooltip>
+        <LoopsMenu rundown={rundown} />
         <div className="flex min-w-0 basis-full items-center gap-2 @[36rem]:contents">
           <NowPlaying rundown={rundown} />
           {steps.length > 0 && (
@@ -590,7 +672,7 @@ function RundownPanelView({
         {steps.length === 0 ? (
           <Empty
             className="h-full border-0"
-            description="Para pausas y loops desatendidos: cada paso con sus segundos. Agregalos con «⋯ → Agregar al guion» en la biblioteca o en los presets."
+            description="Para pausas y loops desatendidos: cada paso con sus segundos. Cargá uno de los «Loops» del día, o agregá escenas con «⋯ → Agregar al guion» en la biblioteca o en los presets."
             icon={ListVideo}
             title="El guion está vacío"
           />

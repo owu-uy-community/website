@@ -200,7 +200,14 @@ test.describe("from a phone", () => {
     await page.getByRole("button", { name: "Escenas", exact: true }).click();
     const card = page.getByRole("button", { name: "Mensaje: a la preview" }).first();
     await card.scrollIntoViewIfNeeded();
-    const box = (await card.boundingBox())!;
+    // Sections render lazily (content-visibility): wait until the card stops moving before aiming.
+    let box = (await card.boundingBox())!;
+    for (let settled = false; !settled;) {
+      await page.waitForTimeout(100);
+      const again = (await card.boundingBox())!;
+      settled = again.y === box.y && again.x === box.x;
+      box = again;
+    }
     const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     // A held finger that drifts a little, as a real one does: Playwright only taps, so through CDP.
     const cdp = await page.context().newCDPSession(page);
