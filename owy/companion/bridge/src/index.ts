@@ -331,7 +331,16 @@ export class DeviceSession {
   private eveAbort: AbortController | null = null;
   private eveAnswer: string | null = null;
   private eveDraft = "";
-  private eveIdleTimer: NodeJS.Timeout | null = null;
+  /** Retires the conversation after COMPANION_EVE_IDLE_RESET_S of silence: the next visitor starts fresh. */
+  private idleTimer: NodeJS.Timeout | null = null;
+  /**
+   * What was said in this conversation, for the local brain: the cascade answers
+   * with it, and a fresh realtime session (after a reset or a reconnect) starts
+   * with it, so a tap remembers the taps before it. eve keeps its own.
+   */
+  private history: { role: "user" | "assistant"; content: string }[] = [];
+  /** This turn's answer as said (for the history). */
+  private turnAnswer = "";
   // Per-turn audio routing (device selects win over env defaults).
   private micSource: AudioRoute = "device";
   private audioOutput: AudioRoute = "device";
@@ -415,6 +424,8 @@ export class DeviceSession {
       provider: this.provider,
       sessionConfig: configFor(this.provider),
       fallbacks,
+      // A fresh session (reset, reconnect) still knows what this visitor already said.
+      instructionsSuffix: () => this.historyNote(),
       tokenTimeoutMs: config.COMPANION_TOKEN_TIMEOUT_MS,
       connectTimeoutMs: config.COMPANION_REALTIME_CONNECT_MS,
       logger: this.log.child("gemini"),
@@ -543,6 +554,8 @@ export class DeviceSession {
     this.lastModelAt = this.pausedAt = 0;
     this.stopWatchdog();
     this.toolsRan = this.toolsRunning = 0;
+    this.clearIdleReset();
+    this.turnAnswer = "";
     this.turnStartedAt = Date.now();
     this.listenEndedAt = this.firstAudioAt = 0;
     this.inputItems.clear();
@@ -593,6 +606,7 @@ export class DeviceSession {
           this.recorder = null;
           this.stopWatchdog();
           this.logTurn();
+          this.rememberTurn();
           this.promptPendingName();
           // RUN_END precedes physical playback completion. Firmware owns
           // the return to idle and the wake-word indicator.
@@ -794,7 +808,13 @@ export class DeviceSession {
       answer =
         this.shared.brain === "eve" && this.shared.eve
           ? await this.askEve(text, signal)
-          : await cascade.answer({ text, instructions: this.shared.instructions, tools: this.cascadeTools(), signal });
+          : await cascade.answer({
+              text,
+              history: [...this.history],
+              instructions: this.shared.instructions,
+              tools: this.cascadeTools(),
+              signal,
+            });
     } catch (error) {
       if (!this.cascadeIsCurrent(run)) return;
       this.log.warn("cascada: no hubo respuesta", error);
@@ -832,6 +852,7 @@ export class DeviceSession {
   private async speakText(turn: VoiceTurn, text: string, signal: AbortSignal, isCurrent: () => boolean): Promise<void> {
     const cascade = this.shared.cascade;
     if (!isCurrent()) return;
+    this.turnAnswer = text;
     this.pushCaption(text);
     this.options.onTranscript?.("output", text);
     this.expressions?.write(text, true);
@@ -1442,8 +1463,8 @@ export class DeviceSession {
         if (this.shared.brain !== "eve") this.expressions?.write(this.spokenText, true);
         this.outputTranscript = "";
         this.pushCaption(this.eveAnswer ?? speech);
+        this.turnAnswer = (this.eveAnswer ?? this.spokenText).trim();
         this.eveAnswer = null;
-        this.armEveIdleReset();
         const pacer = this.pacer;
         const endTurn = () => {
           const where = this.audioOutput === "laptop" ? "reproducidos en el navegador" : "esperando fin en dispositivo";
@@ -1525,7 +1546,6 @@ export class DeviceSession {
     runtime: ToolRuntime | null = this.runtime
   ): Promise<string> {
     if (!eve || !runtime) throw new Error("sin eve");
-    this.clearEveIdleReset();
     this.expressions?.react(texto);
     this.eveAbort?.abort();
     const abort = new AbortController();
@@ -1550,7 +1570,6 @@ export class DeviceSession {
       if (!this.toolIsCurrent()) return "";
       this.pushCaption(result.text);
       this.expressions?.write(result.text, true);
-      this.armEveIdleReset();
       return result.text;
     } catch (error) {
       if (abort.signal.aborted || signal?.aborted) return "";
@@ -1579,20 +1598,52 @@ export class DeviceSession {
   }
 
   /** Nobody talked for a while: the next visitor gets a fresh conversation (memory lives in eve, not in the session). */
-  private armEveIdleReset(): void {
-    if (this.shared.brain !== "eve" || !this.shared.eve) return;
-    this.clearEveIdleReset();
-    const eve = this.shared.eve;
-    this.eveIdleTimer = setTimeout(() => {
-      this.eveIdleTimer = null;
-      this.log.info("conversación cerrada por inactividad; eve session reset");
-      void eve.reset(this.spec.id);
-    }, this.shared.config.COMPANION_EVE_IDLE_RESET_S * 1000);
+  // ── Conversation memory ──────────────────────────────────────────────────
+
+  /** A turn ended: keep what was said, and forget the conversation if nobody talks for a while. */
+  private rememberTurn(): void {
+    const said = this.inputTranscript.trim();
+    const answer = this.turnAnswer.trim();
+    this.turnAnswer = "";
+    if (this.path !== "pitch" && said && answer) {
+      this.history.push({ role: "user", content: said }, { role: "assistant", content: answer });
+      // ponytail: last 6 exchanges verbatim; summarize if visitors' conversations run longer.
+      this.history = this.history.slice(-12);
+    }
+    this.clearIdleReset();
+    const seconds = this.shared.config?.COMPANION_EVE_IDLE_RESET_S;
+    if (seconds) this.idleTimer = setTimeout(() => this.forgetConversation(), seconds * 1000);
   }
 
-  private clearEveIdleReset(): void {
-    if (this.eveIdleTimer) clearTimeout(this.eveIdleTimer);
-    this.eveIdleTimer = null;
+  /** Nobody talked for a while: the next visitor gets a fresh conversation on every brain. */
+  private forgetConversation(): void {
+    this.idleTimer = null;
+    if (this.turn && !this.turn.finished) return;
+    this.history = [];
+    const eve = this.shared.brain === "eve" ? this.shared.eve : undefined;
+    if (eve) {
+      this.log.info("conversación cerrada por inactividad; eve session reset");
+      void eve.reset(this.spec.id);
+      return;
+    }
+    // The local brain's memory is the realtime session itself (plus the history it started with).
+    this.log.info("conversación cerrada por inactividad; la próxima empieza de cero");
+    this.session?.resetConversation();
+    if (!this.options.lazyRealtime && this.linkUp && !this.stopped) void this.ensureSession();
+  }
+
+  private clearIdleReset(): void {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+  }
+
+  /** Appended to a fresh realtime session's instructions (local brain): the conversation so far. */
+  private historyNote(): string {
+    if (this.shared.brain === "eve" || this.history.length === 0) return "";
+    const lines = this.history.map(({ role, content }) => `${role === "user" ? "Persona" : "Owy"}: ${content}`);
+    // ponytail: oldest exchanges dropped past ~2000 chars; plenty for a booth conversation.
+    while (lines.length > 2 && lines.join("\n").length > 2000) lines.splice(0, 2);
+    return `\n\n## Lo que ya hablaron (la misma persona sigue la conversación; no la saludes de nuevo)\n${lines.join("\n")}`;
   }
 
   // ── Captions (boards without a speaker) ──────────────────────────────────
@@ -1751,7 +1802,7 @@ export class DeviceSession {
     this.cancelEveTurn();
     this.cancelPitch();
     this.clearPendingName();
-    this.clearEveIdleReset();
+    this.clearIdleReset();
     this.expressions?.close();
     this.pacer?.stop();
     this.turn?.finish();

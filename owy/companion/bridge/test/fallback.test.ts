@@ -27,6 +27,7 @@ function harness(
     speak?: () => AsyncGenerator<Buffer>;
     clips?: Record<string, Buffer>;
     authorizeTool?: (name: string) => string | null;
+    idleResetS?: number;
   } = {}
 ) {
   const events: number[] = [];
@@ -78,7 +79,7 @@ function harness(
     { id: "test", host: "unused", port: 6053, psk: null },
     {
       logger: createLogger("test", "error"),
-      config: { COMPANION_ACK_MS: 2500, COMPANION_PITCH_VAD_RMS: 0.012 },
+      config: { COMPANION_ACK_MS: 2500, COMPANION_PITCH_VAD_RMS: 0.012, COMPANION_EVE_IDLE_RESET_S: options.idleResetS },
       brain: "local",
       provider: { spec: "gateway:google/gemini-3.8-live", provider: "gateway", modelId: "google/gemini-3.8-live" },
       instructions: "Sos Owy.",
@@ -101,6 +102,7 @@ function harness(
     onModelEvent(event: Experimental_RealtimeServerEvent): void;
     onRealtimeDropped(reason: string): void;
     cascadeTools(): ToolSet;
+    historyNote(): string;
   };
   wired.device = device;
   wired.session = realtime;
@@ -305,4 +307,35 @@ it("the cascade's local tools obey the browser grant like the realtime model's",
   expect(await tools.create_track.execute!({}, options)).toEqual({ ok: false, denied: true, error: "Solo lectura" });
   expect(execute).not.toHaveBeenCalled();
   expect(await tools.get_board.execute!({}, options)).toEqual({ ok: true });
+});
+
+it("each tap remembers the taps before it, until nobody talks for a while", async () => {
+  const h = harness({ live: false, idleResetS: 180 });
+  const tap = async (question: string) => {
+    h.cascade.transcribe.mockResolvedValueOnce(question);
+    await h.wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+    h.speakFor(1000);
+    await vi.advanceTimersByTimeAsync(900 + 1500);
+    expect(h.wired.turn.finished).toBe(true);
+  };
+  await tap("¿Dónde es la charla de Effect?");
+  await vi.advanceTimersByTimeAsync(60_000); // a minute later, same person
+  await tap("¿Y a qué hora empieza?");
+  expect(h.cascade.answer).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      text: "¿Y a qué hora empieza?",
+      history: [
+        { role: "user", content: "¿Dónde es la charla de Effect?" },
+        { role: "assistant", content: "En la Cueva, a las tres." },
+      ],
+    })
+  );
+  // A fresh realtime session (after a reset or a reconnect) starts knowing it too.
+  expect(h.wired.historyNote()).toContain("Persona: ¿Y a qué hora empieza?");
+
+  await vi.advanceTimersByTimeAsync(180_000); // the visitor left
+  expect(h.wired.historyNote()).toBe("");
+  expect(h.realtime.resetConversation).toHaveBeenCalled(); // the live session forgets them too
+  await tap("Hola, ¿qué es OWU?");
+  expect(h.cascade.answer).toHaveBeenLastCalledWith(expect.objectContaining({ history: [] }));
 });

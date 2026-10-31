@@ -344,7 +344,8 @@ El modelo realtime siempre es **oídos y boca**. Quién *piensa* lo decide `COMP
 | | `eve` (recomendado) | `local` |
 | --- | --- | --- |
 | Quién contesta | **El Owy de eve** (`agent/`): mismas instrucciones, knowledge, tools, skills, gating de staff y memoria que Slack/Telegram | El modelo realtime con `agent/instructions.md` + knowledge inline + las tools de `agent/tools/*` corridas en el bridge con un shim |
-| Sesión | Una **sesión durable de eve por dispositivo** (`from(deviceId)`): follow-ups con contexto; se retira tras `COMPANION_EVE_IDLE_RESET_S` sin hablar (próximo visitante arranca de cero) | Sólo el contexto de la sesión realtime |
+| Memoria entre taps | Una **sesión durable de eve por dispositivo** (`from(deviceId)`): follow-ups con contexto, también por la cascada. Si una cabina muy concurrida nunca queda 3 min en silencio y la sesión llega al tope de tokens del agente (`maxInputTokensPerSession`), el bridge la retira y repite la pregunta en una nueva en vez de quedar trabado en el aviso de aprobación | El historial de la conversación (últimos 6 intercambios) vive en el bridge: la cascada contesta con él y cada sesión realtime nueva (tras un reset o una reconexión: el gateway no reanuda) arranca con él en las instrucciones |
+| Fin de la conversación | `COMPANION_EVE_IDLE_RESET_S` (180) sin hablar: se retira la sesión de eve (el próximo visitante arranca de cero) | Igual: se borra el historial y se descarta la sesión realtime |
 | Tools en el modelo de voz | `hablar_con_owy` (la conversación), `set_volume`, `show_on_screen` | Todas las de Owy + `propose_talk`, `event_now`, `set_volume`, `show_on_screen` |
 | Necesita | `COMPANION_EVE_URL` + `OWY_API_KEY` (la llave del dispositivo, fuera de `eve dev`) | `OWU_API_URL` + `OWY_API_KEY` en el bridge |
 

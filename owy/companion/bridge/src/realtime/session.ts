@@ -59,6 +59,11 @@ export interface NodeRealtimeSessionOptions {
   fallbacks?: RealtimeTier[];
   /** A tier that failed to connect is skipped for this long (unless every tier is down). */
   tierCooldownMs?: number;
+  /**
+   * Appended to the instructions at every connect: the gateway cannot resume a
+   * session, so a fresh one learns the conversation so far this way.
+   */
+  instructionsSuffix?: () => string;
   onToolCall: ToolCallHandler;
   /** Every normalized server event, after the session's own bookkeeping ran. */
   onEvent?: (event: RealtimeServerEvent) => void;
@@ -89,6 +94,7 @@ export class NodeRealtimeSession {
   /** Per tier: until when it is skipped after failing to connect. */
   private readonly downUntil: number[];
   private readonly tierCooldownMs: number;
+  private readonly instructionsSuffix?: () => string;
   private tierIndex = 0;
   private readonly onToolCall: ToolCallHandler;
   private readonly onEvent?: (event: RealtimeServerEvent) => void;
@@ -127,6 +133,7 @@ export class NodeRealtimeSession {
     this.tiers = [{ provider: options.provider, sessionConfig: options.sessionConfig }, ...(options.fallbacks ?? [])];
     this.downUntil = this.tiers.map(() => 0);
     this.tierCooldownMs = options.tierCooldownMs ?? 180_000;
+    this.instructionsSuffix = options.instructionsSuffix;
     this.onToolCall = options.onToolCall;
     this.onEvent = options.onEvent;
     this.onError = options.onError;
@@ -189,13 +196,14 @@ export class NodeRealtimeSession {
    * but closes 1008 "transform rejected frame" on a setup that carries `sessionResumption`.
    */
   currentConfig(): RealtimeSessionConfig {
-    const resumable = (this.baseConfig.providerOptions as { sessionResumption?: unknown } | undefined)
-      ?.sessionResumption;
-    if (this._resumptionHandle === null || !resumable) return this.baseConfig;
+    const suffix = this.instructionsSuffix?.() ?? "";
+    const base = suffix ? { ...this.baseConfig, instructions: `${this.baseConfig.instructions ?? ""}${suffix}` } : this.baseConfig;
+    const resumable = (base.providerOptions as { sessionResumption?: unknown } | undefined)?.sessionResumption;
+    if (this._resumptionHandle === null || !resumable) return base;
     return {
-      ...this.baseConfig,
+      ...base,
       providerOptions: {
-        ...(this.baseConfig.providerOptions ?? {}),
+        ...(base.providerOptions ?? {}),
         sessionResumption: { handle: this._resumptionHandle },
       },
     };

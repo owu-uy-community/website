@@ -21,8 +21,14 @@ import type { Logger } from "../log";
 export interface Cascade {
   /** Speech → text, each transcription model in turn. "" = nothing intelligible. */
   transcribe(wav: Buffer, signal: AbortSignal): Promise<string>;
-  /** The local brain's answer: the text model with this device's tools (eve answers on its own). */
-  answer(options: { text: string; instructions: string; tools: ToolSet; signal: AbortSignal }): Promise<string>;
+  /** The local brain's answer: the text model with this device's tools and the conversation so far (eve keeps its own). */
+  answer(options: {
+    text: string;
+    history: { role: "user" | "assistant"; content: string }[];
+    instructions: string;
+    tools: ToolSet;
+    signal: AbortSignal;
+  }): Promise<string>;
   /** Streaming TTS as 16 kHz PCM16 (the device's rate), chunk by chunk as it is synthesized. */
   speak(text: string, signal: AbortSignal): AsyncIterable<Buffer>;
 }
@@ -70,11 +76,11 @@ export function gatewayCascade(options: GatewayCascadeOptions): Cascade {
       throw lastError;
     },
 
-    async answer({ text, instructions, tools, signal }) {
+    async answer({ text, history, instructions, tools, signal }) {
       const result = await generateText({
         model: gateway(options.textModel),
         system: instructions,
-        prompt: text,
+        messages: [...history, { role: "user", content: text }],
         tools,
         stopWhen: stepCountIs(5),
         maxRetries: 1,

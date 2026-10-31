@@ -181,3 +181,38 @@ describe("EveLink deadlines", () => {
     expect(Date.now() - started).toBeLessThan(1000);
   });
 });
+
+describe("EveLink memory", () => {
+  it("a session at its token cap is retired and the question asked again on a fresh one", async () => {
+    const calls: string[] = [];
+    let turns = 0;
+    const fake: typeof fetch = async (input, init) => {
+      const url = new URL(String(input));
+      calls.push(`${init?.method ?? "GET"} ${url.pathname}`);
+      if (url.pathname.endsWith("/turns")) {
+        turns++;
+        return Response.json({ sessionId: `s${turns}`, streamIndex: 0 });
+      }
+      if (url.pathname.endsWith("/reset")) return Response.json({ ok: true });
+      // eve's per-session token guardrail parks the turn on an Approve/Stop prompt nobody can answer by voice.
+      const events =
+        turns === 1
+          ? [{ type: "input.requested", data: { requests: [{ kind: "session-limit", requestId: "s1:limit:input:500001" }] } }]
+          : [
+              { type: "message.completed", data: { message: "La charla de Effect es a las tres.", finishReason: "stop" } },
+              { type: "session.waiting" },
+            ];
+      return new Response(events.map((event) => `${JSON.stringify(event)}\n`).join(""));
+    };
+    const link = new EveLink({ url: "http://eve.test", logger: createLogger("test", "error"), fetch: fake });
+    const result = await link.turn("knob", "¿A qué hora es Effect?", { staff: false, marketplaceOpen: false });
+    expect(result.text).toBe("La charla de Effect es a las tres.");
+    expect(calls).toEqual([
+      "POST /companion/knob/turns",
+      "GET /companion/sessions/s1/stream",
+      "POST /companion/knob/reset",
+      "POST /companion/knob/turns",
+      "GET /companion/sessions/s2/stream",
+    ]);
+  });
+});

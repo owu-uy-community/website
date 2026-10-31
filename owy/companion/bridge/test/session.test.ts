@@ -395,3 +395,19 @@ describe("NodeRealtimeSession tiers", () => {
     session.close();
   });
 });
+
+describe("NodeRealtimeSession memory", () => {
+  it("a fresh session starts with the conversation so far in its instructions", () => {
+    let note = "";
+    const session = new NodeRealtimeSession({
+      provider: tierProvider("gemini", "ok").provider,
+      sessionConfig: { instructions: "Sos Owy." },
+      instructionsSuffix: () => note,
+      logger: createLogger("test", "error"),
+      onToolCall: () => ({}),
+    });
+    expect(session.currentConfig().instructions).toBe("Sos Owy.");
+    note = "\nPersona: ¿dónde es Effect?\nOwy: En la Cueva.";
+    expect(session.currentConfig().instructions).toBe("Sos Owy.\nPersona: ¿dónde es Effect?\nOwy: En la Cueva.");
+  });
+});

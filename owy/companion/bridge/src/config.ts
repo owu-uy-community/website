@@ -75,7 +75,11 @@ const EnvSchema = z.object({
    */
   COMPANION_BRAIN: z.enum(["eve", "local"]).optional(),
   COMPANION_EVE_URL: z.string().url().optional(),
-  /** Seconds of silence after which the device's eve conversation is retired (next visitor starts fresh). */
+  /**
+   * Seconds of silence after which the device's conversation is retired, on either
+   * brain (eve session reset; the local brain's history and realtime context
+   * dropped): until then every tap remembers the taps before it.
+   */
   COMPANION_EVE_IDLE_RESET_S: z.coerce.number().int().min(10).default(180),
   /** Laptop audio: ms from a frame leaving the pacer to it being heard in the browser (mouth sync). */
   COMPANION_MOUTH_LATENCY_MS: z.coerce.number().int().min(0).max(2000).default(250),

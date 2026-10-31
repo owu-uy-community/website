@@ -95,69 +95,91 @@ export class EveLink {
     const deadline = setTimeout(() => controller.abort(), options.timeoutMs ?? this.turnTimeoutMs);
 
     try {
-      const accepted = (await this.json(
-        `/companion/${encodeURIComponent(deviceId)}/turns`,
-        {
-          text,
-          staff: options.staff,
-          marketplaceOpen: options.marketplaceOpen,
-          eventName: options.eventName,
-          ...(options.kind ? { kind: options.kind } : {}),
-          ...(options.pitch ? { pitch: options.pitch } : {}),
-        },
-        controller.signal
-      )) as { sessionId: string; streamIndex: number };
-
-      const response = await this.fetchImpl(
-        `${this.base}/companion/sessions/${encodeURIComponent(accepted.sessionId)}/stream?startIndex=${accepted.streamIndex}`,
-        { headers: this.headers(), signal: controller.signal }
-      );
-      if (!response.ok || !response.body) throw new Error(`eve stream ${response.status}`);
-
-      const result: EveTurnResult = { sessionId: accepted.sessionId, text: "", interim: [] };
-      let current = "";
-      for await (const event of ndjson(response.body)) {
-        const data = event.data ?? {};
-        switch (event.type) {
-          case "message.appended":
-            current += String(data.messageDelta ?? "");
-            options.onDelta?.(current);
-            break;
-          case "message.completed": {
-            const message = typeof data.message === "string" ? data.message : current;
-            current = "";
-            if (data.finishReason === "tool-calls") {
-              if (message.trim()) result.interim.push(message.trim());
-            } else if (message.trim()) {
-              result.text = message.trim();
-            }
-            break;
-          }
-          case "actions.requested":
-            for (const action of (data.actions as { toolName?: string }[] | undefined) ?? []) {
-              if (action.toolName) options.onTool?.(action.toolName);
-            }
-            break;
-          case "input.requested":
-            // Voice cannot render buttons; unpark the session and answer for it.
-            this.log.warn("eve asked for human input during a voice turn; cancelling");
-            void this.cancel(deviceId);
-            result.text ||= "Eso necesita una confirmación que no puedo pedir por acá; pedíselo al staff en Slack.";
-            return result;
-          case "turn.failed":
-          case "session.failed":
-            throw new Error(`eve turn failed: ${String(data.message ?? data.code ?? event.type)}`);
-        }
-        if (TERMINAL.has(event.type)) break;
+      let result = await this.attempt(deviceId, text, options, controller.signal, started);
+      if (result === "session-full") {
+        // A busy booth never goes quiet for the idle reset, and the agent's per-session token
+        // guardrail then asks for an approval nobody can give by voice: the conversation's
+        // memory is spent, so start a fresh one and ask again (once).
+        this.log.warn(`eve: la sesión de ${deviceId} llegó a su tope de tokens; empiezo una nueva y repito la pregunta`);
+        await this.reset(deviceId);
+        result = await this.attempt(deviceId, text, options, controller.signal, started);
+        if (result === "session-full") throw new Error("eve: también la sesión nueva pide aprobación");
       }
-      if (!result.text && result.interim.length) result.text = result.interim[result.interim.length - 1];
-      this.log.info(`eve turn ${accepted.sessionId} done in ${Date.now() - started} ms`);
       return result;
     } finally {
       clearTimeout(deadline);
       options.signal?.removeEventListener("abort", onAbort);
       controller.abort();
     }
+  }
+
+  private async attempt(
+    deviceId: string,
+    text: string,
+    options: EveTurnOptions,
+    signal: AbortSignal,
+    started: number
+  ): Promise<EveTurnResult | "session-full"> {
+    const accepted = (await this.json(
+      `/companion/${encodeURIComponent(deviceId)}/turns`,
+      {
+        text,
+        staff: options.staff,
+        marketplaceOpen: options.marketplaceOpen,
+        eventName: options.eventName,
+        ...(options.kind ? { kind: options.kind } : {}),
+        ...(options.pitch ? { pitch: options.pitch } : {}),
+      },
+      signal
+    )) as { sessionId: string; streamIndex: number };
+
+    const response = await this.fetchImpl(
+      `${this.base}/companion/sessions/${encodeURIComponent(accepted.sessionId)}/stream?startIndex=${accepted.streamIndex}`,
+      { headers: this.headers(), signal }
+    );
+    if (!response.ok || !response.body) throw new Error(`eve stream ${response.status}`);
+
+    const result: EveTurnResult = { sessionId: accepted.sessionId, text: "", interim: [] };
+    let current = "";
+    for await (const event of ndjson(response.body)) {
+      const data = event.data ?? {};
+      switch (event.type) {
+        case "message.appended":
+          current += String(data.messageDelta ?? "");
+          options.onDelta?.(current);
+          break;
+        case "message.completed": {
+          const message = typeof data.message === "string" ? data.message : current;
+          current = "";
+          if (data.finishReason === "tool-calls") {
+            if (message.trim()) result.interim.push(message.trim());
+          } else if (message.trim()) {
+            result.text = message.trim();
+          }
+          break;
+        }
+        case "actions.requested":
+          for (const action of (data.actions as { toolName?: string }[] | undefined) ?? []) {
+            if (action.toolName) options.onTool?.(action.toolName);
+          }
+          break;
+        case "input.requested":
+          if (((data.requests as { kind?: string }[] | undefined) ?? []).some((r) => r.kind === "session-limit"))
+            return "session-full";
+          // Voice cannot render buttons; unpark the session and answer for it.
+          this.log.warn("eve asked for human input during a voice turn; cancelling");
+          void this.cancel(deviceId);
+          result.text ||= "Eso necesita una confirmación que no puedo pedir por acá; pedíselo al staff en Slack.";
+          return result;
+        case "turn.failed":
+        case "session.failed":
+          throw new Error(`eve turn failed: ${String(data.message ?? data.code ?? event.type)}`);
+      }
+      if (TERMINAL.has(event.type)) break;
+    }
+    if (!result.text && result.interim.length) result.text = result.interim[result.interim.length - 1];
+    this.log.info(`eve turn ${accepted.sessionId} done in ${Date.now() - started} ms`);
+    return result;
   }
 
   async cancel(deviceId: string): Promise<void> {
