@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { TALKS } from "app/conf/talks";
+import { DAY_TIMES, OPEN_SPACE_TIMES, TALKS, type Talk } from "app/conf/talks";
 
 /**
  * Owy Stage — the video-wall scene registry shared by the oRPC layer (what an
@@ -10,9 +10,29 @@ import { TALKS } from "app/conf/talks";
 
 export const OWY_STAGE_CHANNEL = "owy-stage";
 
-/** The 2026 rundown (staff spreadsheet); editable from the admin on the day. */
-const DEFAULT_PROGRAM =
-  "14:30 Recepción y acreditación | 15:00 Bienvenida | 15:15 Explicación open space + marketplace | 16:00 Open Space | 18:25 Coffee Break | 19:00 Charla 1 | 19:45 Charla 2 | 20:25 Despedida + foto";
+const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+/** "HH:MM" moved by some minutes (negative = earlier). */
+const shift = (time: string, minutes: number) => {
+  const total = toMinutes(time) + minutes;
+
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+const speakerNames = (talk: Talk) => talk.speakers.map((speaker) => speaker.name).join(" y ");
+const FIRST_TALK = TALKS[0];
+const TALK_MINUTES = toMinutes(FIRST_TALK.end) - toMinutes(FIRST_TALK.start);
+const { mercado, sesiones, coffee } = OPEN_SPACE_TIMES;
+
+/** The day as /conf shows it (same times, from app/conf/talks); editable from the admin on the day. */
+const DEFAULT_PROGRAM = [
+  `${DAY_TIMES.recepcion.start} Recepción y acreditación`,
+  `${OPEN_SPACE_TIMES.bienvenida.start} Bienvenida`,
+  `${mercado.start} Mercado de ideas`,
+  `${sesiones.start} Open space`,
+  `${coffee.start} Coffee break`,
+  ...TALKS.map((talk) => `${talk.start} Charla · ${speakerNames(talk)}`),
+  `${DAY_TIMES.despedida.start} Despedida y foto`,
+  `${DAY_TIMES.after.start} After`,
+].join(" | ");
 
 const DEPARTMENTS =
   "Montevideo | Canelones | Maldonado | Colonia | San José | Salto | Paysandú | Rivera | Tacuarembó | Cerro Largo | Rocha | Florida | Lavalleja | Durazno | Soriano | Río Negro | Artigas | Treinta y Tres | Flores | Otro país";
@@ -46,9 +66,8 @@ const AGILES_OS_ROUNDS = "18:15-18:45 | 18:50-19:20 | 19:25-19:55";
 const AGILES_OS_CLOSING =
   "¿Qué te llevás de hoy? | ¿Qué conversación querés continuar? | ¿Con quién querés seguir en contacto? | ¿Qué vas a probar el lunes?";
 
+/** Display order of the full library; Ágiles (01 OCT, already happened) goes last. */
 export const SCENE_CATEGORIES = {
-  agiles: { title: "Ágiles Uruguay 2026" },
-  agilesOpenSpace: { title: "Ágiles · Open space" },
   opening: { title: "Apertura y cierre" },
   programme: { title: "Programa y horarios" },
   talks: { title: "Charlas y escenario" },
@@ -62,6 +81,8 @@ export const SCENE_CATEGORIES = {
   games: { title: "Juegos y humor" },
   visuals: { title: "Visuales y música" },
   utility: { title: "Utilidades" },
+  agiles: { title: "Ágiles Uruguay 2026" },
+  agilesOpenSpace: { title: "Ágiles · Open space" },
 } as const;
 export type SceneCategory = keyof typeof SCENE_CATEGORIES;
 export const SCENE_CATEGORY_IDS = Object.keys(SCENE_CATEGORIES) as SceneCategory[];
@@ -204,7 +225,7 @@ export const SCENES = {
     params: z.object({
       title: z.string().trim().max(40).default("Así va el día"),
       items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
-      end: z.string().trim().max(5).default("20:40"),
+      end: z.string().trim().max(5).default(DAY_TIMES.despedida.end),
     }),
   },
   pipeline: {
@@ -238,7 +259,7 @@ export const SCENES = {
         .string()
         .trim()
         .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
-        .default("17:30"),
+        .default(FIRST_TALK.start),
     }),
   },
   reminders: {
@@ -251,7 +272,13 @@ export const SCENES = {
         .trim()
         .max(1200)
         .default(
-          "15:55 El open space arranca en 5 minutos: buscá tu sala | 18:20 Coffee break en 5 minutos en el hall | 18:55 Las charlas empiezan a las 19:00 en el escenario | 20:20 Foto grupal en 5 minutos en el escenario"
+          [
+            `${shift(mercado.start, -5)} En 5 minutos arranca el mercado de ideas: pensá tu tema`,
+            `${shift(sesiones.start, -5)} El open space arranca en 5 minutos: buscá tu sala`,
+            `${shift(coffee.start, -5)} Coffee break en 5 minutos en el hall`,
+            `${shift(FIRST_TALK.start, -5)} Las charlas empiezan a las ${FIRST_TALK.start} en el escenario`,
+            `${shift(DAY_TIMES.despedida.start, -5)} Foto grupal en 5 minutos en el escenario`,
+          ].join(" | ")
         ),
       hold: z.number().int().min(1).max(60).default(8),
     }),
@@ -304,8 +331,8 @@ export const SCENES = {
     title: "Lower third",
     description: "Nombre y charla del speaker; pensado para ?bg=transparent sobre la cámara.",
     params: z.object({
-      title: z.string().trim().max(60).default("Nombre Apellido"),
-      subtitle: z.string().trim().max(100).default("Título de la charla"),
+      title: z.string().trim().max(60).default(speakerNames(FIRST_TALK)),
+      subtitle: z.string().trim().max(100).default(FIRST_TALK.title),
     }),
   },
   speaker: {
@@ -313,9 +340,9 @@ export const SCENES = {
     title: "Speaker",
     description: "La tarjeta de presentación antes de una charla: nombre, empresa y título.",
     params: z.object({
-      name: z.string().trim().max(60).default("Nombre Apellido"),
-      company: z.string().trim().max(60).default(""),
-      talk: z.string().trim().max(120).default("Título de la charla"),
+      name: z.string().trim().max(60).default(speakerNames(FIRST_TALK)),
+      company: z.string().trim().max(60).default(FIRST_TALK.speakers[0].role),
+      talk: z.string().trim().max(120).default(FIRST_TALK.title),
     }),
   },
   talk: {
@@ -323,9 +350,9 @@ export const SCENES = {
     title: "Charla en curso",
     description: "Título, speaker y un reloj de charla que arranca al ponerla en pantalla.",
     params: z.object({
-      title: z.string().trim().max(90).default("Título de la charla"),
-      speaker: z.string().trim().max(60).default("Speaker"),
-      minutes: z.coerce.number().int().min(1).max(180).default(20),
+      title: z.string().trim().max(90).default(FIRST_TALK.title),
+      speaker: z.string().trim().max(60).default(speakerNames(FIRST_TALK)),
+      minutes: z.coerce.number().int().min(1).max(180).default(TALK_MINUTES),
     }),
   },
   lineup: {
@@ -335,12 +362,24 @@ export const SCENES = {
     params: z.object({
       eyebrow: z.string().trim().max(60).default("Después del coffee"),
       title: z.string().trim().max(40).default("Charlas"),
-      h1: z.string().trim().max(5).default("19:00"),
-      t1: z.string().trim().max(90).default("Charla 1"),
-      s1: z.string().trim().max(60).default(""),
-      h2: z.string().trim().max(5).default("19:45"),
-      t2: z.string().trim().max(90).default("Charla 2"),
-      s2: z.string().trim().max(60).default(""),
+      h1: z.string().trim().max(5).default(TALKS[0].start),
+      t1: z.string().trim().max(90).default(TALKS[0].title),
+      s1: z.string().trim().max(60).default(speakerNames(TALKS[0])),
+      h2: z
+        .string()
+        .trim()
+        .max(5)
+        .default(TALKS[1]?.start ?? ""),
+      t2: z
+        .string()
+        .trim()
+        .max(90)
+        .default(TALKS[1]?.title ?? ""),
+      s2: z
+        .string()
+        .trim()
+        .max(60)
+        .default(TALKS[1] ? speakerNames(TALKS[1]) : ""),
       h3: z.string().trim().max(5).default(""),
       t3: z.string().trim().max(90).default(""),
       s3: z.string().trim().max(60).default(""),
@@ -376,7 +415,7 @@ export const SCENES = {
     description: "Cuenta regresiva para quien habla: arranca al ponerla en pantalla, avisa al final.",
     params: z.object({
       title: z.string().trim().max(40).default("Tiempo de charla"),
-      minutes: z.number().int().min(1).max(180).default(20),
+      minutes: z.number().int().min(1).max(180).default(TALK_MINUTES),
       warn: z.number().int().min(0).max(60).default(5),
     }),
   },
@@ -453,8 +492,8 @@ export const SCENES = {
   room: {
     category: "openspace",
     title: "Sala",
-    description: "El día completo de una sala del open space; para la pantalla de la puerta.",
-    params: z.object({ room: z.string().trim().max(40).default("Lobby") }),
+    description: "El día completo de una sala del open space; para la pantalla de la puerta. Vacío = la primera sala.",
+    params: z.object({ room: z.string().trim().max(40).default("") }),
   },
   "room-cards": {
     category: "openspace",
@@ -465,10 +504,11 @@ export const SCENES = {
   rounds: {
     category: "openspace",
     title: "Rondas del open space",
-    description: "Ronda actual, tiempo restante y las que faltan; el reloj facilita solo. Formato HH:MM-HH:MM | …",
+    description:
+      "Ronda actual, tiempo restante y las que faltan; el reloj facilita solo. Vacío = los bloques de la grilla; o a mano: HH:MM-HH:MM | …",
     params: z.object({
       title: z.string().trim().max(40).default("Open space"),
-      rounds: z.string().trim().max(300).default("16:00-16:40 | 16:45-17:25 | 17:30-18:10"),
+      rounds: z.string().trim().max(300).default(""),
     }),
   },
   hosts: {
@@ -624,7 +664,9 @@ export const SCENES = {
         .string()
         .trim()
         .max(600)
-        .default("WiFi: OWU-CONF · Próxima charla 16:00 · Proponé tu charla en el open space · #OWUCONF"),
+        .default(
+          `WiFi: OWU-CONF · Charlas desde las ${FIRST_TALK.start} · Proponé tu tema en el mercado de ideas · #OWUCONF`
+        ),
     }),
   },
   marquee: {
@@ -650,7 +692,11 @@ export const SCENES = {
     title: "Acreditación",
     description: "Los pasos de la recepción y el aviso de fotos, para la pantalla del lobby a las 14:30.",
     params: z.object({
-      eyebrow: z.string().trim().max(60).default("Bienvenidos · 14:30 a 15:00"),
+      eyebrow: z
+        .string()
+        .trim()
+        .max(60)
+        .default(`Bienvenidos · ${DAY_TIMES.recepcion.start} a ${DAY_TIMES.recepcion.end}`),
       step1: z.string().trim().max(90).default("Buscá tu nombre en la lista o mostrá tu entrada"),
       step2: z.string().trim().max(90).default("Retirá tu lanyard y los stickers"),
       step3: z.string().trim().max(90).default("Dejá el abrigo en guardarropa y pasá al hall"),
@@ -696,7 +742,7 @@ export const SCENES = {
     description: "Qué hay para comer y a qué hora. Formato: emoji Nombre: detalle | …",
     params: z.object({
       title: z.string().trim().max(40).default("Coffee break"),
-      time: z.string().trim().max(5).default("18:25"),
+      time: z.string().trim().max(5).default(coffee.start),
       items: z
         .string()
         .trim()
@@ -982,12 +1028,12 @@ export const SCENES = {
     title: "Quiz en vivo",
     description: "Pregunta con cuatro opciones; se responde desde el celular y al terminar se revela quién acertó.",
     params: z.object({
-      question: z.string().trim().max(140).default("¿En qué año se fundó OWU?"),
-      a: z.string().trim().max(60).default("2019"),
-      b: z.string().trim().max(60).default("2021"),
-      c: z.string().trim().max(60).default("2023"),
-      d: z.string().trim().max(60).default("2024"),
-      answer: z.string().trim().max(1).default("C"),
+      question: z.string().trim().max(140).default("¿Desde qué año existe OWU?"),
+      a: z.string().trim().max(60).default("2011"),
+      b: z.string().trim().max(60).default("2015"),
+      c: z.string().trim().max(60).default("2019"),
+      d: z.string().trim().max(60).default("2023"),
+      answer: z.string().trim().max(1).default("A"),
       seconds: z.number().int().min(5).max(180).default(30),
     }),
   },
@@ -1376,11 +1422,11 @@ export const SCENES = {
     title: "Trivia",
     description: "Pregunta con cuatro opciones; cuenta regresiva y revela la correcta con confetti.",
     params: z.object({
-      question: z.string().trim().max(140).default("¿En qué año fue la primera OWU CONF?"),
-      a: z.string().trim().max(60).default("2019"),
-      b: z.string().trim().max(60).default("2022"),
-      c: z.string().trim().max(60).default("2024"),
-      d: z.string().trim().max(60).default("2025"),
+      question: z.string().trim().max(140).default("¿Cuántas ediciones de La Meetup hubo antes de OWU CONF?"),
+      a: z.string().trim().max(60).default("Una"),
+      b: z.string().trim().max(60).default("Dos"),
+      c: z.string().trim().max(60).default("Tres"),
+      d: z.string().trim().max(60).default("Cuatro"),
       answer: z.string().trim().max(1).default("C"),
       seconds: z.number().int().min(0).max(120).default(20),
     }),

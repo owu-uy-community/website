@@ -10,7 +10,7 @@ import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import { QrCode, Rise } from "./parts";
-import { parseProgram, secondsUntil, useNow } from "./useful";
+import { EmptyText, parseProgram, secondsUntil, useBoard, useNow } from "./useful";
 
 export const splitList = (value: string) =>
   value
@@ -52,9 +52,24 @@ function parseRounds(value: string): Round[] {
     .map((match) => ({ start: match[1].padStart(5, "0"), end: match[2].padStart(5, "0") }));
 }
 
-export function Rounds({ params }: SceneProps<"rounds">) {
+export function Rounds({ params, eventId }: SceneProps<"rounds">) {
+  const { preview } = useContext(StageContext);
   const now = useNow(1000);
-  const rounds = useMemo(() => parseRounds(params.rounds), [params.rounds]);
+  // Typed rounds win; otherwise the open space grid's own blocks, so a moved block moves here too.
+  const board = useBoard(params.rounds ? null : eventId, preview);
+  const rounds = useMemo(
+    () =>
+      params.rounds
+        ? parseRounds(params.rounds)
+        : (board?.schedules ?? [])
+            .filter((slot) => slot.isActive)
+            .map((slot) => ({ start: slot.startTime.slice(0, 5), end: slot.endTime.slice(0, 5) }))
+            .sort((a, b) => a.start.localeCompare(b.start)),
+    [params.rounds, board]
+  );
+  if (!params.rounds && !eventId) return <EmptyText text="Elegí un evento en el admin" />;
+  if (!params.rounds && !board) return null;
+  if (!rounds.length) return <EmptyText text="Todavía no hay bloques en la grilla" />;
   const active = rounds.findIndex((r) => r.start <= now && now < r.end);
   const nextIndex = rounds.findIndex((r) => r.start > now);
   const over = rounds.length > 0 && now >= rounds[rounds.length - 1].end;

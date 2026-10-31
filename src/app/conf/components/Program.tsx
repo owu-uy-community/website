@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { CONF_DATES } from "app/lib/constants";
 
-import { OPEN_SPACE_TIMES, TALKS, type Talk } from "../talks";
+import { DAY_TIMES, OPEN_SPACE_TIMES, TALKS, type Talk } from "../talks";
 
 import Reveal, { EASE_OUT } from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -179,8 +179,7 @@ const speakerNames = ({ speakers }: Talk) => speakers.map(({ name }) => name).jo
  */
 const SESSIONS: Session[] = [
   {
-    start: "14:30",
-    end: "15:00",
+    ...DAY_TIMES.recepcion,
     title: "Recepción y acreditación",
     blurb: "Registro, credenciales y café de bienvenida",
     description: (
@@ -283,8 +282,7 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-tap",
   },
   {
-    start: "20:25",
-    end: "20:40",
+    ...DAY_TIMES.despedida,
     title: "Despedida y foto",
     blurb: "Agradecimientos y foto de toda la comunidad",
     description: (
@@ -297,7 +295,7 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-flash",
   },
   {
-    start: "20:40",
+    ...DAY_TIMES.after,
     title: "After",
     blurb: "Te invitamos a seguirla un rato más",
     description: (

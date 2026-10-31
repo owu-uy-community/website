@@ -14,6 +14,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import {
   Check,
+  ChevronDown,
   Copy,
   ExternalLink,
   LayoutGrid,
@@ -32,8 +33,10 @@ import { Button } from "components/shared/ui/button";
 import { ContextMenu, ContextMenuTrigger } from "components/shared/ui/context-menu";
 import { Empty } from "components/shared/ui/empty";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
+import { CONF_SECTIONS, OTHER_SCENE_COUNT } from "lib/owy-stage/conf";
 import {
   INTERACTIVE_SCENES,
+  SCENE_IDS,
   SCENES,
   SCENE_CATEGORIES,
   SCENE_GROUPS,
@@ -48,12 +51,15 @@ import { SceneThumb } from "./SceneThumb";
 import { releaseFocus } from "./useStageHotkeys";
 import { useStoredState } from "./useStoredState";
 
-type Filter = "recent" | "all" | SceneCategory;
+/** «conf» = the day's shortlist (lib/owy-stage/conf), the library's starting point. */
+type Filter = "conf" | "recent" | "all" | SceneCategory;
 type View = "grid" | "list";
 
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
 const isFilter = (value: unknown): value is Filter =>
-  value === "recent" || value === "all" || (typeof value === "string" && value in SCENE_CATEGORIES);
+  value === "conf" || value === "recent" || value === "all" || (typeof value === "string" && value in SCENE_CATEGORIES);
+const CONF_GROUPS = CONF_SECTIONS.map((section, i) => ({ category: `conf-${i}`, ...section }));
+const CONF_COUNT = SCENE_IDS.length - OTHER_SCENE_COUNT;
 const isView = (value: unknown): value is View => value === "grid" || value === "list";
 const POP = { type: "spring", stiffness: 520, damping: 22 } as const;
 
@@ -319,10 +325,15 @@ function ToolbarView({
     row.scrollTo({ left: row.scrollLeft + at.left - box.left - 12, behavior: "smooth" });
   }, [filter]);
 
+  // The categories only show once you asked for the whole library.
+  const browsing = filter !== "conf" && filter !== "recent";
   const chips: [Filter, string, number | null][] = [
+    ["conf", "OWU CONF", CONF_COUNT],
     ["recent", "Recientes", null],
-    ["all", "Todas", null],
-    ...SCENE_GROUPS.map((group): [Filter, string, number] => [group.category, group.title, group.scenes.length]),
+    ["all", "Todas", SCENE_IDS.length],
+    ...(browsing
+      ? SCENE_GROUPS.map((group): [Filter, string, number] => [group.category, group.title, group.scenes.length])
+      : []),
   ];
 
   return (
@@ -398,7 +409,8 @@ const sceneAt = (event: MouseEvent | PointerEvent) => {
 const fromPortal = (event: MouseEvent | PointerEvent) => !event.currentTarget.contains(event.target as Node);
 
 /**
- * Every scene the wall can show, by category, in the day's order. Tapping a
+ * The day's shortlist first (by moment, see lib/owy-stage/conf), and behind
+ * «Todas» every scene the wall can show, by category. Tapping a
  * card stages it in preview — nothing goes on air from here except through
  * «⋯ → Al aire ya» (also on a long-press or a right-click). The filter and the
  * grid/list view are per device.
@@ -415,7 +427,7 @@ function SceneLibraryView({
   /** Something to put before the chips (the phone's search button). */
   lead?: ReactNode;
 }) {
-  const [filter, setFilter] = useStoredState<Filter>("owy-stage-library-filter", "all", isFilter);
+  const [filter, setFilter] = useStoredState<Filter>("owy-stage-library-filter", "conf", isFilter);
   const [view, setView] = useStoredState<View>("owy-stage-library-view", "grid", isView);
   // The chip and the toggle answer at once; the grid behind them follows without blocking the tap.
   const shownFilter = useDeferredValue(filter);
@@ -423,9 +435,16 @@ function SceneLibraryView({
   /** One right-click / long-press menu for the whole grid, filled with the scene it was opened on. */
   const [menuFor, setMenuFor] = useState<SceneId | null>(null);
   const longPress = useLongPress();
+  const list = useRef<HTMLDivElement>(null);
+  // A new filter starts at its top, not wherever the last one was scrolled to.
+  // A block, not an expression: Chrome's scrollTo returns a promise, and React would call it as the cleanup.
+  useEffect(() => {
+    list.current?.scrollTo({ top: 0 });
+  }, [shownFilter]);
 
   const groups = useMemo(() => {
     if (shownFilter === "recent") return [{ category: "recent", title: "Recientes", scenes: recent }];
+    if (shownFilter === "conf") return CONF_GROUPS;
 
     return SCENE_GROUPS.filter((group) => shownFilter === "all" || group.category === shownFilter);
   }, [shownFilter, recent]);
@@ -440,6 +459,7 @@ function SceneLibraryView({
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <div
+            ref={list}
             className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-3"
             onContextMenu={(event) => {
               if (fromPortal(event)) return;
@@ -475,7 +495,7 @@ function SceneLibraryView({
                     key={group.category}
                     className="[contain-intrinsic-size:auto_480px] [content-visibility:auto]"
                   >
-                    {(shownFilter === "all" || shownFilter === "recent") && (
+                    {(shownFilter === "all" || shownFilter === "recent" || shownFilter === "conf") && (
                       <h3 className="sticky top-0 z-10 -mx-3 bg-card px-3 py-1.5 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
                         {group.title} · {group.scenes.length}
                       </h3>
@@ -501,6 +521,19 @@ function SceneLibraryView({
                     </div>
                   </section>
                 )
+            )}
+            {shownFilter === "conf" && (
+              <Button
+                className="mt-1 mb-2 w-full gap-2 border-dashed text-muted-foreground pointer-coarse:h-11"
+                variant="outline"
+                onClick={(event) => {
+                  setFilter("all");
+                  releaseFocus(event);
+                }}
+              >
+                <ChevronDown className="h-4 w-4" />
+                Ver las otras {OTHER_SCENE_COUNT} escenas
+              </Button>
             )}
           </div>
         </ContextMenuTrigger>

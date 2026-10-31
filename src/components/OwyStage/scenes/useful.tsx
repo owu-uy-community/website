@@ -196,7 +196,10 @@ export function RoomDay({ params, eventId }: SceneProps<"room">) {
   if (!data) return null;
 
   const wanted = params.room.trim().toLowerCase();
-  const room = data.rooms.find((candidate) => candidate.name.trim().toLowerCase() === wanted);
+  // No name: the first room of the grid, so the scene shows something real out of the box.
+  const room = wanted
+    ? data.rooms.find((candidate) => candidate.name.trim().toLowerCase() === wanted)
+    : data.rooms.filter((candidate) => candidate.isActive).sort((a, b) => a.sortOrder - b.sortOrder)[0];
   if (!room) {
     return (
       <EmptyText
