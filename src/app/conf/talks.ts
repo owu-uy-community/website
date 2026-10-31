@@ -81,3 +81,10 @@ export const OPEN_SPACE_TIMES = {
   /** The break runs into the first talk. */
   coffee: { start: "18:25", end: TALKS[0].start },
 } as const;
+
+/** The rest of the day around the open space and the talks; the agenda and the wall's program read it. */
+export const DAY_TIMES = {
+  recepcion: { start: "14:30", end: OPEN_SPACE_TIMES.bienvenida.start },
+  despedida: { start: TALKS[TALKS.length - 1].end, end: "20:40" },
+  after: { start: "20:40" },
+} as const;
