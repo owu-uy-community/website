@@ -5,7 +5,10 @@
 # Modo pitch (controls.yaml `pitch_mode`): tap → record, tap → send. The run
 # starts with `wake_word: "pitch"` and no device end-of-speech; the bridge
 # records, ends it on `pitch_submit` (or its own silence/cap), and answers
-# through the normal speaking path. `pitch_state` drives a board's haptics.
+# through the normal speaking path. When the pitch missed the topic or the
+# name, Owy asks and the bridge calls `pitch_prompt`: the mic then opens by
+# itself for the answer (a run tagged "pitch-answer"). `pitch_state` drives a
+# board's haptics.
 
 substitutions:
   # The start buzz settles before the mic opens; boards with a motor override this.
@@ -33,18 +36,14 @@ globals:
     type: bool
     restore_value: false
     initial_value: "false"
-  # Modo pitch: this run records a pitch; the name step answers Owy's question.
+  # Modo pitch: this run records a pitch, or the answer to Owy's question
+  # about it (pitch_answer_step: 0 = the pitch, 1 = the topic, 2 = the name).
   - id: pitch_active
     type: bool
     restore_value: false
     initial_value: "false"
-  - id: pitch_name_step
-    type: bool
-    restore_value: false
-    initial_value: "false"
-  # Until when the rim invites a tap to say one's name (pitch_prompt "name").
-  - id: pitch_prompt_until
-    type: uint32_t
+  - id: pitch_answer_step
+    type: int
     restore_value: false
     initial_value: "0"
 
@@ -84,7 +83,7 @@ text_sensor:
       if (id(mww).is_running() && id(mic).is_running()) return {"wake_word"};
       return {"idle"};
   # Modo pitch, one step at a time (a board's haptics ride on it):
-  # arming · recording · sent · invite · idle.
+  # arming (the mic is about to open: a pitch, or an answer) · recording · sent.
   - platform: template
     id: pitch_state
     name: Pitch State
@@ -209,10 +208,8 @@ script:
                 then:
                   - lambda: |-
                       id(pitch_active) = true;
-                      // Owy asked who speaks and the rim still invites: this tap answers.
-                      id(pitch_name_step) = int32_t(millis() - id(pitch_prompt_until)) < 0;
-                      id(pitch_prompt_until) = 0;
-                  - script.stop: pitch_prompt_guard
+                      id(pitch_answer_step) = 0;
+                  - script.stop: pitch_answer
                   - script.execute: start_listening
 
   # The second tap. The bridge sees `pitch_submit` rise and closes the run with
@@ -239,13 +236,27 @@ script:
           timeout: 1500ms
       - lambda: id(pitch_state).publish_state("sent");
 
-  # Backstop for pitch_prompt("name"): the invitation never outlives the bridge's 20 s.
-  - id: pitch_prompt_guard
+  # The answer to Owy's question (pitch_prompt "topic" / "name"): once the
+  # question has played (run over, speaker released), the mic opens by itself.
+  # The bridge ends the answer as it ends a pitch: a pause, a tap, or nobody
+  # answering; a board that is busy by then just skips it (the bridge gives up
+  # waiting and places the card with what it has).
+  - id: pitch_answer
     mode: restart
     then:
-      - delay: 25s
-      - lambda: id(pitch_prompt_until) = 0;
-      - script.execute: apply_face
+      - delay: 50ms
+      - wait_until:
+          condition:
+            lambda: return !id(va).is_running() && id(va_speaker).is_stopped() && !id(turn_pending);
+          timeout: 5s
+      - if:
+          condition:
+            lambda: |-
+              return id(pitch_mode).state && id(pitch_answer_step) != 0 && !id(mic_privacy).state &&
+                     !id(va).is_running() && !id(turn_pending) && !id(audio_recovering) && id(va_speaker).is_stopped();
+          then:
+            - lambda: id(pitch_active) = true;
+            - script.execute: start_listening
 
   - id: start_listening
     mode: single
@@ -298,11 +309,11 @@ script:
                       then:
                         # A pitch has pauses: no end-of-speech on the device; the person
                         # (or the bridge's silence/cap fallback) ends it. The tag tells the
-                        # bridge what this run is; "pitch-name" answers its question.
+                        # bridge what this run is; "pitch-answer" answers its question.
                         - voice_assistant.start:
                             silence_detection: false
                             wake_word: !lambda |-
-                              return std::string(id(pitch_name_step) ? "pitch-name" : "pitch");
+                              return std::string(id(pitch_answer_step) ? "pitch-answer" : "pitch");
                         - lambda: id(pitch_state).publish_state("recording");
                       else:
                         # The tag persists on the component: a conversation clears it.

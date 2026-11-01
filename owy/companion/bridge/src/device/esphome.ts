@@ -8,7 +8,8 @@ import {
   type VoiceAssistantEventData,
   type VoiceAssistantRequest,
 } from "esphome-client";
-import { audioRoute, type AudioRoute } from "../audio/route";
+import { audioRoute, micRoute, type AudioRoute, type MicRoute } from "../audio/route";
+import type { PitchVoice } from "../pitch-flow";
 import type { DeviceSpec } from "../config";
 import type { Logger } from "../log";
 import type { FaceState, ScreenCard } from "../realtime/tools";
@@ -21,12 +22,15 @@ import type { VoiceLink } from "./pipeline";
  * Firmware contract (see `companion/firmware/packages/controls.yaml`):
  *   - select  `face_state`        options: idle|listening|thinking|speaking|happy|error|offline
  *   - switch  `staff_mode`, `marketplace_open`, `quiet_mode`   (set from the on-device PIN page)
- *   - switch  `pitch_mode`, `pitch_reacts`  (modo pitch; optional), binary_sensor `pitch_submit` (the second tap)
+ *   - switch  `pitch_mode` + select `pitch_voice` (Callado|Confirma|Confirma y comenta; older boards: switch `pitch_reacts`),
+ *     binary_sensor `pitch_submit` (the second tap) — modo pitch, optional
+ *   - select  `mic_source` (dispositivo|laptop|mac), `audio_output` (dispositivo|laptop)
  *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`,
  *     optional `show_caption(body)` (boards without a speaker show the reply as text),
- *     `express(feeling, lead_ms, strength)`, `mouth_track(frames, lead_ms)`, `pitch_prompt(kind)`
+ *     `express(feeling, lead_ms, strength)`, `mouth_track(frames, lead_ms)`, `pitch_prompt(kind: topic|name|idle)`
  *     (positional string arguments; variable names avoid ESPHome component namespaces)
  *   - voice_assistant (speaker path) subscribed with API audio; a pitch run starts with `wake_word: "pitch"`
+ *     ("pitch-answer" when the board opened its mic for the answer to Owy's question)
  */
 
 export interface DeviceHandlers {
@@ -38,6 +42,13 @@ export interface DeviceHandlers {
   onConnected?(): void;
   onDisconnected?(): void;
 }
+
+/** `select.pitch_voice` options as the knob shows them. */
+export const PITCH_VOICE_OPTIONS: [PitchVoice, string][] = [
+  ["silent", "Callado"],
+  ["confirm", "Confirma"],
+  ["react", "Confirma y comenta"],
+];
 
 export const FACE_STATES: FaceState[] = ["idle", "listening", "thinking", "speaking", "happy", "error", "offline"];
 
@@ -53,6 +64,7 @@ const ENTITY = {
   audioOutput: entityId("select", "audio_output"),
   pitchMode: entityId("switch", "pitch_mode"),
   pitchReacts: entityId("switch", "pitch_reacts"),
+  pitchVoice: entityId("select", "pitch_voice"),
   pitchSubmit: entityId("binary_sensor", "pitch_submit"),
 } as const;
 
@@ -122,8 +134,8 @@ export class CompanionDevice implements VoiceLink {
   sendMouthTrack?: (frames: string, leadMs: number) => void;
   /** Set when the firmware exposes `show_caption`; DeviceSession streams the reply transcript through it. */
   showCaption?: (text: string) => void;
-  /** Set when the firmware exposes `pitch_prompt`: the rim invites a tap to say one's name. */
-  pitchPrompt?: (kind: "name" | "idle") => void;
+  /** Set when the firmware exposes `pitch_prompt`: the board opens its mic for the answer to Owy's question. */
+  pitchPrompt?: (kind: "topic" | "name" | "idle") => void;
   /** The listening haptic plays as the mic opens and the motor shares the enclosure with the mic. */
   readonly micSettleMs = 250;
 
@@ -275,23 +287,20 @@ export class CompanionDevice implements VoiceLink {
   }
 
   /** `null` when the firmware has no routing selects (older boards). */
-  getMicSource(): AudioRoute | null {
-    return this.readRoute(ENTITY.micSource);
+  getMicSource(): MicRoute | null {
+    const state = this.client.latest(ENTITY.micSource)?.state;
+    return typeof state === "string" ? micRoute(state) : null;
   }
 
   getAudioOutput(): AudioRoute | null {
-    return this.readRoute(ENTITY.audioOutput);
-  }
-
-  setAudioRoute(which: "mic" | "output", route: AudioRoute): void {
-    this.client.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
-      state: route === "laptop" ? "laptop" : "dispositivo",
-    });
-  }
-
-  private readRoute(id: typeof ENTITY.micSource): AudioRoute | null {
-    const state = this.client.latest(id)?.state;
+    const state = this.client.latest(ENTITY.audioOutput)?.state;
     return typeof state === "string" ? audioRoute(state) : null;
+  }
+
+  setAudioRoute(which: "mic" | "output", route: MicRoute): void {
+    this.client.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
+      state: route === "laptop" ? "laptop" : route === "host" && which === "mic" ? "mac" : "dispositivo",
+    });
   }
 
   isMarketplaceOpen(): boolean {
@@ -307,8 +316,19 @@ export class CompanionDevice implements VoiceLink {
     return this.readOptionalSwitch(ENTITY.pitchReacts);
   }
 
-  setSwitch(id: "pitch_mode" | "pitch_reacts", on: boolean): void {
-    this.client.command(id === "pitch_mode" ? ENTITY.pitchMode : ENTITY.pitchReacts, { state: on });
+  setSwitch(id: "pitch_mode", on: boolean): void {
+    this.client.command(ENTITY.pitchMode, { state: on });
+  }
+
+  /** `null` when the firmware has no `select.pitch_voice` (older boards: the `pitch_reacts` switch). */
+  getPitchVoice(): PitchVoice | null {
+    const state = this.client.latest(ENTITY.pitchVoice)?.state;
+    return typeof state === "string" ? (PITCH_VOICE_OPTIONS.find(([, label]) => label === state)?.[0] ?? null) : null;
+  }
+
+  setPitchVoice(voice: PitchVoice): void {
+    const label = PITCH_VOICE_OPTIONS.find(([value]) => value === voice)?.[1];
+    if (label) this.client.command(ENTITY.pitchVoice, { state: label });
   }
 
   private readOptionalSwitch(id: typeof ENTITY.pitchMode): boolean | null {

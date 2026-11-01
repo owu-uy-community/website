@@ -28,7 +28,7 @@ vi.mock("../src/realtime/session", () => ({
 }));
 const grant: WebGrant = {
   identity: "admin",
-  origin: "http://127.0.0.1:3311",
+  origin: "http://localhost:3000",
   writes: false,
   staff: false,
   marketplace: false,
@@ -45,15 +45,17 @@ function runtime() {
   const extract = {
     card: vi.fn(async () => ({
       transcript: "Quiero proponer una charla sobre Effect",
-      isPitch: true,
+      kind: "pitch" as const,
       title: "Effect en producción",
       speaker: null,
       needsTV: false,
       needsWhiteboard: false,
       description: null,
       topics: ["effect"],
+      reaction: null,
+      appropriate: true,
     })),
-    name: vi.fn(async () => ({ name: "Ana" })),
+    answer: vi.fn(async (_wav: Buffer, _context: unknown) => ({ title: null, speaker: "Ana", description: null, appropriate: true })),
   };
   const placed = vi.fn(async (input: { title: string; speaker?: string }) => ({
     note: { id: "t1", title: input.title, speaker: input.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" },
@@ -71,7 +73,7 @@ function runtime() {
     logger: createLogger("web-test", "error"),
     pitch: {
       extract,
-      api: { tracks: { createPlaced: placed, update: vi.fn() } } as unknown as NonNullable<SharedRuntime["pitch"]>["api"],
+      api: { tracks: { createPlaced: placed, list: vi.fn(async () => []), update: vi.fn() } } as unknown as NonNullable<SharedRuntime["pitch"]>["api"],
       openSpaceId: async () => "e1",
       clips: {},
     },
@@ -231,42 +233,65 @@ it("sends real PCM and commit into the shared session and waits for playback-rea
   await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted" && m.run === 2)).toBe(true));
   expect(r.model.resetConversation).not.toHaveBeenCalled();
 });
-it("a pitch over the web is recorded, not streamed; commit hands it to the extractor and the card lands", async () => {
+it("a pitch over the web is recorded, not streamed; Owy asks for the missing name, the browser answers, one card lands", async () => {
   const r = await browser({ writes: true });
   // The browser's first (normal) turn is cancelled; the next start is a pitch.
   r.send({ type: "stop" });
   await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  const runEnds = () => r.messages.filter((m) => m.type === "event" && m.event === "RUN_END").length;
+  const talk = async (run: number) => {
+    // An answer drops its first 400 ms (Owy's question may still be in the room).
+    if (run > 2) await new Promise((resolve) => setTimeout(resolve, 450));
+    const frame = Buffer.alloc(644);
+    frame.writeUInt32LE(run, 0);
+    for (let i = 0; i < 320; i++) frame.writeInt16LE(Math.round(Math.sin(i / 3) * 6000), 4 + i * 2);
+    // 2.4 s of voice, paced under the 64 kB/s mic budget.
+    for (let i = 0; i < 60; i++) r.ws.send(frame);
+    await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "STT_VAD_START" && m.run === run)).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    for (let i = 0; i < 60; i++) r.ws.send(frame);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    r.send({ type: "commit", run });
+    await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "STT_END" && m.run === run)).toBe(true));
+    r.send({ type: "playbackReady", run });
+  };
+  const speak = (responseId: string) => {
+    r.model.options.onEvent({ type: "audio-delta", responseId, itemId: responseId, delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+    r.model.options.onEvent({ type: "response-done", responseId, status: "completed", raw: {} });
+  };
+
   r.send({ type: "start", mode: "pitch" });
   await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted" && m.run === 2)).toBe(true));
-  const frame = Buffer.alloc(644);
-  frame.writeUInt32LE(2, 0);
-  for (let i = 0; i < 320; i++) frame.writeInt16LE(Math.round(Math.sin(i / 3) * 6000), 4 + i * 2);
-  // 2.4 s of voice, paced under the 64 kB/s mic budget.
-  for (let i = 0; i < 60; i++) r.ws.send(frame);
-  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "STT_VAD_START")).toBe(true));
-  await new Promise((resolve) => setTimeout(resolve, 1100));
-  for (let i = 0; i < 60; i++) r.ws.send(frame);
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await talk(2);
   expect(r.model.sendAudio).not.toHaveBeenCalled();
-  r.send({ type: "commit", run: 2 });
-  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "STT_END")).toBe(true));
-  r.send({ type: "playbackReady", run: 2 });
   await vi.waitFor(() => expect(r.extract.card).toHaveBeenCalledOnce());
-  await vi.waitFor(() => expect(r.placed).toHaveBeenCalledOnce());
-  expect(r.placed.mock.calls[0][0]).toMatchObject({ openSpaceId: "e1", title: "Effect en producción", source: "companion" });
-  await vi.waitFor(() =>
-    expect(r.messages.some((m) => m.type === "screen" && m.command?.kind === "card" && m.command.card.room === "Cueva")).toBe(true)
-  );
+  // No name in the pitch: Owy asks before anything reaches the board.
   await vi.waitFor(() => expect(r.model.sendText).toHaveBeenCalledOnce());
-  expect(r.model.sendText.mock.calls[0][0]).toMatch(/^\[GUION\] ¡Listo! Tu charla «Effect en producción» queda en Cueva a las 15:00\. ¿Cómo te llamás\?/);
-  // The model speaks the script through the normal pipeline; the name invitation follows the announcement.
-  r.model.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
-  r.model.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
-  await vi.waitFor(() => expect(r.messages.filter((m) => m.type === "event" && m.event === "RUN_END")).toHaveLength(2));
-  expect(r.audio.length).toBeGreaterThan(0);
+  expect(r.model.sendText.mock.calls[0][0]).toBe("[GUION] ¿Cómo te llamás?");
+  expect(r.placed).not.toHaveBeenCalled();
+  speak("r1");
+  await vi.waitFor(() => expect(runEnds()).toBe(2));
   await vi.waitFor(() =>
     expect(r.messages.some((m) => m.type === "screen" && m.command?.kind === "pitchPrompt" && m.command.prompt === "name")).toBe(true)
   );
+
+  // The browser opens its mic for the answer, as the knob does by itself.
+  r.send({ type: "start", mode: "pitch" });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "accepted" && m.run === 3)).toBe(true));
+  await talk(3);
+  await vi.waitFor(() => expect(r.extract.answer).toHaveBeenCalledOnce());
+  expect(r.extract.answer.mock.calls[0][1]).toMatchObject({ field: "name", question: "¿Cómo te llamás?" });
+  expect(r.extract.card).toHaveBeenCalledOnce(); // not a new pitch
+  await vi.waitFor(() => expect(r.placed).toHaveBeenCalledOnce());
+  expect(r.placed.mock.calls[0][0]).toMatchObject({ openSpaceId: "e1", title: "Effect en producción", speaker: "Ana", source: "companion" });
+  await vi.waitFor(() =>
+    expect(r.messages.some((m) => m.type === "screen" && m.command?.kind === "card" && m.command.card.room === "Cueva")).toBe(true)
+  );
+  await vi.waitFor(() => expect(r.model.sendText).toHaveBeenCalledTimes(2));
+  expect(r.model.sendText.mock.calls[1][0]).toBe("[GUION] ¡Listo, Ana! Tu charla «Effect en producción» queda en Cueva a las 15:00.");
+  speak("r2");
+  await vi.waitFor(() => expect(runEnds()).toBe(3));
+  expect(r.audio.length).toBeGreaterThan(0);
 });
 
 it("executes shared read/screen/volume tools and blocks real writes without consent", async () => {

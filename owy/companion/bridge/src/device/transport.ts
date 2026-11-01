@@ -1,6 +1,7 @@
 import type { VoiceAssistantEvent, VoiceAssistantEventData } from "esphome-client";
 import type { VoiceLink } from "./pipeline";
-import type { AudioRoute } from "../audio/route";
+import type { AudioRoute, MicRoute } from "../audio/route";
+import type { PitchVoice } from "../pitch-flow";
 import type { FaceState, ScreenCard } from "../realtime/tools";
 
 /**
@@ -45,15 +46,22 @@ export interface DeviceTransport extends VoiceLink {
   /** Milliseconds of microphone audio to drop after a turn opens (a haptic cue bleeding into the mic); 0/absent = none. */
   micSettleMs?: number;
   /** Audio routing chosen on the device (`select.mic_source` / `select.audio_output`); absent = bridge default. */
-  getMicSource?: () => AudioRoute | null;
+  getMicSource?: () => MicRoute | null;
   getAudioOutput?: () => AudioRoute | null;
-  setAudioRoute?: (which: "mic" | "output", route: AudioRoute) => void;
-  /** Modo pitch switches (`switch.pitch_mode`, `switch.pitch_reacts`); `null` when the board has none. */
+  setAudioRoute?: (which: "mic" | "output", route: MicRoute) => void;
+  /** Modo pitch (`switch.pitch_mode`); `null` when the board has none. */
   isPitchMode?: () => boolean | null;
+  /** The old «Owy reacciona» switch (`switch.pitch_reacts`), on boards flashed before `select.pitch_voice`. */
   isPitchReacts?: () => boolean | null;
-  setSwitch?: (id: "pitch_mode" | "pitch_reacts", on: boolean) => void;
-  /** Present when the firmware exposes `pitch_prompt`: "name" invites a tap to say one's name, "idle" clears it. */
-  pitchPrompt?: (kind: "name" | "idle") => void;
+  setSwitch?: (id: "pitch_mode", on: boolean) => void;
+  /** What Owy says around a pitch (`select.pitch_voice`); `null` when the board has none. */
+  getPitchVoice?: () => PitchVoice | null;
+  setPitchVoice?: (voice: PitchVoice) => void;
+  /**
+   * Present when the firmware exposes `pitch_prompt`: "topic" / "name" make the board open its
+   * mic by itself for the answer to Owy's question (a run tagged "pitch-answer"), "idle" clears it.
+   */
+  pitchPrompt?: (kind: "topic" | "name" | "idle") => void;
   /** Plays a pre-rendered cue when the device has speakers of its own that can take a file (the browser). */
   playClip?: (id: string) => void;
   getVolume(): number | null;

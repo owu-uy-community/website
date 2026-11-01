@@ -187,12 +187,12 @@ de `knob_turn` a `volume` (mismo overlay).
 | acción `mouth_track(frames, lead_ms)` | labios para turnos que suenan en la laptop: 1 char base64url cada 40 ms (`bridge/src/audio/mouth.ts`). Si el audio sale del dispositivo, la boca sigue al propio parlante (tap de PCM en `components/i2s_audio`) |
 | `number.volumen` | volumen del parlante |
 | `button.tono_de_prueba` | tono suave de prueba de 1 kHz / 80 ms |
-| `select.mic_source` / `select.audio_output` | `dispositivo · laptop`: el bridge los lee al empezar cada turno (ver *Modos de audio*) |
+| `select.mic_source` / `select.audio_output` | `dispositivo · laptop · mac` (mic) y `dispositivo · laptop` (salida): el bridge los lee al empezar cada turno (ver *Modos de audio* y *Micrófono de la Mac*) |
 | acciones `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)` | páginas de pantalla |
 | acción `show_caption(body)` (sólo Knob) | el bridge manda la transcripción de la respuesta a las placas que la anuncian |
-| `switch.pitch_mode` / `switch.pitch_reacts` | **Modo pitch** (ver abajo): cada toque graba una propuesta en vez de conversar; wake word y follow-ups quedan apagados. `pitch_reacts`: Owy agrega una frase sobre el pitch. Persisten tras reiniciar |
-| `binary_sensor.pitch_submit` / `text_sensor.pitch_state` | pulso en el segundo toque (el bridge cierra el run en el flanco de subida); `arming · recording · sent · invite · idle` para la háptica de la placa |
-| acción `pitch_prompt(kind)` | `name`: el aro invita 20 s a tocar y decir el nombre (ese run sale como `pitch-name`); `idle`: lo apaga |
+| `switch.pitch_mode` / `select.pitch_voice` | **Modo pitch** (ver abajo): cada toque graba una propuesta en vez de conversar; wake word y follow-ups quedan apagados. `pitch_voice` (`Callado · Confirma · Confirma y comenta`): qué dice Owy. Persisten tras reiniciar |
+| `binary_sensor.pitch_submit` / `text_sensor.pitch_state` | pulso en el segundo toque (el bridge cierra el run en el flanco de subida); `arming · recording · sent` para la háptica de la placa |
+| acción `pitch_prompt(kind)` | `topic` / `name`: terminada la pregunta de Owy, el mic se abre solo para la respuesta (ese run sale como `pitch-answer`); `idle`: cancela una pendiente |
 
 ### Interacción cotidiana
 
@@ -241,12 +241,14 @@ Un mic azul indica captura de conversación; el mic tachado amarillo indica
 privacidad. En reposo el wake word sigue usando captura local si está habilitado.
 No hay cámara, sensor de presencia/luz ni motor háptico establecido en este modelo.
 
-## Modos de audio (dispositivo o laptop)
+## Modos de audio (dispositivo, Mac o laptop)
 
-Cada dispositivo elige dónde viven su micrófono y su salida: `select.mic_source` y
-`select.audio_output` (`dispositivo` | `laptop`, persistentes), desde sus ajustes rápidos
-("Mic: …", "Audio: …"), desde la página del bridge (`http://127.0.0.1:3313/`) o desde la
-tarjeta **Audio** de `/admin/companion`. El bridge expone su API de control como un
+Cada dispositivo elige dónde viven su micrófono y su salida: `select.mic_source`
+(`dispositivo` | `laptop` | `mac`) y `select.audio_output` (`dispositivo` | `laptop`), persistentes, desde sus ajustes rápidos
+("Mic: …", "Audio: …") o desde la tarjeta **Owy físico** de `/admin/companion` — el lugar de
+siempre: ahí están también el emulador, *Hablá con Owy*, el modo pitch y el micrófono de la Mac. La
+página del bridge (`http://127.0.0.1:3313/`) es sólo el respaldo para cuando el sitio no llega al
+bridge (el sitio en Vercel en el evento). El bridge expone su API de control como un
 **router oRPC** (`bridge/src/web/rpc.ts`, servido en `http://127.0.0.1:3313/rpc`; el
 contrato zod vive en `bridge/src/web/contract.ts`); el sitio lo consume con un cliente oRPC
 tipado (`RouterClient<BridgeRouter>`) detrás de `companion.getAudioRouting` /
@@ -255,6 +257,8 @@ tipado (`RouterClient<BridgeRouter>`) detrás de `companion.getAudioRouting` /
 `/api/settings` es un espejo JSON plano de las mismas procedures para la página del bridge.
 
 - **dispositivo**: como siempre (mic del gadget; parlante/jack del gadget).
+- **mac** (sólo mic): el bridge graba una entrada de la Mac donde corre — el integrado o un
+  receptor DJI — sin navegador de por medio; ver *Micrófono de la Mac*.
 - **laptop**: la máquina que corre el bridge pone su micrófono (el mic de escenario
   enchufado a la compu) y sus parlantes (la PA del evento). El gadget sigue siendo el
   disparador, la cara y los subtítulos. El audio lo aporta **un navegador con el
@@ -597,22 +601,43 @@ cejas y cachetes cambian; los labios siguen haciendo lip-sync.
 
 ## Modo pitch (mercado de ideas)
 
-En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, o la UI del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación:
+En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, la tarjeta «Owy físico» de `/admin/companion`, o la página de respaldo del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación. El flujo de una persona, del primer toque a la card, es `bridge/src/pitch-flow.ts`:
 
-1. **Toque** → vibra, el aro parpadea como un REC y la laptop dice «Te escucho. Contame tu charla y tocá de nuevo cuando termines» (un clip pregrabado con la voz de Owy, `public/companion-audio/clips/`). La grabación arranca cuando termina el aviso.
-2. La persona cuenta la charla (20–60 s, con pausas). **El audio no pasa por el modelo de voz**: su detección de fin de habla cortaría el pitch en la primera pausa. El bridge lo graba (`PitchRecorder`, `bridge/src/pitch.ts`) y detecta voz con energía (`COMPANION_PITCH_VAD_RMS`).
+1. **Toque** → vibra, el aro parpadea como un REC y (salvo en *Callado*) Owy dice «Te escucho. Contame tu charla y tocá de nuevo cuando termines» (clip pregrabado). La grabación arranca cuando termina el aviso.
+2. La persona cuenta la charla (20–60 s, con pausas). **El audio no pasa por el modelo de voz**: su detección de fin de habla cortaría el pitch en la primera pausa. El bridge lo graba (`PitchRecorder`, `bridge/src/pitch.ts`) del micrófono que tenga elegido ese dispositivo (el del knob, el de la Mac o un receptor DJI: ver *Micrófono de la Mac*) y detecta voz con energía (`COMPANION_PITCH_VAD_RMS`).
 3. **Toque** (`binary_sensor.pitch_submit`) → doble vibración, cara pensando. Si nadie toca, 10 s de silencio después de hablar (`COMPANION_PITCH_SILENCE_S`) o 2 minutos (`COMPANION_PITCH_MAX_S`) terminan la grabación solos.
-4. Una llamada multimodal al gateway (`COMPANION_PITCH_MODEL`, default `google/gemini-3.8-flash`) devuelve transcripción + card (título, speaker si se presentó, tele/pizarra, descripción, temas). Menos de 2 s de habla o algo que no es una propuesta → «No escuché una propuesta» y no se crea nada.
-5. `tracks.createPlaced` en el sitio ubica la charla con los mismos modelos de decisión que «Sugerir con AI» y la crea; una celda ocupada entre medio pasa a la siguiente. Owy anuncia dónde quedó («¡Listo, Ana! Tu charla «X» queda en Cueva a las 15:00») con su voz de siempre: el bridge le manda el texto al modelo realtime como `[GUION] …` (regla en los prompts). El knob muestra la card, la pared (`owy-face`) la hace aterrizar.
-6. Si el pitch no dijo quién la da: Owy pregunta «¿Cómo te llamás? Tocá, decime tu nombre y tocá de nuevo», el aro respira invitando (`pitch_prompt("name")`) durante 20 s; toque → nombre → toque → `tracks.update`. Sin respuesta, la card queda sin speaker.
-7. **Owy reacciona** (`pitch_reacts`, apagado por defecto): el cerebro eve agrega una o dos frases cálidas sobre la propuesta (turno `kind: "pitch"` con la card ya creada; 8 s de presupuesto, si falla no cuesta nada).
+4. Una llamada multimodal al gateway (`COMPANION_PITCH_MODEL`, default `google/gemini-3.8-flash`, con `COMPANION_PITCH_FALLBACK_MODELS`) devuelve transcripción + card: `kind` (`pitch` · `unclear` · `not_pitch`), título, speaker si se presentó, tele/pizarra, descripción, temas. Si el modelo de audio no responde, segundo camino: transcripción (`COMPANION_TRANSCRIBE_MODELS`) + el modelo de texto (`COMPANION_TEXT_MODEL`) sobre las palabras. Menos de 2 s de habla o un saludo/prueba → «No escuché una propuesta» y no se crea nada.
+5. **Lo que falta se pregunta una vez**: sin tema claro, «¿De qué va tu charla, en pocas palabras?»; sin nombre, «¿Cómo te llamás?». Terminada la pregunta el bridge llama `pitch_prompt("topic" | "name")` y **el knob abre el mic solo** (un run `pitch-answer`; vibra antes, como siempre). La respuesta termina con un toque, 3 s de pausa, o a los 8 s si nadie habla. Una respuesta sólo completa lo que se preguntó (y el nombre, si alguien lo dice); nunca pisa lo que el pitch ya dijo. Sin tema después de preguntar → «No me quedó claro el tema…» y no se crea nada; sin nombre, la card va sin speaker.
+6. **Antes de escribir, dos chequeos.** *¿Es apto para la grilla pública?*: la misma llamada que arma la card marca `appropriate` (ofensivo, discriminatorio, sexual, burla o spam → «Esa propuesta no la puedo cargar…», sin preguntar nada; una respuesta ofensiva también cuenta). *¿Ya está en la grilla?*: en cuanto la charla tiene tema, un modelo de decisión (jev; Luna re-decide si jev duda entre 0,35 y 0,8; d1 si falla un proveedor) contesta sí/no por cada card del evento «¿son la misma charla?»; con P ≥ 0,8 Owy dice «Esa charla ya está en la grilla: «…», en Ventana a las 16:00» y muestra esa card en vez de crear otra. Tarda ~0,3–0,6 s y corre mientras Owy pregunta el nombre; si falla, la charla se carga igual (`COMPANION_PITCH_DEDUPE=off` lo apaga).
+6. **Una sola escritura**: `tracks.createPlaced` ubica la charla (los mismos modelos de decisión que «Sugerir con AI») y la crea cuando está completa. Si la escritura no contesta claro (timeout, conexión cortada, 5xx), el bridge busca la charla en la grilla antes de reintentar una vez: ni pitch perdido ni duplicado. Grilla llena → «no queda lugar libre; hablá con el staff».
+7. Owy confirma según **Owy responde** (`select.pitch_voice`, ver abajo): el knob muestra la card y la pared (`owy-face`) la hace aterrizar; con voz, «¡Listo, Ana! Tu charla «X» queda en Cueva a las 15:00» por el modelo realtime como `[GUION] …` (si no arranca en 2×`COMPANION_ACK_MS`, la voz de la cascada; sin voz, la pantalla).
 
-Nada se persiste del audio; las llamadas al gateway van con `zeroDataRetention`. El modo pitch no aplica el gate del mercado ni el cooldown de `propose_talk`: el interruptor es la decisión del staff.
+**Owy responde** (`select.pitch_voice` en el knob — botón «Owy responde» en los ajustes —, la tarjeta «Owy físico» de `/admin/companion`, o `COMPANION_PITCH_VOICE`):
 
-- Variables: `COMPANION_PITCH_MODE` / `COMPANION_PITCH_REACTS` (fallbacks para placas sin interruptores: lab web, REPL), `COMPANION_PITCH_MODEL`, `COMPANION_PITCH_SILENCE_S`, `COMPANION_PITCH_MAX_S`, `COMPANION_PITCH_VAD_RMS`. Necesita `AI_GATEWAY_API_KEY` y `OWY_API_KEY`.
-- `pnpm companion:clips` regenera los avisos pregrabados (una vez por cambio de voz o de texto); `pnpm companion:pitch grabacion.wav [--name]` prueba el extractor con un WAV.
-- Contrato con el firmware: `switch.pitch_mode`, `switch.pitch_reacts`, `binary_sensor.pitch_submit` (pulso en el segundo toque), acción `pitch_prompt(kind)` (`name` | `idle`), y el run del pipeline arranca con `wake_word: "pitch"` (`"pitch-name"` en el paso del nombre). En el lab web: `start { mode: "pitch" }` y `commit` como segundo toque.
-- Firmware (`voice.yaml` / `controls.yaml`): en modo pitch `tap_to_talk` va a `tap_pitch` (grabando → `stop_pitch`; libre → `start_listening` con `pitch_active`), que arranca el run con `silence_detection: false` y `wake_word: "pitch"` (`"pitch-name"` si Owy acaba de preguntar el nombre); el guard local de 9 s no corre y el watchdog del turno pasa a 180 s. Caras `record` (aro REC: el arco azul del mic más el punto de las 6 parpadeando) e `invite` (aro que respira); hints «contá tu charla · tocá al terminar», «armando tu tarjeta...», «¿cómo te llamás? · tocá y decime». En el Knob la háptica sigue a `pitch_state` (`arming` 1, `sent` 10, `invite` 12; `pitch_arm_ms: 320ms` deja morir el buzz antes de abrir el mic) y la card queda en pantalla durante el anuncio. Emulador: fixture «Un pitch en el mercado», toggles «Modo pitch» / «Owy reacciona al pitch» y caras «Grabando» / «Tocá (pitch)» en el lab.
+| Nivel | Qué hace |
+| --- | --- |
+| `Callado` (`silent`) | sin audio: la card en pantalla; las preguntas son el hint del knob («¿cómo te llamás? · tocá al terminar») y el mic se abre igual; los finales sin card van como texto |
+| `Confirma` (`confirm`, default) | dice dónde quedó y pregunta lo que falta |
+| `Confirma y comenta` (`react`) | además una frase cálida sobre la charla: el cerebro eve escrita en la misma llamada que arma la tarjeta: no suma ni un segundo |
+
+Las frases fijas (te escucho, las dos preguntas, los finales sin card) salen de clips pregrabados (`pnpm companion:clips`): el navegador las reproduce, y por el parlante del knob el bridge manda su PCM (sin red). Las que todavía no están grabadas las dice el modelo.
+
+Interrupciones: un stop durante la grabación del pitch (modo apagado, privacidad) descarta el pitch; después (esperando una respuesta, ubicando la card), lo que ya se entendió se carga igual, sin hablar ni pisar la pantalla. Un pitch que no se pudo entender o cargar se guarda para el staff (WAV + JSON en `$COMPANION_LOG_DIR/pitch-failures/`, sólo si esa variable está puesta); fuera de eso nada se persiste del audio y las llamadas al gateway van con `zeroDataRetention`. El modo pitch no aplica el gate del mercado ni el cooldown de `propose_talk`: el interruptor es la decisión del staff.
+
+- Variables: `COMPANION_PITCH_MODE` / `COMPANION_PITCH_VOICE` (fallbacks para placas sin interruptor/select: lab web, REPL; el viejo `COMPANION_PITCH_REACTS=1` equivale a `react`), `COMPANION_PITCH_MODEL`, `COMPANION_PITCH_FALLBACK_MODELS`, `COMPANION_PITCH_THINKING` (default `low`: medido, la tarjeta baja de 5–7 s a 3–4 s con los mismos resultados), `COMPANION_PITCH_HEDGE_MODEL` / `COMPANION_PITCH_HEDGE_MS` (default `google/gemini-3.5-flash-lite` a los 5 s: si el modelo principal tarda o falla, se le pide también al rápido y gana la primera respuesta), `COMPANION_PITCH_SILENCE_S`, `COMPANION_PITCH_MAX_S`, `COMPANION_PITCH_VAD_RMS`, `COMPANION_PITCH_EVENT_ID`. Necesita `AI_GATEWAY_API_KEY` y `OWY_API_KEY`.
+- `pnpm companion:clips` regenera los avisos pregrabados (una vez por cambio de voz o de texto); `pnpm companion:pitch pitch.wav [respuesta.wav …]` prueba el extractor con WAVs: la card, lo que Owy preguntaría y cómo queda con cada respuesta.
+- Contrato con el firmware: `switch.pitch_mode`, `select.pitch_voice` (`Callado · Confirma · Confirma y comenta`; placas viejas: `switch.pitch_reacts`), `binary_sensor.pitch_submit` (pulso en el segundo toque), acción `pitch_prompt(kind)` (`topic` | `name` abren el mic para la respuesta; `idle` cancela una pendiente), y el run arranca con `wake_word: "pitch"` (`"pitch-answer"` en una respuesta; el bridge decide igual por su propio estado). En el lab web: `start { mode: "pitch" }` y `commit` como segundo toque; el navegador abre el mic solo para la respuesta al recibir `pitchPrompt`.
+- Firmware (`voice.yaml` / `controls.yaml`): en modo pitch `tap_to_talk` va a `tap_pitch` (grabando → `stop_pitch`; libre → `start_listening` con `pitch_active`), que arranca el run con `silence_detection: false`; `pitch_prompt` corre `pitch_answer`, que espera a que termine la pregunta (run cerrado, parlante libre) y abre el mic. El guard local de 9 s no corre y el watchdog del turno pasa a 180 s. Cara `record` (aro REC: el arco azul del mic más el punto de las 6 parpadeando); hints «contá tu charla · tocá al terminar», «¿de qué va tu charla? · tocá al terminar», «¿cómo te llamás? · tocá al terminar», «armando tu tarjeta...». En el Knob la háptica sigue a `pitch_state` (`arming` 1, `sent` 10; `pitch_arm_ms: 320ms` deja morir el buzz antes de abrir el mic) y la card queda en pantalla durante el anuncio. Emulador: fixture «Un pitch en el mercado», toggles «Modo pitch» / «Owy reacciona al pitch» y caras «Grabando» / «Tocá (pitch)» en el lab — todavía con el paso del nombre por toque hasta regenerarlo (`pnpm companion:emulator:generate` + `build`).
+
+### Micrófono de la Mac (DJI o el integrado)
+
+`select.mic_source` también ofrece **`mac`**: el bridge graba una entrada de la Mac donde corre (el micrófono integrado, un receptor DJI Mic 2 por USB-C) con ffmpeg (`avfoundation`, `bridge/src/audio/host-mic.ts`), a 16 kHz mono, igual que el knob. Sirve para el pitch y para conversar.
+
+- **Sólo con el bridge corriendo nativo en macOS** (`pnpm -C owy companion:start`): Docker Desktop corre en una VM sin audio, así que en el contenedor la opción aparece *no disponible*. Necesita `ffmpeg` (`brew install ffmpeg`) y el permiso de **Micrófono** para la app de terminal (Ajustes del Sistema → Privacidad y seguridad → Micrófono); sin permiso llega silencio digital y el bridge lo marca *sin señal*.
+- La entrada se elige **por nombre** (`COMPANION_HOST_MIC=DJI` o el nombre exacto, o en la tarjeta «Owy físico» de `/admin/companion`): los índices de avfoundation cambian al enchufar algo y el primero suele ser un mic virtual (Krisp, Teams). Un receptor DJI (Mic 2, Mic Mini) aparece como **«Wireless Microphone RX»** (`DJI` también lo encuentra). Sin nombre: el integrado. `COMPANION_HOST_MIC_CHANNEL` = `L` · `R` · `mix` (default): un receptor DJI en estéreo pone un transmisor por lado; en *safety track* el R es la copia a -6 dB. **Ganancia:** un receptor DJI llega sin AGC, mucho más bajo que el mic del knob (con su silencio casi en cero por la cancelación de ruido): `COMPANION_HOST_MIC_GAIN_DB=12` deja la voz sobre el umbral del pitch sin que el silencio lo cruce (medido: silencio 0,34 %, umbral 1,2 %). Con un solo transmisor, `L` en vez de `mix`: promediar los dos lados baja la voz a la mitad y, si el otro canal trae otra copia, la cancela en parte.
+- Queda abierto mientras está elegido (sin latencia al tocar, sin perder la primera palabra) y se reabre solo si ffmpeg muere (desenchufado: 1 → 2 → 5 → 10 s). Si no está sano al empezar un turno, ese turno usa el mic del knob y el log lo dice.
+- Ruta: en la placa (`mic_source = mac`, tile «mic en» de los ajustes rápidos o `/admin/companion`; persiste) o `COMPANION_MIC_SOURCE=host` para placas sin el select. Los navegadores (Hablá con Owy, consola de la charla) siguen con su propio mic.
+- Chequeo antes del evento: `pnpm -C owy companion:mic-check` lista las entradas; `pnpm -C owy companion:mic-check Wireless --channel L` graba 5 s, dice pico/promedio contra el umbral del pitch y deja `/tmp/owy-mic-check.wav`. `/admin/companion` tiene lo mismo («Grabar 4 s»).
 
 ## Charla (Owy, en vivo)
 

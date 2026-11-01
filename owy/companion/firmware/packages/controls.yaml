@@ -4,7 +4,8 @@
 # (companion/bridge/src/device/esphome.ts):
 #   select  face_state · switch staff_mode / marketplace_open / quiet_mode / wake_word_enabled
 #   number  volume · actions show_card / show_qr / show_text / set_volume / mouth_track / express
-#   modo pitch: switch pitch_mode / pitch_reacts · binary_sensor pitch_submit · action pitch_prompt
+#   modo pitch: switch pitch_mode · select pitch_voice · binary_sensor pitch_submit · action pitch_prompt
+#   audio routing: select mic_source (dispositivo|laptop|mac) / audio_output (dispositivo|laptop)
 #
 # The mouth follows the audio this device plays (speaker PCM tap); when the
 # bridge plays a turn on the laptop instead, it sends `mouth_track` frames.
@@ -37,16 +38,19 @@ select:
                 state: !lambda return x;
 
   # Audio routing, read by the bridge at the start of every turn. `laptop` =
-  # the machine running the bridge captures/plays through its own audio
-  # devices (a stage mic + the room PA) while this device keeps the trigger,
-  # the face and the captions. Persisted; the bridge falls back to
-  # COMPANION_MIC_SOURCE / COMPANION_AUDIO_OUTPUT when a board lacks them.
+  # a browser attached to the bridge as this device's audio (the talk
+  # console); `mac` = an input of the Mac running the bridge, captured by
+  # the bridge itself (the built-in mic, a DJI receiver: COMPANION_HOST_MIC).
+  # This device keeps the trigger, the face and the captions. Persisted; the
+  # bridge falls back to COMPANION_MIC_SOURCE / COMPANION_AUDIO_OUTPUT when a
+  # board lacks them, and to this device's mic when the chosen one is down.
   - platform: template
     id: mic_source
     name: Mic Source
     options:
       - dispositivo
       - laptop
+      - mac
     initial_option: dispositivo
     optimistic: true
     restore_value: true
@@ -57,6 +61,21 @@ select:
       - dispositivo
       - laptop
     initial_option: dispositivo
+    optimistic: true
+    restore_value: true
+
+  # Modo pitch: what Owy says back. Callado = the card on screen (questions as
+  # the knob's hint); Confirma = where it landed, and asks for what the pitch
+  # missed; Confirma y comenta = plus one warm sentence about the talk.
+  # The bridge reads it for every pitch; option labels are its contract.
+  - platform: template
+    id: pitch_voice
+    name: Pitch Voice
+    options:
+      - Callado
+      - Confirma
+      - Confirma y comenta
+    initial_option: Confirma
     optimistic: true
     restore_value: true
 
@@ -112,16 +131,9 @@ switch:
             lambda: return id(pitch_active);
           then:
             - script.execute: cancel_turn
-      - lambda: id(pitch_prompt_until) = 0;
-      - script.stop: pitch_prompt_guard
+      - lambda: id(pitch_answer_step) = 0;
+      - script.stop: pitch_answer
       - script.execute: resume_wake_word
-
-  # Owy adds a warm sentence about each pitch (the bridge asks its brain).
-  - platform: template
-    id: pitch_reacts
-    name: Pitch Reacts
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_OFF
 
   # No ambient announcements (talks block, after party).
   - platform: template
@@ -268,24 +280,22 @@ api:
             if (owy::expression_from_name(feeling.c_str(), feeling.size(), e))
               id(companion).express(e, millis() + uint32_t(int32_t(lead_ms)), strength / 100.0f);
 
-    # Modo pitch: after a pitch without a name, "name" makes the rim invite one
-    # more tap for 20 s (that run is tagged "pitch-name"); "idle" clears it.
+    # Modo pitch: Owy asked for what the pitch missed. "topic" / "name" open the
+    # mic by itself for the answer once the question has played (that run is
+    # tagged "pitch-answer"; voice.yaml pitch_answer); "idle" drops a pending one.
     - action: pitch_prompt
       variables:
         kind: string
       then:
         - lambda: |-
-            const bool name = kind == "name";
-            id(pitch_prompt_until) = name ? millis() + 20000 : 0;
-            id(pitch_state).publish_state(name ? "invite" : "idle");
-        - script.execute: apply_face
+            id(pitch_answer_step) = kind == "topic" ? 1 : kind == "name" ? 2 : 0;
         - if:
             condition:
-              lambda: return kind == "name";
+              lambda: return id(pitch_answer_step) != 0;
             then:
-              - script.execute: pitch_prompt_guard
+              - script.execute: pitch_answer
             else:
-              - script.stop: pitch_prompt_guard
+              - script.stop: pitch_answer
 
     - action: show_text
       variables:

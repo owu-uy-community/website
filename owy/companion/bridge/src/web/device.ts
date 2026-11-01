@@ -126,8 +126,8 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   playClip(id: string) {
     this.emit({ type: "screen", command: { kind: "clip", id } });
   }
-  /** Modo pitch: invite a tap to say one's name ("name") or clear the invitation ("idle"). */
-  pitchPrompt(kind: "name" | "idle") {
+  /** Modo pitch: Owy asked for the topic or the name; the browser opens its mic for the answer ("idle" clears it). */
+  pitchPrompt(kind: "topic" | "name" | "idle") {
     this.emit({ type: "screen", command: { kind: "pitchPrompt", prompt: kind } });
   }
   showCard(card: ScreenCard) {

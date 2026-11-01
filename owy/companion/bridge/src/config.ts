@@ -90,16 +90,40 @@ const EnvSchema = z.object({
   COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
 
   // --- Modo pitch (the open space's marketplace: tap, pitch a talk, tap → a card on the board) ---
-  /** Fallbacks for boards without `switch.pitch_mode` / `switch.pitch_reacts` (web lab, text REPL). */
+  /** Fallbacks for boards without `switch.pitch_mode` / `select.pitch_voice` (web lab, text REPL). */
   COMPANION_PITCH_MODE: boolFromEnv,
+  /**
+   * What Owy says around a pitch: `silent` (the card on screen, questions as text),
+   * `confirm` (says where it landed, asks what is missing), `react` (+ one warm
+   * sentence about the talk). Unset = `react` when the old COMPANION_PITCH_REACTS is on, else `confirm`.
+   */
+  COMPANION_PITCH_VOICE: z.enum(["silent", "confirm", "react"]).optional(),
   COMPANION_PITCH_REACTS: boolFromEnv,
   /** Audio → card, one multimodal call through the gateway. */
   COMPANION_PITCH_MODEL: z.string().default("google/gemini-3.8-flash"),
   /** Gateway model fallbacks for the pitch extractor (comma-separated, audio-capable). */
   COMPANION_PITCH_FALLBACK_MODELS: z.string().default("google/gemini-3.5-flash"),
+  /**
+   * How much the extractor reasons first. Measured on Gemini 3.8 Flash (2026-11-01): the default
+   * (medium) takes 5–7 s per pitch, `low` 3–4 s with the same cards and names; `minimal` is rejected.
+   */
+  COMPANION_PITCH_THINKING: z.enum(["low", "medium", "high"]).default("low"),
+  /**
+   * Tail latency: past COMPANION_PITCH_HEDGE_MS without an answer (or on a failure) this faster
+   * model is asked too and the first answer wins (flash-lite: ~1.7 s, but worse at names). Empty = off.
+   */
+  COMPANION_PITCH_HEDGE_MODEL: z.string().default("google/gemini-3.5-flash-lite"),
+  COMPANION_PITCH_HEDGE_MS: z.coerce.number().int().min(500).max(20_000).default(5_000),
+  /**
+   * Before placing, a decision model (jev, Luna when unsure) asks per card on the board «is this the
+   * same talk?»: a repeated pitch gets "ya está en la grilla" instead of a second card. ~0.5 s,
+   * overlapped with the name question when there is one.
+   */
+  COMPANION_PITCH_DEDUPE: z.enum(["on", "off"]).default("on"),
   /** Seconds of silence after speech that end a pitch on their own, and the hard cap. */
   COMPANION_PITCH_SILENCE_S: z.coerce.number().min(3).max(60).default(10),
-  COMPANION_PITCH_MAX_S: z.coerce.number().min(20).max(300).default(120),
+  // The board's own watchdog gives a pitch run 180 s (recording + thinking): keep the cap well under it.
+  COMPANION_PITCH_MAX_S: z.coerce.number().min(20).max(150).default(120),
   /** RMS a 20 ms mic frame must exceed (three in a row) to count as speech. */
   // ponytail: the knob's mic has AGC; calibrate on the device if the ring never lights, or lights on room noise.
   COMPANION_PITCH_VAD_RMS: z.coerce.number().min(0.001).max(0.2).default(0.012),
@@ -112,7 +136,8 @@ const EnvSchema = z.object({
   COMPANION_DEVICES: z.string().default(""),
   COMPANION_WEB_BRIDGE: boolFromEnv,
   COMPANION_WEB_PORT: z.coerce.number().int().min(1).max(65535).default(3312),
-  COMPANION_WEB_ORIGINS: z.string().default("http://127.0.0.1:3311,http://localhost:3311"),
+  /** Origins whose pages may open a voice session (the site's /admin/companion, the talk console). */
+  COMPANION_WEB_ORIGINS: z.string().default("http://localhost:3000,http://127.0.0.1:3000"),
   COMPANION_BRIDGE_SECRET: z.string().optional(),
   COMPANION_BRIDGE_PUBLIC_URL: z.string().optional(),
 
@@ -133,7 +158,19 @@ const EnvSchema = z.object({
   COMPANION_PROPOSAL_COOLDOWN_S: z.coerce.number().int().nonnegative().default(60),
   /** Directory for opt-in JSONL transcripts; unset = no transcript persisted. */
   // --- Audio routing defaults (a board's mic_source / audio_output selects win) ---
-  COMPANION_MIC_SOURCE: z.enum(["device", "laptop"]).default("device"),
+  /** `host` = an input of the Mac running the bridge (COMPANION_HOST_MIC), captured with ffmpeg; macOS only, not in Docker. */
+  COMPANION_MIC_SOURCE: z.enum(["device", "laptop", "host"]).default("device"),
+  /** The Mac input for the `host` route, by name or part of it ("DJI"); unset = the built-in mic. */
+  COMPANION_HOST_MIC: z.string().trim().min(1).optional(),
+  /** Side of a stereo input that feeds Owy (a DJI receiver in stereo mode: one transmitter per side). */
+  COMPANION_HOST_MIC_CHANNEL: z.enum(["L", "R", "mix"]).default("mix"),
+  /**
+   * Gain on the Mac's input. A DJI receiver has no AGC and arrives far quieter than a board's mic
+   * (its noise-cancelled silence stays near zero): +12 dB puts a voice over COMPANION_PITCH_VAD_RMS.
+   */
+  // ponytail: one gain for whichever Mac input is chosen; per-input gains if the venue mixes mics.
+  COMPANION_HOST_MIC_GAIN_DB: z.coerce.number().min(-12).max(30).default(0),
+  COMPANION_FFMPEG: z.string().default("ffmpeg"),
   COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
   /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */

@@ -358,7 +358,13 @@ try {
   assert(voice.includes("script.stop: play_companion_feedback") && voice.includes("script.stop: play_soft_cue"));
   assert((voice.match(/!id\(play_companion_feedback\)\.is_running\(\)/g) ?? []).length >= 4, "Voice entry and re-arm respect exclusive feedback ownership");
   // Modo pitch: the second tap sends (never cancels), the run has no device end-of-speech and tags itself.
-  assert(voice.includes("- id: tap_pitch") && voice.includes("- id: stop_pitch") && voice.includes("- id: pitch_prompt_guard"));
+  assert(voice.includes("- id: tap_pitch") && voice.includes("- id: stop_pitch") && voice.includes("- id: pitch_answer"));
+  // Owy asked for what the pitch missed: pitch_prompt opens the mic by itself once the question has played.
+  const answer = voice.slice(voice.indexOf("- id: pitch_answer"), voice.indexOf("- id: start_listening"));
+  assert(answer.includes("id(va_speaker).is_stopped()") && answer.includes("script.execute: start_listening"), "The answer waits for the question, then listens");
+  assert(controls.includes("script.execute: pitch_answer") && voice.includes("\"pitch-answer\" : \"pitch\""), "pitch_prompt opens the answer run, tagged pitch-answer");
+  assert(controls.includes("id: pitch_voice") && !controls.includes("id: pitch_reacts"), "One select for what Owy says back");
+  assert(controls.match(/id: mic_source[\s\S]*?- mac\n/), "The mic can be the Mac running the bridge");
   const tapPitch = voice.slice(voice.indexOf("- id: tap_pitch"), voice.indexOf("- id: stop_pitch"));
   assert(!tapPitch.includes("cancel_turn"), "A pitch tap never cancels: the second tap sends");
   assert(voice.includes("silence_detection: false") && voice.includes("wake_word: !lambda"), "A pitch run keeps the mic open and tags itself for the bridge");
