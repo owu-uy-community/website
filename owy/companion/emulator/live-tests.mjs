@@ -301,11 +301,18 @@ test("a pitch run never commits on its own: the person (or the bridge) ends it",
   // The person ends it.
   voice.finishTurn();
   assert.deepEqual(sent.at(-1), { type: "commit", run: 1 });
-  // Cues and the name invitation reach the virtual device as screen commands.
+  // Cues and Owy's question reach the virtual device as screen commands.
   voice.receive({ type: "screen", run: 1, command: { kind: "clip", id: "pitch-listen" } });
   voice.receive({ type: "screen", run: 1, command: { kind: "pitchPrompt", prompt: "name" } });
   assert.deepEqual(commands.at(-2), { kind: "clip", id: "pitch-listen" });
   assert.deepEqual(commands.at(-1), { kind: "pitchPrompt", prompt: "name" });
+  // The question is over (nothing left to play): the mic opens for the answer by itself, like the knob.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(sent.at(-1), { type: "start", mode: "pitch" });
+  sent.length = 0;
+  voice.receive({ type: "screen", run: 2, command: { kind: "pitchPrompt", prompt: "idle" } });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(sent.length, 0);
   voice.stop();
   assert.equal(voice.status.pitch, false);
 });

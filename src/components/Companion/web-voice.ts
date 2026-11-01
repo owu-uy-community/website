@@ -48,7 +48,7 @@ export type DeviceCommand =
   | { kind: "bridgeEvent"; event: string; run: number }
   /** A pre-rendered cue to play (public/companion-audio/clips/<id>.wav); the browser plays it itself. */
   | { kind: "clip"; id: string }
-  /** Modo pitch: "name" invites a tap to say one's name, "idle" clears it. */
+  /** Modo pitch: Owy asked for the "topic" or the "name" — the mic opens for the answer ("idle" clears it). */
   | { kind: "pitchPrompt"; prompt: string };
 type Ticket = { token: string; url: string; model: string; expiresAt: number; protocol: number };
 /**
@@ -133,6 +133,8 @@ export class WebVoice {
   private deviceBlocked = false;
   private attachTo: string | null = null;
   private pitch = false;
+  /** Owy asked a pitch question: open the mic for the answer once the question has played (the knob does it by itself). */
+  private answerNext = false;
   private mic: MicOptions = {};
   private channel: ListenChannel = "L";
   private sessionTimer?: ReturnType<typeof setTimeout>;
@@ -422,6 +424,7 @@ export class WebVoice {
     // Attached: the virtual Owy's privacy, power and cancel are not the physical device's.
     if (this.attachTo) return;
     this.pitch = false;
+    this.answerNext = false;
     this.status.pitch = false;
     ++this.captureEpoch;
     this.resuming = false;
@@ -562,6 +565,14 @@ export class WebVoice {
       this.changed({ ...this.status });
     } else if (message.type === "screen") {
       if (message.command?.kind === "clip") void this.playClip(String(message.command.id));
+      if (message.command?.kind === "pitchPrompt" && !this.attachTo) {
+        this.answerNext = message.command.prompt === "topic" || message.command.prompt === "name";
+        // The question is over (Callado, or its audio already played): answer now; else afterPlayback does.
+        if (this.answerNext && !this.queue.size) {
+          this.answerNext = false;
+          void this.resume("pitch");
+        }
+      }
       this.deviceCommand(message.command);
     } else if (message.type === "volume") {
       this.setVolume(message.value);
@@ -647,6 +658,11 @@ export class WebVoice {
     const pitched = this.pitch;
     this.pitch = false;
     this.status.pitch = false;
+    if (this.answerNext && !this.attachTo) {
+      this.answerNext = false;
+      void this.resume("pitch");
+      return;
+    }
     if (this.attachTo) {
       // The device decides whether a follow-up window opens; it will send `accepted` again.
       this.gate(false);
@@ -698,6 +714,7 @@ export class WebVoice {
     this.run = 0;
     this.attachTo = null;
     this.pitch = false;
+    this.answerNext = false;
     this.status.attached = undefined;
     this.status.pitch = false;
     ++this.captureEpoch;
