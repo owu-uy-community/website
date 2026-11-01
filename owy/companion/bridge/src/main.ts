@@ -162,7 +162,7 @@ async function main(): Promise<void> {
     : null;
   if (!channel) logger.warn("sin OWY_API_KEY: el panel del sitio no llega a este bridge (corre con sus ajustes guardados y el env)");
 
-  const settings = await startSettingsServer({ control, config, logger, sessions, hostMic: shared.hostMic }).catch((error) => {
+  const settings = await startSettingsServer({ control, config, logger }).catch((error) => {
     logger.warn(`settings UI not started: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   });

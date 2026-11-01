@@ -615,7 +615,7 @@ cejas y cachetes cambian; los labios siguen haciendo lip-sync.
 
 ## Modo pitch (mercado de ideas)
 
-En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, la tarjeta «Owy físico» de `/admin/companion`, o la página de respaldo del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación. El flujo de una persona, del primer toque a la card, es `bridge/src/pitch-flow.ts`:
+En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, `/admin/companion` → Control, o la página de respaldo del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación. El flujo de una persona, del primer toque a la card, es `bridge/src/pitch-flow.ts`:
 
 1. **Toque** → vibra, el aro parpadea como un REC y (salvo en *Callado*) Owy dice «Te escucho. Contame tu charla y tocá de nuevo cuando termines» (clip pregrabado). La grabación arranca cuando termina el aviso.
 2. La persona cuenta la charla (20–60 s, con pausas). **El audio no pasa por el modelo de voz**: su detección de fin de habla cortaría el pitch en la primera pausa. El bridge lo graba (`PitchRecorder`, `bridge/src/pitch.ts`) del micrófono que tenga elegido ese dispositivo (el del knob, el de la Mac o un receptor DJI: ver *Micrófono de la Mac*) y detecta voz con energía (`COMPANION_PITCH_VAD_RMS`).

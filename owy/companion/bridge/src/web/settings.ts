@@ -14,20 +14,15 @@
  *   GET  /api/state     {status, rows}
  *   POST /api/set       {target, key, value}
  *   POST /api/command   a CompanionCommand (tone, probe-mic, hush, say…)
- *   *    /rpc/…         the older typed router, while the site still has a caller for it
  */
 import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { RPCHandler } from "@orpc/server/node";
 import type { BridgeConfig } from "../config";
 import type { ControlPlane } from "../control/plane";
 import type { Logger } from "../log";
 import { CompanionCommandSchema } from "./contract";
 import { SETTING_GROUPS, SETTINGS } from "./registry";
-import { bridgeRouter, type BridgeRpcContext, type RoutableHostMic, type RoutableSession } from "./rpc";
 import { matchesSecret } from "./tickets";
-
-export { settingsSnapshot, type SettingsSnapshot } from "./rpc";
 
 // The page's script avoids backticks and `${`: it lives inside this template literal.
 const page = () => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Owy bridge</title>
@@ -74,18 +69,12 @@ export interface LocalPageOptions {
   control: ControlPlane;
   config: BridgeConfig;
   logger: Logger;
-  /** The older router's callers (the site's loopback proxy) until the site drops it. */
-  sessions: readonly RoutableSession[];
-  hostMic?: RoutableHostMic;
 }
 
-export function startSettingsServer({ control, config, logger, sessions, hostMic }: LocalPageOptions): Promise<{
+export function startSettingsServer({ control, config, logger }: LocalPageOptions): Promise<{
   url: string;
-  rpcUrl: string;
   close: () => Promise<void>;
 }> {
-  const context: BridgeRpcContext = { sessions, hostMic, log: (message) => logger.info(message) };
-  const rpc = new RPCHandler(bridgeRouter);
   const password = config.COMPANION_BRIDGE_SECRET ?? randomBytes(9).toString("base64url");
   if (!config.COMPANION_BRIDGE_SECRET) logger.info(`página local: usuario «owy», clave ${password} (COMPANION_BRIDGE_SECRET la fija)`);
   const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -118,9 +107,6 @@ export function startSettingsServer({ control, config, logger, sessions, hostMic
       if (!hosts.has(req.headers.host ?? "")) return json(res, 421, { error: "host not allowed" });
       if (req.method !== "GET" && req.method !== "HEAD" && req.headers.origin && !origins.has(req.headers.origin))
         return json(res, 403, { error: "cross-origin writes are not allowed" });
-      // ponytail: the older router stays open to loopback callers (the site on this Mac) until the site's proxy goes.
-      const { matched } = await rpc.handle(req, res, { prefix: "/rpc", context });
-      if (matched) return;
       if (!authorized(req)) {
         res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Owy bridge", charset="UTF-8"' }).end();
         return;
@@ -150,7 +136,7 @@ export function startSettingsServer({ control, config, logger, sessions, hostMic
     server.once("error", reject);
     server.listen(port, config.COMPANION_BIND_HOST, () => {
       const url = `http://127.0.0.1:${port}/`;
-      resolve({ url, rpcUrl: `${url}rpc`, close: () => new Promise((done) => server.close(() => done())) });
+      resolve({ url, close: () => new Promise((done) => server.close(() => done())) });
     });
   });
 }

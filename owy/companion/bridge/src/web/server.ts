@@ -6,8 +6,18 @@ import { DeviceSession, type SharedRuntime } from "../index";
 import type { Logger } from "../log";
 import { createStageMirror } from "../stage";
 import { BrowserDevice } from "./device";
-import { settingsSnapshot, TalkMessageSchema, type TalkReply } from "./rpc";
+import { TalkMessageSchema, type DeviceRouting, type TalkReply } from "./contract";
 import { matchesSecret, toolDenial, WebTickets, WEB_SESSION_MS, type WebGrant } from "./tickets";
+
+/** What the talk console shows for its device: routes, modo pitch, the voice. */
+const routingOf = (session: DeviceSession): DeviceRouting => ({
+  id: session.id,
+  connected: session.connected,
+  ...session.audioRouting(),
+  peer: session.hasPeer,
+  pitch: session.pitchSettings(),
+  voice: session.voiceStatus(),
+});
 
 export type WebBridgeOptions = { port: number; host?: string; origins: string[]; secret?: string; publicUrl?: string };
 /** A browser attached as a device's laptop audio stays for the whole open space, not five minutes. */
@@ -175,8 +185,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
     ws.on("error", () => ws.terminate());
     let attached: DeviceSession | null = null;
     const reply = (message: TalkReply) => send(message);
-    const status = (target: DeviceSession) =>
-      reply({ type: "status", device: settingsSnapshot([target]).devices[0], talk: target.talkContext });
+    const status = (target: DeviceSession) => reply({ type: "status", device: routingOf(target), talk: target.talkContext });
     /**
      * The talk console («Owy, en vivo»): commands for the device this browser is attached to.
      * A bad or failed command is answered with a notice; it never closes the socket.

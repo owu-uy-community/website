@@ -1,7 +1,6 @@
 /**
- * Wire contract of the bridge's control API — zod only, no runtime deps on the
- * bridge. The Next.js site imports these values (schemas) and the router
- * *type* from `./rpc`, so its bundle never carries the handlers.
+ * Wire contract between the bridge and the site — zod only, no runtime deps on
+ * the bridge, so the Next.js site can import it.
  */
 import { z } from "zod";
 
@@ -10,13 +9,6 @@ export type AudioRoute = z.infer<typeof AudioRouteSchema>;
 /** A turn's microphone: the device, the attached browser, or `host` — an input of the Mac running the bridge. */
 export const MicRouteSchema = z.enum(["device", "laptop", "host"]);
 export type MicRoute = z.infer<typeof MicRouteSchema>;
-
-export const SetAudioRoutingSchema = z.object({
-  deviceId: z.string().min(1).max(64),
-  mic: MicRouteSchema.optional(),
-  output: AudioRouteSchema.optional(),
-});
-export type SetAudioRoutingInput = z.infer<typeof SetAudioRoutingSchema>;
 
 /** What Owy says around a pitch: nothing (the card on screen), where it landed, or that plus a comment on the talk. */
 export const PitchVoiceSchema = z.enum(["silent", "confirm", "react"]);
@@ -28,13 +20,6 @@ export const PitchSettingsSchema = z.object({
   source: z.enum(["device", "override", "env"]),
 });
 export type PitchSettings = z.infer<typeof PitchSettingsSchema>;
-
-export const SetPitchSchema = z.object({
-  deviceId: z.string().min(1).max(64),
-  mode: z.boolean().optional(),
-  voice: PitchVoiceSchema.optional(),
-});
-export type SetPitchInput = z.infer<typeof SetPitchSchema>;
 
 export const HostMicChannelSchema = z.enum(["L", "R", "mix"]);
 
@@ -50,12 +35,6 @@ export const HostMicSchema = z.object({
 });
 export type HostMicSnapshot = z.infer<typeof HostMicSchema>;
 
-export const SetHostMicSchema = z.object({
-  /** Name (or part of it, "DJI"); null = the built-in mic. */
-  name: z.string().trim().max(120).nullable().optional(),
-  channel: HostMicChannelSchema.optional(),
-});
-export type SetHostMicInput = z.infer<typeof SetHostMicSchema>;
 
 /** How a turn was answered: realtime · fallback (backup realtime model) · cascade · offline · pitch. */
 export const TurnPathSchema = z.enum(["realtime", "fallback", "cascade", "offline", "pitch"]);
@@ -97,12 +76,6 @@ export const DeviceRoutingSchema = z.object({
 
 export type DeviceRouting = z.infer<typeof DeviceRoutingSchema>;
 
-export const SettingsSnapshotSchema = z.object({
-  devices: z.array(DeviceRoutingSchema),
-  /** Absent from bridges older than the `host` route. */
-  hostMic: HostMicSchema.optional(),
-});
-export type SettingsSnapshot = z.infer<typeof SettingsSnapshotSchema>;
 
 // ---------------------------------------------------------------------------
 // The talk console («Owy, en vivo»): what an attached browser may send on the
