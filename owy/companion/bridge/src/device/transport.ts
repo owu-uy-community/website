@@ -10,8 +10,11 @@ import type { FaceState, ScreenCard } from "../realtime/tools";
  */
 export interface AudioPeer {
   readonly attachedTo: string | null;
-  /** Start of a mirrored turn: bumps the run, emits `accepted`, arms mic frames for this run. */
-  mirrorAccept(): void;
+  /**
+   * Start of a mirrored turn: bumps the run, emits `accepted`, arms mic frames for this run.
+   * `own`: a turn Owy starts himself (a talk's line or text question): nobody speaks, the browser skips its listening cue.
+   */
+  mirrorAccept(own?: boolean): void;
   mirrorDecline(): void;
   sendEvent(eventType: VoiceAssistantEvent, data?: VoiceAssistantEventData[]): void;
   sendAudio(audio: Buffer, end?: boolean): void;

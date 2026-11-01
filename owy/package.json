@@ -30,7 +30,8 @@
     "companion:driver-test": "node companion/firmware/tests/speaker-startup.mjs && node companion/firmware/tests/voice-buffer.mjs",
     "companion:interaction-test": "node companion/firmware/tests/companion.mjs",
     "companion:pitch": "tsx companion/bridge/src/cli/pitch.ts",
-    "companion:clips": "tsx companion/bridge/src/cli/clips.ts"
+    "companion:clips": "tsx companion/bridge/src/cli/clips.ts",
+    "companion:talk-clips": "tsx companion/bridge/src/cli/clips.ts --talk"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.109",

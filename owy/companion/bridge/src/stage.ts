@@ -20,6 +20,8 @@ export interface StageMirror {
   transcript(who: "input" | "output", text: string): void;
   /** The feeling the device shows for the sentence being spoken. */
   expression(name: string, strength: number): void;
+  /** The tool Owy is running while thinking (`null` when it is done); any face change clears it. */
+  tool(name: string | null): void;
   /** Tees the transport's explicit face changes (happy after a card, error…) and the cards it shows into the mirror. */
   wrap<T extends DeviceTransport>(transport: T): T;
 }
@@ -36,7 +38,7 @@ export interface StageMirrorOptions {
 export function createStageMirror({ api, logger, source, clock = systemClock }: StageMirrorOptions): StageMirror {
   if (!api) {
     logger.info("stage mirror off (OWY_API_KEY not set)");
-    return { face() {}, transcript() {}, expression() {}, wrap: (transport) => transport };
+    return { face() {}, transcript() {}, expression() {}, tool() {}, wrap: (transport) => transport };
   }
 
   let state: StageFaceState = "idle";
@@ -45,6 +47,7 @@ export function createStageMirror({ api, logger, source, clock = systemClock }: 
   let dirty = false;
   let timer: ReturnType<RuntimeClock["setTimeout"]> | null = null;
   let lastErrorAt = -Infinity;
+  let running: string | null = null;
 
   const post = (extra: Omit<StageFaceInput, "state" | "source"> = {}) => {
     api.owyStage.setFace({ state, ...extra, source }).catch((error: unknown) => {
@@ -67,6 +70,7 @@ export function createStageMirror({ api, logger, source, clock = systemClock }: 
     if (next === state) return;
     flush();
     state = next;
+    running = null;
     // A new listening window is a new turn: the wall starts a fresh caption.
     if (next === "listening") {
       who = null;
@@ -87,6 +91,12 @@ export function createStageMirror({ api, logger, source, clock = systemClock }: 
   };
 
   const expression = (name: string, strength: number) => post({ expression: { name, strength } });
+
+  const tool = (name: string | null) => {
+    if (name === running) return;
+    running = name;
+    post(name ? { tool: name.slice(0, 60) } : {});
+  };
 
   const wrap = <T extends DeviceTransport>(transport: T): T => {
     const setFace = transport.setFace.bind(transport);
@@ -112,5 +122,5 @@ export function createStageMirror({ api, logger, source, clock = systemClock }: 
     return transport;
   };
 
-  return { face, transcript, expression, wrap };
+  return { face, transcript, expression, tool, wrap };
 }

@@ -6,11 +6,15 @@ import { DeviceSession, type SharedRuntime } from "../index";
 import type { Logger } from "../log";
 import { createStageMirror } from "../stage";
 import { BrowserDevice } from "./device";
+import { settingsSnapshot, TalkMessageSchema, type TalkReply } from "./rpc";
 import { matchesSecret, toolDenial, WebTickets, WEB_SESSION_MS, type WebGrant } from "./tickets";
 
 export type WebBridgeOptions = { port: number; host?: string; origins: string[]; secret?: string; publicUrl?: string };
 /** A browser attached as a device's laptop audio stays for the whole open space, not five minutes. */
 export const ATTACHED_SESSION_MS = 6 * 60 * 60_000;
+/** Talk-console commands per minute (a `status` poll every 3 s is 20); past it they get a notice, not a close. */
+export const TALK_BUDGET_PER_MINUTE = 120;
+const TALK_TYPES = new Set(["say", "ask", "hush", "talk", "route", "pitch", "status"]);
 const silent: Logger = {
   debug() {},
   info() {},
@@ -34,7 +38,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
   const secret = options.secret || randomBytes(32).toString("base64url");
   if (secret.length < 32) throw Error("COMPANION_BRIDGE_SECRET must contain at least 32 characters");
   const origins = new Set(options.origins.map((v) => new URL(v).origin));
-  const tickets = new WebTickets();
+  const tickets = new WebTickets(secret);
   const active = new Set<string>();
   const clients = new Set<WebSocket>();
   const attempts = new Map<string, number[]>();
@@ -137,7 +141,8 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
       alive = true,
       controls = 0,
       pcmBytes = 0,
-      starts = 0;
+      starts = 0,
+      talks = 0;
     const send = (message: object | Buffer) => {
       if (closed || ws.readyState !== WebSocket.OPEN) return;
       if (ws.bufferedAmount > 128 * 1024) {
@@ -154,6 +159,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
     }, 1000);
     const turnRate = setInterval(() => {
       starts = 0;
+      talks = 0;
     }, 60_000);
     const heartbeat = setInterval(() => {
       if (!alive) {
@@ -168,6 +174,47 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
     });
     ws.on("error", () => ws.terminate());
     let attached: DeviceSession | null = null;
+    const reply = (message: TalkReply) => send(message);
+    const status = (target: DeviceSession) =>
+      reply({ type: "status", device: settingsSnapshot([target]).devices[0], talk: target.talkContext });
+    /**
+     * The talk console («Owy, en vivo»): commands for the device this browser is attached to.
+     * A bad or failed command is answered with a notice; it never closes the socket.
+     */
+    const talk = async (raw: unknown) => {
+      const target = attached;
+      if (!target) return reply({ type: "notice", level: "error", message: "Conectá este navegador a un dispositivo primero." });
+      if (++talks > TALK_BUDGET_PER_MINUTE)
+        return reply({ type: "notice", level: "warn", message: "Demasiados comandos por minuto; esperá un momento." });
+      const parsed = TalkMessageSchema.safeParse(raw);
+      if (!parsed.success) return reply({ type: "notice", level: "error", message: "Comando de charla inválido." });
+      const m = parsed.data;
+      try {
+        switch (m.type) {
+          case "say":
+            return await target.say(m.text, m.clip);
+          case "ask":
+            return await target.ask(m.text, m.asker);
+          case "hush":
+            return target.hush();
+          case "talk":
+            target.setTalk(m.talk);
+            return status(target);
+          case "route":
+            if (m.mic) target.setAudioRouting("mic", m.mic);
+            if (m.output) target.setAudioRouting("output", m.output);
+            // A device select confirms over its native API: answer once it has had a moment.
+            return void setTimeout(() => status(target), 400);
+          case "pitch":
+            target.setPitchSetting("mode", m.mode);
+            return void setTimeout(() => status(target), 400);
+          case "status":
+            return status(target);
+        }
+      } catch (error) {
+        reply({ type: "notice", level: "error", message: error instanceof Error ? error.message : String(error) });
+      }
+    };
     const detach = () => {
       if (!attached || !device) return;
       attached.detachPeer(device);
@@ -195,9 +242,12 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
           device?.microphone(bytes);
           return;
         }
-        if (++controls > 100 || bytes.length > 2048) throw Error("Too many controls");
+        // An attached console may send a talk line (up to 600 characters, accents included).
+        if (bytes.length > (attached ? 4096 : 2048)) throw Error("Too many controls");
         const m = JSON.parse(bytes.toString());
         if (!m || typeof m !== "object") throw Error("Invalid command");
+        if (initialized && TALK_TYPES.has(m.type)) return void talk(m);
+        if (++controls > 100) throw Error("Too many controls");
         if (!grant) {
           if (m.type !== "auth" || m.protocol !== 1) throw Error("Authentication required");
           grant = tickets.consume(m.token, req.headers.origin!);
@@ -231,7 +281,10 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
                 device?.emit({ type: "transcript", who, text: text.slice(0, 2000) });
                 mirror.transcript(who, text);
               },
-              onTool: (event) => device?.emit({ type: "tool", ...event }),
+              onTool: (event) => {
+                device?.emit({ type: "tool", ...event });
+                mirror.tool(event.status === "running" ? event.name : null);
+              },
             }
           );
           await session.start();

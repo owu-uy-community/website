@@ -54,6 +54,7 @@ async function main(): Promise<void> {
       onFace: mirror.face,
       onTranscript: mirror.transcript,
       onExpression: mirror.expression,
+      onTool: (event) => mirror.tool(event.status === "running" ? event.name : null),
     });
   });
   for (const session of sessions) shared.sessions.set(session.id, session);

@@ -579,6 +579,8 @@ export interface StageFaceInput {
   /** A talk that just landed on the board, as the companion announces it. */
   card?: { title: string; speaker?: string; room?: string; timeSlot?: string; reasoning?: string };
   source?: string;
+  /** The tool Owy is running while thinking (the talk's live diagram lights its box). */
+  tool?: string;
 }
 
 // ---------------------------------------------------------------------------

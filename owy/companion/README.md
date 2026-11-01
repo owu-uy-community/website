@@ -613,3 +613,28 @@ Nada se persiste del audio; las llamadas al gateway van con `zeroDataRetention`.
 - `pnpm companion:clips` regenera los avisos pregrabados (una vez por cambio de voz o de texto); `pnpm companion:pitch grabacion.wav [--name]` prueba el extractor con un WAV.
 - Contrato con el firmware: `switch.pitch_mode`, `switch.pitch_reacts`, `binary_sensor.pitch_submit` (pulso en el segundo toque), acción `pitch_prompt(kind)` (`name` | `idle`), y el run del pipeline arranca con `wake_word: "pitch"` (`"pitch-name"` en el paso del nombre). En el lab web: `start { mode: "pitch" }` y `commit` como segundo toque.
 - Firmware (`voice.yaml` / `controls.yaml`): en modo pitch `tap_to_talk` va a `tap_pitch` (grabando → `stop_pitch`; libre → `start_listening` con `pitch_active`), que arranca el run con `silence_detection: false` y `wake_word: "pitch"` (`"pitch-name"` si Owy acaba de preguntar el nombre); el guard local de 9 s no corre y el watchdog del turno pasa a 180 s. Caras `record` (aro REC: el arco azul del mic más el punto de las 6 parpadeando) e `invite` (aro que respira); hints «contá tu charla · tocá al terminar», «armando tu tarjeta...», «¿cómo te llamás? · tocá y decime». En el Knob la háptica sigue a `pitch_state` (`arming` 1, `sent` 10, `invite` 12; `pitch_arm_ms: 320ms` deja morir el buzz antes de abrir el mic) y la card queda en pantalla durante el anuncio. Emulador: fixture «Un pitch en el mercado», toggles «Modo pitch» / «Owy reacciona al pitch» y caras «Grabando» / «Tocá (pitch)» en el lab.
+
+## Charla (Owy, en vivo)
+
+Para la charla del open space Owy co-presenta: la consola `/admin/owy/charla` (en la Mac del lugar) se conecta al bridge como **audio de laptop** del knob (`attach`) y por el mismo socket le manda comandos a ese dispositivo. El knob sigue siendo el gatillo (tap = turno) y su cara; la voz de Owy sale por los parlantes de la Mac.
+
+**Con el sitio en producción.** El sitio en Vercel no llega al bridge de la Mac (loopback), así que no le puede pedir el ticket a `POST /sessions`. En ese caso el sitio firma él mismo un ticket de un solo uso, atado al origen y válido un minuto (`v1.<payload>.<mac>`, HMAC con el secreto compartido) y el bridge lo verifica sin red:
+
+- En Vercel: `COMPANION_BRIDGE_SECRET` (el mismo que el bridge, ≥32 caracteres) y `COMPANION_BRIDGE_PUBLIC_URL=ws://127.0.0.1:3312/voice`, **sin** `COMPANION_BRIDGE_URL` (si está, el sitio sigue pidiendo el ticket al bridge como siempre).
+- En el bridge: el mismo `COMPANION_BRIDGE_SECRET` y `COMPANION_WEB_ORIGINS` con el origen del sitio (`https://www.owu.uy`).
+- Chrome puede pedir permiso de «red local» la primera vez que una página https abre `ws://127.0.0.1`: aceptalo en el ensayo, no arriba del escenario.
+
+Comandos (`TalkMessageSchema` en `bridge/src/web/contract.ts`; sólo con el navegador ya conectado, si no → `notice`):
+
+- `say { text, clip? }`: Owy dice ese texto tal cual, **sin que nadie toque**. Voz en vivo (`[GUION]`); si el modelo no está o no arranca en ~5 s, el clip grabado (`clip`) y si no hay, la voz de la cascada; como último recurso, el texto en pantalla.
+- `ask { text, asker }`: una pregunta en texto (un celular, la consola): el cerebro la responde con sus herramientas y Owy la dice. `asker: "audience"` vale sólo para esa pregunta.
+- `hush`: corta lo que Owy esté diciendo o haciendo (un turno del knob, uno propio, un pitch).
+- `talk { talk: { slide, asker } | null }`: el contexto de la charla para los turnos que siguen, taps del knob incluidos (`null` = fuera de la charla). Con eve viaja en los atributos del turno (`turn_kind: "talk"`, `talk_slide`, `talk_asker`): instrucciones de escenario y sin `propose_talk`. Con el cerebro local va a las instrucciones (se aplica en la próxima sesión realtime).
+- `route { mic?, output? }`, `pitch { mode }`: lo mismo que la UI de ajustes, para ese dispositivo.
+- `status` → `{ type: "status", device, talk }` (la fila de ajustes del dispositivo, con `voice.lastTurn` = camino, primera palabra y total del último turno).
+
+Los turnos propios de Owy (`say`, `ask`) no abren un run en el pipeline del dispositivo (ESPHome sólo reproduce dentro de un run que arranca él): eventos y audio van únicamente al navegador (`accepted` llega con `own: true`, sin cue de escucha), y la cara del knob y de la pantalla sigue al turno con `setFace`. Por eso **necesitan la salida en laptop**; con salida en el dispositivo, `notice` de error. En cambio **no necesitan la placa**: si la perilla se cae del wifi (o nunca prendió), las frases y preguntas de la consola salen igual por la Mac y la cara sigue en la pantalla grande; sin placa nadie mantiene tibia la voz, así que la primera frase espera hasta 4 s a que conecte. Un pitch que se está grabando no se corta: `notice` y nada más. Presupuesto: 120 comandos por minuto por socket (un `status` cada 3 s son 20); pasado eso, `notice` de aviso, el socket sigue.
+
+- `COMPANION_PITCH_EVENT_ID` (id o slug): la grilla donde el modo pitch carga las charlas, si no es `OWY_EVENT_ID` (la grilla de prueba de la demo). Las preguntas al cerebro siguen con el evento de eve.
+- `pnpm companion:talk-clips [--dry-run]` graba con la voz en vivo cada `say` con `clip` del deck (`src/lib/owy-stage/talk/deck.ts`) en `public/companion-audio/clips/` y suma sus duraciones al `manifest.json` (no pisa los avisos del pitch). Necesita la clave del modelo realtime.
+- La pantalla grande recibe, además de la cara, el nombre de la herramienta que corre (`tool` en `owyStage.setFace`; `hablar_con_owy` = el cerebro pensando) para el diagrama en vivo.
