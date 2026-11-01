@@ -581,6 +581,10 @@ export class DeviceSession {
     this.inputTranscript = "";
     this.outputTranscript = "";
     this.discardedResponseId = null;
+    // An earlier turn's line (a talk's script, eve's answer) must never caption or end up in this one.
+    this.eveAnswer = null;
+    this.eveDraft = "";
+    this.currentResponseId = null;
     this.sawAudioThisTurn = false;
     this.micPeak = 0;
     this.micBytes = 0;
