@@ -8,7 +8,7 @@ import { createLogger } from "../log";
  * inputs ffmpeg sees, records a few seconds from one and says how loud it was.
  *
  *   pnpm companion:mic-check                       # the inputs
- *   pnpm companion:mic-check Wireless [--channel L|R|mix] [--seconds 5]   (a DJI receiver is «Wireless Microphone RX»)
+ *   pnpm companion:mic-check Wireless [--channel L|R|mix] [--gain 12] [--seconds 5]   (a DJI receiver is «Wireless Microphone RX»)
  *
  * Silence everywhere = the terminal has no Microphone permission (System
  * Settings → Privacy & Security → Microphone) or the receiver is muted.
@@ -21,10 +21,11 @@ async function main(): Promise<void> {
   };
   const channel = (flag("channel") ?? "mix") as HostMicChannel;
   const seconds = Number(flag("seconds") ?? 5);
+  const gain = flag("gain");
   const name = args[0];
   const config = loadConfig();
   const logger = createLogger("mic", config.COMPANION_LOG_LEVEL);
-  const mic = new HostMic({ logger, ffmpeg: config.COMPANION_FFMPEG, channel });
+  const mic = new HostMic({ logger, ffmpeg: config.COMPANION_FFMPEG, channel, gainDb: Number(gain ?? config.COMPANION_HOST_MIC_GAIN_DB) });
   const inputs = await mic.devices(true);
   if (mic.status().health === "unavailable") throw new Error(mic.status().detail);
   console.log(`Entradas que ve ffmpeg:\n${inputs.map((input) => `  · ${input}`).join("\n") || "  (ninguna)"}`);

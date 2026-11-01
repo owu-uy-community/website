@@ -52,8 +52,10 @@ function runtime() {
       needsWhiteboard: false,
       description: null,
       topics: ["effect"],
+      reaction: null,
+      appropriate: true,
     })),
-    answer: vi.fn(async (_wav: Buffer, _context: unknown) => ({ title: null, speaker: "Ana", description: null })),
+    answer: vi.fn(async (_wav: Buffer, _context: unknown) => ({ title: null, speaker: "Ana", description: null, appropriate: true })),
   };
   const placed = vi.fn(async (input: { title: string; speaker?: string }) => ({
     note: { id: "t1", title: input.title, speaker: input.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" },

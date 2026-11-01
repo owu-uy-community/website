@@ -103,6 +103,23 @@ const EnvSchema = z.object({
   COMPANION_PITCH_MODEL: z.string().default("google/gemini-3.8-flash"),
   /** Gateway model fallbacks for the pitch extractor (comma-separated, audio-capable). */
   COMPANION_PITCH_FALLBACK_MODELS: z.string().default("google/gemini-3.5-flash"),
+  /**
+   * How much the extractor reasons first. Measured on Gemini 3.8 Flash (2026-11-01): the default
+   * (medium) takes 5–7 s per pitch, `low` 3–4 s with the same cards and names; `minimal` is rejected.
+   */
+  COMPANION_PITCH_THINKING: z.enum(["low", "medium", "high"]).default("low"),
+  /**
+   * Tail latency: past COMPANION_PITCH_HEDGE_MS without an answer (or on a failure) this faster
+   * model is asked too and the first answer wins (flash-lite: ~1.7 s, but worse at names). Empty = off.
+   */
+  COMPANION_PITCH_HEDGE_MODEL: z.string().default("google/gemini-3.5-flash-lite"),
+  COMPANION_PITCH_HEDGE_MS: z.coerce.number().int().min(500).max(20_000).default(5_000),
+  /**
+   * Before placing, a decision model (jev, Luna when unsure) asks per card on the board «is this the
+   * same talk?»: a repeated pitch gets "ya está en la grilla" instead of a second card. ~0.5 s,
+   * overlapped with the name question when there is one.
+   */
+  COMPANION_PITCH_DEDUPE: z.enum(["on", "off"]).default("on"),
   /** Seconds of silence after speech that end a pitch on their own, and the hard cap. */
   COMPANION_PITCH_SILENCE_S: z.coerce.number().min(3).max(60).default(10),
   // The board's own watchdog gives a pitch run 180 s (recording + thinking): keep the cap well under it.
@@ -147,6 +164,12 @@ const EnvSchema = z.object({
   COMPANION_HOST_MIC: z.string().trim().min(1).optional(),
   /** Side of a stereo input that feeds Owy (a DJI receiver in stereo mode: one transmitter per side). */
   COMPANION_HOST_MIC_CHANNEL: z.enum(["L", "R", "mix"]).default("mix"),
+  /**
+   * Gain on the Mac's input. A DJI receiver has no AGC and arrives far quieter than a board's mic
+   * (its noise-cancelled silence stays near zero): +12 dB puts a voice over COMPANION_PITCH_VAD_RMS.
+   */
+  // ponytail: one gain for whichever Mac input is chosen; per-input gains if the venue mixes mics.
+  COMPANION_HOST_MIC_GAIN_DB: z.coerce.number().min(-12).max(30).default(0),
   COMPANION_FFMPEG: z.string().default("ffmpeg"),
   COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),

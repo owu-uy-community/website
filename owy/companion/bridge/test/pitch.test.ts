@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fromWav } from "../src/audio/pcm";
 import type { RuntimeClock } from "../src/clock";
-import { PITCH_CLIPS, PITCH_LIMITS, PITCH_LINES, PitchRecorder, announcementText, isPitchRun } from "../src/pitch";
+import { PITCH_CLIPS, PITCH_LIMITS, PITCH_LINES, PitchRecorder, announcementText, hedged, isPitchRun } from "../src/pitch";
 
 /** Manual clock: timers fire only when the test advances time. */
 function fakeClock() {
@@ -145,5 +145,37 @@ describe("the words", () => {
     expect(isPitchRun({ wakeWordPhrase: "pitch-answer" })).toBe(true);
     expect(isPitchRun({ wakeWordPhrase: "okay_nabu" })).toBe(false);
     expect(isPitchRun({})).toBe(false);
+  });
+});
+
+describe("the hedged request", () => {
+  const later = <T>(ms: number, value: T, fail = false) => (signal: AbortSignal) =>
+    new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => (fail ? reject(new Error(String(value))) : resolve(value)), ms);
+      signal.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(new Error("aborted"));
+      });
+    });
+  const signal = () => new AbortController().signal;
+
+  it("the main model answering in time wins, and the faster one is never asked", async () => {
+    const hedge = vi.fn(later(10, "lite"));
+    expect(await hedged(later(20, "flash"), hedge, 100, signal())).toEqual({ value: "flash", by: "primary" });
+    expect(hedge).not.toHaveBeenCalled();
+  });
+
+  it("a slow main model is raced by the faster one; the first answer wins and the other is dropped", async () => {
+    const why: string[] = [];
+    const result = await hedged(later(300, "flash"), later(20, "lite"), 50, signal(), (w) => why.push(w));
+    expect(result).toEqual({ value: "lite", by: "hedge" });
+    expect(why).toEqual(["slow"]);
+  });
+
+  it("a failing main model asks the faster one at once; both failing throws the main model's error", async () => {
+    const started = Date.now();
+    expect(await hedged(later(10, "down", true), later(10, "lite"), 5_000, signal())).toEqual({ value: "lite", by: "hedge" });
+    expect(Date.now() - started).toBeLessThan(1_000);
+    await expect(hedged(later(10, "main down", true), later(10, "lite down", true), 5_000, signal())).rejects.toThrow("main down");
   });
 });

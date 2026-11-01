@@ -3,6 +3,7 @@ import {
   PITCH_LINES,
   QUESTION,
   announcementText,
+  duplicateText,
   type PitchAnswer,
   type PitchCard,
   type PitchExtractor,
@@ -37,6 +38,10 @@ export interface PitchDraft {
   needsTV: boolean;
   needsWhiteboard: boolean;
   topics: string[];
+  /** «Confirma y comenta»: Owy's sentence about the talk, from the same extraction. */
+  reaction: string | null;
+  /** Fit for the public board (the pitch and every answer); false turns it away. */
+  appropriate: boolean;
   /** Each field is asked once. */
   asked: PitchField[];
 }
@@ -56,14 +61,20 @@ export function draftFromCard(card: PitchCard): PitchDraft | null {
     needsTV: card.needsTV,
     needsWhiteboard: card.needsWhiteboard,
     topics: card.topics,
+    reaction: clean(card.reaction),
+    appropriate: card.appropriate,
     asked: [],
   };
 }
 
-export type PitchStep = { ask: PitchField } | { place: true } | { reject: "unclear" };
+export type PitchStep = { ask: PitchField } | { place: true } | { reject: "unclear" | "declined" };
 
-/** The topic is required (no title, no card); the name is wanted. Each is asked at most once. */
+/**
+ * Not fit for the public board: turned away, nothing asked. The topic is required (no title, no
+ * card); the name is wanted. Each is asked at most once.
+ */
 export function nextStep(draft: PitchDraft, canAsk: boolean): PitchStep {
+  if (!draft.appropriate) return { reject: "declined" };
   if (!draft.title) return canAsk && !draft.asked.includes("topic") ? { ask: "topic" } : { reject: "unclear" };
   if (!draft.speaker && canAsk && !draft.asked.includes("name")) return { ask: "name" };
   return { place: true };
@@ -77,6 +88,7 @@ export function nextStep(draft: PitchDraft, canAsk: boolean): PitchStep {
 export function mergeAnswer(draft: PitchDraft, field: PitchField, answer: PitchAnswer | null): PitchDraft {
   const next: PitchDraft = { ...draft, asked: [...draft.asked, field] };
   if (!answer) return next;
+  next.appropriate = draft.appropriate && answer.appropriate;
   if (field === "topic") {
     next.title ??= clean(answer.title);
     next.description ??= clean(answer.description);
@@ -115,9 +127,9 @@ export interface PitchPort<R extends PitchRecording = PitchRecording> {
   /** The board opens its mic for this answer, or stops inviting one ("idle"). */
   prompt(field: PitchField | "idle"): void;
   place(draft: CompleteDraft, signal: AbortSignal): Promise<Placement>;
+  /** The card already on the board that is this same talk (a decision model, ~0.5 s), or null. */
+  findDuplicate(draft: CompleteDraft, signal: AbortSignal): Promise<ScreenCard | null>;
   showCard(card: ScreenCard): void;
-  /** One warm sentence about the talk ("" when there is none in time). */
-  react(draft: CompleteDraft, signal: AbortSignal): Promise<string>;
   /** Keeps a pitch that could not be placed, for the staff. */
   saveFailure(reason: string, draft: PitchDraft | null, wav: Buffer): void;
 }
@@ -133,6 +145,8 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
   /** Interrupted once it had a recording: no more questions or words, but a card with a title is still placed. */
   private detached = false;
   private waiting: { field: PitchField; resolve: (run: R | null) => void } | null = null;
+  /** Started as soon as the talk has a title, so it runs while Owy asks for the name. */
+  private duplicate: Promise<ScreenCard | null> | null = null;
 
   constructor(private readonly port: PitchPort<R>) {}
 
@@ -192,17 +206,22 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
     const draft = draftFromCard(card);
     if (!draft) return this.tell(run, "empty");
     this.draft = draft;
+    this.checkDuplicate();
     if (this.live(run)) this.port.heard(first, draft.transcript);
 
     for (;;) {
       const step = nextStep(this.draft, !this.detached && this.port.canAsk());
-      if ("reject" in step) return this.tell(run, "unclear");
+      if ("reject" in step) {
+        if (step.reject === "declined") this.port.log.warn(`pitch: no se carga, no es apto para la grilla: "${this.draft.transcript}"`);
+        return this.tell(run, step.reject);
+      }
       if ("place" in step) break;
       run = await this.ask(run, step.ask);
       if (signal.aborted) return;
       const answer = run ? await this.hear(run, step.ask) : null;
       if (signal.aborted) return;
       this.draft = mergeAnswer(this.draft, step.ask, answer);
+      this.checkDuplicate();
     }
     return this.place(run, wav);
   }
@@ -251,8 +270,14 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
   private async place(run: R | null, wav: Buffer): Promise<void> {
     const draft = this.draft as CompleteDraft;
     const signal = this.abort.signal;
-    const reaction =
-      this.port.voice() === "react" && this.live(run) ? this.port.react(draft, signal) : Promise.resolve("");
+    const duplicate = await (this.duplicate ?? Promise.resolve(null));
+    if (signal.aborted) return;
+    if (duplicate) {
+      this.port.log.info(`pitch: ya estaba en la grilla: «${duplicate.title}» (${duplicate.room} ${duplicate.timeSlot})`);
+      if (this.detached) return;
+      this.port.showCard(duplicate);
+      return this.port.announce(this.live(run), duplicateText(duplicate));
+    }
     let placed: Placement;
     try {
       placed = await this.port.place(draft, signal);
@@ -267,8 +292,17 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
     if ("denied" in placed) return this.port.announce(this.live(run), placed.denied);
     if (this.detached) return;
     this.port.showCard(placed);
-    const extra = await reaction;
+    const extra = this.port.voice() === "react" ? draft.reaction : null;
     await this.port.announce(this.live(run), `${announcementText(placed)}${extra ? ` ${extra}` : ""}`);
+  }
+
+  /** Is this talk already on the board? Asked once, as soon as there is a title to compare. */
+  private checkDuplicate(): void {
+    if (this.duplicate || !this.draft?.title || !this.draft.appropriate) return;
+    this.duplicate = this.port.findDuplicate(this.draft as CompleteDraft, this.abort.signal).catch((error: unknown) => {
+      if (!this.abort.signal.aborted) this.port.log.warn("pitch: no pude revisar si ya estaba en la grilla; la cargo igual", error);
+      return null;
+    });
   }
 
   /** A fixed line, unless the flow was interrupted (then the log is enough). */

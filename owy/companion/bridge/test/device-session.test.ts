@@ -229,6 +229,8 @@ const heardCard = {
   needsWhiteboard: false,
   description: "Un año de Effect" as string | null,
   topics: ["effect"],
+  reaction: "Qué lindo tema, Ana." as string | null,
+  appropriate: true,
 };
 const ANNOUNCED = "[GUION] ¡Listo, Ana! Tu charla «Effect en producción» queda en Cueva a las 15:00.";
 
@@ -243,6 +245,7 @@ function pitchHarness(
     logDir?: string;
     hostMic?: unknown;
     mic?: "device" | "host";
+    dedupe?: unknown;
   } = {}
 ) {
   const events: number[] = [];
@@ -287,6 +290,7 @@ function pitchHarness(
       title: null as string | null,
       speaker: "Ana" as string | null,
       description: null as string | null,
+      appropriate: true,
     })),
   };
   const api = {
@@ -306,7 +310,7 @@ function pitchHarness(
     eve: options.eve,
     cascade: options.cascade,
     hostMic: options.hostMic,
-    pitch: { extract, api, openSpaceId: async () => "e1", clips: options.clips ?? {}, clipPcm: options.clipPcm ?? {} },
+    pitch: { extract, api, openSpaceId: async () => "e1", clips: options.clips ?? {}, clipPcm: options.clipPcm ?? {}, dedupe: options.dedupe },
   } as unknown as SharedRuntime);
   const wired = session as unknown as {
     device: unknown;
@@ -427,7 +431,7 @@ it("modo pitch: a pitch without a name asks for it first; the board opens its mi
 it("modo pitch: an unclear topic is asked once and the answer names the talk; a second miss creates nothing", async () => {
   const h = pitchHarness();
   h.extract.card.mockResolvedValueOnce({ ...heardCard, kind: "unclear", title: null, description: null });
-  h.extract.answer.mockResolvedValueOnce({ title: "Testing con IA", speaker: null, description: "Cómo testear con LLMs" });
+  h.extract.answer.mockResolvedValueOnce({ title: "Testing con IA", speaker: null, description: "Cómo testear con LLMs", appropriate: true });
   await h.tap();
   h.speak(3000);
   await h.submit();
@@ -448,7 +452,7 @@ it("modo pitch: an unclear topic is asked once and the answer names the talk; a 
 
   // Again, and this time the answer does not say it either.
   h.extract.card.mockResolvedValueOnce({ ...heardCard, kind: "unclear", title: null });
-  h.extract.answer.mockResolvedValueOnce({ title: null, speaker: null, description: null });
+  h.extract.answer.mockResolvedValueOnce({ title: null, speaker: null, description: null, appropriate: true });
   await h.tap();
   h.speak(3000);
   await h.submit();
@@ -644,36 +648,27 @@ it("modo pitch, Callado: no voice at all — questions are the knob's own hint, 
   expect(h.texts).toEqual(["No escuché una propuesta. Tocá y contame tu charla."]);
 });
 
-it("modo pitch, Confirma y comenta: eve adds a sentence; on the local brain the text model does; failures cost nothing", async () => {
-  const eve = {
-    turn: vi.fn(async () => ({ sessionId: "s", text: "Qué lindo tema, Ana.", interim: [] })),
-    cancel: vi.fn(),
-    reset: vi.fn(),
-  };
+it("modo pitch, Confirma y comenta: Owy's sentence comes in the same extraction, no second model on the way", async () => {
+  const eve = { turn: vi.fn(), cancel: vi.fn(), reset: vi.fn() };
   const h = pitchHarness({ voice: "react", eve });
   await h.tap();
   h.speak(3000);
   await h.submit();
-  expect(eve.turn).toHaveBeenCalledWith(
-    "test",
-    heardCard.transcript,
-    expect.objectContaining({ kind: "pitch", pitch: expect.objectContaining({ title: "Effect en producción" }), timeoutMs: 8000 })
-  );
   expect(h.spoken).toEqual([`${ANNOUNCED} Qué lindo tema, Ana.`]);
+  expect(eve.turn).not.toHaveBeenCalled();
   await h.answer();
-  eve.turn.mockRejectedValueOnce(new Error("eve down"));
+
+  // No sentence from the model: the announcement alone. Confirma never adds it.
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, reaction: null });
   await h.tap();
   h.speak(3000);
   await h.submit();
   expect(h.spoken.at(-1)).toBe(ANNOUNCED);
-
-  const cascade = { answer: vi.fn(async () => "Effect, qué buena elección.") };
-  const local = pitchHarness({ voice: "react", cascade });
-  await local.tap();
-  local.speak(3000);
-  await local.submit();
-  expect(cascade.answer).toHaveBeenCalledWith(expect.objectContaining({ tools: {}, history: [] }));
-  expect(local.spoken).toEqual([`${ANNOUNCED} Effect, qué buena elección.`]);
+  const plain = pitchHarness({ voice: "confirm" });
+  await plain.tap();
+  plain.speak(3000);
+  await plain.submit();
+  expect(plain.spoken).toEqual([ANNOUNCED]);
 });
 
 it("modo pitch: interrupted while Owy waits for the name, what it understood is still placed — silently", async () => {
@@ -725,6 +720,53 @@ it("modo pitch: the Mac's mic feeds the recording when the board routes to it, a
   await h.tap();
   h.speak(3000);
   expect(h.events.filter((e) => e === E.STT_VAD_START)).toHaveLength(2);
+});
+
+it("modo pitch: something not fit for the public board is turned away — nothing asked, nothing placed", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null, appropriate: false });
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(h.api.tracks.createPlaced).not.toHaveBeenCalled();
+  expect(h.prompts).toEqual([]);
+  expect(h.spoken).toEqual(["[GUION] Esa propuesta no la puedo cargar en la grilla. Si te parece un error, hablá con el staff."]);
+});
+
+it("modo pitch: a talk already on the board is not placed twice — Owy says where it is", async () => {
+  const onBoard = { id: "t9", title: "Effect en producción, un año después", speaker: "Ana", room: "Ventana", timeSlot: "16:00 - 16:45" };
+  const dedupe = { find: vi.fn(async () => 0) };
+  const h = pitchHarness({ dedupe });
+  h.api.tracks.list.mockResolvedValue([onBoard]);
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(dedupe.find).toHaveBeenCalledWith(
+    expect.objectContaining({ title: "Effect en producción", transcript: heardCard.transcript }),
+    [onBoard],
+    expect.anything()
+  );
+  expect(h.api.tracks.createPlaced).not.toHaveBeenCalled();
+  expect(h.shown).toEqual([{ title: onBoard.title, speaker: "Ana", room: "Ventana", timeSlot: "16:00 - 16:45" }]);
+  expect(h.spoken).toEqual(["[GUION] Esa charla ya está en la grilla: «Effect en producción, un año después», en Ventana a las 16:00."]);
+});
+
+it("modo pitch: the duplicate check runs while Owy asks for the name, and a failed check never blocks the card", async () => {
+  const dedupe = { find: vi.fn(async (): Promise<number | null> => { throw new Error("jev down"); }) };
+  const h = pitchHarness({ dedupe });
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null });
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(h.spoken).toEqual(["[GUION] ¿Cómo te llamás?"]);
+  expect(dedupe.find).toHaveBeenCalledOnce(); // already asked, before the answer exists
+  await h.answer();
+  await h.tap("pitch-answer");
+  h.speak(1200);
+  await h.submit();
+  expect(dedupe.find).toHaveBeenCalledOnce();
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+  expect(h.spoken.at(-1)).toBe(ANNOUNCED);
 });
 
 it("a normal run still streams the microphone to the model", async () => {

@@ -58,7 +58,7 @@ async function main(): Promise<void> {
 
   const step = nextStep(draft, true);
   if ("ask" in step) return console.log(`\nOwy preguntaría: «${PITCH_LINES[QUESTION[step.ask]]}» (pasá la respuesta como otro WAV)`);
-  if ("reject" in step) return console.log(`\nOwy diría: «${PITCH_LINES.unclear}»`);
+  if ("reject" in step) return console.log(`\nOwy diría: «${PITCH_LINES[step.reject]}»`);
   console.log(
     "\nLa card:",
     JSON.stringify({ title: draft.title, speaker: draft.speaker, description: draft.description }),

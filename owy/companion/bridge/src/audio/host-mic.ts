@@ -68,8 +68,10 @@ export function pickHostMic(available: string[], wanted?: string | null): string
  * both sides), so L / R / mix never fail on a mono device; a DJI receiver in
  * stereo mode puts one transmitter on each side.
  */
-export function ffmpegArgs(name: string, channel: HostMicChannel): string[] {
+export function ffmpegArgs(name: string, channel: HostMicChannel, gainDb = 0): string[] {
   const pan = channel === "mix" ? "0.5*c0+0.5*c1" : channel === "L" ? "c0" : "c1";
+  // A wireless lav arrives without AGC, far quieter than a board's mic (and its noise-cancelled silence is near zero).
+  const gain = gainDb ? `,volume=${gainDb}dB` : "";
   return [
     "-hide_banner",
     "-loglevel",
@@ -80,7 +82,7 @@ export function ffmpegArgs(name: string, channel: HostMicChannel): string[] {
     "-i",
     `:${name}`,
     "-af",
-    `aformat=channel_layouts=stereo,pan=mono|c0=${pan}`,
+    `aformat=channel_layouts=stereo,pan=mono|c0=${pan}${gain}`,
     "-ar",
     String(DEVICE_SAMPLE_RATE),
     "-f",
@@ -115,6 +117,8 @@ export interface HostMicOptions {
   /** Wanted input (name or part of it); unset = the built-in mic once something asks for it. */
   name?: string | null;
   channel?: HostMicChannel;
+  /** Gain (dB) on the captured audio (COMPANION_HOST_MIC_GAIN_DB). */
+  gainDb?: number;
   platform?: NodeJS.Platform;
   spawn?: (command: string, args: string[]) => MicProcess;
   list?: () => Promise<string[]>;
@@ -243,7 +247,7 @@ export class HostMic {
       this.using = name;
       this.silentSince = 0;
       this.chunker = new FrameChunker(FRAME_BYTES);
-      const child = (this.options.spawn ?? defaultSpawn)(this.options.ffmpeg ?? "ffmpeg", ffmpegArgs(name, this.channel));
+      const child = (this.options.spawn ?? defaultSpawn)(this.options.ffmpeg ?? "ffmpeg", ffmpegArgs(name, this.channel, this.options.gainDb));
       this.child = child;
       this.setHealth("starting");
       let stderr = "";

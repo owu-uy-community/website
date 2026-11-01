@@ -1,4 +1,12 @@
 {
-  "pitch-listen": 4550,
-  "pitch-empty": 4240
+  "pitch-listen": 4680,
+  "pitch-empty": 4120,
+  "pitch-ask-topic": 2750,
+  "pitch-ask-name": 1270,
+  "pitch-unclear": 5460,
+  "pitch-full": 4230,
+  "pitch-failed": 5220,
+  "offline": 5500,
+  "retry": 3670,
+  "pitch-declined": 5900
 }

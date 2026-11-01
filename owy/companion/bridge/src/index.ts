@@ -44,8 +44,10 @@ import {
   PITCH_LINES,
   PitchRecorder,
   SCRIPT_PREFIX,
+  gatewayDuplicateFinder,
   gatewayPitchExtractor,
   isPitchRun,
+  type DuplicateFinder,
   type PitchExtractor,
   type PitchKind,
   type PitchLine,
@@ -250,6 +252,8 @@ export interface PitchRuntime {
   clips: Record<string, number>;
   /** The same cues as 16 kHz PCM, for the board's own speaker (the browser plays the files). */
   clipPcm?: Record<string, Buffer>;
+  /** Is this talk already on the board? (a decision model; absent = never checked, COMPANION_PITCH_DEDUPE=off) */
+  dedupe?: DuplicateFinder;
 }
 
 /**
@@ -266,8 +270,6 @@ interface PitchRun extends PitchRecording {
 
 /** createPlaced and the board read get this long before the bridge looks for itself. */
 const PLACE_TIMEOUT_MS = 20_000;
-/** «Confirma y comenta»: a comment that is not ready by then is skipped. */
-const PITCH_REACTION_MS = 8_000;
 
 const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
   let timer: NodeJS.Timeout | undefined;
@@ -301,9 +303,6 @@ const isAmbiguous = (error: unknown): boolean => {
   const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
   return !(typeof status === "number" && status >= 400 && status < 500);
 };
-
-const reactionPrompt = (eventName: string) =>
-  `Sos Owy, la mascota de OWU, en el mercado de ideas del open space de ${eventName}. Te llega el pitch de una charla que ya quedó en la grilla. Respondé UNA sola frase cálida y breve (hasta 20 palabras) sobre el tema, en español rioplatense. No repitas sala ni horario, no hagas preguntas, sin emojis.`;
 
 /**
  * The knob's voice link when a browser is attached as its laptop audio: every
@@ -1500,7 +1499,8 @@ export class DeviceSession {
             maxMs: (config.COMPANION_PITCH_MAX_S ?? 120) * 1000,
           }
         : PITCH_LIMITS.answer;
-    // Owy says it is listening from the laptop; the room mic hears that too, so recording waits it out.
+    // Owy says it is listening. People start talking right away, over it: nothing is dropped, and
+    // the extractor is told to leave Owy's line out (an answer waits for the question to end).
     const cueMs = kind === "pitch" && this.pitchVoice() !== "silent" ? this.playClip("pitch-listen") : 0;
     let resolveDone: (wav: Buffer | null) => void = () => {};
     let resolveEnded: () => void = () => {};
@@ -1519,7 +1519,7 @@ export class DeviceSession {
         limits,
         rmsThreshold: config.COMPANION_PITCH_VAD_RMS,
         // A question Owy just asked through the laptop's speakers is still in the room for a moment.
-        ignoreMs: cueMs > 0 ? cueMs + 400 : kind === "answer" ? 400 : 0,
+        ignoreMs: kind === "answer" ? 400 : 0,
         onSpeechStart: () => {
           if (this.pitch === run) turn.markSpeechStarted();
         },
@@ -1597,7 +1597,7 @@ export class DeviceSession {
     // The second tap's buzz lands in the last frames.
     if (reason === "submit") run.recorder.trimTailMs(300);
     this.log.info(
-      `pitch: grabación terminada (${run.kind}, ${reason}, ${(run.recorder.durationMs / 1000).toFixed(1)} s, habló ${(run.recorder.speechMs / 1000).toFixed(1)} s)`
+      `pitch: grabación terminada (${run.kind}, ${reason}, ${(run.recorder.durationMs / 1000).toFixed(1)} s, habló ${(run.recorder.speechMs / 1000).toFixed(1)} s, pico ${Math.round(run.recorder.peak * 100)}%, mic ${this.micSource})`
     );
     run.turn.endListening("");
     if (run.kind === "pitch") {
@@ -1627,8 +1627,8 @@ export class DeviceSession {
       announce: (run, text) => this.announcePitch(run, text),
       prompt: (field) => this.device?.pitchPrompt?.(field),
       place: (draft) => this.placePitch(runtime, draft, since),
+      findDuplicate: (draft, signal) => this.findDuplicatePitch(runtime, draft, signal),
       showCard: (card) => this.device?.showCard(card),
-      react: (draft, signal) => this.pitchReaction(draft, signal),
       saveFailure: (reason, draft, wav) => this.savePitchFailure(reason, draft, wav),
     };
   }
@@ -1778,6 +1778,22 @@ export class DeviceSession {
     return card;
   }
 
+  /** The card on the board that is this same talk (asked while Owy may still be asking for the name). */
+  private async findDuplicatePitch(runtime: PitchRuntime, draft: CompleteDraft, signal: AbortSignal): Promise<ScreenCard | null> {
+    if (!runtime.dedupe) return null;
+    const started = Date.now();
+    const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId: await runtime.openSpaceId() }), PLACE_TIMEOUT_MS);
+    const index = await runtime.dedupe.find(
+      { title: draft.title, description: draft.description, transcript: draft.transcript },
+      notes,
+      signal
+    );
+    this.log.info(`pitch: ¿ya está en la grilla? ${index === null ? "no" : `sí, «${notes[index].title}»`} (${notes.length} cards, ${Date.now() - started} ms)`);
+    if (index === null) return null;
+    const note = notes[index];
+    return { title: note.title, speaker: note.speaker ?? undefined, room: note.room, timeSlot: note.timeSlot };
+  }
+
   /** The talk this flow created, if the write landed after all. */
   private async findPlaced(runtime: PitchRuntime, openSpaceId: string, title: string, since: number): Promise<StickyNote | null> {
     const want = title.trim().toLowerCase();
@@ -1793,50 +1809,6 @@ export class DeviceSession {
       this.log.warn("pitch: tampoco pude leer la grilla", error);
       return null;
     }
-  }
-
-  /** «Confirma y comenta»: one sentence about the talk, from the eve brain or the local text model; "" when none in time. */
-  private pitchReaction(draft: CompleteDraft, signal: AbortSignal): Promise<string> {
-    const card = {
-      title: draft.title,
-      speaker: draft.speaker,
-      needsTV: draft.needsTV,
-      needsWhiteboard: draft.needsWhiteboard,
-      description: draft.description,
-      topics: draft.topics,
-    };
-    const eventName = this.shared.config?.COMPANION_EVENT_NAME ?? "OWU Conf 2026";
-    const eve = this.shared.brain === "eve" ? this.shared.eve : undefined;
-    let ask: Promise<string>;
-    if (eve) {
-      const writes = !this.options.authorizeTool || this.options.authorizeTool("create_track") === null;
-      const staff = this.options.isStaff?.() ?? (this.device?.isStaffMode() || !!this.shared.config?.COMPANION_STAFF_MODE);
-      ask = eve
-        .turn(this.spec.id, draft.transcript.slice(0, 3500), {
-          kind: "pitch",
-          pitch: card,
-          staff: writes && staff,
-          marketplaceOpen: false,
-          eventName,
-          timeoutMs: PITCH_REACTION_MS,
-          signal,
-        })
-        .then((result) => result.text);
-    } else if (this.shared.cascade) {
-      ask = this.shared.cascade.answer({
-        text: `Charla «${draft.title}». Lo que dijo la persona: ${draft.transcript.slice(0, 3500)}`,
-        history: [],
-        instructions: reactionPrompt(eventName),
-        tools: {},
-        signal: AbortSignal.any([signal, AbortSignal.timeout(PITCH_REACTION_MS)]),
-      });
-    } else return Promise.resolve("");
-    return ask
-      .then((text) => text.trim())
-      .catch((error: unknown) => {
-        this.log.warn("pitch: no hubo comentario a tiempo", error);
-        return "";
-      });
   }
 
   /** A pitch the bridge could not place, kept for the staff (COMPANION_LOG_DIR only: a visitor's voice stays nowhere else). */
@@ -2374,6 +2346,9 @@ function loadPitch(
       apiKey: config.AI_GATEWAY_API_KEY,
       model: config.COMPANION_PITCH_MODEL,
       fallbacks: parseModelSpecs(config.COMPANION_PITCH_FALLBACK_MODELS),
+      thinking: config.COMPANION_PITCH_THINKING,
+      hedgeModel: config.COMPANION_PITCH_HEDGE_MODEL || undefined,
+      hedgeAfterMs: config.COMPANION_PITCH_HEDGE_MS,
       eventName: config.COMPANION_EVENT_NAME,
       // The audio model down: the cascade's transcription, then the text model on the words.
       ...(cascade
@@ -2386,6 +2361,7 @@ function loadPitch(
       logger: logger.child("pitch"),
     }),
     clipPcm,
+    dedupe: config.COMPANION_PITCH_DEDUPE === "on" ? gatewayDuplicateFinder({ apiKey: config.AI_GATEWAY_API_KEY }) : undefined,
     api: owuApi(),
     // A talk's demo grid (COMPANION_PITCH_EVENT_ID) wins over OWY_EVENT_ID; eve keeps its own event for questions.
     openSpaceId: () =>
@@ -2436,6 +2412,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     ffmpeg: config.COMPANION_FFMPEG,
     name: config.COMPANION_HOST_MIC,
     channel: config.COMPANION_HOST_MIC_CHANNEL,
+    gainDb: config.COMPANION_HOST_MIC_GAIN_DB,
   });
   if (brain === "eve") {
     if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");

@@ -1,4 +1,4 @@
-import { createGateway, generateText, Output } from "ai";
+import { createGateway, experimental_decide, generateText, Output } from "ai";
 import { z } from "zod";
 import { BYTES_PER_SAMPLE, DEVICE_SAMPLE_RATE, rmsLevel, toWav } from "./audio/pcm";
 import { systemClock, type ClockTimer, type RuntimeClock } from "./clock";
@@ -31,7 +31,9 @@ export interface PitchLimits {
 }
 
 export const PITCH_LIMITS: Record<PitchKind, PitchLimits> = {
-  pitch: { silenceMs: 10_000, maxMs: 120_000, minSpeechMs: 2_000 },
+  // A tap with a voice in it goes to the model, which tells a pitch from a greeting or noise
+  // (the level detector undercounts a lav that has no AGC); only a near-silent tap stops here.
+  pitch: { silenceMs: 10_000, maxMs: 120_000, minSpeechMs: 800 },
   answer: { silenceMs: 3_000, maxMs: 15_000, minSpeechMs: 300, noSpeechMs: 8_000 },
 };
 
@@ -197,6 +199,10 @@ export const PitchCardSchema = z.object({
   description: z.string().nullable(),
   /** One to four keywords. */
   topics: z.array(z.string()),
+  /** «Confirma y comenta»: Owy's warm sentence about the talk, written in the same call (no second model on the way). */
+  reaction: z.string().nullable(),
+  /** The board is public and live: false for something offensive, a joke at someone's expense or spam (same call, no extra time). */
+  appropriate: z.boolean(),
 });
 export type PitchCard = z.infer<typeof PitchCardSchema>;
 
@@ -205,6 +211,7 @@ export const PitchAnswerSchema = z.object({
   title: z.string().nullable(),
   speaker: z.string().nullable(),
   description: z.string().nullable(),
+  appropriate: z.boolean(),
 });
 export type PitchAnswer = z.infer<typeof PitchAnswerSchema>;
 
@@ -227,14 +234,18 @@ const EXTRACT_TIMEOUT_MS = 20_000;
 const cardPrompt = (eventName: string) =>
   `Sos el asistente del mercado de ideas del open space de ${eventName}. Te llega una persona proponiendo una charla (entre 20 y 60 segundos), en español rioplatense (a veces en inglés), grabada con un micrófono en una sala con ruido: el audio, o su transcripción.
 
+La grabación puede empezar con Owy (la mascota) diciendo «Te escucho. Contame tu charla y tocá de nuevo cuando termines»: eso NO es parte del pitch, ignoralo; la persona puede hablar encima.
+
 Devolvé solo el objeto pedido:
-- transcript: lo que dijo, fiel, sin inventar ni completar; vacío si no hay habla inteligible.
+- transcript: lo que dijo la persona, fiel, sin inventar ni completar (sin la frase de Owy); vacío si no hay habla inteligible.
 - kind: "pitch" si propone una charla, taller, debate o tema y se entiende de qué; "unclear" si quiere proponer algo pero no se entiende el tema (se cortó, habló de otra cosa, solo dijo "quiero dar una charla"); "not_pitch" para saludos, pruebas de micrófono, preguntas sueltas o ruido.
 - title: un título corto (hasta 60 caracteres) como iría en la card, fiel al tema aunque la persona no lo diga como título; null si kind no es "pitch".
 - speaker: SOLO si la persona dice su nombre ("soy Ana", "me llamo…", "mi nombre es…"); si no, null. No inventes nombres.
 - needsTV / needsWhiteboard: true solo si lo pide explícitamente (proyector, tele, pantalla / pizarra, pizarrón).
 - description: una línea (hasta 140 caracteres) de qué va la charla, en tercera persona; null si no se sabe.
-- topics: entre una y cuatro palabras clave en minúsculas; vacío si no es un pitch.`;
+- topics: entre una y cuatro palabras clave en minúsculas; vacío si no es un pitch.
+- reaction: si es un pitch, lo que Owy (la mascota de OWU: cálida, rioplatense) le diría en UNA frase corta (hasta 15 palabras) sobre el tema; sin repetir el título, sin sala ni horario, sin preguntas, sin emojis. null si no es un pitch.
+- appropriate: false SOLO si es ofensivo, discriminatorio, sexual, una burla hacia alguien o spam/publicidad; un tema polémico pero serio, informal o con humor sano es true. Ante la duda, true.`;
 
 const answerPrompt = ({ question, transcript }: AnswerContext) =>
   `En el mercado de ideas de un open space, Owy le preguntó a una persona «${question}» sobre la charla que acaba de proponer. Te llega su respuesta (el audio, o su transcripción), en español rioplatense, con ruido de sala. Lo que había dicho antes: «${transcript.slice(0, 1500)}».
@@ -242,7 +253,8 @@ const answerPrompt = ({ question, transcript }: AnswerContext) =>
 Devolvé solo el objeto pedido, con lo que dice ESTA respuesta:
 - title: un título corto (hasta 60 caracteres) para la charla, si la respuesta dice de qué va; si no, null.
 - speaker: su nombre tal como se presenta (capitalizado, con apellido si lo dice), solo si lo dice; si no, null. No inventes nombres.
-- description: una línea (hasta 140 caracteres) de qué va la charla, en tercera persona, solo si la respuesta lo cuenta; si no, null.`;
+- description: una línea (hasta 140 caracteres) de qué va la charla, en tercera persona, solo si la respuesta lo cuenta; si no, null.
+- appropriate: false SOLO si la respuesta (un título o un nombre que iría en la card pública) es ofensiva, discriminatoria, sexual, una burla o spam. Ante la duda, true.`;
 
 export interface GatewayPitchExtractorOptions {
   apiKey?: string;
@@ -257,7 +269,61 @@ export interface GatewayPitchExtractorOptions {
   transcribe?: (wav: Buffer, signal: AbortSignal) => Promise<string>;
   textModel?: string;
   textFallbacks?: string[];
+  /** Gemini 3 reasons before answering by default ("medium"); an extraction needs little of it. */
+  thinking?: Thinking;
+  /**
+   * Tail latency: when the main model has not answered after `hedgeAfterMs`
+   * (or failed), this faster model is asked too and the first answer wins.
+   */
+  hedgeModel?: string;
+  hedgeAfterMs?: number;
   logger?: Logger;
+}
+
+type Thinking = "minimal" | "low" | "medium" | "high";
+
+/**
+ * The first of two attempts to answer: `primary` now, `hedge` after `afterMs`
+ * (or as soon as `primary` fails). The loser is aborted; both failing throws
+ * the primary's error.
+ */
+export async function hedged<T>(
+  primary: (signal: AbortSignal) => Promise<T>,
+  hedge: ((signal: AbortSignal) => Promise<T>) | undefined,
+  afterMs: number,
+  signal: AbortSignal,
+  onHedge?: (why: "slow" | "failed") => void
+): Promise<{ value: T; by: "primary" | "hedge" }> {
+  const primaryAbort = new AbortController();
+  const hedgeAbort = new AbortController();
+  const first = primary(AbortSignal.any([signal, primaryAbort.signal]));
+  if (!hedge) return { value: await first, by: "primary" };
+  let timer: NodeJS.Timeout | undefined;
+  let started = false;
+  const second = new Promise<T>((resolve, reject) => {
+    const start = (why: "slow" | "failed") => {
+      if (started || signal.aborted) return;
+      started = true;
+      clearTimeout(timer);
+      onHedge?.(why);
+      hedge(AbortSignal.any([signal, hedgeAbort.signal])).then(resolve, reject);
+    };
+    timer = setTimeout(() => start("slow"), afterMs);
+    first.catch(() => start("failed"));
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  });
+  try {
+    return await Promise.any([first.then((value) => ({ value, by: "primary" as const })), second.then((value) => ({ value, by: "hedge" as const }))]);
+  } catch {
+    throw await first.then(
+      () => new Error("unreachable"),
+      (error: unknown) => error
+    );
+  } finally {
+    clearTimeout(timer);
+    primaryAbort.abort();
+    hedgeAbort.abort();
+  }
 }
 
 export function gatewayPitchExtractor(options: GatewayPitchExtractorOptions): PitchExtractor {
@@ -268,7 +334,8 @@ export function gatewayPitchExtractor(options: GatewayPitchExtractorOptions): Pi
     prompt: string,
     model: string,
     fallbacks: string[] | undefined,
-    signal: AbortSignal
+    signal: AbortSignal,
+    thinking: Thinking | undefined
   ): Promise<T> => {
     const { output } = await generateText({
       model: gateway(model),
@@ -292,6 +359,7 @@ export function gatewayPitchExtractor(options: GatewayPitchExtractorOptions): Pi
           // A visitor's voice: no retention at the provider.
           zeroDataRetention: true,
         },
+        ...(thinking ? { google: { thinkingConfig: { thinkingLevel: thinking } } } : {}),
       },
       abortSignal: AbortSignal.any([signal, AbortSignal.timeout(EXTRACT_TIMEOUT_MS)]),
     });
@@ -299,17 +367,125 @@ export function gatewayPitchExtractor(options: GatewayPitchExtractorOptions): Pi
   };
   const extract = async <T>(wav: Buffer, schema: z.ZodType<T>, prompt: string, signal: AbortSignal): Promise<T> => {
     try {
-      return await ask({ wav }, schema, prompt, options.model, options.fallbacks, signal);
+      const started = Date.now();
+      const hedgeModel = options.hedgeModel;
+      const { value, by } = await hedged(
+        (attempt) => ask({ wav }, schema, prompt, options.model, options.fallbacks, attempt, options.thinking),
+        hedgeModel ? (attempt) => ask({ wav }, schema, prompt, hedgeModel, undefined, attempt, undefined) : undefined,
+        options.hedgeAfterMs ?? 5_000,
+        signal,
+        (why) => options.logger?.info(`pitch: ${why === "slow" ? "el modelo tarda" : "el modelo falló"}; pido también a ${hedgeModel}`)
+      );
+      options.logger?.info(`pitch: extracción en ${Date.now() - started} ms (${by === "primary" ? options.model : hedgeModel})`);
+      return value;
     } catch (error) {
       if (signal.aborted || !options.transcribe || !options.textModel) throw error;
       options.logger?.warn("pitch: el modelo de audio no respondió; pruebo transcripción + texto", error);
       const text = await options.transcribe(wav, signal);
-      return ask({ text }, schema, prompt, options.textModel, options.textFallbacks, signal);
+      return ask({ text }, schema, prompt, options.textModel, options.textFallbacks, signal, undefined);
     }
   };
   return {
     card: (wav, signal) => extract(wav, PitchCardSchema, cardPrompt(options.eventName), signal),
     answer: (wav, context, signal) => extract(wav, PitchAnswerSchema, answerPrompt(context), signal),
+  };
+}
+
+// ── Is it already on the board? ───────────────────────────────────────────
+
+/** A card already on the board, as the duplicate check sees it. */
+export interface BoardCard {
+  title: string;
+  speaker?: string | null;
+  description?: string | null;
+}
+
+export interface DuplicateFinder {
+  /** Index in `board` of the card that is this same talk, or null. */
+  find(talk: { title: string; description: string | null; transcript: string }, board: BoardCard[], signal: AbortSignal): Promise<number | null>;
+}
+
+/**
+ * Same models as the site's placement (src/lib/orpc/ocr/models.ts): jev decides, Luna re-decides
+ * when jev sits on the fence, d1 answers if a provider errors. One yes/no per card: asking a
+ * decision model to pick among many cards was measurably useless (it takes the first).
+ */
+export const DUPLICATE_MODEL = {
+  primary: "typesafe-ai/jev",
+  unsure: "openai/gpt-6-luna-decisions",
+  // Wider than the placement's: a doubtful "yes" here turns a visitor away, so Luna (sharper:
+  // 0.99 where jev said 0.72 on a real duplicate, 2026-11-01) re-decides anything that is not clearly no.
+  unsureBand: [0.35, 0.8] as [number, number],
+  failover: "liquid/d1",
+};
+/** P(same talk) at or above this turns the pitch away; a wrong "yes" costs a visitor their card, so it has to be clear. */
+// ponytail: set by reasoning, not measured; tune on real duplicates if staff report misses or false hits.
+export const DUPLICATE_THRESHOLD = 0.8;
+/** Past this, the card is placed without the check (a slow decision never holds a visitor). */
+const DUPLICATE_TIMEOUT_MS = 4_000;
+/** The newest cards are the likely duplicates; a long day's board stays one bounded call. */
+const DUPLICATE_MAX_CARDS = 60;
+
+export function gatewayDuplicateFinder(options: { apiKey?: string; threshold?: number }): DuplicateFinder {
+  const gateway = createGateway({ apiKey: options.apiKey });
+  const threshold = options.threshold ?? DUPLICATE_THRESHOLD;
+  return {
+    async find(talk, board, signal) {
+      const cards = board.slice(-DUPLICATE_MAX_CARDS);
+      const offset = board.length - cards.length;
+      if (cards.length === 0) return null;
+      const ids = cards.map((_, index) => `card${index}`);
+      const questions = Object.fromEntries(
+        cards.map((card, index) => [
+          ids[index],
+          {
+            type: "boolean" as const,
+            // Measured: asking for "the same talk (topic and approach), title worded differently" took jev from
+            // 0.72 to 0.91 on a real duplicate, with a same-area different talk still at 0.18.
+            instructions: `¿La charla nueva y esta charla de la grilla son la misma charla (el mismo tema y enfoque, aunque el título esté escrito distinto)? «${card.title}»${card.speaker ? ` (de ${card.speaker})` : ""}${card.description ? ` — ${card.description}` : ""}`,
+            criteria: {
+              true: "Sí: es la misma charla propuesta otra vez, por la misma persona o por otra",
+              false: "No: es otra charla, aunque sea de un tema parecido o del mismo área",
+            },
+          },
+        ])
+      );
+      const result = await experimental_decide({
+        model: gateway.decisionModel(DUPLICATE_MODEL.primary),
+        state: {
+          charlaNueva: {
+            titulo: talk.title,
+            ...(talk.description ? { descripcion: talk.description } : {}),
+            loQueDijo: talk.transcript.slice(0, 800),
+          },
+        },
+        questions,
+        maxRetries: 0,
+        abortSignal: AbortSignal.any([signal, AbortSignal.timeout(DUPLICATE_TIMEOUT_MS)]),
+        providerOptions: {
+          gateway: {
+            models: [
+              {
+                model: DUPLICATE_MODEL.unsure,
+                when: { any: ids.map((question) => ({ question, probabilityBetween: DUPLICATE_MODEL.unsureBand })) },
+              },
+              DUPLICATE_MODEL.failover,
+            ],
+          },
+        },
+      });
+      let best: number | null = null;
+      let bestProbability = threshold;
+      ids.forEach((id, index) => {
+        const answer = result.answers[id];
+        const probability = answer?.type === "boolean" ? answer.probability : 0;
+        if (probability >= bestProbability) {
+          best = offset + index;
+          bestProbability = probability;
+        }
+      });
+      return best;
+    },
   };
 }
 
@@ -326,6 +502,7 @@ export const PITCH_LINES = {
   unclear: "No me quedó claro el tema. Tocá y contame de nuevo de qué va tu charla.",
   full: "Justo ahora no queda lugar libre en la grilla; hablá con el staff.",
   failed: "Perdón, se me trabó la propuesta. Probá de nuevo o contale al staff.",
+  declined: "Esa propuesta no la puedo cargar en la grilla. Si te parece un error, hablá con el staff.",
   unconfigured: "El modo pitch no está configurado en este bridge.",
 } as const;
 export type PitchLine = keyof typeof PITCH_LINES;
@@ -339,6 +516,7 @@ export const PITCH_CLIPS: Partial<Record<PitchLine, string>> = {
   unclear: "pitch-unclear",
   full: "pitch-full",
   failed: "pitch-failed",
+  declined: "pitch-declined",
 };
 
 export const QUESTION: Record<PitchField, PitchLine> = { topic: "askTopic", name: "askName" };
@@ -353,6 +531,13 @@ export function announcementText(card: {
   const start = card.timeSlot?.split(" - ")[0]?.trim();
   const where = [card.room ? `en ${card.room}` : "", start ? `a las ${start}` : ""].filter(Boolean).join(" ");
   return `¡Listo${card.speaker ? `, ${card.speaker}` : ""}! Tu charla «${card.title}» queda ${where || "en la grilla"}.`;
+}
+
+/** The pitch is already on the board: Owy says where, instead of making a second card. */
+export function duplicateText(card: { title: string; room?: string | null; timeSlot?: string | null }): string {
+  const start = card.timeSlot?.split(" - ")[0]?.trim();
+  const where = [card.room ? `en ${card.room}` : "", start ? `a las ${start}` : ""].filter(Boolean).join(" ");
+  return `Esa charla ya está en la grilla: «${card.title}»${where ? `, ${where}` : ""}.`;
 }
 
 /** The device tags a pitch run with `wake_word: "pitch"` (an answer to Owy's question is "pitch-answer"). */

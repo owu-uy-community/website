@@ -36,6 +36,8 @@ it("captures 16 kHz mono from the chosen side of the input", () => {
   expect(args).toContain("aformat=channel_layouts=stereo,pan=mono|c0=c1");
   expect(ffmpegArgs("x", "L")).toContain("aformat=channel_layouts=stereo,pan=mono|c0=c0");
   expect(ffmpegArgs("x", "mix")).toContain("aformat=channel_layouts=stereo,pan=mono|c0=0.5*c0+0.5*c1");
+  // A quiet wireless lav gets its gain after the side is picked.
+  expect(ffmpegArgs("x", "L", 12)).toContain("aformat=channel_layouts=stereo,pan=mono|c0=c0,volume=12dB");
   expect(args.slice(-5)).toEqual(["-ar", "16000", "-f", "s16le", "pipe:1"]);
 });
 
