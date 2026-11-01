@@ -996,23 +996,29 @@ lvgl:
                     flex_align_cross: center
                   widgets:
                     - label:
-                        text: "Owy reacciona"
+                        text: "Owy responde"
                         text_color: 0xFBF5E7
-                    - switch:
-                        id: sw_pitch_reacts
-                        width: 56
+                    # Callado → confirma → comenta (select.pitch_voice; the bridge reads it per pitch).
+                    - button:
+                        id: btn_pitch_voice
                         height: 30
-                        indicator:
-                          checked:
-                            bg_color: 0x0162C8
-                        on_value:
-                          - if:
-                              condition:
-                                lambda: return x;
-                              then:
-                                - switch.turn_on: pitch_reacts
-                              else:
-                                - switch.turn_off: pitch_reacts
+                        bg_color: 0x0162C8
+                        radius: 15
+                        pad_left: 12
+                        pad_right: 12
+                        widgets:
+                          - label:
+                              id: pitch_voice_value
+                              align: CENTER
+                              text: "confirma"
+                              text_color: 0xFBF5E7
+                        on_click:
+                          - select.next: pitch_voice
+                          - lvgl.label.update:
+                              id: pitch_voice_value
+                              text: !lambda |-
+                                const auto option = id(pitch_voice).current_option();
+                                return std::string(option == "Callado" ? "callado" : option == "Confirma" ? "confirma" : "comenta");
               - label:
                   text: "AUDIO"
                   text_font: font_small
@@ -1188,10 +1194,7 @@ script:
     parameters:
       state: string
     then:
-      - lambda: |-
-          // Modo pitch: while the rim invites a name, "idle" (ours or the bridge's) is the invitation.
-          const bool inviting = int32_t(millis() - id(pitch_prompt_until)) < 0;
-          id(current_face) = state == "idle" && inviting ? std::string("invite") : state;
+      - lambda: id(current_face) = state;
       - if:
           condition:
             lambda: return (state == "listening" || state == "followup" || state == "record" || state == "thinking" || state == "speaking") && !id(page_hold);
@@ -1310,10 +1313,11 @@ script:
           id: sw_pitch
           state:
             checked: !lambda return id(pitch_mode).state;
-      - lvgl.widget.update:
-          id: sw_pitch_reacts
-          state:
-            checked: !lambda return id(pitch_reacts).state;
+      - lvgl.label.update:
+          id: pitch_voice_value
+          text: !lambda |-
+            const auto option = id(pitch_voice).current_option();
+            return std::string(option == "Callado" ? "callado" : option == "Confirma" ? "confirma" : "comenta");
       - lvgl.widget.update:
           id: sw_quiet
           state:

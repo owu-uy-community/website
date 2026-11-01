@@ -640,12 +640,11 @@ text_sensor:
     on_value:
       - lambda: |-
           // Modo pitch (voice.yaml), one cue per step: `arming` buzzes before the
-          // mic opens, `sent` after it closes, `invite` when Owy asks for a name.
+          // mic opens (the pitch, or the answer to Owy's question), `sent` after it closes.
           // ponytail: DRV2605 ROM effect ids; tune with "Vibración de prueba".
           int effect = 0;
           if (x == "arming") effect = 1;        // strong click 100%
           else if (x == "sent") effect = 10;    // double click
-          else if (x == "invite") effect = 12;  // triple click
           if (effect) id(haptic).execute(effect);
   - id: !extend interface_page
     on_value:
