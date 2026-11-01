@@ -23,6 +23,8 @@ it("reads avfoundation's audio inputs by name, and picks one by name, by part of
   expect(parseAvfoundationAudio("no devices here")).toEqual([]);
   expect(pickHostMic(names, "dji mic 2")).toBe("DJI Mic 2");
   expect(pickHostMic(names, "DJI")).toBe("DJI Mic 2");
+  // A real DJI receiver does not say DJI: it is «Wireless Microphone RX».
+  expect(pickHostMic(["MacBook Pro Microphone", "Wireless Microphone RX"], "DJI")).toBe("Wireless Microphone RX");
   // Not the first in the list (a virtual mic): the built-in one.
   expect(pickHostMic(names, null)).toBe("MacBook Pro Microphone");
   expect(pickHostMic(names, "Rode")).toBeNull();

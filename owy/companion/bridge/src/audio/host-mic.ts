@@ -46,13 +46,17 @@ export function parseAvfoundationAudio(stderr: string): string[] {
   return names;
 }
 
-/** Exact name first (case-insensitive), then a substring ("DJI"); nothing wanted = the built-in mic. */
+/**
+ * Exact name first (case-insensitive), then a substring ("Wireless"); nothing wanted = the built-in mic.
+ * "DJI" also finds a DJI receiver (Mic 2, Mic Mini), which calls itself «Wireless Microphone RX».
+ */
 export function pickHostMic(available: string[], wanted?: string | null): string | null {
   const want = wanted?.trim().toLowerCase();
   if (want) {
     return (
       available.find((name) => name.toLowerCase() === want) ??
       available.find((name) => name.toLowerCase().includes(want)) ??
+      (want === "dji" ? available.find((name) => /wireless microphone/i.test(name)) : undefined) ??
       null
     );
   }

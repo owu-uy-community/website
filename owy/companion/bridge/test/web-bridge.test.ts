@@ -28,7 +28,7 @@ vi.mock("../src/realtime/session", () => ({
 }));
 const grant: WebGrant = {
   identity: "admin",
-  origin: "http://127.0.0.1:3311",
+  origin: "http://localhost:3000",
   writes: false,
   staff: false,
   marketplace: false,

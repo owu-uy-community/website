@@ -119,7 +119,8 @@ const EnvSchema = z.object({
   COMPANION_DEVICES: z.string().default(""),
   COMPANION_WEB_BRIDGE: boolFromEnv,
   COMPANION_WEB_PORT: z.coerce.number().int().min(1).max(65535).default(3312),
-  COMPANION_WEB_ORIGINS: z.string().default("http://127.0.0.1:3311,http://localhost:3311"),
+  /** Origins whose pages may open a voice session (the site's /admin/companion, the talk console). */
+  COMPANION_WEB_ORIGINS: z.string().default("http://localhost:3000,http://127.0.0.1:3000"),
   COMPANION_BRIDGE_SECRET: z.string().optional(),
   COMPANION_BRIDGE_PUBLIC_URL: z.string().optional(),
 

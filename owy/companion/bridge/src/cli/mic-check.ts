@@ -8,7 +8,7 @@ import { createLogger } from "../log";
  * inputs ffmpeg sees, records a few seconds from one and says how loud it was.
  *
  *   pnpm companion:mic-check                       # the inputs
- *   pnpm companion:mic-check DJI [--channel L|R|mix] [--seconds 5]
+ *   pnpm companion:mic-check Wireless [--channel L|R|mix] [--seconds 5]   (a DJI receiver is «Wireless Microphone RX»)
  *
  * Silence everywhere = the terminal has no Microphone permission (System
  * Settings → Privacy & Security → Microphone) or the receiver is muted.
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   const inputs = await mic.devices(true);
   if (mic.status().health === "unavailable") throw new Error(mic.status().detail);
   console.log(`Entradas que ve ffmpeg:\n${inputs.map((input) => `  · ${input}`).join("\n") || "  (ninguna)"}`);
-  if (!name) return console.log("\nPara grabar, pasá el nombre o una parte: pnpm companion:mic-check DJI");
+  if (!name) return console.log("\nPara grabar, pasá el nombre o una parte: pnpm companion:mic-check Wireless (un receptor DJI se llama «Wireless Microphone RX»)");
   mic.select(name, channel);
   console.log(`\nGrabando ${seconds} s de «${mic.status().name ?? "el integrado"}» (${channel})… hablá.`);
   const result = await mic.probe(seconds * 1000);

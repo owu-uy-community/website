@@ -21,18 +21,12 @@ Sign in as an admin and open **Companion lab** in the admin navigation.
 Prebuilt runtime assets are included; opening the workbench needs no Emscripten,
 device, Gemini key, microphone permission, or production API key.
 
-For development without the site's database/auth environment, the same React
-workbench has a deliberately separate **loopback-only fixture preview**:
-
-```sh
-pnpm companion:emulator:preview
-```
-
-Open `http://127.0.0.1:3311`. By default, voice issuance is disabled. The preview
-does not connect to physical hardware or bypass website authentication. It serves the
-workbench and fixed static assets. Restart it after React/CSS edits. Use the repository's installed
-pnpm version; `node owy/companion/emulator/preview.mjs` is equivalent once
-dependencies are installed.
+This page is the one place for the companion: the emulator, **Hablá con Owy**
+(a browser as a virtual Owy, or as a physical Owy's laptop audio) and the
+**Owy físico** card (each board's mic, output, modo pitch and «Owy responde»,
+plus the Mac's own mic). Locally, run the site against the bridge on the same
+machine; the bridge's own page (`127.0.0.1:3313`) is only the fallback for
+when the site cannot reach it (the site on Vercel at the venue).
 
 ## Speak with Owy
 
@@ -98,17 +92,12 @@ session. These scopes are frozen server-side. The fixture PIN never elevates the
 Shared tool policies, staff checks and proposal cooldowns still apply. Real actions
 are real actions, not simulations; use a staging `OWU_API_URL` for mutation tests.
 
-For the explicitly local preview, run from the repository root:
-
-```sh
-COMPANION_WEB_VOICE=1 pnpm companion:emulator:preview
-```
-
-It remains bound to `127.0.0.1:3311`, rejects foreign Host/Origin requests, and
-does not replace website authentication. Do not expose this development server
-through a public tunnel. Distributed production deployments should add a shared
-quota/billing limit; the per-process limiter is a retry safeguard, not a global
-spending cap.
+Locally the site reaches the bridge with `COMPANION_BRIDGE_URL` (its web
+transport, `http://127.0.0.1:3312`) and the same `COMPANION_BRIDGE_SECRET`;
+the bridge accepts the site's origin through `COMPANION_WEB_ORIGINS` (default
+`http://localhost:3000,http://127.0.0.1:3000`). Distributed production
+deployments should add a shared quota/billing limit; the per-process limiter is
+a retry safeguard, not a global spending cap.
 
 Live mode is deliberately non-replayable: no audio, tokens or transcript are
 written to application storage. The bridge suppresses conversation/tool payload

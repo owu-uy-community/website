@@ -8,7 +8,6 @@
     "companion:emulator:generate": "node owy/companion/emulator/generate-scene.mjs",
     "companion:emulator:test": "node --test owy/companion/emulator/tests.mjs",
     "companion:voice:test": "node --test owy/companion/emulator/live-tests.mjs",
-    "companion:emulator:preview": "node owy/companion/emulator/preview.mjs",
     "analyze": "next analyze",
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=6144\" next build",
     "db:backfill-communities": "tsx src/lib/db/backfill-communities.ts",

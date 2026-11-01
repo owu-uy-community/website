@@ -3,7 +3,8 @@
  * 127.0.0.1 (`COMPANION_BIND_HOST`; in Docker, published on the host's loopback
  * only) and unauthenticated on purpose (no secrets, only audio routing):
  *
- *   GET  /            one-page UI (per device: mic / audio output / modo pitch; the Mac's mic)
+ *   GET  /            fallback one-page UI (per device: mic / audio output / modo pitch; the Mac's mic) for when
+ *                     the site cannot reach this bridge; the real place is the site's /admin/companion
  *   *    /rpc/…       the typed oRPC router (`web/rpc.ts`) — what the Next.js
  *                     admin talks to through `companion.getAudioRouting/setAudioRouting`
  *   GET|POST /api/settings[/pitch|/host-mic|/host-mic/probe]   plain-JSON mirror of the same procedures for the page
@@ -25,7 +26,7 @@ h1{font-size:20px;color:#F5BB03;margin:0 0 4px}h2{font-size:16px;margin:0 0 8px}
 .seg button,.btn{border:0;padding:8px 14px;background:transparent;color:#FBF5E7;cursor:pointer;font:inherit}.seg button.on{background:#0162C8}.btn{background:#1F1F1F;border-radius:12px}
 select{font:inherit;background:#1F1F1F;color:#FBF5E7;border:0;border-radius:12px;padding:8px 10px;max-width:320px}
 .off{color:#8A8A8A}.warn{color:#F5BB03}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#8A8A8A;margin-right:8px}.dot.on{background:#3FB950}.dot.bad{background:#F85149}</style>
-<h1>Owy bridge · audio</h1><small>Por dispositivo: de dónde sale el micrófono y adónde va la voz. <b>Owy</b> = el propio dispositivo · <b>Mac</b> = un micrófono de esta máquina (el integrado, el receptor DJI) · <b>navegador</b> = una pestaña enchufada como audio de laptop (la consola de la charla). El dispositivo sigue siendo el disparador, la cara y los subtítulos.</small>
+<h1>Owy bridge · ajustes de respaldo</h1><div class="card"><b>El lugar de siempre es el sitio:</b> <i>/admin/companion</i> (emulador, Hablá con Owy y la tarjeta «Owy físico» con estos mismos ajustes), con el sitio corriendo en esta Mac. Esta página queda para cuando el sitio no llega a este bridge (por ejemplo, el sitio en Vercel en el evento).</div><small>Por dispositivo: de dónde sale el micrófono y adónde va la voz. <b>Owy</b> = el propio dispositivo · <b>Mac</b> = un micrófono de esta máquina (el integrado, un receptor DJI: «Wireless Microphone RX») · <b>navegador</b> = una pestaña enchufada como audio de ese Owy (Hablá con Owy en /admin/companion, o la consola de la charla). El dispositivo sigue siendo el disparador, la cara y los subtítulos.</small>
 <div id="mac"></div><div id="devices"></div>
 <script>
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};

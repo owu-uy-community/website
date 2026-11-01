@@ -245,8 +245,10 @@ No hay cámara, sensor de presencia/luz ni motor háptico establecido en este mo
 
 Cada dispositivo elige dónde viven su micrófono y su salida: `select.mic_source`
 (`dispositivo` | `laptop` | `mac`) y `select.audio_output` (`dispositivo` | `laptop`), persistentes, desde sus ajustes rápidos
-("Mic: …", "Audio: …"), desde la página del bridge (`http://127.0.0.1:3313/`) o desde la
-tarjeta **Audio** de `/admin/companion`. El bridge expone su API de control como un
+("Mic: …", "Audio: …") o desde la tarjeta **Owy físico** de `/admin/companion` — el lugar de
+siempre: ahí están también el emulador, *Hablá con Owy*, el modo pitch y el micrófono de la Mac. La
+página del bridge (`http://127.0.0.1:3313/`) es sólo el respaldo para cuando el sitio no llega al
+bridge (el sitio en Vercel en el evento). El bridge expone su API de control como un
 **router oRPC** (`bridge/src/web/rpc.ts`, servido en `http://127.0.0.1:3313/rpc`; el
 contrato zod vive en `bridge/src/web/contract.ts`); el sitio lo consume con un cliente oRPC
 tipado (`RouterClient<BridgeRouter>`) detrás de `companion.getAudioRouting` /
@@ -599,7 +601,7 @@ cejas y cachetes cambian; los labios siguen haciendo lip-sync.
 
 ## Modo pitch (mercado de ideas)
 
-En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, o la página del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación. El flujo de una persona, del primer toque a la card, es `bridge/src/pitch-flow.ts`:
+En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch** prendido (interruptor `pitch_mode`: fila «Modo pitch» en la página de ajustes del dispositivo detrás del PIN, la tarjeta «Owy físico» de `/admin/companion`, o la página de respaldo del bridge en `127.0.0.1:3313`). Mientras está prendido, cada toque arranca un pitch en vez de una conversación. El flujo de una persona, del primer toque a la card, es `bridge/src/pitch-flow.ts`:
 
 1. **Toque** → vibra, el aro parpadea como un REC y (salvo en *Callado*) Owy dice «Te escucho. Contame tu charla y tocá de nuevo cuando termines» (clip pregrabado). La grabación arranca cuando termina el aviso.
 2. La persona cuenta la charla (20–60 s, con pausas). **El audio no pasa por el modelo de voz**: su detección de fin de habla cortaría el pitch en la primera pausa. El bridge lo graba (`PitchRecorder`, `bridge/src/pitch.ts`) del micrófono que tenga elegido ese dispositivo (el del knob, el de la Mac o un receptor DJI: ver *Micrófono de la Mac*) y detecta voz con energía (`COMPANION_PITCH_VAD_RMS`).
@@ -609,7 +611,7 @@ En el mercado de ideas el knob queda en el medio de la sala con el **Modo pitch*
 6. **Una sola escritura**: `tracks.createPlaced` ubica la charla (los mismos modelos de decisión que «Sugerir con AI») y la crea cuando está completa. Si la escritura no contesta claro (timeout, conexión cortada, 5xx), el bridge busca la charla en la grilla antes de reintentar una vez: ni pitch perdido ni duplicado. Grilla llena → «no queda lugar libre; hablá con el staff».
 7. Owy confirma según **Owy responde** (`select.pitch_voice`, ver abajo): el knob muestra la card y la pared (`owy-face`) la hace aterrizar; con voz, «¡Listo, Ana! Tu charla «X» queda en Cueva a las 15:00» por el modelo realtime como `[GUION] …` (si no arranca en 2×`COMPANION_ACK_MS`, la voz de la cascada; sin voz, la pantalla).
 
-**Owy responde** (`select.pitch_voice` en el knob — botón «Owy responde» en los ajustes —, la página del bridge, o `COMPANION_PITCH_VOICE`):
+**Owy responde** (`select.pitch_voice` en el knob — botón «Owy responde» en los ajustes —, la tarjeta «Owy físico» de `/admin/companion`, o `COMPANION_PITCH_VOICE`):
 
 | Nivel | Qué hace |
 | --- | --- |
@@ -631,10 +633,10 @@ Interrupciones: un stop durante la grabación del pitch (modo apagado, privacida
 `select.mic_source` también ofrece **`mac`**: el bridge graba una entrada de la Mac donde corre (el micrófono integrado, un receptor DJI Mic 2 por USB-C) con ffmpeg (`avfoundation`, `bridge/src/audio/host-mic.ts`), a 16 kHz mono, igual que el knob. Sirve para el pitch y para conversar.
 
 - **Sólo con el bridge corriendo nativo en macOS** (`pnpm -C owy companion:start`): Docker Desktop corre en una VM sin audio, así que en el contenedor la opción aparece *no disponible*. Necesita `ffmpeg` (`brew install ffmpeg`) y el permiso de **Micrófono** para la app de terminal (Ajustes del Sistema → Privacidad y seguridad → Micrófono); sin permiso llega silencio digital y el bridge lo marca *sin señal*.
-- La entrada se elige **por nombre** (`COMPANION_HOST_MIC=DJI`, o en la página del bridge): los índices de avfoundation cambian al enchufar algo y el primero suele ser un mic virtual (Krisp, Teams). Sin nombre: el integrado. `COMPANION_HOST_MIC_CHANNEL` = `L` · `R` · `mix` (default): un receptor DJI en estéreo pone un transmisor por lado; en *safety track* el R es la copia a -6 dB.
+- La entrada se elige **por nombre** (`COMPANION_HOST_MIC=DJI` o el nombre exacto, o en la tarjeta «Owy físico» de `/admin/companion`): los índices de avfoundation cambian al enchufar algo y el primero suele ser un mic virtual (Krisp, Teams). Un receptor DJI (Mic 2, Mic Mini) aparece como **«Wireless Microphone RX»** (`DJI` también lo encuentra). Sin nombre: el integrado. `COMPANION_HOST_MIC_CHANNEL` = `L` · `R` · `mix` (default): un receptor DJI en estéreo pone un transmisor por lado; en *safety track* el R es la copia a -6 dB.
 - Queda abierto mientras está elegido (sin latencia al tocar, sin perder la primera palabra) y se reabre solo si ffmpeg muere (desenchufado: 1 → 2 → 5 → 10 s). Si no está sano al empezar un turno, ese turno usa el mic del knob y el log lo dice.
-- Ruta: en la placa (`mic_source = mac`, tile «mic en» de los ajustes rápidos o la página del bridge; persiste) o `COMPANION_MIC_SOURCE=host` para placas sin el select. Los navegadores (lab, consola de la charla) siguen con su propio mic.
-- Chequeo antes del evento: `pnpm -C owy companion:mic-check` lista las entradas; `pnpm -C owy companion:mic-check DJI --channel L` graba 5 s, dice pico/promedio contra el umbral del pitch y deja `/tmp/owy-mic-check.wav`. La página del bridge tiene lo mismo («Grabar 4 s»).
+- Ruta: en la placa (`mic_source = mac`, tile «mic en» de los ajustes rápidos o `/admin/companion`; persiste) o `COMPANION_MIC_SOURCE=host` para placas sin el select. Los navegadores (Hablá con Owy, consola de la charla) siguen con su propio mic.
+- Chequeo antes del evento: `pnpm -C owy companion:mic-check` lista las entradas; `pnpm -C owy companion:mic-check Wireless --channel L` graba 5 s, dice pico/promedio contra el umbral del pitch y deja `/tmp/owy-mic-check.wav`. `/admin/companion` tiene lo mismo («Grabar 4 s»).
 
 ## Charla (Owy, en vivo)
 
