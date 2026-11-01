@@ -49,6 +49,8 @@ export const STATE_PATH = path.resolve(import.meta.dirname, "../../../.eve/compa
 const REPORT_EVERY_MS = 15_000;
 /** A board's first values after its link comes up are its own boot values, not changes. */
 const RECONCILE_MS = 3_000;
+/** The panel hears what took after a board has checked its write (1 s, DeviceSession.applySetting). */
+const APPLIED_REPORT_MS = 1_200;
 
 const rowId = (target: string, key: string) => `${target}\n${key}`;
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
@@ -230,7 +232,9 @@ export class ControlPlane {
         const row = SettingRowSchema.safeParse(raw);
         return row.success ? [row.data] : [];
       });
-      for (const row of this.options.store.merge(valid)) this.apply(row);
+      const changed = this.options.store.merge(valid);
+      for (const row of changed) this.apply(row);
+      if (changed.length) this.reportSoon(APPLIED_REPORT_MS);
     } else if (event === "command") {
       const envelope = CommandEnvelopeSchema.safeParse(payload);
       if (envelope.success) void this.run(envelope.data);

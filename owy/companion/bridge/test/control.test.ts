@@ -86,8 +86,11 @@ describe("control plane", () => {
     control.onEvent(COMPANION_CHANNEL, "rows", { rows: [row("owy-knob", "volume", 70, "2026-11-01T22:00:00.000Z")] });
     expect(sessions[0].applied).toEqual([["volume", 70]]);
     control.deviceSetting(sessions[0] as never, "volume", 70, "dispositivo");
-    await vi.advanceTimersByTimeAsync(400);
-    expect(reports.at(-1)?.changes ?? []).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1_300);
+    // One report, after the board had its second to take it: the panel sees 70 in effect, and no change of its own.
+    expect(reports).toHaveLength(1);
+    expect(reports[0].changes).toEqual([]);
+    expect(reports[0].status.devices[0].values).toMatchObject({ volume: 70 });
   });
 
   it("reports a change made on the board once, as the device's", async () => {
