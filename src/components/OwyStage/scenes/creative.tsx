@@ -17,8 +17,9 @@ import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Confetti } from "../effects";
+import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Caption, Flag, H, StageContext, W, useStageFrame } from "../Stage";
-import { HAPPY_MS, drawFace, initialSim } from "./OwyFace";
+import { WALL_FACE } from "./OwyFace";
 import { LogoReveal, MOMENT_PHOTOS, Rise } from "./parts";
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
@@ -459,8 +460,7 @@ export function Kaleidoscope() {
 
 export function OwyTalks() {
   const { preview } = useContext(StageContext);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef(initialSim());
+  const face = useRef<FaceApi>(null);
   const [line, setLine] = useState<{ id: number; text: string } | null>(null);
 
   useEffect(() => {
@@ -468,15 +468,14 @@ export function OwyTalks() {
     let timer: ReturnType<typeof setTimeout>;
     const say = () => {
       const text = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
-      const s = sim.current;
-      s.mood = "thinking";
+      face.current?.state("thinking");
       timer = setTimeout(() => {
-        s.mood = "speaking";
+        face.current?.state("speaking");
         setLine({ id: Date.now(), text });
         const speaking = 1200 + text.length * 55;
         timer = setTimeout(() => {
-          s.mood = "idle";
-          s.happyUntil = s.now + HAPPY_MS;
+          face.current?.state("idle");
+          face.current?.smile();
           timer = setTimeout(() => {
             setLine(null);
             timer = setTimeout(say, rand(3000, 7000));
@@ -488,15 +487,10 @@ export function OwyTalks() {
     return () => clearTimeout(timer);
   }, [preview]);
 
-  useStageFrame((t, dt) => {
-    const ctx = canvas.current?.getContext("2d");
-    if (ctx) drawFace(ctx, sim.current, t, dt);
-  });
-
   return (
     <>
       <Ambient />
-      <canvas ref={canvas} className="absolute inset-0" height={H} width={W} />
+      <OwyFace ref={face} {...WALL_FACE} />
       <AnimatePresence>{line && <Caption key={line.id} text={line.text} />}</AnimatePresence>
     </>
   );

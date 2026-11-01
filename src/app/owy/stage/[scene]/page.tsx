@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import StageClient from "components/OwyStage/StageClient";
 import { parseCanvas } from "lib/owy-stage/canvas";
+import { parseLag } from "lib/owy-stage/face-flow";
 import { SCENES, isSceneId } from "lib/owy-stage/scenes";
 
 type Params = Promise<{ scene: string }>;
@@ -31,6 +32,7 @@ export default async function OwyScenePage({ params, searchParams }: { params: P
       bg={query.bg === "transparent" ? "transparent" : "black"}
       canvas={parseCanvas(typeof query.canvas === "string" ? query.canvas : undefined)}
       fixed={scene}
+      lag={parseLag(query.lag)}
       preview={query.preview === "1"}
     />
   );

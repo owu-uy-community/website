@@ -7,7 +7,7 @@ import type { SceneProps } from "lib/owy-stage/scenes";
 import { TALK_SECTIONS, slideSteps, talkSlide, type TalkLayout } from "lib/owy-stage/talk/deck";
 
 import { usePlayUrl } from "../../inputs";
-import OwyFace from "../OwyFace";
+import OwyFaceScene from "../OwyFace";
 import { QrCode } from "../parts";
 import { OwyFeed } from "./feed";
 import {
@@ -176,7 +176,7 @@ export function OwyCharla(props: Props) {
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
             >
-              <OwyFace
+              <OwyFaceScene
                 ambient={false}
                 eventId={eventId}
                 params={{ captions: params.captions }}

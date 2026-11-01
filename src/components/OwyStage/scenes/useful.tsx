@@ -11,8 +11,8 @@ import { eventChannel } from "lib/realtime/channels";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
+import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
-import { drawFace, initialSim } from "./OwyFace";
 import { QrCode, Rise, nowHHMM } from "./parts";
 
 // ---------------------------------------------------------------------------
@@ -482,21 +482,18 @@ const OWY_STEPS = [
 ];
 
 export function OwyHowTo() {
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef(initialSim());
-  useStageFrame((t, dt) => {
-    const ctx = canvas.current?.getContext("2d");
-    if (!ctx) return;
-    // Every so often Owy smiles at the reader.
-    if (Math.floor(t / 9000) !== Math.floor((t - dt) / 9000)) sim.current.happyUntil = t + 2200;
-    drawFace(ctx, sim.current, t, dt);
-  });
+  const face = useRef<FaceApi>(null);
+  // Every so often Owy smiles at the reader.
+  useEffect(() => {
+    const id = setInterval(() => face.current?.smile(), 9000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <>
       <Ambient />
-      {/* The face is drawn at the frame's centre; shift the canvas so it sits on the left half */}
-      <canvas ref={canvas} className="absolute inset-0 -translate-x-[440px] scale-[0.78]" height={H} width={W} />
+      {/* On the left half, beside the steps: the wall face at ×0.78 */}
+      <OwyFace ref={face} className="absolute top-[150px] left-[174px]" size={692} />
       <div className="absolute top-[110px] right-[120px] w-[980px]">
         <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
           Open Space
