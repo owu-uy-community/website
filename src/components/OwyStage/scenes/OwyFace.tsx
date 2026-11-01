@@ -1,299 +1,77 @@
 "use client";
 
-import { Fragment, useCallback, useContext, useEffect, useReducer, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useReducer, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client, type Room, type Schedule, type StickyNote } from "lib/orpc";
 import {
-  CARD_MS,
-  EXPRESSION_MS,
-  FACE_RESUME_MS,
+  applyFaceEvent,
   initialFlow,
   nextTick,
   reduceFlow,
   type CardChange,
   type Landed,
 } from "lib/owy-stage/face-flow";
-import {
-  OWY_STAGE_CHANNEL,
-  type EffectEvent,
-  type Expression,
-  type FaceEvent,
-  type FaceState,
-  type SceneProps,
-} from "lib/owy-stage/scenes";
+import type { SceneProps } from "lib/owy-stage/scenes";
 import { eventChannel } from "lib/realtime/channels";
 import { roomColorFor } from "lib/rooms/palette";
 
-import { Ambient, BRAND, Caption, Flag, H, StageContext, W, useStageFrame, useTyped } from "../Stage";
+import { OwyFace, useFaceEvents, type FaceApi } from "../Face";
+import { Ambient, BRAND, Caption, Flag, StageContext, W, useTyped } from "../Stage";
 
 /**
- * Owy's face at wall scale. The geometry, moods and timings are the companion
- * firmware's (owy/companion/firmware/companion_model.h, previewed in
- * owy/companion/docs/experience.html), drawn in the same 466×466 space and
- * scaled up, so the wall Owy and the table Owy are the same character.
+ * Owy at wall scale: the device's own face (the firmware's model and renderer, see Face.tsx),
+ * fed by the companion's events through the bridge — its state, the feeling per sentence on the
+ * word it belongs to, and its lip shapes — so the wall Owy and the table Owy are one character.
  *
- * Around the face, what the companion is doing: the transcript typing in, a
- * feeling per sentence, and — at the open space's marketplace — the pitch it
- * just heard landing on the board as a card.
+ * Around the face, what the companion is doing: the transcript typing in and, at the open
+ * space's marketplace, the pitch it just heard landing on the board as a card.
  */
 
-const S = 1.9;
-const OX = (W - 466 * S) / 2;
-const OY = 40;
-
-const EYE_GREY = "#777368";
-const DOT_DIM = "#343126";
-const BLINK_MS = 160;
-
-export type Mood = Exclude<FaceState, "happy">;
-
-export type Sim = {
-  mood: Mood;
-  /** Last frame time on the scene clock (motion's time-since-mount, not performance.now). */
-  now: number;
-  happyUntil: number;
-  /** The companion's per-sentence feeling, fading out at `until` (scene clock). */
-  expression: { name: Expression; strength: number; until: number } | null;
-  /** Smoothed gaze offset and its target. */
-  px: number;
-  py: number;
-  gx: number;
-  gy: number;
-  nextSaccade: number;
-  blinkAt: number;
-  eyeH: number;
-  mouthH: number;
-};
-
-const EYE_H: Record<Mood, number> = { idle: 156, listening: 176, thinking: 142, speaking: 156, error: 88, offline: 94 };
-const HAPPY_EYE_H = 56;
-
-/** How a feeling bends the face: eye height, brow lift (negative = up), pupil size, right-eye squint, mouth width. */
-type Tweak = {
-  eye: number;
-  browL: number;
-  browR: number;
-  pupil: number;
-  squintR: number;
-  mouth: number;
-  cheeks: boolean;
-};
-const NO_TWEAK: Tweak = { eye: 0, browL: 0, browR: 0, pupil: 1, squintR: 1, mouth: 0, cheeks: false };
-const TWEAKS: Record<Expression, Partial<Tweak>> = {
-  neutral: {},
-  happy: { eye: -40, mouth: 16, cheeks: true },
-  excited: { eye: 12, browL: -10, browR: -10, mouth: 26, cheeks: true },
-  curious: { eye: 4, browL: -14, browR: 4 },
-  thinking: { eye: -12, browL: -6, browR: 10 },
-  empathetic: { eye: -16, browL: 10, browR: -10 },
-  playful: { squintR: 0.5, browR: -8, mouth: 8 },
-  surprised: { eye: 24, browL: -20, browR: -20, pupil: 0.78, mouth: -6 },
-};
-
-function box(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, color: string) {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.roundRect(x - w / 2, y - h / 2, w, h, Math.min(r, h / 2, w / 2));
-  ctx.fill();
-}
-
-function ease(dt: number, tau: number) {
-  return 1 - Math.exp(-dt / tau);
-}
-
-/** Where `drawFace` paints: the canvas size and the 466-space transform. The default fills the 1920×1080 wall. */
-export type FaceView = { w: number; h: number; s: number; ox: number; oy: number };
-const WALL_VIEW: FaceView = { w: W, h: H, s: S, ox: OX, oy: OY };
-
-/** A square canvas of `size` px with the whole face inside, the listening halo included. */
-export function squareView(size: number): FaceView {
-  const s = size / 520;
-  const o = (size - 466 * s) / 2;
-
-  return { w: size, h: size, s, ox: o, oy: o };
-}
-
-export function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: number, view: FaceView = WALL_VIEW) {
-  s.now = t;
-  const { mood } = s;
-  const alive = mood !== "offline" && mood !== "error";
-  const voice = mood === "listening" || mood === "thinking" || mood === "speaking";
-  const happy = alive && !voice && t < s.happyUntil;
-
-  // A feeling fades over its last 400 ms; its strength scales every tweak.
-  const feeling = s.expression && t < s.expression.until ? s.expression : null;
-  const k = feeling ? (feeling.strength / 100) * Math.min(1, (feeling.until - t) / 400) : 0;
-  const tweak = { ...NO_TWEAK, ...(feeling ? TWEAKS[feeling.name] : {}) };
-
-  // Gaze: idle looks around (drift + saccades); voice states face the speaker.
-  if (!alive || voice) {
-    s.gx = 0;
-    s.gy = 0;
-  } else if (t >= s.nextSaccade) {
-    s.gx = (Math.random() - 0.5) * 64;
-    s.gy = (Math.random() - 0.5) * 50;
-    s.nextSaccade = t + 1800 + Math.random() * 3200;
-  }
-  const tx = s.gx + (alive && !voice ? Math.sin(t / 2400) * 4 : 0);
-  const ty = s.gy + (alive && !voice ? Math.sin(t / 1000) * 1.5 : 0);
-  s.px += (tx - s.px) * (dt / (32 + dt));
-  s.py += (ty - s.py) * (dt / (32 + dt));
-
-  // Eye height eases between moods; blinks override it for 160 ms.
-  s.eyeH += ((happy ? HAPPY_EYE_H : EYE_H[mood]) - s.eyeH) * ease(dt, 70);
-  let eh = Math.max(12, s.eyeH + tweak.eye * k);
-  if (alive && !happy) {
-    if (t >= s.blinkAt + BLINK_MS) s.blinkAt = t + 2500 + Math.random() * 3500;
-    else if (t >= s.blinkAt) eh = 12 + (eh - 12) * Math.abs((2 * (t - s.blinkAt)) / BLINK_MS - 1);
-  }
-  const rh = Math.max(12, (mood === "thinking" ? Math.max(12, eh - 18) : eh) * (1 - (1 - tweak.squintR) * k));
-
-  // Mouth: procedural syllables while speaking (no level is streamed to the wall).
-  let mouthTarget = 28;
-  if (happy) mouthTarget = 42;
-  else if (mood === "speaking") {
-    const gate = Math.sin(t / 97) * Math.sin(t / 151) > -0.2 ? 1 : 0.15;
-    mouthTarget = 14 + 40 * gate * (0.6 + 0.4 * Math.abs(Math.sin(t / 60)));
-  } else if (voice) mouthTarget = 14;
-  else if (!alive) mouthTarget = 8;
-  s.mouthH += (mouthTarget - s.mouthH) * ease(dt, 45);
-  const mh = s.mouthH;
-  const mw = (happy ? 126 : voice ? 76 : 100) + tweak.mouth * k;
-
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, view.w, view.h);
-  ctx.setTransform(view.s, 0, 0, view.s, view.ox, view.oy);
-
-  // Listening: the knob's rim, a blue halo breathing around the face.
-  if (mood === "listening") {
-    ctx.save();
-    ctx.globalAlpha = 0.22 + 0.16 * Math.sin(t / 420);
-    ctx.strokeStyle = BRAND.blue;
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.arc(233, 233, 250, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  const browTilt = mood === "thinking" ? 8 : 0;
-  box(ctx, 139, 83 - browTilt + tweak.browL * k, 48, 12, 3, BRAND.yellow);
-  box(ctx, 327, 83 + browTilt + tweak.browR * k, 48, 12, 3, BRAND.blue);
-
-  const eyeColor = mood === "offline" ? EYE_GREY : BRAND.cream;
-  box(ctx, 144, 209, 152, eh, 58, eyeColor);
-  box(ctx, 322, 209, 152, rh, 58, eyeColor);
-  const pupil = 1 - (1 - tweak.pupil) * k;
-  for (const [cx, h] of [
-    [144, eh],
-    [322, rh],
-  ] as const) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(cx - 76, 209 - h / 2, 152, h, Math.min(58, h / 2));
-    ctx.clip();
-    box(ctx, cx + s.px, 209 + s.py, 44 * pupil, Math.max(1, Math.min(54, h - 20)) * pupil, 20, BRAND.black);
-    ctx.restore();
-  }
-
-  const mx = 233 + s.px / 3;
-  box(ctx, mx, 349, mw, mh, 18, BRAND.cream);
-  if (mood === "idle" || happy) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(mx - mw / 2, 349 - mh / 2, mw, mh, Math.min(18, mh / 2));
-    ctx.clip();
-    box(ctx, mx, 341, mw - 20, mh - 4, 12, BRAND.black);
-    ctx.restore();
-  }
-  if (happy || (tweak.cheeks && k > 0.2)) {
-    box(ctx, 82, 317, 30, 14, 4, BRAND.yellow);
-    box(ctx, 384, 317, 30, 14, 4, BRAND.blue);
-  }
-  if (mood === "thinking") {
-    const active = Math.floor(t / 350) % 3;
-    for (let i = 0; i < 3; i++) box(ctx, 209 + 24 * i, 401, 10, 10, 5, i === active ? BRAND.yellow : DOT_DIM);
-  }
-  if (mood === "listening") {
-    box(ctx, 233, 401, 14, 24, 7, BRAND.blue);
-    box(ctx, 233, 417, 4, 12, 0, BRAND.cream);
-    box(ctx, 233, 423, 18, 4, 2, BRAND.cream);
-  }
-}
-
-export function initialSim(): Sim {
-  return {
-    mood: "idle",
-    now: 0,
-    happyUntil: 0,
-    expression: null,
-    px: 0,
-    py: 0,
-    gx: 0,
-    gy: 0,
-    nextSaccade: 0,
-    blinkAt: 2500,
-    eyeH: 156,
-    mouthH: 28,
-  };
-}
-
-export const HAPPY_MS = 2500;
+/** 466 px of the device at ×1.9, centred, with room under it for the captions. */
+const FACE = 886;
+const FACE_X = (W - FACE) / 2;
+const FACE_Y = 40;
+/**
+ * Over the brand shapes: the device's black screen lets them through (lighten keeps the
+ * brighter of the two), and over the black wall every pixel is the device's own.
+ */
+export const OVER_SHAPES = "mix-blend-lighten";
+/** The face where every wall scene puts it (owy-says, owy-talks). */
+export const WALL_FACE = {
+  size: FACE,
+  className: `absolute ${OVER_SHAPES}`,
+  style: { left: FACE_X, top: FACE_Y },
+} as const;
 
 /** The face slides left to make room for the pitch panel or the landed card. */
 const ASIDE_PX = 380;
 
 /** `ambient={false}`: the face alone, without the brand shapes around it (the talk deck draws its own). */
-export default function OwyFace({ params, eventId, ambient = true }: SceneProps<"owy-face"> & { ambient?: boolean }) {
+export default function OwyFaceScene({
+  params,
+  eventId,
+  ambient = true,
+}: SceneProps<"owy-face"> & { ambient?: boolean }) {
   const { preview } = useContext(StageContext);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef<Sim>(initialSim());
+  const face = useRef<FaceApi>(null);
   const [flow, dispatch] = useReducer(reduceFlow, undefined, initialFlow);
   const captions = params.captions;
 
-  const applyFace = useCallback(
-    (face: FaceEvent, now: number) => {
-      const s = sim.current;
-      if (face.state === "happy" || face.card) s.happyUntil = s.now + HAPPY_MS;
-      if (face.state !== "happy") s.mood = face.state;
-      if (face.expression) s.expression = { ...face.expression, until: s.now + EXPRESSION_MS };
-      dispatch({ type: "face", face, now, captions });
+  useFaceEvents({
+    face: (event, now) => {
+      if (face.current) applyFaceEvent(face.current, event);
+      dispatch({ type: "face", face: event, now, captions });
     },
-    [captions]
-  );
-
-  const { isConnected } = useRealtimeChannel(preview ? null : OWY_STAGE_CHANNEL, (event, payload) => {
-    if (event === "face") applyFace(payload as FaceEvent, Date.now());
-    if (event === "effect" && (payload as EffectEvent).effect === "owy-happy") {
-      sim.current.happyUntil = sim.current.now + HAPPY_MS;
-    }
+    mouth: (frames, at) => face.current?.mouth(frames, at),
+    smile: () => face.current?.smile(),
   });
   // The board's own event for a new card: it lands even if the companion's post never arrives.
   useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event, payload) => {
     if (event === "card_change") dispatch({ type: "card_change", change: payload as CardChange, now: Date.now() });
   });
-
-  // A wall that (re)connects mid-conversation picks up the last face and, if recent, its card.
-  useEffect(() => {
-    if (preview || !isConnected) return;
-    let live = true;
-    client.owyStage
-      .getState()
-      .then(({ face }) => {
-        if (!live || !face) return;
-        const at = Date.parse(face.at);
-        const age = Date.now() - at;
-        if (!Number.isFinite(age) || age > FACE_RESUME_MS) return;
-        applyFace({ ...face, card: age < CARD_MS ? face.card : undefined }, at);
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [preview, isConnected, applyFace]);
 
   // Captions linger long enough to be read, then clear; every update extends the timer.
   useEffect(() => {
@@ -306,18 +84,13 @@ export default function OwyFace({ params, eventId, ambient = true }: SceneProps<
     return () => clearTimeout(id);
   }, [flow.transcript]);
 
-  // The card and the feeling expire on the wall clock.
+  // The card leaves on the wall clock.
   useEffect(() => {
     const at = nextTick(flow);
     if (at === null) return;
     const id = setTimeout(() => dispatch({ type: "tick", now: Date.now() }), Math.max(30, at - Date.now()));
     return () => clearTimeout(id);
   }, [flow]);
-
-  useStageFrame((t, dt) => {
-    const ctx = canvas.current?.getContext("2d");
-    if (ctx) drawFace(ctx, sim.current, t, dt);
-  });
 
   // Subtitles switched off mid-sentence leave at once, not when the caption would have timed out.
   const transcript = captions ? flow.transcript : null;
@@ -327,12 +100,11 @@ export default function OwyFace({ params, eventId, ambient = true }: SceneProps<
   return (
     <>
       {ambient && <Ambient />}
-      <canvas
-        ref={canvas}
-        className="absolute inset-0 transition-transform duration-700 ease-out"
-        height={H}
-        style={{ transform: aside ? `translateX(-${ASIDE_PX}px)` : undefined }}
-        width={W}
+      <OwyFace
+        ref={face}
+        className={`absolute transition-transform duration-700 ease-out ${OVER_SHAPES}`}
+        size={FACE}
+        style={{ left: FACE_X, top: FACE_Y, transform: aside ? `translateX(-${ASIDE_PX}px)` : undefined }}
       />
       <AnimatePresence>
         {transcript && !panel && flow.landed === null && (
@@ -441,9 +213,8 @@ function LandedCard({ card, eventId }: { card: Landed; eventId: string | null })
 /** Rooms across, blocks down, the landed cell pulsing in its room's colour. */
 function MiniBoard({ board, roomId, scheduleId }: { board: BoardSnapshot; roomId: string; scheduleId: string }) {
   const rooms = board.rooms.filter((room) => room.isActive).slice(0, 6);
-  const all = board.schedules
-    .filter((slot) => slot.isActive)
-    .toSorted((a, b) => a.startTime.localeCompare(b.startTime));
+  // filter() makes the copy that sort() orders: OBS 30's Chromium 103 has no toSorted.
+  const all = board.schedules.filter((slot) => slot.isActive).sort((a, b) => a.startTime.localeCompare(b.startTime));
   const at = Math.max(
     0,
     all.findIndex((slot) => slot.id === scheduleId)

@@ -44,11 +44,14 @@ export const StageContext = createContext<{
   canvas: StageCanvas;
   /** Fewer frames, same behaviour: the admin's monitors (see useStageFrame). */
   throttle: boolean;
+  /** How late this screen shows Owy's face, in ms (`?lag=`): its faces act that much earlier. */
+  lag: number;
 }>({
   preview: false,
   bg: "black",
   canvas: DEFAULT_CANVAS,
   throttle: false,
+  lag: 0,
 });
 
 /** Canvas plus the two numbers every scene needs: type scale and "is it a strip?". */
@@ -71,12 +74,14 @@ export function Stage({
   preview,
   throttle = preview,
   canvas = DEFAULT_CANVAS,
+  lag = 0,
   children,
 }: {
   bg: StageBackground;
   preview: boolean;
   throttle?: boolean;
   canvas?: StageCanvas | "fit";
+  lag?: number;
   children: ReactNode;
 }) {
   const [scale, setScale] = useState(1);
@@ -119,7 +124,7 @@ export function Stage({
   }, []);
 
   return (
-    <StageContext.Provider value={{ preview, bg, canvas: size, throttle }}>
+    <StageContext.Provider value={{ preview, bg, canvas: size, throttle, lag }}>
       {/* Unlayered, so it beats the `@layer base` body background while a stage is mounted */}
       <style>{`html,body{background:transparent!important;margin:0;overflow:hidden}`}</style>
       <MotionConfig reducedMotion="never">

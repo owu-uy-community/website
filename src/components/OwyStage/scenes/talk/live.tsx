@@ -16,9 +16,10 @@ import {
   type TalkLayout,
 } from "lib/owy-stage/talk/deck";
 
+import { OwyFace, type FaceApi } from "../../Face";
 import { tally, useInputs, useInputsWithStatus, usePlayUrl } from "../../inputs";
 import { BRAND, StageContext } from "../../Stage";
-import OwyFace from "../OwyFace";
+import OwyFaceScene from "../OwyFace";
 import { QrCode, Rise } from "../parts";
 import { MiniFace, seconds, useFeed } from "./feed";
 import { Build, COL_W, COL_X, Frame, ROW, useSinceMount, type LayoutProps } from "./layouts";
@@ -62,7 +63,8 @@ export function LobbySlide({ slide, round }: LiveProps<"lobby">) {
   const url = usePlayUrl();
   const inputs = useRound(round);
   const questions = visibleQuestions(inputs);
-  const latest = questions.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  // A copy sorted, not toSorted: OBS 30's Chromium 103 doesn't have it.
+  const latest = [...questions].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
   const [i, setI] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setI((n) => n + 1), 5000);
@@ -118,7 +120,9 @@ export function LobbySlide({ slide, round }: LiveProps<"lobby">) {
 // ---------------------------------------------------------------------------
 
 export function FaceSlide({ eventId, round, params }: LiveProps<"face">) {
-  return <OwyFace ambient={false} eventId={eventId} params={{ captions: params.captions }} round={round} takenAt="" />;
+  return (
+    <OwyFaceScene ambient={false} eventId={eventId} params={{ captions: params.captions }} round={round} takenAt="" />
+  );
 }
 
 /**
@@ -128,7 +132,7 @@ export function FaceSlide({ eventId, round, params }: LiveProps<"face">) {
 export function PitchSlide({ slide, eventId, round, params }: LiveProps<"pitch">) {
   return (
     <>
-      <OwyFace ambient={false} eventId={eventId} params={{ captions: params.captions }} round={round} takenAt="" />
+      <OwyFaceScene ambient={false} eventId={eventId} params={{ captions: params.captions }} round={round} takenAt="" />
       <div className="absolute top-[44px] grid grid-cols-[auto_auto] gap-x-[56px] gap-y-[14px]" style={{ left: COL_X }}>
         {slide.how.map((text, i) => (
           <Build key={text} className="flex items-baseline gap-4" delay={0.1 + i * 0.1}>
@@ -508,7 +512,7 @@ export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
 }
 
 // ---------------------------------------------------------------------------
-// The bodies: the two boards side by side, round screens with the live face inside
+// The bodies: the two boards side by side, round screens with each one's own face, live
 // ---------------------------------------------------------------------------
 
 export function DevicesSlide({ slide, step }: LiveProps<"devices">) {
@@ -529,12 +533,7 @@ export function DevicesSlide({ slide, step }: LiveProps<"devices">) {
                     : BRAND.cream,
                 }}
               >
-                <div
-                  className="overflow-hidden rounded-full bg-black"
-                  style={{ width: d, height: d, padding: knob ? 8 : 0 }}
-                >
-                  <MiniFace className="h-full w-full" size={d} />
-                </div>
+                <MiniFace board={knob ? "knob" : "amoled"} className="bg-black" size={d} />
               </div>
             </div>
             <div className="w-[380px]">
@@ -566,26 +565,36 @@ const EXPRESSION_LABEL: Record<Expression, string> = {
   excited: "Entusiasmado",
 };
 const FACE_EVERY_MS = 2400;
+/** 1 s of a shut mouth (open 0), in the bridge's lip-shape codec. */
+const SHUT = "A".repeat(25);
 
-/** The face big, cycling its feelings; its name under it, both above Owy's caption. */
+/** The face big, going through its feelings; its name under it, both above Owy's caption. */
 export function FacesSlide({ slide }: LiveProps<"faces">) {
+  const { state } = useFeed();
+  const face = useRef<FaceApi>(null);
   const [index, setIndex] = useState(0);
   const list = slide.expressions;
   const name = list[index % list.length];
 
+  // The device keeps a feeling for the sentence it is saying, so this face is always mid-sentence.
+  useEffect(() => {
+    face.current?.state("speaking");
+    const id = setInterval(() => setIndex((i) => i + 1), FACE_EVERY_MS);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => face.current?.express(name, 100), [name]);
+  // Between Owy's lines the mouth stays shut, so each face reads; while he talks, it moves.
+  useEffect(() => {
+    if (state === "speaking") return;
+    const shut = () => face.current?.mouth(SHUT, Date.now());
+    shut();
+    const id = setInterval(shut, 500);
+    return () => clearInterval(id);
+  }, [state]);
+
   return (
     <>
-      <div className="absolute top-[40px] left-[640px]">
-        <MiniFace
-          drive={(s, t) => {
-            const i = Math.floor(t / FACE_EVERY_MS);
-            if (i !== index) setIndex(i);
-            s.mood = "idle";
-            s.expression = { name: list[i % list.length], strength: 100, until: t + 1000 };
-          }}
-          size={640}
-        />
-      </div>
+      <OwyFace ref={face} className="absolute top-[40px] left-[640px]" size={640} />
       <div className="absolute top-[704px] right-0 left-0 flex justify-center">
         <AnimatePresence mode="wait">
           <m.p

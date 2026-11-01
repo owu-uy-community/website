@@ -2122,9 +2122,14 @@ export const FaceEventSchema = z.object({
       text: z.string().trim().max(2000),
     })
     .optional(),
-  /** A feeling over the state, what the device's face does per sentence; it fades on the wall. */
+  /** A feeling over the state, what the device's face does per sentence. */
   expression: z
-    .object({ name: z.enum(EXPRESSIONS), strength: z.number().int().min(0).max(100).default(100) })
+    .object({
+      name: z.enum(EXPRESSIONS),
+      strength: z.number().int().min(0).max(100).default(100),
+      /** Epoch ms when its sentence becomes audible: the faces change on the word, not on arrival. */
+      at: z.number().optional(),
+    })
     .optional(),
   /** "The card landed": the wall shows it with its place. */
   card: FaceCardSchema.optional(),
@@ -2134,6 +2139,19 @@ export const FaceEventSchema = z.object({
   tool: z.string().trim().max(60).optional(),
 });
 export type FaceEvent = z.infer<typeof FaceEventSchema>;
+
+/**
+ * Owy's lip shapes, what the device's mouth_track gets: base64url, one char per 40 ms, the first
+ * heard at `at` (epoch ms). The bridge publishes them on the stage channel; never stored. Anyone
+ * who may operate the stage can publish there, so the wall checks every one.
+ */
+export const MouthEventSchema = z.object({
+  /** The Owy speaking (a FaceEvent's `source`): a wall only takes the one it follows. */
+  source: z.string().max(80),
+  at: z.number(),
+  frames: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+});
+export type MouthEvent = z.infer<typeof MouthEventSchema>;
 
 /** The face as kept on the stage row: the last state, feeling and card — never the transcript. */
 export const StoredFaceSchema = FaceEventSchema.omit({ transcript: true }).extend({ at: z.string() });
