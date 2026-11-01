@@ -1,16 +1,13 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import {
   experimental_getRealtimeToolDefinitions,
   tool,
   type Experimental_RealtimeServerEvent as RealtimeServerEvent,
-  type Experimental_RealtimeSessionConfig as RealtimeSessionConfig,
   type ToolSet,
 } from "ai";
 import { z } from "zod";
-import { VoiceAssistantEvent, type VoiceAssistantAudioData, type VoiceAssistantRequest } from "esphome-client";
+import type { VoiceAssistantAudioData, VoiceAssistantRequest } from "esphome-client";
 import {
   DEVICE_SAMPLE_RATE,
   FrameChunker,
@@ -18,67 +15,31 @@ import {
   PacedSpeaker,
   Pcm16Resampler,
   bytesForMs,
-  fromWav,
   rmsLevel,
 } from "./audio/pcm";
 import { MouthTrack } from "./audio/mouth";
-import { ExpressionDirector, jevClassifier, type Classifier } from "./expression";
-import { HostMic } from "./audio/host-mic";
-import { audioRoute, micRoute, type AudioRoute, type MicRoute } from "./audio/route";
-import { loadConfig, type BridgeConfig, type DeviceSpec } from "./config";
-import { CompanionDevice } from "./device/esphome";
-import type { DeviceHandlers } from "./device/esphome";
-import type { AudioPeer, DeviceTransport } from "./device/transport";
-import { AsyncLocalStorage } from "node:async_hooks";
+import { audioRoute, type AudioRoute, type MicRoute } from "./audio/route";
+import type { BridgeConfig, DeviceSpec } from "./config";
+import { CompanionDevice, type DeviceHandlers } from "./device/esphome";
 import { VoiceTurn, type VoiceLink } from "./device/pipeline";
 import { RouteLink } from "./device/route-link";
+import type { AudioPeer, DeviceTransport } from "./device/transport";
+import { ExpressionDirector } from "./expression";
 import { faceForPhase } from "./face";
-import { createLogger, type Logger } from "./log";
-import { FALLBACK_LINES, gatewayCascade, loadFallbackClips, type Cascade, type FallbackClip } from "./realtime/cascade";
-import { EveLink } from "./realtime/eve-link";
-import { parseModelSpecs, resolveRealtimeProvider, type RealtimeProvider } from "./realtime/models";
-import { resolveActiveEvent } from "../../../agent/lib/board";
-import { owuApi, type OwuApi, type PlacedTrackResponse, type StickyNote } from "../../../agent/lib/owu-api";
-import {
-  PITCH_CLIPS,
-  PITCH_LIMITS,
-  PITCH_LINES,
-  PitchRecorder,
-  SCRIPT_PREFIX,
-  gatewayDuplicateFinder,
-  gatewayPitchExtractor,
-  isPitchRun,
-  type DuplicateFinder,
-  type PitchExtractor,
-  type PitchKind,
-  type PitchLine,
-} from "./pitch";
-import {
-  PitchFlow,
-  type CompleteDraft,
-  type PitchDraft,
-  type PitchPort,
-  type PitchRecording,
-  type PitchVoice,
-  type Placement,
-} from "./pitch-flow";
-import { pitchThinkingMs, sleep, TIMINGS, within, withTimeout } from "./timings";
-import type { Asker, DeviceStatus, TalkContext, TurnSummary, VoiceStatus } from "./web/contract";
-import { BRIDGE_TARGET, DEVICE_KEYS, describeValue, settingSpec, type SettingCheck, type SettingKey } from "./web/registry";
+import type { Logger } from "./log";
+import { PITCH_CLIPS, PITCH_LIMITS, PITCH_LINES, PitchRecorder, SCRIPT_PREFIX, isPitchRun, type PitchKind, type PitchLine } from "./pitch";
+import { findDuplicatePitch, placePitch, savePitchFailure } from "./pitch-board";
+import { PitchFlow, type PitchPort, type PitchRecording, type PitchVoice } from "./pitch-flow";
+import { FALLBACK_LINES, type FallbackClip } from "./realtime/cascade";
+import type { EveLink } from "./realtime/eve-link";
+import type { RealtimeProvider } from "./realtime/models";
 import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
 import { buildSessionConfig, sessionInputRate, voiceFor } from "./realtime/session-config";
+import { buildCompanionToolSet, executeToolByName, type FaceState, type ScreenCommand, type ToolRuntime } from "./realtime/tools";
 import type { PitchRuntime, SharedRuntime } from "./runtime";
-import {
-  buildCompanionToolSet,
-  executeToolByName,
-  loadOwyToolDefinitions,
-  resolveGridUrl,
-  type FaceState,
-  type OwyToolDefinition,
-  type ScreenCard,
-  type ScreenCommand,
-  type ToolRuntime,
-} from "./realtime/tools";
+import { pitchThinkingMs, sleep, TIMINGS } from "./timings";
+import type { Asker, DeviceStatus, TalkContext, TurnSummary, VoiceStatus } from "./web/contract";
+import { BRIDGE_TARGET, DEVICE_KEYS, describeValue, settingSpec, type SettingCheck, type SettingKey } from "./web/registry";
 
 export { loadClipPcm, loadSharedRuntime, type PitchRuntime, type SharedRuntime } from "./runtime";
 export {
@@ -149,14 +110,6 @@ interface PitchRun extends PitchRecording {
   resolveEnded(): void;
 }
 
-const isConflict = (error: unknown): boolean =>
-  typeof error === "object" && error !== null && "code" in error && error.code === "CONFLICT";
-
-/** A 4xx said no for sure; anything else (a timeout, a dropped connection, a 5xx) may or may not have written. */
-const isAmbiguous = (error: unknown): boolean => {
-  const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
-  return !(typeof status === "number" && status >= 400 && status < 500);
-};
 
 export interface DeviceSessionOptions {
   connectDevice?: (
@@ -1641,10 +1594,10 @@ export class DeviceSession {
       say: (run, line) => this.sayPitchLine(run, line),
       announce: (run, text) => this.announcePitch(run, text),
       prompt: (field) => this.device?.pitchPrompt?.(field),
-      place: (draft) => this.placePitch(runtime, draft, since),
-      findDuplicate: (draft, signal) => this.findDuplicatePitch(runtime, draft, signal),
+      place: (draft) => placePitch(runtime, draft, since, { log: this.log, authorize: this.options.authorizeTool }),
+      findDuplicate: (draft, signal) => findDuplicatePitch(runtime, draft, signal, this.log),
       showCard: (card) => this.device?.showCard(card),
-      saveFailure: (reason, draft, wav) => this.savePitchFailure(reason, draft, wav),
+      saveFailure: (reason, draft, wav) => savePitchFailure(this.shared.config?.COMPANION_LOG_DIR, this.spec.id, reason, draft, wav, this.log),
     };
   }
 
@@ -1731,115 +1684,6 @@ export class DeviceSession {
       },
       2 * (this.shared.config?.COMPANION_ACK_MS ?? 2500)
     );
-  }
-
-  /**
-   * One card on the board, never two. A slow write is never raced by a
-   * second one: past TIMINGS.placeTimeoutMs the bridge looks for the card and keeps
-   * waiting on the same request. Only a request that is over and failed
-   * ambiguously (dropped connection, 5xx) is tried again, once, after
-   * looking for its card — so a bad network costs neither the pitch nor a duplicate.
-   */
-  private async placePitch(runtime: PitchRuntime, draft: CompleteDraft, since: number): Promise<Placement> {
-    const denial = this.options.authorizeTool?.("create_track");
-    if (denial) return { denied: denial };
-    const openSpaceId = await runtime.openSpaceId();
-    const input = {
-      openSpaceId,
-      title: draft.title,
-      speaker: draft.speaker ?? undefined,
-      description: draft.description ?? undefined,
-      needsTV: draft.needsTV,
-      needsWhiteboard: draft.needsWhiteboard,
-      source: "companion",
-    };
-    const found = async (): Promise<ScreenCard | null> => {
-      const note = await this.findPlaced(runtime, openSpaceId, draft.title, since);
-      if (!note) return null;
-      this.log.info(`pitch: la charla «${note.title}» ya estaba en la grilla (${note.room} ${note.timeSlot})`);
-      return { title: note.title, speaker: note.speaker, room: note.room, timeSlot: note.timeSlot };
-    };
-    const request = runtime.api.tracks.createPlaced(input);
-    let outcome = await within(request, TIMINGS.placeTimeoutMs);
-    if ("late" in outcome) {
-      this.log.warn(`pitch: la grilla tarda más de ${TIMINGS.placeTimeoutMs / 1000} s; me fijo si la charla ya quedó y sigo esperando`);
-      const card = await found();
-      if (card) return card;
-      outcome = await within(request, TIMINGS.placeTimeoutMs);
-      if ("late" in outcome) throw new Error(`la grilla no contestó en ${(2 * TIMINGS.placeTimeoutMs) / 1000} s`);
-    }
-    let placed: PlacedTrackResponse;
-    if ("error" in outcome) {
-      const error = outcome.error;
-      if (isConflict(error)) return "full";
-      if (!isAmbiguous(error)) throw error;
-      this.log.warn("pitch: la grilla no contestó claro; me fijo si la charla quedó antes de reintentar", error);
-      const card = await found();
-      if (card) return card;
-      try {
-        placed = await withTimeout(runtime.api.tracks.createPlaced(input), TIMINGS.placeTimeoutMs);
-      } catch (retryError) {
-        if (isConflict(retryError)) return "full";
-        throw retryError;
-      }
-    } else placed = outcome.value;
-    const card: ScreenCard = {
-      title: placed.note.title,
-      speaker: placed.note.speaker ?? undefined,
-      room: placed.note.room ?? placed.placement.room,
-      timeSlot: placed.note.timeSlot ?? placed.placement.timeSlot,
-    };
-    this.log.info(`pitch: charla creada «${card.title}» → ${card.room} ${card.timeSlot} (${placed.placement.reasoning})`);
-    return card;
-  }
-
-  /** The card on the board that is this same talk (asked while Owy may still be asking for the name). */
-  private async findDuplicatePitch(runtime: PitchRuntime, draft: CompleteDraft, signal: AbortSignal): Promise<ScreenCard | null> {
-    if (!runtime.dedupe) return null;
-    const started = Date.now();
-    const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId: await runtime.openSpaceId() }), TIMINGS.placeTimeoutMs);
-    const index = await runtime.dedupe.find(
-      { title: draft.title, description: draft.description, transcript: draft.transcript },
-      notes,
-      signal
-    );
-    this.log.info(`pitch: ¿ya está en la grilla? ${index === null ? "no" : `sí, «${notes[index].title}»`} (${notes.length} cards, ${Date.now() - started} ms)`);
-    if (index === null) return null;
-    const note = notes[index];
-    return { title: note.title, speaker: note.speaker ?? undefined, room: note.room, timeSlot: note.timeSlot };
-  }
-
-  /** The talk this flow created, if the write landed after all. */
-  private async findPlaced(runtime: PitchRuntime, openSpaceId: string, title: string, since: number): Promise<StickyNote | null> {
-    const want = title.trim().toLowerCase();
-    try {
-      const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId }), TIMINGS.placeTimeoutMs);
-      return (
-        notes.find(
-          (note) =>
-            note.title.trim().toLowerCase() === want && (!note.createdAt || Date.parse(note.createdAt) >= since - 60_000)
-        ) ?? null
-      );
-    } catch (error) {
-      this.log.warn("pitch: tampoco pude leer la grilla", error);
-      return null;
-    }
-  }
-
-  /** A pitch the bridge could not place, kept for the staff (COMPANION_LOG_DIR only: a visitor's voice stays nowhere else). */
-  private savePitchFailure(reason: string, draft: PitchDraft | null, wav: Buffer): void {
-    const dir = this.shared.config?.COMPANION_LOG_DIR;
-    if (!dir) return;
-    const base = path.join(dir, "pitch-failures", `${new Date().toISOString().replace(/[:.]/g, "-")}-${this.spec.id}`);
-    void mkdir(path.dirname(base), { recursive: true })
-      .then(() =>
-        Promise.all([
-          writeFile(`${base}.wav`, wav),
-          writeFile(`${base}.json`, JSON.stringify({ reason, device: this.spec.id, draft }, null, 2)),
-        ])
-      )
-      .then(() => this.log.warn(`pitch: guardado para el staff en ${base}.wav`))
-      .catch((error: unknown) => this.log.warn("pitch: no pude guardar el pitch fallido", error));
   }
 
   // ── Model → device ──────────────────────────────────────────────────────

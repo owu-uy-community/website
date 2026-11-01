@@ -218,7 +218,7 @@ export function gatewayCascade(options: GatewayCascadeOptions): Cascade {
           (error: unknown) => ({ error })
         );
       let next = chunks.length ? start(chunks[0]) : null;
-      for (const [index, chunk] of chunks.entries()) {
+      for (const index of chunks.keys()) {
         const result = await next!;
         next = index + 1 < chunks.length ? start(chunks[index + 1]) : null;
         if ("pcm" in result) {
