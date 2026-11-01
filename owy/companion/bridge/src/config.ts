@@ -27,7 +27,7 @@ export const DeviceSpecSchema = z.object({
 });
 export type DeviceSpec = z.infer<typeof DeviceSpecSchema>;
 
-const EnvSchema = z.object({
+export const EnvSchema = z.object({
   // --- Realtime model (ears + mouth) ---
   COMPANION_REALTIME_MODEL: z.string().default("gateway:google/gemini-3.8-live"),
   COMPANION_VOICE: z.string().default("Kore"),
@@ -52,6 +52,8 @@ const EnvSchema = z.object({
   COMPANION_TRANSCRIBE_MODELS: z.string().default("google/gemini-3.5-transcribe,openai/gpt-4o-mini-transcribe"),
   /** Streaming TTS for the cascade (24 kHz PCM); the voice defaults to COMPANION_VOICE. */
   COMPANION_TTS_MODEL: z.string().default("google/gemini-3.8-flash-tts"),
+  /** Speech for the cascade, one sentence at a time in Owy's voice, tried in order (comma-separated). */
+  COMPANION_TTS_MODELS: z.string().optional(),
   COMPANION_TTS_VOICE: z.string().optional(),
   /** Local brain in the cascade: the text model, then gateway model fallbacks (comma-separated). */
   COMPANION_TEXT_MODEL: z.string().default("google/gemini-3.8-flash"),
@@ -171,6 +173,12 @@ const EnvSchema = z.object({
   // ponytail: one gain for whichever Mac input is chosen; per-input gains if the venue mixes mics.
   COMPANION_HOST_MIC_GAIN_DB: z.coerce.number().min(-12).max(30).default(0),
   COMPANION_FFMPEG: z.string().default("ffmpeg"),
+  /** The Mac output for the `host` route (the room's PA), by name or part of it; unset = the system's default output. */
+  COMPANION_HOST_SPEAKER: z.string().trim().min(1).optional(),
+  /** ms from a frame leaving the pacer to it being heard from the Mac's output (mouth and face sync; calibrate by ear). */
+  COMPANION_HOST_SPEAKER_LATENCY_MS: z.coerce.number().int().min(0).max(1000).default(150),
+  /** After Owy speaks on the Mac, its mic stays deaf this long more: the room's echo (no echo cancellation). */
+  COMPANION_HOST_SPEAKER_TAIL_MS: z.coerce.number().int().min(0).max(2000).default(300),
   COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
   /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */
