@@ -180,8 +180,10 @@ export interface DeviceSessionOptions {
   lazyRealtime?: boolean;
   /** Turn-phase face changes (listening/thinking/speaking/idle) — what the firmware derives on its own. */
   onFace?: (state: FaceState) => void;
-  /** The feeling cued for the sentence being spoken (the wall mirrors it). */
-  onExpression?: (name: string, strength: number) => void;
+  /** The feeling cued for the sentence being spoken, heard `leadMs` from now (the wall mirrors it). */
+  onExpression?: (name: string, strength: number, leadMs: number) => void;
+  /** Lip shapes for every answer, the first heard `leadMs` from now (the wall's face follows them). */
+  onMouth?: (frames: string, leadMs: number) => void;
   /**
    * A device setting changed: on the board itself (its screen, its knob — or a write of ours
    * echoing back, which the control plane tells apart) or through this bridge's own APIs (`local`).
@@ -2183,7 +2185,7 @@ export class DeviceSession {
       send: (expression, leadMs, strength) => {
         send?.(expression, leadMs, strength);
         peer?.sendExpression?.(expression, leadMs, strength);
-        this.options.onExpression?.(expression, strength);
+        this.options.onExpression?.(expression, strength, leadMs);
       },
       leadMs: () => this.outputLeadMs(device),
       log: this.log,
@@ -2197,9 +2199,17 @@ export class DeviceSession {
     if (this.pacer || turn.finished) return;
     this.firstAudioAt ||= Date.now();
     turn.beginSpeaking(text);
-    // The device lip-syncs what its own speaker plays; audio played elsewhere needs a track.
-    const send = this.device?.sendMouthTrack;
-    this.mouth = send && this.audioOutput !== "device" ? new MouthTrack(send, this.outputLeadMs()) : null;
+    // The device lip-syncs what its own speaker plays; audio played elsewhere needs a track. The wall
+    // always gets one.
+    const device = this.audioOutput !== "device" ? this.device?.sendMouthTrack?.bind(this.device) : undefined;
+    const wall = this.options.onMouth;
+    this.mouth =
+      device || wall
+        ? new MouthTrack((frames, leadMs) => {
+            device?.(frames, leadMs);
+            wall?.(frames, leadMs);
+          }, this.outputLeadMs())
+        : null;
     this.pacer = new PacedSpeaker(
       (frame) => {
         turn.pushAudio(frame);

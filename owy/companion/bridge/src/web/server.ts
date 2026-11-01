@@ -262,6 +262,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             api: shared.config.OWY_API_KEY ? owuApi() : null,
             logger: shared.logger.child(id),
             source: id,
+            publish: shared.publishStage,
           });
           session = new DeviceSession(
             { id, host: "virtual", port: 1, psk: null },
@@ -273,6 +274,8 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
               connectDevice: async (_spec, handlers) =>
                 (device = mirror.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),
               onFace: mirror.face,
+              onExpression: mirror.expression,
+              onMouth: mirror.mouth,
               lazyRealtime: true,
               isStaff: () => authority.staff,
               isMarketplaceOpen: () => authority.marketplace,

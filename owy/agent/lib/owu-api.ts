@@ -582,8 +582,8 @@ export type StageFaceState = "idle" | "listening" | "thinking" | "speaking" | "h
 export interface StageFaceInput {
   state: StageFaceState;
   transcript?: { who: "input" | "output"; text: string };
-  /** The feeling the device shows for the sentence being spoken (companion_model.h expressions). */
-  expression?: { name: string; strength: number };
+  /** The feeling the device shows for the sentence being spoken (companion_model.h expressions); `at`: epoch ms it is heard. */
+  expression?: { name: string; strength: number; at?: number };
   /** A talk that just landed on the board, as the companion announces it. */
   card?: { title: string; speaker?: string; room?: string; timeSlot?: string; reasoning?: string };
   source?: string;

@@ -122,6 +122,10 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   }
   /** The browser schedules playback a little ahead of the pacer. */
   readonly expressionLeadMs = 250;
+  /** Lip shapes for the emulator's face while the browser plays the answer (input 39 there). */
+  sendMouthTrack(frames: string, leadMs: number) {
+    this.emit({ type: "screen", command: { kind: "mouth", frames, leadMs } });
+  }
   /** A pre-rendered cue the browser plays from /companion-audio/clips/<id>.wav, whatever its stage. */
   playClip(id: string) {
     this.emit({ type: "screen", command: { kind: "clip", id } });

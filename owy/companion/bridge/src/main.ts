@@ -61,6 +61,8 @@ async function main(): Promise<void> {
 
   const shared = await loadSharedRuntime(config, logger);
   shared.sessions = new Map();
+  let channel: ControlChannel | null = null;
+  shared.publishStage = (event, payload) => channel?.publish("owy-stage", event, payload) ?? false;
   const web = config.COMPANION_WEB_BRIDGE
     ? await startWebBridge(shared, {
         port: config.COMPANION_WEB_PORT,
@@ -93,12 +95,14 @@ async function main(): Promise<void> {
       api: config.OWY_API_KEY ? owuApi() : null,
       logger: logger.child(spec.id),
       source: spec.id,
+      publish: shared.publishStage,
     });
     const session: DeviceSession = new DeviceSession(spec, shared, {
       connectDevice: async (...args) => mirror.wrap(await CompanionDevice.connect(...args)),
       onFace: mirror.face,
       onTranscript: mirror.transcript,
       onExpression: mirror.expression,
+      onMouth: mirror.mouth,
       onTool: (event) => mirror.tool(event.status === "running" ? event.name : null),
       onSetting: (key, value, setBy) => control?.deviceSetting(session, key, value, setBy),
       onLinkUp: () => control?.linkUp(session),
@@ -140,7 +144,7 @@ async function main(): Promise<void> {
     restart: () => void shutdown(75),
   });
   const plane = control;
-  const channel = config.OWY_API_KEY
+  channel = config.OWY_API_KEY
     ? new ControlChannel({
         url: config.COMPANION_SITE_WS_URL ?? realtimeUrl(owuApiUrl()),
         apiKey: config.OWY_API_KEY,

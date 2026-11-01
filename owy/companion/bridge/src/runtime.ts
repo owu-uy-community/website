@@ -62,6 +62,8 @@ export interface SharedRuntime {
   localInstructions?: string;
   /** Until when eve is skipped after failing (ms epoch); shared by every device of this bridge. */
   eveDownUntil?: number;
+  /** Publishes on the wall's realtime channel over the bridge's socket (set once it exists); false when down. */
+  publishStage?: (event: string, payload: unknown) => boolean;
 }
 
 export interface PitchRuntime {
