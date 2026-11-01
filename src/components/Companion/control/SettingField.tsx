@@ -71,7 +71,7 @@ export function SettingField({
         {spec.hint ? <p className="text-meta text-muted-foreground">{spec.hint}</p> : null}
         {view.standing ? <p className={cn("text-meta", TONE[view.standing.tone])}>{view.standing.text}</p> : null}
       </div>
-      <div className={cn("min-w-0", spec.type !== "boolean" && "flex-1")}>
+      <div className={spec.type === "boolean" ? "shrink-0" : "min-w-0 flex-1"}>
         {spec.type === "boolean" ? (
           <Switch checked={view.value === true} id={id} onCheckedChange={set} />
         ) : spec.type === "number" ? (

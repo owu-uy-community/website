@@ -1,15 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { Component, useState, type ReactNode } from "react";
 
 import { PageTabs } from "components/Admin/comms/PageTabs";
+import { Notice } from "components/Admin/panel";
+import { Button } from "components/shared/ui/button";
 import { Tabs, TabsContent } from "components/shared/ui/tabs";
 
 import CompanionControl from "../CompanionControl";
 import CompanionWorkbench from "../CompanionWorkbench";
 
-export const COMPANION_TABS = ["control", "lab"] as const;
-export type CompanionTab = (typeof COMPANION_TABS)[number];
+const COMPANION_TABS = ["control", "lab"] as const;
+type CompanionTab = (typeof COMPANION_TABS)[number];
+
+/** The lab is an emulator under construction: if it breaks, Control (and a browser serving as audio) keeps going. */
+class LabBoundary extends Component<
+  { children: ReactNode; fallback: (error: Error) => ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: ReactNode; fallback: (error: Error) => ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  render() {
+    return this.state.error ? this.props.fallback(this.state.error) : this.props.children;
+  }
+}
 
 /**
  * /admin/companion: «Control» (the physical Owys and the bridge) and «Laboratorio» (the emulator
@@ -19,6 +40,7 @@ export type CompanionTab = (typeof COMPANION_TABS)[number];
 export function CompanionTabs({ initialTab }: { initialTab: CompanionTab }) {
   const [tab, setTab] = useState<CompanionTab>(initialTab);
   const [opened, setOpened] = useState<ReadonlySet<CompanionTab>>(() => new Set([initialTab]));
+  const [labRun, setLabRun] = useState(0);
 
   const change = (next: string) => {
     const value = COMPANION_TABS.find((item) => item === next) ?? "control";
@@ -53,7 +75,21 @@ export function CompanionTabs({ initialTab }: { initialTab: CompanionTab }) {
         forceMount={opened.has("lab") || undefined}
         value="lab"
       >
-        <CompanionWorkbench />
+        <LabBoundary
+          key={labRun}
+          fallback={(error) => (
+            <div className="mx-auto w-full max-w-[1600px] px-4 pt-5 md:px-6">
+              <Notice tone="danger">
+                <p>El laboratorio se cayó: {error.message}. El control sigue andando.</p>
+                <Button className="mt-2" size="sm" variant="outline" onClick={() => setLabRun((run) => run + 1)}>
+                  Reintentar
+                </Button>
+              </Notice>
+            </div>
+          )}
+        >
+          <CompanionWorkbench />
+        </LabBoundary>
       </TabsContent>
     </Tabs>
   );

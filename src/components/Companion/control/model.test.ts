@@ -179,6 +179,14 @@ describe("the mode switch", () => {
     expect(modeView(applied, "owy-knob", true)).toStrictEqual({ mode: "pitch", standing: null });
   });
 
+  test("counts only what a mode writes for a device the bridge doesn't report", () => {
+    expect(modeView(state([row("owy-mini", "volume", 30)]), "owy-mini", true).standing).toBeNull();
+    expect(modeView(state([row("owy-mini", "talk", true)]), "owy-mini", true)).toStrictEqual({
+      mode: "charla",
+      standing: { text: "sin aplicar · dispositivo sin conexión", tone: "warn" },
+    });
+  });
+
   test("puts a paused mic first", () => {
     const s = state([row("owy-knob", "pitch_mode", true), row("owy-knob", "privacy", true)]);
     expect(modeView(s, "owy-knob", false).mode).toBe("pausa");
@@ -198,7 +206,7 @@ describe("groups, turns and the mic test", () => {
       { path: "cascade", ttfaMs: null, totalMs: 9000, at: at(10) },
     ]);
     expect(turns.map((t) => [t.path, t.firstAudio])).toStrictEqual([
-      ["cascada", "sin audio"],
+      ["cascada", null],
       ["en vivo", "1,2 s"],
     ]);
   });

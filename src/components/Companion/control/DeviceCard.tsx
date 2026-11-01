@@ -19,7 +19,12 @@ import { STAGES, type BrowserAudio } from "./useBrowserAudio";
 
 const MODE_KEYS = Object.keys(MODES) as ModeKey[];
 const OPEN_GROUPS = new Set(["modo", "audio", "sonido"]);
-const TIME = new Intl.DateTimeFormat("es-UY", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const TIME = new Intl.DateTimeFormat("es-UY", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
 
 /**
  * One physical Owy: whether it is there, its mode in one tap, staff unlock, a tone, a line to
@@ -117,14 +122,14 @@ export function DeviceCard({
           </CommandButton>
           <CommandButton
             command={{ type: "staff", deviceId: id, on: !device?.staff }}
-            done={() => (device?.staff ? "bloqueado" : "desbloqueado por 10 min")}
+            done={(_, sent) => (sent.type === "staff" && sent.on ? "desbloqueado por 10 min" : "bloqueado")}
             send={send}
           >
             {device?.staff ? <Lock aria-hidden /> : <Unlock aria-hidden />}
             {device?.staff ? "Bloquear" : "Desbloquear 10 min"}
           </CommandButton>
+          <Say id={id} send={send} />
         </div>
-        <Say id={id} send={send} />
 
         <BrowserAudioRow audio={audio} id={id} />
 
@@ -136,7 +141,14 @@ export function DeviceCard({
                 <li key={`${turn.at}-${index}`} className="flex items-center justify-between gap-3 py-1">
                   <span className="text-foreground">{turn.path}</span>
                   <span className="text-muted-foreground">
-                    primer audio <span className="font-terminal text-foreground tabular-nums">{turn.firstAudio}</span>
+                    {turn.firstAudio === null ? (
+                      "sin audio"
+                    ) : (
+                      <>
+                        primer audio{" "}
+                        <span className="font-terminal text-foreground tabular-nums">{turn.firstAudio}</span>
+                      </>
+                    )}
                   </span>
                   <span className="font-terminal text-muted-foreground tabular-nums">
                     {TIME.format(new Date(turn.at))}
@@ -179,7 +191,7 @@ function Say({ id, send }: { id: string; send: SendCommand }) {
 
   return (
     <form
-      className="flex flex-wrap items-center gap-2"
+      className="flex basis-full flex-wrap items-center gap-2"
       onSubmit={async (event) => {
         event.preventDefault();
         const line = text.trim();
@@ -218,7 +230,7 @@ function BrowserAudioRow({ id, audio }: { id: string; audio: BrowserAudio }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-ui text-foreground">
           <Laptop aria-hidden className="size-4 text-muted-foreground" />
-          {mine && audio.status ? STAGES[audio.status.stage] : "Este navegador como audio"}
+          Este navegador · {mine && audio.status ? STAGES[audio.status.stage] : STAGES.off}
         </span>
         {live ? (
           <Button size="sm" variant="destructive" onClick={audio.detach}>

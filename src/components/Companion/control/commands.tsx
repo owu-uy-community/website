@@ -55,19 +55,19 @@ export function useCommands() {
   return { send, settle };
 }
 
-type CommandState = { running: boolean; result?: CommandResult };
+type CommandState = { running: boolean; result?: CommandResult; command?: CompanionCommand };
 
 /** One control's command: running, then its result until the next run. */
 export function useCommand(send: SendCommand) {
   const [state, setState] = useState<CommandState>({ running: false });
   const run = async (command: CompanionCommand) => {
-    setState({ running: true });
+    setState({ running: true, command });
     const result = await send(command).catch((error: unknown): CommandResult => ({
       id: "",
       ok: false,
       error: error instanceof Error ? error.message : "No se pudo mandar.",
     }));
-    setState({ running: false, result });
+    setState({ running: false, result, command });
     return result;
   };
 
@@ -115,7 +115,8 @@ export function CommandButton({
   send: SendCommand;
   command: CompanionCommand;
   running?: ReactNode;
-  done?: (result: CommandResult) => ReactNode;
+  /** What to say when it worked, from the command as it was sent. */
+  done?: (result: CommandResult, command: CompanionCommand) => ReactNode;
   children: ReactNode;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
@@ -127,7 +128,11 @@ export function CommandButton({
       <Button disabled={state.running} size={size} variant={variant} onClick={() => void state.run(command)}>
         {children}
       </Button>
-      <CommandNote done={state.result && done ? done(state.result) : undefined} running={running} state={state} />
+      <CommandNote
+        done={state.result && state.command && done ? done(state.result, state.command) : undefined}
+        running={running}
+        state={state}
+      />
     </span>
   );
 }

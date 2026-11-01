@@ -160,22 +160,22 @@ export default function CompanionControl() {
             <p className="text-ui text-muted-foreground">
               Todavía no hay dispositivos: aparecen cuando el bridge reporta (corre en la Mac con COMPANION_DEVICES).
             </p>
-          ) : (
-            <div className="grid items-start gap-4 xl:grid-cols-2">
-              {ids.map((id) => (
-                <DeviceCard
-                  key={id}
-                  audio={audio}
-                  id={id}
-                  online={online}
-                  send={commands.send}
-                  state={state}
-                  onSet={onSet}
-                />
-              ))}
-            </div>
-          )}
-          <BridgeCard online={online} send={commands.send} state={state} onSet={onSet} />
+          ) : null}
+          {/* Cards stack on a phone; side by side on a wide screen, the bridge's after the devices. */}
+          <div className="grid items-start gap-4 xl:grid-cols-2">
+            {ids.map((id) => (
+              <DeviceCard
+                key={id}
+                audio={audio}
+                id={id}
+                online={online}
+                send={commands.send}
+                state={state}
+                onSet={onSet}
+              />
+            ))}
+            <BridgeCard online={online} send={commands.send} state={state} onSet={onSet} />
+          </div>
         </>
       )}
     </PageContainer>

@@ -68,7 +68,7 @@ export function BridgeStrip({
             </span>
           </p>
           {facts.length > 0 ? (
-            <p className="truncate font-terminal text-meta text-muted-foreground">{facts.join(" · ")}</p>
+            <p className="font-terminal text-meta break-words text-muted-foreground">{facts.join(" · ")}</p>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">

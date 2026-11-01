@@ -8,6 +8,7 @@ import type { CompanionState } from "lib/orpc/companion/schemas";
 import type { SettingRow, TurnPath, TurnSummary } from "../../../../owy/companion/bridge/src/web/contract";
 import {
   BRIDGE_TARGET,
+  MODES,
   modeOf,
   SETTING_GROUPS,
   SETTING_KEYS,
@@ -65,7 +66,13 @@ const WRITERS: Record<string, string> = { dispositivo: "en el dispositivo", voz:
 export const writerText = (setBy: string) =>
   setBy.startsWith("admin:") ? setBy.slice("admin:".length) || "el panel" : (WRITERS[setBy] ?? setBy);
 
-const WHEN = new Intl.DateTimeFormat("es-UY", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+const WHEN = new Intl.DateTimeFormat("es-UY", {
+  day: "numeric",
+  month: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
 
 /** «Agustín · 1/11, 14:32». */
 export const changedText = (row: SettingRow) => `${writerText(row.setBy)} · ${WHEN.format(new Date(row.setAt))}`;
@@ -148,13 +155,16 @@ export function settingView(state: CompanionState, target: string, key: SettingK
   };
 }
 
+/** The settings a mode writes. */
+const MODE_KEYS = new Set(Object.values(MODES).flatMap((mode) => Object.keys(mode.values)));
+
 /**
  * A device's mode: the one its stored values ask for (over the values in effect), and whether it
  * is in effect yet.
  */
 export function modeView(state: CompanionState, target: string, online: boolean) {
   const values = valuesOf(state.status, target);
-  const stored = state.rows.filter((row) => row.target === target);
+  const stored = state.rows.filter((row) => row.target === target && MODE_KEYS.has(row.key));
   const mode: ModeKey = modeOf({ ...values, ...Object.fromEntries(stored.map((row) => [row.key, row.value])) });
   const differs = values !== undefined && modeOf(values) !== mode;
   const known = values !== undefined;
@@ -186,7 +196,7 @@ const PATHS: Record<TurnPath, string> = {
   pitch: "pitch",
 };
 
-/** A device's last turns, newest first: how it was answered and how long until Owy's first sound. */
+/** A device's last turns, newest first: how it was answered and how long until Owy's first sound (null: none). */
 export const turnsView = (turns: TurnSummary[]) =>
   [...turns]
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
@@ -195,7 +205,7 @@ export const turnsView = (turns: TurnSummary[]) =>
       path: PATHS[turn.path] ?? turn.path,
       firstAudio:
         turn.ttfaMs === null
-          ? "sin audio"
+          ? null
           : `${(turn.ttfaMs / 1000).toLocaleString("es-UY", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} s`,
     }));
 
