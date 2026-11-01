@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 import { resolveActiveEvent } from "../../../../agent/lib/board";
+import { PROPOSE_TALK_DESCRIPTION, ProposeTalkSchema, proposalRefusal } from "../../../../agent/lib/proposals";
 import {
   describeValue,
   settingSpec,
@@ -288,16 +289,6 @@ export function trimForVoice(name: string, output: unknown): unknown {
 
 // ── Bridge-only tools ─────────────────────────────────────────────────────
 
-const proposeTalkSchema = z.object({
-  title: z.string().min(2).describe("Título de la charla, como lo dijo la persona"),
-  speaker: z.string().min(1).describe("Nombre de quien la da"),
-  room: z.string().min(1).describe("Sala elegida (nombre)"),
-  timeSlot: z.string().min(1).describe("Horario elegido (nombre del bloque o hora, ej: '15:30')"),
-  needsTV: z.boolean().optional().describe("Necesita tele/proyector"),
-  needsWhiteboard: z.boolean().optional().describe("Necesita pizarra"),
-  description: z.string().optional().describe("Una línea opcional sobre el tema"),
-});
-
 const showOnScreenSchema = z.object({
   kind: z.enum(["qr", "text", "card", "face"]).describe("qr = QR de la grilla; text = un texto corto; card = una card; face = expresión"),
   text: z.string().max(120).optional().describe("Texto corto para kind=text o caption del QR"),
@@ -323,24 +314,18 @@ export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition
   const createTrack = definitions.get("create_track");
 
   set.propose_talk = tool({
-    description:
-      "Carga en la grilla del open space una charla propuesta en el mercado de ideas. Usala SOLO después de confirmar en voz alta título, speaker, sala y horario con la persona. Funciona mientras el mercado de ideas está abierto (o en modo staff).",
-    inputSchema: proposeTalkSchema,
+    description: PROPOSE_TALK_DESCRIPTION,
+    inputSchema: ProposeTalkSchema,
     execute: async (input) => {
-      const staff = runtime.isStaff();
-      if (!staff && !runtime.isMarketplaceOpen()) {
-        return {
-          ok: false,
-          error:
-            "El mercado de ideas está cerrado en este momento: las propuestas se toman solo durante el mercado. Que hablen con el staff.",
-        };
-      }
       const now = (runtime.now ?? (() => new Date()))().getTime();
-      const last = lastProposalAt.get(runtime.deviceId) ?? 0;
-      if (!staff && now - last < runtime.proposalCooldownMs) {
-        const wait = Math.ceil((runtime.proposalCooldownMs - (now - last)) / 1000);
-        return { ok: false, error: `Acabo de cargar una propuesta; esperá ${wait} segundos para la siguiente.` };
-      }
+      const refusal = proposalRefusal({
+        staff: runtime.isStaff(),
+        marketplaceOpen: runtime.isMarketplaceOpen(),
+        lastAt: lastProposalAt.get(runtime.deviceId) ?? null,
+        now,
+        cooldownMs: runtime.proposalCooldownMs,
+      });
+      if (refusal) return { ok: false, error: refusal };
       if (!createTrack) {
         return { ok: false, error: "La herramienta create_track no está disponible." };
       }

@@ -1,9 +1,9 @@
 import { isChannel } from "eve/channels";
 import { defineDynamic, defineTool } from "eve/tools";
-import { z } from "zod";
 import companion from "../channels/companion";
 import { findRoom, findSchedule, getBoard } from "../lib/board";
 import { owuApi } from "../lib/owu-api";
+import { PROPOSE_TALK_DESCRIPTION, ProposeTalkSchema, proposalRefusal } from "../lib/proposals";
 import { isCompanionStaff } from "../lib/staff";
 
 /**
@@ -29,32 +29,18 @@ export default defineDynamic((ctx) => {
 
   return {
     propose_talk: defineTool({
-      description:
-        "Carga en la grilla del open space una charla propuesta en el mercado de ideas. Usala SOLO después de confirmar en voz alta título, speaker, sala y horario con la persona. Funciona mientras el mercado de ideas está abierto (o en modo staff).",
-      inputSchema: z.object({
-        title: z.string().min(2).describe("Título de la charla, como lo dijo la persona"),
-        speaker: z.string().min(1).describe("Nombre de quien la da"),
-        room: z.string().min(1).describe("Sala elegida (nombre)"),
-        timeSlot: z.string().min(1).describe("Horario elegido (nombre del bloque o hora, ej: '15:30')"),
-        needsTV: z.boolean().optional().describe("Necesita tele/proyector"),
-        needsWhiteboard: z.boolean().optional().describe("Necesita pizarra"),
-        description: z.string().optional().describe("Una línea opcional sobre el tema"),
-      }),
+      description: PROPOSE_TALK_DESCRIPTION,
+      inputSchema: ProposeTalkSchema,
       async execute(input, toolCtx) {
         // The device unlocked with its PIN is staff mode; the kiosk is anyone (the marketplace rules)
-        const staff = isCompanionStaff(toolCtx);
-        const marketplaceOpen = toolCtx.session.auth.current?.attributes?.marketplace_open === "true";
-        if (!staff && !marketplaceOpen) {
-          return {
-            ok: false,
-            error:
-              "El mercado de ideas está cerrado en este momento: las propuestas se toman solo durante el mercado. Que hablen con el staff.",
-          };
-        }
-        if (!staff && lastProposalAt !== null && Date.now() - lastProposalAt < COOLDOWN_MS) {
-          const wait = Math.ceil((COOLDOWN_MS - (Date.now() - lastProposalAt)) / 1000);
-          return { ok: false, error: `Acabo de cargar una propuesta; esperá ${wait} segundos para la siguiente.` };
-        }
+        const refusal = proposalRefusal({
+          staff: isCompanionStaff(toolCtx),
+          marketplaceOpen: toolCtx.session.auth.current?.attributes?.marketplace_open === "true",
+          lastAt: lastProposalAt,
+          now: Date.now(),
+          cooldownMs: COOLDOWN_MS,
+        });
+        if (refusal) return { ok: false, error: refusal };
 
         const board = await getBoard();
         const room = findRoom(board, input.room);
