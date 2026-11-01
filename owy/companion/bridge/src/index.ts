@@ -61,10 +61,11 @@ import {
   type PitchVoice,
   type Placement,
 } from "./pitch-flow";
-import { loadPromptBundle, loadVoiceOfOwyPrompt } from "./realtime/prompt";
 import { pitchThinkingMs, sleep, TIMINGS, within, withTimeout } from "./timings";
 import type { Asker, TalkContext, VoiceStatus } from "./web/contract";
 import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
+import { buildSessionConfig, sessionInputRate, voiceFor } from "./realtime/session-config";
+import type { PitchRuntime, SharedRuntime } from "./runtime";
 import {
   buildCompanionToolSet,
   executeToolByName,
@@ -76,6 +77,16 @@ import {
   type ScreenCommand,
   type ToolRuntime,
 } from "./realtime/tools";
+
+export { loadClipPcm, loadSharedRuntime, type PitchRuntime, type SharedRuntime } from "./runtime";
+export {
+  buildSessionConfig,
+  geminiLiveOptions,
+  isAudioOnlyModel,
+  isGeminiModel,
+  sessionInputRate,
+  voiceFor,
+} from "./realtime/session-config";
 
 /**
  * owy companion bridge — one process per venue laptop.
@@ -103,6 +114,8 @@ const BENIGN_ERROR_CODES = new Set([
   "conversation_already_has_active_response",
   "response_cancel_not_active",
 ]);
+/** After eve fails, the local brain answers alone this long (eve is not asked, so no turn waits on it). */
+const EVE_BREAKER_MS = 60_000;
 /** Cascade TTS has no transcript marks: roughly how fast Owy speaks, to cue faces per sentence. */
 // ponytail: fixed speaking rate; use TTS word timings if a provider streams them.
 const SPOKEN_CHARS_PER_SECOND = 14;
@@ -127,121 +140,6 @@ interface CascadeRun {
   abort: AbortController;
   /** The answer is on its way (submitted once: a pause, the device's end of audio, or eve finishing). */
   submitted: boolean;
-}
-
-/** Gemini Live (direct) takes the device's 16 kHz as-is; the AI Gateway's realtime endpoint wants 24 kHz PCM16. */
-export function sessionInputRate(provider: RealtimeProvider | undefined): number {
-  return provider?.provider === "gateway" ? GEMINI_OUTPUT_SAMPLE_RATE : DEVICE_SAMPLE_RATE;
-}
-
-export function buildSessionConfig(options: {
-  provider: RealtimeProvider;
-  instructions: string;
-  voice: string;
-  tools: RealtimeSessionConfig["tools"];
-  modality: "audio" | "text";
-}): RealtimeSessionConfig {
-  const base: RealtimeSessionConfig = {
-    instructions: options.instructions,
-    outputModalities: [options.modality],
-    inputAudioFormat: { type: "audio/pcm", rate: sessionInputRate(options.provider) },
-    outputAudioFormat: { type: "audio/pcm", rate: GEMINI_OUTPUT_SAMPLE_RATE },
-    inputAudioTranscription: {},
-    outputAudioTranscription: {},
-    tools: options.tools,
-  };
-  if (options.modality === "audio") base.voice = options.voice;
-
-  const googleOptions = geminiLiveOptions(options.provider.modelId);
-  if (options.provider.provider === "google") {
-    // Non-`google` keys are merged verbatim into the Gemini `setup` message.
-    base.providerOptions = {
-      realtimeInputConfig: { automaticActivityDetection: { silenceDurationMs: 600 } },
-      contextWindowCompression: { slidingWindow: {} },
-      sessionResumption: {},
-      ...(googleOptions ? { google: googleOptions } : {}),
-    };
-  } else if (isGeminiModel(options.provider.modelId)) {
-    // The gateway rejects `turnDetection` and Gemini-native setup keys for Gemini Live
-    // (its own activity detection applies); `providerOptions.google` does pass through.
-    if (googleOptions) base.providerOptions = { google: googleOptions };
-  } else {
-    // ElevenLabs' realtime models reject `server_vad` ("use semantic_vad or null").
-    base.turnDetection = /(^|\/)eleven-/.test(options.provider.modelId ?? "")
-      ? { type: "semantic-vad" }
-      : { type: "server-vad", silenceDurationMs: 600 };
-  }
-  return base;
-}
-
-/** `google/gemini-3.8-live` through the gateway, or a bare Gemini id on the direct provider. */
-export function isGeminiModel(modelId: string | undefined): boolean {
-  return /(^|\/)gemini-/.test(modelId ?? "");
-}
-
-/** Gemini 3.8 Live only speaks audio (`outputModalities: ["text"]` is rejected); transcripts carry the text. */
-export function isAudioOnlyModel(modelId: string | undefined): boolean {
-  return /^gemini-\d+\.\d+-live/.test(modelId?.split("/").at(-1) ?? "");
-}
-
-/**
- * Gemini 3.8 Live defaults to asynchronous (`NON_BLOCKING`) tool calls; the
- * bridge's turn machine expects the classic blocking flow (call → output →
- * spoken answer), so pin `BLOCKING` on the latency-optimised model. The
- * extended-thinking variant only accepts `NON_BLOCKING`, so it is left alone
- * (the provider adds its mandatory `thinkingLevel: "low"` by itself).
- */
-export function geminiLiveOptions(modelId: string | undefined): { defaultToolBehavior: "BLOCKING" } | undefined {
-  const name = modelId?.split("/").at(-1) ?? "";
-  return /^gemini-\d+\.\d+-live$/.test(name) ? { defaultToolBehavior: "BLOCKING" } : undefined;
-}
-
-/** Everything a device session needs and that is shared across devices. */
-export interface SharedRuntime {
-  config: BridgeConfig;
-  provider: RealtimeProvider;
-  definitions: Map<string, OwyToolDefinition>;
-  instructions: string;
-  gridUrl: string | undefined;
-  logger: Logger;
-  /** Provider codecs contain turn counters; each device must own its codec. */
-  createProvider?: () => RealtimeProvider;
-  /** Physical device sessions by id, so a browser can attach as one's laptop audio. */
-  sessions?: Map<string, DeviceSession>;
-  /**
-   * `eve`: the eve Owy answers (agent/channels/companion.ts) and the realtime
-   * model only hears/speaks; `local`: the realtime model is the brain with the
-   * agent's tools in-process. Absent = `local` (tests, older callers).
-   */
-  brain?: "eve" | "local";
-  eve?: EveLink;
-  /** Faces while Owy talks (COMPANION_EXPRESSIONS); `classify` absent = local guesses only. */
-  expressions?: { classify?: Classifier };
-  /** Modo pitch (the open space's marketplace); absent = a pitch run ends with "sin configurar". */
-  pitch?: PitchRuntime;
-  /** Realtime models tried after the primary (COMPANION_REALTIME_FALLBACKS); each device owns its codecs. */
-  createFallbackProviders?: () => RealtimeProvider[];
-  /** The voice loop without a realtime model; absent = a tap with no live model is declined (old behaviour). */
-  cascade?: Cascade;
-  /** Pre-rendered fallback lines, 16 kHz PCM (`pnpm companion:clips`). */
-  fallbackClips?: Partial<Record<FallbackClip, Buffer>>;
-  /** Every recorded clip by id → duration (ms): the clips manifest (pitch cues, the talk's lines). */
-  clips?: Record<string, number>;
-  /** An input of the Mac running the bridge (`mic: host`); absent in Docker and in browser sessions. */
-  hostMic?: HostMic;
-}
-
-export interface PitchRuntime {
-  extract: PitchExtractor;
-  api: Pick<OwuApi, "tracks">;
-  /** The event the knob proposes into (OWY_EVENT_ID or the active one), resolved on first use. */
-  openSpaceId: () => Promise<string>;
-  /** Pre-rendered cues by id → duration (ms); empty = Owy says the cues through the model. */
-  clips: Record<string, number>;
-  /** The same cues as 16 kHz PCM, for the board's own speaker (the browser plays the files). */
-  clipPcm?: Record<string, Buffer>;
-  /** Is this talk already on the board? (a decision model; absent = never checked, COMPANION_PITCH_DEDUPE=off) */
-  dedupe?: DuplicateFinder;
 }
 
 /**
@@ -332,6 +230,8 @@ export class DeviceSession {
   private readonly toolEpoch = new AsyncLocalStorage<number>();
   private session: NodeRealtimeSession | null = null;
   private tools: ToolSet = {};
+  /** The local brain's tools (all of Owy's): the realtime model's own on `local`, eve's fallback on `eve`. */
+  private localTools: ToolSet | null = null;
   private turn: VoiceTurn | null = null;
   private requestEpoch = 0;
   private conversationId: string = randomUUID();
@@ -453,6 +353,8 @@ export class DeviceSession {
         show_on_screen: local.show_on_screen,
         hablar_con_owy: this.eveTool(this.shared.eve, runtime),
       };
+      // When eve is down the local brain answers, with every tool.
+      this.localTools = buildCompanionToolSet(this.shared.definitions, runtime);
     } else {
       this.tools = buildCompanionToolSet(this.shared.definitions, runtime);
     }
@@ -463,8 +365,7 @@ export class DeviceSession {
       buildSessionConfig({
         provider,
         instructions: this.shared.instructions,
-        // Gemini voice names do not exist on other vendors.
-        voice: isGeminiModel(provider.modelId) ? config.COMPANION_VOICE : config.COMPANION_FALLBACK_VOICE,
+        voice: voiceFor(provider, config),
         tools: toolDefinitions,
         modality: "audio",
       });
@@ -912,16 +813,7 @@ export class DeviceSession {
 
     let answer: string;
     try {
-      answer =
-        this.shared.brain === "eve" && this.shared.eve
-          ? await this.askEve(text, signal)
-          : await cascade.answer({
-              text,
-              history: [...this.history],
-              instructions: this.shared.instructions + this.talkNote(),
-              tools: this.cascadeTools(),
-              signal,
-            });
+      answer = await this.askBrain(text, signal);
     } catch (error) {
       if (!this.cascadeIsCurrent(run)) return;
       this.log.warn("cascada: no hubo respuesta", error);
@@ -935,7 +827,7 @@ export class DeviceSession {
   /** The local brain's tools, authorized exactly like the realtime model's calls (browser grants deny writes). */
   private cascadeTools(): ToolSet {
     return Object.fromEntries(
-      Object.entries(this.tools).map(([name, definition]) => {
+      Object.entries(this.localTools ?? this.tools).map(([name, definition]) => {
         const execute = definition.execute;
         if (!execute) return [name, definition];
         return [
@@ -1103,15 +995,7 @@ export class DeviceSession {
     }
     let answer = "";
     try {
-      if (eve) answer = await this.askEve(text, abort.signal, eve, this.runtime, talk);
-      else if (this.shared.cascade)
-        answer = await this.shared.cascade.answer({
-          text,
-          history: [...this.history],
-          instructions: this.shared.instructions + this.talkNote(talk),
-          tools: this.cascadeTools(),
-          signal: abort.signal,
-        });
+      answer = await this.askBrain(text, abort.signal, this.runtime, talk);
     } catch (error) {
       if (!isCurrent()) return;
       this.log.warn("charla: el cerebro no respondió", error);
@@ -1253,8 +1137,8 @@ export class DeviceSession {
   }
 
   /** The talk, for the local brain's instructions (eve gets it in the turn's attributes instead). */
-  private talkNote(talk: TalkContext = this.talk): string {
-    if (!talk || this.shared.brain === "eve") return "";
+  private talkNote(talk: TalkContext = this.talk, local = this.shared.brain !== "eve"): string {
+    if (!talk || !local) return "";
     return `\n\n## Charla en vivo\nEstás co-presentando una charla con Agustín frente a público. Respuestas de hasta veinte segundos, una sola idea, y devolvele la palabra. ${
       talk.asker === "audience" ? "Ahora te habla alguien del público: respondele a esa persona." : "Ahora te habla Agustín."
     }\nEn pantalla: ${talk.slide}`;
@@ -1936,7 +1820,7 @@ export class DeviceSession {
         if (this.script) return { respuesta: this.script };
         let text: string;
         try {
-          text = await this.askEve(texto, undefined, eve, runtime);
+          text = await this.askBrain(texto, undefined, runtime);
         } catch (error) {
           this.log.error("eve turn failed", error);
           // The socket died while eve was thinking: nobody will say the model's apology.
@@ -1960,6 +1844,44 @@ export class DeviceSession {
     if (!run || this.path !== "cascade" || run.submitted || !this.cascadeIsCurrent(run)) return null;
     run.submitted = true;
     return run;
+  }
+
+  /**
+   * Owy's brain for what the person said: eve when it is the brain and answering,
+   * the local brain (the text model with every tool and this conversation) when
+   * it is not — and, after eve failed, for a minute without asking it, so a turn
+   * doesn't wait out eve's deadline each time. Throws only when no brain answered.
+   */
+  private async askBrain(
+    texto: string,
+    signal?: AbortSignal,
+    runtime: ToolRuntime | null = this.runtime,
+    talk: TalkContext = this.talk
+  ): Promise<string> {
+    const eve = this.shared.brain === "eve" ? this.shared.eve : undefined;
+    const cascade = this.shared.cascade;
+    if (eve && Date.now() >= (this.shared.eveDownUntil ?? 0)) {
+      try {
+        return await this.askEve(texto, signal, eve, runtime, talk);
+      } catch (error) {
+        if (signal?.aborted || !cascade) throw error;
+        this.shared.eveDownUntil = Date.now() + EVE_BREAKER_MS;
+        this.log.warn(`eve no respondió; contesta el cerebro local (sin eve por ${EVE_BREAKER_MS / 1000} s)`, error);
+      }
+    }
+    if (!cascade) throw new Error("sin cerebro: eve no responde y no hay modelo de texto");
+    this.expressions?.react(texto);
+    const answer = await cascade.answer({
+      text: texto,
+      history: [...this.history],
+      instructions: (this.shared.localInstructions ?? this.shared.instructions) + this.talkNote(talk, true),
+      tools: this.cascadeTools(),
+      signal: signal ?? AbortSignal.timeout(TIMINGS.cascadeThinkingMs),
+    });
+    if (!this.toolIsCurrent()) return "";
+    this.pushCaption(answer);
+    this.expressions?.write(answer, true);
+    return answer;
   }
 
   /**
@@ -2248,195 +2170,4 @@ export class DeviceSession {
     this.session?.close();
     this.device?.close();
   }
-}
-
-function loadExpressions(config: BridgeConfig, logger: Logger): SharedRuntime["expressions"] {
-  if (config.COMPANION_EXPRESSIONS === "off") return undefined;
-  if (config.COMPANION_EXPRESSIONS === "jev" && config.AI_GATEWAY_API_KEY) {
-    logger.info(`expresiones: ${config.COMPANION_EXPRESSION_MODEL} (AI Gateway) + estimación local`);
-    return { classify: jevClassifier({ apiKey: config.AI_GATEWAY_API_KEY, model: config.COMPANION_EXPRESSION_MODEL }) };
-  }
-  if (config.COMPANION_EXPRESSIONS === "jev") logger.warn("expresiones: sin AI_GATEWAY_API_KEY, sólo estimación local");
-  return {};
-}
-
-const CLIPS_DIR = path.resolve(import.meta.dirname, "../../../../public/companion-audio/clips");
-const CLIPS_MANIFEST = path.join(CLIPS_DIR, "manifest.json");
-
-/** The voice loop without a realtime model: needs the gateway (transcribe, answer, speak). */
-function loadCascade(config: BridgeConfig, logger: Logger): Pick<SharedRuntime, "cascade" | "fallbackClips"> {
-  if (config.COMPANION_CASCADE === "off") return {};
-  if (!config.AI_GATEWAY_API_KEY) {
-    logger.warn("cascada: falta AI_GATEWAY_API_KEY; sin modelo realtime, los toques se rechazan");
-    return {};
-  }
-  return {
-    cascade: gatewayCascade({
-      apiKey: config.AI_GATEWAY_API_KEY,
-      transcribeModels: parseModelSpecs(config.COMPANION_TRANSCRIBE_MODELS),
-      ttsModel: config.COMPANION_TTS_MODEL,
-      ttsVoice: config.COMPANION_TTS_VOICE ?? config.COMPANION_VOICE,
-      textModel: config.COMPANION_TEXT_MODEL,
-      textFallbacks: parseModelSpecs(config.COMPANION_TEXT_FALLBACK_MODELS),
-      logger: logger.child("cascada"),
-    }),
-    fallbackClips: loadFallbackClips(CLIPS_DIR, logger),
-  };
-}
-
-/** Recorded clips by id → ms (`pnpm companion:clips`, `companion:talk-clips`); empty = Owy says every line live. */
-function loadClips(logger: Logger): Record<string, number> {
-  try {
-    return z.record(z.string(), z.number()).parse(JSON.parse(readFileSync(CLIPS_MANIFEST, "utf8")));
-  } catch {
-    logger.info("sin audios pregrabados (pnpm companion:clips); Owy dice los avisos con el modelo");
-    return {};
-  }
-}
-
-/** 16 kHz mono PCM of each recorded clip on disk, by id (the board's speaker plays these; missing ones are skipped). */
-export function loadClipPcm(dir: string, ids: string[]): Record<string, Buffer> {
-  const clips: Record<string, Buffer> = {};
-  for (const id of ids) {
-    try {
-      const wav = fromWav(readFileSync(path.join(dir, `${id}.wav`)));
-      if (wav.sampleRate === DEVICE_SAMPLE_RATE && wav.channels === 1) clips[id] = wav.pcm;
-    } catch {
-      // Not recorded yet (`pnpm companion:clips`): Owy says that line live.
-    }
-  }
-  return clips;
-}
-
-/** Modo pitch needs the gateway (audio → card) and the site (the board); without either, pitches end in words only. */
-function loadPitch(
-  config: BridgeConfig,
-  logger: Logger,
-  clips: Record<string, number>,
-  cascade: Cascade | undefined
-): SharedRuntime["pitch"] {
-  if (!config.AI_GATEWAY_API_KEY || !config.OWY_API_KEY) {
-    logger.warn("modo pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; los pitches no se van a cargar");
-    return undefined;
-  }
-  let openSpaceId: Promise<string> | null = null;
-  const clipPcm = loadClipPcm(CLIPS_DIR, Object.values(PITCH_CLIPS));
-  logger.info(`modo pitch: avisos grabados ${Object.keys(clipPcm).join(", ") || "ninguno (los dice el modelo)"}`);
-  return {
-    extract: gatewayPitchExtractor({
-      apiKey: config.AI_GATEWAY_API_KEY,
-      model: config.COMPANION_PITCH_MODEL,
-      fallbacks: parseModelSpecs(config.COMPANION_PITCH_FALLBACK_MODELS),
-      thinking: config.COMPANION_PITCH_THINKING,
-      hedgeModel: config.COMPANION_PITCH_HEDGE_MODEL || undefined,
-      hedgeAfterMs: config.COMPANION_PITCH_HEDGE_MS,
-      eventName: config.COMPANION_EVENT_NAME,
-      // The audio model down: the cascade's transcription, then the text model on the words.
-      ...(cascade
-        ? {
-            transcribe: (wav: Buffer, signal: AbortSignal) => cascade.transcribe(wav, signal),
-            textModel: config.COMPANION_TEXT_MODEL,
-            textFallbacks: parseModelSpecs(config.COMPANION_TEXT_FALLBACK_MODELS),
-          }
-        : {}),
-      logger: logger.child("pitch"),
-    }),
-    clipPcm,
-    dedupe: config.COMPANION_PITCH_DEDUPE === "on" ? gatewayDuplicateFinder({ apiKey: config.AI_GATEWAY_API_KEY }) : undefined,
-    api: owuApi(),
-    // A talk's demo grid (COMPANION_PITCH_EVENT_ID) wins over OWY_EVENT_ID; eve keeps its own event for questions.
-    openSpaceId: () =>
-      (openSpaceId ??= resolveActiveEvent(config.COMPANION_PITCH_EVENT_ID)
-        .then((event) => event.id)
-        .catch((error: unknown) => {
-          openSpaceId = null;
-          throw error;
-        })),
-    clips,
-  };
-}
-
-export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): Promise<SharedRuntime> {
-  const keys = { googleApiKey: config.GOOGLE_GENERATIVE_AI_API_KEY, gatewayApiKey: config.AI_GATEWAY_API_KEY };
-  const createProvider = () => resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, keys);
-  const provider = createProvider();
-  const fallbackSpecs = parseModelSpecs(config.COMPANION_REALTIME_FALLBACKS).filter((spec) => spec !== provider.spec);
-  const createFallbackProviders = () =>
-    fallbackSpecs.flatMap((spec) => {
-      try {
-        return [resolveRealtimeProvider(spec, keys)];
-      } catch (error) {
-        logger.warn(`respaldo realtime ${spec} ignorado: ${error instanceof Error ? error.message : String(error)}`);
-        return [];
-      }
-    });
-  const fallback = { createFallbackProviders, ...loadCascade(config, logger) };
-  logger.info(
-    `respaldos: ${fallbackSpecs.join(", ") || "ninguno"}; cascada ${fallback.cascade ? "lista" : "apagada"}${
-      fallback.cascade ? ` (avisos pregrabados: ${Object.keys(fallback.fallbackClips ?? {}).join(", ") || "ninguno"})` : ""
-    }`
-  );
-
-  let gridUrl: string | undefined;
-  try {
-    gridUrl = await resolveGridUrl(config.COMPANION_PUBLIC_SITE_URL);
-  } catch (error) {
-    logger.warn("could not resolve the public grid URL (site API unreachable?)", error);
-  }
-
-  const brain = config.COMPANION_BRAIN ?? (config.COMPANION_EVE_URL ? "eve" : "local");
-  const expressions = loadExpressions(config, logger);
-  const clips = loadClips(logger);
-  const pitch = loadPitch(config, logger, clips, fallback.cascade);
-  const hostMic = new HostMic({
-    logger: logger.child("mic"),
-    ffmpeg: config.COMPANION_FFMPEG,
-    name: config.COMPANION_HOST_MIC,
-    channel: config.COMPANION_HOST_MIC_CHANNEL,
-    gainDb: config.COMPANION_HOST_MIC_GAIN_DB,
-  });
-  if (brain === "eve") {
-    if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");
-    const eve = new EveLink({
-      url: config.COMPANION_EVE_URL,
-      apiKey: config.OWY_API_KEY ?? null,
-      logger: logger.child("eve"),
-    });
-    const instructions = await loadVoiceOfOwyPrompt({ eventName: config.COMPANION_EVENT_NAME });
-    logger.info(`model ${provider.spec} (voz); cerebro: eve en ${config.COMPANION_EVE_URL}; grid ${gridUrl ?? "-"}`);
-    return {
-      config,
-      provider,
-      createProvider,
-      definitions: new Map(),
-      instructions,
-      gridUrl,
-      logger,
-      brain,
-      eve,
-      expressions,
-      pitch,
-      clips,
-      hostMic,
-      ...fallback,
-    };
-  }
-
-  const [definitions, prompt] = await Promise.all([loadOwyToolDefinitions(), loadPromptBundle({ gridUrl })]);
-  logger.info(`model ${provider.spec}; cerebro local con ${definitions.size} owy tools; grid ${gridUrl ?? "-"}`);
-  return {
-    config,
-    provider,
-    createProvider,
-    definitions,
-    instructions: prompt.system,
-    gridUrl,
-    logger,
-    brain,
-    expressions,
-    pitch,
-    clips,
-    hostMic,
-    ...fallback,
-  };
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BYTES_PER_SAMPLE, DEVICE_SAMPLE_RATE, rmsLevel, toWav } from "./audio/pcm";
 import { systemClock, type ClockTimer, type RuntimeClock } from "./clock";
 import type { Logger } from "./log";
+import { MODELS } from "../../../agent/lib/models";
 
 /**
  * Modo pitch: at the open space's marketplace the knob sits in the middle of
@@ -411,12 +412,10 @@ export interface DuplicateFinder {
  * decision model to pick among many cards was measurably useless (it takes the first).
  */
 export const DUPLICATE_MODEL = {
-  primary: "typesafe-ai/jev",
-  unsure: "openai/gpt-6-luna-decisions",
+  ...MODELS.duplicate,
   // Wider than the placement's: a doubtful "yes" here turns a visitor away, so Luna (sharper:
   // 0.99 where jev said 0.72 on a real duplicate, 2026-11-01) re-decides anything that is not clearly no.
   unsureBand: [0.35, 0.8] as [number, number],
-  failover: "liquid/d1",
 };
 /** P(same talk) at or above this turns the pitch away; a wrong "yes" costs a visitor their card, so it has to be clear. */
 // ponytail: set by reasoning, not measured; tune on real duplicates if staff report misses or false hits.

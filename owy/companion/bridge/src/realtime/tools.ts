@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
-import { getBoard, resolveActiveEvent } from "../../../../agent/lib/board";
+import { resolveActiveEvent } from "../../../../agent/lib/board";
 import type { Logger } from "../log";
 
 /**
@@ -299,24 +299,6 @@ const showOnScreenSchema = z.object({
   face: z.enum(["idle", "listening", "thinking", "speaking", "happy", "error", "offline"]).optional(),
 });
 
-function nowInMontevideo(now: Date): { hhmm: string; minutes: number } {
-  const parts = new Intl.DateTimeFormat("es-UY", {
-    timeZone: "America/Montevideo",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
-  return { hhmm: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`, minutes: hour * 60 + minute };
-}
-
-function toMinutes(hhmm: string): number | null {
-  const match = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
-  if (!match) return null;
-  return Number(match[1]) * 60 + Number(match[2]);
-}
-
 export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition>, runtime: ToolRuntime): ToolSet {
   const set: ToolSet = {};
 
@@ -400,41 +382,6 @@ export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition
       }
       await runtime.onScreen?.(command);
       return { ok: true, shown: command.kind };
-    },
-  });
-
-  set.event_now = tool({
-    description:
-      "Qué hora es en Montevideo y qué bloque del open space está pasando ahora y cuál viene después, con las charlas del bloque actual. Usala para 'qué hay ahora', 'cuándo empieza el próximo bloque'.",
-    inputSchema: z.object({}),
-    execute: async () => {
-      const board = await getBoard();
-      const { hhmm, minutes } = nowInMontevideo((runtime.now ?? (() => new Date()))());
-      const slots = board.schedules
-        .map((schedule) => ({
-          name: schedule.name,
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          start: toMinutes(schedule.startTime),
-          end: toMinutes(schedule.endTime),
-        }))
-        .filter((slot) => slot.start !== null)
-        .sort((a, b) => (a.start as number) - (b.start as number));
-
-      const current = slots.find((slot) => (slot.start as number) <= minutes && (slot.end ?? Infinity) > minutes) ?? null;
-      const next = slots.find((slot) => (slot.start as number) > minutes) ?? null;
-      const talksNow = current
-        ? board.cards
-            .filter((card) => card.timeSlot === `${current.startTime} - ${current.endTime}` || card.timeSlot === current.name)
-            .map((card) => `«${card.title}» en ${card.room ?? "sala sin definir"}`)
-        : [];
-
-      return {
-        now: hhmm,
-        openSpace: board.openSpace.name,
-        currentBlock: current ? { name: current.name, from: current.startTime, to: current.endTime, talks: talksNow } : null,
-        nextBlock: next ? { name: next.name, from: next.startTime, to: next.endTime } : null,
-      };
     },
   });
 

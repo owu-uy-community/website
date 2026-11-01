@@ -26,7 +26,10 @@ export interface RealtimeToken {
 }
 
 export interface RealtimeProvider {
+  /** `<provider>:<model>`, without the voice. */
   readonly spec: string;
+  /** The tier's own voice (`spec#voice`); absent = the bridge's default for its vendor. */
+  readonly voice?: string;
   readonly provider: "google" | "gateway";
   readonly modelId: string;
   readonly model: Experimental_RealtimeModel;
@@ -65,7 +68,9 @@ export function parseModelSpecs(list: string | undefined): string[] {
     .filter((spec) => spec.length > 0);
 }
 
-export function resolveRealtimeProvider(spec: string, options: ResolveModelOptions = {}): RealtimeProvider {
+export function resolveRealtimeProvider(tier: string, options: ResolveModelOptions = {}): RealtimeProvider {
+  const [spec, voiceName] = tier.split("#", 2).map((part) => part.trim());
+  const voice = voiceName || undefined;
   const { provider, modelId } = parseModelSpec(spec);
 
   if (provider === "google") {
@@ -78,6 +83,7 @@ export function resolveRealtimeProvider(spec: string, options: ResolveModelOptio
     const google = createGoogle({ apiKey });
     return {
       spec,
+      voice,
       provider,
       modelId,
       confirmsConfig: false,
@@ -91,6 +97,7 @@ export function resolveRealtimeProvider(spec: string, options: ResolveModelOptio
   const gateway = createGateway(apiKey ? { apiKey } : {});
   return {
     spec,
+    voice,
     provider,
     modelId,
     confirmsConfig: !/(^|\/)gemini-/.test(modelId),
