@@ -221,14 +221,15 @@ export function SettingGroup({
   views: SettingView[];
   children: ReactNode;
 }) {
-  const flagged = views.filter((view) => view.standing && view.standing.tone !== "muted").length;
+  const flagged = views.filter((view) => view.standing && view.standing.tone !== "muted");
+  const tone = flagged.some((view) => view.standing?.tone === "warn") ? "warn" : "pending";
 
   return (
     <Collapsible className="border-t border-border first:border-t-0" defaultOpen={defaultOpen}>
       <CollapsibleTrigger className="group flex min-h-11 w-full items-center justify-between gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/70">
         <span className="font-terminal text-[10.5px] tracking-[0.14em] text-muted-foreground uppercase">{label}</span>
         <span className="flex items-center gap-2 text-meta text-muted-foreground">
-          {flagged > 0 ? <span className="text-info-foreground">{flagged} sin aplicar</span> : null}
+          {flagged.length > 0 ? <span className={TONE[tone]}>{flagged.length} sin aplicar</span> : null}
           <ChevronDown aria-hidden className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
         </span>
       </CollapsibleTrigger>

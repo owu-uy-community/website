@@ -17,7 +17,8 @@ import { modeView, settingGroups, settingView, turnsView } from "./model";
 import { SettingField, SettingGroup, type OnSet, type SetValue } from "./SettingField";
 import { STAGES, type BrowserAudio } from "./useBrowserAudio";
 
-const MODE_KEYS = Object.keys(MODES) as ModeKey[];
+/** The modes, in the registry's order. */
+const MODE_LIST = Object.keys(MODES) as ModeKey[];
 const OPEN_GROUPS = new Set(["modo", "audio", "sonido"]);
 const TIME = new Intl.DateTimeFormat("es-UY", {
   hour: "2-digit",
@@ -94,7 +95,7 @@ export function DeviceCard({
             ) : null}
           </div>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4" role="group" aria-label="Modo">
-            {MODE_KEYS.map((key) => (
+            {MODE_LIST.map((key) => (
               <Button
                 key={key}
                 aria-pressed={mode.mode === key}

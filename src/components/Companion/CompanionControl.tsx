@@ -125,7 +125,7 @@ export default function CompanionControl() {
       />
 
       {/* Sticky: a change far down the page that bounces back says why where it can be seen. */}
-      <div className="sticky top-[calc(46px+env(safe-area-inset-top)+0.5rem)] z-30 md:top-2">
+      <div className="sticky top-[calc(46px+env(safe-area-inset-top)+0.5rem)] z-30 empty:hidden md:top-2">
         <Notice show={!!error} tone="danger">
           <span className="flex items-start justify-between gap-3">
             <span>No se guardó: {error}</span>
