@@ -9,6 +9,7 @@
 - How the build joins everything
 - People
 - Places
+- What the numbers count
 - Photos
 - Code that names data
 
@@ -123,8 +124,22 @@ A wrong merge or split is fixed at the source of the name: an `enrichment` organ
 
 Computed when the site reads the dataset (`src/lib/timeline/venues.ts`), not by the build: event
 `venue` names are joined by `venueKey` ("Oficina de Pyxis" = "Pyxis"; `VENUE_ALIASES` for the
-rest). A place with 2+ events gets a page. Its dot is the median of its events' `geo`, which only
-Meetup venues in Uruguay have. To join two spellings of a place, add a `VENUE_ALIASES` entry.
+rest). A place counts the in-person events communities held there (2+ get a page), like every other
+number on the site; the ecosystem's events there are listed apart on its page and don't count.
+"¿Dónde?" on /timeline ranks these same places, so the two lists can't disagree. Its dot is the
+median of its events' `geo`, which only Meetup venues in Uruguay have. To join two spellings of a
+place, add a `VENUE_ALIASES` entry.
+
+## What the numbers count
+
+One scope everywhere: **communities' events** (layer `community`, not milestones). The hero,
+"En números", the archive's default view, places, the network and photo totals all count those;
+"presenciales" where a chart is about meeting in person. The ecosystem layer (companies, academia,
+the State) is listed apart wherever it shows (a place's page, a profile, /timeline/fotos) and only
+counted when the archive's "Sumar el ecosistema" is on. Milestones are listed, never counted as
+events. A photo count is the photos an event shows; an album's bigger size is only mentioned on the
+event's page. An event whose city or venue says "En línea", "Online" or "Virtual" is online (the
+build sets it), unless it also says "presencial" or "híbrido".
 
 ## Photos
 

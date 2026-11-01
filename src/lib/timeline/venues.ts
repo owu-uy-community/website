@@ -5,13 +5,15 @@ import path from "node:path";
 
 import { cache } from "react";
 
-import { getTimeline } from "./data";
+import { getTimeline, isCommunityEvent } from "./data";
 import { type MapDot, type MapView, project } from "./map";
 import type { TimelineEvent } from "./types";
 
 /*
  * The places the community met in (/timeline/lugares): every event's venue as people typed it,
- * joined into one place per name, with where it is on the map when Meetup says.
+ * joined into one place per name, with where it is on the map when Meetup says. A place counts the
+ * in-person events communities ran there, like every other number of the history ("¿Dónde?" ranks
+ * these same counts); what companies, academia and the State held there is listed apart.
  */
 
 const COMBINING_MARKS = new RegExp(`[${String.fromCharCode(0x300)}-${String.fromCharCode(0x36f)}]`, "g");
@@ -51,8 +53,10 @@ export type TimelineVenue = {
   city?: string;
   /** [lat, lon]: the middle of where its events were pinned */
   geo?: [number, number];
-  /** Oldest first */
+  /** The communities' events, oldest first: the ones the place counts */
   events: TimelineEvent[];
+  /** The ecosystem's events there (companies, academia, the State), oldest first, apart */
+  others: TimelineEvent[];
   /** Community slugs, most events first */
   communities: string[];
 };
@@ -64,24 +68,32 @@ const mostUsed = (values: string[]) => {
 };
 const median = (values: number[]) => values.toSorted((a, b) => a - b)[values.length >> 1];
 
-/** Places that held two events or more (one is often a one-off, or someone's home), busiest first */
+/**
+ * Places where communities held two events or more (one is often a one-off, or someone's home),
+ * busiest first, then by name
+ */
 export const getVenues = cache(() => {
-  const grouped = new Map<string, { names: string[]; events: TimelineEvent[] }>();
+  const grouped = new Map<string, { names: string[]; events: TimelineEvent[]; others: TimelineEvent[] }>();
   for (const event of getTimeline().events) {
     if (event.online || !event.venue || event.kind === "hito") continue;
     const venue = venueKey(event.venue);
     if (!venue) continue;
-    const entry = grouped.get(venue.key) ?? { names: [], events: [] };
-    entry.names.push(venue.display);
-    entry.events.push(event);
+    const entry = grouped.get(venue.key) ?? { names: [], events: [], others: [] };
+    if (isCommunityEvent(event)) {
+      entry.names.push(venue.display);
+      entry.events.push(event);
+    } else entry.others.push(event);
     grouped.set(venue.key, entry);
   }
 
   const venues: TimelineVenue[] = [];
   const pages = new Map<string, TimelineVenue>();
   const taken = new Set<string>();
-  for (const [key, { names, events }] of [...grouped].toSorted((a, b) => b[1].events.length - a[1].events.length)) {
-    if (events.length < 2) continue;
+  const ordered = [...grouped]
+    .filter(([, { events }]) => events.length >= 2)
+    .map(([key, entry]) => ({ key, ...entry, name: mostUsed(entry.names)! }))
+    .toSorted((a, b) => b.events.length - a.events.length || a.name.localeCompare(b.name, "es"));
+  for (const { key, name, events, others } of ordered) {
     const base =
       plain(key)
         .replace(/[^a-z0-9]+/g, "-")
@@ -89,16 +101,19 @@ export const getVenues = cache(() => {
     let slug = base;
     for (let n = 2; taken.has(slug); n++) slug = `${base}-${n}`;
     taken.add(slug);
-    const pinned = events.flatMap((event) => (event.geo ? [event.geo] : []));
+    // Where the communities' events were pinned; the ecosystem's when none were
+    const pinsOf = (list: TimelineEvent[]) => list.flatMap((event) => (event.geo ? [event.geo] : []));
+    const pinned = pinsOf(events).length ? pinsOf(events) : pinsOf(others);
     const counts = new Map<string, number>();
     for (const event of events) counts.set(event.community, (counts.get(event.community) ?? 0) + 1);
     const venue: TimelineVenue = {
       slug,
-      name: mostUsed(names)!,
-      city: mostUsed(events.flatMap((event) => (event.city ? [event.city] : []))),
+      name,
+      city: mostUsed([...events, ...others].flatMap((event) => (event.city ? [event.city] : []))),
       // The median, so one event pinned across town doesn't move the place
       geo: pinned.length ? [median(pinned.map(([lat]) => lat)), median(pinned.map(([, lon]) => lon))] : undefined,
       events,
+      others,
       communities: [...counts].toSorted((a, b) => b[1] - a[1]).map(([community]) => community),
     };
     venues.push(venue);
@@ -106,7 +121,8 @@ export const getVenues = cache(() => {
   }
 
   const ofEvent = new Map<string, string>();
-  for (const venue of venues) for (const event of venue.events) ofEvent.set(event.slug, venue.slug);
+  for (const venue of venues)
+    for (const event of [...venue.events, ...venue.others]) ofEvent.set(event.slug, venue.slug);
   return { venues, bySlug: new Map(venues.map((venue) => [venue.slug, venue])), byKey: pages, ofEvent };
 });
 

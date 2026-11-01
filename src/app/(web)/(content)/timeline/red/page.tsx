@@ -20,6 +20,7 @@ export const metadata = pageMetadata({
 });
 
 const number = new Intl.NumberFormat("es-UY");
+const plural = (count: number, one: string, many: string) => `${number.format(count)} ${count === 1 ? one : many}`;
 
 export default async function NetworkPage() {
   "use cache";
@@ -40,9 +41,9 @@ export default async function NetworkPage() {
       if (nodes[one].t === "p" && nodes[other].t === "c") communities.set(one, (communities.get(one) ?? 0) + 1);
   const bridges = [...communities]
     .filter(([, n]) => n > 2)
-    .toSorted((x, y) => y[1] - x[1] || nodes[y[0]].n - nodes[x[0]].n)
+    .toSorted((x, y) => y[1] - x[1] || nodes[y[0]].s - nodes[x[0]].s)
     .slice(0, 24)
-    .map(([i, n]) => ({ person: person.get(nodes[i].k.slice(2))!, communities: n, events: nodes[i].n }));
+    .map(([i, n]) => ({ person: person.get(nodes[i].k.slice(2))!, communities: n }));
 
   return (
     <>
@@ -55,9 +56,10 @@ export default async function NetworkPage() {
           }
           description={
             <>
-              {number.format(count("c"))} comunidades, {number.format(count("p"))} personas y{" "}
-              {number.format(count("v"))} lugares: cada persona, unida a las comunidades donde organizó o dio una
-              charla, y cada lugar, a las que se juntaron ahí. Las que comparten gente quedan cerca.
+              Las {number.format(count("c"))} comunidades de la historia, las {number.format(count("p"))} personas que
+              organizaron o dieron charlas en sus eventos y los {number.format(count("v"))} lugares donde se juntaron
+              más de una vez: cada persona, unida a las comunidades donde organizó o habló, y cada lugar, a las que
+              recibió. Las que comparten gente quedan cerca.
             </>
           }
           eyebrow="Historia · Red"
@@ -78,7 +80,7 @@ export default async function NetworkPage() {
               pasan los puentes de la red.
             </p>
             <ol className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {bridges.map(({ person: bridge, communities: n, events }) => (
+              {bridges.map(({ person: bridge, communities: n }) => (
                 <li key={bridge.slug}>
                   <Link
                     className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 transition-colors hover:border-white/20 hover:bg-white/[0.04]"
@@ -88,7 +90,14 @@ export default async function NetworkPage() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] text-zinc-100">{bridge.name}</span>
                       <span className="block text-[13px] text-zinc-400">
-                        {n} comunidades · {number.format(events)} {events === 1 ? "evento" : "eventos"}
+                        {/* What the profile says: its communities, the events organized, the talks */}
+                        {[
+                          plural(n, "comunidad", "comunidades"),
+                          bridge.events ? plural(bridge.events, "evento", "eventos") : null,
+                          bridge.talks ? plural(bridge.talks, "charla", "charlas") : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </span>
                     </span>
                   </Link>

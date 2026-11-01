@@ -937,6 +937,21 @@ for (const file of existsSync(ENRICHMENT) ? readdirSync(ENRICHMENT).filter((name
   }
 }
 
+// An event "En línea" happened online, whatever format its source gave it (a catalog without the
+// flag, a Meetup event typed in person, a researched venue): otherwise it counts as a night out.
+// A hybrid one ("Virtual … y presencial en Ingenio") had people in a room: it stays in person
+const ONLINE_PLACE = /^\s*(en l[ií]nea|online|virtual)\b/i;
+const IN_A_ROOM = /presencial|h[ií]brid/i;
+for (const event of events) {
+  const place = `${event.venue ?? ""} ${event.city ?? ""}`;
+  if (
+    !event.online &&
+    (ONLINE_PLACE.test(event.city ?? "") || ONLINE_PLACE.test(event.venue ?? "")) &&
+    !IN_A_ROOM.test(place)
+  )
+    event.online = true;
+}
+
 // Pictures looked at one by one (contact sheets of every candidate) that aren't photos of the event:
 // flyers inside albums, speaker cards, logos, slides as files, screen captures
 const notPhotos = new Set<string>(

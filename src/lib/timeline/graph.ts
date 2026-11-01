@@ -4,19 +4,25 @@ import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import { cache } from "react";
 
-import { getTimeline } from "./data";
+import { getTimeline, isCommunityEvent } from "./data";
 import { getVenues } from "./venues";
 
 /*
  * The history as a network (/timeline/red): communities, the people who organized or spoke at
  * them, and the places where they met. Laid out here, once per deploy, so the page only draws it.
+ * Communities' events only, like every other number of the history: the same communities the hero
+ * counts and the same places /timeline/lugares lists.
  */
 
 /** c: a community, p: a person, v: a venue */
 export type GraphKind = "c" | "p" | "v";
 
-/** A node: its key ("c:jsconfuy"), name, kind, place on the layout, size and events */
-export type GraphNode = { k: string; l: string; t: GraphKind; x: number; y: number; s: number; n: number };
+/**
+ * A node: its key ("c:jsconfuy"), name, kind, place on the layout and size. `n` is what its card
+ * says, as its page does: a community's events, a place's events, the events a person organized;
+ * `h` the talks a person gave
+ */
+export type GraphNode = { k: string; l: string; t: GraphKind; x: number; y: number; s: number; n: number; h?: number };
 
 /** An edge between two nodes (their index in `nodes`), and how many events it stands for */
 export type GraphEdge = [number, number, number];
@@ -43,7 +49,7 @@ export const getGraph = cache((): TimelineGraph => {
   const add = (key: string) => count.set(key, (count.get(key) ?? 0) + 1);
 
   for (const event of events) {
-    if (event.kind === "hito" || !community.has(event.community)) continue;
+    if (!isCommunityEvent(event) || !community.has(event.community)) continue;
     const group = `c:${event.community}`;
     add(group);
     // Someone who organized it and spoke at it counts once
@@ -81,12 +87,10 @@ export const getGraph = cache((): TimelineGraph => {
     graph.addEdge(a, b, { weight });
   }
 
-  // A community nobody is tied to says nothing here, and drifts off on its own
-  for (const key of graph.filterNodes((node) => graph.degree(node) === 0)) graph.dropNode(key);
-
   // ForceAtlas2, the Gephi layout: linked nodes pull together, every node pushes the rest away.
   // Measured on this graph: LinLog mode never settles (edges as long as random pairs), and without
-  // strong gravity the small pieces float 2.6 times past the rest, shrinking the network to a dot
+  // strong gravity the small pieces float 2.6 times past the rest, shrinking the network to a dot.
+  // Strong gravity also keeps a community nobody is tied to near the rest, so every one of them counts
   forceAtlas2.assign(graph, {
     iterations: 600,
     getEdgeWeight: "weight",
@@ -105,9 +109,14 @@ export const getGraph = cache((): TimelineGraph => {
     nodes: keys.map((key) => {
       const { x, y, n } = graph.getNodeAttributes(key) as { x: number; y: number; n: number };
       const kind = key[0] as GraphKind;
-      // A disc's area grows with its events; communities weigh most, people least
+      // A disc's area grows with its events here; communities weigh most, people least
       const [base, grow] = kind === "c" ? [2, 0.8] : kind === "v" ? [1.5, 0.6] : [1, 0.5];
-      return { k: key, l: label(key), t: kind, x: round(x), y: round(y), s: round(base + grow * Math.sqrt(n)), n };
+      const size = round(base + grow * Math.sqrt(n));
+      // A person's card says what their profile does: the events they organized and the talks they gave
+      const profile = kind === "p" ? person.get(key.slice(2))! : null;
+      return profile
+        ? { k: key, l: label(key), t: kind, x: round(x), y: round(y), s: size, n: profile.events, h: profile.talks }
+        : { k: key, l: label(key), t: kind, x: round(x), y: round(y), s: size, n };
     }),
     edges: graph.mapEdges((_, { weight }, source, target): GraphEdge => [
       index.get(source)!,

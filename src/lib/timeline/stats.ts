@@ -32,9 +32,12 @@ export type TimelineStats = {
   topics: { keys: string[]; labels: Record<string, string>; rows: ({ year: number } & Record<string, number>)[] };
   /** Communities that met in person each year, the ones that held their first event, and the ones that held their last */
   communities: { year: number; active: number; births: number; closures: number }[];
+  /** The places with the most events: /timeline/lugares' first twelve, the same counts */
   venues: Rank[];
-  /** By department; events abroad or without a city left out */
+  /** By department; events abroad, and the ones with neither a city nor a known venue, left out */
   places: Rank[];
+  /** How many events have a department: what the shares are of */
+  placed: number;
   /** Median RSVPs per meetup, for years with at least five meetups with RSVPs */
   attendance: { year: number; median: number; meetups: number }[];
   biggest: { slug: string; title: string; start: string; community: string; people: number }[];
@@ -81,7 +84,7 @@ const ranked = (counts: Map<string, number>, limit: number): Rank[] =>
 
 const bump = <K>(counts: Map<K, number>, key: K) => counts.set(key, (counts.get(key) ?? 0) + 1);
 
-export function computeStats(events: TimelineEvent[], communities: TimelineCommunity[]): TimelineStats {
+export function computeStats(events: TimelineEvent[], communities: TimelineCommunity[]): Omit<TimelineStats, "venues"> {
   const own = events.filter((event) => isCommunityEvent(event) && !event.online);
   const from = Math.min(...own.map(yearOf));
   const to = Math.max(...own.map(yearOf));
@@ -131,26 +134,24 @@ export function computeStats(events: TimelineEvent[], communities: TimelineCommu
     closures: lanes.filter((c) => c.status === "cerrada" && Number(c.last?.slice(0, 4)) === year).length,
   }));
 
-  // Where
-  const venues = new Map<string, number>();
-  const venueNames = new Map<string, Map<string, number>>();
+  // Where: the department of the event's city, or of its venue's when it has none (an event at
+  // Sinergia without a city was where Sinergia's others were)
+  const citiesAt = new Map<string, Map<string, number>>();
+  for (const event of own) {
+    const venue = event.venue ? venueKey(event.venue) : null;
+    if (!venue || !event.city) continue;
+    const cities = citiesAt.get(venue.key) ?? new Map<string, number>();
+    bump(cities, event.city);
+    citiesAt.set(venue.key, cities);
+  }
   const places = new Map<string, number>();
   for (const event of own) {
     const venue = event.venue ? venueKey(event.venue) : null;
-    if (venue) {
-      bump(venues, venue.key);
-      const names = venueNames.get(venue.key) ?? new Map<string, number>();
-      bump(names, venue.display);
-      venueNames.set(venue.key, names);
-    }
-    const department = event.city ? departmentOf(event.city) : null;
+    const cities = venue ? citiesAt.get(venue.key) : undefined;
+    const city = event.city ?? (cities ? ranked(cities, 1)[0].name : undefined);
+    const department = city ? departmentOf(city) : null;
     if (department) bump(places, department);
   }
-  // Each place under the spelling most of its events used
-  const topVenues = ranked(venues, 12).map(({ name, count }) => ({
-    name: ranked(venueNames.get(name)!, 1)[0].name,
-    count,
-  }));
 
   // Attendance: RSVPs are sign-ups on Meetup, not head counts; the median keeps one big night from skewing a year
   const rsvpsByYear = new Map<number, number[]>();
@@ -197,8 +198,8 @@ export function computeStats(events: TimelineEvent[], communities: TimelineCommu
       rows: topicRows,
     },
     communities: communityRows,
-    venues: topVenues,
     places: ranked(places, 12),
+    placed: [...places.values()].reduce((a, b) => a + b, 0),
     attendance,
     biggest,
     sizes,
@@ -206,14 +207,11 @@ export function computeStats(events: TimelineEvent[], communities: TimelineCommu
   };
 }
 
-export const getTimelineStats = cache(() => {
+export const getTimelineStats = cache((): TimelineStats => {
   const { events, communities } = getTimeline();
-  const stats = computeStats(events, communities);
-  // Each place links to its page
-  const { byKey } = getVenues();
-  for (const venue of stats.venues) {
-    const page = byKey.get(venueKey(venue.name)?.key ?? "");
-    if (page) venue.href = venueHref(page.slug);
-  }
-  return stats;
+  // The places' ranking is /timeline/lugares' own, so the two lists can't disagree
+  const venues = getVenues()
+    .venues.slice(0, 12)
+    .map((venue) => ({ name: venue.name, count: venue.events.length, href: venueHref(venue.slug) }));
+  return { ...computeStats(events, communities), venues };
 });

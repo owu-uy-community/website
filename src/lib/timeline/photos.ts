@@ -50,6 +50,7 @@ const getGroups = cache(() => {
 export type PhotoCommunity = {
   slug: string;
   name: string;
+  layer: TimelineCommunity["layer"];
   logo?: string;
   photos: number;
   events: number;
@@ -71,6 +72,7 @@ export const getPhotoCommunities = cache((): PhotoCommunity[] => {
         {
           slug,
           name: record.name,
+          layer: record.layer,
           logo: record.logo,
           photos: groups.reduce((sum, group) => sum + group.photos.length, 0),
           events: groups.length,

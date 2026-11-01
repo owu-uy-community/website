@@ -47,8 +47,8 @@ export default async function VenuesPage() {
           description={
             <>
               {number.format(venues.length)} lugares que recibieron a la comunidad más de una vez: oficinas de empresas,
-              coworks, universidades y bares que abrieron sus puertas a {number.format(total)} eventos. Cada punto, del
-              tamaño de lo que pasó ahí.
+              coworks, universidades y bares que abrieron sus puertas a {number.format(total)} eventos de comunidades.
+              Cada punto, del tamaño de lo que pasó ahí.
             </>
           }
           eyebrow="Historia · Lugares"

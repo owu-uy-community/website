@@ -389,7 +389,7 @@ function ArchiveView() {
         set={set}
         state={state}
         loading={!data}
-        total={data ? ordered.length : 0}
+        total={data ? eventCount(ordered) : 0}
       />
 
       {!data ? (
@@ -497,12 +497,15 @@ function SwipeArea({ children, onSwipe }: { children: React.ReactNode; onSwipe: 
   );
 }
 
+/** Events among rows: milestones are listed with them, but they aren't events */
+const eventCount = (rows: ArchiveRow[]) => rows.reduce((sum, row) => sum + (row.k === "hito" ? 0 : 1), 0);
+
 /* ------------------------------------------------------------- year index */
 
 /** A sticky column of years beside the list (xl): the one being read is lit; a click jumps */
 function YearIndex({ years }: { years: Year[] }) {
   const [active, setActive] = useState("");
-  const busiest = Math.max(1, ...years.map(([, items]) => items.length));
+  const busiest = Math.max(1, ...years.map(([, items]) => eventCount(items)));
 
   useEffect(() => {
     const visible = new Map<string, boolean>();
@@ -546,7 +549,7 @@ function YearIndex({ years }: { years: Year[] }) {
               <span
                 aria-hidden
                 className="relative ml-auto h-1 rounded-full bg-[#b8860b]/70"
-                style={{ width: `${4 + (items.length / busiest) * 18}px` }}
+                style={{ width: `${4 + (eventCount(items) / busiest) * 18}px` }}
               />
             </button>
           </li>
@@ -598,7 +601,7 @@ function YearSection({
       <h3 className={YEAR_HEAD} id={`anio-${year}-h`}>
         {year}
         <span className={YEAR_COUNT}>
-          {number.format(items.length)} {items.length === 1 ? "evento" : "eventos"}
+          {number.format(eventCount(items))} {eventCount(items) === 1 ? "evento" : "eventos"}
         </span>
       </h3>
       {rendered ? (
@@ -607,7 +610,7 @@ function YearSection({
             <div key={month}>
               <p className={MONTH}>
                 {month === "00" ? "Sin mes" : MONTHS[Number(month) - 1]}
-                <span className="ml-2 font-terminal tracking-normal normal-case">{rows.length}</span>
+                <span className="ml-2 font-terminal tracking-normal normal-case">{eventCount(rows) || null}</span>
               </p>
               {/* No step is "completed": the rail stays a quiet hairline */}
               <Timeline value={0}>
@@ -795,6 +798,7 @@ function Overview({ rows, communities }: { rows: ArchiveRow[]; communities: Map<
     let rsvps = 0;
     let photos = 0;
     for (const row of rows) {
+      if (row.k === "hito") continue;
       perCommunity.set(row.c, (perCommunity.get(row.c) ?? 0) + 1);
       perYear.set(row.d.slice(0, 4), (perYear.get(row.d.slice(0, 4)) ?? 0) + 1);
       rsvps += row.r ?? 0;
@@ -813,7 +817,7 @@ function Overview({ rows, communities }: { rows: ArchiveRow[]; communities: Map<
   }, [rows]);
 
   const figures = [
-    { label: "eventos", value: rows.length },
+    { label: "eventos", value: eventCount(rows) },
     { label: "comunidades", value: stats.communities },
     { label: "anotados", value: stats.rsvps },
     { label: "fotos", value: stats.photos },

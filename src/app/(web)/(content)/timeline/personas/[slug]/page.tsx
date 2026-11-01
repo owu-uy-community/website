@@ -75,7 +75,18 @@ async function ProfileView({ slug }: { slug: string }) {
   const involved = [...new Set([...events, ...talks.map(({ event }) => event)])].toSorted((a, b) =>
     a.start.localeCompare(b.start)
   );
-  const where = communities.filter((entry) => entry.events);
+  // Communities, counted as the network does; the ecosystem's groups (companies, academia, the State) apart
+  const where = communities.filter((entry) => entry.events && entry.community.layer === "community");
+  const ecosystem = communities.filter((entry) => entry.community.layer === "ecosystem");
+  const inEcosystem = ecosystem.some((entry) => entry.events);
+  const scope =
+    where.length > 1
+      ? ` en ${where.length} comunidades${inEcosystem ? " y el ecosistema" : ""}`
+      : inEcosystem
+        ? where.length
+          ? " en una comunidad y el ecosistema"
+          : " en el ecosistema"
+        : "";
 
   return (
     <>
@@ -107,7 +118,7 @@ async function ProfileView({ slug }: { slug: string }) {
                     ]
                       .filter(Boolean)
                       .join(" y ")}
-                    {where.length > 1 ? ` en ${where.length} comunidades` : ""}
+                    {scope}
                   </>
                 ) : (
                   <>En el equipo de {listOf(communities.map(({ community }) => community.name))}</>
@@ -163,13 +174,25 @@ async function ProfileView({ slug }: { slug: string }) {
           </div>
 
           <aside className="flex flex-col gap-10">
-            {communities.length ? (
+            {communities.length > ecosystem.length ? (
               <CommunityList
-                items={communities.map(({ community, events: count }) => ({
+                items={communities
+                  .filter(({ community }) => community.layer === "community")
+                  .map(({ community, events: count }) => ({
+                    ...community,
+                    label: count ? eventsLabel(count) : "En su equipo hoy",
+                  }))}
+                title="Comunidades"
+              />
+            ) : null}
+            {ecosystem.length ? (
+              <CommunityList
+                id="ecosistema"
+                items={ecosystem.map(({ community, events: count }) => ({
                   ...community,
                   label: count ? eventsLabel(count) : "En su equipo hoy",
                 }))}
-                title="Comunidades"
+                title="Del ecosistema"
               />
             ) : null}
 

@@ -23,7 +23,10 @@ export default async function PhotosIndexPage() {
   cacheLife({ stale: 300, revalidate: 31_536_000, expire: 31_536_000 });
 
   const communities = getPhotoCommunities();
-  const photos = communities.reduce((sum, community) => sum + community.photos, 0);
+  // The communities' photos, the hero's count; the ecosystem's groups follow them, apart
+  const own = communities.filter((community) => community.layer === "community");
+  const photos = own.reduce((sum, community) => sum + community.photos, 0);
+  const others = communities.length - own.length;
 
   return (
     <>
@@ -36,8 +39,9 @@ export default async function PhotosIndexPage() {
           }
           description={
             <>
-              {number.format(photos)} fotos de {communities.length} comunidades, cada una con todas las suyas en un
-              mismo lugar: elegí una y recorré sus eventos sin abrirlos de a uno.
+              {number.format(photos)} fotos de {own.length} comunidades, cada una con todas las suyas en un mismo lugar:
+              elegí una y recorré sus eventos sin abrirlos de a uno.
+              {others ? ` Abajo, las de ${others} grupos del ecosistema.` : ""}
             </>
           }
           eyebrow="Historia · Fotos"

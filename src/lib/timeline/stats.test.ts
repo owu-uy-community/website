@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { computeStats } from "./stats";
+import { venueKey } from "./venues";
 import type { TimelineCommunity, TimelineEvent } from "./types";
 
 const event = (slug: string, start: string, extra: Partial<TimelineEvent> = {}): TimelineEvent => ({
@@ -42,6 +43,8 @@ describe(computeStats, () => {
       event("a", "2012-04-10T19:00:00-03:00", { venue: "Oficina de Pyxis", city: "Montevideo", rsvps: 30 }),
       event("b", "2013-03-07T19:30:00-03:00", { venue: "Pyxis", city: "Punta del Este", rsvps: 10 }),
       event("c", "2013-05", { community: "ember", venue: "Torre Antel", city: "Montevideo" }),
+      // No city: the Torre's events were in Montevideo
+      event("d", "2013-08", { community: "ember", venue: "Torre de las Telecomunicaciones" }),
       event("online", "2013-06-01T19:00:00-03:00", { online: true, rsvps: 500 }),
       event("vendor", "2013-07-01T19:00:00-03:00", { layer: "ecosystem", rsvps: 900 }),
     ],
@@ -53,6 +56,7 @@ describe(computeStats, () => {
     expect(stats.to).toBe(2013);
     expect(stats.heatmap[1].months[2]).toBe(1);
     expect(stats.heatmap[1].months[4]).toBe(1);
+    expect(stats.heatmap[1].months[7]).toBe(1);
   });
 
   test("reads weekday and hour off the local time, skipping date-only events", () => {
@@ -62,11 +66,9 @@ describe(computeStats, () => {
     expect(stats.hours.find((h) => h.hour === 19)?.count).toBe(2);
   });
 
-  test("merges venue spellings and maps cities to departments", () => {
-    expect(stats.venues[0]).toStrictEqual({ name: "Pyxis", count: 2 });
-    expect(stats.venues).toContainEqual({ name: "Torre de las Telecomunicaciones", count: 1 });
+  test("maps cities to departments, an event without one by its venue's", () => {
     expect(stats.places).toStrictEqual([
-      { name: "Montevideo", count: 2 },
+      { name: "Montevideo", count: 3 },
       { name: "Maldonado", count: 1 },
     ]);
   });
@@ -76,11 +78,20 @@ describe(computeStats, () => {
       { year: 2012, active: 1, births: 1, closures: 0 },
       { year: 2013, active: 2, births: 1, closures: 1 },
     ]);
-    expect(stats.topics.rows[1]).toStrictEqual({ year: 2013, lenguajes: 1, web: 1 });
+    expect(stats.topics.rows[1]).toStrictEqual({ year: 2013, lenguajes: 1, web: 2 });
   });
 
   test("ranks the biggest in-person community events", () => {
     expect(stats.biggest.map((b) => b.slug)).toStrictEqual(["a", "b"]);
+  });
+});
+
+describe(venueKey, () => {
+  test("joins the spellings of one place", () => {
+    expect(venueKey("Oficina de Pyxis")?.key).toBe(venueKey("Pyxis")?.key);
+    expect(venueKey("Pyxis (via Cubox)")?.key).toBe(venueKey("Pyxis")?.key);
+    expect(venueKey("Torre Antel")?.display).toBe("Torre de las Telecomunicaciones");
+    expect(venueKey("Online")).toBeNull();
   });
 });
 

@@ -23,6 +23,17 @@ import { LEVELS } from "./stats/Visuals";
 // 7–11, 12+ of 589): a scale relative to the busiest year would leave nearly everything dim
 const STEPS = [1, 2, 4, 7, 12];
 const STEP_LABELS = ["1", "2–3", "4–6", "7–11", "12+"];
+/**
+ * A lane's events as its cells add them up, the in-person ones; its total when online ones add to
+ * it ("67 eventos, 59 presenciales"), so the archive the name opens says the same
+ */
+const presenciales = (row: ActivityRow) => {
+  const inPerson = row.years.reduce((a, b) => a + b, 0);
+  return row.events === inPerson
+    ? `${inPerson} ${inPerson === 1 ? "evento" : "eventos"}`
+    : `${row.events} eventos, ${inPerson} ${inPerson === 1 ? "presencial" : "presenciales"}`;
+};
+
 const level = (count: number) => STEPS.findLastIndex((step) => count >= step) + 1;
 
 const COLUMNS = "grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-x-3 sm:grid-cols-[12rem_minmax(0,1fr)]";
@@ -40,7 +51,7 @@ function Row({ row, from, span, order }: { row: ActivityRow; from: number; span:
           closed ? "text-zinc-400" : "text-zinc-200"
         )}
         href={`/timeline?comunidad=${row.slug}#archivo`}
-        title={`${row.name} · ${row.events} eventos · ${STATUS_LABEL[row.status]}`}
+        title={`${row.name} · ${presenciales(row)} · ${STATUS_LABEL[row.status]}`}
       >
         {row.name}
       </a>
@@ -158,7 +169,9 @@ export default function Activity({
           <span className="block font-medium text-zinc-100">{hover.row.name}</span>
           <span className="text-zinc-400">{hover.year} · </span>
           <span className="text-zinc-200">
-            {hover.count ? `${hover.count} ${hover.count === 1 ? "evento" : "eventos"}` : "ningún evento presencial"}
+            {hover.count
+              ? `${hover.count} ${hover.count === 1 ? "evento presencial" : "eventos presenciales"}`
+              : "ningún evento presencial"}
           </span>
           {hover.count ? <span className="mt-0.5 block text-[12px] text-zinc-400">Tocá para verlos</span> : null}
         </div>

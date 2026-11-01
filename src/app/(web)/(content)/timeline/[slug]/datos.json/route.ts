@@ -8,7 +8,11 @@ import type { TimelineCommunity, TimelineEvent, TimelinePersonChip } from "lib/t
 export type EventDetail = {
   event: TimelineEvent;
   organizers: TimelinePersonChip[];
-  community: Pick<TimelineCommunity, "slug" | "name" | "logo" | "status" | "events" | "directory" | "photos"> | null;
+  community:
+    | (Pick<TimelineCommunity, "slug" | "name" | "logo" | "status" | "events" | "directory" | "photos"> & {
+        milestones?: number;
+      })
+    | null;
   previous: { slug: string; title: string; start: string } | null;
   next: { slug: string; title: string; start: string } | null;
 };
@@ -35,8 +39,9 @@ async function render(slug: string) {
           name: community.name,
           logo: community.logo,
           status: community.status,
-          // The archive's count, so the panel says the same before and after it loads
+          // The archive's counts, so the panel says the same before and after it loads
           events: getArchive().communities.find((c) => c.slug === community.slug)?.events ?? community.events,
+          milestones: getArchive().communities.find((c) => c.slug === community.slug)?.milestones,
           directory: community.directory,
           photos: community.photos,
         }

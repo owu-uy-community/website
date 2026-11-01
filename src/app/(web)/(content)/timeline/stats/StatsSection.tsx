@@ -126,8 +126,8 @@ export default function StatsSection() {
   const midweek = stats.weekdays[1] + stats.weekdays[2] + stats.weekdays[3];
   const topHour = stats.hours.reduce((a, b) => (b.count > a.count ? b : a));
 
-  // Where
-  const placed = stats.places.reduce((sum, place) => sum + place.count, 0);
+  // Where: the first place, and the one that matches it, if any
+  const [first, second] = stats.venues;
   const montevideo = stats.places.find((place) => place.name === "Montevideo")?.count ?? 0;
 
   // What about
@@ -215,13 +215,15 @@ export default function StatsSection() {
         <Card
           headline={
             <>
-              {stats.venues[0].name} fue sede de {number.format(stats.venues[0].count)} eventos, más que ningún otro
-              lugar. El {pct(montevideo, placed)}% fue en Montevideo.
+              {first.name} fue sede de {number.format(first.count)} eventos,{" "}
+              {second?.count === first.count ? `tantos como ${second.name}` : "más que ningún otro lugar"}. El{" "}
+              {pct(montevideo, stats.placed)}% fue en Montevideo.
             </>
           }
           note={
             <>
-              Los nombres de un mismo lugar se unificaron (por ejemplo, «Oficina de Pyxis» y «Pyxis»).{" "}
+              Los nombres de un mismo lugar se unificaron (por ejemplo, «Oficina de Pyxis» y «Pyxis»). El porcentaje es
+              sobre los {number.format(stats.placed)} eventos con ciudad o lugar conocido.{" "}
               <Link
                 className="text-zinc-300 underline decoration-white/20 underline-offset-4 hover:decoration-yellow-400"
                 href="/timeline/lugares"

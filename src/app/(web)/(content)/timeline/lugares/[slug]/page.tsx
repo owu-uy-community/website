@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props) {
   const span = yearSpan(venue.events[0].start, venue.events.at(-1)!.start);
   return pageMetadata({
     title: `${venue.name}: los eventos de la comunidad tech que recibió`,
-    description: `${venue.name}${venue.city ? `, en ${venue.city},` : ""} recibió ${eventsLabel(venue.events.length)} de la comunidad tech uruguaya (${span}): cuáles, de qué comunidades y sus fotos.`,
+    description: `${venue.name}${venue.city ? `, en ${venue.city},` : ""} recibió ${eventsLabel(venue.events.length)} de comunidades tech uruguayas (${span}): cuáles, de qué comunidades y sus fotos.`,
     path: venueHref(venue.slug),
   });
 }
@@ -82,8 +82,8 @@ async function VenueView({ slug }: { slug: string }) {
               <h1 className={headingClassName.h1}>{venue.name}</h1>
               <TitleBar className="mt-6" />
               <p className="mt-6 text-lg text-zinc-300">
-                Recibió {eventsLabel(venue.events.length)}
-                {venue.communities.length > 1 ? ` de ${venue.communities.length} comunidades` : ""}
+                Recibió {eventsLabel(venue.events.length)} de{" "}
+                {venue.communities.length > 1 ? `${venue.communities.length} comunidades` : "comunidades"}
                 <span className="text-zinc-400"> · {yearSpan(venue.events[0].start, venue.events.at(-1)!.start)}</span>
               </p>
               {venue.city ? (
@@ -108,6 +108,19 @@ async function VenueView({ slug }: { slug: string }) {
               Sus eventos
             </h2>
             <EventsByYear events={venue.events} />
+            {/* The ecosystem met here too: listed, but not in the place's count nor in the ranking */}
+            {venue.others.length ? (
+              <section aria-labelledby="ecosistema" className="mt-12">
+                <h2 className={headingClassName.h3} id="ecosistema">
+                  Del ecosistema
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+                  {eventsLabel(venue.others.length)} de empresas, la academia o el Estado. No entran en la cuenta del
+                  lugar, que suma los de comunidades, como el resto de la historia.
+                </p>
+                <EventsByYear events={venue.others} />
+              </section>
+            ) : null}
           </section>
 
           <aside>

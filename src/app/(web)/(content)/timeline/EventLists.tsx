@@ -96,15 +96,17 @@ export function EventsByYear({ events }: { events: TimelineEvent[] }) {
 
 /** The communities a person or a place had events with, and how many */
 export function CommunityList({
+  id = "comunidades",
   title,
   items,
 }: {
+  id?: string;
   title: string;
   items: { slug: string; name: string; logo?: string; label: string }[];
 }) {
   return (
-    <section aria-labelledby="comunidades">
-      <h2 className="text-sm font-medium text-zinc-400" id="comunidades">
+    <section aria-labelledby={id}>
+      <h2 className="text-sm font-medium text-zinc-400" id={id}>
         {title}
       </h2>
       <ul className="mt-3 flex flex-col gap-2">

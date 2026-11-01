@@ -46,6 +46,13 @@ export const getTimeline = cache(() => {
   }
 
   const communities = read<TimelineCommunity[]>("communities.json");
+  // A community's photos are the ones its events show (OWU's own included, which the build doesn't
+  // know about), the count /timeline/fotos and every link to it use
+  const shown = new Map<string, number>();
+  for (const event of events)
+    if (event.kind !== "hito" && event.photos?.length)
+      shown.set(event.community, (shown.get(event.community) ?? 0) + event.photos.length);
+  for (const community of communities) community.photos = shown.get(community.slug) || undefined;
   // Who organized what, most events first
   const people = read<TimelinePerson[]>("people.json");
 
@@ -62,6 +69,7 @@ export const getTimeline = cache(() => {
 /** What counts by default: community-run, and not a milestone */
 export const isCommunityEvent = (event: TimelineEvent) => event.layer === "community" && event.kind !== "hito";
 
+/** The photos an event has, its album's size when it's bigger than the ones it shows */
 export const photoCount = (event: TimelineEvent) => Math.max(event.photos?.length ?? 0, event.photoCount ?? 0);
 
 export function getStats() {
@@ -73,7 +81,8 @@ export function getStats() {
     events: own.length,
     communities: communities.filter((community) => community.layer === "community" && (community.events ?? 0) > 0)
       .length,
-    photos: events.reduce((sum, event) => sum + photoCount(event), 0),
+    // The photos the history shows of those events, the same count as /timeline/fotos'
+    photos: own.reduce((sum, event) => sum + (event.photos?.length ?? 0), 0),
     rsvps: own.reduce((sum, event) => sum + (event.rsvps ?? 0), 0),
     since: Number(first),
   };
@@ -102,16 +111,15 @@ export type ArchiveRow = {
   r?: number;
   /** cover photo, as published (the client asks for a thumbnail size) */
   i?: string;
-  /** photo count */
+  /** photos shown (the album may hold more: the event's page says so) */
   n?: number;
   /** first milestone that happened there */
   h?: string;
   /*
-   * What the reading panel needs to hold the exact shape of an event while it loads: how many
-   * photos it has (as files), its description's length, how many talks, its organizers' line
-   * length, the attendance when there's no RSVP count, and a date's confidence when it isn't firm
+   * What the reading panel needs to hold the exact shape of an event while it loads: its
+   * description's length, how many talks, its organizers' line length, the attendance when there's
+   * no RSVP count, and a date's confidence when it isn't firm
    */
-  p?: number;
   l?: number;
   /** Its first real photo (not a flyer, a banner or a logo), for the deck that only shows those */
   f?: string;
@@ -130,7 +138,7 @@ export const firstPhoto = (event: TimelineEvent) => {
 export function getArchiveRows(): ArchiveRow[] {
   return getTimeline().events.map((event) => {
     const cover = event.photos?.[0];
-    const n = photoCount(event);
+    const n = event.photos?.length ?? 0;
     const venue = [event.venue, event.city && event.city !== event.venue ? event.city : null]
       .filter(Boolean)
       .join(" · ");
@@ -150,7 +158,6 @@ export function getArchiveRows(): ArchiveRow[] {
       ...(cover ? { i: cover.src } : {}),
       ...(n ? { n } : {}),
       ...(event.highlights?.length ? { h: event.highlights[0] } : {}),
-      ...(event.photos?.length ? { p: event.photos.length } : {}),
       ...(firstPhoto(event) ? { f: firstPhoto(event) } : {}),
       ...((event.summary ?? event.description) ? { l: (event.summary ?? event.description)!.length } : {}),
       ...(event.talks?.length ? { tk: event.talks.length } : {}),
@@ -161,9 +168,10 @@ export function getArchiveRows(): ArchiveRow[] {
   });
 }
 
-/** A community as the archive lists it, its event count taken from the rows (milestones included) */
+/** A community as the archive lists it: its events (online included), and its milestones apart */
 export type ArchiveCommunity = Pick<TimelineCommunity, "slug" | "name" | "status" | "layer" | "first"> & {
   events: number;
+  milestones?: number;
   /** Its first topic, for the topic filter */
   topic: string;
   logo?: string;
@@ -175,13 +183,18 @@ export type ArchiveCommunity = Pick<TimelineCommunity, "slug" | "name" | "status
 export const getArchive = cache(() => {
   const rows = getArchiveRows();
   const counts = new Map<string, number>();
-  for (const row of rows) counts.set(row.c, (counts.get(row.c) ?? 0) + 1);
+  const milestones = new Map<string, number>();
+  for (const row of rows) {
+    const tally = row.k === "hito" ? milestones : counts;
+    tally.set(row.c, (tally.get(row.c) ?? 0) + 1);
+  }
   const communities: ArchiveCommunity[] = getTimeline()
-    .communities.filter((community) => counts.has(community.slug))
+    .communities.filter((community) => counts.has(community.slug) || milestones.has(community.slug))
     .map(({ slug, name, status, layer, first, topics, logo, photos }) => ({
       slug,
       name,
-      events: counts.get(slug)!,
+      events: counts.get(slug) ?? 0,
+      ...(milestones.get(slug) ? { milestones: milestones.get(slug) } : {}),
       status,
       layer,
       first,

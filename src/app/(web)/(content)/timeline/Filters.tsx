@@ -139,7 +139,9 @@ function CommunityPicker({ state, set, communities }: Pick<Props, "state" | "set
                   <span className={cn("flex-1 truncate", community.status === "cerrada" && "text-zinc-400")}>
                     {community.name}
                   </span>
-                  <span className="font-terminal text-[11px] text-zinc-400 tabular-nums">{community.events}</span>
+                  <span className="font-terminal text-[11px] text-zinc-400 tabular-nums">
+                    {community.events || (community.milestones ? `${community.milestones} hitos` : 0)}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

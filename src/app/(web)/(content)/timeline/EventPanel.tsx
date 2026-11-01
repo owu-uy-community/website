@@ -78,7 +78,10 @@ type View = {
   place: string;
   people?: string;
   community:
-    | (Pick<ArchiveCommunity, "slug" | "name" | "status" | "events"> & { logo?: string; photos?: number })
+    | (Pick<ArchiveCommunity, "slug" | "name" | "status" | "events" | "milestones"> & {
+        logo?: string;
+        photos?: number;
+      })
     | null;
 };
 
@@ -96,6 +99,12 @@ const viewOfDetail = ({ event, community }: EventDetail): View => ({
   people: event.rsvps ? `${number.format(event.rsvps)} anotados` : event.attendance,
   community: community ? { ...community, events: community.events ?? 0 } : null,
 });
+
+/** "12 eventos"; the milestones' own lane, which has none, by its milestones */
+const countLabel = ({ events, milestones }: Pick<ArchiveCommunity, "events" | "milestones">) =>
+  events || !milestones
+    ? `${number.format(events)} ${events === 1 ? "evento" : "eventos"}`
+    : `${number.format(milestones)} ${milestones === 1 ? "hito" : "hitos"}`;
 
 const viewOfRow = ({ row, community }: Preview): View => ({
   slug: row.s,
@@ -178,7 +187,7 @@ function Header({ view }: { view: View }) {
           <span className="min-w-0">
             <span className="block truncate text-[14px] text-zinc-100">{view.community.name}</span>
             <span className="block text-[12px] text-zinc-400">
-              {view.community.events} eventos · {STATUS_LABEL[view.community.status]}
+              {countLabel(view.community)} · {STATUS_LABEL[view.community.status]}
             </span>
           </span>
         </Link>
@@ -200,7 +209,8 @@ function Photos({ detail }: { detail: EventDetail }) {
   }));
   if (!photos.length) return null;
   const shown = photos.slice(0, 6);
-  const more = Math.max(photos.length, detail.event.photoCount ?? 0) - shown.length;
+  // The photos the viewer opens: an album bigger than that is the event page's to mention
+  const more = photos.length - shown.length;
 
   return (
     <>
@@ -332,8 +342,8 @@ function Buttons({ view, source }: { view: View; source: string | null | undefin
 
 /** What the row can't tell yet, drawn at the size it will take: tiles, talks, the description */
 function Pending({ row }: { row: ArchiveRow }) {
-  const tiles = Math.min(row.p ?? 0, 6);
-  const more = Math.max(row.p ?? 0, row.n ?? 0) - tiles;
+  const tiles = Math.min(row.n ?? 0, 6);
+  const more = (row.n ?? 0) - tiles;
   const talks = Math.min(row.tk ?? 0, 8);
   // Folded descriptions take 6 lines; shorter ones (and organizers) about one line per 48 characters of the panel
   const lines = row.l ? (row.l > FOLD ? 6 : Math.max(1, Math.ceil(row.l / 48))) : 0;

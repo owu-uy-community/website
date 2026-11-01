@@ -33,10 +33,47 @@ function href(key: string) {
 /** The node in focus wears its name even where a bigger neighbor's would cover it */
 type NodeState = { isFocused: boolean };
 
-type NodeAttributes = { x: number; y: number; size: number; label: string; color: string; kind: GraphKind; n: number };
+type NodeAttributes = {
+  x: number;
+  y: number;
+  size: number;
+  label: string;
+  color: string;
+  kind: GraphKind;
+  n: number;
+  h?: number;
+};
 
 /** What the card says about the node in focus */
-type Focus = { key: string; label: string; kind: GraphKind; events: number; links: Record<GraphKind, number> };
+type Focus = {
+  key: string;
+  label: string;
+  kind: GraphKind;
+  events: number;
+  talks?: number;
+  links: Record<GraphKind, number>;
+};
+
+const plural = (count: number, one: string, many: string) => `${number.format(count)} ${count === 1 ? one : many}`;
+
+/** What a card says, as the node's page does: a person organized and spoke; a place or a community held events */
+const summary = ({ kind, events, talks, links }: Focus) =>
+  [
+    kind === "p"
+      ? [
+          events ? `Organizó ${plural(events, "evento", "eventos")}` : null,
+          talks ? plural(talks, "charla", "charlas") : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : plural(events, "evento", "eventos"),
+    (["c", "p", "v"] as const)
+      .filter((other) => links[other])
+      .map((other) => plural(links[other], KINDS[other].one, KINDS[other].many))
+      .join(", "),
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
 /**
  * The history as a network, drawn by sigma (WebGL) with the layout the server computed. Hovering
@@ -116,6 +153,7 @@ export default function Network() {
         color: KINDS[node.t].color,
         kind: node.t,
         n: node.n,
+        h: node.h,
       });
     for (const [a, b, weight] of data.edges)
       graph.addEdge(data.nodes[a].k, data.nodes[b].k, { size: Math.min(3, 0.4 + Math.log2(weight) * 0.5) });
@@ -191,8 +229,8 @@ export default function Network() {
       sigma.setEdgesState(graph.edges(key), { isHighlighted: true });
       const links = { c: 0, p: 0, v: 0 };
       for (const other of graph.neighbors(key)) links[graph.getNodeAttribute(other, "kind")]++;
-      const { label, kind, n } = graph.getNodeAttributes(key);
-      setFocus({ key, label, kind, events: n, links });
+      const { label, kind, n, h } = graph.getNodeAttributes(key);
+      setFocus({ key, label, kind, events: n, talks: h, links });
     };
     select.current = (key) => {
       picked = key;
@@ -316,16 +354,7 @@ export default function Network() {
                 <X className="size-4" />
               </button>
             </div>
-            <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
-              {number.format(focus.events)} {focus.events === 1 ? "evento" : "eventos"} ·{" "}
-              {(["c", "p", "v"] as const)
-                .filter((kind) => focus.links[kind])
-                .map(
-                  (kind) =>
-                    `${number.format(focus.links[kind])} ${focus.links[kind] === 1 ? KINDS[kind].one : KINDS[kind].many}`
-                )
-                .join(", ")}
-            </p>
+            <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">{summary(focus)}</p>
             <Link
               className="mt-3 inline-flex items-center gap-1 text-[13px] text-zinc-200 underline decoration-white/25 underline-offset-4 hover:decoration-yellow-400"
               href={href(focus.key)}
