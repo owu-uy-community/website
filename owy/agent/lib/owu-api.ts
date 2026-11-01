@@ -567,6 +567,14 @@ export interface OwuApi {
     /** Mirrors a companion's face + running transcript onto the wall's Owy. */
     setFace: (input: StageFaceInput) => Promise<unknown>;
   };
+  /**
+   * The companion's control plane (site: src/lib/orpc/companion/control.ts). The bridge's 15 s
+   * heartbeat: its status, changes made on a board, by voice or on its page, and command results;
+   * the reply is every stored setting. Shapes in companion/bridge/src/web/contract.ts.
+   */
+  companion: {
+    report: (input: unknown) => Promise<unknown>;
+  };
 }
 
 export type StageFaceState = "idle" | "listening" | "thinking" | "speaking" | "happy" | "error" | "offline";

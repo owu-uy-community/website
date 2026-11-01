@@ -185,6 +185,13 @@ export class HostMic {
     void this.open();
   }
 
+  /** Another gain on the capture (COMPANION_HOST_MIC_GAIN_DB, from the panel): reopens it. */
+  setGain(db: number): void {
+    if (this.options.gainDb === db) return;
+    this.options.gainDb = db;
+    if (this.child) this.select(this.wanted, this.channel);
+  }
+
   /** A session's route is `host`: open it if it is not (idempotent, cheap). */
   ensureOpen(): void {
     if (!this.child && !this.opening && !this.restartTimer && this.health !== "unavailable") void this.open();

@@ -300,7 +300,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             model: shared.provider.spec,
             voice: shared.config.COMPANION_VOICE,
             promptHash: createHash("sha256").update(shared.instructions).digest("hex").slice(0, 16),
-            tools: [...shared.definitions.keys(), "propose_talk", "show_on_screen", "event_now", "set_volume"],
+            tools: [...new Set([...shared.definitions.keys(), "propose_talk", "show_on_screen", "set_volume"])],
             permissions: { writes: authority.writes, staff: authority.staff, marketplace: authority.marketplace },
             siteConfigured: !!shared.config.OWY_API_KEY,
             sampleRate: 16000,

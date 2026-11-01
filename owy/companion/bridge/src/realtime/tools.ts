@@ -5,6 +5,15 @@ import { pathToFileURL } from "node:url";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
 import { resolveActiveEvent } from "../../../../agent/lib/board";
+import {
+  describeValue,
+  settingSpec,
+  VOICE_KEYS,
+  voiceMay,
+  voiceValue,
+  type SettingCheck,
+  type SettingKey,
+} from "../web/registry";
 import type { Logger } from "../log";
 
 /**
@@ -79,6 +88,15 @@ export interface ToolRuntime {
   setVolume?(pct: number): void;
   logger: Logger;
   now?: () => Date;
+  /**
+   * Owy's settings by voice (tool `ajustes`): read one in effect, or change it (the session picks
+   * the target: its own board for device settings, the bridge for the rest). Absent: only the
+   * volume (`set_volume`), as on a browser's virtual Owy.
+   */
+  settings?: {
+    get(key: SettingKey): unknown;
+    set(key: SettingKey, value: unknown): SettingCheck & { later?: string };
+  };
 }
 
 export const DEFAULT_TOOL_TIMEOUT_MS = 20_000;
@@ -375,6 +393,51 @@ export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition
       return { ok: true, shown: command.kind };
     },
   });
+
+  const settings = runtime.settings;
+  if (settings) {
+    set.ajustes = tool({
+      description:
+        "Lee o cambia los ajustes de Owy (el que te habla). Sin `clave`: la lista de los que podés tocar, con su valor. Con `clave` sola: lee uno. Con `valor` (\"sí\", \"no\", un número o una opción, como lo dijo la persona) o `paso` (cuánto subir o bajar, ej. volumen +15 / -15): lo cambia. Cualquiera puede cambiar volumen, brillo, modo silencioso, tono de escucha, charla continua y animaciones mínimas, y pausar tu micrófono; lo demás es solo para staff. Contá el resultado en una frase.",
+      inputSchema: z.object({
+        clave: z
+          .enum(VOICE_KEYS as [string, ...string[]])
+          .optional()
+          .describe(VOICE_KEYS.map((key) => `${key}: ${settingSpec(key).label}`).join("; ")),
+        valor: z.string().max(200).optional().describe("El valor pedido, en palabras o número"),
+        paso: z.number().min(-100).max(100).optional().describe("Para números: cuánto sumar (negativo: restar)"),
+      }),
+      execute: async ({ clave, valor, paso }) => {
+        const staff = runtime.isStaff();
+        if (!clave)
+          return {
+            ajustes: VOICE_KEYS.filter((key) => staff || settingSpec(key).voice === "public").map((key) => ({
+              clave: key,
+              nombre: settingSpec(key).label,
+              valor: describeValue(key, settings.get(key)),
+            })),
+          };
+        const key = clave as SettingKey;
+        const spec = settingSpec(key);
+        if (valor === undefined && paso === undefined) return { nombre: spec.label, valor: describeValue(key, settings.get(key)) };
+        const wanted = voiceValue(key, valor, paso, settings.get(key));
+        if (!wanted.ok) return { ok: false, error: wanted.error };
+        const may = voiceMay(key, wanted.value, staff);
+        if (!may.ok) return { ok: false, error: may.error };
+        const result = settings.set(key, wanted.value);
+        if (!result.ok) return { ok: false, error: result.error };
+        return {
+          ok: true,
+          nombre: spec.label,
+          valor: describeValue(key, result.value),
+          cuando:
+            result.later ??
+            (spec.apply === "now" ? "ya" : spec.apply === "turn" ? "desde el próximo turno" : "cuando el bridge se reinicie, en un momento sin charlas"),
+        };
+      },
+    });
+    return set;
+  }
 
   set.set_volume = tool({
     description:

@@ -3,6 +3,7 @@ import type { VoiceLink } from "./pipeline";
 import type { AudioRoute, MicRoute } from "../audio/route";
 import type { PitchVoice } from "../pitch-flow";
 import type { FaceState, ScreenCard } from "../realtime/tools";
+import type { SettingKey } from "../web/registry";
 
 /**
  * A browser attached as the *audio peer* of a physical device: it mirrors that
@@ -66,5 +67,15 @@ export interface DeviceTransport extends VoiceLink {
   playClip?: (id: string) => void;
   getVolume(): number | null;
   setVolume(pct: number): void;
+  /** A registry setting as the board holds it; undefined = the board has no such entity (or no state yet). */
+  readSetting?: (key: SettingKey) => unknown;
+  /** Writes a registry setting to the board, as the option label it expects. */
+  writeSetting?: (key: SettingKey, value: unknown) => void;
+  /** Unlocks staff on the board (it locks itself after 10 minutes), or locks it now. */
+  setStaff?: (on: boolean) => void;
+  /** Presses a board button by its object id (`tono_de_prueba`). */
+  pressButton?: (objectId: string) => void;
+  /** The firmware version and the board's audio state, for the panel. */
+  info?: () => { firmware?: string; audio?: string };
   close(): void;
 }

@@ -63,7 +63,8 @@ import {
   type Placement,
 } from "./pitch-flow";
 import { pitchThinkingMs, sleep, TIMINGS, within, withTimeout } from "./timings";
-import type { Asker, TalkContext, VoiceStatus } from "./web/contract";
+import type { Asker, DeviceStatus, TalkContext, TurnSummary, VoiceStatus } from "./web/contract";
+import { BRIDGE_TARGET, DEVICE_KEYS, describeValue, settingSpec, type SettingCheck, type SettingKey } from "./web/registry";
 import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
 import { buildSessionConfig, sessionInputRate, voiceFor } from "./realtime/session-config";
 import type { PitchRuntime, SharedRuntime } from "./runtime";
@@ -181,6 +182,18 @@ export interface DeviceSessionOptions {
   onFace?: (state: FaceState) => void;
   /** The feeling cued for the sentence being spoken (the wall mirrors it). */
   onExpression?: (name: string, strength: number) => void;
+  /**
+   * A device setting changed: on the board itself (its screen, its knob — or a write of ours
+   * echoing back, which the control plane tells apart) or through this bridge's own APIs (`local`).
+   */
+  onSetting?: (key: SettingKey, value: unknown, setBy: "dispositivo" | "local") => void;
+  /** The board's link came up (first connect or back from a flap): the moment to re-apply its settings. */
+  onLinkUp?: () => void;
+  /** The control plane's settings, for Owy's own `ajustes` tool; absent: only this board's volume. */
+  settings?: {
+    get(target: string, key: SettingKey): unknown;
+    set(target: string, key: string, value: unknown): SettingCheck;
+  };
   onTool?: (event: {
     name: string;
     status: "running" | "done" | "denied" | "error";
@@ -264,16 +277,18 @@ export class DeviceSession {
   private audioOutput: AudioRoute = "device";
   private peer: AudioPeer | null = null;
   private micOpenAt = 0;
-  /** Settings UI choice for boards without routing selects. */
-  private routeOverride: { mic?: MicRoute; output?: AudioRoute } = {};
+  /** Device settings the board can't hold (no entity, a missing option) or only the bridge keeps (talk, host). */
+  private readonly held: Partial<Record<SettingKey, unknown>> = {};
+  /** The last finished turns, oldest first (the panel shows them). */
+  private turns: TurnSummary[] = [];
+  /** Run once the current turn is over (a voice request that would cut it short). */
+  private afterTurn: (() => void)[] = [];
   private unsubscribeHostMic: (() => void) | null = null;
   /** Modo pitch: this device run (a pitch or an answer), and the visitor's flow it belongs to. */
   private pitch: PitchRun | null = null;
   private flow: PitchFlow<PitchRun> | null = null;
   /** A line the realtime model must say verbatim this turn (the bridge's words, not the visitor's). */
   private script: string | null = null;
-  /** Settings UI choice for boards without the pitch switch / select. */
-  private pitchOverride: { mode?: boolean; voice?: PitchVoice } = {};
   /** «Owy, en vivo»: the talk around the next turns (the slide on screen, who asks); null = no talk. */
   private talk: TalkContext = null;
   /** Owy's own turn: its abort, and the timer of the line it is waiting on (a script, a clip). */
@@ -300,7 +315,7 @@ export class DeviceSession {
         this.options.isStaff?.() ?? (this.device?.isStaffMode() || this.shared.config.COMPANION_STAFF_MODE),
       isMarketplaceOpen: () =>
         this.options.isMarketplaceOpen?.() ??
-        (this.device?.isMarketplaceOpen() || this.shared.config.COMPANION_MARKETPLACE_OPEN),
+        (this.device?.isMarketplaceOpen() || this.setting("marketplace_open") === true),
       proposalCooldownMs: this.shared.config.COMPANION_PROPOSAL_COOLDOWN_S * 1000,
       proposalHistory: this.options.proposalHistory,
       gridUrl: this.shared.gridUrl,
@@ -309,6 +324,7 @@ export class DeviceSession {
       setVolume: (pct) => {
         if (this.toolIsCurrent()) this.device?.setVolume(pct);
       },
+      ...(this.options.settings ? { settings: this.voiceSettings(this.options.settings) } : {}),
       logger: this.log,
     };
     this.runtime = runtime;
@@ -316,7 +332,7 @@ export class DeviceSession {
       // Ears and mouth only: device-local tools + the line to the eve Owy.
       const local = buildCompanionToolSet(new Map(), runtime);
       this.tools = {
-        set_volume: local.set_volume,
+        ...(local.ajustes ? { ajustes: local.ajustes } : { set_volume: local.set_volume }),
         show_on_screen: local.show_on_screen,
         hablar_con_owy: this.eveTool(this.shared.eve, runtime),
       };
@@ -368,9 +384,14 @@ export class DeviceSession {
         onRequestStop: () => this.onRequestStop(),
         onAudio: (chunk) => this.onDeviceAudio(chunk),
         onPitchSubmit: () => this.submitPitch("submit"),
+        // Not before the device is ours (its first telemetry arrives while it connects): those are boot values.
+        onSetting: (key, value) => {
+          if (this.device) this.options.onSetting?.(key, value, "dispositivo");
+        },
         onConnected: () => {
           this.linkUp = true;
           this.device?.setFace("idle");
+          if (this.device) this.options.onLinkUp?.();
           // Back from a Wi-Fi flap: the next tap should find a warm voice, not a cold handshake.
           if (!this.options.lazyRealtime && !this.stopped && this.session) void this.ensureSession();
         },
@@ -406,6 +427,7 @@ export class DeviceSession {
     }
     if (this.stopped) return;
     this.device.setFace("idle");
+    this.options.onLinkUp?.();
     this.log.info("ready");
   }
 
@@ -596,6 +618,7 @@ export class DeviceSession {
           this.stopWatchdog();
           this.logTurn();
           this.rememberTurn();
+          for (const run of this.afterTurn.splice(0)) run();
           // RUN_END precedes physical playback completion. Firmware owns
           // the return to idle and the wake-word indicator.
         }
@@ -933,6 +956,7 @@ export class DeviceSession {
     const totalMs = Date.now() - this.turnStartedAt;
     this.log.info(`turn path=${this.path} ttfa=${ttfaMs === null ? "-" : seconds(ttfaMs)} total=${seconds(totalMs)}`);
     this.lastTurn = { path: this.path, ttfaMs, totalMs, at: new Date().toISOString() };
+    this.turns = [...this.turns.slice(-4), this.lastTurn];
     this.turnStartedAt = 0;
   }
 
@@ -1139,32 +1163,152 @@ export class DeviceSession {
     return this.device !== null;
   }
 
-  /** Current routing and where it comes from (device selects, settings UI, or env). */
-  audioRouting(): { mic: MicRoute; output: AudioRoute; source: "device" | "override" | "env" } {
-    const config: Partial<BridgeConfig> = this.shared.config ?? {}; // test fakes omit config
-    const fromDevice = this.device?.getMicSource?.() ?? null;
-    if (fromDevice !== null)
-      return { mic: fromDevice, output: this.device?.getAudioOutput?.() ?? "device", source: "device" };
-    const overridden = this.routeOverride.mic !== undefined || this.routeOverride.output !== undefined;
+  // ── Settings (registry keys of this device) ─────────────────────────────
+
+  /** A device setting in effect: what the bridge holds for it, else the board's, else the env default. */
+  setting(key: SettingKey): unknown {
+    if (Object.hasOwn(this.held, key)) return this.held[key];
+    const board = this.boardSetting(key);
+    return board !== undefined ? board : settingDefault(key, this.shared.config);
+  }
+
+  /** Every device setting in effect, and the ones only the bridge keeps for this board. */
+  settingValues(): Record<string, unknown> {
+    return Object.fromEntries(DEVICE_KEYS.map((key) => [key, this.setting(key) ?? null]));
+  }
+
+  heldSettings(): string[] {
+    return Object.keys(this.held);
+  }
+
+  /**
+   * Writes a device setting: to the board when it has it (checked once the board answers — one
+   * flashed before an option existed ignores it), kept here otherwise. Applies from the next turn
+   * for routes and modes, at once for the rest.
+   */
+  applySetting(key: SettingKey, value: unknown): void {
+    const spec = settingSpec(key);
+    if (spec.scope !== "device") return;
+    const device = this.device;
+    if (!this.writeBoard(key, value)) this.held[key] = value;
+    else {
+      delete this.held[key];
+      if (device?.readSetting?.(key) !== undefined)
+        setTimeout(() => {
+          if (this.device !== device || this.stopped || device.readSetting?.(key) === value) return;
+          this.held[key] = value;
+          this.log.info(`${spec.label}: la placa no tiene «${describeValue(key, value)}»; lo guarda el bridge`);
+        }, 1000).unref?.();
+    }
+    if (key === "mic" && value === "host") this.shared.hostMic?.ensureOpen();
+    if (key === "output" && value === "host") this.shared.hostSpeaker?.ensureOpen();
+    if (key === "talk" && value !== true) this.talk = null;
+  }
+
+  /** The board's value: the registry's reader, or the older per-setting getters (the browser device, test boards). */
+  private boardSetting(key: SettingKey): unknown {
+    const device = this.device;
+    if (!device) return undefined;
+    const value = device.readSetting?.(key);
+    if (value !== undefined) return value;
+    switch (key) {
+      case "mic":
+        return device.getMicSource?.() ?? undefined;
+      case "output":
+        return device.getAudioOutput?.() ?? undefined;
+      case "pitch_mode":
+        return device.isPitchMode?.() ?? undefined;
+      case "pitch_voice":
+        return device.getPitchVoice?.() ?? undefined;
+      default:
+        return undefined;
+    }
+  }
+
+  /** True when the board took the value (registry writer, or the older setters); false = nowhere to put it. */
+  private writeBoard(key: SettingKey, value: unknown): boolean {
+    const device = this.device;
+    if (!device || this.boardSetting(key) === undefined) return false;
+    if (device.writeSetting && device.readSetting?.(key) !== undefined) {
+      device.writeSetting(key, value);
+      return true;
+    }
+    if ((key === "mic" || key === "output") && device.setAudioRoute) device.setAudioRoute(key, audioRoute(value));
+    else if (key === "pitch_mode" && device.setSwitch) device.setSwitch("pitch_mode", value === true);
+    else if (key === "pitch_voice" && device.setPitchVoice) device.setPitchVoice(value as PitchVoice);
+    else return false;
+    return true;
+  }
+
+  /** What the panel shows for this device (the control plane's report). */
+  deviceStatus(): DeviceStatus {
+    const info = this.device?.info?.() ?? {};
     return {
-      mic: this.routeOverride.mic ?? micRoute(config.COMPANION_MIC_SOURCE),
-      output: this.routeOverride.output ?? audioRoute(config.COMPANION_AUDIO_OUTPUT),
-      source: overridden ? "override" : "env",
+      id: this.spec.id,
+      host: this.spec.host,
+      connected: this.linkUp,
+      ...(info.firmware ? { firmware: info.firmware } : {}),
+      ...(info.audio ? { audio: info.audio } : {}),
+      peer: this.peer !== null,
+      staff: this.device?.isStaffMode() ?? false,
+      voice: this.voiceStatus(),
+      turns: this.turns,
+      values: this.settingValues() as DeviceStatus["values"],
+      held: this.heldSettings(),
     };
   }
 
-  /** From the settings UI: writes the device select when the board has one, otherwise remembers it here. */
-  setAudioRouting(which: "mic", route: MicRoute): void;
-  setAudioRouting(which: "output", route: AudioRoute): void;
-  setAudioRouting(which: "mic" | "output", route: MicRoute): void {
-    const device = this.device;
-    if (device?.getMicSource?.() != null && device.setAudioRoute) {
-      if (which === "mic") device.setAudioRoute("mic", route);
-      else device.setAudioRoute("output", audioRoute(route));
-    } else if (which === "mic") this.routeOverride.mic = route;
-    else this.routeOverride.output = audioRoute(route);
-    if (which === "mic" && route === "host") this.shared.hostMic?.ensureOpen();
-    if (which === "output" && route === "host") this.shared.hostSpeaker?.ensureOpen();
+  /**
+   * The `ajustes` tool's port: device settings are this board's, the rest the bridge's. Pausing
+   * the mic by voice waits for the answer to end (the switch would cut it mid-sentence).
+   */
+  private voiceSettings(port: NonNullable<DeviceSessionOptions["settings"]>): NonNullable<ToolRuntime["settings"]> {
+    const target = (key: SettingKey) => (settingSpec(key).scope === "bridge" ? BRIDGE_TARGET : this.spec.id);
+    return {
+      get: (key) => (target(key) === BRIDGE_TARGET ? port.get(BRIDGE_TARGET, key) : this.setting(key)),
+      set: (key, value) => {
+        if (!this.toolIsCurrent()) return { ok: false, error: "el turno terminó" };
+        if (key === "privacy" && value === true && this.turn && !this.turn.finished) {
+          this.afterTurn.push(() => port.set(target(key), key, value));
+          return { ok: true, value, later: "cuando termine de hablar" };
+        }
+        return port.set(target(key), key, value);
+      },
+    };
+  }
+
+  /** The panel's «Tono de prueba»: the board's own test tone. */
+  testTone(): void {
+    if (!this.device?.pressButton) throw new Error("este dispositivo no tiene tono de prueba");
+    this.device.pressButton("tono_de_prueba");
+  }
+
+  /** The panel unlocks staff on the board (it locks itself after 10 minutes), or locks it. */
+  setStaff(on: boolean): void {
+    if (!this.device?.setStaff) throw new Error("este dispositivo no tiene modo staff");
+    this.device.setStaff(on);
+  }
+
+  /** A turn of this device is under way (a restart waits for none). */
+  get busy(): boolean {
+    return (!!this.turn && !this.turn.finished) || this.flow !== null;
+  }
+
+  /** Current routing and where it comes from (the board, what the bridge holds, or env). */
+  audioRouting(): { mic: MicRoute; output: AudioRoute; source: "device" | "override" | "env" } {
+    const source =
+      Object.hasOwn(this.held, "mic") || Object.hasOwn(this.held, "output")
+        ? "override"
+        : this.boardSetting("mic") !== undefined
+          ? "device"
+          : "env";
+    return { mic: audioRoute(this.setting("mic")), output: audioRoute(this.setting("output")), source };
+  }
+
+  /** From the talk console or the local page: like the panel, and reported back to it. */
+  setAudioRouting(which: "mic" | "output", route: AudioRoute): void {
+    this.applySetting(which, route);
+    this.options.onSetting?.(which, route, "local");
   }
 
   /** The Mac's own mic feeds this device's turns while its route says so. */
@@ -1314,38 +1458,26 @@ export class DeviceSession {
 
   // ── Modo pitch ──────────────────────────────────────────────────────────
 
-  /** The mode and Owy's reply level as the settings UI shows them: the board's, the settings override, or env. */
+  /** Modo pitch and Owy's reply level, and where they come from. */
   pitchSettings(): { mode: boolean; voice: PitchVoice; source: "device" | "override" | "env" } {
-    const config: Partial<BridgeConfig> = this.shared.config ?? {}; // test fakes omit config
-    const fromDevice = this.device?.isPitchMode?.() ?? null;
-    // Boards flashed before `select.pitch_voice` have the old «Owy reacciona» switch.
-    const reacts = this.device?.isPitchReacts?.() ?? null;
-    const voice =
-      this.device?.getPitchVoice?.() ??
-      this.pitchOverride.voice ??
-      (reacts !== null ? (reacts ? "react" : "confirm") : null) ??
-      config.COMPANION_PITCH_VOICE ??
-      (config.COMPANION_PITCH_REACTS ? "react" : "confirm");
-    if (fromDevice !== null) return { mode: fromDevice, voice, source: "device" };
-    const overridden = this.pitchOverride.mode !== undefined || this.pitchOverride.voice !== undefined;
-    return {
-      mode: this.pitchOverride.mode ?? config.COMPANION_PITCH_MODE ?? false,
-      voice,
-      source: overridden ? "override" : "env",
-    };
+    const source =
+      Object.hasOwn(this.held, "pitch_mode") || Object.hasOwn(this.held, "pitch_voice")
+        ? "override"
+        : this.boardSetting("pitch_mode") !== undefined
+          ? "device"
+          : "env";
+    return { mode: this.setting("pitch_mode") === true, voice: (this.setting("pitch_voice") as PitchVoice) ?? "confirm", source };
   }
 
-  /** From the settings UI / the talk console: the board's switch when it has one, otherwise remembered here. */
+  /** From the talk console or the local page: like the panel, and reported back to it. */
   setPitchMode(on: boolean): void {
-    const device = this.device;
-    if (device?.setSwitch && device.isPitchMode?.() != null) device.setSwitch("pitch_mode", on);
-    else this.pitchOverride.mode = on;
+    this.applySetting("pitch_mode", on);
+    this.options.onSetting?.("pitch_mode", on, "local");
   }
 
   setPitchVoice(voice: PitchVoice): void {
-    const device = this.device;
-    if (device?.setPitchVoice && device.getPitchVoice?.() != null) device.setPitchVoice(voice);
-    else this.pitchOverride.voice = voice;
+    this.applySetting("pitch_voice", voice);
+    this.options.onSetting?.("pitch_voice", voice, "local");
   }
 
   private pitchVoice(): PitchVoice {
@@ -2180,4 +2312,13 @@ export class DeviceSession {
     this.session?.close();
     this.device?.close();
   }
+}
+
+/** A device setting's value when neither the bridge nor the board has one: its env var, or off. */
+export function settingDefault(key: SettingKey, config: Partial<BridgeConfig> | undefined): unknown {
+  if (key === "pitch_voice") return config?.COMPANION_PITCH_VOICE ?? (config?.COMPANION_PITCH_REACTS ? "react" : "confirm");
+  if (key === "talk") return false;
+  const spec = settingSpec(key);
+  const env = "env" in spec ? spec.env : undefined;
+  return env && config ? (config as Record<string, unknown>)[env] : undefined;
 }
