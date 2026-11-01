@@ -283,7 +283,13 @@ export class ControlPlane {
       version: this.options.version,
       startedAt: this.startedAt,
       machine: hostname().slice(0, 80),
-      values: Object.fromEntries(BRIDGE_KEYS.map((key) => [key, bridgeValue(key, this.options.config)])) as BridgeStatus["values"],
+      values: Object.fromEntries(
+        BRIDGE_KEYS.map((key) => [
+          key,
+          // The brain is derived when unset (eve with COMPANION_EVE_URL): the panel shows the one in use.
+          key === "brain" ? (this.options.config.COMPANION_BRAIN ?? this.options.shared.brain ?? null) : bridgeValue(key, this.options.config),
+        ])
+      ) as BridgeStatus["values"],
       pending: [...this.pendingRestart],
       rejected: this.rejected.slice(-20),
       devices: this.options.sessions.map((session) => session.deviceStatus()),
