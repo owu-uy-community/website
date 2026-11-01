@@ -84,7 +84,6 @@ export async function requireStaffOrSchedule(ctx: ToolSessionCtx, permission: Pe
 
 interface ApprovalPolicyCtx extends ToolSessionCtx {
   toolName: string;
-  approvedTools: ReadonlySet<string>;
   toolInput?: unknown;
 }
 
