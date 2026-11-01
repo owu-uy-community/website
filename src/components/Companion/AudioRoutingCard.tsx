@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "c
 import { orpc } from "lib/orpc/client";
 import type { AudioRoutingSnapshot } from "lib/orpc/companion/schemas";
 
-type Options<T extends string> = readonly (readonly [T, string])[];
+import { Row, Segmented } from "./control/ui";
 
 const MIC = [
   ["device", "Owy"],
@@ -47,49 +47,6 @@ const HEALTH: Record<string, [NonNullable<BadgeProps["variant"]>, string]> = {
 };
 /** Radix Select reserves "": the built-in mic is this sentinel. */
 const BUILT_IN = "__built-in__";
-
-function Segmented<T extends string>({
-  label,
-  options,
-  value,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  options: Options<T>;
-  value: T;
-  disabled: boolean;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <div role="group" aria-label={label} className="flex flex-wrap gap-1">
-      {options.map(([option, text]) => (
-        <Button
-          key={option}
-          aria-pressed={value === option}
-          className={value === option ? "ring-1 ring-primary/40" : undefined}
-          disabled={disabled}
-          size="sm"
-          variant={value === option ? "outline" : "ghost"}
-          onClick={() => value !== option && onChange(option)}
-        >
-          {text}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="w-28 shrink-0 font-terminal text-2xs tracking-[0.14em] text-muted-foreground uppercase">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
 
 /**
  * Each physical Owy's audio and modo pitch, and the Mac's own mic: where the

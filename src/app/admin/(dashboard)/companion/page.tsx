@@ -1,7 +1,10 @@
 import { requirePermission } from "app/lib/auth-helpers";
-import CompanionWorkbench from "components/Companion/CompanionWorkbench";
+import { CompanionTabs } from "components/Companion/control/CompanionTabs";
 
-export default async function CompanionPage() {
+/** The physical Owys: «Control» (the devices and the bridge) and «Laboratorio» (?tab=lab). */
+export default async function CompanionPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await requirePermission("stage:read");
-  return <CompanionWorkbench />;
+  const { tab } = await searchParams;
+
+  return <CompanionTabs initialTab={tab === "lab" ? "lab" : "control"} />;
 }
