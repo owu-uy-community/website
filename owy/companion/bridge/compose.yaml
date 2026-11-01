@@ -28,5 +28,11 @@ services:
         read_only: true
         bind:
           create_host_path: false
+      # The last settings the panel gave this bridge (companion-state.json): a restart with the
+      # site out of reach keeps them.
+      - companion-state:/app/owy/companion/.eve
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+volumes:
+  companion-state: {}

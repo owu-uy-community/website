@@ -243,31 +243,25 @@ No hay cámara, sensor de presencia/luz ni motor háptico establecido en este mo
 
 ## Modos de audio (dispositivo, Mac o laptop)
 
-Cada dispositivo elige dónde viven su micrófono y su salida: `select.mic_source`
-(`dispositivo` | `laptop` | `mac`) y `select.audio_output` (`dispositivo` | `laptop`), persistentes, desde sus ajustes rápidos
-("Mic: …", "Audio: …") o desde la tarjeta **Owy físico** de `/admin/companion` — el lugar de
-siempre: ahí están también el emulador, *Hablá con Owy*, el modo pitch y el micrófono de la Mac. La
-página del bridge (`http://127.0.0.1:3313/`) es sólo el respaldo para cuando el sitio no llega al
-bridge (el sitio en Vercel en el evento). El bridge expone su API de control como un
-**router oRPC** (`bridge/src/web/rpc.ts`, servido en `http://127.0.0.1:3313/rpc`; el
-contrato zod vive en `bridge/src/web/contract.ts`); el sitio lo consume con un cliente oRPC
-tipado (`RouterClient<BridgeRouter>`) detrás de `companion.getAudioRouting` /
-`setAudioRouting` (admin). Sólo alcanza al bridge cuando el sitio corre en la misma laptop;
-`COMPANION_BRIDGE_SETTINGS_URL` (por defecto `http://127.0.0.1:3313/rpc`) para otro host.
-`/api/settings` es un espejo JSON plano de las mismas procedures para la página del bridge.
+Cada dispositivo elige dónde viven su micrófono y su salida: `select.mic_source` y
+`select.audio_output` (`dispositivo` | `laptop` | `mac`), persistentes, desde sus ajustes rápidos
+("Mic: …", "Audio: …") o desde **Control** en `/admin/companion` (el modo «Charla» pone las dos
+en la Mac). Una placa flasheada antes de que existiera la salida `mac` la deja en manos del bridge
+hasta el próximo flash (el panel lo marca «lo guarda el bridge»).
 
 - **dispositivo**: como siempre (mic del gadget; parlante/jack del gadget).
-- **mac** (sólo mic): el bridge graba una entrada de la Mac donde corre — el integrado o un
-  receptor DJI — sin navegador de por medio; ver *Micrófono de la Mac*.
-- **laptop**: la máquina que corre el bridge pone su micrófono (el mic de escenario
-  enchufado a la compu) y sus parlantes (la PA del evento). El gadget sigue siendo el
-  disparador, la cara y los subtítulos. El audio lo aporta **un navegador con el
-  workbench abierto**: `/admin/companion` → *Talk to Owy* → *Laptop audio for a physical
-  device* → elegir el dispositivo. Ese navegador queda "enchufado" (`attach`) hasta que se
-  desenchufa o se cierra: recibe los mismos `accepted`/eventos/PCM que el gadget, abre su
-  mic en cada turno y reproduce la respuesta. Sin navegador enchufado, el bridge avisa y
-  vuelve al audio del dispositivo en ese turno. Mic y salida se eligen por separado
-  (mic del gadget + PA de la sala también sirve).
+- **mac**: la Mac donde corre el bridge, sin navegador de por medio. Mic: graba una de sus entradas
+  (el integrado o un receptor DJI; ver *Micrófono de la Mac*). Salida: Owy suena por la salida de la
+  Mac (la PA de la sala enchufada, sus parlantes) con ffmpeg (`COMPANION_HOST_SPEAKER`, por nombre;
+  vacío = la del sistema). No hay cancelación de eco: mientras Owy suena ahí, y
+  `COMPANION_HOST_SPEAKER_TAIL_MS` después, el mic de la Mac no escucha (nunca durante un pitch).
+  `COMPANION_HOST_SPEAKER_LATENCY_MS` alinea la boca de la cara con lo que se oye (ajustar a ojo).
+- **laptop**: un navegador enchufado como audio del dispositivo: en **Control**, «Usar este
+  navegador como audio» en la tarjeta de la placa. Ese navegador recibe los mismos eventos y el
+  PCM que el gadget, abre su mic en cada turno y reproduce la respuesta, hasta «Desenchufar» o
+  cerrar la pestaña (si se cierra a mitad de una respuesta, el resto sale por la placa). El gadget
+  sigue siendo el disparador, la cara y los subtítulos. Sin navegador enchufado, el bridge avisa y
+  ese turno usa el audio del dispositivo. Mic y salida se eligen por separado.
 
 Requiere `COMPANION_WEB_BRIDGE=1` (transporte web en `:3312`); en macOS el navegador pide
 permiso de micrófono una vez. La pestaña puede quedar en segundo plano (no se corta al
@@ -280,23 +274,40 @@ audio de la laptop y sockets persistentes); el sitio sólo lo controla.
 
 ## Bridge
 
-Las variables se leen del entorno o de `owy/.env.local` (el mismo archivo que usa `eve dev`;
-gitignoreado). Mínimo para hablar con el dispositivo:
+El bridge corre **sin interfaz** en la Mac del venue y se maneja desde el panel online
+(`/admin/companion` → **Control**). En la Mac sólo van los secretos y la plomería, en
+`owy/.env.local` (el mismo archivo que usa `eve dev`; gitignoreado):
 
 ```bash
 # owy/.env.local
-AI_GATEWAY_API_KEY=...                                 # voz: gateway:google/gemini-3.8-live (o GOOGLE_GENERATIVE_AI_API_KEY con google:…)
-COMPANION_DEVICES=owy-1@owy-companion.local#secrets   # id@host[:port][#psk]; "#secrets" lee api_key de firmware/secrets.yaml
-# cerebro eve (recomendado): el mismo Owy de Slack/Telegram contesta
-COMPANION_EVE_URL=https://<owy>.vercel.app             # o http://127.0.0.1:2000 con `eve dev`
-# cerebro local (sin eve): las tools de la grilla corren en el bridge
-OWU_API_URL=https://owu.uy                             # o http://localhost:3000 con el sitio local
-OWY_API_KEY=companion...                               # la llave del dispositivo (preset companion): API del sitio y rutas de eve
-OWY_EVENT_ID=owu-conf-2026                             # id o slug; sin esto usa el evento más reciente
-# caras mientras habla (opcional; usa la misma AI_GATEWAY_API_KEY)
-COMPANION_EXPRESSIONS=jev                              # jev (default) · guess (sólo estimación local) · off
-COMPANION_EXPRESSION_MODEL=typesafe-ai/jev
+AI_GATEWAY_API_KEY=...                                 # voz y modelos (gateway:google/gemini-3.8-live por defecto)
+OWU_API_URL=https://www.owu.uy                         # el sitio: su API, su panel y su socket de realtime
+OWY_API_KEY=companion...                               # llave preset «companion» (pnpm auth:key -- --owner companion --preset companion)
+COMPANION_DEVICES=owy-knob@192.168.1.56#secrets        # id@host[:port][#psk]; "#secrets" lee api_key de firmware/secrets.yaml
+COMPANION_EVE_URL=https://<owy>.vercel.app             # cerebro eve (si falta, contesta el cerebro local)
 ```
+
+```bash
+pnpm -C owy companion:serve   # desde Terminal: nativo (mic y parlante de la Mac), despierto (caffeinate), se rearranca solo
+```
+
+Todo lo demás —modo (conversación · pitch · charla · pausa), de dónde sale el audio, volumen y
+brillo de cada placa, el micrófono y la salida de la Mac, modelos, voz, cerebro, tiempos— se
+cambia en **Control**, y queda guardado en el sitio. El bridge se conecta **saliendo** al socket de
+realtime del sitio con su llave (no abre puertos de la Mac), sigue los ajustes, reporta cada 15 s
+lo que está en efecto (la respuesta trae todos los ajustes: sincronización completa) y corre los
+comandos del panel (tono de prueba, decir, callar, staff 10 min, grabar 4 s de la Mac, buscar
+placas en la red, reiniciar). Un cambio hecho en la pantalla de la placa, por voz o en la página
+local también llega al panel. Los últimos ajustes quedan en `owy/companion/.eve/companion-state.json`:
+si el sitio no responde al arrancar, sigue con esos. Un ajuste que sólo aplica al reiniciar
+(modelo, voz, cerebro…) espera un momento sin charlas y reinicia el bridge (`companion:serve` y
+Docker lo levantan solos). Las variables de entorno quedan como valores por defecto.
+
+**Por voz** (tool `ajustes`): cualquiera puede cambiar volumen, brillo, modo silencioso, tono de
+escucha, charla continua y animaciones mínimas, y pausar el micrófono (después de la respuesta);
+lo demás sólo en una sesión de staff; apagar la pausa del micrófono, nunca por voz.
+
+La página local `http://127.0.0.1:3313/` queda sólo como respaldo (sitio caído).
 
 ```bash
 cd owy
@@ -409,10 +420,13 @@ una sola vez); la línea `turn path=… ttfa=… total=…` del log dice cuál c
 | Camino | Cuándo | Latencia |
 | --- | --- | --- |
 | `realtime` | Gemini 3.8 Live conectado (la sesión se mantiene tibia entre turnos) | ~2 s |
-| `fallback` | Gemini no conecta: `COMPANION_REALTIME_FALLBACKS` (default `gateway:openai/gpt-realtime-2.1`, voz `COMPANION_FALLBACK_VOICE=marin`). El AI Gateway no tiene fallbacks para realtime: la sesión prueba los modelos en orden y deja descansar 3 min al que falló | ~2 s |
-| `cascade` | Ningún realtime vivo al tocar, el modelo no da señales ~2,5 s después de que la persona calla (`COMPANION_ACK_MS`: socket medio muerto), o el socket se cae mientras escucha. El bridge graba el turno (su propio VAD), lo transcribe (`COMPANION_TRANSCRIBE_MODELS`), contesta (eve, o el modelo de texto con las tools locales) y lo dice con TTS en streaming (`COMPANION_TTS_MODEL`, voz Kore) | ~4–6 s |
+| `fallback` | Gemini no conecta: `COMPANION_REALTIME_FALLBACKS` (default `gateway:openai/gpt-realtime-2#marin,gateway:spacexai/grok-voice-3.0`; `#voz` elige la voz de cada uno). El AI Gateway no tiene fallbacks para realtime: la sesión prueba los modelos en orden y deja descansar 3 min al que falló | ~2 s |
+| `cascade` | Ningún realtime vivo al tocar, el modelo no da señales ~2,5 s después de que la persona calla (`COMPANION_ACK_MS`: socket medio muerto), o el socket se cae mientras escucha. El bridge graba el turno (su propio VAD), lo transcribe con modelos que no retienen datos (`COMPANION_TRANSCRIBE_MODELS`: voxtral, mai-transcribe, grok-stt), contesta (eve, o el modelo de texto con las tools locales; si eve no responde, el cerebro local) y lo dice frase por frase con la voz de Owy (`COMPANION_TTS_MODELS`, Gemini TTS en Kore; la siguiente frase se sintetiza mientras suena la anterior). Si no hay voz de Owy, ElevenLabs en streaming (otra voz) y, si tampoco, el texto en pantalla | ~4–6 s |
 | `offline` | Ni eso: el aviso pregrabado `offline` sale por el parlante (sin red) y la pantalla muestra el QR de la grilla | instantáneo |
 
+Si eve no contesta, contesta el cerebro local (el modelo de texto con todas las tools y la charla
+hasta ahí) y eve queda en pausa 1 minuto. Si la salida de audio elegida desaparece a mitad de una
+respuesta (la PA desenchufada, la pestaña cerrada), el resto sale por el navegador o la placa.
 Si el socket se cae mientras Owy ya habla, termina con lo que llegó y deja la respuesta de eve
 como subtítulo; si cae mientras eve piensa, la respuesta de eve sale por la voz de la cascada
 (nunca se repite un turno que ya ejecutó una tool). `COMPANION_CASCADE=off` vuelve al
@@ -522,12 +536,12 @@ un long press abre ajustes sin iniciar una conversación al soltar.
 
 - [ ] Router de viaje propio (SSID nuestro, sin aislamiento de clientes, reservas DHCP para las placas) colgado del uplink del venue; hotspot del celular como uplink de respaldo. Si no hay, Wi-Fi del venue 2.4 GHz sin captive portal.
 - [ ] `pnpm companion:netcheck` desde la laptop ya en el venue: todo `ok` (o `lento` con los timeouts ajustados).
-- [ ] `caffeinate -i` corriendo (una Mac en batería que se duerme congela el bridge).
+- [ ] `pnpm -C owy companion:serve` desde Terminal (mantiene la Mac despierta y rearranca el bridge); en **Control**, el bridge «en línea» y cada placa conectada.
 - [ ] Permiso "Red local" de macOS habilitado para la terminal desde la que corre el bridge (ver "Primer arranque").
 - [ ] `secrets.yaml` con el SSID del venue, reflash OTA la noche anterior.
 - [ ] `pnpm companion:tools` y `pnpm companion:text` contra producción: "¿cuándo es la conf?" y una propuesta de prueba (borrarla después).
-- [ ] Bridge corriendo en la laptop, cara en *idle*, tono de prueba audible a distancia de uso.
-- [ ] PIN → **Mercado abierto** al empezar el mercado de ideas; apagarlo cuando cierre.
+- [ ] Cara en *idle*, «Tono de prueba» (Control) audible a distancia de uso; «Tono en la Mac» por la PA.
+- [ ] Control → modo de cada placa (Conversación · Pitch · Charla) y **Mercado abierto** al empezar el mercado de ideas; apagarlo cuando cierre.
 - [ ] Cartel en la mesa: "Tocá o decí Okay Nabu. Seguí después del tono. Mantené para ajustes".
 - [ ] Alimentación USB-C; el brillo baja solo a los 2 min sin tocarla.
 
