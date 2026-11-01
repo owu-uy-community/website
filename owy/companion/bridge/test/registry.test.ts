@@ -78,8 +78,6 @@ describe("settings registry", () => {
       const options = entities.get(spec.entity) ?? [];
       for (const [value, label] of spec.options) {
         const onBoard = spec.board?.[value] ?? label;
-        // ponytail: boards flashed before the `mac` output keep it in the bridge (DeviceStatus.held).
-        if (spec.entity === "select.audio_output" && onBoard === "mac") continue;
         expect(options, `${key}=${value} → ${onBoard}`).toContain(onBoard);
       }
     }

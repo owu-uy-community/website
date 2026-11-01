@@ -368,7 +368,7 @@ try {
   const tapPitch = voice.slice(voice.indexOf("- id: tap_pitch"), voice.indexOf("- id: stop_pitch"));
   assert(!tapPitch.includes("cancel_turn"), "A pitch tap never cancels: the second tap sends");
   assert(voice.includes("silence_detection: false") && voice.includes("wake_word: !lambda"), "A pitch run keeps the mic open and tags itself for the bridge");
-  assert(voice.includes("id(pitch_active) ? 180000 : 90000"), "A pitch may record two minutes and then think");
+  assert(voice.includes("id(pitch_active) ? 240000 : 90000"), "A pitch may record two and a half minutes, then think and answer");
   assert((voice.match(/!id\(pitch_mode\)\.state/g) ?? []).length >= 4, "Wake word, follow-up and re-arm stay off in modo pitch");
   assert(controls.includes("id: pitch_mode") && controls.includes("id: pitch_submit") && controls.includes("action: pitch_prompt"));
   console.log("PASS YAML integration: one input owner, no full-screen spinner, privacy guards");
