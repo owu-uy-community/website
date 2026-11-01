@@ -5,11 +5,12 @@ import { owuApi, owuApiUrl } from "../../../agent/lib/owu-api";
 import { loadConfig, loadEnvLocal, type BridgeConfig } from "./config";
 import { ControlChannel, realtimeUrl } from "./control/channel";
 import { ControlPlane, SettingsStore, STATE_PATH } from "./control/plane";
+import { TalkSeat } from "./control/seat";
 import { CompanionDevice } from "./device/esphome";
 import { DeviceSession, loadSharedRuntime } from "./index";
 import { createLogger } from "./log";
 import { createStageMirror } from "./stage";
-import { COMPANION_CHANNEL, type BridgeStatus } from "./web/contract";
+import { COMPANION_CHANNEL, OWY_TALK_CHANNEL, type BridgeStatus } from "./web/contract";
 import { startWebBridge } from "./web/server";
 import { startSettingsServer } from "./web/settings";
 
@@ -121,6 +122,7 @@ async function main(): Promise<void> {
     stopping = true;
     logger.info("shutting down");
     channel?.stop();
+    seat?.stop();
     control?.stop();
     await web?.close();
     await settings?.close();
@@ -144,13 +146,17 @@ async function main(): Promise<void> {
     restart: () => void shutdown(75),
   });
   const plane = control;
+  const seat = api ? new TalkSeat({ config, sessions, plane, beat: (status) => api.owyStage.talkStatus(status), logger }) : null;
   channel = config.OWY_API_KEY
     ? new ControlChannel({
         url: config.COMPANION_SITE_WS_URL ?? realtimeUrl(owuApiUrl()),
         apiKey: config.OWY_API_KEY,
-        channels: [COMPANION_CHANNEL],
+        channels: [COMPANION_CHANNEL, OWY_TALK_CHANNEL],
         logger,
-        onEvent: (ch, ev, pl) => plane.onEvent(ch, ev, pl),
+        onEvent: (ch, ev, pl) => {
+          plane.onEvent(ch, ev, pl);
+          seat?.onEvent(ch, ev, pl);
+        },
         onOpen: () => plane.reportSoon(0),
       })
     : null;
@@ -165,6 +171,7 @@ async function main(): Promise<void> {
   process.on("SIGINT", () => void shutdown());
   process.on("SIGTERM", () => void shutdown());
   control.start();
+  seat?.start();
   channel?.start();
   // Each board on its own: one that is off keeps retrying, one with a wrong key fails alone.
   for (const session of sessions)

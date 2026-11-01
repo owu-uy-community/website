@@ -141,6 +141,8 @@ const ListenSchema = z.enum(["L", "R", "mix"]);
 /**
  * What a remote asks the seat to do. Mirrors the bridge's talk messages by hand (the site never
  * imports the bridge's runtime), plus `listen`, which the seat applies to its own microphone.
+ * `talk` is the slide on screen and who is asking (null: talk mode off), for a seat with no deck
+ * of its own — the bridge; a browser seat sends its own.
  */
 export const TalkCommandSchema = z.object({
   id: z.string().trim().min(1).max(40),
@@ -159,6 +161,10 @@ export const TalkCommandSchema = z.object({
       asker: AskerSchema.default("presenter"),
     }),
     z.object({ type: z.literal("hush") }),
+    z.object({
+      type: z.literal("talk"),
+      talk: z.object({ slide: z.string().trim().max(600), asker: AskerSchema }).nullable(),
+    }),
     z.object({ type: z.literal("pitch"), mode: z.boolean() }),
     z.object({ type: z.literal("listen"), channel: ListenSchema }),
   ]),

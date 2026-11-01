@@ -1378,6 +1378,11 @@ export class DeviceSession {
     return this.peer !== null;
   }
 
+  /** Where this device's turn is (listening, thinking, speaking), or idle. */
+  get phase(): string {
+    return this.turn && !this.turn.finished ? this.turn.phase : "idle";
+  }
+
   /** A browser (workbench) becomes this device's laptop audio until it detaches or disconnects. */
   attachPeer(peer: AudioPeer & { attach(deviceId: string, sink: (pcm16k: Buffer) => void): void }): void {
     this.peer = peer;

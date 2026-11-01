@@ -566,6 +566,8 @@ export interface OwuApi {
   owyStage: {
     /** Mirrors a companion's face + running transcript onto the wall's Owy. */
     setFace: (input: StageFaceInput) => Promise<unknown>;
+    /** «Owy, en vivo»: the seat's heartbeat (the bridge seats a board in talk mode with no browser). */
+    talkStatus: (input: unknown) => Promise<unknown>;
   };
   /**
    * The companion's control plane (site: src/lib/orpc/companion/control.ts). The bridge's 15 s

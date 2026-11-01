@@ -154,6 +154,8 @@ export type TalkReply =
 
 /** The site's realtime channel for the companion (private: `stage:operate`). */
 export const COMPANION_CHANNEL = "private:companion";
+/** «Owy, en vivo»: the talk console's commands for its seat, and the seat's heartbeat (src/lib/realtime/channels.ts). */
+export const OWY_TALK_CHANNEL = "private:owy-talk";
 
 /**
  * One stored setting. `target` is "bridge" or a device id; `setBy` says who wrote it:

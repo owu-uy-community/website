@@ -31,7 +31,7 @@ export interface StageMirror {
 
 export interface StageMirrorOptions {
   /** `null` (no OWY_API_KEY) makes the mirror a no-op. */
-  api: Pick<OwuApi, "owyStage"> | null;
+  api: { owyStage: Pick<OwuApi["owyStage"], "setFace"> } | null;
   logger: Logger;
   /** Device id / web session, informational on the wall. */
   source: string;
