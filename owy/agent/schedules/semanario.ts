@@ -7,6 +7,6 @@ import { defineSchedule } from "eve/schedules";
  */
 export default defineSchedule({
   cron: "0 12 * * 1",
-  markdown:
+  content:
     "Es lunes: armá el borrador del Semanario OWU de esta semana siguiendo la skill `semanario` (cargala primero). Juntá todo con collect_semanario, escribí el título, la intro y un título de una línea por hilo, y guardalo con save_semanario_draft. No publiques nada: lo revisa y lo publica una persona del staff.",
 });
