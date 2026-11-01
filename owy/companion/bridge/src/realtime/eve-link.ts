@@ -72,7 +72,20 @@ interface StreamEvent {
   data?: Record<string, unknown>;
 }
 
-const TERMINAL = new Set(["session.waiting", "turn.failed", "turn.cancelled", "session.failed", "session.completed"]);
+/**
+ * The events that end a turn's stream. eve 0.x (stream v26) and eve 1.0 (v27: one event ends
+ * each item, with an `outcome`) are both read: the bridge keeps working across the agent's
+ * redeploy, whichever side ships first.
+ */
+const TERMINAL = new Set([
+  "session.waiting",
+  "turn.failed",
+  "turn.cancelled",
+  "session.failed",
+  "session.completed",
+  "turn.settled",
+  "session.ended",
+]);
 
 export class EveLink {
   private readonly fetchImpl: typeof fetch;
@@ -145,9 +158,47 @@ export class EveLink {
 
     const result: EveTurnResult = { sessionId: accepted.sessionId, text: "", interim: [] };
     let current = "";
+    // v27: text arrives per content part (a part per message), its kind announced by its first delta.
+    const parts = new Map<string, { kind: string; text: string }>();
+    const replies: string[] = [];
     for await (const event of ndjson(response.body)) {
       const data = event.data ?? {};
       switch (event.type) {
+        case "content.delta": {
+          const id = String(data.partId ?? "");
+          const part = parts.get(id) ?? { kind: String(data.kind ?? "text"), text: "" };
+          part.text += String(data.delta ?? "");
+          parts.set(id, part);
+          if (part.kind === "text") options.onDelta?.(part.text);
+          break;
+        }
+        case "content.completed": {
+          if (data.kind !== "text") break;
+          const value = (typeof data.value === "string" ? data.value : parts.get(String(data.partId))?.text ?? "").trim();
+          if (!value) break;
+          if (data.phase === "reply") replies.push(value);
+          else result.interim.push(value);
+          break;
+        }
+        case "call.requested": {
+          const name = (data.capability as { name?: string } | undefined)?.name;
+          if (name) options.onTool?.(name);
+          break;
+        }
+        case "interaction.opened": {
+          if ((data.request as { kind?: string } | undefined)?.kind === "budget") return "session-full";
+          this.log.warn("eve asked for human input during a voice turn; cancelling");
+          void this.cancel(deviceId);
+          result.text ||= "Eso necesita una confirmación que no puedo pedir por acá; pedíselo al staff en Slack.";
+          return result;
+        }
+        case "session.ended":
+        case "turn.settled":
+          if (data.outcome === "failed") {
+            const error = data.error as { message?: string; code?: string } | undefined;
+            throw new Error(`eve turn failed: ${String(error?.message ?? error?.code ?? event.type)}`);
+          }
+          break;
         case "message.appended":
           current += String(data.messageDelta ?? "");
           options.onDelta?.(current);
@@ -181,6 +232,7 @@ export class EveLink {
       }
       if (TERMINAL.has(event.type)) break;
     }
+    if (replies.length) result.text = replies.join(" ");
     if (!result.text && result.interim.length) result.text = result.interim[result.interim.length - 1];
     this.log.info(`eve turn ${accepted.sessionId} done in ${Date.now() - started} ms`);
     return result;
