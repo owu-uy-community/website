@@ -206,7 +206,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             // A device select confirms over its native API: answer once it has had a moment.
             return void setTimeout(() => status(target), 400);
           case "pitch":
-            target.setPitchSetting("mode", m.mode);
+            target.setPitchMode(m.mode);
             return void setTimeout(() => status(target), 400);
           case "status":
             return status(target);
@@ -267,7 +267,8 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             { id, host: "virtual", port: 1, psk: null },
             // Browser sessions are quiet by default (visitors' words stay out of the
             // venue log); COMPANION_WEB_DEBUG=1 traces them like a physical Owy.
-            { ...shared, logger: process.env.COMPANION_WEB_DEBUG === "1" ? shared.logger.child("web") : silent },
+            // A browser is its own mic: the Mac's stays with the physical devices.
+            { ...shared, hostMic: undefined, logger: process.env.COMPANION_WEB_DEBUG === "1" ? shared.logger.child("web") : silent },
             {
               connectDevice: async (_spec, handlers) =>
                 (device = mirror.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),

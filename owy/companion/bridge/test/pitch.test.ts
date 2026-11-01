@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fromWav } from "../src/audio/pcm";
 import type { RuntimeClock } from "../src/clock";
-import { PITCH_LIMITS, PitchRecorder, announcementText, isPitchRun } from "../src/pitch";
+import { PITCH_CLIPS, PITCH_LIMITS, PITCH_LINES, PitchRecorder, announcementText, isPitchRun } from "../src/pitch";
 
 /** Manual clock: timers fire only when the test advances time. */
 function fakeClock() {
@@ -41,7 +41,7 @@ const frame = (loud: boolean) => {
   return pcm;
 };
 
-function recorder(kind: "pitch" | "name" = "pitch", extra: { ignoreMs?: number } = {}) {
+function recorder(kind: "pitch" | "answer" = "pitch", extra: { ignoreMs?: number } = {}) {
   const { clock, advance } = fakeClock();
   const onSpeechStart = vi.fn();
   const onDone = vi.fn();
@@ -102,28 +102,47 @@ describe("the pitch recorder", () => {
     expect(rec.durationMs).toBeCloseTo(200, 5);
   });
 
-  it("the name step is short", () => {
-    const { feed, advance, onDone } = recorder("name");
-    feed(10, true);
-    advance(PITCH_LIMITS.name.silenceMs);
-    expect(onDone).toHaveBeenCalledWith("silence");
+  it("an answer is short, and ends by itself when nobody answers (the flow goes on in that run)", () => {
+    const answered = recorder("answer");
+    answered.feed(10, true);
+    answered.advance(PITCH_LIMITS.answer.silenceMs);
+    expect(answered.onDone).toHaveBeenCalledWith("silence");
+
+    const silent = recorder("answer", { ignoreMs: 400 });
+    silent.advance(PITCH_LIMITS.answer.noSpeechMs! + 399);
+    expect(silent.onDone).not.toHaveBeenCalled();
+    silent.advance(1);
+    expect(silent.onDone).toHaveBeenCalledWith("silence");
+    expect(silent.rec.heardSpeech).toBe(false);
+  });
+
+  it("a pitch has no such limit: silence before the first word is the person thinking", () => {
+    const { advance, onDone } = recorder("pitch");
+    advance(PITCH_LIMITS.pitch.maxMs - 1);
+    expect(onDone).not.toHaveBeenCalled();
   });
 });
 
 describe("the words", () => {
-  it("announces the place, the speaker when known, and asks for the name when not", () => {
-    expect(announcementText({ title: "Effect en producción", speaker: "Ana", room: "Cueva", timeSlot: "15:00 - 15:45" }, { askName: false })).toBe(
+  it("announces the place, and the speaker when known", () => {
+    expect(announcementText({ title: "Effect en producción", speaker: "Ana", room: "Cueva", timeSlot: "15:00 - 15:45" })).toBe(
       "¡Listo, Ana! Tu charla «Effect en producción» queda en Cueva a las 15:00."
     );
-    expect(announcementText({ title: "Lambdas", room: "Rincón", timeSlot: "16:00 - 16:45" }, { askName: true })).toBe(
-      "¡Listo! Tu charla «Lambdas» queda en Rincón a las 16:00. ¿Cómo te llamás? Tocá, decime tu nombre y tocá de nuevo."
+    expect(announcementText({ title: "Lambdas", room: "Rincón", timeSlot: "16:00 - 16:45" })).toBe(
+      "¡Listo! Tu charla «Lambdas» queda en Rincón a las 16:00."
     );
-    expect(announcementText({ title: "X" }, { askName: false })).toBe("¡Listo! Tu charla «X» queda en la grilla.");
+    expect(announcementText({ title: "X" })).toBe("¡Listo! Tu charla «X» queda en la grilla.");
+  });
+
+  it("every fixed line Owy asks or ends a pitch with has a recorded cue id", () => {
+    for (const line of ["listen", "askTopic", "askName", "empty", "unclear", "full", "failed"] as const)
+      expect(PITCH_CLIPS[line]).toMatch(/^pitch-/);
+    expect(PITCH_LINES.askName).not.toMatch(/tocá/i); // the board opens its mic by itself now
   });
 
   it("recognises the firmware's pitch tags", () => {
     expect(isPitchRun({ wakeWordPhrase: "pitch" })).toBe(true);
-    expect(isPitchRun({ wakeWordPhrase: "pitch-name" })).toBe(true);
+    expect(isPitchRun({ wakeWordPhrase: "pitch-answer" })).toBe(true);
     expect(isPitchRun({ wakeWordPhrase: "okay_nabu" })).toBe(false);
     expect(isPitchRun({})).toBe(false);
   });

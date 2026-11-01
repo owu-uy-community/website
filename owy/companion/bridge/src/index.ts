@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   experimental_getRealtimeToolDefinitions,
@@ -17,11 +18,13 @@ import {
   PacedSpeaker,
   Pcm16Resampler,
   bytesForMs,
+  fromWav,
   rmsLevel,
 } from "./audio/pcm";
 import { MouthTrack } from "./audio/mouth";
 import { ExpressionDirector, jevClassifier, type Classifier } from "./expression";
-import { audioRoute, type AudioRoute } from "./audio/route";
+import { HostMic } from "./audio/host-mic";
+import { audioRoute, micRoute, type AudioRoute, type MicRoute } from "./audio/route";
 import { loadConfig, type BridgeConfig, type DeviceSpec } from "./config";
 import { CompanionDevice } from "./device/esphome";
 import type { DeviceHandlers } from "./device/esphome";
@@ -34,19 +37,28 @@ import { FALLBACK_LINES, gatewayCascade, loadFallbackClips, type Cascade, type F
 import { EveLink } from "./realtime/eve-link";
 import { parseModelSpecs, resolveRealtimeProvider, type RealtimeProvider } from "./realtime/models";
 import { resolveActiveEvent } from "../../../agent/lib/board";
-import { owuApi, type OwuApi, type PlacedTrackResponse } from "../../../agent/lib/owu-api";
+import { owuApi, type OwuApi, type PlacedTrackResponse, type StickyNote } from "../../../agent/lib/owu-api";
 import {
+  PITCH_CLIPS,
   PITCH_LIMITS,
   PITCH_LINES,
   PitchRecorder,
   SCRIPT_PREFIX,
-  announcementText,
   gatewayPitchExtractor,
   isPitchRun,
-  type PitchCard,
   type PitchExtractor,
   type PitchKind,
+  type PitchLine,
 } from "./pitch";
+import {
+  PitchFlow,
+  type CompleteDraft,
+  type PitchDraft,
+  type PitchPort,
+  type PitchRecording,
+  type PitchVoice,
+  type Placement,
+} from "./pitch-flow";
 import { loadPromptBundle, loadVoiceOfOwyPrompt } from "./realtime/prompt";
 import type { Asker, TalkContext, VoiceStatus } from "./web/contract";
 import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
@@ -225,6 +237,8 @@ export interface SharedRuntime {
   fallbackClips?: Partial<Record<FallbackClip, Buffer>>;
   /** Every recorded clip by id → duration (ms): the clips manifest (pitch cues, the talk's lines). */
   clips?: Record<string, number>;
+  /** An input of the Mac running the bridge (`mic: host`); absent in Docker and in browser sessions. */
+  hostMic?: HostMic;
 }
 
 export interface PitchRuntime {
@@ -234,16 +248,62 @@ export interface PitchRuntime {
   openSpaceId: () => Promise<string>;
   /** Pre-rendered cues by id → duration (ms); empty = Owy says the cues through the model. */
   clips: Record<string, number>;
+  /** The same cues as 16 kHz PCM, for the board's own speaker (the browser plays the files). */
+  clipPcm?: Record<string, Buffer>;
 }
 
-/** A pitch being recorded: never streamed to the model, transcribed as a whole once the person taps again. */
-interface PitchRun {
-  kind: PitchKind;
-  recorder: PitchRecorder;
+/**
+ * One device run in modo pitch (the pitch, or an answer to Owy's question):
+ * never streamed to the model, recorded here and handed to the flow as a whole.
+ */
+interface PitchRun extends PitchRecording {
   abort: AbortController;
   epoch: number;
   turn: VoiceTurn;
+  resolveDone(wav: Buffer | null): void;
+  resolveEnded(): void;
 }
+
+/** createPlaced and the board read get this long before the bridge looks for itself. */
+const PLACE_TIMEOUT_MS = 20_000;
+/** «Confirma y comenta»: a comment that is not ready by then is skipped. */
+const PITCH_REACTION_MS = 8_000;
+
+const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
+  let timer: NodeJS.Timeout | undefined;
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`sin respuesta en ${ms / 1000} s`)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+};
+
+/** A promise's outcome within `ms`, without abandoning it: `late` means it is still running. */
+const within = <T>(promise: Promise<T>, ms: number): Promise<{ value: T } | { error: unknown } | { late: true }> => {
+  let timer: NodeJS.Timeout | undefined;
+  return Promise.race([
+    promise.then(
+      (value) => ({ value }),
+      (error: unknown) => ({ error })
+    ),
+    new Promise<{ late: true }>((resolve) => {
+      timer = setTimeout(() => resolve({ late: true }), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+};
+
+const isConflict = (error: unknown): boolean =>
+  typeof error === "object" && error !== null && "code" in error && error.code === "CONFLICT";
+
+/** A 4xx said no for sure; anything else (a timeout, a dropped connection, a 5xx) may or may not have written. */
+const isAmbiguous = (error: unknown): boolean => {
+  const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
+  return !(typeof status === "number" && status >= 400 && status < 500);
+};
+
+const reactionPrompt = (eventName: string) =>
+  `Sos Owy, la mascota de OWU, en el mercado de ideas del open space de ${eventName}. Te llega el pitch de una charla que ya quedó en la grilla. Respondé UNA sola frase cálida y breve (hasta 20 palabras) sobre el tema, en español rioplatense. No repitas sala ni horario, no hagas preguntas, sin emojis.`;
 
 /**
  * The knob's voice link when a browser is attached as its laptop audio: every
@@ -364,20 +424,20 @@ export class DeviceSession {
   /** This turn's answer as said (for the history). */
   private turnAnswer = "";
   // Per-turn audio routing (device selects win over env defaults).
-  private micSource: AudioRoute = "device";
+  private micSource: MicRoute = "device";
   private audioOutput: AudioRoute = "device";
   private peer: AudioPeer | null = null;
   private micOpenAt = 0;
   /** Settings UI choice for boards without routing selects. */
-  private routeOverride: { mic?: AudioRoute; output?: AudioRoute } = {};
-  /** Modo pitch: the run being recorded, and the card waiting for its speaker's name. */
+  private routeOverride: { mic?: MicRoute; output?: AudioRoute } = {};
+  private unsubscribeHostMic: (() => void) | null = null;
+  /** Modo pitch: this device run (a pitch or an answer), and the visitor's flow it belongs to. */
   private pitch: PitchRun | null = null;
-  private pendingName: { trackId: string; card: ScreenCard; prompted: boolean; timer: NodeJS.Timeout | null } | null =
-    null;
+  private flow: PitchFlow<PitchRun> | null = null;
   /** A line the realtime model must say verbatim this turn (the bridge's words, not the visitor's). */
   private script: string | null = null;
-  /** Settings UI choice for boards without the pitch switches. */
-  private pitchOverride: { mode?: boolean; reacts?: boolean } = {};
+  /** Settings UI choice for boards without the pitch switch / select. */
+  private pitchOverride: { mode?: boolean; voice?: PitchVoice } = {};
   /** «Owy, en vivo»: the talk around the next turns (the slide on screen, who asks); null = no talk. */
   private talk: TalkContext = null;
   /** Owy's own turn: its abort, and the timer of the line it is waiting on (a script, a clip). */
@@ -478,6 +538,8 @@ export class DeviceSession {
         onDisconnected: () => {
           this.linkUp = false;
           this.requestEpoch++;
+          // A pitch already understood is still placed; nobody will hear about it from this board.
+          this.flow?.interrupt();
           this.cancelCascade();
           this.pacer?.stop();
           this.pacer = null;
@@ -494,6 +556,7 @@ export class DeviceSession {
       return;
     }
 
+    this.listenToHostMic();
     this.linkUp = true;
     if (this.options.lazyRealtime) void this.ensureSession();
     else {
@@ -508,6 +571,7 @@ export class DeviceSession {
 
   /** Between turns: reconnect a dropped session, renew an old one. */
   private warmTick(): void {
+    this.warmHostMic();
     const session = this.session;
     if (this.stopped || !session || !this.linkUp || (this.turn && !this.turn.finished)) return;
     if (session.status === "connecting") return;
@@ -548,8 +612,11 @@ export class DeviceSession {
     if (this.turn && !this.turn.finished) this.turn.finish({ notify: false });
     this.cancelPitch();
     this.cancelCascade();
-    // Modo pitch: recording needs no model; warm it meanwhile for the announcement.
-    const kind: PitchKind | null = isPitchRun(request) ? (this.pendingName ? "name" : "pitch") : null;
+    // Modo pitch: recording needs no model; warm it meanwhile for what Owy says next.
+    // While Owy waits for an answer, the next pitch run is that answer.
+    const kind: PitchKind | null = isPitchRun(request) ? (this.flow?.awaiting ? "answer" : "pitch") : null;
+    // A conversation tap ends whatever pitch was around (what it understood is still placed).
+    if (!kind) this.flow?.interrupt();
     let path: TurnPath = "pitch";
     if (kind) void this.ensureSession();
     else {
@@ -583,9 +650,10 @@ export class DeviceSession {
       device,
       peer ? new PeerLink(device, peer, () => this.audioOutput) : device,
       path,
-      // A pitch gives the person time to start and the bridge time to transcribe and place it.
+      // A pitch gives the person time to start and the bridge time to transcribe and place it;
+      // an answer's own recorder ends it when nobody answers, so the flow can go on in this run.
       kind
-        ? { noSpeechMs: 15_000, thinkingMs: 60_000 }
+        ? { noSpeechMs: kind === "answer" ? 0 : 15_000, thinkingMs: 60_000 }
         : path === "cascade"
           ? { thinkingMs: CASCADE_THINKING_MS }
           : undefined
@@ -659,14 +727,13 @@ export class DeviceSession {
           this.expressions?.close();
           this.expressions = null;
           this.script = null;
-          if (this.pitch?.turn === this.turn) this.cancelPitch();
+          if (this.pitch?.turn === this.turn) this.endPitchRun(this.pitch);
           if (this.cascadeRun?.turn === this.turn) this.cancelCascade();
           this.recorder?.stop();
           this.recorder = null;
           this.stopWatchdog();
           this.logTurn();
           this.rememberTurn();
-          this.promptPendingName();
           // RUN_END precedes physical playback completion. Firmware owns
           // the return to idle and the wake-word indicator.
         }
@@ -763,8 +830,15 @@ export class DeviceSession {
       return;
     }
     if (turn.phase === "speaking" || turn.deferred || this.pacer) return this.finishSpokenSoFar(turn, reason);
-    if (this.pitch?.turn === turn) {
-      if (turn.phase === "thinking") turn.fail("server_error", "Se cortó la conexión con el modelo");
+    const pitch = this.pitch;
+    if (pitch?.turn === turn) {
+      // A pitch needs no model until Owy talks: only a line already handed to it moves to the cascade's voice.
+      if (turn.phase === "thinking" && this.script) {
+        const text = this.script;
+        this.script = this.eveAnswer = null;
+        this.clearOwnTimer();
+        void this.speakText(turn, text, pitch.abort.signal, () => this.pitchIsCurrent(pitch));
+      }
       return;
     }
     this.degrade(turn, reason);
@@ -1164,11 +1238,17 @@ export class DeviceSession {
   }
 
   /** A recorded line the attached browser plays from public/companion-audio/clips; false when there is none. */
-  private playOwnClip({ turn, isCurrent }: OwnTurn, text: string, clip: string): boolean {
+  private playOwnClip(
+    { turn, isCurrent }: Pick<OwnTurn, "turn" | "isCurrent">,
+    text: string,
+    clip: string,
+    /** A talk's line is the offline road; a pitch cue keeps the pitch's. */
+    path: TurnPath | null = "offline"
+  ): boolean {
     const ms = this.clipMs(clip);
     const peer = this.peer;
     if (ms <= 0 || !peer?.playClip || !isCurrent()) return false;
-    this.path = "offline";
+    if (path) this.path = path;
     this.firstAudioAt ||= Date.now();
     turn.beginSpeaking(text);
     peer.playClip(clip);
@@ -1215,33 +1295,70 @@ export class DeviceSession {
   }
 
   /** Current routing and where it comes from (device selects, settings UI, or env). */
-  audioRouting(): { mic: AudioRoute; output: AudioRoute; source: "device" | "override" | "env" } {
+  audioRouting(): { mic: MicRoute; output: AudioRoute; source: "device" | "override" | "env" } {
     const config: Partial<BridgeConfig> = this.shared.config ?? {}; // test fakes omit config
     const fromDevice = this.device?.getMicSource?.() ?? null;
     if (fromDevice !== null)
       return { mic: fromDevice, output: this.device?.getAudioOutput?.() ?? "device", source: "device" };
     const overridden = this.routeOverride.mic !== undefined || this.routeOverride.output !== undefined;
     return {
-      mic: this.routeOverride.mic ?? audioRoute(config.COMPANION_MIC_SOURCE),
+      mic: this.routeOverride.mic ?? micRoute(config.COMPANION_MIC_SOURCE),
       output: this.routeOverride.output ?? audioRoute(config.COMPANION_AUDIO_OUTPUT),
       source: overridden ? "override" : "env",
     };
   }
 
   /** From the settings UI: writes the device select when the board has one, otherwise remembers it here. */
-  setAudioRouting(which: "mic" | "output", route: AudioRoute): void {
-    if (this.device?.getMicSource?.() !== null && this.device?.setAudioRoute) this.device.setAudioRoute(which, route);
-    else this.routeOverride[which] = route;
+  setAudioRouting(which: "mic", route: MicRoute): void;
+  setAudioRouting(which: "output", route: AudioRoute): void;
+  setAudioRouting(which: "mic" | "output", route: MicRoute): void {
+    const device = this.device;
+    if (device?.getMicSource?.() != null && device.setAudioRoute) {
+      if (which === "mic") device.setAudioRoute("mic", route);
+      else device.setAudioRoute("output", audioRoute(route));
+    } else if (which === "mic") this.routeOverride.mic = route;
+    else this.routeOverride.output = audioRoute(route);
+    if (which === "mic" && route === "host") this.shared.hostMic?.ensureOpen();
   }
 
-  /** Device selects (mic_source / audio_output) first, env defaults otherwise; laptop needs an attached browser. */
+  /** The Mac's own mic feeds this device's turns while its route says so. */
+  private listenToHostMic(): void {
+    this.unsubscribeHostMic?.();
+    this.unsubscribeHostMic =
+      this.shared.hostMic?.onPcm((pcm) => {
+        if (this.micSource === "host") this.onMicPcm(pcm);
+      }) ?? null;
+    this.warmHostMic();
+  }
+
+  /** The Mac's mic is opened ahead of the tap that needs it: no clipped first words. */
+  private warmHostMic(): void {
+    if (this.shared.hostMic && this.audioRouting().mic === "host") this.shared.hostMic.ensureOpen();
+  }
+
+  /**
+   * Device selects (mic_source / audio_output) first, env defaults otherwise; laptop needs an
+   * attached browser, the Mac's mic needs to be open and hearing something. Otherwise: the device.
+   */
   private chooseRoutes(): void {
     const routing = this.audioRouting();
     let mic = routing.mic;
     let output = routing.output;
+    if (mic === "host") {
+      const hostMic = this.shared.hostMic;
+      hostMic?.ensureOpen();
+      if (!hostMic?.ready) {
+        const status = hostMic?.status();
+        this.log.warn(
+          `mic de la Mac ${status ? `${status.health}${status.detail ? ` (${status.detail})` : ""}` : "no disponible"}; este turno usa el del dispositivo`
+        );
+        mic = "device";
+      }
+    }
     if ((mic === "laptop" || output === "laptop") && !this.peer) {
       this.log.warn("laptop audio requested but no browser is attached to this device; using the device");
-      mic = output = "device";
+      if (mic === "laptop") mic = "device";
+      output = "device";
     }
     if (mic !== this.micSource || output !== this.audioOutput)
       this.log.info(`audio routing: mic=${mic} output=${output}`);
@@ -1285,6 +1402,8 @@ export class DeviceSession {
 
   private async onRequestStop(): Promise<void> {
     this.cancelEveTurn();
+    // A stop while the pitch is being recorded drops it; later, what was understood is still placed.
+    this.flow?.interrupt();
     this.cancelPitch();
     this.cancelCascade();
     this.requestEpoch++;
@@ -1332,29 +1451,45 @@ export class DeviceSession {
 
   // ── Modo pitch ──────────────────────────────────────────────────────────
 
-  /** Both switches as the settings UI shows them: the device's, the settings override, or the env fallback. */
-  pitchSettings(): { mode: boolean; reacts: boolean; source: "device" | "override" | "env" } {
+  /** The mode and Owy's reply level as the settings UI shows them: the board's, the settings override, or env. */
+  pitchSettings(): { mode: boolean; voice: PitchVoice; source: "device" | "override" | "env" } {
     const config: Partial<BridgeConfig> = this.shared.config ?? {}; // test fakes omit config
     const fromDevice = this.device?.isPitchMode?.() ?? null;
-    if (fromDevice !== null) {
-      return { mode: fromDevice, reacts: this.device?.isPitchReacts?.() ?? false, source: "device" };
-    }
-    const overridden = this.pitchOverride.mode !== undefined || this.pitchOverride.reacts !== undefined;
+    // Boards flashed before `select.pitch_voice` have the old «Owy reacciona» switch.
+    const reacts = this.device?.isPitchReacts?.() ?? null;
+    const voice =
+      this.device?.getPitchVoice?.() ??
+      this.pitchOverride.voice ??
+      (reacts !== null ? (reacts ? "react" : "confirm") : null) ??
+      config.COMPANION_PITCH_VOICE ??
+      (config.COMPANION_PITCH_REACTS ? "react" : "confirm");
+    if (fromDevice !== null) return { mode: fromDevice, voice, source: "device" };
+    const overridden = this.pitchOverride.mode !== undefined || this.pitchOverride.voice !== undefined;
     return {
       mode: this.pitchOverride.mode ?? config.COMPANION_PITCH_MODE ?? false,
-      reacts: this.pitchOverride.reacts ?? config.COMPANION_PITCH_REACTS ?? false,
+      voice,
       source: overridden ? "override" : "env",
     };
   }
 
-  /** From the settings UI: writes the device switch when the board has one, otherwise remembers it here. */
-  setPitchSetting(which: "mode" | "reacts", on: boolean): void {
+  /** From the settings UI / the talk console: the board's switch when it has one, otherwise remembered here. */
+  setPitchMode(on: boolean): void {
     const device = this.device;
-    if (device?.isPitchMode && device.setSwitch && device.isPitchMode() !== null) {
-      device.setSwitch(which === "mode" ? "pitch_mode" : "pitch_reacts", on);
-    } else this.pitchOverride[which] = on;
+    if (device?.setSwitch && device.isPitchMode?.() != null) device.setSwitch("pitch_mode", on);
+    else this.pitchOverride.mode = on;
   }
 
+  setPitchVoice(voice: PitchVoice): void {
+    const device = this.device;
+    if (device?.setPitchVoice && device.getPitchVoice?.() != null) device.setPitchVoice(voice);
+    else this.pitchOverride.voice = voice;
+  }
+
+  private pitchVoice(): PitchVoice {
+    return this.pitchSettings().voice;
+  }
+
+  /** A pitch run opened: record it, and hand it to the visitor's flow (a new one, or the one waiting for this answer). */
   private startPitch(kind: PitchKind, turn: VoiceTurn, epoch: number): void {
     const config: Partial<BridgeConfig> = this.shared.config ?? {};
     const limits =
@@ -1364,22 +1499,59 @@ export class DeviceSession {
             silenceMs: (config.COMPANION_PITCH_SILENCE_S ?? 10) * 1000,
             maxMs: (config.COMPANION_PITCH_MAX_S ?? 120) * 1000,
           }
-        : PITCH_LIMITS.name;
+        : PITCH_LIMITS.answer;
     // Owy says it is listening from the laptop; the room mic hears that too, so recording waits it out.
-    const cueMs = kind === "pitch" ? this.playClip("pitch-listen") : 0;
-    const recorder = new PitchRecorder({
+    const cueMs = kind === "pitch" && this.pitchVoice() !== "silent" ? this.playClip("pitch-listen") : 0;
+    let resolveDone: (wav: Buffer | null) => void = () => {};
+    let resolveEnded: () => void = () => {};
+    const run: PitchRun = {
       kind,
-      limits,
-      rmsThreshold: config.COMPANION_PITCH_VAD_RMS,
-      ignoreMs: cueMs > 0 ? cueMs + 400 : 0,
-      onSpeechStart: () => {
-        if (this.pitch?.recorder === recorder) turn.markSpeechStarted();
-      },
-      onDone: (reason) => this.submitPitch(reason),
-    });
-    this.pitch = { kind, recorder, abort: new AbortController(), epoch, turn };
-    recorder.start();
+      epoch,
+      turn,
+      abort: new AbortController(),
+      done: new Promise<Buffer | null>((resolve) => (resolveDone = resolve)),
+      ended: new Promise<void>((resolve) => (resolveEnded = resolve)),
+      resolveDone: (wav) => resolveDone(wav),
+      resolveEnded: () => resolveEnded(),
+      live: () => this.pitchIsCurrent(run),
+      recorder: new PitchRecorder({
+        kind,
+        limits,
+        rmsThreshold: config.COMPANION_PITCH_VAD_RMS,
+        // A question Owy just asked through the laptop's speakers is still in the room for a moment.
+        ignoreMs: cueMs > 0 ? cueMs + 400 : kind === "answer" ? 400 : 0,
+        onSpeechStart: () => {
+          if (this.pitch === run) turn.markSpeechStarted();
+        },
+        onDone: (reason) => {
+          if (this.pitch === run) this.submitPitch(reason);
+        },
+      }),
+    };
+    this.pitch = run;
+    run.recorder.start();
     this.log.info(`pitch: grabando (${kind}${cueMs > 0 ? `, aviso de ${cueMs} ms` : ""})`);
+    if (kind === "answer" && this.flow?.takeAnswer(run)) return;
+
+    // A new pitch: a flow still around keeps only what it already understood.
+    this.flow?.interrupt();
+    const runtime = this.shared.pitch;
+    if (!runtime) {
+      void run.done.then((wav) => {
+        if (!wav) return;
+        this.log.warn("pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; no se carga nada");
+        return this.sayPitchLine(run, "unconfigured");
+      });
+      return;
+    }
+    const flow = new PitchFlow<PitchRun>(this.pitchPort(runtime));
+    this.flow = flow;
+    void flow
+      .run(run)
+      .catch((error: unknown) => this.log.error("pitch failed", error))
+      .finally(() => {
+        if (this.flow === flow) this.flow = null;
+      });
   }
 
   /** Plays a pre-rendered cue where this turn's audio goes; 0 when nothing can play it. */
@@ -1392,15 +1564,23 @@ export class DeviceSession {
   }
 
   private cancelPitch(): void {
-    const pitch = this.pitch;
-    if (!pitch) return;
-    pitch.recorder.stop();
-    pitch.abort.abort();
+    const run = this.pitch;
+    if (!run) return;
+    this.endPitchRun(run);
+    run.abort.abort();
     this.pitch = null;
+  }
+
+  /** The run is over on the device: whoever waits on its recording or its end gets an answer. */
+  private endPitchRun(run: PitchRun): void {
+    run.recorder.stop();
+    run.resolveDone(null);
+    run.resolveEnded();
   }
 
   private pitchIsCurrent(p: PitchRun): boolean {
     return (
+      !this.stopped &&
       this.pitch === p &&
       p.epoch === this.requestEpoch &&
       this.turn === p.turn &&
@@ -1409,217 +1589,270 @@ export class DeviceSession {
     );
   }
 
-  /** The second tap, or the recorder's own end: the pitch is complete; transcribe and place it. */
+  /** The second tap, or the recorder's own end: the recording is complete; the flow takes it from here. */
   private submitPitch(reason: "submit" | "silence" | "cap"): void {
-    const pitch = this.pitch;
-    if (!pitch || pitch.turn.phase !== "listening") return;
-    pitch.recorder.stop();
+    const run = this.pitch;
+    if (!run || run.turn.phase !== "listening") return;
+    run.recorder.stop();
     // The second tap's buzz lands in the last frames.
-    if (reason === "submit") pitch.recorder.trimTailMs(300);
+    if (reason === "submit") run.recorder.trimTailMs(300);
     this.log.info(
-      `pitch: grabación terminada (${reason}, ${(pitch.recorder.durationMs / 1000).toFixed(1)} s, habló ${(pitch.recorder.speechMs / 1000).toFixed(1)} s)`
+      `pitch: grabación terminada (${run.kind}, ${reason}, ${(run.recorder.durationMs / 1000).toFixed(1)} s, habló ${(run.recorder.speechMs / 1000).toFixed(1)} s)`
     );
-    pitch.turn.endListening("");
-    void this.runPitch(pitch).catch((error) => this.log.error("pitch failed", error));
+    run.turn.endListening("");
+    if (run.kind === "pitch") {
+      // What Owy says next needs the voice: a fresh conversation, connected while the pitch is understood.
+      this.session?.resetConversation();
+      this.conversationId = randomUUID();
+      void this.ensureSession();
+    }
+    run.resolveDone(run.recorder.wav());
   }
 
-  private async runPitch(p: PitchRun): Promise<void> {
-    const runtime = this.shared.pitch;
-    if (!runtime) {
-      this.log.warn("pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; no se carga nada");
-      return this.speakScript(PITCH_LINES.unconfigured, p);
-    }
-    if (p.recorder.speechMs < p.recorder.limits.minSpeechMs) return this.speakCue("pitch-empty", PITCH_LINES.empty, p);
-    // The announcement needs the model: a fresh conversation, connected while we transcribe.
-    this.session?.resetConversation();
-    this.conversationId = randomUUID();
-    const warm = this.ensureSession();
-    if (p.kind === "name") return this.finishName(p, runtime, warm);
-
-    let card: PitchCard;
-    try {
-      card = await runtime.extract.card(p.recorder.wav(), p.abort.signal);
-    } catch (error) {
-      if (!this.pitchIsCurrent(p)) return;
-      this.log.error("pitch: no pude transcribir", error);
-      await warm;
-      return this.speakScript(PITCH_LINES.failed, p);
-    }
-    if (!this.pitchIsCurrent(p)) return;
-    const transcript = card.transcript.trim();
-    this.log.info(
-      `pitch: "${transcript}" → ${JSON.stringify({ isPitch: card.isPitch, title: card.title, speaker: card.speaker, needsTV: card.needsTV, needsWhiteboard: card.needsWhiteboard, topics: card.topics })}`
-    );
-    if (!card.isPitch || !transcript || !card.title) {
-      await warm;
-      return this.speakCue("pitch-empty", PITCH_LINES.empty, p);
-    }
-    this.options.onTranscript?.("input", transcript);
-    this.expressions?.react(transcript);
-    // The knob's « heard » pill shows the transcript.
-    this.device?.sendEvent(VoiceAssistantEvent.STT_END, [{ name: "text", value: transcript.slice(0, 480) }]);
-
-    const denial = this.options.authorizeTool?.("create_track");
-    if (denial) {
-      await warm;
-      return this.speakScript(denial, p);
-    }
-    const title = card.title;
-    const reaction = this.pitchReaction(transcript, { ...card, title }, p.abort.signal);
-    let placed: PlacedTrackResponse;
-    try {
-      placed = await runtime.api.tracks.createPlaced({
-        openSpaceId: await runtime.openSpaceId(),
-        title,
-        speaker: card.speaker ?? undefined,
-        description: card.description ?? undefined,
-        needsTV: card.needsTV,
-        needsWhiteboard: card.needsWhiteboard,
-        source: "companion",
-      });
-    } catch (error) {
-      if (!this.pitchIsCurrent(p)) return;
-      this.log.error("pitch: no pude crear la charla", error);
-      await warm;
-      const full = typeof error === "object" && error !== null && "code" in error && error.code === "CONFLICT";
-      return this.speakScript(full ? PITCH_LINES.full : PITCH_LINES.failed, p);
-    }
-    if (!this.pitchIsCurrent(p)) return;
-    const note = placed.note;
-    const screen: ScreenCard = {
-      title: note.title,
-      speaker: note.speaker ?? undefined,
-      room: note.room ?? placed.placement.room,
-      timeSlot: note.timeSlot ?? placed.placement.timeSlot,
+  /** What a visitor's flow can do with this device. */
+  private pitchPort(runtime: PitchRuntime): PitchPort<PitchRun> {
+    const since = Date.now();
+    return {
+      log: this.log,
+      extract: runtime.extract,
+      voice: () => this.pitchVoice(),
+      canAsk: () => !!this.device?.pitchPrompt,
+      heard: (run, transcript) => {
+        this.options.onTranscript?.("input", transcript);
+        this.expressions?.react(transcript);
+        // The knob's « heard » pill shows the transcript.
+        run.turn.heard(transcript);
+      },
+      say: (run, line) => this.sayPitchLine(run, line),
+      announce: (run, text) => this.announcePitch(run, text),
+      prompt: (field) => this.device?.pitchPrompt?.(field),
+      place: (draft) => this.placePitch(runtime, draft, since),
+      showCard: (card) => this.device?.showCard(card),
+      react: (draft, signal) => this.pitchReaction(draft, signal),
+      saveFailure: (reason, draft, wav) => this.savePitchFailure(reason, draft, wav),
     };
-    this.log.info(
-      `pitch: charla creada «${screen.title}» → ${screen.room} ${screen.timeSlot} (${placed.placement.reasoning})`
-    );
-    this.device?.showCard(screen);
-    const askName = !note.speaker;
-    if (askName) this.pendingName = { trackId: note.id, card: screen, prompted: false, timer: null };
-    const extra = await reaction;
-    await warm;
-    await this.speakScript(`${announcementText(screen, { askName })}${extra ? ` ${extra}` : ""}`, p);
   }
 
-  /** "Owy reacciona": one or two sentences from the eve brain about the pitch, or nothing. */
-  private pitchReaction(
-    transcript: string,
-    card: {
-      title: string;
-      speaker: string | null;
-      needsTV: boolean;
-      needsWhiteboard: boolean;
-      description: string | null;
-      topics: string[];
-    },
-    signal: AbortSignal
-  ): Promise<string> {
-    const eve = this.shared.eve;
-    if (!this.pitchReacts() || this.shared.brain !== "eve" || !eve) return Promise.resolve("");
-    const writes = !this.options.authorizeTool || this.options.authorizeTool("create_track") === null;
-    const staff = this.options.isStaff?.() ?? (this.device?.isStaffMode() || !!this.shared.config?.COMPANION_STAFF_MODE);
-    return eve
-      .turn(this.spec.id, transcript.slice(0, 3500), {
-        kind: "pitch",
-        pitch: card,
-        staff: writes && staff,
-        marketplaceOpen: false,
-        eventName: this.shared.config?.COMPANION_EVENT_NAME,
-        timeoutMs: 8_000,
-        signal,
-      })
-      .then((result) => result.text.trim())
-      .catch((error: unknown) => {
-        this.log.warn("pitch: eve no reaccionó a tiempo", error);
-        return "";
-      });
-  }
-
-  private pitchReacts(): boolean {
-    return this.pitchSettings().reacts;
-  }
-
-  /** The name step: the person answered "¿Cómo te llamás?"; the card gets its speaker. */
-  private async finishName(p: PitchRun, runtime: PitchRuntime, warm: Promise<void>): Promise<void> {
-    const pending = this.pendingName;
-    let name: string | null = null;
-    try {
-      name = (await runtime.extract.name(p.recorder.wav(), p.abort.signal)).name?.trim() || null;
-    } catch (error) {
-      this.log.warn("pitch: no pude entender el nombre", error);
+  /**
+   * A fixed line in `run`: the recording when there is one (the browser's file,
+   * or its PCM through the board's speaker; no network), Owy's live voice
+   * otherwise. Callado: errors go on the screen and a question is the knob's
+   * own hint once its mic opens. Resolves once the run is over on the device.
+   */
+  private async sayPitchLine(run: PitchRun | null, line: PitchLine): Promise<void> {
+    const text = PITCH_LINES[line];
+    const question = line === "askTopic" || line === "askName";
+    if (!run) {
+      // No run to talk in (nobody answered, the board was busy): the words go on the screen.
+      if (!question) this.device?.showText(text);
+      return;
     }
-    if (!this.pitchIsCurrent(p)) return;
-    this.clearPendingName();
-    if (!pending) return this.speakCue("pitch-empty", PITCH_LINES.empty, p);
-    if (!name) {
-      await warm;
-      return this.speakScript(PITCH_LINES.noName, p);
+    if (!this.pitchIsCurrent(run)) return;
+    if (this.pitchVoice() === "silent") {
+      if (!question) this.device?.showText(text);
+      run.turn.finish();
+      return run.ended;
     }
-    try {
-      await runtime.api.tracks.update({ id: pending.trackId, data: { speaker: name } });
-    } catch (error) {
-      if (!this.pitchIsCurrent(p)) return;
-      this.log.warn("pitch: no pude guardar el nombre", error);
-      await warm;
-      return this.speakScript(`Gracias, ${name}. No pude anotar tu nombre, pero la charla ya está en la grilla.`, p);
-    }
-    if (!this.pitchIsCurrent(p)) return;
-    this.log.info(`pitch: «${pending.card.title}» es de ${name}`);
-    this.device?.showCard({ ...pending.card, speaker: name });
-    await warm;
-    await this.speakScript(`Listo, ${name}. Gracias.`, p);
+    const clip = PITCH_CLIPS[line];
+    if (!(clip && this.playPitchClip(run, clip, text))) await this.speakScript(text, run);
+    return run.ended;
   }
 
-  /** The realtime model says the bridge's line in Owy's voice, through the normal speaking pipeline. */
+  /** The card is on the board: Owy says where (Callado: the card on screen is enough). */
+  private async announcePitch(run: PitchRun | null, text: string): Promise<void> {
+    if (!run || !this.pitchIsCurrent(run)) return;
+    if (this.pitchVoice() === "silent") {
+      run.turn.finish();
+      return run.ended;
+    }
+    await this.speakScript(text, run);
+    return run.ended;
+  }
+
+  /** A recorded cue: the attached browser plays the file, the board's speaker gets its PCM; false when neither can. */
+  private playPitchClip(run: PitchRun, clip: string, text: string): boolean {
+    const isCurrent = () => this.pitchIsCurrent(run);
+    if (this.audioOutput === "laptop") return this.playOwnClip({ turn: run.turn, isCurrent }, text, clip, null);
+    const pcm = this.shared.pitch?.clipPcm?.[clip];
+    if (!pcm || !isCurrent()) return false;
+    this.turnAnswer = text;
+    this.pushCaption(text);
+    this.options.onTranscript?.("output", text);
+    this.expressions?.write(text, true);
+    this.startSpeaking(run.turn, text);
+    for (const frame of this.chunker.push(pcm)) this.pacer?.push(frame);
+    this.finishSpeaking(run.turn, text);
+    return true;
+  }
+
+  /**
+   * The realtime model says the bridge's line in Owy's voice, through the
+   * normal speaking pipeline; no live model (or one that never starts the
+   * line) → the cascade's voice; no voice at all → the screen.
+   */
   private async speakScript(text: string, p: PitchRun): Promise<void> {
     if (!this.pitchIsCurrent(p)) return;
-    if (!this.session?.isConnected) await this.ensureSession();
+    if (!this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(OWN_CONNECT_WAIT_MS)]);
     if (!this.pitchIsCurrent(p)) return;
+    if (!this.realtimeLive()) {
+      this.log.warn("pitch: sin modelo realtime para hablar; va por la voz de la cascada");
+      return this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
+    }
     this.script = text;
     // The caption is the script itself (response-done pushes `eveAnswer`); the expressions follow its sentences.
     this.eveAnswer = text;
     if (this.shared.brain === "eve") this.expressions?.write(text, true);
-    if (!this.session?.isConnected) {
-      this.log.warn("pitch: sin modelo realtime para hablar; va por la voz de la cascada");
-      this.script = null;
-      this.eveAnswer = null;
-      return this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
+    this.session!.sendText(SCRIPT_PREFIX + text);
+    this.clearOwnTimer();
+    this.ownTimer = setTimeout(
+      () => {
+        this.ownTimer = null;
+        if (!this.pitchIsCurrent(p) || this.firstAudioAt || p.turn.phase !== "thinking" || this.script !== text) return;
+        this.log.warn("pitch: el modelo no dijo el guion; va por la voz de la cascada");
+        this.script = this.eveAnswer = null;
+        this.session?.resetConversation();
+        void this.ensureSession();
+        void this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
+      },
+      2 * (this.shared.config?.COMPANION_ACK_MS ?? 2500)
+    );
+  }
+
+  /**
+   * One card on the board, never two. A slow write is never raced by a
+   * second one: past PLACE_TIMEOUT_MS the bridge looks for the card and keeps
+   * waiting on the same request. Only a request that is over and failed
+   * ambiguously (dropped connection, 5xx) is tried again, once, after
+   * looking for its card — so a bad network costs neither the pitch nor a duplicate.
+   */
+  private async placePitch(runtime: PitchRuntime, draft: CompleteDraft, since: number): Promise<Placement> {
+    const denial = this.options.authorizeTool?.("create_track");
+    if (denial) return { denied: denial };
+    const openSpaceId = await runtime.openSpaceId();
+    const input = {
+      openSpaceId,
+      title: draft.title,
+      speaker: draft.speaker ?? undefined,
+      description: draft.description ?? undefined,
+      needsTV: draft.needsTV,
+      needsWhiteboard: draft.needsWhiteboard,
+      source: "companion",
+    };
+    const found = async (): Promise<ScreenCard | null> => {
+      const note = await this.findPlaced(runtime, openSpaceId, draft.title, since);
+      if (!note) return null;
+      this.log.info(`pitch: la charla «${note.title}» ya estaba en la grilla (${note.room} ${note.timeSlot})`);
+      return { title: note.title, speaker: note.speaker, room: note.room, timeSlot: note.timeSlot };
+    };
+    const request = runtime.api.tracks.createPlaced(input);
+    let outcome = await within(request, PLACE_TIMEOUT_MS);
+    if ("late" in outcome) {
+      this.log.warn(`pitch: la grilla tarda más de ${PLACE_TIMEOUT_MS / 1000} s; me fijo si la charla ya quedó y sigo esperando`);
+      const card = await found();
+      if (card) return card;
+      outcome = await within(request, PLACE_TIMEOUT_MS);
+      if ("late" in outcome) throw new Error(`la grilla no contestó en ${(2 * PLACE_TIMEOUT_MS) / 1000} s`);
     }
-    this.session.sendText(SCRIPT_PREFIX + text);
+    let placed: PlacedTrackResponse;
+    if ("error" in outcome) {
+      const error = outcome.error;
+      if (isConflict(error)) return "full";
+      if (!isAmbiguous(error)) throw error;
+      this.log.warn("pitch: la grilla no contestó claro; me fijo si la charla quedó antes de reintentar", error);
+      const card = await found();
+      if (card) return card;
+      try {
+        placed = await withTimeout(runtime.api.tracks.createPlaced(input), PLACE_TIMEOUT_MS);
+      } catch (retryError) {
+        if (isConflict(retryError)) return "full";
+        throw retryError;
+      }
+    } else placed = outcome.value;
+    const card: ScreenCard = {
+      title: placed.note.title,
+      speaker: placed.note.speaker ?? undefined,
+      room: placed.note.room ?? placed.placement.room,
+      timeSlot: placed.note.timeSlot ?? placed.placement.timeSlot,
+    };
+    this.log.info(`pitch: charla creada «${card.title}» → ${card.room} ${card.timeSlot} (${placed.placement.reasoning})`);
+    return card;
   }
 
-  /** A pre-rendered cue when the laptop can play it (instant), the spoken line otherwise. */
-  private async speakCue(clip: string, text: string, p: PitchRun): Promise<void> {
-    if (!this.pitchIsCurrent(p)) return;
-    if (this.playClip(clip) > 0) {
-      p.turn.finish();
-      return;
+  /** The talk this flow created, if the write landed after all. */
+  private async findPlaced(runtime: PitchRuntime, openSpaceId: string, title: string, since: number): Promise<StickyNote | null> {
+    const want = title.trim().toLowerCase();
+    try {
+      const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId }), PLACE_TIMEOUT_MS);
+      return (
+        notes.find(
+          (note) =>
+            note.title.trim().toLowerCase() === want && (!note.createdAt || Date.parse(note.createdAt) >= since - 60_000)
+        ) ?? null
+      );
+    } catch (error) {
+      this.log.warn("pitch: tampoco pude leer la grilla", error);
+      return null;
     }
-    await this.speakScript(text, p);
   }
 
-  /** The announcement ended: now the knob invites the tap that gives the name, for 20 s. */
-  private promptPendingName(): void {
-    const pending = this.pendingName;
-    if (!pending || pending.prompted) return;
-    pending.prompted = true;
-    if (this.device?.pitchPrompt) this.device.pitchPrompt("name");
-    else this.device?.showText(PITCH_LINES.askName);
-    pending.timer = setTimeout(() => {
-      if (this.pendingName !== pending) return;
-      this.log.info(`pitch: «${pending.card.title}» queda sin nombre`);
-      this.clearPendingName();
-    }, 20_000);
+  /** «Confirma y comenta»: one sentence about the talk, from the eve brain or the local text model; "" when none in time. */
+  private pitchReaction(draft: CompleteDraft, signal: AbortSignal): Promise<string> {
+    const card = {
+      title: draft.title,
+      speaker: draft.speaker,
+      needsTV: draft.needsTV,
+      needsWhiteboard: draft.needsWhiteboard,
+      description: draft.description,
+      topics: draft.topics,
+    };
+    const eventName = this.shared.config?.COMPANION_EVENT_NAME ?? "OWU Conf 2026";
+    const eve = this.shared.brain === "eve" ? this.shared.eve : undefined;
+    let ask: Promise<string>;
+    if (eve) {
+      const writes = !this.options.authorizeTool || this.options.authorizeTool("create_track") === null;
+      const staff = this.options.isStaff?.() ?? (this.device?.isStaffMode() || !!this.shared.config?.COMPANION_STAFF_MODE);
+      ask = eve
+        .turn(this.spec.id, draft.transcript.slice(0, 3500), {
+          kind: "pitch",
+          pitch: card,
+          staff: writes && staff,
+          marketplaceOpen: false,
+          eventName,
+          timeoutMs: PITCH_REACTION_MS,
+          signal,
+        })
+        .then((result) => result.text);
+    } else if (this.shared.cascade) {
+      ask = this.shared.cascade.answer({
+        text: `Charla «${draft.title}». Lo que dijo la persona: ${draft.transcript.slice(0, 3500)}`,
+        history: [],
+        instructions: reactionPrompt(eventName),
+        tools: {},
+        signal: AbortSignal.any([signal, AbortSignal.timeout(PITCH_REACTION_MS)]),
+      });
+    } else return Promise.resolve("");
+    return ask
+      .then((text) => text.trim())
+      .catch((error: unknown) => {
+        this.log.warn("pitch: no hubo comentario a tiempo", error);
+        return "";
+      });
   }
 
-  private clearPendingName(): void {
-    const pending = this.pendingName;
-    if (!pending) return;
-    if (pending.timer) clearTimeout(pending.timer);
-    this.pendingName = null;
-    if (pending.prompted) this.device?.pitchPrompt?.("idle");
+  /** A pitch the bridge could not place, kept for the staff (COMPANION_LOG_DIR only: a visitor's voice stays nowhere else). */
+  private savePitchFailure(reason: string, draft: PitchDraft | null, wav: Buffer): void {
+    const dir = this.shared.config?.COMPANION_LOG_DIR;
+    if (!dir) return;
+    const base = path.join(dir, "pitch-failures", `${new Date().toISOString().replace(/[:.]/g, "-")}-${this.spec.id}`);
+    void mkdir(path.dirname(base), { recursive: true })
+      .then(() =>
+        Promise.all([
+          writeFile(`${base}.wav`, wav),
+          writeFile(`${base}.json`, JSON.stringify({ reason, device: this.spec.id, draft }, null, 2)),
+        ])
+      )
+      .then(() => this.log.warn(`pitch: guardado para el staff en ${base}.wav`))
+      .catch((error: unknown) => this.log.warn("pitch: no pude guardar el pitch fallido", error));
   }
 
   // ── Model → device ──────────────────────────────────────────────────────
@@ -2052,8 +2285,9 @@ export class DeviceSession {
     this.cancelCascade();
     this.recorder?.stop();
     this.cancelEveTurn();
+    this.flow?.cancel();
     this.cancelPitch();
-    this.clearPendingName();
+    this.unsubscribeHostMic?.();
     this.clearIdleReset();
     this.expressions?.close();
     this.pacer?.stop();
@@ -2107,20 +2341,51 @@ function loadClips(logger: Logger): Record<string, number> {
   }
 }
 
+/** 16 kHz mono PCM of each recorded clip on disk, by id (the board's speaker plays these; missing ones are skipped). */
+export function loadClipPcm(dir: string, ids: string[]): Record<string, Buffer> {
+  const clips: Record<string, Buffer> = {};
+  for (const id of ids) {
+    try {
+      const wav = fromWav(readFileSync(path.join(dir, `${id}.wav`)));
+      if (wav.sampleRate === DEVICE_SAMPLE_RATE && wav.channels === 1) clips[id] = wav.pcm;
+    } catch {
+      // Not recorded yet (`pnpm companion:clips`): Owy says that line live.
+    }
+  }
+  return clips;
+}
+
 /** Modo pitch needs the gateway (audio → card) and the site (the board); without either, pitches end in words only. */
-function loadPitch(config: BridgeConfig, logger: Logger, clips: Record<string, number>): SharedRuntime["pitch"] {
+function loadPitch(
+  config: BridgeConfig,
+  logger: Logger,
+  clips: Record<string, number>,
+  cascade: Cascade | undefined
+): SharedRuntime["pitch"] {
   if (!config.AI_GATEWAY_API_KEY || !config.OWY_API_KEY) {
     logger.warn("modo pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; los pitches no se van a cargar");
     return undefined;
   }
   let openSpaceId: Promise<string> | null = null;
+  const clipPcm = loadClipPcm(CLIPS_DIR, Object.values(PITCH_CLIPS));
+  logger.info(`modo pitch: avisos grabados ${Object.keys(clipPcm).join(", ") || "ninguno (los dice el modelo)"}`);
   return {
     extract: gatewayPitchExtractor({
       apiKey: config.AI_GATEWAY_API_KEY,
       model: config.COMPANION_PITCH_MODEL,
       fallbacks: parseModelSpecs(config.COMPANION_PITCH_FALLBACK_MODELS),
       eventName: config.COMPANION_EVENT_NAME,
+      // The audio model down: the cascade's transcription, then the text model on the words.
+      ...(cascade
+        ? {
+            transcribe: (wav: Buffer, signal: AbortSignal) => cascade.transcribe(wav, signal),
+            textModel: config.COMPANION_TEXT_MODEL,
+            textFallbacks: parseModelSpecs(config.COMPANION_TEXT_FALLBACK_MODELS),
+          }
+        : {}),
+      logger: logger.child("pitch"),
     }),
+    clipPcm,
     api: owuApi(),
     // A talk's demo grid (COMPANION_PITCH_EVENT_ID) wins over OWY_EVENT_ID; eve keeps its own event for questions.
     openSpaceId: () =>
@@ -2165,7 +2430,13 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
   const brain = config.COMPANION_BRAIN ?? (config.COMPANION_EVE_URL ? "eve" : "local");
   const expressions = loadExpressions(config, logger);
   const clips = loadClips(logger);
-  const pitch = loadPitch(config, logger, clips);
+  const pitch = loadPitch(config, logger, clips, fallback.cascade);
+  const hostMic = new HostMic({
+    logger: logger.child("mic"),
+    ffmpeg: config.COMPANION_FFMPEG,
+    name: config.COMPANION_HOST_MIC,
+    channel: config.COMPANION_HOST_MIC_CHANNEL,
+  });
   if (brain === "eve") {
     if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");
     const eve = new EveLink({
@@ -2188,6 +2459,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
       expressions,
       pitch,
       clips,
+      hostMic,
       ...fallback,
     };
   }
@@ -2206,6 +2478,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     expressions,
     pitch,
     clips,
+    hostMic,
     ...fallback,
   };
 }

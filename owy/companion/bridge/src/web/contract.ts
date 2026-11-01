@@ -7,18 +7,24 @@ import { z } from "zod";
 
 export const AudioRouteSchema = z.enum(["device", "laptop"]);
 export type AudioRoute = z.infer<typeof AudioRouteSchema>;
+/** A turn's microphone: the device, the attached browser, or `host` — an input of the Mac running the bridge. */
+export const MicRouteSchema = z.enum(["device", "laptop", "host"]);
+export type MicRoute = z.infer<typeof MicRouteSchema>;
 
 export const SetAudioRoutingSchema = z.object({
   deviceId: z.string().min(1).max(64),
-  mic: AudioRouteSchema.optional(),
+  mic: MicRouteSchema.optional(),
   output: AudioRouteSchema.optional(),
 });
 export type SetAudioRoutingInput = z.infer<typeof SetAudioRoutingSchema>;
 
-/** Modo pitch: every tap records a talk proposal; "reacts" adds Owy's short reaction to the announcement. */
+/** What Owy says around a pitch: nothing (the card on screen), where it landed, or that plus a comment on the talk. */
+export const PitchVoiceSchema = z.enum(["silent", "confirm", "react"]);
+
+/** Modo pitch: every tap records a talk proposal; `voice` is what Owy says back. */
 export const PitchSettingsSchema = z.object({
   mode: z.boolean(),
-  reacts: z.boolean(),
+  voice: PitchVoiceSchema,
   source: z.enum(["device", "override", "env"]),
 });
 export type PitchSettings = z.infer<typeof PitchSettingsSchema>;
@@ -26,9 +32,30 @@ export type PitchSettings = z.infer<typeof PitchSettingsSchema>;
 export const SetPitchSchema = z.object({
   deviceId: z.string().min(1).max(64),
   mode: z.boolean().optional(),
-  reacts: z.boolean().optional(),
+  voice: PitchVoiceSchema.optional(),
 });
 export type SetPitchInput = z.infer<typeof SetPitchSchema>;
+
+export const HostMicChannelSchema = z.enum(["L", "R", "mix"]);
+
+/** The Mac's own microphone (the `host` route), shared by every device of this bridge. */
+export const HostMicSchema = z.object({
+  /** The input in use, or wanted; null = the built-in mic. */
+  name: z.string().nullable(),
+  channel: HostMicChannelSchema,
+  health: z.enum(["off", "starting", "open", "no-signal", "gone", "unavailable"]),
+  detail: z.string().optional(),
+  /** Inputs ffmpeg sees (empty in Docker). */
+  available: z.array(z.string()),
+});
+export type HostMicSnapshot = z.infer<typeof HostMicSchema>;
+
+export const SetHostMicSchema = z.object({
+  /** Name (or part of it, "DJI"); null = the built-in mic. */
+  name: z.string().trim().max(120).nullable().optional(),
+  channel: HostMicChannelSchema.optional(),
+});
+export type SetHostMicInput = z.infer<typeof SetHostMicSchema>;
 
 /** Which road Owy's voice is on: staff see at a glance when it is degraded. */
 export const VoiceStatusSchema = z.object({
@@ -53,7 +80,7 @@ export type VoiceStatus = z.infer<typeof VoiceStatusSchema>;
 export const DeviceRoutingSchema = z.object({
   id: z.string(),
   connected: z.boolean(),
-  mic: AudioRouteSchema,
+  mic: MicRouteSchema,
   output: AudioRouteSchema,
   /** Where the current choice comes from: the device's selects, the settings UI, or env defaults. */
   source: z.enum(["device", "override", "env"]),
@@ -65,7 +92,11 @@ export const DeviceRoutingSchema = z.object({
 
 export type DeviceRouting = z.infer<typeof DeviceRoutingSchema>;
 
-export const SettingsSnapshotSchema = z.object({ devices: z.array(DeviceRoutingSchema) });
+export const SettingsSnapshotSchema = z.object({
+  devices: z.array(DeviceRoutingSchema),
+  /** Absent from bridges older than the `host` route. */
+  hostMic: HostMicSchema.optional(),
+});
 export type SettingsSnapshot = z.infer<typeof SettingsSnapshotSchema>;
 
 // ---------------------------------------------------------------------------

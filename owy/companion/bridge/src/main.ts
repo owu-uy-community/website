@@ -58,7 +58,7 @@ async function main(): Promise<void> {
     });
   });
   for (const session of sessions) shared.sessions.set(session.id, session);
-  const settings = await startSettingsServer(sessions, config, logger).catch((error) => {
+  const settings = await startSettingsServer(sessions, config, logger, shared.hostMic).catch((error) => {
     logger.warn(`settings UI not started: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   });
@@ -73,6 +73,7 @@ async function main(): Promise<void> {
     await web?.close();
     await settings?.close();
     await Promise.all(sessions.map((session) => session.stop()));
+    shared.hostMic?.close();
     process.exit(0);
   };
   process.on("SIGINT", () => void shutdown());

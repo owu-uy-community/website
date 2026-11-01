@@ -9,13 +9,26 @@ import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
 import { orpc } from "lib/orpc/client";
-import type { AudioRoute, AudioRoutingSnapshot } from "lib/orpc/companion/schemas";
+import type { AudioRoutingSnapshot, MicRoute } from "lib/orpc/companion/schemas";
+
+const ROUTES = {
+  mic: [
+    ["device", "dispositivo"],
+    ["host", "mac"],
+    ["laptop", "navegador"],
+  ],
+  output: [
+    ["device", "dispositivo"],
+    ["laptop", "navegador"],
+  ],
+} as const;
 
 /**
  * Where each physical companion's microphone and audio output live: the device
- * itself, or the laptop running the bridge (a browser attached through "Audio de
- * laptop" in Hablá con Owy). Proxies the bridge's loopback settings API, so it
- * only works when this site runs on the venue laptop.
+ * itself, an input of the Mac running the bridge (its own mic, a DJI receiver;
+ * mic only), or a browser attached through "Audio de laptop" in Hablá con Owy.
+ * Proxies the bridge's loopback settings API, so it only works when this site
+ * runs on the venue laptop.
  */
 export default function AudioRoutingCard({ onDevices }: { onDevices?: (ids: string[]) => void }) {
   const queryClient = useQueryClient();
@@ -32,8 +45,8 @@ export default function AudioRoutingCard({ onDevices }: { onDevices?: (ids: stri
     if (reachable) onDevices?.(key ? key.split(",") : []);
   }, [reachable, key, onDevices]);
 
-  const seg = (deviceId: string, which: "mic" | "output", current: AudioRoute) =>
-    (["device", "laptop"] as const).map((route) => (
+  const seg = (deviceId: string, which: "mic" | "output", current: MicRoute) =>
+    ROUTES[which].map(([route, label]) => (
       <Button
         key={route}
         aria-pressed={current === route}
@@ -43,7 +56,7 @@ export default function AudioRoutingCard({ onDevices }: { onDevices?: (ids: stri
         variant={current === route ? "outline" : "ghost"}
         onClick={() => mutation.mutate({ deviceId, [which]: route })}
       >
-        {route === "device" ? "dispositivo" : "laptop"}
+        {label}
       </Button>
     ));
 
@@ -57,7 +70,7 @@ export default function AudioRoutingCard({ onDevices }: { onDevices?: (ids: stri
               Audio de los Owy físicos
             </CardTitle>
             <CardDescription>
-              Micrófono y salida de cada dispositivo: el propio gadget o la laptop del bridge.
+              Micrófono y salida de cada dispositivo: el propio gadget, la Mac del bridge o un navegador.
             </CardDescription>
           </div>
           <Badge className="shrink-0" variant={reachable ? "success" : "outline"}>
@@ -103,8 +116,9 @@ export default function AudioRoutingCard({ onDevices }: { onDevices?: (ids: stri
         ))}
         {reachable && (
           <p className="text-meta text-muted-foreground">
-            “laptop” necesita un navegador conectado como audio de ese dispositivo. Sin uno, el bridge usa el
-            dispositivo en ese turno.
+            “mac” usa el micrófono de la Mac del bridge (el integrado o un receptor DJI; se elige en la página del
+            bridge, 127.0.0.1:3313) y “navegador”, uno conectado como audio de ese dispositivo. Si el elegido no
+            responde, el bridge usa el del dispositivo en ese turno.
           </p>
         )}
       </CardContent>

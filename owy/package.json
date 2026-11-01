@@ -30,6 +30,7 @@
     "companion:driver-test": "node companion/firmware/tests/speaker-startup.mjs && node companion/firmware/tests/voice-buffer.mjs",
     "companion:interaction-test": "node companion/firmware/tests/companion.mjs",
     "companion:pitch": "tsx companion/bridge/src/cli/pitch.ts",
+    "companion:mic-check": "tsx companion/bridge/src/cli/mic-check.ts",
     "companion:clips": "tsx companion/bridge/src/cli/clips.ts",
     "companion:talk-clips": "tsx companion/bridge/src/cli/clips.ts --talk"
   },
