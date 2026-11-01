@@ -114,6 +114,8 @@ const handlers = {
 async function init({ canvas, size: px, board, fps = 60, lag: late = 0 }) {
   module = await createRuntime();
   size = boot(module, (Math.random() * 0xfffffffe + 1) >>> 0, board, px, true).size;
+  // Awake from its first frame: past the boot's shut lids (wake_at 1.6 s) and their opening, unseen.
+  module._owy_advance(2000);
   canvas.width = canvas.height = size;
   ctx = canvas.getContext("2d");
   lag = Number.isFinite(late) ? Math.max(-2000, Math.min(2000, late)) : 0;

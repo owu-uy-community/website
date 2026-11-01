@@ -29,12 +29,6 @@ export type FaceBoard = "amoled" | "knob";
 
 /** A real idle frame of the AMOLED face (written by the emulator's goldens test): shown until the face is up. */
 const STILL = "/companion-runtime/face.png";
-/**
- * A new face boots like the device: lids shut until 1.6 s, then they spring open (the runtime's
- * wake_at). The still covers that, so a face that mounts mid-show (a new slide) never looks asleep.
- * ponytail: a fixed wait after the first frame; drop it once face.mjs starts its faces awake.
- */
-const AWAKE_MS = 1900;
 
 type Message = { type: string } & Record<string, unknown>;
 
@@ -109,15 +103,14 @@ export function OwyFace({
     canvas.className = "block h-full w-full";
     box.append(canvas);
     const instance = new Worker("/companion-runtime/face.mjs", { type: "module", name: "owy-face" });
-    let timer: ReturnType<typeof setTimeout> | undefined;
     const fail = () => {
-      clearTimeout(timer);
       instance.terminate();
       if (worker.current === instance) worker.current = false;
       setAwake(false);
     };
     instance.onmessage = ({ data }: MessageEvent<{ type?: string } | null>) => {
-      if (data?.type === "frame") timer = setTimeout(() => setAwake(true), AWAKE_MS);
+      // The worker starts its faces awake (face.mjs), so the first frame can show.
+      if (data?.type === "frame") setAwake(true);
       else if (data?.type === "error") fail();
     };
     instance.onerror = fail;
@@ -129,7 +122,6 @@ export function OwyFace({
     worker.current = instance;
 
     return () => {
-      clearTimeout(timer);
       if (worker.current === instance) worker.current = null;
       instance.terminate();
       canvas.remove();
