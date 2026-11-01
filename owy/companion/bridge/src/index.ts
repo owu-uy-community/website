@@ -31,6 +31,7 @@ import type { DeviceHandlers } from "./device/esphome";
 import type { AudioPeer, DeviceTransport } from "./device/transport";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { VoiceTurn, type VoiceLink } from "./device/pipeline";
+import { RouteLink } from "./device/route-link";
 import { faceForPhase } from "./face";
 import { createLogger, type Logger } from "./log";
 import { FALLBACK_LINES, gatewayCascade, loadFallbackClips, type Cascade, type FallbackClip } from "./realtime/cascade";
@@ -127,13 +128,6 @@ interface OwnTurn {
   isCurrent: () => boolean;
 }
 
-/** Owy's own turns have no device pipeline run: only the attached browser gets the events and the audio. */
-const peerOnlyLink = (peer: AudioPeer): VoiceLink => ({
-  sendEvent: (event, data) => peer.sendEvent(event, data),
-  sendAudio: (audio, end) => peer.sendAudio(audio, end),
-  isPlaybackReady: () => true,
-});
-
 interface CascadeRun {
   turn: VoiceTurn;
   epoch: number;
@@ -162,33 +156,6 @@ const isAmbiguous = (error: unknown): boolean => {
   const status = typeof error === "object" && error !== null && "status" in error ? error.status : undefined;
   return !(typeof status === "number" && status >= 400 && status < 500);
 };
-
-/**
- * The knob's voice link when a browser is attached as its laptop audio: every
- * pipeline event reaches both, `accepted` opens the browser mic, and model
- * audio goes to whichever side owns the output this turn. Readiness stays the
- * physical device's (its mic must have released the bus before TTS).
- */
-class PeerLink implements VoiceLink {
-  constructor(
-    private readonly device: DeviceTransport,
-    private readonly peer: () => AudioPeer | null,
-    private readonly output: () => AudioRoute
-  ) {}
-  sendEvent(event: Parameters<VoiceLink["sendEvent"]>[0], data?: Parameters<VoiceLink["sendEvent"]>[1]): void {
-    this.device.sendEvent(event, data);
-    this.peer()?.sendEvent(event, data);
-  }
-  sendAudio(audio: Buffer, end = false): void {
-    // A browser that left mid-answer: the rest goes to the board (its speaker, or its captions on the knob).
-    const peer = this.output() === "laptop" ? this.peer() : null;
-    if (peer) peer.sendAudio(audio, end);
-    else this.device.sendAudio(audio, end);
-  }
-  isPlaybackReady(): boolean {
-    return this.device.isPlaybackReady();
-  }
-}
 
 export interface DeviceSessionOptions {
   connectDevice?: (
@@ -521,7 +488,7 @@ export class DeviceSession {
     const peer = this.peer;
     const turn = this.openTurn(
       device,
-      peer ? new PeerLink(device, () => this.peer, () => this.audioOutput) : device,
+      this.linkFor(device),
       path,
       // A pitch gives the person time to start and the bridge time to transcribe and place it;
       // an answer's own recorder ends it when nobody answers, so the flow can go on in this run.
@@ -540,6 +507,24 @@ export class DeviceSession {
     turn.start();
     if (kind) this.startPitch(kind, turn, epoch);
     else this.startTurnRecorder(turn, epoch);
+  }
+
+  /** This turn's events and audio: the board (when it ran the turn), an attached browser, the Mac's speaker. */
+  private linkFor(device: DeviceTransport | null): VoiceLink {
+    return new RouteLink({
+      device,
+      peer: () => this.peer,
+      host: () => this.shared.hostSpeaker,
+      output: () => this.audioOutput,
+    });
+  }
+
+  /** ms from a frame leaving the pacer to it being heard where this turn plays (mouth and faces follow it). */
+  private outputLeadMs(device: DeviceTransport | null = this.device): number {
+    const config = this.shared.config;
+    if (this.audioOutput === "laptop") return config?.COMPANION_MOUTH_LATENCY_MS ?? 250;
+    if (this.audioOutput === "host") return this.shared.hostSpeaker?.latencyMs ?? config?.COMPANION_HOST_SPEAKER_LATENCY_MS ?? 150;
+    return device?.expressionLeadMs ?? 200;
   }
 
   /** The primary realtime model or one of its backups (test fakes have no tiers: they count as the primary). */
@@ -1027,8 +1012,8 @@ export class DeviceSession {
     this.chooseRoutes();
     const peer = this.peer;
     // ponytail: the device's own speaker only plays inside a run it starts; add a firmware action if a talk needs it.
-    if (!peer || this.audioOutput !== "laptop")
-      throw new Error("Para que Owy hable solo, la salida de audio tiene que ser la laptop (este navegador).");
+    if (this.audioOutput === "device" || (this.audioOutput === "laptop" && !peer))
+      throw new Error("Para que Owy hable solo, la salida tiene que ser la Mac o un navegador enchufado.");
     if (this.turn && !this.turn.finished) this.hush();
     const epoch = ++this.requestEpoch;
     const session = this.session;
@@ -1036,10 +1021,10 @@ export class DeviceSession {
     else if (!board && !this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(TIMINGS.ownConnectWaitMs)]);
     if (epoch !== this.requestEpoch || this.stopped || this.peer !== peer) return null;
 
-    const turn = this.openTurn(board, peerOnlyLink(peer), "realtime", { thinkingMs: TIMINGS.cascadeThinkingMs }, true);
+    const turn = this.openTurn(board, this.linkFor(null), "realtime", { thinkingMs: TIMINGS.cascadeThinkingMs }, true);
     const abort = new AbortController();
     this.ownAbort = abort;
-    peer.mirrorAccept(true);
+    peer?.mirrorAccept(true);
     turn.start();
     turn.endListening(question);
     if (question) {
@@ -1179,6 +1164,7 @@ export class DeviceSession {
     } else if (which === "mic") this.routeOverride.mic = route;
     else this.routeOverride.output = audioRoute(route);
     if (which === "mic" && route === "host") this.shared.hostMic?.ensureOpen();
+    if (which === "output" && route === "host") this.shared.hostSpeaker?.ensureOpen();
   }
 
   /** The Mac's own mic feeds this device's turns while its route says so. */
@@ -1186,14 +1172,19 @@ export class DeviceSession {
     this.unsubscribeHostMic?.();
     this.unsubscribeHostMic =
       this.shared.hostMic?.onPcm((pcm) => {
-        if (this.micSource === "host") this.onMicPcm(pcm);
+        if (this.micSource !== "host") return;
+        // No echo cancellation: while (and right after) Owy plays on the Mac, its mic hears the room's PA.
+        if (this.shared.hostSpeaker?.busy && this.pitch?.turn !== this.turn) return;
+        this.onMicPcm(pcm);
       }) ?? null;
     this.warmHostMic();
   }
 
   /** The Mac's mic is opened ahead of the tap that needs it: no clipped first words. */
   private warmHostMic(): void {
-    if (this.shared.hostMic && this.audioRouting().mic === "host") this.shared.hostMic.ensureOpen();
+    const routing = this.audioRouting();
+    if (this.shared.hostMic && routing.mic === "host") this.shared.hostMic.ensureOpen();
+    if (routing.output === "host") this.shared.hostSpeaker?.ensureOpen();
   }
 
   /**
@@ -1213,6 +1204,17 @@ export class DeviceSession {
           `mic de la Mac ${status ? `${status.health}${status.detail ? ` (${status.detail})` : ""}` : "no disponible"}; este turno usa el del dispositivo`
         );
         mic = "device";
+      }
+    }
+    if (output === "host") {
+      const speaker = this.shared.hostSpeaker;
+      speaker?.ensureOpen();
+      if (!speaker?.ready) {
+        const status = speaker?.status();
+        output = this.peer ? "laptop" : "device";
+        this.log.warn(
+          `salida de la Mac ${status ? `${status.health}${status.detail ? ` (${status.detail})` : ""}` : "no disponible"}; este turno suena en ${output === "laptop" ? "el navegador" : "el dispositivo"}`
+        );
       }
     }
     if ((mic === "laptop" || output === "laptop") && !this.peer) {
@@ -1273,6 +1275,7 @@ export class DeviceSession {
       this.discardedResponseId = this.currentResponseId;
       this.pacer?.stop();
       this.pacer = null;
+      if (this.audioOutput === "host") this.shared.hostSpeaker?.flush();
       turn.finish();
       this.session?.resetConversation();
       this.conversationId = randomUUID();
@@ -1418,8 +1421,16 @@ export class DeviceSession {
   /** Plays a pre-rendered cue where this turn's audio goes; 0 when nothing can play it. */
   private playClip(id: string): number {
     const ms = this.clipMs(id);
+    if (ms <= 0) return 0;
+    if (this.audioOutput === "host") {
+      const pcm = this.shared.pitch?.clipPcm?.[id];
+      const speaker = this.shared.hostSpeaker;
+      if (!pcm || !speaker?.ready) return 0;
+      speaker.write(pcm);
+      return ms;
+    }
     const sink = this.audioOutput === "laptop" ? this.peer : this.device;
-    if (ms <= 0 || !sink?.playClip) return 0;
+    if (!sink?.playClip) return 0;
     sink.playClip(id);
     return ms;
   }
@@ -1778,7 +1789,12 @@ export class DeviceSession {
         this.eveAnswer = null;
         const pacer = this.pacer;
         const endTurn = () => {
-          const where = this.audioOutput === "laptop" ? "reproducidos en el navegador" : "esperando fin en dispositivo";
+          const where =
+            this.audioOutput === "laptop"
+              ? "reproducidos en el navegador"
+              : this.audioOutput === "host"
+                ? "en la salida de la Mac"
+                : "esperando fin en dispositivo";
           this.log.info(`owy: "${speech}" (${turn.audioBytesSent} B enviados @16k; ${where})`);
           // Firmware reopens capture after physical playback + its soft cue.
           // ESPHome's immediate continuation would bypass that bus handoff.
@@ -2037,10 +2053,7 @@ export class DeviceSession {
         peer?.sendExpression?.(expression, leadMs, strength);
         this.options.onExpression?.(expression, strength);
       },
-      leadMs: () =>
-        this.audioOutput === "laptop"
-          ? this.shared.config.COMPANION_MOUTH_LATENCY_MS
-          : (device?.expressionLeadMs ?? 200),
+      leadMs: () => this.outputLeadMs(device),
       log: this.log,
     });
   }
@@ -2052,12 +2065,9 @@ export class DeviceSession {
     if (this.pacer || turn.finished) return;
     this.firstAudioAt ||= Date.now();
     turn.beginSpeaking(text);
-    // The device lip-syncs what its own speaker plays; laptop output needs a track.
+    // The device lip-syncs what its own speaker plays; audio played elsewhere needs a track.
     const send = this.device?.sendMouthTrack;
-    this.mouth =
-      send && this.audioOutput === "laptop"
-        ? new MouthTrack(send, this.shared.config.COMPANION_MOUTH_LATENCY_MS)
-        : null;
+    this.mouth = send && this.audioOutput !== "device" ? new MouthTrack(send, this.outputLeadMs()) : null;
     this.pacer = new PacedSpeaker(
       (frame) => {
         turn.pushAudio(frame);

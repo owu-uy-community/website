@@ -153,8 +153,6 @@ it("rejects unknown devices and invalid routes with oRPC errors", async () => {
   await expect(client.settings.set({ deviceId: "nope", mic: "laptop" })).rejects.toMatchObject({ code: "NOT_FOUND" });
   // @ts-expect-error — the contract only allows device | laptop | host
   await expect(client.settings.set({ deviceId: "owy-knob", mic: "ffmpeg" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-  // @ts-expect-error — the Mac's mic is an input, not an output
-  await expect(client.settings.set({ deviceId: "owy-knob", output: "host" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
 });
 
 it("routes a device to the Mac's mic, picks the input and its side, and tests it", async () => {

@@ -1,5 +1,6 @@
-import { execFile, spawn as nodeSpawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import type { Logger } from "../log";
+import { BACKOFF_MS, FFMPEG_MISSING, pickByName, spawnFfmpeg, type FfmpegProcess } from "./ffmpeg";
 import { BYTES_PER_SAMPLE, DEVICE_SAMPLE_RATE, FrameChunker, rmsLevel, toWav } from "./pcm";
 
 /**
@@ -29,7 +30,6 @@ export interface HostMicStatus {
 
 const FRAME_BYTES = (DEVICE_SAMPLE_RATE * BYTES_PER_SAMPLE * 20) / 1000; // 640 B = 20 ms, the board's frame
 const SILENT_MS = 3_000;
-const BACKOFF_MS = [1_000, 2_000, 5_000, 10_000];
 const LIST_CACHE_MS = 10_000;
 
 /** Audio input names from `ffmpeg -f avfoundation -list_devices true -i ""` (it prints them on stderr). */
@@ -54,8 +54,7 @@ export function pickHostMic(available: string[], wanted?: string | null): string
   const want = wanted?.trim().toLowerCase();
   if (want) {
     return (
-      available.find((name) => name.toLowerCase() === want) ??
-      available.find((name) => name.toLowerCase().includes(want)) ??
+      pickByName(available, want) ??
       (want === "dji" ? available.find((name) => /wireless microphone/i.test(name)) : undefined) ??
       null
     );
@@ -103,13 +102,7 @@ export function listHostMics(ffmpeg = "ffmpeg"): Promise<string[]> {
 }
 
 /** What HostMic needs from a child process (the real one, or a test fake). */
-export interface MicProcess {
-  stdout: { on(event: "data", listener: (chunk: Buffer) => void): unknown } | null;
-  stderr: { on(event: "data", listener: (chunk: Buffer) => void): unknown } | null;
-  on(event: "exit", listener: (code: number | null, signal: string | null) => void): unknown;
-  on(event: "error", listener: (error: NodeJS.ErrnoException) => void): unknown;
-  kill(signal?: NodeJS.Signals): unknown;
-}
+export type MicProcess = FfmpegProcess;
 
 export interface HostMicOptions {
   logger: Logger;
@@ -177,7 +170,7 @@ export class HostMic {
       return names;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT")
-        this.setHealth("unavailable", "no hay ffmpeg en esta máquina (brew install ffmpeg)");
+        this.setHealth("unavailable", FFMPEG_MISSING);
       return [];
     }
   }
@@ -247,7 +240,7 @@ export class HostMic {
       this.using = name;
       this.silentSince = 0;
       this.chunker = new FrameChunker(FRAME_BYTES);
-      const child = (this.options.spawn ?? defaultSpawn)(this.options.ffmpeg ?? "ffmpeg", ffmpegArgs(name, this.channel, this.options.gainDb));
+      const child = (this.options.spawn ?? spawnFfmpeg)(this.options.ffmpeg ?? "ffmpeg", ffmpegArgs(name, this.channel, this.options.gainDb));
       this.child = child;
       this.setHealth("starting");
       let stderr = "";
@@ -260,7 +253,7 @@ export class HostMic {
       child.on("error", (error) => {
         if (this.child !== child) return;
         this.child = null;
-        if (error.code === "ENOENT") this.setHealth("unavailable", "no hay ffmpeg en esta máquina (brew install ffmpeg)");
+        if (error.code === "ENOENT") this.setHealth("unavailable", FFMPEG_MISSING);
         else {
           this.setHealth("gone", error.message);
           this.scheduleRestart();
@@ -328,8 +321,4 @@ export class HostMic {
 function isDigitalSilence(frame: Buffer): boolean {
   for (let i = 0; i + 1 < frame.length; i += 2) if (frame.readInt16LE(i) !== 0) return false;
   return true;
-}
-
-function defaultSpawn(command: string, args: string[]): MicProcess {
-  return nodeSpawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
 }

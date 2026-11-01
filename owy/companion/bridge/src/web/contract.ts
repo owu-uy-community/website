@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 
-export const AudioRouteSchema = z.enum(["device", "laptop"]);
+export const AudioRouteSchema = z.enum(["device", "laptop", "host"]);
 export type AudioRoute = z.infer<typeof AudioRouteSchema>;
 /** A turn's microphone: the device, the attached browser, or `host` — an input of the Mac running the bridge. */
 export const MicRouteSchema = z.enum(["device", "laptop", "host"]);

@@ -186,7 +186,8 @@ export const EnvSchema = z.object({
   COMPANION_HOST_SPEAKER_LATENCY_MS: z.coerce.number().int().min(0).max(1000).default(150),
   /** After Owy speaks on the Mac, its mic stays deaf this long more: the room's echo (no echo cancellation). */
   COMPANION_HOST_SPEAKER_TAIL_MS: z.coerce.number().int().min(0).max(2000).default(300),
-  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
+  /** `host` = the Mac's own output (COMPANION_HOST_SPEAKER), played with ffmpeg; macOS only, not in Docker. */
+  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop", "host"]).default("device"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
   /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */
   COMPANION_BIND_HOST: z.string().default("127.0.0.1"),

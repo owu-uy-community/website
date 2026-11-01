@@ -335,7 +335,7 @@ export class CompanionDevice implements VoiceLink {
 
   setAudioRoute(which: "mic" | "output", route: MicRoute): void {
     this.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
-      state: route === "laptop" ? "laptop" : route === "host" && which === "mic" ? "mac" : "dispositivo",
+      state: route === "laptop" ? "laptop" : route === "host" ? "mac" : "dispositivo",
     });
   }
 

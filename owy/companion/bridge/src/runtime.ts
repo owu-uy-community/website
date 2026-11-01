@@ -4,6 +4,7 @@ import { z } from "zod";
 import { resolveActiveEvent } from "../../../agent/lib/board";
 import { owuApi, type OwuApi } from "../../../agent/lib/owu-api";
 import { HostMic } from "./audio/host-mic";
+import { HostSpeaker } from "./audio/host-speaker";
 import { DEVICE_SAMPLE_RATE, fromWav } from "./audio/pcm";
 import type { BridgeConfig } from "./config";
 import { jevClassifier, type Classifier } from "./expression";
@@ -55,6 +56,8 @@ export interface SharedRuntime {
   clips?: Record<string, number>;
   /** An input of the Mac running the bridge (`mic: host`); absent in Docker and in browser sessions. */
   hostMic?: HostMic;
+  /** The Mac's own output (`output: host`, the room's PA); `unavailable` in Docker. */
+  hostSpeaker?: HostSpeaker;
   /** eve brain: the local brain's prompt, for when eve does not answer (the realtime model keeps `instructions`). */
   localInstructions?: string;
   /** Until when eve is skipped after failing (ms epoch); shared by every device of this bridge. */
@@ -236,6 +239,13 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     channel: config.COMPANION_HOST_MIC_CHANNEL,
     gainDb: config.COMPANION_HOST_MIC_GAIN_DB,
   });
+  const hostSpeaker = new HostSpeaker({
+    logger: logger.child("parlante"),
+    ffmpeg: config.COMPANION_FFMPEG,
+    name: config.COMPANION_HOST_SPEAKER,
+    latencyMs: config.COMPANION_HOST_SPEAKER_LATENCY_MS,
+    tailMs: config.COMPANION_HOST_SPEAKER_TAIL_MS,
+  });
   if (brain === "eve") {
     if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");
     const eve = new EveLink({
@@ -267,6 +277,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
       pitch,
       clips,
       hostMic,
+      hostSpeaker,
       ...fallback,
     };
   }
@@ -286,6 +297,7 @@ export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): P
     pitch,
     clips,
     hostMic,
+    hostSpeaker,
     ...fallback,
   };
 }
