@@ -102,10 +102,21 @@ const SCENARIO_COPY: Record<string, { name: string; detail: string }> = {
 /** The firmware's voice states, in words; an unknown one shows as the firmware names it. */
 const VOICE: Record<string, string> = {
   wake_word: "esperando activación",
+  idle: "en reposo",
+  mic_off: "esperando la voz",
+  handoff: "abriendo el micrófono",
   listening: "escuchando",
+  follow_up: "¿algo más?",
+  recording: "grabando el pitch",
   thinking: "pensando",
   speaking: "hablando",
-  idle: "en reposo",
+  draining: "terminando de sonar",
+  recovering: "recuperando el audio",
+  feedback: "reaccionando",
+  calibrating: "calibrando",
+  privacy: "privacidad",
+  offline: "sin conexión",
+  off: "apagado",
 };
 export const voiceLabel = (state: Snapshot | null) =>
   state ? (VOICE[state.voice] ?? state.voice.replaceAll("_", " ")) : "cargando";
