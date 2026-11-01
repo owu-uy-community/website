@@ -1,9 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { crc32, deflateSync } from "node:zlib";
 import createRuntime from "../../../public/companion-runtime/owy-runtime.mjs";
-import { Session, validateBundle, validateEvent } from "./session.mjs";
+import { BOARDS, Session, boot, validateBundle, validateEvent } from "./session.mjs";
 import { scenarios } from "./fixtures.mjs";
 import { orientation, poseMotion } from "./pose.mjs";
 import { verifyArtifacts } from "./provenance.mjs";
@@ -366,4 +369,143 @@ test("pose adapter: normalized rotation, correct gravity and gyro sign", () => {
   const yaw = poseMotion([0, 0, 0], [0, 0, 90], 0, 1000);
   assert(yaw.every((e) => Math.abs(e.values[2] - 1) < 1e-8));
   assert(yaw.some((e) => e.values[5] > 0));
+});
+
+// ---------------------------------------------------------------------------
+// Face-only mode (the wall, the talk deck): the same renderer, any size
+// ---------------------------------------------------------------------------
+
+/** owy::Mood and owy::Expression, in their numeric order (companion_model.h). */
+const MOODS = ["idle", "listening", "thinking", "speaking", "happy", "error", "offline", "privacy", "followup", "sleep", "record", "invite"];
+const EXPRESSIONS = ["neutral", "happy", "excited", "curious", "thinking", "empathetic", "playful", "surprised"];
+/** The wall face is 886 px (466 × 1.9); 360 is the knob's own panel. */
+const BOARD_AT = { 466: "amoled", 360: "knob", 886: "amoled" };
+const GOLDENS = new URL("./goldens.json", import.meta.url);
+const face = await createRuntime();
+function send(module, kind, values = [], text = "") {
+  const ptr = module._malloc(text.length + 1);
+  module.stringToUTF8(text, ptr, text.length + 1);
+  module._owy_input(kind, ...[...values, 0, 0, 0, 0, 0, 0].slice(0, 6), ptr);
+  module._free(ptr);
+}
+const screen = (module, size) => module.HEAPU16.subarray(module._owy_pixels() / 2, module._owy_pixels() / 2 + size * size);
+const hash = (pixels) => createHash("sha256").update(pixels).digest("hex");
+function png(module, size) {
+  const rgba = module.HEAPU8.subarray(module._owy_rgba(), module._owy_rgba() + size * size * 4);
+  const rows = Buffer.alloc((size * 4 + 1) * size);
+  for (let y = 0; y < size; y++) rows.set(rgba.subarray(y * size * 4, (y + 1) * size * 4), y * (size * 4 + 1) + 1);
+  const chunk = (type, data) => {
+    const body = Buffer.concat([Buffer.from(type), data]);
+    const out = Buffer.alloc(body.length + 8);
+    out.writeUInt32BE(data.length);
+    body.copy(out, 4);
+    out.writeUInt32BE(crc32(body), body.length + 4);
+    return out;
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(size);
+  header.writeUInt32BE(size, 4);
+  header.set([8, 6], 8); // 8-bit RGBA
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", header), chunk("IDAT", deflateSync(rows, { level: 9 })), chunk("IEND", Buffer.alloc(0))]);
+}
+/** A face-only frame: 2 s after boot, then 1.5 s after the mood (and the expression) was set. */
+function render(size, mood, expression, reduced = false) {
+  boot(face, 0x4f5759, BOARD_AT[size], size, true);
+  if (reduced) send(face, 3, [1], "reduced");
+  face._owy_advance(2000);
+  send(face, 18, [mood]);
+  if (expression !== undefined) send(face, 37, [expression, 0, 100]);
+  face._owy_advance(1500);
+  return screen(face, size);
+}
+const cases = [
+  ...MOODS.map((name, mood) => [name, mood]),
+  ...["speaking", "thinking"].flatMap((state) => EXPRESSIONS.map((name, e) => [`${state}+${name}`, MOODS.indexOf(state), e])),
+  // Reduced motion holds still (no blinks, saccades or springs): what a device capture can match.
+  ...MOODS.map((name, mood) => [`reduced:${name}`, mood, undefined, true]),
+];
+test("face-only draws the device emulator's exact pixels at 466 through a live turn", () => {
+  s.reset();
+  s.beginLive();
+  boot(face, s.seed, "amoled", 466, true);
+  const both = (kind, values, text) => (s.raw(kind, values, text), send(face, kind, values, text));
+  const advance = (ms) => (s.advance(ms), face._owy_advance(ms));
+  // The emulator's boot logo and its volume overlay (beginLive replays the settings) are gone by 3 s.
+  advance(3000);
+  // ms, then input: the presentation a live turn sends (phase/mic/speaker), its feelings, lips and moods.
+  const script = [
+    [0, 33, [2, 0.6, 0]],
+    [900, 33, [2, 0.2, 0]],
+    [700, 33, [3, 0, 0]],
+    [300, 37, [4, 200, 80]],
+    [800, 33, [4, 0, 0]],
+    [0, 39, [80], "AAQgw-_8QgAQgwAAAQgw8_-QgA"],
+    [400, 37, [7, 300, 100]],
+    [900, 39, [0], "gw8_-QgAAAQgw8"],
+    [700, 33, [0, 0, 0]],
+    [600, 18, [4]],
+    [1200, 18, [6]],
+    [1500, 18, [5]],
+    [1300, 18, [0]],
+  ];
+  // The idle hint under the mouth is the emulator's alone: its rows are masked.
+  const masked = (pixels) => hash(pixels.map((v, i) => (Math.floor(i / 466) >= 396 && Math.floor(i / 466) < 432 ? 0 : v)));
+  let checked = 0;
+  for (const [ms, kind, values, text] of script) {
+    for (let t = 0; t < ms; t += 100) {
+      advance(Math.min(100, ms - t));
+      assert.equal(masked(screen(face, 466)), masked(s.frame()), `diverged at ${s.time} ms`);
+      checked++;
+    }
+    both(kind, values, text);
+  }
+  advance(1000);
+  assert.equal(masked(screen(face, 466)), masked(s.frame()));
+  assert(checked > 80);
+  s.reset();
+});
+test("face goldens: moods and expressions at 466 (AMOLED), 360 (knob) and 886 (the wall); UPDATE_GOLDENS=1 rewrites", () => {
+  const golden = existsSync(GOLDENS) ? JSON.parse(readFileSync(GOLDENS, "utf8")) : {};
+  const actual = {},
+    changed = [],
+    dump = join(tmpdir(), "owy-face-goldens");
+  for (const size of [466, 360, 886]) {
+    actual[size] = {};
+    for (const [key, mood, expression, reduced] of cases) {
+      actual[size][key] = hash(render(size, mood, expression, reduced));
+      if (golden[size]?.[key] === actual[size][key]) continue;
+      changed.push(`${size}/${key}`);
+      mkdirSync(dump, { recursive: true });
+      writeFileSync(join(dump, `${size}-${key.replace(/[:+]/g, "-")}.png`), png(face, size));
+    }
+  }
+  assert.notEqual(actual[886]["speaking+surprised"], actual[886].speaking);
+  if (process.env.UPDATE_GOLDENS) writeFileSync(GOLDENS, JSON.stringify(actual, null, 2) + "\n");
+  else assert.deepEqual(changed, [], `Face pixels changed; PNGs in ${dump}. UPDATE_GOLDENS=1 if intended.`);
+  // The site's fallback face (<OwyFace> when a browser cannot run the worker): a real idle frame.
+  render(466, 0);
+  writeFileSync(new URL("../../../public/companion-runtime/face.png", import.meta.url), png(face, 466));
+});
+test("knob captures match the knob's reduced-motion goldens (KNOB_SHOTS=<dir of knob-shots.py .rgb565>)", { skip: !process.env.KNOB_SHOTS }, () => {
+  // Name each capture after its golden, e.g. `knob-shots.py --name reduced.idle` with the knob in that face
+  // and «Animaciones mínimas» on. The rim (animated) and everything under the mouth (hint, badge) are masked.
+  const [size, , ring, dot] = BOARDS.knob;
+  const golden = JSON.parse(readFileSync(GOLDENS, "utf8"))[size];
+  const shots = readdirSync(process.env.KNOB_SHOTS).filter((name) => /-reduced\.[a-z]+\.rgb565$/.test(name));
+  assert(shots.length > 0, "No *-reduced.<mood>.rgb565 captures");
+  const keep = (i) => {
+    const x = (i % size) - size / 2 + 0.5,
+      y = Math.floor(i / size) - size / 2 + 0.5;
+    return Math.floor(i / size) < 300 && Math.abs(Math.hypot(x, y) - ring) > dot;
+  };
+  for (const name of shots) {
+    const key = `reduced:${/-reduced\.([a-z]+)\.rgb565$/.exec(name)[1]}`;
+    assert(golden[key], `${name}: no golden ${key}`);
+    const bytes = readFileSync(join(process.env.KNOB_SHOTS, name));
+    const device = new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.length / 2);
+    const web = render(size, MOODS.indexOf(key.slice(8)), undefined, true);
+    let differ = 0;
+    for (let i = 0; i < size * size; i++) if (keep(i) && device[i] !== web[i]) differ++;
+    assert.equal(differ, 0, `${name}: ${differ} px differ from the web face`);
+  }
 });
