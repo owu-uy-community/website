@@ -130,3 +130,58 @@ export const SpotifyTrackSchema = z.object({
   /** Server time of the reading, so the wall can extrapolate progress between polls. */
   at: z.string(),
 });
+
+// ---------------------------------------------------------------------------
+// «Owy, en vivo»: the relay between the presenter's phone and the Mac seat
+// ---------------------------------------------------------------------------
+
+const AskerSchema = z.enum(["presenter", "audience"]);
+const ListenSchema = z.enum(["L", "R", "mix"]);
+
+/**
+ * What a remote asks the seat to do. Mirrors the bridge's talk messages by hand (the site never
+ * imports the bridge's runtime), plus `listen`, which the seat applies to its own microphone.
+ */
+export const TalkCommandSchema = z.object({
+  id: z.string().trim().min(1).max(40),
+  message: z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("say"),
+      text: z.string().trim().min(1).max(600),
+      clip: z
+        .string()
+        .regex(/^[\w-]{1,40}$/)
+        .optional(),
+    }),
+    z.object({
+      type: z.literal("ask"),
+      text: z.string().trim().min(1).max(600),
+      asker: AskerSchema.default("presenter"),
+    }),
+    z.object({ type: z.literal("hush") }),
+    z.object({ type: z.literal("pitch"), mode: z.boolean() }),
+    z.object({ type: z.literal("listen"), channel: ListenSchema }),
+  ]),
+});
+export type TalkCommand = z.infer<typeof TalkCommandSchema>;
+
+/** The seat's heartbeat: whether Owy can be driven from a phone right now, and how he is doing. */
+export const SeatStatusSchema = z.object({
+  seat: z.string().trim().min(1).max(40),
+  /** The device the seat is attached to; null while it isn't. */
+  attached: z.string().max(64).nullable(),
+  /** The browser voice's stage (standby, listening, speaking…). */
+  stage: z.string().max(20),
+  listen: ListenSchema,
+  talk: z.boolean(),
+  pitch: z.boolean().nullable(),
+  voice: z
+    .object({
+      tier: z.string().max(120).nullable(),
+      realtime: z.string().max(20),
+      lastPath: z.string().max(20).nullable(),
+      lastTurn: z.object({ path: z.string().max(20), ttfaMs: z.number().nullable(), totalMs: z.number() }).nullable(),
+    })
+    .nullable(),
+});
+export type SeatStatus = z.infer<typeof SeatStatusSchema>;

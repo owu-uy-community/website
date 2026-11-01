@@ -44,3 +44,9 @@ export function obsQueueChannel(instanceId: number): string {
 export function obsControlChannel(instanceId: number): string {
   return `private:obs:${instanceId}`;
 }
+
+/**
+ * «Owy, en vivo»: the presenter's phone sends Owy commands here and the Mac console that holds
+ * the bridge socket (the seat) runs them and reports its status back. `private:` — admin only.
+ */
+export const OWY_TALK_CHANNEL = "private:owy-talk";

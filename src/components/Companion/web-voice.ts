@@ -1,3 +1,4 @@
+import type { TalkMessage, TalkReply } from "../../../owy/companion/bridge/src/web/contract";
 import { pcmLevel } from "../../../public/companion-audio/pcm.mjs";
 
 export type VoiceStage =
@@ -50,16 +51,29 @@ export type DeviceCommand =
   /** Modo pitch: "name" invites a tap to say one's name, "idle" clears it. */
   | { kind: "pitchPrompt"; prompt: string };
 type Ticket = { token: string; url: string; model: string; expiresAt: number; protocol: number };
+/**
+ * Which microphone, and how. `raw` is for a wireless kit (the DJI receiver): it brings its own
+ * noise cancelling and two transmitters, one per side, so the browser's processing (which smears
+ * a lav and folds stereo to mono) stays off.
+ */
+export type MicOptions = { deviceId?: string; raw?: boolean };
+/** The side of a stereo input that feeds Owy: L, R, or both mixed. A mono mic is always L. */
+export type ListenChannel = "L" | "R" | "mix";
 type Dependencies = {
-  media: () => Promise<MediaStream>;
+  media: (mic: MicOptions) => Promise<MediaStream>;
   context: () => AudioContext;
   socket: (url: string) => WebSocket;
   ticket: (signal: AbortSignal, scopes: VoiceScopes) => Promise<Ticket>;
 };
 const defaults: Dependencies = {
-  media: () =>
+  media: ({ deviceId, raw }) =>
     navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      audio: {
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+        ...(raw
+          ? { channelCount: { ideal: 2 }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+          : { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }),
+      },
       video: false,
     }),
   context: () => new AudioContext({ latencyHint: "interactive" }),
@@ -119,6 +133,8 @@ export class WebVoice {
   private deviceBlocked = false;
   private attachTo: string | null = null;
   private pitch = false;
+  private mic: MicOptions = {};
+  private channel: ListenChannel = "L";
   private sessionTimer?: ReturnType<typeof setTimeout>;
   private messageChain: Promise<void> = Promise.resolve();
   constructor(
@@ -126,7 +142,8 @@ export class WebVoice {
     private visual: (state: VoiceVisual) => void,
     private cue: () => void,
     private deps: Dependencies = defaults,
-    private deviceCommand: (command: DeviceCommand) => void = () => {}
+    private deviceCommand: (command: DeviceCommand) => void = () => {},
+    private talkReply: (reply: TalkReply) => void = () => {}
   ) {}
   private update(stage: VoiceStage, message: string) {
     this.status = { ...this.status, stage, message };
@@ -161,6 +178,26 @@ export class WebVoice {
    * that physical device's microphone and speakers (laptop mode). The device
    * keeps the trigger, the face and the captions; turns arrive as `accepted`.
    */
+  /** The microphone for the next capture; attached, it switches at once. */
+  setMic(mic: MicOptions) {
+    this.mic = mic;
+    if (!this.stream || !this.status.attached) return;
+    this.releaseInput();
+    void this.acquire(this.epoch).catch(() => this.update("standby", "No se pudo abrir ese micrófono."));
+  }
+  setChannel(channel: ListenChannel) {
+    this.channel = channel;
+    this.capture?.port.postMessage({ channel });
+  }
+  /**
+   * A talk-console message (say, ask, hush, talk, route, pitch, status) for the device this
+   * browser is attached to; false when it isn't attached (the bridge only takes them then).
+   */
+  talk(message: TalkMessage): boolean {
+    if (!this.status.attached || this.socket?.readyState !== 1) return false;
+    this.send(message);
+    return true;
+  }
   async start(scopes: VoiceScopes = { writes: false, staff: false, marketplace: false }, attachTo?: string) {
     this.stop();
     this.stopped = false;
@@ -191,7 +228,8 @@ export class WebVoice {
       if (
         typeof ticket.token !== "string" ||
         typeof ticket.url !== "string" ||
-        !/^[\w-]{43}$/.test(ticket.token) ||
+        // A bridge ticket, or one the site signed for a bridge on this laptop (v1.<payload>.<mac>).
+        !/^(?:[\w-]{43}|v1\.[\w-]{20,1200}\.[\w-]{43})$/.test(ticket.token) ||
         ticket.protocol !== 1 ||
         !Number.isFinite(ticket.expiresAt)
       )
@@ -263,7 +301,7 @@ export class WebVoice {
   }
   private async acquire(epoch: number, captureEpoch = this.captureEpoch) {
     if (this.stream?.getAudioTracks().some((t) => t.readyState === "live")) return;
-    const stream = await this.deps.media();
+    const stream = await this.deps.media(this.mic);
     if (epoch !== this.epoch || captureEpoch !== this.captureEpoch || !this.ctx) {
       stream.getTracks().forEach((t) => t.stop());
       return;
@@ -277,6 +315,7 @@ export class WebVoice {
     }
     this.source = this.ctx.createMediaStreamSource(stream);
     this.capture = new AudioWorkletNode(this.ctx, "owy-capture");
+    this.capture.port.postMessage({ channel: this.channel });
     this.capture.onprocessorerror = () => this.fail("Se detuvo el procesamiento del micrófono. Reconectá.");
     this.silent = this.ctx.createGain();
     this.silent.gain.value = 0;
@@ -426,6 +465,10 @@ export class WebVoice {
   }
   private async receive(message: any) {
     if (!message || typeof message.type !== "string") throw Error("Invalid bridge message");
+    if (message.type === "status" || message.type === "notice") {
+      this.talkReply(message as TalkReply);
+      return;
+    }
     if (message.type === "ready") {
       if (message.protocol !== 1 || message.sampleRate !== 16000 || !Array.isArray(message.tools))
         throw Error("Unsupported bridge protocol");
@@ -474,6 +517,12 @@ export class WebVoice {
       this.run = message.run;
       this.discard = false;
       this.clear(this.watchdog);
+      // A turn Owy starts himself (a console line or a typed question): nobody to hear, so no
+      // chime in the room and no open mic; the reply arrives like any other.
+      if (message.own === true) {
+        this.update("thinking", "Owy habla por su cuenta…");
+        return;
+      }
       this.update(
         "listening",
         this.attachTo
