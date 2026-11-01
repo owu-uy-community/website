@@ -4,6 +4,7 @@ import { CompanionDevice } from "../device/esphome";
 import { createLogger } from "../log";
 import { FACE_STATES } from "../device/esphome";
 import { encodeMouth } from "../audio/mouth";
+import { sleep } from "../timings";
 
 /**
  * Hardware probe over the native API — no Gemini, no site. Connects to the
@@ -92,10 +93,6 @@ async function main(): Promise<void> {
 
   logger.info("probe done");
   device.close();
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 main().catch((error) => {

@@ -14,6 +14,7 @@ import type { DeviceSpec } from "../config";
 import type { Logger } from "../log";
 import type { FaceState, ScreenCard } from "../realtime/tools";
 import type { VoiceLink } from "./pipeline";
+import { sleep } from "../timings";
 
 /**
  * The companion device seen from the bridge: an ESPHome node reached over the
@@ -91,13 +92,14 @@ export class CompanionDevice implements VoiceLink {
     spec: DeviceSpec,
     handlers: DeviceHandlers,
     logger: Logger,
-    options: { retryForMs?: number } = {}
+    options: { retryForMs?: number; signal?: AbortSignal } = {}
   ): Promise<CompanionDevice> {
     const log = logger.child(spec.id);
     const deadline = Date.now() + (options.retryForMs ?? Infinity);
     let attempt = 0;
 
     for (;;) {
+      options.signal?.throwIfAborted();
       attempt++;
       try {
         const client = await openEspHomeClient({
@@ -121,7 +123,7 @@ export class CompanionDevice implements VoiceLink {
         if (isCredentialError(error) || Date.now() >= deadline) throw error;
         const delay = Math.min(10_000, 1000 * attempt);
         log.warn(`connect attempt ${attempt} failed (${message}); retrying in ${delay} ms`);
-        await new Promise((resolve) => setTimeout(resolve, delay));
+        await sleep(delay, options.signal);
       }
     }
   }
@@ -203,47 +205,77 @@ export class CompanionDevice implements VoiceLink {
           );
           // Start may await a model connection. Keep consuming stop requests
           // so a cancelled tap cannot be accepted several seconds later.
-          void Promise.resolve(this.handlers.onRequestStart(request)).catch((error) => {
-            this.log.error("pipeline start failed", error);
-            this.declineRequest();
-          });
+          void Promise.resolve()
+            .then(() => this.handlers.onRequestStart(request))
+            .catch((error) => {
+              this.log.error("pipeline start failed", error);
+              this.declineRequest();
+            });
         } else {
           this.log.info("pipeline stop requested by device");
-          await this.handlers.onRequestStop();
+          await Promise.resolve()
+            .then(() => this.handlers.onRequestStop())
+            .catch((error) => this.log.error("pipeline stop failed", error));
         }
       }
     } catch (error) {
-      if (!this.abort.signal.aborted) this.log.error("request pump died", error);
+      if (!this.abort.signal.aborted) this.log.error("request pump died; restarting it", error);
     }
+    this.restartPump(() => this.pumpRequests());
   }
 
   private async pumpAudio(): Promise<void> {
     try {
       for await (const chunk of this.client.voiceAssistant.audio({ signal: this.abort.signal })) {
-        this.handlers.onAudio(chunk);
+        try {
+          this.handlers.onAudio(chunk);
+        } catch (error) {
+          this.log.error("mic chunk failed", error);
+        }
       }
     } catch (error) {
-      if (!this.abort.signal.aborted) this.log.error("audio pump died", error);
+      if (!this.abort.signal.aborted) this.log.error("audio pump died; restarting it", error);
     }
+    this.restartPump(() => this.pumpAudio());
+  }
+
+  /** A pump that ended while the device is still ours runs again: a board that stays connected must never go deaf. */
+  private restartPump(pump: () => Promise<void>): void {
+    if (this.abort.signal.aborted) return;
+    setTimeout(() => {
+      if (!this.abort.signal.aborted) void pump();
+    }, 1000).unref?.();
   }
 
   // ── VoiceLink ───────────────────────────────────────────────────────────
 
   acceptRequest(): void {
-    this.client.voiceAssistant.respondToRequest({ port: 0, error: false });
+    this.guard("accept", () => this.client.voiceAssistant.respondToRequest({ port: 0, error: false }));
   }
 
   declineRequest(): void {
-    this.client.voiceAssistant.respondToRequest({ error: true });
+    this.guard("decline", () => this.client.voiceAssistant.respondToRequest({ error: true }));
   }
 
   sendEvent(eventType: VoiceAssistantEvent, data?: VoiceAssistantEventData[]): void {
-    this.client.voiceAssistant.sendEvent(eventType, data);
+    this.guard("voice event", () => this.client.voiceAssistant.sendEvent(eventType, data));
   }
 
   sendAudio(audio: Buffer, end = false): void {
-    this.client.voiceAssistant.sendAudio(audio, end);
+    this.guard("audio", () => this.client.voiceAssistant.sendAudio(audio, end));
   }
+
+  /** Writes to the board can throw while its link is down: log once per outage instead of crashing a timer. */
+  private guard(what: string, write: () => void): void {
+    try {
+      write();
+      this.writeFailing = false;
+    } catch (error) {
+      if (!this.writeFailing) this.log.warn(`could not send ${what} to the device (link down?)`, error);
+      this.writeFailing = true;
+    }
+  }
+  private writeFailing = false;
 
   isPlaybackReady(): boolean {
     return this.client.latest(ENTITY.playbackReady)?.state === true;
@@ -254,7 +286,7 @@ export class CompanionDevice implements VoiceLink {
   setFace(state: FaceState): void {
     if (this.lastFace === state) return;
     this.lastFace = state;
-    this.client.command(ENTITY.face, { state });
+    this.command(ENTITY.face, { state });
   }
 
   showCard(card: ScreenCard): void {
@@ -272,6 +304,10 @@ export class CompanionDevice implements VoiceLink {
 
   showText(text: string): void {
     this.callService("show_text", [{ stringValue: text }]);
+  }
+
+  private command(...args: Parameters<EspHomeClient["command"]>): void {
+    this.guard(`command ${String(args[0])}`, () => this.client.command(...args));
   }
 
   private callService(name: string, args: ({ stringValue: string } | { intValue: number })[]): void {
@@ -298,7 +334,7 @@ export class CompanionDevice implements VoiceLink {
   }
 
   setAudioRoute(which: "mic" | "output", route: MicRoute): void {
-    this.client.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
+    this.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
       state: route === "laptop" ? "laptop" : route === "host" && which === "mic" ? "mac" : "dispositivo",
     });
   }
@@ -317,7 +353,7 @@ export class CompanionDevice implements VoiceLink {
   }
 
   setSwitch(id: "pitch_mode", on: boolean): void {
-    this.client.command(ENTITY.pitchMode, { state: on });
+    this.command(ENTITY.pitchMode, { state: on });
   }
 
   /** `null` when the firmware has no `select.pitch_voice` (older boards: the `pitch_reacts` switch). */
@@ -328,7 +364,7 @@ export class CompanionDevice implements VoiceLink {
 
   setPitchVoice(voice: PitchVoice): void {
     const label = PITCH_VOICE_OPTIONS.find(([value]) => value === voice)?.[1];
-    if (label) this.client.command(ENTITY.pitchVoice, { state: label });
+    if (label) this.command(ENTITY.pitchVoice, { state: label });
   }
 
   private readOptionalSwitch(id: typeof ENTITY.pitchMode): boolean | null {
@@ -348,7 +384,7 @@ export class CompanionDevice implements VoiceLink {
 
   /** Sets speaker volume 0..100. */
   setVolume(pct: number): void {
-    this.client.command(ENTITY.volume, { state: Math.max(0, Math.min(80, Math.round(pct))) });
+    this.command(ENTITY.volume, { state: Math.max(0, Math.min(80, Math.round(pct))) });
   }
 
   private readSwitch(id: typeof ENTITY.staffMode): boolean {

@@ -464,12 +464,13 @@ script:
             - script.execute: cancel_turn
 
   # Also covers a bridge that stays connected but hangs after speech starts.
-  # A pitch may record for two minutes and then think: give it three.
+  # A pitch may record for two and a half minutes, then think and answer: give
+  # it four. The bridge sizes its budgets from these two numbers (timings.ts).
   - id: turn_watchdog
     mode: restart
     then:
       - delay: !lambda |-
-          return id(pitch_active) ? 180000 : 90000;
+          return id(pitch_active) ? 240000 : 90000;
       - logger.log:
           level: WARN
           format: "Voice turn timed out; recovering audio"

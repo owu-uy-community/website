@@ -62,6 +62,7 @@ import {
   type Placement,
 } from "./pitch-flow";
 import { loadPromptBundle, loadVoiceOfOwyPrompt } from "./realtime/prompt";
+import { pitchThinkingMs, sleep, TIMINGS, within, withTimeout } from "./timings";
 import type { Asker, TalkContext, VoiceStatus } from "./web/contract";
 import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
 import {
@@ -96,17 +97,6 @@ const OUTPUT_FRAME_BYTES = bytesForMs(32, DEVICE_SAMPLE_RATE); // 1024 B, the de
  */
 export type TurnPath = "realtime" | "fallback" | "cascade" | "offline" | "pitch";
 
-/** A connect already under way gets this long before a physical tap is answered through the cascade instead. */
-const ACCEPT_WAIT_MS = 1_500;
-/** With no board up nothing keeps the voice warm: a console line waits this long for a cold connect. */
-const OWN_CONNECT_WAIT_MS = 4_000;
-/** Transcribe + eve/text model + first TTS audio, with room for a slow network. */
-const CASCADE_THINKING_MS = 45_000;
-/** The gateway caps a realtime session at 25 min; renew it between turns well before. */
-const ROTATE_AFTER_MS = 20 * 60_000;
-const KEEP_WARM_EVERY_MS = 30_000;
-/** A voice turn's own recorder: a pause this long ends the utterance (the realtime model has its own VAD). */
-const TURN_LIMITS = { silenceMs: 900, maxMs: 30_000, minSpeechMs: 300 };
 /** Provider errors that are noise, not a broken turn (an OpenAI commit after its server VAD already committed, etc.). */
 const BENIGN_ERROR_CODES = new Set([
   "input_audio_buffer_commit_empty",
@@ -138,8 +128,6 @@ interface CascadeRun {
   /** The answer is on its way (submitted once: a pause, the device's end of audio, or eve finishing). */
   submitted: boolean;
 }
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Gemini Live (direct) takes the device's 16 kHz as-is; the AI Gateway's realtime endpoint wants 24 kHz PCM16. */
 export function sessionInputRate(provider: RealtimeProvider | undefined): number {
@@ -268,33 +256,6 @@ interface PitchRun extends PitchRecording {
   resolveEnded(): void;
 }
 
-/** createPlaced and the board read get this long before the bridge looks for itself. */
-const PLACE_TIMEOUT_MS = 20_000;
-
-const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> => {
-  let timer: NodeJS.Timeout | undefined;
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`sin respuesta en ${ms / 1000} s`)), ms);
-    }),
-  ]).finally(() => clearTimeout(timer));
-};
-
-/** A promise's outcome within `ms`, without abandoning it: `late` means it is still running. */
-const within = <T>(promise: Promise<T>, ms: number): Promise<{ value: T } | { error: unknown } | { late: true }> => {
-  let timer: NodeJS.Timeout | undefined;
-  return Promise.race([
-    promise.then(
-      (value) => ({ value }),
-      (error: unknown) => ({ error })
-    ),
-    new Promise<{ late: true }>((resolve) => {
-      timer = setTimeout(() => resolve({ late: true }), ms);
-    }),
-  ]).finally(() => clearTimeout(timer));
-};
-
 const isConflict = (error: unknown): boolean =>
   typeof error === "object" && error !== null && "code" in error && error.code === "CONFLICT";
 
@@ -313,15 +274,17 @@ const isAmbiguous = (error: unknown): boolean => {
 class PeerLink implements VoiceLink {
   constructor(
     private readonly device: DeviceTransport,
-    private readonly peer: AudioPeer,
+    private readonly peer: () => AudioPeer | null,
     private readonly output: () => AudioRoute
   ) {}
   sendEvent(event: Parameters<VoiceLink["sendEvent"]>[0], data?: Parameters<VoiceLink["sendEvent"]>[1]): void {
     this.device.sendEvent(event, data);
-    this.peer.sendEvent(event, data);
+    this.peer()?.sendEvent(event, data);
   }
   sendAudio(audio: Buffer, end = false): void {
-    if (this.output() === "laptop") this.peer.sendAudio(audio, end);
+    // A browser that left mid-answer: the rest goes to the board (its speaker, or its captions on the knob).
+    const peer = this.output() === "laptop" ? this.peer() : null;
+    if (peer) peer.sendAudio(audio, end);
     else this.device.sendAudio(audio, end);
   }
   isPlaybackReady(): boolean {
@@ -330,7 +293,12 @@ class PeerLink implements VoiceLink {
 }
 
 export interface DeviceSessionOptions {
-  connectDevice?: (spec: DeviceSpec, handlers: DeviceHandlers, logger: Logger) => Promise<DeviceTransport>;
+  connectDevice?: (
+    spec: DeviceSpec,
+    handlers: DeviceHandlers,
+    logger: Logger,
+    options?: { signal?: AbortSignal }
+  ) => Promise<DeviceTransport>;
   /** Browser authority is server-issued; never inherit physical staff env overrides. */
   isStaff?: () => boolean;
   isMarketplaceOpen?: () => boolean;
@@ -359,6 +327,8 @@ export interface DeviceSessionOptions {
 export class DeviceSession {
   private device: DeviceTransport | null = null;
   private stopped = false;
+  /** Aborts a connect still retrying (an Owy that is off) when the session stops. */
+  private readonly connecting = new AbortController();
   private readonly toolEpoch = new AsyncLocalStorage<number>();
   private session: NodeRealtimeSession | null = null;
   private tools: ToolSet = {};
@@ -533,6 +503,8 @@ export class DeviceSession {
         onConnected: () => {
           this.linkUp = true;
           this.device?.setFace("idle");
+          // Back from a Wi-Fi flap: the next tap should find a warm voice, not a cold handshake.
+          if (!this.options.lazyRealtime && !this.stopped && this.session) void this.ensureSession();
         },
         onDisconnected: () => {
           this.linkUp = false;
@@ -546,7 +518,8 @@ export class DeviceSession {
           this.session?.resetConversation();
         },
       },
-      this.shared.logger
+      this.shared.logger,
+      { signal: this.connecting.signal }
     );
 
     if (this.stopped) {
@@ -561,7 +534,7 @@ export class DeviceSession {
     else {
       await this.ensureSession();
       // Physical Owys keep a warm session: the gateway closes idle ones at 5 min and caps them at 25.
-      this.keepWarm = setInterval(() => this.warmTick(), KEEP_WARM_EVERY_MS);
+      this.keepWarm = setInterval(() => this.warmTick(), TIMINGS.keepWarmEveryMs);
     }
     if (this.stopped) return;
     this.device.setFace("idle");
@@ -575,8 +548,8 @@ export class DeviceSession {
     if (this.stopped || !session || !this.linkUp || (this.turn && !this.turn.finished)) return;
     if (session.status === "connecting") return;
     const age = session.connectedAt ? Date.now() - session.connectedAt : 0;
-    if (age > ROTATE_AFTER_MS) this.log.info(`realtime: renuevo la sesión (${Math.round(age / 60_000)} min)`);
-    if (!session.isConnected || session.goAwayPending || age > ROTATE_AFTER_MS) void this.ensureSession(age > ROTATE_AFTER_MS);
+    if (age > TIMINGS.rotateAfterMs) this.log.info(`realtime: renuevo la sesión (${Math.round(age / 60_000)} min)`);
+    if (!session.isConnected || session.goAwayPending || age > TIMINGS.rotateAfterMs) void this.ensureSession(age > TIMINGS.rotateAfterMs);
   }
 
   /** A live, connected realtime session that will not go away mid-turn. */
@@ -624,7 +597,7 @@ export class DeviceSession {
       // bridges without the cascade) still wait for their session, as before.
       const session = this.session;
       if (!this.shared.cascade || this.options.lazyRealtime) await this.ensureSession();
-      else if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(ACCEPT_WAIT_MS)]);
+      else if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(TIMINGS.acceptWaitMs)]);
       if (epoch !== this.requestEpoch) return;
       const live = this.realtimeLive();
       if (!live && !this.shared.cascade) {
@@ -647,14 +620,18 @@ export class DeviceSession {
     const peer = this.peer;
     const turn = this.openTurn(
       device,
-      peer ? new PeerLink(device, peer, () => this.audioOutput) : device,
+      peer ? new PeerLink(device, () => this.peer, () => this.audioOutput) : device,
       path,
       // A pitch gives the person time to start and the bridge time to transcribe and place it;
       // an answer's own recorder ends it when nobody answers, so the flow can go on in this run.
       kind
-        ? { noSpeechMs: kind === "answer" ? 0 : 15_000, thinkingMs: 60_000 }
+        ? {
+            noSpeechMs: kind === "answer" ? 0 : TIMINGS.pitchNoSpeechMs,
+            // The board cancels a run that outlives its watchdog: think only as long as it allows.
+            thinkingMs: pitchThinkingMs(this.shared.config?.COMPANION_PITCH_MAX_S ?? 120),
+          }
         : path === "cascade"
-          ? { thinkingMs: CASCADE_THINKING_MS }
+          ? { thinkingMs: TIMINGS.cascadeThinkingMs }
           : undefined
     );
     device.acceptRequest();
@@ -771,7 +748,7 @@ export class DeviceSession {
     if (!this.shared.cascade) return;
     if (this.path === "cascade") this.cascadeRun = { turn, epoch, abort: new AbortController(), submitted: false };
     const recorder = new PitchRecorder({
-      limits: TURN_LIMITS,
+      limits: TIMINGS.turn,
       rmsThreshold: this.shared.config?.COMPANION_PITCH_VAD_RMS,
       repeatSilence: true,
       onSpeechStart: () => {
@@ -873,7 +850,7 @@ export class DeviceSession {
       return;
     }
     // Thinking: the model already took the words.
-    turn.extendThinking(CASCADE_THINKING_MS);
+    turn.extendThinking(TIMINGS.cascadeThinkingMs);
     // eve answers without the socket; `hablar_con_owy` speaks its text through the cascade.
     if (this.eveAbort) return;
     if (this.eveAnswer) {
@@ -906,7 +883,7 @@ export class DeviceSession {
     run.submitted = true;
     recorder.stop();
     if (turn.phase === "listening") turn.endListening("");
-    turn.extendThinking(CASCADE_THINKING_MS);
+    turn.extendThinking(TIMINGS.cascadeThinkingMs);
     void this.runCascade(run, recorder.wav()).catch((error: unknown) => {
       this.log.error("cascada falló", error);
       if (this.cascadeIsCurrent(run)) void this.speakFallback(run, "offline");
@@ -1171,11 +1148,11 @@ export class DeviceSession {
     if (this.turn && !this.turn.finished) this.hush();
     const epoch = ++this.requestEpoch;
     const session = this.session;
-    if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(ACCEPT_WAIT_MS)]);
-    else if (!board && !this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(OWN_CONNECT_WAIT_MS)]);
+    if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(TIMINGS.acceptWaitMs)]);
+    else if (!board && !this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(TIMINGS.ownConnectWaitMs)]);
     if (epoch !== this.requestEpoch || this.stopped || this.peer !== peer) return null;
 
-    const turn = this.openTurn(board, peerOnlyLink(peer), "realtime", { thinkingMs: CASCADE_THINKING_MS }, true);
+    const turn = this.openTurn(board, peerOnlyLink(peer), "realtime", { thinkingMs: TIMINGS.cascadeThinkingMs }, true);
     const abort = new AbortController();
     this.ownAbort = abort;
     peer.mirrorAccept(true);
@@ -1692,7 +1669,7 @@ export class DeviceSession {
    */
   private async speakScript(text: string, p: PitchRun): Promise<void> {
     if (!this.pitchIsCurrent(p)) return;
-    if (!this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(OWN_CONNECT_WAIT_MS)]);
+    if (!this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(TIMINGS.ownConnectWaitMs)]);
     if (!this.pitchIsCurrent(p)) return;
     if (!this.realtimeLive()) {
       this.log.warn("pitch: sin modelo realtime para hablar; va por la voz de la cascada");
@@ -1720,7 +1697,7 @@ export class DeviceSession {
 
   /**
    * One card on the board, never two. A slow write is never raced by a
-   * second one: past PLACE_TIMEOUT_MS the bridge looks for the card and keeps
+   * second one: past TIMINGS.placeTimeoutMs the bridge looks for the card and keeps
    * waiting on the same request. Only a request that is over and failed
    * ambiguously (dropped connection, 5xx) is tried again, once, after
    * looking for its card — so a bad network costs neither the pitch nor a duplicate.
@@ -1745,13 +1722,13 @@ export class DeviceSession {
       return { title: note.title, speaker: note.speaker, room: note.room, timeSlot: note.timeSlot };
     };
     const request = runtime.api.tracks.createPlaced(input);
-    let outcome = await within(request, PLACE_TIMEOUT_MS);
+    let outcome = await within(request, TIMINGS.placeTimeoutMs);
     if ("late" in outcome) {
-      this.log.warn(`pitch: la grilla tarda más de ${PLACE_TIMEOUT_MS / 1000} s; me fijo si la charla ya quedó y sigo esperando`);
+      this.log.warn(`pitch: la grilla tarda más de ${TIMINGS.placeTimeoutMs / 1000} s; me fijo si la charla ya quedó y sigo esperando`);
       const card = await found();
       if (card) return card;
-      outcome = await within(request, PLACE_TIMEOUT_MS);
-      if ("late" in outcome) throw new Error(`la grilla no contestó en ${(2 * PLACE_TIMEOUT_MS) / 1000} s`);
+      outcome = await within(request, TIMINGS.placeTimeoutMs);
+      if ("late" in outcome) throw new Error(`la grilla no contestó en ${(2 * TIMINGS.placeTimeoutMs) / 1000} s`);
     }
     let placed: PlacedTrackResponse;
     if ("error" in outcome) {
@@ -1762,7 +1739,7 @@ export class DeviceSession {
       const card = await found();
       if (card) return card;
       try {
-        placed = await withTimeout(runtime.api.tracks.createPlaced(input), PLACE_TIMEOUT_MS);
+        placed = await withTimeout(runtime.api.tracks.createPlaced(input), TIMINGS.placeTimeoutMs);
       } catch (retryError) {
         if (isConflict(retryError)) return "full";
         throw retryError;
@@ -1782,7 +1759,7 @@ export class DeviceSession {
   private async findDuplicatePitch(runtime: PitchRuntime, draft: CompleteDraft, signal: AbortSignal): Promise<ScreenCard | null> {
     if (!runtime.dedupe) return null;
     const started = Date.now();
-    const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId: await runtime.openSpaceId() }), PLACE_TIMEOUT_MS);
+    const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId: await runtime.openSpaceId() }), TIMINGS.placeTimeoutMs);
     const index = await runtime.dedupe.find(
       { title: draft.title, description: draft.description, transcript: draft.transcript },
       notes,
@@ -1798,7 +1775,7 @@ export class DeviceSession {
   private async findPlaced(runtime: PitchRuntime, openSpaceId: string, title: string, since: number): Promise<StickyNote | null> {
     const want = title.trim().toLowerCase();
     try {
-      const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId }), PLACE_TIMEOUT_MS);
+      const notes = await withTimeout(runtime.api.tracks.list({ openSpaceId }), TIMINGS.placeTimeoutMs);
       return (
         notes.find(
           (note) =>
@@ -2042,7 +2019,7 @@ export class DeviceSession {
     this.captionTimer = setTimeout(() => {
       this.captionTimer = null;
       if (this.eveDraft) this.pushCaption(this.eveDraft);
-    }, 300);
+    }, TIMINGS.captionEveryMs);
   }
 
   /** A tap or a dropped device mid-turn also stops the agent's work on it. */
@@ -2110,7 +2087,7 @@ export class DeviceSession {
     this.captionTimer = setTimeout(() => {
       this.captionTimer = null;
       this.pushCaption(this.outputTranscript.trim());
-    }, 300);
+    }, TIMINGS.captionEveryMs);
   }
 
   private pushCaption(text: string): void {
@@ -2250,9 +2227,13 @@ export class DeviceSession {
 
   async stop(): Promise<void> {
     this.stopped = true;
+    this.connecting.abort();
     this.requestEpoch++;
     if (this.keepWarm) clearInterval(this.keepWarm);
     this.keepWarm = null;
+    this.ownAbort?.abort();
+    this.clearOwnTimer();
+    this.clearCaptionTimer();
     this.stopWatchdog();
     this.cancelCascade();
     this.recorder?.stop();

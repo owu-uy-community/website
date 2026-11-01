@@ -6,6 +6,7 @@ import type {
 } from "ai";
 import type { Logger } from "../log";
 import type { RealtimeProvider } from "./models";
+import { withTimeout } from "../timings";
 
 /**
  * Node-side realtime session.
@@ -115,6 +116,7 @@ export class NodeRealtimeSession {
   private sendQueue: Promise<void> = Promise.resolve();
   private _status: SessionStatus = "disconnected";
   private inflightConnect: Promise<void> | null = null;
+  private inflightGeneration = -1;
   private _connectedAt = 0;
   private _lastConnectMs: number | null = null;
   private confirmTimer: ReturnType<typeof setTimeout> | null = null;
@@ -217,11 +219,15 @@ export class NodeRealtimeSession {
   }
 
   async connect(): Promise<void> {
-    if (this.inflightConnect) return this.inflightConnect;
-    this.inflightConnect = this.connectInternal().finally(() => {
-      this.inflightConnect = null;
+    // A connect started before close() is doomed (it rejects once its token arrives):
+    // a caller that closed and reconnects gets a fresh attempt, not that one.
+    if (this.inflightConnect && this.inflightGeneration === this.generation) return this.inflightConnect;
+    const attempt = this.connectInternal().finally(() => {
+      if (this.inflightConnect === attempt) this.inflightConnect = null;
     });
-    return this.inflightConnect;
+    this.inflightConnect = attempt;
+    this.inflightGeneration = this.generation;
+    return attempt;
   }
 
   /**
@@ -313,7 +319,7 @@ export class NodeRealtimeSession {
       };
       ws.onmessage = (event) => {
         if (this.ws !== ws) return;
-        void this.handleRawMessage(event.data);
+        this.handleRawMessage(event.data).catch((error) => this.log.error("realtime: a server event failed", error));
       };
       ws.onerror = (event) => {
         if (this.ws !== ws) return;
@@ -529,7 +535,13 @@ export class NodeRealtimeSession {
       default:
         break;
     }
-    this.onEvent?.(event);
+    // The session's owner reacts here (speech, captions, the turn's state): its bug must cost
+    // this one event, not the process.
+    try {
+      this.onEvent?.(event);
+    } catch (error) {
+      this.log.error(`realtime: handling ${event.type} failed`, error);
+    }
   }
 
   private handleCustomEvent(rawType: string, raw: unknown): void {
@@ -621,13 +633,4 @@ function toText(data: unknown): string | null {
   }
   if (ArrayBuffer.isView(data)) return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString("utf8");
   return null;
-}
-
-/** Rejects after `ms`; the slow promise's late outcome is ignored (Promise.race keeps it handled). */
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const deadline = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
-  });
-  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }

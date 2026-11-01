@@ -13,6 +13,13 @@ import path from "node:path";
 async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger("bridge", config.COMPANION_LOG_LEVEL);
+  // A bug in one turn costs that turn: log it and keep Owy up. An exception that unwound the stack
+  // leaves state nobody can trust: exit, and the supervisor (companion:serve, Docker) restarts us in a second.
+  process.on("unhandledRejection", (reason) => logger.error("unhandled rejection (kept running)", reason));
+  process.on("uncaughtException", (error) => {
+    logger.error("uncaught exception; exiting for a clean restart", error);
+    process.exit(1);
+  });
   if (config.devices.length === 0 && !config.COMPANION_WEB_BRIDGE) {
     logger.error("COMPANION_DEVICES vacío: nada que hacer (formato: id@host[:port][#psk]).");
     process.exitCode = 1;
@@ -63,8 +70,6 @@ async function main(): Promise<void> {
     return null;
   });
   if (settings) logger.info(`settings UI at ${settings.url} · oRPC at ${settings.rpcUrl} (audio routing per device)`);
-  await Promise.all(sessions.map((session) => session.start()));
-
   let stopping = false;
   const shutdown = async () => {
     if (stopping) return;
@@ -78,6 +83,9 @@ async function main(): Promise<void> {
   };
   process.on("SIGINT", () => void shutdown());
   process.on("SIGTERM", () => void shutdown());
+  // Each board on its own: one that is off keeps retrying, one with a wrong key fails alone.
+  for (const session of sessions)
+    void session.start().catch((error: unknown) => logger.error(`${session.id}: no arrancó`, error));
 }
 
 main().catch((error) => {

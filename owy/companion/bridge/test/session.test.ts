@@ -223,6 +223,56 @@ describe("NodeRealtimeSession", () => {
     session.close();
   });
 
+  it("tap, stop, tap on a cold session: the second tap connects instead of waiting on the doomed first connect", async () => {
+    const { session, sockets, getToken } = setup();
+    let releaseToken!: () => void;
+    getToken.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseToken = () => resolve({ token: "slow", url: "wss://fake" });
+        })
+    );
+    const first = session.connect();
+    session.resetConversation();
+    const second = session.connect();
+    releaseToken();
+    await expect(first).rejects.toThrow();
+    await second;
+    expect(session.isConnected).toBe(true);
+    expect(sockets).toHaveLength(1);
+    session.close();
+  });
+
+  it("a crash in the owner's event handler costs that event, not the socket", async () => {
+    const sockets: FakeSocket[] = [];
+    let calls = 0;
+    const session = new NodeRealtimeSession({
+      provider: { spec: "fake:fake-live", provider: "google", modelId: "fake-live", model: new FakeModel(), getToken: async () => ({ token: "t", url: "wss://fake" }) },
+      sessionConfig: { instructions: "hola" },
+      logger: createLogger("test", "error"),
+      onToolCall: () => ({}),
+      onEvent: (event) => {
+        if (event.type === "audio-delta" && calls++ === 0) throw new Error("boom");
+      },
+      createWebSocket: (url) => {
+        const socket = new FakeSocket(url);
+        sockets.push(socket);
+        queueMicrotask(() => {
+          socket.open();
+          socket.receive({ setupComplete: {} });
+        });
+        return socket;
+      },
+    });
+    await session.connect();
+    sockets[0].receive({ audio: "AAAA" });
+    sockets[0].receive({ audio: "BBBB" });
+    await flush();
+    expect(calls).toBe(2);
+    expect(session.isConnected).toBe(true);
+    session.close();
+  });
+
   it("does not send an old tool result into the next connection", async () => {
     let resolveTool!: (value: unknown) => void;
     const { session, sockets } = setup({ onToolCall: () => new Promise(resolve => { resolveTool = resolve; }) });
