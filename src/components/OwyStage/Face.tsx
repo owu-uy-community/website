@@ -27,10 +27,14 @@ import { StageContext } from "./Stage";
 export type { FaceApi };
 export type FaceBoard = "amoled" | "knob";
 
-/** A real idle frame of the AMOLED face (written by the emulator's goldens test). */
+/** A real idle frame of the AMOLED face (written by the emulator's goldens test): shown until the face is up. */
 const STILL = "/companion-runtime/face.png";
-/** No frame by then: the still shows until one arrives (a slow first load at the venue). */
-const STILL_AFTER_MS = 3000;
+/**
+ * A new face boots like the device: lids shut until 1.6 s, then they spring open (the runtime's
+ * wake_at). The still covers that, so a face that mounts mid-show (a new slide) never looks asleep.
+ * ponytail: a fixed wait after the first frame; drop it once face.mjs starts its faces awake.
+ */
+const AWAKE_MS = 1900;
 
 type Message = { type: string } & Record<string, unknown>;
 
@@ -40,7 +44,8 @@ type Message = { type: string } & Record<string, unknown>;
  * workbench's knob show what the device shows. A page tells it what happens through the ref;
  * blinks, springs, how long a feeling lasts, the happy mood and the mouth's babble are the
  * model's. `lag` (ms, by default the stage's `?lag=`) makes it act earlier on a screen that
- * shows it late. Without a worker or a canvas it can hand over, it is a still of the idle face.
+ * shows it late. Until it is up (or when it can't run: no worker, no canvas it can hand over, no
+ * frame), it is a still of the idle face.
  */
 export function OwyFace({
   size,
@@ -70,7 +75,7 @@ export function OwyFace({
   const queue = useRef<Message[]>([]);
   /** The last state or mood: a new worker (a new size, StrictMode's second mount) starts from it. */
   const standing = useRef<Message | null>(null);
-  const [shown, setShown] = useState<"wait" | "live" | "still">("wait");
+  const [awake, setAwake] = useState(false);
 
   useImperativeHandle(ref, () => {
     const post = (message: Message) => {
@@ -95,27 +100,25 @@ export function OwyFace({
     if (!box) return;
     // A fresh canvas each time: one that handed its context to a worker can't hand it again.
     const canvas = document.createElement("canvas");
+    setAwake(false);
     if (typeof canvas.transferControlToOffscreen !== "function" || typeof Worker !== "function") {
       worker.current = false;
       queue.current = [];
-      setShown("still");
       return;
     }
     canvas.className = "block h-full w-full";
     box.append(canvas);
     const instance = new Worker("/companion-runtime/face.mjs", { type: "module", name: "owy-face" });
-    const timer = setTimeout(() => setShown((now) => (now === "wait" ? "still" : now)), STILL_AFTER_MS);
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const fail = () => {
       clearTimeout(timer);
       instance.terminate();
       if (worker.current === instance) worker.current = false;
-      setShown("still");
+      setAwake(false);
     };
     instance.onmessage = ({ data }: MessageEvent<{ type?: string } | null>) => {
-      if (data?.type === "frame") {
-        clearTimeout(timer);
-        setShown("live");
-      } else if (data?.type === "error") fail();
+      if (data?.type === "frame") timer = setTimeout(() => setAwake(true), AWAKE_MS);
+      else if (data?.type === "error") fail();
     };
     instance.onerror = fail;
     const offscreen = canvas.transferControlToOffscreen();
@@ -141,7 +144,11 @@ export function OwyFace({
       style={{ width: size, height: size, ...style }}
     >
       <div ref={host} className="col-start-1 row-start-1 min-h-0 min-w-0" />
-      {shown === "still" && <img alt="" className="col-start-1 row-start-1 h-full w-full" src={STILL} />}
+      <img
+        alt=""
+        className={`col-start-1 row-start-1 h-full w-full transition-opacity duration-300 ${awake ? "opacity-0" : ""}`}
+        src={STILL}
+      />
     </div>
   );
 }

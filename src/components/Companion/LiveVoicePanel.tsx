@@ -4,12 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Mic, MicOff, PhoneOff, Play, Send, Volume2, Wrench } from "lucide-react";
 
 import { Notice } from "components/Admin/panel";
+import { Panel, PanelHead } from "components/Admin/ui/page";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "components/shared/ui/collapsible";
 import { Label } from "components/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
 import { Slider } from "components/shared/ui/slider";
 import { Switch } from "components/shared/ui/switch";
 
@@ -50,6 +49,11 @@ export function LevelMeter({ label, value, color }: { label: string; value: numb
   );
 }
 
+/**
+ * A real conversation with the lab's virtual Owy: this browser's mic and speakers through the
+ * bridge, the same prompts, tools and 16 kHz audio as the device. (A physical Owy takes this
+ * browser as its audio from the Control tab.)
+ */
 export default function LiveVoicePanel({
   disabled,
   onActive,
@@ -60,7 +64,6 @@ export default function LiveVoicePanel({
   onSetting,
   deviceSettings,
   unavailable,
-  attachDevices,
 }: {
   disabled: boolean;
   onActive: (active: boolean) => void;
@@ -71,8 +74,6 @@ export default function LiveVoicePanel({
   onSetting: (name: string, value: number) => void;
   deviceSettings?: Record<string, number>;
   unavailable?: string;
-  /** Physical devices this browser may serve as laptop audio (from the bridge settings API). */
-  attachDevices?: string[];
 }) {
   const client = useRef<WebVoice | null>(null);
   const activeRef = useRef(false);
@@ -89,9 +90,6 @@ export default function LiveVoicePanel({
   const [writes, setWrites] = useState(false);
   const [staff, setStaff] = useState(false);
   const [marketplace, setMarketplace] = useState(false);
-  const [attachTarget, setAttachTarget] = useState("");
-  const attachOptions = attachDevices ?? [];
-  const attachId = attachTarget || attachOptions[0] || "";
   const active = !["off", "error"].includes(status.stage);
 
   const visual = useCallback(
@@ -103,9 +101,11 @@ export default function LiveVoicePanel({
   );
 
   useEffect(() => {
+    // Its own stop on unmount still reports `onActive(false)`, but not a status for the next mount.
+    let current = true;
     const instance = new WebVoice(
       (state) => {
-        setStatus({ ...state });
+        if (current) setStatus({ ...state });
         const next = !["off", "error"].includes(state.stage);
         if (next !== activeRef.current) {
           activeRef.current = next;
@@ -120,14 +120,13 @@ export default function LiveVoicePanel({
     client.current = instance;
     onClient(instance);
     const hide = () => {
-      // A browser serving as a device's laptop audio must survive tab switches at the venue.
-      if (document.hidden && activeRef.current && !instance.status.attached)
-        instance.stop("Micrófono apagado porque la pestaña quedó oculta.");
+      if (document.hidden && activeRef.current) instance.stop("Micrófono apagado porque la pestaña quedó oculta.");
     };
     const leave = () => instance.stop();
     document.addEventListener("visibilitychange", hide);
     window.addEventListener("pagehide", leave);
     return () => {
+      current = false;
       instance.stop();
       client.current = null;
       onClient(null);
@@ -165,22 +164,17 @@ export default function LiveVoicePanel({
   const stage = STAGE[status.stage];
 
   return (
-    <Card className="flex h-full flex-col">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Mic aria-hidden className="h-4 w-4 text-muted-foreground" />
-              Hablá con Owy
-            </CardTitle>
-            <CardDescription>El mismo bridge, prompts, herramientas y audio 16 kHz que el gadget.</CardDescription>
-          </div>
-          <Badge className="shrink-0 whitespace-nowrap" variant={active ? "info" : "outline"}>
-            {active ? "Bridge en vivo" : "Opcional"}
+    <Panel className="flex flex-col">
+      <PanelHead
+        actions={
+          <Badge className="whitespace-nowrap" variant={active ? "info" : "outline"}>
+            {active ? "Bridge en vivo" : "Mic cerrado"}
           </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4">
+        }
+        icon={Mic}
+        title="Hablá con Owy"
+      />
+      <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="rounded-md border bg-background p-3">
           <div className="flex items-center gap-2 text-ui font-medium">
             <span aria-hidden className={`inline-block size-2 rounded-full ${stage.dot}`} />
@@ -235,51 +229,7 @@ export default function LiveVoicePanel({
             <Button className="w-full" disabled={disabled || !consent || !!unavailable} size="lg" onClick={start}>
               <Mic /> Empezar a hablar
             </Button>
-            {attachOptions.length > 0 && (
-              <Collapsible>
-                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-sm text-ui font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/70 pointer-coarse:min-h-11">
-                  Audio de laptop para un dispositivo físico
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-3 space-y-3">
-                  <p className="text-meta text-muted-foreground">
-                    Este navegador pasa a ser el micrófono y los parlantes del dispositivo (enchufá el mic del escenario
-                    y el PA a esta compu); el dispositivo conserva el toque, la cara y los subtítulos. Poné Mic/Audio en
-                    “laptop” desde sus ajustes rápidos o la tarjeta de audio.
-                  </p>
-                  <Select value={attachId} onValueChange={setAttachTarget}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Dispositivo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {attachOptions.map((id) => (
-                        <SelectItem key={id} value={id}>
-                          {id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    className="w-full"
-                    disabled={disabled || !consent || !!unavailable || !attachId}
-                    variant="secondary"
-                    onClick={() => void client.current?.start({ writes, staff, marketplace }, attachId)}
-                  >
-                    <Mic /> Usar este navegador como audio de {attachId}
-                  </Button>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
           </>
-        ) : status.attached ? (
-          <div className="flex items-center gap-2">
-            <span className="text-ui text-muted-foreground">
-              Conectado a <strong className="text-foreground">{status.attached}</strong> · {stage.label}
-            </span>
-            <Button className="ml-auto" variant="destructive" onClick={() => client.current?.stop()}>
-              <PhoneOff /> Desconectar
-            </Button>
-          </div>
         ) : (
           <div className="flex flex-wrap gap-2">
             {["idle", "muted"].includes(status.stage) && (
@@ -417,10 +367,10 @@ export default function LiveVoicePanel({
         ) : null}
 
         <p className="mt-auto text-2xs leading-relaxed text-muted-foreground">
-          Ocho segundos de silencio arrancan una conversación nueva, como en el gadget. Las sesiones duran cinco
-          minutos. Con auriculares anda mejor. Pantalla y volumen afectan solo a este dispositivo virtual.
+          El mismo bridge, prompts, herramientas y audio 16 kHz que el Owy de la mesa. Ocho segundos de silencio
+          arrancan una conversación nueva; las sesiones duran cinco minutos. Con auriculares anda mejor.
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </Panel>
   );
 }

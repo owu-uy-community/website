@@ -13,6 +13,7 @@ import { formatTime } from "lib/utils";
 
 import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
+import { OVER_SHAPES } from "./OwyFace";
 import { QrCode, Rise, nowHHMM } from "./parts";
 
 // ---------------------------------------------------------------------------
@@ -493,7 +494,7 @@ export function OwyHowTo() {
     <>
       <Ambient />
       {/* On the left half, beside the steps: the wall face at ×0.78 */}
-      <OwyFace ref={face} className="absolute top-[150px] left-[174px]" size={692} />
+      <OwyFace ref={face} className={`absolute top-[150px] left-[174px] ${OVER_SHAPES}`} size={692} />
       <div className="absolute top-[110px] right-[120px] w-[980px]">
         <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
           Open Space

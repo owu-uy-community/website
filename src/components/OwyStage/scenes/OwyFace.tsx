@@ -34,10 +34,15 @@ import { Ambient, BRAND, Caption, Flag, StageContext, W, useTyped } from "../Sta
 const FACE = 886;
 const FACE_X = (W - FACE) / 2;
 const FACE_Y = 40;
+/**
+ * Over the brand shapes: the device's black screen lets them through (lighten keeps the
+ * brighter of the two), and over the black wall every pixel is the device's own.
+ */
+export const OVER_SHAPES = "mix-blend-lighten";
 /** The face where every wall scene puts it (owy-says, owy-talks). */
 export const WALL_FACE = {
   size: FACE,
-  className: "absolute",
+  className: `absolute ${OVER_SHAPES}`,
   style: { left: FACE_X, top: FACE_Y },
 } as const;
 
@@ -97,7 +102,7 @@ export default function OwyFaceScene({
       {ambient && <Ambient />}
       <OwyFace
         ref={face}
-        className="absolute transition-transform duration-700 ease-out"
+        className={`absolute transition-transform duration-700 ease-out ${OVER_SHAPES}`}
         size={FACE}
         style={{ left: FACE_X, top: FACE_Y, transform: aside ? `translateX(-${ASIDE_PX}px)` : undefined }}
       />
