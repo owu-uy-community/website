@@ -1,8 +1,10 @@
 import { afterEach, expect, it } from "vitest";
+import { request } from "node:http";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import type { RouterClient } from "@orpc/server";
 import { loadConfig } from "../src/config";
+import type { ControlPlane } from "../src/control/plane";
 import { createLogger } from "../src/log";
 import { startSettingsServer } from "../src/web/settings";
 import type { BridgeRouter, RoutableHostMic, RoutableSession } from "../src/web/rpc";
@@ -14,6 +16,9 @@ const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0)) await close();
 });
+
+const SECRET = "clave-de-prueba";
+const AUTH = { authorization: `Basic ${Buffer.from(`owy:${SECRET}`).toString("base64")}` };
 
 function fakeSession(id: string): RoutableSession & {
   routes: { mic: MicRoute; output: "device" | "laptop" };
@@ -58,24 +63,45 @@ function fakeHostMic(): RoutableHostMic & { selected: [string | null, string][] 
   };
 }
 
+/** What the page needs from the control plane, recorded. */
+function fakeControl() {
+  const changes: unknown[][] = [];
+  const commands: unknown[] = [];
+  const control = {
+    status: () => ({ version: "test", machine: "mac", values: {}, devices: [] }),
+    rows: () => [],
+    change: (...args: unknown[]) => (changes.push(args), { ok: true }),
+    runLocal: async (command: unknown) => (commands.push(command), { ok: true, data: null }),
+  } as unknown as ControlPlane;
+  return { control, changes, commands };
+}
+
 async function server(hostMic?: RoutableHostMic) {
   const config = loadConfig({});
   const port = 20000 + Math.floor(Math.random() * 20000); // ephemeral; the schema forbids 0
   const knob = fakeSession("owy-knob");
-  const started = await startSettingsServer(
-    [knob],
-    { ...config, COMPANION_SETTINGS_PORT: port },
-    createLogger("rpc-test", "error"),
-    hostMic
-  );
+  const { control, changes, commands } = fakeControl();
+  const started = await startSettingsServer({
+    control,
+    config: { ...config, COMPANION_SETTINGS_PORT: port, COMPANION_BRIDGE_SECRET: SECRET },
+    logger: createLogger("rpc-test", "error"),
+    sessions: [knob],
+    hostMic,
+  });
   cleanup.push(started.close);
   const rpc = new URL(started.rpcUrl);
   const client: RouterClient<BridgeRouter> = createORPCClient(new RPCLink({ origin: rpc.origin, url: rpc.pathname as `/${string}` }));
-  return { knob, client, started };
+  const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+    fetch(new URL(path, started.url), {
+      method: "POST",
+      headers: { "content-type": "application/json", ...AUTH, ...headers },
+      body: JSON.stringify(body),
+    });
+  return { knob, client, started, post, changes, commands, port };
 }
 
-it("serves the routing procedures over oRPC and mirrors them as plain JSON", async () => {
-  const { knob, client, started } = await server();
+it("serves the routing procedures over oRPC", async () => {
+  const { knob, client } = await server();
   expect(await client.settings.get()).toEqual({
     devices: [
       {
@@ -92,60 +118,16 @@ it("serves the routing procedures over oRPC and mirrors them as plain JSON", asy
   const after = await client.settings.set({ deviceId: "owy-knob", output: "laptop" });
   expect(after.devices[0]).toMatchObject({ mic: "device", output: "laptop" });
   expect(knob.routes.output).toBe("laptop");
-  // The bridge page uses the plain-JSON mirror of the same procedures.
-  const rest = await (await fetch(`${started.url}api/settings`)).json();
-  expect(rest).toEqual(after);
-  const posted = await (
-    await fetch(`${started.url}api/settings`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ deviceId: "owy-knob", mic: "laptop" }),
-    })
-  ).json();
-  expect(posted.devices[0]).toMatchObject({ mic: "laptop", output: "laptop" });
 });
 
-it("flips modo pitch and what Owy says back per device, over oRPC and the JSON mirror", async () => {
-  const { knob, client, started } = await server();
+it("flips modo pitch and what Owy says back per device", async () => {
+  const { knob, client } = await server();
   const after = await client.settings.setPitch({ deviceId: "owy-knob", mode: true });
   expect(after.devices[0].pitch).toEqual({ mode: true, voice: "confirm", source: "env" });
   expect(knob.pitch.mode).toBe(true);
-  const posted = await (
-    await fetch(`${started.url}api/settings/pitch`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ deviceId: "owy-knob", voice: "silent" }),
-    })
-  ).json();
-  expect(posted.devices[0].pitch).toEqual({ mode: true, voice: "silent", source: "env" });
   // @ts-expect-error — three levels only
   await expect(client.settings.setPitch({ deviceId: "owy-knob", voice: "loud" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   await expect(client.settings.setPitch({ deviceId: "nope", mode: true })).rejects.toMatchObject({ code: "NOT_FOUND" });
-});
-
-it("refuses writes posted from another site, even as a plain form", async () => {
-  const { knob, started } = await server();
-  const evil = await fetch(`${started.url}api/settings/pitch`, {
-    method: "POST",
-    headers: { "content-type": "text/plain", origin: "https://evil.example" },
-    body: JSON.stringify({ deviceId: "owy-knob", mode: true }),
-  });
-  expect(evil.status).toBe(403);
-  expect(knob.pitch.mode).toBe(false);
-  const rpc = await fetch(`${started.rpcUrl}/settings/set`, {
-    method: "POST",
-    headers: { "content-type": "application/json", origin: "https://evil.example" },
-    body: JSON.stringify({ json: { deviceId: "owy-knob", mic: "laptop" } }),
-  });
-  expect(rpc.status).toBe(403);
-  expect(knob.routes.mic).toBe("device");
-  // The page's own fetches carry the loopback origin and keep working.
-  const own = await fetch(`${started.url}api/settings/pitch`, {
-    method: "POST",
-    headers: { "content-type": "application/json", origin: new URL(started.url).origin },
-    body: JSON.stringify({ deviceId: "owy-knob", mode: true }),
-  });
-  expect(own.status).toBe(200);
 });
 
 it("rejects unknown devices and invalid routes with oRPC errors", async () => {
@@ -157,7 +139,7 @@ it("rejects unknown devices and invalid routes with oRPC errors", async () => {
 
 it("routes a device to the Mac's mic, picks the input and its side, and tests it", async () => {
   const hostMic = fakeHostMic();
-  const { knob, client, started } = await server(hostMic);
+  const { knob, client } = await server(hostMic);
   const before = await client.settings.get();
   expect(before.hostMic).toEqual({ name: null, channel: "mix", health: "off", available: ["MacBook Pro Microphone", "DJI Mic 2"] });
   const routed = await client.settings.set({ deviceId: "owy-knob", mic: "host" });
@@ -165,14 +147,8 @@ it("routes a device to the Mac's mic, picks the input and its side, and tests it
   expect(knob.routes.mic).toBe("host");
   const picked = await client.settings.setHostMic({ name: "DJI Mic 2" });
   expect(picked.hostMic).toMatchObject({ name: "DJI Mic 2", channel: "mix", health: "open" });
-  // The page's JSON mirror: the side of a stereo receiver keeps the input.
-  const side = await (
-    await fetch(`${started.url}api/settings/host-mic`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ channel: "L" }),
-    })
-  ).json();
+  // The side of a stereo receiver keeps the input.
+  const side = await client.settings.setHostMic({ channel: "L" });
   expect(side.hostMic).toMatchObject({ name: "DJI Mic 2", channel: "L" });
   expect(hostMic.selected).toEqual([
     ["DJI Mic 2", "mix"],
@@ -185,4 +161,55 @@ it("a settings server without the Mac's mic reports none and refuses to pick one
   const { client } = await server();
   expect((await client.settings.get()).hostMic).toBeUndefined();
   await expect(client.settings.setHostMic({ name: "DJI" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+});
+
+it("the page asks for the bridge's secret, then reads and writes through the control plane", async () => {
+  const { started, post, changes, commands } = await server();
+  const anonymous = await fetch(started.url);
+  expect(anonymous.status).toBe(401);
+  expect(anonymous.headers.get("www-authenticate")).toMatch(/^Basic/);
+  const wrong = await fetch(started.url, { headers: { authorization: `Basic ${Buffer.from("owy:nope").toString("base64")}` } });
+  expect(wrong.status).toBe(401);
+  expect((await fetch(started.url, { headers: AUTH })).headers.get("content-type")).toMatch(/text\/html/);
+
+  expect(await (await fetch(new URL("api/state", started.url), { headers: AUTH })).json()).toEqual({
+    status: { version: "test", machine: "mac", values: {}, devices: [] },
+    rows: [],
+  });
+  expect((await post("api/set", { target: "owy-knob", key: "volume", value: 40 })).status).toBe(200);
+  expect(changes).toEqual([["owy-knob", "volume", 40, "local"]]);
+  expect((await post("api/set", { key: "volume", value: 40 })).status).toBe(400);
+  expect((await post("api/command", { type: "tone", target: "mac" })).status).toBe(200);
+  expect((await post("api/command", { type: "format-disk" })).status).toBe(400);
+  expect(commands).toEqual([{ type: "tone", target: "mac" }]);
+});
+
+it("refuses writes posted from another site, even as a plain form", async () => {
+  const { knob, started, post, changes } = await server();
+  const evil = await post("api/set", { target: "owy-knob", key: "volume", value: 80 }, { "content-type": "text/plain", origin: "https://evil.example" });
+  expect(evil.status).toBe(403);
+  expect(changes).toEqual([]);
+  const rpc = await fetch(`${started.rpcUrl}/settings/set`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "https://evil.example" },
+    body: JSON.stringify({ json: { deviceId: "owy-knob", mic: "laptop" } }),
+  });
+  expect(rpc.status).toBe(403);
+  expect(knob.routes.mic).toBe("device");
+  // The page's own fetches carry the loopback origin and keep working.
+  const own = await post("api/set", { target: "owy-knob", key: "volume", value: 40 }, { origin: new URL(started.url).origin });
+  expect(own.status).toBe(200);
+});
+
+it("answers only to this machine's names (a rebound DNS name gets nothing)", async () => {
+  const { port } = await server();
+  const status = await new Promise<number>((resolve, reject) => {
+    request({ host: "127.0.0.1", port, path: "/api/state", headers: { host: `evil.example:${port}`, ...AUTH } }, (res) => {
+      res.resume();
+      resolve(res.statusCode ?? 0);
+    })
+      .on("error", reject)
+      .end();
+  });
+  expect(status).toBe(421);
 });

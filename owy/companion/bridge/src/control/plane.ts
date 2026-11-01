@@ -391,6 +391,21 @@ export class ControlPlane {
     this.restartTimer.unref?.();
   }
 
+  /** A command from the bridge's own page: run now, answered directly (nothing goes to the site). */
+  async runLocal(command: CompanionCommand): Promise<CommandResult> {
+    try {
+      const data = await this.execute(command);
+      return { id: "local", ok: true, ...(data !== undefined ? { data: data as CommandResult["data"] } : {}) };
+    } catch (error) {
+      return { id: "local", ok: false, error: message(error).slice(0, 400) };
+    }
+  }
+
+  /** Every stored row (the bridge's page shows who set what). */
+  rows(): SettingRow[] {
+    return this.options.store.all();
+  }
+
   private async run({ id, command }: CommandEnvelope): Promise<void> {
     let result: CommandResult;
     try {

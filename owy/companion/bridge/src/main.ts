@@ -162,11 +162,11 @@ async function main(): Promise<void> {
     : null;
   if (!channel) logger.warn("sin OWY_API_KEY: el panel del sitio no llega a este bridge (corre con sus ajustes guardados y el env)");
 
-  const settings = await startSettingsServer(sessions, config, logger, shared.hostMic).catch((error) => {
+  const settings = await startSettingsServer({ control, config, logger, sessions, hostMic: shared.hostMic }).catch((error) => {
     logger.warn(`settings UI not started: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   });
-  if (settings) logger.info(`settings UI at ${settings.url} · oRPC at ${settings.rpcUrl} (audio routing per device)`);
+  if (settings) logger.info(`página de respaldo en ${settings.url} (el lugar de siempre: /admin/companion → Control)`);
 
   process.on("SIGINT", () => void shutdown());
   process.on("SIGTERM", () => void shutdown());
