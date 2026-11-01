@@ -962,6 +962,26 @@ export const owyStageInputs = pgTable(
   ]
 );
 
+/**
+ * The companion's settings as /admin/companion → Control keeps them: one row per setting of a
+ * device (`target` = its id) or of the bridge (`target` = "bridge"), keys from the bridge's
+ * registry. The last writer wins, by `setAt`. The bridge's last report lives here too (target
+ * "bridge", key "status"), stamped when it arrived.
+ */
+export const companionSettings = pgTable(
+  "companion_settings",
+  {
+    target: text("target").notNull(),
+    key: text("key").notNull(),
+    /** JSON `null` (never SQL NULL) for a setting cleared on purpose. */
+    value: jsonb("value").notNull(),
+    /** `admin:<name>`, `dispositivo`, `voz`, `local`; `bridge` on the status row. */
+    setBy: text("setBy").notNull(),
+    setAt: ts("setAt").notNull(),
+  },
+  (t) => [primaryKey({ name: "companion_settings_pkey", columns: [t.target, t.key] })]
+);
+
 // ---------------------------------------------------------------------------
 // Staff coordination (event-day task board + announcements)
 // ---------------------------------------------------------------------------
