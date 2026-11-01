@@ -34,8 +34,10 @@ import {
   StagePulseSchema,
   StageSpeakerSchema,
   StageWeatherSchema,
+  SeatStatusSchema,
   TakeResultSchema,
   TakeSchema,
+  TalkCommandSchema,
 } from "./schemas";
 import * as Stage from "./service";
 
@@ -175,6 +177,22 @@ export const owyStageRouter = {
     .output(z.array(StageInputSchema))
     .effect(function* ({ input }) {
       return yield* Stage.getInputs(input.round);
+    }),
+
+  talkCommand: platform("stage:operate")
+    .meta(docs("«Owy, en vivo»: a command from the presenter's phone for the Mac seat that drives Owy"))
+    .input(TalkCommandSchema)
+    .output(z.object({ ok: z.literal(true) }))
+    .effect(function* ({ input }) {
+      return yield* Stage.talkCommand(input);
+    }),
+
+  talkStatus: platform("stage:operate")
+    .meta(docs("«Owy, en vivo»: the Mac seat's heartbeat (attached device, voice tier, last turn)"))
+    .input(SeatStatusSchema)
+    .output(z.object({ ok: z.literal(true) }))
+    .effect(function* ({ input }) {
+      return yield* Stage.talkStatus(input);
     }),
 
   moderate: platform("stage:operate")

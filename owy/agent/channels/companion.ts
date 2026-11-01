@@ -15,7 +15,7 @@ import { verifyOwuKey } from "../lib/owu-api";
  * Owy is still thinking corrects the turn instead of queueing behind it.
  *
  * Routes (bridge → agent; Basic auth in production, loopback in `eve dev`):
- *   POST /companion/:deviceId/turns   { text, staff?, marketplaceOpen?, eventName? } → { sessionId, streamIndex }
+ *   POST /companion/:deviceId/turns   { text, staff?, marketplaceOpen?, eventName?, kind?, pitch?, talk? } → { sessionId, streamIndex }
  *   GET  /companion/sessions/:sessionId/stream?startIndex=N               NDJSON event stream
  *   POST /companion/:deviceId/cancel                                      stop the active turn (tap)
  *   POST /companion/:deviceId/reset                                       retire the conversation (next visitor)
@@ -49,6 +49,8 @@ const TurnBody = z.object({
   /** `pitch`: `text` is the transcript of a pitch whose card already exists; Owy only reacts. */
   kind: z.enum(["chat", "pitch"]).default("chat"),
   pitch: PitchContext.optional(),
+  /** «Owy, en vivo»: Owy is co-presenting a talk; what is on the screen and who is talking to him. */
+  talk: z.object({ slide: z.string().max(600), asker: z.enum(["presenter", "audience"]) }).optional(),
 });
 
 export interface CompanionState {
@@ -130,9 +132,11 @@ export default defineChannel({
           attributes: {
             device_id: deviceId,
             marketplace_open: body.marketplaceOpen ? "true" : "false",
-            // Per turn: a chat turn and a pitch reaction share the device's session.
-            turn_kind: body.kind,
+            // Per turn: a chat turn, a pitch reaction and a talk turn share the device's session.
+            turn_kind: body.kind === "pitch" ? "pitch" : body.talk ? "talk" : "chat",
             pitch_title: body.kind === "pitch" ? (body.pitch?.title ?? "") : "",
+            talk_slide: body.talk?.slide ?? "",
+            talk_asker: body.talk?.asker ?? "",
           },
         },
         // Seeds a new session only (an existing one keeps its state, e.g. the proposal cooldown).

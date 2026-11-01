@@ -1,3 +1,5 @@
+import { createHmac, randomBytes } from "node:crypto";
+
 // Server only. Authenticated webapp -> existing Node bridge -> same gadget session.
 export class VoiceHttpError extends Error {
   constructor(
@@ -118,6 +120,60 @@ export async function requestBridgeTicket(
     throw new VoiceHttpError(502, "Invalid bridge session.");
   return data;
 }
+/** How long a web voice session may last once connected (the bridge's WEB_SESSION_MS). */
+const WEB_SESSION_MS = 5 * 60_000;
+/** A signed ticket is only good for connecting, right away. */
+const SIGNED_TICKET_MS = 60_000;
+
+/**
+ * Mints the ticket here instead of asking the bridge: for a bridge on the venue laptop, which the
+ * site (on Vercel) can't reach but the browser on that laptop can. Same capability as a bridge
+ * ticket — bound to the page's origin, one use, a minute to connect — signed with the shared secret
+ * (owy/companion/bridge/src/web/tickets.ts `consumeSigned` verifies it; keep the two in step).
+ */
+export function signBridgeTicket(
+  identity: string,
+  origin: string,
+  scopes: VoiceScopes,
+  connection: { publicUrl?: string; secret?: string },
+  now = Date.now()
+) {
+  if (!connection.publicUrl || !connection.secret || connection.secret.length < 32)
+    throw new VoiceHttpError(
+      503,
+      "The companion bridge is not configured. Set COMPANION_BRIDGE_URL, or COMPANION_BRIDGE_PUBLIC_URL plus COMPANION_BRIDGE_SECRET for a bridge on this laptop."
+    );
+  const url = new URL(connection.publicUrl);
+  if (
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    (url.protocol !== "wss:" && !(url.protocol === "ws:" && ["127.0.0.1", "localhost"].includes(url.hostname)))
+  )
+    throw new VoiceHttpError(503, "Bridge public URL must be wss:// or a ws:// loopback address.");
+  const payload = Buffer.from(
+    JSON.stringify({
+      i: identity,
+      o: origin,
+      w: scopes.writes,
+      s: scopes.staff,
+      m: scopes.marketplace,
+      e: now + SIGNED_TICKET_MS,
+      n: randomBytes(16).toString("base64url"),
+    })
+  ).toString("base64url");
+  const mac = createHmac("sha256", connection.secret).update(`owy-voice-ticket:v1.${payload}`).digest("base64url");
+
+  return {
+    token: `v1.${payload}.${mac}`,
+    url: url.href,
+    expiresAt: now + WEB_SESSION_MS,
+    model: "bridge",
+    protocol: 1,
+  };
+}
+
 export function voiceResponse(data: unknown, status = 200) {
   return Response.json(data, {
     status,

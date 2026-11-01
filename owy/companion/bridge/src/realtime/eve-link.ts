@@ -1,4 +1,5 @@
 import type { Logger } from "../log";
+import type { Asker } from "../web/contract";
 
 /**
  * Client for the agent's voice channel (`agent/channels/companion.ts`).
@@ -47,6 +48,8 @@ export interface EveTurnOptions {
   /** `pitch`: `text` is the transcript of a pitch whose card already exists; eve answers with a short reaction only. */
   kind?: "chat" | "pitch";
   pitch?: PitchContext;
+  /** «Owy, en vivo»: Owy is co-presenting a talk; `slide` is what is on the screen, `asker` who is talking to him. */
+  talk?: { slide: string; asker: Asker } | null;
   /** Cap for this turn instead of the link's default. */
   timeoutMs?: number;
   /** Running text of the assistant message being written (captions). */
@@ -129,6 +132,7 @@ export class EveLink {
         eventName: options.eventName,
         ...(options.kind ? { kind: options.kind } : {}),
         ...(options.pitch ? { pitch: options.pitch } : {}),
+        ...(options.talk ? { talk: options.talk } : {}),
       },
       signal
     )) as { sessionId: string; streamIndex: number };

@@ -3,6 +3,7 @@ import { once } from "node:events";
 import WebSocket from "ws";
 import { z } from "zod";
 import { WebTickets, matchesSecret, toolDenial, type WebGrant } from "../src/web/tickets";
+import { signBridgeTicket } from "../../../../src/lib/companion/voice-bridge.server";
 import { startWebBridge } from "../src/web/server";
 import { DeviceSession, type SharedRuntime } from "../src/index";
 import { loadConfig } from "../src/config";
@@ -119,6 +120,25 @@ it("uses one-use, expiring origin-bound tickets and constant-time secret verific
   expect(matchesSecret("test", "test")).toBe(true);
   expect(matchesSecret(undefined, "test")).toBe(false);
   expect(matchesSecret("wrong", "test")).toBe(false);
+});
+it("accepts a ticket the site signed for a bridge on this laptop: once, its origin, its minute, its secret", () => {
+  const secret = "s".repeat(40);
+  const tickets = new WebTickets(secret);
+  const scopes = { writes: grant.writes, staff: grant.staff, marketplace: grant.marketplace };
+  const now = Date.now();
+  // The site's own signer, so the two sides can't drift apart silently.
+  const sign = (at = now, key = secret) =>
+    signBridgeTicket(grant.identity, grant.origin, scopes, { publicUrl: "ws://127.0.0.1:3312/voice", secret: key }, at).token;
+  const token = sign();
+  expect(tickets.consume(token, "https://evil.example", now)).toBeNull();
+  expect(tickets.consume(token, grant.origin, now)).toMatchObject(grant);
+  expect(tickets.consume(token, grant.origin, now + 1)).toBeNull();
+  expect(tickets.consume(sign(now - 61_000), grant.origin, now)).toBeNull();
+  expect(tickets.consume(sign(now, "x".repeat(40)), grant.origin, now)).toBeNull();
+  expect(new WebTickets().consume(sign(), grant.origin, now)).toBeNull();
+  const [v, payload, mac] = sign().split(".");
+  const forged = Buffer.from(JSON.stringify({ ...JSON.parse(Buffer.from(payload, "base64url").toString()), w: true }));
+  expect(tickets.consume([v, forged.toString("base64url"), mac].join("."), grant.origin, now)).toBeNull();
 });
 it("fails closed for new/mutating tools and does not equate staff with write consent", () => {
   expect(toolDenial(grant, "show_on_screen")).toBeNull();
@@ -328,17 +348,28 @@ function fakeKnob(routes: { mic: "device" | "laptop"; output: "device" | "laptop
   };
   return { transport, handlers, events, deviceAudio, routes };
 }
-async function attached(routes: { mic: "device" | "laptop"; output: "device" | "laptop" }) {
+async function attached(
+  routes: { mic: "device" | "laptop"; output: "device" | "laptop" },
+  tweak?: (shared: SharedRuntime) => void,
+  /** "off": the board never answers (powered off, another Wi-Fi): the session never finishes starting. */
+  board: "on" | "off" = "on"
+) {
   const r = await server();
+  tweak?.(r.shared);
   const knob = fakeKnob(routes);
   const session = new DeviceSession({ id: "owy-knob", host: "virtual", port: 1, psk: null }, r.shared, {
     connectDevice: async (_spec, handlers) => {
       knob.handlers.current = handlers;
+      if (board === "off") await new Promise(() => {});
       return knob.transport;
     },
   });
   r.shared.sessions = new Map([[session.id, session]]);
-  await session.start();
+  if (board === "on") await session.start();
+  else {
+    void session.start();
+    await vi.waitFor(() => expect(models.length).toBeGreaterThan(0));
+  }
   cleanup.push(() => session.stop());
   const knobModel = models.at(-1);
   const { data } = await ticket(r.bridge);
@@ -408,4 +439,131 @@ it("device mic + browser output, and detaching falls back to device audio", asyn
   r.knobModel.options.onEvent({ type: "response-done", responseId: "r2", status: "completed", raw: {} });
   await vi.waitFor(() => expect(r.knob.deviceAudio.length).toBeGreaterThan(0));
   expect(r.audio).toHaveLength(0);
+});
+
+// ── «Owy, en vivo»: the talk console on an attached browser ──
+
+const notices = (messages: any[]) => messages.filter((m) => m.type === "notice");
+const statuses = (messages: any[]) => messages.filter((m) => m.type === "status");
+
+it("talk commands need an attachment and answer with notices, never a close", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" });
+  r.send({ type: "status" });
+  await vi.waitFor(() => expect(statuses(r.messages)).toHaveLength(1));
+  expect(statuses(r.messages)[0]).toMatchObject({ device: { id: "owy-knob", peer: true, output: "laptop" }, talk: null });
+  r.send({ type: "talk", talk: { slide: "Slide 5 «Encuesta»", asker: "audience" } });
+  await vi.waitFor(() => expect(statuses(r.messages)).toHaveLength(2));
+  expect(r.session.talkContext).toEqual({ slide: "Slide 5 «Encuesta»", asker: "audience" });
+  r.send({ type: "say", text: "" }); // invalid
+  await vi.waitFor(() => expect(notices(r.messages)).toHaveLength(1));
+  // Over the per-minute budget: a warning, and the socket stays up.
+  for (let i = 0; i < 125; i++) r.send({ type: "status" });
+  await vi.waitFor(() => expect(notices(r.messages).some((m) => m.level === "warn")).toBe(true));
+  r.send({ type: "detach" });
+  await vi.waitFor(() => expect(r.session.hasPeer).toBe(false));
+  r.send({ type: "hush" });
+  await vi.waitFor(() => expect(notices(r.messages).some((m) => /Conectá/.test(m.message))).toBe(true));
+  expect(r.ws.readyState).toBe(WebSocket.OPEN);
+});
+
+it("say: Owy speaks on his own through the browser, the knob shows the face but gets no pipeline run", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" });
+  r.send({ type: "say", text: "Hola, soy Owy." });
+  await vi.waitFor(() => expect(r.knobModel.sendText).toHaveBeenCalledWith("[GUION] Hola, soy Owy."));
+  expect(r.messages.find((m) => m.type === "accepted")).toMatchObject({ own: true });
+  expect(r.knob.transport.setFace).toHaveBeenCalledWith("thinking");
+  r.knobModel.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.knobModel.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  expect(r.audio.reduce((sum, b) => sum + b.length - 4, 0)).toBe(3200);
+  expect(r.knob.events).toHaveLength(0);
+  expect(r.knob.deviceAudio).toHaveLength(0);
+  expect(r.knob.transport.setFace).toHaveBeenLastCalledWith("idle");
+  expect(r.session.voiceStatus().lastTurn).toMatchObject({ path: "realtime" });
+});
+
+it("say: without a live voice the recorded clip plays; output on the device is refused", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" }, (shared) => {
+    shared.clips = { "talk-wake": 300 };
+  });
+  r.knobModel.isConnected = false;
+  r.knobModel.status = "disconnected";
+  r.knobModel.connect = vi.fn(async () => {});
+  r.send({ type: "say", text: "Hola, soy Owy.", clip: "talk-wake" });
+  await vi.waitFor(() =>
+    expect(r.messages.some((m) => m.type === "screen" && m.command?.kind === "clip" && m.command.id === "talk-wake")).toBe(true)
+  );
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  expect(r.session.voiceStatus().lastTurn).toMatchObject({ path: "offline" });
+
+  r.knob.routes.output = "device";
+  r.send({ type: "say", text: "No me van a escuchar." });
+  await vi.waitFor(() => expect(notices(r.messages).some((m) => /laptop/.test(m.message))).toBe(true));
+  expect(r.ws.readyState).toBe(WebSocket.OPEN);
+});
+
+it("say: with the board off from the start, Owy still speaks through the console (and warms his voice)", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" }, undefined, "off");
+  // Nothing warmed the voice: the board never connected.
+  r.knobModel.isConnected = false;
+  r.knobModel.status = "disconnected";
+  r.knobModel.connect = vi.fn(async () => {
+    r.knobModel.isConnected = true;
+    r.knobModel.status = "connected";
+  });
+  r.send({ type: "route", mic: "laptop", output: "laptop" });
+  await vi.waitFor(() => expect(statuses(r.messages)).toHaveLength(1));
+  r.send({ type: "say", text: "Hola, soy Owy." });
+  await vi.waitFor(() => expect(r.knobModel.sendText).toHaveBeenCalledWith("[GUION] Hola, soy Owy."));
+  expect(r.knobModel.connect).toHaveBeenCalledOnce();
+  expect(r.messages.find((m) => m.type === "accepted")).toMatchObject({ own: true });
+  r.knobModel.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.knobModel.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  expect(r.audio.reduce((sum, b) => sum + b.length - 4, 0)).toBe(3200);
+  expect(notices(r.messages)).toHaveLength(0);
+});
+
+it("say: when the board drops mid-talk, the console's lines keep coming out of the laptop", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" });
+  r.knob.handlers.current!.onDisconnected!();
+  r.knob.transport.setFace.mockClear();
+  r.send({ type: "say", text: "Sigo acá." });
+  await vi.waitFor(() => expect(r.knobModel.sendText).toHaveBeenCalledWith("[GUION] Sigo acá."));
+  r.knobModel.options.onEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  r.knobModel.options.onEvent({ type: "response-done", responseId: "r1", status: "completed", raw: {} });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+  expect(r.audio.reduce((sum, b) => sum + b.length - 4, 0)).toBe(3200);
+  expect(notices(r.messages)).toHaveLength(0);
+  // The dropped board is left alone: nothing is sent to a link that is down.
+  expect(r.knob.transport.setFace).not.toHaveBeenCalled();
+});
+
+it("ask: eve answers with the talk context (the asker overridden) and Owy says it; hush stops a turn", async () => {
+  const turn = vi.fn(async () => ({ sessionId: "s", text: "Me hicieron con eve.", interim: [] }));
+  const r = await attached({ mic: "laptop", output: "laptop" }, (shared) => {
+    shared.brain = "eve";
+    shared.eve = { turn, cancel: vi.fn(async () => {}), reset: vi.fn(async () => {}) } as unknown as SharedRuntime["eve"];
+  });
+  r.send({ type: "talk", talk: { slide: "Slide 14 «Por dentro»", asker: "presenter" } });
+  await vi.waitFor(() => expect(statuses(r.messages)).toHaveLength(1));
+  r.send({ type: "ask", text: "¿Cómo estás hecho?", asker: "audience" });
+  await vi.waitFor(() => expect(r.knobModel.sendText).toHaveBeenCalledWith("[GUION] Me hicieron con eve."));
+  expect(turn).toHaveBeenCalledWith(
+    "owy-knob",
+    "¿Cómo estás hecho?",
+    expect.objectContaining({ talk: { slide: "Slide 14 «Por dentro»", asker: "audience" } })
+  );
+  // The next knob tap still carries the console's own asker.
+  expect(r.session.talkContext).toEqual({ slide: "Slide 14 «Por dentro»", asker: "presenter" });
+  r.send({ type: "hush" });
+  await vi.waitFor(() => expect(r.messages.some((m) => m.type === "event" && m.event === "RUN_END")).toBe(true));
+});
+
+it("a pitch being recorded is never cut by a console line", async () => {
+  const r = await attached({ mic: "laptop", output: "laptop" });
+  await r.knob.handlers.current!.onRequestStart({ start: true, wakeWordPhrase: "pitch" } as any);
+  r.send({ type: "say", text: "¡Hola!" });
+  await vi.waitFor(() => expect(notices(r.messages).some((m) => /pitch/.test(m.message))).toBe(true));
+  expect(r.knobModel.sendText).not.toHaveBeenCalled();
 });

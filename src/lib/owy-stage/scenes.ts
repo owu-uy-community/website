@@ -537,6 +537,28 @@ export const SCENES = {
       "La cara de Owy reaccionando a las conversaciones (bridge del companion); en el mercado de ideas, el pitch que escucha y la charla que acaba de ubicar.",
     params: z.object({ captions: z.boolean().default(true) }),
   },
+  "owy-charla": {
+    category: "owy",
+    title: "Charla: Owy, en vivo",
+    description:
+      "Las slides de la charla de Owy en el open space (consola en /admin/owy/charla). Una sola ronda para toda la charla: las preguntas del celular llegan hasta el Q&A.",
+    params: z.object({
+      slide: z.string().trim().max(40).default("lobby"),
+      step: z.number().int().min(0).max(40).default(0),
+      /** Q&A: who answers the question in focus. */
+      who: z.enum(["", "agustin", "owy", "both"]).default(""),
+      /** Q&A: the question being answered (an input id), highlighted on the wall. */
+      focus: z.string().trim().max(40).default(""),
+      /** Overlays the console toggles without leaving the scene (a new take would start a new phone round). */
+      blank: z.boolean().default(false),
+      /** Owy's face over the whole slide. */
+      owy: z.boolean().default(false),
+      /** The /owy/play QR, big. */
+      qr: z.boolean().default(false),
+      /** Owy's subtitles: his words under his face, along the bottom, on the face slides and the live demo. */
+      captions: z.boolean().default(true),
+    }),
+  },
   "owy-says": {
     category: "owy",
     title: "Owy dice",
@@ -2108,6 +2130,8 @@ export const FaceEventSchema = z.object({
   card: FaceCardSchema.optional(),
   /** Which Owy produced it (device id / web session); informational. */
   source: z.string().max(80).optional(),
+  /** The tool Owy is running right now, while thinking (the talk's live diagram lights its box). */
+  tool: z.string().trim().max(60).optional(),
 });
 export type FaceEvent = z.infer<typeof FaceEventSchema>;
 
@@ -2213,6 +2237,7 @@ export const EMPTY_DESK: Desk = { preview: null, queue: [], presets: [] };
 
 /** Scenes that take input from phones at /owy/play. */
 export const INTERACTIVE_SCENES = [
+  "owy-charla",
   "live-poll",
   "word-cloud",
   "live-questions",

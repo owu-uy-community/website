@@ -67,13 +67,13 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
     this.accepted = false;
     if (was) this.emit({ type: "detached", deviceId: was });
   }
-  mirrorAccept() {
+  mirrorAccept(own = false) {
     if (this.closed) return;
     ++this.run;
     this.active = true;
     this.accepted = true;
     this.ready = true;
-    this.emit({ type: "accepted" });
+    this.emit(own ? { type: "accepted", own: true } : { type: "accepted" });
   }
   mirrorDecline() {
     this.active = false;

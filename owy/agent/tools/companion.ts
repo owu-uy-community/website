@@ -22,8 +22,9 @@ export default defineDynamic({
   events: {
     "turn.started": (_event, ctx) => {
       if (!isChannel(ctx.channel, companion)) return null;
-      // A pitch's card already exists (the bridge placed it): nothing to propose in that turn.
-      if (ctx.session.auth.current?.attributes?.turn_kind === "pitch") return null;
+      // A pitch's card already exists (the bridge placed it), and a talk on stage is no marketplace: nothing to propose.
+      const kind = ctx.session.auth.current?.attributes?.turn_kind;
+      if (kind === "pitch" || kind === "talk") return null;
       // Snapshot (JSON) for the durable callback: the channel updates it from
       // `action.result` after every accepted proposal.
       const lastProposalAt = ctx.channel.metadata.lastProposalAt ?? null;

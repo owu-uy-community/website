@@ -120,6 +120,8 @@ const EnvSchema = z.object({
   OWU_API_URL: z.string().optional(),
   OWY_API_KEY: z.string().optional(),
   OWY_EVENT_ID: z.string().optional(),
+  /** The event modo pitch places cards into (id or slug), when it isn't OWY_EVENT_ID — a demo grid for a talk. */
+  COMPANION_PITCH_EVENT_ID: z.string().trim().min(1).optional(),
   COMPANION_PUBLIC_SITE_URL: z.string().default("https://owu.uy"),
   COMPANION_SITE_WS_URL: z.string().optional(),
 

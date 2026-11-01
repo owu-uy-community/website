@@ -17,6 +17,7 @@ import {
   Newspaper,
   PenLine,
   PiggyBank,
+  Presentation,
   Settings,
   ShieldCheck,
   Siren,
@@ -39,6 +40,7 @@ export type NavKey =
   | "asistentes"
   | "comunicacion"
   | "escenas"
+  | "charla"
   | "obs"
   | "sonidos"
   | "owy"
@@ -160,6 +162,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         icon: Clapperboard,
         go: "e",
         keywords: ["owy", "stage", "video wall", "pantalla", "take"],
+      },
+      {
+        key: "charla",
+        title: "Charla Owy",
+        href: "/admin/owy/charla",
+        icon: Presentation,
+        keywords: ["owy", "slides", "presentación", "charla", "en vivo", "open space"],
       },
       {
         key: "obs",

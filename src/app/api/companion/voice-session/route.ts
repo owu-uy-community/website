@@ -4,6 +4,7 @@ import {
   assertVoiceRequest,
   readVoiceScopes,
   requestBridgeTicket,
+  signBridgeTicket,
   VoiceHttpError,
   VoiceQuota,
   voiceFailure,
@@ -20,11 +21,14 @@ export async function POST(request: Request) {
     if (!(await can(principal, "stage:operate"))) throw new VoiceHttpError(403, "Admin access required.");
     const scopes = await readVoiceScopes(request);
     quota.take(principal.id);
+    const origin = new URL(request.url).origin;
+    const secret = process.env.COMPANION_BRIDGE_SECRET;
+    // A reachable bridge issues its own tickets; a bridge on the venue laptop (only its browser
+    // reaches it) takes one the site signs with the shared secret.
     return voiceResponse(
-      await requestBridgeTicket(principal.id, new URL(request.url).origin, scopes, {
-        url: process.env.COMPANION_BRIDGE_URL,
-        secret: process.env.COMPANION_BRIDGE_SECRET,
-      })
+      process.env.COMPANION_BRIDGE_URL || !process.env.COMPANION_BRIDGE_PUBLIC_URL
+        ? await requestBridgeTicket(principal.id, origin, scopes, { url: process.env.COMPANION_BRIDGE_URL, secret })
+        : signBridgeTicket(principal.id, origin, scopes, { publicUrl: process.env.COMPANION_BRIDGE_PUBLIC_URL, secret })
     );
   } catch (error) {
     return voiceFailure(error);

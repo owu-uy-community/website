@@ -228,6 +228,8 @@ const EXPECTED: Record<string, Access> = {
   "owyStage.spotifyStatus": "platform:stage:read",
   "owyStage.submit": "public",
   "owyStage.take": "platform:stage:operate",
+  "owyStage.talkCommand": "platform:stage:operate",
+  "owyStage.talkStatus": "platform:stage:operate",
   "panel.headcounts": "community:event:read",
   "panel.summary": "community:event:read",
   "polls.choose": "community:poll:choose",

@@ -104,7 +104,19 @@ function ease(dt: number, tau: number) {
   return 1 - Math.exp(-dt / tau);
 }
 
-export function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: number) {
+/** Where `drawFace` paints: the canvas size and the 466-space transform. The default fills the 1920×1080 wall. */
+export type FaceView = { w: number; h: number; s: number; ox: number; oy: number };
+const WALL_VIEW: FaceView = { w: W, h: H, s: S, ox: OX, oy: OY };
+
+/** A square canvas of `size` px with the whole face inside, the listening halo included. */
+export function squareView(size: number): FaceView {
+  const s = size / 520;
+  const o = (size - 466 * s) / 2;
+
+  return { w: size, h: size, s, ox: o, oy: o };
+}
+
+export function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: number, view: FaceView = WALL_VIEW) {
   s.now = t;
   const { mood } = s;
   const alive = mood !== "offline" && mood !== "error";
@@ -152,8 +164,8 @@ export function drawFace(ctx: CanvasRenderingContext2D, s: Sim, t: number, dt: n
   const mw = (happy ? 126 : voice ? 76 : 100) + tweak.mouth * k;
 
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, W, H);
-  ctx.setTransform(S, 0, 0, S, OX, OY);
+  ctx.clearRect(0, 0, view.w, view.h);
+  ctx.setTransform(view.s, 0, 0, view.s, view.ox, view.oy);
 
   // Listening: the knob's rim, a blue halo breathing around the face.
   if (mood === "listening") {
@@ -234,7 +246,8 @@ export const HAPPY_MS = 2500;
 /** The face slides left to make room for the pitch panel or the landed card. */
 const ASIDE_PX = 380;
 
-export default function OwyFace({ params, eventId }: SceneProps<"owy-face">) {
+/** `ambient={false}`: the face alone, without the brand shapes around it (the talk deck draws its own). */
+export default function OwyFace({ params, eventId, ambient = true }: SceneProps<"owy-face"> & { ambient?: boolean }) {
   const { preview } = useContext(StageContext);
   const canvas = useRef<HTMLCanvasElement>(null);
   const sim = useRef<Sim>(initialSim());
@@ -306,13 +319,14 @@ export default function OwyFace({ params, eventId }: SceneProps<"owy-face">) {
     if (ctx) drawFace(ctx, sim.current, t, dt);
   });
 
-  const transcript = flow.transcript;
+  // Subtitles switched off mid-sentence leave at once, not when the caption would have timed out.
+  const transcript = captions ? flow.transcript : null;
   const panel = transcript !== null && flow.landed === null && transcript.text.length > 160;
   const aside = panel || flow.landed !== null;
 
   return (
     <>
-      <Ambient />
+      {ambient && <Ambient />}
       <canvas
         ref={canvas}
         className="absolute inset-0 transition-transform duration-700 ease-out"

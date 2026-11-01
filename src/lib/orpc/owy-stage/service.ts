@@ -33,15 +33,18 @@ import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
 import * as Eventbrite from "../eventbrite/service";
 import { fetchJson } from "../http";
+import { OWY_TALK_CHANNEL } from "../../realtime/channels";
 import { Realtime } from "../services";
 import type {
   SaveDeskInput,
+  SeatStatus,
   SetNowPlayingInput,
   SetSceneInput,
   StageMeetup,
   StagePulse,
   StageSpeaker,
   StageWeather,
+  TalkCommand,
 } from "./schemas";
 
 const ROW_ID = "global";
@@ -603,3 +606,17 @@ export const getSpeakers = () =>
       }))
       .toSorted((a, b) => a.name.localeCompare(b.name));
   });
+
+// ---------------------------------------------------------------------------
+// «Owy, en vivo»: broadcast-only relay between the presenter's phone and the Mac seat
+// ---------------------------------------------------------------------------
+
+/** A phone's command for the seat. Nothing is stored: with no seat listening it is simply gone. */
+export const talkCommand = (command: TalkCommand) =>
+  broadcast("command", command, OWY_TALK_CHANNEL).pipe(Effect.as({ ok: true as const }));
+
+/** The seat's heartbeat, stamped with the server's clock so every phone ages it the same way. */
+export const talkStatus = (status: SeatStatus) =>
+  broadcast("status", { ...status, at: new Date().toISOString() }, OWY_TALK_CHANNEL).pipe(
+    Effect.as({ ok: true as const })
+  );
