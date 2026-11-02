@@ -40,14 +40,14 @@
 </style>
 <main>
   <h1>Owy Companion<span>.</span> arquitectura</h1>
-  <p class="lead">Dos Owys físicos (Knob 1.8B mudo y AMOLED 1.75C) hablan con un <b>bridge</b> Node en la laptop del venue. El modelo realtime (AI SDK 7 · Gemini 3.8 Live vía AI Gateway) es sólo <b>oídos y boca</b>: cada turno va al <b>Owy de eve</b> por su canal <code>companion</code> (una sesión durable por dispositivo: memoria, tools, staff) y la voz repite la respuesta textual. El sitio controla el bridge por un router <b>oRPC</b> tipado. Estado: 2026-09-20.</p>
+  <p class="lead">Dos Owys físicos (Knob 1.8B mudo y AMOLED 1.75C) hablan con un <b>bridge</b> Node en la laptop del venue. El modelo realtime (AI SDK 7 · Gemini 3.8 Live vía AI Gateway) es sólo <b>oídos y boca</b>: cada turno va al <b>Owy de eve</b> por su canal <code>companion</code> (una sesión durable por dispositivo: memoria, tools, staff) y la voz repite la respuesta textual. El panel online (<code>/admin/companion</code> → Control) es el que manda: el bridge corre sin interfaz, se conecta <b>saliendo</b> al socket de realtime del sitio con su llave, sigue los ajustes que el sitio guarda (un registro único: <code>web/registry.ts</code>) y reporta cada 15 s. Estado: 2026-11-01.</p>
 
   <div class="stack">
     <div><b>Owys</b> ESPHome 2026.8.2 · esp-idf · LVGL 9 · C++ (cara, halo, screenshots) · micro_wake_word · voice_assistant · API nativa :6053 con Noise</div>
     <div><b>Bridge</b> Node 24 · tsx · <code>node:http</code> (sin framework) · esphome-client · AI SDK 7 (<code>ai</code> + <code>@ai-sdk/google</code>) · oRPC server 1.14 · ws · zod 4 · vitest</div>
     <div><b>Sitio</b> Next 16 (App Router) · oRPC 1.14 (<code>RPCLink</code>) · Better Auth · Drizzle/Postgres · WebAudio · emulador WASM · Vercel</div>
     <div><b>Voz</b> <code>gateway:google/gemini-3.8-live</code> (default) · <code>gateway:openai/gpt-realtime-2.1</code> · <code>google:gemini-3.8-live</code> directo</div>
-    <div><b>Cerebro</b> eve 0.63 (<code>owy/agent</code>, Vercel o <code>eve dev</code>) · claude-sonnet-5 vía gateway · canal custom <code>companion</code> · instrucciones dinámicas de voz · <code>propose_talk</code> sólo ahí</div>
+    <div><b>Cerebro</b> eve 1.0 (<code>owy/agent</code>, Vercel o <code>eve dev</code>) · claude-sonnet-5.5 vía gateway (respaldos sonnet-5, haiku-5.5; si eve cae, el cerebro local del bridge) · canal custom <code>companion</code> · instrucciones dinámicas de voz · <code>propose_talk</code> sólo ahí</div>
   </div>
 
   <h2>Flujo</h2>
@@ -61,14 +61,15 @@ flowchart TB
 
   subgraph SITE["Sitio · Next.js"]
     direction LR
-    WB["/admin/companion<br/>workbench · voz · AudioRoutingCard"]:::site
+    WB["/admin/companion<br/>Control · Laboratorio (emulador)"]:::site
+    RTS["/api/realtime · private:companion<br/>companion.state / set / report / command"]:::site
   end
   OW[("API owu.uy · /api/orpc<br/>x-api-key · grilla · tareas")]:::site
 
   subgraph BRIDGE["Bridge · Node en la laptop del venue"]
     direction LR
     WS["web/server.ts :3312<br/>WS /voice · start | attach"]:::br
-    ST["web/settings.ts :3313<br/>oRPC /rpc"]:::br
+    CT["control/ · socket saliente + reporte 15 s<br/>ajustes en efecto · comandos · caché en disco"]:::br
     DS["DeviceSession × Owy<br/>turno · rutas · pacing · captions"]:::br
     RT["NodeRealtimeSession<br/>codec AI SDK sobre ws"]:::br
     TL["hablar_con_owy<br/>realtime/eve-link.ts"]:::br
@@ -84,9 +85,10 @@ flowchart TB
   EV["Owy de eve · owy/agent<br/>canal companion · sesión por Owy<br/>instrucciones de voz · tools · memoria"]:::site
 
   WB <--"ticket + WS"--> WS
-  WB <--"oRPC"--> ST
+  WB <--> RTS
+  CT <--"x-api-key (preset companion)"--> RTS
   WS --> DS
-  ST --> DS
+  CT --> DS
   DS <--"API nativa :6053"--> K
   DS <--> A
   DS <--> RT <--> M
@@ -94,7 +96,7 @@ flowchart TB
   TL <--"POST /turns · NDJSON stream<br/>cancel · reset"--> EV
   EV --> OW
   </pre>
-  <div class="legend">Azul: hardware · Amarillo: bridge · Gris: sitio y agente. El bridge no puede vivir en Vercel: necesita la LAN, el audio de la laptop y sockets persistentes; el sitio sólo lo controla (y sólo alcanza <code>:3313</code> cuando corre en la misma laptop). <b>El físico es el mismo Owy que Slack/Telegram</b>: en modo <code>COMPANION_BRAIN=eve</code> (default con <code>COMPANION_EVE_URL</code>) el modelo de voz llama <code>hablar_con_owy</code> con lo que dijo la persona, el bridge lo manda al canal <code>companion</code> del agente (Basic auth; loopback libre en <code>eve dev</code>), muestra los deltas de eve como subtítulos y devuelve el texto final para que la voz lo diga textual. Un tap cancela el turno en eve; tras 3 min de silencio la sesión se retira. <code>COMPANION_BRAIN=local</code> conserva el modo anterior (tools en el bridge con shim, sin eve).</div>
+  <div class="legend">Azul: hardware · Amarillo: bridge · Gris: sitio y agente. El bridge no puede vivir en Vercel: necesita la LAN, el audio de la laptop y sockets persistentes; el sitio sólo lo controla, a través del socket que abre el bridge (la página <code>:3313</code> queda de respaldo). <b>El físico es el mismo Owy que Slack/Telegram</b>: en modo <code>COMPANION_BRAIN=eve</code> (default con <code>COMPANION_EVE_URL</code>) el modelo de voz llama <code>hablar_con_owy</code> con lo que dijo la persona, el bridge lo manda al canal <code>companion</code> del agente (Basic auth; loopback libre en <code>eve dev</code>), muestra los deltas de eve como subtítulos y devuelve el texto final para que la voz lo diga textual. Un tap cancela el turno en eve; tras 3 min de silencio la sesión se retira. <code>COMPANION_BRAIN=local</code> conserva el modo anterior (tools en el bridge con shim, sin eve).</div>
 
   <h2>Modelo realtime · speech-to-speech</h2>
   <div class="two">
@@ -130,16 +132,17 @@ flowchart LR
   classDef dev fill:#0b1f3a,stroke:#0162C8,color:#FBF5E7
   classDef br fill:#1c1a10,stroke:#F5BB03,color:#FBF5E7
   classDef site fill:#141414,stroke:#8A8A8A,color:#FBF5E7
-  QC["Owy · quick controls<br/>select.mic_source · select.audio_output<br/>(persisten en flash)"]:::dev
-  RPC["bridgeRouter.settings.get / set<br/>web/rpc.ts · zod en web/contract.ts<br/>set espera ≤ 800 ms la confirmación del select"]:::br
-  PG["página http://127.0.0.1:3313/<br/>vía /api/settings (call())"]:::br
-  AD["/admin/companion · AudioRoutingCard<br/>companion.getAudioRouting / setAudioRouting<br/>RouterClient&lt;BridgeRouter&gt;"]:::site
-  ENV["env COMPANION_MIC_SOURCE / AUDIO_OUTPUT<br/>override cuando no hay selects"]:::br
-  QC <--"API nativa"--> RPC
-  PG --> RPC
-  AD --"oRPC /rpc"--> RPC
-  ENV -.-> RPC
-  RPC --"chooseRoutes() por turno · laptop sin peer ⇒ dispositivo"--> T["turno"]:::br
+  QC["Owy · su pantalla, su perilla<br/>entidades de la placa (persisten en flash)"]:::dev
+  AD["/admin/companion · Control<br/>companion_settings: una fila por ajuste<br/>gana el último (setAt)"]:::site
+  VZ["voz · tool ajustes<br/>público: comodidad · staff: el resto"]:::br
+  CP["control/plane.ts<br/>registry.ts: ajustes, entidades, cuándo aplican"]:::br
+  ENV["env COMPANION_*<br/>valores por defecto"]:::br
+  AD --"filas (socket) · reporte 15 s = sync completa"--> CP
+  CP --"reporta cambios: dispositivo · voz · local"--> AD
+  QC <--"API nativa · escribe y relee"--> CP
+  VZ --> CP
+  ENV -.-> CP
+  CP --"ya · próximo turno · al reiniciar (sin charlas)"--> T["turno"]:::br
   </pre>
 
   <h2>Modos de audio · por dispositivo</h2>
@@ -212,19 +215,20 @@ sequenceDiagram
       <li><code>index.ts</code> DeviceSession · PeerLink · <code>device/pipeline.ts</code> VoiceTurn</li>
       <li><code>device/esphome.ts</code> CompanionDevice · <code>web/device.ts</code> BrowserDevice (own | attached)</li>
       <li><code>realtime/</code> session (codec sobre ws) · models (<code>proveedor:modelo</code>) · <code>eve-link.ts</code> (canal companion) · prompt (<code>prompts/voice-of-owy.md</code> | <code>companion.md</code>) · tools (modo local) · <code>audio/pcm.ts</code> resamplers, chunker, pacer</li>
-      <li><code>web/server.ts</code> :3312 · <code>web/settings.ts</code> :3313 (oRPC <code>web/rpc.ts</code>, contrato <code>web/contract.ts</code>, tickets <code>web/tickets.ts</code>)</li>
-      <li><code>cli/</code> text (REPL) · probe · audio-check · tools · <code>test/</code> 69 vitest (web-bridge, rpc, pipeline…)</li>
+      <li><code>web/server.ts</code> :3312 · <code>web/settings.ts</code> :3313 página de respaldo · <code>web/registry.ts</code> todos los ajustes · contrato <code>web/contract.ts</code> · tickets <code>web/tickets.ts</code></li>
+      <li><code>control/</code> plane (sigue al panel, reporta cada 15 s) · channel (socket del sitio) · seat (la charla sin pestaña)</li>
+      <li><code>cli/</code> text (REPL) · probe · audio-check · tools · <code>test/</code> vitest (web-bridge, control, pipeline…)</li>
       <li><code>scripts/web-turn.mts</code> turno E2E sin hardware · <code>knob-peer.mts</code> modo laptop E2E · <code>knob-shots.py</code> receptor de capturas :8787</li>
     </ul></div>
-    <div class="card"><h3><b>agent/</b> · Owy de eve 0.63</h3><ul>
+    <div class="card"><h3><b>agent/</b> · Owy de eve 1.0</h3><ul>
       <li><code>channels/companion.ts</code> rutas <code>/companion/*</code>, sesión durable por Owy (<code>from(deviceId)</code>, <code>turnPolicy: steer</code>), auth <code>companion | companion-staff</code>, metadata (evento, cooldown)</li>
       <li><code>instructions/companion.ts</code> "modo voz" por turno (frases cortas, sin markdown, mercado abierto/cerrado, staff)</li>
       <li><code>tools/companion.ts</code> <code>propose_talk</code> dinámico (mercado + cooldown) · <code>tools/event_now.ts</code> común · <code>lib/staff.ts</code> gating</li>
       <li><code>instructions.md</code> · <code>sandbox/workspace/knowledge/*.md</code> · <code>channels/{slack,telegram,eve}.ts</code> · <code>evals/</code> (<code>t.judge</code>)</li>
     </ul></div>
     <div class="card"><h3><b>src/</b> · sitio Next.js</h3><ul>
-      <li><code>components/Companion/</code> workbench · LiveVoicePanel · web-voice.ts · AudioRoutingCard</li>
-      <li><code>lib/orpc/companion/</code> cliente oRPC tipado al bridge (<code>COMPANION_BRIDGE_SETTINGS_URL</code> → <code>/rpc</code>)</li>
+      <li><code>components/Companion/</code> Control (<code>CompanionControl.tsx</code>, <code>control/</code>) · Laboratorio (<code>CompanionWorkbench.tsx</code>, <code>lab/</code>) · LiveVoicePanel · web-voice.ts</li>
+      <li><code>lib/orpc/companion/</code> ajustes guardados y último reporte del bridge (<code>state</code> · <code>set</code> · <code>command</code> · <code>report</code>; canal <code>private:companion</code>)</li>
       <li><code>app/api/companion/voice-session</code> → bridge <code>/sessions</code> (<code>COMPANION_BRIDGE_URL</code> + secret)</li>
       <li><code>public/companion-runtime/</code> emulador WASM (cara 466 del AMOLED)</li>
     </ul></div>

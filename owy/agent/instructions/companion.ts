@@ -9,25 +9,23 @@ import companion from "../channels/companion";
  * replaces the Slack/Telegram formatting rules for that turn.
  *
  * Staff and marketplace state are per turn: the device sends them with every
- * message (`session.auth.current`), so this resolver runs at `turn.started`.
+ * message (`session.auth.current`), and eve runs this before every model call.
  */
-export default defineDynamic({
-  events: {
-    "turn.started": (_event, ctx) => {
-      if (!isChannel(ctx.channel, companion)) return null;
-      const auth = ctx.session.auth.current;
-      const staff = auth?.authenticator === "companion-staff";
-      const marketplaceOpen = auth?.attributes.marketplace_open === "true";
-      const eventName = ctx.channel.metadata.eventName ?? "la OWU Conf";
-      const deviceId = ctx.channel.metadata.deviceId ?? auth?.principalId ?? "owy";
+export default defineDynamic((ctx) => {
+  if (!isChannel(ctx.channel, companion)) return null;
+  const auth = ctx.session.auth.current;
+  const staff = auth?.authenticator === "companion-staff";
+  const marketplaceOpen = auth?.attributes.marketplace_open === "true";
+  const eventName = ctx.channel.metadata.eventName ?? "la OWU Conf";
+  const deviceId = ctx.channel.metadata.deviceId ?? auth?.principalId ?? "owy";
 
-      // Modo pitch: the bridge already transcribed the pitch, placed it and will announce where it
-      // landed; the only thing wanted from Owy is a warm, specific reaction, said right after.
-      // Per turn (auth attributes): the device's session also carries its chat turns.
-      if (auth?.attributes.turn_kind === "pitch") {
-        const title = auth.attributes.pitch_title;
-        return defineInstructions({
-          content: `# Modo voz: reacción a un pitch del mercado de ideas
+  // Modo pitch: the bridge already transcribed the pitch, placed it and will announce where it
+  // landed; the only thing wanted from Owy is a warm, specific reaction, said right after.
+  // Per turn (auth attributes): the device's session also carries its chat turns.
+  if (auth?.attributes.turn_kind === "pitch") {
+    const title = auth.attributes.pitch_title;
+    return defineInstructions({
+      content: `# Modo voz: reacción a un pitch del mercado de ideas
 
 Sos el **Owy físico** en el mercado de ideas del open space de ${eventName}. Una persona acaba de proponer una charla hablándote; el mensaje que te llega es la transcripción de su pitch. La card${title ? ` «${title}»` : ""} **ya está creada y ubicada en la grilla** por el sistema, y el dispositivo ya anuncia sala y horario.
 
@@ -37,15 +35,15 @@ Tu única tarea: **una o dos frases cálidas, concretas y con los pies en la tie
 - NO uses herramientas, no preguntes nada, no pidas confirmación.
 - Sin markdown, listas, emojis ni símbolos: se pronuncia en voz alta.
 - Si la transcripción no parece una propuesta, devolvé una frase breve y amable igual.`,
-        });
-      }
+    });
+  }
 
-      // «Owy, en vivo»: on stage with Agustín, in front of an audience (the bridge sends the slide on screen).
-      if (auth?.attributes.turn_kind === "talk") {
-        const slide = auth.attributes.talk_slide;
-        const audience = auth.attributes.talk_asker === "audience";
-        return defineInstructions({
-          content: `# Modo voz: co-presentás una charla
+  // «Owy, en vivo»: on stage with Agustín, in front of an audience (the bridge sends the slide on screen).
+  if (auth?.attributes.turn_kind === "talk") {
+    const slide = auth.attributes.talk_slide;
+    const audience = auth.attributes.talk_asker === "audience";
+    return defineInstructions({
+      content: `# Modo voz: co-presentás una charla
 
 Sos el **Owy físico** y ahora mismo estás **dando una charla junto con Agustín**, frente a público, en el open space de ${eventName}. La charla se llama «Owy, en vivo» y es sobre vos: qué hacés, cómo te hicieron y tu historia. Un modelo de voz dice en voz alta **exactamente** lo que escribís, por el parlante de la sala, y tus palabras salen como subtítulos en la pantalla grande.
 
@@ -62,11 +60,11 @@ ${slide ? `\nEn pantalla ahora: ${slide}\nSi viene al caso, referite a lo que se
 - Datos del evento o de la grilla: con tus herramientas, como siempre.
 - No cargues propuestas de charlas en este modo (no estás en el mercado de ideas); si alguien quiere proponer una, que lo haga en el mercado o con el modo pitch.
 - Si la pregunta es incómoda, personal o fuera de lugar, respondé breve y amable y devolvele la palabra a Agustín.`,
-        });
-      }
+    });
+  }
 
-      return defineInstructions({
-        content: `# Modo voz: sos el Owy físico
+  return defineInstructions({
+    content: `# Modo voz: sos el Owy físico
 
 Ahora mismo NO estás en Slack ni Telegram: sos el **Owy físico**, un dispositivo con cara, micrófono y (a veces) parlante en la mesa del **mercado de ideas** del open space de ${eventName} (id de dispositivo ${deviceId}). La gente se acerca, te toca y te habla. Un modelo de voz repite en voz alta **exactamente** lo que escribís y tu texto también se muestra como subtítulo en tu pantalla.
 
@@ -106,7 +104,5 @@ ${
     : "Esta persona **no es staff**: información sí; mover, borrar o editar cards, castear, OBS, countdown, tareas y avisos no. Si lo pide, decilo amable: eso lo hace el staff, que active el modo staff en la pantalla o lo pida en Slack."
 }
 Nunca compartas datos internos con quien no sea staff. Si la conversación se desvía a temas sensibles (código de conducta, incidentes), derivá al staff de inmediato.`,
-      });
-    },
-  },
+  });
 });

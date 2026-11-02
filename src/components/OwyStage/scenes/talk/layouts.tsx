@@ -278,7 +278,7 @@ export function OrbitSlide({ slide, step }: LayoutProps<"orbit">) {
         className="absolute flex flex-col items-center justify-center rounded-full border-[6px] border-[#F5BB03]"
         style={{ left: cx - ring, top: cy - ring, width: ring * 2, height: ring * 2 }}
       >
-        <MiniFace className="h-[124px] w-[124px]" size={124} />
+        <MiniFace size={124} />
         <p className="mt-2 w-[180px] text-center text-[24px] leading-[1.15] font-medium text-balance text-[#FBF5E7]/70">
           {slide.core.detail}
         </p>

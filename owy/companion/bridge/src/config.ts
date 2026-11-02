@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { MODELS } from "../../../agent/lib/models";
 
 /**
  * Bridge configuration, read once from the environment.
@@ -27,17 +28,21 @@ export const DeviceSpecSchema = z.object({
 });
 export type DeviceSpec = z.infer<typeof DeviceSpecSchema>;
 
-const EnvSchema = z.object({
+export const EnvSchema = z.object({
   // --- Realtime model (ears + mouth) ---
-  COMPANION_REALTIME_MODEL: z.string().default("gateway:google/gemini-3.8-live"),
-  COMPANION_VOICE: z.string().default("Kore"),
+  COMPANION_REALTIME_MODEL: z.string().default(MODELS.realtime),
+  COMPANION_VOICE: z.string().default(MODELS.realtimeVoice),
   GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
   AI_GATEWAY_API_KEY: z.string().optional(),
 
   // --- Fallbacks (the venue network is unknown) ---
-  /** Realtime models tried in order when the primary cannot connect (comma-separated specs; empty = none). */
-  COMPANION_REALTIME_FALLBACKS: z.string().default("gateway:openai/gpt-realtime-2.1"),
-  /** Voice for non-Gemini fallbacks (Gemini voice names do not exist there). */
+  /**
+   * Realtime models tried in order when the primary cannot connect (comma-separated specs; empty
+   * = none). `spec#voice` picks a tier's voice; without it Gemini gets COMPANION_VOICE, OpenAI
+   * COMPANION_FALLBACK_VOICE and any other vendor its own default.
+   */
+  COMPANION_REALTIME_FALLBACKS: z.string().default(MODELS.realtimeFallbacks.join(",")),
+  /** Voice for OpenAI tiers without their own `#voice` (Gemini voice names do not exist there). */
   COMPANION_FALLBACK_VOICE: z.string().default("marin"),
   /** Per tier: how long a token may take, and the whole handshake. */
   COMPANION_TOKEN_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(8000),
@@ -48,14 +53,18 @@ const EnvSchema = z.object({
    * (needs AI_GATEWAY_API_KEY). `off`: the old behaviour (decline when no model).
    */
   COMPANION_CASCADE: z.enum(["on", "off"]).default("on"),
-  /** Transcription models for the cascade, tried in order. */
-  COMPANION_TRANSCRIBE_MODELS: z.string().default("google/gemini-3.5-transcribe,openai/gpt-4o-mini-transcribe"),
-  /** Streaming TTS for the cascade (24 kHz PCM); the voice defaults to COMPANION_VOICE. */
-  COMPANION_TTS_MODEL: z.string().default("google/gemini-3.8-flash-tts"),
+  /** Transcription models for the cascade, tried in order; each must keep zero data retention. */
+  COMPANION_TRANSCRIBE_MODELS: z.string().default(MODELS.transcribe.join(",")),
+  /** Speech for the cascade, a sentence at a time in COMPANION_TTS_VOICE (default: COMPANION_VOICE), tried in order. */
+  COMPANION_TTS_MODELS: z.string().default(MODELS.speech.join(",")),
+  /** Older single-model form of COMPANION_TTS_MODELS; wins when set. */
+  COMPANION_TTS_MODEL: z.string().optional(),
+  /** The last voice that speaks before the text on screen (streams; its own voice). Empty = none. */
+  COMPANION_TTS_STREAM_MODEL: z.string().default(MODELS.speechStream),
   COMPANION_TTS_VOICE: z.string().optional(),
   /** Local brain in the cascade: the text model, then gateway model fallbacks (comma-separated). */
-  COMPANION_TEXT_MODEL: z.string().default("google/gemini-3.8-flash"),
-  COMPANION_TEXT_FALLBACK_MODELS: z.string().default("openai/gpt-5-mini"),
+  COMPANION_TEXT_MODEL: z.string().default(MODELS.text),
+  COMPANION_TEXT_FALLBACK_MODELS: z.string().default(MODELS.textFallbacks.join(",")),
   /**
    * A realtime model that says nothing this long after the person paused (twice
    * this once the turn is handed over, tools excluded) is a dead socket or a
@@ -85,7 +94,7 @@ const EnvSchema = z.object({
   COMPANION_MOUTH_LATENCY_MS: z.coerce.number().int().min(0).max(2000).default(250),
   /** Faces while Owy talks: `jev` (TypeSafe on the AI Gateway, local guess as fallback), `guess` (local only), `off`. */
   COMPANION_EXPRESSIONS: z.enum(["jev", "guess", "off"]).default("jev"),
-  COMPANION_EXPRESSION_MODEL: z.string().default("typesafe-ai/jev"),
+  COMPANION_EXPRESSION_MODEL: z.string().default(MODELS.expression),
   /** Shown to the agent as where the device stands. */
   COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
 
@@ -100,9 +109,9 @@ const EnvSchema = z.object({
   COMPANION_PITCH_VOICE: z.enum(["silent", "confirm", "react"]).optional(),
   COMPANION_PITCH_REACTS: boolFromEnv,
   /** Audio → card, one multimodal call through the gateway. */
-  COMPANION_PITCH_MODEL: z.string().default("google/gemini-3.8-flash"),
+  COMPANION_PITCH_MODEL: z.string().default(MODELS.pitch),
   /** Gateway model fallbacks for the pitch extractor (comma-separated, audio-capable). */
-  COMPANION_PITCH_FALLBACK_MODELS: z.string().default("google/gemini-3.5-flash"),
+  COMPANION_PITCH_FALLBACK_MODELS: z.string().default(MODELS.pitchFallbacks.join(",")),
   /**
    * How much the extractor reasons first. Measured on Gemini 3.8 Flash (2026-11-01): the default
    * (medium) takes 5–7 s per pitch, `low` 3–4 s with the same cards and names; `minimal` is rejected.
@@ -112,7 +121,7 @@ const EnvSchema = z.object({
    * Tail latency: past COMPANION_PITCH_HEDGE_MS without an answer (or on a failure) this faster
    * model is asked too and the first answer wins (flash-lite: ~1.7 s, but worse at names). Empty = off.
    */
-  COMPANION_PITCH_HEDGE_MODEL: z.string().default("google/gemini-3.5-flash-lite"),
+  COMPANION_PITCH_HEDGE_MODEL: z.string().default(MODELS.pitchHedge),
   COMPANION_PITCH_HEDGE_MS: z.coerce.number().int().min(500).max(20_000).default(5_000),
   /**
    * Before placing, a decision model (jev, Luna when unsure) asks per card on the board «is this the
@@ -171,7 +180,14 @@ const EnvSchema = z.object({
   // ponytail: one gain for whichever Mac input is chosen; per-input gains if the venue mixes mics.
   COMPANION_HOST_MIC_GAIN_DB: z.coerce.number().min(-12).max(30).default(0),
   COMPANION_FFMPEG: z.string().default("ffmpeg"),
-  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop"]).default("device"),
+  /** The Mac output for the `host` route (the room's PA), by name or part of it; unset = the system's default output. */
+  COMPANION_HOST_SPEAKER: z.string().trim().min(1).optional(),
+  /** ms from a frame leaving the pacer to it being heard from the Mac's output (mouth and face sync; calibrate by ear). */
+  COMPANION_HOST_SPEAKER_LATENCY_MS: z.coerce.number().int().min(0).max(1000).default(150),
+  /** After Owy speaks on the Mac, its mic stays deaf this long more: the room's echo (no echo cancellation). */
+  COMPANION_HOST_SPEAKER_TAIL_MS: z.coerce.number().int().min(0).max(2000).default(300),
+  /** `host` = the Mac's own output (COMPANION_HOST_SPEAKER), played with ffmpeg; macOS only, not in Docker. */
+  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop", "host"]).default("device"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
   /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */
   COMPANION_BIND_HOST: z.string().default("127.0.0.1"),

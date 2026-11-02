@@ -465,7 +465,7 @@ script:
           tile(id(quick_chime), id(listening_chime).state ? "al escuchar" : "apagado", id(listening_chime).state);
           tile(id(quick_sounds), id(interaction_sounds).state ? "al jugar" : "apagados", id(interaction_sounds).state);
           tile(id(quick_mic_source), id(mic_source).current_option() == "laptop" ? "laptop" : id(mic_source).current_option() == "mac" ? "mac" : "dispositivo", -1);
-          tile(id(quick_audio_output), id(audio_output).current_option() == "laptop" ? "laptop" : "dispositivo", -1);
+          tile(id(quick_audio_output), id(audio_output).current_option() == "laptop" ? "laptop" : id(audio_output).current_option() == "mac" ? "mac" : "dispositivo", -1);
           tile(id(quick_motion), !id(companion).motion_ok(millis()) ? "sin sensor" : id(motion_follow).state ? "me sigue" : "quieto",
                id(motion_follow).state && id(companion).motion_ok(millis()));
           tile(id(quick_reduce), id(reduced_motion).state ? "mínimas" : "completas", !id(reduced_motion).state);

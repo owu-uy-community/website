@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 
 export const root = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 export const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-export const protocolFiles = ["worker.mjs", "session.mjs", "pose.mjs", "fixtures.mjs", "bridge.mjs"];
+export const protocolFiles = ["worker.mjs", "face.mjs", "session.mjs", "pose.mjs", "fixtures.mjs", "bridge.mjs"];
 const inputs = [
   ...[
     "runtime.cpp",

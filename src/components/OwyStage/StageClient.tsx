@@ -39,12 +39,14 @@ type Props = {
    * (a scene that is not on air yet), so it changes as the operator types.
    */
   monitor?: "program" | "preview";
+  /** `?lag=<ms>`: how late this screen shows Owy's face (OBS, the projector), so his face acts earlier. */
+  lag?: number;
 };
 
 /** Offline, or a deploy swapped the files: the frame keeps what it shows and the next state tries again. */
 const logFailure = (error: unknown) => console.error("[stage] scene code did not load", error);
 
-export default function StageClient({ bg, fixed, preview = false, canvas, monitor }: Props) {
+export default function StageClient({ bg, fixed, preview = false, canvas, monitor, lag }: Props) {
   const posted = monitor === "preview";
   const follows = !preview && !posted;
   const wall = follows && !monitor && !fixed;
@@ -158,7 +160,7 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
       {/* The wall itself is a venue screen; its monitors and pinned scenes are not. A scene without an event
           (black, Owy's face) leaves the wall in the event it was in, instead of dropping it from Pantallas. */}
       {wall && <ScreenBeacon eventId={shown?.eventId ?? undefined} />}
-      <Stage bg={bg} canvas={canvas} preview={preview} throttle={preview || Boolean(monitor)}>
+      <Stage bg={bg} canvas={canvas} lag={lag} preview={preview} throttle={preview || Boolean(monitor)}>
         {Scene && shown && (
           <Scene
             key={restarts ? `${shown.scene}:${shown.round}` : shown.scene}

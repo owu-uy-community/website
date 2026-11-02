@@ -44,6 +44,8 @@ export type DeviceCommand =
   | { kind: "face"; state: string }
   /** What Owy's face feels while a sentence plays (bridge expression.ts). */
   | { kind: "expression"; expression: string; leadMs: number; strength: number }
+  /** Lip shapes for the reply (bridge audio/mouth.ts): base64url, 40 ms each, the first heard `leadMs` from now. */
+  | { kind: "mouth"; frames: string; leadMs: number }
   | { kind: "volume"; value: number }
   | { kind: "bridgeEvent"; event: string; run: number }
   /** A pre-rendered cue to play (public/companion-audio/clips/<id>.wav); the browser plays it itself. */

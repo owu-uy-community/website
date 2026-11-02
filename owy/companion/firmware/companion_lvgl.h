@@ -1,4 +1,5 @@
 #pragma once
+#include <utility>
 #include "companion_model.h"
 #include "lvgl.h"
 
@@ -83,6 +84,13 @@ class FaceRenderer {
       lv_obj_set_style_line_width(line, std::max(2, s(12)), LV_PART_MAIN);
       lv_obj_set_style_line_rounded(line, true, LV_PART_MAIN);
     }
+    // The fixed radii YAML bakes in at 466 (face.yaml), scaled like every other
+    // number: unscaled, a smaller face's eyes and pupils render rounder.
+    const std::pair<lv_obj_t *, int> radii[] = {
+        {o.eye_l, 58}, {o.eye_r, 58}, {o.pupil_l, 20}, {o.pupil_r, 20}, {o.glint_l, 7}, {o.glint_r, 7},
+        {o.happy_l, 62}, {o.happy_r, 62}, {o.cheek_l, 7}, {o.cheek_r, 7}, {o.tongue, 18}, {o.cut, 12}};
+    for (const auto &radius : radii)
+      if (radius.first) lv_obj_set_style_radius(radius.first, s(radius.second), LV_PART_MAIN);
     prepared_ = true;
   }
   void eye(int n, lv_obj_t *eye, lv_obj_t *pupil, lv_obj_t *glint, lv_obj_t *happy, lv_obj_t *lid,

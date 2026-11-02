@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { pickChannel } from "../../../public/companion-audio/pcm.mjs";
+import { WebVoice, type DeviceCommand } from "./web-voice";
 
 describe("capture channel pick", () => {
   const left = Float32Array.from([0.2, 0.4]);
@@ -16,5 +17,21 @@ describe("capture channel pick", () => {
   test("a mono mic is always its only side", () => {
     expect(pickChannel([left], "R", scratch)).toBe(left);
     expect(pickChannel([left], "mix", scratch)).toBe(left);
+  });
+});
+
+describe("the bridge's screen commands", () => {
+  type Receiver = { receive: (message: unknown) => Promise<void> };
+  const nothing = () => {};
+
+  test("the reply's lip shapes reach the virtual Owy like any other device command", async () => {
+    const commands: DeviceCommand[] = [];
+    const voice = new WebVoice(nothing, nothing, nothing, undefined, (command) => commands.push(command));
+    const mouth = { kind: "mouth", frames: "AEIMQU", leadMs: 120 } as const;
+
+    await (voice as unknown as Receiver).receive({ type: "screen", run: 0, command: mouth });
+    await (voice as unknown as Receiver).receive({ type: "screen", run: 7, command: mouth });
+
+    expect(commands).toStrictEqual([mouth]);
   });
 });

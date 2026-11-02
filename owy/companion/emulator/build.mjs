@@ -89,8 +89,10 @@ const link = spawnSync(
     "-sALLOW_MEMORY_GROWTH=1",
     "-sINITIAL_MEMORY=16777216",
     "-sMAXIMUM_MEMORY=67108864",
-    '-sEXPORTED_RUNTIME_METHODS=["HEAPU8","HEAPU16","HEAPF32","UTF8ToString","stringToUTF8"]',
-    '-sEXPORTED_FUNCTIONS=["_malloc","_free","_owy_init","_owy_advance","_owy_input","_owy_snapshot","_owy_pixels","_owy_cue","_owy_cue_size","_owy_trace","_owy_phase","_owy_audio_received","_owy_audio_buffered"]',
+    // OBS 30's browser source is Chromium 103: never emit anything newer.
+    "-sMIN_CHROME_VERSION=103",
+    '-sEXPORTED_RUNTIME_METHODS=["HEAPU8","HEAPU16","HEAP32","HEAPF32","UTF8ToString","stringToUTF8"]',
+    '-sEXPORTED_FUNCTIONS=["_malloc","_free","_owy_init","_owy_advance","_owy_input","_owy_snapshot","_owy_pixels","_owy_rgba","_owy_dirty","_owy_cue","_owy_cue_size","_owy_trace","_owy_phase","_owy_audio_received","_owy_audio_buffered"]',
     "-o",
     join(out, "owy-runtime.mjs"),
   ],

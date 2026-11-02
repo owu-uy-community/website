@@ -1,5 +1,5 @@
 import createRuntime from "./owy-runtime.mjs";
-import { Session, MAX_TIME } from "./session.mjs";
+import { Session, MAX_TIME, paint } from "./session.mjs";
 import { scenarios } from "./fixtures.mjs";
 import { poseMotion, shakeMotion } from "./pose.mjs";
 let session,
@@ -8,23 +8,34 @@ let session,
   timer,
   pose = [0, 0, 0],
   lastWall = 0,
-  remainder = 0;
-function emit() {
-  const frame = session.frame();
+  remainder = 0,
+  screen,
+  posted = { at: 0, mode: "", playing: false, trace: undefined, traced: 0 };
+const cache = {};
+// The worker paints its own canvas; the page gets the state at most 15 times a second,
+// at once when the trace, a cue, a command, the mode or play/pause changes.
+function emit(urgent = true) {
+  if (screen) paint(session.module, screen, session.size, cache);
   const cues = session.cues.splice(0).map((c) => ({ ...c, pcm: session.pcm(c.kind) }));
+  const commands = session.commands.splice(0);
+  const tail = session.trace.at(-1);
+  const traced = tail !== posted.trace || session.trace.length !== posted.traced;
+  const now = performance.now();
+  urgent ||= traced || cues.length > 0 || commands.length > 0 || session.mode !== posted.mode || playing !== posted.playing;
+  if (!urgent && now - posted.at < 66) return;
+  posted = { at: now, mode: session.mode, playing, trace: tail, traced: session.trace.length };
   postMessage(
     {
       type: "state",
-      state: session.snapshot(),
-      frame,
-      trace: session.trace.slice(-120),
+      state: session.last,
+      ...(traced ? { trace: session.trace.slice(-120) } : {}),
       mode: session.mode,
       duration: session.duration,
       playing,
       cues,
-      commands: session.commands.splice(0),
+      commands,
     },
-    [frame.buffer, ...cues.map((c) => c.pcm.buffer)]
+    cues.map((c) => c.pcm.buffer)
   );
 }
 function run() {
@@ -38,7 +49,7 @@ function run() {
     remainder -= elapsed;
     session.advance(elapsed);
     if (session.time >= MAX_TIME || (session.mode === "replay" && session.time >= session.duration)) playing = false;
-    emit();
+    emit(false);
     if (playing) timer = setTimeout(run, 16);
   } catch (error) {
     playing = false;
@@ -51,6 +62,9 @@ self.onmessage = async ({ data: m }) => {
       const manifest = await (await fetch(new URL("./manifest.json", import.meta.url))).json();
       const module = await createRuntime();
       session = new Session(module, manifest);
+      // The page's canvas, transferred: this worker draws what LVGL flushes.
+      screen = m.canvas?.getContext("2d");
+      if (screen) m.canvas.width = m.canvas.height = session.size;
       postMessage({ type: "ready", manifest, scenarios: scenarios.map(({ events, ...s }) => s) });
       emit();
       return;
@@ -74,7 +88,7 @@ self.onmessage = async ({ data: m }) => {
     }
     if (m.type === "liveVisual") {
       session.liveVisual(m.phase, m.mic, m.speaker);
-      emit();
+      emit(false);
       return;
     }
     if (m.type === "liveCue" && session.mode === "live") {

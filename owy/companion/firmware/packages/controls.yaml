@@ -5,7 +5,7 @@
 #   select  face_state · switch staff_mode / marketplace_open / quiet_mode / wake_word_enabled
 #   number  volume · actions show_card / show_qr / show_text / set_volume / mouth_track / express
 #   modo pitch: switch pitch_mode · select pitch_voice · binary_sensor pitch_submit · action pitch_prompt
-#   audio routing: select mic_source (dispositivo|laptop|mac) / audio_output (dispositivo|laptop)
+#   audio routing: select mic_source (dispositivo|laptop|mac) / audio_output (dispositivo|laptop|mac)
 #
 # The mouth follows the audio this device plays (speaker PCM tap); when the
 # bridge plays a turn on the laptop instead, it sends `mouth_track` frames.
@@ -39,8 +39,9 @@ select:
 
   # Audio routing, read by the bridge at the start of every turn. `laptop` =
   # a browser attached to the bridge as this device's audio (the talk
-  # console); `mac` = an input of the Mac running the bridge, captured by
-  # the bridge itself (the built-in mic, a DJI receiver: COMPANION_HOST_MIC).
+  # console); `mac` = the Mac running the bridge, handled by the bridge itself:
+  # its input (the built-in mic, a DJI receiver: COMPANION_HOST_MIC) or its
+  # output (the room's PA: COMPANION_HOST_SPEAKER).
   # This device keeps the trigger, the face and the captions. Persisted; the
   # bridge falls back to COMPANION_MIC_SOURCE / COMPANION_AUDIO_OUTPUT when a
   # board lacks them, and to this device's mic when the chosen one is down.
@@ -60,6 +61,7 @@ select:
     options:
       - dispositivo
       - laptop
+      - mac
     initial_option: dispositivo
     optimistic: true
     restore_value: true

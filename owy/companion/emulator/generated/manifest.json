@@ -17,18 +17,18 @@
     "calibration_page",
     "help_page"
   ],
-  "objects": 210,
-  "sceneHash": "21685f6e9403b9287b6d202a39a9a9f7a030f6f3c1c9dcc110c929f284d78b42",
+  "objects": 211,
+  "sceneHash": "5da2d7c7d2fe55b3e2ddc335ea092d02d00143e6b15a62a44317312068b1dd12",
   "fontsHash": "49d1d6d4be92e886f9d496b396402084f2c4f084a28249148381f14c12c3d381",
   "sourceHashes": {
     "companion_model.h": "bdd2b66a8a35c79755f3db82a3f4af482e32617fb575d7144a238bbd36278302",
     "companion_motion.h": "91cb07a936be6db2d3dde2ebce8ad664fe18569b245c8f93a1d0af55acec89ba",
-    "companion_lvgl.h": "d937bc1904cd67538a68c1b5faaa000d1c1407352730459943a468f4d5c86be1",
+    "companion_lvgl.h": "b67d2d36e179f6b2c4f41763b2934cd9bbbff4fb0bd7786a69563bba857996a2",
     "companion_sound.h": "7606317ae9d927a233dc7ed25c11b01b00ffdd67c5b23c84ecb81c70424faca3",
-    "packages/face.yaml": "0ed7f8476d7a98a5cbe4e8bbe827cf07238168914714346fa3cceb281a0bb632",
-    "packages/companion.yaml": "033872ee5ea2b0282b74d3d9faf179e007dc515f5ebd1acf5668434c26d54acc",
-    "packages/voice.yaml": "567a92b90ba906ae68b9288ff9216a102d830732cfed751fb22abfa1dd7998ff",
-    "packages/controls.yaml": "ddd955accc7e35be53ded5159accb34d29d62256ea629d73364641526c543ec3"
+    "packages/face.yaml": "f7f5260a92b280cd815cabb500aabc9c96144bfeac735325ca9836201f03bc9e",
+    "packages/companion.yaml": "1a20692bd54a9ef81107c4d058b054d49fe4363214b70e32afc5e336d99d783d",
+    "packages/voice.yaml": "63c9ea66ae9b3dbb1e9884a37d803725dfff1be98228995cdfb191aa59629274",
+    "packages/controls.yaml": "c9e6816b482edd664cc53866b6827c24827971f71e80b46b86d7a097bdeb361e"
   },
-  "version": "0bdc7ebe7eac4914"
+  "version": "26d5467811148414"
 }

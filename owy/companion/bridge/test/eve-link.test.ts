@@ -166,6 +166,60 @@ describe("EveLink", () => {
   });
 });
 
+/** eve 1.0's stream (v27), one session event per line as the companion channel serializes them. */
+const at = (line: number, index = 0) => ({ position: { line, index }, at: "2026-11-01T22:00:00.000Z" });
+describe("EveLink on eve 1.0 (stream v27)", () => {
+  it("captions the reply as it streams, reports tools, and answers with the reply parts", async () => {
+    eve = await fakeEve(
+      [
+        { type: "delivery.admitted", data: { deliveryId: "d_1" }, meta: at(7) },
+        { type: "turn.started", scope: { turnId: "turn_3" }, data: { turnId: "turn_3" }, meta: at(8) },
+        { type: "content.delta", scope: { turnId: "turn_3" }, data: { partId: "p0", kind: "reasoning", delta: "pienso" }, meta: at(8) },
+        { type: "content.delta", scope: { turnId: "turn_3" }, data: { partId: "p1", kind: "text", delta: "Dejame " }, meta: at(8) },
+        { type: "content.delta", scope: { turnId: "turn_3" }, data: { partId: "p1", delta: "ver." }, meta: at(8) },
+        { type: "content.completed", scope: { turnId: "turn_3" }, data: { partId: "p1", kind: "text", phase: "narration", value: "Dejame ver." }, meta: at(9) },
+        { type: "call.requested", scope: { turnId: "turn_3" }, data: { callId: "c1", capability: { kind: "tool", name: "find_free_slot" }, input: {} }, meta: at(9) },
+        { type: "call.settled", scope: { turnId: "turn_3" }, data: { callId: "c1", outcome: "completed", output: {} }, meta: at(10) },
+        { type: "content.delta", scope: { turnId: "turn_3" }, data: { partId: "p2", kind: "text", delta: "Hay lugar en Cueva " }, meta: at(10) },
+        { type: "content.delta", scope: { turnId: "turn_3" }, data: { partId: "p2", delta: "a las quince." }, meta: at(10) },
+        { type: "content.completed", scope: { turnId: "turn_3" }, data: { partId: "p2", kind: "text", phase: "reply", value: "Hay lugar en Cueva a las quince." }, meta: at(11) },
+        { type: "turn.settled", scope: { turnId: "turn_3" }, data: { turnId: "turn_3", outcome: "completed", reply: ["p2"] }, meta: at(11) },
+        { type: "delivery.settled", data: { deliveryId: "d_1", outcome: "handled", turnId: "turn_3" }, meta: at(11, 1) },
+      ],
+      { streamIndex: 7 }
+    );
+    const link = new EveLink({ url: eve.url, logger });
+    const deltas: string[] = [];
+    const tools: string[] = [];
+    const result = await link.turn("owy-knob", "¿hay lugar a las tres?", {
+      staff: false,
+      marketplaceOpen: true,
+      onDelta: (text) => deltas.push(text),
+      onTool: (name) => tools.push(name),
+    });
+    expect(result.text).toBe("Hay lugar en Cueva a las quince.");
+    expect(result.interim).toEqual(["Dejame ver."]);
+    expect(tools).toEqual(["find_free_slot"]);
+    expect(deltas).not.toContain("pienso");
+    expect(deltas.at(-1)).toBe("Hay lugar en Cueva a las quince.");
+    expect(eve.requests[1].url).toBe("/companion/sessions/wrun_test/stream?startIndex=7");
+  });
+
+  it("a failed turn is an error, and the budget prompt starts a fresh session", async () => {
+    eve = await fakeEve([
+      { type: "turn.settled", data: { turnId: "t", outcome: "failed", error: { code: "model_error", message: "boom" } }, meta: at(3) },
+    ]);
+    await expect(new EveLink({ url: eve.url, logger }).turn("owy-knob", "hola", { staff: false, marketplaceOpen: false })).rejects.toThrow(/boom/);
+
+    await eve.close();
+    eve = await fakeEve([
+      { type: "interaction.opened", data: { interactionId: "i1", subject: { turnId: "t" }, request: { kind: "budget", prompt: "¿Seguimos?" } }, meta: at(4) },
+    ]);
+    await expect(new EveLink({ url: eve.url, logger }).turn("owy-knob", "hola", { staff: false, marketplaceOpen: false, timeoutMs: 2000 })).rejects.toThrow(/sesión nueva/);
+    expect(eve.requests.map((r) => `${r.method} ${r.url}`)).toContain("POST /companion/owy-knob/reset");
+  });
+});
+
 describe("EveLink deadlines", () => {
   it("a POST that never answers counts toward the turn deadline", async () => {
     const hanging: typeof fetch = (_input, init) =>

@@ -3,7 +3,8 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { DEVICE_SAMPLE_RATE, GEMINI_OUTPUT_SAMPLE_RATE, Pcm16Resampler, toWav } from "../audio/pcm";
 import { loadConfig } from "../config";
-import { buildSessionConfig } from "../index";
+import { buildSessionConfig } from "../realtime/session-config";
+import { realtimeKeys } from "../runtime";
 import { createLogger } from "../log";
 import { PITCH_CLIPS, PITCH_LINES, SCRIPT_PREFIX, type PitchLine } from "../pitch";
 import { FALLBACK_LINES } from "../realtime/cascade";
@@ -55,10 +56,7 @@ async function main(): Promise<void> {
   }
   const config = loadConfig();
   const logger = createLogger("clips", config.COMPANION_LOG_LEVEL);
-  const provider = resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, {
-    googleApiKey: config.GOOGLE_GENERATIVE_AI_API_KEY,
-    gatewayApiKey: config.AI_GATEWAY_API_KEY,
-  });
+  const provider = resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, realtimeKeys(config));
   const session = new NodeRealtimeSession({
     provider,
     sessionConfig: buildSessionConfig({

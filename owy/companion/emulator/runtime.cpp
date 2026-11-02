@@ -20,18 +20,26 @@ FaceRenderer renderer;
 FaceRing ring;
 Frame last_frame;
 lv_display_t *display{}; lv_indev_t *pointer{};
-uint16_t pixels[466*466];
-alignas(32) uint16_t draw[466*120]; // LVGL's pinned LV_DRAW_BUF_ALIGN, never linker-luck alignment.
+// The panel: 466 for the AMOLED emulator; the web faces render the same scene at any size.
+int size=466; float face_scale=1;
+// Face-only (the wall, the talk deck): model + renderer, no gestures, IMU, sleep, pages or hints.
+bool face_only=false;
+std::vector<uint16_t> pixels;  // RGB565, what the panel shows
+std::vector<uint8_t> rgba;     // the same pixels for a canvas, alpha 255
+int32_t dirty[4]{};            // x1, y1, x2, y2 flushed since the last owy_dirty(); empty when x2 < x1
+uint8_t expand5[32], expand6[64];
+alignas(32) uint16_t draw[1080*120]; // LVGL's pinned LV_DRAW_BUF_ALIGN, never linker-luck alignment.
 uint8_t pcm[CUE_BYTES];
 uint32_t now=0, activity=0, phase_at=0, page_until=0, staff_until=0, feedback_at=0, pin_error_until=0;
 uint32_t cue_serial=0, event_serial=0, follow_deadline=0, overlay_until=0, sleep_at=0;
 float overlay_level=0;
 bool sleeping=false, boot_logo_visible=true;
-int cue_kind=0, phase=0, reply_ms=1200, replies=0, mood_override=-1;
+int cue_kind=0, phase=0, reply_ms=1200, replies=0, mood_override=-1, painted_mood=0;
 int audio_buffered=0,audio_received=0;uint32_t audio_empty_at=0;bool bridge_enabled=false,stream_ended=false;
 bool external_voice=false;
-// Modo pitch (voice.yaml): this run records a pitch; the rim invites a name until prompt_until.
-bool pitch_active=false,pitch_name_step=false; uint32_t prompt_until=0;
+// Modo pitch (voice.yaml): this run records a pitch, or the answer to Owy's question about it
+// (answer_step: 0 = the pitch, 1 = the topic, 2 = the name). A pending answer opens the mic once the question has played.
+bool pitch_active=false,answer_pending=false; int answer_step=0; uint32_t answer_at=0;
 int px=233,py=233; bool pressed=false,initialized=false,dimmed=false,powered=true,connected=true,follow_up=false;
 bool imu_available=true,stall_driver=false,stuck_drain=false,hung_bridge=false,had_feedback=false;
 Vec3 acceleration{0,0,1}, angular_rate{};
@@ -39,15 +47,15 @@ float mic_level=0, speaking_level=0;
 std::string page="face",last_event="boot",pin;
 struct TraceEvent { uint32_t time; std::string name, page; int phase; };
 std::vector<TraceEvent> trace_events;
-struct Settings { bool privacy=false,motion=true,reduced=false,invert_x=false,invert_y=false,continuous=true,chime=true,sounds=true,wake=true,quiet=false,staff=false,marketplace=false,pitch=false,pitch_reacts=false; int volume=80,brightness=80; } settings;
+struct Settings { bool privacy=false,motion=true,reduced=false,invert_x=false,invert_y=false,continuous=true,chime=true,sounds=true,wake=true,quiet=false,staff=false,marketplace=false,pitch=false; int volume=80,brightness=80,pitch_voice=1; } settings;  // pitch_voice: Callado, Confirma, Confirma y comenta
 std::array<float,7> saved_cal{0,0,0,0,0,0,1};
 bool calibration_saved=false;
 void reboot_model() {
   const auto power=companion->power;
-  companion=std::make_unique<Companion>();companion->power=power;renderer=FaceRenderer{};companion->wake_at(now+1600);
+  companion=std::make_unique<Companion>();companion->power=power;renderer=FaceRenderer{};renderer.scale=face_scale;companion->wake_at(now+1600);
   if(saved_cal[0]==1)companion->tracker.restore_calibration({saved_cal[1],saved_cal[2],saved_cal[3]},{saved_cal[4],saved_cal[5],saved_cal[6]});
   settings.staff=settings.quiet=settings.marketplace=false;staff_until=0;had_feedback=false;
-  pitch_active=pitch_name_step=false;prompt_until=0;  // pitch mode itself persists, like the firmware's switch
+  pitch_active=answer_pending=false;answer_step=0;  // pitch mode itself persists, like the firmware's switch
 }
 void event(const char *value) {last_event=value;++event_serial;if(trace_events.size()<256)trace_events.push_back({now,value,page,phase});}
 bool busy() {return phase!=0;}
@@ -78,16 +86,15 @@ void navigate(const char *name) {
 void cancel() {phase=0;follow_up=false;pitch_active=false;replies=0;follow_deadline=0;speaking_level=0;audio_buffered=0;stream_ended=false;event("voice.cancelled");}
 void cue(int kind) {if(settings.volume==0||settings.quiet||(kind==0&&!settings.chime))return;cue_kind=kind;++cue_serial;}
 void submit() {phase=3;phase_at=now;companion->nod(now);event("pitch.submit");}
+// A pitch run (voice.yaml start_listening, tagged for the bridge): its recorder ends it, never the silent window.
+void record(const char *request) {pitch_active=true;navigate("face");follow_up=false;if(!external_voice){phase=1;phase_at=now;}event(request);}
 void talk(bool follow=false) {
   if(!powered||!connected||settings.privacy||companion->tracker.calibrating()) {event("voice.blocked");return;}
   if(settings.pitch) {
     // Modo pitch: tap → record, tap → send; while Owy thinks or talks a tap does nothing.
     if(pitch_active&&phase==2) {submit();return;}
     if(busy()) return;
-    pitch_active=true;pitch_name_step=int32_t(prompt_until-now)>0;prompt_until=0;
-    navigate("face");follow_up=false;
-    if(!external_voice) {phase=1;phase_at=now;}
-    event(pitch_name_step?"voice.request.pitch_name":"voice.request.pitch");return;
+    answer_step=0;answer_pending=false;record("voice.request.pitch");return;
   }
   if(busy()) {cancel();return;}
   if(external_voice) {navigate("face");event("voice.request");return;}
@@ -128,8 +135,9 @@ void sync() {
   if(page=="staff") {
     lv_slider_set_value(scene->volume_slider,settings.volume,LV_ANIM_OFF);
     lv_slider_set_value(scene->brightness_slider,settings.brightness,LV_ANIM_OFF);
-    for(auto pair:{std::make_pair(scene->sw_marketplace,settings.marketplace),{scene->sw_quiet,settings.quiet},{scene->sw_wake_word,settings.wake},{scene->sw_pitch,settings.pitch},{scene->sw_pitch_reacts,settings.pitch_reacts}})
+    for(auto pair:{std::make_pair(scene->sw_marketplace,settings.marketplace),{scene->sw_quiet,settings.quiet},{scene->sw_wake_word,settings.wake},{scene->sw_pitch,settings.pitch}})
       if(pair.second)lv_obj_add_state(pair.first,LV_STATE_CHECKED);else lv_obj_remove_state(pair.first,LV_STATE_CHECKED);
+    label(scene->pitch_voice_value,settings.pitch_voice==0?"callado":settings.pitch_voice==1?"confirma":"comenta");
   }
   auto &t=companion->tracker;
   const char *message=t.calibration_message();
@@ -147,8 +155,8 @@ void hint() {
   if(settings.privacy)text="micrófono apagado · mantené: ajustes";
   else if(!connected||forced==int(Mood::OFFLINE))text="buscando a owy...";
   else if(phase==6||forced==int(Mood::ERROR))text="ups, me trabé · probá de nuevo";
-  else if((phase==2&&pitch_active)||forced==int(Mood::RECORD))text=pitch_name_step?"decime tu nombre · tocá al terminar":"contá tu charla · tocá al terminar";
-  else if((phase==0&&int32_t(prompt_until-now)>0)||forced==int(Mood::INVITE))text="¿cómo te llamás? · tocá y decime";
+  else if((phase==2&&pitch_active)||forced==int(Mood::RECORD))
+    text=answer_step==1?"¿de qué va tu charla? · tocá al terminar":answer_step==2?"¿cómo te llamás? · tocá al terminar":"contá tu charla · tocá al terminar";
   else if(phase==3&&pitch_active)text="armando tu tarjeta...";
   else if(phase==0&&forced<=0&&!sleeping&&!companion->tracker.calibrating()){
     if(settings.pitch)text="modo pitch · tocá y contá tu charla";
@@ -171,8 +179,8 @@ void setting(const char *name,float value) {
   else if(!strcmp(name,"volume")){settings.volume=std::lround(bound(value,0,80));
     overlay_level=settings.volume/80.f;overlay_until=now+1400;char text[16];snprintf(text,sizeof(text),"vol %d",settings.volume);label(scene->overlay_label,text);}
   else if(!strcmp(name,"brightness"))settings.brightness=std::lround(bound(value,10,100));
-  else if(!strcmp(name,"pitch")){settings.pitch=on;if(!on){prompt_until=0;if(pitch_active)cancel();}}
-  else if(!strcmp(name,"pitch_reacts"))settings.pitch_reacts=on;
+  else if(!strcmp(name,"pitch")){settings.pitch=on;if(!on){answer_step=0;answer_pending=false;if(pitch_active)cancel();}}
+  else if(!strcmp(name,"pitch_voice"))settings.pitch_voice=std::clamp(int(value),0,2);
   else if(!strcmp(name,"marketplace")&&settings.staff)settings.marketplace=on;
   sync();event("settings.changed");
 }
@@ -192,7 +200,8 @@ void button_event(lv_event_t *e) {
   if(!strcmp(key,"keypad")){const auto i=lv_buttonmatrix_get_selected_button(obj);const char *s=lv_buttonmatrix_get_button_text(obj,i);if(s)pin_key(s);return;}
   if(!strcmp(key,"volume")){setting(key,lv_slider_get_value(obj));return;}
   if(!strcmp(key,"brightness_slider")){setting("brightness",lv_slider_get_value(obj));return;}
-  if(!strcmp(key,"marketplace")||!strcmp(key,"quiet")||!strcmp(key,"wake")||!strcmp(key,"pitch")||!strcmp(key,"pitch_reacts")){setting(key,lv_obj_has_state(obj,LV_STATE_CHECKED));return;}
+  if(!strcmp(key,"marketplace")||!strcmp(key,"quiet")||!strcmp(key,"wake")||!strcmp(key,"pitch")){setting(key,lv_obj_has_state(obj,LV_STATE_CHECKED));return;}
+  if(!strcmp(key,"pitch_voice")){setting(key,(settings.pitch_voice+1)%3);return;}  // select.next wraps
   if(!strcmp(key,"home"))navigate("face");else if(!strcmp(key,"quick")){pin.clear();navigate("quick");}
   else if(!strcmp(key,"privacy"))setting(key,!settings.privacy);else if(!strcmp(key,"continuous"))setting(key,!settings.continuous);
   else if(!strcmp(key,"chime"))setting(key,!settings.chime);else if(!strcmp(key,"sounds"))setting(key,!settings.sounds);
@@ -223,9 +232,10 @@ void bind_buttons(lv_obj_t *root) {
 }
 void paint() {
   if(!powered||dimmed)return;
-  Mood mood=!connected?Mood::OFFLINE:phase==2?(pitch_active?Mood::RECORD:follow_up?Mood::FOLLOWUP:Mood::LISTENING):phase==3?Mood::THINKING:(phase==4||phase==5)?Mood::SPEAKING:phase==6?Mood::ERROR:sleeping?Mood::SLEEP:int32_t(prompt_until-now)>0?Mood::INVITE:Mood::IDLE;
+  Mood mood=!connected?Mood::OFFLINE:phase==2?(pitch_active?Mood::RECORD:follow_up?Mood::FOLLOWUP:Mood::LISTENING):phase==3?Mood::THINKING:(phase==4||phase==5)?Mood::SPEAKING:phase==6?Mood::ERROR:sleeping?Mood::SLEEP:Mood::IDLE;
   if(mood_override>=0&&!busy())mood=static_cast<Mood>(mood_override);
   if(settings.privacy)mood=Mood::PRIVACY;
+  painted_mood=int(mood);
   last_frame=companion->frame(now,mood,settings.motion,settings.reduced||phase==6,settings.invert_x,settings.invert_y,speaking_level);
   const bool on_face=page=="face",overlay=int32_t(overlay_until-now)>0;
   ring.apply(overlay?ring_frame(RingMode::LEVEL,now,overlay_level,0,0):companion->ring(last_frame,now),on_face&&(overlay||last_frame.ring!=RingMode::NONE));
@@ -245,6 +255,7 @@ void tick() {
     const uint8_t sample[4]={uint8_t(value&255),uint8_t((value>>8)&255),0,0};
     companion->audio(sample,sizeof(sample),now);
   }
+  if(face_only){if(now%(busy()?32:16)==0)paint();if(now%5==0)lv_timer_handler();return;}
   if(now%10==0&&imu_available) {
     companion->motion(acceleration.x,acceleration.y,acceleration.z,angular_rate.x,angular_rate.y,angular_rate.z,now,settings.motion&&!settings.reduced&&!settings.privacy&&!busy()&&page=="face"&&!dimmed);
     if(companion->take_shake()){event("shake");feedback();}
@@ -263,11 +274,15 @@ void tick() {
   else if(phase==7&&now-phase_at>=580){phase=0;event("interaction.speaker_stopped");}
   if(!bridge_enabled&&phase==2&&follow_up&&replies>0&&now-phase_at>=800){phase=3;phase_at=now;companion->nod(now);event("fixture.speech");}
   if(bridge_enabled&&(phase==4||phase==5)&&audio_buffered>0){audio_buffered=std::max(0,audio_buffered-32);if(!audio_buffered)audio_empty_at=now;}
-  if((phase==3||phase==4||phase==5)&&now-phase_at>=(pitch_active?180000u:90000u)){cancel();event("guard.turn_timeout");}
+  if((phase==3||phase==4||phase==5)&&now-phase_at>=(pitch_active?240000u:90000u)){cancel();event("guard.turn_timeout");}
   }
   if(external_voice&&phase==7&&now-phase_at>=580){phase=0;event("interaction.speaker_stopped");}
   if(page_until&&now>=page_until)navigate("face");
-  if(prompt_until&&int32_t(prompt_until-now)<=0){prompt_until=0;event("pitch.prompt.expired");}
+  // pitch_answer: 50 ms, then up to 5 s for the question to finish playing; a board still busy by then skips it.
+  if(answer_pending&&now-answer_at>=50&&(!busy()||now-answer_at>=5050)){
+    answer_pending=false;
+    if(settings.pitch&&answer_step&&connected&&!settings.privacy&&!busy())record("voice.request.pitch_answer");
+  }
   if(settings.staff&&now>=staff_until){settings.staff=false;if(page=="staff")navigate("quick");event("staff.expired");}
   if(pin_error_until&&now>=pin_error_until){pin_error_until=0;label(scene->pin_entry_label,"_ _ _ _");}
   if(boot_logo_visible&&now>=1400){boot_logo_visible=false;hide(scene->boot_logo,true);}
@@ -280,27 +295,49 @@ void tick() {
 }
 }
 extern "C" {
-EMSCRIPTEN_KEEPALIVE void owy_init(int seed) {
+// `panel` px square (64–1080); `scale` maps the 466-space face onto it; the rim at `ring_r` with `ring_dot` dots.
+EMSCRIPTEN_KEEPALIVE void owy_init(int seed,int panel,float scale,int ring_r,int ring_dot,int face) {
   if(initialized){lv_style_reset(scene->companion_control);lv_style_reset(scene->companion_tile);lv_deinit();}
-  companion=std::make_unique<Companion>(uint32_t(seed));scene=std::make_unique<Scene>();renderer=FaceRenderer{};ring=FaceRing{};last_frame=Frame{};
+  size=std::clamp(panel,64,1080);face_scale=std::isfinite(scale)?bound(scale,.05f,3):1;face_only=face!=0;
+  companion=std::make_unique<Companion>(uint32_t(seed));scene=std::make_unique<Scene>();renderer=FaceRenderer{};renderer.scale=face_scale;ring=FaceRing{};last_frame=Frame{};
   now=activity=phase_at=page_until=staff_until=feedback_at=pin_error_until=cue_serial=event_serial=follow_deadline=0;
-  phase=replies=0;reply_ms=1200;mood_override=-1;overlay_until=sleep_at=0;overlay_level=0;sleeping=false;boot_logo_visible=true;pressed=dimmed=follow_up=stall_driver=stuck_drain=hung_bridge=had_feedback=calibration_saved=false;
+  phase=replies=painted_mood=0;reply_ms=1200;mood_override=-1;overlay_until=sleep_at=0;overlay_level=0;sleeping=false;boot_logo_visible=true;pressed=dimmed=follow_up=stall_driver=stuck_drain=hung_bridge=had_feedback=calibration_saved=false;
   audio_buffered=audio_received=0;audio_empty_at=0;bridge_enabled=stream_ended=false;
-  external_voice=false;pitch_active=pitch_name_step=false;prompt_until=0;
+  external_voice=false;pitch_active=answer_pending=false;answer_step=0;answer_at=0;
   trace_events.clear();trace_events.push_back({0,"boot","face",0});
-  powered=connected=imu_available=true;settings=Settings{};acceleration={0,0,1};angular_rate={};mic_level=speaking_level=0;pin.clear();page="face";last_event="boot";saved_cal={0,0,0,0,0,0,1};
-  memset(pixels,0,sizeof(pixels));esphome_lv_default_font=font_20;lv_init();lv_tick_set_cb([]{return now;});
-  display=lv_display_create(466,466);lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
-  lv_display_set_buffers(display,draw,nullptr,sizeof(draw),LV_DISPLAY_RENDER_MODE_PARTIAL);
+  px=py=size/2;powered=connected=imu_available=true;settings=Settings{};acceleration={0,0,1};angular_rate={};mic_level=speaking_level=0;pin.clear();page="face";last_event="boot";saved_cal={0,0,0,0,0,0,1};
+  pixels.assign(size*size,0);rgba.assign(size_t(size)*size*4,0);for(size_t i=3;i<rgba.size();i+=4)rgba[i]=255;
+  dirty[0]=dirty[1]=size;dirty[2]=dirty[3]=-1;
+  // The workbench's old main-thread conversion, exactly: round(v * 255 / 31|63).
+  for(int i=0;i<64;++i){if(i<32)expand5[i]=uint8_t(std::lround(i*255./31));expand6[i]=uint8_t(std::lround(i*255./63));}
+  esphome_lv_default_font=font_20;lv_init();lv_tick_set_cb([]{return now;});
+  display=lv_display_create(size,size);lv_display_set_color_format(display,LV_COLOR_FORMAT_RGB565);
+  // 120 rows per band at any width: at 466 the bands are the device emulator's, so parity holds.
+  lv_display_set_buffers(display,draw,nullptr,size*120*2,LV_DISPLAY_RENDER_MODE_PARTIAL);
   lv_display_set_flush_cb(display,[](lv_display_t *d,const lv_area_t *area,uint8_t *data){
-    const auto width=lv_area_get_width(area);for(int y=area->y1;y<=area->y2;++y)memcpy(pixels+y*466+area->x1,data+(y-area->y1)*width*2,width*2);lv_display_flush_ready(d);
+    const auto width=lv_area_get_width(area);
+    for(int y=area->y1;y<=area->y2;++y){
+      const auto *row=reinterpret_cast<const uint16_t*>(data+(y-area->y1)*width*2);
+      memcpy(pixels.data()+y*size+area->x1,row,width*2);
+      uint8_t *out=rgba.data()+(size_t(y)*size+area->x1)*4;
+      for(int x=0;x<width;++x,out+=4){const uint16_t v=row[x];out[0]=expand5[v>>11];out[1]=expand6[(v>>5)&63];out[2]=expand5[v&31];}
+    }
+    dirty[0]=std::min<int32_t>(dirty[0],area->x1);dirty[1]=std::min<int32_t>(dirty[1],area->y1);
+    dirty[2]=std::max<int32_t>(dirty[2],area->x2);dirty[3]=std::max<int32_t>(dirty[3],area->y2);
+    lv_display_flush_ready(d);
   });
-  scene->create();lv_screen_load(scene->face_page);ring.create(scene->face_page,214,12);companion->wake_at(1600);
+  scene->create();lv_screen_load(scene->face_page);ring.create(scene->face_page,ring_r,ring_dot);companion->wake_at(1600);
+  if(face_only){
+    // Only the face: no logo, hint, overlay or 466 px tap catcher (which would make a small page scroll).
+    for(auto *o:{scene->boot_logo,scene->face_hint,scene->overlay_label,scene->tap_area})hide(o,true);
+    lv_obj_remove_flag(scene->face_page,LV_OBJ_FLAG_SCROLLABLE);
+    boot_logo_visible=false;external_voice=true;imu_available=false;
+  }
   for(auto *p:{scene->face_page,scene->quick_page,scene->calibration_page,scene->help_page,scene->pin_page,scene->settings_page,scene->qr_page,scene->card_page,scene->text_page})bind_buttons(p);
   for(auto pair:{std::make_pair(scene->quick_mic,"privacy"),{scene->quick_continue,"continuous"},{scene->quick_chime,"chime"},{scene->quick_sounds,"sounds"},{scene->quick_motion,"motion"},{scene->quick_reduce,"reduced"},{scene->quick_brightness,"brightness"},{scene->quick_volume,"volume_cycle"}})bind(lv_obj_get_parent(pair.first),pair.second);
   bind(scene->pin_keypad,"keypad",LV_EVENT_VALUE_CHANGED);bind(scene->volume_slider,"volume",LV_EVENT_VALUE_CHANGED);bind(scene->brightness_slider,"brightness_slider",LV_EVENT_VALUE_CHANGED);
   bind(scene->sw_marketplace,"marketplace",LV_EVENT_VALUE_CHANGED);bind(scene->sw_quiet,"quiet",LV_EVENT_VALUE_CHANGED);bind(scene->sw_wake_word,"wake",LV_EVENT_VALUE_CHANGED);
-  bind(scene->sw_pitch,"pitch",LV_EVENT_VALUE_CHANGED);bind(scene->sw_pitch_reacts,"pitch_reacts",LV_EVENT_VALUE_CHANGED);
+  bind(scene->sw_pitch,"pitch",LV_EVENT_VALUE_CHANGED);bind(scene->btn_pitch_voice,"pitch_voice");
   lv_obj_add_event_cb(scene->tap_area,[](lv_event_t *e){
     lv_point_t p;lv_indev_get_point(lv_indev_active(),&p);auto code=lv_event_get_code(e);
     if(code==LV_EVENT_PRESSED)companion->contact.begin(p.x,p.y,now);
@@ -311,14 +348,14 @@ EMSCRIPTEN_KEEPALIVE void owy_init(int seed) {
   pointer=lv_indev_create();lv_indev_set_type(pointer,LV_INDEV_TYPE_POINTER);
   lv_indev_set_read_cb(pointer,[](lv_indev_t*,lv_indev_data_t*d){d->point={px,py};d->state=pressed?LV_INDEV_STATE_PRESSED:LV_INDEV_STATE_RELEASED;});
   lv_indev_set_long_press_time(pointer,400);lv_indev_set_long_press_repeat_time(pointer,100);
-  companion->power.decode(0x28,0,100);initialized=true;sync();paint();lv_refr_now(display);
+  companion->power.decode(0x28,0,100);initialized=true;if(!face_only)sync();paint();lv_refr_now(display);
 }
 EMSCRIPTEN_KEEPALIVE void owy_advance(int ms){if(ms<0||ms>600000)return;for(int i=0;i<ms;++i){++now;tick();}}
 // Typed input codec is validated/bounded in the worker. No JS/eval in C++.
 EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,float e,float f,const char *text){
   switch(kind){
     case 1:acceleration={a,b,c};angular_rate={d,e,f};break;
-    case 2:px=std::clamp(int(a),0,465);py=std::clamp(int(b),0,465);pressed=c!=0;activity=now;wake();lv_indev_read(pointer);break;
+    case 2:px=std::clamp(int(a),0,size-1);py=std::clamp(int(b),0,size-1);pressed=c!=0;activity=now;wake();lv_indev_read(pointer);break;
     case 3:setting(text,a);break;
     case 4:if(settings.wake)talk();break;
     case 5:if(a>=800)navigate("quick");else if(a>=35)talk();break;
@@ -339,7 +376,7 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
     case 37:companion->express(static_cast<Expression>(std::clamp(int(a),0,7)),now+uint32_t(int32_t(std::lround(b))),bound(c,0,100)/100.f);break;
     case 19:label(scene->text_body,text);navigate("text");break;
     case 20:label(scene->card_title,text);label(scene->card_speaker,"Comunidad OWU");label(scene->card_where,"Sala Azul  ·  15:00");navigate("card");break;
-    case 21:companion->delight(now);feedback();break;
+    case 21:companion->delight(now);if(!face_only)feedback();break;
     case 30: // Real VoiceTurn protocol delivered to the modeled firmware HAL.
       switch(int(a)){
         case 4:if(phase==2){phase=3;phase_at=now;companion->nod(now);event("stt.end");}break;
@@ -355,7 +392,9 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
     case 32:bridge_enabled=true;break;
     case 33:if(external_voice&&!settings.privacy&&powered&&!companion->tracker.calibrating()){
       if(a==0&&phase!=0&&phase!=7)pitch_active=false;  // the live turn ended
+      const int before=phase;
       if(a!=0||phase!=7)phase=(a==2||a==3||a==4)?int(a):0;
+      if(before==2&&phase==3)companion->nod(now);  // "te entendí", like the device at STT end
       mic_level=bound(b,0,1);speaking_level=bound(c,0,100);if(phase){activity=now;wake();}
     }break;
     case 34:cancel();external_voice=a!=0;navigate("face");break;
@@ -363,28 +402,39 @@ EMSCRIPTEN_KEEPALIVE void owy_input(int kind,float a,float b,float c,float d,flo
       if(a==0)label(scene->card_title,text);else if(a==1)label(scene->card_speaker,text);
       else if(a==2)label(scene->card_where,text);else if(a==3)navigate("card");
     }break;
-    // Modo pitch prompt from the bridge: 1 = invite a tap to say one's name (20 s), 0 = clear.
-    case 38:prompt_until=a!=0?now+20000:0;event(a!=0?"pitch.prompt":"pitch.prompt.cleared");break;
+    // Modo pitch: Owy asked for what the pitch missed (controls.yaml pitch_prompt): 1 = the topic, 2 = the name,
+    // 0 = drop a pending answer. The mic opens by itself once the question has played (tick).
+    case 38:answer_step=std::clamp(int(a),0,2);answer_pending=answer_step!=0;answer_at=now;event(answer_pending?"pitch.prompt":"pitch.prompt.cleared");break;
+    // Bridge mouth track (controls.yaml mouth_track): base64url frames, 40 ms each, the first `a` ms from now.
+    case 39:companion->mouth_track(text,strnlen(text,256),now,int(std::lround(bound(a,-2000,5000))));break;
     case 36:if(external_voice){
       if(a==0)lv_qrcode_update(scene->grid_qr,text,strlen(text));
       else {label(scene->qr_caption,text);navigate("qr");}
     }break;
     default:break;
   }
-  sync();paint();lv_refr_now(display);
+  if(!face_only)sync();paint();lv_refr_now(display);
 }
 EMSCRIPTEN_KEEPALIVE const char *owy_snapshot(){
   static char out[4096];auto g=companion->tracker.gravity(),b=companion->tracker.bias(),n=companion->tracker.neutral();
   const char *why=settings.privacy?"Microphone privacy is enabled":!powered?"Device is powered off":companion->tracker.calibrating()?"Calibration owns the stillness window":!connected?"No bridge connection":phase==5?"RUN_END received; waiting for physical speaker STOPPED":phase==2&&pitch_active?"Recording a pitch: the next tap sends it":phase==2?"Listening window is open":phase==1?"Waiting for exclusive speaker handoff and cue":phase==0?"Idle: waiting for touch or injected wake word":"Voice turn is active";
-  snprintf(out,sizeof(out),"{\"time\":%u,\"page\":\"%s\",\"voice\":\"%s\",\"phase\":%d,\"why\":\"%s\",\"event\":\"%s\",\"eventSerial\":%u,\"cueSerial\":%u,\"cueKind\":%d,\"powered\":%s,\"dimmed\":%s,\"imuReady\":%s,\"gravity\":[%.6f,%.6f,%.6f],\"bias\":[%.6f,%.6f,%.6f],\"neutral\":[%.6f,%.6f,%.6f],\"gaze\":[%d,%d],\"calibration\":\"%s\",\"calibrationProgress\":%d,\"settings\":{\"privacy\":%d,\"motion\":%d,\"reduced\":%d,\"invert_x\":%d,\"invert_y\":%d,\"continuous\":%d,\"chime\":%d,\"sounds\":%d,\"wake\":%d,\"quiet\":%d,\"staff\":%d,\"marketplace\":%d,\"pitch\":%d,\"pitch_reacts\":%d,\"volume\":%d,\"brightness\":%d},\"followDeadline\":%u,\"staffDeadline\":%u,\"pitchActive\":%s,\"promptDeadline\":%u}",
-    now,page.c_str(),voice_name(),phase,why,last_event.c_str(),event_serial,cue_serial,cue_kind,powered?"true":"false",dimmed?"true":"false",companion->motion_ok(now)?"true":"false",g.x,g.y,g.z,b.x,b.y,b.z,n.x,n.y,n.z,last_frame.gaze_x,last_frame.gaze_y,companion->tracker.calibration_name(),companion->tracker.calibration_progress(now),settings.privacy,settings.motion,settings.reduced,settings.invert_x,settings.invert_y,settings.continuous,settings.chime,settings.sounds,settings.wake,settings.quiet,settings.staff,settings.marketplace,settings.pitch,settings.pitch_reacts,settings.volume,settings.brightness,follow_deadline,staff_until,pitch_active?"true":"false",prompt_until);
+  snprintf(out,sizeof(out),"{\"time\":%u,\"page\":\"%s\",\"voice\":\"%s\",\"phase\":%d,\"why\":\"%s\",\"event\":\"%s\",\"eventSerial\":%u,\"cueSerial\":%u,\"cueKind\":%d,\"powered\":%s,\"dimmed\":%s,\"imuReady\":%s,\"gravity\":[%.6f,%.6f,%.6f],\"bias\":[%.6f,%.6f,%.6f],\"neutral\":[%.6f,%.6f,%.6f],\"gaze\":[%d,%d],\"calibration\":\"%s\",\"calibrationProgress\":%d,\"settings\":{\"privacy\":%d,\"motion\":%d,\"reduced\":%d,\"invert_x\":%d,\"invert_y\":%d,\"continuous\":%d,\"chime\":%d,\"sounds\":%d,\"wake\":%d,\"quiet\":%d,\"staff\":%d,\"marketplace\":%d,\"pitch\":%d,\"pitch_voice\":%d,\"volume\":%d,\"brightness\":%d},\"followDeadline\":%u,\"staffDeadline\":%u,\"pitchActive\":%s,\"answerStep\":%d}",
+    now,page.c_str(),voice_name(),phase,why,last_event.c_str(),event_serial,cue_serial,cue_kind,powered?"true":"false",dimmed?"true":"false",companion->motion_ok(now)?"true":"false",g.x,g.y,g.z,b.x,b.y,b.z,n.x,n.y,n.z,last_frame.gaze_x,last_frame.gaze_y,companion->tracker.calibration_name(),companion->tracker.calibration_progress(now),settings.privacy,settings.motion,settings.reduced,settings.invert_x,settings.invert_y,settings.continuous,settings.chime,settings.sounds,settings.wake,settings.quiet,settings.staff,settings.marketplace,settings.pitch,settings.pitch_voice,settings.volume,settings.brightness,follow_deadline,staff_until,pitch_active?"true":"false",answer_step);
   // Append the input levels without duplicating the shared envelope calculation.
   static char with_levels[4224];
   out[strlen(out)-1]='\0';
-  snprintf(with_levels,sizeof(with_levels),"%s,\"envelope\":[%.3f,%.3f]}",out,mic_level,speaking_level);
+  snprintf(with_levels,sizeof(with_levels),"%s,\"envelope\":[%.3f,%.3f],\"mood\":%d}",out,mic_level,speaking_level,painted_mood);
   return with_levels;
 }
-EMSCRIPTEN_KEEPALIVE const uint16_t *owy_pixels(){return pixels;}
+EMSCRIPTEN_KEEPALIVE const uint16_t *owy_pixels(){return pixels.data();}
+EMSCRIPTEN_KEEPALIVE const uint8_t *owy_rgba(){return rgba.data();}
+// The flushed rectangle since the last call as x, y, w, h (w = 0: nothing new); clears it.
+EMSCRIPTEN_KEEPALIVE const int32_t *owy_dirty(){
+  static int32_t out[4];
+  out[0]=dirty[0];out[1]=dirty[1];out[2]=std::max(0,dirty[2]-dirty[0]+1);out[3]=std::max(0,dirty[3]-dirty[1]+1);
+  dirty[0]=dirty[1]=size;dirty[2]=dirty[3]=-1;
+  return out;
+}
 EMSCRIPTEN_KEEPALIVE int owy_phase(){return phase;}
 EMSCRIPTEN_KEEPALIVE int owy_audio_received(){return audio_received;}
 EMSCRIPTEN_KEEPALIVE int owy_audio_buffered(){return audio_buffered;}

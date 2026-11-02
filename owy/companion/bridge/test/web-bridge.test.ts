@@ -507,7 +507,7 @@ it("say: Owy speaks on his own through the browser, the knob shows the face but 
   expect(r.session.voiceStatus().lastTurn).toMatchObject({ path: "realtime" });
 });
 
-it("say: without a live voice the recorded clip plays; output on the device is refused", async () => {
+it("say: without a live voice the recorded clip plays; output on the board itself is refused", async () => {
   const r = await attached({ mic: "laptop", output: "laptop" }, (shared) => {
     shared.clips = { "talk-wake": 300 };
   });
@@ -523,7 +523,7 @@ it("say: without a live voice the recorded clip plays; output on the device is r
 
   r.knob.routes.output = "device";
   r.send({ type: "say", text: "No me van a escuchar." });
-  await vi.waitFor(() => expect(notices(r.messages).some((m) => /laptop/.test(m.message))).toBe(true));
+  await vi.waitFor(() => expect(notices(r.messages).some((m) => /la Mac o un navegador/.test(m.message))).toBe(true));
   expect(r.ws.readyState).toBe(WebSocket.OPEN);
 });
 

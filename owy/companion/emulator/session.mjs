@@ -4,6 +4,38 @@ import { FixtureBridge } from "./bridge.mjs";
 export const MAX_TIME = 600000;
 export const MAX_EVENTS = 20000;
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
+/** Each board's panel: [px, face scale, rim radius, rim dot] (firmware substitutions, OWY_FACE_SCALE). */
+export const BOARDS = { amoled: [466, 1, 214, 12], knob: [360, 0.7725, 166, 12] };
+/** A board's face drawn at `size` px: its own geometry scaled, so the native size is the device's pixels. */
+export function geometry(board = "amoled", size) {
+  const [screen, scale, ring, dot] = BOARDS[board] ?? BOARDS.amoled;
+  const px = Math.max(64, Math.min(1080, Math.round(size ?? screen)));
+  const k = px / screen;
+  return { size: px, scale: scale * k, ring: Math.round(ring * k), dot: Math.max(2, Math.round(dot * k)) };
+}
+/** owy_init for a board at a size; `faceOnly` = the web faces (no gestures, pages, IMU or sleep). */
+export function boot(module, seed, board, size, faceOnly) {
+  const g = geometry(board, size);
+  module._owy_init(seed, g.size, g.scale, g.ring, g.dot, faceOnly ? 1 : 0);
+  return g;
+}
+/** Bridge mouth_track frames: base64url, one char per 40 ms. */
+export const MOUTH_FRAMES = /^[A-Za-z0-9_-]{1,64}$/;
+/**
+ * Paints what LVGL flushed since the last call into a 2D context, straight from
+ * WASM memory (no copy). `full` repaints everything (a new canvas).
+ */
+export function paint(module, ctx, size, cache, full = false) {
+  const ptr = module._owy_rgba();
+  if (cache.ptr !== ptr || cache.image?.data.buffer !== module.HEAPU8.buffer) {
+    cache.ptr = ptr;
+    cache.image = new ImageData(new Uint8ClampedArray(module.HEAPU8.buffer, ptr, size * size * 4), size, size);
+  }
+  const d = module._owy_dirty() >> 2;
+  const [x, y, w, h] = module.HEAP32.subarray(d, d + 4);
+  if (full) ctx.putImageData(cache.image, 0, 0);
+  else if (w > 0) ctx.putImageData(cache.image, 0, 0, x, y, w, h);
+}
 const settings = new Set([
   "privacy",
   "motion",
@@ -19,7 +51,7 @@ const settings = new Set([
   "brightness",
   "marketplace",
   "pitch",
-  "pitch_reacts",
+  "pitch_voice",
 ]);
 const pages = new Set(["face", "quick", "help", "qr", "pin", "calibration"]); // staff only through fixture PIN
 const kinds = {
@@ -122,7 +154,7 @@ export class Session {
   reset(seed = 0x4f5759) {
     this.bridge?.stop();
     this.seed = seed;
-    this.module._owy_init(seed);
+    this.size = boot(this.module, seed, "amoled", undefined, false).size;
     this.time = 0;
     this.events = [];
     this.trace = [];
@@ -146,7 +178,7 @@ export class Session {
     };
   }
   observe() {
-    const state = this.snapshot();
+    const state = (this.last = this.snapshot());
     this.time = state.time;
     this.duration = Math.max(this.duration, this.time);
     if (this.mode !== "live") this.bridge.observe(state);
@@ -154,9 +186,9 @@ export class Session {
     if (this.mode === "live")
       for (const e of events) {
         if (e.event === "voice.request") this.commands.push("start");
-        // Modo pitch: a tap records a pitch (the name step re-tags it), the second tap sends it.
+        // Modo pitch: a tap records a pitch, the second tap sends it; Owy's question opens the mic for the answer.
         if (e.event === "voice.request.pitch") this.commands.push("start:pitch");
-        if (e.event === "voice.request.pitch_name") this.commands.push("start:pitch-name");
+        if (e.event === "voice.request.pitch_answer") this.commands.push("start:pitch-answer");
         if (e.event === "pitch.submit") this.commands.push("commit");
         if (["voice.cancelled", "calibration.started", "power.off", "fixture.reboot"].includes(e.event))
           this.commands.push("stop");
@@ -218,6 +250,14 @@ export class Session {
         this.dispatch(e);
       }
       if (this.time >= target) break;
+      // Live has no fixture timers to keep in step: one WASM call per host tick (or per pose sample).
+      if (this.mode === "live") {
+        const to = Math.min(target, this.pending[0]?.t ?? target);
+        this.module._owy_advance(to - this.time);
+        this.time = to;
+        this.observe();
+        continue;
+      }
       const step = Math.min(16, target - this.time, this.pending.length ? this.pending[0].t - this.time : 16);
       for (let i = 0; i < step; i++) {
         this.module._owy_advance(1);
@@ -229,7 +269,7 @@ export class Session {
       }
       this.observe();
     }
-    return this.snapshot();
+    return this.last;
   }
   export() {
     if (this.mode === "live") throw Error("Live audio sessions cannot be exported.");
@@ -313,9 +353,13 @@ export class Session {
     } else if (command.kind === "face") {
       const moods = { idle: 0, happy: 4, error: 5, offline: 6 };
       if (Object.hasOwn(moods, command.state)) this.raw(18, [moods[command.state]]);
+    } else if (command.kind === "mouth") {
+      // Lip shapes for the reply (the bridge's mouth_track), the first frame `leadMs` from now.
+      if (MOUTH_FRAMES.test(command.frames ?? "") && Number.isFinite(command.leadMs))
+        this.raw(39, [Math.max(-2000, Math.min(5000, command.leadMs))], command.frames);
     } else if (command.kind === "pitchPrompt") {
-      // The bridge asks who speaks: the rim invites one more tap for 20 s ("name"), or stops ("idle").
-      this.raw(38, [command.prompt === "name" ? 1 : 0]);
+      // Owy asked for what the pitch missed: the mic opens by itself once the question has played ("idle" drops it).
+      this.raw(38, [command.prompt === "topic" ? 1 : command.prompt === "name" ? 2 : 0]);
     }
     this.observe();
   }
@@ -341,7 +385,8 @@ export class Session {
     this.cues = [];
   }
   frame() {
-    return this.module.HEAPU16.slice(this.module._owy_pixels() / 2, this.module._owy_pixels() / 2 + 466 * 466);
+    const at = this.module._owy_pixels() / 2;
+    return this.module.HEAPU16.slice(at, at + this.size * this.size);
   }
   pcm(kind) {
     const ptr = this.module._owy_cue(kind);

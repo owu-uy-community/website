@@ -130,7 +130,34 @@ describe("stage mirror", () => {
     expect(shown).toEqual([card]);
     expect(posts.slice(-2)).toEqual([
       { state: "thinking", card, source: "owy-1" },
-      { state: "thinking", expression: { name: "surprised", strength: 70 }, source: "owy-1" },
+      { state: "thinking", expression: { name: "surprised", strength: 70, at: expect.any(Number) }, source: "owy-1" },
+    ]);
+  });
+
+  it("sends the running transcript and the lip track over the bridge's socket when it is up", () => {
+    const published: [string, unknown][] = [];
+    const posts: unknown[] = [];
+    const { clock, advance } = fakeClock();
+    const mirror = createStageMirror({
+      api: { owyStage: { setFace: async (input: StageFaceInput) => void posts.push(input) } },
+      logger: silent,
+      source: "owy-1",
+      publish: (event, payload) => (published.push([event, payload]), true),
+      clock,
+    });
+    mirror.face("speaking");
+    mirror.transcript("output", "Hola");
+    advance(300);
+    mirror.mouth("AAQgw", 120);
+    mirror.expression("happy", 80, 200);
+    expect(published).toEqual([
+      ["face", { state: "speaking", transcript: { who: "output", text: "Hola" }, source: "owy-1" }],
+      ["mouth", { source: "owy-1", at: expect.any(Number), frames: "AAQgw" }],
+    ]);
+    // The state and the feeling are kept on the site (a wall that reconnects catches up).
+    expect(posts).toEqual([
+      { state: "speaking", source: "owy-1" },
+      { state: "speaking", expression: { name: "happy", strength: 80, at: expect.any(Number) }, source: "owy-1" },
     ]);
   });
 });

@@ -167,6 +167,19 @@ var VoiceTurn = class {
     this.armThinkingTimer();
   }
   /**
+   * The answer takes the slower road (the bridge's own transcribe → answer →
+   * speak cascade): give "thinking" more time, restarting the timer.
+   */
+  extendThinking(ms) {
+    this.thinkingMs = Math.max(this.thinkingMs, ms);
+    if (this._phase === "thinking") this.armThinkingTimer();
+  }
+  /** The bridge transcribed the turn itself after the mic closed: show the device what it heard. */
+  heard(text) {
+    if (this._phase !== "thinking" || !text) return;
+    this.link.sendEvent(VoiceAssistantEvent.STT_END, [{ name: "text", value: text.slice(0, 480) }]);
+  }
+  /**
    * First response audio is on its way: open the TTS stream on the device.
    * Wait for the firmware to acknowledge microphone shutdown. The caller
    * keeps audio in a paused PacedSpeaker until phase=speaking.
