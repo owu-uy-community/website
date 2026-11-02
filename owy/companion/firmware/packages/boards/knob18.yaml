@@ -635,7 +635,7 @@ interval:
             mini.mouth = id(mini_mouth); mini.cavity = id(mini_cavity); mini.tongue = id(mini_tongue); mini.cut = id(mini_cut);
             mini.happy_l = id(mini_happy_l); mini.happy_r = id(mini_happy_r);
             mini.lid_l = id(mini_lid_l); mini.lid_r = id(mini_lid_r);
-            mini.brow_l = id(mini_brow_l); mini.brow_r = id(mini_brow_r);
+            mini.brow_l = id(mini_brow_l)->obj; mini.brow_r = id(mini_brow_r)->obj;
             mini.cheek_l = id(mini_cheek_l); mini.cheek_r = id(mini_cheek_r); mini.bowl = id(mini_bowl);
           }
           id(mini_renderer).render(frame, mini);
