@@ -9,6 +9,7 @@ import { Slider } from "components/shared/ui/slider";
 import { Switch } from "components/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
 
+import { Segmented, type Options } from "../control/ui";
 import type { Input } from "./Device";
 import type { Manifest, Snapshot } from "./emulator";
 import { WhyState } from "./panels";
@@ -47,7 +48,12 @@ const TOGGLES: [string, string][] = [
   ["wake", "Palabra de activación"],
   ["quiet", "Modo silencioso"],
   ["pitch", "Modo pitch"],
-  ["pitch_reacts", "Owy reacciona al pitch"],
+];
+/** What Owy says back after a pitch (select.pitch_voice), cycled on the device by «Owy responde». */
+const PITCH_VOICES: Options<string> = [
+  ["0", "Callado"],
+  ["1", "Confirma"],
+  ["2", "Confirma y comenta"],
 ];
 const FAULTS = [
   "Driver demorado más allá del timeout",
@@ -259,6 +265,16 @@ export function MoreControls({
                     onChange={(value) => input("setting", [Number(value)], key)}
                   />
                 ))}
+                <div className="flex items-center justify-between gap-3 py-1 text-ui">
+                  <span>Owy responde</span>
+                  <Segmented
+                    disabled={!ready}
+                    label="Owy responde"
+                    options={PITCH_VOICES}
+                    value={String(state?.settings.pitch_voice ?? 1)}
+                    onChange={(value) => input("setting", [Number(value)], "pitch_voice")}
+                  />
+                </div>
               </div>
               <div className="space-y-4">
                 {(

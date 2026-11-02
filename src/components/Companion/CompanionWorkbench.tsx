@@ -67,8 +67,8 @@ export default function CompanionWorkbench() {
       voice.current?.syncDevice(state.settings, state.powered, ["settling", "collecting"].includes(state.calibration));
       for (const command of commands) {
         if (command === "start") void voice.current?.resume();
-        // Modo pitch on the virtual Owy: a tap records a pitch, the second tap sends it.
-        if (command === "start:pitch" || command === "start:pitch-name") void voice.current?.resume("pitch");
+        // Modo pitch on the virtual Owy: a tap records a pitch (or Owy's question opens the mic for the answer), the second tap sends it.
+        if (command === "start:pitch" || command === "start:pitch-answer") void voice.current?.resume("pitch");
         if (command === "commit") voice.current?.finishTurn();
         if (command === "stop") voice.current?.mute();
       }

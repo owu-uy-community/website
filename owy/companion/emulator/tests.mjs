@@ -173,6 +173,7 @@ test("modeled power cycle retains explicit calibration and persistent preference
   input("setting", [35], "volume");
   input("setting", [1], "quiet");
   input("setting", [1], "pitch");
+  input("setting", [2], "pitch_voice");
   input("power", [0]);
   input("power", [1]);
   assert.deepEqual(s.snapshot().neutral, neutral);
@@ -180,6 +181,7 @@ test("modeled power cycle retains explicit calibration and persistent preference
   assert.equal(s.snapshot().settings.quiet, 0);
   assert.equal(s.snapshot().settings.staff, 0);
   assert.equal(s.snapshot().settings.pitch, 1); // like the firmware's persisted switch
+  assert.equal(s.snapshot().settings.pitch_voice, 2); // and select.pitch_voice (restore_value)
   assert.equal(s.snapshot().pitchActive, false);
 });
 test("modo pitch: a tap records past the silent-window guard, the second tap sends it, nothing follows up", () => {
@@ -197,7 +199,7 @@ test("modo pitch: a tap records past the silent-window guard, the second tap sen
   assert.equal(s.snapshot().voice, "idle"); // no wake word in modo pitch
   assert.equal(s.snapshot().pitchActive, false);
 });
-test("modo pitch live: taps become start:pitch / commit, the bridge's prompt re-tags the next tap and expires", () => {
+test("modo pitch live: taps become start:pitch / commit; Owy's question opens the mic by itself once it has played", () => {
   s.reset();
   s.beginLive();
   s.liveInput({ type: "setting", values: [1], text: "pitch" });
@@ -207,17 +209,31 @@ test("modo pitch live: taps become start:pitch / commit, the bridge's prompt re-
   assert.equal(s.snapshot().voice, "recording");
   s.liveInput({ type: "boot", values: [100] });
   assert.deepEqual(s.commands.splice(0), ["commit"]);
+  // Owy asks for the name while it still speaks: the mic waits for the question to end (voice.yaml pitch_answer).
   s.liveVisual(4, 0, 60);
+  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
+  s.advance(1000);
+  assert.deepEqual(s.commands.splice(0), []);
   s.liveVisual(0, 0, 0);
   assert.equal(s.snapshot().pitchActive, false);
-  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
-  assert(s.snapshot().promptDeadline > 0);
+  s.advance(100);
+  assert.deepEqual(s.commands.splice(0), ["start:pitch-answer"]);
+  s.liveVisual(2, 0.4, 0);
+  assert.equal(s.snapshot().voice, "recording");
+  assert.equal(s.snapshot().answerStep, 2);
   s.liveInput({ type: "boot", values: [100] });
-  assert.deepEqual(s.commands.splice(0), ["start:pitch-name"]);
-  assert.equal(s.snapshot().promptDeadline, 0);
-  s.liveDevice({ kind: "pitchPrompt", prompt: "name" });
-  s.advance(21000);
-  assert.equal(s.snapshot().promptDeadline, 0);
+  assert.deepEqual(s.commands.splice(0), ["commit"]);
+  s.liveVisual(0, 0, 0);
+  // "idle" drops a pending answer; a board still busy 5 s after the question skips it.
+  s.liveDevice({ kind: "pitchPrompt", prompt: "topic" });
+  s.liveDevice({ kind: "pitchPrompt", prompt: "idle" });
+  s.advance(6000);
+  s.liveVisual(4, 0, 60);
+  s.liveDevice({ kind: "pitchPrompt", prompt: "topic" });
+  s.advance(6000);
+  s.liveVisual(0, 0, 0);
+  s.advance(1000);
+  assert.deepEqual(s.commands.splice(0), []);
   assert.equal(s.events.length, 0);
   s.reset();
 });

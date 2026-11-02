@@ -51,7 +51,7 @@ const settings = new Set([
   "brightness",
   "marketplace",
   "pitch",
-  "pitch_reacts",
+  "pitch_voice",
 ]);
 const pages = new Set(["face", "quick", "help", "qr", "pin", "calibration"]); // staff only through fixture PIN
 const kinds = {
@@ -186,9 +186,9 @@ export class Session {
     if (this.mode === "live")
       for (const e of events) {
         if (e.event === "voice.request") this.commands.push("start");
-        // Modo pitch: a tap records a pitch (the name step re-tags it), the second tap sends it.
+        // Modo pitch: a tap records a pitch, the second tap sends it; Owy's question opens the mic for the answer.
         if (e.event === "voice.request.pitch") this.commands.push("start:pitch");
-        if (e.event === "voice.request.pitch_name") this.commands.push("start:pitch-name");
+        if (e.event === "voice.request.pitch_answer") this.commands.push("start:pitch-answer");
         if (e.event === "pitch.submit") this.commands.push("commit");
         if (["voice.cancelled", "calibration.started", "power.off", "fixture.reboot"].includes(e.event))
           this.commands.push("stop");
@@ -358,8 +358,8 @@ export class Session {
       if (MOUTH_FRAMES.test(command.frames ?? "") && Number.isFinite(command.leadMs))
         this.raw(39, [Math.max(-2000, Math.min(5000, command.leadMs))], command.frames);
     } else if (command.kind === "pitchPrompt") {
-      // The bridge asks who speaks: the rim invites one more tap for 20 s ("name"), or stops ("idle").
-      this.raw(38, [command.prompt === "name" ? 1 : 0]);
+      // Owy asked for what the pitch missed: the mic opens by itself once the question has played ("idle" drops it).
+      this.raw(38, [command.prompt === "topic" ? 1 : command.prompt === "name" ? 2 : 0]);
     }
     this.observe();
   }
