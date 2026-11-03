@@ -8,7 +8,7 @@ Durante el open space las charlas se proponen en cards físicas. El staff puede 
 
 ## Procedimiento
 
-1. La foto adjunta queda en el sandbox bajo `/workspace/attachments/` (la ruta aparece referenciada en el mensaje).
+1. La foto adjunta queda en el sandbox bajo `/workspace/.eve/attachments/` (la ruta aparece referenciada en el mensaje).
 2. Llamá `digitize_board_photo` con esa ruta. La tool usa el OCR del sitio para extraer **título (CHARLA), speaker (NOMBRE) y requisitos** (el círculo marcado en REQUISITOS: TV, pizarra o NO) y sugiere **sala + horario libre** analizando la grilla actual.
 3. **Mostrá el resultado y confirmá** con el staff antes de tocar la grilla: datos extraídos y ubicación sugerida (ofrecé las alternativas si las hay). Si la respuesta trae `revisar`, preguntá puntualmente por **esos** campos: son los que el OCR leyó con dudas.
 4. Con el OK, creá la card con `create_track` usando la sala/horario confirmados.
