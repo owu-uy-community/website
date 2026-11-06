@@ -368,7 +368,7 @@ export default function LiveVoicePanel({
 
         <p className="mt-auto text-2xs leading-relaxed text-muted-foreground">
           El mismo bridge, prompts, herramientas y audio 16 kHz que el Owy de la mesa. Ocho segundos de silencio
-          arrancan una conversación nueva; las sesiones duran cinco minutos. Con auriculares anda mejor.
+          arrancan una conversación nueva; las sesiones duran media hora. Con auriculares anda mejor.
         </p>
       </div>
     </Panel>

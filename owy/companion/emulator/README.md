@@ -53,7 +53,7 @@ durable-agent integration. Missing `OWY_API_KEY` is surfaced, not replaced by fa
   the response. The mic is gated during ordinary playback to reduce echo; this
   is button-driven interruption, not always-listening full duplex.
 - **Mute** releases microphone tracks and stops playback. **End**, tab hiding,
-  navigation, disconnect, and the 5-minute cap close the voice session and audio
+  navigation, disconnect, and the 30-minute cap close the voice session and audio
   resources. A new session needs another Start, not an automatic reconnect.
 - Volume, continuous mode and privacy are linked to the on-screen device settings.
   Touch/BOOT start or cancel, motion/gestures remain interactive, and calibration or
@@ -82,7 +82,7 @@ The bridge process must run separately from serverless Next request handlers.
 `POST /api/companion/voice-session` requires site-admin auth, exact origin and JSON.
 It brokers a **single-use**, origin-bound, 60-second-to-connect capability, never a
 provider token. The browser authenticates in its first WS message, not a URL query.
-The bridge enforces session/connection/PCM/control limits, heartbeat and five-minute
+The bridge enforces session/connection/PCM/control limits, heartbeat and 30-minute
 expiry. Model, tools, provider credentials, staff and write scopes cannot be changed
 through browser WS commands. The old direct-provider token route has been removed.
 
