@@ -265,8 +265,8 @@ hasta el próximo flash (el panel lo marca «lo guarda el bridge»).
 
 Requiere `COMPANION_WEB_BRIDGE=1` (transporte web en `:3312`); en macOS el navegador pide
 permiso de micrófono una vez. La pestaña puede quedar en segundo plano (no se corta al
-ocultarse, a diferencia de una conversación propia). Los turnos enchufados no vencen a los
-5 minutos (6 h). Prueba sin hablar: `companion/scripts/knob-peer.mts` (cliente WS que hace de
+ocultarse, a diferencia de una conversación propia). Los turnos enchufados no vencen a la
+media hora (6 h). Prueba sin hablar: `companion/scripts/knob-peer.mts` (cliente WS que hace de
 navegador y manda un WAV de 16 kHz generado con `say -o q.wav --data-format=LEI16@16000`).
 
 El bridge no puede correr dentro del sitio en Vercel (necesita la LAN del venue, el

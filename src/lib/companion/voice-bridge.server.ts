@@ -49,24 +49,6 @@ export async function readVoiceScopes(request: Request): Promise<VoiceScopes> {
     throw new VoiceHttpError(400, "Invalid voice permissions.");
   return { writes: input.writes === true, staff: input.staff === true, marketplace: input.marketplace === true };
 }
-export class VoiceQuota {
-  private entries = new Map<string, number[]>();
-  take(id: string, now = Date.now()) {
-    for (const [key, times] of this.entries) {
-      const recent = times.filter((t) => now - t < 3_600_000);
-      if (!recent.length) this.entries.delete(key);
-      else this.entries.set(key, recent);
-    }
-    const times = this.entries.get(id) ?? [];
-    if (
-      times.length >= 20 ||
-      times.filter((t) => now - t < 60_000).length >= 3 ||
-      (!this.entries.has(id) && this.entries.size >= 1000)
-    )
-      throw new VoiceHttpError(429, "Please wait before starting another voice session.");
-    this.entries.set(id, [...times, now]);
-  }
-}
 export async function requestBridgeTicket(
   identity: string,
   origin: string,
@@ -121,7 +103,7 @@ export async function requestBridgeTicket(
   return data;
 }
 /** How long a web voice session may last once connected (the bridge's WEB_SESSION_MS). */
-const WEB_SESSION_MS = 5 * 60_000;
+const WEB_SESSION_MS = 30 * 60_000;
 /** A signed ticket is only good for connecting, right away. */
 const SIGNED_TICKET_MS = 60_000;
 

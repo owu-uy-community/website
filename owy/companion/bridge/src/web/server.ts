@@ -20,7 +20,7 @@ const routingOf = (session: DeviceSession): DeviceRouting => ({
 });
 
 export type WebBridgeOptions = { port: number; host?: string; origins: string[]; secret?: string; publicUrl?: string };
-/** A browser attached as a device's laptop audio stays for the whole open space, not five minutes. */
+/** A browser attached as a device's laptop audio stays for the whole open space, not half an hour. */
 export const ATTACHED_SESSION_MS = 6 * 60 * 60_000;
 /** Talk-console commands per minute (a `status` poll every 3 s is 20); past it they get a notice, not a close. */
 export const TALK_BUDGET_PER_MINUTE = 120;
@@ -162,7 +162,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
       ws.send(Buffer.isBuffer(message) ? message : JSON.stringify(message));
     };
     const authTimer = setTimeout(() => ws.close(1008, "Authentication timed out"), 5000);
-    let lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
+    let lifetime = setTimeout(() => ws.close(1000, "Session ended"), WEB_SESSION_MS);
     const rate = setInterval(() => {
       controls = 0;
       pcmBytes = 0;
@@ -342,7 +342,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
               );
             detach();
             clearTimeout(lifetime);
-            lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
+            lifetime = setTimeout(() => ws.close(1000, "Session ended"), WEB_SESSION_MS);
             break;
           case "start":
             if (attached) throw Error("Attached as laptop audio; the device starts the turns");

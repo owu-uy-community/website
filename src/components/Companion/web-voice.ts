@@ -251,8 +251,8 @@ export class WebVoice {
       socket.binaryType = "arraybuffer";
       this.watchdog = this.later(() => this.fail("El bridge no respondió a tiempo. Probá de nuevo."), 20000);
       this.sessionTimer = this.later(
-        () => this.stop("Terminaron los cinco minutos de sesión. Empezá otra cuando quieras."),
-        Math.max(0, Math.min(300000, ticket.expiresAt - Date.now()))
+        () => this.stop("Terminó la media hora de sesión. Empezá otra cuando quieras."),
+        Math.max(0, Math.min(30 * 60_000, ticket.expiresAt - Date.now()))
       );
       socket.onopen = () => {
         if (epoch === this.epoch) this.send({ type: "auth", token: ticket.token, protocol: 1 });
