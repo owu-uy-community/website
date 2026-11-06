@@ -41,12 +41,14 @@ type Props = {
   monitor?: "program" | "preview";
   /** `?lag=<ms>`: how late this screen shows Owy's face (OBS, the projector), so his face acts earlier. */
   lag?: number;
+  /** The pinned scene's params (`?p=`); its defaults otherwise. */
+  params?: Record<string, unknown>;
 };
 
 /** Offline, or a deploy swapped the files: the frame keeps what it shows and the next state tries again. */
 const logFailure = (error: unknown) => console.error("[stage] scene code did not load", error);
 
-export default function StageClient({ bg, fixed, preview = false, canvas, monitor, lag }: Props) {
+export default function StageClient({ bg, fixed, preview = false, canvas, monitor, lag, params }: Props) {
   const posted = monitor === "preview";
   const follows = !preview && !posted;
   const wall = follows && !monitor && !fixed;
@@ -77,8 +79,8 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
     client.owyStage
       .getState()
       .catch(() => DEFAULT_STAGE_STATE)
-      .then((state) => show(fixed ? { ...state, scene: fixed, params: {} } : state, ticket));
-  }, [fixed, show]);
+      .then((state) => show(fixed ? { ...state, scene: fixed, params: params ?? {} } : state, ticket));
+  }, [fixed, params, show]);
 
   useEffect(() => {
     if (!posted) load();

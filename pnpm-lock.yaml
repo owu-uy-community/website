@@ -242,6 +242,9 @@ importers:
       lucide-react:
         specifier: 1.28.0
         version: 1.28.0(react@19.3.0)
+      mediabunny:
+        specifier: 1.50.8
+        version: 1.50.8
       meshline:
         specifier: 3.3.1
         version: 3.3.1(three@0.186.1)
