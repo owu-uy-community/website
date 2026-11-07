@@ -9,6 +9,7 @@ import { TALK_SECTIONS, slideSteps, talkSlide, type TalkLayout } from "lib/owy-s
 import { usePlayUrl } from "../../inputs";
 import OwyFaceScene from "../OwyFace";
 import { QrCode } from "../parts";
+import { LanesSlide, SequenceSlide, TreeSlide } from "./diagrams";
 import { OwyFeed } from "./feed";
 import {
   BubblesSlide,
@@ -41,6 +42,8 @@ import {
   RatingSlide,
   VsSlide,
 } from "./live";
+import { MapSlide } from "./map";
+import { PhonesSlide, ScreenSlide } from "./screens";
 import { CaptionLine, CaptionsContext } from "./seat";
 import { BoardSlide, FlowSlide, HubSlide, SplitSlide, WifiSlide } from "./system";
 
@@ -124,6 +127,18 @@ function Slide({ params, round, eventId }: Props) {
       return <WifiSlide slide={slide} step={step} />;
     case "split":
       return <SplitSlide slide={slide} step={step} />;
+    case "map":
+      return <MapSlide slide={slide} step={step} />;
+    case "screen":
+      return <ScreenSlide slide={slide} step={step} />;
+    case "phones":
+      return <PhonesSlide slide={slide} step={step} />;
+    case "sequence":
+      return <SequenceSlide slide={slide} step={step} />;
+    case "tree":
+      return <TreeSlide slide={slide} step={step} />;
+    case "lanes":
+      return <LanesSlide slide={slide} step={step} />;
     case "qa":
       return <QaSlide slide={slide} {...live} />;
     case "rating":

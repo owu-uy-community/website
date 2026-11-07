@@ -385,7 +385,7 @@ export function BugsSlide({ slide, step }: LayoutProps<"bugs">) {
   );
 }
 
-function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
+export function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
   const [n, setN] = useState(0);
   const start = useRef<number | null>(null);
   useStageFrame((t) => {
