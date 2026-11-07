@@ -150,8 +150,10 @@ export const HostSpeakerSchema = z.object({
   name: z.string().nullable(),
   health: z.enum(["off", "starting", "open", "gone", "unavailable"]),
   detail: z.string().optional(),
-  /** Outputs ffmpeg sees (empty in Docker). */
+  /** Outputs the Mac has (empty in Docker). */
   available: z.array(z.string()),
+  /** Where «la salida del sistema» plays right now (macOS's default output), when known. */
+  systemDefault: z.string().optional(),
 });
 export type HostSpeakerSnapshot = z.infer<typeof HostSpeakerSchema>;
 

@@ -7,7 +7,7 @@ import type { CompanionState } from "lib/orpc/companion/schemas";
 
 import { BRIDGE_TARGET, type SettingKey } from "../../../../owy/companion/bridge/src/web/registry";
 import { CommandButton, type SendCommand } from "./commands";
-import { probeText, settingGroups, settingView } from "./model";
+import { macAudioChoices, probeText, settingGroups, settingView } from "./model";
 import { SettingField, SettingGroup, type Choices, type OnSet, type SetValue } from "./SettingField";
 import { Health } from "./ui";
 
@@ -29,10 +29,7 @@ export function BridgeCard({
 }) {
   const status = state.status;
   const setValue: SetValue = (key, value) => onSet([{ target: BRIDGE_TARGET, key, value }]);
-  const choices: Partial<Record<SettingKey, Choices>> = {
-    host_mic: { items: status?.hostMic?.available ?? [], none: "el micrófono integrado" },
-    host_speaker: { items: status?.hostSpeaker?.available ?? [], none: "la salida del sistema" },
-  };
+  const choices: Partial<Record<SettingKey, Choices>> = macAudioChoices(status);
 
   return (
     <Panel>
