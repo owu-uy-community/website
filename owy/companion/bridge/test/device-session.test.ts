@@ -12,6 +12,27 @@ import { createLogger } from "../src/log";
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
+it("a board slow to echo a setting still keeps it; one that never takes it leaves it to the bridge", () => {
+  const logger = createLogger("test", "error");
+  const session = new DeviceSession({ id: "test", host: "unused", port: 6053, psk: null }, { logger } as SharedRuntime);
+  const board: Record<string, unknown> = { pitch_mode: false, pitch_voice: "confirm" };
+  const device = {
+    readSetting: (key: string) => board[key],
+    writeSetting: (key: string, value: unknown) => {
+      // A busy knob applies the switch 2 s later; an old firmware never takes "react".
+      if (key === "pitch_mode") setTimeout(() => (board[key] = value), 2000);
+    },
+  };
+  (session as unknown as { device: unknown }).device = device;
+  session.applySetting("pitch_mode", true);
+  session.applySetting("pitch_voice", "react");
+  vi.advanceTimersByTime(4999);
+  expect(session.heldSettings()).toEqual([]);
+  vi.advanceTimersByTime(1);
+  expect(board.pitch_mode).toBe(true);
+  expect(session.heldSettings()).toEqual(["pitch_voice"]);
+});
+
 it("uses one paced queue for many model deltas received during the firmware handoff", () => {
   let ready = false;
   let bytes = 0;

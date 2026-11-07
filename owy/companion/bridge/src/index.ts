@@ -79,6 +79,11 @@ const BENIGN_ERROR_CODES = new Set([
 ]);
 /** After eve fails, the local brain answers alone this long (eve is not asked, so no turn waits on it). */
 const EVE_BREAKER_MS = 60_000;
+/**
+ * How long a board gets to echo a setting write before the bridge decides it lacks that option and
+ * keeps it itself. The knob, busy with its face and wake word, took over a second on a healthy link.
+ */
+export const BOARD_ECHO_MS = 5_000;
 /** Cascade TTS has no transcript marks: roughly how fast Owy speaks, to cue faces per sentence. */
 // ponytail: fixed speaking rate; use TTS word timings if a provider streams them.
 const SPOKEN_CHARS_PER_SECOND = 14;
@@ -341,6 +346,8 @@ export class DeviceSession {
         onPitchSubmit: () => this.submitPitch("submit"),
         // Not before the device is ours (its first telemetry arrives while it connects): those are boot values.
         onSetting: (key, value) => {
+          // The board echoing a value the bridge was keeping for it: it has that option after all, just slow.
+          if (Object.hasOwn(this.held, key) && this.held[key] === value) delete this.held[key];
           if (this.device) this.options.onSetting?.(key, value, "dispositivo");
         },
         onConnected: () => {
@@ -1157,7 +1164,7 @@ export class DeviceSession {
           if (this.device !== device || this.stopped || device.readSetting?.(key) === value) return;
           this.held[key] = value;
           this.log.info(`${spec.label}: la placa no tiene «${describeValue(key, value)}»; lo guarda el bridge`);
-        }, 1000).unref?.();
+        }, BOARD_ECHO_MS).unref?.();
     }
     if (key === "mic" && value === "host") this.shared.hostMic?.ensureOpen();
     if (key === "output" && value === "host") this.shared.hostSpeaker?.ensureOpen();
