@@ -296,13 +296,13 @@ const SESSIONS: Session[] = [
   },
   {
     ...DAY_TIMES.after,
-    title: "After",
-    blurb: "Te invitamos a seguirla un rato más",
+    title: "After en MBC",
+    blurb: "Cruzando la calle: te invitamos a seguirla un rato más",
     description: (
       <>
-        Cuando termina la parte formal seguimos cerca, sin agenda y sin horarios. <Hl>Es totalmente opcional</Hl>, pero
-        es donde las conversaciones que quedaron por la mitad siguen sin reloj y donde{" "}
-        <Hl yellow>se conoce a la gente sin apuro</Hl>. El lugar se anuncia el mismo día.
+        Cuando termina la parte formal cruzamos la calle: el after es <Hl yellow>enfrente, en MBC</Hl>, sin agenda y sin
+        horarios. <Hl>Es totalmente opcional</Hl>, pero es donde las conversaciones que quedaron por la mitad siguen sin
+        reloj y donde se conoce a la gente sin apuro.
       </>
     ),
     Icon: Beer,
@@ -329,7 +329,8 @@ export default function Program() {
 
       <Reveal delay={0.15} y={20}>
         <p className="mt-6 max-w-[620px] text-base leading-relaxed text-[#FBF5E7]/80 min-[1440px]:text-lg">
-          De 14:30 a 20:40 en Sinergia Faro: open space construido por la comunidad, charlas para cerrar y after.
+          De 14:30 a 20:40 en Sinergia Faro: open space construido por la comunidad, charlas para cerrar y after
+          enfrente, en MBC.
         </p>
       </Reveal>
 
