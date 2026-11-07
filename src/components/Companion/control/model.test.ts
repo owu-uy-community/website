@@ -25,6 +25,7 @@ const device = (id: string, values: Record<string, unknown>, held: string[] = []
   id,
   host: "192.168.1.20",
   connected: true,
+  phase: "idle",
   peer: false,
   staff: false,
   voice: { tier: "gateway:google/gemini-3.8-live", realtime: "connected", lastPath: "realtime" },
@@ -40,7 +41,7 @@ const status = (patch: Partial<BridgeStatus> = {}): BridgeStatus => ({
   values: { brain: "eve", voice: "Kore", host_mic: null },
   pending: [],
   rejected: [],
-  devices: [device("owy-knob", { volume: 40, pitch_mode: false, talk: false, privacy: false }, ["talk"])],
+  devices: [device("owy-knob", { brightness: 40, pitch_mode: false, talk: false, privacy: false }, ["talk"])],
   ...patch,
 });
 
@@ -75,7 +76,11 @@ describe("the bridge's presence", () => {
 
 describe("devices", () => {
   test("lists the reported ones, then those with only stored rows", () => {
-    const rows = [row("owy-companion", "volume", 30), row("bridge", "voice", "Leda"), row("owy-knob", "volume", 50)];
+    const rows = [
+      row("owy-companion", "brightness", 30),
+      row("bridge", "voice", "Leda"),
+      row("owy-knob", "brightness", 50),
+    ];
     expect(deviceIds(state(rows))).toStrictEqual(["owy-knob", "owy-companion"]);
   });
 
@@ -88,19 +93,19 @@ describe("devices", () => {
 
 describe("rows", () => {
   test("merge by setting and roll back only what a failed write touched", () => {
-    const before = [row("owy-knob", "volume", 40), row("bridge", "voice", "Kore")];
-    const optimistic = mergeRows(before, [row("owy-knob", "volume", 60), row("owy-knob", "quiet_mode", true)]);
+    const before = [row("owy-knob", "brightness", 40), row("bridge", "voice", "Kore")];
+    const optimistic = mergeRows(before, [row("owy-knob", "brightness", 60), row("owy-knob", "reduced_motion", true)]);
     expect(optimistic).toHaveLength(3);
-    expect(optimistic.find((r) => r.key === "volume")?.value).toBe(60);
+    expect(optimistic.find((r) => r.key === "brightness")?.value).toBe(60);
 
     // Meanwhile another panel changed the voice: the rollback keeps it.
     const later = mergeRows(optimistic, [row("bridge", "voice", "Leda")]);
     const undone = rollbackRows(later, before, [
-      { target: "owy-knob", key: "volume" },
-      { target: "owy-knob", key: "quiet_mode" },
+      { target: "owy-knob", key: "brightness" },
+      { target: "owy-knob", key: "reduced_motion" },
     ]);
-    expect(undone.find((r) => r.key === "volume")?.value).toBe(40);
-    expect(undone.find((r) => r.key === "quiet_mode")).toBeUndefined();
+    expect(undone.find((r) => r.key === "brightness")?.value).toBe(40);
+    expect(undone.find((r) => r.key === "reduced_motion")).toBeUndefined();
     expect(undone.find((r) => r.key === "voice")?.value).toBe("Leda");
   });
 
@@ -117,12 +122,16 @@ describe("where a setting stands", () => {
     settingView(s, target, key, online).standing?.text ?? null;
 
   test("is quiet when the stored value is in effect", () => {
-    expect(text(state([row("owy-knob", "volume", 40)]), "owy-knob", "volume")).toBeNull();
+    expect(text(state([row("owy-knob", "brightness", 40)]), "owy-knob", "brightness")).toBeNull();
   });
 
   test("waits for the bridge, and says until when", () => {
-    const s = state([row("owy-knob", "volume", 60), row("owy-knob", "mic", "host"), row("bridge", "voice", "Leda")]);
-    expect(text(s, "owy-knob", "volume")).toBe("pendiente");
+    const s = state([
+      row("owy-knob", "brightness", 60),
+      row("owy-knob", "mic", "host"),
+      row("bridge", "voice", "Leda"),
+    ]);
+    expect(text(s, "owy-knob", "brightness")).toBe("pendiente");
     expect(text(s, "owy-knob", "mic")).toBe("pendiente · próximo turno");
     expect(text(s, "bridge", "voice")).toBe("pendiente · al reiniciar");
   });
@@ -133,19 +142,19 @@ describe("where a setting stands", () => {
   });
 
   test("can't be applied with the bridge offline, or a device it doesn't know", () => {
-    const s = state([row("owy-knob", "volume", 60), row("owy-companion", "volume", 30)]);
-    expect(text(s, "owy-knob", "volume", false)).toBe("sin aplicar · bridge sin conexión");
-    expect(text(s, "owy-companion", "volume")).toBe("sin aplicar · dispositivo sin conexión");
-    expect(text(state([row("owy-knob", "volume", 60)], null), "owy-knob", "volume", false)).toBe(
+    const s = state([row("owy-knob", "brightness", 60), row("owy-companion", "brightness", 30)]);
+    expect(text(s, "owy-knob", "brightness", false)).toBe("sin aplicar · bridge sin conexión");
+    expect(text(s, "owy-companion", "brightness")).toBe("sin aplicar · dispositivo sin conexión");
+    expect(text(state([row("owy-knob", "brightness", 60)], null), "owy-knob", "brightness", false)).toBe(
       "sin aplicar · bridge sin conexión"
     );
   });
 
   test("shows the bridge's own value when nothing is stored", () => {
-    const view = settingView(state([]), "owy-knob", "volume", true);
+    const view = settingView(state([]), "owy-knob", "brightness", true);
     expect(view.value).toBe(40);
     expect(view.standing?.text).toBe("valor del bridge");
-    expect(settingView(state([], null), "owy-knob", "volume", false).standing?.text).toBe("sin datos");
+    expect(settingView(state([], null), "owy-knob", "brightness", false).standing?.text).toBe("sin datos");
   });
 
   test("treats a cleared value and a missing one alike", () => {
@@ -180,7 +189,7 @@ describe("the mode switch", () => {
   });
 
   test("counts only what a mode writes for a device the bridge doesn't report", () => {
-    expect(modeView(state([row("owy-mini", "volume", 30)]), "owy-mini", true).standing).toBeNull();
+    expect(modeView(state([row("owy-mini", "brightness", 30)]), "owy-mini", true).standing).toBeNull();
     expect(modeView(state([row("owy-mini", "talk", true)]), "owy-mini", true)).toStrictEqual({
       mode: "charla",
       standing: { text: "sin aplicar · dispositivo sin conexión", tone: "warn" },
@@ -194,8 +203,16 @@ describe("the mode switch", () => {
 });
 
 describe("groups, turns and the mic test", () => {
-  test("orders the bridge's groups with the Mac first", () => {
-    expect(settingGroups("bridge").map((g) => g.group)).toStrictEqual(["mac", "voz", "cerebro", "pitch", "avanzado"]);
+  test("orders the bridge's groups with the mode and the Mac first", () => {
+    expect(settingGroups("bridge").map((g) => g.group)).toStrictEqual([
+      "modo",
+      "mac",
+      "voz",
+      "cerebro",
+      "pitch",
+      "avanzado",
+    ]);
+    expect(settingGroups("bridge")[0]?.keys).toStrictEqual(["marketplace_open"]);
     expect(settingGroups("device")[0]).toMatchObject({ group: "modo", label: "Modo" });
     expect(settingGroups("device").flatMap((g) => g.keys)).not.toContain("voice");
   });

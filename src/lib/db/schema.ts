@@ -963,7 +963,7 @@ export const owyStageInputs = pgTable(
 );
 
 /**
- * The companion's settings as /admin/companion → Control keeps them: one row per setting of a
+ * The companion's settings as the panels (/admin/owy, /admin/companion) keep them: one row per setting of a
  * device (`target` = its id) or of the bridge (`target` = "bridge"), keys from the bridge's
  * registry. The last writer wins, by `setAt`. The bridge's last report lives here too (target
  * "bridge", key "status"), stamped when it arrived.
