@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AudioLines,
   Bot,
   Cast,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
   Store,
   Timer,
   TvMinimal,
+  Volume2,
   VolumeX,
   X,
 } from "lucide-react";
@@ -34,8 +36,10 @@ import {
   ago,
   deviceIds,
   faceText,
+  macAudioChoices,
   modeView,
   phaseText,
+  probeText,
   settingView,
   tierText,
   turnsView,
@@ -63,6 +67,8 @@ import {
   type SceneId,
 } from "lib/owy-stage/scenes";
 import { eventChannel } from "lib/realtime/channels";
+
+import { BRIDGE_TARGET } from "../../../../owy/companion/bridge/src/web/registry";
 
 import { COUNTDOWN_PRESETS, clockText, countdownLeft, knobAction, latestNote, phaseOfFace } from "./ops";
 
@@ -117,6 +123,7 @@ export function OwyOps() {
       ) : (
         <>
           <BridgeLine online={online} state={state} />
+          <MacAudio online={online} send={panel.send} state={state} onSet={onSet} />
           {ids.length === 0 ? (
             <p className="text-ui text-muted-foreground">
               Todavía no hay ningún Owy: aparece cuando el bridge reporta (corre en la Mac con COMPANION_DEVICES).
@@ -172,7 +179,7 @@ function useLiveFace(): LiveFace | null {
   return live;
 }
 
-/** The bridge in one line: there or not, since when, its code, the Mac, the voice tier, the Mac's audio. */
+/** The bridge in one line: there or not, since when, its code, the Mac, the voice tier. */
 function BridgeLine({ state, online }: { state: CompanionState; online: boolean }) {
   const now = useNow(1000);
   const status = state.status;
@@ -192,17 +199,64 @@ function BridgeLine({ state, online }: { state: CompanionState; online: boolean 
         </p>
         {facts.length > 0 ? <p className="font-terminal text-meta text-muted-foreground">{facts.join(" · ")}</p> : null}
       </div>
-      {status?.hostMic || status?.hostSpeaker ? (
-        <div className="flex flex-wrap gap-x-6 gap-y-1">
-          <Health detail={status.hostMic?.detail} health={status.hostMic?.health} icon={Mic} label="Mic de la Mac" />
+    </Panel>
+  );
+}
+
+/**
+ * The Mac's ears and mouth: which input Owy hears and which output he speaks from, picked from what
+ * the bridge found on the Mac (the choice applies at once), with a 4 s level test and a tone.
+ */
+function MacAudio({
+  state,
+  online,
+  onSet,
+  send,
+}: {
+  state: CompanionState;
+  online: boolean;
+  onSet: OnSet;
+  send: SendCommand;
+}) {
+  const status = state.status;
+  if (!status?.hostMic && !status?.hostSpeaker) return null;
+  const choices = macAudioChoices(status);
+
+  return (
+    <Panel>
+      <PanelHead icon={AudioLines} meta={status.machine} title="Audio de la Mac" />
+      <div className="space-y-1 p-3.5 pt-2">
+        <div className="flex flex-wrap gap-x-6 gap-y-1 pb-1">
+          <Health detail={status.hostMic?.detail} health={status.hostMic?.health} icon={Mic} label="Entrada" />
           <Health
             detail={status.hostSpeaker?.detail}
             health={status.hostSpeaker?.health}
             icon={Speaker}
-            label="Salida de la Mac"
+            label="Salida"
           />
         </div>
-      ) : null}
+        {(["host_mic", "host_speaker"] as const).map((key) => (
+          <SettingField
+            key={key}
+            choices={choices[key]}
+            view={settingView(state, BRIDGE_TARGET, key, online)}
+            onChange={(setting, value) => onSet([{ target: BRIDGE_TARGET, key: setting, value }])}
+          />
+        ))}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <CommandButton
+            command={{ type: "probe-mic", ms: 4000 }}
+            done={(result) => probeText(result.data)}
+            running="grabando 4 s… hablá"
+            send={send}
+          >
+            <Mic aria-hidden /> Grabar 4 s
+          </CommandButton>
+          <CommandButton command={{ type: "tone", target: "mac" }} send={send}>
+            <Volume2 aria-hidden /> Tono en la Mac
+          </CommandButton>
+        </div>
+      </div>
     </Panel>
   );
 }

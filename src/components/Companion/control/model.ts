@@ -220,6 +220,23 @@ export function matchFound(name: string, ids: string[]): string | undefined {
   return ids.find((id) => id.toLowerCase() === bare);
 }
 
+/**
+ * The Mac's input and output as pickers: the devices the bridge found, and what «nothing chosen»
+ * means right now (the built-in mic; for the output, wherever macOS plays — a Bluetooth speaker
+ * can only be reached that way, since ffmpeg gives it no name).
+ */
+export function macAudioChoices(status: CompanionState["status"]) {
+  const system = status?.hostSpeaker?.systemDefault;
+
+  return {
+    host_mic: { items: status?.hostMic?.available ?? [], none: "el micrófono integrado" },
+    host_speaker: {
+      items: status?.hostSpeaker?.available ?? [],
+      none: system ? `la salida del sistema (${system})` : "la salida del sistema",
+    },
+  };
+}
+
 /** The Mac's mic test, from the result's data: the loudest 20 ms and the average, 0..1. */
 export function probeText(data: unknown): string {
   const { peak, rms } = (data ?? {}) as { peak?: unknown; rms?: unknown };

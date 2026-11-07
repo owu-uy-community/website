@@ -7,6 +7,7 @@ import {
   ago,
   deviceIds,
   isOnline,
+  macAudioChoices,
   matchFound,
   mergeRows,
   modeView,
@@ -232,5 +233,38 @@ describe("groups, turns and the mic test", () => {
     expect(probeText({ peak: 0.31, rms: 0.05 })).toBe("pico 31% · promedio 5%");
     expect(probeText({ peak: 0.01, rms: 0.002 })).toMatch(/casi nada/);
     expect(probeText(null)).toMatch(/no mandó el nivel/);
+  });
+});
+
+describe(macAudioChoices, () => {
+  const status = (hostSpeaker?: Partial<BridgeStatus["hostSpeaker"]>) =>
+    ({
+      hostMic: {
+        name: null,
+        channel: "mix",
+        health: "open",
+        available: ["MacBook Pro Microphone", "Wireless Microphone RX"],
+      },
+      ...(hostSpeaker ? { hostSpeaker: { name: null, health: "open", available: [], ...hostSpeaker } } : {}),
+    }) as unknown as BridgeStatus;
+
+  test("offers the inputs and outputs the bridge found", () => {
+    const choices = macAudioChoices(status({ available: ["MacBook Pro Speakers", "External Headphones"] }));
+    expect(choices.host_mic).toStrictEqual({
+      items: ["MacBook Pro Microphone", "Wireless Microphone RX"],
+      none: "el micrófono integrado",
+    });
+    expect(choices.host_speaker.items).toStrictEqual(["MacBook Pro Speakers", "External Headphones"]);
+  });
+
+  test("names where «la salida del sistema» plays, when the bridge knows", () => {
+    expect(macAudioChoices(status({ systemDefault: "AirPods Pro" })).host_speaker.none).toBe(
+      "la salida del sistema (AirPods Pro)"
+    );
+    expect(macAudioChoices(status({})).host_speaker.none).toBe("la salida del sistema");
+    expect(macAudioChoices(null)).toStrictEqual({
+      host_mic: { items: [], none: "el micrófono integrado" },
+      host_speaker: { items: [], none: "la salida del sistema" },
+    });
   });
 });

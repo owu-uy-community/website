@@ -84,6 +84,47 @@ function plane(options: { report?: (input: Report) => Promise<unknown>; sessions
 }
 
 describe("control plane", () => {
+  it("offers the panel only the Mac's outputs, and says where the system's output plays", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "owy-control-"));
+    const reports: Report[] = [];
+    const control = new ControlPlane({
+      config: config(),
+      shared: {
+        hostMic: {
+          devices: async () => ["MacBook Pro Microphone", "Wireless Microphone RX"],
+          status: () => ({ name: null, channel: "mix", health: "open" }),
+        },
+        hostSpeaker: {
+          // ffmpeg's list: microphones next to speakers.
+          devices: async () => ["MacBook Pro Microphone", "MacBook Pro Speakers", "krisp speaker"],
+          status: (available: string[]) => ({ name: null, health: "open", available }),
+        },
+      } as never,
+      sessions: [],
+      store: new SettingsStore(path.join(dir, "state.json")),
+      logger,
+      version: "test",
+      report: async (input) => {
+        reports.push(input);
+        return { rows: [] };
+      },
+      restart: vi.fn(),
+      coreAudio: async () => ({
+        inputs: ["MacBook Pro Microphone", "Wireless Microphone RX"],
+        outputs: ["MacBook Pro Speakers", "krisp speaker", "AirPods Pro"],
+        defaultInput: "MacBook Pro Microphone",
+        defaultOutput: "AirPods Pro",
+      }),
+    });
+    await control.report();
+    const status = reports[0].status;
+    expect(status.hostMic?.available).toEqual(["MacBook Pro Microphone", "Wireless Microphone RX"]);
+    expect(status.hostSpeaker).toMatchObject({
+      available: ["MacBook Pro Speakers", "krisp speaker"],
+      systemDefault: "AirPods Pro",
+    });
+  });
+
   it("follows the panel's rows onto the board, and its own write echoing back is not a change", async () => {
     const { control, sessions, reports } = plane();
     control.onEvent(COMPANION_CHANNEL, "rows", { rows: [row("owy-knob", "brightness", 70, "2026-11-01T22:00:00.000Z")] });

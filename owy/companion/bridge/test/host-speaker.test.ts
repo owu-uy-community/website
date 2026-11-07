@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { parseAudioToolbox } from "../src/audio/ffmpeg";
+import { parseAudioToolbox, parseCoreAudio } from "../src/audio/ffmpeg";
 import { HostSpeaker, speakerArgs } from "../src/audio/host-speaker";
 import { RouteLink } from "../src/device/route-link";
 import { createLogger } from "../src/log";
@@ -52,13 +52,39 @@ const loud = () => {
 it("parses ffmpeg's CoreAudio list (inputs and outputs share one index space)", () => {
   const stderr = `Press [q] to stop
 [AudioToolbox @ 0xabd01c3c0] CoreAudio devices:
-[AudioToolbox @ 0xabd01c3c0] [0]         MacBook Pro Microphone, BuiltInMicrophoneDevice
-[AudioToolbox @ 0xabd01c3c0] [1]           MacBook Pro Speakers, BuiltInSpeakerDevice
+[AudioToolbox @ 0xabd01c3c0] [0]                         (null), 20-52-1D-96-98-5A:output
+[AudioToolbox @ 0xabd01c3c0] [1]         MacBook Pro Microphone, BuiltInMicrophoneDevice
+[AudioToolbox @ 0xabd01c3c0] [2]           MacBook Pro Speakers, BuiltInSpeakerDevice
 Output #0, audiotoolbox, to 'pipe:':`;
+  // A Bluetooth device has no name here: it can only be reached as the system's default output.
   expect(parseAudioToolbox(stderr)).toEqual([
-    { index: 0, name: "MacBook Pro Microphone", uid: "BuiltInMicrophoneDevice" },
-    { index: 1, name: "MacBook Pro Speakers", uid: "BuiltInSpeakerDevice" },
+    { index: 1, name: "MacBook Pro Microphone", uid: "BuiltInMicrophoneDevice" },
+    { index: 2, name: "MacBook Pro Speakers", uid: "BuiltInSpeakerDevice" },
   ]);
+});
+
+it("reads which devices macOS can play and record, and its defaults", () => {
+  const device = (name: string, extra: Record<string, unknown>) => ({ _name: name, ...extra });
+  const json = JSON.stringify({
+    SPAudioDataType: [
+      {
+        _items: [
+          device("AirPods Pro", { coreaudio_device_input: 1 }),
+          device("AirPods Pro", { coreaudio_device_output: 2 }),
+          device("MacBook Pro Microphone", { coreaudio_device_input: 1, coreaudio_default_audio_input_device: "spaudio_yes" }),
+          device("MacBook Pro Speakers", { coreaudio_device_output: 2, coreaudio_default_audio_output_device: "spaudio_yes" }),
+          device("ZoomAudioDevice", { coreaudio_device_input: 2, coreaudio_device_output: 2 }),
+        ],
+      },
+    ],
+  });
+  expect(parseCoreAudio(json)).toEqual({
+    inputs: ["AirPods Pro", "MacBook Pro Microphone", "ZoomAudioDevice"],
+    outputs: ["AirPods Pro", "MacBook Pro Speakers", "ZoomAudioDevice"],
+    defaultInput: "MacBook Pro Microphone",
+    defaultOutput: "MacBook Pro Speakers",
+  });
+  expect(parseCoreAudio("not json")).toEqual({ inputs: [], outputs: [], defaultInput: null, defaultOutput: null });
 });
 
 it("is unavailable outside macOS (Docker)", () => {
