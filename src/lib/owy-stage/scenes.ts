@@ -298,6 +298,26 @@ export const SCENES = {
         .default(FIRST_TALK.start),
     }),
   },
+  coffee: {
+    category: "programme",
+    title: "Coffee break · reloj",
+    description: "Una taza que humea y se va vaciando, con la cuenta regresiva hasta que vuelven las charlas.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Coffee break"),
+      label: z.string().trim().max(40).default("Las charlas empiezan en"),
+      start: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default(coffee.start),
+      until: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default(coffee.end),
+      note: z.string().trim().max(120).default(`${FIRST_TALK.start} · ${FIRST_TALK.title}`),
+    }),
+  },
   reminders: {
     category: "programme",
     title: "Avisos programados",

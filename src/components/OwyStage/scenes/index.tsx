@@ -175,6 +175,7 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   emergency: () => import("./service").then((m) => m.Emergency),
   transport: () => import("./service").then((m) => m.Transport),
   food: () => import("./service").then((m) => m.Food),
+  coffee: () => import("./service").then((m) => m.CoffeeBreak),
   feedback: () => import("./service").then((m) => m.Feedback),
   checklist: () => import("./service").then((m) => m.Checklist),
   grid: () => import("./service2").then((m) => m.Grid),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
@@ -414,6 +414,97 @@ export function Transport({ params }: SceneProps<"transport">) {
       <div className="absolute top-[330px] right-[140px] flex w-[400px] flex-col items-center gap-5">
         <QrCode size={400} value={MAPS_URLS.meetupLocation} />
         <p className="text-center text-[26px] font-semibold text-[#FBF5E7]/70">Ubicación en Google Maps</p>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Coffee break — a steaming cup that empties as the break runs out
+// ---------------------------------------------------------------------------
+
+/** Lucide's `coffee` icon, animated: the steam rises and the coffee sits at `fill` (0 empty, 1 full). */
+function CoffeeCup({ fill, className }: { fill: number; className?: string }) {
+  // Two monitors on the desk can show the scene at once: each cup needs its own clip id.
+  const clip = useId();
+  // The surface, from just under the rim (full) to the bottom of the cup (empty).
+  const level = 9.5 + (1 - fill) * 11.5;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke={BRAND.cream}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      viewBox="0 -4 24 26"
+    >
+      <clipPath id={clip}>
+        <path d="M4 8h13v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" />
+      </clipPath>
+      <g clipPath={`url(#${clip})`}>
+        <m.g animate={{ y: level }} initial={{ y: level }} transition={{ duration: 1, ease: "linear" }}>
+          {/* A wave one wavelength (7) wider than the cup each side, slid by one wavelength: it loops seamlessly */}
+          <m.path
+            animate={{ x: [0, 7] }}
+            d="M-11 0q1.75-.6 3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0V14H-11z"
+            fill={BRAND.yellow}
+            stroke="none"
+            transition={{ duration: 2.4, ease: "linear", repeat: Infinity }}
+          />
+        </m.g>
+      </g>
+      {[6, 10, 14].map((x, i) => (
+        <m.path
+          key={x}
+          animate={{ opacity: [0, 1, 0], y: [1, -3] }}
+          d={`M${x} 6q-1-1.25 0-2.5t0-2.5`}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 2.6, delay: i * 0.7, ease: "easeOut", repeat: Infinity }}
+        />
+      ))}
+      <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" />
+    </svg>
+  );
+}
+
+export function CoffeeBreak({ params }: SceneProps<"coffee">) {
+  useNow(1000);
+  const left = secondsUntil(params.until);
+  const total = left - secondsUntil(params.start);
+  const fill = total > 0 ? Math.min(1, Math.max(0, left / total)) : Number(left > 0);
+  const done = left <= 0;
+
+  return (
+    <>
+      <Ambient />
+      <m.div
+        animate={{ y: [0, -14, 0] }}
+        className="absolute top-[250px] left-[300px] h-[560px] w-[520px]"
+        transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
+      >
+        <CoffeeCup className="h-full w-full" fill={fill} />
+      </m.div>
+      <div className="absolute top-[330px] left-[940px] w-[880px]">
+        <Rise className="text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
+          {params.title}
+        </Rise>
+        <Rise className="mt-8 text-[34px] font-semibold tracking-[0.3em] text-[#FBF5E7]/60 uppercase" delay={0.15}>
+          {params.label}
+        </Rise>
+        {/* Ends on a pulsing cream 00:00: the stencil's «¡» hangs off the line and runs into the label */}
+        <div
+          className={`countdown-font mt-6 text-[250px] leading-none tracking-wider select-none ${done ? "animate-timer-pulse text-[#FBF5E7]" : "text-[#F5BB03]"}`}
+        >
+          {formatTime(Math.min(Math.max(left, 0), 5999))}
+        </div>
+        {params.note && (
+          <Rise className="mt-4 text-[40px] leading-[1.15] font-semibold text-balance text-[#FBF5E7]/75" delay={0.3}>
+            {params.note}
+          </Rise>
+        )}
       </div>
     </>
   );
