@@ -2162,12 +2162,42 @@ export const FaceEventSchema = z.object({
     .optional(),
   /** "The card landed": the wall shows it with its place. */
   card: FaceCardSchema.optional(),
-  /** Which Owy produced it (device id / web session); informational. */
+  /** Which Owy produced it (device id / web session): a wall follows the one that is doing something. */
   source: z.string().max(80).optional(),
   /** The tool Owy is running right now, while thinking (the talk's live diagram lights its box). */
   tool: z.string().trim().max(60).optional(),
+  /**
+   * The bridge process that sent it and its place in that process's order: a page drops an event
+   * that arrives late or twice (the socket and the site's fallback can both carry one). Absent
+   * from older bridges, whose events always count.
+   */
+  boot: z.string().max(40).optional(),
+  seq: z.number().int().min(0).optional(),
+  /** A heartbeat: the face as it stands (its `seq` is the last event's); it only counts if a page missed that one. */
+  beat: z.boolean().optional(),
+  /** Pausa: the faces show it like the knob does. */
+  privacy: z.boolean().optional(),
 });
 export type FaceEvent = z.infer<typeof FaceEventSchema>;
+
+/** The level (0..100) of the mic Owy listens with, as the knob's halo gets it. Live only. */
+export const LevelEventSchema = z.object({
+  source: z.string().max(80),
+  level: z.number().min(0).max(100),
+});
+export type LevelEvent = z.infer<typeof LevelEventSchema>;
+
+/**
+ * What the knob's screen was told besides its face (the bridge's show_caption, show_heard,
+ * show_text, show_qr): the knob's twin on /admin/owy shows it the same way. Live only.
+ */
+export const ScreenEventSchema = z.object({
+  source: z.string().max(80),
+  kind: z.enum(["caption", "heard", "text", "qr"]),
+  text: z.string().max(600),
+  url: z.url().max(500).optional(),
+});
+export type ScreenEvent = z.infer<typeof ScreenEventSchema>;
 
 /**
  * Owy's lip shapes, what the device's mouth_track gets: base64url, one char per 40 ms, the first

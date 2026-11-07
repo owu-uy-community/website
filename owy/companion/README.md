@@ -11,7 +11,7 @@ knob: cara · tap · perilla · subtítulos ──API nativa (LAN, :6053, Noise)
                                                                            ├─ AI Gateway: voz en vivo → respaldo → cascada → clip grabado
                                                                            ├─ cerebro local (o eve) · modo pitch · tools de Owy → owu.uy
                                                                            └─ sale a wss://owu.uy/api/realtime: ajustes, comandos, cara en el wall
-owu.uy /admin/owy ─ el panel (celular o laptop): estado · knob virtual · sala · pantalla
+owu.uy /admin/owy ─ el panel (celular o laptop): el knob en vivo (tocá su pantalla) · modo · sala · pantalla
 ```
 
 El knob **no escucha ni habla**: sólo manda "me tocaron" y muestra la cara, lo que
@@ -20,8 +20,9 @@ se apaga, el panel tiene los mismos botones y la cara sigue en el wall.
 
 - `firmware/` — ESPHome 2026.8.2 (stock, sin componentes parcheados), sólo `owy-knob.yaml`.
 - `bridge/` — el proceso Node de la Mac. Sus dependencias y scripts viven en `owy/package.json`.
-- `emulator/` — la cara del firmware compilada a WebAssembly, en modo sólo-cara: la usa el
-  wall (`/owy/stage`, escena **Owy**) y la charla. Ver `emulator/README.md`.
+- `emulator/` — la cara del firmware compilada a WebAssembly: sólo la cara para el wall
+  (`/owy/stage`, escena **Owy**) y la charla; la pantalla entera del knob para su gemelo en
+  `/admin/owy`. Ver `emulator/README.md`.
 
 ## Requisitos
 
@@ -153,6 +154,17 @@ pnpm companion:clips      # regenera los avisos pregrabados (offline, retry, pit
 6. **Sin knob** es igual: el botón del panel es el toque y la cara vive en el wall. **Sin micrófono** (ni Mac ni
    navegador) Owy lo dice en pantalla y no escucha a nadie.
 
+### La cara en el sitio
+
+Todo lo que el bridge le dice al knob también sale por su socket del sitio (`owy-stage`): la cara, la
+cara por frase, los labios, el nivel del mic, los subtítulos, la tarjeta. El wall y el gemelo del knob
+dibujan con el mismo firmware (WASM), así que hacen las mismas caras, el mismo aro y el mismo cabeceo.
+Cada evento va numerado (`boot` + `seq`): una página descarta lo que llega tarde o dos veces. Cada 4 s el
+bridge repite la cara (latido): una página que se perdió algo se pone al día, y si deja de oírlo 15 s
+suelta el turno (cara tranquila) en vez de quedarse hablando. Sin socket, la cara y las tarjetas van por
+`owyStage.setFace` como antes; el resto es sólo en vivo. Los sockets se renuevan antes del corte de
+Vercel a los 5 min, así que no se pierde nada en el cambio.
+
 Es half-duplex: mientras Owy habla, no escucha. En la Mac no hay cancelación de eco: mientras suena y
 `COMPANION_HOST_SPEAKER_TAIL_MS` después, su mic no escucha (nunca durante un pitch). Cada toque recuerda
 los anteriores hasta `COMPANION_EVE_IDLE_RESET_S` (180 s) de silencio.
@@ -175,12 +187,13 @@ respuesta va en pantalla (knob y wall) y el turno termina igual.
 
 ## El panel
 
-- **`/admin/owy`** — el día a día, desde el celular: estado (knob, bridge, voz, audio de la Mac),
-  modo (Conversación · Pitch · Charla · Pausa), el **knob virtual** (Tocar, Pitch/Enviar, Callar,
-  Decir…, Preguntar…, este navegador como audio), subtítulos en vivo; **Sala** (Mercado abierto,
-  countdown, castear la última tarjeta, aviso); **Pantalla** (presets 1–9 al aire, escenas de Owy, links a la mesa y la consola).
-- **`/admin/companion`** — Ajustes de Owy: cada ajuste del knob y del bridge, la entrada/salida de la Mac
-  («Grabar 4 s», «Tono en la Mac»), modelos, voz, cerebro, modo pitch.
+- **`/admin/owy`** — el día a día, desde el celular: el **knob en vivo** (su pantalla tal cual, con la cara,
+  los subtítulos y las tarjetas; tocarla es el toque: Tocar · Listo · Enviar · Frenar), modo (Conversación ·
+  Pitch · Charla · Pausa), Grabar un pitch, Callar, Decir…, Preguntar…, lo que oyó y dijo, este navegador
+  como audio, el audio de la Mac; **Sala** (Mercado abierto, countdown, castear la última tarjeta, aviso);
+  **Pantalla** (presets 1–9 al aire, escenas de Owy, links a la mesa y la consola).
+- **`/admin/companion`** — Ajustes de Owy: cada knob (su cara y su botón) y la Mac (el bridge: entrada/salida,
+  «Grabar 4 s», «Tono en la Mac», modelos, voz, cerebro, modo pitch).
 - **`/admin/owy/charla`** — la consola de «Owy, en vivo»; **`/admin/owy/scenes`** — la mesa del wall.
 
 ## Verificar

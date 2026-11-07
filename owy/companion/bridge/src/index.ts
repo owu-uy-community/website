@@ -142,6 +142,8 @@ export interface DeviceSessionOptions {
   onExpression?: (name: string, strength: number, leadMs: number) => void;
   /** Lip shapes for every answer, the first heard `leadMs` from now (the wall's face follows them). */
   onMouth?: (frames: string, leadMs: number) => void;
+  /** The listening mic's level (0..100), as the knob's halo gets it (the wall's and the twin's follow it). */
+  onLevel?: (level: number) => void;
   /**
    * A device setting changed: on the board itself (its screen, its knob — or a write of ours
    * echoing back, which the control plane tells apart) or through this bridge's own APIs (`local`).
@@ -1490,12 +1492,14 @@ export class DeviceSession {
     const level = rmsLevel(pcm16k);
     this.micPeak = Math.max(this.micPeak, level);
     this.micBytes += pcm16k.length;
-    // The knob's listening halo follows this mic, a few times a second.
+    // The knob's listening halo follows this mic, a few times a second (and so do the wall's and the twin's).
     const now = Date.now();
-    if (this.device?.sendMicLevel && now - this.micLevelAt >= TIMINGS.micLevelEveryMs) {
+    if (now - this.micLevelAt >= TIMINGS.micLevelEveryMs) {
       this.micLevelAt = now;
       // ponytail: speech RMS sits around 0.03–0.2 of full scale; ×400 fills the ring at a normal voice. Tune by eye.
-      this.device.sendMicLevel(Math.min(100, Math.round(level * 400)));
+      const pct = Math.min(100, Math.round(level * 400));
+      this.device?.sendMicLevel?.(pct);
+      this.options.onLevel?.(pct);
     }
     // A pitch is recorded here, never streamed: the model's end-of-speech detection would cut it.
     if (this.pitch?.turn === turn) {
