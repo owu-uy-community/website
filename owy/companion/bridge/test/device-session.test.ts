@@ -225,7 +225,9 @@ const heardCard = {
   transcript: "Soy Ana y quiero hablar de Effect en producción",
   kind: "pitch" as "pitch" | "unclear" | "not_pitch",
   title: "Effect en producción" as string | null,
+  titleSaid: true,
   speaker: "Ana" as string | null,
+  nominated: false,
   needsTV: false,
   needsWhiteboard: false,
   description: "Un año de Effect" as string | null,
@@ -291,6 +293,7 @@ function pitchHarness(
     answer: vi.fn(async (_wav: Buffer, _context: unknown, _signal: AbortSignal) => ({
       title: null as string | null,
       speaker: "Ana" as string | null,
+      nominated: false,
       description: null as string | null,
       appropriate: true,
     })),
@@ -446,7 +449,7 @@ it("modo pitch: a pitch without a name asks for it first; the board opens its mi
 it("modo pitch: an unclear topic is asked once and the answer names the talk; a second miss creates nothing", async () => {
   const h = pitchHarness();
   h.extract.card.mockResolvedValueOnce({ ...heardCard, kind: "unclear", title: null, description: null });
-  h.extract.answer.mockResolvedValueOnce({ title: "Testing con IA", speaker: null, description: "Cómo testear con LLMs", appropriate: true });
+  h.extract.answer.mockResolvedValueOnce({ title: "Testing con IA", speaker: null, nominated: false, description: "Cómo testear con LLMs", appropriate: true });
   await h.tap();
   h.speak(3000);
   await h.submit();
@@ -467,7 +470,7 @@ it("modo pitch: an unclear topic is asked once and the answer names the talk; a 
 
   // Again, and this time the answer does not say it either.
   h.extract.card.mockResolvedValueOnce({ ...heardCard, kind: "unclear", title: null });
-  h.extract.answer.mockResolvedValueOnce({ title: null, speaker: null, description: null, appropriate: true });
+  h.extract.answer.mockResolvedValueOnce({ title: null, speaker: null, nominated: false, description: null, appropriate: true });
   await h.tap();
   h.speak(3000);
   await h.submit();
@@ -477,6 +480,39 @@ it("modo pitch: an unclear topic is asked once and the answer names the talk; a 
   await h.submit();
   expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
   expect(h.spoken.at(-1)).toBe("[GUION] No me quedó claro el tema. Tocá y contame de nuevo de qué va tu charla.");
+});
+
+it("modo pitch: a title the model put together is asked in the person's words, and their answer names the card", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, title: "Migrar a Effect", titleSaid: false });
+  h.extract.answer.mockResolvedValueOnce({ title: "Effect sin miedo", speaker: null, nominated: false, description: null, appropriate: true });
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(h.spoken).toEqual(["[GUION] ¿Cómo se llamaría tu charla, en pocas palabras?"]);
+  await h.answer();
+  expect(h.prompts).toEqual(["topic"]); // the board just opens its mic, as for any answer
+  await h.tap("pitch-answer");
+  h.speak(1500);
+  await h.submit();
+  expect(h.extract.answer.mock.calls[0][1]).toEqual({
+    field: "topic",
+    question: "¿Cómo se llamaría tu charla, en pocas palabras?",
+    transcript: heardCard.transcript,
+  });
+  expect(h.api.tracks.createPlaced.mock.calls[0][0]).toMatchObject({ title: "Effect sin miedo", speaker: "Ana" });
+  expect(h.spoken.at(-1)).toBe("[GUION] ¡Listo, Ana! Tu charla «Effect sin miedo» queda en Cueva a las 15:00.");
+});
+
+it("modo pitch: a speaker put forward by someone else lands on the card, and Owy does not greet them as the one listening", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: "Lucía Gómez", nominated: true });
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(h.prompts).toEqual([]); // who gives it is known: nothing to ask
+  expect(h.api.tracks.createPlaced.mock.calls[0][0]).toMatchObject({ title: "Effect en producción", speaker: "Lucía Gómez" });
+  expect(h.spoken).toEqual(["[GUION] ¡Listo! La charla de Lucía Gómez, «Effect en producción», queda en Cueva a las 15:00."]);
 });
 
 it("modo pitch: nobody answers the question — the card lands with what it has, said in that same run", async () => {
@@ -876,7 +912,7 @@ it("tap in modo pitch: tapped twice with nothing said, the cue stops and Owy say
   const peer = attachPeer(h);
   h.session.tap();
   await vi.advanceTimersByTimeAsync(0);
-  expect(h.clips).toEqual(["pitch-listen"]); // «contame tu charla…» starts while the mic records
+  expect(h.clips).toEqual(["pitch-listen"]); // «te escucho» starts while the mic records
   peer.stopAudio.mockClear();
   vi.advanceTimersByTime(800);
   h.session.tap(); // a second tap, the cue still playing, nothing said yet

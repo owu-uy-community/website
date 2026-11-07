@@ -10,9 +10,11 @@ import { MODELS } from "../../../agent/lib/models";
  * the room; a person taps, pitches a talk, taps again. The bridge records the
  * pitch itself (never through the realtime model, whose own end-of-speech
  * detection would cut it at the first pause), then turns the audio into a
- * card in one gateway call, asks once for what it missed (the topic, the
- * name) and places the card. `pitch-flow.ts` is the workflow; this file is
- * the recorder, the extractor and the words — the parts that need no device.
+ * card in one gateway call, asks once for what it missed (the topic or a
+ * title in the person's words, the name) and places the card. The speaker
+ * may be someone else the person puts forward. `pitch-flow.ts` is the
+ * workflow; this file is the recorder, the extractor and the words — the
+ * parts that need no device.
  */
 
 /** A pitch, or the answer to one of Owy's questions about it. */
@@ -192,8 +194,12 @@ export const PitchCardSchema = z.object({
   /** `pitch`: a talk with a clear topic · `unclear`: wants to propose something, the topic is not clear · `not_pitch`: a greeting, a test, noise. */
   kind: z.enum(["pitch", "unclear", "not_pitch"]),
   title: z.string().nullable(),
-  /** Only when the person introduced themselves. */
+  /** The title is the person's own words (a title, or the topic in a few words), not one the model put together from a long pitch. */
+  titleSaid: z.boolean(),
+  /** Who gives the talk: the person, only when they say their name, or someone they put forward by name. */
   speaker: z.string().nullable(),
+  /** The speaker is someone else, put forward by the person talking. */
+  nominated: z.boolean(),
   needsTV: z.boolean(),
   needsWhiteboard: z.boolean(),
   /** One line on what it is about. */
@@ -211,6 +217,7 @@ export type PitchCard = z.infer<typeof PitchCardSchema>;
 export const PitchAnswerSchema = z.object({
   title: z.string().nullable(),
   speaker: z.string().nullable(),
+  nominated: z.boolean(),
   description: z.string().nullable(),
   appropriate: z.boolean(),
 });
@@ -233,27 +240,30 @@ export interface PitchExtractor {
 const EXTRACT_TIMEOUT_MS = 20_000;
 
 const cardPrompt = (eventName: string) =>
-  `Sos el asistente del mercado de ideas del open space de ${eventName}. Te llega una persona proponiendo una charla (entre 20 y 60 segundos), en español rioplatense (a veces en inglés), grabada con un micrófono en una sala con ruido: el audio, o su transcripción.
+  `Sos el asistente del mercado de ideas del open space de ${eventName}. Te llega una persona proponiendo una charla (entre 20 y 60 segundos), suya o de otra persona a la que postula para darla, en español rioplatense (a veces en inglés), grabada con un micrófono en una sala con ruido: el audio, o su transcripción.
 
-La grabación puede empezar con Owy (la mascota) diciendo «Te escucho. Contame tu charla y tocá de nuevo cuando termines»: eso NO es parte del pitch, ignoralo; la persona puede hablar encima.
+La grabación puede empezar con Owy (la mascota) diciendo «${PITCH_LINES.listen}»: eso NO es parte del pitch, ignoralo; la persona puede hablar encima.
 
 Devolvé solo el objeto pedido:
 - transcript: lo que dijo la persona, fiel, sin inventar ni completar (sin la frase de Owy); vacío si no hay habla inteligible.
 - kind: "pitch" si propone una charla, taller, debate o tema y se entiende de qué; "unclear" si quiere proponer algo pero no se entiende el tema (se cortó, habló de otra cosa, solo dijo "quiero dar una charla"); "not_pitch" para saludos, pruebas de micrófono, preguntas sueltas o ruido.
 - title: un título corto (hasta 60 caracteres) como iría en la card, fiel al tema aunque la persona no lo diga como título; null si kind no es "pitch".
-- speaker: SOLO si la persona dice su nombre ("soy Ana", "me llamo…", "mi nombre es…"); si no, null. No inventes nombres.
+- titleSaid: true si la persona dijo el título ("se llama…", "el título sería…") o su tema concreto en pocas palabras ("quiero hablar de Kubernetes para gente que nunca lo usó"), aunque vos lo reescribas como título; false si nunca lo dijo así y lo tuviste que deducir de una explicación larga o difusa, o si title es null.
+- speaker: quién da la charla: la propia persona SOLO si dice su nombre ("soy Ana", "me llamo…", "mi nombre es…"), u otra persona si la postula con nombre ("propongo que Juan Pérez cuente…", "estaría bueno que Ana hable de…"); si no se dice ningún nombre, null. No inventes nombres.
+- nominated: true si el speaker es otra persona, postulada por quien habla; false si es la propia persona o si speaker es null.
 - needsTV / needsWhiteboard: true solo si lo pide explícitamente (proyector, tele, pantalla / pizarra, pizarrón).
 - description: una línea (hasta 140 caracteres) de qué va la charla, en tercera persona; null si no se sabe.
 - topics: entre una y cuatro palabras clave en minúsculas; vacío si no es un pitch.
-- reaction: si es un pitch, lo que Owy (la mascota de OWU: cálida, rioplatense) le diría en UNA frase corta (hasta 15 palabras) sobre el tema; sin repetir el título, sin sala ni horario, sin preguntas, sin emojis. null si no es un pitch.
+- reaction: si es un pitch, lo que Owy (la mascota de OWU: cálida, rioplatense) le diría a quien le está hablando en UNA frase corta (hasta 15 palabras) sobre el tema; sin repetir el título, sin sala ni horario, sin preguntas, sin emojis. null si no es un pitch.
 - appropriate: false SOLO si es ofensivo, discriminatorio, sexual, una burla hacia alguien o spam/publicidad; un tema polémico pero serio, informal o con humor sano es true. Ante la duda, true.`;
 
 const answerPrompt = ({ question, transcript }: AnswerContext) =>
   `En el mercado de ideas de un open space, Owy le preguntó a una persona «${question}» sobre la charla que acaba de proponer. Te llega su respuesta (el audio, o su transcripción), en español rioplatense, con ruido de sala. Lo que había dicho antes: «${transcript.slice(0, 1500)}».
 
 Devolvé solo el objeto pedido, con lo que dice ESTA respuesta:
-- title: un título corto (hasta 60 caracteres) para la charla, si la respuesta dice de qué va; si no, null.
-- speaker: su nombre tal como se presenta (capitalizado, con apellido si lo dice), solo si lo dice; si no, null. No inventes nombres.
+- title: un título corto (hasta 60 caracteres) para la charla, si la respuesta dice de qué va o cómo se llama (si dice el título, usalo tal cual); si no, null.
+- speaker: quién da la charla, capitalizado y con apellido si lo dice: su nombre tal como se presenta, o el de otra persona si dice que la da otra ("la da mi compañera Lucía"); solo si lo dice; si no, null. No inventes nombres.
+- nominated: true si el speaker es otra persona y no quien responde; si no, false.
 - description: una línea (hasta 140 caracteres) de qué va la charla, en tercera persona, solo si la respuesta lo cuenta; si no, null.
 - appropriate: false SOLO si la respuesta (un título o un nombre que iría en la card pública) es ofensiva, discriminatoria, sexual, una burla o spam. Ante la duda, true.`;
 
@@ -494,8 +504,9 @@ export function gatewayDuplicateFinder(options: { apiKey?: string; threshold?: n
 export const SCRIPT_PREFIX = "[GUION] ";
 
 export const PITCH_LINES = {
-  listen: "Te escucho. Contame tu charla y tocá de nuevo cuando termines.",
+  listen: "Te escucho.",
   askTopic: "¿De qué va tu charla, en pocas palabras?",
+  askTitle: "¿Cómo se llamaría tu charla, en pocas palabras?",
   askName: "¿Cómo te llamás?",
   empty: "No escuché una propuesta. Tocá y contame tu charla.",
   unclear: "No me quedó claro el tema. Tocá y contame de nuevo de qué va tu charla.",
@@ -510,6 +521,7 @@ export type PitchLine = keyof typeof PITCH_LINES;
 export const PITCH_CLIPS: Partial<Record<PitchLine, string>> = {
   listen: "pitch-listen",
   askTopic: "pitch-ask-topic",
+  askTitle: "pitch-ask-title",
   askName: "pitch-ask-name",
   empty: "pitch-empty",
   unclear: "pitch-unclear",
@@ -518,18 +530,15 @@ export const PITCH_CLIPS: Partial<Record<PitchLine, string>> = {
   declined: "pitch-declined",
 };
 
-export const QUESTION: Record<PitchField, PitchLine> = { topic: "askTopic", name: "askName" };
-
-/** What Owy says once the card is on the board. */
-export function announcementText(card: {
-  title: string;
-  speaker?: string | null;
-  room?: string | null;
-  timeSlot?: string | null;
-}): string {
+/** What Owy says once the card is on the board; a speaker someone else put forward is not the one listening. */
+export function announcementText(
+  card: { title: string; speaker?: string | null; room?: string | null; timeSlot?: string | null },
+  nominated = false
+): string {
   const start = card.timeSlot?.split(" - ")[0]?.trim();
   const where = [card.room ? `en ${card.room}` : "", start ? `a las ${start}` : ""].filter(Boolean).join(" ");
-  return `¡Listo${card.speaker ? `, ${card.speaker}` : ""}! Tu charla «${card.title}» queda ${where || "en la grilla"}.`;
+  const talk = nominated && card.speaker ? `La charla de ${card.speaker}, «${card.title}»,` : `Tu charla «${card.title}»`;
+  return `¡Listo${card.speaker && !nominated ? `, ${card.speaker}` : ""}! ${talk} queda ${where || "en la grilla"}.`;
 }
 
 /** The pitch is already on the board: Owy says where, instead of making a second card. */
