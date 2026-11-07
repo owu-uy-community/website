@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useContext, useEffect, useReducer, useRef } from "react";
+import { Fragment, useContext, useEffect, useLayoutEffect, useReducer, useRef } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
@@ -81,6 +81,8 @@ const MAX_ROOMS = 6;
 const MAX_ROWS = 6;
 /** The sticky, centred over the grid. */
 const STICKY: Box = { x: GRID.x + GRID.w / 2 - 440, y: GRID.y + GRID.h / 2 - 260, w: 880, h: 520 };
+/** The sticky's title sizes, biggest first: it takes the first one that fits (200 characters fit at the last). */
+const TITLE_PX = [100, 88, 76, 66, 58, 50, 44, 38, 34] as const;
 /** The face's glide between the middle and the corner; the grid waits for it before a sticky comes in. */
 const MORPH = { duration: 1.1, ease: [0.65, 0, 0.35, 1] as const };
 const BOARD_IN_MS = 1200;
@@ -449,9 +451,19 @@ function Spotlit({ spot, cell, flying }: { spot: Queued; cell: Box | null; flyin
   const color = roomColorFor(track.roomId, track.roomColor);
   const ink = readableOn(color);
   const start = track.timeSlot.split(" - ")[0];
-  // A short title fills the sticky; a long one still fits in three lines.
-  const size = track.title.length <= 24 ? 100 : track.title.length <= 48 ? 72 : 62;
   const to = cell ? flyTo(STICKY, cell) : { x: 0, y: 40, scale: 0.9 };
+  // A short title fills the sticky; a long one (or a long word) steps down until it fits.
+  const body = useRef<HTMLDivElement>(null);
+  const title = useRef<HTMLHeadingElement>(null);
+  useLayoutEffect(() => {
+    const box = body.current;
+    const text = title.current;
+    if (!box || !text) return;
+    for (const size of TITLE_PX) {
+      text.style.fontSize = `${size}px`;
+      if (box.scrollHeight <= box.clientHeight && text.scrollWidth <= text.clientWidth) break;
+    }
+  }, [track.title, track.speaker]);
 
   return (
     <m.div
@@ -492,14 +504,17 @@ function Spotlit({ spot, cell, flying }: { spot: Queued; cell: Box | null; flyin
           {spot.how === "manual" ? "Destacada" : "Nueva charla"}
         </p>
         {/* Between the tag and the place, in the middle of what is left. */}
-        <div className="my-auto py-4">
-          <h2
-            className="line-clamp-3 leading-[1.02] font-black tracking-[-0.02em] text-balance"
-            style={{ fontSize: size }}
-          >
-            {track.title}
-          </h2>
-          {track.speaker && <p className="mt-4 truncate text-[38px] font-semibold opacity-85">{track.speaker}</p>}
+        <div ref={body} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="my-auto py-4">
+            <h2
+              ref={title}
+              className="leading-[1.02] font-black tracking-[-0.02em] text-balance"
+              style={{ fontSize: TITLE_PX[0] }}
+            >
+              {track.title}
+            </h2>
+            {track.speaker && <p className="mt-4 truncate text-[38px] font-semibold opacity-85">{track.speaker}</p>}
+          </div>
         </div>
         <p className="text-[40px] font-extrabold">→ {[track.room, start].filter(Boolean).join(" · ")}</p>
       </div>
