@@ -5,14 +5,12 @@ import { m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { useCountdownState } from "hooks/useCountdownState";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type StickyNote } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
 import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
+import { useCast } from "./useful";
 
 /** The first scenes the wall had: the logo, the opening, a message, what's next, the sponsors, a countdown. */
 
@@ -107,19 +105,7 @@ export function Message({ params }: SceneProps<"message">) {
 
 export function UpNext({ eventId }: SceneProps<"up-next">) {
   const { preview } = useContext(StageContext);
-  const [note, setNote] = useState<StickyNote | null>(null);
-
-  useEffect(() => {
-    if (!eventId) return;
-    client.cast
-      .getState({ eventId })
-      .then((state) => setNote(state.note))
-      .catch((error) => console.error("[stage] cast state", error));
-  }, [eventId]);
-
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "cast") : null, (event, payload) => {
-    if (event === "note_highlighted") setNote((payload as { note: StickyNote | null }).note);
-  });
+  const note = useCast(eventId, preview);
 
   return (
     <>

@@ -1,11 +1,11 @@
 "use client";
 
-import { Fragment, useContext, useEffect, useReducer, useRef, useState } from "react";
+import { Fragment, useContext, useEffect, useReducer, useRef } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type Room, type Schedule, type StickyNote } from "lib/orpc";
+import type { Room, Schedule, StickyNote } from "lib/orpc";
 import {
   applyFaceEvent,
   initialFlow,
@@ -20,6 +20,7 @@ import { roomColorFor } from "lib/rooms/palette";
 
 import { OwyFace, useFaceEvents, type FaceApi } from "../Face";
 import { Ambient, BRAND, Caption, Flag, StageContext, W, useTyped } from "../Stage";
+import { useBoard } from "../board";
 
 /**
  * Owy at wall scale: the device's own face (the firmware's model and renderer, see Face.tsx),
@@ -143,35 +144,14 @@ function PitchPanel({ text, who }: { text: string; who: "input" | "output" }) {
   );
 }
 
-type BoardSnapshot = { rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] };
-
-/** The board once, when a card lands (the create already happened, so the new talk is in it). */
-function useBoardSnapshot(eventId: string | null) {
-  const [data, setData] = useState<BoardSnapshot | null>(null);
-  useEffect(() => {
-    if (!eventId) return;
-    let live = true;
-    Promise.all([
-      client.rooms.getByOpenSpace({ openSpaceId: eventId }),
-      client.schedules.getByOpenSpace({ openSpaceId: eventId }),
-      client.tracks.list({ openSpaceId: eventId }),
-    ])
-      .then(([rooms, schedules, tracks]) => live && setData({ rooms, schedules, tracks }))
-      .catch((error) => console.error("[stage] board", error));
-    return () => {
-      live = false;
-    };
-  }, [eventId]);
-
-  return data;
-}
-
 const sameName = (a: string | undefined, b: string | undefined) =>
   Boolean(a && b && a.trim().toLowerCase() === b.trim().toLowerCase());
 
 /** The talk that just landed, as a sticky note in its room's colour, with its place on a mini board. */
 function LandedCard({ card, eventId }: { card: Landed; eventId: string | null }) {
-  const board = useBoardSnapshot(eventId);
+  const { preview } = useContext(StageContext);
+  // Live, so the cell the new talk took (and any taken since) shows as taken.
+  const board = useBoard(eventId, preview);
   const room =
     board?.rooms.find((candidate) => candidate.id === card.roomId) ??
     board?.rooms.find((candidate) => sameName(candidate.name, card.room));
@@ -211,7 +191,15 @@ function LandedCard({ card, eventId }: { card: Landed; eventId: string | null })
 }
 
 /** Rooms across, blocks down, the landed cell pulsing in its room's colour. */
-function MiniBoard({ board, roomId, scheduleId }: { board: BoardSnapshot; roomId: string; scheduleId: string }) {
+function MiniBoard({
+  board,
+  roomId,
+  scheduleId,
+}: {
+  board: { rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] };
+  roomId: string;
+  scheduleId: string;
+}) {
   const rooms = board.rooms.filter((room) => room.isActive).slice(0, 6);
   // filter() makes the copy that sort() orders: OBS 30's Chromium 103 has no toSorted.
   const all = board.schedules.filter((slot) => slot.isActive).sort((a, b) => a.startTime.localeCompare(b.startTime));

@@ -8,7 +8,7 @@ import { db } from "lib/db";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { makeAttendee, makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 import { server } from "test/msw/server";
 
 /** The wall is one global row, so every test starts with nothing on air. */
@@ -445,6 +445,21 @@ describe("data-driven scenes", () => {
     await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toStrictEqual({
       tickets: null,
       board: { ideas: 1, rooms: 2 },
+    });
+  });
+
+  test("the pulse counts the event's own attendees: who came in, out of who is attending", async () => {
+    await setup();
+    const { event } = await makeBoard();
+    const other = await makeBoard();
+    await makeAttendee(event.id, { checkedInAt: new Date() });
+    await makeAttendee(event.id);
+    await makeAttendee(event.id, { status: "refunded" });
+    // Another event's door never counts here.
+    await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toMatchObject({
+      tickets: { checkedIn: 1, active: 2, capacity: null },
     });
   });
 

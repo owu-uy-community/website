@@ -1,20 +1,20 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type Room, type Schedule, type StickyNote } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
+import { useBoard, useCast } from "../board";
 import { OVER_SHAPES } from "./OwyFace";
 import { QrCode, Rise, nowHHMM } from "./parts";
+
+export { useBoard, useCast };
 
 // ---------------------------------------------------------------------------
 // Program items — "HH:MM Título | HH:MM Título" typed by staff in the admin
@@ -167,27 +167,6 @@ export function Next({ params }: SceneProps<"next">) {
 // Room — one room's day, for a screen at that room's door
 // ---------------------------------------------------------------------------
 
-export function useBoard(eventId: string | null, preview: boolean) {
-  const [data, setData] = useState<{ rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] } | null>(null);
-  const load = useCallback(() => {
-    if (!eventId) return;
-    Promise.all([
-      client.rooms.getByOpenSpace({ openSpaceId: eventId }),
-      client.schedules.getByOpenSpace({ openSpaceId: eventId }),
-      client.tracks.list({ openSpaceId: eventId }),
-    ])
-      .then(([rooms, schedules, tracks]) => setData({ rooms, schedules, tracks }))
-      .catch((error) => console.error("[stage] board", error));
-  }, [eventId]);
-  useEffect(() => {
-    load();
-  }, [load]);
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change" || event === "structure_change") load();
-  });
-  return data;
-}
-
 export function RoomDay({ params, eventId }: SceneProps<"room">) {
   const { preview } = useContext(StageContext);
   const data = useBoard(eventId, preview);
@@ -286,18 +265,7 @@ export function EmptyText({ text }: { text: string }) {
 
 export function CastBar({ eventId }: SceneProps<"cast-bar">) {
   const { preview } = useContext(StageContext);
-  const [note, setNote] = useState<StickyNote | null>(null);
-
-  useEffect(() => {
-    if (!eventId) return;
-    client.cast
-      .getState({ eventId })
-      .then((state) => setNote(state.note))
-      .catch((error) => console.error("[stage] cast", error));
-  }, [eventId]);
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "cast") : null, (event, payload) => {
-    if (event === "note_highlighted") setNote((payload as { note: StickyNote | null }).note);
-  });
+  const note = useCast(eventId, preview);
 
   return (
     <AnimatePresence>
