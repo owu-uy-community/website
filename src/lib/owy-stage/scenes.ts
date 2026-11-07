@@ -499,6 +499,13 @@ export const SCENES = {
     description: "Una tarjeta por sala: lo que pasa ahora y lo que sigue.",
     params: z.object({}),
   },
+  map: {
+    category: "openspace",
+    title: "Mapa del open space",
+    description:
+      "El plano del lugar con cada sala en su color; se ilumina una sala a la vez con lo que pasa ahí ahora, como el mapa de La Meetup.",
+    params: z.object({}),
+  },
   room: {
     category: "openspace",
     title: "Sala",
