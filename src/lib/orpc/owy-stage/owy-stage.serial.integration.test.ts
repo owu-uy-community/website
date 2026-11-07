@@ -8,7 +8,7 @@ import { db } from "lib/db";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeAttendee, makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { makeAttendee, makeBoard, makeCommunity, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 import { server } from "test/msw/server";
 
 /** The wall is one global row, so every test starts with nothing on air. */
@@ -532,6 +532,18 @@ describe("data-driven scenes", () => {
 
     expect(speakers.length).toBeGreaterThan(0);
     expect(speakers.map((speaker) => speaker.slug)).not.toContain("openspace");
+  });
+
+  test("the community wall shows the public directory: listed, active groups only", async () => {
+    const listed = await makeCommunity({ listed: true, logoUrl: "/images/communities/x/picture.webp" });
+    const unlisted = await makeCommunity({ listed: false });
+    const inactive = await makeCommunity({ listed: true, isActive: false });
+
+    const slugs = (await call(router.owyStage.getCommunities, undefined, by(null))).map(({ slug }) => slug);
+
+    expect(slugs).toContain(listed.slug);
+    expect(slugs).not.toContain(unlisted.slug);
+    expect(slugs).not.toContain(inactive.slug);
   });
 
   test("without Spotify configured the wall shows no track and the status says so", async () => {

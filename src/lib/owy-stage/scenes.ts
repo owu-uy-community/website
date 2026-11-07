@@ -938,6 +938,12 @@ export const SCENES = {
     description: "Todo el equipo organizador a la vez, como foto grupal.",
     params: z.object({ title: z.string().trim().max(40).default("El equipo") }),
   },
+  "community-wall": {
+    category: "community",
+    title: "Pared de comunidades",
+    description: "Los logos de las comunidades de owu.uy/comunidades, todos a la vez.",
+    params: z.object({ title: z.string().trim().max(40).default("Comunidades amigas") }),
+  },
   history: {
     category: "community",
     title: "Historia",
