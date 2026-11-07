@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { DAY_TIMES, OPEN_SPACE_TIMES, TALKS, type Talk } from "app/conf/talks";
+import { SOUNDS } from "lib/launchpad/sounds";
 
 /**
  * Owy Stage — the video-wall scene registry shared by the oRPC layer (what an
@@ -12,7 +13,7 @@ export const OWY_STAGE_CHANNEL = "owy-stage";
 
 const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
 /** "HH:MM" moved by some minutes (negative = earlier). */
-const shift = (time: string, minutes: number) => {
+export const shift = (time: string, minutes: number) => {
   const total = toMinutes(time) + minutes;
 
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
@@ -33,6 +34,10 @@ const DEFAULT_PROGRAM = [
   `${DAY_TIMES.despedida.start} Despedida y foto`,
   `${DAY_TIMES.after.start} After`,
 ].join(" | ");
+
+/** A launchpad sound (by id) the wall plays itself when a clock reaches zero, or "off". */
+const WallSound = z.enum(["off", ...SOUNDS.map((sound) => sound.id)]);
+const DEVELOPERS = "29";
 
 const DEPARTMENTS =
   "Montevideo | Canelones | Maldonado | Colonia | San José | Salto | Paysandú | Rivera | Tacuarembó | Cerro Largo | Rocha | Florida | Lavalleja | Durazno | Soriano | Río Negro | Artigas | Treinta y Tres | Flores | Otro país";
@@ -122,8 +127,12 @@ export const SCENES = {
   countdown: {
     category: "opening",
     title: "Countdown",
-    description: "El countdown del evento, en pantalla grande.",
-    params: z.object({ label: z.string().trim().max(40).default("") }),
+    description:
+      "El countdown del evento (el mismo de /countdown y del open space), en pantalla grande. Se controla desde el inspector; suena al llegar a cero si el sonido está activado.",
+    params: z.object({
+      label: z.string().trim().max(40).default(""),
+      sound: WallSound.default(DEVELOPERS),
+    }),
   },
   days: {
     category: "opening",
@@ -537,6 +546,14 @@ export const SCENES = {
     params: z.object({
       title: z.string().trim().max(40).default("Open space"),
       rounds: z.string().trim().max(300).default(""),
+      /** Minutes every round moves on the wall when the day runs late (the grid itself stays). */
+      shift: z.number().int().min(-120).max(120).default(0),
+      list: z.boolean().default(true),
+      sound: WallSound.default("off"),
+      startsIn: z.string().trim().max(40).default("Empieza en"),
+      endsIn: z.string().trim().max(40).default("termina en"),
+      nextIn: z.string().trim().max(60).default("Cambio de sala · próxima ronda en"),
+      doneText: z.string().trim().max(60).default("Cierre · gracias por las sesiones"),
     }),
   },
   hosts: {

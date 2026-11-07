@@ -1,12 +1,13 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { MAPS_URLS } from "app/lib/constants";
-import type { SceneProps } from "lib/owy-stage/scenes";
-import { formatTime } from "lib/utils";
+import { findSound } from "lib/launchpad/sounds";
+import { shift, type SceneProps } from "lib/owy-stage/scenes";
+import { formatCountdown, formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import { QrCode, Rise } from "./parts";
@@ -53,41 +54,79 @@ function parseRounds(value: string): Round[] {
 }
 
 export function Rounds({ params, eventId }: SceneProps<"rounds">) {
-  const { preview } = useContext(StageContext);
+  const { preview, throttle } = useContext(StageContext);
   const now = useNow(1000);
   // Typed rounds win; otherwise the open space grid's own blocks, so a moved block moves here too.
   const board = useBoard(params.rounds ? null : eventId, preview);
   const rounds = useMemo(
     () =>
-      params.rounds
+      (params.rounds
         ? parseRounds(params.rounds)
         : (board?.schedules ?? [])
             .filter((slot) => slot.isActive)
             .map((slot) => ({ start: slot.startTime.slice(0, 5), end: slot.endTime.slice(0, 5) }))
-            .sort((a, b) => a.start.localeCompare(b.start)),
-    [params.rounds, board]
+            .sort((a, b) => a.start.localeCompare(b.start))
+      ).map((round) => ({ start: shift(round.start, params.shift), end: shift(round.end, params.shift) })),
+    [params.rounds, params.shift, board]
   );
+
+  // A round that ends while the scene is on the wall sounds once. Opening the page, or moving the
+  // rounds (shift, a block edited in the grid), sets the count without a sound.
+  const key = rounds.map((round) => round.end).join(",");
+  const ended = rounds.filter((round) => round.end <= now).length;
+  const heard = useRef<{ key: string; ended: number } | null>(null);
+  useEffect(() => {
+    const before = heard.current;
+    heard.current = { key, ended };
+    const sound = findSound(params.sound);
+    if (sound && !throttle && before?.key === key && ended > before.ended) {
+      new Audio(sound.audioFile).play().catch(() => undefined);
+    }
+  }, [key, ended, params.sound, throttle]);
+
   if (!params.rounds && !eventId) return <EmptyText text="Elegí un evento en el admin" />;
   if (!params.rounds && !board) return null;
   if (!rounds.length) return <EmptyText text="Todavía no hay bloques en la grilla" />;
   const active = rounds.findIndex((r) => r.start <= now && now < r.end);
   const nextIndex = rounds.findIndex((r) => r.start > now);
-  const over = rounds.length > 0 && now >= rounds[rounds.length - 1].end;
+  const over = now >= rounds[rounds.length - 1].end;
 
-  let label = "Empieza en";
+  let label = params.startsIn;
   let seconds = 0;
   let caption = "";
   if (active >= 0) {
-    label = `Ronda ${active + 1} · termina en`;
+    label = `Ronda ${active + 1} · ${params.endsIn}`;
     seconds = secondsUntil(rounds[active].end);
     caption = `${rounds[active].start} – ${rounds[active].end}`;
   } else if (over) {
-    label = "Open space";
-    caption = "Cierre · gracias por las sesiones";
+    label = params.title;
+    caption = params.doneText;
   } else if (nextIndex >= 0) {
-    label = nextIndex === 0 ? "Empieza en" : "Cambio de sala · próxima ronda en";
+    label = nextIndex === 0 ? params.startsIn : params.nextIn;
     seconds = secondsUntil(rounds[nextIndex].start);
     caption = `Ronda ${nextIndex + 1} · ${rounds[nextIndex].start}`;
+  }
+  const clock = over ? "FIN" : formatCountdown(Math.max(0, seconds));
+  const long = clock.length > 5;
+
+  if (!params.list) {
+    return (
+      <>
+        <Ambient />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
+            {params.title}
+          </Rise>
+          <p className="mt-8 text-[48px] font-semibold tracking-[0.25em] text-[#FBF5E7]/70 uppercase">{label}</p>
+          <p
+            className={`countdown-font countdown-centered mt-4 leading-none tracking-wider text-[#F5BB03] ${long ? "text-[300px]" : "text-[400px]"}`}
+          >
+            {clock}
+          </p>
+          <p className="mt-8 text-[56px] font-bold">{caption}</p>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -97,40 +136,44 @@ export function Rounds({ params, eventId }: SceneProps<"rounds">) {
         eyebrow={params.title}
         title={active >= 0 ? `Ronda ${active + 1} de ${rounds.length}` : over ? "Terminó" : "Entre rondas"}
       />
-      <div className="absolute top-[330px] left-[340px] w-[820px]">
-        <p className="text-[34px] font-semibold tracking-[0.25em] text-[#FBF5E7]/60 uppercase">{label}</p>
-        <p className="countdown-font mt-2 text-[300px] leading-none tracking-wider text-[#F5BB03]">
-          {over ? "FIN" : formatTime(Math.max(0, Math.min(seconds, 5999)))}
-        </p>
-        <p className="mt-4 text-[44px] font-bold">{caption}</p>
+      <div className="absolute top-[300px] right-[140px] bottom-[80px] left-[140px] flex items-center justify-between gap-[100px]">
+        <div className="min-w-0 flex-1 text-center">
+          <p className="text-[34px] font-semibold tracking-[0.25em] text-[#FBF5E7]/60 uppercase">{label}</p>
+          <p
+            className={`countdown-font countdown-centered mt-2 leading-none tracking-wider text-[#F5BB03] ${long ? "text-[220px]" : "text-[300px]"}`}
+          >
+            {clock}
+          </p>
+          <p className="mt-4 text-[44px] font-bold">{caption}</p>
+        </div>
+        <ol className="flex w-[520px] shrink-0 flex-col gap-[18px]">
+          {rounds.map((round, i) => {
+            const state = i === active ? "active" : round.end <= now ? "done" : "pending";
+            const startIn = secondsUntil(round.start);
+            const endIn = secondsUntil(round.end);
+            const progress = state === "active" ? Math.min(1, Math.max(0, -startIn / Math.max(1, endIn - startIn))) : 0;
+            return (
+              <m.li
+                key={round.start}
+                animate={{ opacity: 1, x: 0 }}
+                className={`relative overflow-hidden px-8 py-5 ${state === "active" ? "bg-[#F5BB03] text-black" : state === "done" ? "bg-[#FBF5E7]/[0.05] text-[#FBF5E7]/40" : "bg-[#FBF5E7]/[0.08]"}`}
+                initial={{ opacity: 0, x: 40 }}
+                transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}
+              >
+                {state === "active" && (
+                  <div className="absolute inset-y-0 left-0 bg-black/15" style={{ width: `${progress * 100}%` }} />
+                )}
+                <div className="relative flex items-center justify-between">
+                  <span className="text-[34px] font-bold">Ronda {i + 1}</span>
+                  <span className="text-[34px] font-semibold tabular-nums">
+                    {round.start} – {round.end}
+                  </span>
+                </div>
+              </m.li>
+            );
+          })}
+        </ol>
       </div>
-      <ol className="absolute top-[340px] right-[140px] flex w-[520px] flex-col gap-[18px]">
-        {rounds.map((round, i) => {
-          const state = i === active ? "active" : round.end <= now ? "done" : "pending";
-          const startIn = secondsUntil(round.start);
-          const endIn = secondsUntil(round.end);
-          const progress = state === "active" ? Math.min(1, Math.max(0, -startIn / Math.max(1, endIn - startIn))) : 0;
-          return (
-            <m.li
-              key={round.start}
-              animate={{ opacity: 1, x: 0 }}
-              className={`relative overflow-hidden px-8 py-5 ${state === "active" ? "bg-[#F5BB03] text-black" : state === "done" ? "bg-[#FBF5E7]/[0.05] text-[#FBF5E7]/40" : "bg-[#FBF5E7]/[0.08]"}`}
-              initial={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}
-            >
-              {state === "active" && (
-                <div className="absolute inset-y-0 left-0 bg-black/15" style={{ width: `${progress * 100}%` }} />
-              )}
-              <div className="relative flex items-center justify-between">
-                <span className="text-[34px] font-bold">Ronda {i + 1}</span>
-                <span className="text-[34px] font-semibold tabular-nums">
-                  {round.start} – {round.end}
-                </span>
-              </div>
-            </m.li>
-          );
-        })}
-      </ol>
     </>
   );
 }
