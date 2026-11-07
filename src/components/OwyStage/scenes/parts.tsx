@@ -93,14 +93,17 @@ export function nowHHMM(timeZone = "America/Montevideo"): string {
   );
 }
 
-/** The wall clock (HH:MM), ticking every `everyMs`. */
+/**
+ * The wall clock (HH:MM), re-rendering every `everyMs`. It re-renders on every tick, not only when
+ * the minute changes: countdowns read `secondsUntil` during that render.
+ */
 export function useNow(everyMs = 1000) {
-  const [now, setNow] = useState(nowHHMM);
+  const [, setTick] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setNow(nowHHMM()), everyMs);
+    const id = setInterval(() => setTick((tick) => tick + 1), everyMs);
     return () => clearInterval(id);
   }, [everyMs]);
-  return now;
+  return nowHHMM();
 }
 
 /** QR on a cream card (dark modules on light stays scannable on any wall). */
