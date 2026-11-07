@@ -19,6 +19,7 @@ import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc } from "lib/orpc";
 import { OWY_DESK_CHANNEL, type FaceState, type SceneId } from "lib/owy-stage/scenes";
 import { eventChannel } from "lib/realtime/channels";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 
 import { knobAction, phaseOfFace } from "./ops";
@@ -306,11 +307,7 @@ function Highlights({ eventId }: { eventId: string }) {
 
           return (
             <li key={note.id} className="flex items-center gap-3 py-2">
-              <span
-                aria-hidden
-                className="size-2.5 shrink-0 rounded-full"
-                style={{ background: roomColorFor(note.roomId, note.roomColor) }}
-              />
+              <RoomMark className="size-2.5" color={roomColorFor(note.roomId, note.roomColor)} icon={note.roomIcon} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-ui font-medium text-foreground">{note.title}</span>
                 <span className="block truncate text-meta text-muted-foreground">
