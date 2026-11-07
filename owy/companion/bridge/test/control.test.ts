@@ -272,19 +272,59 @@ describe("Owy's ajustes tool", () => {
 });
 
 describe("control channel", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** A `ws` socket as far as the channel sees it: it answers pings like the site. */
   class FakeSocket extends EventEmitter {
-    sent: unknown[] = [];
+    readyState = 0;
+    sent: Record<string, unknown>[] = [];
     closed = false;
+    closedWith: number | undefined;
     send(data: string) {
-      this.sent.push(JSON.parse(data));
+      const frame = JSON.parse(data) as Record<string, unknown>;
+      this.sent.push(frame);
+      if (frame.t === "ping") this.receive({ t: "pong" });
     }
-    close() {
+    close(code?: number) {
       this.closed = true;
+      this.closedWith = code;
+      this.readyState = 3;
+    }
+    open() {
+      this.readyState = 1;
+      this.emit("open");
     }
     receive(frame: object) {
       this.emit("message", JSON.stringify(frame));
     }
   }
+
+  const TALK_CHANNEL = "private:owy-talk";
+  function bridgeChannel() {
+    const sockets: FakeSocket[] = [];
+    const events: unknown[] = [];
+    const opened = vi.fn();
+    const channel = new ControlChannel({
+      url: "wss://www.owu.uy/api/realtime",
+      apiKey: "owy_key",
+      channels: [COMPANION_CHANNEL, TALK_CHANNEL],
+      logger,
+      onEvent: (_ch, _ev, pl) => events.push(pl),
+      onOpen: opened,
+      createSocket: () => {
+        const socket = new FakeSocket();
+        sockets.push(socket);
+        return socket as never;
+      },
+    });
+    channel.start();
+    return { channel, sockets, events, opened };
+  }
+  const subscribed = (socket: FakeSocket) => {
+    socket.open();
+    socket.receive({ t: "ok", ch: COMPANION_CHANNEL });
+    socket.receive({ t: "ok", ch: TALK_CHANNEL });
+  };
 
   it("subscribes with the key, hands events over, and reconnects after a recycle", async () => {
     const sockets: { socket: FakeSocket; headers: Record<string, string> }[] = [];
@@ -306,7 +346,7 @@ describe("control channel", () => {
     channel.start();
     const first = sockets[0].socket;
     expect(sockets[0].headers).toEqual({ "x-api-key": "owy_key" });
-    first.emit("open");
+    first.open();
     expect(first.sent).toEqual([{ t: "sub", ch: COMPANION_CHANNEL }]);
     first.receive({ t: "ok", ch: COMPANION_CHANNEL });
     expect(opened).toHaveBeenCalledOnce();
@@ -336,13 +376,87 @@ describe("control channel", () => {
       },
     });
     channel.start();
-    sockets[0].emit("open");
+    sockets[0].open();
     sockets[0].receive({ t: "err", msg: "forbidden", ch: COMPANION_CHANNEL });
     expect(sockets[0].closed).toBe(true);
     await vi.advanceTimersByTimeAsync(10_000);
     expect(sockets).toHaveLength(1);
     await vi.advanceTimersByTimeAsync(21_000);
     expect(sockets).toHaveLength(2);
+    channel.stop();
+  });
+
+  it("a second socket takes over before Vercel's cut: each message once, no onOpen, publishes on the current one", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0); // the rotation at exactly 240 s
+    const { channel, sockets, events, opened } = bridgeChannel();
+    const [first] = sockets;
+    subscribed(first);
+    expect(opened).toHaveBeenCalledOnce();
+
+    await vi.advanceTimersByTimeAsync(240_000);
+    const second = sockets[1];
+    second.open();
+    expect(second.sent).toEqual([
+      { t: "sub", ch: COMPANION_CHANNEL },
+      { t: "sub", ch: TALK_CHANNEL },
+    ]);
+    // Both carry what the panel sends meanwhile: handed over once (by id; a frame without one passes)
+    first.receive({ t: "msg", ch: COMPANION_CHANNEL, ev: "command", pl: 1, id: "m1" });
+    second.receive({ t: "msg", ch: COMPANION_CHANNEL, ev: "command", pl: 1, id: "m1" });
+    second.receive({ t: "msg", ch: COMPANION_CHANNEL, ev: "command", pl: "no id" });
+    first.receive({ t: "msg", ch: COMPANION_CHANNEL, ev: "command", pl: "no id" });
+    expect(channel.publish("owy-stage", "face", { n: 1 })).toBe(true);
+    expect(first.sent.at(-1)).toMatchObject({ t: "pub", pl: { n: 1 } });
+
+    second.receive({ t: "ok", ch: COMPANION_CHANNEL });
+    expect(first.closed).toBe(false);
+    second.receive({ t: "ok", ch: TALK_CHANNEL });
+    expect(first.closedWith).toBe(1000);
+    first.emit("close", 1000, Buffer.from("rotated"));
+
+    second.receive({ t: "msg", ch: COMPANION_CHANNEL, ev: "command", pl: 2, id: "m2" });
+    expect(channel.publish("owy-stage", "face", { n: 2 })).toBe(true);
+    expect(second.sent.at(-1)).toMatchObject({ t: "pub", pl: { n: 2 } });
+    expect(events).toEqual([1, "no id", "no id", 2]);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(sockets).toHaveLength(2);
+    expect(opened).toHaveBeenCalledOnce();
+    channel.stop();
+  });
+
+  it("a rotation that fails keeps the current socket and tries again later", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { channel, sockets, opened } = bridgeChannel();
+    subscribed(sockets[0]);
+
+    await vi.advanceTimersByTimeAsync(240_000);
+    sockets[1].emit("close", 1006, Buffer.from("")); // refused
+    expect(channel.publish("owy-stage", "face", {})).toBe(true);
+    expect(sockets[0].sent.at(-1)).toMatchObject({ t: "pub" });
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    sockets[2].open();
+    sockets[2].receive({ t: "err", msg: "forbidden", ch: COMPANION_CHANNEL });
+    expect(sockets[2].closed).toBe(true);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(sockets).toHaveLength(4);
+    expect(sockets[0].closed).toBe(false);
+    expect(channel.publish("owy-stage", "face", {})).toBe(true);
+    expect(opened).toHaveBeenCalledOnce();
+    channel.stop();
+  });
+
+  it("publish() is true only on an open, subscribed socket: otherwise the stage mirror posts instead", () => {
+    const { channel, sockets } = bridgeChannel();
+    const [socket] = sockets;
+    expect(channel.publish("owy-stage", "face", {})).toBe(false); // connecting
+    socket.open();
+    socket.receive({ t: "ok", ch: COMPANION_CHANNEL });
+    expect(channel.publish("owy-stage", "face", {})).toBe(false); // a channel still to confirm
+    socket.receive({ t: "ok", ch: TALK_CHANNEL });
+    expect(channel.publish("owy-stage", "face", {})).toBe(true);
+    socket.readyState = 2; // closing: `ws` would drop the send without a word
+    expect(channel.publish("owy-stage", "face", {})).toBe(false);
     channel.stop();
   });
 });
