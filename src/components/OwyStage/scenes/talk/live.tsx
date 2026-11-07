@@ -10,6 +10,7 @@ import {
   DIAGRAM_NODES,
   inputKey,
   slideInput,
+  slideSteps,
   vsRevealed,
   vsRound,
   type DiagramNode,
@@ -325,7 +326,7 @@ export function RatingSlide({ slide, round }: LiveProps<"rating">) {
 // Owy live: the question in blue, his answer in yellow, the tools he reaches for
 // ---------------------------------------------------------------------------
 
-const TOOL_LABEL: Record<string, string> = { event_now: "qué pasa ahora", get_board: "la grilla" };
+const TOOL_LABEL: Record<string, string> = { event_now: "qué pasa ahora", get_openspace_board: "la grilla" };
 
 const STATE_LABEL: Record<FaceState, string> = {
   idle: "Esperando",
@@ -401,20 +402,21 @@ const NODE_GAP = (COL_W - NODE_W * 4) / 3;
 const col = (i: number) => i * (NODE_W + NODE_GAP);
 const ROW_1 = 40;
 const ROW_2 = ROW_1 + NODE_H + 110;
-/** In content coordinates. A snake: right along the top, down into the brain, back left to the wall. */
+/** In content coordinates. A snake: right along the top to the brain, down into the API, back left to the screens. */
 const NODE_AT: Record<DiagramNode, [number, number]> = {
-  mic: [col(0), ROW_1],
-  device: [col(1), ROW_1],
-  bridge: [col(2), ROW_1],
-  voice: [col(3), ROW_1],
-  brain: [col(3), ROW_2],
-  api: [col(2), ROW_2],
+  knob: [col(0), ROW_1],
+  mac: [col(1), ROW_1],
+  voice: [col(2), ROW_1],
+  brain: [col(3), ROW_1],
+  api: [col(3), ROW_2],
+  bus: [col(2), ROW_2],
   wall: [col(1), ROW_2],
 };
+/** Listening: the tap, the Mac's mic, the model. Speaking: the Mac's speakers, the knob's lips, and the face on the wall (through the API and the bus). */
 const LIGHTS: Partial<Record<FaceState, DiagramNode[]>> = {
-  listening: ["mic", "device", "bridge", "voice"],
-  thinking: ["bridge", "voice", "brain"],
-  speaking: ["voice", "bridge", "device", "wall"],
+  listening: ["knob", "mac", "voice"],
+  thinking: ["voice", "brain"],
+  speaking: ["voice", "mac", "knob", "api", "bus", "wall"],
 };
 
 /** The last turn's timings, measured on the wall, under Owy's face. */
@@ -439,7 +441,9 @@ function Timings() {
 
 export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
   const { state, tool } = useFeed();
-  const shown = slide.live ? DIAGRAM_NODES.length : Math.min(step + 1, DIAGRAM_NODES.length);
+  // With builds, one box per click (the newest bright); without, the whole diagram at once.
+  const shown = slideSteps(slide) > 1 ? Math.min(step + 1, DIAGRAM_NODES.length) : DIAGRAM_NODES.length;
+  const building = shown < DIAGRAM_NODES.length;
   const visible = new Set(DIAGRAM_NODES.slice(0, shown));
   const lit = new Set<DiagramNode>(slide.live ? (LIGHTS[state] ?? []) : []);
   if (slide.live && state === "thinking" && tool) lit.add("api");
@@ -475,7 +479,7 @@ export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
           if (!visible.has(node.id)) return null;
           const on = lit.has(node.id);
           const [x, y] = NODE_AT[node.id];
-          const dim = !slide.live && node.id !== newest;
+          const dim = building && node.id !== newest;
           return (
             <m.div
               key={node.id}

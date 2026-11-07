@@ -1,12 +1,16 @@
 import type { Expression } from "../scenes";
 
 /**
- * «Owy, en vivo» — the open-space talk at OWU CONF 2026, given by Agustín and Owy together.
+ * «Owy, en vivo» — the open-space talk at OWU CONF 2026, given by Agustín and Owy together:
+ * how the open space tool and Owy work, and how they are connected. 25 minutes, ~5 of them Q&A.
  *
  * The whole deck is ONE Owy Stage scene (`owy-charla`, params `{slide, step}`): moving between
  * slides is a params edit, never a new take, so the phone round lives for the whole talk and a
  * question sent on the second slide is still there at the Q&A. Polls and votes are layouts of
  * the same scene with their own input keys (`inputKey`), for the same reason.
+ *
+ * The grid slides show the board of the wall's event (the desk's event): for the talk, the demo
+ * grid where the bridge's pitches land (`COMPANION_PITCH_EVENT_ID`).
  *
  * Pure data: the wall, the phones, the console and Owy's talk context all read it. What only
  * the presenter should read lives in `notes.ts` (kept out of the public stage bundle). Nothing
@@ -16,14 +20,13 @@ import type { Expression } from "../scenes";
 export const TALK_SECTIONS = {
   previa: { title: "Previa", color: "#FBF5E7" },
   apertura: { title: "Apertura", color: "#F5BB03" },
-  problema: { title: "El problema", color: "#0162C8" },
+  openspace: { title: "El open space", color: "#0162C8" },
   owy: { title: "Conocé a Owy", color: "#F5BB03" },
-  historia: { title: "La historia", color: "#0162C8" },
-  adentro: { title: "Por dentro", color: "#F5BB03" },
-  cuerpos: { title: "Los cuerpos", color: "#0162C8" },
-  juego: { title: "¿Humano u Owy?", color: "#F5BB03" },
-  cierre: { title: "Cierre", color: "#0162C8" },
-  preguntas: { title: "Preguntas", color: "#F5BB03" },
+  conexion: { title: "Cómo se conectan", color: "#0162C8" },
+  wifi: { title: "El wifi", color: "#F5BB03" },
+  envivo: { title: "En vivo", color: "#0162C8" },
+  cierre: { title: "Cierre", color: "#F5BB03" },
+  preguntas: { title: "Preguntas", color: "#0162C8" },
   final: { title: "Final", color: "#FBF5E7" },
 } as const;
 export type TalkSection = keyof typeof TALK_SECTIONS;
@@ -47,8 +50,13 @@ export type TalkInput =
   | { kind: "reactions"; prompt: string };
 
 /** The boxes of the "por dentro" diagram, in the order a voice turn crosses them. */
-export const DIAGRAM_NODES = ["mic", "device", "bridge", "voice", "brain", "api", "wall"] as const;
+export const DIAGRAM_NODES = ["knob", "mac", "voice", "brain", "api", "bus", "wall"] as const;
 export type DiagramNode = (typeof DIAGRAM_NODES)[number];
+
+/** A name and one line under it: the boxes and rows of the system slides. */
+export type Labeled = { label: string; detail: string };
+/** Whose colour a row of the hub takes: blue for people, yellow for Owy (`seat.tsx`). */
+export type HubItem = Labeled & { tone?: "people" | "owy" };
 
 type Base = {
   id: string;
@@ -77,7 +85,7 @@ export type TalkSlide = Base &
     | { layout: "statement"; kicker: string; text: string; by?: string }
     | { layout: "poll"; reveal: string }
     | { layout: "orbit"; core: { label: string; detail: string }; bodies: { label: string; detail: string }[] }
-    | { layout: "tiles"; tiles: { icon: string; title: string; body: string }[] }
+    | { layout: "tiles"; sub?: string; tiles: { title: string; body: string; code?: true }[] }
     | { layout: "live"; kicker: string; ask: string; tools: string[] }
     | { layout: "timeline"; events: { date: string; title: string; body: string }[] }
     | { layout: "bugs"; bugs: { title: string; body: string }[] }
@@ -90,6 +98,26 @@ export type TalkSlide = Base &
     | { layout: "pitch"; how: string[] }
     | { layout: "vs"; rounds: { text: string; author: "human" | "owy" }[] }
     | { layout: "links"; kicker: string; links: { label: string; url: string }[] }
+    /** The live grid of the wall's event; a card that lands while it is up lights. `how` sits under Owy's face. */
+    | { layout: "board"; sub: string; how?: string[] }
+    /** Who writes → the one API and its realtime bus → who listens; a pulse crosses it. */
+    | { layout: "hub"; sub: string; writers: HubItem[]; core: Labeled[]; readers: HubItem[] }
+    /** A pipeline, one station per build, on a rail: what happens, then how (`detail`, monospace). */
+    | { layout: "flow"; sub?: string; stations: Labeled[] }
+    /** Packets on a link: a healthy lane and a lossy one, with what was measured. */
+    | {
+        layout: "wifi";
+        sub: string;
+        lanes: { label: string; rtt: string; loss: string; ok: boolean }[];
+        /** Said once every lane is up. */
+        verdict: string;
+      }
+    /** Before and after, side by side: a device and the Mac, and what crosses the wifi between them. */
+    | {
+        layout: "split";
+        sub: string;
+        sides: { title: string; device: Labeled; mac: Labeled; wire: string; heavy: boolean; facts: string[] }[];
+      }
     | { layout: "qa" }
     | { layout: "rating" }
     | { layout: "photo-op" }
@@ -121,13 +149,13 @@ export const TALK_SLIDES: TalkSlide[] = [
     ],
   },
 
-  // --- Apertura (0:00–1:30) ---
+  // --- Apertura (0:00–1:20) ---
   {
     id: "wake",
     section: "apertura",
     layout: "face",
     title: "Owy se despierta",
-    seconds: 40,
+    seconds: 35,
     pip: false,
     owy: "Arranca la charla: tu cara ocupa toda la pantalla. Hablás vos primero, antes que Agustín.",
     cues: [
@@ -136,7 +164,7 @@ export const TALK_SLIDES: TalkSlide[] = [
         mode: "say",
         auto: true,
         clip: "talk-wake",
-        text: "Hola, soy Owy. Agustín me pidió que arranque yo, porque a mí no me tiembla la voz. Esta charla la damos entre los dos: él pone las manos, yo pongo la voz. ¿Arrancás, Agus?",
+        text: "Hola, soy Owy. Agustín me pidió que arranque yo, porque a mí no me tiembla la voz. Hoy les contamos cómo funciona la grilla del open space, qué hago yo ahí, y cómo el wifi casi me deja mudo. ¿Arrancás, Agus?",
       },
     ],
   },
@@ -146,63 +174,63 @@ export const TALK_SLIDES: TalkSlide[] = [
     layout: "title",
     title: "Owy, en vivo",
     kicker: "Open space de OWU CONF 2026",
-    subtitle: "Un bot hecho por la comunidad, con cuerpo.",
+    subtitle: "Cómo el open space y un carpincho trabajan juntos.",
     people: [
       { name: "Agustín Tornielli", role: "el humano" },
       { name: "Owy", role: "el carpincho" },
     ],
-    seconds: 50,
-    owy: "La portada: «Owy, en vivo. Un bot hecho por la comunidad, con cuerpo». Agustín y vos, co-presentadores.",
+    seconds: 45,
+    owy: "La portada: «Owy, en vivo. Cómo el open space y un carpincho trabajan juntos». Agustín y vos, co-presentadores.",
   },
 
-  // --- El problema (1:30–3:30) ---
+  // --- El open space (1:20–5:05) ---
   {
-    id: "questions",
-    section: "problema",
-    layout: "bubbles",
-    title: "Un sábado en una conf",
-    bubbles: [
-      "¿Dónde es la sala 3?",
-      "¿A qué hora es el almuerzo?",
-      "¿Hay wifi?",
-      "¿Quién da la charla de las 16?",
-      "¿Dónde dejo el post-it?",
-      "¿Hay mate?",
-    ],
-    punchline: "Siempre las mismas preguntas. Siempre a la misma persona del staff.",
-    steps: 7,
-    seconds: 40,
-    owy: "Las preguntas que el staff contesta cien veces en una conf: salas, horarios, wifi, quién da cada charla.",
-  },
-  {
-    id: "board",
-    section: "problema",
+    id: "paper",
+    section: "openspace",
     layout: "photos",
     title: "El open space, en papel",
     photos: [
       { src: "/images/conf/openspace/galeria-10.webp", alt: "La grilla de papel pegada en el vidrio, en 2024" },
       { src: "/images/conf/openspace/galeria-02.webp", alt: "Manos escribiendo tarjetas de charlas" },
     ],
-    captions: ["La agenda la arma la gente, en papel.", "Y después alguien la pasa a mano."],
+    captions: ["La agenda la arma la gente, en post-its.", "Y después alguien la pasa a mano."],
     steps: 2,
-    seconds: 40,
-    owy: "Fotos del open space: la grilla de post-its en papel, y alguien que después la pasa a mano.",
+    seconds: 45,
+    owy: "Fotos del open space de otros años: la grilla de post-its en papel, y alguien que después la pasa a mano.",
   },
   {
-    id: "why",
-    section: "problema",
-    layout: "statement",
-    title: "Por qué Owy",
-    kicker: "Por qué lo hicimos",
-    // [A] Agustín: tu frase. Corta, en primera persona.
-    text: "Quería que el staff disfrute la conf, y que las preguntas de siempre las conteste alguien que nunca se cansa.",
-    by: "Agustín",
-    seconds: 20,
-    owy: "Agustín cuenta por qué arrancó con Owy.",
+    id: "grid",
+    section: "openspace",
+    layout: "board",
+    title: "La grilla, en vivo",
+    sub: "La misma en el admin, el celular, los kiosks y esta pantalla.",
+    seconds: 75,
+    owy: "La grilla del open space en vivo: salas por bloques, con las tarjetas de las charlas. Es la misma que usa el staff en el admin y que ve la gente en el celular, en los kiosks y en esta pantalla.",
+  },
+  {
+    id: "ai",
+    section: "openspace",
+    layout: "points",
+    title: "La grilla piensa un poco",
+    kicker: "Con AI, donde ayuda",
+    points: [
+      {
+        title: "Del post-it a la tarjeta",
+        body: "Una foto, y Gemini Flash lee la letra: título, quién, si precisa tele.",
+      },
+      {
+        title: "Sugerir con AI",
+        body: "Un modelo de decisión contesta sí o no: ¿mismo tema? ¿sala parecida? El lugar sale de una cuenta.",
+      },
+      { title: "«Para vos»", body: "Cada tarjeta se etiqueta sola, por tema y formato, para recomendarte charlas." },
+    ],
+    steps: 3,
+    seconds: 60,
+    owy: "Dónde ayuda la AI en la grilla: leer la foto de un post-it y armar la tarjeta, sugerir el lugar con un modelo que contesta sí o no, y etiquetar cada charla para recomendarla.",
   },
   {
     id: "poll-bathroom",
-    section: "problema",
+    section: "openspace",
     layout: "poll",
     title: "Encuesta",
     input: {
@@ -212,7 +240,7 @@ export const TALK_SLIDES: TalkSlide[] = [
     },
     reveal: "Por eso existe Owy.",
     steps: 2,
-    seconds: 20,
+    seconds: 45,
     owy: "Una encuesta en vivo desde los celulares: cuántas veces les preguntaron dónde es el baño en un evento.",
     cues: [
       {
@@ -224,7 +252,7 @@ export const TALK_SLIDES: TalkSlide[] = [
     ],
   },
 
-  // --- Conocé a Owy (3:30–6:00) ---
+  // --- Conocé a Owy (5:05–7:05) ---
   {
     id: "bodies",
     section: "owy",
@@ -234,30 +262,13 @@ export const TALK_SLIDES: TalkSlide[] = [
     bodies: [
       { label: "Slack", detail: "el canal de la conf" },
       { label: "Telegram", detail: "para el staff" },
-      { label: "Web", detail: "hablás desde el navegador" },
-      { label: "Owy físico", detail: "la pantallita y la perilla" },
+      { label: "La perilla", detail: "una cara y un botón" },
       { label: "La pantalla", detail: "esto que están viendo" },
+      { label: "El panel", detail: "/admin/owy, en el celular" },
     ],
     steps: 6,
     seconds: 45,
-    owy: "Un diagrama: un solo cerebro en el medio y tus cuerpos alrededor: Slack, Telegram, la web, el Owy físico y la pantalla.",
-  },
-  {
-    id: "does",
-    section: "owy",
-    layout: "tiles",
-    title: "Qué hace Owy",
-    tiles: [
-      { icon: "💬", title: "Responde sobre el evento", body: "Y si no sabe, lo dice. Nunca inventa." },
-      { icon: "🗂️", title: "La grilla en vivo", body: "Qué hay ahora, dónde y quién." },
-      { icon: "📸", title: "Lee la foto del tablero", body: "Del post-it a la grilla digital." },
-      { icon: "🧑‍🤝‍🧑", title: "Coordina al staff", body: "Tareas, avisos y turnos." },
-      { icon: "🎤", title: "Modo pitch", body: "Proponé tu charla hablándole." },
-      { icon: "⏰", title: "Avisos del día", body: "Apertura, bloques y cierre, solo." },
-    ],
-    steps: 6,
-    seconds: 45,
-    owy: "Lo que hacés: responder sobre el evento sin inventar, la grilla en vivo, leer la foto del tablero, coordinar al staff, el modo pitch y los avisos automáticos del día.",
+    owy: "Un diagrama: un solo cerebro en el medio y tus cuerpos alrededor: Slack, Telegram, la perilla, la pantalla y el panel del staff.",
   },
   {
     id: "demo-now",
@@ -266,8 +277,8 @@ export const TALK_SLIDES: TalkSlide[] = [
     title: "En vivo: ¿qué hay ahora?",
     kicker: "Demo en vivo",
     ask: "Owy, ¿qué hay ahora en el open space?",
-    tools: ["event_now", "get_board"],
-    seconds: 60,
+    tools: ["event_now", "get_openspace_board"],
+    seconds: 75,
     owy: "Primera demo en vivo: Agustín te pregunta qué hay ahora en el open space. Usá tus tools, contestá corto y con datos reales.",
     cues: [
       {
@@ -278,134 +289,195 @@ export const TALK_SLIDES: TalkSlide[] = [
     ],
   },
 
-  // --- La historia (6:00–8:00) ---
+  // --- Cómo se conectan (7:05–9:10) ---
   {
-    id: "timeline",
-    section: "historia",
-    layout: "timeline",
-    title: "De bot a mascota",
-    events: [
-      { date: "17 ago", title: "Owy nace", body: "Un bot en Slack y Telegram, hecho con eve." },
-      { date: "ago", title: "Lee el tablero", body: "Le mandás la foto de los post-its y los carga." },
-      { date: "4 sep", title: "Primera palabra", body: "El primer Owy físico habla de verdad." },
-      { date: "12 sep", title: "La pantalla", body: "Owy Stage: escenas, cara y celulares." },
-      { date: "19 sep", title: "La perilla", body: "Un segundo cuerpo, que gira y vibra." },
-      { date: "20 sep", title: "Un solo cerebro", body: "La voz pasa a pensar con eve." },
-      { date: "7 oct", title: "Modo pitch", body: "Proponés tu charla hablando." },
-      { date: "31 oct", title: "Planes B", body: "Por si el wifi de la conf falla." },
-      { date: "7 nov", title: "Hoy", body: "Acá, con ustedes." },
+    id: "tools",
+    section: "conexion",
+    layout: "tiles",
+    title: "Owy usa la misma API que vos",
+    sub: "29 tools. Los mismos archivos en Slack, Telegram y la voz.",
+    tiles: [
+      {
+        title: "La grilla",
+        body: "get_openspace_board · event_now · create_track · move_track · digitize_board_photo",
+        code: true,
+      },
+      {
+        title: "Las salas y el staff",
+        body: "set_room_status · cast_track · countdown_control · announce_to_staff",
+        code: true,
+      },
+      { title: "Su propia llave", body: "x-api-key → un usuario bot, con permisos acotados", code: true },
+      {
+        title: "Sólo lo que vos podés",
+        body: "Owy chequea que quien le habla tenga el permiso. La API lo chequea otra vez.",
+      },
     ],
-    steps: 9,
+    steps: 4,
     seconds: 50,
-    owy: "Tu historia en una línea de tiempo: naciste el 17 de agosto en Slack y Telegram; en septiembre hablaste por primera vez con cuerpo, llegó la pantalla y la perilla; en octubre el modo pitch y los planes B para el wifi; hoy, 7 de noviembre, la charla.",
+    owy: "Tus tools: leer y mover la grilla, leer la foto del tablero, las salas, el staff. Entrás a la API de OWU con tu propia llave, como un usuario bot, y sólo hacés lo que la persona que te habla tiene permiso de hacer; la API lo vuelve a chequear.",
   },
   {
-    id: "bugs",
-    section: "historia",
-    layout: "bugs",
-    title: "Bugs que nos marcaron",
-    bugs: [
-      {
-        title: "El micrófono mudo",
-        body: "Días creyendo que era el mic. Era el reloj compartido del bus de audio. Y encima se subía el firmware viejo.",
-      },
-      { title: "La perilla que no es perilla", body: "No es un encoder: son dos botones disfrazados." },
-      { title: "macOS no te deja hablar con tu red", body: "El permiso de red local bloqueaba al bridge." },
-      { title: "La Mac se dormía", body: "En la mitad de cada prueba larga. caffeinate -i." },
-      { title: "La vibración que se escuchaba", body: "El motor háptico se metía en el micrófono." },
+    id: "hub",
+    section: "conexion",
+    layout: "hub",
+    title: "Una API, un bus",
+    sub: "Todos escriben en el mismo lugar. Todos escuchan el mismo canal.",
+    writers: [
+      { label: "El staff", detail: "el admin, en el celular", tone: "people" },
+      { label: "Owy", detail: "Slack, Telegram y la voz", tone: "owy" },
+      { label: "La perilla", detail: "el modo pitch", tone: "owy" },
+      { label: "Una foto", detail: "del post-it a la tarjeta", tone: "people" },
     ],
-    steps: 5,
-    seconds: 45,
-    owy: "El muro de bugs: el micrófono mudo por el reloj del bus de audio, la perilla que en realidad son dos botones, macOS bloqueando la red local, la Mac que se dormía en las pruebas y la vibración que se colaba en el micrófono.",
-    cues: [
-      { label: "Chiste del micrófono", mode: "say", clip: "talk-bugs", text: "Esa fue mi semana más silenciosa." },
+    core: [
+      { label: "owu.uy", detail: "oRPC · Postgres" },
+      { label: "Realtime", detail: "card_change" },
     ],
-  },
-  {
-    id: "numbers",
-    section: "historia",
-    layout: "numbers",
-    title: "Owy en números",
-    // Re-count before the talk (commands in the plan).
-    stats: [
-      { value: 214, label: "escenas para la pantalla" },
-      { value: 30, label: "tools" },
-      { value: 2, label: "cuerpos físicos" },
-      { value: 4, label: "caminos para la voz" },
-      { value: 43, suffix: " mil", label: "líneas de código" },
-      { value: 100, suffix: " %", label: "comunidad" },
+    readers: [
+      { label: "El wall", detail: "grilla, mapa, salas" },
+      { label: "Celulares", detail: "conf.owu.uy/openspace" },
+      { label: "Kiosks", detail: "la puerta de cada sala" },
+      { label: "La perilla", detail: "te muestra tu tarjeta" },
     ],
-    seconds: 25,
-    owy: "Tus números: más de doscientas escenas de pantalla, treinta tools, dos cuerpos físicos, cuatro caminos para la voz, unas cuarenta y tres mil líneas de código, cien por ciento comunidad.",
-    cues: [
-      {
-        label: "Chiste de la esquina",
-        mode: "say",
-        clip: "talk-numbers",
-        text: "Doscientas escenas, y a mí igual me ponen en la esquina.",
-      },
-    ],
+    steps: 3,
+    seconds: 75,
+    owy: "Cómo se conecta todo: el staff, vos y las fotos escriben en la misma API de owu.uy; cada cambio sale por un canal en tiempo real, y el wall, los celulares, los kiosks y la perilla lo escuchan al mismo tiempo.",
   },
 
-  // --- Por dentro (8:00–11:30) ---
+  // --- El wifi (9:10–14:05) ---
   {
-    id: "inside",
-    section: "adentro",
-    layout: "diagram",
-    title: "Por dentro",
-    live: false,
-    nodes: [
-      { id: "mic", label: "Micrófono", detail: "el del Owy o el de Agustín" },
-      { id: "device", label: "Owy físico", detail: "ESP32-S3 con ESPHome" },
-      { id: "bridge", label: "Bridge", detail: "Node: se hace pasar por Home Assistant" },
-      { id: "voice", label: "Oídos y boca", detail: "Gemini Live por AI Gateway" },
-      { id: "brain", label: "Cerebro", detail: "eve: sesiones, tools, skills" },
-      { id: "api", label: "API de OWU", detail: "oRPC: grilla, staff, pantalla" },
-      { id: "wall", label: "Pantalla", detail: "Owy Stage por WebSocket" },
+    id: "wifi",
+    section: "wifi",
+    layout: "wifi",
+    title: "La noche anterior",
+    sub: "El wifi de la perilla, medido el viernes a la noche.",
+    lanes: [
+      { label: "El router", rtt: "5 ms", loss: "0 %", ok: true },
+      { label: "La perilla", rtt: "200–1500 ms", loss: "7–75 %", ok: false },
     ],
-    steps: 7,
-    seconds: 25,
-    owy: "El diagrama de cómo funcionás: micrófono, el Owy físico con ESPHome, el bridge en Node que se hace pasar por Home Assistant, Gemini Live como oídos y boca, eve como cerebro, la API de OWU y la pantalla.",
+    verdict: "El router andaba. La perilla, no.",
+    steps: 2,
+    seconds: 50,
+    owy: "Lo que midieron la noche anterior: el router contestaba en 5 milisegundos sin perder nada; tu perilla tardaba entre 200 y 1500 milisegundos y perdía entre el 7 y el 75 por ciento de los paquetes.",
   },
   {
-    id: "inside-live",
-    section: "adentro",
+    id: "wifi-bugs",
+    section: "wifi",
+    layout: "bugs",
+    title: "Lo que el wifi rompía",
+    bugs: [
+      {
+        title: "El micrófono llegaba vacío",
+        body: "La placa mandaba el audio por wifi. Perdiendo hasta tres de cada cuatro paquetes, Owy escuchaba silencio.",
+      },
+      { title: "Toques con demora", body: "Tocabas la perilla y Owy se enteraba de 3 a 11 segundos después." },
+      { title: "«Ups, me trabé»", body: "Un segundo toque cancelaba el turno, y la cara decía que se había roto." },
+      {
+        title: "El sospechoso: el USB-C de la Mac",
+        body: "La perilla estaba enchufada a la Mac, y el USB 3 mete ruido justo en los 2,4 GHz del wifi.",
+      },
+    ],
+    steps: 4,
+    seconds: 50,
+    owy: "Lo que el wifi malo rompía: el micrófono llegaba vacío, los toques llegaban segundos tarde, un segundo toque parecía un error, y el sospechoso era el USB de la Mac, que mete ruido en la banda del wifi.",
+    cues: [{ label: "Chiste del silencio", mode: "say", clip: "talk-bugs", text: "Esa fue mi noche más silenciosa." }],
+  },
+  {
+    id: "split",
+    section: "wifi",
+    layout: "split",
+    title: "Que el audio no viaje",
+    sub: "Por el wifi, mensajes chicos. El audio se queda en la Mac.",
+    sides: [
+      {
+        title: "Antes",
+        device: { label: "La placa", detail: "mic y parlante" },
+        mac: { label: "La Mac", detail: "el bridge" },
+        wire: "audio a 16 kHz, ida y vuelta",
+        heavy: true,
+        facts: [
+          "32.000 bytes de audio por segundo",
+          "dos placas, las dos con micrófono",
+          "ESPHome con componentes parcheados",
+        ],
+      },
+      {
+        title: "Ahora",
+        device: { label: "La perilla", detail: "cara y botón" },
+        mac: { label: "La Mac", detail: "mic DJI y parlantes" },
+        wire: "un toque, una cara, los labios",
+        heavy: false,
+        facts: ["un toque es un número; la cara, una palabra", "una sola placa", "ESPHome de fábrica"],
+      },
+    ],
+    steps: 2,
+    seconds: 60,
+    owy: "La decisión: antes la placa mandaba audio por el wifi, ida y vuelta; ahora tu perilla es una cara y un botón, y por el wifi viajan mensajes chicos. El audio se queda en la Mac, con el micrófono inalámbrico y los parlantes de la sala.",
+  },
+  {
+    id: "deleted",
+    section: "wifi",
+    layout: "numbers",
+    title: "Simplificar es borrar",
+    stats: [
+      { value: 19, suffix: " mil", label: "líneas borradas" },
+      { value: 3, suffix: " mil", label: "líneas nuevas" },
+      { value: 122, label: "archivos, un solo PR" },
+      { value: 1, label: "placa (eran dos)" },
+      { value: 0, label: "bytes de audio por el wifi" },
+      { value: 0, label: "componentes parcheados" },
+    ],
+    seconds: 35,
+    owy: "Lo que dejó la simplificación: diecinueve mil líneas borradas y tres mil nuevas, en un solo PR; una placa en vez de dos, cero audio por el wifi y cero componentes parcheados.",
+    cues: [
+      {
+        label: "Chiste de los oídos",
+        mode: "say",
+        clip: "talk-gone",
+        text: "Me sacaron los oídos y la boca, y ahora escucho mejor que nunca.",
+      },
+    ],
+  },
+  {
+    id: "inside",
+    section: "wifi",
     layout: "diagram",
-    title: "En vivo: cómo funciono",
+    title: "Un turno, por dentro",
     live: true,
     nodes: [
-      { id: "mic", label: "Micrófono", detail: "el del Owy o el de Agustín" },
-      { id: "device", label: "Owy físico", detail: "ESP32-S3 con ESPHome" },
-      { id: "bridge", label: "Bridge", detail: "Node: se hace pasar por Home Assistant" },
+      { id: "knob", label: "La perilla", detail: "un toque y la cara" },
+      { id: "mac", label: "La Mac", detail: "bridge en Node, mic DJI y PA" },
       { id: "voice", label: "Oídos y boca", detail: "Gemini Live por AI Gateway" },
-      { id: "brain", label: "Cerebro", detail: "eve: sesiones, tools, skills" },
-      { id: "api", label: "API de OWU", detail: "oRPC: grilla, staff, pantalla" },
-      { id: "wall", label: "Pantalla", detail: "Owy Stage por WebSocket" },
+      { id: "brain", label: "Cerebro", detail: "eve: memoria, tools, skills" },
+      { id: "api", label: "API de OWU", detail: "oRPC: grilla, salas, staff" },
+      { id: "bus", label: "Realtime", detail: "WebSocket en Vercel + Redis" },
+      { id: "wall", label: "Pantallas", detail: "wall, kiosks y celulares" },
     ],
-    seconds: 70,
-    owy: "Segunda demo en vivo, sobre el mismo diagrama: las cajas se prenden mientras contestás. Agustín te pide que cuentes cómo funcionás por dentro: en treinta segundos, recorriendo el diagrama de izquierda a derecha.",
+    steps: 7,
+    seconds: 60,
+    owy: "El diagrama de un turno de voz, ahora: un toque en la perilla, el bridge en la Mac con el micrófono y los parlantes, Gemini Live como oídos y boca, eve como cerebro, la API de OWU, el realtime y las pantallas. Las cajas se prenden mientras hablás.",
     cues: [
       {
         label: "Owy explica el diagrama",
         mode: "ask",
-        text: "Contá en treinta segundos cómo funcionás por dentro, recorriendo el diagrama que está en pantalla.",
+        text: "Contá en treinta segundos cómo funcionás ahora por dentro, recorriendo el diagrama que está en pantalla.",
       },
     ],
   },
   {
     id: "ladder",
-    section: "adentro",
+    section: "wifi",
     layout: "ladder",
-    title: "Cuando el wifi falla",
+    title: "Y si internet igual falla",
     rungs: [
       { title: "Tiempo real", body: "Gemini Live: escucha y habla en un solo paso." },
-      { title: "Tiempo real de respaldo", body: "Otro modelo, por si el primero no contesta." },
+      { title: "Tiempo real de respaldo", body: "GPT Realtime o Grok, si Gemini no conecta." },
       { title: "Cascada", body: "Transcribir, pensar, hablar. Más lento, más firme." },
-      { title: "Sin internet", body: "Un audio grabado y el QR de la grilla." },
+      { title: "Sin internet", body: "Un audio grabado en la Mac y el QR de la grilla en la perilla." },
     ],
     steps: 4,
-    seconds: 50,
-    owy: "Tus planes de respaldo para la voz: tiempo real, tiempo real de respaldo, cascada de transcribir-pensar-hablar, y sin internet un audio grabado con el QR de la grilla.",
+    seconds: 40,
+    owy: "Tus planes de respaldo para la voz: tiempo real, tiempo real de respaldo con otro modelo, cascada de transcribir-pensar-hablar, y sin internet un audio grabado con el QR de la grilla.",
     cues: [
       {
         label: "Chiste de los planes B",
@@ -415,88 +487,34 @@ export const TALK_SLIDES: TalkSlide[] = [
       },
     ],
   },
-  {
-    id: "decisions",
-    section: "adentro",
-    layout: "points",
-    title: "Tres decisiones",
-    kicker: "Lo que decidimos",
-    points: [
-      { title: "Firmware estándar", body: "ESPHome tal cual, y la magia en un bridge propio en Node." },
-      { title: "Un solo cerebro", body: "La misma memoria y las mismas tools en Slack, Telegram y la voz." },
-      { title: "Nunca inventar", body: "Los datos vivos salen de tools; el resto, de un knowledge curado." },
-    ],
-    steps: 3,
-    seconds: 45,
-    owy: "Tres decisiones de diseño: firmware estándar con un bridge propio, un solo cerebro para todos los canales, y nunca inventar.",
-  },
-  {
-    id: "limits",
-    section: "adentro",
-    layout: "points",
-    title: "Lo que Owy todavía no puede",
-    kicker: "Seamos honestos",
-    points: [
-      { title: "No lo podés interrumpir", body: "Mientras habla, no escucha." },
-      { title: "No se acuerda de vos mañana", body: "Las charlas en el stand se olvidan a los tres minutos." },
-      { title: "A veces piensa un rato", body: "Unos segundos cuando va a buscar datos." },
-    ],
-    steps: 3,
-    seconds: 20,
-    owy: "Tus límites, con honestidad: no te pueden interrumpir mientras hablás, en el stand te olvidás de la gente a los tres minutos, y a veces tardás unos segundos en buscar datos.",
-  },
 
-  // --- Los cuerpos (11:30–13:30) ---
+  // --- En vivo (14:05–17:35) ---
   {
-    id: "devices",
-    section: "cuerpos",
-    layout: "devices",
-    title: "Los cuerpos de Owy",
-    devices: [
-      {
-        name: "La pantallita",
-        size: "1,75 pulgadas",
-        screen: 466,
-        specs: ["AMOLED redonda, táctil", "micrófonos y parlante", "caja de aluminio"],
-      },
-      {
-        name: "La perilla",
-        size: "1,8 pulgadas",
-        screen: 360,
-        specs: ["gira y vibra", "micrófono, sin parlante", "dos chips adentro"],
-      },
+    id: "pitch-flow",
+    section: "envivo",
+    layout: "flow",
+    title: "Del pitch a la grilla",
+    stations: [
+      { label: "Tocás la perilla", detail: "sensor.taps + 1" },
+      { label: "La Mac te escucha", detail: "ffmpeg · mic DJI" },
+      { label: "Owy arma la tarjeta", detail: "generateText + Output.object" },
+      { label: "Elige el lugar", detail: "jev: ¿mismo tema? ¿sala parecida?" },
+      { label: "Queda en la grilla", detail: "tracks.createPlaced" },
+      { label: "Lo ven todas las pantallas", detail: "card_change → wall · celulares · perilla" },
     ],
-    steps: 2,
-    seconds: 40,
-    owy: "Tus dos cuerpos: la pantallita AMOLED redonda de 1,75 pulgadas con micrófonos y parlante, y la perilla de 1,8 que gira y vibra. Agustín las muestra.",
-  },
-  {
-    id: "faces",
-    section: "cuerpos",
-    layout: "faces",
-    title: "La cara de Owy",
-    expressions: ["happy", "curious", "surprised", "thinking", "playful", "empathetic", "excited"],
-    seconds: 20,
-    pip: false,
-    owy: "Tu cara en grande, pasando por tus expresiones: contento, curioso, sorprendido, pensando, pícaro, empático, entusiasmado.",
-    cues: [
-      {
-        label: "Owy presenta sus caras",
-        mode: "say",
-        clip: "talk-faces",
-        text: "Tengo una cara para cada frase. Esta es la de contento, esta la de curioso… y esta, la que pongo cuando el wifi anda mal.",
-      },
-    ],
+    steps: 6,
+    seconds: 60,
+    owy: "Qué pasa en un pitch, paso a paso: un toque, la Mac escucha, armás la tarjeta con el título y el nombre, un modelo de decisión elige el lugar, la tarjeta queda en la grilla y todas las pantallas se enteran por el realtime.",
   },
   {
     id: "pitch",
-    section: "cuerpos",
-    layout: "pitch",
-    title: "En vivo: modo pitch",
-    how: ["Tocá la perilla", "Contá tu charla en 20 segundos", "Tocá de nuevo", "Owy la ubica en la grilla"],
-    seconds: 60,
-    pip: false,
-    owy: "Tercera demo en vivo: alguien del público te propone una charla en modo pitch y vos la ubicás en la grilla de prueba.",
+    section: "envivo",
+    layout: "board",
+    title: "En vivo: proponé tu charla",
+    sub: "Mirá la grilla: tu tarjeta aparece sola.",
+    how: ["Tocá la perilla", "Contá tu charla en 20 segundos", "Tocá de nuevo"],
+    seconds: 150,
+    owy: "Segunda demo en vivo: alguien del público te propone una charla en modo pitch, vos la ubicás en la grilla de prueba, y la tarjeta aparece en la grilla que está en pantalla.",
     cues: [
       {
         label: "Owy invita al pitch",
@@ -507,37 +525,7 @@ export const TALK_SLIDES: TalkSlide[] = [
     ],
   },
 
-  // --- ¿Humano u Owy? (13:30–14:30) ---
-  {
-    id: "vs",
-    section: "juego",
-    layout: "vs",
-    title: "¿Humano u Owy?",
-    // [A] Drafts: before the talk, the "owy" ones must really come from Owy and the "human" ones from Agustín.
-    rounds: [
-      { text: "Un open space es una conferencia donde la agenda la escribe la gente que vino.", author: "human" },
-      { text: "Mate en la mano, post-it en la otra: la agenda se escribe sola.", author: "owy" },
-      {
-        text: "El wifi de las conferencias es como el colectivo: llega, pero nunca cuando lo necesitás.",
-        author: "owy",
-      },
-    ],
-    input: { kind: "vote", prompt: "¿Quién lo escribió?", options: ["Humano", "Owy"] },
-    steps: 6,
-    seconds: 60,
-    owy: "Un juego: en pantalla aparecen frases, el público vota desde el celular si las escribió un humano o vos, y después se revela.",
-    cues: [
-      { label: "Revelación: Owy", mode: "say", clip: "talk-vs-owy", text: "Ese fui yo. Se nota el talento." },
-      {
-        label: "Revelación: humano",
-        mode: "say",
-        clip: "talk-vs-human",
-        text: "Ese fue Agustín. Se nota el esfuerzo.",
-      },
-    ],
-  },
-
-  // --- Cierre (14:30–15:30) ---
+  // --- Cierre (17:35–18:55) ---
   {
     id: "learned",
     section: "cierre",
@@ -545,13 +533,19 @@ export const TALK_SLIDES: TalkSlide[] = [
     title: "Lo que aprendimos",
     kicker: "Para llevarse",
     points: [
-      { title: "El hardware nunca es el del papel", body: "Dejá perillas para calibrar." },
-      { title: "Un cerebro, muchos cuerpos", body: "Lo difícil se escribe una sola vez." },
-      { title: "Diseñá para el wifi de la conferencia", body: "No para el de tu casa." },
+      { title: "Diseñá para el wifi de la conferencia", body: "No para el de tu casa. Que viajen mensajes, no audio." },
+      {
+        title: "Lo simple aguanta",
+        body: "Una placa, firmware de fábrica, el audio en la Mac. Menos código, menos fallas.",
+      },
+      {
+        title: "Owy es un usuario más",
+        body: "La misma API, los mismos permisos, el mismo bus. Lo difícil se escribe una vez.",
+      },
     ],
     steps: 3,
-    seconds: 30,
-    owy: "Lo que aprendieron haciéndote: el hardware nunca es el del papel, un cerebro con muchos cuerpos, y diseñar para el wifi de la conferencia.",
+    seconds: 45,
+    owy: "Lo que aprendieron: diseñar para el wifi de la conferencia, que lo simple aguanta, y que vos sos un usuario más de la misma API.",
   },
   {
     id: "join",
@@ -563,7 +557,7 @@ export const TALK_SLIDES: TalkSlide[] = [
       { label: "El código de Owy", url: REPO },
       { label: "Sumate a OWU", url: SLACK },
     ],
-    seconds: 15,
+    seconds: 20,
     owy: "Los links: tu código es abierto, en el repo de la comunidad, y el Slack de OWU para sumarse.",
   },
   {
@@ -582,21 +576,15 @@ export const TALK_SLIDES: TalkSlide[] = [
     ],
   },
 
-  // --- Preguntas (15:30–37:30) ---
+  // --- Preguntas (18:55–23:55) ---
   {
     id: "qa",
     section: "preguntas",
     layout: "qa",
     title: "Preguntas y respuestas",
-    seconds: 1320,
+    seconds: 300,
     owy: "Ronda de preguntas: el público pregunta desde el celular o con el micrófono de mano. Respondé corto, a la persona que preguntó, y devolvele la palabra a Agustín.",
     cues: [
-      {
-        label: "Owy pregunta al público",
-        mode: "say",
-        clip: "talk-qa-hands",
-        text: "Ahora pregunto yo: ¿quién de ustedes ya le habló en voz alta a un bot y se sintió raro? Levanten la mano, que no los veo, pero me imagino.",
-      },
       {
         label: "Leer la más votada",
         mode: "say",
@@ -605,36 +593,7 @@ export const TALK_SLIDES: TalkSlide[] = [
     ],
   },
 
-  // --- Final (37:30–40:00) ---
-  {
-    id: "rating",
-    section: "final",
-    layout: "rating",
-    title: "¿Qué te pareció?",
-    input: { kind: "stars", prompt: "¿Qué te pareció la charla?" },
-    seconds: 60,
-    owy: "Cierre: el público puntúa la charla con estrellas desde el celular.",
-    cues: [
-      {
-        label: "Despedida de Owy",
-        mode: "say",
-        clip: "talk-bye",
-        text: "Gracias por bancarse una charla con un carpincho. Si me ven en el pasillo, tóquenme la perilla, que para eso estoy.",
-      },
-    ],
-  },
-  {
-    id: "photo",
-    section: "final",
-    layout: "photo-op",
-    title: "Foto con Owy",
-    steps: 2,
-    seconds: 45,
-    pip: false,
-    input: { kind: "reactions", prompt: "¡Mandá tu reacción para la foto!" },
-    owy: "La foto de cierre: cuenta regresiva y todos con vos en pantalla.",
-    cues: [{ label: "¡Digan mate!", mode: "say", clip: "talk-photo", text: "¡Foto! Todos digan «mate»." }],
-  },
+  // --- Final (23:55–24:15) ---
   {
     id: "end",
     section: "final",
@@ -644,8 +603,16 @@ export const TALK_SLIDES: TalkSlide[] = [
       { label: "Código", url: REPO },
       { label: "Slack de OWU", url: SLACK },
     ],
-    seconds: 45,
+    seconds: 20,
     owy: "La placa final: gracias, OWU CONF 2026.",
+    cues: [
+      {
+        label: "Despedida de Owy",
+        mode: "say",
+        clip: "talk-bye",
+        text: "Gracias por bancarse una charla con un carpincho. Si me ven en el pasillo, tóquenme la perilla, que para eso estoy.",
+      },
+    ],
   },
 ];
 

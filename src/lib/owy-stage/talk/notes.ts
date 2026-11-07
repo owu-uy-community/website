@@ -4,37 +4,37 @@
  */
 export const TALK_NOTES: Record<string, string> = {
   lobby:
-    "Puertas abiertas. Owy conectado y la perilla en la mano. A T-1:00, cue «Aviso». Mirá que entren preguntas en el panel.",
+    "Antes de abrir puertas: en la mesa, el evento del wall = la grilla demo (la misma que COMPANION_PITCH_EVENT_ID), con lugares libres. Owy conectado y la perilla en la mano. A T-1:00, cue «Aviso».",
   wake: "Luces. No digas nada: Owy arranca solo (cue auto). Cuando te pregunta «¿Arrancás, Agus?», entrás con el mic.",
   title:
-    "Presentate y presentalo. «Hoy la charla la damos entre los dos». Contá que pueden preguntar desde el celular en cualquier momento.",
-  questions: "Avanzá burbuja por burbuja. Contá una anécdota real de una conf pasada.",
-  board: "Primero la grilla de papel, después «alguien la pasa a mano». Ese alguien eras vos.",
-  why: "[A] Tu frase, en primera persona. Pausa.",
-  "poll-bathroom": "Dejá votar ~15 s. Next revela el resultado. Después, cue «Remate».",
-  bodies: "Un cuerpo por click. Remarcá: el cerebro es uno solo, los cuerpos son muchos.",
-  does: "Rápido: una frase por tile. El modo pitch se ve en vivo más adelante.",
+    "Presentate y presentalo. «Hoy les contamos cómo funciona el open space por dentro y qué hace Owy ahí». Pueden preguntar desde el celular en cualquier momento.",
+  paper: "Primero la grilla de papel, después «alguien la pasa a mano». Ese alguien eras vos.",
+  grid: "Es la grilla de verdad, en vivo. Contá: salas por bloques; el staff la maneja desde el celular (arrastrar, editar, deshacer); la misma la ve la gente en conf.owu.uy/openspace, los kiosks y el wall.",
+  ai: "Tres clicks. En «Sugerir con AI» remarcá: el modelo no elige la celda, contesta sí o no a preguntas chicas y el lugar sale de una cuenta. Medio segundo.",
+  "poll-bathroom": "Dejá votar ~15 s. Next revela el resultado. Después, cue «Remate». Es el puente a Owy.",
+  bodies:
+    "Un cuerpo por click. El cerebro es uno solo; los cuerpos, muchos. La perilla ahora es sólo cara y botón (más adelante, por qué).",
   "demo-now":
-    "Tocá la perilla y preguntá en voz alta. Owy tarda ~3 s en pensar: llenalo («está mirando la grilla de verdad»). Si la voz falla: cue por texto.",
-  timeline: "Un hito por click. Contá el del 4 de septiembre: la primera vez que habló.",
-  bugs: "Después del primero, cue «Chiste del micrófono». El de caffeinate siempre arranca una risa.",
-  numbers: "Leé dos o tres números, no todos. Cue de la esquina al final.",
-  inside: "Una caja por click, de izquierda a derecha. Quedate en el bridge: «se hace pasar por Home Assistant».",
-  "inside-live":
-    "Cue «Owy explica el diagrama» (o tocá la perilla y pedíselo). Mientras habla, las cajas se prenden solas. Comentá los tiempos del chip al terminar.",
+    "Tocá la perilla y preguntá en voz alta. Owy tarda ~3 s: llenalo («está mirando la grilla de verdad»). Si la voz falla: cue por texto.",
+  tools:
+    "Una fila por click. Volvé a la demo: «¿cómo supo? Con estas tools». Remarcá que son los mismos archivos para Slack, Telegram y la voz, y que Owy hace sólo lo que vos podés hacer.",
+  hub: "Click 1 quién escribe, 2 el centro, 3 quién escucha: ahí arranca el pulso. Si querés, mové una tarjeta de la grilla demo desde el celular: el bus se prende de verdad.",
+  wifi: "Primero el router (anda), después la perilla. Dejá que se vean los paquetes perdidos antes de hablar.",
+  "wifi-bugs":
+    "Uno por click. Después del primero, cue «Chiste del silencio». El del USB 3 es probable, no probado: decilo así.",
+  split:
+    "Click: «Antes», después «Ahora». La frase: «por el wifi, mensajes; el audio, cerca». El DJI y la PA están en la Mac.",
+  deleted: "Leé dos números: 19 mil borradas y 0 audio por el wifi. Cue de los oídos al final.",
+  inside:
+    "Una caja por click. Con todas a la vista, cue «Owy explica el diagrama» (o tocá la perilla y pedíselo): las cajas se prenden solas y abajo quedan los tiempos.",
   ladder: "Un escalón por click. Cue de los planes B al final.",
-  decisions: "Tres clicks. La tercera es la importante: nunca inventar.",
-  limits: "Opcional: si vas atrasado, saltala.",
-  devices: "Levantá las placas cuando aparecen. La pantallita queda en la mesa mostrando la cara.",
-  faces: "Cue «Owy presenta sus caras». La pantalla pasa sola por las expresiones.",
+  "pitch-flow":
+    "Una estación por click. Es el mapa de la demo que sigue: «todo esto pasa en unos segundos». Mientras, modo Pitch ON en la consola.",
   pitch:
-    "Modo pitch ON en la consola. Dale el micrófono de mano (TX2) y la perilla a la persona voluntaria, pasá «Owy escucha» a Público. Al terminar, modo pitch OFF y escucha de vuelta a Agustín.",
-  vs: "Por cada ronda: dejá votar ~10 s, Next revela. Cue de revelación según quién lo escribió. [A] Antes de la charla: las de Owy tienen que salir de Owy y las tuyas de vos.",
+    "Modo pitch ON y «Owy escucha a» Público. Dale el mic de mano (TX2) y la perilla a la persona voluntaria. Cue «Owy invita» si hace falta. La tarjeta aparece sola en la grilla (anillo amarillo) y en la perilla. Al terminar, modo pitch OFF y escucha de vuelta a Agustín. Si la grilla está llena, Owy lo dice: borrá una tarjeta demo.",
   learned: "Tres clicks, una frase cada una.",
   join: "Dejá el QR unos segundos. «Es todo abierto, hagan su propio Owy».",
   "to-qa": "Cue «Owy lee la más votada». Decidí en el momento quién contesta (botones en Preguntas).",
-  qa: "Moderá desde Preguntas: fijar, respondida, ocultar, «Owy, respondé». El mic de mano va al público con «Owy escucha: Público». Cada ~6 min un respiro: cue de levantar la mano, reacciones o una pregunta rápida.",
-  rating: "Dejá puntuar. Cue de despedida de Owy.",
-  photo: "Next arranca la cuenta regresiva. Sacá la selfie con la sala y la cara de Owy atrás. Confetti con C.",
-  end: "Gracias. Después, volvé al lobby (Inicio) si queda gente.",
+  qa: "Moderá desde Preguntas: fijar, respondida, ocultar, «Owy, respondé». El mic de mano va al público con «Owy escucha: Público». A los 5 min, cerrá.",
+  end: "Gracias. Cue de despedida de Owy. Después, volvé al lobby (Inicio) si queda gente.",
 };

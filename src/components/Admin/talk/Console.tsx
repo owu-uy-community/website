@@ -70,7 +70,7 @@ const useWide = () =>
 
 /** When the Q&A starts and when the talk ends, on the plan (seconds from the first slide). */
 const QA_AT = plannedStart("qa");
-const QA_END = plannedStart("rating");
+const QA_END = plannedStart("end");
 const TOTAL = TALK_SLIDES.reduce((sum, slide) => sum + slide.seconds, 0);
 const BUDGETS = sectionBudgets();
 
