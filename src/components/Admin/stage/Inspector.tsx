@@ -8,6 +8,7 @@ import { cn } from "app/lib/utils";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { EmptyState } from "components/Admin/ui/states";
+import { CountdownPanel } from "components/Meetups/OpenSpace/organisms/CountdownControls";
 import { Kbd } from "components/shared/ui/kbd";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import {
@@ -38,6 +39,22 @@ function Highlight({ tone }: { tone: "preview" | "program" }) {
       layoutId="inspector-target"
       transition={{ type: "spring", stiffness: 500, damping: 40 }}
     />
+  );
+}
+
+/**
+ * The Countdown scene shows the event's own countdown (the one /countdown and the open space
+ * follow), so its controls sit above the scene's params, for preview and air alike.
+ */
+function CountdownBox({ eventId }: { eventId: string | null }) {
+  return (
+    <div className="shrink-0 border-b px-4 pt-1 pb-3">
+      {eventId ? (
+        <CountdownPanel eventId={eventId} quiet />
+      ) : (
+        <p className="text-sm text-muted-foreground">Elegí el evento de la pared en Salida y ajustes · Evento.</p>
+      )}
+    </div>
   );
 }
 
@@ -156,6 +173,7 @@ function InspectorView({
               <Copy /> A preview
             </Button>
           </div>
+          {live.scene === "countdown" && <CountdownBox eventId={live.eventId} />}
           {/* The live questions: their one field, then the moderation of what the phones sent. */}
           <div className={live.scene === "live-questions" ? "shrink-0" : "min-h-0 flex-1"}>
             <SceneParams apply={onLiveParams} mode="live" params={live.params} pending={pending} scene={live.scene} />
@@ -177,6 +195,7 @@ function InspectorView({
           <div className="mx-4 mb-1 hidden items-center gap-2 rounded-md border border-success/25 bg-success-surface px-3 py-2 text-meta text-success-foreground sm:flex">
             <Eye className="h-3.5 w-3.5 shrink-0" /> Fuera del aire · TAKE para mostrarlo
           </div>
+          {preview.scene === "countdown" && <CountdownBox eventId={live.eventId} />}
           <div className="min-h-0 flex-1">
             <SceneParams
               key={preview.id}

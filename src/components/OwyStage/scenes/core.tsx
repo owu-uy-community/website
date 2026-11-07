@@ -4,9 +4,11 @@ import { useContext, useEffect, useState } from "react";
 import { m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
+import { useCountdownAudio } from "hooks/useCountdownAudio";
 import { useCountdownState } from "hooks/useCountdownState";
+import { findSound } from "lib/launchpad/sounds";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { formatTime } from "lib/utils";
+import { formatCountdown } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
@@ -175,29 +177,30 @@ export function Sponsors() {
   );
 }
 
-function CountdownClock({ eventId, label }: { eventId: string; label: string }) {
-  const { preview } = useContext(StageContext);
+function CountdownClock({ eventId, label, sound }: { eventId: string; label: string; sound: string }) {
+  const { preview, throttle } = useContext(StageContext);
   const { state, loading } = useCountdownState({ eventId, enableRealtime: !preview });
+  // Only the wall itself sounds: the desk's monitors and the thumbnails stay quiet.
+  const audioFile = findSound(sound)?.audioFile;
+  useCountdownAudio({ ...state, soundEnabled: state.soundEnabled && !throttle && Boolean(audioFile) }, audioFile);
   const done = state.remainingSeconds === 0;
+  const time = loading ? "00:00" : formatCountdown(state.remainingSeconds);
 
   return (
-    <>
+    <div className="absolute inset-0 flex flex-col items-center justify-center">
       {label && (
-        <Rise
-          className="absolute top-[150px] right-0 left-0 text-center text-[56px] font-semibold tracking-[0.25em] text-[#FBF5E7]/80 uppercase"
-          delay={0.1}
-        >
+        <Rise className="mb-4 text-[56px] font-semibold tracking-[0.25em] text-[#FBF5E7]/80 uppercase" delay={0.1}>
           {label}
         </Rise>
       )}
       <div
-        className={`countdown-font absolute top-1/2 right-0 left-0 -translate-y-1/2 text-center text-[420px] leading-none tracking-wider select-none ${
+        className={`countdown-font countdown-centered leading-none tracking-wider tabular-nums select-none ${time.length > 5 ? "text-[300px]" : "text-[420px]"} ${
           done ? "text-red-500" : `text-[#F5BB03] ${state.isRunning ? "animate-timer-pulse" : "opacity-80"}`
         }`}
       >
-        {loading ? "00:00" : formatTime(state.remainingSeconds)}
+        {time}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -206,7 +209,7 @@ export function CountdownScene({ params, eventId }: SceneProps<"countdown">) {
     <>
       <Ambient />
       {eventId ? (
-        <CountdownClock eventId={eventId} label={params.label} />
+        <CountdownClock eventId={eventId} label={params.label} sound={params.sound} />
       ) : (
         <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[64px] font-extrabold text-[#FBF5E7]/40 uppercase">
           Elegí un evento en el admin
