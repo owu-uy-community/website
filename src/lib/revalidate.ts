@@ -1,4 +1,20 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+
+/** The cache tag on an event's public board: its rooms, blocks and cards (lib/openspace/public-board). */
+export const boardTag = (eventId: string) => `board:${eventId}`;
+
+/**
+ * An event's board changed: the next read of its cached board goes to the database. Next applies it
+ * when the request ends, so a write inside a transaction is already committed by then. Outside a
+ * request (tests, scripts) there's no cache to clear.
+ */
+export function refreshBoard(eventId: string) {
+  try {
+    revalidateTag(boardTag(eventId), { expire: 0 });
+  } catch {
+    // Not in a request: no cache to clear
+  }
+}
 
 /**
  * Ask Next to rebuild a page on its next visit (seats left, a new date). Outside a request (tests,

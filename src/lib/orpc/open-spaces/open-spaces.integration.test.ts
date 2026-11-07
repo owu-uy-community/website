@@ -31,6 +31,23 @@ describe("openSpaces.listByCommunity", () => {
   });
 });
 
+describe("openSpaces.board", () => {
+  test("anyone reads an event's rooms, blocks and talks in one call, the same as the separate reads", async () => {
+    const board = await makeBoard();
+    await makeTrack({ eventId: board.event.id, scheduleId: board.slots.late.id, roomId: board.rooms.tv.id });
+    const input = { openSpaceId: board.event.id };
+
+    const read = await call(router.openSpaces.board, input, by(null));
+
+    expect(read).toStrictEqual({
+      rooms: await call(router.rooms.getByOpenSpace, input, by(null)),
+      schedules: await call(router.schedules.getByOpenSpace, input, by(null)),
+      tracks: await call(router.tracks.list, input, by(null)),
+    });
+    expect(read.tracks).toHaveLength(1);
+  });
+});
+
 describe("openSpaces.listForAdmin", () => {
   test("site staff sees every event; members only their communities' events", async () => {
     const mine = await makeCommunity();
