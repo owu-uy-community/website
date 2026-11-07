@@ -115,6 +115,9 @@ test("Espacios and its request sheet pass axe", async ({ pageFor }) => {
   await expectAccessible(panel, { include: "main" });
 
   await panel.getByRole("button", { name: "Pedir a varios a la vez" }).click();
-  await expect(panel.getByRole("dialog", { name: "Pedir a varios espacios a la vez" })).toBeVisible();
+  const sheet = panel.getByRole("dialog", { name: "Pedir a varios espacios a la vez" });
+  // The submit stays disabled (half opacity) until the spaces it reaches load, then fades in:
+  // measure after that, or axe can catch it mid-fade
+  await expect(sheet.getByRole("button", { name: /^Pedir a \d+ espacio/ })).toBeEnabled();
   await expectAccessible(panel, { include: "[role=dialog]" });
 });
