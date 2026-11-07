@@ -121,7 +121,7 @@ export class WebVoice {
   private idleTimer?: ReturnType<typeof setTimeout>;
   private meter?: ReturnType<typeof setInterval>;
   private queue = new Set<AudioBufferSourceNode>();
-  /** Cues playing now (the pitch's «contame tu charla»…): a tap or «Callar» stops them too. */
+  /** Cues playing now (the pitch's «te escucho»…): a tap or «Callar» stops them too. */
   private clips = new Set<AudioBufferSourceNode>();
   private nextAudio = 0;
   private complete = false;

@@ -132,10 +132,14 @@ describe("the words", () => {
       "¡Listo! Tu charla «Lambdas» queda en Rincón a las 16:00."
     );
     expect(announcementText({ title: "X" })).toBe("¡Listo! Tu charla «X» queda en la grilla.");
+    // Someone put forward by the person talking is not the one listening.
+    expect(announcementText({ title: "Effect en producción", speaker: "Lucía", room: "Cueva", timeSlot: "15:00 - 15:45" }, true)).toBe(
+      "¡Listo! La charla de Lucía, «Effect en producción», queda en Cueva a las 15:00."
+    );
   });
 
   it("every fixed line Owy asks or ends a pitch with has a recorded cue id", () => {
-    for (const line of ["listen", "askTopic", "askName", "empty", "unclear", "full", "failed"] as const)
+    for (const line of ["listen", "askTopic", "askTitle", "askName", "empty", "unclear", "full", "failed"] as const)
       expect(PITCH_CLIPS[line]).toMatch(/^pitch-/);
     expect(PITCH_LINES.askName).not.toMatch(/tocá/i); // the board opens its mic by itself now
   });

@@ -1761,7 +1761,7 @@ export class DeviceSession {
    */
   private async sayPitchLine(run: PitchRun | null, line: PitchLine): Promise<void> {
     const text = PITCH_LINES[line];
-    const question = line === "askTopic" || line === "askName";
+    const question = line === "askTopic" || line === "askTitle" || line === "askName";
     if (!run) {
       // No run to talk in (nobody answered, the board was busy): the words go on the screen.
       if (!question) this.device?.showText(text);

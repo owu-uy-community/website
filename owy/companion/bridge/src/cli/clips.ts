@@ -25,7 +25,7 @@ import { NodeRealtimeSession } from "../realtime/session";
  * The manifest is merged, so recording one set keeps the other.
  */
 const CLIPS: Record<string, string> = {
-  // Modo pitch: «te escucho», the two questions, and the lines that end a pitch without a card.
+  // Modo pitch: «te escucho», the questions, and the lines that end a pitch without a card.
   ...Object.fromEntries(Object.entries(PITCH_CLIPS).map(([line, id]) => [id, PITCH_LINES[line as PitchLine]])),
   ...FALLBACK_LINES,
 };
