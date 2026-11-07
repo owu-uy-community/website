@@ -7,6 +7,7 @@ import {
   Clapperboard,
   ClipboardCheck,
   DoorOpen,
+  Footprints,
   Gauge,
   HandHeart,
   LayoutGrid,
@@ -41,6 +42,7 @@ export type NavKey =
   | "comunicacion"
   | "escenas"
   | "charla"
+  | "intro"
   | "obs"
   | "sonidos"
   | "owy"
@@ -170,6 +172,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         href: "/admin/owy/charla",
         icon: Presentation,
         keywords: ["owy", "slides", "presentación", "charla", "en vivo", "open space"],
+      },
+      {
+        key: "intro",
+        title: "Intro open space",
+        href: "/admin/owy/intro",
+        icon: Footprints,
+        keywords: ["open space", "intro", "bienvenida", "slides", "clicker", "presentación", "principios", "dos pies"],
       },
       {
         key: "obs",

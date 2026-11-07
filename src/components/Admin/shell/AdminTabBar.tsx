@@ -20,7 +20,7 @@ const STAFF_TABS: NavKey[] = ["mi-turno", "sala", "staff", "incidentes"];
  * Full-screen tools with their own way around (canonical paths): the scenes desk has its own tab
  * bar, the scanner its back arrow and mode bar, and both want the room.
  */
-const OWN_TABS = ["/admin/owy/scenes", "/admin/owy/charla", "/admin/attendees/escanear"];
+const OWN_TABS = ["/admin/owy/scenes", "/admin/owy/charla", "/admin/owy/intro", "/admin/attendees/escanear"];
 
 /**
  * The admin's bottom bar on phones, like an iOS tab bar: four destinations for the role plus

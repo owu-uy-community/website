@@ -727,6 +727,7 @@ function PantallaCard() {
           {[
             ["/admin/owy/scenes", "Escenas: la mesa, con preview y TAKE"],
             ["/admin/owy/charla", "Charla Owy: la consola de la charla"],
+            ["/admin/owy/intro", "Intro open space: las slides de la bienvenida, con clicker"],
             ["/admin/companion", "Ajustes de Owy: audio, modelos, cerebro"],
           ].map(([href, label]) => (
             <Link key={href} className="flex items-center justify-between gap-2 py-2 text-foreground" href={href}>

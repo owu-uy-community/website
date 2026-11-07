@@ -491,6 +491,17 @@ export const SCENES = {
     }),
   },
   // --- Open space ---
+  "openspace-intro": {
+    category: "openspace",
+    title: "Intro al open space",
+    description:
+      "Las slides de la bienvenida: qué es, la dinámica, los principios, los dos pies, cómo proponer y Owy. Se pasan desde /admin/owy/intro; /owy/stage/openspace-intro anda sola con un clicker USB.",
+    params: z.object({
+      slide: z.string().trim().max(40).default("portada"),
+      build: z.number().int().min(0).max(20).default(0),
+      blank: z.boolean().default(false),
+    }),
+  },
   principles: {
     category: "openspace",
     title: "Principios del open space",

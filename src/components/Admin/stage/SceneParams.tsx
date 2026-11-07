@@ -92,6 +92,7 @@ export const PARAM_LABELS: Record<string, string> = {
   hint: "Consejo cuando Owy está callada",
   // Charla: Owy, en vivo (the console at /admin/owy/charla drives these)
   slide: "Slide",
+  build: "Paso de la slide",
   who: "Quién responde",
   focus: "Pregunta en foco",
   blank: "Pantalla en negro",
