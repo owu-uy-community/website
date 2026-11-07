@@ -206,9 +206,8 @@ export const SCENES = {
     category: "opening",
     title: "After en MBC",
     description:
-      "El after de enfrente, con el logo de Montevideo Beer Company. La promo se muestra solo si tiene texto.",
+      "El after de enfrente, solo el logo de Montevideo Beer Company. La promo se muestra solo si tiene texto.",
     params: z.object({
-      detail: z.string().trim().max(80).default(`Hasta las ${DAY_TIMES.after.start} · cruzando la calle`),
       offer: z.string().trim().max(12).default(""),
     }),
   },
