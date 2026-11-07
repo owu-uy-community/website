@@ -96,6 +96,8 @@ async function main(): Promise<void> {
       logger: logger.child(spec.id),
       source: spec.id,
       publish: shared.publishStage,
+      // Read on the mirror's first beat, a second from now: the session exists by then.
+      paused: () => session.setting("privacy") === true,
     });
     const session: DeviceSession = new DeviceSession(spec, shared, {
       connectDevice: async (...args) => mirror.wrap(await CompanionDevice.connect(...args)),
@@ -103,6 +105,7 @@ async function main(): Promise<void> {
       onTranscript: mirror.transcript,
       onExpression: mirror.expression,
       onMouth: mirror.mouth,
+      onLevel: mirror.level,
       onTool: (event) => mirror.tool(event.status === "running" ? event.name : null),
       onSetting: (key, value, setBy) => control?.deviceSetting(session, key, value, setBy),
       onLinkUp: () => control?.linkUp(session),

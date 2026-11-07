@@ -62,6 +62,8 @@ type BackplaneEnvelope = {
   ev: string;
   pl: unknown;
   sid?: string;
+  /** The message's id, fanned out as is by every instance (absent from an older one's). */
+  id?: string;
   origin: string;
 };
 
@@ -115,6 +117,9 @@ class RealtimeHub {
               this.channels.set(frame.ch, set);
             }
             set.add(connection);
+            // `ok` promises delivery (a client rotating its socket closes the old one on it): on a
+            // fresh instance that includes what other instances publish, so the backplane first.
+            await this.ensureRedis();
             this.sendFrame(ws, { t: "ok", ch: frame.ch });
           })();
           break;
@@ -154,11 +159,11 @@ class RealtimeHub {
   }
 
   /** Fan out to connections on THIS instance only. */
-  publishLocal(channel: string, event: string, payload: unknown, senderId?: string): void {
+  publishLocal(channel: string, event: string, payload: unknown, senderId?: string, id?: string): void {
     const set = this.channels.get(channel);
     if (!set) return;
 
-    const frame: ServerFrame = { t: "msg", ch: channel, ev: event, pl: payload, sid: senderId };
+    const frame: ServerFrame = { t: "msg", ch: channel, ev: event, pl: payload, sid: senderId, id };
     const encoded = JSON.stringify(frame);
     for (const connection of set) {
       try {
@@ -171,7 +176,8 @@ class RealtimeHub {
 
   /** Fan out locally and across instances (via Redis, when configured). */
   async publish(channel: string, event: string, payload: unknown, senderId?: string): Promise<void> {
-    this.publishLocal(channel, event, payload, senderId);
+    const id = createId();
+    this.publishLocal(channel, event, payload, senderId, id);
 
     const redis = await this.ensureRedis();
     if (redis) {
@@ -180,6 +186,7 @@ class RealtimeHub {
         ev: event,
         pl: payload,
         sid: senderId,
+        id,
         origin: this.instanceId,
       };
       await redis.pub.publish(REDIS_CHANNEL, JSON.stringify(envelope)).catch(() => undefined);
@@ -223,7 +230,7 @@ class RealtimeHub {
             const envelope = JSON.parse(raw) as BackplaneEnvelope;
             if (envelope.origin === this.instanceId) return; // already fanned out locally
 
-            this.publishLocal(envelope.ch, envelope.ev, envelope.pl, envelope.sid);
+            this.publishLocal(envelope.ch, envelope.ev, envelope.pl, envelope.sid, envelope.id);
           } catch {
             // malformed envelope; drop
           }

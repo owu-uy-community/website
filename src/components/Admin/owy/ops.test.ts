@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { clockText, countdownLeft, knobAction, latestNote, phaseOfFace } from "./ops";
+import { clockText, countdownLeft, knobAction, latestNote, phaseOfFace, tail } from "./ops";
 
 describe("the virtual knob", () => {
   test("taps when idle, ends the turn while listening, stops while Owy talks", () => {
@@ -12,6 +12,11 @@ describe("the virtual knob", () => {
     });
     expect(knobAction("owy-knob", "speaking", true)).toMatchObject({ label: "Frenar", command: { type: "hush" } });
     expect(knobAction("owy-knob", "thinking", false).command).toStrictEqual({ type: "hush", deviceId: "owy-knob" });
+  });
+
+  test("shows the newest words of a long transcript", () => {
+    expect(tail("  hola Owy  ", 280)).toBe("hola Owy");
+    expect(tail("uno dos tres cuatro", 6)).toBe("…cuatro");
   });
 
   test("reads the phase off a face", () => {

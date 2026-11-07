@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot, Laptop, Lock, PhoneOff, Unlock, VolumeX } from "lucide-react";
+import { Bot, Laptop, Lock, PhoneOff, Unlock } from "lucide-react";
 
 import { MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
 import { StatusDot } from "components/Admin/ui/status";
@@ -9,7 +9,6 @@ import { Button } from "components/shared/ui/button";
 import type { CompanionState } from "lib/orpc/companion/schemas";
 
 import { CommandButton, type SendCommand } from "./commands";
-import { LineForm } from "./LineForm";
 import { ModeSwitch } from "./ModeSwitch";
 import { faceText, phaseText, settingGroups, settingView, turnsView } from "./model";
 import { SettingField, SettingGroup, type OnSet, type SetValue } from "./SettingField";
@@ -24,8 +23,9 @@ const TIME = new Intl.DateTimeFormat("es-UY", {
 });
 
 /**
- * One physical Owy: whether it is there, its mode in one tap, staff unlock, a line to say,
- * silence, this browser as its audio, its last turns and every setting it has.
+ * One physical Owy (the knob: its face, its button, its screen): whether it is there, its mode in
+ * one tap, staff unlock, this browser as its audio, its last turns and every setting it has. The
+ * day's buttons (tap, hush, say) are on /admin/owy.
  */
 export function DeviceCard({
   id,
@@ -61,6 +61,9 @@ export function DeviceCard({
         title={id}
       />
       <div className="space-y-4 p-3.5">
+        <p className="text-ui text-muted-foreground">
+          El knob: la cara y el botón de Owy. Lo que cambies acá se aplica en la placa (o lo guarda el bridge).
+        </p>
         <div className="flex flex-wrap items-center gap-1.5">
           {device ? <Badge variant="secondary">{phaseText(device.phase)}</Badge> : null}
           {device?.face ? <Badge variant="outline">cara: {faceText(device.face)}</Badge> : null}
@@ -79,9 +82,6 @@ export function DeviceCard({
         <ModeSwitch id={id} online={online} state={state} onSet={onSet} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <CommandButton command={{ type: "hush", deviceId: id }} send={send}>
-            <VolumeX aria-hidden /> Callar
-          </CommandButton>
           <CommandButton
             command={{ type: "staff", deviceId: id, on: !device?.staff }}
             done={(_, sent) => (sent.type === "staff" && sent.on ? "desbloqueado por 10 min" : "bloqueado")}
@@ -90,7 +90,6 @@ export function DeviceCard({
             {device?.staff ? <Lock aria-hidden /> : <Unlock aria-hidden />}
             {device?.staff ? "Bloquear" : "Desbloquear 10 min"}
           </CommandButton>
-          <LineForm id={id} kind="say" send={send} />
         </div>
 
         <BrowserAudioRow audio={audio} id={id} />

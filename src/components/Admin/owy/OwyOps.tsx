@@ -12,7 +12,7 @@ import {
   Hand,
   Megaphone,
   Mic,
-  Server,
+  SlidersHorizontal,
   Speaker,
   Store,
   Timer,
@@ -30,12 +30,12 @@ import { StatusDot } from "components/Admin/ui/status";
 import { useNow } from "components/Admin/ui/time";
 import { CommandButton, CommandNote, useCommand, type SendCommand } from "components/Companion/control/commands";
 import { BrowserAudioRow } from "components/Companion/control/DeviceCard";
+import { KnobTwin } from "components/Companion/control/KnobTwin";
 import { LineForm } from "components/Companion/control/LineForm";
 import { ModeSwitch } from "components/Companion/control/ModeSwitch";
 import {
   ago,
   deviceIds,
-  faceText,
   macAudioChoices,
   modeView,
   phaseText,
@@ -70,15 +70,16 @@ import { eventChannel } from "lib/realtime/channels";
 
 import { BRIDGE_TARGET } from "../../../../owy/companion/bridge/src/web/registry";
 
-import { COUNTDOWN_PRESETS, clockText, countdownLeft, knobAction, latestNote, phaseOfFace } from "./ops";
+import { COUNTDOWN_PRESETS, clockText, countdownLeft, knobAction, latestNote, phaseOfFace, tail } from "./ops";
 
 /** The scenes worth one tap from the table: Owy's face, the board, the agenda. */
 const QUICK_SCENES: SceneId[] = ["owy-face", "grid", "agenda"];
 
 /**
- * /admin/owy, the one page for the day: Owy (the knob, the bridge, the virtual knob), the room
- * (mercado, countdown, cast, an aviso) and the wall (presets, quick scenes). Everything here is a
- * procedure that already exists; the page just puts the buttons within thumb's reach.
+ * /admin/owy, the one page for the day: Owy (its knob, live — tap its screen —, its mode and its
+ * words), the Mac it speaks through, the room (mercado, countdown, cast, an aviso) and the wall
+ * (presets, quick scenes). Everything here is a procedure that already exists; the page just puts
+ * the buttons within thumb's reach.
  */
 export function OwyOps() {
   const panel = useCompanionState();
@@ -91,7 +92,15 @@ export function OwyOps() {
   return (
     <PageContainer className="space-y-4" size="default">
       <PageHeader
-        description="El knob, el bridge y la mesa del open space desde el celular. Lo que no está acá vive en Ajustes de Owy."
+        actions={
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/admin/companion">
+              <SlidersHorizontal aria-hidden /> Ajustes
+            </Link>
+          </Button>
+        }
+        description="El knob en vivo, la Mac por la que habla y la sala, desde el celular."
+        meta={state ? <BridgeLine online={online} state={state} /> : null}
         title="Owy"
       />
 
@@ -117,13 +126,11 @@ export function OwyOps() {
 
       {!state ? (
         <div className="space-y-4">
+          <Skeleton className="h-80 w-full" />
           <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-64 w-full" />
         </div>
       ) : (
         <>
-          <BridgeLine online={online} state={state} />
-          <MacAudio online={online} send={panel.send} state={state} onSet={onSet} />
           {ids.length === 0 ? (
             <p className="text-ui text-muted-foreground">
               Todavía no hay ningún Owy: aparece cuando el bridge reporta (corre en la Mac con COMPANION_DEVICES).
@@ -141,6 +148,7 @@ export function OwyOps() {
               onSet={onSet}
             />
           ))}
+          <MacAudio online={online} send={panel.send} state={state} onSet={onSet} />
         </>
       )}
 
@@ -179,27 +187,177 @@ function useLiveFace(): LiveFace | null {
   return live;
 }
 
-/** The bridge in one line: there or not, since when, its code, the Mac, the voice tier. */
+/** The bridge next to the title: there or not, since when, its code, the Mac, the voice tier. */
 function BridgeLine({ state, online }: { state: CompanionState; online: boolean }) {
   const now = useNow(1000);
   const status = state.status;
   const tier = tierText(status?.devices[0]?.voice.tier);
-  const facts = status ? [status.version, status.machine, tier ? `voz ${tier}` : null].filter(Boolean) : [];
+  // On a phone only when it was last seen: the code and the voice tier wrap badly and live in Ajustes too.
+  const more = [status?.version, tier ? `voz ${tier}` : null].filter(Boolean);
 
   return (
-    <Panel className="space-y-2 p-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p className="flex items-center gap-2 text-ui font-medium text-foreground">
-          <Server aria-hidden className="size-4 text-muted-foreground" />
-          <StatusDot ring tone={online ? "ok" : "live"} />
-          {online ? "Bridge en línea" : "Bridge sin conexión"}
-          <span className="font-normal text-muted-foreground">
-            {state.seenAt ? `· visto ${ago(state.seenAt, now)}` : "· todavía no reportó"}
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-meta text-foreground">
+        <StatusDot ring tone={online ? "ok" : "live"} />
+        {online ? "Bridge en línea" : "Bridge sin conexión"}
+      </span>
+      <span className="font-terminal text-meta text-muted-foreground tabular-nums">
+        {state.seenAt ? `visto ${ago(state.seenAt, now)}` : "todavía no reportó"}
+        {more.length > 0 ? <span className="hidden sm:inline"> · {more.join(" · ")}</span> : null}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * One Owy: its knob as it is right now (tap the screen: that's the knob's tap), what a tap does,
+ * its mode, the other things Owy can be asked, what it heard and said, this browser as its audio.
+ */
+function KnobCard({
+  id,
+  state,
+  online,
+  onSet,
+  send,
+  audio,
+  live,
+}: {
+  id: string;
+  state: CompanionState;
+  online: boolean;
+  onSet: OnSet;
+  send: SendCommand;
+  audio: BrowserAudio;
+  live: LiveFace | null;
+}) {
+  const device = state.status?.devices.find((item) => item.id === id);
+  const connected = online && !!device?.connected;
+  const mode = modeView(state, id, online).mode;
+  // The face events arrive as they happen; the report every 15 s catches up when they don't.
+  const phase = live ? phaseOfFace(live.state) : (device?.phase ?? "idle");
+  const [pitching, setPitching] = useState(false);
+  const pitch = mode === "pitch" || (pitching && phase !== "idle");
+  const action = knobAction(id, phase, pitch);
+  const tap = useCommand(send);
+  const start = useCommand(send);
+  const turn = turnsView(device?.turns ?? [])[0];
+  const values = device?.values ?? {};
+
+  return (
+    <Panel>
+      <PanelHead
+        actions={
+          <span className="flex items-center gap-1.5 text-meta text-muted-foreground">
+            <StatusDot ring tone={connected ? "ok" : "idle"} />
+            {connected ? "knob en línea" : "knob sin conexión"}
           </span>
-        </p>
-        {facts.length > 0 ? <p className="font-terminal text-meta text-muted-foreground">{facts.join(" · ")}</p> : null}
+        }
+        icon={Bot}
+        meta={device?.host}
+        title={id}
+      />
+      <div className="grid gap-x-8 gap-y-5 p-4 md:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] md:p-5">
+        <div className="flex flex-col items-center gap-3">
+          <KnobTwin
+            className="max-w-[18rem]"
+            disabled={tap.running || !online}
+            id={id}
+            label={`${action.label}: ${action.hint}`}
+            online={online}
+            privacy={values.privacy === true}
+            reduced={values.reduced_motion === true}
+            onTap={() => {
+              if (action.command.type === "tap" && phase === "idle") setPitching(false);
+              void tap.run(action.command);
+            }}
+          />
+          <div className="flex min-h-11 flex-col items-center gap-0.5 text-center">
+            <p className="flex items-center gap-1.5 text-ui text-foreground">
+              <Hand aria-hidden className="size-4 text-muted-foreground" />
+              <span>
+                <span className="font-medium">{online ? tapText(action.label) : "Sin bridge"}</span>
+                <span className="text-muted-foreground"> · {online ? action.hint : "el knob lo está buscando"}</span>
+              </span>
+            </p>
+            <CommandNote done="listo" running="enviando…" state={tap} />
+          </div>
+        </div>
+
+        <div className="min-w-0 space-y-5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge variant={phase === "idle" ? "outline" : "info"}>{phaseText(phase)}</Badge>
+            {device?.firmware ? <Badge variant="outline">firmware {device.firmware}</Badge> : null}
+            {device?.peer ? <Badge variant="info">navegador enchufado</Badge> : null}
+            {online && !connected ? (
+              <span className="text-meta text-muted-foreground">
+                El knob real no está conectado: tocar acá igual hace que Owy escuche por la Mac.
+              </span>
+            ) : null}
+          </div>
+
+          <ModeSwitch id={id} online={online} size="touch" state={state} onSet={onSet} />
+
+          <section aria-label="Pedirle algo a Owy" className="space-y-2">
+            <MicroLabel>Pedirle algo</MicroLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              {phase === "idle" && mode !== "pitch" ? (
+                <Button
+                  disabled={start.running || !online}
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setPitching(true);
+                    void start.run({ type: "pitch", deviceId: id, action: "start" });
+                  }}
+                >
+                  <Mic aria-hidden /> Grabar un pitch
+                </Button>
+              ) : null}
+              <CommandNote done="grabando" state={start} />
+              <CommandButton command={{ type: "hush", deviceId: id }} send={send}>
+                <VolumeX aria-hidden /> Callar
+              </CommandButton>
+              <LineForm id={id} kind="say" send={send} />
+              <LineForm id={id} kind="ask" send={send} />
+            </div>
+          </section>
+
+          <LiveWords live={live} />
+          {turn ? (
+            <p className="font-terminal text-meta text-muted-foreground">
+              último turno · {turn.path} · {turn.firstAudio ? `primer audio ${turn.firstAudio}` : "sin audio"}
+            </p>
+          ) : null}
+
+          <BrowserAudioRow audio={audio} id={id} />
+        </div>
       </div>
     </Panel>
+  );
+}
+
+/** What tapping the knob's screen does, as the caption under it says it. */
+const tapText = (label: string) => (label === "Tocar" ? "Tocá la pantalla" : `Tocá: ${label.toLowerCase()}`);
+
+/** What Owy heard and said this turn: the newest words of each. */
+function LiveWords({ live }: { live: LiveFace | null }) {
+  if (!live || (!live.input && !live.output)) return null;
+
+  return (
+    <section aria-label="Lo último" className="space-y-2 rounded-md border border-border bg-white/[0.02] p-3 text-ui">
+      {live.input ? (
+        <p className="text-muted-foreground">
+          <MicroLabel className="mr-2">oyó</MicroLabel>
+          {tail(live.input, 280)}
+        </p>
+      ) : null}
+      {live.output ? (
+        <p className="text-foreground">
+          <MicroLabel className="mr-2">dijo</MicroLabel>
+          {tail(live.output, 280)}
+        </p>
+      ) : null}
+    </section>
   );
 }
 
@@ -225,8 +383,8 @@ function MacAudio({
   return (
     <Panel>
       <PanelHead icon={AudioLines} meta={status.machine} title="Audio de la Mac" />
-      <div className="space-y-1 p-3.5 pt-2">
-        <div className="flex flex-wrap gap-x-6 gap-y-1 pb-1">
+      <div className="space-y-2 p-3.5">
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
           <Health detail={status.hostMic?.detail} health={status.hostMic?.health} icon={Mic} label="Entrada" />
           <Health
             detail={status.hostSpeaker?.detail}
@@ -235,15 +393,17 @@ function MacAudio({
             label="Salida"
           />
         </div>
-        {(["host_mic", "host_speaker"] as const).map((key) => (
-          <SettingField
-            key={key}
-            choices={choices[key]}
-            view={settingView(state, BRIDGE_TARGET, key, online)}
-            onChange={(setting, value) => onSet([{ target: BRIDGE_TARGET, key: setting, value }])}
-          />
-        ))}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
+        <div className="grid gap-x-6 md:grid-cols-2">
+          {(["host_mic", "host_speaker"] as const).map((key) => (
+            <SettingField
+              key={key}
+              choices={choices[key]}
+              view={settingView(state, BRIDGE_TARGET, key, online)}
+              onChange={(setting, value) => onSet([{ target: BRIDGE_TARGET, key: setting, value }])}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           <CommandButton
             command={{ type: "probe-mic", ms: 4000 }}
             done={(result) => probeText(result.data)}
@@ -256,133 +416,6 @@ function MacAudio({
             <Volume2 aria-hidden /> Tono en la Mac
           </CommandButton>
         </div>
-      </div>
-    </Panel>
-  );
-}
-
-/** One Owy: its state, its mode, the virtual knob, what it hears and says, this browser as its audio. */
-function KnobCard({
-  id,
-  state,
-  online,
-  onSet,
-  send,
-  audio,
-  live,
-}: {
-  id: string;
-  state: CompanionState;
-  online: boolean;
-  onSet: OnSet;
-  send: SendCommand;
-  audio: BrowserAudio;
-  live: LiveFace | null;
-}) {
-  const device = state.status?.devices.find((item) => item.id === id);
-  const connected = online && !!device?.connected;
-  const mode = modeView(state, id, online).mode;
-  // The wall's face events arrive as they happen; the report every 15 s catches up when they don't.
-  const phase = live ? phaseOfFace(live.state) : (device?.phase ?? "idle");
-  const [pitching, setPitching] = useState(false);
-  const pitch = mode === "pitch" || (pitching && phase !== "idle");
-  const action = knobAction(id, phase, pitch);
-  const big = useCommand(send);
-  const start = useCommand(send);
-  const turns = turnsView(device?.turns ?? []).slice(0, 1);
-
-  return (
-    <Panel>
-      <PanelHead
-        actions={
-          <span className="flex items-center gap-1.5 text-meta text-muted-foreground">
-            <StatusDot ring tone={connected ? "ok" : "idle"} />
-            {connected ? "knob en línea" : "knob sin conexión"}
-          </span>
-        }
-        icon={Bot}
-        meta={device?.host}
-        title={id}
-      />
-      <div className="space-y-4 p-3.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Badge variant={phase === "idle" ? "outline" : "info"}>{phaseText(phase)}</Badge>
-          {device?.face ? <Badge variant="outline">cara: {faceText(device.face)}</Badge> : null}
-          {device?.firmware ? <Badge variant="outline">firmware {device.firmware}</Badge> : null}
-          {device?.peer ? <Badge variant="info">navegador enchufado</Badge> : null}
-          {!connected ? (
-            <span className="text-meta text-muted-foreground">
-              Sin knob igual anda: el botón de abajo es el toque, y la cara va a la pantalla.
-            </span>
-          ) : null}
-        </div>
-
-        <ModeSwitch id={id} online={online} size="touch" state={state} onSet={onSet} />
-
-        <section aria-label="Knob virtual" className="space-y-2">
-          <MicroLabel>Knob virtual</MicroLabel>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              className={cn("min-w-32", phase === "listening" && "ring-2 ring-info-foreground/40")}
-              disabled={big.running || !online}
-              size="touch"
-              variant={phase === "idle" ? "default" : "outline"}
-              onClick={() => {
-                if (action.command.type === "tap" && phase === "idle") setPitching(false);
-                void big.run(action.command);
-              }}
-            >
-              <Hand aria-hidden /> {action.label}
-            </Button>
-            <span className="text-meta text-muted-foreground">{action.hint}</span>
-            <CommandNote done="listo" running="…" state={big} />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {phase === "idle" && mode !== "pitch" ? (
-              <Button
-                disabled={start.running || !online}
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setPitching(true);
-                  void start.run({ type: "pitch", deviceId: id, action: "start" });
-                }}
-              >
-                <Mic aria-hidden /> Pitch
-              </Button>
-            ) : null}
-            <CommandNote done="grabando" state={start} />
-            <CommandButton command={{ type: "hush", deviceId: id }} send={send}>
-              <VolumeX aria-hidden /> Callar
-            </CommandButton>
-            <LineForm id={id} kind="say" send={send} />
-            <LineForm id={id} kind="ask" send={send} />
-          </div>
-        </section>
-
-        {live && (live.input || live.output) ? (
-          <section aria-label="Lo último" className="space-y-1 rounded-md border border-border p-3 text-ui">
-            {live.input ? (
-              <p className="text-muted-foreground">
-                <span className="font-terminal text-meta uppercase">oyó</span> {live.input}
-              </p>
-            ) : null}
-            {live.output ? (
-              <p className="text-foreground">
-                <span className="font-terminal text-meta text-muted-foreground uppercase">dijo</span> {live.output}
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-
-        {turns.length > 0 ? (
-          <p className="text-meta text-muted-foreground">
-            Último turno: {turns[0].path}
-            {turns[0].firstAudio ? ` · primer audio ${turns[0].firstAudio}` : " · sin audio"}
-          </p>
-        ) : null}
-
-        <BrowserAudioRow audio={audio} id={id} />
       </div>
     </Panel>
   );

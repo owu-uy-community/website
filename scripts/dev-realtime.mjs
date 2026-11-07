@@ -7,6 +7,7 @@
  * Run with: pnpm dev:realtime
  */
 import { createServer } from "node:http";
+import { createId } from "@paralleldrive/cuid2";
 import { WebSocketServer } from "ws";
 
 const PORT = Number(process.env.REALTIME_PORT ?? 3199);
@@ -19,7 +20,8 @@ const memberships = new Map();
 function fanout(ch, ev, pl, sid) {
   const set = channels.get(ch);
   if (!set) return;
-  const frame = JSON.stringify({ t: "msg", ch, ev, pl, sid });
+  // One id per message, as the hub: a client rotating its socket hears it on both and delivers it once.
+  const frame = JSON.stringify({ t: "msg", ch, ev, pl, sid, id: createId() });
   for (const ws of set) {
     if (ws.readyState === ws.OPEN) ws.send(frame);
   }

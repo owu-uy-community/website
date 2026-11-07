@@ -30,7 +30,7 @@ import { Ambient, BRAND, Caption, Flag, StageContext, W, useTyped } from "../Sta
  * space's marketplace, the pitch it just heard landing on the board as a card.
  */
 
-/** 466 px of the device at ×1.9, centred, with room under it for the captions. */
+/** The knob's face at ×2.46 (466-space ×1.9), centred, with room under it for the captions. */
 const FACE = 886;
 const FACE_X = (W - FACE) / 2;
 const FACE_Y = 40;
@@ -66,6 +66,7 @@ export default function OwyFaceScene({
       dispatch({ type: "face", face: event, now, captions });
     },
     mouth: (frames, at) => face.current?.mouth(frames, at),
+    level: (level) => face.current?.level(level),
     smile: () => face.current?.smile(),
   });
   // The board's own event for a new card: it lands even if the companion's post never arrives.
