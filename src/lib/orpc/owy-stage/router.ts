@@ -33,6 +33,7 @@ import {
   SetSceneSchema,
   SpotifyTrackSchema,
   SpotlightInputSchema,
+  StageArrivalSchema,
   StageCommunitySchema,
   StageInputSchema,
   StageMeetupSchema,
@@ -195,6 +196,13 @@ export const owyStageRouter = {
     .output(z.array(StageCommunitySchema))
     .effect(function* () {
       return yield* Stage.getCommunities();
+    }),
+
+  getArrivals: pub
+    .meta(docs("Who has checked in to the wall's event, by first name and initial"))
+    .output(z.array(StageArrivalSchema))
+    .effect(function* () {
+      return yield* Stage.getArrivals();
     }),
 
   submit: pub

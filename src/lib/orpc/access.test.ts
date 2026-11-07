@@ -214,6 +214,7 @@ const EXPECTED: Record<string, Access> = {
   "owyStage.fireEffect": "platform:stage:operate",
   "owyStage.firePreset": "platform:stage:fire-preset",
   "owyStage.getAutopilot": "platform:stage:read",
+  "owyStage.getArrivals": "public",
   "owyStage.getCommunities": "public",
   "owyStage.getDesk": "platform:stage:read",
   "owyStage.getMeetups": "public",

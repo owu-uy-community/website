@@ -115,6 +115,16 @@ export const SCENES = {
       title: z.string().trim().max(60).default("Bienvenidos a OWU CONF"),
     }),
   },
+  "welcome-wall": {
+    category: "opening",
+    title: "Bienvenida en vivo",
+    description:
+      "Saluda a cada persona que se acredita y suma su avatar a la pared de acreditados, en vivo. La foto sale de su cuenta de OWU, Gravatar o GitHub; si no hay, sus iniciales. Quien tenga la etiqueta «sin fotos» o dijo que no a las fotos no aparece.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Bienvenidos a OWU CONF"),
+      subtitle: z.string().trim().max(80).default("Qué bueno que viniste"),
+    }),
+  },
   message: {
     category: "opening",
     title: "Mensaje",

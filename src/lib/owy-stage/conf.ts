@@ -12,6 +12,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
     scenes: [
       "logo",
       "welcome",
+      "welcome-wall",
       "checkin",
       "program",
       "next",

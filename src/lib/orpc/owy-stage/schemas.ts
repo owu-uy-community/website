@@ -128,6 +128,14 @@ export const StageCommunitySchema = z.object({
 });
 export type StageCommunity = z.infer<typeof StageCommunitySchema>;
 
+/** Someone checked in, as the welcome wall shows them: "Ana G.", never the email. */
+export const StageArrivalSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  at: z.string(),
+});
+export type StageArrival = z.infer<typeof StageArrivalSchema>;
+
 export const SpotifyTrackSchema = z.object({
   song: z.string(),
   artist: z.string(),
