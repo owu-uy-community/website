@@ -72,6 +72,20 @@ const ENTITY = {
   pitchSubmit: entityId("binary_sensor", "pitch_submit"),
 } as const;
 
+type TapSigns = { submit: boolean; audio: unknown };
+/**
+ * The second tap of a pitch, from either sign the board gives: the rising edge of its 300 ms
+ * `pitch_submit` pulse, or its face turning to thinking, which that tap does at once. The pulse
+ * can go missing on the way (two pitches through the browser mic never showed it, so they waited
+ * for the silence fallback); the face state stays. The session ignores both outside a pitch it is
+ * recording, so the thinking after an ordinary turn is harmless.
+ */
+export function pitchTap(before: TapSigns, now: TapSigns): "pulse" | "face" | null {
+  if (now.submit && !before.submit) return "pulse";
+  if (now.audio === "thinking" && before.audio !== "thinking") return "face";
+  return null;
+}
+
 export class CompanionDevice implements VoiceLink {
   private readonly abort = new AbortController();
   private lastFace: FaceState | null = null;
@@ -178,17 +192,15 @@ export class CompanionDevice implements VoiceLink {
         }
       }
       const state = this.client.latest(ENTITY.audioState)?.state;
+      const submit = this.client.latest(ENTITY.pitchSubmit)?.state === true;
+      const tap = pitchTap({ submit: lastSubmit, audio: lastAudioState }, { submit, audio: state });
       if (typeof state === "string" && state !== lastAudioState) {
         lastAudioState = state;
         this.log.info(`device audio: ${state}`);
       }
-      // The second tap of a pitch is a momentary sensor: act on its rising edge.
-      const submit = this.client.latest(ENTITY.pitchSubmit)?.state === true;
-      if (submit && !lastSubmit) {
-        this.log.info("pitch submitted by device");
-        this.handlers.onPitchSubmit?.();
-      }
       lastSubmit = submit;
+      if (tap === "pulse") this.log.info("pitch submitted by device");
+      if (tap) this.handlers.onPitchSubmit?.();
     });
 
     this.client.on("lifecycle", (event) => {
