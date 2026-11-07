@@ -1,8 +1,10 @@
-# Owy Companion — ESPHome firmware for the Waveshare ESP32-S3-Knob-Touch-LCD-1.8B
+# Owy Companion — ESPHome firmware for the Waveshare ESP32-S3-Knob-Touch-LCD-1.8B.
 #
-# Same firmware as owy-companion.yaml (AMOLED 1.75C) with the Knob's hardware
-# package: 360 px ST77916 LCD, CST816 touch, PDM mic, PCM5100A line-out (no
-# speaker on this board), rotary encoder → volume. Served by companion/bridge.
+# A face with a button. The knob neither hears nor speaks: the bridge on the Mac
+# (companion/bridge) does both and drives the face over the native API — it sets
+# `select.face_state`, streams captions and lip shapes, and reads `sensor.taps`.
+# Round 360 px ST77916 LCD, CST816 touch, DRV2605 haptics, a detent knob for the
+# brightness. Everything else is LVGL.
 #
 #   esphome compile owy-knob.yaml && esphome upload owy-knob.yaml --device /dev/cu.usbmodemXXXX
 #   esphome run owy-knob.yaml                                      # OTA afterwards (owy-knob.local)
@@ -15,12 +17,6 @@ substitutions:
   name: owy-knob
   friendly_name: Owy Knob
   board_variant: knob18b
-
-  # Mic and speaker run at the rate voice_assistant streams in both directions.
-  audio_sample_rate: "16000"
-  # Modo pitch: the motor shares the enclosure with the mic — let the start
-  # buzz (DRV2605 effect 1, ~300 ms) die before capture opens.
-  pitch_arm_ms: "320ms"
 
   staff_pin: !secret staff_pin
 
@@ -61,14 +57,6 @@ substitutions:
   row_step: "96"
   pill_w: "120"
   pill_h: "36"
-  level_px: "116"
-  level_inner: "62"
-  level_y: "-32"
-  bubble_px: "24"
-  calib_status_y: "52"
-  calib_bar_y: "92"
-  calib_btn_w: "84"
-  calib_btn_x: "44"
   help_w: "262"
   help_h: "220"
 
@@ -79,17 +67,14 @@ esphome:
   min_version: 2026.8.0
   project:
     name: owu.companion
-    version: "2026.09.19-companion-knob"
+    version: "2026.11.06-companion-knob"
   includes:
     # System-style includes are emitted before generated global declarations;
     # file-style entries also copy these headers into the build's src directory.
     - <companion_model.h>
     - <companion_lvgl.h>
-    - <companion_sound.h>
     - companion_model.h
-    - companion_motion.h
     - companion_lvgl.h
-    - companion_sound.h
     - knob_shot.h
   platformio_options:
     build_flags:
@@ -109,16 +94,8 @@ esphome:
             id: show_face
             state: offline
 
-external_components:
-  - source:
-      type: local
-      path: components
-    components: [i2s_audio, voice_assistant]
-
 packages:
   mcu: !include packages/mcu.yaml
-  audio: !include packages/audio.yaml
-  voice: !include packages/voice.yaml
   face: !include packages/face.yaml
   controls: !include packages/controls.yaml
   connectivity: !include packages/connectivity.yaml

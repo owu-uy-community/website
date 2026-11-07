@@ -26,7 +26,7 @@ psram:
   speed: 80MHz
 
 logger:
-  # DEBUG during bring-up (I2C scan results and voice_assistant state changes
+  # DEBUG during bring-up (I2C scan results and API connection events
   # only show at DEBUG/CONFIG); switch to INFO for the event.
   level: DEBUG
   # The USB-C port is the S3's native USB-Serial/JTAG controller.

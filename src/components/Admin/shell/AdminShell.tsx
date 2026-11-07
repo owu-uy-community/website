@@ -27,7 +27,7 @@ import { ShellStatusProvider, useShell } from "./use-shell-status";
 import { eventHref } from "./use-selected-event";
 
 /** Live-control pages want every pixel: there the sidebar folds to its icon rail (⌘B still opens it). */
-const FOCUS_ROUTES = ["/admin/owy/scenes", "/admin/owy/charla", "/admin/screen"];
+const FOCUS_ROUTES = ["/admin/owy/scenes", "/admin/owy/charla", "/admin/owy/intro", "/admin/screen"];
 const isFocusRoute = (pathname: string | null) => FOCUS_ROUTES.some((route) => pathname?.startsWith(route));
 
 /** "G" then a letter jumps to a page, from anywhere in the admin. */

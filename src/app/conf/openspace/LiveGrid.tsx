@@ -6,6 +6,7 @@ import { Sparkles } from "lucide-react";
 
 import { RoomStatusBadge } from "components/Meetups/OpenSpace/atoms/RoomStatusBadge";
 import type { Schedule, StickyNote } from "lib/orpc";
+import { RoomMark } from "lib/rooms/icons";
 
 import type { BoardRoom } from "./board";
 import { trackAt } from "./board";
@@ -171,11 +172,7 @@ export default function LiveGrid({
                   const track = trackAt(tracks, room.id, block.id);
                   const content = (
                     <>
-                      <span
-                        aria-hidden="true"
-                        className="mt-1.5 h-2.5 w-2.5 shrink-0 rotate-45"
-                        style={{ backgroundColor: room.color }}
-                      />
+                      <RoomMark className="mt-1 h-3 w-3" color={room.color} icon={room.icon} />
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="font-display text-[11px] font-bold tracking-[0.12em] text-[#FBF5E7]/70 uppercase">
@@ -241,7 +238,7 @@ export default function LiveGrid({
                 selected && selected.roomId !== room.id && "opacity-55"
               )}
             >
-              <span aria-hidden="true" className="h-2 w-2 shrink-0 rotate-45" style={{ backgroundColor: room.color }} />
+              <RoomMark className="h-2.5 w-2.5" color={room.color} icon={room.icon} />
               <span
                 className="truncate font-display text-xs font-bold tracking-[0.12em] uppercase"
                 style={{ color: room.color }}

@@ -3,29 +3,39 @@ import "server-only";
 import { createId } from "@paralleldrive/cuid2";
 import type { WebSocket } from "ws";
 
+import type { Permission } from "../authz/catalog";
 import { isPublicChannel, parseFrame, type ClientFrame, type ServerFrame } from "./protocol";
 
 type Connection = {
   ws: WebSocket;
-  /** Asked on every private subscribe and publish (memoized by the caller), so a revoked role stops the socket too. */
-  canPublish: () => Promise<boolean>;
+  /** Asked on every private subscribe and publish (the caller caches who is behind the socket), so a revoked role stops the socket too. */
+  can: (permission: Permission) => Promise<boolean>;
   channels: Set<string>;
-  /** It has published: its heartbeat keeps `canPublish` fresh, so its next publish doesn't wait on it. */
-  publishes: boolean;
+  /** What its last publish needed: its heartbeat keeps that answer fresh, so its next publish doesn't wait on it. */
+  publishes: Permission | null;
 };
 
 /**
- * A permission check for a socket's lifetime: answered at most `ttlMs` ago, and asked again ahead
- * of time. Past `refreshMs` the answer in hand still counts while a fresh one comes in, so with
- * someone calling it on every heartbeat (25 s) a publish never waits on the lookup — a session
- * read that, after a quiet minute, can need a new database connection. A press on the launchpad
- * paid exactly that before reaching the speakers.
+ * What a channel takes to subscribe (private ones) and to publish: the OBS control bus
+ * `obs:operate`, so a key that runs the stage and the companion (the bridge's) can't reach the
+ * stream; every other channel `stage:operate`.
  */
-export function cachedCheck(check: () => Promise<boolean>, ttlMs = 30_000, refreshMs = 20_000) {
-  type Answer = { at: number; allowed: Promise<boolean> };
+export function channelPermission(channel: string): Permission {
+  return channel.startsWith("private:obs:") ? "obs:operate" : "stage:operate";
+}
+
+/**
+ * A lookup for a socket's lifetime (who is behind it): answered at most `ttlMs` ago, and asked
+ * again ahead of time. Past `refreshMs` the answer in hand still counts while a fresh one comes in,
+ * so with someone calling it on every heartbeat (25 s) a publish never waits on the lookup — a
+ * session read that, after a quiet minute, can need a new database connection. A press on the
+ * launchpad paid exactly that before reaching the speakers. A failed lookup answers null.
+ */
+export function cachedLookup<T>(lookup: () => Promise<T>, ttlMs = 30_000, refreshMs = 20_000) {
+  type Answer = { at: number; value: Promise<T | null> };
   let current: Answer | null = null;
   let next: Answer | null = null;
-  const ask = (): Answer => ({ at: Date.now(), allowed: check().catch(() => false) });
+  const ask = (): Answer => ({ at: Date.now(), value: lookup().catch(() => null) });
 
   return () => {
     const age = current ? Date.now() - current.at : Infinity;
@@ -36,14 +46,14 @@ export function cachedCheck(check: () => Promise<boolean>, ttlMs = 30_000, refre
     } else if (age > refreshMs && !next) {
       const fresh = ask();
       next = fresh;
-      void fresh.allowed.then(() => {
+      void fresh.value.then(() => {
         if (next !== fresh) return;
         current = fresh;
         next = null;
       });
     }
 
-    return current.allowed;
+    return current.value;
   };
 }
 
@@ -52,6 +62,8 @@ type BackplaneEnvelope = {
   ev: string;
   pl: unknown;
   sid?: string;
+  /** The message's id, fanned out as is by every instance (absent from an older one's). */
+  id?: string;
   origin: string;
 };
 
@@ -76,7 +88,7 @@ class RealtimeHub {
   private redisReady: Promise<{ pub: { publish: (ch: string, msg: string) => Promise<unknown> } } | null> | null = null;
   private warnedNoBackplane = false;
 
-  attach(ws: WebSocket, options: { canPublish: () => Promise<boolean> }): void {
+  attach(ws: WebSocket, options: { can: (permission: Permission) => Promise<boolean> }): void {
     // Join the backplane as soon as a socket lands here. Redis is what carries
     // publishes between function instances, and `ensureRedis` is where this
     // instance SUBSCRIBES — an instance that only holds sockets never
@@ -84,7 +96,7 @@ class RealtimeHub {
     // sent (a server-side write, or a client on a different instance).
     void this.ensureRedis();
 
-    const connection: Connection = { ws, canPublish: options.canPublish, channels: new Set(), publishes: false };
+    const connection: Connection = { ws, can: options.can, channels: new Set(), publishes: null };
 
     ws.on("message", (data: unknown) => {
       const frame = parseFrame<ClientFrame>(typeof data === "string" ? data : String(data));
@@ -93,7 +105,7 @@ class RealtimeHub {
       switch (frame.t) {
         case "sub": {
           void (async () => {
-            if (!isPublicChannel(frame.ch) && !(await connection.canPublish())) {
+            if (!isPublicChannel(frame.ch) && !(await connection.can(channelPermission(frame.ch)))) {
               this.sendFrame(ws, { t: "err", msg: "forbidden", ch: frame.ch });
 
               return;
@@ -105,6 +117,9 @@ class RealtimeHub {
               this.channels.set(frame.ch, set);
             }
             set.add(connection);
+            // `ok` promises delivery (a client rotating its socket closes the old one on it): on a
+            // fresh instance that includes what other instances publish, so the backplane first.
+            await this.ensureRedis();
             this.sendFrame(ws, { t: "ok", ch: frame.ch });
           })();
           break;
@@ -116,19 +131,20 @@ class RealtimeHub {
         }
         case "pub": {
           void (async () => {
-            if (!(await connection.canPublish())) {
+            const permission = channelPermission(frame.ch);
+            if (!(await connection.can(permission))) {
               this.sendFrame(ws, { t: "err", msg: "publish requires authentication", ch: frame.ch });
 
               return;
             }
-            connection.publishes = true;
+            connection.publishes = permission;
             await this.publish(frame.ch, frame.ev, frame.pl, frame.sid);
           })();
           break;
         }
         case "ping": {
           this.sendFrame(ws, { t: "pong" });
-          if (connection.publishes) void connection.canPublish();
+          if (connection.publishes) void connection.can(connection.publishes);
           break;
         }
       }
@@ -143,11 +159,11 @@ class RealtimeHub {
   }
 
   /** Fan out to connections on THIS instance only. */
-  publishLocal(channel: string, event: string, payload: unknown, senderId?: string): void {
+  publishLocal(channel: string, event: string, payload: unknown, senderId?: string, id?: string): void {
     const set = this.channels.get(channel);
     if (!set) return;
 
-    const frame: ServerFrame = { t: "msg", ch: channel, ev: event, pl: payload, sid: senderId };
+    const frame: ServerFrame = { t: "msg", ch: channel, ev: event, pl: payload, sid: senderId, id };
     const encoded = JSON.stringify(frame);
     for (const connection of set) {
       try {
@@ -160,7 +176,8 @@ class RealtimeHub {
 
   /** Fan out locally and across instances (via Redis, when configured). */
   async publish(channel: string, event: string, payload: unknown, senderId?: string): Promise<void> {
-    this.publishLocal(channel, event, payload, senderId);
+    const id = createId();
+    this.publishLocal(channel, event, payload, senderId, id);
 
     const redis = await this.ensureRedis();
     if (redis) {
@@ -169,6 +186,7 @@ class RealtimeHub {
         ev: event,
         pl: payload,
         sid: senderId,
+        id,
         origin: this.instanceId,
       };
       await redis.pub.publish(REDIS_CHANNEL, JSON.stringify(envelope)).catch(() => undefined);
@@ -212,7 +230,7 @@ class RealtimeHub {
             const envelope = JSON.parse(raw) as BackplaneEnvelope;
             if (envelope.origin === this.instanceId) return; // already fanned out locally
 
-            this.publishLocal(envelope.ch, envelope.ev, envelope.pl, envelope.sid);
+            this.publishLocal(envelope.ch, envelope.ev, envelope.pl, envelope.sid, envelope.id);
           } catch {
             // malformed envelope; drop
           }

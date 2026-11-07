@@ -1,4 +1,5 @@
 import { openapi } from "@orpc/openapi";
+import { Effect } from "effect";
 import * as z from "zod";
 
 import { platform, pub } from "../base";
@@ -30,7 +31,7 @@ export const commsRouter = {
     .input(EventIdSchema)
     .output(z.array(PostedMessageSchema))
     .effect(function* ({ input }) {
-      return yield* Comms.feed(input.eventId);
+      return yield* Effect.promise(() => Comms.publicFeed(input.eventId));
     }),
 
   list: platform("comms:read")

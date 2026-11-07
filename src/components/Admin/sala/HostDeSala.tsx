@@ -34,6 +34,7 @@ import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc, type Room } from "lib/orpc";
 import type { RoomStatus } from "lib/orpc/rooms/schemas";
 import { eventChannel } from "lib/realtime/channels";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 import { roomNow } from "./now";
 
@@ -309,11 +310,7 @@ export function HostDeSala({ eventId, meId }: { eventId: string; meId: string })
               {rooms.map((item) => (
                 <SelectItem key={item.id} value={item.id}>
                   <span className="flex items-center gap-2">
-                    <span
-                      aria-hidden
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: roomColorFor(item.id, item.color) }}
-                    />
+                    <RoomMark className="size-2.5" color={roomColorFor(item.id, item.color)} icon={item.icon} />
                     {item.name}
                   </span>
                 </SelectItem>

@@ -70,7 +70,7 @@ const useWide = () =>
 
 /** When the Q&A starts and when the talk ends, on the plan (seconds from the first slide). */
 const QA_AT = plannedStart("qa");
-const QA_END = plannedStart("rating");
+const QA_END = plannedStart("end");
 const TOTAL = TALK_SLIDES.reduce((sum, slide) => sum + slide.seconds, 0);
 const BUDGETS = sectionBudgets();
 
@@ -113,6 +113,39 @@ const press = (action: () => void) => (event: React.MouseEvent<HTMLElement>) => 
 };
 
 const LISTENS: ListenChannel[] = ["L", "R", "mix"];
+/** What a USB clicker sends for next and back (PageDown/PageUp), plus the keyboard's. */
+const NAV_KEYS = new Set(["ArrowRight", "ArrowLeft", "PageDown", "PageUp", " "]);
+
+/**
+ * Whether this window has the keyboard: a clicker types into whatever has focus, so the console
+ * says when it doesn't (another app or the wall's window was clicked last).
+ */
+function ClickerFocus() {
+  const [focused, setFocused] = useState(true);
+  useEffect(() => {
+    const update = () => setFocused(document.hasFocus());
+    update();
+    window.addEventListener("focus", update);
+    window.addEventListener("blur", update);
+    return () => {
+      window.removeEventListener("focus", update);
+      window.removeEventListener("blur", update);
+    };
+  }, []);
+
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1.5 text-meta whitespace-nowrap",
+        focused ? "text-muted-foreground" : "font-semibold text-warning"
+      )}
+      title="El clicker manda teclas a la ventana que tiene el foco"
+    >
+      <span className={cn("size-2 rounded-full", focused ? "bg-success" : "animate-pulse bg-warning")} />
+      {focused ? "Clicker" : "Sin foco: hacé click acá"}
+    </span>
+  );
+}
 
 function Console() {
   const talk = useTalkStage();
@@ -165,6 +198,8 @@ function Console() {
   keys.current = { talk, seat, slide, fire, hush };
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // A presenter's slideshow button sends F5: it must never reload the console mid-talk.
+      if (event.key === "F5") return event.preventDefault();
       if (event.metaKey || event.ctrlKey || event.altKey || busy(event.target as Element)) return;
       const { talk: t, seat: s, slide: current, fire: cue, hush: quiet } = keys.current;
       const key = event.key;
@@ -174,11 +209,14 @@ function Console() {
       };
       if (key === "Escape") return run(quiet);
       if (!t.onTalk) return;
+      // A held clicker button repeats its key: one press is one build.
+      if (event.repeat && NAV_KEYS.has(key)) return event.preventDefault();
       if (key === "ArrowRight" || key === "PageDown" || (key === " " && !ownsSpace(document.activeElement)))
         return run(t.next);
       if (key === "ArrowLeft" || key === "PageUp") return run(t.prev);
       const lower = key.toLowerCase();
-      if (lower === "b") return run(() => t.toggle("blank"));
+      // B, or "." (what Logitech presenters send for black screen).
+      if (lower === "b" || key === ".") return run(() => t.toggle("blank"));
       if (lower === "o") return run(() => t.toggle("owy"));
       if (lower === "q") return run(() => t.toggle("qr"));
       if (lower === "s") return run(() => t.toggle("captions"));
@@ -396,6 +434,7 @@ function TopBar(view: View) {
   return (
     <Panel className="flex h-14 shrink-0 items-center gap-4 px-3">
       <ClockReadout view={view} />
+      <ClickerFocus />
       <div className="ml-auto flex items-center gap-1.5">
         {overlay("blank", "Negro", MonitorOff, "B")}
         {overlay("owy", "Owy grande", Eye, "O")}

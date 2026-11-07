@@ -54,6 +54,8 @@ export const TakeSchema = z.object({ step: DeskStepSchema, transition: z.enum(["
 export const TakeResultSchema = z.object({ state: StageStateSchema, desk: DeskWireSchema });
 
 export const FireEffectSchema = EffectEventSchema;
+export const AutopilotSchema = z.object({ on: z.boolean() });
+export const SpotlightInputSchema = z.object({ trackId: z.string().trim().min(1).max(40) });
 export const SetFaceSchema = FaceEventSchema;
 
 export type SetSceneInput = z.infer<typeof SetSceneSchema>;
@@ -87,7 +89,7 @@ export const StageInputSchema = z.object({
 });
 
 export const StagePulseSchema = z.object({
-  /** Aggregates only — never attendee data. `null` when Eventbrite isn't configured or answering. */
+  /** Aggregates only — never attendee data. `null` when nobody is registered for the event. */
   tickets: z.object({ checkedIn: z.number(), active: z.number(), capacity: z.number().nullable() }).nullable(),
   board: z.object({ ideas: z.number(), rooms: z.number() }).nullable(),
 });
@@ -119,6 +121,13 @@ export const StageSpeakerSchema = z.object({
 });
 export type StageSpeaker = z.infer<typeof StageSpeakerSchema>;
 
+export const StageCommunitySchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  logo: z.string().nullable(),
+});
+export type StageCommunity = z.infer<typeof StageCommunitySchema>;
+
 export const SpotifyTrackSchema = z.object({
   song: z.string(),
   artist: z.string(),
@@ -141,6 +150,8 @@ const ListenSchema = z.enum(["L", "R", "mix"]);
 /**
  * What a remote asks the seat to do. Mirrors the bridge's talk messages by hand (the site never
  * imports the bridge's runtime), plus `listen`, which the seat applies to its own microphone.
+ * `talk` is the slide on screen and who is asking (null: talk mode off), for a seat with no deck
+ * of its own — the bridge; a browser seat sends its own.
  */
 export const TalkCommandSchema = z.object({
   id: z.string().trim().min(1).max(40),
@@ -159,6 +170,10 @@ export const TalkCommandSchema = z.object({
       asker: AskerSchema.default("presenter"),
     }),
     z.object({ type: z.literal("hush") }),
+    z.object({
+      type: z.literal("talk"),
+      talk: z.object({ slide: z.string().trim().max(600), asker: AskerSchema }).nullable(),
+    }),
     z.object({ type: z.literal("pitch"), mode: z.boolean() }),
     z.object({ type: z.literal("listen"), channel: ListenSchema }),
   ]),

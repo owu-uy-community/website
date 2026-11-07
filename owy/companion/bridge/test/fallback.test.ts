@@ -28,6 +28,7 @@ function harness(
     clips?: Record<string, Buffer>;
     authorizeTool?: (name: string) => string | null;
     idleResetS?: number;
+    eve?: { turn: (...args: unknown[]) => Promise<{ text: string }>; cancel: () => Promise<void>; reset: () => Promise<void> };
   } = {}
 ) {
   const events: number[] = [];
@@ -80,7 +81,8 @@ function harness(
     {
       logger: createLogger("test", "error"),
       config: { COMPANION_ACK_MS: 2500, COMPANION_PITCH_VAD_RMS: 0.012, COMPANION_EVE_IDLE_RESET_S: options.idleResetS },
-      brain: "local",
+      brain: options.eve ? "eve" : "local",
+      eve: options.eve,
       provider: { spec: "gateway:google/gemini-3.8-live", provider: "gateway", modelId: "google/gemini-3.8-live" },
       instructions: "Sos Owy.",
       cascade,
@@ -338,4 +340,26 @@ it("each tap remembers the taps before it, until nobody talks for a while", asyn
   expect(h.realtime.resetConversation).toHaveBeenCalled(); // the live session forgets them too
   await tap("Hola, ¿qué es OWU?");
   expect(h.cascade.answer).toHaveBeenLastCalledWith(expect.objectContaining({ history: [] }));
+});
+
+it("eve down: the local brain answers instead of an apology, and eve is skipped for a minute", async () => {
+  const turn = vi.fn(async () => {
+    throw new Error("eve 503");
+  });
+  const h = harness({ live: false, eve: { turn, cancel: vi.fn(async () => {}), reset: vi.fn(async () => {}) } });
+  (h.wired as unknown as { runtime: unknown }).runtime = { isStaff: () => false, isMarketplaceOpen: () => false };
+  await h.wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  h.speakFor(1000);
+  await vi.advanceTimersByTimeAsync(900);
+  expect(turn).toHaveBeenCalledOnce();
+  expect(h.cascade.answer).toHaveBeenCalledOnce();
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(h.audio()).toBe(32_000);
+  expect(h.events).not.toContain(E.ERROR);
+
+  await h.wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  h.speakFor(1000);
+  await vi.advanceTimersByTimeAsync(900);
+  expect(turn).toHaveBeenCalledOnce();
+  expect(h.cascade.answer).toHaveBeenCalledTimes(2);
 });

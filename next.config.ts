@@ -25,6 +25,17 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 2_678_400,
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
+  // Pictures under /public: a browser keeps one five minutes, then shows its copy while it checks
+  // for a newer one. The default (max-age=0, must-revalidate) asked again every time a page first
+  // showed it, so wall scenes popped in on a busy network; a replaced photo still arrives in a view.
+  async headers() {
+    return [
+      {
+        source: "/:dir(images|owy-stage|agiles)/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=300, stale-while-revalidate=604800" }],
+      },
+    ];
+  },
   // The English paths people and agents guess, to the Spanish pages that answer them
   async redirects() {
     return [

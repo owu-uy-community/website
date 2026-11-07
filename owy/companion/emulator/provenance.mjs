@@ -5,23 +5,20 @@ import { resolve } from "node:path";
 
 export const root = resolve(fileURLToPath(new URL(".", import.meta.url)), "../../..");
 export const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-export const protocolFiles = ["worker.mjs", "session.mjs", "pose.mjs", "fixtures.mjs", "bridge.mjs"];
+/** What the page loads next to the WASM: the face worker and its helpers. */
+export const protocolFiles = ["face.mjs", "session.mjs"];
 const inputs = [
-  ...[
-    "runtime.cpp",
-    "font_adapter.h",
-    "build.mjs",
-    "generate-scene.mjs",
-    "provenance.mjs",
-    "bridge-adapter.ts",
-    "THIRD-PARTY-NOTICES.txt",
-    "generated/scene.generated.h",
-    "generated/fonts.generated.h",
-    "generated/lv_conf.h",
-    "generated/manifest.json",
-  ].map((p) => "owy/companion/emulator/" + p),
-  ...["clock.ts", "device/pipeline.ts", "audio/pcm.ts"].map((p) => "owy/companion/bridge/src/" + p),
-];
+  "runtime.cpp",
+  "font_adapter.h",
+  "build.mjs",
+  "generate-scene.mjs",
+  "provenance.mjs",
+  "THIRD-PARTY-NOTICES.txt",
+  "generated/scene.generated.h",
+  "generated/fonts.generated.h",
+  "generated/lv_conf.h",
+  "generated/manifest.json",
+].map((p) => "owy/companion/emulator/" + p);
 export function buildInputHashes() {
   return Object.fromEntries(inputs.map((p) => [p, sha256(readFileSync(resolve(root, p)))]));
 }

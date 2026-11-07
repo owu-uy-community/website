@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 
 import { principalFromRequest } from "app/lib/auth-helpers";
 import { can } from "lib/authz/principal";
-import { cachedCheck, hub } from "lib/realtime/hub";
+import { cachedLookup, hub } from "lib/realtime/hub";
 
 // WebSocket connections should live as long as the platform allows.
 export const maxDuration = 300;
@@ -40,16 +40,15 @@ export async function GET() {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // The upgrade request carries cookies like any GET. Publishing and private channels take
-  // `realtime` rights (site staff), asked again at most every 30 s while the socket lives (ahead of
-  // time, on a publisher's heartbeat), so a role taken away or a revoked session stops it too.
-  // Public displays subscribe without a session.
+  // The upgrade request carries cookies like any GET (or the companion bridge's `x-api-key`).
+  // Publishing and private channels take a permission per channel (see channelPermission), asked of
+  // whoever is behind the socket, looked up again at most every 30 s while it lives (ahead of time,
+  // on a publisher's heartbeat), so a role taken away or a revoked session stops it too. Public
+  // displays subscribe without a session.
   const captured = new Headers(requestHeaders);
-  const canPublish = cachedCheck(() =>
-    principalFromRequest(captured).then((principal) => can(principal, "stage:operate"))
-  );
+  const principal = cachedLookup(() => principalFromRequest(captured));
 
   return experimental_upgradeWebSocket((ws) => {
-    hub.attach(ws, { canPublish });
+    hub.attach(ws, { can: async (permission) => can(await principal(), permission) });
   });
 }

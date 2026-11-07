@@ -3,17 +3,19 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { DEVICE_SAMPLE_RATE, GEMINI_OUTPUT_SAMPLE_RATE, Pcm16Resampler, toWav } from "../audio/pcm";
 import { loadConfig } from "../config";
-import { buildSessionConfig } from "../index";
+import { buildSessionConfig } from "../realtime/session-config";
+import { realtimeKeys } from "../runtime";
 import { createLogger } from "../log";
-import { PITCH_LINES, SCRIPT_PREFIX } from "../pitch";
+import { PITCH_CLIPS, PITCH_LINES, SCRIPT_PREFIX, type PitchLine } from "../pitch";
 import { FALLBACK_LINES } from "../realtime/cascade";
 import { resolveRealtimeProvider } from "../realtime/models";
 import { NodeRealtimeSession } from "../realtime/session";
 
 /**
  * Renders the fixed pitch-mode cues in Owy's own voice, once, as static WAV
- * files the laptop browser plays at tap time (no model round trip while a
- * person waits): public/companion-audio/clips/<id>.wav + manifest.json.
+ * files the laptop browser plays at tap time, and the bridge streams to a
+ * board's own speaker (no model round trip while a person waits):
+ * public/companion-audio/clips/<id>.wav + manifest.json.
  * The fallback lines (`offline`, `retry`) are what the bridge plays through
  * the device when there is no network to synthesize anything.
  *
@@ -23,9 +25,8 @@ import { NodeRealtimeSession } from "../realtime/session";
  * The manifest is merged, so recording one set keeps the other.
  */
 const CLIPS: Record<string, string> = {
-  "pitch-listen": PITCH_LINES.listen,
-  "pitch-name": PITCH_LINES.askName,
-  "pitch-empty": PITCH_LINES.empty,
+  // Modo pitch: «te escucho», the two questions, and the lines that end a pitch without a card.
+  ...Object.fromEntries(Object.entries(PITCH_CLIPS).map(([line, id]) => [id, PITCH_LINES[line as PitchLine]])),
   ...FALLBACK_LINES,
 };
 
@@ -55,10 +56,7 @@ async function main(): Promise<void> {
   }
   const config = loadConfig();
   const logger = createLogger("clips", config.COMPANION_LOG_LEVEL);
-  const provider = resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, {
-    googleApiKey: config.GOOGLE_GENERATIVE_AI_API_KEY,
-    gatewayApiKey: config.AI_GATEWAY_API_KEY,
-  });
+  const provider = resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, realtimeKeys(config));
   const session = new NodeRealtimeSession({
     provider,
     sessionConfig: buildSessionConfig({

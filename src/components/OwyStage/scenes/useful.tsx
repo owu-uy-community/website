@@ -1,19 +1,21 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type Room, type Schedule, type StickyNote } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
+import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
-import { drawFace, initialSim } from "./OwyFace";
-import { QrCode, Rise, nowHHMM } from "./parts";
+import { useBoard, useCast } from "../board";
+import { OVER_SHAPES } from "./OwyFace";
+import { QrCode, Rise, useNow } from "./parts";
+
+export { useBoard, useCast, useNow };
 
 // ---------------------------------------------------------------------------
 // Program items — "HH:MM Título | HH:MM Título" typed by staff in the admin
@@ -37,15 +39,6 @@ function currentIndex(program: ProgramItem[], now: string): number {
     if (item.time <= now) index = i;
   });
   return index;
-}
-
-export function useNow(everyMs = 1000) {
-  const [now, setNow] = useState(nowHHMM);
-  useEffect(() => {
-    const id = setInterval(() => setNow(nowHHMM()), everyMs);
-    return () => clearInterval(id);
-  }, [everyMs]);
-  return now;
 }
 
 /** Seconds from now (HH:MM:SS in the event timezone) until an HH:MM today. */
@@ -166,27 +159,6 @@ export function Next({ params }: SceneProps<"next">) {
 // Room — one room's day, for a screen at that room's door
 // ---------------------------------------------------------------------------
 
-export function useBoard(eventId: string | null, preview: boolean) {
-  const [data, setData] = useState<{ rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] } | null>(null);
-  const load = useCallback(() => {
-    if (!eventId) return;
-    Promise.all([
-      client.rooms.getByOpenSpace({ openSpaceId: eventId }),
-      client.schedules.getByOpenSpace({ openSpaceId: eventId }),
-      client.tracks.list({ openSpaceId: eventId }),
-    ])
-      .then(([rooms, schedules, tracks]) => setData({ rooms, schedules, tracks }))
-      .catch((error) => console.error("[stage] board", error));
-  }, [eventId]);
-  useEffect(() => {
-    load();
-  }, [load]);
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change" || event === "structure_change") load();
-  });
-  return data;
-}
-
 export function RoomDay({ params, eventId }: SceneProps<"room">) {
   const { preview } = useContext(StageContext);
   const data = useBoard(eventId, preview);
@@ -223,7 +195,10 @@ export function RoomDay({ params, eventId }: SceneProps<"room">) {
             Sala
           </Rise>
           <Rise className="mt-2 text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.15}>
-            {room.name}
+            <span className="flex items-center gap-8">
+              <RoomMark className="h-[84px] w-[84px]" color={color} icon={room.icon} />
+              {room.name}
+            </span>
           </Rise>
         </div>
         <p className="pb-3 text-[40px] font-semibold text-[#FBF5E7]/60 tabular-nums">{now}</p>
@@ -285,18 +260,7 @@ export function EmptyText({ text }: { text: string }) {
 
 export function CastBar({ eventId }: SceneProps<"cast-bar">) {
   const { preview } = useContext(StageContext);
-  const [note, setNote] = useState<StickyNote | null>(null);
-
-  useEffect(() => {
-    if (!eventId) return;
-    client.cast
-      .getState({ eventId })
-      .then((state) => setNote(state.note))
-      .catch((error) => console.error("[stage] cast", error));
-  }, [eventId]);
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "cast") : null, (event, payload) => {
-    if (event === "note_highlighted") setNote((payload as { note: StickyNote | null }).note);
-  });
+  const note = useCast(eventId, preview);
 
   return (
     <AnimatePresence>
@@ -482,21 +446,18 @@ const OWY_STEPS = [
 ];
 
 export function OwyHowTo() {
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef(initialSim());
-  useStageFrame((t, dt) => {
-    const ctx = canvas.current?.getContext("2d");
-    if (!ctx) return;
-    // Every so often Owy smiles at the reader.
-    if (Math.floor(t / 9000) !== Math.floor((t - dt) / 9000)) sim.current.happyUntil = t + 2200;
-    drawFace(ctx, sim.current, t, dt);
-  });
+  const face = useRef<FaceApi>(null);
+  // Every so often Owy smiles at the reader.
+  useEffect(() => {
+    const id = setInterval(() => face.current?.smile(), 9000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <>
       <Ambient />
-      {/* The face is drawn at the frame's centre; shift the canvas so it sits on the left half */}
-      <canvas ref={canvas} className="absolute inset-0 -translate-x-[440px] scale-[0.78]" height={H} width={W} />
+      {/* On the left half, beside the steps: the wall face at ×0.78 */}
+      <OwyFace ref={face} className={`absolute top-[150px] left-[174px] ${OVER_SHAPES}`} size={692} />
       <div className="absolute top-[110px] right-[120px] w-[980px]">
         <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
           Open Space

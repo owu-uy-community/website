@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 
 import { eventChannel } from "../realtime/channels";
+import { refreshBoard } from "../revalidate";
 import { Realtime } from "./services";
 import type { StickyNote } from "./tracks/schemas";
 
@@ -26,6 +27,7 @@ export const cardChanged = (change: {
   updatedCards?: StickyNote[];
 }) =>
   Effect.gen(function* () {
+    refreshBoard(change.openSpaceId);
     const realtime = yield* Realtime;
     yield* realtime.publish(eventChannel(change.openSpaceId, "sync"), "card_change", {
       type: change.type,
@@ -52,6 +54,7 @@ export const cardsDeleted = (openSpaceId: string, cardIds: readonly string[]) =>
  */
 export const structureChanged = (openSpaceId: string) =>
   Effect.gen(function* () {
+    refreshBoard(openSpaceId);
     const realtime = yield* Realtime;
     yield* realtime.publish(eventChannel(openSpaceId, "sync"), "structure_change", { openSpaceId });
   });

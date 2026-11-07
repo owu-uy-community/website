@@ -12,7 +12,8 @@ import { writeFileSync } from "node:fs";
 import { fromWav, toWav } from "../bridge/src/audio/pcm";
 
 const { url, secret } = JSON.parse(readFileSync(new URL("../.eve/web-bridge.json", import.meta.url), "utf8"));
-const origin = "http://127.0.0.1:3311";
+// The bridge only issues tickets for an origin it accepts: its first COMPANION_WEB_ORIGINS entry.
+const origin = (process.env.COMPANION_WEB_ORIGINS ?? "http://localhost:3000").split(",")[0].trim();
 const http = url.replace(/^ws/, "http").replace(/\/voice$/, "");
 const ticket = await (await fetch(`${http}/sessions`, {
   method: "POST",

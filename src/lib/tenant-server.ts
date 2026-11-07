@@ -19,16 +19,15 @@ export const getCommunityBySlug = cache(async (slug: string): Promise<CommunityR
 
 export const getEventBySlugs = cache(
   async (communitySlug: string, eventSlug: string): Promise<{ community: CommunityRow; event: EventRow } | null> => {
-    const community = await getCommunityBySlug(communitySlug);
-    if (!community) return null;
-
-    const [event] = await db
-      .select()
+    // One round trip: request-time pages (the live board) run this on every visit
+    const [row] = await db
+      .select({ community: communities, event: events })
       .from(events)
-      .where(and(eq(events.communityId, community.id), eq(events.slug, eventSlug), ne(events.status, "draft")))
+      .innerJoin(communities, eq(events.communityId, communities.id))
+      .where(and(eq(communities.slug, communitySlug), eq(events.slug, eventSlug), ne(events.status, "draft")))
       .limit(1);
 
-    return event ? { community, event } : null;
+    return row ?? null;
   }
 );
 

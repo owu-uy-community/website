@@ -1,55 +1,29 @@
 import { useEffect, useRef } from "react";
 
-interface UseCountdownAudioOptions {
-  remainingSeconds: number;
-  soundEnabled: boolean;
-  soundPath?: string;
-}
+import type { CountdownState } from "../lib/orpc/countdown/schemas";
+
+type Tick = Pick<CountdownState, "isRunning" | "remainingSeconds" | "lastUpdated">;
 
 /**
- * Custom hook to manage countdown audio playback
- * Plays sound when countdown reaches zero and ensures it only plays once
+ * The countdown ran out by itself: it was running and is now at zero with no admin action in
+ * between (an action, like a reset, arrives as a new state with a new `lastUpdated`).
  */
-export function useCountdownAudio({
-  remainingSeconds,
-  soundEnabled,
-  soundPath = "/sounds/developers.mp3",
-}: UseCountdownAudioOptions) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const hasPlayedRef = useRef(false);
+export const ranOut = (before: Tick, now: Tick) =>
+  before.isRunning && !now.isRunning && now.remainingSeconds === 0 && before.lastUpdated === now.lastUpdated;
+
+/**
+ * Plays a sound once when the countdown runs out. Opening a screen on a finished countdown, or
+ * resetting a running one, stays silent.
+ */
+export function useCountdownAudio(state: Tick & { soundEnabled: boolean }, soundPath = "/sounds/developers.mp3") {
+  const before = useRef<Tick>(state);
+  const { isRunning, remainingSeconds, lastUpdated, soundEnabled } = state;
 
   useEffect(() => {
-    // Play sound when countdown reaches zero and sound is enabled
-    if (remainingSeconds === 0 && soundEnabled && !hasPlayedRef.current) {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(soundPath);
-      }
-
-      audioRef.current.play().catch((err) => {
-        console.error("Failed to play countdown sound:", err);
-      });
-
-      hasPlayedRef.current = true;
+    const now = { isRunning, remainingSeconds, lastUpdated };
+    if (soundEnabled && ranOut(before.current, now)) {
+      new Audio(soundPath).play().catch((error) => console.error("Failed to play countdown sound:", error));
     }
-
-    // Reset flag when countdown is reset or started again
-    if (remainingSeconds > 0) {
-      hasPlayedRef.current = false;
-    }
-  }, [remainingSeconds, soundEnabled, soundPath]);
-
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  return {
-    audioRef,
-    hasPlayed: hasPlayedRef.current,
-  };
+    before.current = now;
+  }, [isRunning, remainingSeconds, lastUpdated, soundEnabled, soundPath]);
 }

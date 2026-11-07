@@ -22,6 +22,19 @@ api:
     key: !secret api_key
   # Never reboot because "no client connected": the bridge may be down for a while.
   reboot_timeout: 0s
+  # The face says whether the bridge is there: it drives every other state.
+  on_client_connected:
+    - if:
+        condition:
+          lambda: return id(face_state).current_option() == "offline";
+        then:
+          - select.set:
+              id: face_state
+              option: idle
+  on_client_disconnected:
+    - select.set:
+        id: face_state
+        option: offline
 
 ota:
   - platform: esphome

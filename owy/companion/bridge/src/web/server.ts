@@ -4,13 +4,23 @@ import { WebSocketServer, WebSocket } from "ws";
 import { owuApi } from "../../../../agent/lib/owu-api";
 import { DeviceSession, type SharedRuntime } from "../index";
 import type { Logger } from "../log";
-import { createStageMirror } from "../stage";
+import { createStageMirror, type StageMirror } from "../stage";
 import { BrowserDevice } from "./device";
-import { settingsSnapshot, TalkMessageSchema, type TalkReply } from "./rpc";
+import { TalkMessageSchema, type DeviceRouting, type TalkReply } from "./contract";
 import { matchesSecret, toolDenial, WebTickets, WEB_SESSION_MS, type WebGrant } from "./tickets";
 
+/** What the talk console shows for its device: routes, modo pitch, the voice. */
+const routingOf = (session: DeviceSession): DeviceRouting => ({
+  id: session.id,
+  connected: session.connected,
+  ...session.audioRouting(),
+  peer: session.hasPeer,
+  pitch: session.pitchSettings(),
+  voice: session.voiceStatus(),
+});
+
 export type WebBridgeOptions = { port: number; host?: string; origins: string[]; secret?: string; publicUrl?: string };
-/** A browser attached as a device's laptop audio stays for the whole open space, not five minutes. */
+/** A browser attached as a device's laptop audio stays for the whole open space, not half an hour. */
 export const ATTACHED_SESSION_MS = 6 * 60 * 60_000;
 /** Talk-console commands per minute (a `status` poll every 3 s is 20); past it they get a notice, not a close. */
 export const TALK_BUDGET_PER_MINUTE = 120;
@@ -134,7 +144,8 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
     clients.add(ws);
     let grant: WebGrant | null = null,
       device: BrowserDevice | undefined,
-      session: DeviceSession | undefined;
+      session: DeviceSession | undefined,
+      mirror: StageMirror | undefined;
     let closed = false,
       initialized = false,
       ownsSession = false,
@@ -152,7 +163,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
       ws.send(Buffer.isBuffer(message) ? message : JSON.stringify(message));
     };
     const authTimer = setTimeout(() => ws.close(1008, "Authentication timed out"), 5000);
-    let lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
+    let lifetime = setTimeout(() => ws.close(1000, "Session ended"), WEB_SESSION_MS);
     const rate = setInterval(() => {
       controls = 0;
       pcmBytes = 0;
@@ -175,8 +186,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
     ws.on("error", () => ws.terminate());
     let attached: DeviceSession | null = null;
     const reply = (message: TalkReply) => send(message);
-    const status = (target: DeviceSession) =>
-      reply({ type: "status", device: settingsSnapshot([target]).devices[0], talk: target.talkContext });
+    const status = (target: DeviceSession) => reply({ type: "status", device: routingOf(target), talk: target.talkContext });
     /**
      * The talk console («Owy, en vivo»): commands for the device this browser is attached to.
      * A bad or failed command is answered with a notice; it never closes the socket.
@@ -206,7 +216,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             // A device select confirms over its native API: answer once it has had a moment.
             return void setTimeout(() => status(target), 400);
           case "pitch":
-            target.setPitchSetting("mode", m.mode);
+            target.setPitchMode(m.mode);
             return void setTimeout(() => status(target), 400);
           case "status":
             return status(target);
@@ -231,6 +241,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
       clearInterval(rate);
       clearInterval(turnRate);
       clearInterval(heartbeat);
+      mirror?.stop();
       void session?.stop();
     });
     ws.on("message", (raw, binary) => {
@@ -258,20 +269,26 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
           const authority = grant;
           const id = `web-${createHash("sha256").update(grant.identity).digest("hex").slice(0, 16)}`;
           // The browser voice mirrors onto the video wall exactly like a gadget does.
-          const mirror = createStageMirror({
+          const stage = createStageMirror({
             api: shared.config.OWY_API_KEY ? owuApi() : null,
             logger: shared.logger.child(id),
             source: id,
+            publish: shared.publishStage,
           });
+          mirror = stage;
           session = new DeviceSession(
             { id, host: "virtual", port: 1, psk: null },
             // Browser sessions are quiet by default (visitors' words stay out of the
             // venue log); COMPANION_WEB_DEBUG=1 traces them like a physical Owy.
-            { ...shared, logger: process.env.COMPANION_WEB_DEBUG === "1" ? shared.logger.child("web") : silent },
+            // A browser is its own mic: the Mac's stays with the physical devices.
+            { ...shared, hostMic: undefined, logger: process.env.COMPANION_WEB_DEBUG === "1" ? shared.logger.child("web") : silent },
             {
               connectDevice: async (_spec, handlers) =>
-                (device = mirror.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),
-              onFace: mirror.face,
+                (device = stage.wrap(new BrowserDevice(handlers, authority, send, () => ws.close()))),
+              onFace: stage.face,
+              onExpression: stage.expression,
+              onMouth: stage.mouth,
+              onLevel: stage.level,
               lazyRealtime: true,
               isStaff: () => authority.staff,
               isMarketplaceOpen: () => authority.marketplace,
@@ -279,11 +296,11 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
               authorizeTool: (name) => toolDenial(authority, name),
               onTranscript: (who, text) => {
                 device?.emit({ type: "transcript", who, text: text.slice(0, 2000) });
-                mirror.transcript(who, text);
+                stage.transcript(who, text);
               },
               onTool: (event) => {
                 device?.emit({ type: "tool", ...event });
-                mirror.tool(event.status === "running" ? event.name : null);
+                stage.tool(event.status === "running" ? event.name : null);
               },
             }
           );
@@ -299,7 +316,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
             model: shared.provider.spec,
             voice: shared.config.COMPANION_VOICE,
             promptHash: createHash("sha256").update(shared.instructions).digest("hex").slice(0, 16),
-            tools: [...shared.definitions.keys(), "propose_talk", "show_on_screen", "event_now", "set_volume"],
+            tools: [...new Set([...shared.definitions.keys(), "propose_talk", "show_on_screen", "set_volume"])],
             permissions: { writes: authority.writes, staff: authority.staff, marketplace: authority.marketplace },
             siteConfigured: !!shared.config.OWY_API_KEY,
             sampleRate: 16000,
@@ -329,7 +346,7 @@ export async function startWebBridge(shared: SharedRuntime, options: WebBridgeOp
               );
             detach();
             clearTimeout(lifetime);
-            lifetime = setTimeout(() => ws.close(1000, "Five-minute session ended"), WEB_SESSION_MS);
+            lifetime = setTimeout(() => ws.close(1000, "Session ended"), WEB_SESSION_MS);
             break;
           case "start":
             if (attached) throw Error("Attached as laptop audio; the device starts the turns");

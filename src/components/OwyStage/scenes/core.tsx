@@ -4,15 +4,16 @@ import { useContext, useEffect, useState } from "react";
 import { m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
+import { useCountdownAudio } from "hooks/useCountdownAudio";
 import { useCountdownState } from "hooks/useCountdownState";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type StickyNote } from "lib/orpc";
+import { findSound } from "lib/launchpad/sounds";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
-import { formatTime } from "lib/utils";
+import { RoomMark } from "lib/rooms/icons";
+import { formatCountdown } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import { DATE_LABEL, LogoReveal, Rise, SponsorRow } from "./parts";
+import { useCast } from "./useful";
 
 /** The first scenes the wall had: the logo, the opening, a message, what's next, the sponsors, a countdown. */
 
@@ -107,19 +108,7 @@ export function Message({ params }: SceneProps<"message">) {
 
 export function UpNext({ eventId }: SceneProps<"up-next">) {
   const { preview } = useContext(StageContext);
-  const [note, setNote] = useState<StickyNote | null>(null);
-
-  useEffect(() => {
-    if (!eventId) return;
-    client.cast
-      .getState({ eventId })
-      .then((state) => setNote(state.note))
-      .catch((error) => console.error("[stage] cast state", error));
-  }, [eventId]);
-
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "cast") : null, (event, payload) => {
-    if (event === "note_highlighted") setNote((payload as { note: StickyNote | null }).note);
-  });
+  const note = useCast(eventId, preview);
 
   return (
     <>
@@ -148,7 +137,7 @@ export function UpNext({ eventId }: SceneProps<"up-next">) {
               transition={{ duration: 0.6, delay: 0.7, ease: EASE_OUT }}
             >
               <span className="flex items-center gap-4 border-2 border-[#FBF5E7]/25 px-8 py-4">
-                <span className="h-[22px] w-[22px] rounded-full" style={{ background: note.roomColor ?? BRAND.blue }} />
+                <RoomMark className="h-[22px] w-[22px]" color={note.roomColor ?? BRAND.blue} icon={note.roomIcon} />
                 {note.room}
               </span>
               <span className="border-2 border-[#FBF5E7]/25 px-8 py-4 text-[#F5BB03]">{note.timeSlot}</span>
@@ -189,29 +178,30 @@ export function Sponsors() {
   );
 }
 
-function CountdownClock({ eventId, label }: { eventId: string; label: string }) {
-  const { preview } = useContext(StageContext);
+function CountdownClock({ eventId, label, sound }: { eventId: string; label: string; sound: string }) {
+  const { preview, throttle } = useContext(StageContext);
   const { state, loading } = useCountdownState({ eventId, enableRealtime: !preview });
+  // Only the wall itself sounds: the desk's monitors and the thumbnails stay quiet.
+  const audioFile = findSound(sound)?.audioFile;
+  useCountdownAudio({ ...state, soundEnabled: state.soundEnabled && !throttle && Boolean(audioFile) }, audioFile);
   const done = state.remainingSeconds === 0;
+  const time = loading ? "00:00" : formatCountdown(state.remainingSeconds);
 
   return (
-    <>
+    <div className="absolute inset-0 flex flex-col items-center justify-center">
       {label && (
-        <Rise
-          className="absolute top-[150px] right-0 left-0 text-center text-[56px] font-semibold tracking-[0.25em] text-[#FBF5E7]/80 uppercase"
-          delay={0.1}
-        >
+        <Rise className="mb-4 text-[56px] font-semibold tracking-[0.25em] text-[#FBF5E7]/80 uppercase" delay={0.1}>
           {label}
         </Rise>
       )}
       <div
-        className={`countdown-font absolute top-1/2 right-0 left-0 -translate-y-1/2 text-center text-[420px] leading-none tracking-wider select-none ${
+        className={`countdown-font countdown-centered leading-none tracking-wider tabular-nums select-none ${time.length > 5 ? "text-[300px]" : "text-[420px]"} ${
           done ? "text-red-500" : `text-[#F5BB03] ${state.isRunning ? "animate-timer-pulse" : "opacity-80"}`
         }`}
       >
-        {loading ? "00:00" : formatTime(state.remainingSeconds)}
+        {time}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -220,7 +210,7 @@ export function CountdownScene({ params, eventId }: SceneProps<"countdown">) {
     <>
       <Ambient />
       {eventId ? (
-        <CountdownClock eventId={eventId} label={params.label} />
+        <CountdownClock eventId={eventId} label={params.label} sound={params.sound} />
       ) : (
         <p className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center text-[64px] font-extrabold text-[#FBF5E7]/40 uppercase">
           Elegí un evento en el admin

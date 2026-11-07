@@ -6,8 +6,10 @@ import { m } from "motion/react";
 import { geistMono } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { SPONSORS_2026 } from "app/conf/components/Sponsors";
+import { client } from "lib/orpc";
+import type { StageCommunity } from "lib/orpc/owy-stage/schemas";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { roomColorFor } from "lib/rooms/palette";
+import { readableFill, roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Confetti, EmojiRain } from "../effects";
@@ -48,16 +50,16 @@ export function Board({ eventId }: SceneProps<"board">) {
           <m.div
             key={note.id}
             animate={{ opacity: 1, y: 0, rotate: tilts[i % tilts.length] }}
-            className="flex h-[200px] w-[280px] flex-col justify-between p-5 text-black shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
+            className="flex h-[200px] w-[280px] flex-col justify-between p-5 shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
             initial={{ opacity: 0, y: 40, rotate: 0 }}
-            style={{ background: roomColorFor(note.roomId, note.roomColor) }}
+            style={readableFill(roomColorFor(note.roomId, note.roomColor))}
             transition={{ duration: 0.5, delay: 0.1 + i * 0.05, ease: EASE_OUT }}
           >
             <div>
               <p className="line-clamp-2 text-[27px] leading-[1.15] font-bold">{note.title}</p>
-              {note.speaker && <p className="mt-1 truncate text-[20px] font-medium text-black/75">{note.speaker}</p>}
+              {note.speaker && <p className="mt-1 truncate text-[20px] font-medium opacity-75">{note.speaker}</p>}
             </div>
-            <p className="truncate text-[18px] font-semibold tracking-[0.06em] text-black/65 uppercase">
+            <p className="truncate text-[18px] font-semibold tracking-[0.06em] uppercase opacity-65">
               {note.timeSlot.split(" - ")[0]} · {note.room}
             </p>
           </m.div>
@@ -115,8 +117,8 @@ export function RoomsNow({ eventId }: SceneProps<"rooms-now">) {
               transition={{ duration: 0.6, delay: 0.15 + i * 0.1, ease: EASE_OUT }}
             >
               <div
-                className="flex items-center gap-3 px-6 py-4 text-[28px] font-extrabold tracking-[0.08em] text-black uppercase"
-                style={{ background: color }}
+                className="flex items-center gap-3 px-6 py-4 text-[28px] font-extrabold tracking-[0.08em] uppercase"
+                style={readableFill(color)}
               >
                 {room.name}
               </div>
@@ -283,6 +285,99 @@ export function SponsorWall() {
           </m.div>
         ))}
       </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Community wall — every group in the owu.uy directory, as the sponsor wall does for sponsors
+// ---------------------------------------------------------------------------
+
+export function CommunityWall({ params }: SceneProps<"community-wall">) {
+  const [list, setList] = useState<StageCommunity[] | null>(null);
+  useEffect(() => {
+    client.owyStage
+      .getCommunities()
+      .then(setList)
+      .catch(() => setList([]));
+  }, []);
+  if (!list) return <Ambient />;
+  if (!list.length) return <EmptyText text="Sin comunidades cargadas" />;
+  // Eight to a row; the tiles shrink when a fourth row is needed so the grid still ends above the bottom edge
+  const tile = Math.min(160, Math.floor(700 / Math.ceil(list.length / 8)) - 70);
+
+  return (
+    <>
+      <Ambient />
+      {/* Below the half-circle that hangs from the top edge */}
+      <div className="absolute inset-x-0 top-[124px] text-center">
+        <Rise className="text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
+          {params.title}
+        </Rise>
+      </div>
+      <div className="absolute inset-x-[106px] top-[264px] flex flex-wrap justify-center gap-x-[20px] gap-y-[22px]">
+        {list.map(({ slug, name, logo }, i) => (
+          <m.div
+            key={slug}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="flex w-[196px] flex-col items-center text-center"
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            transition={{ duration: 0.55, delay: 0.3 + i * 0.05, ease: EASE_OUT }}
+          >
+            {/* Logos are pre-composed square tiles on their own background, shown edge to edge as on /comunidades */}
+            {logo ? (
+              <img alt="" className="object-cover" src={logo} style={{ width: tile, height: tile }} />
+            ) : (
+              <span
+                className="flex items-center justify-center bg-[#0162C8] text-[64px] font-extrabold"
+                style={{ width: tile, height: tile }}
+              >
+                {name[0]}
+              </span>
+            )}
+            <p className="mt-3 line-clamp-2 text-[21px] leading-[1.15] font-semibold text-balance text-[#FBF5E7]/85">
+              {name}
+            </p>
+          </m.div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Declarado —the institutions that declared the conference of interest (same logos as /conf «Apoyan»)
+// ---------------------------------------------------------------------------
+
+export function Declarado() {
+  return (
+    <>
+      <Ambient />
+      <div className="absolute inset-x-0 top-[110px] text-center">
+        <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
+          OWU CONF 2026
+        </Rise>
+        <Rise className="mt-3 text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.15}>
+          Declarado de interés
+        </Rise>
+      </div>
+      <m.img
+        alt="Declarado de interés ministerial — Ministerio de Educación y Cultura"
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-[390px] left-[310px] w-[1300px]"
+        initial={{ opacity: 0, y: 24 }}
+        src="/images/2025/government/mec.webp"
+        transition={{ duration: 0.7, delay: 0.4, ease: EASE_OUT }}
+      />
+      {/* Inversion baked into the asset (white boxes, knocked-out letters), as on /conf */}
+      <m.img
+        alt="Declarado de interés por la ANII — Agencia Nacional de Investigación e Innovación"
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-[780px] left-[510px] w-[900px]"
+        initial={{ opacity: 0, y: 24 }}
+        src="/images/conf/apoyan/anii.webp"
+        transition={{ duration: 0.7, delay: 0.65, ease: EASE_OUT }}
+      />
     </>
   );
 }

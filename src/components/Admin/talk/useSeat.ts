@@ -31,7 +31,8 @@ const newId = () => Math.random().toString(36).slice(2, 12) + Date.now().toStrin
 
 export const LISTEN_LABELS: Record<ListenChannel, string> = { L: "Agustín", R: "Público", mix: "Ambos" };
 /** TX1 (left) is the presenter's lav; TX2 (right) the handheld that goes around the room. */
-export const askerFor = (listen: ListenChannel) => (listen === "R" ? "audience" : "presenter");
+export const askerFor = (listen: ListenChannel): "audience" | "presenter" =>
+  listen === "R" ? "audience" : "presenter";
 
 /**
  * The Mac side of the talk: this tab attaches to a physical Owy as its laptop audio (the DJI
@@ -198,7 +199,8 @@ export function useSeat(position: TalkPosition | null) {
     }
     if (event !== "command" || !attached) return;
     const command = payload as TalkCommand;
-    if (seen.current.has(command.id)) return;
+    // This tab sends its own slide (above): a remote's copy would only race it.
+    if (command.message.type === "talk" || seen.current.has(command.id)) return;
     seen.current.add(command.id);
     if (seen.current.size > 200) seen.current = new Set([...seen.current].slice(-100));
     runLocal(command.message);
@@ -214,6 +216,18 @@ export function useSeat(position: TalkPosition | null) {
 
   const remoteOnline =
     !attached && remote !== null && remote.attached !== null && now - remote.receivedAt < SEAT_STALE_MS;
+
+  // A seat elsewhere hears the slide too, as that seat reports talk mode and the mic: the bridge,
+  // seated with no tab, has no deck of its own to read it from. Every console sends the same.
+  const remoteSeat = remoteOnline ? remote.seat : null;
+  const remoteTalk = remote?.talk ?? false;
+  const remoteListen = remote?.listen ?? "L";
+  useEffect(() => {
+    if (!remoteSeat) return;
+    const context =
+      remoteTalk && slide ? { slide: talkContext({ slide, step: 0 }), asker: askerFor(remoteListen) } : null;
+    relayRef.current({ id: newId(), message: { type: "talk", talk: context } });
+  }, [remoteSeat, remoteTalk, remoteListen, slide]);
 
   /** Owy, from this tab: straight to the bridge as the seat, through the relay otherwise. */
   const command = useCallback(

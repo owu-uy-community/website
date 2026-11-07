@@ -12,6 +12,7 @@ import { Input } from "components/shared/ui/input";
 import { Label } from "components/shared/ui/label";
 import { Switch } from "components/shared/ui/switch";
 import { Textarea } from "components/shared/ui/textarea";
+import { findSound } from "lib/launchpad/sounds";
 import { SCENES, parseSceneParams, type SceneId } from "lib/owy-stage/scenes";
 
 /** Live edits: long enough that typing is not interrupted, short enough to feel live. */
@@ -88,8 +89,10 @@ export const PARAM_LABELS: Record<string, string> = {
   label2: "Cámara 2",
   label3: "Cámara 3",
   captions: "Subtítulos",
+  hint: "Consejo cuando Owy está callada",
   // Charla: Owy, en vivo (the console at /admin/owy/charla drives these)
   slide: "Slide",
+  build: "Paso de la slide",
   who: "Quién responde",
   focus: "Pregunta en foco",
   blank: "Pantalla en negro",
@@ -164,7 +167,18 @@ export const PARAM_LABELS: Record<string, string> = {
   photo: "Foto",
   accounts: "Cuentas",
   law: "Ley",
+  sound: "Sonido al llegar a cero",
+  shift: "Corrimiento (minutos)",
+  list: "Mostrar las rondas",
+  startsIn: "Texto · empieza en",
+  endsIn: "Texto · termina en",
+  nextIn: "Texto · próxima ronda en",
+  doneText: "Texto · al terminar",
 };
+
+/** How an enum param's value reads in the picker: a sound by its launchpad name. */
+const optionLabel = (key: string, value: string) =>
+  key === "sound" ? (findSound(value)?.name ?? "Sin sonido") : value;
 
 /** The label of a scene param; a key nobody named yet is spelled out from itself. */
 export const labelFor = (key: string) =>
@@ -199,6 +213,14 @@ function boundsOf(schema: z.ZodType | undefined): { maxLength?: number; min?: nu
     min: bag?.minValue ?? undefined,
     max: bag?.maxValue ?? undefined,
   };
+}
+
+/** The values of an enum param (the wall's sounds, the traffic light), or undefined for anything else. */
+function optionsOf(schema: z.ZodType | undefined): string[] | undefined {
+  const inner = (schema as { unwrap?: () => unknown } | undefined)?.unwrap?.() ?? schema;
+  const options = (inner as { options?: unknown[] } | undefined)?.options;
+
+  return options?.every((option) => typeof option === "string") ? (options as string[]) : undefined;
 }
 
 /**
@@ -489,6 +511,31 @@ export function SceneParams({
                 <Switch checked={Boolean(value)} onCheckedChange={(next) => set(key, next, true)} />
                 {label}
               </label>
+            );
+
+          const options = optionsOf(shape[key]);
+          if (options)
+            return (
+              <Field key={key} className="gap-1.5">
+                <FieldLabel
+                  className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
+                  htmlFor={id}
+                >
+                  {label}
+                </FieldLabel>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-raised px-2.5 text-base sm:h-9 sm:text-sm pointer-coarse:sm:h-10 pointer-coarse:sm:text-base"
+                  id={id}
+                  value={String(value ?? fallback)}
+                  onChange={(event) => set(key, event.target.value, true)}
+                >
+                  {options.map((option) => (
+                    <option key={option} value={option}>
+                      {optionLabel(key, option)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             );
 
           if (typeof fallback === "string" && fallback.includes("|"))

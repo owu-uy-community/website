@@ -1,15 +1,13 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import {
   experimental_getRealtimeToolDefinitions,
   tool,
   type Experimental_RealtimeServerEvent as RealtimeServerEvent,
-  type Experimental_RealtimeSessionConfig as RealtimeSessionConfig,
   type ToolSet,
 } from "ai";
 import { z } from "zod";
-import { VoiceAssistantEvent, type VoiceAssistantAudioData, type VoiceAssistantRequest } from "esphome-client";
+import type { VoiceAssistantAudioData, VoiceAssistantRequest } from "esphome-client";
 import {
   DEVICE_SAMPLE_RATE,
   FrameChunker,
@@ -20,57 +18,53 @@ import {
   rmsLevel,
 } from "./audio/pcm";
 import { MouthTrack } from "./audio/mouth";
-import { ExpressionDirector, jevClassifier, type Classifier } from "./expression";
-import { audioRoute, type AudioRoute } from "./audio/route";
-import { loadConfig, type BridgeConfig, type DeviceSpec } from "./config";
-import { CompanionDevice } from "./device/esphome";
-import type { DeviceHandlers } from "./device/esphome";
-import type { AudioPeer, DeviceTransport } from "./device/transport";
-import { AsyncLocalStorage } from "node:async_hooks";
+import { audioRoute, type AudioRoute, type MicRoute } from "./audio/route";
+import type { BridgeConfig, DeviceSpec } from "./config";
+import { CompanionDevice, type DeviceHandlers } from "./device/esphome";
 import { VoiceTurn, type VoiceLink } from "./device/pipeline";
+import { RouteLink } from "./device/route-link";
+import type { AudioPeer, DeviceTransport } from "./device/transport";
+import { ExpressionDirector } from "./expression";
 import { faceForPhase } from "./face";
-import { createLogger, type Logger } from "./log";
-import { FALLBACK_LINES, gatewayCascade, loadFallbackClips, type Cascade, type FallbackClip } from "./realtime/cascade";
-import { EveLink } from "./realtime/eve-link";
-import { parseModelSpecs, resolveRealtimeProvider, type RealtimeProvider } from "./realtime/models";
-import { resolveActiveEvent } from "../../../agent/lib/board";
-import { owuApi, type OwuApi, type PlacedTrackResponse } from "../../../agent/lib/owu-api";
-import {
-  PITCH_LIMITS,
-  PITCH_LINES,
-  PitchRecorder,
-  SCRIPT_PREFIX,
-  announcementText,
-  gatewayPitchExtractor,
-  isPitchRun,
-  type PitchCard,
-  type PitchExtractor,
-  type PitchKind,
-} from "./pitch";
-import { loadPromptBundle, loadVoiceOfOwyPrompt } from "./realtime/prompt";
-import type { Asker, TalkContext, VoiceStatus } from "./web/contract";
+import type { Logger } from "./log";
+import { PITCH_CLIPS, PITCH_LIMITS, PITCH_LINES, PitchRecorder, SCRIPT_PREFIX, isPitchRun, type PitchKind, type PitchLine } from "./pitch";
+import { findDuplicatePitch, placePitch, savePitchFailure } from "./pitch-board";
+import { PitchFlow, type PitchPort, type PitchRecording, type PitchVoice } from "./pitch-flow";
+import { FALLBACK_LINES, type FallbackClip } from "./realtime/cascade";
+import type { EveLink } from "./realtime/eve-link";
+import type { RealtimeProvider } from "./realtime/models";
 import { NodeRealtimeSession, type SessionStatus } from "./realtime/session";
-import {
-  buildCompanionToolSet,
-  executeToolByName,
-  loadOwyToolDefinitions,
-  resolveGridUrl,
-  type FaceState,
-  type OwyToolDefinition,
-  type ScreenCard,
-  type ScreenCommand,
-  type ToolRuntime,
-} from "./realtime/tools";
+import { buildSessionConfig, sessionInputRate, voiceFor } from "./realtime/session-config";
+import { buildCompanionToolSet, executeToolByName, type FaceState, type ScreenCommand, type ToolRuntime } from "./realtime/tools";
+import type { PitchRuntime, SharedRuntime } from "./runtime";
+import { sleep, TIMINGS } from "./timings";
+import type { Asker, DeviceStatus, TalkContext, TurnSummary, VoiceStatus } from "./web/contract";
+import { BRIDGE_TARGET, DEVICE_KEYS, describeValue, settingSpec, type SettingCheck, type SettingKey } from "./web/registry";
+
+export { loadClipPcm, loadSharedRuntime, type PitchRuntime, type SharedRuntime } from "./runtime";
+export {
+  buildSessionConfig,
+  geminiLiveOptions,
+  isAudioOnlyModel,
+  isGeminiModel,
+  sessionInputRate,
+  voiceFor,
+} from "./realtime/session-config";
 
 /**
- * owy companion bridge — one process per venue laptop.
+ * owy companion bridge — one process per venue Mac: Owy's voice box.
  *
- * For every configured device it keeps one ESPHome native-API connection and
- * one Gemini Live session, and turns each device-initiated voice run into a
- * realtime conversation turn. See `companion/README.md` for the runbook.
+ * For every configured device it keeps one realtime session and, when the
+ * knob is on the network, one ESPHome native-API link to it. A turn starts
+ * with a tap (the knob's, or the panel's) and runs through the Mac's audio —
+ * the knob only shows the face and the words. See `companion/README.md`.
  */
 
 const OUTPUT_FRAME_BYTES = bytesForMs(32, DEVICE_SAMPLE_RATE); // 1024 B, the device's own chunk size
+/** A tap with nowhere to listen: the Mac's mic is down and no browser is attached. */
+const NO_MIC_LINE = "No tengo micrófono: conectá el de la Mac o un navegador.";
+/** A turn's kind: a conversation, a pitch, or the answer to Owy's question about a pitch. */
+type TurnKind = "turn" | PitchKind;
 
 /**
  * How a turn is answered. Fixed when the tap is accepted (a socket that comes
@@ -82,23 +76,14 @@ const OUTPUT_FRAME_BYTES = bytesForMs(32, DEVICE_SAMPLE_RATE); // 1024 B, the de
  */
 export type TurnPath = "realtime" | "fallback" | "cascade" | "offline" | "pitch";
 
-/** A connect already under way gets this long before a physical tap is answered through the cascade instead. */
-const ACCEPT_WAIT_MS = 1_500;
-/** With no board up nothing keeps the voice warm: a console line waits this long for a cold connect. */
-const OWN_CONNECT_WAIT_MS = 4_000;
-/** Transcribe + eve/text model + first TTS audio, with room for a slow network. */
-const CASCADE_THINKING_MS = 45_000;
-/** The gateway caps a realtime session at 25 min; renew it between turns well before. */
-const ROTATE_AFTER_MS = 20 * 60_000;
-const KEEP_WARM_EVERY_MS = 30_000;
-/** A voice turn's own recorder: a pause this long ends the utterance (the realtime model has its own VAD). */
-const TURN_LIMITS = { silenceMs: 900, maxMs: 30_000, minSpeechMs: 300 };
 /** Provider errors that are noise, not a broken turn (an OpenAI commit after its server VAD already committed, etc.). */
 const BENIGN_ERROR_CODES = new Set([
   "input_audio_buffer_commit_empty",
   "conversation_already_has_active_response",
   "response_cancel_not_active",
 ]);
+/** After eve fails, the local brain answers alone this long (eve is not asked, so no turn waits on it). */
+const EVE_BREAKER_MS = 60_000;
 /** Cascade TTS has no transcript marks: roughly how fast Owy speaks, to cue faces per sentence. */
 // ponytail: fixed speaking rate; use TTS word timings if a provider streams them.
 const SPOKEN_CHARS_PER_SECOND = 14;
@@ -110,13 +95,6 @@ interface OwnTurn {
   isCurrent: () => boolean;
 }
 
-/** Owy's own turns have no device pipeline run: only the attached browser gets the events and the audio. */
-const peerOnlyLink = (peer: AudioPeer): VoiceLink => ({
-  sendEvent: (event, data) => peer.sendEvent(event, data),
-  sendAudio: (audio, end) => peer.sendAudio(audio, end),
-  isPlaybackReady: () => true,
-});
-
 interface CascadeRun {
   turn: VoiceTurn;
   epoch: number;
@@ -125,153 +103,26 @@ interface CascadeRun {
   submitted: boolean;
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Gemini Live (direct) takes the device's 16 kHz as-is; the AI Gateway's realtime endpoint wants 24 kHz PCM16. */
-export function sessionInputRate(provider: RealtimeProvider | undefined): number {
-  return provider?.provider === "gateway" ? GEMINI_OUTPUT_SAMPLE_RATE : DEVICE_SAMPLE_RATE;
-}
-
-export function buildSessionConfig(options: {
-  provider: RealtimeProvider;
-  instructions: string;
-  voice: string;
-  tools: RealtimeSessionConfig["tools"];
-  modality: "audio" | "text";
-}): RealtimeSessionConfig {
-  const base: RealtimeSessionConfig = {
-    instructions: options.instructions,
-    outputModalities: [options.modality],
-    inputAudioFormat: { type: "audio/pcm", rate: sessionInputRate(options.provider) },
-    outputAudioFormat: { type: "audio/pcm", rate: GEMINI_OUTPUT_SAMPLE_RATE },
-    inputAudioTranscription: {},
-    outputAudioTranscription: {},
-    tools: options.tools,
-  };
-  if (options.modality === "audio") base.voice = options.voice;
-
-  const googleOptions = geminiLiveOptions(options.provider.modelId);
-  if (options.provider.provider === "google") {
-    // Non-`google` keys are merged verbatim into the Gemini `setup` message.
-    base.providerOptions = {
-      realtimeInputConfig: { automaticActivityDetection: { silenceDurationMs: 600 } },
-      contextWindowCompression: { slidingWindow: {} },
-      sessionResumption: {},
-      ...(googleOptions ? { google: googleOptions } : {}),
-    };
-  } else if (isGeminiModel(options.provider.modelId)) {
-    // The gateway rejects `turnDetection` and Gemini-native setup keys for Gemini Live
-    // (its own activity detection applies); `providerOptions.google` does pass through.
-    if (googleOptions) base.providerOptions = { google: googleOptions };
-  } else {
-    // ElevenLabs' realtime models reject `server_vad` ("use semantic_vad or null").
-    base.turnDetection = /(^|\/)eleven-/.test(options.provider.modelId ?? "")
-      ? { type: "semantic-vad" }
-      : { type: "server-vad", silenceDurationMs: 600 };
-  }
-  return base;
-}
-
-/** `google/gemini-3.8-live` through the gateway, or a bare Gemini id on the direct provider. */
-export function isGeminiModel(modelId: string | undefined): boolean {
-  return /(^|\/)gemini-/.test(modelId ?? "");
-}
-
-/** Gemini 3.8 Live only speaks audio (`outputModalities: ["text"]` is rejected); transcripts carry the text. */
-export function isAudioOnlyModel(modelId: string | undefined): boolean {
-  return /^gemini-\d+\.\d+-live/.test(modelId?.split("/").at(-1) ?? "");
-}
-
 /**
- * Gemini 3.8 Live defaults to asynchronous (`NON_BLOCKING`) tool calls; the
- * bridge's turn machine expects the classic blocking flow (call → output →
- * spoken answer), so pin `BLOCKING` on the latency-optimised model. The
- * extended-thinking variant only accepts `NON_BLOCKING`, so it is left alone
- * (the provider adds its mandatory `thinkingLevel: "low"` by itself).
+ * One device run in modo pitch (the pitch, or an answer to Owy's question):
+ * never streamed to the model, recorded here and handed to the flow as a whole.
  */
-export function geminiLiveOptions(modelId: string | undefined): { defaultToolBehavior: "BLOCKING" } | undefined {
-  const name = modelId?.split("/").at(-1) ?? "";
-  return /^gemini-\d+\.\d+-live$/.test(name) ? { defaultToolBehavior: "BLOCKING" } : undefined;
-}
-
-/** Everything a device session needs and that is shared across devices. */
-export interface SharedRuntime {
-  config: BridgeConfig;
-  provider: RealtimeProvider;
-  definitions: Map<string, OwyToolDefinition>;
-  instructions: string;
-  gridUrl: string | undefined;
-  logger: Logger;
-  /** Provider codecs contain turn counters; each device must own its codec. */
-  createProvider?: () => RealtimeProvider;
-  /** Physical device sessions by id, so a browser can attach as one's laptop audio. */
-  sessions?: Map<string, DeviceSession>;
-  /**
-   * `eve`: the eve Owy answers (agent/channels/companion.ts) and the realtime
-   * model only hears/speaks; `local`: the realtime model is the brain with the
-   * agent's tools in-process. Absent = `local` (tests, older callers).
-   */
-  brain?: "eve" | "local";
-  eve?: EveLink;
-  /** Faces while Owy talks (COMPANION_EXPRESSIONS); `classify` absent = local guesses only. */
-  expressions?: { classify?: Classifier };
-  /** Modo pitch (the open space's marketplace); absent = a pitch run ends with "sin configurar". */
-  pitch?: PitchRuntime;
-  /** Realtime models tried after the primary (COMPANION_REALTIME_FALLBACKS); each device owns its codecs. */
-  createFallbackProviders?: () => RealtimeProvider[];
-  /** The voice loop without a realtime model; absent = a tap with no live model is declined (old behaviour). */
-  cascade?: Cascade;
-  /** Pre-rendered fallback lines, 16 kHz PCM (`pnpm companion:clips`). */
-  fallbackClips?: Partial<Record<FallbackClip, Buffer>>;
-  /** Every recorded clip by id → duration (ms): the clips manifest (pitch cues, the talk's lines). */
-  clips?: Record<string, number>;
-}
-
-export interface PitchRuntime {
-  extract: PitchExtractor;
-  api: Pick<OwuApi, "tracks">;
-  /** The event the knob proposes into (OWY_EVENT_ID or the active one), resolved on first use. */
-  openSpaceId: () => Promise<string>;
-  /** Pre-rendered cues by id → duration (ms); empty = Owy says the cues through the model. */
-  clips: Record<string, number>;
-}
-
-/** A pitch being recorded: never streamed to the model, transcribed as a whole once the person taps again. */
-interface PitchRun {
-  kind: PitchKind;
-  recorder: PitchRecorder;
+interface PitchRun extends PitchRecording {
   abort: AbortController;
   epoch: number;
   turn: VoiceTurn;
+  resolveDone(wav: Buffer | null): void;
+  resolveEnded(): void;
 }
 
-/**
- * The knob's voice link when a browser is attached as its laptop audio: every
- * pipeline event reaches both, `accepted` opens the browser mic, and model
- * audio goes to whichever side owns the output this turn. Readiness stays the
- * physical device's (its mic must have released the bus before TTS).
- */
-class PeerLink implements VoiceLink {
-  constructor(
-    private readonly device: DeviceTransport,
-    private readonly peer: AudioPeer,
-    private readonly output: () => AudioRoute
-  ) {}
-  sendEvent(event: Parameters<VoiceLink["sendEvent"]>[0], data?: Parameters<VoiceLink["sendEvent"]>[1]): void {
-    this.device.sendEvent(event, data);
-    this.peer.sendEvent(event, data);
-  }
-  sendAudio(audio: Buffer, end = false): void {
-    if (this.output() === "laptop") this.peer.sendAudio(audio, end);
-    else this.device.sendAudio(audio, end);
-  }
-  isPlaybackReady(): boolean {
-    return this.device.isPlaybackReady();
-  }
-}
 
 export interface DeviceSessionOptions {
-  connectDevice?: (spec: DeviceSpec, handlers: DeviceHandlers, logger: Logger) => Promise<DeviceTransport>;
+  connectDevice?: (
+    spec: DeviceSpec,
+    handlers: DeviceHandlers,
+    logger: Logger,
+    options?: { signal?: AbortSignal }
+  ) => Promise<DeviceTransport>;
   /** Browser authority is server-issued; never inherit physical staff env overrides. */
   isStaff?: () => boolean;
   isMarketplaceOpen?: () => boolean;
@@ -285,10 +136,26 @@ export interface DeviceSessionOptions {
    * a browser turn still waits for it (onRequestStart → ensureSession).
    */
   lazyRealtime?: boolean;
-  /** Turn-phase face changes (listening/thinking/speaking/idle) — what the firmware derives on its own. */
+  /** Turn-phase face changes (listening/thinking/speaking/idle), the same ones the board is told. */
   onFace?: (state: FaceState) => void;
-  /** The feeling cued for the sentence being spoken (the wall mirrors it). */
-  onExpression?: (name: string, strength: number) => void;
+  /** The feeling cued for the sentence being spoken, heard `leadMs` from now (the wall mirrors it). */
+  onExpression?: (name: string, strength: number, leadMs: number) => void;
+  /** Lip shapes for every answer, the first heard `leadMs` from now (the wall's face follows them). */
+  onMouth?: (frames: string, leadMs: number) => void;
+  /** The listening mic's level (0..100), as the knob's halo gets it (the wall's and the twin's follow it). */
+  onLevel?: (level: number) => void;
+  /**
+   * A device setting changed: on the board itself (its screen, its knob — or a write of ours
+   * echoing back, which the control plane tells apart) or through this bridge's own APIs (`local`).
+   */
+  onSetting?: (key: SettingKey, value: unknown, setBy: "dispositivo" | "local") => void;
+  /** The board's link came up (first connect or back from a flap): the moment to re-apply its settings. */
+  onLinkUp?: () => void;
+  /** The control plane's settings, for Owy's own `ajustes` tool; absent: only this board's volume. */
+  settings?: {
+    get(target: string, key: SettingKey): unknown;
+    set(target: string, key: string, value: unknown): SettingCheck;
+  };
   onTool?: (event: {
     name: string;
     status: "running" | "done" | "denied" | "error";
@@ -300,9 +167,13 @@ export interface DeviceSessionOptions {
 export class DeviceSession {
   private device: DeviceTransport | null = null;
   private stopped = false;
+  /** Aborts a connect still retrying (an Owy that is off) when the session stops. */
+  private readonly connecting = new AbortController();
   private readonly toolEpoch = new AsyncLocalStorage<number>();
   private session: NodeRealtimeSession | null = null;
   private tools: ToolSet = {};
+  /** The local brain's tools (all of Owy's): the realtime model's own on `local`, eve's fallback on `eve`. */
+  private localTools: ToolSet | null = null;
   private turn: VoiceTurn | null = null;
   private requestEpoch = 0;
   private conversationId: string = randomUUID();
@@ -319,8 +190,13 @@ export class DeviceSession {
   private watchdog: NodeJS.Timeout | null = null;
   private cascadeRun: CascadeRun | null = null;
   private keepWarm: NodeJS.Timeout | null = null;
-  /** The device's native-API link is up (keep-warm only works for a board that can tap). */
+  /** The device's native-API link is up (the board is optional: turns run without it). */
   private linkUp = false;
+  /** Modo pitch: the Mac mic opens for the answer to Owy's question a moment after the question ends. */
+  private answerTimer: NodeJS.Timeout | null = null;
+  /** An error face goes back to the plain one by itself. */
+  private errorTimer: NodeJS.Timeout | null = null;
+  private micLevelAt = 0;
   /** Tools the model ran this turn: a turn that already acted is never replayed on another road. */
   private toolsRan = 0;
   private turnStartedAt = 0;
@@ -364,20 +240,22 @@ export class DeviceSession {
   /** This turn's answer as said (for the history). */
   private turnAnswer = "";
   // Per-turn audio routing (device selects win over env defaults).
-  private micSource: AudioRoute = "device";
+  private micSource: MicRoute = "device";
   private audioOutput: AudioRoute = "device";
   private peer: AudioPeer | null = null;
   private micOpenAt = 0;
-  /** Settings UI choice for boards without routing selects. */
-  private routeOverride: { mic?: AudioRoute; output?: AudioRoute } = {};
-  /** Modo pitch: the run being recorded, and the card waiting for its speaker's name. */
+  /** Device settings the board can't hold (no entity, a missing option) or only the bridge keeps (talk, host). */
+  private readonly held: Partial<Record<SettingKey, unknown>> = {};
+  /** The last finished turns, oldest first (the panel shows them). */
+  private turns: TurnSummary[] = [];
+  /** Run once the current turn is over (a voice request that would cut it short). */
+  private afterTurn: (() => void)[] = [];
+  private unsubscribeHostMic: (() => void) | null = null;
+  /** Modo pitch: this device run (a pitch or an answer), and the visitor's flow it belongs to. */
   private pitch: PitchRun | null = null;
-  private pendingName: { trackId: string; card: ScreenCard; prompted: boolean; timer: NodeJS.Timeout | null } | null =
-    null;
+  private flow: PitchFlow<PitchRun> | null = null;
   /** A line the realtime model must say verbatim this turn (the bridge's words, not the visitor's). */
   private script: string | null = null;
-  /** Settings UI choice for boards without the pitch switches. */
-  private pitchOverride: { mode?: boolean; reacts?: boolean } = {};
   /** «Owy, en vivo»: the talk around the next turns (the slide on screen, who asks); null = no talk. */
   private talk: TalkContext = null;
   /** Owy's own turn: its abort, and the timer of the line it is waiting on (a script, a clip). */
@@ -402,9 +280,8 @@ export class DeviceSession {
       deviceId: this.spec.id,
       isStaff: () =>
         this.options.isStaff?.() ?? (this.device?.isStaffMode() || this.shared.config.COMPANION_STAFF_MODE),
-      isMarketplaceOpen: () =>
-        this.options.isMarketplaceOpen?.() ??
-        (this.device?.isMarketplaceOpen() || this.shared.config.COMPANION_MARKETPLACE_OPEN),
+      // A bridge setting now (the panel's «Mercado abierto»); the control plane keeps the config current.
+      isMarketplaceOpen: () => this.options.isMarketplaceOpen?.() ?? this.shared.config?.COMPANION_MARKETPLACE_OPEN === true,
       proposalCooldownMs: this.shared.config.COMPANION_PROPOSAL_COOLDOWN_S * 1000,
       proposalHistory: this.options.proposalHistory,
       gridUrl: this.shared.gridUrl,
@@ -413,6 +290,7 @@ export class DeviceSession {
       setVolume: (pct) => {
         if (this.toolIsCurrent()) this.device?.setVolume(pct);
       },
+      ...(this.options.settings ? { settings: this.voiceSettings(this.options.settings) } : {}),
       logger: this.log,
     };
     this.runtime = runtime;
@@ -420,10 +298,12 @@ export class DeviceSession {
       // Ears and mouth only: device-local tools + the line to the eve Owy.
       const local = buildCompanionToolSet(new Map(), runtime);
       this.tools = {
-        set_volume: local.set_volume,
+        ...(local.ajustes ? { ajustes: local.ajustes } : { set_volume: local.set_volume }),
         show_on_screen: local.show_on_screen,
         hablar_con_owy: this.eveTool(this.shared.eve, runtime),
       };
+      // When eve is down the local brain answers, with every tool.
+      this.localTools = buildCompanionToolSet(this.shared.definitions, runtime);
     } else {
       this.tools = buildCompanionToolSet(this.shared.definitions, runtime);
     }
@@ -434,8 +314,7 @@ export class DeviceSession {
       buildSessionConfig({
         provider,
         instructions: this.shared.instructions,
-        // Gemini voice names do not exist on other vendors.
-        voice: isGeminiModel(provider.modelId) ? config.COMPANION_VOICE : config.COMPANION_FALLBACK_VOICE,
+        voice: voiceFor(provider, config),
         tools: toolDefinitions,
         modality: "audio",
       });
@@ -464,56 +343,80 @@ export class DeviceSession {
       onError: (error) => this.onRealtimeDropped(error.message),
     });
 
-    this.device = await (this.options.connectDevice ?? CompanionDevice.connect)(
-      this.spec,
-      {
-        onRequestStart: (request) => this.onRequestStart(request),
-        onRequestStop: () => this.onRequestStop(),
-        onAudio: (chunk) => this.onDeviceAudio(chunk),
-        onPitchSubmit: () => this.submitPitch("submit"),
-        onConnected: () => {
-          this.linkUp = true;
-          this.device?.setFace("idle");
-        },
-        onDisconnected: () => {
-          this.linkUp = false;
-          this.requestEpoch++;
-          this.cancelCascade();
-          this.pacer?.stop();
-          this.pacer = null;
-          this.turn?.finish();
-          this.session?.resetConversation();
-        },
-      },
-      this.shared.logger
-    );
-
-    if (this.stopped) {
-      this.device.close();
-      this.session.close();
-      return;
-    }
-
-    this.linkUp = true;
+    // The Mac's mic and the voice come up now; the board is optional and may take a while
+    // (or never come): it connects in the background and joins whatever is going on.
+    this.listenToHostMic();
+    const board = this.connectBoard();
+    await Promise.race([board, sleep(TIMINGS.boardWaitMs)]);
+    if (this.stopped) return;
     if (this.options.lazyRealtime) void this.ensureSession();
     else {
       await this.ensureSession();
       // Physical Owys keep a warm session: the gateway closes idle ones at 5 min and caps them at 25.
-      this.keepWarm = setInterval(() => this.warmTick(), KEEP_WARM_EVERY_MS);
+      this.keepWarm = setInterval(() => this.warmTick(), TIMINGS.keepWarmEveryMs);
     }
     if (this.stopped) return;
-    this.device.setFace("idle");
-    this.log.info("ready");
+    this.log.info(this.linkUp ? "ready" : "ready (la placa todavía no está; sigo sin ella)");
+  }
+
+  /** Connects the board (forever, retrying) and keeps the session in step with its link. */
+  private async connectBoard(): Promise<void> {
+    let device: DeviceTransport;
+    try {
+      device = await (this.options.connectDevice ?? CompanionDevice.connect)(
+        this.spec,
+        {
+          onTap: () => this.tap(),
+          onRequestStart: (request) => this.onRequestStart(request),
+          onRequestStop: () => this.onRequestStop(),
+          onAudio: (chunk) => this.onDeviceAudio(chunk),
+          // Not before the device is ours (its first telemetry arrives while it connects): those are boot values.
+          onSetting: (key, value) => {
+            if (!this.device) return;
+            // Pausa from the knob's own screen stops whatever Owy is doing.
+            if (key === "privacy" && value === true) this.hush();
+            this.options.onSetting?.(key, value, "dispositivo");
+          },
+          onConnected: () => {
+            // The first connect lands below, once the device is ours; this is the link coming back.
+            if (this.device) this.onBoardUp();
+          },
+          onDisconnected: () => {
+            // The turn goes on without the board: its audio is the Mac's; the face catches up on reconnect.
+            this.linkUp = false;
+          },
+        },
+        this.shared.logger,
+        { signal: this.connecting.signal }
+      );
+    } catch (error) {
+      if (!this.stopped) this.log.error("la placa no conectó", error);
+      return;
+    }
+    if (this.stopped) return device.close();
+    this.device = device;
+    this.onBoardUp();
+  }
+
+  /** The board's link is up (first time, or back from a flap): its face catches up, its settings get re-applied. */
+  private onBoardUp(): void {
+    this.linkUp = true;
+    const turn = this.turn;
+    this.device?.setFace(turn && !turn.finished ? faceForPhase(turn.phase) : "idle");
+    this.options.onLinkUp?.();
+    // Back from a Wi-Fi flap: the next tap should find a warm voice, not a cold handshake.
+    if (!this.options.lazyRealtime && !this.stopped && this.session) void this.ensureSession();
   }
 
   /** Between turns: reconnect a dropped session, renew an old one. */
   private warmTick(): void {
+    this.warmHostMic();
     const session = this.session;
-    if (this.stopped || !session || !this.linkUp || (this.turn && !this.turn.finished)) return;
+    if (this.stopped || !session || (this.turn && !this.turn.finished)) return;
     if (session.status === "connecting") return;
     const age = session.connectedAt ? Date.now() - session.connectedAt : 0;
-    if (age > ROTATE_AFTER_MS) this.log.info(`realtime: renuevo la sesión (${Math.round(age / 60_000)} min)`);
-    if (!session.isConnected || session.goAwayPending || age > ROTATE_AFTER_MS) void this.ensureSession(age > ROTATE_AFTER_MS);
+    if (age > TIMINGS.rotateAfterMs) this.log.info(`realtime: renuevo la sesión (${Math.round(age / 60_000)} min)`);
+    if (!session.isConnected || session.goAwayPending || age > TIMINGS.rotateAfterMs) void this.ensureSession(age > TIMINGS.rotateAfterMs);
   }
 
   /** A live, connected realtime session that will not go away mid-turn. */
@@ -536,35 +439,109 @@ export class DeviceSession {
     }
   }
 
-  // ── Device → bridge ─────────────────────────────────────────────────────
+  // ── Taps → turns ────────────────────────────────────────────────────────
 
-  private async onRequestStart(request: VoiceAssistantRequest): Promise<void> {
+  /**
+   * The knob's tap, or the panel's. Nothing going on: Owy listens (a pitch in modo pitch).
+   * Listening: the person is done — the words go to the brain (a pitch is sent). Thinking or
+   * speaking: Owy stops, with a plain face (a pitch being understood or announced is left alone).
+   */
+  tap(): void {
+    if (this.stopped || this.setting("privacy") === true) return;
+    // A tap always quiets Owy first: an answer, or a cue still playing in the browser or on the Mac.
+    this.silence();
+    const turn = this.turn;
+    if (!turn || turn.finished) {
+      void this.beginTurn(this.setting("pitch_mode") === true ? "pitch" : "turn");
+      return;
+    }
+    const pitch = this.pitch?.turn === turn ? this.pitch : null;
+    if (turn.phase === "listening") {
+      if (pitch) {
+        // Tapped twice with nothing said: taken back quietly, like a conversation (no «No escuché una propuesta»).
+        if (pitch.recorder.speechMs < pitch.recorder.limits.minSpeechMs) return this.hush();
+        return this.submitPitch("submit");
+      }
+      // Nothing said yet: a tap takes it back, quietly.
+      const spoke =
+        this.recorder?.heardSpeech || this.micPeak > (this.shared.config?.COMPANION_PITCH_VAD_RMS ?? 0.012) || this.inputTranscript.trim() !== "";
+      if (!spoke) return this.hush();
+      if (this.path === "cascade") return this.submitCascade();
+      this.session?.commitAudio();
+      turn.endListening(this.inputTranscript.trim());
+      return;
+    }
+    // A pitch being understood keeps going (the tap only cut a cue still playing); anything else Owy is doing stops.
+    if (pitch && turn.phase === "thinking") return;
+    this.hush();
+  }
+
+  /**
+   * Whatever Owy is saying stops, wherever it plays: a cue or an answer already handed to the Mac's
+   * speaker (a clip is written whole), and the attached browser's queue and clips.
+   */
+  private silence(): void {
+    const speaker = this.shared.hostSpeaker;
+    if (speaker?.busy) speaker.flush();
+    this.peer?.stopAudio?.();
+  }
+
+  /** The panel's modo pitch buttons: record a pitch now (whatever the mode says), or send the one being recorded. */
+  pitchAction(action: "start" | "submit"): void {
     if (this.stopped) return;
-    const device = this.device;
-    if (!device) return;
-    const epoch = ++this.requestEpoch;
+    this.silence();
+    if (action === "submit") return this.submitPitch("submit");
+    const turn = this.turn;
+    if (turn && !turn.finished) {
+      if (this.pitch?.turn === turn && turn.phase === "listening") return;
+      this.hush();
+    }
+    void this.beginTurn("pitch");
+  }
 
-    // The device has already moved to a new run: close ours without telling it.
+  /** The browser virtual device opened a run (its own mic); a pitch run is tagged like the firmware used to. */
+  private async onRequestStart(request: VoiceAssistantRequest): Promise<void> {
+    // While Owy waits for an answer, the next pitch run is that answer.
+    const kind: TurnKind = isPitchRun(request) ? (this.flow?.awaiting ? "answer" : "pitch") : "turn";
+    await this.beginTurn(kind, request.conversationId ?? undefined);
+  }
+
+  /**
+   * Opens a turn, with or without the board: the Mac's mic (or an attached browser) is the
+   * ear, the Mac's output (or the browser) the mouth, and the board — when it is up — only
+   * shows the face and the words.
+   */
+  private async beginTurn(kind: TurnKind, conversationId?: string): Promise<void> {
+    if (this.stopped) return;
+    // A board whose link is down gets the writes anyway (guarded, logged once): its face catches up on reconnect.
+    const device = this.device;
+    const epoch = ++this.requestEpoch;
+    this.clearAnswerPrompt();
+    this.clearErrorFace();
+
+    // A newer run supersedes the old turn without ending the new one on the device.
     if (this.turn && !this.turn.finished) this.turn.finish({ notify: false });
     this.cancelPitch();
     this.cancelCascade();
-    // Modo pitch: recording needs no model; warm it meanwhile for the announcement.
-    const kind: PitchKind | null = isPitchRun(request) ? (this.pendingName ? "name" : "pitch") : null;
+    const pitchKind: PitchKind | null = kind === "turn" ? null : kind;
+    // A conversation tap ends whatever pitch was around (what it understood is still placed).
+    if (!pitchKind) this.flow?.interrupt();
     let path: TurnPath = "pitch";
-    if (kind) void this.ensureSession();
+    // Modo pitch: recording needs no model; warm it meanwhile for what Owy says next.
+    if (pitchKind) void this.ensureSession();
     else {
       // Never hold a tap on the model when the cascade can answer: a connect already
       // under way gets a moment, then the turn starts either way. Browsers (and
       // bridges without the cascade) still wait for their session, as before.
       const session = this.session;
       if (!this.shared.cascade || this.options.lazyRealtime) await this.ensureSession();
-      else if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(ACCEPT_WAIT_MS)]);
+      else if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(TIMINGS.acceptWaitMs)]);
       if (epoch !== this.requestEpoch) return;
       const live = this.realtimeLive();
       if (!live && !this.shared.cascade) {
-        this.log.warn("declining pipeline: no realtime session");
-        device.declineRequest();
-        device.setFace("error");
+        this.log.warn("declining the turn: no realtime session");
+        device?.declineRequest();
+        this.errorFace();
         return;
       }
       // Test fakes have no provider and no tiers: they count as the primary.
@@ -577,24 +554,84 @@ export class DeviceSession {
       }
     }
 
-    if (request.conversationId) this.conversationId = request.conversationId;
+    if (conversationId) this.conversationId = conversationId;
     const peer = this.peer;
     const turn = this.openTurn(
       device,
-      peer ? new PeerLink(device, peer, () => this.audioOutput) : device,
+      this.linkFor(device),
       path,
-      // A pitch gives the person time to start and the bridge time to transcribe and place it.
-      kind
-        ? { noSpeechMs: 15_000, thinkingMs: 60_000 }
+      // A pitch gives the person time to start and the bridge time to transcribe and place it;
+      // an answer's own recorder ends it when nobody answers, so the flow can go on in this run.
+      pitchKind
+        ? { noSpeechMs: pitchKind === "answer" ? 0 : TIMINGS.pitchNoSpeechMs, thinkingMs: TIMINGS.pitchThinkingMs }
         : path === "cascade"
-          ? { thinkingMs: CASCADE_THINKING_MS }
+          ? { thinkingMs: TIMINGS.cascadeThinkingMs }
           : undefined
     );
-    device.acceptRequest();
+    device?.acceptRequest();
     if (peer) peer.mirrorAccept();
     turn.start();
-    if (kind) this.startPitch(kind, turn, epoch);
+    if (!this.micAvailable()) {
+      // Nowhere to listen: say so instead of listening to nothing.
+      this.log.warn("sin micrófono: ni el de la Mac ni un navegador enchufado");
+      this.pushCaption(NO_MIC_LINE);
+      if (!device?.showCaption) device?.showText(NO_MIC_LINE);
+      turn.fail("no-mic", NO_MIC_LINE);
+      return;
+    }
+    if (pitchKind) this.startPitch(pitchKind, turn, epoch);
     else this.startTurnRecorder(turn, epoch);
+  }
+
+  /** Whether this turn's microphone can hear anything: the device's own, the Mac's (open), or an attached browser. */
+  private micAvailable(): boolean {
+    if (this.micSource === "device") return this.device?.canPlayAudio !== false;
+    if (this.micSource === "host") return !!this.shared.hostMic?.ready;
+    return this.peer !== null;
+  }
+
+  /** An error face for a moment, then the plain one — unless a new turn started meanwhile. */
+  private errorFace(): void {
+    this.clearErrorFace();
+    const epoch = this.requestEpoch;
+    this.device?.setFace("error");
+    this.options.onFace?.("error");
+    this.errorTimer = setTimeout(() => {
+      this.errorTimer = null;
+      if (this.stopped || epoch !== this.requestEpoch || (this.turn && !this.turn.finished)) return;
+      this.device?.setFace("idle");
+      this.options.onFace?.("idle");
+    }, TIMINGS.errorFaceMs);
+    this.errorTimer.unref?.();
+  }
+
+  private clearErrorFace(): void {
+    if (this.errorTimer) clearTimeout(this.errorTimer);
+    this.errorTimer = null;
+  }
+
+  /** What Owy understood, on the board's « heard » pill. */
+  private showHeard(text: string): void {
+    const heard = text.trim();
+    if (heard) this.device?.showHeard?.(heard.slice(0, 480));
+  }
+
+  /** This turn's events and audio: the board (when it ran the turn), an attached browser, the Mac's speaker. */
+  private linkFor(device: DeviceTransport | null): VoiceLink {
+    return new RouteLink({
+      device,
+      peer: () => this.peer,
+      host: () => this.shared.hostSpeaker,
+      output: () => this.audioOutput,
+    });
+  }
+
+  /** ms from a frame leaving the pacer to it being heard where this turn plays (mouth and faces follow it). */
+  private outputLeadMs(device: DeviceTransport | null = this.device): number {
+    const config = this.shared.config;
+    if (this.audioOutput === "laptop") return config?.COMPANION_MOUTH_LATENCY_MS ?? 250;
+    if (this.audioOutput === "host") return this.shared.hostSpeaker?.latencyMs ?? config?.COMPANION_HOST_SPEAKER_LATENCY_MS ?? 150;
+    return device?.expressionLeadMs ?? 200;
   }
 
   /** The primary realtime model or one of its backups (test fakes have no tiers: they count as the primary). */
@@ -604,16 +641,15 @@ export class DeviceSession {
 
   /**
    * Fresh per-turn state and the VoiceTurn on `link` (not started): a tap's
-   * run, or one Owy starts himself in a talk (`own`: the device never opened a
-   * pipeline run, so its face follows the turn explicitly).
+   * run, or one Owy starts himself in a talk. The device's face follows the
+   * turn's phases from here; the firmware derives nothing on its own.
    */
   private openTurn(
-    /** Null for an own turn while the board is down: the browser and the wall carry it alone. */
+    /** Null while the board is down: the browser and the wall carry the turn alone. */
     device: DeviceTransport | null,
     link: VoiceLink,
     path: TurnPath,
-    timers: { noSpeechMs?: number; thinkingMs?: number } | undefined,
-    own = false
+    timers: { noSpeechMs?: number; thinkingMs?: number } | undefined
   ): VoiceTurn {
     this.path = path;
     this.lastModelAt = this.pausedAt = 0;
@@ -627,6 +663,10 @@ export class DeviceSession {
     this.inputTranscript = "";
     this.outputTranscript = "";
     this.discardedResponseId = null;
+    // An earlier turn's line (a talk's script, eve's answer) must never caption or end up in this one.
+    this.eveAnswer = null;
+    this.eveDraft = "";
+    this.currentResponseId = null;
     this.sawAudioThisTurn = false;
     this.micPeak = 0;
     this.micBytes = 0;
@@ -649,9 +689,12 @@ export class DeviceSession {
       conversationId: this.conversationId,
       timers,
       onPhase: (phase) => {
-        if (own) device?.setFace(faceForPhase(phase));
+        device?.setFace(faceForPhase(phase));
         this.options.onFace?.(faceForPhase(phase));
-        if (phase === "thinking") this.listenEndedAt = Date.now();
+        if (phase === "thinking") {
+          this.listenEndedAt = Date.now();
+          this.showHeard(this.inputTranscript);
+        }
         if (phase === "finished") {
           this.clearOwnTimer();
           this.pacer?.stop();
@@ -659,16 +702,14 @@ export class DeviceSession {
           this.expressions?.close();
           this.expressions = null;
           this.script = null;
-          if (this.pitch?.turn === this.turn) this.cancelPitch();
+          if (this.pitch?.turn === this.turn) this.endPitchRun(this.pitch);
           if (this.cascadeRun?.turn === this.turn) this.cancelCascade();
           this.recorder?.stop();
           this.recorder = null;
           this.stopWatchdog();
           this.logTurn();
           this.rememberTurn();
-          this.promptPendingName();
-          // RUN_END precedes physical playback completion. Firmware owns
-          // the return to idle and the wake-word indicator.
+          for (const run of this.afterTurn.splice(0)) run();
         }
       },
       onNoSpeech: () => {
@@ -689,6 +730,8 @@ export class DeviceSession {
         // eve keeps working on a turn nobody waits for, and the next POST would find it busy.
         this.cancelEveTurn();
         if (!this.options.lazyRealtime) void this.ensureSession();
+        // Something went wrong: the face says so for a moment (a deliberate stop never comes here).
+        this.errorFace();
       },
     });
     return this.turn;
@@ -705,7 +748,7 @@ export class DeviceSession {
     if (!this.shared.cascade) return;
     if (this.path === "cascade") this.cascadeRun = { turn, epoch, abort: new AbortController(), submitted: false };
     const recorder = new PitchRecorder({
-      limits: TURN_LIMITS,
+      limits: TIMINGS.turn,
       rmsThreshold: this.shared.config?.COMPANION_PITCH_VAD_RMS,
       repeatSilence: true,
       onSpeechStart: () => {
@@ -759,12 +802,19 @@ export class DeviceSession {
     const turn = this.turn;
     if (!turn || turn.finished || this.path === "cascade") {
       // Between turns: reconnect now so the next tap finds a warm session.
-      if (!this.options.lazyRealtime && !this.stopped && this.linkUp) void this.ensureSession();
+      if (!this.options.lazyRealtime && !this.stopped) void this.ensureSession();
       return;
     }
     if (turn.phase === "speaking" || turn.deferred || this.pacer) return this.finishSpokenSoFar(turn, reason);
-    if (this.pitch?.turn === turn) {
-      if (turn.phase === "thinking") turn.fail("server_error", "Se cortó la conexión con el modelo");
+    const pitch = this.pitch;
+    if (pitch?.turn === turn) {
+      // A pitch needs no model until Owy talks: only a line already handed to it moves to the cascade's voice.
+      if (turn.phase === "thinking" && this.script) {
+        const text = this.script;
+        this.script = this.eveAnswer = null;
+        this.clearOwnTimer();
+        void this.speakText(turn, text, pitch.abort.signal, () => this.pitchIsCurrent(pitch));
+      }
       return;
     }
     this.degrade(turn, reason);
@@ -800,7 +850,7 @@ export class DeviceSession {
       return;
     }
     // Thinking: the model already took the words.
-    turn.extendThinking(CASCADE_THINKING_MS);
+    turn.extendThinking(TIMINGS.cascadeThinkingMs);
     // eve answers without the socket; `hablar_con_owy` speaks its text through the cascade.
     if (this.eveAbort) return;
     if (this.eveAnswer) {
@@ -833,7 +883,7 @@ export class DeviceSession {
     run.submitted = true;
     recorder.stop();
     if (turn.phase === "listening") turn.endListening("");
-    turn.extendThinking(CASCADE_THINKING_MS);
+    turn.extendThinking(TIMINGS.cascadeThinkingMs);
     void this.runCascade(run, recorder.wav()).catch((error: unknown) => {
       this.log.error("cascada falló", error);
       if (this.cascadeIsCurrent(run)) void this.speakFallback(run, "offline");
@@ -859,19 +909,11 @@ export class DeviceSession {
     this.options.onTranscript?.("input", text);
     this.expressions?.react(text);
     run.turn.heard(text);
+    this.showHeard(text);
 
     let answer: string;
     try {
-      answer =
-        this.shared.brain === "eve" && this.shared.eve
-          ? await this.askEve(text, signal)
-          : await cascade.answer({
-              text,
-              history: [...this.history],
-              instructions: this.shared.instructions + this.talkNote(),
-              tools: this.cascadeTools(),
-              signal,
-            });
+      answer = await this.askBrain(text, signal);
     } catch (error) {
       if (!this.cascadeIsCurrent(run)) return;
       this.log.warn("cascada: no hubo respuesta", error);
@@ -885,7 +927,7 @@ export class DeviceSession {
   /** The local brain's tools, authorized exactly like the realtime model's calls (browser grants deny writes). */
   private cascadeTools(): ToolSet {
     return Object.fromEntries(
-      Object.entries(this.tools).map(([name, definition]) => {
+      Object.entries(this.localTools ?? this.tools).map(([name, definition]) => {
         const execute = definition.execute;
         if (!execute) return [name, definition];
         return [
@@ -1006,6 +1048,7 @@ export class DeviceSession {
     const totalMs = Date.now() - this.turnStartedAt;
     this.log.info(`turn path=${this.path} ttfa=${ttfaMs === null ? "-" : seconds(ttfaMs)} total=${seconds(totalMs)}`);
     this.lastTurn = { path: this.path, ttfaMs, totalMs, at: new Date().toISOString() };
+    this.turns = [...this.turns.slice(-4), this.lastTurn];
     this.turnStartedAt = 0;
   }
 
@@ -1053,15 +1096,7 @@ export class DeviceSession {
     }
     let answer = "";
     try {
-      if (eve) answer = await this.askEve(text, abort.signal, eve, this.runtime, talk);
-      else if (this.shared.cascade)
-        answer = await this.shared.cascade.answer({
-          text,
-          history: [...this.history],
-          instructions: this.shared.instructions + this.talkNote(talk),
-          tools: this.cascadeTools(),
-          signal: abort.signal,
-        });
+      answer = await this.askBrain(text, abort.signal, this.runtime, talk);
     } catch (error) {
       if (!isCurrent()) return;
       this.log.warn("charla: el cerebro no respondió", error);
@@ -1077,6 +1112,8 @@ export class DeviceSession {
   hush(): void {
     this.ownAbort?.abort();
     this.clearOwnTimer();
+    // Also what outlived its turn (a cue, the tail of an answer still queued in the browser).
+    this.silence();
     void this.onRequestStop();
   }
 
@@ -1093,19 +1130,20 @@ export class DeviceSession {
     this.chooseRoutes();
     const peer = this.peer;
     // ponytail: the device's own speaker only plays inside a run it starts; add a firmware action if a talk needs it.
-    if (!peer || this.audioOutput !== "laptop")
-      throw new Error("Para que Owy hable solo, la salida de audio tiene que ser la laptop (este navegador).");
+    if (this.audioOutput === "device" || (this.audioOutput === "laptop" && !peer))
+      throw new Error("Para que Owy hable solo, la salida tiene que ser la Mac o un navegador enchufado.");
     if (this.turn && !this.turn.finished) this.hush();
     const epoch = ++this.requestEpoch;
+    this.clearErrorFace();
     const session = this.session;
-    if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(ACCEPT_WAIT_MS)]);
-    else if (!board && !this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(OWN_CONNECT_WAIT_MS)]);
+    if (session?.status === "connecting") await Promise.race([session.whenSettled(), sleep(TIMINGS.acceptWaitMs)]);
+    else if (!board && !this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(TIMINGS.ownConnectWaitMs)]);
     if (epoch !== this.requestEpoch || this.stopped || this.peer !== peer) return null;
 
-    const turn = this.openTurn(board, peerOnlyLink(peer), "realtime", { thinkingMs: CASCADE_THINKING_MS }, true);
+    const turn = this.openTurn(board, this.linkFor(null), "realtime", { thinkingMs: TIMINGS.cascadeThinkingMs });
     const abort = new AbortController();
     this.ownAbort = abort;
-    peer.mirrorAccept(true);
+    peer?.mirrorAccept(true);
     turn.start();
     turn.endListening(question);
     if (question) {
@@ -1164,11 +1202,17 @@ export class DeviceSession {
   }
 
   /** A recorded line the attached browser plays from public/companion-audio/clips; false when there is none. */
-  private playOwnClip({ turn, isCurrent }: OwnTurn, text: string, clip: string): boolean {
+  private playOwnClip(
+    { turn, isCurrent }: Pick<OwnTurn, "turn" | "isCurrent">,
+    text: string,
+    clip: string,
+    /** A talk's line is the offline road; a pitch cue keeps the pitch's. */
+    path: TurnPath | null = "offline"
+  ): boolean {
     const ms = this.clipMs(clip);
     const peer = this.peer;
     if (ms <= 0 || !peer?.playClip || !isCurrent()) return false;
-    this.path = "offline";
+    if (path) this.path = path;
     this.firstAudioAt ||= Date.now();
     turn.beginSpeaking(text);
     peer.playClip(clip);
@@ -1197,8 +1241,8 @@ export class DeviceSession {
   }
 
   /** The talk, for the local brain's instructions (eve gets it in the turn's attributes instead). */
-  private talkNote(talk: TalkContext = this.talk): string {
-    if (!talk || this.shared.brain === "eve") return "";
+  private talkNote(talk: TalkContext = this.talk, local = this.shared.brain !== "eve"): string {
+    if (!talk || !local) return "";
     return `\n\n## Charla en vivo\nEstás co-presentando una charla con Agustín frente a público. Respuestas de hasta veinte segundos, una sola idea, y devolvele la palabra. ${
       talk.asker === "audience" ? "Ahora te habla alguien del público: respondele a esa persona." : "Ahora te habla Agustín."
     }\nEn pantalla: ${talk.slide}`;
@@ -1211,38 +1255,206 @@ export class DeviceSession {
   }
 
   get connected(): boolean {
-    return this.device !== null;
+    return this.linkUp;
   }
 
-  /** Current routing and where it comes from (device selects, settings UI, or env). */
-  audioRouting(): { mic: AudioRoute; output: AudioRoute; source: "device" | "override" | "env" } {
-    const config: Partial<BridgeConfig> = this.shared.config ?? {}; // test fakes omit config
-    const fromDevice = this.device?.getMicSource?.() ?? null;
-    if (fromDevice !== null)
-      return { mic: fromDevice, output: this.device?.getAudioOutput?.() ?? "device", source: "device" };
-    const overridden = this.routeOverride.mic !== undefined || this.routeOverride.output !== undefined;
+  // ── Settings (registry keys of this device) ─────────────────────────────
+
+  /** A device setting in effect: what the bridge holds for it, else the board's, else the env default. */
+  setting(key: SettingKey): unknown {
+    if (Object.hasOwn(this.held, key)) return this.held[key];
+    const board = this.boardSetting(key);
+    return board !== undefined ? board : settingDefault(key, this.shared.config);
+  }
+
+  /** Every device setting in effect, and the ones only the bridge keeps for this board. */
+  settingValues(): Record<string, unknown> {
+    return Object.fromEntries(DEVICE_KEYS.map((key) => [key, this.setting(key) ?? null]));
+  }
+
+  heldSettings(): string[] {
+    return Object.keys(this.held);
+  }
+
+  /**
+   * Writes a device setting: to the board when it has the entity (pausa, brillo, animaciones —
+   * checked once the board answers), kept here otherwise (modes, routing). Applies from the next
+   * turn for routes and modes, at once for the rest.
+   */
+  applySetting(key: SettingKey, value: unknown): void {
+    const spec = settingSpec(key);
+    if (spec.scope !== "device") return;
+    const device = this.device;
+    if (!this.writeBoard(key, value)) this.held[key] = value;
+    else {
+      delete this.held[key];
+      if (device?.readSetting?.(key) !== undefined)
+        setTimeout(() => {
+          if (this.device !== device || this.stopped || device.readSetting?.(key) === value) return;
+          this.held[key] = value;
+          this.log.info(`${spec.label}: la placa no tiene «${describeValue(key, value)}»; lo guarda el bridge`);
+        }, 1000).unref?.();
+    }
+    if (key === "mic" && value === "host") this.shared.hostMic?.ensureOpen();
+    if (key === "output" && value === "host") this.shared.hostSpeaker?.ensureOpen();
+    if (key === "talk" && value !== true) this.talk = null;
+    // Pausa stops whatever Owy is doing; the knob's taps are ignored until it is lifted.
+    if (key === "privacy" && value === true && this.turn && !this.turn.finished) this.hush();
+  }
+
+  /** The board's value: the registry's reader, or a device that routes its own audio (the browser). */
+  private boardSetting(key: SettingKey): unknown {
+    const device = this.device;
+    if (!device) return undefined;
+    const value = device.readSetting?.(key);
+    if (value !== undefined) return value;
+    if (key === "mic") return device.getMicSource?.() ?? undefined;
+    if (key === "output") return device.getAudioOutput?.() ?? undefined;
+    return undefined;
+  }
+
+  /** True when the board took the value (it has the entity); false = nowhere to put it, the bridge holds it. */
+  private writeBoard(key: SettingKey, value: unknown): boolean {
+    const device = this.device;
+    if (!device?.writeSetting || device.readSetting?.(key) === undefined) return false;
+    device.writeSetting(key, value);
+    return true;
+  }
+
+  /** What the panel shows for this device (the control plane's report). */
+  deviceStatus(): DeviceStatus {
+    const info = (this.linkUp ? this.device?.info?.() : undefined) ?? {};
+    const phase = this.turn && !this.turn.finished ? this.turn.phase : "idle";
     return {
-      mic: this.routeOverride.mic ?? audioRoute(config.COMPANION_MIC_SOURCE),
-      output: this.routeOverride.output ?? audioRoute(config.COMPANION_AUDIO_OUTPUT),
-      source: overridden ? "override" : "env",
+      id: this.spec.id,
+      host: this.spec.host,
+      connected: this.linkUp,
+      ...(info.firmware ? { firmware: info.firmware } : {}),
+      ...(info.face ? { face: info.face } : {}),
+      phase: phase === "listening" || phase === "thinking" || phase === "speaking" ? phase : "idle",
+      peer: this.peer !== null,
+      staff: this.device?.isStaffMode() ?? false,
+      voice: this.voiceStatus(),
+      turns: this.turns,
+      values: this.settingValues() as DeviceStatus["values"],
+      held: this.heldSettings(),
     };
   }
 
-  /** From the settings UI: writes the device select when the board has one, otherwise remembers it here. */
-  setAudioRouting(which: "mic" | "output", route: AudioRoute): void {
-    if (this.device?.getMicSource?.() !== null && this.device?.setAudioRoute) this.device.setAudioRoute(which, route);
-    else this.routeOverride[which] = route;
+  /**
+   * The `ajustes` tool's port: device settings are this board's, the rest the bridge's. Pausing
+   * the mic by voice waits for the answer to end (the switch would cut it mid-sentence).
+   */
+  private voiceSettings(port: NonNullable<DeviceSessionOptions["settings"]>): NonNullable<ToolRuntime["settings"]> {
+    const target = (key: SettingKey) => (settingSpec(key).scope === "bridge" ? BRIDGE_TARGET : this.spec.id);
+    return {
+      get: (key) => (target(key) === BRIDGE_TARGET ? port.get(BRIDGE_TARGET, key) : this.setting(key)),
+      set: (key, value) => {
+        if (!this.toolIsCurrent()) return { ok: false, error: "el turno terminó" };
+        if (key === "privacy" && value === true && this.turn && !this.turn.finished) {
+          this.afterTurn.push(() => port.set(target(key), key, value));
+          return { ok: true, value, later: "cuando termine de hablar" };
+        }
+        return port.set(target(key), key, value);
+      },
+    };
   }
 
-  /** Device selects (mic_source / audio_output) first, env defaults otherwise; laptop needs an attached browser. */
+  /** The panel's «Tono de prueba» aims at the Mac; a board has no speaker. */
+  testTone(): void {
+    throw new Error("este dispositivo no tiene parlante; el tono va en la Mac");
+  }
+
+  /** The panel unlocks staff on the board (it locks itself after 10 minutes), or locks it. */
+  setStaff(on: boolean): void {
+    if (!this.device?.setStaff) throw new Error("este dispositivo no tiene modo staff");
+    this.device.setStaff(on);
+  }
+
+  /** A turn of this device is under way (a restart waits for none). */
+  get busy(): boolean {
+    return (!!this.turn && !this.turn.finished) || this.flow !== null;
+  }
+
+  /** Current routing and where it comes from (the board, what the bridge holds, or env). */
+  audioRouting(): { mic: MicRoute; output: AudioRoute; source: "device" | "override" | "env" } {
+    const source =
+      Object.hasOwn(this.held, "mic") || Object.hasOwn(this.held, "output")
+        ? "override"
+        : this.boardSetting("mic") !== undefined
+          ? "device"
+          : "env";
+    return { mic: audioRoute(this.setting("mic")), output: audioRoute(this.setting("output")), source };
+  }
+
+  /** From the talk console or the local page: like the panel, and reported back to it. */
+  setAudioRouting(which: "mic" | "output", route: AudioRoute): void {
+    this.applySetting(which, route);
+    this.options.onSetting?.(which, route, "local");
+  }
+
+  /** The Mac's own mic feeds this device's turns while its route says so. */
+  private listenToHostMic(): void {
+    this.unsubscribeHostMic?.();
+    this.unsubscribeHostMic =
+      this.shared.hostMic?.onPcm((pcm) => {
+        if (this.micSource !== "host") return;
+        // No echo cancellation: while (and right after) Owy plays on the Mac, its mic hears the room's PA.
+        if (this.shared.hostSpeaker?.busy && this.pitch?.turn !== this.turn) return;
+        this.onMicPcm(pcm);
+      }) ?? null;
+    this.warmHostMic();
+  }
+
+  /** The Mac's mic is opened ahead of the tap that needs it: no clipped first words. */
+  private warmHostMic(): void {
+    const routing = this.audioRouting();
+    if (this.shared.hostMic && routing.mic === "host") this.shared.hostMic.ensureOpen();
+    if (routing.output === "host") this.shared.hostSpeaker?.ensureOpen();
+  }
+
+  /**
+   * The panel's mic / output settings (a device that is its own audio — the browser — says so
+   * itself), with what is actually there: the Mac's mic must be open and hearing, the Mac's
+   * output open, a browser attached for laptop. A device with audio of its own is the fallback;
+   * the knob has none, so its turn stays on the Mac — listening fails cleanly (beginTurn) and the
+   * answer goes on screen only.
+   */
   private chooseRoutes(): void {
     const routing = this.audioRouting();
     let mic = routing.mic;
     let output = routing.output;
-    if ((mic === "laptop" || output === "laptop") && !this.peer) {
-      this.log.warn("laptop audio requested but no browser is attached to this device; using the device");
-      mic = output = "device";
+    const own = this.device?.canPlayAudio !== false;
+    const detail = (status: { health: string; detail?: string } | undefined) =>
+      status ? `${status.health}${status.detail ? ` (${status.detail})` : ""}` : "no disponible";
+    if (mic === "host") {
+      const hostMic = this.shared.hostMic;
+      hostMic?.ensureOpen();
+      if (!hostMic?.ready) {
+        mic = own ? "device" : this.peer ? "laptop" : "host";
+        this.log.warn(
+          `mic de la Mac ${detail(hostMic?.status())}; ${mic === "device" ? "este turno usa el del dispositivo" : mic === "laptop" ? "este turno usa el navegador" : "no hay con qué escuchar"}`
+        );
+      }
     }
+    if (output === "host") {
+      const speaker = this.shared.hostSpeaker;
+      speaker?.ensureOpen();
+      if (!speaker?.ready) {
+        output = this.peer ? "laptop" : own ? "device" : "host";
+        this.log.warn(
+          `salida de la Mac ${detail(speaker?.status())}; ${output === "laptop" ? "este turno suena en el navegador" : output === "device" ? "este turno suena en el dispositivo" : "la respuesta va en pantalla"}`
+        );
+      }
+    }
+    if ((mic === "laptop" || output === "laptop") && !this.peer) {
+      this.log.warn(`laptop audio requested but no browser is attached to this device; using ${own ? "the device" : "the Mac"}`);
+      if (mic === "laptop") mic = own ? "device" : "host";
+      output = own ? "device" : "host";
+    }
+    // A device with no audio never records or plays through itself.
+    if (!own && mic === "device") mic = "host";
+    if (!own && output === "device") output = "host";
     if (mic !== this.micSource || output !== this.audioOutput)
       this.log.info(`audio routing: mic=${mic} output=${output}`);
     this.micSource = mic;
@@ -1251,6 +1463,11 @@ export class DeviceSession {
 
   get hasPeer(): boolean {
     return this.peer !== null;
+  }
+
+  /** Where this device's turn is (listening, thinking, speaking), or idle. */
+  get phase(): string {
+    return this.turn && !this.turn.finished ? this.turn.phase : "idle";
   }
 
   /** A browser (workbench) becomes this device's laptop audio until it detaches or disconnects. */
@@ -1272,8 +1489,18 @@ export class DeviceSession {
   private onMicPcm(pcm16k: Buffer): void {
     const turn = this.turn;
     if (!turn || turn.phase !== "listening") return;
-    this.micPeak = Math.max(this.micPeak, rmsLevel(pcm16k));
+    const level = rmsLevel(pcm16k);
+    this.micPeak = Math.max(this.micPeak, level);
     this.micBytes += pcm16k.length;
+    // The knob's listening halo follows this mic, a few times a second (and so do the wall's and the twin's).
+    const now = Date.now();
+    if (now - this.micLevelAt >= TIMINGS.micLevelEveryMs) {
+      this.micLevelAt = now;
+      // ponytail: speech RMS sits around 0.03–0.2 of full scale; ×400 fills the ring at a normal voice. Tune by eye.
+      const pct = Math.min(100, Math.round(level * 400));
+      this.device?.sendMicLevel?.(pct);
+      this.options.onLevel?.(pct);
+    }
     // A pitch is recorded here, never streamed: the model's end-of-speech detection would cut it.
     if (this.pitch?.turn === turn) {
       this.pitch.recorder.push(pcm16k);
@@ -1285,6 +1512,8 @@ export class DeviceSession {
 
   private async onRequestStop(): Promise<void> {
     this.cancelEveTurn();
+    // A stop while the pitch is being recorded drops it; later, what was understood is still placed.
+    this.flow?.interrupt();
     this.cancelPitch();
     this.cancelCascade();
     this.requestEpoch++;
@@ -1294,6 +1523,7 @@ export class DeviceSession {
       this.discardedResponseId = this.currentResponseId;
       this.pacer?.stop();
       this.pacer = null;
+      this.silence();
       turn.finish();
       this.session?.resetConversation();
       this.conversationId = randomUUID();
@@ -1303,18 +1533,12 @@ export class DeviceSession {
     this.device?.setFace("idle");
   }
 
+  /** The browser virtual device's own mic (the knob has none). */
   private onDeviceAudio(chunk: VoiceAssistantAudioData): void {
     const turn = this.turn;
     if (!turn || turn.phase !== "listening") return;
     // With the laptop mic the device still streams its own capture; ignore it.
-    // The first frames after the mic opens carry the tail of the "listening"
-    // haptic (motor and mic share the enclosure): drop them, they are not speech.
-    if (
-      chunk.data.length > 0 &&
-      this.micSource === "device" &&
-      Date.now() >= this.micOpenAt + (this.device?.micSettleMs ?? 0)
-    )
-      this.onMicPcm(chunk.data);
+    if (chunk.data.length > 0 && this.micSource === "device") this.onMicPcm(chunk.data);
     if (chunk.end) {
       // The browser's "Terminé el pitch" is the second tap.
       if (this.pitch?.turn === turn) {
@@ -1332,29 +1556,28 @@ export class DeviceSession {
 
   // ── Modo pitch ──────────────────────────────────────────────────────────
 
-  /** Both switches as the settings UI shows them: the device's, the settings override, or the env fallback. */
-  pitchSettings(): { mode: boolean; reacts: boolean; source: "device" | "override" | "env" } {
-    const config: Partial<BridgeConfig> = this.shared.config ?? {}; // test fakes omit config
-    const fromDevice = this.device?.isPitchMode?.() ?? null;
-    if (fromDevice !== null) {
-      return { mode: fromDevice, reacts: this.device?.isPitchReacts?.() ?? false, source: "device" };
-    }
-    const overridden = this.pitchOverride.mode !== undefined || this.pitchOverride.reacts !== undefined;
-    return {
-      mode: this.pitchOverride.mode ?? config.COMPANION_PITCH_MODE ?? false,
-      reacts: this.pitchOverride.reacts ?? config.COMPANION_PITCH_REACTS ?? false,
-      source: overridden ? "override" : "env",
-    };
+  /** Modo pitch and Owy's reply level, and where they come from (the panel, or the env). */
+  pitchSettings(): { mode: boolean; voice: PitchVoice; source: "device" | "override" | "env" } {
+    const source = Object.hasOwn(this.held, "pitch_mode") || Object.hasOwn(this.held, "pitch_voice") ? "override" : "env";
+    return { mode: this.setting("pitch_mode") === true, voice: (this.setting("pitch_voice") as PitchVoice) ?? "confirm", source };
   }
 
-  /** From the settings UI: writes the device switch when the board has one, otherwise remembers it here. */
-  setPitchSetting(which: "mode" | "reacts", on: boolean): void {
-    const device = this.device;
-    if (device?.isPitchMode && device.setSwitch && device.isPitchMode() !== null) {
-      device.setSwitch(which === "mode" ? "pitch_mode" : "pitch_reacts", on);
-    } else this.pitchOverride[which] = on;
+  /** From the talk console or the local page: like the panel, and reported back to it. */
+  setPitchMode(on: boolean): void {
+    this.applySetting("pitch_mode", on);
+    this.options.onSetting?.("pitch_mode", on, "local");
   }
 
+  setPitchVoice(voice: PitchVoice): void {
+    this.applySetting("pitch_voice", voice);
+    this.options.onSetting?.("pitch_voice", voice, "local");
+  }
+
+  private pitchVoice(): PitchVoice {
+    return this.pitchSettings().voice;
+  }
+
+  /** A pitch run opened: record it, and hand it to the visitor's flow (a new one, or the one waiting for this answer). */
   private startPitch(kind: PitchKind, turn: VoiceTurn, epoch: number): void {
     const config: Partial<BridgeConfig> = this.shared.config ?? {};
     const limits =
@@ -1364,43 +1587,97 @@ export class DeviceSession {
             silenceMs: (config.COMPANION_PITCH_SILENCE_S ?? 10) * 1000,
             maxMs: (config.COMPANION_PITCH_MAX_S ?? 120) * 1000,
           }
-        : PITCH_LIMITS.name;
-    // Owy says it is listening from the laptop; the room mic hears that too, so recording waits it out.
-    const cueMs = kind === "pitch" ? this.playClip("pitch-listen") : 0;
-    const recorder = new PitchRecorder({
+        : PITCH_LIMITS.answer;
+    // Owy says it is listening. People start talking right away, over it: nothing is dropped, and
+    // the extractor is told to leave Owy's line out (an answer waits for the question to end).
+    const cueMs = kind === "pitch" && this.pitchVoice() !== "silent" ? this.playClip("pitch-listen") : 0;
+    let resolveDone: (wav: Buffer | null) => void = () => {};
+    let resolveEnded: () => void = () => {};
+    const run: PitchRun = {
       kind,
-      limits,
-      rmsThreshold: config.COMPANION_PITCH_VAD_RMS,
-      ignoreMs: cueMs > 0 ? cueMs + 400 : 0,
-      onSpeechStart: () => {
-        if (this.pitch?.recorder === recorder) turn.markSpeechStarted();
-      },
-      onDone: (reason) => this.submitPitch(reason),
-    });
-    this.pitch = { kind, recorder, abort: new AbortController(), epoch, turn };
-    recorder.start();
+      epoch,
+      turn,
+      abort: new AbortController(),
+      done: new Promise<Buffer | null>((resolve) => (resolveDone = resolve)),
+      ended: new Promise<void>((resolve) => (resolveEnded = resolve)),
+      resolveDone: (wav) => resolveDone(wav),
+      resolveEnded: () => resolveEnded(),
+      live: () => this.pitchIsCurrent(run),
+      recorder: new PitchRecorder({
+        kind,
+        limits,
+        rmsThreshold: config.COMPANION_PITCH_VAD_RMS,
+        // A question Owy just asked through the laptop's speakers is still in the room for a moment.
+        ignoreMs: kind === "answer" ? 400 : 0,
+        onSpeechStart: () => {
+          if (this.pitch === run) turn.markSpeechStarted();
+        },
+        onDone: (reason) => {
+          if (this.pitch === run) this.submitPitch(reason);
+        },
+      }),
+    };
+    this.pitch = run;
+    run.recorder.start();
     this.log.info(`pitch: grabando (${kind}${cueMs > 0 ? `, aviso de ${cueMs} ms` : ""})`);
+    if (kind === "answer" && this.flow?.takeAnswer(run)) return;
+
+    // A new pitch: a flow still around keeps only what it already understood.
+    this.flow?.interrupt();
+    const runtime = this.shared.pitch;
+    if (!runtime) {
+      void run.done.then((wav) => {
+        if (!wav) return;
+        this.log.warn("pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; no se carga nada");
+        return this.sayPitchLine(run, "unconfigured");
+      });
+      return;
+    }
+    const flow = new PitchFlow<PitchRun>(this.pitchPort(runtime));
+    this.flow = flow;
+    void flow
+      .run(run)
+      .catch((error: unknown) => this.log.error("pitch failed", error))
+      .finally(() => {
+        if (this.flow === flow) this.flow = null;
+      });
   }
 
   /** Plays a pre-rendered cue where this turn's audio goes; 0 when nothing can play it. */
   private playClip(id: string): number {
     const ms = this.clipMs(id);
+    if (ms <= 0) return 0;
+    if (this.audioOutput === "host") {
+      const pcm = this.shared.pitch?.clipPcm?.[id];
+      const speaker = this.shared.hostSpeaker;
+      if (!pcm || !speaker?.ready) return 0;
+      speaker.write(pcm);
+      return ms;
+    }
     const sink = this.audioOutput === "laptop" ? this.peer : this.device;
-    if (ms <= 0 || !sink?.playClip) return 0;
+    if (!sink?.playClip) return 0;
     sink.playClip(id);
     return ms;
   }
 
   private cancelPitch(): void {
-    const pitch = this.pitch;
-    if (!pitch) return;
-    pitch.recorder.stop();
-    pitch.abort.abort();
+    const run = this.pitch;
+    if (!run) return;
+    this.endPitchRun(run);
+    run.abort.abort();
     this.pitch = null;
+  }
+
+  /** The run is over on the device: whoever waits on its recording or its end gets an answer. */
+  private endPitchRun(run: PitchRun): void {
+    run.recorder.stop();
+    run.resolveDone(null);
+    run.resolveEnded();
   }
 
   private pitchIsCurrent(p: PitchRun): boolean {
     return (
+      !this.stopped &&
       this.pitch === p &&
       p.epoch === this.requestEpoch &&
       this.turn === p.turn &&
@@ -1409,217 +1686,156 @@ export class DeviceSession {
     );
   }
 
-  /** The second tap, or the recorder's own end: the pitch is complete; transcribe and place it. */
+  /** The second tap, or the recorder's own end: the recording is complete; the flow takes it from here. */
   private submitPitch(reason: "submit" | "silence" | "cap"): void {
-    const pitch = this.pitch;
-    if (!pitch || pitch.turn.phase !== "listening") return;
-    pitch.recorder.stop();
+    const run = this.pitch;
+    if (!run || run.turn.phase !== "listening") return;
+    run.recorder.stop();
     // The second tap's buzz lands in the last frames.
-    if (reason === "submit") pitch.recorder.trimTailMs(300);
+    if (reason === "submit") run.recorder.trimTailMs(300);
     this.log.info(
-      `pitch: grabación terminada (${reason}, ${(pitch.recorder.durationMs / 1000).toFixed(1)} s, habló ${(pitch.recorder.speechMs / 1000).toFixed(1)} s)`
+      `pitch: grabación terminada (${run.kind}, ${reason}, ${(run.recorder.durationMs / 1000).toFixed(1)} s, habló ${(run.recorder.speechMs / 1000).toFixed(1)} s, pico ${Math.round(run.recorder.peak * 100)}%, mic ${this.micSource})`
     );
-    pitch.turn.endListening("");
-    void this.runPitch(pitch).catch((error) => this.log.error("pitch failed", error));
+    run.turn.endListening("");
+    if (run.kind === "pitch") {
+      // What Owy says next needs the voice: a fresh conversation, connected while the pitch is understood.
+      this.session?.resetConversation();
+      this.conversationId = randomUUID();
+      void this.ensureSession();
+    }
+    run.resolveDone(run.recorder.wav());
   }
 
-  private async runPitch(p: PitchRun): Promise<void> {
-    const runtime = this.shared.pitch;
-    if (!runtime) {
-      this.log.warn("pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; no se carga nada");
-      return this.speakScript(PITCH_LINES.unconfigured, p);
-    }
-    if (p.recorder.speechMs < p.recorder.limits.minSpeechMs) return this.speakCue("pitch-empty", PITCH_LINES.empty, p);
-    // The announcement needs the model: a fresh conversation, connected while we transcribe.
-    this.session?.resetConversation();
-    this.conversationId = randomUUID();
-    const warm = this.ensureSession();
-    if (p.kind === "name") return this.finishName(p, runtime, warm);
-
-    let card: PitchCard;
-    try {
-      card = await runtime.extract.card(p.recorder.wav(), p.abort.signal);
-    } catch (error) {
-      if (!this.pitchIsCurrent(p)) return;
-      this.log.error("pitch: no pude transcribir", error);
-      await warm;
-      return this.speakScript(PITCH_LINES.failed, p);
-    }
-    if (!this.pitchIsCurrent(p)) return;
-    const transcript = card.transcript.trim();
-    this.log.info(
-      `pitch: "${transcript}" → ${JSON.stringify({ isPitch: card.isPitch, title: card.title, speaker: card.speaker, needsTV: card.needsTV, needsWhiteboard: card.needsWhiteboard, topics: card.topics })}`
-    );
-    if (!card.isPitch || !transcript || !card.title) {
-      await warm;
-      return this.speakCue("pitch-empty", PITCH_LINES.empty, p);
-    }
-    this.options.onTranscript?.("input", transcript);
-    this.expressions?.react(transcript);
-    // The knob's « heard » pill shows the transcript.
-    this.device?.sendEvent(VoiceAssistantEvent.STT_END, [{ name: "text", value: transcript.slice(0, 480) }]);
-
-    const denial = this.options.authorizeTool?.("create_track");
-    if (denial) {
-      await warm;
-      return this.speakScript(denial, p);
-    }
-    const title = card.title;
-    const reaction = this.pitchReaction(transcript, { ...card, title }, p.abort.signal);
-    let placed: PlacedTrackResponse;
-    try {
-      placed = await runtime.api.tracks.createPlaced({
-        openSpaceId: await runtime.openSpaceId(),
-        title,
-        speaker: card.speaker ?? undefined,
-        description: card.description ?? undefined,
-        needsTV: card.needsTV,
-        needsWhiteboard: card.needsWhiteboard,
-        source: "companion",
-      });
-    } catch (error) {
-      if (!this.pitchIsCurrent(p)) return;
-      this.log.error("pitch: no pude crear la charla", error);
-      await warm;
-      const full = typeof error === "object" && error !== null && "code" in error && error.code === "CONFLICT";
-      return this.speakScript(full ? PITCH_LINES.full : PITCH_LINES.failed, p);
-    }
-    if (!this.pitchIsCurrent(p)) return;
-    const note = placed.note;
-    const screen: ScreenCard = {
-      title: note.title,
-      speaker: note.speaker ?? undefined,
-      room: note.room ?? placed.placement.room,
-      timeSlot: note.timeSlot ?? placed.placement.timeSlot,
+  /** What a visitor's flow can do with this device. */
+  private pitchPort(runtime: PitchRuntime): PitchPort<PitchRun> {
+    const since = Date.now();
+    return {
+      log: this.log,
+      extract: runtime.extract,
+      voice: () => this.pitchVoice(),
+      // A question needs an ear for the answer: the browser's own mic, or the Mac's / an attached browser.
+      canAsk: () => !!this.device?.pitchPrompt || this.micAvailable(),
+      heard: (run, transcript) => {
+        this.options.onTranscript?.("input", transcript);
+        this.expressions?.react(transcript);
+        // The knob's « heard » pill shows the transcript.
+        run.turn.heard(transcript);
+        this.showHeard(transcript);
+      },
+      say: (run, line) => this.sayPitchLine(run, line),
+      announce: (run, text) => this.announcePitch(run, text),
+      prompt: (field) => this.promptAnswer(field),
+      place: (draft) => placePitch(runtime, draft, since, { log: this.log, authorize: this.options.authorizeTool }),
+      findDuplicate: (draft, signal) => findDuplicatePitch(runtime, draft, signal, this.log),
+      showCard: (card) => this.device?.showCard(card),
+      saveFailure: (reason, draft, wav) => savePitchFailure(this.shared.config?.COMPANION_LOG_DIR, this.spec.id, reason, draft, wav, this.log),
     };
-    this.log.info(
-      `pitch: charla creada «${screen.title}» → ${screen.room} ${screen.timeSlot} (${placed.placement.reasoning})`
-    );
-    this.device?.showCard(screen);
-    const askName = !note.speaker;
-    if (askName) this.pendingName = { trackId: note.id, card: screen, prompted: false, timer: null };
-    const extra = await reaction;
-    await warm;
-    await this.speakScript(`${announcementText(screen, { askName })}${extra ? ` ${extra}` : ""}`, p);
   }
 
-  /** "Owy reacciona": one or two sentences from the eve brain about the pitch, or nothing. */
-  private pitchReaction(
-    transcript: string,
-    card: {
-      title: string;
-      speaker: string | null;
-      needsTV: boolean;
-      needsWhiteboard: boolean;
-      description: string | null;
-      topics: string[];
-    },
-    signal: AbortSignal
-  ): Promise<string> {
-    const eve = this.shared.eve;
-    if (!this.pitchReacts() || this.shared.brain !== "eve" || !eve) return Promise.resolve("");
-    const writes = !this.options.authorizeTool || this.options.authorizeTool("create_track") === null;
-    const staff = this.options.isStaff?.() ?? (this.device?.isStaffMode() || !!this.shared.config?.COMPANION_STAFF_MODE);
-    return eve
-      .turn(this.spec.id, transcript.slice(0, 3500), {
-        kind: "pitch",
-        pitch: card,
-        staff: writes && staff,
-        marketplaceOpen: false,
-        eventName: this.shared.config?.COMPANION_EVENT_NAME,
-        timeoutMs: 8_000,
-        signal,
-      })
-      .then((result) => result.text.trim())
-      .catch((error: unknown) => {
-        this.log.warn("pitch: eve no reaccionó a tiempo", error);
-        return "";
-      });
+  /**
+   * Owy asked for what the pitch missed: the answer needs a run of its own. A device with a mic
+   * of its own (the browser) opens it when told; otherwise the bridge opens one on the Mac's mic
+   * a moment after the question's run ends (`say` resolves once it has). "idle" drops a pending one.
+   */
+  private promptAnswer(field: "topic" | "name" | "idle"): void {
+    if (this.device?.pitchPrompt) return this.device.pitchPrompt(field);
+    this.clearAnswerPrompt();
+    if (field === "idle") return;
+    this.answerTimer = setTimeout(() => {
+      this.answerTimer = null;
+      if (!this.stopped && this.flow?.awaiting) void this.beginTurn("answer");
+    }, TIMINGS.answerGapMs);
+    this.answerTimer.unref?.();
   }
 
-  private pitchReacts(): boolean {
-    return this.pitchSettings().reacts;
+  private clearAnswerPrompt(): void {
+    if (this.answerTimer) clearTimeout(this.answerTimer);
+    this.answerTimer = null;
   }
 
-  /** The name step: the person answered "¿Cómo te llamás?"; the card gets its speaker. */
-  private async finishName(p: PitchRun, runtime: PitchRuntime, warm: Promise<void>): Promise<void> {
-    const pending = this.pendingName;
-    let name: string | null = null;
-    try {
-      name = (await runtime.extract.name(p.recorder.wav(), p.abort.signal)).name?.trim() || null;
-    } catch (error) {
-      this.log.warn("pitch: no pude entender el nombre", error);
+  /**
+   * A fixed line in `run`: the recording when there is one (the browser's file,
+   * or its PCM through the Mac's output; no network), Owy's live voice
+   * otherwise. Callado: errors go on the screen and a question is the knob's
+   * own hint once its mic opens. Resolves once the run is over on the device.
+   */
+  private async sayPitchLine(run: PitchRun | null, line: PitchLine): Promise<void> {
+    const text = PITCH_LINES[line];
+    const question = line === "askTopic" || line === "askName";
+    if (!run) {
+      // No run to talk in (nobody answered, the board was busy): the words go on the screen.
+      if (!question) this.device?.showText(text);
+      return;
     }
-    if (!this.pitchIsCurrent(p)) return;
-    this.clearPendingName();
-    if (!pending) return this.speakCue("pitch-empty", PITCH_LINES.empty, p);
-    if (!name) {
-      await warm;
-      return this.speakScript(PITCH_LINES.noName, p);
+    if (!this.pitchIsCurrent(run)) return;
+    if (this.pitchVoice() === "silent") {
+      if (!question) this.device?.showText(text);
+      run.turn.finish();
+      return run.ended;
     }
-    try {
-      await runtime.api.tracks.update({ id: pending.trackId, data: { speaker: name } });
-    } catch (error) {
-      if (!this.pitchIsCurrent(p)) return;
-      this.log.warn("pitch: no pude guardar el nombre", error);
-      await warm;
-      return this.speakScript(`Gracias, ${name}. No pude anotar tu nombre, pero la charla ya está en la grilla.`, p);
-    }
-    if (!this.pitchIsCurrent(p)) return;
-    this.log.info(`pitch: «${pending.card.title}» es de ${name}`);
-    this.device?.showCard({ ...pending.card, speaker: name });
-    await warm;
-    await this.speakScript(`Listo, ${name}. Gracias.`, p);
+    const clip = PITCH_CLIPS[line];
+    if (!(clip && this.playPitchClip(run, clip, text))) await this.speakScript(text, run);
+    return run.ended;
   }
 
-  /** The realtime model says the bridge's line in Owy's voice, through the normal speaking pipeline. */
+  /** The card is on the board: Owy says where (Callado: the card on screen is enough). */
+  private async announcePitch(run: PitchRun | null, text: string): Promise<void> {
+    if (!run || !this.pitchIsCurrent(run)) return;
+    if (this.pitchVoice() === "silent") {
+      run.turn.finish();
+      return run.ended;
+    }
+    await this.speakScript(text, run);
+    return run.ended;
+  }
+
+  /** A recorded cue: the attached browser plays the file, the board's speaker gets its PCM; false when neither can. */
+  private playPitchClip(run: PitchRun, clip: string, text: string): boolean {
+    const isCurrent = () => this.pitchIsCurrent(run);
+    if (this.audioOutput === "laptop") return this.playOwnClip({ turn: run.turn, isCurrent }, text, clip, null);
+    const pcm = this.shared.pitch?.clipPcm?.[clip];
+    if (!pcm || !isCurrent()) return false;
+    this.turnAnswer = text;
+    this.pushCaption(text);
+    this.options.onTranscript?.("output", text);
+    this.expressions?.write(text, true);
+    this.startSpeaking(run.turn, text);
+    for (const frame of this.chunker.push(pcm)) this.pacer?.push(frame);
+    this.finishSpeaking(run.turn, text);
+    return true;
+  }
+
+  /**
+   * The realtime model says the bridge's line in Owy's voice, through the
+   * normal speaking pipeline; no live model (or one that never starts the
+   * line) → the cascade's voice; no voice at all → the screen.
+   */
   private async speakScript(text: string, p: PitchRun): Promise<void> {
     if (!this.pitchIsCurrent(p)) return;
-    if (!this.session?.isConnected) await this.ensureSession();
+    if (!this.realtimeLive()) await Promise.race([this.ensureSession(), sleep(TIMINGS.ownConnectWaitMs)]);
     if (!this.pitchIsCurrent(p)) return;
+    if (!this.realtimeLive()) {
+      this.log.warn("pitch: sin modelo realtime para hablar; va por la voz de la cascada");
+      return this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
+    }
     this.script = text;
     // The caption is the script itself (response-done pushes `eveAnswer`); the expressions follow its sentences.
     this.eveAnswer = text;
     if (this.shared.brain === "eve") this.expressions?.write(text, true);
-    if (!this.session?.isConnected) {
-      this.log.warn("pitch: sin modelo realtime para hablar; va por la voz de la cascada");
-      this.script = null;
-      this.eveAnswer = null;
-      return this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
-    }
-    this.session.sendText(SCRIPT_PREFIX + text);
-  }
-
-  /** A pre-rendered cue when the laptop can play it (instant), the spoken line otherwise. */
-  private async speakCue(clip: string, text: string, p: PitchRun): Promise<void> {
-    if (!this.pitchIsCurrent(p)) return;
-    if (this.playClip(clip) > 0) {
-      p.turn.finish();
-      return;
-    }
-    await this.speakScript(text, p);
-  }
-
-  /** The announcement ended: now the knob invites the tap that gives the name, for 20 s. */
-  private promptPendingName(): void {
-    const pending = this.pendingName;
-    if (!pending || pending.prompted) return;
-    pending.prompted = true;
-    if (this.device?.pitchPrompt) this.device.pitchPrompt("name");
-    else this.device?.showText(PITCH_LINES.askName);
-    pending.timer = setTimeout(() => {
-      if (this.pendingName !== pending) return;
-      this.log.info(`pitch: «${pending.card.title}» queda sin nombre`);
-      this.clearPendingName();
-    }, 20_000);
-  }
-
-  private clearPendingName(): void {
-    const pending = this.pendingName;
-    if (!pending) return;
-    if (pending.timer) clearTimeout(pending.timer);
-    this.pendingName = null;
-    if (pending.prompted) this.device?.pitchPrompt?.("idle");
+    this.session!.sendText(SCRIPT_PREFIX + text);
+    this.clearOwnTimer();
+    this.ownTimer = setTimeout(
+      () => {
+        this.ownTimer = null;
+        if (!this.pitchIsCurrent(p) || this.firstAudioAt || p.turn.phase !== "thinking" || this.script !== text) return;
+        this.log.warn("pitch: el modelo no dijo el guion; va por la voz de la cascada");
+        this.script = this.eveAnswer = null;
+        this.session?.resetConversation();
+        void this.ensureSession();
+        void this.speakText(p.turn, text, p.abort.signal, () => this.pitchIsCurrent(p));
+      },
+      2 * (this.shared.config?.COMPANION_ACK_MS ?? 2500)
+    );
   }
 
   // ── Model → device ──────────────────────────────────────────────────────
@@ -1650,6 +1866,8 @@ export class DeviceSession {
         this.inputTranscript = [...this.inputItems.values()].join(" ").replace(/\s{2,}/g, " ");
         // Listeners (the workbench) append what they receive: only the new words.
         this.options.onTranscript?.("input", delta);
+        // Gemini's transcript often lands after the turn moved on: the pill catches up.
+        if (turn.phase !== "listening") this.showHeard(this.inputTranscript);
         // With the eve brain the reaction comes from `hablar_con_owy`'s text.
         if (this.shared.brain !== "eve") this.expressions?.react(this.inputTranscript);
         this.log.info(`escuché: "${this.inputTranscript.trim()}"`);
@@ -1712,10 +1930,13 @@ export class DeviceSession {
         this.eveAnswer = null;
         const pacer = this.pacer;
         const endTurn = () => {
-          const where = this.audioOutput === "laptop" ? "reproducidos en el navegador" : "esperando fin en dispositivo";
+          const where =
+            this.audioOutput === "laptop"
+              ? "reproducidos en el navegador"
+              : this.audioOutput === "host"
+                ? "en la salida de la Mac"
+                : "en el dispositivo";
           this.log.info(`owy: "${speech}" (${turn.audioBytesSent} B enviados @16k; ${where})`);
-          // Firmware reopens capture after physical playback + its soft cue.
-          // ESPHome's immediate continuation would bypass that bus handoff.
           turn.endSpeaking({ continueConversation: false, speech });
           this.mouth?.flush();
           this.mouth = null;
@@ -1754,7 +1975,7 @@ export class DeviceSession {
         if (this.script) return { respuesta: this.script };
         let text: string;
         try {
-          text = await this.askEve(texto, undefined, eve, runtime);
+          text = await this.askBrain(texto, undefined, runtime);
         } catch (error) {
           this.log.error("eve turn failed", error);
           // The socket died while eve was thinking: nobody will say the model's apology.
@@ -1778,6 +1999,44 @@ export class DeviceSession {
     if (!run || this.path !== "cascade" || run.submitted || !this.cascadeIsCurrent(run)) return null;
     run.submitted = true;
     return run;
+  }
+
+  /**
+   * Owy's brain for what the person said: eve when it is the brain and answering,
+   * the local brain (the text model with every tool and this conversation) when
+   * it is not — and, after eve failed, for a minute without asking it, so a turn
+   * doesn't wait out eve's deadline each time. Throws only when no brain answered.
+   */
+  private async askBrain(
+    texto: string,
+    signal?: AbortSignal,
+    runtime: ToolRuntime | null = this.runtime,
+    talk: TalkContext = this.talk
+  ): Promise<string> {
+    const eve = this.shared.brain === "eve" ? this.shared.eve : undefined;
+    const cascade = this.shared.cascade;
+    if (eve && Date.now() >= (this.shared.eveDownUntil ?? 0)) {
+      try {
+        return await this.askEve(texto, signal, eve, runtime, talk);
+      } catch (error) {
+        if (signal?.aborted || !cascade) throw error;
+        this.shared.eveDownUntil = Date.now() + EVE_BREAKER_MS;
+        this.log.warn(`eve no respondió; contesta el cerebro local (sin eve por ${EVE_BREAKER_MS / 1000} s)`, error);
+      }
+    }
+    if (!cascade) throw new Error("sin cerebro: eve no responde y no hay modelo de texto");
+    this.expressions?.react(texto);
+    const answer = await cascade.answer({
+      text: texto,
+      history: [...this.history],
+      instructions: (this.shared.localInstructions ?? this.shared.instructions) + this.talkNote(talk, true),
+      tools: this.cascadeTools(),
+      signal: signal ?? AbortSignal.timeout(TIMINGS.cascadeThinkingMs),
+    });
+    if (!this.toolIsCurrent()) return "";
+    this.pushCaption(answer);
+    this.expressions?.write(answer, true);
+    return answer;
   }
 
   /**
@@ -1837,7 +2096,7 @@ export class DeviceSession {
     this.captionTimer = setTimeout(() => {
       this.captionTimer = null;
       if (this.eveDraft) this.pushCaption(this.eveDraft);
-    }, 300);
+    }, TIMINGS.captionEveryMs);
   }
 
   /** A tap or a dropped device mid-turn also stops the agent's work on it. */
@@ -1880,7 +2139,7 @@ export class DeviceSession {
     // The local brain's memory is the realtime session itself (plus the history it started with).
     this.log.info("conversación cerrada por inactividad; la próxima empieza de cero");
     this.session?.resetConversation();
-    if (!this.options.lazyRealtime && this.linkUp && !this.stopped) void this.ensureSession();
+    if (!this.options.lazyRealtime && !this.stopped) void this.ensureSession();
   }
 
   private clearIdleReset(): void {
@@ -1905,7 +2164,7 @@ export class DeviceSession {
     this.captionTimer = setTimeout(() => {
       this.captionTimer = null;
       this.pushCaption(this.outputTranscript.trim());
-    }, 300);
+    }, TIMINGS.captionEveryMs);
   }
 
   private pushCaption(text: string): void {
@@ -1931,12 +2190,9 @@ export class DeviceSession {
       send: (expression, leadMs, strength) => {
         send?.(expression, leadMs, strength);
         peer?.sendExpression?.(expression, leadMs, strength);
-        this.options.onExpression?.(expression, strength);
+        this.options.onExpression?.(expression, strength, leadMs);
       },
-      leadMs: () =>
-        this.audioOutput === "laptop"
-          ? this.shared.config.COMPANION_MOUTH_LATENCY_MS
-          : (device?.expressionLeadMs ?? 200),
+      leadMs: () => this.outputLeadMs(device),
       log: this.log,
     });
   }
@@ -1948,11 +2204,16 @@ export class DeviceSession {
     if (this.pacer || turn.finished) return;
     this.firstAudioAt ||= Date.now();
     turn.beginSpeaking(text);
-    // The device lip-syncs what its own speaker plays; laptop output needs a track.
-    const send = this.device?.sendMouthTrack;
+    // The device lip-syncs what its own speaker plays; audio played elsewhere needs a track. The wall
+    // always gets one.
+    const device = this.audioOutput !== "device" ? this.device?.sendMouthTrack?.bind(this.device) : undefined;
+    const wall = this.options.onMouth;
     this.mouth =
-      send && this.audioOutput === "laptop"
-        ? new MouthTrack(send, this.shared.config.COMPANION_MOUTH_LATENCY_MS)
+      device || wall
+        ? new MouthTrack((frames, leadMs) => {
+            device?.(frames, leadMs);
+            wall?.(frames, leadMs);
+          }, this.outputLeadMs())
         : null;
     this.pacer = new PacedSpeaker(
       (frame) => {
@@ -2045,15 +2306,22 @@ export class DeviceSession {
 
   async stop(): Promise<void> {
     this.stopped = true;
+    this.connecting.abort();
     this.requestEpoch++;
     if (this.keepWarm) clearInterval(this.keepWarm);
     this.keepWarm = null;
+    this.ownAbort?.abort();
+    this.clearOwnTimer();
+    this.clearCaptionTimer();
+    this.clearAnswerPrompt();
+    this.clearErrorFace();
     this.stopWatchdog();
     this.cancelCascade();
     this.recorder?.stop();
     this.cancelEveTurn();
+    this.flow?.cancel();
     this.cancelPitch();
-    this.clearPendingName();
+    this.unsubscribeHostMic?.();
     this.clearIdleReset();
     this.expressions?.close();
     this.pacer?.stop();
@@ -2063,149 +2331,11 @@ export class DeviceSession {
   }
 }
 
-function loadExpressions(config: BridgeConfig, logger: Logger): SharedRuntime["expressions"] {
-  if (config.COMPANION_EXPRESSIONS === "off") return undefined;
-  if (config.COMPANION_EXPRESSIONS === "jev" && config.AI_GATEWAY_API_KEY) {
-    logger.info(`expresiones: ${config.COMPANION_EXPRESSION_MODEL} (AI Gateway) + estimación local`);
-    return { classify: jevClassifier({ apiKey: config.AI_GATEWAY_API_KEY, model: config.COMPANION_EXPRESSION_MODEL }) };
-  }
-  if (config.COMPANION_EXPRESSIONS === "jev") logger.warn("expresiones: sin AI_GATEWAY_API_KEY, sólo estimación local");
-  return {};
-}
-
-const CLIPS_DIR = path.resolve(import.meta.dirname, "../../../../public/companion-audio/clips");
-const CLIPS_MANIFEST = path.join(CLIPS_DIR, "manifest.json");
-
-/** The voice loop without a realtime model: needs the gateway (transcribe, answer, speak). */
-function loadCascade(config: BridgeConfig, logger: Logger): Pick<SharedRuntime, "cascade" | "fallbackClips"> {
-  if (config.COMPANION_CASCADE === "off") return {};
-  if (!config.AI_GATEWAY_API_KEY) {
-    logger.warn("cascada: falta AI_GATEWAY_API_KEY; sin modelo realtime, los toques se rechazan");
-    return {};
-  }
-  return {
-    cascade: gatewayCascade({
-      apiKey: config.AI_GATEWAY_API_KEY,
-      transcribeModels: parseModelSpecs(config.COMPANION_TRANSCRIBE_MODELS),
-      ttsModel: config.COMPANION_TTS_MODEL,
-      ttsVoice: config.COMPANION_TTS_VOICE ?? config.COMPANION_VOICE,
-      textModel: config.COMPANION_TEXT_MODEL,
-      textFallbacks: parseModelSpecs(config.COMPANION_TEXT_FALLBACK_MODELS),
-      logger: logger.child("cascada"),
-    }),
-    fallbackClips: loadFallbackClips(CLIPS_DIR, logger),
-  };
-}
-
-/** Recorded clips by id → ms (`pnpm companion:clips`, `companion:talk-clips`); empty = Owy says every line live. */
-function loadClips(logger: Logger): Record<string, number> {
-  try {
-    return z.record(z.string(), z.number()).parse(JSON.parse(readFileSync(CLIPS_MANIFEST, "utf8")));
-  } catch {
-    logger.info("sin audios pregrabados (pnpm companion:clips); Owy dice los avisos con el modelo");
-    return {};
-  }
-}
-
-/** Modo pitch needs the gateway (audio → card) and the site (the board); without either, pitches end in words only. */
-function loadPitch(config: BridgeConfig, logger: Logger, clips: Record<string, number>): SharedRuntime["pitch"] {
-  if (!config.AI_GATEWAY_API_KEY || !config.OWY_API_KEY) {
-    logger.warn("modo pitch: falta AI_GATEWAY_API_KEY u OWY_API_KEY; los pitches no se van a cargar");
-    return undefined;
-  }
-  let openSpaceId: Promise<string> | null = null;
-  return {
-    extract: gatewayPitchExtractor({
-      apiKey: config.AI_GATEWAY_API_KEY,
-      model: config.COMPANION_PITCH_MODEL,
-      fallbacks: parseModelSpecs(config.COMPANION_PITCH_FALLBACK_MODELS),
-      eventName: config.COMPANION_EVENT_NAME,
-    }),
-    api: owuApi(),
-    // A talk's demo grid (COMPANION_PITCH_EVENT_ID) wins over OWY_EVENT_ID; eve keeps its own event for questions.
-    openSpaceId: () =>
-      (openSpaceId ??= resolveActiveEvent(config.COMPANION_PITCH_EVENT_ID)
-        .then((event) => event.id)
-        .catch((error: unknown) => {
-          openSpaceId = null;
-          throw error;
-        })),
-    clips,
-  };
-}
-
-export async function loadSharedRuntime(config: BridgeConfig, logger: Logger): Promise<SharedRuntime> {
-  const keys = { googleApiKey: config.GOOGLE_GENERATIVE_AI_API_KEY, gatewayApiKey: config.AI_GATEWAY_API_KEY };
-  const createProvider = () => resolveRealtimeProvider(config.COMPANION_REALTIME_MODEL, keys);
-  const provider = createProvider();
-  const fallbackSpecs = parseModelSpecs(config.COMPANION_REALTIME_FALLBACKS).filter((spec) => spec !== provider.spec);
-  const createFallbackProviders = () =>
-    fallbackSpecs.flatMap((spec) => {
-      try {
-        return [resolveRealtimeProvider(spec, keys)];
-      } catch (error) {
-        logger.warn(`respaldo realtime ${spec} ignorado: ${error instanceof Error ? error.message : String(error)}`);
-        return [];
-      }
-    });
-  const fallback = { createFallbackProviders, ...loadCascade(config, logger) };
-  logger.info(
-    `respaldos: ${fallbackSpecs.join(", ") || "ninguno"}; cascada ${fallback.cascade ? "lista" : "apagada"}${
-      fallback.cascade ? ` (avisos pregrabados: ${Object.keys(fallback.fallbackClips ?? {}).join(", ") || "ninguno"})` : ""
-    }`
-  );
-
-  let gridUrl: string | undefined;
-  try {
-    gridUrl = await resolveGridUrl(config.COMPANION_PUBLIC_SITE_URL);
-  } catch (error) {
-    logger.warn("could not resolve the public grid URL (site API unreachable?)", error);
-  }
-
-  const brain = config.COMPANION_BRAIN ?? (config.COMPANION_EVE_URL ? "eve" : "local");
-  const expressions = loadExpressions(config, logger);
-  const clips = loadClips(logger);
-  const pitch = loadPitch(config, logger, clips);
-  if (brain === "eve") {
-    if (!config.COMPANION_EVE_URL) throw new Error("COMPANION_BRAIN=eve necesita COMPANION_EVE_URL");
-    const eve = new EveLink({
-      url: config.COMPANION_EVE_URL,
-      apiKey: config.OWY_API_KEY ?? null,
-      logger: logger.child("eve"),
-    });
-    const instructions = await loadVoiceOfOwyPrompt({ eventName: config.COMPANION_EVENT_NAME });
-    logger.info(`model ${provider.spec} (voz); cerebro: eve en ${config.COMPANION_EVE_URL}; grid ${gridUrl ?? "-"}`);
-    return {
-      config,
-      provider,
-      createProvider,
-      definitions: new Map(),
-      instructions,
-      gridUrl,
-      logger,
-      brain,
-      eve,
-      expressions,
-      pitch,
-      clips,
-      ...fallback,
-    };
-  }
-
-  const [definitions, prompt] = await Promise.all([loadOwyToolDefinitions(), loadPromptBundle({ gridUrl })]);
-  logger.info(`model ${provider.spec}; cerebro local con ${definitions.size} owy tools; grid ${gridUrl ?? "-"}`);
-  return {
-    config,
-    provider,
-    createProvider,
-    definitions,
-    instructions: prompt.system,
-    gridUrl,
-    logger,
-    brain,
-    expressions,
-    pitch,
-    clips,
-    ...fallback,
-  };
+/** A device setting's value when neither the bridge nor the board has one: its env var, or off. */
+export function settingDefault(key: SettingKey, config: Partial<BridgeConfig> | undefined): unknown {
+  if (key === "pitch_voice") return config?.COMPANION_PITCH_VOICE ?? "confirm";
+  if (key === "talk") return false;
+  const spec = settingSpec(key);
+  const env = "env" in spec ? spec.env : undefined;
+  return env && config ? (config as Record<string, unknown>)[env] : undefined;
 }

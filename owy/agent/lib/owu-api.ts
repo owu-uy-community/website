@@ -566,6 +566,16 @@ export interface OwuApi {
   owyStage: {
     /** Mirrors a companion's face + running transcript onto the wall's Owy. */
     setFace: (input: StageFaceInput) => Promise<unknown>;
+    /** «Owy, en vivo»: the seat's heartbeat (the bridge seats a board in talk mode with no browser). */
+    talkStatus: (input: unknown) => Promise<unknown>;
+  };
+  /**
+   * The companion's control plane (site: src/lib/orpc/companion/control.ts). The bridge's 15 s
+   * heartbeat: its status, changes made on a board, by voice or on its page, and command results;
+   * the reply is every stored setting. Shapes in companion/bridge/src/web/contract.ts.
+   */
+  companion: {
+    report: (input: unknown) => Promise<unknown>;
   };
 }
 
@@ -574,13 +584,20 @@ export type StageFaceState = "idle" | "listening" | "thinking" | "speaking" | "h
 export interface StageFaceInput {
   state: StageFaceState;
   transcript?: { who: "input" | "output"; text: string };
-  /** The feeling the device shows for the sentence being spoken (companion_model.h expressions). */
-  expression?: { name: string; strength: number };
+  /** The feeling the device shows for the sentence being spoken (companion_model.h expressions); `at`: epoch ms it is heard. */
+  expression?: { name: string; strength: number; at?: number };
   /** A talk that just landed on the board, as the companion announces it. */
   card?: { title: string; speaker?: string; room?: string; timeSlot?: string; reasoning?: string };
   source?: string;
   /** The tool Owy is running while thinking (the talk's live diagram lights its box). */
   tool?: string;
+  /** The bridge process that sent it and its place in that process's order: pages drop late repeats. */
+  boot?: string;
+  seq?: number;
+  /** A heartbeat: the face as it stands, nothing new. */
+  beat?: boolean;
+  /** Pausa: the faces show it like the knob does. */
+  privacy?: boolean;
 }
 
 // ---------------------------------------------------------------------------

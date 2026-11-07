@@ -1,5 +1,7 @@
 import { defineChannel, GET, POST } from "eve/channels";
 import { type AuthFn, localDev, routeAuth } from "eve/channels/auth";
+import { call } from "eve/events";
+import { type Delivery, SessionNotActiveError } from "eve/sessions";
 import { z } from "zod";
 
 import { verifyOwuKey } from "../lib/owu-api";
@@ -16,7 +18,7 @@ import { verifyOwuKey } from "../lib/owu-api";
  *
  * Routes (bridge → agent; Basic auth in production, loopback in `eve dev`):
  *   POST /companion/:deviceId/turns   { text, staff?, marketplaceOpen?, eventName?, kind?, pitch?, talk? } → { sessionId, streamIndex }
- *   GET  /companion/sessions/:sessionId/stream?startIndex=N               NDJSON event stream
+ *   GET  /companion/sessions/:sessionId/stream?startIndex=N               NDJSON session events (stream line N on)
  *   POST /companion/:deviceId/cancel                                      stop the active turn (tap)
  *   POST /companion/:deviceId/reset                                       retire the conversation (next visitor)
  *
@@ -78,17 +80,33 @@ const auth: AuthFn<Request>[] = process.env.NODE_ENV === "production" ? [product
 
 const NDJSON = { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" };
 
-/** Serializes runtime events as NDJSON lines (the handle yields event objects). */
-function ndjson(events: ReadableStream<unknown>): ReadableStream<Uint8Array> {
+/** Serializes session events as NDJSON lines, starting with the one the route already read. */
+function ndjson(first: IteratorResult<unknown>, events: AsyncIterator<unknown>): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
-  return events.pipeThrough(
-    new TransformStream<unknown, Uint8Array>({
-      transform(event, controller) {
-        if (event instanceof Uint8Array) return controller.enqueue(event);
-        controller.enqueue(encoder.encode(`${typeof event === "string" ? event : JSON.stringify(event)}\n`));
-      },
-    })
-  );
+  let pending: IteratorResult<unknown> | null = first;
+  return new ReadableStream({
+    async pull(controller) {
+      const next = pending ?? (await events.next());
+      pending = null;
+      if (next.done) controller.close();
+      else controller.enqueue(encoder.encode(`${JSON.stringify(next.value)}\n`));
+    },
+    async cancel() {
+      await events.return?.();
+    },
+  });
+}
+
+/** The stream line that admitted a delivery: the bridge reads its turn from there on. */
+async function admittedAt(delivery: Delivery, signal: AbortSignal): Promise<number> {
+  for await (const event of delivery.stream({ signal })) return event.meta.position.line;
+  throw new Error(`eve: delivery ${delivery.deliveryId} has no events`);
+}
+
+/** eve 0.x answered a control with nothing to act on with "nothing to do"; 1.0 throws, and the bridge expects a 200. */
+function inactive(error: unknown): null {
+  if (SessionNotActiveError.is(error)) return null;
+  throw error;
 }
 
 const initialState: CompanionState = { deviceId: "", eventName: null, lastProposalAt: null };
@@ -113,18 +131,13 @@ export default defineChannel({
   },
 
   routes: [
-    POST<CompanionState>("/companion/:deviceId/turns", async (request, { from, params, resolveSession }) => {
+    POST<CompanionState>("/companion/:deviceId/turns", async (request, { from, params }) => {
       const verdict = await routeAuth(request, auth);
       if (verdict instanceof Response) return verdict;
       const body = TurnBody.parse(await request.json());
       const deviceId = params.deviceId;
 
-      // Tail *before* sending: the bridge streams from the next index, so a
-      // continued session never replays the previous turn's events.
-      const current = await resolveSession(deviceId);
-      const streamIndex = current ? (await current.getStreamTailIndex()) + 1 : 0;
-
-      const session = await from(deviceId).send(body.text, {
+      const delivery = await from(deviceId).send(body.text, {
         auth: {
           authenticator: body.staff ? "companion-staff" : "companion",
           principalType: "service",
@@ -143,7 +156,9 @@ export default defineChannel({
         state: { deviceId, eventName: body.eventName ?? null, lastProposalAt: null },
         title: `Owy físico · ${deviceId}`,
       });
-      return Response.json({ sessionId: session.id, streamIndex: session.id === current?.id ? streamIndex : 0 });
+      // The bridge streams from the line that admitted this message, so a continued session never
+      // replays the previous turn's events.
+      return Response.json({ sessionId: delivery.sessionId, streamIndex: await admittedAt(delivery, request.signal) });
     }),
 
     GET<CompanionState>("/companion/sessions/:sessionId/stream", async (request, { attachSession, params }) => {
@@ -151,32 +166,36 @@ export default defineChannel({
       if (verdict instanceof Response) return verdict;
       const raw = new URL(request.url).searchParams.get("startIndex");
       const startIndex = raw === null ? undefined : Number(raw);
-      const stream = await attachSession(params.sessionId).getEventStream(
-        Number.isFinite(startIndex) ? { startIndex } : undefined
-      );
-      return new Response(ndjson(stream), { headers: NDJSON });
+      const events = attachSession(params.sessionId)
+        .stream({ ...(Number.isFinite(startIndex) ? { startIndex } : {}), signal: request.signal })
+        [Symbol.asyncIterator]();
+      // Read once before the headers, so a missing or stranded session answers with an error status.
+      const first = await events.next();
+      return new Response(ndjson(first, events), { headers: NDJSON });
     }),
 
     POST<CompanionState>("/companion/:deviceId/cancel", async (request, { from, params }) => {
       const verdict = await routeAuth(request, auth);
       if (verdict instanceof Response) return verdict;
-      return Response.json(await from(params.deviceId).cancel());
+      return Response.json((await from(params.deviceId).cancel().catch(inactive)) ?? { status: "no_active_turn" });
     }),
 
     POST<CompanionState>("/companion/:deviceId/reset", async (request, { from, params }) => {
       const verdict = await routeAuth(request, auth);
       if (verdict instanceof Response) return verdict;
-      return Response.json(await from(params.deviceId).reset({ reason: "Fin de la conversación en el dispositivo" }));
+      // `end` retires the session for good; the device's next turn starts a new one.
+      const ended = await from(params.deviceId).end({ reason: "Fin de la conversación en el dispositivo" }).catch(inactive);
+      return Response.json(ended ?? { status: "no_active_session" });
     }),
   ],
 
   events: {
     // Kiosk anti-spam: the companion-only `propose_talk` reads this back from metadata.
-    "action.result"(event, channel) {
-      const result = event.result;
-      if (result.kind !== "tool-result" || result.toolName !== "propose_talk" || result.isError) return;
-      const output = result.output as { ok?: boolean } | null;
-      if (output && typeof output === "object" && output.ok === true) channel.state.lastProposalAt = Date.now();
+    "call.settled"(event, ctx) {
+      const settled = call(ctx.view, event.data.callId);
+      if (settled?.name !== "propose_talk" || settled.outcome !== "completed") return;
+      const output = settled.output as { ok?: boolean } | null | undefined;
+      if (output && typeof output === "object" && output.ok === true) ctx.channel.state.lastProposalAt = Date.now();
     },
   },
 });

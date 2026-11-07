@@ -7,8 +7,9 @@ import type { SceneProps } from "lib/owy-stage/scenes";
 import { TALK_SECTIONS, slideSteps, talkSlide, type TalkLayout } from "lib/owy-stage/talk/deck";
 
 import { usePlayUrl } from "../../inputs";
-import OwyFace from "../OwyFace";
+import OwyFaceScene from "../OwyFace";
 import { QrCode } from "../parts";
+import { LanesSlide, SequenceSlide, TreeSlide } from "./diagrams";
 import { OwyFeed } from "./feed";
 import {
   BubblesSlide,
@@ -41,7 +42,10 @@ import {
   RatingSlide,
   VsSlide,
 } from "./live";
+import { MapSlide } from "./map";
+import { PhonesSlide, ScreenSlide } from "./screens";
 import { CaptionLine, CaptionsContext } from "./seat";
+import { BoardSlide, FlowSlide, HubSlide, SplitSlide, WifiSlide } from "./system";
 
 /**
  * «Owy, en vivo» — the talk deck on the wall. One scene for the whole talk: `slide`/`step` move
@@ -113,6 +117,28 @@ function Slide({ params, round, eventId }: Props) {
       return <VsSlide slide={slide} {...live} />;
     case "links":
       return <LinksSlide slide={slide} step={step} />;
+    case "board":
+      return <BoardSlide slide={slide} {...live} />;
+    case "hub":
+      return <HubSlide slide={slide} {...live} />;
+    case "flow":
+      return <FlowSlide slide={slide} step={step} />;
+    case "wifi":
+      return <WifiSlide slide={slide} step={step} />;
+    case "split":
+      return <SplitSlide slide={slide} step={step} />;
+    case "map":
+      return <MapSlide slide={slide} step={step} />;
+    case "screen":
+      return <ScreenSlide slide={slide} step={step} />;
+    case "phones":
+      return <PhonesSlide slide={slide} step={step} />;
+    case "sequence":
+      return <SequenceSlide slide={slide} step={step} />;
+    case "tree":
+      return <TreeSlide slide={slide} step={step} />;
+    case "lanes":
+      return <LanesSlide slide={slide} step={step} />;
     case "qa":
       return <QaSlide slide={slide} {...live} />;
     case "rating":
@@ -176,7 +202,7 @@ export function OwyCharla(props: Props) {
               exit={{ opacity: 0 }}
               initial={{ opacity: 0 }}
             >
-              <OwyFace
+              <OwyFaceScene
                 ambient={false}
                 eventId={eventId}
                 params={{ captions: params.captions }}

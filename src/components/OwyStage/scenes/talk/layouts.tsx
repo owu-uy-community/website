@@ -278,7 +278,7 @@ export function OrbitSlide({ slide, step }: LayoutProps<"orbit">) {
         className="absolute flex flex-col items-center justify-center rounded-full border-[6px] border-[#F5BB03]"
         style={{ left: cx - ring, top: cy - ring, width: ring * 2, height: ring * 2 }}
       >
-        <MiniFace className="h-[124px] w-[124px]" size={124} />
+        <MiniFace size={124} />
         <p className="mt-2 w-[180px] text-center text-[24px] leading-[1.15] font-medium text-balance text-[#FBF5E7]/70">
           {slide.core.detail}
         </p>
@@ -303,15 +303,19 @@ export function OrbitSlide({ slide, step }: LayoutProps<"orbit">) {
   );
 }
 
-/** What Owy does: two columns of rows, no icons, no cards. */
+/** Two columns of rows, no icons, no cards. A `code` body is Owy's (tool names): monospace, his yellow. */
 export function TilesSlide({ slide, step }: LayoutProps<"tiles">) {
   return (
     <>
-      <Frame className="grid grid-cols-2 content-start gap-x-[56px]" title={slide.title}>
+      <Frame className="grid grid-cols-2 content-start gap-x-[56px]" sub={slide.sub} title={slide.title}>
         {slide.tiles.slice(0, step + 1).map((tile, i) => (
           <Build key={tile.title} className={`${ROW} pt-6 pb-8`} settled={i < step}>
             <p className="text-[42px] leading-[1.08] font-semibold tracking-[-0.02em]">{tile.title}</p>
-            <p className="mt-3 text-[32px] leading-[1.25] font-medium text-[#FBF5E7]/65">{tile.body}</p>
+            <p
+              className={`mt-3 leading-[1.25] ${tile.code ? "font-terminal text-[27px] text-[#F5BB03]" : "text-[32px] font-medium text-[#FBF5E7]/65"}`}
+            >
+              {tile.body}
+            </p>
           </Build>
         ))}
       </Frame>
@@ -381,7 +385,7 @@ export function BugsSlide({ slide, step }: LayoutProps<"bugs">) {
   );
 }
 
-function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
+export function CountUp({ value, suffix = "" }: { value: number; suffix?: string }) {
   const [n, setN] = useState(0);
   const start = useRef<number | null>(null);
   useStageFrame((t) => {

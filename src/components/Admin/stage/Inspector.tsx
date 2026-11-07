@@ -2,12 +2,13 @@
 
 import { memo } from "react";
 import { motion } from "motion/react";
-import { Copy, Eye, ListPlus, Radio, Smartphone } from "lucide-react";
+import { Clapperboard, Copy, Eye, ListPlus, Radio, Smartphone } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { EmptyState } from "components/Admin/ui/states";
+import { CountdownPanel } from "components/Meetups/OpenSpace/organisms/CountdownControls";
 import { Kbd } from "components/shared/ui/kbd";
 import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
 import {
@@ -41,7 +42,30 @@ function Highlight({ tone }: { tone: "preview" | "program" }) {
   );
 }
 
-function Heading({ scene }: { scene: SceneId }) {
+/**
+ * The Countdown scene shows the event's own countdown (the one /countdown and the open space
+ * follow), so its controls sit above the scene's params, for preview and air alike.
+ */
+function CountdownBox({ eventId }: { eventId: string | null }) {
+  return (
+    <div className="shrink-0 border-b px-4 pt-1 pb-3">
+      {eventId ? (
+        <CountdownPanel eventId={eventId} quiet />
+      ) : (
+        <p className="text-sm text-muted-foreground">Elegí el evento de la pared en Salida y ajustes · Evento.</p>
+      )}
+    </div>
+  );
+}
+
+/** The scene as a 1920×1080, 60 fps MP4, with these params: recorded in a tab of its own (see SceneExport). */
+function exportHref(scene: SceneId, params: Params) {
+  const query = Object.keys(params).length ? `&p=${encodeURIComponent(JSON.stringify(params))}` : "";
+
+  return `/owy/stage/${scene}?export=1${query}`;
+}
+
+function Heading({ scene, params }: { scene: SceneId; params: Params }) {
   const { title, description, category } = SCENES[scene];
 
   return (
@@ -56,6 +80,18 @@ function Heading({ scene }: { scene: SceneId }) {
             <Smartphone className="h-3 w-3" /> celular
           </Badge>
         )}
+        {/* Recording needs a desktop Chrome. */}
+        <Button asChild className="ml-auto size-7 pointer-coarse:hidden" size="icon" variant="ghost">
+          <a
+            aria-label="Exportar video 1080p60"
+            href={exportHref(scene, params)}
+            rel="noopener"
+            target="_blank"
+            title="Exportar video · 1920×1080 · 60 fps"
+          >
+            <Clapperboard />
+          </a>
+        </Button>
       </div>
       {/* On a phone the height goes to the fields: the description waits for a bigger screen. */}
       <p className="hidden text-xs text-muted-foreground sm:block">{description}</p>
@@ -129,7 +165,7 @@ function InspectorView({
 
       {target === "program" ? (
         <>
-          <Heading scene={live.scene} />
+          <Heading params={live.params} scene={live.scene} />
           <div className="mx-4 mb-1 flex items-center gap-2 rounded-md border border-live/30 bg-live-surface px-3 py-2 text-meta text-live-foreground">
             <Radio className="h-3.5 w-3.5 shrink-0" />
             <span className="flex-1">En vivo: cada cambio sale al aire mientras escribís.</span>
@@ -137,6 +173,7 @@ function InspectorView({
               <Copy /> A preview
             </Button>
           </div>
+          {live.scene === "countdown" && <CountdownBox eventId={live.eventId} />}
           {/* The live questions: their one field, then the moderation of what the phones sent. */}
           <div className={live.scene === "live-questions" ? "shrink-0" : "min-h-0 flex-1"}>
             <SceneParams apply={onLiveParams} mode="live" params={live.params} pending={pending} scene={live.scene} />
@@ -154,10 +191,11 @@ function InspectorView({
         </>
       ) : preview ? (
         <>
-          <Heading scene={preview.scene} />
+          <Heading params={preview.params} scene={preview.scene} />
           <div className="mx-4 mb-1 hidden items-center gap-2 rounded-md border border-success/25 bg-success-surface px-3 py-2 text-meta text-success-foreground sm:flex">
             <Eye className="h-3.5 w-3.5 shrink-0" /> Fuera del aire · TAKE para mostrarlo
           </div>
+          {preview.scene === "countdown" && <CountdownBox eventId={live.eventId} />}
           <div className="min-h-0 flex-1">
             <SceneParams
               key={preview.id}

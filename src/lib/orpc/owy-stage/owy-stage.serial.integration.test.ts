@@ -8,7 +8,7 @@ import { db } from "lib/db";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { makeAttendee, makeBoard, makeCommunity, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 import { server } from "test/msw/server";
 
 /** The wall is one global row, so every test starts with nothing on air. */
@@ -448,6 +448,21 @@ describe("data-driven scenes", () => {
     });
   });
 
+  test("the pulse counts the event's own attendees: who came in, out of who is attending", async () => {
+    await setup();
+    const { event } = await makeBoard();
+    const other = await makeBoard();
+    await makeAttendee(event.id, { checkedInAt: new Date() });
+    await makeAttendee(event.id);
+    await makeAttendee(event.id, { status: "refunded" });
+    // Another event's door never counts here.
+    await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toMatchObject({
+      tickets: { checkedIn: 1, active: 2, capacity: null },
+    });
+  });
+
   test("meetups are the next eight, soonest first; a feed outage is an empty list", async () => {
     await setup();
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -519,6 +534,18 @@ describe("data-driven scenes", () => {
     expect(speakers.map((speaker) => speaker.slug)).not.toContain("openspace");
   });
 
+  test("the community wall shows the public directory: listed, active groups only", async () => {
+    const listed = await makeCommunity({ listed: true, logoUrl: "/images/communities/x/picture.webp" });
+    const unlisted = await makeCommunity({ listed: false });
+    const inactive = await makeCommunity({ listed: true, isActive: false });
+
+    const slugs = (await call(router.owyStage.getCommunities, undefined, by(null))).map(({ slug }) => slug);
+
+    expect(slugs).toContain(listed.slug);
+    expect(slugs).not.toContain(unlisted.slug);
+    expect(slugs).not.toContain(inactive.slug);
+  });
+
   test("without Spotify configured the wall shows no track and the status says so", async () => {
     const { staff } = await setup();
 
@@ -526,6 +553,59 @@ describe("data-driven scenes", () => {
     await expect(call(router.owyStage.spotifyStatus, undefined, by(staff))).resolves.toStrictEqual({
       configured: false,
       account: null,
+    });
+  });
+});
+
+describe("«Owy y la grilla»", () => {
+  const newTalk = { needsTV: false, needsWhiteboard: false, skipResourceValidation: false };
+
+  test("with the autopilot on, a new talk brings the board (subtitles kept) and shows it big", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    await putOnAir({ scene: "owy-face", params: { captions: false }, eventId: event.id });
+    await call(router.owyStage.setAutopilot, { on: true }, by(staff));
+    // A desk save (it writes the same JSON) leaves the switch where it was.
+    await call(router.owyStage.saveDesk, { desk: { queue: [] } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const note = await call(
+      router.tracks.create,
+      { ...newTalk, title: "IA en el aula", openSpaceId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id },
+      by(staff)
+    );
+
+    await vi.waitFor(() =>
+      expect(publish).toHaveBeenCalledWith(
+        "owy-stage",
+        "spotlight",
+        expect.objectContaining({ how: "new", track: expect.objectContaining({ id: note.id, title: "IA en el aula" }) })
+      )
+    );
+    await expect(call(router.owyStage.getAutopilot, undefined, by(staff))).resolves.toStrictEqual({ on: true });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      params: { captions: false },
+      eventId: event.id,
+    });
+  });
+
+  test("«Destacar» brings the board for the talk's event and puts it up; only site staff do it", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    const talk = await makeTrack({ eventId: event.id, scheduleId: slots.late.id, roomId: rooms.tv.id });
+    await putOnAir({ scene: "agenda" });
+
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(staff))).resolves.toMatchObject({
+      how: "manual",
+      track: { id: talk.id, roomId: rooms.tv.id, scheduleId: slots.late.id },
+    });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      eventId: event.id,
+    });
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(await makeUser()))).rejects.toMatchObject({
+      code: "FORBIDDEN",
     });
   });
 });
