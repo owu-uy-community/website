@@ -9,7 +9,7 @@ import { SPONSORS_2026 } from "app/conf/components/Sponsors";
 import { client } from "lib/orpc";
 import type { StageCommunity } from "lib/orpc/owy-stage/schemas";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { roomColorFor } from "lib/rooms/palette";
+import { readableFill, roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Confetti, EmojiRain } from "../effects";
@@ -50,16 +50,16 @@ export function Board({ eventId }: SceneProps<"board">) {
           <m.div
             key={note.id}
             animate={{ opacity: 1, y: 0, rotate: tilts[i % tilts.length] }}
-            className="flex h-[200px] w-[280px] flex-col justify-between p-5 text-black shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
+            className="flex h-[200px] w-[280px] flex-col justify-between p-5 shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
             initial={{ opacity: 0, y: 40, rotate: 0 }}
-            style={{ background: roomColorFor(note.roomId, note.roomColor) }}
+            style={readableFill(roomColorFor(note.roomId, note.roomColor))}
             transition={{ duration: 0.5, delay: 0.1 + i * 0.05, ease: EASE_OUT }}
           >
             <div>
               <p className="line-clamp-2 text-[27px] leading-[1.15] font-bold">{note.title}</p>
-              {note.speaker && <p className="mt-1 truncate text-[20px] font-medium text-black/75">{note.speaker}</p>}
+              {note.speaker && <p className="mt-1 truncate text-[20px] font-medium opacity-75">{note.speaker}</p>}
             </div>
-            <p className="truncate text-[18px] font-semibold tracking-[0.06em] text-black/65 uppercase">
+            <p className="truncate text-[18px] font-semibold tracking-[0.06em] uppercase opacity-65">
               {note.timeSlot.split(" - ")[0]} · {note.room}
             </p>
           </m.div>
@@ -117,8 +117,8 @@ export function RoomsNow({ eventId }: SceneProps<"rooms-now">) {
               transition={{ duration: 0.6, delay: 0.15 + i * 0.1, ease: EASE_OUT }}
             >
               <div
-                className="flex items-center gap-3 px-6 py-4 text-[28px] font-extrabold tracking-[0.08em] text-black uppercase"
-                style={{ background: color }}
+                className="flex items-center gap-3 px-6 py-4 text-[28px] font-extrabold tracking-[0.08em] uppercase"
+                style={readableFill(color)}
               >
                 {room.name}
               </div>

@@ -14,6 +14,8 @@ export const StickyNoteSchema = z.object({
   room: z.string(),
   /** The room's explicit color; the UI falls back to a palette. */
   roomColor: z.string().optional(),
+  /** The room's shape key (lib/rooms/icons); unset draws a dot. */
+  roomIcon: z.string().optional(),
   timeSlot: z.string(),
   /** Interest tags for «Para vos» (lib/openspace/topics); null on cards older than tagging. */
   topics: z.array(z.string()).nullish(),

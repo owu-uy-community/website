@@ -29,7 +29,7 @@ import {
   type Queued,
 } from "lib/owy-stage/spotlight";
 import { eventChannel } from "lib/realtime/channels";
-import { readableOn, roomColorFor } from "lib/rooms/palette";
+import { readableFill, readableOn, roomColorFor } from "lib/rooms/palette";
 
 import { OwyFace, useFaceEvents, type FaceApi } from "../Face";
 import { Ambient, BRAND, Caption, Flag, StageContext, W, useTyped } from "../Stage";
@@ -616,9 +616,9 @@ function LandedCard({ card, eventId }: { card: Landed; eventId: string | null })
     >
       <m.div
         animate={{ scale: 1, y: 0, opacity: 1, rotate: 1.5 }}
-        className="rounded-[28px] px-10 py-8 text-[#1F1F1F] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+        className="rounded-[28px] px-10 py-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
         initial={{ scale: 0.6, y: 120, opacity: 0, rotate: -6 }}
-        style={{ background: color }}
+        style={readableFill(color)}
         transition={{ duration: 0.7, ease: EASE_OUT }}
       >
         <p className="text-[20px] font-semibold tracking-[0.18em] uppercase opacity-70">Nueva charla</p>

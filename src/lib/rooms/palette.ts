@@ -41,6 +41,11 @@ export function readableOn(hex: string): "#000000" | "#FFFFFF" {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? "#000000" : "#FFFFFF";
 }
 
+/** A fill in `hex` with text that reads on it: black on most room colours, white on a dark one like Ventana's blue. */
+export function readableFill(hex: string): { background: string; color: string } {
+  return { background: hex, color: readableOn(hex) };
+}
+
 /** Lighten (positive pct) or darken (negative pct) a #rrggbb color. */
 export function shadeHex(hex: string, pct: number): string {
   const value = hex.replace("#", "");

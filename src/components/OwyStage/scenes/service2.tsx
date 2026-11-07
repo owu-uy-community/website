@@ -7,7 +7,8 @@ import { EASE_OUT } from "app/conf/components/Reveal";
 import { client } from "lib/orpc";
 import type { StageWeather } from "lib/orpc/owy-stage/schemas";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { roomColorFor } from "lib/rooms/palette";
+import { RoomMark } from "lib/rooms/icons";
+import { readableFill, roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext, useStageFrame } from "../Stage";
@@ -53,10 +54,7 @@ export function Grid({ eventId }: SceneProps<"grid">) {
         <div />
         {rooms.map((room) => (
           <div key={room.id} className="flex items-center justify-center bg-[#FBF5E7]/[0.08] px-3">
-            <span
-              className="h-[18px] w-[18px] shrink-0 rounded-full"
-              style={{ background: roomColorFor(room.id, room.color) }}
-            />
+            <RoomMark className="h-[22px] w-[22px]" color={roomColorFor(room.id, room.color)} icon={room.icon} />
             <span className="ml-3 truncate text-[28px] font-extrabold uppercase">{room.name}</span>
           </div>
         ))}
@@ -79,16 +77,16 @@ export function Grid({ eventId }: SceneProps<"grid">) {
                   key={`${slot.id}-${room.id}`}
                   animate={{ opacity: 1 }}
                   className={`flex flex-col justify-center overflow-hidden px-4 py-2 ${
-                    note ? "text-black" : live ? "bg-[#F5BB03]/15" : "bg-[#FBF5E7]/[0.04]"
+                    note ? "" : live ? "bg-[#F5BB03]/15" : "bg-[#FBF5E7]/[0.04]"
                   }`}
                   initial={{ opacity: 0 }}
-                  style={note ? { background: roomColorFor(room.id, room.color) } : undefined}
+                  style={note ? readableFill(roomColorFor(room.id, room.color)) : undefined}
                   transition={{ duration: 0.4, delay: 0.2 }}
                 >
                   {note ? (
                     <>
                       <p className="line-clamp-2 text-[26px] leading-[1.1] font-bold">{note.title}</p>
-                      {note.speaker && <p className="mt-1 truncate text-[20px] text-black/70">{note.speaker}</p>}
+                      {note.speaker && <p className="mt-1 truncate text-[20px] opacity-70">{note.speaker}</p>}
                     </>
                   ) : (
                     <p className="text-[22px] text-[#FBF5E7]/25">—</p>

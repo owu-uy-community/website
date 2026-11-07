@@ -45,6 +45,7 @@ export const toStickyNote = (track: PlacedTrack): StickyNote => ({
   roomId: track.roomId,
   room: track.room?.name || track.roomId,
   roomColor: track.room?.color ?? undefined,
+  roomIcon: track.room?.icon ?? undefined,
   timeSlot: track.schedule ? `${track.schedule.startTime} - ${track.schedule.endTime}` : track.scheduleId,
   topics: track.topics ?? null,
   format: track.format ?? null,

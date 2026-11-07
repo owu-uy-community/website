@@ -13,11 +13,14 @@ import { EmptyMapState } from "components/Meetups/OpenSpace/molecules/EmptyMapSt
 import { LocationArrow } from "components/Meetups/OpenSpace/atoms/LocationArrow";
 import { LogoCorner } from "components/Meetups/OpenSpace/atoms/LogoCorner";
 
-// Memoized Map wrapper: the SVG only reads `event.location`, so comparing
+// Memoized Map wrapper: the SVG only reads `event.location` and its colour, so comparing
 // the `events` array identity (new after every refetch) forced pointless
 // re-renders of the 300-line SVG on every data churn.
 const MemoizedMap = memo(OpenSpaceMap, (prevProps, nextProps) => {
-  return prevProps.event?.location === nextProps.event?.location;
+  const zone = nextProps.event?.location ?? "";
+  return (
+    prevProps.event?.location === nextProps.event?.location && prevProps.colors?.[zone] === nextProps.colors?.[zone]
+  );
 });
 
 MemoizedMap.displayName = "MemoizedMap";
@@ -69,7 +72,12 @@ export default function MapKioskClient({ eventId }: { eventId: string }) {
 
       {/* Map Container */}
       <div className="absolute top-[120px] right-0 bottom-0 left-0 z-10 flex flex-col items-center justify-start p-4 sm:top-[150px] sm:p-6 md:p-8">
-        <MemoizedMap event={eventProp} events={events} scene={MAP_KIOSK_CONFIG.SCENE} />
+        <MemoizedMap
+          colors={currentLocation ? { [currentLocation.name]: currentLocation.color } : undefined}
+          event={eventProp}
+          events={events}
+          scene={MAP_KIOSK_CONFIG.SCENE}
+        />
       </div>
 
       {/* Right Side Location Label with Arrow */}

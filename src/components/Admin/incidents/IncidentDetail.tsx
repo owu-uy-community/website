@@ -24,6 +24,7 @@ import { Textarea } from "components/shared/ui/textarea";
 import { toast } from "components/shared/ui/toast-utils";
 import { orpc } from "lib/orpc";
 import type { IncidentDetail, IncidentStatus } from "lib/orpc/incidents/schemas";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 
 import {
@@ -320,11 +321,7 @@ export function IncidentBody({
                 {rooms.map((room) => (
                   <SelectItem key={room.id} value={room.id}>
                     <span className="flex items-center gap-2">
-                      <span
-                        aria-hidden
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: roomColorFor(room.id, room.color) }}
-                      />
+                      <RoomMark className="size-2.5" color={roomColorFor(room.id, room.color)} icon={room.icon} />
                       {room.name}
                     </span>
                   </SelectItem>

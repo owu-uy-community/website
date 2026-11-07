@@ -5,6 +5,7 @@ import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
@@ -194,7 +195,10 @@ export function RoomDay({ params, eventId }: SceneProps<"room">) {
             Sala
           </Rise>
           <Rise className="mt-2 text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.15}>
-            {room.name}
+            <span className="flex items-center gap-8">
+              <RoomMark className="h-[84px] w-[84px]" color={color} icon={room.icon} />
+              {room.name}
+            </span>
           </Rise>
         </div>
         <p className="pb-3 text-[40px] font-semibold text-[#FBF5E7]/60 tabular-nums">{now}</p>
