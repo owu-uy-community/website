@@ -116,6 +116,29 @@ it("restarts with backoff when ffmpeg dies", async () => {
   expect(instance.ready).toBe(true);
 });
 
+it("waits for the board's bus only when the board plays the answer", () => {
+  const device = { sendEvent: vi.fn(), sendAudio: vi.fn(), isPlaybackReady: () => false }; // its ack is late
+  const peer = { sendEvent: vi.fn(), sendAudio: vi.fn() };
+  const host = { ready: true, write: vi.fn() };
+  let output: "device" | "laptop" | "host" = "laptop";
+  let attached: typeof peer | null = peer;
+  const link = new RouteLink({
+    device: device as never,
+    peer: () => attached as never,
+    host: () => host as never,
+    output: () => output,
+  });
+  expect(link.isPlaybackReady()).toBe(true); // the browser plays
+  output = "host";
+  expect(link.isPlaybackReady()).toBe(true); // the Mac plays
+  host.ready = false;
+  attached = null;
+  expect(link.isPlaybackReady()).toBe(false); // nothing else: the board plays, so wait for it
+  output = "device";
+  attached = peer;
+  expect(link.isPlaybackReady()).toBe(false);
+});
+
 it("routes a turn's audio to the Mac, then the browser, then the board, frame by frame", () => {
   const device = { sendEvent: vi.fn(), sendAudio: vi.fn(), isPlaybackReady: () => true };
   const peer = { sendEvent: vi.fn(), sendAudio: vi.fn() };

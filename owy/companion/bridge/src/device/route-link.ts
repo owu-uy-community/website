@@ -9,8 +9,7 @@ import type { AudioPeer, DeviceTransport } from "./transport";
  * and an attached browser. Audio: the turn's output — the Mac's speaker, the
  * browser, or the board — falling back frame by frame when that one is gone (an
  * unplugged PA, a closed tab): the browser, then the board (its speaker, or on
- * the knob its captions). Readiness stays the board's: its mic must have
- * released the bus before TTS.
+ * the knob its captions). Readiness is the board's only when the board plays.
  */
 export class RouteLink implements VoiceLink {
   constructor(
@@ -40,7 +39,15 @@ export class RouteLink implements VoiceLink {
     else this.route.device?.sendAudio(audio, end);
   }
 
+  /**
+   * The board's readiness matters only when the board plays the answer (its mic must release the
+   * shared bus first). The Mac or a browser start at once: waiting on the board over a slow wifi
+   * timed out (audio-bus-timeout) and lost answers that never needed it.
+   */
   isPlaybackReady(): boolean {
+    const output = this.route.output();
+    if (output === "host" && this.route.host()?.ready) return true;
+    if (output !== "device" && this.route.peer()) return true;
     return this.route.device?.isPlaybackReady() ?? true;
   }
 }

@@ -393,6 +393,18 @@ it("modo pitch: records the pitch itself, places it on the board and announces w
   expect(h.wired.flow).toBeNull();
 });
 
+it("modo pitch: the second tap arriving twice (pulse, then the face turning to thinking) places one card", async () => {
+  const h = pitchHarness();
+  h.wired.submitPitch("submit"); // no pitch recording yet: ignored
+  await h.tap();
+  h.speak(3000);
+  h.wired.submitPitch("submit"); // the pulse
+  h.wired.submitPitch("submit"); // the face, a moment later
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).toHaveBeenCalledOnce();
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+});
+
 it("modo pitch: a pitch without a name asks for it first; the board opens its mic and the card lands once, complete", async () => {
   const h = pitchHarness();
   h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null });

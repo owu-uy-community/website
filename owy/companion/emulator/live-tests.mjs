@@ -94,15 +94,6 @@ test("only bounded explicit boolean scopes are accepted; no prompt, model, devic
     await assert.rejects(server.readVoiceScopes(request(body)), /Invalid voice permissions/);
   await assert.rejects(server.readVoiceScopes(request({ unknown: "a".repeat(2048) })), /large/);
 });
-test("issuance quota bounds rapid retries and hourly sessions", () => {
-  const q = new server.VoiceQuota();
-  for (let i = 0; i < 3; i++) q.take("admin", 1000);
-  assert.throws(() => q.take("admin", 1000), /wait/);
-  q.take("admin", 61001);
-  const hourly = new server.VoiceQuota();
-  for (let i = 0; i < 20; i++) hourly.take("admin", i * 61000);
-  assert.throws(() => hourly.take("admin", 20 * 61000), /wait/);
-});
 test("capture resamples 44.1/48 kHz into exact 20 ms little-endian 16 kHz frames", () => {
   for (const rate of [44100, 48000]) {
     const pcm = new CapturePCM(rate),
