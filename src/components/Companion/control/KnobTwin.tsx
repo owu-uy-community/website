@@ -126,7 +126,8 @@ export function KnobTwin({
         type="button"
         onClick={onTap}
       >
-        <OwyFace ref={face} device className="bg-black" size={360} style={{ width: "100%", height: "100%" }} />
+        {/* 30 fps, the knob's own panel rate (and a phone's battery thanks it). */}
+        <OwyFace ref={face} device className="bg-black" fps={30} size={360} style={{ width: "100%", height: "100%" }} />
         {/* Glass: a faint highlight over the panel. */}
         <span
           aria-hidden

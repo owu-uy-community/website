@@ -192,11 +192,8 @@ function BridgeLine({ state, online }: { state: CompanionState; online: boolean 
   const now = useNow(1000);
   const status = state.status;
   const tier = tierText(status?.devices[0]?.voice.tier);
-  const facts = [
-    state.seenAt ? `visto ${ago(state.seenAt, now)}` : "todavía no reportó",
-    status?.version,
-    tier ? `voz ${tier}` : null,
-  ].filter(Boolean);
+  // On a phone only when it was last seen: the code and the voice tier wrap badly and live in Ajustes too.
+  const more = [status?.version, tier ? `voz ${tier}` : null].filter(Boolean);
 
   return (
     <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -204,7 +201,10 @@ function BridgeLine({ state, online }: { state: CompanionState; online: boolean 
         <StatusDot ring tone={online ? "ok" : "live"} />
         {online ? "Bridge en línea" : "Bridge sin conexión"}
       </span>
-      <span className="font-terminal text-meta text-muted-foreground tabular-nums">{facts.join(" · ")}</span>
+      <span className="font-terminal text-meta text-muted-foreground tabular-nums">
+        {state.seenAt ? `visto ${ago(state.seenAt, now)}` : "todavía no reportó"}
+        {more.length > 0 ? <span className="hidden sm:inline"> · {more.join(" · ")}</span> : null}
+      </span>
     </span>
   );
 }
@@ -275,7 +275,7 @@ function KnobCard({
             <p className="flex items-center gap-1.5 text-ui text-foreground">
               <Hand aria-hidden className="size-4 text-muted-foreground" />
               <span>
-                <span className="font-medium">{online ? `Tocá: ${action.label.toLowerCase()}` : "Sin bridge"}</span>
+                <span className="font-medium">{online ? tapText(action.label) : "Sin bridge"}</span>
                 <span className="text-muted-foreground"> · {online ? action.hint : "el knob lo está buscando"}</span>
               </span>
             </p>
@@ -336,6 +336,9 @@ function KnobCard({
   );
 }
 
+/** What tapping the knob's screen does, as the caption under it says it. */
+const tapText = (label: string) => (label === "Tocar" ? "Tocá la pantalla" : `Tocá: ${label.toLowerCase()}`);
+
 /** What Owy heard and said this turn: the newest words of each. */
 function LiveWords({ live }: { live: LiveFace | null }) {
   if (!live || (!live.input && !live.output)) return null;
@@ -379,23 +382,17 @@ function MacAudio({
 
   return (
     <Panel>
-      <PanelHead
-        actions={
-          <span className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1">
-            <Health detail={status.hostMic?.detail} health={status.hostMic?.health} icon={Mic} label="Entrada" />
-            <Health
-              detail={status.hostSpeaker?.detail}
-              health={status.hostSpeaker?.health}
-              icon={Speaker}
-              label="Salida"
-            />
-          </span>
-        }
-        className="h-auto min-h-11 flex-wrap py-2"
-        icon={AudioLines}
-        title="Audio de la Mac"
-      />
-      <div className="space-y-2 p-3.5 pt-1.5">
+      <PanelHead icon={AudioLines} meta={status.machine} title="Audio de la Mac" />
+      <div className="space-y-2 p-3.5">
+        <div className="flex flex-wrap gap-x-6 gap-y-1">
+          <Health detail={status.hostMic?.detail} health={status.hostMic?.health} icon={Mic} label="Entrada" />
+          <Health
+            detail={status.hostSpeaker?.detail}
+            health={status.hostSpeaker?.health}
+            icon={Speaker}
+            label="Salida"
+          />
+        </div>
         <div className="grid gap-x-6 md:grid-cols-2">
           {(["host_mic", "host_speaker"] as const).map((key) => (
             <SettingField
