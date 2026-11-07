@@ -71,9 +71,10 @@ import { eventChannel } from "lib/realtime/channels";
 import { BRIDGE_TARGET } from "../../../../owy/companion/bridge/src/web/registry";
 
 import { COUNTDOWN_PRESETS, clockText, countdownLeft, knobAction, latestNote, phaseOfFace, tail } from "./ops";
+import { Autopilot, Puppet } from "./OwyPanel";
 
-/** The scenes worth one tap from the table: Owy's face, the board, the agenda. */
-const QUICK_SCENES: SceneId[] = ["owy-face", "grid", "agenda"];
+/** The scenes worth one tap from the table: Owy's face, Owy beside the board, the board, the agenda. */
+const QUICK_SCENES: SceneId[] = ["owy-face", "owy-board", "grid", "agenda"];
 
 /**
  * /admin/owy, the one page for the day: Owy (its knob, live — tap its screen —, its mode and its
@@ -149,6 +150,14 @@ export function OwyOps() {
             />
           ))}
           <MacAudio online={online} send={panel.send} state={state} onSet={onSet} />
+          {online ? null : (
+            <Panel>
+              <PanelHead icon={Hand} title="Owy a mano" />
+              <div className="p-3.5">
+                <Puppet />
+              </div>
+            </Panel>
+          )}
         </>
       )}
 
@@ -712,6 +721,7 @@ function PantallaCard() {
               </Button>
             ))}
           </div>
+          <Autopilot />
         </section>
         <nav aria-label="Más de Owy" className="flex flex-col divide-y divide-border/60 text-ui">
           {[

@@ -927,9 +927,11 @@ export const owyStageState = pgTable("owy_stage_state", {
   /**
    * The operator's desk: what is in preview, the queue behind it and the presets; see DeskSchema. The
    * default still says `favorites`, as desks did before presets: readDesk carries them over.
+   * `autopilot` (new talks bring the wall to «Owy y la grilla») rides along, read and written on
+   * its own.
    */
   desk: jsonb("desk")
-    .$type<{ preview: unknown; queue: unknown[]; presets?: unknown[]; favorites?: string[] }>()
+    .$type<{ preview: unknown; queue: unknown[]; presets?: unknown[]; favorites?: string[]; autopilot?: boolean }>()
     .notNull()
     .default({ preview: null, queue: [], favorites: [] }),
   updatedAt: ts("updatedAt")

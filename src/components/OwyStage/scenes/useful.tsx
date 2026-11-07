@@ -12,9 +12,9 @@ import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
 import { useBoard, useCast } from "../board";
 import { OVER_SHAPES } from "./OwyFace";
-import { QrCode, Rise, nowHHMM } from "./parts";
+import { QrCode, Rise, useNow } from "./parts";
 
-export { useBoard, useCast };
+export { useBoard, useCast, useNow };
 
 // ---------------------------------------------------------------------------
 // Program items — "HH:MM Título | HH:MM Título" typed by staff in the admin
@@ -38,15 +38,6 @@ function currentIndex(program: ProgramItem[], now: string): number {
     if (item.time <= now) index = i;
   });
   return index;
-}
-
-export function useNow(everyMs = 1000) {
-  const [now, setNow] = useState(nowHHMM);
-  useEffect(() => {
-    const id = setInterval(() => setNow(nowHHMM()), everyMs);
-    return () => clearInterval(id);
-  }, [everyMs]);
-  return now;
 }
 
 /** Seconds from now (HH:MM:SS in the event timezone) until an HH:MM today. */

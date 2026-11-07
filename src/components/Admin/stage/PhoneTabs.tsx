@@ -1,14 +1,14 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { LayoutGrid, ListOrdered, ListVideo, SlidersHorizontal, Star, type LucideIcon } from "lucide-react";
+import { Bot, LayoutGrid, ListOrdered, ListVideo, SlidersHorizontal, Star, type LucideIcon } from "lucide-react";
 
 import { cn } from "app/lib/utils";
 
 import { haptic } from "./haptics";
 
-export type PhoneTab = "queue" | "library" | "presets" | "edit" | "guion";
-export const PHONE_TABS: PhoneTab[] = ["queue", "library", "presets", "edit", "guion"];
+export type PhoneTab = "queue" | "library" | "presets" | "edit" | "guion" | "owy";
+export const PHONE_TABS: PhoneTab[] = ["queue", "library", "presets", "edit", "guion", "owy"];
 
 const TABS: [PhoneTab, string, LucideIcon][] = [
   ["queue", "Cola", ListOrdered],
@@ -16,6 +16,7 @@ const TABS: [PhoneTab, string, LucideIcon][] = [
   ["presets", "Presets", Star],
   ["edit", "Editar", SlidersHorizontal],
   ["guion", "Guion", ListVideo],
+  ["owy", "Owy", Bot],
 ];
 
 /**
@@ -42,11 +43,12 @@ export function PhoneTabs({
     presets: null,
     edit: preview ? "dot" : null,
     guion: guionPlaying ? "dot" : null,
+    owy: null,
   };
 
   return (
     <nav aria-label="Secciones del desk" className="shrink-0 border-t bg-background pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-5 px-[env(safe-area-inset-left)]">
+      <div className="grid grid-cols-6 px-[env(safe-area-inset-left)]">
         {TABS.map(([id, label, Icon]) => {
           const active = tab === id;
           const mark = badge[id];

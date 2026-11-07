@@ -493,6 +493,17 @@ export const SCENES = {
     description: "La grilla salas × horarios con las sesiones del muro, en vivo; resalta el bloque en curso.",
     params: z.object({}),
   },
+  "owy-board": {
+    category: "openspace",
+    title: "Owy y la grilla",
+    description:
+      "La grilla en vivo con Owy en la esquina, hablando. Cada charla nueva sale como un sticky grande sobre la grilla desenfocada y vuela a su lugar. Desde «Owy» se pasa sin corte.",
+    params: z.object({
+      captions: z.boolean().default(true),
+      /** What the corner says while Owy waits; empty = nothing. */
+      hint: z.string().trim().max(120).default("¿Tenés un tema? Contáselo a Owy en la mesa y lo anota en la grilla."),
+    }),
+  },
   "rooms-now": {
     category: "openspace",
     title: "Ahora en cada sala",
@@ -2118,6 +2129,35 @@ export type SceneProps<K extends SceneId> = {
 export function isSceneId(value: string): value is SceneId {
   return value in SCENES;
 }
+
+/**
+ * Scenes that are one picture in two layouts: the wall moves between them in place (Owy glides
+ * from the middle to the corner and the grid comes in) instead of the brand wipe, because the
+ * same component stays up.
+ */
+const SCENE_FAMILIES: Partial<Record<SceneId, string>> = { "owy-face": "owy", "owy-board": "owy" };
+export const sceneFamily = (id: SceneId): string => SCENE_FAMILIES[id] ?? id;
+
+/**
+ * A talk the wall puts up big over the blurred grid, then sends to its cell: one that just landed
+ * on the board (`new`) or one the operator picked (`manual`). Public: it carries only what the
+ * board already shows. `id` is fresh per spotlight, so the same talk can be shown again.
+ */
+export const SpotlightSchema = z.object({
+  id: z.string().min(1).max(40),
+  how: z.enum(["new", "manual"]),
+  track: z.object({
+    id: z.string().min(1).max(40),
+    title: z.string().max(200),
+    speaker: z.string().max(200).optional(),
+    room: z.string().max(80),
+    timeSlot: z.string().max(40),
+    roomId: z.string().max(40),
+    scheduleId: z.string().max(40),
+    roomColor: z.string().max(20).optional(),
+  }),
+});
+export type Spotlight = z.infer<typeof SpotlightSchema>;
 
 export const EFFECTS = ["confetti", "flash", "owy-happy", "caption", "emoji"] as const;
 export type EffectId = (typeof EFFECTS)[number];
