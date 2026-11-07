@@ -68,7 +68,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   cacheLife("hours");
 
   const [posts, community] = await Promise.all([getBlogPosts(), communityPages()]);
-  const mainRoutes = [...new Set([...PUBLIC_ROUTES.map((page) => page.href), ...ARCHIVE_ROUTES])];
+  // /timeline is noindex (its layout), so none of it is listed
+  const mainRoutes = [
+    ...new Set([...PUBLIC_ROUTES.map((page) => page.href).filter((href) => href !== "/timeline"), ...ARCHIVE_ROUTES]),
+  ];
 
   return [
     ...mainRoutes.map((route) => ({ url: `${SITE_URL}${route === "/" ? "" : route}` })),

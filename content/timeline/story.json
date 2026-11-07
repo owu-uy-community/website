@@ -1,0 +1,180 @@
+[
+  {
+    "year": 2006,
+    "label": "Antes",
+    "lines": [
+      ["1990: el primer ", ["Encuentro GeneXus", "1990-encuentro-genexus-1990"], " junta a unas 35 personas. Hoy es la conferencia de software más longeva del país."],
+      ["1997: nace UYLUG, el grupo de usuarios de Linux, que venía de los usuarios de FidoNet."],
+      ["2001: ICANN se reúne en Montevideo. Al año siguiente LACNIC instala su sede acá."]
+    ]
+  },
+  {
+    "year": 2007,
+    "lines": [
+      ["El ", ["primer FLISoL", "2007-04-28-flisol-uruguay-2007"], ": Montevideo, Colonia, Florida, Melo, Paysandú, Rivera y Rocha instalan software libre el mismo día."],
+      ["En Paysandú nace LinuxPay, durante el Software Freedom Day."]
+    ]
+  },
+  {
+    "year": 2008,
+    "lines": [["El FLISoL repite y el ", ["World Usability Day", "2008-11-13-world-usability-day-montevideo-2008"], " junta a la gente de usabilidad."]]
+  },
+  {
+    "year": 2009,
+    "lines": [
+      ["Más de 600 personas en el ", ["FLISoL Montevideo", "2009-04-25-flisol-uruguay-2009"], ", que se muda a la Torre de las Telecomunicaciones."],
+      ["En Punta del Este, unas 50 personas de tecnología se juntan en una casa: es el ", ["primer Punta Tech Meetup", "2009-01-punta-tech-meetup-2009"], "."]
+    ]
+  },
+  {
+    "year": 2010,
+    "lines": [
+      ["La ", ["primera RubyConf Uruguay", "2010-10-29-rubyconf-uruguay-2010"], ": la primera conferencia internacional de desarrollo que organiza una comunidad del país."],
+      [["BarCamp Uruguay", "2010-11-13-barcamp-uruguay-2010"], " agota sus 150 lugares y OWASP hace ", ["su primer evento", "2010-12-09-owasp-day-uruguay-2010"], ", en la ORT."]
+    ],
+    "photos": [{ "event": "2010-12-09-owasp-day-uruguay-2010", "n": 0 }]
+  },
+  {
+    "year": 2011,
+    "lines": [
+      ["El ", ["primer PyDay", "2011-08-20-pyday-uruguay-2011"], ": más de 200 pythonistas y 18 charlas."],
+      [["Startup Weekend", "2011-11-25-startup-weekend-montevideo-2011"], " llega a Montevideo y la ", ["RubyConf", "2011-11-11-rubyconf-uruguay-2011"], " repite."]
+    ],
+    "photos": [{ "event": "2011-11-11-rubyconf-uruguay-2011", "n": 19 }]
+  },
+  {
+    "year": 2012,
+    "lines": [
+      ["Nacen en Meetup ", ["Ruby Montevideo", "2012-03-08-nace-el-grupo-ruby-montevideo"], ", Montevideo JS y Python Montevideo: tres grupos que siguen activos."],
+      ["Primera ", ["PyCon Uruguay", "2012-11-10-pycon-uruguay-2012"], ", primer ", ["DevFest", "2012-11-05-devfest-uruguay-2012"], " y primera ", ["Global Game Jam", "2012-01-27-global-game-jam-uruguay-2012"], " uruguaya."],
+      ["El ", ["TechMeetup", "2012-11-03-techmeetup-uy-2012-meetupuy-v2012"], " junta 245 personas en su primera edición."]
+    ],
+    "photos": [{ "event": "2012-11-03-techmeetup-uy-2012-meetupuy-v2012", "n": 0 }],
+    "badges": ["ruby-montevideo", "montevideo-js", "python-montevideo"]
+  },
+  {
+    "year": 2013,
+    "lines": [
+      ["El año de los grupos: nacen AgileUY, PHP Montevideo, .NET Meetup UY, Scala Meetup, IxDA Montevideo, DevOps MVD y más."],
+      ["Se promulga ", ["la ley de software libre", "2013-12-27-se-promulga-la-ley-de-software-libre"], " que la comunidad impulsaba desde 2003."]
+    ],
+    "photos": [{ "event": "2013-03-22-rubyconf-uruguay-2013", "n": 2 }],
+    "badges": ["agileuy", "php-montevideo"]
+  },
+  {
+    "year": 2014,
+    "lines": [
+      ["La ", ["primera JSConf Uruguay", "2014-03-14-jsconf-uruguay-2014"], ": Douglas Crockford, Guillermo Rauch y Jeremy Ashkenas en la Torre Antel."],
+      ["La ", ["última RubyConf", "2014-05-23-rubyconf-uruguay-2014"], ", la ", ["primera TestingUy", "2014-04-03-testinguy-2014"], " y el ", ["primer Rails Girls", "2014-05-21-rails-girls-montevideo-2014"], "."],
+      ["Según la historia de OWU, ", ["nace su Slack", "2014-nace-el-slack-de-owu"], " para organizar la JSConfUY."]
+    ],
+    "photos": [{ "event": "2014-03-14-jsconf-uruguay-2014", "n": 1 }, { "event": "2014-05-23-rubyconf-uruguay-2014", "n": 0 }]
+  },
+  {
+    "year": 2015,
+    "lines": [
+      ["173 eventos presenciales en el año. Nace Angular MVD, que llegaría a 110 meetups."],
+      ["Montevideo recibe ", ["Ágiles 2015", "2015-10-22-agiles-2015"], ", el encuentro latinoamericano de agilidad."],
+      ["Diciembre: la primera huella pública del Slack de OWU, «Open Web Uruguay», ", ["con 88 personas", "2015-12-05-el-slack-de-owu-con-88-personas"], "."]
+    ],
+    "photos": [{ "event": "2015-10-16-devfest-uruguay-2015", "n": 0 }],
+    "badges": ["angular-mvd"]
+  },
+  {
+    "year": 2016,
+    "lines": [
+      ["La ", ["última JSConf Uruguay", "2016-04-15-jsconf-uruguay-2016"], " invita a sumarse al Slack, que ya tiene 270 personas."],
+      ["Nacen Elixir |> Montevideo, Abstracta Tech Talks y ReactJS Uruguay, y llega la ", ["primera NASA Space Apps", "2016-04-23-nasa-space-apps-uruguay-2016"], "."]
+    ],
+    "photos": [{ "event": "2016-04-26-testinguy-2016", "n": 26 }],
+    "badges": ["elixir-montevideo"]
+  },
+  {
+    "year": 2017,
+    "lines": [
+      ["Nace R-Ladies Montevideo y el ", ["primer LEVEL UY", "2017-12-06-level-uy-2017"], " reúne a la industria de videojuegos."],
+      ["js.uy organiza el ", ["JSDay Uruguay", "2017-11-24-jsday-uruguay-2017"], ". El Slack de OWU ", ["pasa las 500 personas", "2017-10-14-el-slack-de-owu-pasa-las-500-personas"], "."]
+    ],
+    "photos": [{ "event": "2017-05-15-testinguy-2017", "n": 18 }]
+  },
+  {
+    "year": 2018,
+    "lines": [
+      ["Nacen ProductTank, Montevideo Web Developers, Rust Meetup Uruguay, Inteligencia Artificial Montevideo y GURU::mvd."],
+      ["El ", ["primer (y único) WordCamp", "2018-11-24-wordcamp-montevideo-2018"], " en Uruguay, y Startup Weekend llega a ", ["Fray Bentos", "2018-07-27-startup-weekend-fray-bentos-2018"], "."]
+    ],
+    "photos": [{ "event": "2018-03-03-open-data-day-montevideo-2018", "n": 0 }],
+    "badges": ["montevideo-web-developers"]
+  },
+  {
+    "year": 2019,
+    "lines": [
+      ["El año con más eventos presenciales: 196."],
+      [["Rust Latam", "2019-03-29-rust-latam-2019"], ", el ", ["primer DevOpsDays", "2019-08-21-devopsdays-montevideo-2019"], " en Uruguay y ", ["KHIPU", "2019-11-11-khipu-2019"], ", el encuentro latinoamericano de IA."],
+      [["Nace Data Science UY", "2019-05-23-nace-data-science-uy"], ", hoy ConnectIA. El Slack de OWU pasa las 1.100 personas."]
+    ],
+    "photos": [{ "event": "2019-05-13-testinguy-2019", "n": 0 }],
+    "badges": ["connectia"]
+  },
+  {
+    "year": 2020,
+    "lines": [
+      ["En marzo todo pasa a online: 135 eventos a distancia en el año."],
+      ["El OWASP Latam Tour no vuelve a Montevideo y ", ["Ágiles 2020", "2020-11-08-agiles-2020"], ", que iba a ser acá, se hace online."]
+    ]
+  },
+  {
+    "year": 2021,
+    "lines": [
+      ["Seguimos a distancia: 75 eventos online."],
+      ["En noviembre vuelven las meetups presenciales, como la de ", ["Angular MVD", "2021-11-17-presencial-meetup-de-angular"], "."],
+      ["El Slack de OWU ", ["pasa las 2.000 personas", "2021-08-05-el-slack-de-owu-pasa-las-2-000-personas"], "."]
+    ],
+    "photos": [{ "event": "2021-11-17-presencial-meetup-de-angular", "n": 0 }]
+  },
+  {
+    "year": 2022,
+    "lines": [
+      ["La vuelta: 74 eventos presenciales. Nacen AWS User Group Montevideo y MLOps Uruguay."],
+      ["José Valim abre la ", ["primera ElixirConf UY", "2022-11-11-elixirconf-uy-2022"], "."]
+    ],
+    "photos": [{ "event": "2022-11-23-owasp-day-uruguay-2022", "n": 0 }],
+    "badges": ["aws-ug-montevideo", "mlops-uruguay"]
+  },
+  {
+    "year": 2023,
+    "lines": [
+      ["La ", ["primera La Meetup", "2023-11-25-la-meetup-2023"], " de OWU: todas las comunidades juntas en Sinergia Faro."],
+      ["El ", ["FLISoL", "2023-04-22-flisol-uruguay-2023"], " vuelve a ser presencial y nace AI for Devs Montevideo."]
+    ],
+    "photos": [{ "event": "2023-11-02-abrelatam-2023", "n": 0 }],
+    "badges": ["ai-for-devs"]
+  },
+  {
+    "year": 2024,
+    "lines": [
+      ["Data Science UY pasa a ser ConnectIA y hace ", ["su primera conferencia", "2024-09-14-connectia-2024"], "."],
+      [["La Meetup II", "2024-10-19-la-meetup-2024"], ", vuelve ", ["AppSec Río de la Plata", "2024-12-12-owasp-appsec-2024"], " y nace AWS Girls UG Uruguay."]
+    ],
+    "photos": [{ "event": "2024-10-19-la-meetup-2024", "n": 0 }],
+    "badges": ["aws-girls-ug-uruguay"]
+  },
+  {
+    "year": 2025,
+    "lines": [
+      ["El ", ["primer CODE Pop", "2025-04-05-code-pop-2025"], " de OWU, en Holberton – Zonamerica."],
+      [["La Meetup III", "2025-11-01-la-meetup-2025"], " en Sinergia Faro y nace ", ["Maldonado Tech Meetup", "2025-10-22-nace-maldonado-tech-meetup"], ", el primer grupo del directorio fuera de Montevideo."]
+    ],
+    "photos": [{ "event": "2025-11-01-la-meetup-2025", "n": 0 }, { "event": "2025-11-19-owasp-appsec-2025", "n": 0 }],
+    "badges": ["maldonado-tech-meetup"]
+  },
+  {
+    "year": 2026,
+    "lines": [
+      ["La Meetup pasa a llamarse ", ["OWU CONF", "2026-11-07-owu-conf-2026"], ": 7 de noviembre, Sinergia Faro."],
+      ["Vuelven PyLadies Uruguay y el ", ["PyDay", "2026-10-10-pyday-uruguay-2026"], ". El Slack de OWU ", ["tiene 5.601 personas", "2026-10-22-el-slack-de-owu-5-601-personas"], "."]
+    ],
+    "photos": [{ "event": "2026-04-24-flisol-uruguay-2026", "n": 0 }],
+    "badges": ["pyladies-uruguay"]
+  }
+]

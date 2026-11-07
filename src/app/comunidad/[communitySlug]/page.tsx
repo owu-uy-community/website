@@ -12,6 +12,7 @@ import { ORGANIZAR_ON } from "lib/community/flags";
 import { db } from "lib/db";
 import { communities, communityMembers, eventHosts, events, user, venues, type CommunityRow } from "lib/db/schema";
 import { listCommunityEvents, publicCommunity } from "lib/tenant-server";
+import { getTimeline } from "lib/timeline/data";
 
 // Every listed community is prerendered; one listed later renders on its first visit
 export const generateStaticParams = communityParams;
@@ -93,6 +94,7 @@ async function CommunityHome({ community }: { community: CommunityRow }) {
         canFollow={ORGANIZAR_ON}
         claimHref={ORGANIZAR_ON ? "/organizar/panel/reclamar" : null}
         community={community}
+        history={historyOf(community.slug)}
         hosts={hosted.toSorted((a, b) => a.name.localeCompare(b.name, "es"))}
         organizers={organizers}
         past={past}
@@ -101,4 +103,10 @@ async function CommunityHome({ community }: { community: CommunityRow }) {
       <Footer />
     </SiteChrome>
   );
+}
+
+/** Its lane in /timeline: how many events the rebuilt history found, and since when */
+function historyOf(slug: string) {
+  const record = getTimeline().community.get(slug);
+  return record?.events && record.first ? { events: record.events, since: record.first } : null;
 }
