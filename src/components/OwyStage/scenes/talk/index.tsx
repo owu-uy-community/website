@@ -42,6 +42,7 @@ import {
   VsSlide,
 } from "./live";
 import { CaptionLine, CaptionsContext } from "./seat";
+import { BoardSlide, FlowSlide, HubSlide, SplitSlide, WifiSlide } from "./system";
 
 /**
  * «Owy, en vivo» — the talk deck on the wall. One scene for the whole talk: `slide`/`step` move
@@ -113,6 +114,16 @@ function Slide({ params, round, eventId }: Props) {
       return <VsSlide slide={slide} {...live} />;
     case "links":
       return <LinksSlide slide={slide} step={step} />;
+    case "board":
+      return <BoardSlide slide={slide} {...live} />;
+    case "hub":
+      return <HubSlide slide={slide} {...live} />;
+    case "flow":
+      return <FlowSlide slide={slide} step={step} />;
+    case "wifi":
+      return <WifiSlide slide={slide} step={step} />;
+    case "split":
+      return <SplitSlide slide={slide} step={step} />;
     case "qa":
       return <QaSlide slide={slide} {...live} />;
     case "rating":

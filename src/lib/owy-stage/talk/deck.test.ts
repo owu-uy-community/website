@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { TALK_SLIDES, cueText, inputKey, slideSteps, stepAfter, stepBefore, talkSlide } from "./deck";
+import { TALK_SLIDES, cueText, inputKey, slideSteps, stepAfter, stepBefore, talkSlide, type TalkSlide } from "./deck";
 
 describe("talk deck", () => {
   test("ids are unique, every vote has options, a vs round is two builds", () => {
@@ -34,9 +34,25 @@ describe("talk deck", () => {
   test("questions share one key, votes are per slide and per vs round", () => {
     expect(inputKey(talkSlide("title"), 0)).toBe("question");
     expect(inputKey(talkSlide("poll-bathroom"), 1)).toBe("vote:poll-bathroom");
-    expect(inputKey(talkSlide("vs"), 0)).toBe("vote:vs:0");
-    expect(inputKey(talkSlide("vs"), 3)).toBe("vote:vs:1");
-    expect(inputKey(talkSlide("rating"), 0)).toBe("stars:rating");
+    // Out of the 25-minute cut, still in the deck's vocabulary.
+    const base = { section: "final", title: "x", seconds: 0, owy: "x" } as const;
+    const vs: TalkSlide = {
+      ...base,
+      id: "vs",
+      layout: "vs",
+      rounds: [],
+      input: { kind: "vote", prompt: "?", options: ["Humano", "Owy"] },
+    };
+    expect(inputKey(vs, 0)).toBe("vote:vs:0");
+    expect(inputKey(vs, 3)).toBe("vote:vs:1");
+    expect(inputKey({ ...base, id: "rating", layout: "rating", input: { kind: "stars", prompt: "?" } }, 0)).toBe(
+      "stars:rating"
+    );
+  });
+
+  test("the talk fits its 25 minutes, five of them questions", () => {
+    expect(TALK_SLIDES.reduce((sum, slide) => sum + slide.seconds, 0)).toBeLessThanOrEqual(25 * 60);
+    expect(talkSlide("qa").seconds).toBe(300);
   });
 
   test("an unknown slide falls back to the lobby; {top} needs a question", () => {
