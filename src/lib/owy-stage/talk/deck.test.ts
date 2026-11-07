@@ -11,6 +11,52 @@ describe("talk deck", () => {
     expect(badVs).toStrictEqual([]);
   });
 
+  test("every click shows one more thing: a slide has exactly as many builds as it has pieces", () => {
+    const expected = (slide: TalkSlide): number | null => {
+      switch (slide.layout) {
+        case "map":
+          return slide.build ? slide.build.length + (slide.pulse ? 1 : 0) : 1;
+        case "screen":
+          return slide.callouts.length + 1;
+        case "phones":
+          return slide.phones.length;
+        case "sequence":
+          return slide.messages.length;
+        case "tree":
+          return slide.entries.length;
+        case "lanes":
+          return slide.branches.length + 1;
+        case "points":
+          return slide.points.length;
+        case "tiles":
+          return slide.tiles.length;
+        case "flow":
+          return slide.stations.length;
+        case "orbit":
+          return slide.bodies.length + 1;
+        default:
+          return null;
+      }
+    };
+    const off = TALK_SLIDES.filter((slide) => expected(slide) !== null && expected(slide) !== slideSteps(slide)).map(
+      (slide) => `${slide.id}: ${slideSteps(slide)} builds, ${expected(slide)} pieces`
+    );
+    expect(off).toStrictEqual([]);
+    // A message goes between lanes that exist; a callout stays inside its screenshot.
+    const strays = TALK_SLIDES.flatMap((slide) =>
+      slide.layout === "sequence"
+        ? slide.messages
+            .filter((message) => [message.from, message.to].some((lane) => lane < 0 || lane >= slide.lanes.length))
+            .map((message) => `${slide.id}: ${message.label}`)
+        : slide.layout === "screen"
+          ? slide.callouts
+              .filter(({ box: [x, y, w, h] }) => !(x >= 0 && y >= 0 && w > 0 && h > 0 && x + w <= 1 && y + h <= 1))
+              .map((callout) => `${slide.id}: ${callout.title}`)
+          : []
+    );
+    expect(strays).toStrictEqual([]);
+  });
+
   test("next walks every build, then the next slide; back mirrors it", () => {
     const seen: string[] = [];
     let at: { slide: string; step: number } | null = { slide: TALK_SLIDES[0].id, step: 0 };
@@ -33,9 +79,16 @@ describe("talk deck", () => {
 
   test("questions share one key, votes are per slide and per vs round", () => {
     expect(inputKey(talkSlide("title"), 0)).toBe("question");
-    expect(inputKey(talkSlide("poll-bathroom"), 1)).toBe("vote:poll-bathroom");
     // Out of the 25-minute cut, still in the deck's vocabulary.
     const base = { section: "final", title: "x", seconds: 0, owy: "x" } as const;
+    const poll: TalkSlide = {
+      ...base,
+      id: "poll",
+      layout: "poll",
+      reveal: "x",
+      input: { kind: "vote", prompt: "?", options: ["Sí", "No"] },
+    };
+    expect(inputKey(poll, 1)).toBe("vote:poll");
     const vs: TalkSlide = {
       ...base,
       id: "vs",

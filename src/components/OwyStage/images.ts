@@ -23,7 +23,15 @@ export const STAGE_IMAGES: string[] = [
     ...SPONSORS_2026.map((sponsor) => sponsor.logo),
     ...TEAM_2026.map((member) => member.picture),
     ...MOMENT_PHOTOS,
-    ...TALK_SLIDES.flatMap((slide) => (slide.layout === "photos" ? slide.photos.map((photo) => photo.src) : [])),
+    ...TALK_SLIDES.flatMap((slide) =>
+      slide.layout === "photos"
+        ? slide.photos.map((photo) => photo.src)
+        : slide.layout === "screen"
+          ? [slide.shot]
+          : slide.layout === "phones"
+            ? slide.phones.map((phone) => phone.shot)
+            : []
+    ),
   ]),
 ].filter((src): src is string => Boolean(src));
 

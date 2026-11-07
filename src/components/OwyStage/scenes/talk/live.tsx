@@ -520,18 +520,26 @@ export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
 // ---------------------------------------------------------------------------
 
 export function DevicesSlide({ slide, step }: LiveProps<"devices">) {
+  // One device gets the whole slide: the knob big enough to read its face from the back.
+  const solo = slide.devices.length === 1;
+  const k = solo ? 1.85 : 1;
   return (
-    <Frame caption wide className="flex items-start gap-[96px]" title={slide.title}>
+    <Frame
+      caption
+      wide
+      className={`flex items-start ${solo ? "gap-[120px] pl-[60px]" : "gap-[96px]"}`}
+      title={slide.title}
+    >
       {slide.devices.slice(0, step + 1).map((device, i) => {
-        const d = Math.round((280 * device.screen) / 466);
-        const knob = i === 1;
+        const d = Math.round(((280 * device.screen) / 466) * k);
+        const knob = device.board ? device.board === "knob" : i === 1;
         return (
-          <Build key={device.name} className="flex items-center gap-10">
-            <div className="flex h-[320px] w-[320px] shrink-0 items-center justify-center">
+          <Build key={device.name} className={`flex items-center ${solo ? "gap-[110px]" : "gap-10"}`}>
+            <div className="flex shrink-0 items-center justify-center" style={{ width: 320 * k, height: 320 * k }}>
               <div
                 className="rounded-full"
                 style={{
-                  padding: knob ? 24 : 14,
+                  padding: (knob ? 24 : 14) * k,
                   background: knob
                     ? "repeating-conic-gradient(#FBF5E7 0deg 1.2deg, transparent 1.2deg 7.5deg)"
                     : BRAND.cream,
@@ -540,12 +548,20 @@ export function DevicesSlide({ slide, step }: LiveProps<"devices">) {
                 <MiniFace board={knob ? "knob" : "amoled"} className="bg-black" size={d} />
               </div>
             </div>
-            <div className="w-[380px]">
-              <p className="text-[52px] leading-none font-semibold tracking-[-0.025em]">{device.name}</p>
-              <p className="mt-3 text-[32px] font-medium text-[#F5BB03]">{device.size}</p>
-              <ul className="mt-5 flex flex-col gap-2">
+            <div style={{ width: solo ? 760 : 380 }}>
+              <p className="leading-none font-semibold tracking-[-0.025em]" style={{ fontSize: solo ? 72 : 52 }}>
+                {device.name}
+              </p>
+              <p className="mt-4 font-medium text-[#F5BB03]" style={{ fontSize: solo ? 40 : 32 }}>
+                {device.size}
+              </p>
+              <ul className={`flex flex-col ${solo ? "mt-8 gap-4" : "mt-5 gap-2"}`}>
                 {device.specs.map((spec) => (
-                  <li key={spec} className="text-[32px] leading-[1.2] font-medium text-[#FBF5E7]/70">
+                  <li
+                    key={spec}
+                    className="leading-[1.2] font-medium text-[#FBF5E7]/70"
+                    style={{ fontSize: solo ? 40 : 32 }}
+                  >
                     {spec}
                   </li>
                 ))}
