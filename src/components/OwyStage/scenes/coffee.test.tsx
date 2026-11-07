@@ -13,20 +13,22 @@ vi.mock(import("next/font/google"), () => {
 describe("coffee break scene", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // 18:40:00 in Montevideo (UTC-3), inside the 18:25–19:00 break.
+    // 18:40:00 in Montevideo (UTC-3), inside the break.
     vi.setSystemTime(new Date("2026-11-07T21:40:00Z"));
   });
   afterEach(() => vi.useRealTimers());
 
-  test("counts down every second to the end of the break and stops at zero", () => {
-    const params = SCENES.coffee.params.parse({ start: "18:25", until: "19:00" });
+  test("counts down every second to the rescheduled talks and stops at zero", () => {
+    // The talks slipped from 19:00 to 19:10.
+    const params = SCENES.coffee.params.parse({ breakAt: "18:25", talksAt: "19:10", note: "Primera charla" });
     render(<CoffeeBreak eventId={null} params={params} round="" takenAt="" />);
-    expect(screen.getByText("20:00")).toBeInTheDocument();
+    expect(screen.getByText("30:00")).toBeInTheDocument();
+    expect(screen.getByText("19:10 · Primera charla")).toBeInTheDocument();
 
     act(() => vi.advanceTimersByTime(1000));
-    expect(screen.getByText("19:59")).toBeInTheDocument();
+    expect(screen.getByText("29:59")).toBeInTheDocument();
 
-    act(() => vi.advanceTimersByTime(20 * 60_000));
+    act(() => vi.advanceTimersByTime(30 * 60_000));
     expect(screen.getByText("00:00")).toBeInTheDocument();
   });
 });

@@ -305,17 +305,18 @@ export const SCENES = {
     params: z.object({
       title: z.string().trim().max(40).default("Coffee break"),
       label: z.string().trim().max(40).default("Las charlas empiezan en"),
-      start: z
+      // Move `talksAt` when the talks slip: the countdown, the cup and the note's time all follow it.
+      breakAt: z
         .string()
         .trim()
         .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
         .default(coffee.start),
-      until: z
+      talksAt: z
         .string()
         .trim()
         .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
         .default(coffee.end),
-      note: z.string().trim().max(120).default(`${FIRST_TALK.start} · ${FIRST_TALK.title}`),
+      note: z.string().trim().max(120).default(FIRST_TALK.title),
     }),
   },
   reminders: {

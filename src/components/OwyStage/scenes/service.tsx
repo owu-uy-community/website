@@ -472,8 +472,8 @@ function CoffeeCup({ fill, className }: { fill: number; className?: string }) {
 
 export function CoffeeBreak({ params }: SceneProps<"coffee">) {
   useNow(1000);
-  const left = secondsUntil(params.until);
-  const total = left - secondsUntil(params.start);
+  const left = secondsUntil(params.talksAt);
+  const total = left - secondsUntil(params.breakAt);
   const fill = total > 0 ? Math.min(1, Math.max(0, left / total)) : Number(left > 0);
   const done = left <= 0;
 
@@ -500,11 +500,9 @@ export function CoffeeBreak({ params }: SceneProps<"coffee">) {
         >
           {formatTime(Math.min(Math.max(left, 0), 5999))}
         </div>
-        {params.note && (
-          <Rise className="mt-4 text-[40px] leading-[1.15] font-semibold text-balance text-[#FBF5E7]/75" delay={0.3}>
-            {params.note}
-          </Rise>
-        )}
+        <Rise className="mt-4 text-[40px] leading-[1.15] font-semibold text-balance text-[#FBF5E7]/75" delay={0.3}>
+          {[params.talksAt, params.note].filter(Boolean).join(" · ")}
+        </Rise>
       </div>
     </>
   );
