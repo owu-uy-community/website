@@ -1,19 +1,18 @@
 /**
  * The bridge's own page, for when the site can't reach it (the venue's
  * internet is down): every setting from the registry, the same writes the
- * panel makes (reported to the site as `local` once it is back), a test tone
- * and a 4 s recording of the Mac's mic. The real place is the site's
- * /admin/companion → Control.
+ * panel makes (reported to the site as `local` once it is back), the virtual
+ * knob (tocar, pitch, callar, decir, preguntar), a tone on the Mac and a 4 s
+ * recording of its mic. The real place is the site's /admin/owy.
  *
- * Bound to 127.0.0.1 (`COMPANION_BIND_HOST`; in Docker, published on the
- * host's loopback only), behind Basic auth (any user, COMPANION_BRIDGE_SECRET
- * as the password; a random one printed at start when it is unset), and only
- * for a loopback Host (a page from elsewhere can't rebind its name to it):
+ * Bound to 127.0.0.1, behind Basic auth (any user, COMPANION_BRIDGE_SECRET as
+ * the password; a random one printed at start when it is unset), and only for
+ * a loopback Host (a page from elsewhere can't rebind its name to it):
  *
  *   GET  /              the page
  *   GET  /api/state     {status, rows}
  *   POST /api/set       {target, key, value}
- *   POST /api/command   a CompanionCommand (tone, probe-mic, hush, say…)
+ *   POST /api/command   a CompanionCommand (tap, pitch, ask, say, hush, tone, probe-mic…)
  */
 import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -31,7 +30,7 @@ h1{font-size:20px;color:#F5BB03;margin:0 0 4px}h2{font-size:16px;margin:0 0 6px}
 small{color:#8A8A8A}.card{background:#141414;border-radius:16px;padding:14px 16px;margin:14px 0}.row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:6px 0;min-height:36px}
 button,select,input{font:inherit;color:#FBF5E7;background:#1F1F1F;border:0;border-radius:10px;padding:7px 12px}button.on{background:#0162C8}button{cursor:pointer}input{width:200px}
 .seg{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#8A8A8A;margin-right:8px}.dot.on{background:#3FB950}.warn{color:#F5BB03}</style>
-<h1>Owy bridge · página de respaldo</h1><div class="card">El lugar de siempre es el panel: <b>/admin/companion → Control</b>. Esta página es para cuando el sitio no llega a este bridge; lo que cambies acá se le avisa al sitio cuando vuelva.</div>
+<h1>Owy bridge · página de respaldo</h1><div class="card">El lugar de siempre es el panel: <b>/admin/owy</b>. Esta página es para cuando el sitio no llega a este bridge; lo que cambies acá se le avisa al sitio cuando vuelva.</div>
 <div id="root"><small>Cargando…</small></div>
 <script>
 var SETTINGS=${JSON.stringify(SETTINGS)},GROUPS=${JSON.stringify(SETTING_GROUPS)},state=null,note='';
@@ -47,8 +46,8 @@ function block(target,scope,values){var html='';Object.keys(GROUPS).forEach(func
 function render(){if(!state)return;var s=state.status;if(document.activeElement&&document.activeElement.tagName==='INPUT')return;
  var html='<div class="card"><h2>Bridge <small>'+esc(s.machine)+' · '+esc(s.version)+'</small></h2>'+(note?'<div class="warn"><small>'+esc(note)+'</small></div>':'')+
  '<div class="row"><span>Pruebas</span><div class="seg"><button data-cmd="mac-tone">Tono en la Mac</button><button data-cmd="probe">Grabar 4 s</button></div></div>'+block('bridge','bridge',s.values)+'</div>';
- html+=s.devices.map(function(d){return '<div class="card"><h2><span class="dot '+(d.connected?'on':'')+'"></span>'+esc(d.id)+' <small>'+esc(d.host)+(d.audio?' · '+esc(d.audio):'')+'</small></h2>'+
- '<div class="row"><span>Pruebas</span><div class="seg"><button data-cmd="tone" data-d="'+esc(d.id)+'">Tono de prueba</button><button data-cmd="hush" data-d="'+esc(d.id)+'">Callar</button></div></div>'+block(d.id,'device',d.values)+'</div>';}).join('')||'<div class="card"><small>Sin dispositivos (COMPANION_DEVICES vacío).</small></div>';
+ html+=s.devices.map(function(d){var a=' data-d="'+esc(d.id)+'"';return '<div class="card"><h2><span class="dot '+(d.connected?'on':'')+'"></span>'+esc(d.id)+' <small>'+esc(d.host)+(d.face?' · cara '+esc(d.face):'')+' · '+esc(d.phase||'idle')+'</small></h2>'+
+ '<div class="row"><span>Owy</span><div class="seg"><button data-cmd="tap"'+a+'>Tocar</button><button data-cmd="pitch-start"'+a+'>Pitch</button><button data-cmd="pitch-submit"'+a+'>Enviar</button><button data-cmd="hush"'+a+'>Callar</button><button data-cmd="say"'+a+'>Decir…</button><button data-cmd="ask"'+a+'>Preguntar…</button></div></div>'+block(d.id,'device',d.values)+'</div>';}).join('')||'<div class="card"><small>Sin dispositivos (COMPANION_DEVICES vacío).</small></div>';
  document.getElementById('root').innerHTML=html;}
 async function load(){state=await (await fetch('/api/state')).json();render();}
 async function set(target,key,value){var r=await post('/api/set',{target:target,key:key,value:value});note=r.ok?'':(r.error||'no se pudo');await load();}
@@ -56,8 +55,11 @@ document.addEventListener('click',async function(e){var b=e.target.closest('butt
  if(b.dataset.k)return set(b.dataset.t,b.dataset.k,JSON.parse(b.dataset.v));
  var cmd=b.dataset.cmd,r;if(!cmd)return;b.disabled=true;
  if(cmd==='mac-tone')r=await post('/api/command',{type:'tone',target:'mac'});
- else if(cmd==='tone')r=await post('/api/command',{type:'tone',target:b.dataset.d});
+ else if(cmd==='tap')r=await post('/api/command',{type:'tap',deviceId:b.dataset.d});
+ else if(cmd==='pitch-start')r=await post('/api/command',{type:'pitch',deviceId:b.dataset.d,action:'start'});
+ else if(cmd==='pitch-submit')r=await post('/api/command',{type:'pitch',deviceId:b.dataset.d,action:'submit'});
  else if(cmd==='hush')r=await post('/api/command',{type:'hush',deviceId:b.dataset.d});
+ else if(cmd==='say'||cmd==='ask'){var text=prompt(cmd==='say'?'Lo que va a decir Owy':'La pregunta para Owy');if(!text||!text.trim()){b.disabled=false;return;}r=await post('/api/command',cmd==='say'?{type:'say',deviceId:b.dataset.d,text:text.trim()}:{type:'ask',deviceId:b.dataset.d,text:text.trim()});}
  else if(cmd==='probe'){note='grabando 4 s…';render();r=await post('/api/command',{type:'probe-mic',ms:4000});}
  note=!r.ok?(r.error||'no se pudo'):cmd==='probe'?'pico '+Math.round(r.data.peak*100)+'% · promedio '+Math.round(r.data.rms*100)+'%'+(r.data.peak<0.02?' — casi nada: ¿es esta entrada?':''):'';b.disabled=false;render();});
 document.addEventListener('change',function(e){var i=e.target;if(!i.dataset||!i.dataset.k)return;var s=SETTINGS[i.dataset.k];
@@ -134,7 +136,7 @@ export function startSettingsServer({ control, config, logger }: LocalPageOption
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
-    server.listen(port, config.COMPANION_BIND_HOST, () => {
+    server.listen(port, "127.0.0.1", () => {
       const url = `http://127.0.0.1:${port}/`;
       resolve({ url, close: () => new Promise((done) => server.close(() => done())) });
     });

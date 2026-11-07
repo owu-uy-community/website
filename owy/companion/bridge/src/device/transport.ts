@@ -1,7 +1,6 @@
 import type { VoiceAssistantEvent, VoiceAssistantEventData } from "esphome-client";
 import type { VoiceLink } from "./pipeline";
 import type { AudioRoute, MicRoute } from "../audio/route";
-import type { PitchVoice } from "../pitch-flow";
 import type { FaceState, ScreenCard } from "../realtime/tools";
 import type { SettingKey } from "../web/registry";
 
@@ -26,10 +25,19 @@ export interface AudioPeer {
   playClip?(id: string): void;
 }
 
-/** The gadget and web virtual device implement this same bridge-side contract. */
+/**
+ * What a session drives: the knob (a face link: no mic, no speaker, the pipeline
+ * methods are no-ops) and the browser virtual device (its own mic and speakers,
+ * the Home Assistant events on the wire) implement this same contract.
+ */
 export interface DeviceTransport extends VoiceLink {
   acceptRequest(): void;
   declineRequest(): void;
+  /**
+   * False for a device with no audio of its own (the knob): its turns never route the mic or the
+   * answer to it — the Mac, or an attached browser, carries them. Absent = it hears and plays itself.
+   */
+  readonly canPlayAudio?: boolean;
   setFace(state: FaceState): void;
   /** Expression while a sentence plays (see expression.ts); `leadMs` until it is heard, strength 0..100. Absent = no expressions. */
   sendExpression?: (expression: string, leadMs: number, strength: number) => void;
@@ -37,30 +45,24 @@ export interface DeviceTransport extends VoiceLink {
   expressionLeadMs?: number;
   /** Lip shapes for audio played elsewhere (laptop output); see audio/mouth.ts. Absent = the device lip-syncs itself. */
   sendMouthTrack?: (frames: string, leadMs: number) => void;
+  /** The listening halo on a device that does not hear for itself: the level (0..100) of the mic that owns the turn. */
+  sendMicLevel?: (level: number) => void;
   showCard(card: ScreenCard): void;
   showQr(url: string, caption?: string): void;
   showText(text: string): void;
   /** Present only when the firmware advertises `show_caption` (mute units): the reply transcript while Owy speaks. */
   showCaption?: (text: string) => void;
+  /** Present when the firmware advertises `show_heard`: what Owy understood, once listening ends. */
+  showHeard?: (text: string) => void;
   isStaffMode(): boolean;
   isMarketplaceOpen(): boolean;
-  /** Milliseconds of microphone audio to drop after a turn opens (a haptic cue bleeding into the mic); 0/absent = none. */
-  micSettleMs?: number;
-  /** Audio routing chosen on the device (`select.mic_source` / `select.audio_output`); absent = bridge default. */
+  /** Audio routing the device itself chooses (the browser is its own mic and speakers); absent = the bridge's settings. */
   getMicSource?: () => MicRoute | null;
   getAudioOutput?: () => AudioRoute | null;
-  setAudioRoute?: (which: "mic" | "output", route: MicRoute) => void;
-  /** Modo pitch (`switch.pitch_mode`); `null` when the board has none. */
-  isPitchMode?: () => boolean | null;
-  /** The old «Owy reacciona» switch (`switch.pitch_reacts`), on boards flashed before `select.pitch_voice`. */
-  isPitchReacts?: () => boolean | null;
-  setSwitch?: (id: "pitch_mode", on: boolean) => void;
-  /** What Owy says around a pitch (`select.pitch_voice`); `null` when the board has none. */
-  getPitchVoice?: () => PitchVoice | null;
-  setPitchVoice?: (voice: PitchVoice) => void;
   /**
-   * Present when the firmware exposes `pitch_prompt`: "topic" / "name" make the board open its
-   * mic by itself for the answer to Owy's question (a run tagged "pitch-answer"), "idle" clears it.
+   * Present when the device opens its own mic for the answer to Owy's question (the browser:
+   * "topic" / "name" make it start a run tagged "pitch-answer", "idle" clears it). Absent: the
+   * bridge opens the answer run itself.
    */
   pitchPrompt?: (kind: "topic" | "name" | "idle") => void;
   /** Plays a pre-rendered cue when the device has speakers of its own that can take a file (the browser). */
@@ -73,9 +75,9 @@ export interface DeviceTransport extends VoiceLink {
   writeSetting?: (key: SettingKey, value: unknown) => void;
   /** Unlocks staff on the board (it locks itself after 10 minutes), or locks it now. */
   setStaff?: (on: boolean) => void;
-  /** Presses a board button by its object id (`tono_de_prueba`). */
+  /** Presses a board button by its object id (`hablar`). */
   pressButton?: (objectId: string) => void;
-  /** The firmware version and the board's audio state, for the panel. */
-  info?: () => { firmware?: string; audio?: string };
+  /** The firmware version and the face the board shows, for the panel. */
+  info?: () => { firmware?: string; face?: string };
   close(): void;
 }

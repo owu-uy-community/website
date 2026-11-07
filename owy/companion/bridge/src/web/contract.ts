@@ -161,8 +161,10 @@ export const DeviceStatusSchema = z.object({
   connected: z.boolean(),
   /** ESPHome version the board reports. */
   firmware: z.string().optional(),
-  /** The board's `text_sensor.audio_state` (listening, speaking, privacy…). */
-  audio: z.string().optional(),
+  /** The face the board shows right now (`select.face_state`); absent while it is off the network. */
+  face: z.string().optional(),
+  /** Where this Owy's turn is, board or not: the virtual knob on the panel shows it. */
+  phase: z.enum(["idle", "listening", "thinking", "speaking"]).default("idle"),
   /** A browser is attached as this device's audio. */
   peer: z.boolean(),
   staff: z.boolean(),
@@ -199,7 +201,22 @@ const DeviceIdSchema = z.string().trim().min(1).max(64);
 
 /** What the panel can ask the bridge to do (results come back through `report`). */
 export const CompanionCommandSchema = z.discriminatedUnion("type", [
-  /** A short tone on a board, or on the Mac's output (`target: "mac"`). */
+  /**
+   * The knob's tap, from the panel (the virtual knob): idle → Owy listens through the Mac;
+   * listening → that was all (conversación) or the pitch is sent (pitch); thinking or
+   * speaking → Owy stops, with a plain face. Works with the board off: the wall shows the face.
+   */
+  z.object({ type: z.literal("tap"), deviceId: DeviceIdSchema }),
+  /** Modo pitch from the panel: record a pitch now (whatever the mode), or send the one being recorded. */
+  z.object({ type: z.literal("pitch"), deviceId: DeviceIdSchema, action: z.enum(["start", "submit"]) }),
+  /** A question as text: Owy's brain answers it out loud, with its tools (the talk console's `ask`). */
+  z.object({
+    type: z.literal("ask"),
+    deviceId: DeviceIdSchema,
+    text: z.string().trim().min(1).max(600),
+    asker: AskerSchema.default("presenter"),
+  }),
+  /** A short tone on the Mac's output (`target: "mac"`); a board has no speaker any more. */
   z.object({ type: z.literal("tone"), target: DeviceIdSchema }),
   /** Owy says these exact words on that device. */
   z.object({ type: z.literal("say"), deviceId: DeviceIdSchema, text: z.string().trim().min(1).max(600) }),

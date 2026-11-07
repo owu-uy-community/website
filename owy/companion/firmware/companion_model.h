@@ -1,13 +1,12 @@
 #pragma once
 
-// Allocation-free companion behavior. No audio/network/device commands live here.
+// Allocation-free companion behavior: gestures, the face, the rim. No network or device commands live here.
 // The same code runs in host tests and on the ESP32; milliseconds wrap safely.
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include "companion_motion.h"
 
 // Geometry is authored for the 466 px AMOLED. A smaller round panel builds with
 // -DOWY_FACE_SCALE=<panel/466> and FaceRenderer/touch mapping scale at the edges.
@@ -75,17 +74,6 @@ class Contact {
  private:
   int x0{0}, y0{0}, travel{0}, path{0};
   uint32_t started{0};
-};
-
-struct Power {
-  bool known{false}, usb{false}, battery{false}, charging{false};
-  int percent{-1};
-  void decode(uint8_t s0, uint8_t s1, int pct) {
-    known = true; usb = s0 & 0x20; battery = s0 & 0x08;
-    charging = battery && ((s1 >> 5) & 3) == 1;
-    percent = battery && pct >= 0 && pct <= 100 ? pct : -1;
-  }
-  void unavailable() { *this = Power{}; }
 };
 
 
@@ -167,45 +155,6 @@ class SpeechTrack {
   int head_{0};
 };
 
-// 16-bit PCM → (open, shape) per 10 ms block. Loudness against a decaying peak
-// (an AGC: volume and voice don't matter). Shape from two cheap spectral ratios,
-// each against its own running mean so any voice works: d2 = Σ(Δ²x)²/Σ(Δx)²
-// rises with F2 (front e/i → wide), d1 = Σ(Δx)²/Σx² falls with F1 (u → round).
-// Measured on macOS Spanish TTS voices; good enough for a cartoon, not phonetics.
-class SpeechAnalyzer {
- public:
-  static constexpr size_t BLOCK = 160;  // 10 ms at 16 kHz
-  void feed(const uint8_t *pcm, size_t bytes, size_t channels, uint32_t audible_at, SpeechTrack &out) {
-    const size_t stride = 2 * std::max<size_t>(1, channels);
-    for (size_t p = 0; p + 1 < bytes; p += stride) {
-      const float s = int16_t(uint16_t(pcm[p]) | uint16_t(uint16_t(pcm[p + 1]) << 8));
-      const float d = s - x1_, d2 = s - 2 * x1_ + x2_;
-      energy_ += s * s; diff_ += d * d; diff2_ += d2 * d2; x2_ = x1_; x1_ = s;
-      if (++n_ == BLOCK) publish(audible_at, out);
-    }
-  }
- private:
-  void publish(uint32_t at, SpeechTrack &out) {
-    const float rms = std::sqrt(energy_ / BLOCK);
-    peak_ = std::max(rms, peak_ * .996f);
-    const float floor = std::max(180.f, peak_ * .1f), top = std::max(peak_ * .75f, floor + 400.f);
-    const float open = bound((rms - floor) / (top - floor), 0, 1);
-    float shape = 0;
-    if (open > .15f) {
-      const float r1 = diff_ / (energy_ + 1.f), r2 = diff2_ / (diff_ + 1.f);
-      mean1_ += (r1 - mean1_) * .03f; mean2_ += (r2 - mean2_) * .03f;
-      // ponytail: thresholds are ratios to the voice's own mean; retune by eye here.
-      const float wide = bound((r2 / mean2_ - 1.12f) / .3f, 0, 1);
-      const float round = std::max(bound((.8f - r2 / mean2_) / .3f, 0, 1), bound((.6f - r1 / mean1_) / .25f, 0, 1));
-      shape = round - wide;
-    }
-    out.push(at, open, shape);
-    energy_ = diff_ = diff2_ = 0; n_ = 0;
-  }
-  float energy_{0}, diff_{0}, diff2_{0}, x1_{0}, x2_{0}, peak_{0}, mean1_{.04f}, mean2_{.6f};
-  size_t n_{0};
-};
-
 // What Owy feels while it talks (or reacts while it thinks): a layer over the
 // SPEAKING/THINKING pose that moves eyes, lids, brows and cheeks; the lips keep
 // lip-syncing. The bridge picks one per sentence (companion/bridge/src/expression.ts).
@@ -274,7 +223,7 @@ struct Frame {
   int gaze_x{0}, gaze_y{0}, eye_h{156}, eye_rh{156}, pupil_w{44}, pupil_h{54};
   int lid_l{0}, lid_r{0}, crescent{0};  // px: lids from the top, happy cut from below
   int brow_y{0}, brow_in_l{0}, brow_out_l{0}, brow_in_r{0}, brow_out_r{0};
-  int face_y{0}, sway{0}, cheek{0};      // cheek 0..100
+  int face_y{0}, cheek{0};               // cheek 0..100
   int mouth_w{100}, mouth_h{30}, mouth_r{18}, mouth_x{0};
   int cavity_w{0}, cavity_h{0}, cavity_r{0}, tongue_w{0}, tongue_h{0};
   int cut_y{0}, cut_w{0}, cut_h{0}, bowl_h{0};  // smile (cut above) / frown (cut below)
@@ -288,19 +237,7 @@ class Companion {
  public:
   explicit Companion(uint32_t seed=0x4F5759) : random_(seed ? seed : 0x4F5759) {}
   Contact contact;
-  Power power;
-  MotionTracker tracker;
-  Cadence animation_cadence;
-  SpeechTrack speech_tap, speech_track;  // speaker PCM tap / bridge mouth_track
-  float chip_temperature{NAN};
-  void motion(float ax, float ay, float az, float gx, float gy, float gz, uint32_t now, bool react = true) {
-    if (tracker.update({ax,ay,az}, {gx,gy,gz}, now, react)) {
-      delight(now); shake_at_=now; has_shake_=true; shake_event_=true;
-    }
-  }
-  bool take_shake() { const bool event=shake_event_; shake_event_=false; return event; }
-  bool motion_ok(uint32_t now) const { return tracker.ok(now); }
-  void center() { tracker.center(); }
+  SpeechTrack speech_track;  // the bridge's mouth_track: what Owy says plays on the Mac
   void delight(uint32_t now) { reaction_at_ = now; has_reaction_ = true; }
   /** STT end: a quick nod says "te entendí". */
   void nod(uint32_t now) { nod_at_ = now; has_nod_ = true; }
@@ -317,21 +254,9 @@ class Companion {
   }
   /** Boot: eyes stay shut until `until`, then open with a stretch. */
   void wake_at(uint32_t until) { boot_until_ = until; has_boot_ = true; }
-  // `gain` scales the envelope for quieter front-ends (a raw PDM mic vs the
-  // ES7210's 30 dB analog stage); 1 keeps the original 466 calibration.
-  void audio(const uint8_t *data, size_t size, uint32_t now, float gain = 1.f) {
-    // Existing stereo16-bit stream, first mic only; <=48 samples, no allocation.
-    // Observe data, never start a microphone consumer or touch LVGL here.
-    if (size < 4) return;
-    const size_t frames = size / 4;
-    const size_t stride = std::max(size_t(1), frames / 48);
-    uint32_t sum = 0, n = 0;
-    for (size_t f = 0; f < frames && n < 48; f += stride, ++n) {
-      const size_t p = f * 4;
-      const int sample = int16_t(uint16_t(data[p]) | (uint16_t(data[p + 1]) << 8));
-      sum += std::abs(sample);
-    }
-    mic_level_.store(bound(gain * float(sum) / std::max(uint32_t(1), n) / 3000.f - .025f, 0.f, 1.f), std::memory_order_relaxed);
+  /** The Mac's mic level (0..1) while Owy listens, from the bridge (`mic_level`): the halo and the eyes follow it. */
+  void level(float v, uint32_t now) {
+    mic_level_.store(bound(v, 0.f, 1.f), std::memory_order_relaxed);
     mic_at_.store(now, std::memory_order_relaxed);
   }
   /** Latest mic envelope (0..1); 0 once the stream is >200 ms stale. Observe-only, like the mouth. */
@@ -353,17 +278,13 @@ class Companion {
       speech_track.push(now + uint32_t(int32_t(lead_ms)) + uint32_t(i * 40), (v >> 2) / 15.f, (v & 3) / 1.5f - 1);
     }
   }
-  /** Speech features now audible: the speaker tap first, then a bridge mouth track. */
-  bool speech(uint32_t now, float &open, float &shape) const {
-    return speech_tap.read(now, open, shape) || speech_track.read(now, open, shape);
-  }
+  /** Speech features now audible (the bridge's mouth track). */
+  bool speech(uint32_t now, float &open, float &shape) const { return speech_track.read(now, open, shape); }
   // `speaking` (0..100) is a level-only fallback when no speech features arrive
   // (the emulator's fixtures); real devices drive the lips from speech().
-  Frame frame(uint32_t now, Mood mood, bool motion_on, bool reduced, bool invert_x,
-              bool invert_y, float speaking) {
+  Frame frame(uint32_t now, Mood mood, bool reduced, float speaking) {
     const uint32_t elapsed = has_frame_ ? uint32_t(now - frame_at_) : 50;
     frame_at_ = now; has_frame_ = true;
-    animation_cadence.tick(now);
     const float dt = bound(float(elapsed), 1.f, 150.f);
     const bool listening = hears(mood);
     const bool voice = listening || mood == Mood::THINKING || mood == Mood::SPEAKING;
@@ -386,16 +307,9 @@ class Companion {
     Target t = target(shown);
     if (shown == Mood::SPEAKING || shown == Mood::THINKING) apply_expression(t, now);
 
-    // ── Gaze: deliberate input leads (tilt, touch); otherwise idle saccades ──
+    // ── Gaze: a finger leads; otherwise idle saccades ───────────────────────
     float tx = 0, ty = 0;
     if (!reduced && alive) {
-      if (motion_on && motion_ok(now)) {
-        const auto tilt=tracker.offset();
-        tx = std::abs(tilt.x)<.008f ? 0 : tilt.x*64.f;
-        ty = std::abs(tilt.y)<.008f ? 0 : -tilt.y*54.f;
-        if (invert_x) tx = -tx;
-        if (invert_y) ty = -ty;
-      }
       if (!voice && contact.active) {
         tx = (contact.last_x - scaled(233)) / FACE_SCALE * .17f;
         ty = (contact.last_y - scaled(210)) / FACE_SCALE * .16f;
@@ -484,11 +398,6 @@ class Companion {
         out.face_y -= std::lround(14 * std::sin(age / 350.f * 3.14159265f) * (1 - age / 700.f));
       }
     }
-    if (alive && !voice && !reduced && motion_on && has_shake_ && recent(now,shake_at_,1600)) {
-      const float age=float(uint32_t(now-shake_at_));
-      out.sway=std::lround(8.f*std::sin(age*.014f)*(1.f-age/1600.f));
-      out.brow_y+=out.sway;
-    }
 
     // ── Mouth: stiff springs for speech, bouncy ones for expressions ────────
     MouthShape m = t.mouth;
@@ -500,7 +409,7 @@ class Companion {
     const float w = std::max(8.f, v[0]), h = std::max(2.f, v[1]), lip = 7;
     out.mouth_w = std::lround(w); out.mouth_h = std::lround(h);
     out.mouth_r = std::lround(bound(v[2], 1, std::min(w, h) / 2));
-    out.mouth_x = std::lround(gx / 3 + v[8]) - out.sway;
+    out.mouth_x = std::lround(gx / 3 + v[8]);
     const float cav_h = (h - 2 * lip) * bound(v[3], 0, 1);
     if (v[3] > .03f && cav_h >= 2) {
       out.cavity_w = std::lround(w - 2 * lip); out.cavity_h = std::lround(cav_h);
@@ -609,10 +518,10 @@ class Companion {
   float envelope_{0}, ring_level_{0}, saccade_x_{0}, saccade_y_{0};
   std::atomic<float> mic_level_{0};
   std::atomic<uint32_t> mic_at_{0};
-  uint32_t reaction_at_{0}, shake_at_{0}, frame_at_{0}, blink_at_{0}, blink_delay_{3500}, random_{0x4F5759};
+  uint32_t reaction_at_{0}, frame_at_{0}, blink_at_{0}, blink_delay_{3500}, random_{0x4F5759};
   uint32_t nod_at_{0}, mood_at_{0}, countdown_at_{0}, countdown_ms_{0}, saccade_at_{0}, boot_until_{0};
   Mood mood_{Mood::IDLE};
-  bool has_shake_{false}, shake_event_{false}, has_reaction_{false}, has_frame_{false}, blink_scheduled_{false};
+  bool has_reaction_{false}, has_frame_{false}, blink_scheduled_{false};
   bool has_nod_{false}, has_mood_{false}, saccade_scheduled_{false}, has_boot_{false};
 };
 }  // namespace owy

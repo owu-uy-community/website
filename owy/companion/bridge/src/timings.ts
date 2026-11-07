@@ -1,26 +1,19 @@
 /**
  * The bridge's turn timings in one place, and the only sleep/timeout helpers.
- * test/timings.test.ts checks them against the board's own watchdog
- * (firmware/packages/voice.yaml `turn_watchdog`): a budget the board does not
- * grant ends in the board cancelling the run while the bridge is still working.
+ * The bridge owns every budget: the knob runs no pipeline and has no watchdog.
  */
-
-/**
- * The board's watchdog, from the run's start (the mic opening) to the end of Owy's
- * audio: a conversation turn, and a pitch run (recording, thinking, Owy's reply).
- */
-export const FIRMWARE_WATCHDOG_MS = { turn: 90_000, pitch: 240_000 } as const;
-
-/** What Owy's spoken reply at the end of a run takes at most (an answer, an announcement). */
-export const REPLY_MARGIN_MS = 15_000;
 
 export const TIMINGS = {
   /** A connect already under way gets this long before a physical tap is answered through the cascade instead. */
   acceptWaitMs: 1_500,
   /** With no board up nothing keeps the voice warm: a console line waits this long for a cold connect. */
   ownConnectWaitMs: 4_000,
+  /** start() gives the board this long to answer; a dark one keeps connecting in the background. */
+  boardWaitMs: 1_000,
   /** Transcribe + eve/text model + first TTS audio, with room for a slow network. */
   cascadeThinkingMs: 45_000,
+  /** A pitch: extract (20 s), a duplicate check (4 s), a slow board write (20 s), and then some. */
+  pitchThinkingMs: 90_000,
   /** The gateway caps a realtime session at 25 min; renew it between turns well before. */
   rotateAfterMs: 20 * 60_000,
   keepWarmEveryMs: 30_000,
@@ -28,16 +21,17 @@ export const TIMINGS = {
   turn: { silenceMs: 900, maxMs: 30_000, minSpeechMs: 300 },
   /** A pitch run gives the person this long to start talking. */
   pitchNoSpeechMs: 15_000,
+  /** Owy's question is over: the Mac mic opens for the answer this much later (the room's tail). */
+  answerGapMs: 300,
+  /** An error face stays this long, then the plain face comes back on its own. */
+  errorFaceMs: 3_000,
   /** createPlaced and the board read get this long before the bridge looks for itself. */
   placeTimeoutMs: 20_000,
   /** Caption and transcript updates on a 360 px page: one per this many ms is plenty. */
   captionEveryMs: 300,
+  /** The listening halo on the knob follows the Mac's mic at this rate. */
+  micLevelEveryMs: 100,
 } as const;
-
-/** How long a pitch may think: what the watchdog leaves after the longest recording and Owy's reply. */
-export function pitchThinkingMs(maxRecordingS: number): number {
-  return Math.min(90_000, FIRMWARE_WATCHDOG_MS.pitch - maxRecordingS * 1000 - REPLY_MARGIN_MS);
-}
 
 /** Resolves after `ms`, or rejects as soon as `signal` aborts. */
 export function sleep(ms: number, signal?: AbortSignal): Promise<void> {

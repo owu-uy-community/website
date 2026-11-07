@@ -98,25 +98,31 @@ describe("settings registry", () => {
   });
 
   it("lets the voice change comfort settings, staff the rest, and never turn privacy off", () => {
-    expect(voiceMay("volume", 40, false)).toEqual({ ok: true });
+    expect(voiceMay("brightness", 40, false)).toEqual({ ok: true });
     expect(voiceMay("pitch_mode", true, false)).toMatchObject({ ok: false });
     expect(voiceMay("pitch_mode", true, true)).toEqual({ ok: true });
     expect(voiceMay("privacy", true, false)).toEqual({ ok: true });
     expect(voiceMay("privacy", false, true)).toMatchObject({ ok: false });
     expect(VOICE_KEYS).not.toContain("host");
-    for (const key of ["volume", "brightness", "quiet_mode", "listening_chime", "continuous_conversation", "reduced_motion"] as SettingKey[])
-      expect(settingSpec(key).voice).toBe("public");
+    for (const key of ["brightness", "reduced_motion", "privacy"] as SettingKey[]) expect(settingSpec(key).voice).toBe("public");
   });
 
   it("reads what a voice asks for", () => {
-    expect(voiceValue("volume", undefined, 15, 40)).toEqual({ ok: true, value: 55 });
-    expect(voiceValue("volume", undefined, 50, 70)).toEqual({ ok: true, value: 80 });
-    expect(voiceValue("volume", "33", undefined, 0)).toEqual({ ok: true, value: 35 });
-    expect(voiceValue("volume", undefined, undefined, 40)).toMatchObject({ ok: false });
-    expect(voiceValue("quiet_mode", "apagalo", undefined, true)).toEqual({ ok: true, value: false });
+    expect(voiceValue("brightness", undefined, 15, 40)).toEqual({ ok: true, value: 55 });
+    expect(voiceValue("brightness", undefined, 50, 70)).toEqual({ ok: true, value: 100 });
+    expect(voiceValue("brightness", "33", undefined, 0)).toEqual({ ok: true, value: 35 });
+    expect(voiceValue("brightness", undefined, undefined, 40)).toMatchObject({ ok: false });
+    expect(voiceValue("reduced_motion", "apagalo", undefined, true)).toEqual({ ok: true, value: false });
     expect(voiceValue("pitch_voice", "confirma y comenta", undefined, null)).toEqual({ ok: true, value: "react" });
     expect(voiceValue("mic", "mac", undefined, null)).toEqual({ ok: true, value: "host" });
     expect(voiceValue("mic", "teléfono", undefined, null)).toMatchObject({ ok: false });
+  });
+
+  it("keeps the knob's own settings on the board and everything else in the bridge", () => {
+    // The board holds pausa, brillo and animaciones; modes and routing have no entity: the bridge keeps them.
+    expect(DEVICE_KEYS.filter((key) => "entity" in settingSpec(key)).sort()).toEqual(["brightness", "privacy", "reduced_motion"]);
+    expect(settingSpec("marketplace_open").scope).toBe("bridge");
+    expect(MODES.charla.values).not.toHaveProperty("mic");
   });
 
   it("names one mode per device from its values", () => {

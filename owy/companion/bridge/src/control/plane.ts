@@ -186,7 +186,7 @@ export interface ControlPlaneOptions {
   version: string;
   /** Rows the boot could not apply (a bad override): reported until a new value replaces them. */
   rejected?: BridgeStatus["rejected"];
-  /** Exits so the supervisor starts the bridge again (companion:serve, Docker). */
+  /** Exits so the supervisor starts the bridge again (companion:serve). */
   restart: () => void;
 }
 
@@ -429,6 +429,15 @@ export class ControlPlane {
       return session;
     };
     switch (command.type) {
+      case "tap":
+        device(command.deviceId).tap();
+        return undefined;
+      case "pitch":
+        device(command.deviceId).pitchAction(command.action);
+        return undefined;
+      case "ask":
+        await device(command.deviceId).ask(command.text, command.asker);
+        return undefined;
       case "tone": {
         if (command.target !== "mac") return device(command.target).testTone();
         const speaker = this.options.shared.hostSpeaker;
@@ -477,7 +486,7 @@ function testTone(): Buffer {
 
 /** ESPHome boards announced on the LAN (`dns-sd`, macOS), with their IPv4 when it resolves. */
 export async function discover(browseMs = 3_000): Promise<{ name: string; host: string }[]> {
-  if (process.platform !== "darwin") throw new Error("buscar en la red funciona con el bridge en macOS (dns-sd), no en Docker");
+  if (process.platform !== "darwin") throw new Error("buscar en la red funciona con el bridge en macOS (dns-sd)");
   const names = await new Promise<string[]>((resolve, reject) => {
     const found = new Set<string>();
     const child = spawn("dns-sd", ["-B", "_esphomelib._tcp", "local."], { stdio: ["ignore", "pipe", "ignore"] });

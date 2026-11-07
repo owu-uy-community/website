@@ -27,7 +27,7 @@ const row = (target: string, key: string, value: unknown, setAt: string, setBy =
 
 /** A board session: what the plane drives and reads. */
 function fakeSession(id = "owy-knob") {
-  const values: Partial<Record<SettingKey, unknown>> = { volume: 50, quiet_mode: false };
+  const values: Partial<Record<SettingKey, unknown>> = { brightness: 50, reduced_motion: false };
   const session = {
     id,
     busy: false,
@@ -50,7 +50,10 @@ function fakeSession(id = "owy-knob") {
     }),
     testTone: vi.fn(),
     say: vi.fn(async () => {}),
+    ask: vi.fn(async () => {}),
     hush: vi.fn(),
+    tap: vi.fn(),
+    pitchAction: vi.fn(),
     setStaff: vi.fn(),
   };
   return session;
@@ -83,33 +86,33 @@ function plane(options: { report?: (input: Report) => Promise<unknown>; sessions
 describe("control plane", () => {
   it("follows the panel's rows onto the board, and its own write echoing back is not a change", async () => {
     const { control, sessions, reports } = plane();
-    control.onEvent(COMPANION_CHANNEL, "rows", { rows: [row("owy-knob", "volume", 70, "2026-11-01T22:00:00.000Z")] });
-    expect(sessions[0].applied).toEqual([["volume", 70]]);
-    control.deviceSetting(sessions[0] as never, "volume", 70, "dispositivo");
+    control.onEvent(COMPANION_CHANNEL, "rows", { rows: [row("owy-knob", "brightness", 70, "2026-11-01T22:00:00.000Z")] });
+    expect(sessions[0].applied).toEqual([["brightness", 70]]);
+    control.deviceSetting(sessions[0] as never, "brightness", 70, "dispositivo");
     await vi.advanceTimersByTimeAsync(1_300);
     // One report, after the board had its second to take it: the panel sees 70 in effect, and no change of its own.
     expect(reports).toHaveLength(1);
     expect(reports[0].changes).toEqual([]);
-    expect(reports[0].status.devices[0].values).toMatchObject({ volume: 70 });
+    expect(reports[0].status.devices[0].values).toMatchObject({ brightness: 70 });
   });
 
   it("reports a change made on the board once, as the device's", async () => {
     const { control, sessions, reports, store } = plane();
-    control.deviceSetting(sessions[0] as never, "quiet_mode", true, "dispositivo");
-    control.deviceSetting(sessions[0] as never, "quiet_mode", true, "dispositivo");
+    control.deviceSetting(sessions[0] as never, "reduced_motion", true, "dispositivo");
+    control.deviceSetting(sessions[0] as never, "reduced_motion", true, "dispositivo");
     await vi.advanceTimersByTimeAsync(400);
     expect(reports).toHaveLength(1);
-    expect(reports[0].changes).toMatchObject([{ target: "owy-knob", key: "quiet_mode", value: true, setBy: "dispositivo" }]);
+    expect(reports[0].changes).toMatchObject([{ target: "owy-knob", key: "reduced_motion", value: true, setBy: "dispositivo" }]);
     expect(store.takePending()).toEqual([]);
   });
 
   it("a board coming back up reports its boot values as nothing, and gets the wanted ones again", async () => {
     const { control, store, sessions, reports } = plane();
-    store.merge([row("owy-knob", "volume", 70, "2026-11-01T22:00:00.000Z")]);
+    store.merge([row("owy-knob", "brightness", 70, "2026-11-01T22:00:00.000Z")]);
     control.linkUp(sessions[0] as never);
-    control.deviceSetting(sessions[0] as never, "volume", 30, "dispositivo"); // its boot value
+    control.deviceSetting(sessions[0] as never, "brightness", 30, "dispositivo"); // its boot value
     await vi.advanceTimersByTimeAsync(3_100);
-    expect(sessions[0].applied).toContainEqual(["volume", 70]);
+    expect(sessions[0].applied).toContainEqual(["brightness", 70]);
     expect(reports.flatMap((report) => report.changes ?? [])).toEqual([]);
   });
 
@@ -124,21 +127,21 @@ describe("control plane", () => {
       },
     });
     control.start();
-    control.deviceSetting(sessions[0] as never, "volume", 20, "dispositivo");
+    control.deviceSetting(sessions[0] as never, "brightness", 20, "dispositivo");
     await vi.advanceTimersByTimeAsync(400);
     expect(store.takePending()).toHaveLength(1);
     up = true;
     await vi.advanceTimersByTimeAsync(15_000);
-    expect(reports[0].changes).toMatchObject([{ key: "volume", value: 20 }]);
+    expect(reports[0].changes).toMatchObject([{ key: "brightness", value: 20 }]);
     expect(store.takePending()).toHaveLength(0);
   });
 
   it("a newer change made here survives an older row from the site", () => {
     const { store } = plane();
-    const local = store.record("owy-knob", "volume", 20, "voz");
-    const older = row("owy-knob", "volume", 70, new Date(Date.parse(local.setAt) - 1000).toISOString());
+    const local = store.record("owy-knob", "brightness", 20, "voz");
+    const older = row("owy-knob", "brightness", 70, new Date(Date.parse(local.setAt) - 1000).toISOString());
     expect(store.merge([older])).toEqual([]);
-    expect(store.desired("owy-knob", "volume")?.value).toBe(20);
+    expect(store.desired("owy-knob", "brightness")?.value).toBe(20);
   });
 
   it("a restart-scope setting waits for a moment without turns", async () => {
@@ -157,27 +160,33 @@ describe("control plane", () => {
 
   it("runs the panel's commands and reports each result", async () => {
     const { control, sessions, reports } = plane();
-    control.onEvent(COMPANION_CHANNEL, "command", { id: "c1", command: { type: "tone", target: "owy-knob" } });
+    control.onEvent(COMPANION_CHANNEL, "command", { id: "c1", command: { type: "tap", deviceId: "owy-knob" } });
     control.onEvent(COMPANION_CHANNEL, "command", { id: "c2", command: { type: "hush", deviceId: "nope" } });
+    control.onEvent(COMPANION_CHANNEL, "command", { id: "c3", command: { type: "pitch", deviceId: "owy-knob", action: "submit" } });
+    control.onEvent(COMPANION_CHANNEL, "command", { id: "c4", command: { type: "ask", deviceId: "owy-knob", text: "¿Qué hay ahora?" } });
     await vi.advanceTimersByTimeAsync(10);
-    expect(sessions[0].testTone).toHaveBeenCalledOnce();
+    expect(sessions[0].tap).toHaveBeenCalledOnce();
+    expect(sessions[0].pitchAction).toHaveBeenCalledWith("submit");
+    expect(sessions[0].ask).toHaveBeenCalledWith("¿Qué hay ahora?", "presenter");
     expect(reports.at(-1)?.results).toEqual([
       { id: "c1", ok: true },
       { id: "c2", ok: false, error: "no conozco el dispositivo «nope»" },
+      { id: "c3", ok: true },
+      { id: "c4", ok: true },
     ]);
   });
 
   it("validates a voice change against the registry and its scope", () => {
     const { control } = plane();
-    expect(control.change("owy-knob", "volume", 300, "voz")).toMatchObject({ ok: false });
-    expect(control.change("bridge", "volume", 40, "voz")).toMatchObject({ ok: false });
-    expect(control.change("owy-knob", "volume", 40, "voz")).toEqual({ ok: true, value: 40 });
+    expect(control.change("owy-knob", "brightness", 300, "voz")).toMatchObject({ ok: false });
+    expect(control.change("bridge", "brightness", 40, "voz")).toMatchObject({ ok: false });
+    expect(control.change("owy-knob", "brightness", 40, "voz")).toEqual({ ok: true, value: 40 });
   });
 });
 
 describe("Owy's ajustes tool", () => {
   function tools(staff = false) {
-    const values: Record<string, unknown> = { volume: 50, pitch_mode: false, privacy: false };
+    const values: Record<string, unknown> = { brightness: 50, pitch_mode: false, privacy: false };
     const changes: [string, unknown][] = [];
     const runtime = {
       deviceId: "owy-knob",
@@ -201,8 +210,8 @@ describe("Owy's ajustes tool", () => {
   it("replaces set_volume and lets anyone change comfort settings", async () => {
     const { set, changes } = tools();
     expect(set.set_volume).toBeUndefined();
-    await expect(call(set, { clave: "volume", paso: 50 })).resolves.toMatchObject({ ok: true, valor: "80 %" });
-    expect(changes).toEqual([["volume", 80]]);
+    await expect(call(set, { clave: "brightness", paso: 60 })).resolves.toMatchObject({ ok: true, valor: "100 %" });
+    expect(changes).toEqual([["brightness", 100]]);
   });
 
   it("leaves modes to staff and never turns privacy off by voice", async () => {
@@ -216,7 +225,7 @@ describe("Owy's ajustes tool", () => {
 
   it("lists only what this person may change", async () => {
     const visitor = (await call(tools().set, {})) as { ajustes: { clave: string }[] };
-    expect(visitor.ajustes.map((entry) => entry.clave)).toContain("volume");
+    expect(visitor.ajustes.map((entry) => entry.clave)).toContain("brightness");
     expect(visitor.ajustes.map((entry) => entry.clave)).not.toContain("pitch_mode");
   });
 });

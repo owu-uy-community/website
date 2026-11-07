@@ -149,6 +149,13 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   isMarketplaceOpen() {
     return this.grant.marketplace;
   }
+  /** A browser is its own mic and speakers: the bridge's Mac routing never applies to it. */
+  getMicSource() {
+    return "device" as const;
+  }
+  getAudioOutput() {
+    return "device" as const;
+  }
   getVolume() {
     return this.volume;
   }

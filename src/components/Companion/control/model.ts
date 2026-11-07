@@ -5,7 +5,12 @@
  */
 import type { CompanionState } from "lib/orpc/companion/schemas";
 
-import type { SettingRow, TurnPath, TurnSummary } from "../../../../owy/companion/bridge/src/web/contract";
+import type {
+  DeviceStatus,
+  SettingRow,
+  TurnPath,
+  TurnSummary,
+} from "../../../../owy/companion/bridge/src/web/contract";
 import {
   BRIDGE_TARGET,
   MODES,
@@ -175,11 +180,11 @@ export function modeView(state: CompanionState, target: string, online: boolean)
   };
 }
 
-/** The setting groups of a scope, in order: a device's as the registry lists them; the bridge's Mac first. */
+/** The setting groups of a scope, in order: a device's as the registry lists them; the bridge's mode and Mac first. */
 export function settingGroups(scope: "bridge" | "device") {
   const order: SettingGroup[] =
     scope === "bridge"
-      ? ["mac", "voz", "cerebro", "pitch", "avanzado"]
+      ? ["modo", "mac", "voz", "cerebro", "pitch", "avanzado"]
       : (Object.keys(SETTING_GROUPS) as SettingGroup[]);
 
   return order.flatMap((group) => {
@@ -225,3 +230,29 @@ export function probeText(data: unknown): string {
     peak < 0.02 ? " — casi nada: ¿es esta entrada? ¿el transmisor está prendido?" : ""
   }`;
 }
+
+const PHASES: Record<DeviceStatus["phase"], string> = {
+  idle: "libre",
+  listening: "escuchando",
+  thinking: "pensando",
+  speaking: "hablando",
+};
+
+/** Where a device's turn is, in a word. */
+export const phaseText = (phase: DeviceStatus["phase"]) => PHASES[phase] ?? phase;
+
+const FACES: Record<string, string> = {
+  idle: "tranquilo",
+  listening: "escuchando",
+  thinking: "pensando",
+  speaking: "hablando",
+  happy: "contento",
+  error: "error",
+  offline: "sin bridge",
+};
+
+/** The face the board shows, in a word (`select.face_state`). */
+export const faceText = (face: string) => FACES[face] ?? face;
+
+/** A realtime tier as the panel names it: `gateway:google/gemini-3.8-live` → `google/gemini-3.8-live`. */
+export const tierText = (tier: string | null | undefined) => tier?.replace(/^gateway:/, "") ?? null;

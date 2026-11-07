@@ -1,25 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Bot, Laptop, Lock, MessageSquareText, PhoneOff, Unlock, Volume2, VolumeX } from "lucide-react";
+import { Bot, Laptop, Lock, PhoneOff, Unlock, VolumeX } from "lucide-react";
 
-import { cn } from "app/lib/utils";
 import { MicroLabel, Panel, PanelHead } from "components/Admin/ui/page";
 import { StatusDot } from "components/Admin/ui/status";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Input } from "components/shared/ui/input";
 import type { CompanionState } from "lib/orpc/companion/schemas";
 
-import { MODES, type ModeKey } from "../../../../owy/companion/bridge/src/web/registry";
-import { CommandButton, CommandNote, useCommand, type SendCommand } from "./commands";
-import { modeView, settingGroups, settingView, turnsView } from "./model";
+import { CommandButton, type SendCommand } from "./commands";
+import { LineForm } from "./LineForm";
+import { ModeSwitch } from "./ModeSwitch";
+import { faceText, phaseText, settingGroups, settingView, turnsView } from "./model";
 import { SettingField, SettingGroup, type OnSet, type SetValue } from "./SettingField";
 import { STAGES, type BrowserAudio } from "./useBrowserAudio";
 
-/** The modes, in the registry's order. */
-const MODE_LIST = Object.keys(MODES) as ModeKey[];
-const OPEN_GROUPS = new Set(["modo", "audio", "sonido"]);
+const OPEN_GROUPS = new Set(["modo", "audio", "pantalla"]);
 const TIME = new Intl.DateTimeFormat("es-UY", {
   hour: "2-digit",
   minute: "2-digit",
@@ -28,8 +24,8 @@ const TIME = new Intl.DateTimeFormat("es-UY", {
 });
 
 /**
- * One physical Owy: whether it is there, its mode in one tap, staff unlock, a tone, a line to
- * say, silence, this browser as its audio, its last turns and every setting it has.
+ * One physical Owy: whether it is there, its mode in one tap, staff unlock, a line to say,
+ * silence, this browser as its audio, its last turns and every setting it has.
  */
 export function DeviceCard({
   id,
@@ -48,7 +44,6 @@ export function DeviceCard({
 }) {
   const device = state.status?.devices.find((item) => item.id === id);
   const connected = online && !!device?.connected;
-  const mode = modeView(state, id, online);
   const setValue: SetValue = (key, value) => onSet([{ target: id, key, value }]);
   const turns = turnsView(device?.turns ?? []);
 
@@ -67,7 +62,8 @@ export function DeviceCard({
       />
       <div className="space-y-4 p-3.5">
         <div className="flex flex-wrap items-center gap-1.5">
-          {device?.audio ? <Badge variant="secondary">audio: {device.audio}</Badge> : null}
+          {device ? <Badge variant="secondary">{phaseText(device.phase)}</Badge> : null}
+          {device?.face ? <Badge variant="outline">cara: {faceText(device.face)}</Badge> : null}
           {device?.firmware ? <Badge variant="outline">firmware {device.firmware}</Badge> : null}
           {device?.staff ? <Badge variant="warning">staff desbloqueado</Badge> : null}
           {device?.peer ? (
@@ -80,44 +76,9 @@ export function DeviceCard({
           ) : null}
         </div>
 
-        <section aria-label="Modo" className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-2">
-            <MicroLabel>Modo</MicroLabel>
-            {mode.standing ? (
-              <span
-                className={cn(
-                  "text-meta",
-                  mode.standing.tone === "warn" ? "text-warning-foreground" : "text-info-foreground"
-                )}
-              >
-                {mode.standing.text}
-              </span>
-            ) : null}
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4" role="group" aria-label="Modo">
-            {MODE_LIST.map((key) => (
-              <Button
-                key={key}
-                aria-pressed={mode.mode === key}
-                className="h-10"
-                variant={mode.mode === key ? "default" : "outline"}
-                onClick={() =>
-                  mode.mode !== key &&
-                  onSet(
-                    Object.entries(MODES[key].values).map(([setting, value]) => ({ target: id, key: setting, value }))
-                  )
-                }
-              >
-                {MODES[key].label}
-              </Button>
-            ))}
-          </div>
-        </section>
+        <ModeSwitch id={id} online={online} state={state} onSet={onSet} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <CommandButton command={{ type: "tone", target: id }} send={send}>
-            <Volume2 aria-hidden /> Tono de prueba
-          </CommandButton>
           <CommandButton command={{ type: "hush", deviceId: id }} send={send}>
             <VolumeX aria-hidden /> Callar
           </CommandButton>
@@ -129,7 +90,7 @@ export function DeviceCard({
             {device?.staff ? <Lock aria-hidden /> : <Unlock aria-hidden />}
             {device?.staff ? "Bloquear" : "Desbloquear 10 min"}
           </CommandButton>
-          <Say id={id} send={send} />
+          <LineForm id={id} kind="say" send={send} />
         </div>
 
         <BrowserAudioRow audio={audio} id={id} />
@@ -177,52 +138,8 @@ export function DeviceCard({
   );
 }
 
-/** «Decir…»: a line Owy says out loud on this device. */
-function Say({ id, send }: { id: string; send: SendCommand }) {
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
-  const say = useCommand(send);
-
-  if (!open)
-    return (
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        <MessageSquareText aria-hidden /> Decir…
-      </Button>
-    );
-
-  return (
-    <form
-      className="flex basis-full flex-wrap items-center gap-2"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        const line = text.trim();
-        if (!line) return;
-        const result = await say.run({ type: "say", deviceId: id, text: line });
-        if (result.ok) setText("");
-      }}
-    >
-      <Input
-        autoFocus
-        aria-label={`Lo que dice ${id}`}
-        className="min-w-0 flex-1 sm:max-w-96"
-        maxLength={600}
-        placeholder="Lo que va a decir Owy"
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-      />
-      <Button disabled={say.running || !text.trim()} size="sm" type="submit">
-        Decir
-      </Button>
-      <Button size="sm" type="button" variant="ghost" onClick={() => setOpen(false)}>
-        Cerrar
-      </Button>
-      <CommandNote done="lo dijo" state={say} />
-    </form>
-  );
-}
-
-/** «Usar este navegador como audio»: its mic and speakers become this device's. */
-function BrowserAudioRow({ id, audio }: { id: string; audio: BrowserAudio }) {
+/** «Usar este navegador como audio»: its mic and speakers become this device's (the fallback for the Mac's). */
+export function BrowserAudioRow({ id, audio }: { id: string; audio: BrowserAudio }) {
   const mine = audio.target === id && audio.status !== null && audio.status.stage !== "off";
   const live = mine && audio.status?.stage !== "error" && audio.status?.stage !== "idle";
 

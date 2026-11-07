@@ -23,8 +23,8 @@ class FaceRenderer {
   void render(const Frame &f, const FaceObjects &o) {
     if (!prepared_) prepare(o);
     const int y = f.face_y;
-    eye(0, o.eye_l, o.pupil_l, o.glint_l, o.happy_l, o.lid_l, -89 + f.sway, y, f.eye_h, f.lid_l, f);
-    eye(1, o.eye_r, o.pupil_r, o.glint_r, o.happy_r, o.lid_r, 89 + f.sway, y, f.eye_rh, f.lid_r, f);
+    eye(0, o.eye_l, o.pupil_l, o.glint_l, o.happy_l, o.lid_l, -89, y, f.eye_h, f.lid_l, f);
+    eye(1, o.eye_r, o.pupil_r, o.glint_r, o.happy_r, o.lid_r, 89, y, f.eye_rh, f.lid_r, f);
     color(0, o.eye_l, f.grey ? 0x777368 : 0xFBF5E7);
     color(1, o.eye_r, f.grey ? 0x777368 : 0xFBF5E7);
     color(2, o.glint_l, f.grey ? 0x9C978B : 0xFBF5E7);

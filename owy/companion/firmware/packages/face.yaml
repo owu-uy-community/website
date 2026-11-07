@@ -1,11 +1,11 @@
 # The face (LVGL 9). Brand palette: black, cream 0xFBF5E7, yellow 0xF5BB03,
 # blue 0x0162C8. Roles: cream = Owy's body, yellow = Owy talking / primary
 # action, blue = you (listening, live mic, "on"). Pages: face / card / qr /
-# text / pin / settings (+ quick / calibration / help in companion.yaml).
+# text / pin / settings (+ quick / help in companion.yaml; the answer view in boards/knob18.yaml).
 #
-# Expressions are driven by `show_face(state)`; the voice pipeline sets them
-# through `apply_face` (voice.yaml) and the bridge through the `face_state`
-# select (controls.yaml). companion_model.h owns every animated number and
+# Expressions are driven by `show_face(state)`: the bridge sets them through the
+# `face_state` select (controls.yaml); the board adds pausa, sleep and the boot.
+# companion_model.h owns every animated number and
 # FaceRenderer (companion_lvgl.h) is the only writer of animated geometry; it
 # scales 466-space by OWY_FACE_SCALE, so only the static widgets below and the
 # secondary pages need per-board numbers.
@@ -89,18 +89,8 @@ font:
     bpp: 4
     glyphs:
       - "\U0000E31D"  # mic
-      - "\U0000E02B"  # mic_off
-      - "\U0000E050"  # volume_up
       - "\U0000E518"  # light_mode
-      - "\U0000E8AF"  # forum
-      - "\U0000E7F5"  # notifications
-      - "\U0000E405"  # music_note
-      - "\U0000E320"  # laptop_mac
-      - "\U0000E32D"  # speaker
-      - "\U0000F2D5"  # screen_rotation
       - "\U0000E71C"  # animation
-      - "\U0000E3B4"  # center_focus_strong
-      - "\U0000E3DC"  # filter_center_focus
       - "\U0000E815"  # sentiment_very_satisfied
       - "\U0000E8FD"  # help
       - "\U0000E00A"  # qr_code_2
@@ -131,7 +121,7 @@ globals:
     type: bool
     restore_value: false
     initial_value: "false"
-  # Volume/brightness on the rim (LEVEL ring) until this time.
+  # Brightness on the rim (LEVEL ring) until this time.
   - id: overlay_until
     type: uint32_t
     restore_value: false
@@ -161,7 +151,9 @@ lvgl:
       then:
         - if:
             condition:
-              lambda: return !id(va).is_running() && !id(turn_pending) && id(va_speaker).is_stopped() && !id(face_sleeping);
+              lambda: |-
+                const auto face = id(face_state).current_option();
+                return !id(face_sleeping) && (face == "idle" || face == "offline");
             then:
               - script.execute: fall_asleep
 
@@ -406,8 +398,7 @@ lvgl:
             text_font: font_brand
             text_color: 0xFBF5E7
             hidden: true
-        # Non-text microphone glyph, slashed yellow: privacy only (the rim
-        # carries listening now). Standby wake-word detection is explained in help.
+        # Non-text microphone glyph, slashed yellow: pausa (the rim carries listening).
         - obj:
             id: capture_badge
             align: CENTER
@@ -460,12 +451,12 @@ lvgl:
             text_font: font_small
             text_color: 0x8A8A8A
             hidden: true
-        # Volume / brightness while the rim shows the level.
+        # Brightness while the rim shows the level.
         - label:
             id: overlay_label
             align: BOTTOM_MID
             y: ${hint_y}
-            text: "vol 80"
+            text: "brillo 80%"
             text_font: font_brand
             text_color: 0xF5BB03
             hidden: true
@@ -520,10 +511,7 @@ lvgl:
                   if (gesture != owy::Gesture::NONE) id(last_gesture).publish_state(owy::gesture_name(gesture));
                   switch (gesture) {
                     case owy::Gesture::TAP: id(tap_to_talk).execute(); break;
-                    case owy::Gesture::PET:
-                      id(companion).delight(millis());
-                      id(play_companion_feedback).execute();
-                      break;
+                    case owy::Gesture::PET: id(companion).delight(millis()); break;
                     case owy::Gesture::UP:
                     case owy::Gesture::HOLD: id(open_quick_controls).execute(); break;
                     case owy::Gesture::LEFT: id(open_companion_help).execute(); break;
@@ -920,190 +908,6 @@ lvgl:
                   text_font: font_small
                   text_color: 0x9FD0FF
               - label:
-                  text: "CONFERENCIA"
-                  text_font: font_small
-                  text_color: 0x8A8A8A
-              - obj:
-                  width: 100%
-                  height: 40
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  layout:
-                    type: flex
-                    flex_flow: row
-                    flex_align_main: space_between
-                    flex_align_cross: center
-                  widgets:
-                    - label:
-                        text: "Mercado abierto"
-                        text_color: 0xFBF5E7
-                    - switch:
-                        id: sw_marketplace
-                        width: 56
-                        height: 30
-                        indicator:
-                          checked:
-                            bg_color: 0x0162C8
-                        on_value:
-                          - if:
-                              condition:
-                                lambda: return x;
-                              then:
-                                - switch.turn_on: marketplace_open
-                              else:
-                                - switch.turn_off: marketplace_open
-              - obj:
-                  width: 100%
-                  height: 40
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  layout:
-                    type: flex
-                    flex_flow: row
-                    flex_align_main: space_between
-                    flex_align_cross: center
-                  widgets:
-                    - label:
-                        text: "Modo pitch"
-                        text_color: 0xFBF5E7
-                    - switch:
-                        id: sw_pitch
-                        width: 56
-                        height: 30
-                        indicator:
-                          checked:
-                            bg_color: 0x0162C8
-                        on_value:
-                          - if:
-                              condition:
-                                lambda: return x;
-                              then:
-                                - switch.turn_on: pitch_mode
-                              else:
-                                - switch.turn_off: pitch_mode
-              - obj:
-                  width: 100%
-                  height: 40
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  layout:
-                    type: flex
-                    flex_flow: row
-                    flex_align_main: space_between
-                    flex_align_cross: center
-                  widgets:
-                    - label:
-                        text: "Owy responde"
-                        text_color: 0xFBF5E7
-                    # Callado → confirma → comenta (select.pitch_voice; the bridge reads it per pitch).
-                    - button:
-                        id: btn_pitch_voice
-                        height: 30
-                        bg_color: 0x0162C8
-                        radius: 15
-                        pad_left: 12
-                        pad_right: 12
-                        widgets:
-                          - label:
-                              id: pitch_voice_value
-                              align: CENTER
-                              text: "confirma"
-                              text_color: 0xFBF5E7
-                        on_click:
-                          - select.next: pitch_voice
-                          - lvgl.label.update:
-                              id: pitch_voice_value
-                              text: !lambda |-
-                                const auto option = id(pitch_voice).current_option();
-                                return std::string(option == "Callado" ? "callado" : option == "Confirma" ? "confirma" : "comenta");
-              - label:
-                  text: "AUDIO"
-                  text_font: font_small
-                  text_color: 0x8A8A8A
-              - obj:
-                  width: 100%
-                  height: 40
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  layout:
-                    type: flex
-                    flex_flow: row
-                    flex_align_main: space_between
-                    flex_align_cross: center
-                  widgets:
-                    - label:
-                        text: "Modo silencioso"
-                        text_color: 0xFBF5E7
-                    - switch:
-                        id: sw_quiet
-                        width: 56
-                        height: 30
-                        indicator:
-                          checked:
-                            bg_color: 0x0162C8
-                        on_value:
-                          - if:
-                              condition:
-                                lambda: return x;
-                              then:
-                                - switch.turn_on: quiet_mode
-                              else:
-                                - switch.turn_off: quiet_mode
-              - obj:
-                  width: 100%
-                  height: 40
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  layout:
-                    type: flex
-                    flex_flow: row
-                    flex_align_main: space_between
-                    flex_align_cross: center
-                  widgets:
-                    - label:
-                        text: "Wake word"
-                        text_color: 0xFBF5E7
-                    - switch:
-                        id: sw_wake_word
-                        width: 56
-                        height: 30
-                        indicator:
-                          checked:
-                            bg_color: 0x0162C8
-                        on_value:
-                          - if:
-                              condition:
-                                lambda: return x;
-                              then:
-                                - switch.turn_on: wake_word_enabled
-                              else:
-                                - switch.turn_off: wake_word_enabled
-              - label:
-                  text: "Volumen"
-                  text_font: font_small
-                  text_color: 0xF5BB03
-              - slider:
-                  id: volume_slider
-                  width: 90%
-                  height: 14
-                  min_value: 0
-                  max_value: 80
-                  value: 80
-                  bg_color: 0x333333
-                  indicator:
-                    bg_color: 0x0162C8
-                  knob:
-                    bg_color: 0xFBF5E7
-                  on_release:
-                    - number.set:
-                        id: volume
-                        value: !lambda return x;
-              - label:
                   text: "Brillo"
                   text_font: font_small
                   text_color: 0xF5BB03
@@ -1145,21 +949,7 @@ lvgl:
                     flex_align_cross: center
                   widgets:
                     - button:
-                        width: 30%
-                        height: 40
-                        radius: 20
-                        bg_color: 0x1F1F1F
-                        shadow_width: 0
-                        widgets:
-                          - label:
-                              align: CENTER
-                              text: "Tono"
-                              text_font: font_small
-                              text_color: 0xFBF5E7
-                        on_click:
-                          - script.execute: play_test_tone
-                    - button:
-                        width: 30%
+                        width: 40%
                         height: 40
                         radius: 20
                         bg_color: 0x1F1F1F
@@ -1173,7 +963,7 @@ lvgl:
                         on_click:
                           - button.press: restart_button
                     - button:
-                        width: 30%
+                        width: 40%
                         height: 40
                         radius: 20
                         bg_color: 0xF5BB03
@@ -1188,7 +978,7 @@ lvgl:
                           - lvgl.page.show: face_page
 
 script:
-  # Expression per state. Called by the face_state select (bridge) and apply_face (voice).
+  # Expression per state. Called by the face_state select (the bridge), and by the board for pausa, sleep and boot.
   - id: show_face
     mode: restart
     parameters:
@@ -1202,48 +992,6 @@ script:
             - lvgl.page.show: face_page
       - script.execute: animate_companion
 
-  # Voice pipeline phase (voice.yaml) → face.
-  - id: apply_face
-    mode: restart
-    then:
-      - lambda: |-
-          std::string face = "idle";
-          switch (id(va_phase)) {
-            case 2: face = id(pitch_active) ? "record" : id(follow_up_active) && !id(vad_heard) ? "followup" : "listening"; break;
-            case 3: face = "thinking"; break;
-            case 4: face = "speaking"; break;
-            case 10: face = "offline"; break;
-            case 11: face = "error"; break;
-            default: face = id(face_sleeping) ? "sleep" : "idle";
-          }
-          id(show_face).execute(face);
-
-  - id: adjust_volume
-    mode: single
-    parameters:
-      delta: int
-    then:
-      - number.set:
-          id: volume
-          value: !lambda |-
-            float v = id(volume).state + delta;
-            if (v < 0) v = 0;
-            if (v > 80) v = 80;
-            return v;
-      - script.execute: show_volume
-
-  # Volume on the rim: the face stays up, no page switch mid-sentence.
-  - id: show_volume
-    mode: restart
-    then:
-      - script.execute: sync_quick_controls
-      - lambda: |-
-          id(overlay_level) = id(volume).state / 80.0f;
-          id(overlay_until) = millis() + 1400;
-          char text[16];
-          snprintf(text, sizeof(text), "vol %d", int(id(volume).state));
-          lv_label_set_text(id(overlay_label), text);
-
   - id: return_to_face_later
     mode: restart
     then:
@@ -1256,11 +1004,15 @@ script:
     mode: single
     then:
       - lambda: id(face_sleeping) = true;
-      - script.execute: apply_face
+      - script.execute:
+          id: show_face
+          state: sleep
       - delay: 10s
       - if:
           condition:
-            lambda: return id(face_sleeping) && !id(va).is_running() && !id(turn_pending) && id(va_speaker).is_stopped();
+            lambda: |-
+              const auto face = id(face_state).current_option();
+              return id(face_sleeping) && (face == "idle" || face == "offline");
           then:
             - lambda: id(display_dimmed) = true;
             - light.turn_on:
@@ -1300,32 +1052,8 @@ script:
     mode: single
     then:
       - lvgl.slider.update:
-          id: volume_slider
-          value: !lambda return static_cast<int>(id(volume).state);
-      - lvgl.slider.update:
           id: brightness_slider
           value: !lambda return static_cast<int>(id(screen_brightness).state);
-      - lvgl.widget.update:
-          id: sw_marketplace
-          state:
-            checked: !lambda return id(marketplace_open).state;
-      - lvgl.widget.update:
-          id: sw_pitch
-          state:
-            checked: !lambda return id(pitch_mode).state;
-      - lvgl.label.update:
-          id: pitch_voice_value
-          text: !lambda |-
-            const auto option = id(pitch_voice).current_option();
-            return std::string(option == "Callado" ? "callado" : option == "Confirma" ? "confirma" : "comenta");
-      - lvgl.widget.update:
-          id: sw_quiet
-          state:
-            checked: !lambda return id(quiet_mode).state;
-      - lvgl.widget.update:
-          id: sw_wake_word
-          state:
-            checked: !lambda return id(wake_word_enabled).state;
       - lvgl.page.show: settings_page
 
   - id: pin_bad
