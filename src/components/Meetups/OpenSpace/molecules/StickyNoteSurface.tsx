@@ -50,7 +50,7 @@ export function StickyNoteSurface({
   return (
     <div
       className={cn(
-        "relative flex h-full flex-col items-center justify-center border-2 p-2 text-center text-white md:p-3",
+        "relative flex h-full flex-col items-center justify-center border-2 p-2 text-center md:p-3",
         className
       )}
       style={{ ...surface, transform: `rotate(${rotation}deg)`, ...style }}
