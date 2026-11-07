@@ -73,7 +73,8 @@ function live(options: { paused?: () => boolean; up?: () => boolean } = {}) {
     paused: options.paused,
     clock,
   });
-  const faces = () => published.filter(([event]) => event === "face").map(([, payload]) => payload);
+  const faces = () =>
+    published.filter(([event]) => event === "face").map(([, payload]) => payload as unknown as StageFaceInput);
   return { mirror, published, posts, advance, seconds, faces };
 }
 
@@ -177,7 +178,7 @@ describe("stage mirror", () => {
     mirror.mouth("AAQgw", 120);
     mirror.expression("happy", 80, 200);
     mirror.wrap(transport).showCard({ title: "Effect" });
-    expect(faces().map((face) => said(face as StageFaceInput))).toEqual([
+    expect(faces().map(said)).toEqual([
       { state: "speaking", source: "owy-1" },
       { state: "speaking", transcript: { who: "output", text: "Hola" }, source: "owy-1" },
       { state: "speaking", expression: { name: "happy", strength: 80, at: expect.any(Number) }, source: "owy-1" },
@@ -224,6 +225,33 @@ describe("stage mirror", () => {
     mirror.face("idle");
     expect(faces().at(-1)).toMatchObject({ state: "idle", seq: 3, privacy: true });
     expect(posts).toEqual([]);
+  });
+
+  it("asks for pausa only from its first beat (the session behind it is created after the mirror)", () => {
+    let session: { paused: boolean } | undefined;
+    const { mirror, faces, seconds } = live({
+      paused: () => {
+        if (!session) throw new Error("Cannot access 'session' before initialization");
+        return session.paused;
+      },
+    });
+    session = { paused: true };
+    seconds(1);
+    expect(faces().at(-1)).toMatchObject({ state: "idle", privacy: true, seq: 1 });
+    mirror.stop();
+  });
+
+  it("keeps beating when pausa can't be read", () => {
+    const { faces, seconds } = live({
+      paused: () => {
+        throw new Error("board gone");
+      },
+    });
+    seconds(8);
+    expect(faces().map((face) => [face.state, face.beat, face.privacy])).toEqual([
+      ["idle", true, undefined],
+      ["idle", true, undefined],
+    ]);
   });
 
   it("stops beating once stopped", () => {

@@ -55,7 +55,8 @@ export function applyFaceEvent(
   face: Pick<FaceApi, "state" | "express" | "smile"> & Partial<Pick<FaceApi, "privacy" | "card">>,
   event: FaceEvent
 ) {
-  face.privacy?.(event.privacy === true);
+  // A numbered event (a bridge that mirrors pausa) always says whether Owy is paused; an older one never does.
+  if (event.boot !== undefined) face.privacy?.(event.privacy === true);
   face.state(event.state);
   if (event.expression) face.express(event.expression.name, event.expression.strength, event.expression.at);
   if (event.card) {

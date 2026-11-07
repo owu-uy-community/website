@@ -84,7 +84,8 @@ export function createStageMirror({
   const boot = randomUUID().slice(0, 8);
   let seq = 0;
   let state: StageFaceState = "idle";
-  let privacy = paused?.() === true;
+  // Not read here: the session that answers `paused` is created right after its mirror.
+  let privacy = false;
   let who: "input" | "output" | null = null;
   let text = "";
   let dirty = false;
@@ -180,9 +181,23 @@ export function createStageMirror({
     beat = clock.setTimeout(tick, PAUSE_CHECK_MS);
     beat.unref?.();
   };
+  /** What the session says about pausa; what it said last when it can't answer. */
+  const pausedNow = () => {
+    try {
+      return paused ? paused() === true : privacy;
+    } catch (error) {
+      const at = clock.now();
+      if (at - lastErrorAt >= ERROR_LOG_INTERVAL_MS) {
+        lastErrorAt = at;
+        logger.warn("stage mirror: could not read pausa", error);
+      }
+      return privacy;
+    }
+  };
   const tick = () => {
     if (stopped) return;
-    const now = paused?.() === true;
+    // An exception in a timer would exit the process: nothing here may throw.
+    const now = pausedNow();
     if (now !== privacy) {
       privacy = now;
       send();
