@@ -6,7 +6,7 @@ import * as z from "zod";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
-import { attendees, events, owyStageInputs, owyStageState } from "../../db/schema";
+import { attendees, communities, events, owyStageInputs, owyStageState } from "../../db/schema";
 import { publicBoard } from "../../openspace/public-board";
 import { afterTake, cue, findPreset, presetStep, readDesk } from "../../owy-stage/desk";
 import {
@@ -41,6 +41,7 @@ import type {
   SeatStatus,
   SetNowPlayingInput,
   SetSceneInput,
+  StageCommunity,
   StageMeetup,
   StagePulse,
   StageSpeaker,
@@ -622,6 +623,15 @@ export const getSpeakers = () =>
       }))
       .toSorted((a, b) => a.name.localeCompare(b.name));
   });
+
+/** The groups on /comunidades: listed and active, the same rows the public directory reads. */
+export const getCommunities = () =>
+  query((db) =>
+    db
+      .select({ slug: communities.slug, name: communities.name, logo: communities.logoUrl })
+      .from(communities)
+      .where(and(eq(communities.listed, true), eq(communities.isActive, true)))
+  ).pipe(Effect.map((rows): StageCommunity[] => rows.toSorted((a, b) => a.name.localeCompare(b.name, "es"))));
 
 // ---------------------------------------------------------------------------
 // «Owy, en vivo»: broadcast-only relay between the presenter's phone and the Mac seat

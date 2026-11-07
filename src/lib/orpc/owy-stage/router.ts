@@ -29,6 +29,7 @@ import {
   SetNowPlayingSchema,
   SetSceneSchema,
   SpotifyTrackSchema,
+  StageCommunitySchema,
   StageInputSchema,
   StageMeetupSchema,
   StagePulseSchema,
@@ -160,6 +161,13 @@ export const owyStageRouter = {
     .output(z.array(StageSpeakerSchema))
     .effect(function* () {
       return yield* Stage.getSpeakers();
+    }),
+
+  getCommunities: pub
+    .meta(docs("The communities in OWU's public directory"))
+    .output(z.array(StageCommunitySchema))
+    .effect(function* () {
+      return yield* Stage.getCommunities();
     }),
 
   submit: pub

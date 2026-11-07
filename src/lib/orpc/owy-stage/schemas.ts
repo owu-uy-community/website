@@ -119,6 +119,13 @@ export const StageSpeakerSchema = z.object({
 });
 export type StageSpeaker = z.infer<typeof StageSpeakerSchema>;
 
+export const StageCommunitySchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  logo: z.string().nullable(),
+});
+export type StageCommunity = z.infer<typeof StageCommunitySchema>;
+
 export const SpotifyTrackSchema = z.object({
   song: z.string(),
   artist: z.string(),

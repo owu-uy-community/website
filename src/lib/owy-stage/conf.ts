@@ -19,6 +19,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
       "conduct",
       "facilities",
       "sponsor-wall",
+      "community-wall",
       "declarado",
     ],
   },

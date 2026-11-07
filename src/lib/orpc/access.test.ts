@@ -213,6 +213,7 @@ const EXPECTED: Record<string, Access> = {
   "owyStage.disconnectSpotify": "platform:stage:operate",
   "owyStage.fireEffect": "platform:stage:operate",
   "owyStage.firePreset": "platform:stage:fire-preset",
+  "owyStage.getCommunities": "public",
   "owyStage.getDesk": "platform:stage:read",
   "owyStage.getMeetups": "public",
   "owyStage.getPulse": "public",
