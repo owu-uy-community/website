@@ -85,20 +85,37 @@ export function stickyNoteRotation(noteId: string): number {
 }
 
 /**
- * Sticky-note surface shared by the admin board and the kiosk wall.
- * Slightly darkened gradient so the white title keeps contrast on the
- * lighter palette entries (amber, lime, cyan).
+ * Black or white text, whichever reads better on a #rrggbb background — by APCA, not WCAG 2:
+ * WCAG 2 puts black on orange/red/blue, APCA keeps white there and still flips white/yellow rooms.
+ */
+function inkOn(hex: string): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const y =
+    0.2126729 * ((num >> 16) / 255) ** 2.4 +
+    0.7151522 * (((num >> 8) & 0xff) / 255) ** 2.4 +
+    0.072175 * ((num & 0xff) / 255) ** 2.4;
+  const blackText = y ** 0.56 - 0.022 ** (Math.SQRT2 * 0.57); // soft-clamped black, APCA normal polarity
+  const whiteText = 1 - y ** 0.65; // APCA reverse polarity
+
+  return blackText > whiteText ? "#0a0a0a" : "#ffffff";
+}
+
+/**
+ * Sticky-note surface shared by the admin board and the kiosk wall. The ink is
+ * picked against the gradient's midpoint, so white and yellow rooms get black text.
  */
 export function stickyNoteStyle(color: string): {
   background: string;
   borderColor: string;
   borderRadius: string;
   boxShadow: string;
+  color: string;
 } {
   return {
     background: `linear-gradient(140deg, ${shadeHex(color, 6)}, ${shadeHex(color, -12)})`,
     borderColor: shadeHex(color, -26),
     borderRadius: "10px 14px 8px 16px",
     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22)",
+    color: inkOn(shadeHex(color, -3)),
   };
 }
