@@ -8,9 +8,12 @@ export function geometry(board = "knob", size) {
   const k = px / screen;
   return { size: px, scale: scale * k, ring: Math.round(ring * k), dot: Math.max(2, Math.round(dot * k)) };
 }
-/** owy_init for a board at a size (the runtime is face-only; the last flag is kept for the ABI). */
+/**
+ * owy_init for a board at a size, face-only; or, `faceOnly` false, the knob's whole screen
+ * (device mode: the generated scene is the knob's, so always its own geometry at 360 px).
+ */
 export function boot(module, seed, board, size, faceOnly = true) {
-  const g = geometry(board, size);
+  const g = faceOnly ? geometry(board, size) : geometry("knob");
   module._owy_init(seed, g.size, g.scale, g.ring, g.dot, faceOnly ? 1 : 0);
   return g;
 }
