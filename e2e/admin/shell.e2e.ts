@@ -1,4 +1,6 @@
-import { expect, test } from "../fixtures";
+import { expect, MONTH_AHEAD, test } from "../fixtures";
+
+test.use({ boardEvent: MONTH_AHEAD });
 
 test("⌘K: a page's name and Enter opens the page, never the scene with the same name", async ({ page, board }) => {
   await page.goto(`/admin/${board.community.slug}?event=${board.event.slug}`);
