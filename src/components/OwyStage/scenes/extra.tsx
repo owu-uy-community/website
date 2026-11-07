@@ -288,6 +288,43 @@ export function SponsorWall() {
 }
 
 // ---------------------------------------------------------------------------
+// Declarado — the institutions that declared the conference of interest (same logos as /conf «Apoyan»)
+// ---------------------------------------------------------------------------
+
+export function Declarado() {
+  return (
+    <>
+      <Ambient />
+      <div className="absolute inset-x-0 top-[110px] text-center">
+        <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
+          OWU CONF 2026
+        </Rise>
+        <Rise className="mt-3 text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.15}>
+          Declarado de interés
+        </Rise>
+      </div>
+      <m.img
+        alt="Declarado de interés ministerial — Ministerio de Educación y Cultura"
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-[390px] left-[310px] w-[1300px]"
+        initial={{ opacity: 0, y: 24 }}
+        src="/images/2025/government/mec.webp"
+        transition={{ duration: 0.7, delay: 0.4, ease: EASE_OUT }}
+      />
+      {/* Inversion baked into the asset (white boxes, knocked-out letters), as on /conf */}
+      <m.img
+        alt="Declarado de interés por la ANII — Agencia Nacional de Investigación e Innovación"
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute top-[780px] left-[510px] w-[900px]"
+        initial={{ opacity: 0, y: 24 }}
+        src="/images/conf/apoyan/anii.webp"
+        transition={{ duration: 0.7, delay: 0.65, ease: EASE_OUT }}
+      />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Applause
 // ---------------------------------------------------------------------------
 

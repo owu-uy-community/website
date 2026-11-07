@@ -654,7 +654,7 @@ export const SCENES = {
     description: "Un link como QR gigante: compartí tus fotos, inscripción, lo que sea.",
     params: z.object({
       title: z.string().trim().max(50).default("Compartí tus fotos"),
-      url: z.string().trim().max(300).default("conf.owu.uy"),
+      url: z.string().trim().max(300).default("conf.owu.uy/fotos"),
       caption: z.string().trim().max(120).default("Subí las fotos que sacaste hoy"),
     }),
   },
@@ -917,6 +917,12 @@ export const SCENES = {
     category: "sponsors",
     title: "Pared de sponsors",
     description: "Todos los logos a la vez, con entrada escalonada.",
+    params: z.object({}),
+  },
+  declarado: {
+    category: "sponsors",
+    title: "Declarado de interés",
+    description: "La conferencia, declarada de interés por el MEC y la ANII, con sus logos.",
     params: z.object({}),
   },
   // --- Comunidad y recuerdos ---
