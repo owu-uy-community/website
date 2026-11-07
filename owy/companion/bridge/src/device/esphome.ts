@@ -1,94 +1,65 @@
 import {
   entityId,
   openEspHomeClient,
-  VoiceAssistantSubscribeFlag,
   type EspHomeClient,
   type VoiceAssistantAudioData,
   type VoiceAssistantEvent,
   type VoiceAssistantEventData,
   type VoiceAssistantRequest,
 } from "esphome-client";
-import { audioRoute, micRoute, type AudioRoute, type MicRoute } from "../audio/route";
-import type { PitchVoice } from "../pitch-flow";
 import type { DeviceSpec } from "../config";
 import type { Logger } from "../log";
 import type { FaceState, ScreenCard } from "../realtime/tools";
-import type { VoiceLink } from "./pipeline";
+import type { DeviceTransport } from "./transport";
 import { DEVICE_KEYS, settingSpec, type SettingKey } from "../web/registry";
 import { sleep } from "../timings";
 
 /**
- * The companion device seen from the bridge: an ESPHome node reached over the
- * native API (port 6053, Noise-encrypted) through `esphome-client`.
+ * The knob seen from the bridge: an ESPHome node reached over the native API
+ * (port 6053, Noise-encrypted) through `esphome-client`. It is a face with a
+ * button — it neither hears nor speaks; the bridge runs every turn through the
+ * Mac's audio (or an attached browser) and tells the board what to show.
  *
- * Firmware contract (see `companion/firmware/packages/controls.yaml`):
- *   - select  `face_state`        options: idle|listening|thinking|speaking|happy|error|offline
- *   - switch  `staff_mode`, `marketplace_open`, `quiet_mode`   (set from the on-device PIN page)
- *   - switch  `pitch_mode` + select `pitch_voice` (Callado|Confirma|Confirma y comenta; older boards: switch `pitch_reacts`),
- *     binary_sensor `pitch_submit` (the second tap) — modo pitch, optional
- *   - select  `mic_source` (dispositivo|laptop|mac), `audio_output` (dispositivo|laptop)
- *   - actions `show_card(title, presenter, room, time_slot)`, `show_qr(url, caption)`, `show_text(body)`,
- *     optional `show_caption(body)` (boards without a speaker show the reply as text),
- *     `express(feeling, lead_ms, strength)`, `mouth_track(frames, lead_ms)`, `pitch_prompt(kind: topic|name|idle)`
- *     (positional string arguments; variable names avoid ESPHome component namespaces)
- *   - voice_assistant (speaker path) subscribed with API audio; a pitch run starts with `wake_word: "pitch"`
- *     ("pitch-answer" when the board opened its mic for the answer to Owy's question)
+ * Firmware contract (companion/firmware/packages/controls.yaml, boards/knob18.yaml):
+ *   - select  `face_state`  idle|listening|thinking|speaking|happy|error|offline — set from here
+ *   - sensor  `taps`        a counter, +1 per tap on the face or on the «Hablar» button
+ *   - switch  `staff_mode` (the PIN page), `microphone_privacy` (pausa), `reduced_motion`;
+ *     number `screen_brightness` — the registry's device keys, read and written through their entities
+ *   - button  `hablar` (= a tap), `reiniciar`
+ *   - actions `show_caption(body)`, `show_heard(body)`, `show_card(title, presenter, room, time_slot)`,
+ *     `show_qr(url, caption)`, `show_text(body)`, `express(feeling, lead_ms, strength)`,
+ *     `mouth_track(frames, lead_ms)`, `mic_level(level)`
+ *     (positional arguments; variable names avoid ESPHome component namespaces)
  */
 
+/** What a device tells its session. The browser virtual device still runs the pipeline methods; the knob only taps. */
 export interface DeviceHandlers {
+  /** The knob's tap: a touch on the face, or its «Hablar» button. */
+  onTap?(): void;
   onRequestStart(request: VoiceAssistantRequest): void | Promise<void>;
   onRequestStop(): void | Promise<void>;
   onAudio(chunk: VoiceAssistantAudioData): void;
-  /** Modo pitch: the second tap — the recording is complete, not cancelled. */
-  onPitchSubmit?(): void;
   /** A registry setting changed on the board: its own screen, its knob, or a write of ours echoing back. */
   onSetting?(key: SettingKey, value: unknown): void;
   onConnected?(): void;
   onDisconnected?(): void;
 }
 
-/** `select.pitch_voice` options as the knob shows them. */
-export const PITCH_VOICE_OPTIONS: [PitchVoice, string][] = [
-  ["silent", "Callado"],
-  ["confirm", "Confirma"],
-  ["react", "Confirma y comenta"],
-];
-
 export const FACE_STATES: FaceState[] = ["idle", "listening", "thinking", "speaking", "happy", "error", "offline"];
 
 const ENTITY = {
   face: entityId("select", "face_state"),
   staffMode: entityId("switch", "staff_mode"),
-  marketplaceOpen: entityId("switch", "marketplace_open"),
-  quietMode: entityId("switch", "quiet_mode"),
-  volume: entityId("number", "volumen"),
-  playbackReady: entityId("binary_sensor", "playback_ready"),
-  audioState: entityId("text_sensor", "audio_state"),
-  micSource: entityId("select", "mic_source"),
-  audioOutput: entityId("select", "audio_output"),
-  pitchMode: entityId("switch", "pitch_mode"),
-  pitchReacts: entityId("switch", "pitch_reacts"),
-  pitchVoice: entityId("select", "pitch_voice"),
-  pitchSubmit: entityId("binary_sensor", "pitch_submit"),
+  taps: entityId("sensor", "taps"),
 } as const;
 
-type TapSigns = { submit: boolean; audio: unknown };
-/**
- * The second tap of a pitch, from either sign the board gives: the rising edge of its 300 ms
- * `pitch_submit` pulse, or its face turning to thinking, which that tap does at once. The pulse
- * can go missing on the way (two pitches through the browser mic never showed it, so they waited
- * for the silence fallback); the face state stays. The session ignores both outside a pitch it is
- * recording, so the thinking after an ordinary turn is harmless.
- */
-export function pitchTap(before: TapSigns, now: TapSigns): "pulse" | "face" | null {
-  if (now.submit && !before.submit) return "pulse";
-  if (now.audio === "thinking" && before.audio !== "thinking") return "face";
-  return null;
-}
-
-export class CompanionDevice implements VoiceLink {
+export class CompanionDevice implements DeviceTransport {
   private readonly abort = new AbortController();
   private lastFace: FaceState | null = null;
+  /** The board's tap counter as last seen; null = the next value is a baseline (boot, reconnect), not a tap. */
+  private lastTaps: number | null = null;
+  /** The knob has no mic and no speaker: turns never route audio to it. */
+  readonly canPlayAudio = false;
 
   private constructor(
     readonly spec: DeviceSpec,
@@ -147,37 +118,34 @@ export class CompanionDevice implements VoiceLink {
 
   /** Set when the firmware exposes `express`: faces while Owy talks. */
   sendExpression?: (expression: string, leadMs: number, strength: number) => void;
-  /** Pacer lead (100 ms) + the speaker's ring buffer and DMA queue. */
+  /** Owy's audio plays on the Mac or in a browser: the session uses that output's latency, not this. */
   readonly expressionLeadMs = 200;
-  /** Set when the firmware exposes `mouth_track`: lip shapes for turns played on the laptop. */
+  /** Set when the firmware exposes `mouth_track`: lip shapes for what plays elsewhere. */
   sendMouthTrack?: (frames: string, leadMs: number) => void;
   /** Set when the firmware exposes `show_caption`; DeviceSession streams the reply transcript through it. */
   showCaption?: (text: string) => void;
-  /** Set when the firmware exposes `pitch_prompt`: the board opens its mic for the answer to Owy's question. */
-  pitchPrompt?: (kind: "topic" | "name" | "idle") => void;
-  /** The listening haptic plays as the mic opens and the motor shares the enclosure with the mic. */
-  readonly micSettleMs = 250;
+  /** Set when the firmware exposes `show_heard`: the « heard » pill. */
+  showHeard?: (text: string) => void;
+  /** Set when the firmware exposes `mic_level`: the listening halo follows the Mac's mic. */
+  sendMicLevel?: (level: number) => void;
 
   private attach(): void {
     const info = this.client.deviceInfo();
     this.log.info(`connected to ${info?.name ?? this.spec.host} (esphome ${info?.esphomeVersion ?? "?"})`);
-    if (this.client.services.list().some((service) => service.name === "show_caption")) {
+    const services = new Set(this.client.services.list().map((service) => service.name));
+    if (services.has("show_caption")) {
       this.showCaption = (text) => this.callService("show_caption", [{ stringValue: text }]);
       this.log.info("captions: the device shows replies as text");
     }
-    if (this.client.services.list().some((service) => service.name === "express")) {
+    if (services.has("show_heard")) this.showHeard = (text) => this.callService("show_heard", [{ stringValue: text }]);
+    if (services.has("express"))
       this.sendExpression = (expression, leadMs, strength) =>
         this.callService("express", [{ stringValue: expression }, { intValue: leadMs }, { intValue: strength }]);
-    }
-    if (this.client.services.list().some((service) => service.name === "mouth_track")) {
-      this.sendMouthTrack = (frames, leadMs) =>
-        this.callService("mouth_track", [{ stringValue: frames }, { intValue: leadMs }]);
-    }
-    if (this.client.services.list().some((service) => service.name === "pitch_prompt")) {
-      this.pitchPrompt = (kind) => this.callService("pitch_prompt", [{ stringValue: kind }]);
-    }
-    let lastAudioState: unknown;
-    let lastSubmit = false;
+    if (services.has("mouth_track"))
+      this.sendMouthTrack = (frames, leadMs) => this.callService("mouth_track", [{ stringValue: frames }, { intValue: leadMs }]);
+    if (services.has("mic_level"))
+      this.sendMicLevel = (level) => this.callService("mic_level", [{ intValue: Math.max(0, Math.min(100, Math.round(level))) }]);
+
     const lastSettings = new Map<SettingKey, unknown>();
     this.client.on("telemetry", () => {
       // Any setting whose value moved: the session tells its own writes' echoes from changes made on the board.
@@ -191,22 +159,26 @@ export class CompanionDevice implements VoiceLink {
           this.log.error(`setting ${key} failed`, error);
         }
       }
-      const state = this.client.latest(ENTITY.audioState)?.state;
-      const submit = this.client.latest(ENTITY.pitchSubmit)?.state === true;
-      const tap = pitchTap({ submit: lastSubmit, audio: lastAudioState }, { submit, audio: state });
-      if (typeof state === "string" && state !== lastAudioState) {
-        lastAudioState = state;
-        this.log.info(`device audio: ${state}`);
+      // The tap counter: one tap per change. The first value after a (re)connect — and a
+      // smaller one after the board rebooted — is a baseline.
+      const taps = this.client.latest(ENTITY.taps)?.state;
+      if (typeof taps !== "number") return;
+      const tapped = this.lastTaps !== null && taps > this.lastTaps;
+      this.lastTaps = taps;
+      if (!tapped) return;
+      this.log.info("tap");
+      try {
+        this.handlers.onTap?.();
+      } catch (error) {
+        this.log.error("tap failed", error);
       }
-      lastSubmit = submit;
-      if (tap === "pulse") this.log.info("pitch submitted by device");
-      if (tap) this.handlers.onPitchSubmit?.();
     });
 
     this.client.on("lifecycle", (event) => {
       if (event.kind === "connect") {
         this.log.info(`link up (encrypted=${event.encrypted})`);
         this.lastFace = null;
+        this.lastTaps = null;
         this.handlers.onConnected?.();
       } else {
         this.log.warn(`link down${event.cause ? `: ${event.cause.message}` : ""}`);
@@ -214,82 +186,21 @@ export class CompanionDevice implements VoiceLink {
       }
     });
 
-    // Subscribing with API audio makes the device stream mic PCM over the
-    // native API (no UDP). The subscription survives reconnects.
-    this.client.voiceAssistant.subscribe(VoiceAssistantSubscribeFlag.API_AUDIO);
-
-    void this.pumpRequests();
-    void this.pumpAudio();
     this.handlers.onConnected?.();
   }
 
-  private async pumpRequests(): Promise<void> {
-    try {
-      for await (const request of this.client.voiceAssistant.requests({ signal: this.abort.signal })) {
-        if (request.start) {
-          this.log.info(
-            `pipeline start (conversation=${request.conversationId ?? "-"}, wake="${request.wakeWordPhrase ?? ""}")`
-          );
-          // Start may await a model connection. Keep consuming stop requests
-          // so a cancelled tap cannot be accepted several seconds later.
-          void Promise.resolve()
-            .then(() => this.handlers.onRequestStart(request))
-            .catch((error) => {
-              this.log.error("pipeline start failed", error);
-              this.declineRequest();
-            });
-        } else {
-          this.log.info("pipeline stop requested by device");
-          await Promise.resolve()
-            .then(() => this.handlers.onRequestStop())
-            .catch((error) => this.log.error("pipeline stop failed", error));
-        }
-      }
-    } catch (error) {
-      if (!this.abort.signal.aborted) this.log.error("request pump died; restarting it", error);
-    }
-    this.restartPump(() => this.pumpRequests());
-  }
+  // ── VoiceLink: the knob runs no pipeline; a turn's events and audio go to the Mac or a browser ──
 
-  private async pumpAudio(): Promise<void> {
-    try {
-      for await (const chunk of this.client.voiceAssistant.audio({ signal: this.abort.signal })) {
-        try {
-          this.handlers.onAudio(chunk);
-        } catch (error) {
-          this.log.error("mic chunk failed", error);
-        }
-      }
-    } catch (error) {
-      if (!this.abort.signal.aborted) this.log.error("audio pump died; restarting it", error);
-    }
-    this.restartPump(() => this.pumpAudio());
-  }
+  acceptRequest(): void {}
 
-  /** A pump that ended while the device is still ours runs again: a board that stays connected must never go deaf. */
-  private restartPump(pump: () => Promise<void>): void {
-    if (this.abort.signal.aborted) return;
-    setTimeout(() => {
-      if (!this.abort.signal.aborted) void pump();
-    }, 1000).unref?.();
-  }
+  declineRequest(): void {}
 
-  // ── VoiceLink ───────────────────────────────────────────────────────────
+  sendEvent(_eventType: VoiceAssistantEvent, _data?: VoiceAssistantEventData[]): void {}
 
-  acceptRequest(): void {
-    this.guard("accept", () => this.client.voiceAssistant.respondToRequest({ port: 0, error: false }));
-  }
+  sendAudio(_audio: Buffer, _end = false): void {}
 
-  declineRequest(): void {
-    this.guard("decline", () => this.client.voiceAssistant.respondToRequest({ error: true }));
-  }
-
-  sendEvent(eventType: VoiceAssistantEvent, data?: VoiceAssistantEventData[]): void {
-    this.guard("voice event", () => this.client.voiceAssistant.sendEvent(eventType, data));
-  }
-
-  sendAudio(audio: Buffer, end = false): void {
-    this.guard("audio", () => this.client.voiceAssistant.sendAudio(audio, end));
+  isPlaybackReady(): boolean {
+    return true;
   }
 
   /** Writes to the board can throw while its link is down: log once per outage instead of crashing a timer. */
@@ -304,11 +215,7 @@ export class CompanionDevice implements VoiceLink {
   }
   private writeFailing = false;
 
-  isPlaybackReady(): boolean {
-    return this.client.latest(ENTITY.playbackReady)?.state === true;
-  }
-
-  // ── Screen / modes ──────────────────────────────────────────────────────
+  // ── Screen ──────────────────────────────────────────────────────────────
 
   setFace(state: FaceState): void {
     if (this.lastFace === state) return;
@@ -345,8 +252,15 @@ export class CompanionDevice implements VoiceLink {
     }
   }
 
+  // ── Settings and modes ──────────────────────────────────────────────────
+
   isStaffMode(): boolean {
-    return this.readSwitch(ENTITY.staffMode);
+    return this.client.latest(ENTITY.staffMode)?.state === true;
+  }
+
+  /** The marketplace is a bridge setting now; the board has no say in it. */
+  isMarketplaceOpen(): boolean {
+    return false;
   }
 
   /** The board's value for a registry setting, mapped back from its option label; undefined = it has none. */
@@ -386,83 +300,20 @@ export class CompanionDevice implements VoiceLink {
     this.command(entityId("button", objectId), {} as never);
   }
 
-  info(): { firmware?: string; audio?: string } {
-    const audio = this.client.latest(ENTITY.audioState)?.state;
+  info(): { firmware?: string; face?: string } {
+    const face = this.client.latest(ENTITY.face)?.state;
     return {
       firmware: this.client.deviceInfo()?.esphomeVersion,
-      ...(typeof audio === "string" ? { audio } : {}),
+      ...(typeof face === "string" ? { face } : {}),
     };
   }
 
-  /** `null` when the firmware has no routing selects (older boards). */
-  getMicSource(): MicRoute | null {
-    const state = this.client.latest(ENTITY.micSource)?.state;
-    return typeof state === "string" ? micRoute(state) : null;
-  }
-
-  getAudioOutput(): AudioRoute | null {
-    const state = this.client.latest(ENTITY.audioOutput)?.state;
-    return typeof state === "string" ? audioRoute(state) : null;
-  }
-
-  setAudioRoute(which: "mic" | "output", route: MicRoute): void {
-    this.command(which === "mic" ? ENTITY.micSource : ENTITY.audioOutput, {
-      state: route === "laptop" ? "laptop" : route === "host" ? "mac" : "dispositivo",
-    });
-  }
-
-  isMarketplaceOpen(): boolean {
-    return this.readSwitch(ENTITY.marketplaceOpen);
-  }
-
-  /** `null` when the firmware has no pitch switches (older boards). */
-  isPitchMode(): boolean | null {
-    return this.readOptionalSwitch(ENTITY.pitchMode);
-  }
-
-  isPitchReacts(): boolean | null {
-    return this.readOptionalSwitch(ENTITY.pitchReacts);
-  }
-
-  setSwitch(id: "pitch_mode", on: boolean): void {
-    this.command(ENTITY.pitchMode, { state: on });
-  }
-
-  /** `null` when the firmware has no `select.pitch_voice` (older boards: the `pitch_reacts` switch). */
-  getPitchVoice(): PitchVoice | null {
-    const state = this.client.latest(ENTITY.pitchVoice)?.state;
-    return typeof state === "string" ? (PITCH_VOICE_OPTIONS.find(([, label]) => label === state)?.[0] ?? null) : null;
-  }
-
-  setPitchVoice(voice: PitchVoice): void {
-    const label = PITCH_VOICE_OPTIONS.find(([value]) => value === voice)?.[1];
-    if (label) this.command(ENTITY.pitchVoice, { state: label });
-  }
-
-  private readOptionalSwitch(id: typeof ENTITY.pitchMode): boolean | null {
-    const state = this.client.latest(id)?.state;
-    return typeof state === "boolean" ? state : null;
-  }
-
-  isQuietMode(): boolean {
-    return this.readSwitch(ENTITY.quietMode);
-  }
-
-  /** Current speaker volume 0..100 (null if not reported yet). */
+  /** No speaker: the Mac's output has the volume. */
   getVolume(): number | null {
-    const latest = this.client.latest(ENTITY.volume);
-    return typeof latest?.state === "number" ? latest.state : null;
+    return null;
   }
 
-  /** Sets speaker volume 0..100. */
-  setVolume(pct: number): void {
-    this.command(ENTITY.volume, { state: Math.max(0, Math.min(80, Math.round(pct))) });
-  }
-
-  private readSwitch(id: typeof ENTITY.staffMode): boolean {
-    const latest = this.client.latest(id);
-    return latest?.state === true;
-  }
+  setVolume(_pct: number): void {}
 
   close(): void {
     this.abort.abort();
@@ -470,7 +321,7 @@ export class CompanionDevice implements VoiceLink {
   }
 }
 
-/** `switch.pitch_mode` → the client's entity id (the registry names switch, number and select entities). */
+/** `switch.staff_mode` → the client's entity id (the registry names switch, number and select entities). */
 function boardEntity(spec: string) {
   const [domain, objectId] = spec.split(".");
   return entityId(domain as "switch", objectId);

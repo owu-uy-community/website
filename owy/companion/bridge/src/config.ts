@@ -6,8 +6,8 @@ import { MODELS } from "../../../agent/lib/models";
 /**
  * Bridge configuration, read once from the environment.
  *
- * The bridge runs on a laptop at the venue, on the same Wi-Fi as the companion
- * device(s). It reuses the agent's own variables for the site API
+ * The bridge runs on the Mac at the venue, on the same Wi-Fi as the knob. It
+ * reuses the agent's own variables for the site API
  * (`OWU_API_URL`, `OWY_API_KEY`, `OWY_EVENT_ID` — see `agent/lib/owu-api.ts`
  * and `agent/lib/board.ts`) and adds the `COMPANION_*` set below.
  */
@@ -99,15 +99,14 @@ export const EnvSchema = z.object({
   COMPANION_EVENT_NAME: z.string().default("OWU Conf 2026"),
 
   // --- Modo pitch (the open space's marketplace: tap, pitch a talk, tap → a card on the board) ---
-  /** Fallbacks for boards without `switch.pitch_mode` / `select.pitch_voice` (web lab, text REPL). */
+  /** Modo pitch when the panel has not said (the panel's `pitch_mode` row wins). */
   COMPANION_PITCH_MODE: boolFromEnv,
   /**
    * What Owy says around a pitch: `silent` (the card on screen, questions as text),
    * `confirm` (says where it landed, asks what is missing), `react` (+ one warm
-   * sentence about the talk). Unset = `react` when the old COMPANION_PITCH_REACTS is on, else `confirm`.
+   * sentence about the talk). Unset = `confirm`.
    */
   COMPANION_PITCH_VOICE: z.enum(["silent", "confirm", "react"]).optional(),
-  COMPANION_PITCH_REACTS: boolFromEnv,
   /** Audio → card, one multimodal call through the gateway. */
   COMPANION_PITCH_MODEL: z.string().default(MODELS.pitch),
   /** Gateway model fallbacks for the pitch extractor (comma-separated, audio-capable). */
@@ -160,15 +159,19 @@ export const EnvSchema = z.object({
   COMPANION_SITE_WS_URL: z.string().optional(),
 
   // --- Behaviour ---
-  /** Fallbacks used when the device does not expose the mode switches (text REPL, tests). */
+  /** The marketplace slot is open (the panel's `marketplace_open` row wins); staff mode when no board unlocks it. */
   COMPANION_MARKETPLACE_OPEN: boolFromEnv,
   COMPANION_STAFF_MODE: boolFromEnv,
   /** Seconds a person must wait between two proposals from the same device (staff exempt). */
   COMPANION_PROPOSAL_COOLDOWN_S: z.coerce.number().int().nonnegative().default(60),
   /** Directory for opt-in JSONL transcripts; unset = no transcript persisted. */
-  // --- Audio routing defaults (a board's mic_source / audio_output selects win) ---
-  /** `host` = an input of the Mac running the bridge (COMPANION_HOST_MIC), captured with ffmpeg; macOS only, not in Docker. */
-  COMPANION_MIC_SOURCE: z.enum(["device", "laptop", "host"]).default("device"),
+  // --- Audio routing defaults (the panel's mic / output settings win) ---
+  /**
+   * `host` = an input of the Mac running the bridge (COMPANION_HOST_MIC), captured with ffmpeg;
+   * `laptop` = a browser attached as the device's audio. `device` only means something to the
+   * browser virtual device (its own mic); the knob has none.
+   */
+  COMPANION_MIC_SOURCE: z.enum(["device", "laptop", "host"]).default("host"),
   /** The Mac input for the `host` route, by name or part of it ("DJI"); unset = the built-in mic. */
   COMPANION_HOST_MIC: z.string().trim().min(1).optional(),
   /** Side of a stereo input that feeds Owy (a DJI receiver in stereo mode: one transmitter per side). */
@@ -186,11 +189,9 @@ export const EnvSchema = z.object({
   COMPANION_HOST_SPEAKER_LATENCY_MS: z.coerce.number().int().min(0).max(1000).default(150),
   /** After Owy speaks on the Mac, its mic stays deaf this long more: the room's echo (no echo cancellation). */
   COMPANION_HOST_SPEAKER_TAIL_MS: z.coerce.number().int().min(0).max(2000).default(300),
-  /** `host` = the Mac's own output (COMPANION_HOST_SPEAKER), played with ffmpeg; macOS only, not in Docker. */
-  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop", "host"]).default("device"),
+  /** `host` = the Mac's own output (COMPANION_HOST_SPEAKER, the room's PA), played with ffmpeg. */
+  COMPANION_AUDIO_OUTPUT: z.enum(["device", "laptop", "host"]).default("host"),
   COMPANION_SETTINGS_PORT: z.coerce.number().int().min(1).max(65535).default(3313),
-  /** Interface the web bridge and the settings UI listen on. The Docker image sets 0.0.0.0 and publishes both on the host's 127.0.0.1 only. */
-  COMPANION_BIND_HOST: z.string().default("127.0.0.1"),
   COMPANION_LOG_DIR: z.string().optional(),
   COMPANION_LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
 });

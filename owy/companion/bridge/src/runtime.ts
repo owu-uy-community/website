@@ -54,9 +54,9 @@ export interface SharedRuntime {
   fallbackClips?: Partial<Record<FallbackClip, Buffer>>;
   /** Every recorded clip by id → duration (ms): the clips manifest (pitch cues, the talk's lines). */
   clips?: Record<string, number>;
-  /** An input of the Mac running the bridge (`mic: host`); absent in Docker and in browser sessions. */
+  /** An input of the Mac running the bridge (`mic: host`); absent in browser sessions. */
   hostMic?: HostMic;
-  /** The Mac's own output (`output: host`, the room's PA); `unavailable` in Docker. */
+  /** The Mac's own output (`output: host`, the room's PA); `unavailable` off macOS. */
   hostSpeaker?: HostSpeaker;
   /** eve brain: the local brain's prompt, for when eve does not answer (the realtime model keeps `instructions`). */
   localInstructions?: string;
