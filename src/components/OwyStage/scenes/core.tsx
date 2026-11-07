@@ -8,6 +8,7 @@ import { useCountdownAudio } from "hooks/useCountdownAudio";
 import { useCountdownState } from "hooks/useCountdownState";
 import { findSound } from "lib/launchpad/sounds";
 import type { SceneProps } from "lib/owy-stage/scenes";
+import { RoomMark } from "lib/rooms/icons";
 import { formatCountdown } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
@@ -136,7 +137,7 @@ export function UpNext({ eventId }: SceneProps<"up-next">) {
               transition={{ duration: 0.6, delay: 0.7, ease: EASE_OUT }}
             >
               <span className="flex items-center gap-4 border-2 border-[#FBF5E7]/25 px-8 py-4">
-                <span className="h-[22px] w-[22px] rounded-full" style={{ background: note.roomColor ?? BRAND.blue }} />
+                <RoomMark className="h-[22px] w-[22px]" color={note.roomColor ?? BRAND.blue} icon={note.roomIcon} />
                 {note.room}
               </span>
               <span className="border-2 border-[#FBF5E7]/25 px-8 py-4 text-[#F5BB03]">{note.timeSlot}</span>

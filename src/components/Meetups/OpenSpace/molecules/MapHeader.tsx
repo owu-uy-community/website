@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import { readableFill } from "lib/rooms/palette";
+
 import { CountdownBadge } from "../atoms/CountdownBadge";
 
 interface MapHeaderProps {
@@ -20,11 +22,11 @@ export const MapHeader = React.memo(({ title, color, remainingSeconds }: MapHead
   return (
     <div
       className="absolute top-0 right-0 left-0 z-20 flex flex-col items-start justify-between gap-4 px-4 py-3 transition-colors duration-300 sm:flex-row sm:items-center sm:px-6 sm:py-4 md:px-4"
-      style={{ backgroundColor: color }}
+      style={readableFill(color)}
     >
       <h1
         key={title}
-        className="font-display text-2xl font-bold tracking-tight text-black uppercase duration-300 animate-in fade-in slide-in-from-bottom-1 sm:text-4xl md:text-5xl lg:text-6xl xl:text-[72px]"
+        className="font-display text-2xl font-bold tracking-tight uppercase duration-300 animate-in fade-in slide-in-from-bottom-1 sm:text-4xl md:text-5xl lg:text-6xl xl:text-[72px]"
       >
         {title}
       </h1>

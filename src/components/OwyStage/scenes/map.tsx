@@ -7,6 +7,7 @@ import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { FLOORPLAN } from "lib/rooms/floorplan";
 import { assignMapZones, MAP_ZONES } from "lib/rooms/map-zones";
+import { RoomMark } from "lib/rooms/icons";
 import { readableOn, roomColorFor } from "lib/rooms/palette";
 import { formatCountdown } from "lib/utils";
 
@@ -168,7 +169,7 @@ export function FloorMap({ eventId }: SceneProps<"map">) {
         initial={{ opacity: 0, x: 40 }}
         transition={{ duration: 0.6, ease: EASE_OUT }}
       >
-        <div className="h-[14px] w-[120px]" style={{ background: lit.color }} />
+        <RoomMark className="h-[72px] w-[72px]" color={lit.color} icon={lit.icon} />
         <p className="mt-6 text-[88px] leading-none font-extrabold tracking-[-0.02em] uppercase">{lit.name}</p>
         {lit.status !== "open" && (
           <p className="mt-5 self-start bg-[#FBF5E7] px-4 py-1.5 text-[26px] font-bold tracking-[0.08em] text-black uppercase">

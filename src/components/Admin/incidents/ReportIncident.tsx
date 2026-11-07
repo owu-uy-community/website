@@ -23,11 +23,12 @@ import {
   MAX_PHOTO_BYTES,
   type IncidentDetail,
 } from "lib/orpc/incidents/schemas";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 
 import { CATEGORIES, isLoud, SEVERITIES } from "./meta";
 
-export type RoomOption = { id: string; name: string; color: string | null };
+export type RoomOption = { id: string; name: string; color: string | null; icon?: string | null };
 
 const NO_ROOM = "none";
 
@@ -495,10 +496,10 @@ export function ReportIncidentPanel({
                         {rooms.map((room) => (
                           <SelectItem key={room.id} value={room.id}>
                             <span className="flex items-center gap-2">
-                              <span
-                                aria-hidden
-                                className="size-2 rounded-full"
-                                style={{ backgroundColor: roomColorFor(room.id, room.color) }}
+                              <RoomMark
+                                className="size-2.5"
+                                color={roomColorFor(room.id, room.color)}
+                                icon={room.icon}
                               />
                               {room.name}
                             </span>

@@ -6,12 +6,13 @@ import OpenSpaceMap from "components/Meetups/2024/OpenSpace/Map";
 import { INTERNAL_ROUTES } from "app/lib/constants";
 import type { Room } from "lib/orpc";
 import { publicCaller } from "lib/orpc/server";
+import { RoomMark } from "lib/rooms/icons";
 import { getEventBySlugs } from "lib/tenant-server";
 
 import { OPEN_SPACE_TIMES, TALKS } from "../talks";
 import LiveGrid from "./LiveGrid";
 import PreAnswer from "./PreAnswer";
-import { buildBoardRooms } from "./board";
+import { buildBoardRooms, zoneColors } from "./board";
 
 /** Last edition's real board (La Meetup III): what a filled grid looks like, before this one exists. */
 const EXAMPLE = { communitySlug: "owu", eventSlug: "la-meetup-2025" } as const;
@@ -116,18 +117,14 @@ export default async function BeforeTheBoard({ rooms = [] }: { rooms?: Room[] })
           <h2 className={eyebrow}>Los cinco espacios</h2>
           <div className="mt-5 border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.02] px-3 py-6 sm:px-6">
             <div className="mx-auto aspect-[1315/654] w-full max-w-[720px]">
-              <OpenSpaceMap event={null} />
+              <OpenSpaceMap colors={zoneColors(buildBoardRooms(rooms))} event={null} />
             </div>
           </div>
           {rooms.length > 0 ? (
             <ul className="grid grid-cols-1 gap-px border-x border-b border-[#FBF5E7]/12 bg-[#FBF5E7]/12 sm:grid-cols-2 sm:[&>li:last-child:nth-child(odd)]:col-span-2">
               {buildBoardRooms(rooms).map((room) => (
                 <li key={room.id} className="flex items-center gap-3 bg-black px-4 py-3">
-                  <span
-                    aria-hidden="true"
-                    className="h-2.5 w-2.5 shrink-0 rotate-45"
-                    style={{ backgroundColor: room.color }}
-                  />
+                  <RoomMark className="h-3 w-3" color={room.color} icon={room.icon} />
                   <span className="font-display text-xs font-bold tracking-[0.12em] text-[#FBF5E7] uppercase">
                     {room.name}
                   </span>

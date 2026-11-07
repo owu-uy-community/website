@@ -76,12 +76,53 @@ async function addStaff(communityId: string) {
   }
 }
 
+// Colour and shape as on the venue signage
 const ROOMS = [
-  { name: "Lobby", description: "Main lobby area", capacity: 50, hasTV: true, hasWhiteboard: false },
-  { name: "Centro", description: "Central meeting room", capacity: 30, hasTV: false, hasWhiteboard: true },
-  { name: "Ventana", description: "Window room with natural light", capacity: 25, hasTV: false, hasWhiteboard: true },
-  { name: "Cueva", description: "Cave room for intimate discussions", capacity: 20, hasTV: true, hasWhiteboard: false },
-  { name: "Rincón", description: "Corner space for small groups", capacity: 15, hasTV: true, hasWhiteboard: false },
+  {
+    name: "Lobby",
+    description: "Main lobby area",
+    capacity: 50,
+    hasTV: true,
+    hasWhiteboard: false,
+    color: "#EA3323",
+    icon: "diamond",
+  },
+  {
+    name: "Centro",
+    description: "Central meeting room",
+    capacity: 30,
+    hasTV: false,
+    hasWhiteboard: true,
+    color: "#E2B63E",
+    icon: "circle",
+  },
+  {
+    name: "Ventana",
+    description: "Window room with natural light",
+    capacity: 25,
+    hasTV: false,
+    hasWhiteboard: true,
+    color: "#2960C1",
+    icon: "triangle",
+  },
+  {
+    name: "Cueva",
+    description: "Cave room for intimate discussions",
+    capacity: 20,
+    hasTV: true,
+    hasWhiteboard: false,
+    color: "#EF8A34",
+    icon: "hexagon",
+  },
+  {
+    name: "Rincón",
+    description: "Corner space for small groups",
+    capacity: 15,
+    hasTV: true,
+    hasWhiteboard: false,
+    color: "#FFFFFF",
+    icon: "square",
+  },
 ];
 
 // (block index, room index, title, speaker, description, needsTV, needsWhiteboard) — every room has one free block

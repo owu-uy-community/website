@@ -15,6 +15,7 @@ import { INTERNAL_ROUTES } from "app/lib/constants";
 import type { Room, Schedule, StickyNote } from "lib/orpc";
 import { resolveNowNext } from "lib/openspace/now-next";
 import { matchTrack, tagsOf, type TrackTags } from "lib/openspace/topics";
+import { RoomMark } from "lib/rooms/icons";
 
 import { TALKS } from "../talks";
 import Announcements from "./Announcements";
@@ -562,11 +563,7 @@ function NowAndNext({
                   type="button"
                   onClick={() => current && onSelect({ roomId: room.id, scheduleId: current.id })}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="mt-1.5 h-2.5 w-2.5 shrink-0 rotate-45"
-                    style={{ backgroundColor: room.color }}
-                  />
+                  <RoomMark className="mt-1 h-3 w-3" color={room.color} icon={room.icon} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-display text-[11px] leading-none font-bold tracking-[0.14em] text-[#FBF5E7]/75 uppercase">
@@ -610,11 +607,7 @@ function NowAndNext({
                 type="button"
                 onClick={() => onSelect({ roomId: room.id, scheduleId: next.id })}
               >
-                <span
-                  aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rotate-45"
-                  style={{ backgroundColor: room.color }}
-                />
+                <RoomMark className="h-2.5 w-2.5" color={room.color} icon={room.icon} />
                 <span className="w-20 shrink-0 truncate font-display text-[10px] font-bold tracking-[0.12em] text-[#FBF5E7]/70 uppercase">
                   {room.name}
                 </span>

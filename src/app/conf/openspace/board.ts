@@ -1,4 +1,3 @@
-import { ROOM_COLORS } from "app/lib/constants";
 import type { Room, StickyNote } from "lib/orpc";
 import { assignMapZones, type MapZone } from "lib/rooms/map-zones";
 import { roomColorFor } from "lib/rooms/palette";
@@ -11,12 +10,8 @@ export type BoardRoom = Room & {
 
 /**
  * Rooms in board order, each carrying its floorplan zone and the one colour
- * this page uses for it everywhere — map, legend and grid.
- *
- * A room that appears on the floorplan takes the zone's colour, because the
- * SVG paints those five zones from a fixed palette and a legend that disagreed
- * with the map would be worse than ignoring `rooms.color`. Rooms off the map
- * fall back to the usual per-id palette.
+ * this page uses for it everywhere — map, legend and grid: `rooms.color`, the
+ * same colour the venue signage, kiosks and stage read.
  */
 export function buildBoardRooms(rooms: readonly Room[]): BoardRoom[] {
   const active = rooms.filter((room) => room.isActive);
@@ -27,8 +22,13 @@ export function buildBoardRooms(rooms: readonly Room[]): BoardRoom[] {
     .map((room) => {
       const zone = zones.get(room.id) ?? null;
 
-      return { ...room, zone, color: zone ? ROOM_COLORS[zone] : roomColorFor(room.id, room.color) };
+      return { ...room, zone, color: roomColorFor(room.id, room.color) };
     });
+}
+
+/** Each mapped zone's fill on the floorplan: its room's colour. */
+export function zoneColors(rooms: readonly BoardRoom[]): Record<string, string> {
+  return Object.fromEntries(rooms.flatMap((room) => (room.zone ? [[room.zone, room.color]] : [])));
 }
 
 /** The talk booked in a room for a given block, if anyone claimed it. */

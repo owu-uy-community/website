@@ -1,8 +1,10 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import classNames from "classnames";
-import { ROOM_COLORS } from "app/lib/constants";
+import { ROOM_COLORS, type RoomName } from "app/lib/constants";
 import { FLOORPLAN } from "lib/rooms/floorplan";
+import { readableOn } from "lib/rooms/palette";
 
 interface OpenSpaceEvent {
   location?: string;
@@ -13,9 +15,14 @@ type OpenSpaceMapProps = {
   events?: OpenSpaceEvent[];
   scene?: number;
   onRoomClick?: (roomName: string) => void;
+  /** Fill per zone, from `rooms.color`; a zone left out keeps the 2024 palette. */
+  colors?: Partial<Record<string, string>>;
 };
 
-export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) {
+export default function OpenSpaceMap({ event, onRoomClick, colors }: OpenSpaceMapProps) {
+  const paint = (zone: RoomName) => colors?.[zone] ?? ROOM_COLORS[zone];
+  // The label's colour when its room is lit: black or white, whichever reads on that fill
+  const ink = (zone: RoomName) => ({ "--ink": readableOn(paint(zone)) }) as CSSProperties;
   const isLobbySelected = event?.location === "LOBBY";
   const isCentroSelected = event?.location === "CENTRO";
   const isVentanaSelected = event?.location === "VENTANA";
@@ -33,14 +40,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
       <g
         className="group cursor-pointer"
         id="lobby"
+        style={ink("LOBBY")}
         pointerEvents="all"
         onClick={() => onRoomClick?.("LOBBY")}
         onMouseEnter={(e) => {
           if (!isLobbySelected) {
             const path = e.currentTarget.querySelector("path");
             if (path) {
-              path.style.fill = ROOM_COLORS.LOBBY;
-              path.style.stroke = ROOM_COLORS.LOBBY;
+              path.style.fill = paint("LOBBY");
+              path.style.stroke = paint("LOBBY");
             }
           }
         }}
@@ -58,17 +66,17 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
           d={FLOORPLAN.rooms.LOBBY}
           id="Vector"
           stroke="white"
-          fill={isLobbySelected ? ROOM_COLORS.LOBBY : "transparent"}
+          fill={isLobbySelected ? paint("LOBBY") : "transparent"}
           style={{
-            stroke: isLobbySelected ? ROOM_COLORS.LOBBY : "white",
-            fill: isLobbySelected ? ROOM_COLORS.LOBBY : "transparent",
+            stroke: isLobbySelected ? paint("LOBBY") : "white",
+            fill: isLobbySelected ? paint("LOBBY") : "transparent",
           }}
         />
         <text
           className={classNames(
-            "font-inter pointer-events-none text-[28px] group-hover:fill-black group-hover:stroke-black",
+            "font-inter pointer-events-none text-[28px] group-hover:fill-(--ink) group-hover:stroke-(--ink)",
             {
-              "fill-black stroke-black": event?.location === "LOBBY",
+              "fill-(--ink) stroke-(--ink)": event?.location === "LOBBY",
               "fill-white stroke-white": event?.location !== "LOBBY",
             }
           )}
@@ -85,14 +93,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
       <g
         className="group cursor-pointer"
         id="rincon"
+        style={ink("RINCÓN")}
         pointerEvents="all"
         onClick={() => onRoomClick?.("RINCÓN")}
         onMouseEnter={(e) => {
           if (!isRinconSelected) {
             const path = e.currentTarget.querySelector("path");
             if (path) {
-              path.style.fill = ROOM_COLORS.RINCÓN;
-              path.style.stroke = ROOM_COLORS.RINCÓN;
+              path.style.fill = paint("RINCÓN");
+              path.style.stroke = paint("RINCÓN");
             }
           }
         }}
@@ -111,15 +120,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
           id="Vector_2"
           stroke="white"
           style={{
-            stroke: isRinconSelected ? ROOM_COLORS.RINCÓN : "white",
-            fill: isRinconSelected ? ROOM_COLORS.RINCÓN : "transparent",
+            stroke: isRinconSelected ? paint("RINCÓN") : "white",
+            fill: isRinconSelected ? paint("RINCÓN") : "transparent",
           }}
         />
         <text
           className={classNames(
-            "font-inter pointer-events-none text-[28px] group-hover:fill-black group-hover:stroke-black",
+            "font-inter pointer-events-none text-[28px] group-hover:fill-(--ink) group-hover:stroke-(--ink)",
             {
-              "fill-black stroke-black": event?.location === "RINCÓN",
+              "fill-(--ink) stroke-(--ink)": event?.location === "RINCÓN",
               "fill-white stroke-white": event?.location !== "RINCÓN",
             }
           )}
@@ -136,14 +145,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
       <g
         className="group cursor-pointer"
         id="centro"
+        style={ink("CENTRO")}
         pointerEvents="all"
         onClick={() => onRoomClick?.("CENTRO")}
         onMouseEnter={(e) => {
           if (!isCentroSelected) {
             const path = e.currentTarget.querySelector("path");
             if (path) {
-              path.style.fill = ROOM_COLORS.CENTRO;
-              path.style.stroke = ROOM_COLORS.CENTRO;
+              path.style.fill = paint("CENTRO");
+              path.style.stroke = paint("CENTRO");
             }
           }
         }}
@@ -162,15 +172,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
           id="centro"
           stroke="white"
           style={{
-            stroke: isCentroSelected ? ROOM_COLORS.CENTRO : "white",
-            fill: isCentroSelected ? ROOM_COLORS.CENTRO : "transparent",
+            stroke: isCentroSelected ? paint("CENTRO") : "white",
+            fill: isCentroSelected ? paint("CENTRO") : "transparent",
           }}
         />
         <text
           className={classNames(
-            "font-inter pointer-events-none text-[28px] group-hover:fill-black group-hover:stroke-black",
+            "font-inter pointer-events-none text-[28px] group-hover:fill-(--ink) group-hover:stroke-(--ink)",
             {
-              "fill-black stroke-black": event?.location === "CENTRO",
+              "fill-(--ink) stroke-(--ink)": event?.location === "CENTRO",
               "fill-white stroke-white": event?.location !== "CENTRO",
             }
           )}
@@ -187,14 +197,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
       <g
         className="group cursor-pointer"
         id="ventana"
+        style={ink("VENTANA")}
         pointerEvents="all"
         onClick={() => onRoomClick?.("VENTANA")}
         onMouseEnter={(e) => {
           if (!isVentanaSelected) {
             const path = e.currentTarget.querySelector("path");
             if (path) {
-              path.style.fill = ROOM_COLORS.VENTANA;
-              path.style.stroke = ROOM_COLORS.VENTANA;
+              path.style.fill = paint("VENTANA");
+              path.style.stroke = paint("VENTANA");
             }
           }
         }}
@@ -213,15 +224,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
           id="ventana"
           stroke="white"
           style={{
-            stroke: isVentanaSelected ? ROOM_COLORS.VENTANA : "white",
-            fill: isVentanaSelected ? ROOM_COLORS.VENTANA : "transparent",
+            stroke: isVentanaSelected ? paint("VENTANA") : "white",
+            fill: isVentanaSelected ? paint("VENTANA") : "transparent",
           }}
         />
         <text
           className={classNames(
-            "font-inter pointer-events-none text-[28px] group-hover:fill-black group-hover:stroke-black",
+            "font-inter pointer-events-none text-[28px] group-hover:fill-(--ink) group-hover:stroke-(--ink)",
             {
-              "fill-black stroke-black": event?.location === "VENTANA",
+              "fill-(--ink) stroke-(--ink)": event?.location === "VENTANA",
               "fill-white stroke-white": event?.location !== "VENTANA",
             }
           )}
@@ -238,14 +249,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
       <g
         className="group cursor-pointer"
         id="cueva"
+        style={ink("CUEVA")}
         pointerEvents="all"
         onClick={() => onRoomClick?.("CUEVA")}
         onMouseEnter={(e) => {
           if (!isCuevaSelected) {
             const path = e.currentTarget.querySelector("path");
             if (path) {
-              path.style.fill = ROOM_COLORS.CUEVA;
-              path.style.stroke = ROOM_COLORS.CUEVA;
+              path.style.fill = paint("CUEVA");
+              path.style.stroke = paint("CUEVA");
             }
           }
         }}
@@ -264,15 +276,15 @@ export default function OpenSpaceMap({ event, onRoomClick }: OpenSpaceMapProps) 
           id="Vector_3"
           stroke="white"
           style={{
-            stroke: isCuevaSelected ? ROOM_COLORS.CUEVA : "white",
-            fill: isCuevaSelected ? ROOM_COLORS.CUEVA : "transparent",
+            stroke: isCuevaSelected ? paint("CUEVA") : "white",
+            fill: isCuevaSelected ? paint("CUEVA") : "transparent",
           }}
         />
         <text
           className={classNames(
-            "font-inter pointer-events-none text-[28px] group-hover:fill-black group-hover:stroke-black",
+            "font-inter pointer-events-none text-[28px] group-hover:fill-(--ink) group-hover:stroke-(--ink)",
             {
-              "fill-black stroke-black": event?.location === "CUEVA",
+              "fill-(--ink) stroke-(--ink)": event?.location === "CUEVA",
               "fill-white stroke-white": event?.location !== "CUEVA",
             }
           )}

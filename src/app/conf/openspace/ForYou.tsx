@@ -6,6 +6,7 @@ import { SlidersHorizontal, Sparkles } from "lucide-react";
 
 import type { Schedule, StickyNote } from "lib/orpc";
 import { formatLabel, matchTrack, topicLabel, type TrackTags } from "lib/openspace/topics";
+import { RoomMark } from "lib/rooms/icons";
 
 import type { BoardRoom } from "./board";
 import { trackAt } from "./board";
@@ -97,11 +98,7 @@ export default function ForYou({
                 type="button"
                 onClick={() => onSelect({ roomId: room.id, scheduleId: block.id })}
               >
-                <span
-                  aria-hidden="true"
-                  className="mt-1.5 h-2.5 w-2.5 shrink-0 rotate-45"
-                  style={{ backgroundColor: room.color }}
-                />
+                <RoomMark className="mt-1 h-3 w-3" color={room.color} icon={room.icon} />
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span className="font-display text-[10px] leading-none font-bold tracking-[0.14em] text-[#FBF5E7]/55 uppercase">

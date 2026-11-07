@@ -7,6 +7,7 @@ import { EASE_OUT } from "app/conf/components/Reveal";
 import { TEAM_2026 } from "app/conf/components/Team";
 import type { Schedule } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 
 import { Confetti } from "../effects";
@@ -87,10 +88,7 @@ export function Agenda({ params, eventId }: SceneProps<"agenda">) {
         <div />
         {view.rooms.map((room) => (
           <div key={room.id} className="flex items-center gap-3 pb-2 text-[26px] font-bold tracking-[0.06em] uppercase">
-            <span
-              className="h-[18px] w-[18px] shrink-0 rounded-full"
-              style={{ background: roomColorFor(room.id, room.color) }}
-            />
+            <RoomMark className="h-[22px] w-[22px]" color={roomColorFor(room.id, room.color)} icon={room.icon} />
             <span className="truncate">{room.name}</span>
           </div>
         ))}

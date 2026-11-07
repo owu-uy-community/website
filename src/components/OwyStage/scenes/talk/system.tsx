@@ -8,6 +8,7 @@ import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import type { StickyNote } from "lib/orpc";
 import type { HubItem, Labeled } from "lib/owy-stage/talk/deck";
 import { eventChannel } from "lib/realtime/channels";
+import { RoomMark } from "lib/rooms/icons";
 import { readableOn, roomColorFor } from "lib/rooms/palette";
 
 import { BRAND, StageContext, useStageFrame } from "../../Stage";
@@ -124,10 +125,7 @@ export function BoardSlide({ slide, eventId }: LiveProps<"board">) {
               <div />
               {rooms.map((room) => (
                 <div key={room.id} className="flex min-w-0 items-center gap-3">
-                  <span
-                    className="h-[16px] w-[16px] shrink-0 rounded-full"
-                    style={{ background: roomColorFor(room.id, room.color) }}
-                  />
+                  <RoomMark className="h-[20px] w-[20px]" color={roomColorFor(room.id, room.color)} icon={room.icon} />
                   <span className="truncate text-[26px] font-semibold">{room.name}</span>
                 </div>
               ))}
