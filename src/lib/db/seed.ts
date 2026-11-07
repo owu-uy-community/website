@@ -2,7 +2,7 @@
 /**
  * Dev-only sample data seed. NON-destructive: refuses to run in production or when communities it
  * doesn't own exist (unless --force), and even then it only recreates its own data: the "demo"
- * community, and the OWU CONF board (`owu` / `owu-conf-2026`, what conf.owu.uy/openspace reads).
+ * community, and the OWU CONF board (`owu` / `owu-conf`, what conf.owu.uy/openspace reads).
  * A real `owu` community (a dev database restored from production) keeps everything else.
  *
  *   pnpm db:seed [--force] [--at=HH:MM]
@@ -32,7 +32,7 @@ const FORCE = process.argv.includes("--force");
 const AT = process.argv.find((arg) => arg.startsWith("--at="))?.slice("--at=".length);
 const DEMO_SLUG = "demo";
 /** Mirrors CONF_EVENT (app/lib/constants) */
-const CONF = { communitySlug: "owu", eventSlug: "owu-conf-2026" };
+const CONF = { communitySlug: "owu", eventSlug: "owu-conf" };
 
 const pool = new Pool({ connectionString });
 const db = drizzle({ client: pool });
