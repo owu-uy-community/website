@@ -30,6 +30,17 @@ export function roomColorFor(roomId: string, explicit?: string | null): string {
   return ROOM_PALETTE[hashId(roomId) % ROOM_PALETTE.length];
 }
 
+/** Black or white, whichever reads better on a #rrggbb background (WCAG relative luminance). */
+export function readableOn(hex: string): "#000000" | "#FFFFFF" {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const [r, g, b] = [num >> 16, (num >> 8) & 0xff, num & 0xff].map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? "#000000" : "#FFFFFF";
+}
+
 /** Lighten (positive pct) or darken (negative pct) a #rrggbb color. */
 export function shadeHex(hex: string, pct: number): string {
   const value = hex.replace("#", "");

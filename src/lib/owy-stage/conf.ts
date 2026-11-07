@@ -21,7 +21,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   },
   {
     title: `Open space · ${OPEN_SPACE_TIMES.sesiones.start}`,
-    scenes: ["grid", "rooms-now", "rounds", "room", "reminders"],
+    scenes: ["grid", "rooms-now", "map", "rounds", "room", "reminders"],
   },
   {
     title: `Coffee break · ${OPEN_SPACE_TIMES.coffee.start}`,
@@ -98,6 +98,7 @@ export const CONF_LOOPS: { id: string; title: string; when: string; steps: LoopS
     steps: [
       ["grid", 30],
       ["rooms-now", 25],
+      ["map", 30],
       ["rounds", 15],
       ["program", 15],
       ["wifi-qr", 10],

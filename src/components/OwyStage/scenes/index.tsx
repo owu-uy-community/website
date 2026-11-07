@@ -80,6 +80,7 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   frame: () => import("./legacy").then((m) => m.Frame),
   board: () => import("./extra").then((m) => m.Board),
   "rooms-now": () => import("./extra").then((m) => m.RoomsNow),
+  map: () => import("./map").then((m) => m.FloorMap),
   marquee: () => import("./extra").then((m) => m.Marquee),
   until: () => import("./extra").then((m) => m.Until),
   quote: () => import("./extra").then((m) => m.Quote),
