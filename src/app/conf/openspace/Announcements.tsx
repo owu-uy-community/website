@@ -9,7 +9,11 @@ import { orpc } from "lib/orpc";
 import { eventChannel } from "lib/realtime/channels";
 
 const SHOWN = 5;
-/** Hundreds of phones hear the same ping: spread their refetches over a couple of seconds. */
+/**
+ * Hundreds of phones hear the same ping: spread their refetches over a couple of seconds, never
+ * right away, so the write that pinged has expired the cached feed first (it does when its request ends).
+ */
+const MIN_DELAY_MS = 300;
 const JITTER_MS = 2_000;
 
 /** URLs in a message as links; the rest stays text (bodies are plain text, never HTML). */
@@ -52,7 +56,7 @@ export default function Announcements({
     (topic: string) => {
       if (topic !== "comms") return;
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void refetch(), Math.random() * JITTER_MS);
+      timer.current = setTimeout(() => void refetch(), MIN_DELAY_MS + Math.random() * JITTER_MS);
     },
     [refetch]
   );
