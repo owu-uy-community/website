@@ -406,6 +406,27 @@ test("browser acknowledges real STT_END before playing tagged 16 kHz bridge PCM"
     h.voice.stop();
   }
 });
+test("a tap on the device stops what plays here: the queued reply and a cue, whatever run they came from", async () => {
+  const h = playbackHarness();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ arrayBuffer: async () => new ArrayBuffer(8) });
+  h.voice.ctx.decodeAudioData = async () => ({ duration: 4.68 });
+  try {
+    h.voice.receive({ type: "screen", run: 1, command: { kind: "clip", id: "pitch-listen" } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    h.voice.receive({ type: "event", event: "STT_END", run: 1 });
+    h.voice.play(h.pcm);
+    assert.equal(h.nodes.length, 2); // the cue, then a frame of the reply
+    const stopped = [];
+    h.nodes.forEach((node, index) => (node.stop = () => stopped.push(index)));
+    h.voice.receive({ type: "screen", run: 0, command: { kind: "stop" } });
+    assert.deepEqual(stopped.sort(), [0, 1]);
+    assert.deepEqual(h.commands.at(-1), { kind: "stop" });
+  } finally {
+    globalThis.fetch = realFetch;
+    h.voice.stop();
+  }
+});
 test("follow-up is requested only after browser playback drains, using another bridge turn", async () => {
   const h = playbackHarness();
   try {

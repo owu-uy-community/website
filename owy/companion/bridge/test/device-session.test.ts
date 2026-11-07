@@ -864,6 +864,88 @@ it("tap in modo pitch: the first tap records, the second one sends", async () =>
   expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
 });
 
+/** A browser attached as the device's audio: what the bridge asks it to stop. */
+function attachPeer(h: ReturnType<typeof pitchHarness>) {
+  const peer = { attachedTo: "test", mirrorAccept: vi.fn(), mirrorDecline: vi.fn(), sendEvent: vi.fn(), sendAudio: vi.fn(), stopAudio: vi.fn() };
+  (h.wired as unknown as { peer: unknown }).peer = peer;
+  return peer;
+}
+
+it("tap in modo pitch: tapped twice with nothing said, the cue stops and Owy says nothing (no «No escuché una propuesta»)", async () => {
+  const h = pitchHarness({ pitchMode: true, clips: { "pitch-listen": 4680 } });
+  const peer = attachPeer(h);
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.clips).toEqual(["pitch-listen"]); // «contame tu charla…» starts while the mic records
+  peer.stopAudio.mockClear();
+  vi.advanceTimersByTime(800);
+  h.session.tap(); // a second tap, the cue still playing, nothing said yet
+  await vi.advanceTimersByTimeAsync(50);
+  expect(peer.stopAudio).toHaveBeenCalled();
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.extract.card).not.toHaveBeenCalled();
+  expect(h.spoken).toEqual([]);
+  expect(h.clips).toEqual(["pitch-listen"]);
+  expect(h.events).not.toContain(E.ERROR);
+  expect(h.device.setFace).toHaveBeenLastCalledWith("idle");
+});
+
+it("tap: whatever Owy is still playing stops at the tap — on the Mac and in the browser — before he listens again", async () => {
+  const h = pitchHarness();
+  const peer = attachPeer(h);
+  const speaker = { busy: true, ready: true, flush: vi.fn(), ensureOpen: vi.fn(), write: vi.fn() };
+  (h.session as unknown as { shared: { hostSpeaker: unknown } }).shared.hostSpeaker = speaker;
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(speaker.flush).toHaveBeenCalledOnce();
+  expect(peer.stopAudio).toHaveBeenCalledOnce();
+  expect(h.wired.turn.phase).toBe("listening");
+  // Nothing playing: nothing to cut (the Mac's output is not reopened for nothing).
+  speaker.busy = false;
+  h.session.tap();
+  expect(speaker.flush).toHaveBeenCalledOnce();
+});
+
+it("tap in modo pitch while Owy announces the card: he stops at once, the card stays on the board", async () => {
+  const h = pitchHarness({ pitchMode: true });
+  const peer = attachPeer(h);
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  h.speak(3000);
+  h.session.tap(); // sends the pitch
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+  expect(h.spoken).toEqual([ANNOUNCED]);
+  // A tap while it is still being understood only cuts a cue: the pitch goes on.
+  h.wired.onModelEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  expect(h.wired.turn.phase).toBe("speaking");
+  peer.stopAudio.mockClear();
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(10);
+  expect(peer.stopAudio).toHaveBeenCalled();
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.events).not.toContain(E.ERROR);
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+  expect(h.device.setFace).toHaveBeenLastCalledWith("idle");
+});
+
+it("tap in modo pitch while the pitch is being understood: it keeps going (the tap only quiets a cue)", async () => {
+  const h = pitchHarness({ pitchMode: true });
+  let release: (card: typeof heardCard) => void = () => {};
+  h.extract.card.mockImplementationOnce(() => new Promise((resolve) => (release = resolve)));
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  h.speak(3000);
+  h.session.tap(); // sends it
+  await vi.advanceTimersByTimeAsync(10);
+  expect(h.wired.turn.phase).toBe("thinking");
+  h.session.tap(); // impatient
+  expect(h.wired.turn.phase).toBe("thinking");
+  release({ ...heardCard });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+});
+
 it("the panel's pitch buttons: start records a pitch whatever the mode says, submit sends it", async () => {
   const h = pitchHarness();
   h.session.pitchAction("start");

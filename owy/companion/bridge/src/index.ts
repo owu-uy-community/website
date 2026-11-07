@@ -446,14 +446,20 @@ export class DeviceSession {
    */
   tap(): void {
     if (this.stopped || this.setting("privacy") === true) return;
+    // A tap always quiets Owy first: an answer, or a cue still playing in the browser or on the Mac.
+    this.silence();
     const turn = this.turn;
     if (!turn || turn.finished) {
       void this.beginTurn(this.setting("pitch_mode") === true ? "pitch" : "turn");
       return;
     }
-    const pitch = this.pitch?.turn === turn;
+    const pitch = this.pitch?.turn === turn ? this.pitch : null;
     if (turn.phase === "listening") {
-      if (pitch) return this.submitPitch("submit");
+      if (pitch) {
+        // Tapped twice with nothing said: taken back quietly, like a conversation (no «No escuché una propuesta»).
+        if (pitch.recorder.speechMs < pitch.recorder.limits.minSpeechMs) return this.hush();
+        return this.submitPitch("submit");
+      }
       // Nothing said yet: a tap takes it back, quietly.
       const spoke =
         this.recorder?.heardSpeech || this.micPeak > (this.shared.config?.COMPANION_PITCH_VAD_RMS ?? 0.012) || this.inputTranscript.trim() !== "";
@@ -463,12 +469,25 @@ export class DeviceSession {
       turn.endListening(this.inputTranscript.trim());
       return;
     }
-    if (!pitch) this.hush();
+    // A pitch being understood keeps going (the tap only cut a cue still playing); anything else Owy is doing stops.
+    if (pitch && turn.phase === "thinking") return;
+    this.hush();
+  }
+
+  /**
+   * Whatever Owy is saying stops, wherever it plays: a cue or an answer already handed to the Mac's
+   * speaker (a clip is written whole), and the attached browser's queue and clips.
+   */
+  private silence(): void {
+    const speaker = this.shared.hostSpeaker;
+    if (speaker?.busy) speaker.flush();
+    this.peer?.stopAudio?.();
   }
 
   /** The panel's modo pitch buttons: record a pitch now (whatever the mode says), or send the one being recorded. */
   pitchAction(action: "start" | "submit"): void {
     if (this.stopped) return;
+    this.silence();
     if (action === "submit") return this.submitPitch("submit");
     const turn = this.turn;
     if (turn && !turn.finished) {
@@ -1091,6 +1110,8 @@ export class DeviceSession {
   hush(): void {
     this.ownAbort?.abort();
     this.clearOwnTimer();
+    // Also what outlived its turn (a cue, the tail of an answer still queued in the browser).
+    this.silence();
     void this.onRequestStop();
   }
 
@@ -1498,7 +1519,7 @@ export class DeviceSession {
       this.discardedResponseId = this.currentResponseId;
       this.pacer?.stop();
       this.pacer = null;
-      if (this.audioOutput === "host") this.shared.hostSpeaker?.flush();
+      this.silence();
       turn.finish();
       this.session?.resetConversation();
       this.conversationId = randomUUID();
