@@ -199,6 +199,7 @@ const EXPECTED: Record<string, Access> = {
   "ocr.extractCard": "platform:program:manage",
   "ocr.findFreeSpot": "platform:program:manage",
   "ocr.processImageWithSuggestion": "platform:program:manage",
+  "openSpaces.board": "public",
   "openSpaces.create": "platform:event:manage",
   "openSpaces.delete": "platform:event:manage",
   "openSpaces.get": "public",
