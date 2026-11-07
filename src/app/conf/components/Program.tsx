@@ -296,8 +296,8 @@ const SESSIONS: Session[] = [
   },
   {
     ...DAY_TIMES.after,
-    title: "After",
-    blurb: "Enfrente, en MBC: te invitamos a seguirla un rato más",
+    title: "After en MBC",
+    blurb: "Cruzando la calle: te invitamos a seguirla un rato más",
     description: (
       <>
         Cuando termina la parte formal cruzamos la calle: el after es <Hl yellow>enfrente, en MBC</Hl>, sin agenda y sin
