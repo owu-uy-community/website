@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "width": 466,
-  "height": 466,
+  "width": 360,
+  "height": 360,
   "color": "RGB565",
   "esphome": "2026.8.2",
   "lvgl": "9.5.0",
@@ -14,21 +14,19 @@
     "pin_page",
     "settings_page",
     "quick_page",
-    "calibration_page",
-    "help_page"
+    "help_page",
+    "convo_page"
   ],
-  "objects": 211,
-  "sceneHash": "5da2d7c7d2fe55b3e2ddc335ea092d02d00143e6b15a62a44317312068b1dd12",
-  "fontsHash": "49d1d6d4be92e886f9d496b396402084f2c4f084a28249148381f14c12c3d381",
+  "objects": 162,
+  "sceneHash": "07f5584b1f05b80acb2868ad96458d3a50ef00f440ac1746098c5ddf61b19580",
+  "fontsHash": "770d3b092096afe50e8389874a8bfe41a58ce776b81891d30ee7e67f44e7dea8",
   "sourceHashes": {
-    "companion_model.h": "bdd2b66a8a35c79755f3db82a3f4af482e32617fb575d7144a238bbd36278302",
-    "companion_motion.h": "91cb07a936be6db2d3dde2ebce8ad664fe18569b245c8f93a1d0af55acec89ba",
-    "companion_lvgl.h": "b67d2d36e179f6b2c4f41763b2934cd9bbbff4fb0bd7786a69563bba857996a2",
-    "companion_sound.h": "7606317ae9d927a233dc7ed25c11b01b00ffdd67c5b23c84ecb81c70424faca3",
-    "packages/face.yaml": "f7f5260a92b280cd815cabb500aabc9c96144bfeac735325ca9836201f03bc9e",
-    "packages/companion.yaml": "1a20692bd54a9ef81107c4d058b054d49fe4363214b70e32afc5e336d99d783d",
-    "packages/voice.yaml": "63c9ea66ae9b3dbb1e9884a37d803725dfff1be98228995cdfb191aa59629274",
-    "packages/controls.yaml": "c9e6816b482edd664cc53866b6827c24827971f71e80b46b86d7a097bdeb361e"
+    "companion_model.h": "ac5d64e3cc682fa3c1df697687aba2f015098df946f3a4dff499b419273f93ef",
+    "companion_lvgl.h": "e38608ad9b77deda204b3a39ac77221b03907a556fa5431d7f1205301444e478",
+    "packages/face.yaml": "d435304de6feb21b8822b3ae015783501a8df0787c3a32257cfd21977de6759a",
+    "packages/companion.yaml": "f3a374c4918af05fc9bf5c040f66e29b31a7f209662baf377e5e55164532a826",
+    "packages/controls.yaml": "143354a6998e1ecff76428bc016dc3055a223b817d2557cf3ea86da161792805",
+    "packages/boards/knob18.yaml": "e19b43252fbc32db77c6e0308a3cbd9a50ee52d51611af763649b9dd5973e777"
   },
-  "version": "26d5467811148414"
+  "version": "806ecc494ff34e53"
 }
