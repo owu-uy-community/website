@@ -12,8 +12,10 @@ import {
   MONITOR_READY,
   MONITOR_SHOW,
   OWY_STAGE_CHANNEL,
+  SpotlightSchema,
   isSceneId,
   parseSceneParams,
+  sceneFamily,
   type EffectEvent,
   type SceneId,
   type StageState,
@@ -21,6 +23,7 @@ import {
 
 import { Effects, useEffectQueue } from "./effects";
 import { loadScene, preloadScenes, sceneComponent } from "./scenes";
+import { heardSpotlight } from "./spotlights";
 import { type StageCanvas } from "lib/owy-stage/canvas";
 
 import { Stage, WIPE_MID_MS, Wipe, type StageBackground } from "./Stage";
@@ -112,8 +115,9 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
   }, [wall, up]);
 
   // A scene change plays the band wipe and swaps the scene while the bands
-  // cover the frame; params-only updates apply live. A cut swaps at once,
-  // and also beats a wipe still on its way. The newest state always wins.
+  // cover the frame; params-only updates apply live, and so does a move inside
+  // a family (Owy ↔ Owy y la grilla: the scene animates its own layout). A cut
+  // swaps at once, and also beats a wipe still on its way. The newest state always wins.
   const goTo = useCallback(
     (next: StageState) => {
       const ticket = ++latest.current;
@@ -123,7 +127,8 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
         show(next, ticket);
         return;
       }
-      if (next.scene === shownRef.current?.scene) {
+      const current = shownRef.current?.scene;
+      if (current && sceneFamily(next.scene) === sceneFamily(current)) {
         show(next, ticket);
         return;
       }
@@ -138,6 +143,10 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
   const { isConnected } = useRealtimeChannel(follows ? OWY_STAGE_CHANNEL : null, (event, payload) => {
     if (event === "scene" && !fixed) goTo(payload as StageState);
     if (event === "effect") pushFx(payload as EffectEvent);
+    if (event === "spotlight") {
+      const spot = SpotlightSchema.safeParse(payload);
+      if (spot.success) heardSpotlight(spot.data);
+    }
   });
 
   // The WebSocket route recycles every few minutes; anything sent during the
@@ -148,6 +157,7 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
 
   const Scene = shown
     ? (sceneComponent(shown.scene) as React.ComponentType<{
+        scene: SceneId;
         params: unknown;
         eventId: string | null;
         round: string;
@@ -155,8 +165,9 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
       }> | null)
     : null;
   // Interactive scenes restart (timers, inputs) on every take; the rest keep
-  // running through param edits. A preview monitor restarts on a new round too,
-  // which is how the admin replays a scene that counts down.
+  // running through param edits, and a family keeps one component across its
+  // scenes. A preview monitor restarts on a new round too, which is how the
+  // admin replays a scene that counts down.
   const restarts = posted || (INTERACTIVE_SCENES as readonly string[]).includes(shown?.scene ?? "");
 
   return (
@@ -167,9 +178,10 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
       <Stage bg={bg} canvas={canvas} lag={lag} preview={preview} throttle={preview || Boolean(monitor)}>
         {Scene && shown && (
           <Scene
-            key={restarts ? `${shown.scene}:${shown.round}` : shown.scene}
+            key={restarts ? `${shown.scene}:${shown.round}` : sceneFamily(shown.scene)}
             eventId={shown.eventId}
             params={parseSceneParams(shown.scene, shown.params)}
+            scene={shown.scene}
             round={shown.round ?? ""}
             takenAt={shown.takenAt ?? ""}
           />

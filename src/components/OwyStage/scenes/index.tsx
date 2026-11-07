@@ -32,6 +32,8 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   "agiles-os-rounds": () => import("./agiles-openspace").then((m) => m.OsRounds),
   "agiles-os-closing": () => import("./agiles-openspace").then((m) => m.OsClosing),
   "owy-face": () => import("./OwyFace").then((m) => m.default),
+  // The same component as owy-face (one family): the wall morphs between the two in place.
+  "owy-board": () => import("./OwyFace").then((m) => m.default),
   "owy-charla": () => import("./talk").then((m) => m.OwyCharla),
   logo: () => import("./core").then((m) => m.Logo),
   opening: () => import("./core").then((m) => m.Opening),

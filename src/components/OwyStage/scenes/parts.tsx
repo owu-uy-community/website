@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { m } from "motion/react";
 import { encode } from "uqr";
 
@@ -91,6 +91,16 @@ export function nowHHMM(timeZone = "America/Montevideo"): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(
     new Date()
   );
+}
+
+/** The wall clock (HH:MM), ticking every `everyMs`. */
+export function useNow(everyMs = 1000) {
+  const [now, setNow] = useState(nowHHMM);
+  useEffect(() => {
+    const id = setInterval(() => setNow(nowHHMM()), everyMs);
+    return () => clearInterval(id);
+  }, [everyMs]);
+  return now;
 }
 
 /** QR on a cream card (dark modules on light stays scannable on any wall). */

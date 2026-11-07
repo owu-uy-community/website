@@ -88,6 +88,7 @@ export const PARAM_LABELS: Record<string, string> = {
   label2: "Cámara 2",
   label3: "Cámara 3",
   captions: "Subtítulos",
+  hint: "Consejo cuando Owy está callada",
   // Charla: Owy, en vivo (the console at /admin/owy/charla drives these)
   slide: "Slide",
   who: "Quién responde",

@@ -556,3 +556,56 @@ describe("data-driven scenes", () => {
     });
   });
 });
+
+describe("«Owy y la grilla»", () => {
+  const newTalk = { needsTV: false, needsWhiteboard: false, skipResourceValidation: false };
+
+  test("with the autopilot on, a new talk brings the board (subtitles kept) and shows it big", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    await putOnAir({ scene: "owy-face", params: { captions: false }, eventId: event.id });
+    await call(router.owyStage.setAutopilot, { on: true }, by(staff));
+    // A desk save (it writes the same JSON) leaves the switch where it was.
+    await call(router.owyStage.saveDesk, { desk: { queue: [] } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const note = await call(
+      router.tracks.create,
+      { ...newTalk, title: "IA en el aula", openSpaceId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id },
+      by(staff)
+    );
+
+    await vi.waitFor(() =>
+      expect(publish).toHaveBeenCalledWith(
+        "owy-stage",
+        "spotlight",
+        expect.objectContaining({ how: "new", track: expect.objectContaining({ id: note.id, title: "IA en el aula" }) })
+      )
+    );
+    await expect(call(router.owyStage.getAutopilot, undefined, by(staff))).resolves.toStrictEqual({ on: true });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      params: { captions: false },
+      eventId: event.id,
+    });
+  });
+
+  test("«Destacar» brings the board for the talk's event and puts it up; only site staff do it", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    const talk = await makeTrack({ eventId: event.id, scheduleId: slots.late.id, roomId: rooms.tv.id });
+    await putOnAir({ scene: "agenda" });
+
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(staff))).resolves.toMatchObject({
+      how: "manual",
+      track: { id: talk.id, roomId: rooms.tv.id, scheduleId: slots.late.id },
+    });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      eventId: event.id,
+    });
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(await makeUser()))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+});

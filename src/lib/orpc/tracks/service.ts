@@ -79,7 +79,7 @@ const occupantOf = (scheduleId: string, roomId: string, exceptTrackId?: string) 
 const lostTheRace = (scheduleId: string, roomId: string) => () =>
   occupantOf(scheduleId, roomId).pipe(Effect.flatMap((title) => Effect.fail(slotTaken(title ?? "otra charla"))));
 
-const loadNote = (id: string) =>
+export const loadNote = (id: string) =>
   query((db) => db.query.tracks.findFirst({ where: eq(tracks.id, id), with: { room: true, schedule: true } })).pipe(
     Effect.flatMap((track) => (track ? Effect.succeed(toStickyNote(track)) : Effect.fail(trackNotFound)))
   );

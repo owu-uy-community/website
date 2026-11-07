@@ -14,6 +14,7 @@ import {
   OWY_DESK_CHANNEL,
   OWY_STAGE_CHANNEL,
   RundownStepSchema,
+  SCENES,
   StoredFaceSchema,
   isSceneId,
   parseSceneParams,
@@ -25,6 +26,7 @@ import {
   type ModerationEvent,
   type RundownStep,
   type SceneId,
+  type Spotlight,
   type StageInput,
   type StageState,
   type StageTransition,
@@ -34,8 +36,10 @@ import {
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
 import { fetchJson } from "../http";
+import { later } from "../../later";
 import { OWY_TALK_CHANNEL } from "../../realtime/channels";
-import { Realtime } from "../services";
+import { Realtime, type AppServices } from "../services";
+import type { StickyNote } from "../tracks/schemas";
 import type {
   SaveDeskInput,
   SeatStatus,
@@ -176,13 +180,19 @@ const readStoredDesk = (lock = false) =>
     return lock ? select.for("update") : select;
   }).pipe(Effect.map(([row]) => readDesk(row?.desk)));
 
-/** Not a take: `updatedAt` stays (phones time their rounds off it), like the rundown. */
+/**
+ * Not a take: `updatedAt` stays (phones time their rounds off it), like the rundown. Merged over
+ * the stored desk, so what rides along in it (the autopilot) stays.
+ */
 const writeDesk = (desk: Desk) =>
   query((db) =>
     db
       .insert(owyStageState)
       .values({ id: ROW_ID, desk })
-      .onConflictDoUpdate({ target: owyStageState.id, set: { desk, updatedAt: sql`${owyStageState.updatedAt}` } })
+      .onConflictDoUpdate({
+        target: owyStageState.id,
+        set: { desk: sql`${owyStageState.desk} || excluded."desk"`, updatedAt: sql`${owyStageState.updatedAt}` },
+      })
   );
 
 /**
@@ -286,6 +296,127 @@ export const take = (step: DeskStep, transition?: StageTransition) =>
     yield* broadcast("desk", wire(desk), OWY_DESK_CHANNEL);
 
     return { state, desk: wire(desk) };
+  });
+
+// ---------------------------------------------------------------------------
+// Spotlights and the autopilot: new talks on «Owy y la grilla»
+// ---------------------------------------------------------------------------
+
+const autopilotOf = (desk: unknown) =>
+  Boolean(desk && typeof desk === "object" && (desk as { autopilot?: unknown }).autopilot === true);
+
+/** Whether a new talk brings the wall to «Owy y la grilla» on its own. */
+export const getAutopilot = () =>
+  query((db) => db.select({ desk: owyStageState.desk }).from(owyStageState).where(eq(owyStageState.id, ROW_ID))).pipe(
+    Effect.map(([row]) => ({ on: autopilotOf(row?.desk) }))
+  );
+
+/** Switch the autopilot; kept in the desk's JSON, merged in, so the desk itself is left alone. */
+export const setAutopilot = (on: boolean) =>
+  Effect.gen(function* () {
+    yield* query((db) =>
+      db
+        .insert(owyStageState)
+        .values({ id: ROW_ID, desk: { preview: null, queue: [], presets: [], autopilot: on } })
+        .onConflictDoUpdate({
+          target: owyStageState.id,
+          set: {
+            desk: sql`${owyStageState.desk} || ${JSON.stringify({ autopilot: on })}::jsonb`,
+            updatedAt: sql`${owyStageState.updatedAt}`,
+          },
+        })
+    );
+    yield* broadcast("autopilot", { on }, OWY_DESK_CHANNEL);
+
+    return { on };
+  });
+
+/** What the spotlight needs to know about the wall: what is on air, for which event, the autopilot. */
+const wallNow = () =>
+  query((db) =>
+    db
+      .select({
+        scene: owyStageState.scene,
+        params: owyStageState.params,
+        eventId: owyStageState.eventId,
+        desk: owyStageState.desk,
+      })
+      .from(owyStageState)
+      .where(eq(owyStageState.id, ROW_ID))
+  ).pipe(Effect.map(([row]) => row));
+
+/** «Owy y la grilla» on air for the talk's event; from «Owy» it keeps the captions setting (and morphs in place). */
+const bringBoard = (wall: { scene: string; params: Record<string, unknown> } | undefined, note: StickyNote) =>
+  Effect.gen(function* () {
+    if (wall?.scene === "owy-board") return;
+    const captions =
+      wall?.scene === "owy-face" ? SCENES["owy-face"].params.safeParse(wall.params).data?.captions : undefined;
+    yield* setScene({
+      scene: "owy-board",
+      params: captions === undefined ? {} : { captions },
+      eventId: note.openSpaceId,
+    });
+  });
+
+/** The spotlight itself (SpotlightSchema), on the public stage channel: only what the board already shows. */
+const shine = (note: StickyNote, how: Spotlight["how"]) =>
+  Effect.gen(function* () {
+    const spot: Spotlight = {
+      id: createId(),
+      how,
+      track: {
+        id: note.id,
+        title: note.title,
+        speaker: note.speaker,
+        room: note.room,
+        timeSlot: note.timeSlot,
+        roomId: note.roomId,
+        scheduleId: note.scheduleId,
+        roomColor: note.roomColor,
+      },
+    };
+    yield* broadcast("spotlight", spot);
+
+    return spot;
+  });
+
+/**
+ * The operator picked a talk: «Owy y la grilla» comes up if the wall shows something else, puts it
+ * up big over the blurred grid and sends it back to its cell.
+ */
+export const spotlightTalk = (note: StickyNote) =>
+  Effect.gen(function* () {
+    yield* bringBoard(yield* wallNow(), note);
+
+    return yield* shine(note, "manual");
+  });
+
+/**
+ * A talk just landed on the board: «Owy y la grilla» shows it if it is on air, and with the
+ * autopilot on, the wall goes there first. A talk of another event than the wall's is none of the
+ * wall's business.
+ */
+export const announceNewTalk = (note: StickyNote) =>
+  Effect.gen(function* () {
+    const wall = yield* wallNow();
+    if (wall?.eventId && wall.eventId !== note.openSpaceId) return;
+    if (autopilotOf(wall?.desk)) yield* bringBoard(wall, note);
+    yield* shine(note, "new");
+  });
+
+/**
+ * The wall hears about a new talk after the response (spotlight, autopilot): never in the way of
+ * the write. Called by the routes that create talks (a service import would close a cycle through
+ * the public board).
+ */
+export const announceSoon = (note: StickyNote) =>
+  Effect.gen(function* () {
+    const services = yield* Effect.context<AppServices>();
+    later(() =>
+      Effect.runPromiseWith(services)(announceNewTalk(note)).catch((error: unknown) =>
+        console.warn("[owy-stage] the wall missed a new talk", error)
+      )
+    );
   });
 
 /** The operator's rundown, dropping any step whose scene no longer exists. */

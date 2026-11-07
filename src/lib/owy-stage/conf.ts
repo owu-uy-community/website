@@ -29,7 +29,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   },
   {
     title: `Mercado de ideas · ${OPEN_SPACE_TIMES.mercado.start}`,
-    scenes: ["principles", "owy-howto", "steps", "owy-face", "board"],
+    scenes: ["principles", "owy-howto", "steps", "owy-face", "owy-board", "board"],
   },
   {
     title: `Open space · ${OPEN_SPACE_TIMES.sesiones.start}`,
