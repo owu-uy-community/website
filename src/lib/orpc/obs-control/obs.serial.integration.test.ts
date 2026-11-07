@@ -201,11 +201,12 @@ describe("obsControl bus", () => {
 
   test("a command nobody ran within 30 s is skipped, never replayed late", async () => {
     const { staff } = await setup();
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-07T18:00:00.000Z"));
     const sent = await call(router.obsControl.send, { instanceId: 1, type: "cut", payload: {} }, by(staff));
 
-    vi.setSystemTime(new Date("2026-11-07T18:00:31.000Z"));
+    // The row's createdAt is the database's real clock, so jump from the real now, never from a
+    // fixed date (that passed only until the real clock caught up with it).
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + 31_000);
 
     await expect(call(router.obsControl.pending, { instanceId: 1 }, by(staff))).resolves.toStrictEqual([]);
     const [history] = await call(router.obsControl.history, { instanceId: 1 }, by(staff));
