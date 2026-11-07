@@ -35,6 +35,7 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   // The same component as owy-face (one family): the wall morphs between the two in place.
   "owy-board": () => import("./OwyFace").then((m) => m.default),
   "owy-charla": () => import("./talk").then((m) => m.OwyCharla),
+  "openspace-intro": () => import("./openspace-intro").then((m) => m.OpenSpaceIntro),
   logo: () => import("./core").then((m) => m.Logo),
   opening: () => import("./core").then((m) => m.Opening),
   message: () => import("./core").then((m) => m.Message),

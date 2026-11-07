@@ -175,7 +175,14 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
       {/* The wall itself is a venue screen; its monitors and pinned scenes are not. A scene without an event
           (black, Owy's face) leaves the wall in the event it was in, instead of dropping it from Pantallas. */}
       {wall && <ScreenBeacon eventId={shown?.eventId ?? undefined} />}
-      <Stage bg={bg} canvas={canvas} lag={lag} preview={preview} throttle={preview || Boolean(monitor)}>
+      <Stage
+        bg={bg}
+        canvas={canvas}
+        lag={lag}
+        pinned={Boolean(fixed) && !preview}
+        preview={preview}
+        throttle={preview || Boolean(monitor)}
+      >
         {Scene && shown && (
           <Scene
             key={restarts ? `${shown.scene}:${shown.round}` : sceneFamily(shown.scene)}

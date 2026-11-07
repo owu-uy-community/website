@@ -25,7 +25,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   },
   {
     title: `Bienvenida · ${OPEN_SPACE_TIMES.bienvenida.start}`,
-    scenes: ["launch", "opening", "history", "origin", "live-poll", "quiz", "trivia"],
+    scenes: ["launch", "opening", "history", "origin", "live-poll", "quiz", "trivia", "openspace-intro"],
   },
   {
     title: `Mercado de ideas · ${OPEN_SPACE_TIMES.mercado.start}`,

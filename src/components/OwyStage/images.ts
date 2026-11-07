@@ -1,6 +1,7 @@
 import { SPONSORS_2026 } from "app/conf/components/Sponsors";
 import { TEAM_2026 } from "app/conf/components/Team";
 import { TALKS } from "app/conf/talks";
+import { INTRO_DOODLES, doodleSrc } from "lib/owy-stage/openspace-intro";
 import { MOMENT_PHOTOS } from "lib/owy-stage/photos";
 import { TALK_SLIDES } from "lib/owy-stage/talk/deck";
 
@@ -23,6 +24,7 @@ export const STAGE_IMAGES: string[] = [
     ...SPONSORS_2026.map((sponsor) => sponsor.logo),
     ...TEAM_2026.map((member) => member.picture),
     ...MOMENT_PHOTOS,
+    ...INTRO_DOODLES.map(doodleSrc),
     ...TALK_SLIDES.flatMap((slide) =>
       slide.layout === "photos"
         ? slide.photos.map((photo) => photo.src)
