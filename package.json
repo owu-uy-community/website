@@ -103,6 +103,7 @@
     "@types/pg": "8.20.0",
     "@upstash/qstash": "^2.12.1",
     "@vercel/analytics": "2.0.1",
+    "@vercel/blob": "2.8.2",
     "@vercel/functions": "3.9.3",
     "@vercel/speed-insights": "2.0.0",
     "ai": "7.0.159",

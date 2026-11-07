@@ -938,6 +938,26 @@ export const owyStageState = pgTable("owy_stage_state", {
     .$onUpdate(() => new Date()),
 });
 
+/**
+ * Photos attendees upload from conf.owu.uy/fotos to Vercel Blob (public URLs). A row is
+ * reserved before the upload, so the per-phone and event-wide caps hold under concurrency;
+ * `url` stays null until the Blob upload lands (a failed one deletes its row).
+ */
+export const confPhotos = pgTable(
+  "conf_photos",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    /** Random id the phone keeps in a cookie; not a person. */
+    phone: text("phone").notNull(),
+    url: text("url"),
+    bytes: integer("bytes").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [index("conf_photos_phone_idx").on(t.phone)]
+);
+
 /** What attendees send from /owy/play: votes, words, questions, reactions… */
 export const owyStageInputs = pgTable(
   "owy_stage_inputs",

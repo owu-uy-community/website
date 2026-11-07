@@ -85,6 +85,7 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   until: () => import("./extra").then((m) => m.Until),
   quote: () => import("./extra").then((m) => m.Quote),
   "sponsor-wall": () => import("./extra").then((m) => m.SponsorWall),
+  declarado: () => import("./extra").then((m) => m.Declarado),
   applause: () => import("./extra").then((m) => m.Applause),
   speaker: () => import("./extra").then((m) => m.Speaker),
   numbers: () => import("./extra").then((m) => m.Numbers),

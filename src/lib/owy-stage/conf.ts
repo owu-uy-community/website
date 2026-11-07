@@ -9,7 +9,18 @@ import { SCENE_IDS, type SceneId } from "./scenes";
 export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   {
     title: `Recepción · ${DAY_TIMES.recepcion.start}`,
-    scenes: ["logo", "welcome", "checkin", "program", "next", "wifi-qr", "conduct", "facilities", "sponsor-wall"],
+    scenes: [
+      "logo",
+      "welcome",
+      "checkin",
+      "program",
+      "next",
+      "wifi-qr",
+      "conduct",
+      "facilities",
+      "sponsor-wall",
+      "declarado",
+    ],
   },
   {
     title: `Bienvenida · ${OPEN_SPACE_TIMES.bienvenida.start}`,
