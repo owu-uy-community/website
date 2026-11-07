@@ -1,6 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
+import Link from "next/link";
+import { Hand, X } from "lucide-react";
 
 import { Notice } from "components/Admin/panel";
 import { PageContainer, PageHeader } from "components/Admin/ui/page";
@@ -27,8 +28,15 @@ export default function CompanionControl() {
   return (
     <PageContainer className="space-y-4 pt-0" size="large">
       <PageHeader
+        actions={
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/admin/owy">
+              <Hand aria-hidden /> Botones del día
+            </Link>
+          </Button>
+        }
         className="mb-0"
-        description="Los ajustes de cada Owy y del bridge de la Mac: audio, modelos, cerebro, tiempos. El bridge los sigue en vivo; los botones del día están en Owy."
+        description="Cada knob (su cara y su botón) y la Mac que escucha y habla por Owy. El bridge sigue los cambios en vivo."
         title="Ajustes de Owy"
       />
 

@@ -67,3 +67,9 @@ export function clockText(seconds: number): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return s >= 3600 ? `${Math.floor(s / 3600)}:${pad(mm)}:${pad(ss)}` : `${pad(mm)}:${pad(ss)}`;
 }
+
+/** The newest `max` characters of a running transcript, «…» in front when it was cut. */
+export function tail(text: string, max: number): string {
+  const trimmed = text.trim();
+  return trimmed.length > max ? `…${trimmed.slice(-max).trimStart()}` : trimmed;
+}

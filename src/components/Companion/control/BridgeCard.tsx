@@ -12,9 +12,10 @@ import { SettingField, SettingGroup, type Choices, type OnSet, type SetValue } f
 import { Health } from "./ui";
 
 /**
- * The bridge and the Mac it runs on: the mode's bridge-wide switch (mercado abierto), the Mac's
- * input and output (with a level test and a tone), the voice and models, the brain, modo pitch's
- * knobs and the one advanced timing (closed).
+ * The bridge and the Mac it runs on — Owy's ears and voice, where the knob is only face and
+ * button: the mode's bridge-wide switch (mercado abierto), the Mac's input and output (with a level
+ * test and a tone), the voice and models, the brain, modo pitch's knobs and the one advanced timing
+ * (closed).
  */
 export function BridgeCard({
   state,
@@ -33,8 +34,12 @@ export function BridgeCard({
 
   return (
     <Panel>
-      <PanelHead icon={Server} meta={status?.machine} title="Bridge y Mac" />
+      <PanelHead icon={Server} meta={status?.machine} title="La Mac (bridge)" />
       <div className="p-3.5">
+        <p className="pb-1 text-ui text-muted-foreground">
+          El programa que escucha y habla por Owy: el micrófono y el parlante de la Mac, la voz, el cerebro y el modo
+          pitch. Vale para todos los Owys.
+        </p>
         {settingGroups("bridge").map(({ group, label, keys }) => {
           const views = keys.map((key) => settingView(state, BRIDGE_TARGET, key, online));
           return (
