@@ -1,11 +1,13 @@
 import { createId } from "@paralleldrive/cuid2";
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { Effect } from "effect";
+import { cacheLife } from "next/cache";
 import * as z from "zod";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
-import { owyStageInputs, owyStageState, rooms, tracks } from "../../db/schema";
+import { attendees, events, owyStageInputs, owyStageState } from "../../db/schema";
+import { publicBoard } from "../../openspace/public-board";
 import { afterTake, cue, findPreset, presetStep, readDesk } from "../../owy-stage/desk";
 import {
   DEFAULT_STAGE_STATE,
@@ -31,7 +33,6 @@ import {
 } from "../../owy-stage/scenes";
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
-import * as Eventbrite from "../eventbrite/service";
 import { fetchJson } from "../http";
 import { OWY_TALK_CHANNEL } from "../../realtime/channels";
 import { Realtime } from "../services";
@@ -473,42 +474,38 @@ export const moderate = ({ inputId, moderation }: { inputId: string; moderation:
 // ---------------------------------------------------------------------------
 
 /** Ticket counts over every attendee page. */
-const tickets = () =>
-  Effect.all([Eventbrite.getEvent(), Eventbrite.everyAttendee], { concurrency: "unbounded" }).pipe(
-    Effect.map(([event, attendees]) => {
-      const active = attendees.filter((attendee) => !attendee.cancelled && !attendee.refunded);
-
-      return {
-        checkedIn: active.filter((attendee) => attendee.checked_in).length,
-        active: active.length,
-        capacity: event.capacity ?? null,
-      };
-    }),
-    Effect.orElseSucceed(() => null)
-  );
-
+/**
+ * The wall's «Ya somos N»: the event's own attendees, the rows the door scans and the Eventbrite
+ * mirror keep current (so it agrees with the door's dashboard), and the board from the shared cache.
+ * Aggregates only. `tickets` is null for an event with nobody registered.
+ */
 export const getPulse = (eventId: string | null | undefined) =>
-  Effect.gen(function* () {
-    const [ticketCounts, board] = yield* Effect.all(
-      [
-        Eventbrite.isConfigured() ? tickets() : Effect.succeed(null),
-        eventId
-          ? Effect.all([
-              query((db) => db.select({ count: count() }).from(tracks).where(eq(tracks.openSpaceId, eventId))),
-              query((db) =>
-                db
-                  .select({ count: count() })
-                  .from(rooms)
-                  .where(and(eq(rooms.openSpaceId, eventId), eq(rooms.isActive, true)))
-              ),
-            ]).pipe(Effect.map(([[ideas], [activeRooms]]) => ({ ideas: ideas.count, rooms: activeRooms.count })))
-          : Effect.succeed(null),
-      ],
-      { concurrency: "unbounded" }
-    );
-
-    return { tickets: ticketCounts, board } satisfies StagePulse;
-  });
+  eventId
+    ? Effect.all(
+        [
+          query((db) =>
+            db
+              .select({
+                checkedIn: sql<number>`(count(*) filter (where ${attendees.checkedInAt} is not null))::int`,
+                active: sql<number>`(count(*) filter (where ${attendees.status} = 'attending'))::int`,
+              })
+              .from(attendees)
+              .where(eq(attendees.eventId, eventId))
+          ),
+          query((db) => db.select({ capacity: events.capacity }).from(events).where(eq(events.id, eventId))),
+          Effect.promise(() => publicBoard(eventId)),
+        ],
+        { concurrency: "unbounded" }
+      ).pipe(
+        Effect.map(([[people], [event], board]): StagePulse => ({
+          tickets:
+            people && (people.active > 0 || people.checkedIn > 0)
+              ? { checkedIn: people.checkedIn, active: people.active, capacity: event?.capacity ?? null }
+              : null,
+          board: { ideas: board.tracks.length, rooms: board.rooms.filter((room) => room.isActive).length },
+        }))
+      )
+    : Effect.succeed<StagePulse>({ tickets: null, board: null });
 
 const MeetupFeedSchema = z.object({
   meetups: z.array(
@@ -522,9 +519,21 @@ const MeetupFeedSchema = z.object({
   ),
 });
 
+/**
+ * The feeds below come from a cache every server instance shares, refreshed in the background and
+ * never older than its expiry: the fetch cache they used before had no ceiling, so the first read
+ * after a quiet night served the evening before. A failed read throws, so it is never cached.
+ */
+async function meetupFeed() {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 6 * 3600 });
+
+  return Effect.runPromise(fetchJson("meetup-bot", EXTERNAL_SERVICES.meetupBot, MeetupFeedSchema));
+}
+
 /** The community calendar (meetup-bot feed); the browser can't read it directly (no CORS). */
 export const getMeetups = () =>
-  fetchJson("meetup-bot", EXTERNAL_SERVICES.meetupBot, MeetupFeedSchema, { next: { revalidate: 1800 } }).pipe(
+  Effect.tryPromise(() => meetupFeed()).pipe(
     Effect.map(({ meetups }): StageMeetup[] => {
       const recent = Date.now() - 3_600_000;
 
@@ -564,9 +573,16 @@ const FORECAST_URL =
   "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m" +
   "&hourly=temperature_2m,precipitation_probability,weather_code&forecast_days=2&timezone=America%2FMontevideo";
 
-/** Montevideo right now, from Open-Meteo (no key); cached 15 minutes. */
+async function forecast() {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 900, expire: 3600 });
+
+  return Effect.runPromise(fetchJson("Open-Meteo", FORECAST_URL, ForecastSchema));
+}
+
+/** Montevideo right now, from Open-Meteo (no key): refreshed every 15 minutes, never over an hour old. */
 export const getWeather = () =>
-  fetchJson("Open-Meteo", FORECAST_URL, ForecastSchema, { next: { revalidate: 900 } }).pipe(
+  Effect.tryPromise(() => forecast()).pipe(
     Effect.map(({ current, hourly }): StageWeather => {
       const start = hourly.time.findIndex((time) => time > current.time);
 

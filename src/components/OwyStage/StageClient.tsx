@@ -103,10 +103,12 @@ export default function StageClient({ bg, fixed, preview = false, canvas, monito
     return () => window.removeEventListener("message", onMessage);
   }, [monitor, posted, show]);
 
-  // Once it is up, the wall keeps every scene at hand: no take ever waits on the network.
+  // Once it is up, the wall keeps every scene at hand, code and pictures: no take ever waits on the network.
   const up = shown !== null;
   useEffect(() => {
-    if (wall && up) preloadScenes();
+    if (!wall || !up) return;
+    preloadScenes();
+    import("./images").then(({ preloadImages }) => preloadImages()).catch(logFailure);
   }, [wall, up]);
 
   // A scene change plays the band wipe and swaps the scene while the bands

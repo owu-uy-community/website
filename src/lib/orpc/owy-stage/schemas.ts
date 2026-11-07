@@ -87,7 +87,7 @@ export const StageInputSchema = z.object({
 });
 
 export const StagePulseSchema = z.object({
-  /** Aggregates only — never attendee data. `null` when Eventbrite isn't configured or answering. */
+  /** Aggregates only — never attendee data. `null` when nobody is registered for the event. */
   tickets: z.object({ checkedIn: z.number(), active: z.number(), capacity: z.number().nullable() }).nullable(),
   board: z.object({ ideas: z.number(), rooms: z.number() }).nullable(),
 });

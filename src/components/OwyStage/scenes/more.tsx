@@ -1,18 +1,17 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { TEAM_2026 } from "app/conf/components/Team";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type Room, type Schedule, type StickyNote } from "lib/orpc";
+import type { Schedule } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
 import { roomColorFor } from "lib/rooms/palette";
 
 import { Confetti } from "../effects";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
+import { useBoard } from "../board";
 import { DATE_LABEL, LogoReveal, MOMENT_PHOTOS, Rise, SponsorRow, nowHHMM } from "./parts";
 
 // ---------------------------------------------------------------------------
@@ -23,30 +22,13 @@ const AGENDA_ROWS = 3;
 
 export function Agenda({ params, eventId }: SceneProps<"agenda">) {
   const { preview } = useContext(StageContext);
-  const [data, setData] = useState<{ rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] } | null>(null);
+  // Any board change (admin, kiosk, Owy) reaches the grid live.
+  const data = useBoard(eventId, preview);
   const [now, setNow] = useState(nowHHMM);
-
-  const load = useCallback(() => {
-    if (!eventId) return;
-    Promise.all([
-      client.rooms.getByOpenSpace({ openSpaceId: eventId }),
-      client.schedules.getByOpenSpace({ openSpaceId: eventId }),
-      client.tracks.list({ openSpaceId: eventId }),
-    ])
-      .then(([rooms, schedules, tracks]) => setData({ rooms, schedules, tracks }))
-      .catch((error) => console.error("[stage] agenda", error));
-  }, [eventId]);
-
   useEffect(() => {
-    load();
     const id = setInterval(() => setNow(nowHHMM()), 15_000);
     return () => clearInterval(id);
-  }, [load]);
-
-  // Any board change (admin, kiosk, Owy) re-reads the grid.
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change" || event === "structure_change") load();
-  });
+  }, []);
 
   const view = useMemo(() => {
     if (!data) return null;
