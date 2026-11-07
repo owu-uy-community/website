@@ -262,6 +262,25 @@ const config = {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.3" },
         },
+        /* OWU Unplugged (unplugged.owu.uy): the site's twinkle, and its flickering letter as its
+           script plays it, lit with short bursts (its CSS fallback leaves the letter dim half the time). */
+        "unplugged-twinkle": {
+          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
+          "50%": { opacity: "0.9", transform: "scale(1.2)" },
+        },
+        "unplugged-flicker": {
+          "0%, 42%, 47%, 83%, 100%": { opacity: "1" },
+          "40%, 80%": { opacity: "0.3" },
+          "44%": { opacity: "0.5" },
+        },
+        "unplugged-glow": {
+          "0%, 100%": { opacity: "0.35" },
+          "50%": { opacity: "1" },
+        },
+        "unplugged-sweep": {
+          from: { transform: "translateY(-40px)" },
+          to: { transform: "translateY(1120px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -287,6 +306,10 @@ const config = {
         sheen: "sheen 6s ease-in-out infinite",
         "barcode-scan": "barcode-scan 2.4s ease-in-out infinite",
         "blink-step": "blink-step 1.4s steps(1, end) infinite",
+        "unplugged-twinkle": "unplugged-twinkle 3s ease-in-out infinite",
+        "unplugged-flicker": "unplugged-flicker 2.2s step-end infinite",
+        "unplugged-glow": "unplugged-glow 2.4s ease-in-out infinite",
+        "unplugged-sweep": "unplugged-sweep 8s linear infinite",
       },
     },
   },

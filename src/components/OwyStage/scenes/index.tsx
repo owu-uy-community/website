@@ -46,6 +46,7 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   "lower-third": () => import("./more").then((m) => m.LowerThird),
   clock: () => import("./more").then((m) => m.Clock),
   closing: () => import("./more").then((m) => m.Closing),
+  unplugged: () => import("./unplugged").then((m) => m.Unplugged),
   shapes: () => import("./more").then((m) => m.Shapes),
   team: () => import("./more").then((m) => m.Team),
   "team-wall": () => import("./more").then((m) => m.TeamWall),

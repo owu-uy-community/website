@@ -152,6 +152,13 @@ export const SCENES = {
       subtitle: z.string().trim().max(100).default("Nos vemos en la próxima"),
     }),
   },
+  unplugged: {
+    category: "opening",
+    title: "OWU Unplugged",
+    description:
+      "El título arranca con la marca OWU y se glitchea al pixel de OWU Unplugged (unplugged.owu.uy). La primera palabra queda blanca y el resto rosa.",
+    params: z.object({ title: z.string().trim().min(1).max(32).default("OWU REGRESARÁ") }),
+  },
   credits: {
     category: "opening",
     title: "Créditos",

@@ -57,7 +57,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   },
   {
     title: `Cierre · ${DAY_TIMES.despedida.start}`,
-    scenes: ["photo", "closing", "team", "team-wall", "feedback", "after", "mbc"],
+    scenes: ["photo", "closing", "unplugged", "team", "team-wall", "feedback", "after", "mbc"],
   },
   { title: "Siempre a mano", scenes: ["message", "alert", "countdown", "clock", "test-card", "black"] },
 ];
