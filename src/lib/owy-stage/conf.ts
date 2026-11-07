@@ -39,6 +39,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   {
     title: `Coffee break · ${OPEN_SPACE_TIMES.coffee.start}`,
     scenes: [
+      "coffee",
       "food",
       "now-playing",
       "speakers",
@@ -123,11 +124,11 @@ export const CONF_LOOPS: { id: string; title: string; when: string; steps: LoopS
     title: "Coffee break",
     when: `${OPEN_SPACE_TIMES.coffee.start} – ${OPEN_SPACE_TIMES.coffee.end}`,
     steps: [
-      ["next", 15, { label: "Las charlas empiezan en" }],
+      ["coffee", 15],
       ["speakers", 20],
       ["now-playing", 15],
       ["moments", 30],
-      ["next", 15, { label: "Las charlas empiezan en" }],
+      ["coffee", 15],
       ["sponsor-wall", 15],
       ["tangram", 25],
       ["meetups", 20],
