@@ -524,3 +524,40 @@ export function Team() {
     </>
   );
 }
+
+// ---------------------------------------------------------------------------
+// TeamWall — every organizer at once, the group photo
+// ---------------------------------------------------------------------------
+
+export function TeamWall({ params }: SceneProps<"team-wall">) {
+  return (
+    <>
+      {/* No Ambient: every portrait already carries its own brand shape */}
+      <div className="absolute inset-x-0 top-[80px] text-center">
+        <Rise className="text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
+          {params.title}
+        </Rise>
+      </div>
+      {/* Six to a row: the eleven of 2026 sit 6 + 5 */}
+      <div className="absolute inset-x-[70px] top-[236px] flex flex-wrap justify-center gap-x-[16px] gap-y-[28px]">
+        {TEAM_2026.map((member, i) => (
+          <m.div
+            key={member.picture}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-[280px] text-center"
+            initial={{ opacity: 0, scale: 0.85, y: 30 }}
+            transition={{ duration: 0.6, delay: 0.25 + i * 0.07, ease: EASE_OUT }}
+          >
+            <img alt="" className="h-[280px] w-[280px] object-contain" src={member.picture} />
+            <p className="mt-3 text-[30px] leading-none font-extrabold tracking-[0.02em] text-[#F5BB03] uppercase">
+              {member.firstname}
+            </p>
+            <p className="mt-2 text-[24px] leading-none font-semibold tracking-[0.06em] text-[#FBF5E7]/80 uppercase">
+              {member.lastname}
+            </p>
+          </m.div>
+        ))}
+      </div>
+    </>
+  );
+}

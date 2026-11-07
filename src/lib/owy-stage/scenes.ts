@@ -176,6 +176,16 @@ export const SCENES = {
       offer: z.string().trim().max(12).default("2x1"),
     }),
   },
+  mbc: {
+    category: "opening",
+    title: "After en MBC",
+    description:
+      "El after de enfrente, con el logo de Montevideo Beer Company. La promo se muestra solo si tiene texto.",
+    params: z.object({
+      detail: z.string().trim().max(80).default(`Hasta las ${DAY_TIMES.after.start} · cruzando la calle`),
+      offer: z.string().trim().max(12).default(""),
+    }),
+  },
   // --- Programa y horarios ---
   program: {
     category: "programme",
@@ -908,6 +918,12 @@ export const SCENES = {
     title: "Equipo",
     description: "Créditos: el equipo de OWU CONF 2026.",
     params: z.object({}),
+  },
+  "team-wall": {
+    category: "community",
+    title: "Pared del equipo",
+    description: "Todo el equipo organizador a la vez, como foto grupal.",
+    params: z.object({ title: z.string().trim().max(40).default("El equipo") }),
   },
   history: {
     category: "community",
