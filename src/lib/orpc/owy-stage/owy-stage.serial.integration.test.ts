@@ -1,10 +1,14 @@
 import { call } from "@orpc/server";
 import { sql } from "drizzle-orm";
+import { Effect } from "effect";
 import { http, HttpResponse } from "msw";
 import { describe, expect, test, vi } from "vitest";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 import { db } from "lib/db";
+import { presetQuestion } from "lib/organizar/presets";
+import { arrivalAvatar } from "lib/orpc/owy-stage/service";
+import { liveServices } from "lib/orpc/services";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
@@ -544,6 +548,49 @@ describe("data-driven scenes", () => {
     expect(slugs).toContain(listed.slug);
     expect(slugs).not.toContain(unlisted.slug);
     expect(slugs).not.toContain(inactive.slug);
+  });
+
+  /** An event on the wall with people in every state the welcome wall tells apart. */
+  async function arrivalsOnAir() {
+    const { putOnAir } = await setup();
+    const { event } = await makeBoard({ event: { questions: [presetQuestion("foto")] } });
+    const other = await makeBoard();
+    await putOnAir({ scene: "welcome-wall", eventId: event.id });
+    const account = await makeUser({ image: "https://avatars.slack-edge.com/ana.png" });
+    const ana = await makeAttendee(event.id, {
+      name: "Ana González Pérez",
+      email: account.email.toUpperCase(),
+      checkedInAt: new Date("2026-11-07T17:30:00.000Z"),
+    });
+    const juan = await makeAttendee(event.id, { name: "Juan", checkedInAt: new Date("2026-11-07T17:31:00.000Z") });
+    await makeAttendee(event.id, { name: "Todavía no llegó" });
+    const tagged = await makeAttendee(event.id, { checkedInAt: new Date(), tags: ["Sin fotos"] });
+    await makeAttendee(event.id, { checkedInAt: new Date(), answers: { foto: "No" } });
+    // Another event's door never shows here.
+    const elsewhere = await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    return { account, ana, juan, tagged, elsewhere };
+  }
+
+  test("the welcome wall shows who came in to the wall's own event, as «Ana G.», minus anyone off photos", async () => {
+    await setup();
+    await expect(call(router.owyStage.getArrivals, undefined, by(null))).resolves.toStrictEqual([]);
+    const { ana, juan } = await arrivalsOnAir();
+
+    await expect(call(router.owyStage.getArrivals, undefined, by(null))).resolves.toStrictEqual([
+      { id: ana.id, name: "Ana G.", at: "2026-11-07T17:30:00.000Z" },
+      { id: juan.id, name: "Juan", at: "2026-11-07T17:31:00.000Z" },
+    ]);
+  });
+
+  test("a wall tile's picture is looked up only for someone the wall shows, by the ticket's email in any case", async () => {
+    const { account, ana, juan, tagged, elsewhere } = await arrivalsOnAir();
+    const avatar = (id: string) => Effect.runPromiseWith(liveServices)(arrivalAvatar(id));
+
+    await expect(avatar(ana.id)).resolves.toStrictEqual({ email: ana.email, image: account.image });
+    await expect(avatar(juan.id)).resolves.toStrictEqual({ email: juan.email, image: null });
+    await expect(avatar(tagged.id)).resolves.toBeNull();
+    await expect(avatar(elsewhere.id)).resolves.toBeNull();
   });
 
   test("without Spotify configured the wall shows no track and the status says so", async () => {

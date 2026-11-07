@@ -1,13 +1,14 @@
 import { createId } from "@paralleldrive/cuid2";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 import { Effect } from "effect";
 import { cacheLife } from "next/cache";
 import * as z from "zod";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
-import { attendees, communities, events, owyStageInputs, owyStageState } from "../../db/schema";
+import { attendees, communities, events, owyStageInputs, owyStageState, user } from "../../db/schema";
 import { publicBoard } from "../../openspace/public-board";
+import { photoPreference } from "../../organizar/presets";
 import { afterTake, cue, findPreset, presetStep, readDesk } from "../../owy-stage/desk";
 import {
   DEFAULT_STAGE_STATE,
@@ -33,8 +34,10 @@ import {
   type StoredFace,
   type SubmitInput,
 } from "../../owy-stage/scenes";
+import * as Attendees from "../attendees/service";
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
+import { shortName } from "../events/service";
 import { fetchJson } from "../http";
 import { later } from "../../later";
 import { OWY_TALK_CHANNEL } from "../../realtime/channels";
@@ -45,6 +48,7 @@ import type {
   SeatStatus,
   SetNowPlayingInput,
   SetSceneInput,
+  StageArrival,
   StageCommunity,
   StageMeetup,
   StagePulse,
@@ -753,6 +757,77 @@ export const getSpeakers = () =>
         role: [entry.entry.jobTitle, entry.entry.company].filter(Boolean).join(" · ") || null,
       }))
       .toSorted((a, b) => a.name.localeCompare(b.name));
+  });
+
+/** An attendee tag that keeps someone off the welcome wall, as the door's photo chip says it. */
+const NO_PHOTOS_TAG = "sin fotos";
+
+/** The event on the wall: the only one whose arrivals the public reads below show. */
+const wallEvent = query((db) =>
+  db.select({ eventId: owyStageState.eventId }).from(owyStageState).where(eq(owyStageState.id, ROW_ID))
+).pipe(Effect.map(([row]) => row?.eventId ?? null));
+
+/**
+ * Who has checked in to an event, oldest first, minus anyone tagged «sin fotos» or who answered
+ * "No" to the RSVP's photo question. `only` narrows it to one attendee (the avatar route).
+ */
+const arrivals = (eventId: string, only?: string) =>
+  query((db) =>
+    db
+      .select({
+        id: attendees.id,
+        name: attendees.name,
+        email: attendees.email,
+        at: attendees.checkedInAt,
+        tags: attendees.tags,
+        answers: attendees.answers,
+        questions: events.questions,
+        // Their OWU account's picture (the Slack one), when the ticket's email has an account
+        image: user.image,
+      })
+      .from(attendees)
+      .innerJoin(events, eq(events.id, attendees.eventId))
+      .leftJoin(user, sql`lower(${user.email}) = lower(${attendees.email})`)
+      .where(
+        and(eq(attendees.eventId, eventId), isNotNull(attendees.checkedInAt), only ? eq(attendees.id, only) : undefined)
+      )
+      .orderBy(asc(attendees.checkedInAt), asc(attendees.id))
+  ).pipe(
+    Effect.map((rows) =>
+      rows.filter(
+        (row) =>
+          photoPreference(row.questions, row.answers) !== "Sin fotos" &&
+          !row.tags.some((tag) => tag.trim().toLowerCase() === NO_PHOTOS_TAG)
+      )
+    )
+  );
+
+/**
+ * The welcome wall: who has arrived at the wall's event, as "Ana G." (pictures go through
+ * /api/owy-stage/avatar/<id>, so no email leaves the server). The wall asks every 30 s, so like an
+ * open door screen it keeps the Eventbrite mirror current (throttled per event): check-ins made
+ * in Eventbrite Organizer reach it too.
+ */
+export const getArrivals = () =>
+  Effect.gen(function* () {
+    const eventId = yield* wallEvent;
+    if (!eventId) return [];
+    yield* Effect.ignoreCause(Attendees.sync(eventId, false));
+
+    return (yield* arrivals(eventId)).map((row): StageArrival => ({
+      id: row.id,
+      name: shortName(row.name),
+      at: row.at?.toISOString() ?? "",
+    }));
+  });
+
+/** Where one wall tile's picture may come from: only for someone the wall shows. */
+export const arrivalAvatar = (id: string) =>
+  Effect.gen(function* () {
+    const eventId = yield* wallEvent;
+    const [row] = eventId ? yield* arrivals(eventId, id) : [];
+
+    return row ? { email: row.email, image: row.image } : null;
   });
 
 /** The groups on /comunidades: listed and active, the same rows the public directory reads. */

@@ -106,6 +106,7 @@ const LOADERS: { [K in SceneId]: Loader<K> } = {
   selfie: () => import("./discover").then((m) => m.Selfie),
   raffle: () => import("./discover").then((m) => m.Raffle),
   welcome: () => import("./discover").then((m) => m.Welcome),
+  "welcome-wall": () => import("./welcome-wall").then((m) => m.WelcomeWall),
   trivia: () => import("./fun").then((m) => m.Trivia),
   versus: () => import("./fun").then((m) => m.Versus),
   lineup: () => import("./fun").then((m) => m.Lineup),
