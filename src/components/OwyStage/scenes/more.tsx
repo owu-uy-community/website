@@ -538,8 +538,8 @@ export function TeamWall({ params }: SceneProps<"team-wall">) {
           {params.title}
         </Rise>
       </div>
-      {/* Six to a row: the eleven of 2026 sit 6 + 5 */}
-      <div className="absolute inset-x-[70px] top-[236px] flex flex-wrap justify-center gap-x-[16px] gap-y-[28px]">
+      {/* Five to a row (1480 px fits five 280 px tiles, not six): the ten of 2026 sit 5 + 5 */}
+      <div className="absolute inset-x-[220px] top-[236px] flex flex-wrap justify-center gap-x-[16px] gap-y-[28px]">
         {TEAM_2026.map((member, i) => (
           <m.div
             key={member.picture}

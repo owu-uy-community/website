@@ -87,13 +87,6 @@ export const TEAM_2026: TeamMember[] = [
     jobTitle: "Software Developer",
     linkedin: "https://www.linkedin.com/in/mauricio-mena-7bb13271/",
   },
-  {
-    firstname: "Santiago",
-    lastname: "Ferreira",
-    picture: "/images/conf/staff/santiago-ferreira.webp",
-    jobTitle: "Software Developer",
-    linkedin: "https://www.linkedin.com/in/santiagoferreira/",
-  },
 ];
 
 type PersonCardProps = {
