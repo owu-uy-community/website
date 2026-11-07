@@ -142,11 +142,14 @@ pnpm companion:clips      # regenera los avisos pregrabados (offline, retry, pit
    Un toque antes de decir nada lo cancela sin ruido.
 3. La **respuesta** suena por la salida de la Mac (o el navegador); al knob van la transcripción (`show_caption`),
    los labios (`mouth_track`) y la cara por frase (`express`); cara `speaking`. El wall recibe lo mismo.
-4. Termina → `idle`. Un toque mientras habla lo **frena** (cara normal, nunca un error). Si algo falla de verdad,
-   cara `error` 3 s y vuelve a `idle`.
+4. Termina → `idle`. Un toque mientras habla lo **frena** (cara normal, nunca un error). **Un toque siempre corta
+   lo que Owy está diciendo**, también un aviso grabado que todavía suena en el navegador o en la Mac. Si algo
+   falla de verdad, cara `error` 3 s y vuelve a `idle`.
 5. **Modo pitch**: toque → graba (sin modelo, hasta `COMPANION_PITCH_MAX_S`); toque («Enviar») → transcribe, arma
    la tarjeta y la carga en la grilla (`tracks.createPlaced`); si falta el tema o el nombre, Owy pregunta y abre
    el mic de la Mac solo para la respuesta; la tarjeta aparece en el knob (`show_card`) y Owy dice dónde quedó.
+   Dos toques sin hablar cancelan sin decir nada. Un toque mientras anuncia o pregunta lo frena; lo que ya
+   entendió igual queda en la grilla. Mientras piensa, un toque no corta nada.
 6. **Sin knob** es igual: el botón del panel es el toque y la cara vive en el wall. **Sin micrófono** (ni Mac ni
    navegador) Owy lo dice en pantalla y no escucha a nadie.
 

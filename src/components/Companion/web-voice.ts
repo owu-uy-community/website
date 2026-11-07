@@ -50,6 +50,8 @@ export type DeviceCommand =
   | { kind: "bridgeEvent"; event: string; run: number }
   /** A pre-rendered cue to play (public/companion-audio/clips/<id>.wav); the browser plays it itself. */
   | { kind: "clip"; id: string }
+  /** A tap or «Callar» on the device: stop the queued reply and any cue, now. */
+  | { kind: "stop" }
   /** Modo pitch: Owy asked for the "topic" or the "name" — the mic opens for the answer ("idle" clears it). */
   | { kind: "pitchPrompt"; prompt: string };
 type Ticket = { token: string; url: string; model: string; expiresAt: number; protocol: number };
@@ -119,6 +121,8 @@ export class WebVoice {
   private idleTimer?: ReturnType<typeof setTimeout>;
   private meter?: ReturnType<typeof setInterval>;
   private queue = new Set<AudioBufferSourceNode>();
+  /** Cues playing now (the pitch's «contame tu charla»…): a tap or «Callar» stops them too. */
+  private clips = new Set<AudioBufferSourceNode>();
   private nextAudio = 0;
   private complete = false;
   private discard = false;
@@ -554,6 +558,12 @@ export class WebVoice {
       this.fail("El bridge no pudo conectar con el modelo. Probá de nuevo.");
       return;
     }
+    // A tap or «Callar» on the device silences whatever plays here, whichever run it came from.
+    if (message.type === "screen" && message.command?.kind === "stop") {
+      this.stopPlayback();
+      this.deviceCommand(message.command);
+      return;
+    }
     if (message.run !== this.run || this.discard) return;
     if (message.type === "transcript" && typeof message.text === "string") {
       if (message.who === "input") this.status.input = (this.status.input + message.text).slice(-1500);
@@ -692,14 +702,18 @@ export class WebVoice {
       const source = ctx.createBufferSource();
       source.buffer = await ctx.decodeAudioData(bytes);
       source.connect(gain);
-      source.onended = () => source.disconnect();
+      this.clips.add(source);
+      source.onended = () => {
+        this.clips.delete(source);
+        source.disconnect();
+      };
       source.start();
     } catch {
       // No clip on this build: the bridge speaks the line instead.
     }
   }
   private stopPlayback() {
-    for (const node of this.queue) {
+    for (const node of [...this.queue, ...this.clips]) {
       node.onended = null;
       try {
         node.stop();
@@ -707,6 +721,7 @@ export class WebVoice {
       node.disconnect();
     }
     this.queue.clear();
+    this.clips.clear();
     this.nextAudio = 0;
     this.complete = false;
   }

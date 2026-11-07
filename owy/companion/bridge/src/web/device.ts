@@ -130,6 +130,10 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   playClip(id: string) {
     this.emit({ type: "screen", command: { kind: "clip", id } });
   }
+  /** A tap or «Callar» on the device: the browser drops its queued reply and any cue, now. */
+  stopAudio() {
+    this.emit({ type: "screen", command: { kind: "stop" } });
+  }
   /** Modo pitch: Owy asked for the topic or the name; the browser opens its mic for the answer ("idle" clears it). */
   pitchPrompt(kind: "topic" | "name" | "idle") {
     this.emit({ type: "screen", command: { kind: "pitchPrompt", prompt: kind } });

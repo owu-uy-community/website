@@ -23,6 +23,8 @@ export interface AudioPeer {
   sendExpression?(expression: string, leadMs: number, strength: number): void;
   /** Plays a pre-rendered cue (public/companion-audio/clips/<id>.wav) through the peer's speakers. */
   playClip?(id: string): void;
+  /** A tap or «Callar»: whatever the peer is playing (its queued reply, a cue) stops at once. */
+  stopAudio?(): void;
 }
 
 /**
