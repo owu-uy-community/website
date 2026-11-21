@@ -17,11 +17,7 @@ type ZoneRoom = { id: string; name: string; sortOrder: number };
 
 /** Case-, accent- and whitespace-insensitive key for comparing room names. */
 function fold(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim()
-    .toUpperCase();
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toUpperCase();
 }
 
 const ZONE_BY_FOLDED_NAME = new Map<string, MapZone>(MAP_ZONES.map((zone) => [fold(zone), zone]));

@@ -17,11 +17,7 @@ import { INTERACTIVE_SCENES, SCENES, SCENE_GROUPS, presetLabel, type Preset, typ
 
 const PHONE = new Set<string>(INTERACTIVE_SCENES);
 /** Accent- and case-insensitive: "cancion" finds "Canción". */
-const fold = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+const fold = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 type Intent = "preview" | "queue" | "air";
 type Section = { key: string; heading: string; scenes: readonly SceneId[] };

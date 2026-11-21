@@ -33,13 +33,7 @@ interface Fixture {
 /** Normalised edit distance, 1 = identical. Accent- and case-insensitive: a staffer fixing a
  *  capital letter is not the failure we are hunting. */
 function similarity(a: string, b: string): number {
-  const norm = (value: string) =>
-    value
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
-      .replace(/\s+/g, " ")
-      .trim();
+  const norm = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
   const left = norm(a);
   const right = norm(b);
