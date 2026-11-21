@@ -1101,11 +1101,7 @@ function slackMembers(): Promise<SlackMember[]> {
   return members;
 }
 
-const fold = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+const fold = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 /** OWU Slack members matching a name, for whoever may add people somewhere. */
 export const searchSlack = (q: string) =>

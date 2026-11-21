@@ -50,11 +50,7 @@ const STATUS = {
   rejected: { label: "No aprobado", variant: "secondary" },
 } as const;
 
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+const normalize = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 /**
  * Ask to organize a community from the directory, or propose one that isn't there yet; site staff

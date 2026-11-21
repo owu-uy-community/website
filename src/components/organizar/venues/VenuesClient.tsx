@@ -90,11 +90,7 @@ const STATUS: Record<
   proposed: { label: "Propuso otra fecha", variant: "warning" },
 };
 
-const normalize = (value: string) =>
-  value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+const normalize = (value: string) => value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 const hostDaysLabel = (days: number[]) =>
   days.length === 0

@@ -63,12 +63,7 @@ const STATUS_OPTIONS: { value: RoomStatus; label: string; icon: LucideIcon; on: 
 ];
 
 const HOST_TASK = /^host de sala/i;
-const plain = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .trim()
-    .toLowerCase();
+const plain = (text: string) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
 /** "Host de sala · Cueva" (or a host task whose place is the room) belongs to Cueva. */
 const hostsRoom = (task: { title: string; location: string | null }, room: Room) =>
   HOST_TASK.test(task.title) &&

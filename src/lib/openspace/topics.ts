@@ -101,10 +101,7 @@ export function isTopicId(value: string): value is TopicId {
 
 /** Case- and accent-insensitive, so "Diseño" matches "diseno". */
 function fold(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 /**
