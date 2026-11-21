@@ -24,8 +24,8 @@ export type Talk = {
 /* In agenda order: the Speakers section renders them as listed and the Program reads its talk rows from here */
 export const TALKS: Talk[] = [
   {
-    start: "19:00",
-    end: "19:40",
+    start: "19:10",
+    end: "19:50",
     title: "Retrieval Augmented Gaslight",
     description: [
       "Cómo un solo documento envenenado alcanza para que una IA con RAG mande a un usuario a un link de phishing o afirme algo falso con total seguridad. Un recorrido por cómo envenenar una base vectorial y cómo probar, automatizar y defenderse con herramientas open source, basado en el OWASP LLM Top 10.",
@@ -43,8 +43,8 @@ export const TALKS: Talk[] = [
     ],
   },
   {
-    start: "19:45",
-    end: "20:25",
+    start: "19:55",
+    end: "20:35",
     title: "Kingdom Rush Battles: del lanzamiento al live ops",
     description: [
       "Cómo Ironhide llevó Kingdom Rush a su primer juego multijugador y de operación continua. Un recorrido por las decisiones de diseño, los desafíos técnicos y el uso práctico de IA en el ciclo de desarrollo.",
@@ -77,14 +77,14 @@ export const TALKS: Talk[] = [
 export const OPEN_SPACE_TIMES = {
   bienvenida: { start: "15:00", end: "15:15" },
   mercado: { start: "15:15", end: "16:00" },
-  sesiones: { start: "16:00", end: "18:25" },
+  sesiones: { start: "16:00", end: "18:35" },
   /** The break runs into the first talk. */
-  coffee: { start: "18:25", end: TALKS[0].start },
+  coffee: { start: "18:35", end: TALKS[0].start },
 } as const;
 
 /** The rest of the day around the open space and the talks; the agenda and the wall's program read it. */
 export const DAY_TIMES = {
   recepcion: { start: "14:30", end: OPEN_SPACE_TIMES.bienvenida.start },
-  despedida: { start: TALKS[TALKS.length - 1].end, end: "20:40" },
-  after: { start: "20:40" },
+  despedida: { start: TALKS[TALKS.length - 1].end, end: "20:50" },
+  after: { start: "20:50" },
 } as const;

@@ -42,6 +42,8 @@ export const PARAM_LABELS: Record<string, string> = {
   time: "Hora",
   end: "Fin",
   until: "Hasta",
+  breakAt: "Empieza el break",
+  talksAt: "Empiezan las charlas",
   date: "Fecha",
   label: "Etiqueta",
   name: "Nombre",
