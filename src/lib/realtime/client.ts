@@ -29,6 +29,15 @@ const ROTATE_RETRY_MS = 10_000;
 const SEEN_IDS = 500;
 /** Publishes held while the socket is down; past this the oldest go. */
 const MAX_QUEUED = 100;
+/**
+ * A tab hidden this long lets its socket go and dials again the moment it is shown: an open socket
+ * keeps a function instance running, and a forgotten tab has no use for one. Same as the queries'
+ * staleTime, so whatever the tab shows refetches on return.
+ */
+const HIDDEN_SLEEP_MS = 5 * 60_000;
+/** The stage, screens and the venue's control tabs run unattended, often in the background: they never sleep. */
+const ALWAYS_LIVE =
+  /^\/(owy|admin\/(owy|launchpad|screen|pantallas|[^/]+\/pantallas)|comunidad\/[^/]+\/events\/[^/]+\/(countdown|kiosk))(\/|$)/;
 
 function defaultUrl(): string {
   if (typeof window === "undefined") return "";
@@ -72,7 +81,9 @@ class RealtimeClient {
   private lastPingAt = 0;
   private openedAt = 0;
   private statusListeners = new Set<(status: RealtimeStatus) => void>();
-  private explicitlyClosed = false;
+  /** Hidden past HIDDEN_SLEEP_MS: no socket, publishes queue, until the tab is shown. */
+  private asleep = false;
+  private sleepTimer: ReturnType<typeof setTimeout> | null = null;
   private watchingWake = false;
 
   getStatus(): RealtimeStatus {
@@ -118,11 +129,11 @@ class RealtimeClient {
   private ensureConnected(): void {
     if (typeof window === "undefined") return;
     this.watchWake();
+    if (this.asleep) return;
     if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
-    this.explicitlyClosed = false;
     this.setStatus("connecting");
 
     try {
@@ -270,7 +281,20 @@ class RealtimeClient {
     this.stopRotation();
     this.setStatus("closed");
     this.openedAt = 0;
-    if (!this.explicitlyClosed) this.scheduleReconnect(rightAway);
+    if (!this.asleep) this.scheduleReconnect(rightAway);
+  }
+
+  /** Hidden long enough: the socket goes (and stays gone) until the tab is shown again. */
+  private sleep(): void {
+    this.sleepTimer = null;
+    if (ALWAYS_LIVE.test(window.location.pathname)) return;
+
+    this.asleep = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    const socket = this.socket;
+    this.lost(false);
+    socket?.close(1000);
   }
 
   /**
@@ -296,10 +320,18 @@ class RealtimeClient {
         this.reconnectNow();
       }
     };
+    const fallAsleep = () => (this.sleepTimer = setTimeout(() => this.sleep(), HIDDEN_SLEEP_MS));
     window.addEventListener("online", wake);
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") wake();
+      if (this.sleepTimer) clearTimeout(this.sleepTimer);
+      this.sleepTimer = null;
+      if (document.visibilityState === "hidden") return void fallAsleep();
+
+      this.asleep = false;
+      wake();
     });
+    // Opened in a background tab: no change event until it is shown
+    if (document.visibilityState === "hidden") fallAsleep();
   }
 
   private send(frame: ClientFrame): void {
