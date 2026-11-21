@@ -1,10 +1,9 @@
 import { requirePermission } from "app/lib/auth-helpers";
-import { CompanionTabs } from "components/Companion/control/CompanionTabs";
+import CompanionControl from "components/Companion/CompanionControl";
 
-/** The physical Owys: «Control» (the devices and the bridge) and «Laboratorio» (?tab=lab). */
-export default async function CompanionPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+/** «Ajustes de Owy»: every setting of the physical Owys and the bridge. The day's buttons are on /admin/owy. */
+export default async function CompanionPage() {
   await requirePermission("stage:read");
-  const { tab } = await searchParams;
 
-  return <CompanionTabs initialTab={tab === "lab" ? "lab" : "control"} />;
+  return <CompanionControl />;
 }

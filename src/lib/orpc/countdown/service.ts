@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { Effect } from "effect";
+import { cacheLife, cacheTag } from "next/cache";
 
 import { eventLiveState, events } from "../../db/schema";
 import { eventChannel } from "../../realtime/channels";
+import { countdownTag, expireTag } from "../../revalidate";
 import { query, transaction } from "../db";
 import { NotFound } from "../errors";
-import { Realtime } from "../services";
+import { liveServices, Realtime } from "../services";
 import type { CountdownState, UpdateCountdownStateInput } from "./schemas";
 
 type Stored = {
@@ -84,15 +86,33 @@ const apply = (input: UpdateCountdownStateInput, stored: Stored, now: Date): Par
   }
 };
 
+/**
+ * An event's stored countdown (null: no such event), from the cache every server instance shares:
+ * each phone on the live board reads it on load and on focus. Only an admin action changes it, and
+ * that expires it (updateCountdown).
+ */
+async function storedCountdown(eventId: string) {
+  "use cache: remote";
+  cacheTag(countdownTag(eventId));
+  cacheLife("minutes");
+
+  const [row] = await Effect.runPromiseWith(liveServices)(
+    query((db) =>
+      db
+        .select({ id: events.id, stored: eventLiveState })
+        .from(events)
+        .leftJoin(eventLiveState, eq(eventLiveState.eventId, events.id))
+        .where(eq(events.id, eventId))
+    )
+  );
+
+  return row ? { stored: row.stored } : null;
+}
+
+/** The countdown at this moment: the stored row may be cached, the remaining time never is. */
 export const getCountdown = (eventId: string) =>
-  query((db) =>
-    db
-      .select({ id: events.id, stored: eventLiveState })
-      .from(events)
-      .leftJoin(eventLiveState, eq(eventLiveState.eventId, events.id))
-      .where(eq(events.id, eventId))
-  ).pipe(
-    Effect.flatMap(([row]) => (row ? Effect.succeed(toState(row.stored, new Date())) : Effect.fail(eventNotFound)))
+  Effect.promise(() => storedCountdown(eventId)).pipe(
+    Effect.flatMap((row) => (row ? Effect.succeed(toState(row.stored, new Date())) : Effect.fail(eventNotFound)))
   );
 
 /**
@@ -124,6 +144,7 @@ export const updateCountdown = (input: UpdateCountdownStateInput) =>
     );
 
     // Screens only hear about changes; between them they tick from targetTime.
+    expireTag(countdownTag(input.eventId));
     const realtime = yield* Realtime;
     yield* realtime.publish(eventChannel(input.eventId, "countdown"), "countdown_state_change", state);
 

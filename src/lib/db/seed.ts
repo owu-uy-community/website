@@ -2,7 +2,7 @@
 /**
  * Dev-only sample data seed. NON-destructive: refuses to run in production or when communities it
  * doesn't own exist (unless --force), and even then it only recreates its own data: the "demo"
- * community, and the OWU CONF board (`owu` / `owu-conf-2026`, what conf.owu.uy/openspace reads).
+ * community, and the OWU CONF board (`owu` / `owu-conf`, what conf.owu.uy/openspace reads).
  * A real `owu` community (a dev database restored from production) keeps everything else.
  *
  *   pnpm db:seed [--force] [--at=HH:MM]
@@ -32,7 +32,7 @@ const FORCE = process.argv.includes("--force");
 const AT = process.argv.find((arg) => arg.startsWith("--at="))?.slice("--at=".length);
 const DEMO_SLUG = "demo";
 /** Mirrors CONF_EVENT (app/lib/constants) */
-const CONF = { communitySlug: "owu", eventSlug: "owu-conf-2026" };
+const CONF = { communitySlug: "owu", eventSlug: "owu-conf" };
 
 const pool = new Pool({ connectionString });
 const db = drizzle({ client: pool });
@@ -76,12 +76,53 @@ async function addStaff(communityId: string) {
   }
 }
 
+// Colour and shape as on the venue signage
 const ROOMS = [
-  { name: "Lobby", description: "Main lobby area", capacity: 50, hasTV: true, hasWhiteboard: false },
-  { name: "Centro", description: "Central meeting room", capacity: 30, hasTV: false, hasWhiteboard: true },
-  { name: "Ventana", description: "Window room with natural light", capacity: 25, hasTV: false, hasWhiteboard: true },
-  { name: "Cueva", description: "Cave room for intimate discussions", capacity: 20, hasTV: true, hasWhiteboard: false },
-  { name: "Rincón", description: "Corner space for small groups", capacity: 15, hasTV: true, hasWhiteboard: false },
+  {
+    name: "Lobby",
+    description: "Main lobby area",
+    capacity: 50,
+    hasTV: true,
+    hasWhiteboard: false,
+    color: "#EA3323",
+    icon: "diamond",
+  },
+  {
+    name: "Centro",
+    description: "Central meeting room",
+    capacity: 30,
+    hasTV: false,
+    hasWhiteboard: true,
+    color: "#E2B63E",
+    icon: "circle",
+  },
+  {
+    name: "Ventana",
+    description: "Window room with natural light",
+    capacity: 25,
+    hasTV: false,
+    hasWhiteboard: true,
+    color: "#2960C1",
+    icon: "triangle",
+  },
+  {
+    name: "Cueva",
+    description: "Cave room for intimate discussions",
+    capacity: 20,
+    hasTV: true,
+    hasWhiteboard: false,
+    color: "#EF8A34",
+    icon: "hexagon",
+  },
+  {
+    name: "Rincón",
+    description: "Corner space for small groups",
+    capacity: 15,
+    hasTV: true,
+    hasWhiteboard: false,
+    color: "#FFFFFF",
+    icon: "square",
+  },
 ];
 
 // (block index, room index, title, speaker, description, needsTV, needsWhiteboard) — every room has one free block

@@ -1,0 +1,26 @@
+name: Deploy Owy to vercel on merge
+# Owy (owy/) is its own Vercel project and nothing redeployed it, so prod sat on a months-old
+# build whose sandbox snapshot had expired. Vercel builds it (eve build needs the project's OIDC).
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "owy/**"
+  workflow_dispatch:
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      # Pinned: this action gets the Vercel token.
+      - uses: amondnet/vercel-action@de09aeac2ace6599ec9b11ef87558759a496bac4 # v42.3.0
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-args: "--prod"
+          vercel-org-id: ${{ secrets.OWY_ORG_ID || secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.OWY_PROJECT_ID }}
+          # Uploads owy/ alone, so the project's Root Directory must be empty, not `owy`.
+          working-directory: ./owy

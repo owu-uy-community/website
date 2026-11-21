@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
   // into. Partial Prefetching: links prefetch one App Shell per route instead of one per link.
   cacheComponents: true,
   partialPrefetching: true,
+  // Bots on this list skip the cached page for a fresh render with metadata in <head>. Next's
+  // default list also names the search crawlers (Bingbot, Applebot, Yandex…), so each of their
+  // requests ran a function; prerendered pages already carry their metadata in <head>, and
+  // Googlebot was never on the list. Only link previews (which can't run scripts) keep it.
+  htmlLimitedBots:
+    /facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot|SkypeUriPreview|redditbot|vkShare|quora link preview|bitlybot|tumblr|BingPreview/i,
   images: {
     // AVIF first (~20% smaller than WebP) for browsers that take it
     formats: ["image/avif", "image/webp"],
@@ -24,6 +30,17 @@ const nextConfig: NextConfig = {
     // (replace a photo under a new name to refresh it)
     minimumCacheTTL: 2_678_400,
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
+  },
+  // Pictures under /public: a browser keeps one five minutes, then shows its copy while it checks
+  // for a newer one. The default (max-age=0, must-revalidate) asked again every time a page first
+  // showed it, so wall scenes popped in on a busy network; a replaced photo still arrives in a view.
+  async headers() {
+    return [
+      {
+        source: "/:dir(images|owy-stage|agiles)/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=300, stale-while-revalidate=604800" }],
+      },
+    ];
   },
   // The English paths people and agents guess, to the Spanish pages that answer them
   async redirects() {

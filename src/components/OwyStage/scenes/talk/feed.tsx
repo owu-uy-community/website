@@ -96,6 +96,9 @@ export function OwyFeed({ children }: { children: ReactNode }) {
     mouth: (frames, at) => {
       for (const each of faces.current) each.mouth(frames, at);
     },
+    level: (level) => {
+      for (const each of faces.current) each.level(level);
+    },
     smile: () => {
       for (const each of faces.current) each.smile();
     },

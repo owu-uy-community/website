@@ -1,4 +1,6 @@
-import { expect, test } from "../fixtures";
+import { expect, MONTH_AHEAD, test } from "../fixtures";
+
+test.use({ boardEvent: MONTH_AHEAD });
 
 test("before the day, Hoy is the preparation: countdown, checklist and milestones", async ({ page, board }) => {
   await page.goto(`/admin/${board.community.slug}?event=${board.event.slug}`);

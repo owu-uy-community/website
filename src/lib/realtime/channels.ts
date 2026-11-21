@@ -55,7 +55,7 @@ export const OWY_TALK_CHANNEL = "private:owy-talk";
 
 /**
  * The companion's control plane: settings rows and commands for the bridge on the venue Mac, its
- * status and command results for /admin/companion. `private:` — `stage:operate` (the bridge's key
+ * status and command results for the panels (/admin/owy, /admin/companion). `private:` — `stage:operate` (the bridge's key
  * has it; OBS stays out of its reach). The bridge's contract owns the name; typed against it here,
  * so client bundles that import channels don't carry the contract.
  */

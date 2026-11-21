@@ -1,0 +1,15 @@
+{
+  "name": "Owy",
+  "short_name": "Owy",
+  "description": "El knob, el bridge y la mesa del open space desde el celular: tocar, pitch, countdown, pantallas.",
+  "start_url": "/admin/owy",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0b0d",
+  "theme_color": "#0b0b0d",
+  "icons": [
+    { "src": "/owy-desk-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/owy-desk-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

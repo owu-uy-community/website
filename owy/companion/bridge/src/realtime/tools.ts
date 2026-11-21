@@ -383,7 +383,7 @@ export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition
   if (settings) {
     set.ajustes = tool({
       description:
-        "Lee o cambia los ajustes de Owy (el que te habla). Sin `clave`: la lista de los que podés tocar, con su valor. Con `clave` sola: lee uno. Con `valor` (\"sí\", \"no\", un número o una opción, como lo dijo la persona) o `paso` (cuánto subir o bajar, ej. volumen +15 / -15): lo cambia. Cualquiera puede cambiar volumen, brillo, modo silencioso, tono de escucha, charla continua y animaciones mínimas, y pausar tu micrófono; lo demás es solo para staff. Contá el resultado en una frase.",
+        "Lee o cambia los ajustes de Owy (el que te habla). Sin `clave`: la lista de los que podés tocar, con su valor. Con `clave` sola: lee uno. Con `valor` (\"sí\", \"no\", un número o una opción, como lo dijo la persona) o `paso` (cuánto subir o bajar, ej. volumen +15 / -15): lo cambia. Cualquiera puede cambiar el brillo y las animaciones mínimas, y ponerte en pausa; lo demás es solo para staff. Contá el resultado en una frase.",
       inputSchema: z.object({
         clave: z
           .enum(VOICE_KEYS as [string, ...string[]])

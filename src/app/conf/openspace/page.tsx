@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { CONF_EVENT, INTERNAL_ROUTES } from "app/lib/constants";
-import { publicCaller } from "lib/orpc/server";
+import { publicBoard } from "lib/openspace/public-board";
 import { getEventBySlugs } from "lib/tenant-server";
 
 import Footer from "../components/Footer";
@@ -52,8 +52,10 @@ function BoardSkeleton() {
 }
 
 /**
- * The board, read on every visit: the hooks take their first data as fresh for half a minute, so a
- * cached snapshot would show a stale grid exactly when it changes fastest (the mercado).
+ * The board on every visit, read from the shared cache that every board write expires (on-demand,
+ * by tag): never a stale grid, and a full room of visitors costs no database reads. Only the event
+ * lookup (one indexed query) runs each time, so a board created a moment ago shows up at once. The
+ * phase depends on the clock, so this part renders per request.
  */
 async function Board() {
   await connection();
@@ -63,12 +65,7 @@ async function Board() {
   if (!resolved?.event.isActive) return <BeforeTheBoard />;
 
   const { event } = resolved;
-  const [rooms, schedules, notes] = await Promise.all([
-    // Public procedures through the anonymous caller, like the community agenda
-    publicCaller.rooms.getByOpenSpace({ openSpaceId: event.id }),
-    publicCaller.schedules.getByOpenSpace({ openSpaceId: event.id }),
-    publicCaller.tracks.list({ openSpaceId: event.id }),
-  ]);
+  const { rooms, schedules, tracks: notes } = await publicBoard(event.id);
   const at = Date.now();
 
   if (dayState(schedules, event.timezone, new Date(at)).phase === "before-day") {

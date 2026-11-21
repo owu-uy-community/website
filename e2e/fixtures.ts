@@ -21,12 +21,22 @@ export const signedOut = { cookies: [], origins: [] };
 const contextOptions = { baseURL, locale: "es-UY", timezoneId: "America/Montevideo", storageState: signedOut };
 
 type Board = Awaited<ReturnType<typeof makeBoard>> & { url: string };
+type BoardEvent = NonNullable<Parameters<typeof makeBoard>[0]>["event"];
+
+const DAY_MS = 86_400_000;
+/** Hoy is Preparación only before the day: tests about it `test.use` an event a month out, whatever today is. */
+export const MONTH_AHEAD: BoardEvent = {
+  startDate: new Date(Date.now() + 30 * DAY_MS),
+  endDate: new Date(Date.now() + 30 * DAY_MS + DAY_MS / 4),
+};
 
 export const test = base.extend<
   {
     pageAs: (role: Role | "anonymous") => Promise<Page>;
     pageFor: (user: UserRow) => Promise<Page>;
     board: Board;
+    /** Overrides for the `board` event (the factory puts it on a fixed date). */
+    boardEvent: BoardEvent;
   },
   { tenant: Tenant }
 >({
@@ -51,8 +61,10 @@ export const test = base.extend<
   },
 
   /** A board of its own for one test (community, event, two rooms, two slots), and its admin URL. */
-  board: async ({}, use) => {
-    const board = await makeBoard();
+  boardEvent: [{}, { option: true }],
+
+  board: async ({ boardEvent }, use) => {
+    const board = await makeBoard({ event: boardEvent });
     await use({ ...board, url: `/admin/${board.community.slug}/openspace?event=${board.event.slug}` });
   },
 

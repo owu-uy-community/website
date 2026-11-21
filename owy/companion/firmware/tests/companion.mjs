@@ -8,7 +8,6 @@ import { spawnSync } from "node:child_process";
 
 const source = `
 #include "companion_model.h"
-#include "companion_sound.h"
 #include <cassert>
 #include <iostream>
 #include <limits>
@@ -36,207 +35,53 @@ int main() {
   std::cout << "PASS gestures: tap, jitter, slow drag, out-and-back pet, four swipes, diagonal, hold, cancel, wraparound\\n";
 
   Companion m;
-  assert(!m.motion_ok(0));
-  auto f=m.frame(0,Mood::IDLE,true,false,false,false,0);
+  auto f=m.frame(0,Mood::IDLE,false,0);
   assert(f.gaze_x==0 && f.eye_h==156 && !f.cheeks); // no boot fake-happy
-  m.motion(NAN,0,1,0,0,0,10); assert(!m.motion_ok(10));
-  for(uint32_t t=100;t<=500;t+=10) m.motion(0,0,1,0,0,0,t);
-  assert(m.motion_ok(500)); assert(!m.motion_ok(1000));
-  m.motion(0,0,1,0,NAN,0,1050); assert(!m.motion_ok(1050));
-  for (uint32_t t=1100;t<3000;t+=10) {
-    m.motion(.5f,.4f,.7681146f,0,0,0,t,false);
-    f=m.frame(t,Mood::IDLE,true,false,false,false,0);
-    assert(std::abs(f.gaze_x)<=32 && std::abs(f.gaze_y)<=25);
-  }
-  assert(f.gaze_x>8 && f.gaze_y<0);
-  for (uint32_t t=3000;t<4000;t+=50) {
-    m.motion(.5f,.4f,.7681146f,0,0,0,t,false);
-    f=m.frame(t,Mood::IDLE,true,false,true,true,0);
-  }
-  assert(f.gaze_x<0 && f.gaze_y>0);
-  f=m.frame(4100,Mood::IDLE,true,true,false,false,0);
-  assert(f.gaze_x==0 && f.gaze_y==0 && f.eye_h==156 && !f.cheeks);
-  f=m.frame(4100,Mood::PRIVACY,true,false,false,false,100);
-  assert(f.gaze_x==0 && !f.cheeks);
-  m.center();
-  for(uint32_t t=5000;t<6000;t+=50) {
-    m.motion(.5f,.4f,.7681146f,0,0,0,t,false);
-    f=m.frame(t,Mood::LISTENING,true,false,false,false,0);
-  }
-  assert(f.gaze_x==0 && f.gaze_y==0); // manual neutral pose
-  for(uint32_t t=6100;t<7500;t+=50) f=m.frame(t,Mood::LISTENING,true,false,false,false,0);
-  assert(f.gaze_x==0 && f.gaze_y==0); // stale motion settles
   m.delight(8000);
-  f=m.frame(8100,Mood::IDLE,true,false,false,false,0); assert(f.cheeks);
-  for(uint32_t t=8100;t<=8700;t+=33) f=m.frame(t,Mood::SPEAKING,true,false,false,false,80);
+  f=m.frame(8100,Mood::IDLE,false,0); assert(f.cheeks);
+  for(uint32_t t=8100;t<=8700;t+=33) f=m.frame(t,Mood::SPEAKING,false,80);
   assert(!f.cheeks); // cheeks spring away once Owy talks
   m.delight(8800);
-  f=m.frame(8900,Mood::IDLE,true,true,false,false,0); assert(!f.cheeks); // reduced motion: no reaction
-  f=m.frame(10500,Mood::IDLE,true,false,false,false,0); assert(!f.cheeks);
-  m.motion(0,0,1,200,200,200,15000);
-  assert(!m.take_shake()); // rotation/pickup alone is NOT a deliberate shake
-  Companion disabled;
-  disabled.motion(0,0,1,200,200,200,10,false);
-  assert(!disabled.frame(50,Mood::IDLE,false,false,false,false,0).cheeks);
-  Companion wrap;
-  for(uint32_t i=0;i<=900;i+=10) wrap.motion(0,0,1,0,0,0,UINT32_MAX-1000+i);
-  assert(wrap.motion_ok(20)); assert(!wrap.motion_ok(500));
-  wrap.delight(UINT32_MAX-100); assert(wrap.frame(20,Mood::IDLE,true,false,false,false,0).cheeks);
-  std::cout << "PASS motion: startup, finite/stale data, clamps, axis reversal, center, cooldown, disable, voice/reduced priority, clock rollover\\n";
-
-  auto warm=[](MotionTracker &v, Vec3 a=Vec3{0,0,1}) {
-    for(uint32_t t=0;t<=500;t+=10) assert(!v.update(a,{},t,true));
-    assert(v.ok(500));
-  };
-  for(Vec3 pose : {Vec3{0,0,1},Vec3{0,0,-1},Vec3{1,0,0},Vec3{-1,0,0},Vec3{0,1,0},Vec3{0,-1,0}}) {
-    MotionTracker v; warm(v,pose); assert((v.gravity()-pose).length()<.0001f);
-  }
-  for(int axis=0;axis<3;++axis) for(float sign : {-1.f,1.f}) for(uint32_t step : {10,16,25}) {
-    MotionTracker v; warm(v);
-    uint32_t t=500;
-    while(t<1500) {
-      const uint32_t delta=std::min(step,1500-t); t+=delta;
-      const float angle=sign*(t-500)*.001f*1.57079632679f;
-      Vec3 a=axis==0 ? Vec3{0,std::sin(angle),std::cos(angle)} :
-          axis==1 ? Vec3{-std::sin(angle),0,std::cos(angle)} : Vec3{0,0,1};
-      Vec3 w=axis==0 ? Vec3{sign*90,0,0} : axis==1 ? Vec3{0,sign*90,0} : Vec3{0,0,sign*90};
-      assert(!v.update(a,w,t,true));
-      assert((v.gravity()-a).length()<.002f);
-    }
-  }
-  MotionTracker translated; warm(translated);
-  for(uint32_t t=510;t<=2500;t+=10) assert(!translated.update({.4f,0,1},{},t,true));
-  assert(std::abs(translated.gravity().x)<.005f); // norm gating alone would fail
-  MotionTracker biased;
-  for(uint32_t t=0;t<=3500;t+=10) biased.update({0,0,1},{5,0,0},t,false);
-  assert(std::abs(biased.bias().x-5)<.01f && std::abs(biased.gravity().y)<.01f);
-  MotionTracker slow; warm(slow);
-  for(uint32_t t=510;t<=5000;t+=10) {
-    const float a=(t-500)*.001f*.1745329252f;
-    slow.update({0,std::sin(a),std::cos(a)},{10,0,0},t,false);
-  }
-  assert(slow.bias().length()<.01f); // don't learn intentional slow tilt as bias
-  MotionTracker shaken; warm(shaken);
-  unsigned events=0;
-  for(uint32_t t=510;t<=1200;t+=10) {
-    float x=t==600 || t==840 ? 1.f : t==720 ? -1.f : 0;
-    events+=shaken.update({x,0,1},{},t,true);
-  }
-  assert(events==1);
-  for(uint32_t t=1210;t<=2000;t+=10) events+=shaken.update({t%240<120 ? 1.f : -1.f,0,1},{},t,true);
-  assert(events==1); // cooldown, no repeats while shaking
-  for(uint32_t t=2010;t<=5000;t+=10) events+=shaken.update({0,0,1},{},t,true);
-  for(uint32_t t=5010;t<=5500;t+=10) {
-    float x=t==5100 || t==5340 ? 1.f : t==5220 ? -1.f : 0;
-    events+=shaken.update({x,0,1},{},t,true);
-  }
-  assert(events==2); // calm and cooldown allow the next deliberate shake
-  MotionTracker suppressed; warm(suppressed);
-  for(uint32_t t=510;t<=1500;t+=10)
-    assert(!suppressed.update({t%240<120 ? 1.f : -1.f,0,1},{},t,false));
-  MotionTracker knock; warm(knock);
-  for(uint32_t t=510;t<=1200;t+=10)
-    assert(!knock.update({t==600 ? 2.f : t==620 ? -.9f : 0,0,1},{},t,true));
-  MotionTracker gap; warm(gap);
-  gap.update({1,0,1},{},600,true); // first peak
-  assert(!gap.update({-1,0,1},{},850,true)); assert(!gap.ok(850));
-  assert(!gap.update({0,0,1},{},860,true)); assert(gap.ok(860));
-  assert(!gap.update({NAN,0,1},{},870,true));
-  assert(!gap.update({0,0,0},{1000,0,0},880,true));
-  Cadence cadence; for(uint32_t t=10;t<=1000;t+=10) cadence.tick(t);
-  assert(cadence.read(1000)==100 && cadence.take_gap()==10);
-  cadence.tick(1200); assert(cadence.take_gap()==200); // preserve gaps across publication windows
-  std::cout << "PASS fusion: six poses, ±90deg XYZ, variable dt, translation rejection, bias, slow tilt, deliberate shake, cooldown/calm, disabled, knock, dropout, cadence\\n";
-
-  uint8_t pcm[CUE_BYTES];
-  using Cal=MotionTracker::Calibration;
-  MotionTracker calibrated; warm(calibrated);
-  calibrated.begin_calibration(500);
-  for(uint32_t t=510;t<=3510;t+=10) assert(!calibrated.update({.6f,0,.8f},{2,-1,.5f},t,true));
-  assert(calibrated.calibration==Cal::SUCCESS);
-  assert((calibrated.bias()-Vec3{2,-1,.5f}).length()<.0001f);
-  assert(calibrated.offset().length()<.0001f && calibrated.calibration_progress(3510)==100);
-  const Vec3 saved_bias=calibrated.bias(), saved_neutral=calibrated.neutral();
-  MotionTracker restored;
-  assert(restored.restore_calibration(saved_bias,saved_neutral));
-  assert(!restored.restore_calibration({NAN,0,0},saved_neutral));
-  assert(!restored.restore_calibration({13,0,0},saved_neutral));
-  assert(!restored.restore_calibration({},{}));
-  calibrated.begin_calibration(4000);
-  for(uint32_t t=4010;t<18000;t+=10) calibrated.update({t%200<100 ? .3f : -.3f,0,.953939f},{},t,true);
-  calibrated.tick_calibration(19000);
-  assert(calibrated.calibration==Cal::TIMEOUT);
-  assert((calibrated.bias()-saved_bias).length()<.0001f && (calibrated.neutral()-saved_neutral).length()<.0001f);
-  calibrated.begin_calibration(20000); calibrated.cancel_calibration();
-  assert(calibrated.calibration==Cal::CANCELLED);
-  calibrated.begin_calibration(21000); calibrated.tick_calibration(36000);
-  assert(calibrated.calibration==Cal::TIMEOUT); // completely disconnected sensor
-  MotionTracker interrupted; warm(interrupted); interrupted.begin_calibration(500);
-  for(uint32_t t=510;t<=3000;t+=10) interrupted.update({0,0,1},{},t,true);
-  assert(interrupted.calibration_progress(3000)>50);
-  interrupted.update({NAN,0,1},{},3010,true);
-  assert(interrupted.calibration_progress(3010)==0);
-  for(uint32_t t=3020;t<=4000;t+=10) interrupted.update({0,0,1},{},t,true);
-  interrupted.tick_calibration(4150); assert(interrupted.calibration_progress(4150)==0);
-  MotionTracker calwrap; calwrap.begin_calibration(UINT32_MAX-2000);
-  for(uint32_t t=0;t<=4000;t+=10) calwrap.update({0,0,1},{},UINT32_MAX-2000+t,false);
-  assert(calwrap.calibration==Cal::SUCCESS);
-  std::cout << "PASS calibration: averaged bias/neutral, persistence validation, movement/NaN/gap rejection, timeout, cancel, clock rollover\\n";
-
-  for(int kind=0;kind<3;++kind) {
-    make_cue(pcm,kind); int peak=0,previous=0; long energy=0;
-    assert(pcm[0]==0 && pcm[1]==0 && pcm[CUE_BYTES-2]==0 && pcm[CUE_BYTES-1]==0);
-    for(size_t i=0;i<CUE_SAMPLES;++i) {
-      const int sample=int16_t(uint16_t(pcm[i*2]) | uint16_t(pcm[i*2+1])<<8);
-      peak=std::max(peak,std::abs(sample)); energy+=std::abs(sample);
-      assert(std::abs(sample-previous)<1100); previous=sample;
-    }
-    assert(peak<2600 && peak>1000 && energy>200000 && CUE_BYTES<3200);
-  }
-  std::cout << "PASS sounds: three real PCM cues, bounded peak/slope, zero endpoints, complete ring-buffer fit\\n";
-
-  const uint8_t loud[]={0xD0,0x07,0,0,0x30,0xF8,0,0};
+  f=m.frame(8900,Mood::IDLE,true,0); assert(!f.cheeks); // reduced motion: no reaction
+  f=m.frame(10500,Mood::IDLE,false,0); assert(!f.cheeks);
   auto settle=[](Companion &c, Mood mood, uint32_t from, uint32_t to, float level=0, bool reduced=false) {
-    Frame out; for(uint32_t t=from;t<=to;t+=16) out=c.frame(t,mood,false,reduced,false,false,level); return out;
+    Frame out; for(uint32_t t=from;t<=to;t+=16) out=c.frame(t,mood,reduced,level); return out;
   };
+  // The Mac's mic level (the bridge's mic_level action) widens the eyes and lights the rim; it never moves the mouth.
   Companion mic;
   Frame quiet=settle(mic,Mood::LISTENING,0,600);
-  for(uint32_t t=616;t<760;t+=16){ mic.audio(loud,sizeof(loud),t); f=mic.frame(t,Mood::LISTENING,false,false,false,false,0); }
+  for(uint32_t t=616;t<760;t+=16){ mic.level(.8f,t); f=mic.frame(t,Mood::LISTENING,false,0); }
   assert(f.mouth_h==quiet.mouth_h && f.mouth_w==quiet.mouth_w); // your voice never moves Owy's mouth
   assert(f.pupil_w>quiet.pupil_w && f.eye_h>quiet.eye_h);        // it widens the eyes instead
   assert(f.ring==RingMode::LISTEN && f.level>.1f);
-  f=settle(mic,Mood::LISTENING,1000,2200); assert(f.level<.05f); // stale audio goes quiet
+  f=settle(mic,Mood::LISTENING,1000,2200); assert(f.level<.05f); // a stale level goes quiet
   f=settle(mic,Mood::SPEAKING,2300,2900,100); assert(f.mouth_h>40);        // level fallback opens the lips
   f=settle(mic,Mood::SPEAKING,3000,3300,100,true); assert(f.mouth_h==18);  // reduced: one small fixed shape
   f=settle(mic,Mood::SPEAKING,3400,3700,NAN); assert(f.mouth_h<=12);       // no signal: lips closed
-  mic.audio(loud,1,3700); // undersized data safe
 
-  // Lips follow the speaker tap: loud = open, then the shape axis.
+  // Lips follow the bridge's speech features: loud = open, then the shape axis.
   Companion talk;
   settle(talk,Mood::SPEAKING,0,200);
-  for(uint32_t t=216;t<=400;t+=16){ talk.speech_tap.push(t,1,0); f=talk.frame(t,Mood::SPEAKING,false,false,false,false,0); }
+  for(uint32_t t=216;t<=400;t+=16){ talk.speech_track.push(t,1,0); f=talk.frame(t,Mood::SPEAKING,false,0); }
   assert(f.mouth_h>=56 && f.cavity_h>20 && f.tongue_h>4); // "a": open, cavity, tongue
-  for(uint32_t t=416;t<=600;t+=16){ talk.speech_tap.push(t,.85f,1); f=talk.frame(t,Mood::SPEAKING,false,false,false,false,0); }
+  for(uint32_t t=416;t<=600;t+=16){ talk.speech_track.push(t,.85f,1); f=talk.frame(t,Mood::SPEAKING,false,0); }
   assert(std::abs(f.mouth_w-f.mouth_h)<=4);                // "o": round
-  for(uint32_t t=616;t<=800;t+=16){ talk.speech_tap.push(t,.6f,-1); f=talk.frame(t,Mood::SPEAKING,false,false,false,false,0); }
+  for(uint32_t t=616;t<=800;t+=16){ talk.speech_track.push(t,.6f,-1); f=talk.frame(t,Mood::SPEAKING,false,0); }
   assert(f.mouth_w>f.mouth_h*2);                           // "e": wide
-  f=settle(talk,Mood::SPEAKING,816,1100); assert(f.mouth_h<=12); // tap went stale: closed
+  f=settle(talk,Mood::SPEAKING,816,1100); assert(f.mouth_h<=12); // features went stale: closed
   // A bridge mouth track: base64url, 40 ms frames, first audible after lead_ms.
   talk.mouth_track("____",4,1200,100);
   f=settle(talk,Mood::SPEAKING,1100,1290); assert(f.mouth_h<=14); // not audible yet
   f=settle(talk,Mood::SPEAKING,1300,1420); assert(f.mouth_h>=50);
-  // The analyzer that feeds the tap: silence closes, a loud vowel opens.
-  SpeechAnalyzer analyzer; SpeechTrack tap; float open=1,shape=0;
-  uint8_t voice[640]={}; analyzer.feed(voice,sizeof(voice),1,10,tap); assert(tap.read(20,open,shape) && open==0);
-  for(int i=0;i<320;++i){ const int16_t v=int16_t(9000*std::sin(i*.12f)); voice[i*2]=uint8_t(v); voice[i*2+1]=uint8_t(uint16_t(v)>>8); }
-  analyzer.feed(voice,sizeof(voice),1,30,tap); assert(tap.read(40,open,shape) && open>.5f);
-  assert(!tap.read(200,open,shape)); // older than 120 ms: gone
+  SpeechTrack track; float open=1,shape=0;
+  track.push(10,0,0); assert(track.read(20,open,shape) && open==0);
+  assert(!track.read(200,open,shape)); // older than 120 ms: gone
 
   // Moods are springs, and a blink masks every change.
   Companion moods;
   f=settle(moods,Mood::IDLE,0,400);
   assert(f.eye_h==156 && f.lid_l==0 && f.crescent==0 && f.smile && f.cut_h>0);
-  f=moods.frame(420,Mood::THINKING,false,false,false,false,0);
+  f=moods.frame(420,Mood::THINKING,false,0);
   f=settle(moods,Mood::THINKING,436,480); assert(f.eye_h<60);   // blinked on the change
   f=settle(moods,Mood::THINKING,496,1400);
   assert(f.lid_r>20 && f.lid_l==0 && f.brow_in_l<-5 && f.mouth_x>20 && f.ring==RingMode::COMET);
@@ -255,14 +100,14 @@ int main() {
   f=settle(nod,Mood::THINKING,486,700); assert(f.face_y==0);
 
   Companion blink;
-  blink.frame(100,Mood::IDLE,false,false,false,false,0);
-  assert(blink.frame(3660,Mood::IDLE,false,false,false,false,0).eye_h==12);  // fast close…
-  assert(blink.frame(3660,Mood::IDLE,false,true,false,false,0).eye_h==156);  // never with reduced motion
-  assert(blink.frame(3850,Mood::IDLE,false,false,false,false,0).eye_h==156); // …and open again
+  blink.frame(100,Mood::IDLE,false,0);
+  assert(blink.frame(3660,Mood::IDLE,false,0).eye_h==12);  // fast close…
+  assert(blink.frame(3660,Mood::IDLE,true,0).eye_h==156);  // never with reduced motion
+  assert(blink.frame(3850,Mood::IDLE,false,0).eye_h==156); // …and open again
 
   // The rim: flash on listening, a draining countdown, a comet, the level.
   Companion rim; settle(rim,Mood::IDLE,0,100);
-  f=rim.frame(120,Mood::LISTENING,false,false,false,false,0);
+  f=rim.frame(120,Mood::LISTENING,false,0);
   RingFrame r=rim.ring(f,130); assert(r.opa[0]>=200 && r.color==0x0162C8);
   r=rim.ring(f,1000); assert(r.opa[0]<100);
   rim.countdown(2000,8000);
@@ -297,14 +142,14 @@ int main() {
   f=settle(feel,Mood::SPEAKING,4216,5000); assert(f.lid_l==0 && !f.cheeks);
   Expression parsed; assert(expression_from_name("happy",5,parsed) && parsed==Expression::HAPPY);
   assert(!expression_from_name("happ",4,parsed) && !expression_from_name("happyy",6,parsed));
-  std::cout << "PASS face: springs, blink-on-change, lids, happy cut, sleep/boot/nod, mouth ignores your voice, speaker-tap visemes, mouth track, analyzer, rim, expressions\\n";
+  std::cout << "PASS face: springs, blink-on-change, lids, happy cut, sleep/boot/nod, mouth ignores your voice, mouth track visemes, rim, expressions\\n";
 
   // Modo pitch: RECORD listens (the mic widens the eyes, never the mouth) under a REC rim; INVITE breathes "tocá".
   static_assert(int(Mood::RECORD)==10 && int(Mood::INVITE)==11, "appended mood ids are the emulator/workbench contract");
   assert(hears(Mood::RECORD) && hears(Mood::FOLLOWUP) && !hears(Mood::INVITE) && !hears(Mood::THINKING));
   Companion pitch;
   Frame still=settle(pitch,Mood::RECORD,0,600);
-  for(uint32_t t=616;t<760;t+=16){ pitch.audio(loud,sizeof(loud),t); f=pitch.frame(t,Mood::RECORD,false,false,false,false,0); }
+  for(uint32_t t=616;t<760;t+=16){ pitch.level(.8f,t); f=pitch.frame(t,Mood::RECORD,false,0); }
   assert(f.ring==RingMode::RECORD && f.level>.1f && f.eye_h>still.eye_h && f.mouth_h==still.mouth_h);
   r=pitch.ring(f,700); assert(r.color==0x0162C8 && r.opa[0]>=200);
   // REC blink: the 6 o'clock dot alternates once a second and is the only dot that changes.
@@ -323,13 +168,6 @@ int main() {
   assert(smallest<=4 && largest>=22);
   std::cout << "PASS pitch: RECORD listens under a REC rim, INVITE breathes, bounded repaints\\n";
 
-  Power p; assert(!p.known && p.percent==-1);
-  p.decode(0x20,0,100); assert(p.usb && !p.battery && p.percent==-1);
-  p.decode(0x28,0x20,67); assert(p.battery && p.charging && p.percent==67);
-  p.decode(0x08,0x40,15); assert(!p.usb && !p.charging && p.percent==15);
-  p.decode(0x08,0x40,255); assert(p.percent==-1);
-  p.unavailable(); assert(!p.known && p.percent==-1);
-  std::cout << "PASS power: USB-only, charging, battery, invalid percentage, unavailable\\n";
 }
 `;
 const dir = mkdtempSync(join(tmpdir(), "owy-companion-test-"));
@@ -351,27 +189,16 @@ try {
   assert(touch.includes("contact.end") && touch.includes("contact.cancel") && touch.includes("lv_indev_wait_release"));
   assert(!yaml.includes("think_spinner") && !yaml.includes("id: eye_height"), "One small-region renderer owns geometry");
   const controls = readFileSync(new URL("../packages/controls.yaml", import.meta.url), "utf8");
-  const expressions = controls.slice(controls.indexOf("id: face_state"), controls.indexOf("\nswitch:"));
-  assert(expressions.includes("id(va).is_running()") && expressions.includes("script.execute: apply_face"), "Decorative expressions must defer to active voice state");
-  const voice = readFileSync(new URL("../packages/voice.yaml", import.meta.url), "utf8");
-  assert((voice.match(/!id\(mic_privacy\)\.state/g) ?? []).length >= 7, "Privacy must guard every voice entry/re-arm path");
-  assert(voice.includes("script.stop: play_companion_feedback") && voice.includes("script.stop: play_soft_cue"));
-  assert((voice.match(/!id\(play_companion_feedback\)\.is_running\(\)/g) ?? []).length >= 4, "Voice entry and re-arm respect exclusive feedback ownership");
-  // Modo pitch: the second tap sends (never cancels), the run has no device end-of-speech and tags itself.
-  assert(voice.includes("- id: tap_pitch") && voice.includes("- id: stop_pitch") && voice.includes("- id: pitch_answer"));
-  // Owy asked for what the pitch missed: pitch_prompt opens the mic by itself once the question has played.
-  const answer = voice.slice(voice.indexOf("- id: pitch_answer"), voice.indexOf("- id: start_listening"));
-  assert(answer.includes("id(va_speaker).is_stopped()") && answer.includes("script.execute: start_listening"), "The answer waits for the question, then listens");
-  assert(controls.includes("script.execute: pitch_answer") && voice.includes("\"pitch-answer\" : \"pitch\""), "pitch_prompt opens the answer run, tagged pitch-answer");
-  assert(controls.includes("id: pitch_voice") && !controls.includes("id: pitch_reacts"), "One select for what Owy says back");
-  assert(controls.match(/id: mic_source[\s\S]*?- mac\n/), "The mic can be the Mac running the bridge");
-  const tapPitch = voice.slice(voice.indexOf("- id: tap_pitch"), voice.indexOf("- id: stop_pitch"));
-  assert(!tapPitch.includes("cancel_turn"), "A pitch tap never cancels: the second tap sends");
-  assert(voice.includes("silence_detection: false") && voice.includes("wake_word: !lambda"), "A pitch run keeps the mic open and tags itself for the bridge");
-  assert(voice.includes("id(pitch_active) ? 240000 : 90000"), "A pitch may record two and a half minutes, then think and answer");
-  assert((voice.match(/!id\(pitch_mode\)\.state/g) ?? []).length >= 4, "Wake word, follow-up and re-arm stay off in modo pitch");
-  assert(controls.includes("id: pitch_mode") && controls.includes("id: pitch_submit") && controls.includes("action: pitch_prompt"));
-  console.log("PASS YAML integration: one input owner, no full-screen spinner, privacy guards");
+  const face = controls.slice(controls.indexOf("id: face_state"), controls.indexOf("\nswitch:"));
+  assert(face.includes("script.execute:\n          id: show_face") || face.includes("id: show_face"), "The bridge's face shows at once");
+  assert(!controls.includes("voice_assistant") && !controls.includes("apply_face"), "No voice pipeline on the board");
+  assert(controls.includes("id: taps") && controls.includes("script.execute: tap_to_talk"), "A tap reaches the bridge as a count");
+  for (const action of ["show_card", "show_qr", "show_text", "express", "mouth_track", "mic_level"])
+    assert(controls.includes(`action: ${action}`), `bridge action ${action}`);
+  const companion = readFileSync(new URL("../packages/companion.yaml", import.meta.url), "utf8");
+  const tap = companion.slice(companion.indexOf("- id: tap_to_talk"), companion.indexOf("- id: wake_display"));
+  assert(tap.includes("id(mic_privacy).state") && tap.includes("open_quick_controls"), "In pausa a tap opens the settings, never a turn");
+  console.log("PASS YAML integration: one input owner, no full-screen spinner, bridge-driven face, taps counted");
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

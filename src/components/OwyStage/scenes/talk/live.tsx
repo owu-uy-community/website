@@ -10,6 +10,7 @@ import {
   DIAGRAM_NODES,
   inputKey,
   slideInput,
+  slideSteps,
   vsRevealed,
   vsRound,
   type DiagramNode,
@@ -325,7 +326,7 @@ export function RatingSlide({ slide, round }: LiveProps<"rating">) {
 // Owy live: the question in blue, his answer in yellow, the tools he reaches for
 // ---------------------------------------------------------------------------
 
-const TOOL_LABEL: Record<string, string> = { event_now: "qué pasa ahora", get_board: "la grilla" };
+const TOOL_LABEL: Record<string, string> = { event_now: "qué pasa ahora", get_openspace_board: "la grilla" };
 
 const STATE_LABEL: Record<FaceState, string> = {
   idle: "Esperando",
@@ -401,20 +402,21 @@ const NODE_GAP = (COL_W - NODE_W * 4) / 3;
 const col = (i: number) => i * (NODE_W + NODE_GAP);
 const ROW_1 = 40;
 const ROW_2 = ROW_1 + NODE_H + 110;
-/** In content coordinates. A snake: right along the top, down into the brain, back left to the wall. */
+/** In content coordinates. A snake: right along the top to the brain, down into the API, back left to the screens. */
 const NODE_AT: Record<DiagramNode, [number, number]> = {
-  mic: [col(0), ROW_1],
-  device: [col(1), ROW_1],
-  bridge: [col(2), ROW_1],
-  voice: [col(3), ROW_1],
-  brain: [col(3), ROW_2],
-  api: [col(2), ROW_2],
+  knob: [col(0), ROW_1],
+  mac: [col(1), ROW_1],
+  voice: [col(2), ROW_1],
+  brain: [col(3), ROW_1],
+  api: [col(3), ROW_2],
+  bus: [col(2), ROW_2],
   wall: [col(1), ROW_2],
 };
+/** Listening: the tap, the Mac's mic, the model. Speaking: the Mac's speakers, the knob's lips, and the face on the wall (through the API and the bus). */
 const LIGHTS: Partial<Record<FaceState, DiagramNode[]>> = {
-  listening: ["mic", "device", "bridge", "voice"],
-  thinking: ["bridge", "voice", "brain"],
-  speaking: ["voice", "bridge", "device", "wall"],
+  listening: ["knob", "mac", "voice"],
+  thinking: ["voice", "brain"],
+  speaking: ["voice", "mac", "knob", "api", "bus", "wall"],
 };
 
 /** The last turn's timings, measured on the wall, under Owy's face. */
@@ -439,7 +441,9 @@ function Timings() {
 
 export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
   const { state, tool } = useFeed();
-  const shown = slide.live ? DIAGRAM_NODES.length : Math.min(step + 1, DIAGRAM_NODES.length);
+  // With builds, one box per click (the newest bright); without, the whole diagram at once.
+  const shown = slideSteps(slide) > 1 ? Math.min(step + 1, DIAGRAM_NODES.length) : DIAGRAM_NODES.length;
+  const building = shown < DIAGRAM_NODES.length;
   const visible = new Set(DIAGRAM_NODES.slice(0, shown));
   const lit = new Set<DiagramNode>(slide.live ? (LIGHTS[state] ?? []) : []);
   if (slide.live && state === "thinking" && tool) lit.add("api");
@@ -475,7 +479,7 @@ export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
           if (!visible.has(node.id)) return null;
           const on = lit.has(node.id);
           const [x, y] = NODE_AT[node.id];
-          const dim = !slide.live && node.id !== newest;
+          const dim = building && node.id !== newest;
           return (
             <m.div
               key={node.id}
@@ -516,18 +520,26 @@ export function DiagramSlide({ slide, step }: LiveProps<"diagram">) {
 // ---------------------------------------------------------------------------
 
 export function DevicesSlide({ slide, step }: LiveProps<"devices">) {
+  // One device gets the whole slide: the knob big enough to read its face from the back.
+  const solo = slide.devices.length === 1;
+  const k = solo ? 1.85 : 1;
   return (
-    <Frame caption wide className="flex items-start gap-[96px]" title={slide.title}>
+    <Frame
+      caption
+      wide
+      className={`flex items-start ${solo ? "gap-[120px] pl-[60px]" : "gap-[96px]"}`}
+      title={slide.title}
+    >
       {slide.devices.slice(0, step + 1).map((device, i) => {
-        const d = Math.round((280 * device.screen) / 466);
-        const knob = i === 1;
+        const d = Math.round(((280 * device.screen) / 466) * k);
+        const knob = device.board ? device.board === "knob" : i === 1;
         return (
-          <Build key={device.name} className="flex items-center gap-10">
-            <div className="flex h-[320px] w-[320px] shrink-0 items-center justify-center">
+          <Build key={device.name} className={`flex items-center ${solo ? "gap-[110px]" : "gap-10"}`}>
+            <div className="flex shrink-0 items-center justify-center" style={{ width: 320 * k, height: 320 * k }}>
               <div
                 className="rounded-full"
                 style={{
-                  padding: knob ? 24 : 14,
+                  padding: (knob ? 24 : 14) * k,
                   background: knob
                     ? "repeating-conic-gradient(#FBF5E7 0deg 1.2deg, transparent 1.2deg 7.5deg)"
                     : BRAND.cream,
@@ -536,12 +548,20 @@ export function DevicesSlide({ slide, step }: LiveProps<"devices">) {
                 <MiniFace board={knob ? "knob" : "amoled"} className="bg-black" size={d} />
               </div>
             </div>
-            <div className="w-[380px]">
-              <p className="text-[52px] leading-none font-semibold tracking-[-0.025em]">{device.name}</p>
-              <p className="mt-3 text-[32px] font-medium text-[#F5BB03]">{device.size}</p>
-              <ul className="mt-5 flex flex-col gap-2">
+            <div style={{ width: solo ? 760 : 380 }}>
+              <p className="leading-none font-semibold tracking-[-0.025em]" style={{ fontSize: solo ? 72 : 52 }}>
+                {device.name}
+              </p>
+              <p className="mt-4 font-medium text-[#F5BB03]" style={{ fontSize: solo ? 40 : 32 }}>
+                {device.size}
+              </p>
+              <ul className={`flex flex-col ${solo ? "mt-8 gap-4" : "mt-5 gap-2"}`}>
                 {device.specs.map((spec) => (
-                  <li key={spec} className="text-[32px] leading-[1.2] font-medium text-[#FBF5E7]/70">
+                  <li
+                    key={spec}
+                    className="leading-[1.2] font-medium text-[#FBF5E7]/70"
+                    style={{ fontSize: solo ? 40 : 32 }}
+                  >
                     {spec}
                   </li>
                 ))}

@@ -75,7 +75,7 @@ function conversationHarness() {
     isPlaybackReady: () => true,
     sendEvent: (type: number) => events.push(type),
     sendAudio: () => {},
-    setSpeakLevel: () => {},
+    setFace: vi.fn(),
     acceptRequest: vi.fn(),
   };
   const session = new DeviceSession({ id: "test", host: "unused", port: 6053, psk: null }, {
@@ -143,6 +143,7 @@ it("cues one face per sentence as the paced audio reaches it (local brain, live 
     isPlaybackReady: () => true,
     sendEvent: () => {},
     sendAudio: () => {},
+    setFace: vi.fn(),
     acceptRequest: vi.fn(),
     expressionLeadMs: 200,
     sendExpression: (expression: string, leadMs: number, strength: number) => cues.push([expression, leadMs, strength]),
@@ -224,7 +225,9 @@ const heardCard = {
   transcript: "Soy Ana y quiero hablar de Effect en producción",
   kind: "pitch" as "pitch" | "unclear" | "not_pitch",
   title: "Effect en producción" as string | null,
+  titleSaid: true,
   speaker: "Ana" as string | null,
+  nominated: false,
   needsTV: false,
   needsWhiteboard: false,
   description: "Un año de Effect" as string | null,
@@ -246,6 +249,7 @@ function pitchHarness(
     hostMic?: unknown;
     mic?: "device" | "host";
     dedupe?: unknown;
+    pitchMode?: boolean;
   } = {}
 ) {
   const events: number[] = [];
@@ -289,6 +293,7 @@ function pitchHarness(
     answer: vi.fn(async (_wav: Buffer, _context: unknown, _signal: AbortSignal) => ({
       title: null as string | null,
       speaker: "Ana" as string | null,
+      nominated: false,
       description: null as string | null,
       appropriate: true,
     })),
@@ -305,7 +310,7 @@ function pitchHarness(
   };
   const session = new DeviceSession({ id: "test", host: "unused", port: 6053, psk: null }, {
     logger: createLogger("test", "error"),
-    config: { COMPANION_PITCH_VOICE: options.voice ?? "confirm", COMPANION_LOG_DIR: options.logDir },
+    config: { COMPANION_PITCH_VOICE: options.voice ?? "confirm", COMPANION_LOG_DIR: options.logDir, COMPANION_PITCH_MODE: options.pitchMode ?? false },
     brain: options.eve ? "eve" : "local",
     eve: options.eve,
     cascade: options.cascade,
@@ -346,6 +351,7 @@ function pitchHarness(
     await vi.advanceTimersByTimeAsync(2000);
   };
   return {
+    session,
     wired,
     provider,
     device,
@@ -393,6 +399,18 @@ it("modo pitch: records the pitch itself, places it on the board and announces w
   expect(h.wired.flow).toBeNull();
 });
 
+it("modo pitch: a second submit while the pitch is already understood places one card", async () => {
+  const h = pitchHarness();
+  h.wired.submitPitch("submit"); // no pitch recording yet: ignored
+  await h.tap();
+  h.speak(3000);
+  h.wired.submitPitch("submit"); // the knob's second tap
+  h.wired.submitPitch("submit"); // the panel's «Enviar», a moment later
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).toHaveBeenCalledOnce();
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+});
+
 it("modo pitch: a pitch without a name asks for it first; the board opens its mic and the card lands once, complete", async () => {
   const h = pitchHarness();
   h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null });
@@ -431,7 +449,7 @@ it("modo pitch: a pitch without a name asks for it first; the board opens its mi
 it("modo pitch: an unclear topic is asked once and the answer names the talk; a second miss creates nothing", async () => {
   const h = pitchHarness();
   h.extract.card.mockResolvedValueOnce({ ...heardCard, kind: "unclear", title: null, description: null });
-  h.extract.answer.mockResolvedValueOnce({ title: "Testing con IA", speaker: null, description: "Cómo testear con LLMs", appropriate: true });
+  h.extract.answer.mockResolvedValueOnce({ title: "Testing con IA", speaker: null, nominated: false, description: "Cómo testear con LLMs", appropriate: true });
   await h.tap();
   h.speak(3000);
   await h.submit();
@@ -452,7 +470,7 @@ it("modo pitch: an unclear topic is asked once and the answer names the talk; a 
 
   // Again, and this time the answer does not say it either.
   h.extract.card.mockResolvedValueOnce({ ...heardCard, kind: "unclear", title: null });
-  h.extract.answer.mockResolvedValueOnce({ title: null, speaker: null, description: null, appropriate: true });
+  h.extract.answer.mockResolvedValueOnce({ title: null, speaker: null, nominated: false, description: null, appropriate: true });
   await h.tap();
   h.speak(3000);
   await h.submit();
@@ -462,6 +480,39 @@ it("modo pitch: an unclear topic is asked once and the answer names the talk; a 
   await h.submit();
   expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
   expect(h.spoken.at(-1)).toBe("[GUION] No me quedó claro el tema. Tocá y contame de nuevo de qué va tu charla.");
+});
+
+it("modo pitch: a title the model put together is asked in the person's words, and their answer names the card", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, title: "Migrar a Effect", titleSaid: false });
+  h.extract.answer.mockResolvedValueOnce({ title: "Effect sin miedo", speaker: null, nominated: false, description: null, appropriate: true });
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(h.spoken).toEqual(["[GUION] ¿Cómo se llamaría tu charla, en pocas palabras?"]);
+  await h.answer();
+  expect(h.prompts).toEqual(["topic"]); // the board just opens its mic, as for any answer
+  await h.tap("pitch-answer");
+  h.speak(1500);
+  await h.submit();
+  expect(h.extract.answer.mock.calls[0][1]).toEqual({
+    field: "topic",
+    question: "¿Cómo se llamaría tu charla, en pocas palabras?",
+    transcript: heardCard.transcript,
+  });
+  expect(h.api.tracks.createPlaced.mock.calls[0][0]).toMatchObject({ title: "Effect sin miedo", speaker: "Ana" });
+  expect(h.spoken.at(-1)).toBe("[GUION] ¡Listo, Ana! Tu charla «Effect sin miedo» queda en Cueva a las 15:00.");
+});
+
+it("modo pitch: a speaker put forward by someone else lands on the card, and Owy does not greet them as the one listening", async () => {
+  const h = pitchHarness();
+  h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: "Lucía Gómez", nominated: true });
+  await h.tap();
+  h.speak(3000);
+  await h.submit();
+  expect(h.prompts).toEqual([]); // who gives it is known: nothing to ask
+  expect(h.api.tracks.createPlaced.mock.calls[0][0]).toMatchObject({ title: "Effect en producción", speaker: "Lucía Gómez" });
+  expect(h.spoken).toEqual(["[GUION] ¡Listo! La charla de Lucía Gómez, «Effect en producción», queda en Cueva a las 15:00."]);
 });
 
 it("modo pitch: nobody answers the question — the card lands with what it has, said in that same run", async () => {
@@ -496,14 +547,20 @@ it("modo pitch: a board that never opens its mic for the answer still gets the c
   expect(h.wired.flow).toBeNull();
 });
 
-it("modo pitch: a board without pitch_prompt is never asked anything; the name just stays empty", async () => {
+it("modo pitch: a board that cannot open its own mic (the knob) — the bridge asks and opens the mic for the answer itself", async () => {
   const h = pitchHarness({ canAsk: false });
   h.extract.card.mockResolvedValueOnce({ ...heardCard, speaker: null });
   await h.tap();
   h.speak(3000);
   await h.submit();
-  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
-  expect(h.spoken).toEqual(["[GUION] ¡Listo! Tu charla «Effect en producción» queda en Cueva a las 15:00."]);
+  expect(h.spoken).toEqual(["[GUION] ¿Cómo te llamás?"]);
+  await h.answer(); // the question's run ends; a moment later the answer run opens on its own
+  expect(h.prompts).toEqual([]); // nothing was asked of the board
+  expect(h.wired.pitch?.kind).toBe("answer");
+  h.speak(1200);
+  await h.submit();
+  expect(h.api.tracks.createPlaced.mock.calls[0][0]).toMatchObject({ title: "Effect en producción", speaker: "Ana" });
+  expect(h.spoken.at(-1)).toBe(ANNOUNCED);
 });
 
 it("modo pitch: too short a pitch creates nothing; a recorded cue plays on the board's own speaker, no model needed", async () => {
@@ -776,4 +833,194 @@ it("a normal run still streams the microphone to the model", async () => {
   expect(h.provider.sendAudio).toHaveBeenCalled();
   expect(h.wired.pitch).toBeNull();
   h.wired.turn.finish();
+});
+
+// ── The tap: the knob's, or the panel's virtual knob ────────────────────────
+
+it("tap: starts a turn on the Mac's mic with no board; a second tap hands the words over", async () => {
+  const sink: { listener: ((pcm: Buffer) => void) | null } = { listener: null };
+  const hostMic = {
+    ready: true,
+    status: () => ({ name: "Wireless Microphone RX", channel: "mix", health: "open" }),
+    ensureOpen: vi.fn(),
+    onPcm: (fn: (pcm: Buffer) => void) => {
+      sink.listener = fn;
+      return () => (sink.listener = null);
+    },
+  };
+  const faces: string[] = [];
+  const provider = { status: "connected", isConnected: true, goAwayPending: false, resetConversation: vi.fn(), commitAudio: vi.fn(), sendAudio: vi.fn() };
+  const session = new DeviceSession(
+    { id: "owy-knob", host: "unused", port: 6053, psk: null },
+    { logger: createLogger("test", "error"), config: { COMPANION_MIC_SOURCE: "host", COMPANION_AUDIO_OUTPUT: "host" }, hostMic } as unknown as SharedRuntime,
+    { onFace: (face) => faces.push(face) }
+  );
+  const wired = session as unknown as { session: unknown; turn: VoiceTurn; listenToHostMic(): void };
+  wired.session = provider;
+  wired.listenToHostMic();
+  session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(wired.turn.phase).toBe("listening");
+  expect(faces).toEqual(["listening"]);
+  for (let i = 0; i < 50; i++) {
+    sink.listener?.(loudFrame());
+    vi.advanceTimersByTime(20);
+  }
+  expect(provider.sendAudio).toHaveBeenCalled();
+  session.tap(); // done talking
+  expect(provider.commitAudio).toHaveBeenCalledOnce();
+  expect(wired.turn.phase).toBe("thinking");
+  expect(faces.at(-1)).toBe("thinking");
+  expect(session.deviceStatus()).toMatchObject({ connected: false, phase: "thinking" });
+  wired.turn.finish();
+});
+
+it("tap: while Owy talks, a tap stops him with a plain face, not an error", async () => {
+  const h = pitchHarness();
+  await h.wired.onRequestStart({ start: true } as VoiceAssistantRequest);
+  h.wired.turn.endListening("hola");
+  h.wired.turn.beginSpeaking("Hola");
+  expect(h.device.setFace).toHaveBeenLastCalledWith("speaking");
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(10);
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.device.setFace).toHaveBeenLastCalledWith("idle");
+  expect(h.events).not.toContain(E.ERROR);
+});
+
+it("tap in modo pitch: the first tap records, the second one sends", async () => {
+  const h = pitchHarness({ pitchMode: true });
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.wired.pitch?.kind).toBe("pitch");
+  h.speak(3000);
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).toHaveBeenCalledOnce();
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+});
+
+/** A browser attached as the device's audio: what the bridge asks it to stop. */
+function attachPeer(h: ReturnType<typeof pitchHarness>) {
+  const peer = { attachedTo: "test", mirrorAccept: vi.fn(), mirrorDecline: vi.fn(), sendEvent: vi.fn(), sendAudio: vi.fn(), stopAudio: vi.fn() };
+  (h.wired as unknown as { peer: unknown }).peer = peer;
+  return peer;
+}
+
+it("tap in modo pitch: tapped twice with nothing said, the cue stops and Owy says nothing (no «No escuché una propuesta»)", async () => {
+  const h = pitchHarness({ pitchMode: true, clips: { "pitch-listen": 4680 } });
+  const peer = attachPeer(h);
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.clips).toEqual(["pitch-listen"]); // «te escucho» starts while the mic records
+  peer.stopAudio.mockClear();
+  vi.advanceTimersByTime(800);
+  h.session.tap(); // a second tap, the cue still playing, nothing said yet
+  await vi.advanceTimersByTimeAsync(50);
+  expect(peer.stopAudio).toHaveBeenCalled();
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.extract.card).not.toHaveBeenCalled();
+  expect(h.spoken).toEqual([]);
+  expect(h.clips).toEqual(["pitch-listen"]);
+  expect(h.events).not.toContain(E.ERROR);
+  expect(h.device.setFace).toHaveBeenLastCalledWith("idle");
+});
+
+it("tap: whatever Owy is still playing stops at the tap — on the Mac and in the browser — before he listens again", async () => {
+  const h = pitchHarness();
+  const peer = attachPeer(h);
+  const speaker = { busy: true, ready: true, flush: vi.fn(), ensureOpen: vi.fn(), write: vi.fn() };
+  (h.session as unknown as { shared: { hostSpeaker: unknown } }).shared.hostSpeaker = speaker;
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(speaker.flush).toHaveBeenCalledOnce();
+  expect(peer.stopAudio).toHaveBeenCalledOnce();
+  expect(h.wired.turn.phase).toBe("listening");
+  // Nothing playing: nothing to cut (the Mac's output is not reopened for nothing).
+  speaker.busy = false;
+  h.session.tap();
+  expect(speaker.flush).toHaveBeenCalledOnce();
+});
+
+it("tap in modo pitch while Owy announces the card: he stops at once, the card stays on the board", async () => {
+  const h = pitchHarness({ pitchMode: true });
+  const peer = attachPeer(h);
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  h.speak(3000);
+  h.session.tap(); // sends the pitch
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+  expect(h.spoken).toEqual([ANNOUNCED]);
+  // A tap while it is still being understood only cuts a cue: the pitch goes on.
+  h.wired.onModelEvent({ type: "audio-delta", responseId: "r1", itemId: "i1", delta: Buffer.alloc(4800).toString("base64"), raw: {} });
+  expect(h.wired.turn.phase).toBe("speaking");
+  peer.stopAudio.mockClear();
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(10);
+  expect(peer.stopAudio).toHaveBeenCalled();
+  expect(h.wired.turn.finished).toBe(true);
+  expect(h.events).not.toContain(E.ERROR);
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+  expect(h.device.setFace).toHaveBeenLastCalledWith("idle");
+});
+
+it("tap in modo pitch while the pitch is being understood: it keeps going (the tap only quiets a cue)", async () => {
+  const h = pitchHarness({ pitchMode: true });
+  let release: (card: typeof heardCard) => void = () => {};
+  h.extract.card.mockImplementationOnce(() => new Promise((resolve) => (release = resolve)));
+  h.session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  h.speak(3000);
+  h.session.tap(); // sends it
+  await vi.advanceTimersByTimeAsync(10);
+  expect(h.wired.turn.phase).toBe("thinking");
+  h.session.tap(); // impatient
+  expect(h.wired.turn.phase).toBe("thinking");
+  release({ ...heardCard });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+});
+
+it("the panel's pitch buttons: start records a pitch whatever the mode says, submit sends it", async () => {
+  const h = pitchHarness();
+  h.session.pitchAction("start");
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.wired.pitch?.kind).toBe("pitch");
+  h.speak(3000);
+  h.session.pitchAction("submit");
+  await vi.advanceTimersByTimeAsync(50);
+  expect(h.extract.card).toHaveBeenCalledOnce();
+  expect(h.api.tracks.createPlaced).toHaveBeenCalledOnce();
+});
+
+it("a knob with the Mac's mic down and no browser: the tap says so, and the face recovers by itself", async () => {
+  const events: number[] = [];
+  const device = {
+    canPlayAudio: false,
+    isPlaybackReady: () => true,
+    sendEvent: (type: number) => events.push(type),
+    sendAudio: () => {},
+    acceptRequest: vi.fn(),
+    declineRequest: vi.fn(),
+    setFace: vi.fn(),
+    showCaption: vi.fn(),
+    showText: vi.fn(),
+    isStaffMode: () => false,
+  };
+  const session = new DeviceSession({ id: "owy-knob", host: "unused", port: 6053, psk: null }, {
+    logger: createLogger("test", "error"),
+    config: {},
+  } as unknown as SharedRuntime);
+  const wired = session as unknown as { device: unknown; session: unknown; turn: VoiceTurn };
+  wired.device = device;
+  wired.session = { status: "connected", isConnected: true, goAwayPending: false, resetConversation: vi.fn(), commitAudio: vi.fn() };
+  session.tap();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(device.showCaption).toHaveBeenCalledWith("No tengo micrófono: conectá el de la Mac o un navegador.");
+  expect(device.setFace).toHaveBeenLastCalledWith("error");
+  expect(wired.turn.finished).toBe(true);
+  expect(events).toContain(E.ERROR);
+  await vi.advanceTimersByTimeAsync(3_000);
+  expect(device.setFace).toHaveBeenLastCalledWith("idle");
 });

@@ -54,6 +54,8 @@ export const TakeSchema = z.object({ step: DeskStepSchema, transition: z.enum(["
 export const TakeResultSchema = z.object({ state: StageStateSchema, desk: DeskWireSchema });
 
 export const FireEffectSchema = EffectEventSchema;
+export const AutopilotSchema = z.object({ on: z.boolean() });
+export const SpotlightInputSchema = z.object({ trackId: z.string().trim().min(1).max(40) });
 export const SetFaceSchema = FaceEventSchema;
 
 export type SetSceneInput = z.infer<typeof SetSceneSchema>;
@@ -87,7 +89,7 @@ export const StageInputSchema = z.object({
 });
 
 export const StagePulseSchema = z.object({
-  /** Aggregates only — never attendee data. `null` when Eventbrite isn't configured or answering. */
+  /** Aggregates only — never attendee data. `null` when nobody is registered for the event. */
   tickets: z.object({ checkedIn: z.number(), active: z.number(), capacity: z.number().nullable() }).nullable(),
   board: z.object({ ideas: z.number(), rooms: z.number() }).nullable(),
 });
@@ -118,6 +120,21 @@ export const StageSpeakerSchema = z.object({
   role: z.string().nullable(),
 });
 export type StageSpeaker = z.infer<typeof StageSpeakerSchema>;
+
+export const StageCommunitySchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  logo: z.string().nullable(),
+});
+export type StageCommunity = z.infer<typeof StageCommunitySchema>;
+
+/** Someone checked in, as the welcome wall shows them: "Ana G.", never the email. */
+export const StageArrivalSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  at: z.string(),
+});
+export type StageArrival = z.infer<typeof StageArrivalSchema>;
 
 export const SpotifyTrackSchema = z.object({
   song: z.string(),

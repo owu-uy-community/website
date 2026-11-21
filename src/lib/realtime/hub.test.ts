@@ -6,13 +6,17 @@ import { can, type Principal } from "lib/authz/principal";
 
 const connect = vi.fn<() => Promise<void>>();
 const publish = vi.fn<(channel: string, message: string) => Promise<number>>(async () => 1);
+/** What the backplane's subscriber hands this instance (another instance's publishes). */
+let fromRedis: ((channel: string, raw: string) => void) | undefined;
 
 vi.mock(import("ioredis"), () => ({
   default: class {
     connect = connect;
     disconnect = vi.fn<() => void>();
     subscribe = vi.fn<(channel: string) => Promise<number>>(async () => 1);
-    on = vi.fn<(event: string, listener: () => void) => void>();
+    on = (event: string, listener: (channel: string, raw: string) => void) => {
+      if (event === "message") fromRedis = listener;
+    };
     publish = publish;
   } as never,
 }));
@@ -39,6 +43,50 @@ describe("the realtime hub's Redis backplane", () => {
 
     expect(connect).toHaveBeenCalledTimes(4);
     expect(publish).toHaveBeenCalledWith("owu:realtime", expect.stringContaining('"n":3'));
+  });
+
+  test("a message's id is one: in its frames here and in the envelope every instance fans out", async () => {
+    vi.stubEnv("REDIS_URL", "redis://redis.test:6379");
+    const { hub } = await import("./hub");
+    const listeners = new Map<string, (data: unknown) => void>();
+    const send = vi.fn<(data: string) => void>();
+    const ws = { on: (event: string, listener: (data: unknown) => void) => listeners.set(event, listener), send };
+    hub.attach(ws as never, { can: async () => true });
+    listeners.get("message")?.(JSON.stringify({ t: "sub", ch: "owy-stage" }));
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith(JSON.stringify({ t: "ok", ch: "owy-stage" })));
+    const sent = () => send.mock.calls.map(([data]) => JSON.parse(data) as Record<string, unknown>);
+
+    await hub.publish("owy-stage", "face", { state: "idle" });
+    const id = sent().at(-1)?.id;
+    expect(id).toStrictEqual(expect.any(String));
+    expect(JSON.parse(publish.mock.calls.at(-1)?.[1] ?? "{}")).toMatchObject({ ch: "owy-stage", id });
+
+    // Another instance's keeps its id; one from an older instance has none and still goes out.
+    fromRedis?.("owu:realtime", JSON.stringify({ ch: "owy-stage", ev: "face", pl: 1, id: "elsewhere", origin: "b" }));
+    fromRedis?.("owu:realtime", JSON.stringify({ ch: "owy-stage", ev: "face", pl: 2, origin: "older" }));
+    expect(sent().slice(-2)).toStrictEqual([
+      { t: "msg", ch: "owy-stage", ev: "face", pl: 1, id: "elsewhere" },
+      { t: "msg", ch: "owy-stage", ev: "face", pl: 2 },
+    ]);
+  });
+
+  test("on a fresh instance a subscription is acked once the backplane listens (a rotating client drops its old socket on it)", async () => {
+    vi.stubEnv("REDIS_URL", "redis://redis.test:6379");
+    delete (globalThis as { __owuRealtimeHub?: unknown }).__owuRealtimeHub;
+    vi.resetModules();
+    let connected = () => {};
+    connect.mockReturnValueOnce(new Promise<void>((resolve) => (connected = resolve)));
+    const { hub } = await import("./hub");
+    const listeners = new Map<string, (data: unknown) => void>();
+    const send = vi.fn<(data: string) => void>();
+    const ws = { on: (event: string, listener: (data: unknown) => void) => listeners.set(event, listener), send };
+    hub.attach(ws as never, { can: async () => true });
+
+    listeners.get("message")?.(JSON.stringify({ t: "sub", ch: "owy-stage" }));
+    await Promise.resolve();
+    expect(send).not.toHaveBeenCalled();
+    connected();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith(JSON.stringify({ t: "ok", ch: "owy-stage" })));
   });
 });
 

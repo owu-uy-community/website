@@ -1,12 +1,13 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { MAPS_URLS } from "app/lib/constants";
-import type { SceneProps } from "lib/owy-stage/scenes";
-import { formatTime } from "lib/utils";
+import { findSound } from "lib/launchpad/sounds";
+import { shift, type SceneProps } from "lib/owy-stage/scenes";
+import { formatCountdown, formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext } from "../Stage";
 import { QrCode, Rise } from "./parts";
@@ -53,41 +54,79 @@ function parseRounds(value: string): Round[] {
 }
 
 export function Rounds({ params, eventId }: SceneProps<"rounds">) {
-  const { preview } = useContext(StageContext);
+  const { preview, throttle } = useContext(StageContext);
   const now = useNow(1000);
   // Typed rounds win; otherwise the open space grid's own blocks, so a moved block moves here too.
   const board = useBoard(params.rounds ? null : eventId, preview);
   const rounds = useMemo(
     () =>
-      params.rounds
+      (params.rounds
         ? parseRounds(params.rounds)
         : (board?.schedules ?? [])
             .filter((slot) => slot.isActive)
             .map((slot) => ({ start: slot.startTime.slice(0, 5), end: slot.endTime.slice(0, 5) }))
-            .sort((a, b) => a.start.localeCompare(b.start)),
-    [params.rounds, board]
+            .sort((a, b) => a.start.localeCompare(b.start))
+      ).map((round) => ({ start: shift(round.start, params.shift), end: shift(round.end, params.shift) })),
+    [params.rounds, params.shift, board]
   );
+
+  // A round that ends while the scene is on the wall sounds once. Opening the page, or moving the
+  // rounds (shift, a block edited in the grid), sets the count without a sound.
+  const key = rounds.map((round) => round.end).join(",");
+  const ended = rounds.filter((round) => round.end <= now).length;
+  const heard = useRef<{ key: string; ended: number } | null>(null);
+  useEffect(() => {
+    const before = heard.current;
+    heard.current = { key, ended };
+    const sound = findSound(params.sound);
+    if (sound && !throttle && before?.key === key && ended > before.ended) {
+      new Audio(sound.audioFile).play().catch(() => undefined);
+    }
+  }, [key, ended, params.sound, throttle]);
+
   if (!params.rounds && !eventId) return <EmptyText text="Elegí un evento en el admin" />;
   if (!params.rounds && !board) return null;
   if (!rounds.length) return <EmptyText text="Todavía no hay bloques en la grilla" />;
   const active = rounds.findIndex((r) => r.start <= now && now < r.end);
   const nextIndex = rounds.findIndex((r) => r.start > now);
-  const over = rounds.length > 0 && now >= rounds[rounds.length - 1].end;
+  const over = now >= rounds[rounds.length - 1].end;
 
-  let label = "Empieza en";
+  let label = params.startsIn;
   let seconds = 0;
   let caption = "";
   if (active >= 0) {
-    label = `Ronda ${active + 1} · termina en`;
+    label = `Ronda ${active + 1} · ${params.endsIn}`;
     seconds = secondsUntil(rounds[active].end);
     caption = `${rounds[active].start} – ${rounds[active].end}`;
   } else if (over) {
-    label = "Open space";
-    caption = "Cierre · gracias por las sesiones";
+    label = params.title;
+    caption = params.doneText;
   } else if (nextIndex >= 0) {
-    label = nextIndex === 0 ? "Empieza en" : "Cambio de sala · próxima ronda en";
+    label = nextIndex === 0 ? params.startsIn : params.nextIn;
     seconds = secondsUntil(rounds[nextIndex].start);
     caption = `Ronda ${nextIndex + 1} · ${rounds[nextIndex].start}`;
+  }
+  const clock = over ? "FIN" : formatCountdown(Math.max(0, seconds));
+  const long = clock.length > 5;
+
+  if (!params.list) {
+    return (
+      <>
+        <Ambient />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
+            {params.title}
+          </Rise>
+          <p className="mt-8 text-[48px] font-semibold tracking-[0.25em] text-[#FBF5E7]/70 uppercase">{label}</p>
+          <p
+            className={`countdown-font countdown-centered mt-4 leading-none tracking-wider text-[#F5BB03] ${long ? "text-[300px]" : "text-[400px]"}`}
+          >
+            {clock}
+          </p>
+          <p className="mt-8 text-[56px] font-bold">{caption}</p>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -97,40 +136,44 @@ export function Rounds({ params, eventId }: SceneProps<"rounds">) {
         eyebrow={params.title}
         title={active >= 0 ? `Ronda ${active + 1} de ${rounds.length}` : over ? "Terminó" : "Entre rondas"}
       />
-      <div className="absolute top-[330px] left-[340px] w-[820px]">
-        <p className="text-[34px] font-semibold tracking-[0.25em] text-[#FBF5E7]/60 uppercase">{label}</p>
-        <p className="countdown-font mt-2 text-[300px] leading-none tracking-wider text-[#F5BB03]">
-          {over ? "FIN" : formatTime(Math.max(0, Math.min(seconds, 5999)))}
-        </p>
-        <p className="mt-4 text-[44px] font-bold">{caption}</p>
+      <div className="absolute top-[300px] right-[140px] bottom-[80px] left-[140px] flex items-center justify-between gap-[100px]">
+        <div className="min-w-0 flex-1 text-center">
+          <p className="text-[34px] font-semibold tracking-[0.25em] text-[#FBF5E7]/60 uppercase">{label}</p>
+          <p
+            className={`countdown-font countdown-centered mt-2 leading-none tracking-wider text-[#F5BB03] ${long ? "text-[220px]" : "text-[300px]"}`}
+          >
+            {clock}
+          </p>
+          <p className="mt-4 text-[44px] font-bold">{caption}</p>
+        </div>
+        <ol className="flex w-[520px] shrink-0 flex-col gap-[18px]">
+          {rounds.map((round, i) => {
+            const state = i === active ? "active" : round.end <= now ? "done" : "pending";
+            const startIn = secondsUntil(round.start);
+            const endIn = secondsUntil(round.end);
+            const progress = state === "active" ? Math.min(1, Math.max(0, -startIn / Math.max(1, endIn - startIn))) : 0;
+            return (
+              <m.li
+                key={round.start}
+                animate={{ opacity: 1, x: 0 }}
+                className={`relative overflow-hidden px-8 py-5 ${state === "active" ? "bg-[#F5BB03] text-black" : state === "done" ? "bg-[#FBF5E7]/[0.05] text-[#FBF5E7]/40" : "bg-[#FBF5E7]/[0.08]"}`}
+                initial={{ opacity: 0, x: 40 }}
+                transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}
+              >
+                {state === "active" && (
+                  <div className="absolute inset-y-0 left-0 bg-black/15" style={{ width: `${progress * 100}%` }} />
+                )}
+                <div className="relative flex items-center justify-between">
+                  <span className="text-[34px] font-bold">Ronda {i + 1}</span>
+                  <span className="text-[34px] font-semibold tabular-nums">
+                    {round.start} – {round.end}
+                  </span>
+                </div>
+              </m.li>
+            );
+          })}
+        </ol>
       </div>
-      <ol className="absolute top-[340px] right-[140px] flex w-[520px] flex-col gap-[18px]">
-        {rounds.map((round, i) => {
-          const state = i === active ? "active" : round.end <= now ? "done" : "pending";
-          const startIn = secondsUntil(round.start);
-          const endIn = secondsUntil(round.end);
-          const progress = state === "active" ? Math.min(1, Math.max(0, -startIn / Math.max(1, endIn - startIn))) : 0;
-          return (
-            <m.li
-              key={round.start}
-              animate={{ opacity: 1, x: 0 }}
-              className={`relative overflow-hidden px-8 py-5 ${state === "active" ? "bg-[#F5BB03] text-black" : state === "done" ? "bg-[#FBF5E7]/[0.05] text-[#FBF5E7]/40" : "bg-[#FBF5E7]/[0.08]"}`}
-              initial={{ opacity: 0, x: 40 }}
-              transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}
-            >
-              {state === "active" && (
-                <div className="absolute inset-y-0 left-0 bg-black/15" style={{ width: `${progress * 100}%` }} />
-              )}
-              <div className="relative flex items-center justify-between">
-                <span className="text-[34px] font-bold">Ronda {i + 1}</span>
-                <span className="text-[34px] font-semibold tabular-nums">
-                  {round.start} – {round.end}
-                </span>
-              </div>
-            </m.li>
-          );
-        })}
-      </ol>
     </>
   );
 }
@@ -371,6 +414,95 @@ export function Transport({ params }: SceneProps<"transport">) {
       <div className="absolute top-[330px] right-[140px] flex w-[400px] flex-col items-center gap-5">
         <QrCode size={400} value={MAPS_URLS.meetupLocation} />
         <p className="text-center text-[26px] font-semibold text-[#FBF5E7]/70">Ubicación en Google Maps</p>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Coffee break — a steaming cup that empties as the break runs out
+// ---------------------------------------------------------------------------
+
+/** Lucide's `coffee` icon, animated: the steam rises and the coffee sits at `fill` (0 empty, 1 full). */
+function CoffeeCup({ fill, className }: { fill: number; className?: string }) {
+  // Two monitors on the desk can show the scene at once: each cup needs its own clip id.
+  const clip = useId();
+  // The surface, from just under the rim (full) to the bottom of the cup (empty).
+  const level = 9.5 + (1 - fill) * 11.5;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke={BRAND.cream}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      viewBox="0 -4 24 26"
+    >
+      <clipPath id={clip}>
+        <path d="M4 8h13v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" />
+      </clipPath>
+      <g clipPath={`url(#${clip})`}>
+        <m.g animate={{ y: level }} initial={{ y: level }} transition={{ duration: 1, ease: "linear" }}>
+          {/* A wave one wavelength (7) wider than the cup each side, slid by one wavelength: it loops seamlessly */}
+          <m.path
+            animate={{ x: [0, 7] }}
+            d="M-11 0q1.75-.6 3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0V14H-11z"
+            fill={BRAND.yellow}
+            stroke="none"
+            transition={{ duration: 2.4, ease: "linear", repeat: Infinity }}
+          />
+        </m.g>
+      </g>
+      {[6, 10, 14].map((x, i) => (
+        <m.path
+          key={x}
+          animate={{ opacity: [0, 1, 0], y: [1, -3] }}
+          d={`M${x} 6q-1-1.25 0-2.5t0-2.5`}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 2.6, delay: i * 0.7, ease: "easeOut", repeat: Infinity }}
+        />
+      ))}
+      <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" />
+    </svg>
+  );
+}
+
+export function CoffeeBreak({ params }: SceneProps<"coffee">) {
+  useNow(1000);
+  const left = secondsUntil(params.talksAt);
+  const total = left - secondsUntil(params.breakAt);
+  const fill = total > 0 ? Math.min(1, Math.max(0, left / total)) : Number(left > 0);
+  const done = left <= 0;
+
+  return (
+    <>
+      <Ambient />
+      <m.div
+        animate={{ y: [0, -14, 0] }}
+        className="absolute top-[250px] left-[300px] h-[560px] w-[520px]"
+        transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
+      >
+        <CoffeeCup className="h-full w-full" fill={fill} />
+      </m.div>
+      <div className="absolute top-[330px] left-[940px] w-[880px]">
+        <Rise className="text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
+          {params.title}
+        </Rise>
+        <Rise className="mt-8 text-[34px] font-semibold tracking-[0.3em] text-[#FBF5E7]/60 uppercase" delay={0.15}>
+          {params.label}
+        </Rise>
+        {/* Ends on a pulsing cream 00:00: the stencil's «¡» hangs off the line and runs into the label */}
+        <div
+          className={`countdown-font mt-6 text-[250px] leading-none tracking-wider select-none ${done ? "animate-timer-pulse text-[#FBF5E7]" : "text-[#F5BB03]"}`}
+        >
+          {formatTime(Math.min(Math.max(left, 0), 5999))}
+        </div>
+        <Rise className="mt-4 text-[40px] leading-[1.15] font-semibold text-balance text-[#FBF5E7]/75" delay={0.3}>
+          {[params.talksAt, params.note].filter(Boolean).join(" · ")}
+        </Rise>
       </div>
     </>
   );

@@ -1,6 +1,6 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
-export const WEB_SESSION_MS = 5 * 60_000;
+export const WEB_SESSION_MS = 30 * 60_000;
 export type WebGrant = {
   identity: string;
   origin: string;

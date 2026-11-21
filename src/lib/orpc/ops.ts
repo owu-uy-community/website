@@ -3,6 +3,7 @@ import { Effect, Option } from "effect";
 
 import { activity } from "../db/schema";
 import { eventChannel } from "../realtime/channels";
+import { expireTag, feedTag } from "../revalidate";
 import { query } from "./db";
 import { CurrentUser, Realtime } from "./services";
 
@@ -25,6 +26,8 @@ export type OpsTopic =
  */
 export const opsPing = (eventId: string, topic: OpsTopic) =>
   Effect.gen(function* () {
+    // Every change to what attendees were told ends in this ping: the public feed's cache goes with it
+    if (topic === "comms") expireTag(feedTag(eventId));
     const realtime = yield* Realtime;
     yield* realtime.publish(eventChannel(eventId, "ops"), topic, {});
   });

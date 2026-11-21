@@ -53,7 +53,7 @@ const EVENT_JSON_LD = {
   description: DESCRIPTION,
   url: "https://conf.owu.uy",
   startDate: "2026-11-07T14:30:00-03:00",
-  endDate: "2026-11-07T20:40:00-03:00",
+  endDate: "2026-11-07T20:50:00-03:00",
   eventStatus: "https://schema.org/EventScheduled",
   eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   image: [OG_IMAGE],

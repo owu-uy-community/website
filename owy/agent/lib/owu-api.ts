@@ -591,6 +591,13 @@ export interface StageFaceInput {
   source?: string;
   /** The tool Owy is running while thinking (the talk's live diagram lights its box). */
   tool?: string;
+  /** The bridge process that sent it and its place in that process's order: pages drop late repeats. */
+  boot?: string;
+  seq?: number;
+  /** A heartbeat: the face as it stands, nothing new. */
+  beat?: boolean;
+  /** Pausa: the faces show it like the knob does. */
+  privacy?: boolean;
 }
 
 // ---------------------------------------------------------------------------

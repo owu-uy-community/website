@@ -35,7 +35,7 @@ test("on the day: what's on now, the team's avisos, and cards and room status ar
 }) => {
   const board = await makeBoard({
     community: { slug: "owu", name: "OWU" },
-    event: { slug: "owu-conf-2026", name: "OWU CONF 2026" },
+    event: { slug: "owu-conf", name: "OWU CONF 2026" },
   });
   const today = partsIn(0);
   const end = clockIn(20);

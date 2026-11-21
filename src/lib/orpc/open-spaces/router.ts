@@ -1,10 +1,15 @@
 import { openapi } from "@orpc/openapi";
+import { Effect } from "effect";
 import * as z from "zod";
 
 import { grantsHold } from "../../authz/catalog";
 import { platformGrants } from "../../authz/principal";
+import { publicBoard } from "../../openspace/public-board";
 import { authed, inCommunity, platform, pub } from "../base";
+import { RoomSchema } from "../rooms/schemas";
+import { GetSchedulesByOpenSpaceSchema, ScheduleSchema } from "../schedules/schemas";
 import { CurrentUser } from "../services";
+import { StickyNoteSchema } from "../tracks/schemas";
 import {
   AdminEventOptionSchema,
   CreateOpenSpaceSchema,
@@ -48,6 +53,16 @@ export const openSpacesRouter = {
     .output(OpenSpaceSchema)
     .effect(function* ({ input }) {
       return yield* Events.getEvent(input.id);
+    }),
+
+  board: pub
+    .meta(docs("An event's rooms, time slots and talks in one read, from the shared cache board writes expire"))
+    .input(GetSchedulesByOpenSpaceSchema)
+    .output(
+      z.object({ rooms: z.array(RoomSchema), schedules: z.array(ScheduleSchema), tracks: z.array(StickyNoteSchema) })
+    )
+    .effect(function* ({ input }) {
+      return yield* Effect.promise(() => publicBoard(input.openSpaceId));
     }),
 
   create: platform("event:manage")

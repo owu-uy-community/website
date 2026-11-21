@@ -4,11 +4,16 @@ import type { StickyNote } from "../orpc/tracks/schemas";
 import {
   CARD_MS,
   DEDUPE_MS,
+  FACE_LOST_MS,
   FACE_RESUME_MS,
   RECENT_CREATE_MS,
   applyFaceEvent,
-  followSource,
+  follow,
+  forget,
   initialFlow,
+  initialFollower,
+  lost,
+  release,
   nextTick,
   parseLag,
   reduceFlow,
@@ -196,14 +201,95 @@ describe("a face event on a face", () => {
   });
 });
 
-describe("the wall follows one Owy's mouth", () => {
-  test("the source of the latest face that is not idle", () => {
-    let source = followSource(undefined, { state: "listening", source: "owy-knob" });
-    source = followSource(source, { state: "idle", source: "web:abc" });
-    expect(source).toBe("owy-knob");
-    expect(followSource(source, { state: "speaking", source: "web:abc" })).toBe("web:abc");
+describe("a page follows one Owy", () => {
+  /** Feeds events in order; returns which ones counted. */
+  const run = (events: FaceEvent[], start = initialFollower()) => {
+    let follower = start;
+    const taken = events.map((event, i) => {
+      const next = follow(follower, event, T0 + i);
+      follower = next.follower;
+      return next.take;
+    });
+    return { taken, follower };
+  };
+
+  test("the source of the latest face that is not idle; another Owy's idle face doesn't count", () => {
+    const { taken, follower } = run([
+      { state: "listening", source: "owy-knob" },
+      { state: "idle", source: "web:abc" },
+      { state: "speaking", source: "web:abc" },
+      { state: "idle", source: "owy-knob" },
+    ]);
+    expect(taken).toStrictEqual([true, false, true, false]);
+    expect(follower.source).toBe("web:abc");
   });
 
+  test("a numbered event that arrives late or twice doesn't count; a new bridge process starts over", () => {
+    const knob = (state: FaceEvent["state"], seq: number, boot = "b1"): FaceEvent => ({
+      state,
+      source: "owy-knob",
+      boot,
+      seq,
+    });
+    const { taken } = run([
+      knob("listening", 1),
+      knob("thinking", 2),
+      knob("listening", 1),
+      knob("thinking", 2),
+      knob("speaking", 3),
+      knob("idle", 1, "b2"),
+    ]);
+    expect(taken).toStrictEqual([true, true, false, false, true, true]);
+  });
+
+  test("a heartbeat counts only when it says something the page missed", () => {
+    const beat = (seq: number): FaceEvent => ({ state: "speaking", source: "owy-knob", boot: "b1", seq, beat: true });
+    const { taken } = run([{ state: "thinking", source: "owy-knob", boot: "b1", seq: 4 }, beat(4), beat(5)]);
+    expect(taken).toStrictEqual([true, false, true]);
+  });
+
+  test("events from older bridges (no numbers) always count", () => {
+    const { taken } = run([
+      { state: "speaking", source: "owy-knob" },
+      { state: "speaking", source: "owy-knob" },
+    ]);
+    expect(taken).toStrictEqual([true, true]);
+  });
+
+  test("lets go of an Owy whose bridge stopped beating, and takes its next word again", () => {
+    let { follower } = run([{ state: "speaking", source: "owy-knob", boot: "b1", seq: 7 }]);
+    expect(lost(follower, T0 + FACE_LOST_MS)).toBe(false);
+    expect(lost(follower, T0 + FACE_LOST_MS + 1)).toBe(true);
+    follower = release(follower);
+    expect([follower.source, lost(follower, T0 + 60_000)]).toStrictEqual([undefined, false]);
+    // Back with the same number (it never knew it was let go): it counts.
+    expect(follow(follower, { state: "speaking", source: "owy-knob", boot: "b1", seq: 7, beat: true }, T0).take).toBe(
+      true
+    );
+  });
+
+  test("after the page shows a face of its own, the next heartbeat counts", () => {
+    const { follower } = run([{ state: "speaking", source: "owy-knob", boot: "b1", seq: 9 }]);
+    const beat: FaceEvent = { state: "speaking", source: "owy-knob", boot: "b1", seq: 9, beat: true };
+    expect(follow(follower, beat, T0).take).toBe(false);
+    expect(follow(forget(follower), beat, T0).take).toBe(true);
+    expect(forget(follower).source).toBe("owy-knob");
+  });
+
+  test("an older bridge (it never beats) is never let go", () => {
+    const { follower } = run([{ state: "thinking", source: "owy-knob" }]);
+    expect(lost(follower, T0 + 10 * FACE_LOST_MS)).toBe(false);
+  });
+
+  test("a stored face doesn't make an Owy look alive after the fact", () => {
+    const { follower } = run([{ state: "thinking", source: "owy-knob", boot: "b1", seq: 3 }]);
+    const stored = follow(follower, { state: "speaking", source: "owy-knob", boot: "b1", seq: 2 }, T0 - 30_000);
+    expect(stored.take).toBe(false);
+    expect(lost(stored.follower, T0 + FACE_LOST_MS + 1)).toBe(true);
+  });
+});
+
+describe("the wall follows one Owy's mouth", () => {
   const mouth = { source: "owy-knob", at: T0, frames: "AbC-_9" };
   const valid = (event: unknown) => MouthEventSchema.safeParse(event).success;
 

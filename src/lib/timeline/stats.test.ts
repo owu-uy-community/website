@@ -1,0 +1,113 @@
+import { describe, expect, test } from "vitest";
+
+import { computeStats } from "./stats";
+import { venueKey } from "./venues";
+import type { TimelineCommunity, TimelineEvent } from "./types";
+
+const event = (slug: string, start: string, extra: Partial<TimelineEvent> = {}): TimelineEvent => ({
+  id: slug,
+  slug,
+  title: slug,
+  start,
+  kind: "meetup",
+  layer: "community",
+  community: "ruby",
+  sources: [],
+  ...extra,
+});
+
+const ruby: TimelineCommunity = {
+  slug: "ruby",
+  name: "Ruby Montevideo",
+  kind: "grupo",
+  layer: "community",
+  status: "activa",
+  topics: ["lenguajes"],
+  events: 3,
+  first: "2012-04-10",
+  last: "2013-03-07",
+};
+const ember: TimelineCommunity = {
+  ...ruby,
+  slug: "ember",
+  name: "Ember",
+  topics: ["web"],
+  status: "cerrada",
+  first: "2013-01-01",
+  last: "2013-05-01",
+};
+
+describe(computeStats, () => {
+  const stats = computeStats(
+    [
+      event("a", "2012-04-10T19:00:00-03:00", { venue: "Oficina de Pyxis", city: "Montevideo", rsvps: 30 }),
+      event("b", "2013-03-07T19:30:00-03:00", { venue: "Pyxis", city: "Punta del Este", rsvps: 10 }),
+      event("c", "2013-05", { community: "ember", venue: "Torre Antel", city: "Montevideo" }),
+      // No city: the Torre's events were in Montevideo
+      event("d", "2013-08", { community: "ember", venue: "Torre de las Telecomunicaciones" }),
+      event("online", "2013-06-01T19:00:00-03:00", { online: true, rsvps: 500 }),
+      event("vendor", "2013-07-01T19:00:00-03:00", { layer: "ecosystem", rsvps: 900 }),
+    ],
+    [ruby, ember]
+  );
+
+  test("counts only in-person community events, by year and month", () => {
+    expect(stats.from).toBe(2012);
+    expect(stats.to).toBe(2013);
+    expect(stats.heatmap[1].months[2]).toBe(1);
+    expect(stats.heatmap[1].months[4]).toBe(1);
+    expect(stats.heatmap[1].months[7]).toBe(1);
+  });
+
+  test("reads weekday and hour off the local time, skipping date-only events", () => {
+    expect(stats.timed).toBe(2);
+    // 2012-04-10 was a Tuesday, 2013-03-07 a Thursday (Monday first)
+    expect(stats.weekdays).toStrictEqual([0, 1, 0, 1, 0, 0, 0]);
+    expect(stats.hours.find((h) => h.hour === 19)?.count).toBe(2);
+  });
+
+  test("maps cities to departments, an event without one by its venue's", () => {
+    expect(stats.places).toStrictEqual([
+      { name: "Montevideo", count: 3 },
+      { name: "Maldonado", count: 1 },
+    ]);
+  });
+
+  test("tracks communities alive, born and closed each year", () => {
+    expect(stats.communities).toStrictEqual([
+      { year: 2012, active: 1, births: 1, closures: 0 },
+      { year: 2013, active: 2, births: 1, closures: 1 },
+    ]);
+    expect(stats.topics.rows[1]).toStrictEqual({ year: 2013, lenguajes: 1, web: 2 });
+  });
+
+  test("ranks the biggest in-person community events", () => {
+    expect(stats.biggest.map((b) => b.slug)).toStrictEqual(["a", "b"]);
+  });
+});
+
+describe(venueKey, () => {
+  test("joins the spellings of one place", () => {
+    expect(venueKey("Oficina de Pyxis")?.key).toBe(venueKey("Pyxis")?.key);
+    expect(venueKey("Pyxis (via Cubox)")?.key).toBe(venueKey("Pyxis")?.key);
+    expect(venueKey("Torre Antel")?.display).toBe("Torre de las Telecomunicaciones");
+    expect(venueKey("Online")).toBeNull();
+  });
+});
+
+describe("community sizes", () => {
+  test("ranks by Meetup members and averages the ratings by how many there are", () => {
+    const stats = computeStats(
+      [event("a", "2013-01-10T19:00:00-03:00")],
+      [
+        { ...ruby, members: 900, rating: 5, ratings: 300 },
+        { ...ember, members: 1200, rating: 4, ratings: 100 },
+      ]
+    );
+    expect(stats.sizes.map(({ name, count }) => [name, count])).toStrictEqual([
+      ["Ember", 1200],
+      ["Ruby Montevideo", 900],
+    ]);
+    expect(stats.rating).toStrictEqual({ average: 4.75, ratings: 400 });
+  });
+});

@@ -4,6 +4,7 @@ import classNames from "classnames";
 import { useMemo } from "react";
 
 import type { StickyNote } from "lib/orpc";
+import { RoomMark } from "lib/rooms/icons";
 
 import type { BoardRoom } from "./board";
 
@@ -51,11 +52,7 @@ export default function ProposalFeed({
 
           return (
             <li key={track.id} className="conf-rise flex items-start gap-3 px-5 py-3 [--rise:10px]">
-              <span
-                aria-hidden="true"
-                className="mt-1.5 h-2 w-2 shrink-0 rotate-45"
-                style={{ backgroundColor: room?.color ?? "#F5BB03" }}
-              />
+              <RoomMark className="mt-1 h-2.5 w-2.5" color={room?.color ?? "#F5BB03"} icon={room?.icon} />
               <span className="min-w-0">
                 <span className="block text-sm leading-snug text-[#FBF5E7]">{track.title}</span>
                 <span className="mt-0.5 block truncate text-xs text-[#FBF5E7]/65">

@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Check,
   ChevronDown,
+  Clapperboard,
   Copy,
   ExternalLink,
   LayoutGrid,
@@ -84,6 +85,7 @@ function sceneActions(id: SceneId, actions: LibraryActions): MenuAction[] {
     { label: "Guardar como preset", icon: Star, onSelect: () => actions.preset(id) },
     { label: "Copiar URL para OBS", icon: Copy, group: true, onSelect: () => actions.copyUrl(id) },
     { label: "Abrir en otra pestaña", icon: ExternalLink, href: `/owy/stage/${id}` },
+    { label: "Exportar video 1080p60", icon: Clapperboard, href: `/owy/stage/${id}?export=1` },
   ];
 }
 

@@ -11,7 +11,7 @@ import { BYTES_PER_SAMPLE, DEVICE_SAMPLE_RATE, rmsLevel } from "./pcm";
  * It stays open while selected and is fed silence between answers, so the
  * audio queue never runs dry (no clicks, no first syllable lost to a cold
  * start); an interrupt kills it and starts a fresh one, which drops whatever
- * was queued. macOS only: in Docker this reports `unavailable`.
+ * was queued. macOS only: elsewhere this reports `unavailable`.
  */
 
 export type HostSpeakerHealth = HostSpeakerSnapshot["health"];
@@ -83,7 +83,7 @@ export class HostSpeaker {
     this.latencyMs = options.latencyMs ?? 150;
     this.tailMs = options.tailMs ?? 300;
     if ((options.platform ?? process.platform) !== "darwin")
-      this.setHealth("unavailable", "la salida de la Mac solo suena con el bridge corriendo en macOS (no en Docker)");
+      this.setHealth("unavailable", "la salida de la Mac solo suena con el bridge corriendo en macOS");
   }
 
   status(available: string[] = this.listCache?.devices.map((device) => device.name) ?? []): HostSpeakerSnapshot {

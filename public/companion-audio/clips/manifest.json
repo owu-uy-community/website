@@ -1,7 +1,8 @@
 {
-  "pitch-listen": 4680,
+  "pitch-listen": 1000,
   "pitch-empty": 4120,
   "pitch-ask-topic": 2750,
+  "pitch-ask-title": 3220,
   "pitch-ask-name": 1270,
   "pitch-unclear": 5460,
   "pitch-full": 4230,

@@ -15,6 +15,7 @@ import {
   TrackWithRelationsSchema,
   UpdateTrackInputSchema,
 } from "./schemas";
+import { announceSoon } from "../owy-stage/service";
 import * as Tracks from "./service";
 
 const docs = (summary: string) => openapi({ tags: ["Talks"], summary });
@@ -49,7 +50,11 @@ export const tracksRouter = {
     .input(CreateTrackSchema)
     .output(StickyNoteSchema)
     .effect(function* ({ input }) {
-      return yield* Tracks.createNote(input);
+      const note = yield* Tracks.createNote(input);
+      // A talk brought back by «Deshacer» was already news once.
+      if (input.origin !== "undo") yield* announceSoon(note);
+
+      return note;
     }),
 
   createPlaced: platform("program:manage")
@@ -61,7 +66,10 @@ export const tracksRouter = {
     .input(CreatePlacedTrackSchema)
     .output(PlacedTrackSchema)
     .effect(function* ({ input }) {
-      return yield* Tracks.createPlaced(input);
+      const placed = yield* Tracks.createPlaced(input);
+      yield* announceSoon(placed.note);
+
+      return placed;
     }),
 
   update: platform("program:manage")

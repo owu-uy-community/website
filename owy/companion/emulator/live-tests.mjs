@@ -94,15 +94,6 @@ test("only bounded explicit boolean scopes are accepted; no prompt, model, devic
     await assert.rejects(server.readVoiceScopes(request(body)), /Invalid voice permissions/);
   await assert.rejects(server.readVoiceScopes(request({ unknown: "a".repeat(2048) })), /large/);
 });
-test("issuance quota bounds rapid retries and hourly sessions", () => {
-  const q = new server.VoiceQuota();
-  for (let i = 0; i < 3; i++) q.take("admin", 1000);
-  assert.throws(() => q.take("admin", 1000), /wait/);
-  q.take("admin", 61001);
-  const hourly = new server.VoiceQuota();
-  for (let i = 0; i < 20; i++) hourly.take("admin", i * 61000);
-  assert.throws(() => hourly.take("admin", 20 * 61000), /wait/);
-});
 test("capture resamples 44.1/48 kHz into exact 20 ms little-endian 16 kHz frames", () => {
   for (const rate of [44100, 48000]) {
     const pcm = new CapturePCM(rate),
@@ -412,6 +403,27 @@ test("browser acknowledges real STT_END before playing tagged 16 kHz bridge PCM"
     assert.equal(h.voice.status.stage, "speaking");
     assert.equal(h.sent.filter((m) => m.type === "start").length, 0);
   } finally {
+    h.voice.stop();
+  }
+});
+test("a tap on the device stops what plays here: the queued reply and a cue, whatever run they came from", async () => {
+  const h = playbackHarness();
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ arrayBuffer: async () => new ArrayBuffer(8) });
+  h.voice.ctx.decodeAudioData = async () => ({ duration: 4.68 });
+  try {
+    h.voice.receive({ type: "screen", run: 1, command: { kind: "clip", id: "pitch-listen" } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    h.voice.receive({ type: "event", event: "STT_END", run: 1 });
+    h.voice.play(h.pcm);
+    assert.equal(h.nodes.length, 2); // the cue, then a frame of the reply
+    const stopped = [];
+    h.nodes.forEach((node, index) => (node.stop = () => stopped.push(index)));
+    h.voice.receive({ type: "screen", run: 0, command: { kind: "stop" } });
+    assert.deepEqual(stopped.sort(), [0, 1]);
+    assert.deepEqual(h.commands.at(-1), { kind: "stop" });
+  } finally {
+    globalThis.fetch = realFetch;
     h.voice.stop();
   }
 });

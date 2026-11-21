@@ -9,23 +9,37 @@ import { SCENE_IDS, type SceneId } from "./scenes";
 export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   {
     title: `Recepción · ${DAY_TIMES.recepcion.start}`,
-    scenes: ["logo", "welcome", "checkin", "program", "next", "wifi-qr", "conduct", "facilities", "sponsor-wall"],
+    scenes: [
+      "logo",
+      "welcome",
+      "welcome-wall",
+      "checkin",
+      "program",
+      "next",
+      "wifi-qr",
+      "conduct",
+      "facilities",
+      "sponsor-wall",
+      "community-wall",
+      "declarado",
+    ],
   },
   {
     title: `Bienvenida · ${OPEN_SPACE_TIMES.bienvenida.start}`,
-    scenes: ["launch", "opening", "history", "origin", "live-poll", "quiz", "trivia"],
+    scenes: ["launch", "opening", "history", "origin", "live-poll", "quiz", "trivia", "openspace-intro"],
   },
   {
     title: `Mercado de ideas · ${OPEN_SPACE_TIMES.mercado.start}`,
-    scenes: ["principles", "owy-howto", "steps", "owy-face", "board"],
+    scenes: ["principles", "owy-howto", "steps", "owy-face", "owy-board", "board"],
   },
   {
     title: `Open space · ${OPEN_SPACE_TIMES.sesiones.start}`,
-    scenes: ["grid", "rooms-now", "rounds", "room", "reminders"],
+    scenes: ["grid", "rooms-now", "map", "rounds", "room", "reminders"],
   },
   {
     title: `Coffee break · ${OPEN_SPACE_TIMES.coffee.start}`,
     scenes: [
+      "coffee",
       "food",
       "now-playing",
       "speakers",
@@ -45,7 +59,7 @@ export const CONF_SECTIONS: { title: string; scenes: SceneId[] }[] = [
   },
   {
     title: `Cierre · ${DAY_TIMES.despedida.start}`,
-    scenes: ["photo", "closing", "team", "feedback", "after"],
+    scenes: ["photo", "closing", "unplugged", "team", "team-wall", "feedback", "after", "mbc"],
   },
   { title: "Siempre a mano", scenes: ["message", "alert", "countdown", "clock", "test-card", "black"] },
 ];
@@ -98,6 +112,7 @@ export const CONF_LOOPS: { id: string; title: string; when: string; steps: LoopS
     steps: [
       ["grid", 30],
       ["rooms-now", 25],
+      ["map", 30],
       ["rounds", 15],
       ["program", 15],
       ["wifi-qr", 10],
@@ -109,11 +124,11 @@ export const CONF_LOOPS: { id: string; title: string; when: string; steps: LoopS
     title: "Coffee break",
     when: `${OPEN_SPACE_TIMES.coffee.start} – ${OPEN_SPACE_TIMES.coffee.end}`,
     steps: [
-      ["next", 15, { label: "Las charlas empiezan en" }],
+      ["coffee", 15],
       ["speakers", 20],
       ["now-playing", 15],
       ["moments", 30],
-      ["next", 15, { label: "Las charlas empiezan en" }],
+      ["coffee", 15],
       ["sponsor-wall", 15],
       ["tangram", 25],
       ["meetups", 20],
