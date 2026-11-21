@@ -1,0 +1,295 @@
+import type { Logger } from "../log";
+import type { Asker } from "../web/contract";
+
+/**
+ * Client for the agent's voice channel (`agent/channels/companion.ts`).
+ *
+ * In "eve brain" mode the realtime speech model only hears and speaks; every
+ * turn's text goes to the *same* Owy that answers on Slack/Telegram — one
+ * durable eve session per device (memory, follow-ups, tools, staff gating).
+ *
+ *   POST {url}/companion/:deviceId/turns   → { sessionId, streamIndex }
+ *   GET  {url}/companion/sessions/:id/stream?startIndex=N   NDJSON until `session.waiting`
+ *   POST {url}/companion/:deviceId/cancel | /reset
+ */
+
+export interface EveLinkOptions {
+  /** Base URL of the eve app (e.g. http://127.0.0.1:2000 or https://owy.vercel.app). */
+  url: string;
+  /**
+   * The device's OWU API key (OWY_API_KEY), sent to Owy's companion routes: outside `eve dev` they
+   * only take keys the site says may operate Owy (`owy:operate`).
+   */
+  apiKey?: string | null;
+  logger: Logger;
+  fetch?: typeof fetch;
+  /**
+   * Hard cap for one turn (POST + model + tools) before the bridge gives up.
+   * Must fit inside the voice turn's thinking window (30 s), so the device hears
+   * an apology instead of timing out on its own.
+   */
+  turnTimeoutMs?: number;
+}
+
+/** What the bridge already made of a pitch, so eve reacts to it instead of re-doing it. */
+export interface PitchContext {
+  title: string;
+  speaker: string | null;
+  needsTV: boolean;
+  needsWhiteboard: boolean;
+  description: string | null;
+  topics: string[];
+}
+
+export interface EveTurnOptions {
+  staff: boolean;
+  marketplaceOpen: boolean;
+  eventName?: string;
+  /** `pitch`: `text` is the transcript of a pitch whose card already exists; eve answers with a short reaction only. */
+  kind?: "chat" | "pitch";
+  pitch?: PitchContext;
+  /** «Owy, en vivo»: Owy is co-presenting a talk; `slide` is what is on the screen, `asker` who is talking to him. */
+  talk?: { slide: string; asker: Asker } | null;
+  /** Cap for this turn instead of the link's default. */
+  timeoutMs?: number;
+  /** Running text of the assistant message being written (captions). */
+  onDelta?: (text: string) => void;
+  /** A tool the agent is running (UI hint). */
+  onTool?: (toolName: string) => void;
+  signal?: AbortSignal;
+}
+
+export interface EveTurnResult {
+  sessionId: string;
+  /** Final spoken answer (the last completed assistant message). */
+  text: string;
+  /** Interim messages emitted before tool calls, in order. */
+  interim: string[];
+}
+
+interface StreamEvent {
+  type: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * The events that end a turn's stream. eve 0.x (stream v26) and eve 1.0 (v27: one event ends
+ * each item, with an `outcome`) are both read: the bridge keeps working across the agent's
+ * redeploy, whichever side ships first.
+ */
+const TERMINAL = new Set([
+  "session.waiting",
+  "turn.failed",
+  "turn.cancelled",
+  "session.failed",
+  "session.completed",
+  "turn.settled",
+  "session.ended",
+]);
+
+export class EveLink {
+  private readonly fetchImpl: typeof fetch;
+  private readonly log: Logger;
+  private readonly turnTimeoutMs: number;
+  private readonly base: string;
+  private readonly apiKey: string | null;
+
+  constructor(private readonly options: EveLinkOptions) {
+    this.fetchImpl = options.fetch ?? fetch;
+    this.log = options.logger;
+    this.turnTimeoutMs = options.turnTimeoutMs ?? 25_000;
+    this.base = options.url.replace(/\/+$/, "");
+    this.apiKey = options.apiKey ?? null;
+  }
+
+  async turn(deviceId: string, text: string, options: EveTurnOptions): Promise<EveTurnResult> {
+    const started = Date.now();
+    // One deadline for the whole turn, the POST included (a slow POST used to add 20 s on top).
+    const controller = new AbortController();
+    const onAbort = () => controller.abort();
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    const deadline = setTimeout(() => controller.abort(), options.timeoutMs ?? this.turnTimeoutMs);
+
+    try {
+      let result = await this.attempt(deviceId, text, options, controller.signal, started);
+      if (result === "session-full") {
+        // A busy booth never goes quiet for the idle reset, and the agent's per-session token
+        // guardrail then asks for an approval nobody can give by voice: the conversation's
+        // memory is spent, so start a fresh one and ask again (once).
+        this.log.warn(`eve: la sesión de ${deviceId} llegó a su tope de tokens; empiezo una nueva y repito la pregunta`);
+        await this.reset(deviceId);
+        result = await this.attempt(deviceId, text, options, controller.signal, started);
+        if (result === "session-full") throw new Error("eve: también la sesión nueva pide aprobación");
+      }
+      return result;
+    } finally {
+      clearTimeout(deadline);
+      options.signal?.removeEventListener("abort", onAbort);
+      controller.abort();
+    }
+  }
+
+  private async attempt(
+    deviceId: string,
+    text: string,
+    options: EveTurnOptions,
+    signal: AbortSignal,
+    started: number
+  ): Promise<EveTurnResult | "session-full"> {
+    const accepted = (await this.json(
+      `/companion/${encodeURIComponent(deviceId)}/turns`,
+      {
+        text,
+        staff: options.staff,
+        marketplaceOpen: options.marketplaceOpen,
+        eventName: options.eventName,
+        ...(options.kind ? { kind: options.kind } : {}),
+        ...(options.pitch ? { pitch: options.pitch } : {}),
+        ...(options.talk ? { talk: options.talk } : {}),
+      },
+      signal
+    )) as { sessionId: string; streamIndex: number };
+
+    const response = await this.fetchImpl(
+      `${this.base}/companion/sessions/${encodeURIComponent(accepted.sessionId)}/stream?startIndex=${accepted.streamIndex}`,
+      { headers: this.headers(), signal }
+    );
+    if (!response.ok || !response.body) throw new Error(`eve stream ${response.status}`);
+
+    const result: EveTurnResult = { sessionId: accepted.sessionId, text: "", interim: [] };
+    let current = "";
+    // v27: text arrives per content part (a part per message), its kind announced by its first delta.
+    const parts = new Map<string, { kind: string; text: string }>();
+    const replies: string[] = [];
+    for await (const event of ndjson(response.body)) {
+      const data = event.data ?? {};
+      switch (event.type) {
+        case "content.delta": {
+          const id = String(data.partId ?? "");
+          const part = parts.get(id) ?? { kind: String(data.kind ?? "text"), text: "" };
+          part.text += String(data.delta ?? "");
+          parts.set(id, part);
+          if (part.kind === "text") options.onDelta?.(part.text);
+          break;
+        }
+        case "content.completed": {
+          if (data.kind !== "text") break;
+          const value = (typeof data.value === "string" ? data.value : parts.get(String(data.partId))?.text ?? "").trim();
+          if (!value) break;
+          if (data.phase === "reply") replies.push(value);
+          else result.interim.push(value);
+          break;
+        }
+        case "call.requested": {
+          const name = (data.capability as { name?: string } | undefined)?.name;
+          if (name) options.onTool?.(name);
+          break;
+        }
+        case "interaction.opened": {
+          if ((data.request as { kind?: string } | undefined)?.kind === "budget") return "session-full";
+          this.log.warn("eve asked for human input during a voice turn; cancelling");
+          void this.cancel(deviceId);
+          result.text ||= "Eso necesita una confirmación que no puedo pedir por acá; pedíselo al staff en Slack.";
+          return result;
+        }
+        case "session.ended":
+        case "turn.settled":
+          if (data.outcome === "failed") {
+            const error = data.error as { message?: string; code?: string } | undefined;
+            throw new Error(`eve turn failed: ${String(error?.message ?? error?.code ?? event.type)}`);
+          }
+          break;
+        case "message.appended":
+          current += String(data.messageDelta ?? "");
+          options.onDelta?.(current);
+          break;
+        case "message.completed": {
+          const message = typeof data.message === "string" ? data.message : current;
+          current = "";
+          if (data.finishReason === "tool-calls") {
+            if (message.trim()) result.interim.push(message.trim());
+          } else if (message.trim()) {
+            result.text = message.trim();
+          }
+          break;
+        }
+        case "actions.requested":
+          for (const action of (data.actions as { toolName?: string }[] | undefined) ?? []) {
+            if (action.toolName) options.onTool?.(action.toolName);
+          }
+          break;
+        case "input.requested":
+          if (((data.requests as { kind?: string }[] | undefined) ?? []).some((r) => r.kind === "session-limit"))
+            return "session-full";
+          // Voice cannot render buttons; unpark the session and answer for it.
+          this.log.warn("eve asked for human input during a voice turn; cancelling");
+          void this.cancel(deviceId);
+          result.text ||= "Eso necesita una confirmación que no puedo pedir por acá; pedíselo al staff en Slack.";
+          return result;
+        case "turn.failed":
+        case "session.failed":
+          throw new Error(`eve turn failed: ${String(data.message ?? data.code ?? event.type)}`);
+      }
+      if (TERMINAL.has(event.type)) break;
+    }
+    if (replies.length) result.text = replies.join(" ");
+    if (!result.text && result.interim.length) result.text = result.interim[result.interim.length - 1];
+    this.log.info(`eve turn ${accepted.sessionId} done in ${Date.now() - started} ms`);
+    return result;
+  }
+
+  async cancel(deviceId: string): Promise<void> {
+    await this.json(`/companion/${encodeURIComponent(deviceId)}/cancel`, {}).catch((error) => {
+      this.log.warn("eve cancel failed", error);
+    });
+  }
+
+  /** Retires the device's conversation: the next turn starts a fresh session. */
+  async reset(deviceId: string): Promise<void> {
+    await this.json(`/companion/${encodeURIComponent(deviceId)}/reset`, {}).catch((error) => {
+      this.log.warn("eve reset failed", error);
+    });
+  }
+
+  private headers(): Record<string, string> {
+    return this.apiKey ? { "x-api-key": this.apiKey } : {};
+  }
+
+  private async json(path: string, body: unknown, signal?: AbortSignal): Promise<unknown> {
+    const timeout = AbortSignal.timeout(10_000);
+    const response = await this.fetchImpl(`${this.base}${path}`, {
+      method: "POST",
+      headers: { ...this.headers(), "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    });
+    if (!response.ok) throw new Error(`eve ${path} → ${response.status} ${(await response.text()).slice(0, 200)}`);
+    return response.json();
+  }
+}
+
+async function* ndjson(body: ReadableStream<Uint8Array>): AsyncGenerator<StreamEvent> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newline: number;
+      while ((newline = buffer.indexOf("\n")) >= 0) {
+        const line = buffer.slice(0, newline).trim();
+        buffer = buffer.slice(newline + 1);
+        if (!line) continue;
+        try {
+          yield JSON.parse(line) as StreamEvent;
+        } catch {
+          // transport control records or partial garbage: ignore
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

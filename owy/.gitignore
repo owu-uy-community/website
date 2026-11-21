@@ -11,3 +11,8 @@ node_modules/
 # env
 .env
 .env*.local
+
+# companion (owy/companion)
+companion/firmware/.esphome/
+companion/firmware/secrets.yaml
+companion/bridge/logs/

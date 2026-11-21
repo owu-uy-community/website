@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import { toast } from "../components/shared/ui/toast-utils";
 import { orpc, type StickyNote } from "../lib/orpc";
+import { settleCreatedCard } from "./board-cache";
 import { useSupabaseSync } from "./useSupabaseSync";
 
 interface UseOpenSpaceNotesOptions {
@@ -35,17 +36,11 @@ export const useOpenSpaceNotesORPC = ({
   const queryClient = useQueryClient();
 
   // Realtime sync (multi-device) over the WebSocket transport
-  const {
-    broadcastCardUpdate,
-    broadcastCardSwap,
-    broadcastCardCreate,
-    broadcastCardDelete,
-    isConnected,
-    recentlyUpdatedIds,
-  } = useSupabaseSync({
-    openSpaceId,
-    enabled: enableRealtime,
-  });
+  const { broadcastCardUpdate, broadcastCardCreate, broadcastCardDelete, isConnected, recentlyUpdatedIds } =
+    useSupabaseSync({
+      openSpaceId,
+      enabled: enableRealtime,
+    });
 
   // Query for fetching all sticky notes
   const {
@@ -125,11 +120,11 @@ export const useOpenSpaceNotesORPC = ({
         // No toast here: the talk form surfaces create errors inline.
       },
       onSuccess: async (createdNote, _variables, context) => {
-        // Swap the temp id for the real row so the card doesn't remount.
+        // Swap the temp id for the real row so the card doesn't remount. The server's own
+        // CARD_CREATE may have landed first and taken the temp card's place already.
         queryClient.setQueryData<StickyNote[]>(listKey(), (oldNotes = []) =>
-          oldNotes.map((note) => (note.id === context?.optimisticId ? createdNote : note))
+          settleCreatedCard(oldNotes, createdNote, context?.optimisticId)
         );
-        toast.success("Charla creada", `"${createdNote.title}" ya está en la grilla.`);
         await broadcastCardCreate(createdNote);
       },
     })
@@ -161,6 +156,33 @@ export const useOpenSpaceNotesORPC = ({
     })
   );
 
+  /**
+   * "Deshacer" on a delete: the same talk comes back in the same place (with a
+   * new id). The resource check was already passed once, so it is skipped. If
+   * someone took the place meanwhile, the server's CONFLICT names who.
+   */
+  const restoreNote = async (note: StickyNote) => {
+    try {
+      const restored = await createNoteMutation.mutateAsync({
+        title: note.title,
+        speaker: note.speaker,
+        description: note.description,
+        needsTV: note.needsTV,
+        needsWhiteboard: note.needsWhiteboard,
+        openSpaceId: note.openSpaceId,
+        scheduleId: note.scheduleId,
+        roomId: note.roomId,
+        room: note.room,
+        timeSlot: note.timeSlot,
+        skipResourceValidation: true,
+        origin: "undo",
+      });
+      toast.success("Charla restaurada", `"${restored.title}" volvió a la grilla.`);
+    } catch (error) {
+      showErrorToast("No se pudo restaurar la charla", error);
+    }
+  };
+
   // Delete mutation with optimistic updates
   const deleteNoteMutation = useMutation(
     orpc.tracks.delete.mutationOptions({
@@ -181,7 +203,12 @@ export const useOpenSpaceNotesORPC = ({
         showErrorToast("No se pudo eliminar la charla", error);
       },
       onSuccess: async (deletedNote) => {
-        toast.success("Charla eliminada", `"${deletedNote.title}" fue eliminada.`);
+        toast.success({
+          title: "Charla eliminada",
+          description: `"${deletedNote.title}" salió de la grilla.`,
+          duration: 8000,
+          action: { label: "Deshacer", onClick: () => void restoreNote(deletedNote) },
+        });
         await broadcastCardDelete(deletedNote.id);
       },
     })
@@ -225,9 +252,6 @@ export const useOpenSpaceNotesORPC = ({
         rollbackAndResync(context?.previousNotes);
         showErrorToast("No se pudo intercambiar las charlas", error);
       },
-      onSuccess: async (_swappedNotes, variables) => {
-        await broadcastCardSwap(variables.trackAId, variables.trackBId);
-      },
     })
   );
 
@@ -235,7 +259,12 @@ export const useOpenSpaceNotesORPC = ({
    * Create a new sticky note
    */
   const createNote = useCallback(
-    (noteData: Omit<StickyNote, "id" | "createdAt" | "updatedAt">) => createNoteMutation.mutateAsync(noteData),
+    async (noteData: Omit<StickyNote, "id" | "createdAt" | "updatedAt">) => {
+      const created = await createNoteMutation.mutateAsync(noteData);
+      toast.success("Charla creada", `"${created.title}" ya está en la grilla.`);
+
+      return created;
+    },
     [createNoteMutation]
   );
 

@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 

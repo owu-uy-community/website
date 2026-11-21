@@ -19,7 +19,7 @@ export default function TicketHome({ sponsors }: TicketHomeProps) {
   const { isReleased, releaseDate: uruguayReleaseDate, ticketUrl } = useTicketRelease();
 
   const desktopTicket = (
-    <div className="flex-0 mx-auto flex max-w-[550px] items-center justify-center">
+    <div className="mx-auto flex max-w-[550px] flex-0 items-center justify-center">
       <Container3D>
         <Ticket sponsors={sponsors} releaseDate={uruguayReleaseDate} ticketUrl={ticketUrl} />
       </Container3D>

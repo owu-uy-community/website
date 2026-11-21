@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import type React from "react";
 import { notFound } from "next/navigation";
 
-import { getCommunityBySlug } from "lib/tenant-server";
+import { AppProviders } from "components/providers/AppProviders";
+import { publicCommunity } from "lib/tenant-server";
 
 export async function generateMetadata({ params }: { params: Promise<{ communitySlug: string }> }): Promise<Metadata> {
   const { communitySlug } = await params;
-  const community = await getCommunityBySlug(communitySlug);
+  const community = await publicCommunity(communitySlug);
 
   return {
     title: community ? `${community.name} | owu.uy` : "Comunidad",
@@ -22,11 +23,12 @@ export default async function CommunityLayout({
   params: Promise<{ communitySlug: string }>;
 }) {
   const { communitySlug } = await params;
-  const community = await getCommunityBySlug(communitySlug);
+  const community = await publicCommunity(communitySlug);
 
   if (!community || !community.isActive) {
     notFound();
   }
 
-  return children;
+  // Follow buttons, RSVPs, tickets, surveys and the open-space screens all use React Query
+  return <AppProviders>{children}</AppProviders>;
 }

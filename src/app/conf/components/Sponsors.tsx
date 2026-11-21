@@ -1,5 +1,7 @@
 import { CONF_DATES, INTERNAL_ROUTES } from "app/lib/constants";
 
+import { confUtm } from "../utm";
+
 import Countdown from "./Countdown";
 import PillLink from "./PillLink";
 import Reveal from "./Reveal";
@@ -15,30 +17,43 @@ type Sponsor = {
 
 /* CONFIRMED sponsors only for OWU CONF 2026 (also feeds the hero carousel) */
 export const SPONSORS_2026: Sponsor[] = [
+  { name: "Conveyor Now", logo: "/images/conf/sponsors/conveyornow.svg", website: "https://conveyornow.com/" },
   { name: "Crunchloop", logo: "/images/conf/sponsors/crunchloop.svg", website: "https://www.crunchloop.io/" },
   { name: "Estudio Hahn", logo: "/images/conf/sponsors/han.svg", website: "https://estudiohahn.com/" },
+  { name: "KleverTax", logo: "/images/conf/sponsors/klevertax.svg", website: "https://klevertax.com/" },
   { name: "Mimiquate", logo: "/images/conf/sponsors/mimiquate.svg", website: "https://www.mimiquate.com/" },
   { name: "Neocoast", logo: "/images/conf/sponsors/neocoast.svg", website: "https://www.neocoast.com/" },
   { name: "Nexchange", logo: "/images/conf/sponsors/nexchange.svg", website: "https://www.nex-change.com/" },
+  { name: "OrangeLoops", logo: "/images/conf/sponsors/orangeloops.svg", website: "https://orangeloops.com/" },
   { name: "RevenueCat", logo: "/images/conf/sponsors/revenuecat.svg", website: "https://www.revenuecat.com/" },
   { name: "Segalerba", logo: "/images/conf/sponsors/segalerba.svg", website: "https://segalerba.com.uy/" },
   { name: "Sentry", logo: "/images/conf/sponsors/sentry.svg", website: "https://sentry.io/" },
   { name: "Streaver", logo: "/images/conf/sponsors/streaver.svg", website: "https://www.streaver.com/" },
   { name: "Trupropel", logo: "/images/conf/sponsors/trupropel.svg", website: "https://www.trupropel.com/" },
+  { name: "Tryolabs", logo: "/images/conf/sponsors/tryolabs.svg", website: "https://tryolabs.com/" },
+  { name: "Universidad de Montevideo", logo: "/images/conf/sponsors/um.svg", website: "https://www.um.edu.uy/" },
+  {
+    name: "Universidad ORT Uruguay",
+    logo: "/images/conf/sponsors/ort.webp",
+    website: "https://www.ort.edu.uy/",
+    sizeClassName: "max-h-[76px] max-w-[min(180px,100%)]",
+  },
   { name: "WyeWorks", logo: "/images/conf/sponsors/wyeworks.svg", website: "https://www.wyeworks.com/" },
   { name: "Xmartlabs", logo: "/images/conf/sponsors/xmartlabs.svg", website: "https://xmartlabs.com/" },
 ];
 
 export default function Sponsors() {
+  // The copy follows the deadline (the countdown alone would keep saying "we accept" next to "closed")
+  const isOpen = Date.now() < Date.parse(CONF_DATES.sponsorsDeadline);
+
   return (
     <section className="mx-auto mt-16 w-full max-w-[1440px] scroll-mt-24 px-8 sm:mt-[96px]" id="sponsors">
       <SectionHeader eyebrow="EMPRESAS" title="SPONSORS" />
 
       <div className="mt-8 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
         <Reveal delay={0.12} y={22}>
-          <p className="max-w-[640px] text-pretty text-lg leading-relaxed text-[#FBF5E7]/90">
-            OWU CONF es posible gracias a las empresas que impulsan los eventos de la comunidad. ¿Querés sumar la
-            tuya?
+          <p className="max-w-[640px] text-lg leading-relaxed text-pretty text-[#FBF5E7]/90">
+            OWU CONF es posible gracias a las empresas que impulsan los eventos de la comunidad. ¿Querés sumar la tuya?
           </p>
         </Reveal>
         <Reveal className="shrink-0 max-sm:text-center" delay={0.25} y={18}>
@@ -49,11 +64,11 @@ export default function Sponsors() {
       <Reveal delay={0.15} y={20}>
         <div className="mt-12 flex flex-col gap-8 border-2 border-[#FBF5E7]/15 p-5 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="font-display text-xs font-semibold uppercase leading-none tracking-[0.18em] text-[#FBF5E7]/60">
-              Aceptamos postulaciones
+            <p className="font-display text-xs leading-none font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
+              {isOpen ? "Aceptamos postulaciones" : "Convocatoria 2026"}
             </p>
-            <p className="mt-3 text-balance font-display text-2xl font-extrabold uppercase leading-none tracking-[-0.02em] text-[#F5BB03] sm:text-3xl">
-              Hasta el 15 de septiembre
+            <p className="mt-3 font-display text-2xl leading-none font-extrabold tracking-[-0.02em] text-balance text-[#F5BB03] uppercase sm:text-3xl">
+              {isOpen ? "Hasta el 15 de septiembre" : "Cerró el 15 de septiembre"}
             </p>
           </div>
           <Countdown
@@ -66,7 +81,7 @@ export default function Sponsors() {
       </Reveal>
 
       <Reveal delay={0.1} y={16}>
-        <p className="mt-14 font-display text-xs font-semibold uppercase tracking-[0.18em] text-[#FBF5E7]/60">
+        <p className="mt-14 font-display text-xs font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
           Nos acompañan en 2026
         </p>
       </Reveal>
@@ -76,7 +91,7 @@ export default function Sponsors() {
             <Reveal amount={0.4} delay={0.12 + i * 0.07} scale={0.8} y={18}>
               <a
                 className="group flex h-[96px] items-center justify-center transition-transform hover:-translate-y-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-                href={website}
+                href={confUtm(website, "sponsors-grid")}
                 rel="noopener"
                 target="_blank"
                 title={name}
@@ -104,7 +119,7 @@ export default function Sponsors() {
         <Reveal amount={0.4} delay={0.1} y={24}>
           <a
             className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-            href="https://www.gub.uy/ministerio-educacion-cultura"
+            href={confUtm("https://www.gub.uy/ministerio-educacion-cultura", "institutional-support")}
             rel="noopener"
             target="_blank"
           >
@@ -119,7 +134,7 @@ export default function Sponsors() {
         <Reveal amount={0.4} delay={0.22} y={24}>
           <a
             className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-            href="https://www.anii.org.uy/"
+            href={confUtm("https://www.anii.org.uy/", "institutional-support")}
             rel="noopener"
             target="_blank"
           >

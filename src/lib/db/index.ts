@@ -1,5 +1,6 @@
 import { attachDatabasePool } from "@vercel/functions";
-import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
+import { drizzle, type NodePgDatabase, type NodePgQueryResultHKT } from "drizzle-orm/node-postgres";
+import type { PgDatabase } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
 import * as relations from "./relations";
 import * as schema from "./schema";
@@ -7,10 +8,13 @@ import * as schema from "./schema";
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("POSTGRES_URL or DATABASE_URL environment variable must be set");
+  throw new Error("DATABASE_URL environment variable must be set");
 }
 
 const fullSchema = { ...schema, ...relations };
+
+/** The app database or a transaction on it: anything a query can run against. */
+export type Db = PgDatabase<NodePgQueryResultHKT, typeof fullSchema>;
 
 // Reuse the pool and client in development to prevent too many connections
 const globalForDb = globalThis as unknown as {

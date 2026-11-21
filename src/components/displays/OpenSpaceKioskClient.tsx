@@ -68,6 +68,7 @@ export default function OpenSpaceKioskClient({
     rooms,
     roomColors,
     roomIcons,
+    roomsByName,
     timeSlots,
     schedulesData,
     isLoading: setupLoading,
@@ -75,6 +76,7 @@ export default function OpenSpaceKioskClient({
     initialRooms,
     initialSchedules,
     refetchInterval: 60_000,
+    hideInactiveRooms: true,
   });
 
   // Star/slot changes broadcast on the highlights channel — pick them up live.
@@ -128,7 +130,7 @@ export default function OpenSpaceKioskClient({
     <div ref={screenRef} className="relative h-screen w-full overflow-hidden bg-black">
       {fullscreenSupported ? (
         <FullscreenButton
-          className={`absolute bottom-3 right-3 z-20 bg-black/60 backdrop-blur transition-opacity duration-500 focus-visible:opacity-100 ${
+          className={`absolute right-3 bottom-3 z-20 bg-black/60 backdrop-blur transition-opacity duration-500 focus-visible:opacity-100 ${
             pointerIdle ? "opacity-0" : "opacity-100"
           }`}
           isFullscreen={isFullscreen}
@@ -144,6 +146,7 @@ export default function OpenSpaceKioskClient({
           roomColors={roomColors}
           roomIcons={roomIcons}
           rooms={rooms}
+          roomsByName={roomsByName}
           schedulesData={schedulesData}
           timeSlots={timeSlots}
         />

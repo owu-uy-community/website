@@ -16,14 +16,14 @@ export default defineTool({
     needsTV: z.boolean().optional().describe("La charla necesita TV/proyector"),
     needsWhiteboard: z.boolean().optional().describe("La charla necesita pizarra"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("program:manage"),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
     const board = await getBoard();
     const room = findRoom(board, input.room);
     const schedule = findSchedule(board, input.timeSlot);
 
-    const created = await owuApi().tracks.create({
+    const created = await owuApi(ctx).tracks.create({
       title: input.title,
       speaker: input.speaker,
       description: input.description,

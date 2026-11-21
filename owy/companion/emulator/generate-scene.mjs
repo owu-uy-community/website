@@ -1,0 +1,125 @@
+// Pinned ESPHome output is the scene compiler. Export only allowlisted LVGL
+// construction and font data; NEVER copy main.cpp or secrets. OWY_SCENE_SRC
+// names an already generated src/ dir (a build made elsewhere, e.g. with dummy
+// secrets) and skips the esphome call.
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import assert from "node:assert/strict";
+const base = new URL("../", import.meta.url);
+const generated = new URL("generated/", import.meta.url);
+const build = process.env.OWY_SCENE_SRC
+  ? new URL(process.env.OWY_SCENE_SRC.replace(/\/?$/, "/"), "file://")
+  : new URL(".eve/esphome-build/owy-knob/src/", base);
+const read = (name) => readFileSync(new URL(name, build), "utf8");
+const hash = (s) => createHash("sha256").update(s).digest("hex");
+// Never stamp current YAML hashes onto a stale generated scene. Compiler output
+// may contain credentials, so keep all of it local and out of error messages.
+if (!process.env.OWY_SCENE_SRC) {
+  const fresh = spawnSync("esphome", ["compile", "--only-generate", "owy-knob.yaml"], {
+    cwd: fileURLToPath(new URL("firmware/", base)),
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  assert(
+    fresh.status === 0,
+    "ESPHome source generation failed. Run it locally in firmware/ for diagnostics; no compiler output is exported."
+  );
+}
+const main = read("main.cpp");
+assert(read("esphome/core/version.h").includes("2026.8.2"), "Scene compiler must be ESPHome 2026.8.2");
+const start = main.indexOf("  new(companion_control) lv_style_t();");
+const end = main.indexOf("  new(triggerlv_obj_tlv_point_tlv_event_t_id)", start);
+assert(start > 0 && end > start, "Unknown scene boundaries: review new ESPHome generator");
+const raw = main.slice(start, end);
+assert(!/secret|password|staff_pin|api_key|wifi|noise_psk/i.test(raw));
+let scene = raw.replace(/^\s*#line[^\n]*\n/gm, "").replaceAll("->obj", "");
+scene = scene.replace(/new\((\w+)\) LvPageType\(false\);/g, "$1 = lv_obj_create(nullptr);");
+scene = scene.replace(/^\s*ui->(?:add_page|set_page_wrap)\([^\n]+\n/gm, "");
+scene = scene
+  .replaceAll("ui->get_screen_active()", "lv_screen_active()")
+  .replaceAll("ui->get_disp()", "lv_display_get_default()");
+scene = scene.replace(/new\((\w+)\) Lv(?:Line|ButtonMatrix)Type\(\);/g, "");
+scene = scene.replace(/(\w+)->set_obj\((lv_\w+\([^;]+)\);/g, "$1 = $2;");
+scene = scene.replace(
+  /(\w+)->set_points\((\{[^;]+)\);/g,
+  "static const lv_point_precise_t $1_points[] = $2; lv_line_set_points($1, $1_points, 2);"
+);
+// Styles become Scene members (see the header below); their placement-new goes.
+const styles = [...raw.matchAll(/new\((\w+)\) lv_style_t\(\);/g)].map((m) => m[1]);
+assert(styles[0] === "companion_control", "companion_control must stay the first style (scene start anchor)");
+scene = scene.replace(/new\((\w+)\) lv_style_t\(\);/g, "");
+scene = scene.replace(/^\s*pin_k\w* = \d+;\n/gm, "");
+// Fail closed if a new wrapper or side effect enters the construction block.
+assert(!scene.includes("->") && !scene.includes("new("));
+for (const line of scene
+  .split("\n")
+  .map((l) => l.trim())
+  .filter(Boolean)) {
+  assert(/^(lv_|\w+ = lv_|static const |[{}])/.test(line), `Unreviewed scene statement: ${line.slice(0, 100)}`);
+}
+const ids = [...scene.matchAll(/\b(\w+) = lv_\w+_create\(/g)].map((m) => m[1]);
+const pages = ids.filter((id) => id.endsWith("_page"));
+// face · card · qr · text · pin · settings · quick · help · convo (the knob's answer view)
+assert.equal(pages.length, 9);
+const fonts = ["font_brand", "font_brand_xl", "font_20", "font_small", "font_title", "font_28_bold", "font_40_bold", "font_icons"];
+let data =
+  '#pragma once\n// Generated bitmap data only. Montserrat, Material Symbols: OFL/Apache-2.0; Organic Stencil: repository asset.\n#include "../font_adapter.h"\n';
+const fontInit = [];
+for (const name of fonts) {
+  const args = main.match(new RegExp(`new\\(${name}\\) font::Font\\(([^;]+)\\);`))?.[1];
+  assert(args, `Missing ${name}`);
+  const glyphName = args.split(",")[0];
+  const glyphs = main.match(new RegExp(`static const font::Glyph ${glyphName}\\[\\] = (\\{[^;]+);`))?.[1];
+  assert(glyphs);
+  const bitmap = glyphs.match(/\((uint8_t_id(?:_\d+)?) \+/)?.[1];
+  assert(bitmap);
+  const declaration = main.match(
+    new RegExp(`(?:static )?const(?:expr)? uint8_t ${bitmap}\\[\\](?: PROGMEM)? = (\\{[^;]+);`)
+  )?.[1];
+  assert(declaration, `Missing bitmap ${bitmap}`);
+  assert(/^\{[\s,0-9A-Fa-fx]+\}$/.test(declaration), "Only literal bytes may leave firmware");
+  data += `static const uint8_t ${bitmap}[] = ${declaration};\nstatic const font::Glyph ${glyphName}[] = ${glyphs};\n`;
+  fontInit.push(
+    `static font::Font ${name}_storage(${args});\nconst lv_font_t *${name} = ${name}_storage.get_lv_font();`
+  );
+}
+data += fontInit.join("\n") + "\n";
+const header = `#pragma once\n// Generated by ESPHome 2026.8.2, mechanically adapted for portable LVGL 9.5.\n#include "fonts.generated.h"\nnamespace owy {\nstruct Scene {\n${[...new Set(ids)].map((id) => `lv_obj_t *${id}{};`).join("\n")}\n${styles.map((id) => `lv_style_t ${id}_storage{};\nlv_style_t *${id}=&${id}_storage;\n`).join("")}void create() {\n${scene}\n}\nlv_obj_t *find(const char *name) {\n${[...new Set(ids)].map((id) => `if (!strcmp(name,"${id}")) return ${id};`).join("\n")}\nreturn nullptr;\n}\n};\n}\n`;
+const sourceHashes = {};
+for (const path of [
+  "companion_model.h",
+  "companion_lvgl.h",
+  "packages/face.yaml",
+  "packages/companion.yaml",
+  "packages/controls.yaml",
+  "packages/boards/knob18.yaml",
+])
+  sourceHashes[path] = hash(readFileSync(new URL(`firmware/${path}`, base)));
+const manifest = {
+  schema: 1,
+  width: 360,
+  height: 360,
+  color: "RGB565",
+  esphome: "2026.8.2",
+  lvgl: "9.5.0",
+  emscripten: "6.0.9",
+  pages,
+  objects: ids.length,
+  sceneHash: hash(raw),
+  fontsHash: hash(data),
+  sourceHashes,
+};
+manifest.version = hash(JSON.stringify(manifest)).slice(0, 16);
+mkdirSync(generated, { recursive: true });
+writeFileSync(new URL("scene.generated.h", generated), header);
+writeFileSync(new URL("fonts.generated.h", generated), data);
+let conf = read("lv_conf.h").replace("LV_STDLIB_CUSTOM", "LV_STDLIB_CLIB");
+conf = "#define LV_CONF_H\n#include <stdlib.h>\n#define LV_ASSERT_HANDLER abort();\n#define LV_LOG_PRINTF 1\n" + conf;
+conf = conf.replace("#define LV_COLOR_16_SWAP 1", "#define LV_COLOR_16_SWAP 0");
+writeFileSync(new URL("lv_conf.h", generated), conf);
+writeFileSync(new URL("manifest.json", generated), JSON.stringify(manifest, null, 2) + "\n");
+console.log(
+  `Exported ${pages.length} pages, ${ids.length} objects, ${fonts.length} exact font bitmaps. Version ${manifest.version}. No device configuration exported.`
+);

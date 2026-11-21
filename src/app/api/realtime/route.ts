@@ -1,8 +1,9 @@
 import { experimental_upgradeWebSocket } from "@vercel/functions";
 import { headers } from "next/headers";
 
-import { auth } from "app/lib/auth";
-import { hub } from "lib/realtime/hub";
+import { principalFromRequest } from "app/lib/auth-helpers";
+import { can } from "lib/authz/principal";
+import { cachedLookup, hub } from "lib/realtime/hub";
 
 // WebSocket connections should live as long as the platform allows.
 export const maxDuration = 300;
@@ -39,18 +40,15 @@ export async function GET() {
     return new Response("Forbidden", { status: 403 });
   }
 
-  // The upgrade request carries cookies like any GET: resolve the session to
-  // decide publish rights. Public displays (kiosk/countdown) subscribe without one.
-  let canPublish = false;
-  try {
-    const session = await auth.api.getSession({ headers: requestHeaders });
-    // @ts-expect-error - role comes from Better Auth additionalFields; its types don't carry it
-    canPublish = session?.user?.role === "admin";
-  } catch {
-    canPublish = false;
-  }
+  // The upgrade request carries cookies like any GET (or the companion bridge's `x-api-key`).
+  // Publishing and private channels take a permission per channel (see channelPermission), asked of
+  // whoever is behind the socket, looked up again at most every 30 s while it lives (ahead of time,
+  // on a publisher's heartbeat), so a role taken away or a revoked session stops it too. Public
+  // displays subscribe without a session.
+  const captured = new Headers(requestHeaders);
+  const principal = cachedLookup(() => principalFromRequest(captured));
 
   return experimental_upgradeWebSocket((ws) => {
-    hub.attach(ws, { canPublish });
+    hub.attach(ws, { can: async (permission) => can(await principal(), permission) });
   });
 }

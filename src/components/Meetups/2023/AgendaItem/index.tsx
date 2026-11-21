@@ -18,7 +18,7 @@ export default function AgendaItem({ title, startTime, endTime, description }: A
         })}
       </span>
       <div className="flex w-full flex-col justify-center">
-        <strong className="overflow-hidden break-words text-left text-base font-bold leading-tight text-yellow-400">
+        <strong className="overflow-hidden text-left text-base leading-tight font-bold break-words text-yellow-400">
           {title}
         </strong>
         <span className="text-sm text-white">{description}</span>

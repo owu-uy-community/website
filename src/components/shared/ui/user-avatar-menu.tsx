@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ShieldCheck, LogOut } from "lucide-react";
+import { CalendarDays, LogOut, ShieldCheck, Ticket } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -14,7 +14,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "components/shared/ui/avatar";
 import { Button } from "components/shared/ui/button";
 import { INTERNAL_ROUTES } from "app/lib/constants";
-import { getGravatarUrl } from "lib/gravatar";
+import { ORGANIZAR_ON } from "lib/community/flags";
+import { gravatarUrl } from "lib/gravatar";
 
 interface UserAvatarMenuProps {
   user: {
@@ -36,7 +37,15 @@ export function UserAvatarMenu({
   const initials = user.name?.charAt(0) ?? user.email?.charAt(0) ?? "U";
 
   // Use Gravatar if user has email, fallback to provided image or default
-  const avatarUrl = user.email ? getGravatarUrl(user.email, 200, "identicon") : (user.image ?? "");
+  const [avatarUrl, setAvatarUrl] = React.useState(user.email ? "" : (user.image ?? ""));
+
+  React.useEffect(() => {
+    // Web Crypto only exists in secure contexts; elsewhere the initials stay
+    if (user.email)
+      gravatarUrl(user.email)
+        .then(setAvatarUrl)
+        .catch(() => {});
+  }, [user.email]);
 
   return (
     <DropdownMenu>
@@ -67,6 +76,23 @@ export function UserAvatarMenu({
             Comunidad
           </Link>
         </DropdownMenuItem> */}
+
+        {ORGANIZAR_ON ? (
+          <>
+            <DropdownMenuItem className="cursor-pointer" asChild>
+              <Link href="/mis-eventos">
+                <Ticket size={16} className="mr-2" />
+                Mis eventos
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" asChild>
+              <Link href="/organizar/panel">
+                <CalendarDays size={16} className="mr-2" />
+                Organizá
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
 
         {showAdminSettings && (
           <DropdownMenuItem className="cursor-pointer" asChild>

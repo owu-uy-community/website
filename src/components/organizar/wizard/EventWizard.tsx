@@ -1,0 +1,737 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { FaLinkedin, FaWhatsapp } from "react-icons/fa";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Check,
+  CircleAlert,
+  Copy,
+  ExternalLink,
+  Eye,
+  LayoutDashboard,
+  MapPin,
+  Rocket,
+  Ticket,
+} from "lucide-react";
+
+import { cn } from "app/lib/utils";
+import { Notice } from "components/Admin/panel";
+import { HeaderActions } from "components/Admin/shell/HeaderActions";
+import { KeyHint, useShortcuts } from "components/Admin/shell/shortcuts";
+import { MicroLabel, PageContainer, PageHeader } from "components/Admin/ui/page";
+import { ErrorState } from "components/Admin/ui/states";
+import { QrCode } from "components/Admin/comms/QrCode";
+import { isTransient } from "components/Admin/attendees/scan-queue";
+import { ScrollCue } from "components/Admin/ui/scroll-cue";
+import { RelativeTime } from "components/Admin/ui/time";
+import { Badge } from "components/shared/ui/badge";
+import { Button } from "components/shared/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "components/shared/ui/dialog";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "components/shared/ui/sheet";
+import { useSidebar } from "components/shared/ui/sidebar";
+import { Skeleton } from "components/shared/ui/skeleton";
+import { copyText } from "components/shared/ui/copy-text";
+import { toast } from "components/shared/ui/toast-utils";
+import { shortWhen } from "lib/community/time";
+import { plural } from "lib/organizar/words";
+import { orpc } from "lib/orpc/client";
+import { DraftPatchSchema, type DraftPatch, type EditableEvent } from "lib/orpc/events/schemas";
+import { isStep, issues, STEPS, stepState, UNTITLED, type StepKey } from "lib/organizar/steps";
+
+import type { CalendarCommunity } from "../calendar/CalendarClient";
+import {
+  StepDatos,
+  StepDifusion,
+  StepFecha,
+  StepInscripcion,
+  StepLugar,
+  StepRevisar,
+  StepTipo,
+  type DraftChange,
+  type Notified,
+  type StepProps,
+} from "./WizardSteps";
+
+/** What autosave watches and sends; the rest (dates, status, venue) changes through actions. */
+const EDITABLE = [
+  "name",
+  "summary",
+  "description",
+  "format",
+  "topics",
+  "mode",
+  "placeName",
+  "placeAddress",
+  "venueMapUrl",
+  "onlineUrl",
+  "registration",
+  "registrationUrl",
+  "approval",
+  "capacity",
+  "waitlist",
+  "guestsAllowed",
+  "rsvpClosesAt",
+  "questions",
+  "volunteerRoles",
+  "externalLinks",
+  "sizeBucket",
+  "needs",
+  "talks",
+  "announcement",
+  "reminderNote",
+] as const satisfies readonly (keyof EditableEvent & keyof DraftPatch)[];
+
+type Editable = (typeof EDITABLE)[number];
+type Errors = Partial<Record<keyof EditableEvent, string>>;
+
+const pickEditable = (event: EditableEvent) =>
+  Object.fromEntries(EDITABLE.map((key) => [key, event[key]])) as Pick<EditableEvent, Editable>;
+
+/** What changed since the last save, split into what's valid to send and what the person must fix. */
+function diff(current: EditableEvent, saved: EditableEvent) {
+  const patch: Record<string, unknown> = {};
+  const invalid: Errors = {};
+  for (const key of EDITABLE) {
+    if (JSON.stringify(current[key]) === JSON.stringify(saved[key])) continue;
+    const checked = DraftPatchSchema.shape[key].safeParse(current[key]);
+    // " Python " saves as "Python": once it did, a trailing space isn't a change to send again
+    if (checked.success && JSON.stringify(checked.data) === JSON.stringify(saved[key])) continue;
+    if (checked.success) patch[key] = checked.data;
+    else invalid[key] = checked.error.issues[0]?.message ?? "Revisá este campo";
+  }
+
+  return { patch: patch as DraftPatch, invalid };
+}
+
+const STEP_BODY: Record<Exclude<StepKey, "revisar">, (props: StepProps) => React.ReactNode> = {
+  tipo: StepTipo,
+  datos: StepDatos,
+  fecha: StepFecha,
+  espacio: StepLugar,
+  inscripcion: StepInscripcion,
+  difusion: StepDifusion,
+};
+
+/** The event wizard: seven steps, saved as you go, published when nothing required is missing. */
+export function EventWizard({
+  community,
+  eventId,
+  today,
+}: {
+  community: CalendarCommunity;
+  eventId: string;
+  today: string;
+}) {
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const base = `/organizar/panel/${community.slug}`;
+  const input = { communityId: community.id, eventId };
+
+  const event = useQuery(orpc.events.get.queryOptions({ input, refetchOnWindowFocus: false }));
+  const [draft, setDraft] = useState<EditableEvent | null>(null);
+  const saved = useRef<EditableEvent | null>(null);
+  const latest = useRef<EditableEvent | null>(null);
+  latest.current = draft;
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "stale">("idle");
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Errors>({});
+  const [published, setPublished] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const { isMobile } = useSidebar();
+  const inFlight = useRef(false);
+  const again = useRef(false);
+  const retries = useRef(0);
+  const queued = useRef<DraftPatch>({});
+
+  useEffect(() => {
+    if (event.data && !saved.current) {
+      saved.current = event.data;
+      setDraft(event.data);
+    }
+  }, [event.data]);
+
+  const save = useMutation(orpc.events.save.mutationOptions());
+  const flush = useCallback(
+    async (extra?: DraftPatch): Promise<boolean> => {
+      const now = latest.current;
+      const last = saved.current;
+      if (!now || !last) return false;
+      // A move or co-hosts asked for while a save runs go with the next one
+      const extras = { ...queued.current, ...extra };
+      if (inFlight.current) {
+        queued.current = extras;
+        again.current = true;
+        return false;
+      }
+      queued.current = {};
+      const { patch, invalid } = diff(now, last);
+      setErrors(invalid);
+      const full = { ...patch, ...extras };
+      if (Object.keys(full).length === 0) return Object.keys(invalid).length === 0;
+
+      inFlight.current = true;
+      setStatus("saving");
+      try {
+        const result = await save.mutateAsync({ ...input, expectedUpdatedAt: last.updatedAt, patch: full });
+        saved.current = result;
+        retries.current = 0;
+        setDraft((mine) => (mine ? { ...result, ...pickEditable(mine) } : result));
+        setStatus("saved");
+        setSavedAt(new Date().toISOString());
+
+        return Object.keys(invalid).length === 0;
+      } catch (error) {
+        const reason = (error as { data?: { reason?: string } }).data?.reason;
+        // A dropped connection or a busy server: try again a few times before saying it failed
+        if (!reason && isTransient(error) && retries.current < 3) {
+          retries.current += 1;
+          // The move or co-hosts this save carried go with the retry
+          queued.current = { ...extras, ...queued.current };
+          setStatus("saving");
+          setTimeout(() => void flush(), 1000 * 2 ** retries.current);
+          return false;
+        }
+        retries.current = 0;
+        setStatus(reason === "stale" ? "stale" : "error");
+        if (reason !== "stale") toast.error("No se pudo guardar", (error as Error).message);
+
+        return false;
+      } finally {
+        inFlight.current = false;
+        if (again.current) {
+          again.current = false;
+          void flush();
+        }
+      }
+    },
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- input is rebuilt each render from stable ids
+    [save.mutateAsync, community.id, eventId]
+  );
+
+  // Autosave: 800 ms after the last change
+  useEffect(() => {
+    if (!draft) return;
+    const timer = setTimeout(() => void flush(), 800);
+
+    return () => clearTimeout(timer);
+  }, [draft, flush]);
+
+  // Leaving the tab saves what's pending; leaving the page while something isn't saved asks first;
+  // moving elsewhere in the panel saves on the way out
+  useEffect(() => {
+    const unsaved = () =>
+      inFlight.current ||
+      (latest.current !== null &&
+        saved.current !== null &&
+        Object.keys(diff(latest.current, saved.current).patch).length > 0);
+    const onHide = () => document.visibilityState === "hidden" && void flush();
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!unsaved()) return;
+      void flush();
+      event.preventDefault();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      void flush();
+    };
+  }, [flush]);
+
+  const refresh = useCallback(
+    async (take: (keyof EditableEvent)[] = []) => {
+      const { data } = await event.refetch();
+      if (!data) return;
+      saved.current = data;
+      // What's being typed stays, except the fields the server just changed (a talk assigned from Charlas)
+      const server = Object.fromEntries(take.map((key) => [key, data[key]]));
+      setDraft((mine) => (mine ? { ...data, ...pickEditable(mine), ...server } : data));
+    },
+    [event]
+  );
+
+  const reload = async () => {
+    const { data } = await event.refetch();
+    if (!data) return;
+    saved.current = data;
+    setDraft(data);
+    setStatus("idle");
+  };
+
+  const set = (change: DraftChange) => {
+    const { schedule, cohostIds, reviewed, ...rest } = change;
+    setDraft((mine) => (mine ? { ...mine, ...rest } : mine));
+    if (cohostIds) void flush({ cohosts: cohostIds });
+    if (reviewed) void flush({ reviewed });
+    if (schedule)
+      void flush({ schedule }).then(
+        (ok) => ok && toast.success("Movimos el evento", shortWhen(`${schedule.day}T${schedule.startTime}:00-03:00`))
+      );
+  };
+
+  const list = draft ? issues(draft) : [];
+  const required = list.filter((issue) => issue.level === "required");
+  const requested = params.get("paso");
+  // Without ?paso=, a fresh draft starts at the beginning and one in progress where something is
+  // missing; decided once, so filling a step doesn't move the page from under the person
+  const firstStep = useRef<StepKey | null>(null);
+  if (draft && !firstStep.current) {
+    const fresh = draft.format === null && draft.name === UNTITLED;
+    // A published event opens on its summary, with "Cambiar" next to each part
+    firstStep.current = draft.status !== "draft" ? "revisar" : fresh ? "tipo" : (required[0]?.step ?? "tipo");
+  }
+  // What attendees of a published event know, from when this editor opened it: a change to it
+  // reaches them (the server waits 10 minutes after the last one)
+  const notified = useRef<Notified | null>(null);
+  if (draft && !notified.current && draft.status === "published") {
+    const { startDate, endDate, mode, placeName, placeAddress } = draft;
+    notified.current = { startDate, endDate, mode, placeName, placeAddress };
+  }
+  // ?campo=charlas: focus that field once its step is on screen
+  const field = params.get("campo");
+  useEffect(() => {
+    if (!field || !draft) return;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(field);
+      if (!target) return;
+      target.scrollIntoView({ block: "center" });
+      const input = target.matches("input, textarea, select, button")
+        ? target
+        : (target.querySelector<HTMLElement>("input, textarea, select") ?? target);
+      input.focus({ preventScroll: true });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+    // Once per link: not on every keystroke
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [field, Boolean(draft)]);
+  const step: StepKey = isStep(requested) ? requested : (firstStep.current ?? "tipo");
+  const index = STEPS.findIndex((item) => item.key === step);
+  // On a phone the strip scrolls sideways: the step you're on stays in it
+  useEffect(() => {
+    document
+      .querySelector('nav[aria-label="Pasos"] [aria-current="step"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [step, Boolean(draft)]);
+  const go = (key: StepKey) => {
+    void flush();
+    const next = new URLSearchParams(params.toString());
+    next.set("paso", key);
+    next.delete("campo");
+    window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
+    document.getElementById("wizard-top")?.scrollIntoView({ block: "start" });
+  };
+
+  const publish = useMutation(
+    orpc.events.publish.mutationOptions({
+      onSuccess: (result) => {
+        saved.current = result.event;
+        setDraft(result.event);
+        setPublished(result.path);
+      },
+      onError: (error) => toast.error("Todavía no se puede publicar", error.message),
+    })
+  );
+  // Who hears about a change to a published event: the people with a seat
+  const signedUp = useQuery(orpc.events.stats.queryOptions({ input, enabled: draft?.status === "published" }));
+
+  useShortcuts([
+    {
+      id: "wizard.next",
+      keys: "mod+enter",
+      label: "Paso siguiente",
+      group: "Evento",
+      allowInInputs: true,
+      run: (keyboard) => {
+        keyboard.preventDefault();
+        if (index < STEPS.length - 1) go(STEPS[index + 1].key);
+      },
+    },
+    {
+      id: "wizard.save",
+      keys: "mod+s",
+      label: "Guardar ahora",
+      group: "Evento",
+      allowInInputs: true,
+      run: (keyboard) => {
+        keyboard.preventDefault();
+        void flush();
+      },
+    },
+  ]);
+
+  if (event.isError) {
+    return (
+      <PageContainer>
+        <ErrorState onRetry={() => void event.refetch()} title="No pudimos abrir el evento" />
+      </PageContainer>
+    );
+  }
+  if (!draft) {
+    return (
+      <PageContainer size="large">
+        <Skeleton className="mb-6 h-10 w-80" />
+        <Skeleton className="h-96 rounded-lg" />
+      </PageContainer>
+    );
+  }
+
+  const Body = step === "revisar" ? null : STEP_BODY[step];
+  const seated = signedUp.data ? signedUp.data.attending + signedUp.data.offered : null;
+  const statusBadge =
+    draft.status === "published" ? (
+      <Badge variant="success">Publicado</Badge>
+    ) : draft.status === "cancelled" ? (
+      <Badge variant="destructive">Cancelado</Badge>
+    ) : (
+      <Badge variant="secondary">Borrador</Badge>
+    );
+
+  return (
+    <PageContainer size="large">
+      <HeaderActions>
+        <span
+          aria-live="polite"
+          className="flex items-center gap-1.5 font-terminal text-meta text-muted-foreground tabular-nums"
+        >
+          {status === "saving" ? (
+            "Guardando…"
+          ) : status === "error" ? (
+            <span className="text-live-foreground">No se guardó</span>
+          ) : status === "stale" ? (
+            <span className="text-warning-foreground">Otra persona editó</span>
+          ) : savedAt ? (
+            <>
+              <span aria-hidden className="size-1.5 rounded-full bg-success" />
+              Guardado · <RelativeTime className="text-meta" date={savedAt} />
+            </>
+          ) : null}
+        </span>
+        <Button className="min-[1400px]:hidden" size="sm" variant="outline" onClick={() => setPreviewing(true)}>
+          <Eye />
+          <span className="max-sm:hidden">Cómo se ve</span>
+        </Button>
+        <Button asChild className="max-[1399px]:hidden" size="sm" variant="outline">
+          <Link href={`/organizar/vista-previa/${draft.id}`} target="_blank">
+            <Eye />
+            Vista previa
+          </Link>
+        </Button>
+      </HeaderActions>
+
+      <div id="wizard-top" className="scroll-mt-16" />
+      <PageHeader
+        description={
+          draft.dateChosen ? (
+            <span className="font-terminal tabular-nums">{shortWhen(draft.startDate)}</span>
+          ) : (
+            "Sin fecha todavía"
+          )
+        }
+        meta={statusBadge}
+        title={draft.name === UNTITLED ? "Evento nuevo" : draft.name}
+      />
+
+      <Notice show={status === "stale"} tone="warning">
+        <span className="flex flex-wrap items-center justify-between gap-2">
+          Otra persona guardó cambios en este evento. Recargá para verlos (lo que escribiste desde entonces se pierde).
+          <Button size="xs" variant="outline" onClick={() => void reload()}>
+            Recargar
+          </Button>
+        </span>
+      </Notice>
+      {draft.status === "published" ? (
+        <div className="mb-5" data-testid="published-banner">
+          <Notice tone="info">
+            Ya está publicado: si cambiás la fecha, el lugar o la modalidad, les avisamos a{" "}
+            {seated === null ? "quienes tienen lugar" : plural(seated, "persona", "personas")} (10 minutos después del
+            último cambio). Lo demás se guarda solo y ya se ve en la página.
+            {draft.notifyPending ? " Hay un cambio por avisar: sale en unos minutos." : ""}
+          </Notice>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-6 min-[1400px]:grid-cols-[176px_minmax(0,1fr)_300px] lg:max-[1399px]:grid-cols-[176px_minmax(0,1fr)]">
+        <nav aria-label="Pasos" className="min-w-0 lg:sticky lg:top-4 lg:self-start">
+          <MicroLabel className="mb-2 max-lg:hidden">Pasos</MicroLabel>
+          <ScrollCue>
+            <ol className="flex gap-1 lg:flex-col">
+              {STEPS.map((item, at) => {
+                const state =
+                  item.key === "revisar" ? (required.length ? "required" : "done") : stepState(item.key, list);
+
+                return (
+                  <li key={item.key} className="shrink-0">
+                    <button
+                      aria-current={item.key === step ? "step" : undefined}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui transition-colors",
+                        item.key === step
+                          ? "bg-raised font-medium text-foreground shadow-[inset_2px_0_0_hsl(var(--primary))]"
+                          : "text-muted-foreground hover:bg-raised/60 hover:text-foreground"
+                      )}
+                      type="button"
+                      onClick={() => go(item.key)}
+                    >
+                      <span className="font-terminal text-2xs text-faint tabular-nums">{at + 1}</span>
+                      <span className="flex-1 whitespace-nowrap">{item.title}</span>
+                      {state === "done" ? (
+                        <Check aria-label="Listo" className="size-3.5 text-success" />
+                      ) : state === "required" ? (
+                        <CircleAlert aria-label="Falta algo" className="size-3.5 text-live" />
+                      ) : (
+                        <span aria-label="Con sugerencias" className="size-1.5 rounded-full bg-warning" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </ScrollCue>
+          {/* What the marks mean, once, under the steps */}
+          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-2xs text-muted-foreground" data-testid="steps-legend">
+            <span className="flex items-center gap-1">
+              <Check aria-hidden className="size-3 text-success" />
+              Listo
+            </span>
+            <span className="flex items-center gap-1">
+              <span aria-hidden className="size-1.5 rounded-full bg-warning" />
+              Con sugerencias
+            </span>
+            <span className="flex items-center gap-1">
+              <CircleAlert aria-hidden className="size-3 text-live" />
+              Falta algo
+            </span>
+          </p>
+        </nav>
+
+        <div className="flex min-w-0 flex-col gap-5">
+          {Body ? (
+            <Body
+              community={community}
+              draft={draft}
+              errors={errors}
+              flush={() => flush()}
+              notified={notified.current}
+              refresh={(take) => void refresh(take)}
+              set={set}
+              today={today}
+            />
+          ) : (
+            <StepRevisar
+              community={community}
+              draft={draft}
+              list={list}
+              onGo={go}
+              onScheduled={(scheduled) => {
+                saved.current = scheduled;
+                setDraft((mine) => (mine ? { ...scheduled, ...pickEditable(mine) } : scheduled));
+              }}
+            />
+          )}
+
+          {/* data-save-bar: toasts rise above it, and focus scrolls clear of it */}
+          <div
+            className="sticky bottom-[calc(var(--admin-tabbar-h,0px)+0.5rem)] z-10 flex items-center justify-between gap-2 rounded-lg border border-border bg-card/95 p-2 shadow-edge backdrop-blur"
+            data-save-bar
+          >
+            <Button disabled={index === 0} variant="outline" onClick={() => go(STEPS[index - 1].key)}>
+              <ArrowLeft />
+              Atrás
+            </Button>
+            <div className="flex items-center gap-2">
+              {step !== "revisar" ? (
+                <Button onClick={() => go(STEPS[index + 1].key)}>
+                  Siguiente
+                  <ArrowRight />
+                  <KeyHint keys="mod+enter" />
+                </Button>
+              ) : draft.status === "draft" ? (
+                <Button
+                  disabled={publish.isPending || required.length > 0}
+                  onClick={() => void flush().then((ok) => ok && publish.mutate(input))}
+                >
+                  <Rocket />
+                  Publicar
+                </Button>
+              ) : (
+                <Button asChild variant="outline">
+                  <a href={`/comunidad/${community.slug}/events/${draft.slug}`} rel="noreferrer" target="_blank">
+                    <ExternalLink />
+                    Ver la página
+                  </a>
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <aside
+          aria-label="Cómo se ve"
+          className="hidden min-[1400px]:sticky min-[1400px]:top-4 min-[1400px]:block min-[1400px]:self-start"
+        >
+          <MicroLabel className="mb-2">Cómo se ve</MicroLabel>
+          <Preview community={community} draft={draft} />
+        </aside>
+      </div>
+
+      <Sheet open={previewing} onOpenChange={setPreviewing}>
+        <SheetContent className="sm:max-w-sm" side={isMobile ? "bottom" : "right"}>
+          <SheetHeader>
+            <SheetTitle>Cómo se ve</SheetTitle>
+            <SheetDescription>La tarjeta del evento, como la ve la gente.</SheetDescription>
+          </SheetHeader>
+          <div className="p-4">
+            <Preview community={community} draft={draft} />
+            <Button asChild className="mt-3 w-full" variant="outline">
+              <Link href={`/organizar/vista-previa/${draft.id}`} target="_blank">
+                <ExternalLink />
+                Ver la página entera
+              </Link>
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+      <ShareDialog
+        dashboard={`${base}/eventos/${draft.id}`}
+        name={draft.name}
+        path={published}
+        onClose={() => setPublished(null)}
+      />
+    </PageContainer>
+  );
+}
+
+/** The event as attendees will see it, in miniature (the public site's look, not the panel's) */
+function Preview({ draft, community }: { draft: EditableEvent; community: CalendarCommunity }) {
+  const place =
+    draft.mode === "online"
+      ? "Online"
+      : (draft.venue?.name ?? draft.placeName ?? "Lugar a confirmar") + (draft.mode === "hibrido" ? " · y online" : "");
+  const cta = { owu: "Anotarme", external: "Inscribirme", eventbrite: "Inscribirme", none: "Entrada libre" }[
+    draft.registration
+  ];
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(rgba(255,255,255,0.045),rgba(255,255,255,0.015))] p-5 font-sans">
+      <p className="text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+        {community.name}
+        {draft.format ? ` · ${draft.format.replace("-", " ")}` : ""}
+      </p>
+      <p className="mt-2 font-title text-xl leading-tight font-semibold text-white">
+        {draft.name === UNTITLED ? "Nombre del evento" : draft.name}
+      </p>
+      <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-zinc-400">
+        {draft.summary || "Una línea que lo resuma aparece acá."}
+      </p>
+      <ul className="mt-4 flex flex-col gap-1.5 text-sm text-zinc-300">
+        <li className="flex items-center gap-2">
+          <CalendarDays aria-hidden className="size-4 text-zinc-500" />
+          {draft.dateChosen ? shortWhen(draft.startDate) : "Fecha a confirmar"}
+        </li>
+        <li className="flex items-center gap-2">
+          <MapPin aria-hidden className="size-4 text-zinc-500" />
+          {place}
+        </li>
+        {draft.registration === "owu" && draft.capacity ? (
+          <li className="flex items-center gap-2">
+            <Ticket aria-hidden className="size-4 text-zinc-500" />
+            {draft.capacity} lugares
+          </li>
+        ) : null}
+      </ul>
+      <span
+        className={cn(
+          "mt-5 flex h-10 items-center justify-center rounded-xl text-sm font-semibold",
+          // The real page's primary: light, yellow only on hover
+          draft.registration === "none" ? "border border-white/10 text-zinc-300" : "bg-zinc-50 text-zinc-950"
+        )}
+      >
+        {cta}
+      </span>
+    </div>
+  );
+}
+
+/** Right after publishing: the link, ready to share. */
+function ShareDialog({
+  path,
+  name,
+  dashboard,
+  onClose,
+}: {
+  path: string | null;
+  name: string;
+  /** The event's page in the panel */
+  dashboard: string;
+  onClose: () => void;
+}) {
+  const url = path && typeof window !== "undefined" ? `${window.location.origin}${path}` : "";
+  const text = `${name} ${url}`;
+
+  return (
+    <Dialog open={path !== null} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>¡Publicado!</DialogTitle>
+          <DialogDescription>Ya está en la agenda de owu.uy. Compartilo donde está tu gente.</DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2 rounded-md border border-border bg-raised/50 px-3 py-2">
+          <span className="min-w-0 flex-1 truncate font-terminal text-meta text-foreground">{url}</span>
+          <Button size="xs" variant="outline" onClick={() => void copyText(url, "Link copiado")}>
+            <Copy />
+            Copiar
+          </Button>
+        </div>
+        {url ? (
+          <div className="flex items-center gap-3 rounded-md border border-border p-3">
+            <QrCode className="shrink-0 rounded-sm" size={96} title={`QR de ${name}`} value={url} />
+            <p className="text-meta text-muted-foreground">
+              Para una filmina o un cartel: el QR lleva a la página del evento.
+            </p>
+          </div>
+        ) : null}
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild variant="outline">
+            <a href={`https://wa.me/?text=${encodeURIComponent(text)}`} rel="noreferrer" target="_blank">
+              <FaWhatsapp aria-hidden />
+              WhatsApp
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <a
+              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <FaLinkedin aria-hidden />
+              LinkedIn
+            </a>
+          </Button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button asChild variant="outline">
+            <a href={path ?? "#"} rel="noreferrer" target="_blank">
+              <ExternalLink />
+              Ver la página
+            </a>
+          </Button>
+          <Button asChild>
+            <Link href={dashboard}>
+              <LayoutDashboard />
+              Abrir el tablero
+            </Link>
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

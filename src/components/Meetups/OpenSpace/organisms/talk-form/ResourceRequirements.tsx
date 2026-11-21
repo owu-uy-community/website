@@ -2,10 +2,9 @@
 
 import type { Control } from "react-hook-form";
 import { Controller } from "react-hook-form";
-import { CheckCircle2, Presentation, Tv, XCircle } from "lucide-react";
+import { CheckCircle2, Presentation, TriangleAlert, Tv } from "lucide-react";
 
-import { Checkbox } from "components/shared/ui/checkbox";
-import { Label } from "components/shared/ui/label";
+import { SwitchRow } from "components/Admin/panel";
 
 import type { RoomWithResources, TalkFormData } from "./types";
 
@@ -15,16 +14,19 @@ interface ResourceRequirementsProps {
   roomsData: RoomWithResources[];
 }
 
-function Availability({ available }: { available: boolean }) {
+/** Whether the room picked above has what the talk asks for. */
+function Availability({ needed, available }: { needed: boolean; available: boolean }) {
+  if (!needed) return null;
+
   return available ? (
-    <span className="flex items-center gap-1.5 text-xs text-emerald-500">
-      <CheckCircle2 className="h-3.5 w-3.5" />
-      Disponible
+    <span className="flex items-center gap-1 text-success-foreground">
+      <CheckCircle2 aria-hidden className="size-3.5" />
+      La sala la tiene
     </span>
   ) : (
-    <span className="flex items-center gap-1.5 text-xs text-destructive">
-      <XCircle className="h-3.5 w-3.5" />
-      No disponible
+    <span className="flex items-center gap-1 text-warning-foreground">
+      <TriangleAlert aria-hidden className="size-3.5" />
+      La sala no la tiene
     </span>
   );
 }
@@ -33,46 +35,36 @@ export function ResourceRequirements({ control, watchedValues, roomsData }: Reso
   const selectedRoomData = roomsData.find((r) => r.name === watchedValues.room);
 
   return (
-    <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
-      <Label className="text-sm font-medium">Recursos necesarios</Label>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Controller
-              control={control}
-              name="needsTV"
-              render={({ field }) => <Checkbox checked={field.value} id="needsTV" onCheckedChange={field.onChange} />}
-            />
-            <Label
-              className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground hover:text-foreground"
-              htmlFor="needsTV"
-            >
-              <Tv className="h-4 w-4" />
-              Necesita TV
-            </Label>
-          </div>
-          {watchedValues.needsTV && <Availability available={selectedRoomData?.hasTV || false} />}
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Controller
-              control={control}
-              name="needsWhiteboard"
-              render={({ field }) => (
-                <Checkbox checked={field.value} id="needsWhiteboard" onCheckedChange={field.onChange} />
-              )}
-            />
-            <Label
-              className="flex cursor-pointer items-center gap-1.5 text-sm font-normal text-muted-foreground hover:text-foreground"
-              htmlFor="needsWhiteboard"
-            >
-              <Presentation className="h-4 w-4" />
-              Necesita pizarra
-            </Label>
-          </div>
-          {watchedValues.needsWhiteboard && <Availability available={selectedRoomData?.hasWhiteboard || false} />}
-        </div>
-      </div>
+    // Side by side only where there's room for both hints (the sheet, not the inspector).
+    <div className="grid grid-cols-1 gap-2 @[26rem]:grid-cols-2">
+      <Controller
+        control={control}
+        name="needsTV"
+        render={({ field }) => (
+          <SwitchRow
+            checked={field.value}
+            hint={<Availability available={selectedRoomData?.hasTV ?? false} needed={field.value} />}
+            icon={Tv}
+            id="needsTV"
+            label="Necesita TV"
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="needsWhiteboard"
+        render={({ field }) => (
+          <SwitchRow
+            checked={field.value}
+            hint={<Availability available={selectedRoomData?.hasWhiteboard ?? false} needed={field.value} />}
+            icon={Presentation}
+            id="needsWhiteboard"
+            label="Necesita pizarra"
+            onCheckedChange={field.onChange}
+          />
+        )}
+      />
     </div>
   );
 }

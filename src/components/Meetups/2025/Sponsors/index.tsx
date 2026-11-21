@@ -20,7 +20,7 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
     <div id="sponsors" className="mt-16 flex w-full max-w-7xl flex-col items-center gap-5">
       <span>
         <h2 className="mb-4 text-center text-4xl font-bold text-white md:text-5xl">Sponsors</h2>
-        <p className="mx-auto mt-2 max-w-3xl text-balance text-center text-base leading-relaxed text-gray-300 lg:text-lg">
+        <p className="mx-auto mt-2 max-w-3xl text-center text-base leading-relaxed text-balance text-gray-300 lg:text-lg">
           ¡Nuestros aliados y patrocinadores que hacen este evento posible!
         </p>
       </span>
@@ -38,14 +38,14 @@ export default function Sponsors({ sponsors = [] }: SponsorsProps) {
         />
       </Link>
       <Link href="https://www.anii.org.uy/" target="_blank" prefetch={false}>
-        <p className="mx-auto mt-2 max-w-3xl text-balance text-center text-base leading-relaxed text-gray-300">
+        <p className="mx-auto mt-2 max-w-3xl text-center text-base leading-relaxed text-balance text-gray-300">
           Evento declarado de interés por la ANII
         </p>
         <img
-            src={"/images/2025/anii/anii.png"}
-            alt="Evento declarado de interés ANII"
-            className="mt-5 w-full max-w-[280px] md:max-w-[400px] invert"
-            crossOrigin="anonymous"
+          src={"/images/2025/anii/anii.png"}
+          alt="Evento declarado de interés ANII"
+          className="mt-5 w-full max-w-[280px] invert md:max-w-[400px]"
+          crossOrigin="anonymous"
         />
       </Link>
     </div>

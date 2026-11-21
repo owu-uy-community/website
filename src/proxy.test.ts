@@ -1,0 +1,218 @@
+import { http, HttpResponse } from "msw";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
+import { NextRequest } from "next/server";
+import { describe, expect, test, vi } from "vitest";
+
+import { NOT_FOUND_MARKDOWN } from "lib/community/markdown";
+import { server } from "test/msw/server";
+
+import { LEGACY_REDIRECTS } from "lib/tenant";
+
+import { config, proxy } from "./proxy";
+
+const SITE = "https://www.owu.uy";
+
+const get = (path: string, headers: Record<string, string> = {}) =>
+  proxy(new NextRequest(`${SITE}${path}`, { headers: { host: "www.owu.uy", ...headers } }));
+
+/** The status the page answers to the existence check, and the requests that check made */
+function pageAnswers(status: number) {
+  const seen: Request[] = [];
+  server.use(
+    http.head(`${SITE}/*`, ({ request }) => {
+      seen.push(request);
+      return new HttpResponse(null, { status });
+    })
+  );
+
+  return seen;
+}
+
+describe("Markdown negotiation", () => {
+  test("the home page answers Markdown to agents that ask for it, through its twin", async () => {
+    const response = await get("/", { accept: "text/markdown" });
+
+    expect(response.headers.get("x-middleware-rewrite")).toBe(`${SITE}/index.md`);
+  });
+
+  test("browsers keep getting the HTML", async () => {
+    for (const accept of ["text/html,application/xhtml+xml,*/*;q=0.8", "*/*", ""]) {
+      const response = await get("/", accept ? { accept } : {});
+
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+      expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    }
+  });
+
+  test("406 when the client takes neither HTML nor Markdown", async () => {
+    const response = await get("/", { accept: "application/pdf" });
+
+    expect(response.status).toBe(406);
+    await expect(response.text()).resolves.toContain("text/markdown");
+    expect(response.headers.get("vary")).toBe("Accept");
+  });
+
+  test("a page that doesn't exist answers 404 in Markdown", async () => {
+    const seen = pageAnswers(404);
+    const response = await get("/no-existe", { accept: "text/markdown" });
+
+    expect(response.status).toBe(404);
+    expect(response.headers.get("content-type")).toBe("text/markdown; charset=utf-8");
+    expect(response.headers.get("vary")).toBe("Accept");
+    await expect(response.text()).resolves.toBe(NOT_FOUND_MARKDOWN);
+    // The check asks as a browser, so it goes through as a plain page request
+    expect(seen.map((request) => request.headers.get("accept"))).toStrictEqual(["text/html"]);
+  });
+
+  test("the existence check only asks this site: its hosts, or this server on loopback", async () => {
+    vi.stubEnv("PORT", "3461");
+    const seen: string[] = [];
+    server.use(
+      http.head("*", ({ request }) => {
+        seen.push(request.url);
+        return new HttpResponse(null, { status: 404 });
+      })
+    );
+    const ask = (url: string) => proxy(new NextRequest(url, { headers: { accept: "text/markdown" } }));
+
+    expect((await ask("http://169.254.169.254/latest")).headers.get("x-middleware-next")).toBe("1");
+    expect((await ask("http://localhost:6379/x")).headers.get("x-middleware-next")).toBe("1");
+    expect((await ask("http://localhost:3461/no-existe")).status).toBe(404);
+    expect(seen).toStrictEqual(["http://localhost:3461/no-existe"]);
+    vi.unstubAllEnvs();
+  });
+
+  test("a page without a twin stays HTML for agents", async () => {
+    pageAnswers(200);
+    const response = await get("/eventos", { accept: "text/markdown" });
+
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  test("a launch-flagged page answers the Markdown 404 without asking", async () => {
+    const seen = pageAnswers(200);
+    const response = await get("/semanario", { accept: "text/markdown" });
+
+    expect(response.status).toBe(404);
+    await expect(response.text()).resolves.toBe(NOT_FOUND_MARKDOWN);
+    expect(seen).toStrictEqual([]);
+  });
+
+  test("RSC fetches and files are left alone", async () => {
+    const seen = pageAnswers(404);
+
+    for (const response of [
+      await get("/", { accept: "text/markdown", rsc: "1" }),
+      await get("/eventos.ics", { accept: "text/markdown" }),
+      await get("/llms.txt", { accept: "text/markdown" }),
+    ]) {
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+    }
+    expect(seen).toStrictEqual([]);
+  });
+
+  test("redirects still win", async () => {
+    const response = await get("/c/python", { accept: "text/markdown" });
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(`${SITE}/comunidad/python`);
+  });
+});
+
+describe("sign-in bounce", () => {
+  const cookie = { cookie: "__Secure-better-auth.session_token=stale.token" };
+
+  test("someone with a session cookie skips /login to where they were going", async () => {
+    const response = await get("/login?next=%2Fadmin", cookie);
+
+    expect(response.headers.get("location")).toBe(`${SITE}/admin`);
+  });
+
+  test("a session that just ended on the server reaches /login instead of looping back", async () => {
+    const response = await get("/login?next=%2Fadmin&expired=1", cookie);
+
+    expect(response.headers.get("location")).toBeNull();
+  });
+});
+
+describe("the existence check stays on this site", () => {
+  test("a path that looks like another host (//elsewhere/…) is asked of owu.uy, never of that host", async () => {
+    const seen = pageAnswers(404);
+
+    await get("//evil.example/x", { accept: "text/markdown" });
+
+    expect(seen.map((request) => new URL(request.url).host)).toStrictEqual(["www.owu.uy"]);
+  });
+});
+
+describe("conf.owu.uy", () => {
+  const conf = (path: string) =>
+    proxy(new NextRequest(`https://conf.owu.uy${path}`, { headers: { host: "conf.owu.uy" } }));
+
+  test("its pages map onto /conf, the live open space board included", async () => {
+    for (const path of ["/", "/openspace"]) {
+      const response = await conf(path);
+
+      expect(response.headers.get("x-middleware-rewrite")).toBe(`https://conf.owu.uy/conf${path === "/" ? "" : path}`);
+    }
+  });
+
+  test("owu.uy/conf/openspace moves to the subdomain", async () => {
+    const response = await get("/conf/openspace");
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://conf.owu.uy/openspace");
+  });
+});
+
+describe("where the proxy runs", () => {
+  const BROWSER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+  const runs = (path: string, headers: Record<string, string> = { accept: BROWSER, host: "owu.uy" }) =>
+    unstable_doesMiddlewareMatch({ config, url: `https://${headers.host ?? "owu.uy"}${path}`, headers });
+
+  test("a browser asking for a public page skips it", () => {
+    const paths = ["/", "/eventos", "/comunidad/js-montevideo", "/charlas", "/blog/feed.xml", "/api/search"];
+
+    expect(paths.filter((path) => runs(path))).toStrictEqual([]);
+  });
+
+  test("every redirect, the launch flag and the sign-in bounces still go through it", () => {
+    const paths = [
+      ...Object.keys(LEGACY_REDIRECTS),
+      "/conf",
+      "/conf/sponsors",
+      "/c",
+      "/c/js-montevideo",
+      "/semanario",
+      "/semanario/3",
+      "/encuesta-sueldos/datos.csv",
+      "/admin",
+      "/admin/acceso",
+      "/keystatic",
+      "/organizar/panel/js-montevideo",
+      "/acceso",
+      "/login",
+      "/registro",
+    ];
+
+    expect(paths.filter((path) => !runs(path))).toStrictEqual([]);
+  });
+
+  test("every page on conf.owu.uy goes through it, its assets don't", () => {
+    const conf = { accept: BROWSER, host: "conf.owu.uy" };
+
+    expect(runs("/", conf)).toBe(true);
+    expect(runs("/sponsors", conf)).toBe(true);
+    expect(runs("/openspace", conf)).toBe(true);
+    expect(runs("/2024/la-meetup", conf)).toBe(true);
+    expect(runs("/_next/static/chunks/app.js", conf)).toBe(false);
+  });
+
+  test("agents asking for Markdown reach the negotiation on any page; a client without HTML, on the home page", () => {
+    expect(runs("/eventos", { accept: "text/markdown", host: "owu.uy" })).toBe(true);
+    expect(runs("/", { accept: "text/markdown, text/html;q=0.5", host: "owu.uy" })).toBe(true);
+    expect(runs("/", { accept: "application/json", host: "owu.uy" })).toBe(true);
+    expect(runs("/", { host: "owu.uy" })).toBe(true);
+    expect(runs("/", { accept: "*/*", host: "owu.uy" })).toBe(false);
+  });
+});

@@ -1,15 +1,18 @@
-import { z } from "zod";
+import * as z from "zod";
 
-export const GetCastStateSchema = z
-  .object({
-    eventId: z.string().optional(), // TODO(multi-tenant): becomes required
-  })
-  .optional();
+import { StickyNoteSchema } from "../tracks/schemas";
+
+export const GetCastStateSchema = z.object({ eventId: z.string().min(1) });
 
 export const SetHighlightedNoteSchema = z.object({
-  eventId: z.string().optional(), // TODO(multi-tenant): becomes required
-  trackId: z.string().nullable(),
+  eventId: z.string().min(1),
+  /** The talk to put on the screens, or null to clear them. */
+  trackId: z.string().min(1).nullable(),
 });
 
-export type GetCastStateInput = z.infer<typeof GetCastStateSchema>;
-export type SetHighlightedNoteInput = z.infer<typeof SetHighlightedNoteSchema>;
+export const CastStateSchema = z.object({
+  trackId: z.string().nullable(),
+  note: StickyNoteSchema.nullable(),
+});
+
+export type CastState = z.infer<typeof CastStateSchema>;

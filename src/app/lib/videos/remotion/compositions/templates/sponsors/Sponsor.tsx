@@ -10,7 +10,7 @@ export function Sponsor({ name, image, isEven }: Sponsor) {
   return (
     <div
       className={clsx(
-        "relative flex min-w-[250px] max-w-[300px] flex-1 flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all",
+        "relative flex max-w-[300px] min-w-[250px] flex-1 flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all",
         isEven ? "" : "-translate-x-[90rem]"
       )}
     >

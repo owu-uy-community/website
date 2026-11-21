@@ -12,10 +12,10 @@ export default defineTool({
     urgentOnly: z.boolean().optional().describe("true = solo los marcados como urgentes"),
   }),
   async execute({ limit, urgentOnly }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "announcement:read", (await resolveActiveEvent()).id);
     const event = await resolveActiveEvent();
 
-    const announcements = await owuApi().staffTasks.announcements.list({ eventId: event.id });
+    const announcements = await owuApi(ctx).staffTasks.announcements.list({ eventId: event.id });
     const filtered = (urgentOnly ? announcements.filter((item) => item.urgent) : announcements).slice(0, limit);
 
     return {

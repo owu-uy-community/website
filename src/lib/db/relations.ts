@@ -1,19 +1,28 @@
 import { relations } from "drizzle-orm";
 import {
   account,
+  activity,
+  attendees,
   communities,
   communityMembers,
   eventLiveState,
   events,
+  incidentNotes,
+  incidents,
+  obsCues,
   obsInstances,
   obsPresetItems,
   obsPresets,
   obsQueueItems,
+  raffleDraws,
+  raffles,
   rooms,
+  runOfShowItems,
   schedules,
   session,
   staffAnnouncementAcks,
   staffAnnouncements,
+  staffArrivals,
   staffTaskAssignments,
   staffTasks,
   tracks,
@@ -73,6 +82,46 @@ export const staffAnnouncementAcksRelations = relations(staffAnnouncementAcks, (
     references: [staffAnnouncements.id],
   }),
   user: one(user, { fields: [staffAnnouncementAcks.userId], references: [user.id] }),
+}));
+
+export const staffArrivalsRelations = relations(staffArrivals, ({ one }) => ({
+  event: one(events, { fields: [staffArrivals.eventId], references: [events.id] }),
+  user: one(user, { fields: [staffArrivals.userId], references: [user.id] }),
+}));
+
+// ---------------------------------------------------------------------------
+// Event day
+// ---------------------------------------------------------------------------
+export const incidentsRelations = relations(incidents, ({ one, many }) => ({
+  event: one(events, { fields: [incidents.eventId], references: [events.id] }),
+  room: one(rooms, { fields: [incidents.roomId], references: [rooms.id] }),
+  assignee: one(user, { fields: [incidents.assigneeId], references: [user.id], relationName: "incidentAssignee" }),
+  reporter: one(user, { fields: [incidents.reporterId], references: [user.id], relationName: "incidentReporter" }),
+  notes: many(incidentNotes),
+}));
+
+export const incidentNotesRelations = relations(incidentNotes, ({ one }) => ({
+  incident: one(incidents, { fields: [incidentNotes.incidentId], references: [incidents.id] }),
+  author: one(user, { fields: [incidentNotes.authorId], references: [user.id] }),
+}));
+
+export const runOfShowItemsRelations = relations(runOfShowItems, ({ one }) => ({
+  event: one(events, { fields: [runOfShowItems.eventId], references: [events.id] }),
+  owner: one(user, { fields: [runOfShowItems.ownerId], references: [user.id] }),
+  cue: one(obsCues, { fields: [runOfShowItems.cueId], references: [obsCues.id] }),
+}));
+
+export const raffleDrawsRelations = relations(raffleDraws, ({ one }) => ({
+  raffle: one(raffles, { fields: [raffleDraws.raffleId], references: [raffles.id] }),
+  attendee: one(attendees, { fields: [raffleDraws.attendeeId], references: [attendees.id] }),
+}));
+
+export const rafflesRelations = relations(raffles, ({ many }) => ({
+  draws: many(raffleDraws),
+}));
+
+export const activityRelations = relations(activity, ({ one }) => ({
+  actor: one(user, { fields: [activity.actorId], references: [user.id] }),
 }));
 
 export const eventLiveStateRelations = relations(eventLiveState, ({ one }) => ({

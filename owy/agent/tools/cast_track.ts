@@ -11,11 +11,11 @@ export default defineTool({
     action: z.enum(["highlight", "clear", "status"]).describe("highlight, clear o status"),
     track: z.string().optional().describe("Para highlight: la charla (id o parte del título)"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("stage:operate"),
   async execute({ action, track }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "stage:operate");
     const event = await resolveActiveEvent();
-    const api = owuApi();
+    const api = owuApi(ctx);
 
     if (action === "status") {
       const state = await api.cast.getState({ eventId: event.id });

@@ -3,3 +3,7 @@
 # on Node 22, while eve requires Node >=24).
 packages:
   - "."
+# tsx/vitest (companion bridge) pull esbuild, whose postinstall verifies its
+# platform binary.
+allowBuilds:
+  esbuild: true

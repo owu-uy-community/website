@@ -47,7 +47,7 @@ export default function SpeakerCard({
   const imageSrc = picture?.url || "/images/events/placeholder.webp";
 
   const cardContent = (
-    <article className="group flex h-full w-full min-w-[230px] max-w-[300px] cursor-pointer flex-col items-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20 lg:max-w-[240px]">
+    <article className="group flex h-full w-full max-w-[300px] min-w-[230px] cursor-pointer flex-col items-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20 lg:max-w-[240px]">
       <div className="flex h-full w-full flex-col items-center rounded-md bg-[#000214]/50 px-6 py-6 transition">
         {/* Circular profile image with border ring */}
         <div className="relative mb-4 h-[120px] w-[120px] shrink-0 md:h-[150px] md:w-[150px]">
@@ -67,7 +67,7 @@ export default function SpeakerCard({
 
         {/* Speaker Name */}
         <div className="flex flex-1 flex-col items-center justify-center gap-1 text-center">
-          <h4 className="text-center font-black uppercase tracking-wide text-yellow-400">
+          <h4 className="text-center font-black tracking-wide text-yellow-400 uppercase">
             <div className="text-sm">
               {firstname} {lastname}
             </div>
@@ -77,7 +77,7 @@ export default function SpeakerCard({
           <div className="flex flex-col items-center gap-1 text-center">
             {jobTitle && <p className="text-[13px] font-medium text-gray-300">{jobTitle}</p>}
             {company && (
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 md:text-xs">{company}</p>
+              <p className="text-[10px] font-semibold tracking-wider text-gray-400 uppercase md:text-xs">{company}</p>
             )}
           </div>
 

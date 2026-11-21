@@ -1,6 +1,6 @@
 /**
  * Centralized toast utility using Sonner
- * 
+ *
  * This provides a clean, reusable API for showing toast notifications
  * throughout the application with consistent styling.
  */
@@ -147,5 +147,19 @@ export const toast = {
    * Custom toast with full control
    */
   custom: sonnerToast,
+
+  /**
+   * Something reversible just happened: say so, with "Deshacer" for 8 seconds. Use it instead of
+   * asking "¿Seguro?" first; keep confirmations for what notifies people or can't be undone.
+   */
+  undo: (title: string, onUndo: () => void, description?: string) =>
+    sonnerToast.success(title, { description, duration: 8000, action: { label: "Deshacer", onClick: onUndo } }),
 };
 
+/**
+ * For a modal's `onInteractOutside`: a tap on a toast (its «Deshacer») is not a tap outside the
+ * dialog or panel that is open, so it doesn't close it.
+ */
+export function keepOpenForToasts(event: { target: EventTarget | null; preventDefault: () => void }) {
+  if (event.target instanceof Element && event.target.closest("[data-sonner-toaster]")) event.preventDefault();
+}

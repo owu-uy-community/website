@@ -64,7 +64,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
     <section id="agenda" className="mt-16 w-full">
       <div className="mb-8 text-center">
         <h2 className="mb-4 text-4xl font-bold text-white md:text-5xl">Agenda</h2>
-        <p className="mx-auto mt-2 max-w-3xl text-balance text-base leading-relaxed text-gray-300 lg:text-lg">
+        <p className="mx-auto mt-2 max-w-3xl text-base leading-relaxed text-balance text-gray-300 lg:text-lg">
           ¡Conocé el cronograma de actividades y charlas!
         </p>
         {lastUpdate ? (
@@ -107,7 +107,7 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
                   }`}
                 >
                   {/* Time indicator line */}
-                  <div className="absolute bottom-0 left-0 top-0 w-1 bg-gradient-to-b from-yellow-400 to-yellow-500"></div>
+                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-yellow-400 to-yellow-500"></div>
 
                   {/* Desktop Layout */}
                   <div className="hidden items-center gap-4 p-5 md:flex">

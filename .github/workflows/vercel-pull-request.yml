@@ -3,8 +3,14 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened, labeled]
 jobs:
   build_and_deploy:
+    # Only a pull request labelled "preview" gets one (adding the label builds it, each push after
+    # rebuilds): every preview is a full build that Vercel keeps, wanted or not
+    if: >-
+      contains(github.event.pull_request.labels.*.name, 'preview') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'preview')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -13,30 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Dependabot pull requests cannot access repository secrets. Validate
-      # their dependency updates locally instead of attempting a deployment
-      # that is guaranteed to fail without VERCEL_TOKEN.
-      - name: Set up pnpm
-        if: github.event.pull_request.user.login == 'dependabot[bot]'
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10.9.0
-
-      - name: Set up Node.js
-        if: github.event.pull_request.user.login == 'dependabot[bot]'
-        uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        if: github.event.pull_request.user.login == 'dependabot[bot]'
-        run: pnpm install --frozen-lockfile --ignore-scripts
-
-      - name: Typecheck
-        if: github.event.pull_request.user.login == 'dependabot[bot]'
-        run: pnpm exec tsc --noEmit
-
+      # Dependabot pull requests cannot access repository secrets, so they get no
+      # preview; the CI workflow validates them instead.
       - uses: amondnet/vercel-action@v42.3.0
         if: github.event.pull_request.user.login != 'dependabot[bot]'
         id: vercel-deploy

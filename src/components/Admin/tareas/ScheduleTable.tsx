@@ -1,403 +1,379 @@
 "use client";
 
-import * as React from "react";
-import { useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, Clock3, Flag, MapPin, Pencil, Trash2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Flag, ListChecks, MapPin, Pencil, TimerReset } from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "components/shared/ui/alert-dialog";
-import { Badge } from "components/shared/ui/badge";
+import { Meter, Panel, PanelHead } from "components/Admin/ui/page";
+import { AvatarStack } from "components/Admin/ui/person";
+import { Badge, badgeVariants } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
 import { Label } from "components/shared/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "components/shared/ui/popover";
-import { Progress } from "components/shared/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "components/shared/ui/table";
+import { toast } from "components/shared/ui/toast-utils";
+import { orpc } from "lib/orpc";
+import { taskPhase } from "lib/orpc/staff-tasks/shift";
 
-import { AssigneeStack, StatusActions } from "./TaskCard";
-import { STATUS_META, formatClock, isUnderstaffed, type StaffTask, type StaffTaskStatus } from "./helpers";
+import { assigneeState, formatDayLabel, missingPeople, phaseBadge, plural, timeRange, type StaffTask } from "./helpers";
+import { DRAG_HANDLE, DROP_INSET, DROP_ROW, useTimes } from "./swap";
+import { PeopleChips, type PeopleContext } from "./TaskCard";
+import { staffKeys } from "./use-staff";
 
-interface ShiftPopoverProps {
-  onShift: (fromTime: string, deltaMinutes: number) => Promise<void>;
-  isShifting: boolean;
+/** A task on the Cronograma: an editor drags it onto another task and the two trade their times. */
+function useTimesHandle(
+  task: StaffTask,
+  layout: string,
+  look: Record<"idle" | "candidate" | "over" | "refused", string>
+) {
+  const times = useTimes(task, layout);
+
+  return {
+    ref: times.ref,
+    ...times.listeners,
+    className: cn(times.draggable && DRAG_HANDLE, times.dragging && "opacity-40", look[times.drop]),
+    // A drag across the list isn't a swipe to the next tab.
+    "data-swipe-ignore": times.draggable ? "" : undefined,
+  };
 }
 
-/** "Vamos 15 tarde": slide every task from a given time onward. */
-export function ShiftPopover({ onShift, isShifting }: ShiftPopoverProps) {
-  const [open, setOpen] = useState(false);
-  const [fromTime, setFromTime] = useState(() => formatClock(new Date()));
-  const [custom, setCustom] = useState("");
+function TimesRow({
+  task,
+  className,
+  onClick,
+  children,
+}: {
+  task: StaffTask;
+  className?: string;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  const handle = useTimesHandle(task, "table", DROP_ROW);
 
-  const apply = async (delta: number) => {
-    if (!fromTime || Number.isNaN(delta) || delta === 0) return;
-    await onShift(fromTime, delta);
-    setOpen(false);
+  return (
+    <TableRow {...handle} className={cn(className, handle.className)} onClick={onClick}>
+      {children}
+    </TableRow>
+  );
+}
+
+function TimesItem({ task, className, children }: { task: StaffTask; className?: string; children: ReactNode }) {
+  const handle = useTimesHandle(task, "list", DROP_INSET);
+
+  return (
+    <li {...handle} className={cn(className, handle.className)}>
+      {children}
+    </li>
+  );
+}
+
+const STEPS = [5, 10, 15, 30, -5, -10];
+
+/** "Vamos 15 tarde": slide every timed task of the day from a given time on. */
+export function ShiftPopover({ eventId, dayDate, now }: { eventId: string; dayDate: string; now: string }) {
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [fromTime, setFromTime] = useState(now);
+  const [custom, setCustom] = useState("");
+  const shift = useMutation(
+    orpc.staffTasks.shiftFrom.mutationOptions({
+      onSuccess: ({ count }, { deltaMinutes }) => {
+        setOpen(false);
+        setCustom("");
+        toast.success(
+          count > 0 ? `Corriste ${plural(count, "tarea", "tareas")}` : "No había tareas para correr",
+          count > 0
+            ? `${deltaMinutes > 0 ? "+" : "−"}${Math.abs(deltaMinutes)} min desde las ${fromTime}.`
+            : `Nada empieza después de las ${fromTime}.`
+        );
+        void queryClient.invalidateQueries({ queryKey: staffKeys(eventId).tasks });
+      },
+      onError: (error) => toast.error("No se pudo correr el cronograma", error.message),
+    })
+  );
+  const apply = (deltaMinutes: number) => {
+    if (!fromTime || !Number.isInteger(deltaMinutes) || deltaMinutes === 0) return;
+    shift.mutate({ eventId, dayDate, fromTime, deltaMinutes });
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setFromTime(now);
+        setOpen(next);
+      }}
+    >
       <PopoverTrigger asChild>
-        <Button className="h-11 sm:h-9" size="sm" variant="outline">
-          <Clock3 />
-          Correr horarios
+        <Button aria-label="Correr horarios" variant="outline">
+          <TimerReset />
+          <span className="max-sm:hidden">Correr horarios</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(20rem,calc(100vw-2rem))] space-y-3">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">Correr el cronograma</p>
-          <p className="text-xs text-muted-foreground">
-            Mueve todas las tareas del día con hora desde el horario elegido en adelante.
+        <div>
+          <p className="text-ui font-semibold text-foreground">Correr horarios</p>
+          <p className="mt-0.5 text-meta text-muted-foreground">
+            Mueve las tareas del {formatDayLabel(dayDate)} que empiezan desde esta hora.
           </p>
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs" htmlFor="shift-from">
-            Desde las
-          </Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="shift-from">Desde las</Label>
           <Input
-            className="h-11 font-terminal tabular-nums sm:h-9 [&::-webkit-calendar-picker-indicator]:invert"
+            className="font-terminal tabular-nums [&::-webkit-calendar-picker-indicator]:invert"
             id="shift-from"
             type="time"
             value={fromTime}
-            onChange={(e) => setFromTime(e.target.value)}
+            onChange={(event) => setFromTime(event.target.value)}
           />
         </div>
         <div className="grid grid-cols-3 gap-1.5">
-          {[5, 10, 15, 30, -5, -10].map((mins) => (
+          {STEPS.map((minutes) => (
             <Button
-              key={mins}
-              className="h-11 sm:h-9"
-              disabled={isShifting}
+              key={minutes}
+              className="font-terminal tabular-nums"
+              disabled={shift.isPending}
               size="sm"
               variant="outline"
-              onClick={() => void apply(mins)}
+              onClick={() => apply(minutes)}
             >
-              {mins > 0 ? `+${mins}` : mins}
+              {minutes > 0 ? `+${minutes}` : `−${Math.abs(minutes)}`}
             </Button>
           ))}
         </div>
         <div className="flex gap-1.5">
           <Input
-            className="h-11 tabular-nums sm:h-9"
+            aria-label="Otros minutos (negativos para adelantar)"
+            // A number field: an iPhone's numeric keypad has no minus sign, and this one takes negatives.
+            className="[appearance:textfield] font-terminal tabular-nums [&::-webkit-inner-spin-button]:appearance-none"
+            enterKeyHint="go"
             placeholder="±min"
+            step={1}
             type="number"
             value={custom}
-            onChange={(e) => setCustom(e.target.value)}
+            onChange={(event) => setCustom(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && custom && apply(Number(custom))}
           />
           <Button
-            className="h-11 sm:h-9"
-            disabled={isShifting || !custom}
-            size="sm"
-            onClick={() => void apply(Number(custom))}
+            disabled={shift.isPending || !custom}
+            size="default"
+            variant="outline"
+            onClick={() => apply(Number(custom))}
           >
             Aplicar
           </Button>
         </div>
-        {isShifting && <p className="text-xs text-muted-foreground">Corriendo…</p>}
       </PopoverContent>
     </Popover>
   );
 }
 
-interface ScheduleTableProps {
-  tasks: StaffTask[];
-  meId: string;
-  canEdit: boolean;
-  onSetStatus: (taskId: string, status: StaffTaskStatus) => void;
-  onEdit: (task: StaffTask) => void;
-  onDelete: (task: StaffTask) => Promise<void>;
-  isDeleting: boolean;
-}
-
-function EditActions({
-  task,
+/** The day's plan, in order: a table on desktop, a list on phones. Selecting a task opens it. */
+export function ScheduleTable({
+  tasks,
+  people,
+  canEdit,
+  onOpen,
   onEdit,
-  onDelete,
 }: {
-  task: StaffTask;
+  tasks: StaffTask[];
+  people: PeopleContext;
+  canEdit: boolean;
+  onOpen: (taskId: string) => void;
   onEdit: (task: StaffTask) => void;
-  onDelete: (task: StaffTask) => void;
 }) {
-  return (
-    <div className="flex justify-end gap-0.5">
-      <Button aria-label={`Editar ${task.title}`} size="icon" variant="ghost" onClick={() => onEdit(task)}>
-        <Pencil />
-      </Button>
-      <Button
-        aria-label={`Eliminar ${task.title}`}
-        className="text-muted-foreground hover:text-destructive"
-        size="icon"
-        variant="ghost"
-        onClick={() => onDelete(task)}
-      >
-        <Trash2 />
-      </Button>
-    </div>
-  );
-}
-
-function TimeLabel({ task }: { task: StaffTask }) {
-  if (task.startTime) {
-    return (
-      <>
-        {task.startTime}
-        {task.endTime && <span className="text-muted-foreground">–{task.endTime}</span>}
-      </>
-    );
-  }
-  return <span className="text-muted-foreground">{task.type === "ongoing" ? "Todo el día" : "—"}</span>;
-}
-
-/** Full day plan. Cards on phones, table from `md` up — a 5-column grid on a
- *  390px screen wraps every title into two lines and shrinks the actions. */
-export function ScheduleTable({ tasks, canEdit, onSetStatus, onEdit, onDelete, isDeleting }: ScheduleTableProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<StaffTask | null>(null);
-
-  const workTasks = useMemo(() => tasks.filter((task) => task.type !== "milestone"), [tasks]);
-  const doneCount = workTasks.filter((task) => task.status === "done").length;
-  const progress = workTasks.length > 0 ? Math.round((doneCount / workTasks.length) * 100) : 0;
+  const work = tasks.filter((task) => task.type !== "milestone");
+  const done = work.filter((task) => task.status === "done").length;
+  const arrivalOf = new Map(people.arrivals.map((arrival) => [arrival.userId, arrival]));
+  const lateCount = (task: StaffTask) =>
+    task.assignees.filter(
+      (assignee) => assigneeState(task, assignee, arrivalOf.get(assignee.userId), people.at, people.isToday) === "late"
+    ).length;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <Progress className="h-1.5 flex-1" value={progress} />
-        <span className="font-terminal text-xs tabular-nums text-muted-foreground">
-          {doneCount}/{workTasks.length} listas
-        </span>
-      </div>
+    <Panel className="overflow-clip">
+      <PanelHead
+        actions={
+          <Meter className="w-28 max-sm:hidden" label="Tareas listas" max={work.length} tone="success" value={done} />
+        }
+        icon={ListChecks}
+        meta={`${done} de ${work.length} ${work.length === 1 ? "lista" : "listas"}`}
+        title="Cronograma"
+      />
 
-      {/* Mobile: card list */}
-      <ul className="space-y-2 md:hidden">
+      {/* Phones: one card per task. */}
+      <ul className="divide-y divide-border md:hidden">
         {tasks.map((task) => {
-          const meta = STATUS_META[task.status];
-          const expanded = expandedId === task.id;
-
+          const range = timeRange(task);
           if (task.type === "milestone") {
             return (
-              <li
-                key={task.id}
-                className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2"
-              >
-                <Flag className="h-3.5 w-3.5 shrink-0 text-primary" />
-                <span className="font-terminal text-xs font-semibold tabular-nums text-primary">
+              <TimesItem key={task.id} className="flex items-center gap-2 bg-info-surface/30 px-3.5 py-2.5" task={task}>
+                <Flag aria-hidden className="size-3.5 shrink-0 text-info-foreground" />
+                <span className="font-terminal text-meta text-info-foreground tabular-nums">
                   {task.startTime ?? "—"}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{task.title}</span>
-                {canEdit && <EditActions task={task} onDelete={setDeleting} onEdit={onEdit} />}
-              </li>
+                <span className="min-w-0 flex-1 truncate text-ui font-medium text-foreground">{task.title}</span>
+              </TimesItem>
             );
           }
-
+          const badge = phaseBadge(task, taskPhase(task, people.at));
           return (
-            <li
-              key={task.id}
-              className={cn("rounded-lg border border-border bg-card p-3", task.status === "done" && "opacity-60")}
-            >
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-terminal text-xs font-semibold tabular-nums text-foreground">
-                      <TimeLabel task={task} />
-                    </span>
-                    <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
-                    <span className="text-xs text-muted-foreground">{meta.label}</span>
-                  </div>
-                  <p
-                    className={cn("mt-1 text-sm font-medium text-foreground", task.status === "done" && "line-through")}
-                  >
-                    {task.title}
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    <AssigneeStack task={task} />
-                    {isUnderstaffed(task) && (
-                      <Badge className="gap-1 border-primary/40 font-normal text-primary" variant="outline">
-                        <AlertTriangle className="h-3 w-3" />
-                        Faltan {task.minPeople! - task.assignees.length}
-                      </Badge>
-                    )}
-                    {task.location && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        {task.location}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {canEdit && <EditActions task={task} onDelete={setDeleting} onEdit={onEdit} />}
-              </div>
-
-              {task.notes && (
-                <button
-                  className="mt-2 flex min-h-[36px] items-center gap-1 text-xs text-muted-foreground"
-                  type="button"
-                  onClick={() => setExpandedId(expanded ? null : task.id)}
+            <TimesItem key={task.id} task={task}>
+              <button
+                className="block w-full px-3.5 py-3 text-left focus-visible:bg-raised focus-visible:outline-hidden active:bg-raised"
+                type="button"
+                onClick={() => onOpen(task.id)}
+              >
+                <span className="flex items-center gap-2">
+                  <span className="font-terminal text-meta text-foreground tabular-nums">{range ?? "Sin hora"}</span>
+                  <span className={badgeVariants({ variant: badge.variant })}>{badge.label}</span>
+                  {missingPeople(task) > 0 ? (
+                    <span className={badgeVariants({ variant: "warning" })}>Faltan {missingPeople(task)}</span>
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    "mt-1 block text-ui font-medium text-foreground",
+                    task.status === "done" && "text-muted-foreground line-through"
+                  )}
                 >
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")} />
-                  Instrucciones
-                </button>
-              )}
-              {expanded && task.notes && (
-                <p className="mt-1 whitespace-pre-line rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                  {task.notes}
-                </p>
-              )}
-
-              <div className="mt-2.5">
-                <StatusActions task={task} onSetStatus={onSetStatus} />
-              </div>
-            </li>
+                  {task.title}
+                </span>
+                {task.location ? (
+                  <span className="mt-0.5 block text-meta text-muted-foreground">{task.location}</span>
+                ) : null}
+                <PeopleChips className="mt-2" people={people} task={task} />
+              </button>
+            </TimesItem>
           );
         })}
       </ul>
 
-      {/* Desktop: table */}
-      <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-28">Hora</TableHead>
-              <TableHead>Tarea</TableHead>
-              <TableHead>Asignados</TableHead>
-              <TableHead className="hidden w-40 lg:table-cell">Estado</TableHead>
-              <TableHead className="w-24" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tasks.map((task) => {
-              const meta = STATUS_META[task.status];
-              const expanded = expandedId === task.id;
-
-              if (task.type === "milestone") {
-                return (
-                  <TableRow key={task.id} className="bg-muted/30 hover:bg-muted/40">
-                    <TableCell className="whitespace-nowrap font-terminal text-xs font-semibold tabular-nums text-primary">
-                      {task.startTime ?? "—"}
-                    </TableCell>
-                    <TableCell colSpan={3}>
-                      <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-                        <Flag className="h-3.5 w-3.5 text-primary" />
-                        {task.title}
-                        {task.notes && <span className="truncate text-xs text-muted-foreground">— {task.notes}</span>}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canEdit && <EditActions task={task} onDelete={setDeleting} onEdit={onEdit} />}
-                    </TableCell>
-                  </TableRow>
-                );
-              }
-
+      {/* Desktop: the table, its header stuck under the page header while it scrolls. */}
+      <Table className="hidden md:table">
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-28 pl-3.5">Hora</TableHead>
+            <TableHead>Tarea</TableHead>
+            <TableHead className="w-48">Personas</TableHead>
+            <TableHead className="w-28">Estado</TableHead>
+            {canEdit ? <TableHead className="w-10" /> : null}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tasks.map((task) => {
+            const range = timeRange(task);
+            if (task.type === "milestone") {
               return (
-                <React.Fragment key={task.id}>
-                  <TableRow className={cn(task.status === "done" && "opacity-60")}>
-                    <TableCell className="whitespace-nowrap font-terminal text-xs tabular-nums text-foreground">
-                      <TimeLabel task={task} />
-                    </TableCell>
-                    <TableCell>
-                      <button
-                        className="flex w-full items-start gap-1.5 text-left"
-                        type="button"
-                        onClick={() => setExpandedId(expanded ? null : task.id)}
+                <TimesRow key={task.id} className="bg-info-surface/25 hover:bg-info-surface/40" task={task}>
+                  <TableCell className="h-9 pl-3.5 font-terminal text-meta text-info-foreground tabular-nums">
+                    {task.startTime ?? "—"}
+                  </TableCell>
+                  <TableCell className="h-9" colSpan={3}>
+                    <span className="flex items-center gap-2 text-ui font-medium text-foreground">
+                      <Flag aria-hidden className="size-3.5 text-info-foreground" />
+                      {task.title}
+                      {task.location ? (
+                        <span className="text-meta font-normal text-muted-foreground">· {task.location}</span>
+                      ) : null}
+                    </span>
+                  </TableCell>
+                  {canEdit ? (
+                    <TableCell className="h-9 pr-2 text-right">
+                      <Button
+                        aria-label={`Editar ${task.title}`}
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => onEdit(task)}
                       >
-                        <div className="min-w-0">
-                          <span
-                            className={cn(
-                              "text-sm font-medium text-foreground",
-                              task.status === "done" && "line-through"
-                            )}
-                          >
-                            {task.title}
-                          </span>
-                          <span className="mt-0.5 flex flex-wrap items-center gap-2">
-                            {isUnderstaffed(task) && (
-                              <Badge className="gap-1 border-primary/40 font-normal text-primary" variant="outline">
-                                <AlertTriangle className="h-3 w-3" />
-                                Faltan {task.minPeople! - task.assignees.length}
-                              </Badge>
-                            )}
-                            {task.location && (
-                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3" />
-                                {task.location}
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                        {task.notes && (
-                          <ChevronDown
-                            className={cn(
-                              "mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
-                              expanded && "rotate-180"
-                            )}
-                          />
-                        )}
-                      </button>
+                        <Pencil />
+                      </Button>
                     </TableCell>
-                    <TableCell>
-                      <AssigneeStack task={task} />
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span aria-hidden className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
-                        {meta.label}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {canEdit && <EditActions task={task} onDelete={setDeleting} onEdit={onEdit} />}
-                    </TableCell>
-                  </TableRow>
-                  {expanded && (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={5}>
-                        <div className="space-y-2 py-1">
-                          {task.notes && (
-                            <p className="whitespace-pre-line rounded-md bg-muted/40 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-                              {task.notes}
-                            </p>
-                          )}
-                          <StatusActions task={task} onSetStatus={onSetStatus} />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
+                  ) : null}
+                </TimesRow>
               );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-
-      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar &quot;{deleting?.title}&quot;?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting}
-              variant="destructive"
-              onClick={(e) => {
-                e.preventDefault();
-                if (!deleting) return;
-                void onDelete(deleting).finally(() => setDeleting(null));
-              }}
-            >
-              {isDeleting ? "Eliminando…" : "Eliminar tarea"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+            }
+            const badge = phaseBadge(task, taskPhase(task, people.at));
+            const missing = missingPeople(task);
+            const late = lateCount(task);
+            return (
+              <TimesRow key={task.id} className="cursor-pointer" task={task} onClick={() => onOpen(task.id)}>
+                <TableCell className="pl-3.5 font-terminal text-meta whitespace-nowrap text-foreground tabular-nums">
+                  {range ?? (
+                    <span className="text-muted-foreground">
+                      {task.type === "ongoing" ? "Todo el día" : "Sin hora"}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <button
+                    className={cn(
+                      "rounded-sm text-left text-ui font-medium text-foreground focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:outline-hidden",
+                      task.status === "done" && "text-muted-foreground line-through"
+                    )}
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpen(task.id);
+                    }}
+                  >
+                    {task.title}
+                  </button>
+                  {task.location ? (
+                    <span className="mt-0.5 flex items-center gap-1 text-meta text-muted-foreground">
+                      <MapPin aria-hidden className="size-3" />
+                      {task.location}
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {task.assignees.length > 0 ? (
+                      <AvatarStack
+                        max={4}
+                        people={task.assignees.map((assignee) => ({
+                          id: assignee.userId,
+                          name: assignee.name,
+                          image: assignee.image,
+                          title: assignee.noShow ? `${assignee.name} · no vino` : assignee.name,
+                        }))}
+                      />
+                    ) : (
+                      <span className="text-meta text-muted-foreground">Sin asignar</span>
+                    )}
+                    {missing > 0 ? <Badge variant="warning">Faltan {missing}</Badge> : null}
+                    {late > 0 ? (
+                      <span className="text-meta text-live-foreground">
+                        {late === 1 ? "1 no llegó" : `${late} no llegaron`}
+                      </span>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={badge.variant}>{badge.label}</Badge>
+                </TableCell>
+                {canEdit ? (
+                  <TableCell className="pr-2 text-right">
+                    <Button
+                      aria-label={`Editar ${task.title}`}
+                      size="icon-sm"
+                      variant="ghost"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onEdit(task);
+                      }}
+                    >
+                      <Pencil />
+                    </Button>
+                  </TableCell>
+                ) : null}
+              </TimesRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Panel>
   );
 }

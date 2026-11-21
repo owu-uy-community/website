@@ -5,6 +5,7 @@
 
 /** Slugs that can never be community slugs (they collide with app routes). */
 export const RESERVED_SLUGS = new Set([
+  "acceso",
   "admin",
   "api",
   "c",
@@ -35,6 +36,8 @@ export const RESERVED_SLUGS = new Set([
   "launchpad",
   "tareas",
   "attendees",
+  "owy",
+  "companion",
 ]);
 
 export const COMMUNITY_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,46})[a-z0-9]$/;
@@ -57,4 +60,6 @@ export const LEGACY_REDIRECTS: Record<string, string> = {
   "/openspace/kiosk/map": `${LEGACY_EVENT_BASE}/kiosk/map`,
   "/openspace/stickynote": `${LEGACY_EVENT_BASE}/stickynote`,
   "/openspace/countdown": `${LEGACY_EVENT_BASE}/countdown`,
+  // La Meetup II's "sumá tu comunidad" form (an empty iframe) → the community directory
+  "/2024/la-meetup/comunidades": "/comunidades",
 };

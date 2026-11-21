@@ -132,7 +132,7 @@ export default function Ticket({ sponsors, releaseDate: _releaseDate, ticketUrl:
           "relative flex flex-col overflow-hidden rounded-[10px] border border-gray-300/20 bg-[#24292e]/50 transition duration-500 ease-in-out sm:h-full sm:min-h-0 sm:flex-row"
         )}
       >
-        <div className="absolute left-1/2 top-1/2 h-[300%] w-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gradient-to-r from-[#41b3ff00] via-[#b0a9ff13] to-[#41b3ff00]" />
+        <div className="absolute top-1/2 left-1/2 h-[300%] w-1/2 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-gradient-to-r from-[#41b3ff00] via-[#b0a9ff13] to-[#41b3ff00]" />
 
         {/* Loading Skeleton Overlay */}
         {isLoading && (
@@ -143,7 +143,7 @@ export default function Ticket({ sponsors, releaseDate: _releaseDate, ticketUrl:
         {!isLoading && !isReleased && releaseDate && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-[10px] bg-[#24292e]/95 backdrop-blur-xs">
             <div className="flex flex-col gap-3 px-3 text-center sm:gap-4 sm:px-4">
-              <h3 className="mb-1 text-sm font-bold leading-tight text-white sm:mb-2 sm:text-base lg:text-lg">
+              <h3 className="mb-1 text-sm leading-tight font-bold text-white sm:mb-2 sm:text-base lg:text-lg">
                 Entradas disponibles desde el <br />
                 {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing */}
                 <span className="text-yellow-400">{localReleaseTime || "13 de octubre de 2025, 00:00"}</span>
@@ -215,25 +215,29 @@ export default function Ticket({ sponsors, releaseDate: _releaseDate, ticketUrl:
         {/* Main Content */}
         <div className="relative flex h-full w-full flex-col items-center justify-center gap-4 px-4 py-8 text-left sm:px-5 sm:py-0">
           {/* Desktop only - Header info */}
-          <div className="hidden sm:absolute sm:left-5 sm:top-6 sm:block">
+          <div className="hidden sm:absolute sm:top-6 sm:left-5 sm:block">
             <span className="spacing text-sm tracking-wider text-gray-300 lg:text-lg">#LaMeetup</span>
           </div>
 
           {/* Logo - centered on mobile, left-aligned and vertically centered on desktop */}
-          <div className="flex flex-col items-center justify-center sm:absolute sm:left-5 sm:top-1/2 sm:mt-2.5 sm:-translate-y-1/2">
-            <img alt="OWU Uruguay" className="max-w-[150px] object-cover lg:max-w-[190px]" src="/images/events/ticket_logo.webp" />
+          <div className="flex flex-col items-center justify-center sm:absolute sm:top-1/2 sm:left-5 sm:mt-2.5 sm:-translate-y-1/2">
+            <img
+              alt="OWU Uruguay"
+              className="max-w-[150px] object-cover lg:max-w-[190px]"
+              src="/images/events/ticket_logo.webp"
+            />
           </div>
 
           {/* Click text - mobile centered, desktop bottom right */}
-          <p className="text-center text-sm font-medium leading-relaxed text-gray-400 sm:absolute sm:bottom-6 sm:right-5 sm:text-left sm:text-xs">
+          <p className="text-center text-sm leading-relaxed font-medium text-gray-400 sm:absolute sm:right-5 sm:bottom-6 sm:text-left sm:text-xs">
             {isReleased && ticketUrl ? "¡Haz clic para obtener tu entrada!" : "¡Haz clic para ver más información!"}
           </p>
 
           {/* Desktop only - Date and location at top right */}
-          <p className="hidden text-xs font-semibold text-yellow-400 sm:absolute sm:right-5 sm:top-6 sm:block">
+          <p className="hidden text-xs font-semibold text-yellow-400 sm:absolute sm:top-6 sm:right-5 sm:block">
             01.11.2025
           </p>
-          <p className="text-gray-400/150 hidden text-xs text-gray-400 sm:absolute sm:right-5 sm:top-11 sm:block">
+          <p className="hidden text-xs text-gray-400 text-gray-400/150 sm:absolute sm:top-11 sm:right-5 sm:block">
             SINERGIA FARO
           </p>
 

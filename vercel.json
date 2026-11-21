@@ -2,5 +2,6 @@
   "version": 2,
   "github": {
     "enabled": false
-  }
+  },
+  "crons": [{ "path": "/api/cron/tick", "schedule": "0 9 * * *" }]
 }

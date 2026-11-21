@@ -20,7 +20,7 @@ export default function OpenSpaceClient({ initialEpg }: { initialEpg: any[] }) {
 
   return (
     <div className="container flex w-full flex-col items-center justify-center gap-5 self-center">
-      <div className="flex w-full max-w-[100vw] flex-row flex-wrap items-center justify-between gap-8 pb-8 md:flex-nowrap md:pb-0 md:pt-8">
+      <div className="flex w-full max-w-[100vw] flex-row flex-wrap items-center justify-between gap-8 pb-8 md:flex-nowrap md:pt-8 md:pb-0">
         <div className="flex w-full max-w-[500px] flex-col gap-3">
           <h1 className="text-left text-3xl font-semibold text-white">Open Space</h1>
           <div className="flex flex-col gap-1.5 text-sm text-white">

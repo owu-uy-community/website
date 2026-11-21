@@ -1,0 +1,11 @@
+name: "Elixir Montevideo"
+picture: /images/communities/elixir-montevideo/picture.webp
+description: "Elixir, Erlang y todo lo que corre sobre la BEAM."
+topics:
+  - lenguajes
+status: activa
+meetup: https://www.meetup.com/elixir-montevideo/
+feedNames:
+  - "Elixir |> Montevideo"
+slackChannel: elixir
+confPartner: false

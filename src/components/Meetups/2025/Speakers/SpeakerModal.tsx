@@ -18,7 +18,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     ref={ref}
-    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0"
     {...props}
   />
 ));
@@ -32,11 +32,11 @@ const DialogContent = React.forwardRef<
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
-      className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 border border-blue-900/30 bg-[#0a0e1a] p-6 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg"
+      className="fixed top-[50%] left-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 border border-blue-900/30 bg-[#0a0e1a] p-6 shadow-xl duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] data-[state=open]:zoom-in-95 sm:rounded-lg"
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-yellow-400 focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+      <DialogPrimitive.Close className="absolute top-4 right-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-yellow-400 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-6 w-6 text-gray-400 hover:text-yellow-400" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -56,7 +56,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className="text-2xl font-bold leading-none tracking-tight text-yellow-400"
+    className="text-2xl leading-none font-bold tracking-tight text-yellow-400"
     {...props}
   />
 ));
@@ -203,7 +203,7 @@ export default function SpeakerModal({
                             </div>
                           </div>
                           {/* Tooltip on hover */}
-                          <div className="pointer-events-none absolute -bottom-8 left-1/2 z-[100] -translate-x-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-gray-300 opacity-0 transition-opacity group-hover/avatar:opacity-100">
+                          <div className="pointer-events-none absolute -bottom-8 left-1/2 z-[100] -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs whitespace-nowrap text-gray-300 opacity-0 transition-opacity group-hover/avatar:opacity-100">
                             {speakerFullName}
                           </div>
                         </div>
@@ -219,7 +219,7 @@ export default function SpeakerModal({
               <div className="flex flex-col gap-0.5">
                 {currentSpeaker.jobTitle && <p className="text-sm text-gray-300">{currentSpeaker.jobTitle}</p>}
                 {currentSpeaker.company && (
-                  <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                     {currentSpeaker.company}
                   </p>
                 )}
@@ -239,15 +239,15 @@ export default function SpeakerModal({
                     components={{
                       p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
                       strong: ({ children }) => <strong className="font-bold text-yellow-400">{children}</strong>,
-                      em: ({ children }) => <em className="italic text-gray-200">{children}</em>,
+                      em: ({ children }) => <em className="text-gray-200 italic">{children}</em>,
                       ul: ({ children }) => <ul className="mb-3 list-inside list-disc space-y-1">{children}</ul>,
                       ol: ({ children }) => <ol className="mb-3 list-inside list-decimal space-y-1">{children}</ol>,
                       li: ({ children }) => <li className="text-gray-300">{children}</li>,
                       h1: ({ children }) => (
-                        <h1 className="mb-2 mt-4 text-2xl font-bold text-yellow-400">{children}</h1>
+                        <h1 className="mt-4 mb-2 text-2xl font-bold text-yellow-400">{children}</h1>
                       ),
-                      h2: ({ children }) => <h2 className="mb-2 mt-3 text-xl font-bold text-yellow-400">{children}</h2>,
-                      h3: ({ children }) => <h3 className="mb-2 mt-3 text-lg font-bold text-yellow-400">{children}</h3>,
+                      h2: ({ children }) => <h2 className="mt-3 mb-2 text-xl font-bold text-yellow-400">{children}</h2>,
+                      h3: ({ children }) => <h3 className="mt-3 mb-2 text-lg font-bold text-yellow-400">{children}</h3>,
                       a: ({ children, href }) => (
                         <a
                           href={href}
@@ -259,7 +259,7 @@ export default function SpeakerModal({
                         </a>
                       ),
                       blockquote: ({ children }) => (
-                        <blockquote className="my-3 border-l-4 border-yellow-400/50 pl-4 italic text-gray-400">
+                        <blockquote className="my-3 border-l-4 border-yellow-400/50 pl-4 text-gray-400 italic">
                           {children}
                         </blockquote>
                       ),

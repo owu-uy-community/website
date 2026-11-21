@@ -12,7 +12,7 @@ type MemberProps = {
 
 export default function Member({ name, role, image, linkedin, twitter, github }: MemberProps) {
   const cardContent = (
-    <div className="relative flex w-full min-w-[280px] max-w-[285px] flex-1 flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20">
+    <div className="relative flex w-full max-w-[285px] min-w-[280px] flex-1 flex-col items-center justify-center rounded-md bg-white/10 p-[1px] transition-all hover:bg-white/20">
       <div className="flex w-full flex-1 flex-col justify-between gap-2 rounded-md bg-[#000214]/50 px-6 py-5 transition">
         <span>
           <figure className="flex items-center justify-center">

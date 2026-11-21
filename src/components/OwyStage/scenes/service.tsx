@@ -1,0 +1,617 @@
+"use client";
+
+import { useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { AnimatePresence, m } from "motion/react";
+
+import { EASE_OUT } from "app/conf/components/Reveal";
+import { MAPS_URLS } from "app/lib/constants";
+import { findSound } from "lib/launchpad/sounds";
+import { shift, type SceneProps } from "lib/owy-stage/scenes";
+import { formatCountdown, formatTime } from "lib/utils";
+
+import { Ambient, BRAND, StageContext } from "../Stage";
+import { QrCode, Rise } from "./parts";
+import { EmptyText, parseProgram, secondsUntil, useBoard, useNow } from "./useful";
+
+export const splitList = (value: string) =>
+  value
+    .split("|")
+    .map((v) => v.trim())
+    .filter(Boolean);
+/** "🚻 Baños: planta baja" → { icon, name, detail }. The icon is optional. */
+export function parseItem(line: string) {
+  const match = line.match(/^(\p{Extended_Pictographic}\S*)?\s*([^:]+?)(?::\s*(.*))?$/u);
+  return { icon: match?.[1] ?? "", name: (match?.[2] ?? line).trim(), detail: (match?.[3] ?? "").trim() };
+}
+
+export function Header({ eyebrow, title, wide = false }: { eyebrow: string; title: string; wide?: boolean }) {
+  return (
+    <div className={`absolute top-[100px] left-[140px] ${wide ? "w-[1400px]" : "w-[1100px]"}`}>
+      <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
+        {eyebrow}
+      </Rise>
+      <Rise
+        className={`mt-3 ${title.length > 34 ? "text-[64px]" : "text-[84px]"} leading-none font-extrabold tracking-[-0.02em] text-balance uppercase`}
+        delay={0.15}
+      >
+        {title}
+      </Rise>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Rounds — open space rounds, with the clock doing the facilitation
+// ---------------------------------------------------------------------------
+
+type Round = { start: string; end: string };
+
+function parseRounds(value: string): Round[] {
+  return splitList(value)
+    .map((item) => item.match(/^(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})$/))
+    .filter((match): match is RegExpMatchArray => match !== null)
+    .map((match) => ({ start: match[1].padStart(5, "0"), end: match[2].padStart(5, "0") }));
+}
+
+export function Rounds({ params, eventId }: SceneProps<"rounds">) {
+  const { preview, throttle } = useContext(StageContext);
+  const now = useNow(1000);
+  // Typed rounds win; otherwise the open space grid's own blocks, so a moved block moves here too.
+  const board = useBoard(params.rounds ? null : eventId, preview);
+  const rounds = useMemo(
+    () =>
+      (params.rounds
+        ? parseRounds(params.rounds)
+        : (board?.schedules ?? [])
+            .filter((slot) => slot.isActive)
+            .map((slot) => ({ start: slot.startTime.slice(0, 5), end: slot.endTime.slice(0, 5) }))
+            .sort((a, b) => a.start.localeCompare(b.start))
+      ).map((round) => ({ start: shift(round.start, params.shift), end: shift(round.end, params.shift) })),
+    [params.rounds, params.shift, board]
+  );
+
+  // A round that ends while the scene is on the wall sounds once. Opening the page, or moving the
+  // rounds (shift, a block edited in the grid), sets the count without a sound.
+  const key = rounds.map((round) => round.end).join(",");
+  const ended = rounds.filter((round) => round.end <= now).length;
+  const heard = useRef<{ key: string; ended: number } | null>(null);
+  useEffect(() => {
+    const before = heard.current;
+    heard.current = { key, ended };
+    const sound = findSound(params.sound);
+    if (sound && !throttle && before?.key === key && ended > before.ended) {
+      new Audio(sound.audioFile).play().catch(() => undefined);
+    }
+  }, [key, ended, params.sound, throttle]);
+
+  if (!params.rounds && !eventId) return <EmptyText text="Elegí un evento en el admin" />;
+  if (!params.rounds && !board) return null;
+  if (!rounds.length) return <EmptyText text="Todavía no hay bloques en la grilla" />;
+  const active = rounds.findIndex((r) => r.start <= now && now < r.end);
+  const nextIndex = rounds.findIndex((r) => r.start > now);
+  const over = now >= rounds[rounds.length - 1].end;
+
+  let label = params.startsIn;
+  let seconds = 0;
+  let caption = "";
+  if (active >= 0) {
+    label = `Ronda ${active + 1} · ${params.endsIn}`;
+    seconds = secondsUntil(rounds[active].end);
+    caption = `${rounds[active].start} – ${rounds[active].end}`;
+  } else if (over) {
+    label = params.title;
+    caption = params.doneText;
+  } else if (nextIndex >= 0) {
+    label = nextIndex === 0 ? params.startsIn : params.nextIn;
+    seconds = secondsUntil(rounds[nextIndex].start);
+    caption = `Ronda ${nextIndex + 1} · ${rounds[nextIndex].start}`;
+  }
+  const clock = over ? "FIN" : formatCountdown(Math.max(0, seconds));
+  const long = clock.length > 5;
+
+  if (!params.list) {
+    return (
+      <>
+        <Ambient />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+          <Rise className="text-[30px] font-semibold tracking-[0.3em] text-[#F5BB03] uppercase" delay={0.05}>
+            {params.title}
+          </Rise>
+          <p className="mt-8 text-[48px] font-semibold tracking-[0.25em] text-[#FBF5E7]/70 uppercase">{label}</p>
+          <p
+            className={`countdown-font countdown-centered mt-4 leading-none tracking-wider text-[#F5BB03] ${long ? "text-[300px]" : "text-[400px]"}`}
+          >
+            {clock}
+          </p>
+          <p className="mt-8 text-[56px] font-bold">{caption}</p>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Ambient />
+      <Header
+        eyebrow={params.title}
+        title={active >= 0 ? `Ronda ${active + 1} de ${rounds.length}` : over ? "Terminó" : "Entre rondas"}
+      />
+      <div className="absolute top-[300px] right-[140px] bottom-[80px] left-[140px] flex items-center justify-between gap-[100px]">
+        <div className="min-w-0 flex-1 text-center">
+          <p className="text-[34px] font-semibold tracking-[0.25em] text-[#FBF5E7]/60 uppercase">{label}</p>
+          <p
+            className={`countdown-font countdown-centered mt-2 leading-none tracking-wider text-[#F5BB03] ${long ? "text-[220px]" : "text-[300px]"}`}
+          >
+            {clock}
+          </p>
+          <p className="mt-4 text-[44px] font-bold">{caption}</p>
+        </div>
+        <ol className="flex w-[520px] shrink-0 flex-col gap-[18px]">
+          {rounds.map((round, i) => {
+            const state = i === active ? "active" : round.end <= now ? "done" : "pending";
+            const startIn = secondsUntil(round.start);
+            const endIn = secondsUntil(round.end);
+            const progress = state === "active" ? Math.min(1, Math.max(0, -startIn / Math.max(1, endIn - startIn))) : 0;
+            return (
+              <m.li
+                key={round.start}
+                animate={{ opacity: 1, x: 0 }}
+                className={`relative overflow-hidden px-8 py-5 ${state === "active" ? "bg-[#F5BB03] text-black" : state === "done" ? "bg-[#FBF5E7]/[0.05] text-[#FBF5E7]/40" : "bg-[#FBF5E7]/[0.08]"}`}
+                initial={{ opacity: 0, x: 40 }}
+                transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}
+              >
+                {state === "active" && (
+                  <div className="absolute inset-y-0 left-0 bg-black/15" style={{ width: `${progress * 100}%` }} />
+                )}
+                <div className="relative flex items-center justify-between">
+                  <span className="text-[34px] font-bold">Ronda {i + 1}</span>
+                  <span className="text-[34px] font-semibold tabular-nums">
+                    {round.start} – {round.end}
+                  </span>
+                </div>
+              </m.li>
+            );
+          })}
+        </ol>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Now bar — programme-driven lower third for camera feeds (?bg=transparent)
+// ---------------------------------------------------------------------------
+
+export function NowBar({ params }: SceneProps<"now-bar">) {
+  const { bg } = useContext(StageContext);
+  const now = useNow(1000);
+  const program = useMemo(() => parseProgram(params.items), [params.items]);
+  let current = -1;
+  program.forEach((item, i) => {
+    if (item.time <= now) current = i;
+  });
+  const next = program[current + 1];
+  const shadow = bg === "transparent" ? "shadow-[0_20px_60px_rgba(0,0,0,0.6)]" : "";
+
+  return (
+    <div className={`absolute right-[120px] bottom-[64px] left-[120px] flex items-stretch ${shadow}`}>
+      <div className="flex items-center gap-8 bg-[#F5BB03] px-10 py-6 text-black">
+        <span className="text-[26px] font-bold tracking-[0.3em] uppercase">Ahora</span>
+        <span className="text-[44px] leading-none font-extrabold">
+          {current >= 0 ? program[current].title : "Puertas abiertas"}
+        </span>
+      </div>
+      {next && (
+        <div className="flex items-center gap-8 bg-[#FBF5E7] px-10 py-6 text-black">
+          <span className="text-[26px] font-bold tracking-[0.3em] text-[#0162C8] uppercase">Sigue</span>
+          <span className="text-[40px] leading-none font-bold">
+            <span className="text-[#0162C8]">{next.time}</span> · {next.title}
+          </span>
+        </div>
+      )}
+      <div className="ml-auto flex items-center bg-black px-10 text-[44px] font-extrabold text-[#FBF5E7] tabular-nums">
+        {now}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Notices — rotating announcements
+// ---------------------------------------------------------------------------
+
+export function Notices({ params }: SceneProps<"notices">) {
+  const { preview } = useContext(StageContext);
+  const lines = useMemo(() => splitList(params.lines), [params.lines]);
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (preview || lines.length < 2) return;
+    const id = setInterval(() => setIndex((i) => (i + 1) % lines.length), params.seconds * 1000);
+    return () => clearInterval(id);
+  }, [lines.length, params.seconds, preview]);
+
+  const line = lines[index % Math.max(1, lines.length)] ?? "";
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow={`Avisos · ${Math.min(index + 1, lines.length)} / ${lines.length}`} title={params.title} />
+      <div className="absolute top-[360px] right-[140px] left-[340px]">
+        <AnimatePresence mode="wait">
+          <m.p
+            key={`${index}-${line}`}
+            animate={{ opacity: 1, y: 0 }}
+            className="border-l-[14px] border-[#F5BB03] pl-10 text-[76px] leading-[1.15] font-bold text-balance"
+            exit={{ opacity: 0, y: -30, transition: { duration: 0.3 } }}
+            initial={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.6, ease: EASE_OUT }}
+          >
+            {line}
+          </m.p>
+        </AnimatePresence>
+      </div>
+      <div className="absolute bottom-[110px] left-[340px] flex gap-4">
+        {lines.map((_, i) => (
+          <span key={i} className={`h-[14px] w-[56px] ${i === index ? "bg-[#F5BB03]" : "bg-[#FBF5E7]/25"}`} />
+        ))}
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Changes — what moved, what got cancelled
+// ---------------------------------------------------------------------------
+
+export function Changes({ params }: SceneProps<"changes">) {
+  const now = useNow(60_000);
+  const changes = splitList(params.lines).map((line) => {
+    const [before, after = ""] = line.split(/→|->/).map((v) => v.trim());
+    return { before, after, cancelled: /cancel/i.test(after) };
+  });
+
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow={`Actualizado ${now}`} title="Cambios en el programa" />
+      <ul className="absolute top-[340px] right-[140px] left-[340px] flex flex-col gap-[22px]">
+        {changes.slice(0, 5).map((change, i) => (
+          <m.li
+            key={`${i}-${change.before}`}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-8 bg-[#FBF5E7]/[0.06] px-8 py-6"
+            initial={{ opacity: 0, x: 40 }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.12, ease: EASE_OUT }}
+          >
+            <span className="w-[640px] text-[40px] leading-[1.15] font-semibold text-[#FBF5E7]/70">
+              {change.before}
+            </span>
+            <span className="text-[56px] text-[#F5BB03]">→</span>
+            <span
+              className={`flex-1 text-[44px] leading-[1.15] font-extrabold ${change.cancelled ? "text-[#F5BB03]" : "text-[#FBF5E7]"}`}
+            >
+              {change.after || "—"}
+            </span>
+          </m.li>
+        ))}
+        {!changes.length && (
+          <li className="text-[48px] font-semibold text-[#FBF5E7]/60">Sin cambios. Todo según el programa.</li>
+        )}
+      </ul>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Facilities — where things are
+// ---------------------------------------------------------------------------
+
+export function Facilities({ params }: SceneProps<"facilities">) {
+  const items = splitList(params.items).map(parseItem).slice(0, 8);
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow="Servicios" title={params.title} />
+      <ul className="absolute top-[330px] right-[140px] left-[340px] grid grid-cols-4 gap-[20px]">
+        {items.map((item, i) => (
+          <m.li
+            key={`${i}-${item.name}`}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex min-h-[250px] flex-col bg-[#FBF5E7]/[0.06] px-7 py-6"
+            initial={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.08, ease: EASE_OUT }}
+          >
+            <span className="text-[72px] leading-none">{item.icon || "•"}</span>
+            <span className="mt-5 text-[34px] leading-[1.1] font-extrabold uppercase">{item.name}</span>
+            <span className="mt-2 text-[28px] leading-[1.2] text-[#FBF5E7]/70">{item.detail}</span>
+          </m.li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Emergency — exits and the meeting point
+// ---------------------------------------------------------------------------
+
+export function Emergency({ params }: SceneProps<"emergency">) {
+  const exits = splitList(params.exits).slice(0, 4);
+  return (
+    <>
+      <div
+        className="absolute inset-x-0 top-0 h-[40px]"
+        style={{ background: `repeating-linear-gradient(135deg, ${BRAND.yellow} 0 40px, ${BRAND.black} 40px 80px)` }}
+      />
+      <Header eyebrow="Por si acaso" title="En caso de emergencia" />
+      <ol className="absolute top-[340px] left-[140px] flex w-[900px] flex-col gap-[26px]">
+        {exits.map((exit, i) => (
+          <m.li
+            key={`${i}-${exit}`}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-8"
+            initial={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.12, ease: EASE_OUT }}
+          >
+            <span className="flex h-[96px] w-[96px] shrink-0 items-center justify-center bg-[#F5BB03] text-[48px] font-extrabold text-black">
+              {i + 1}
+            </span>
+            <span className="text-[42px] leading-[1.15] font-semibold text-balance">{exit}</span>
+          </m.li>
+        ))}
+      </ol>
+      <div className="absolute top-[340px] right-[140px] flex w-[620px] flex-col gap-[20px]">
+        <div className="bg-[#0162C8] px-9 py-8 text-[#FBF5E7]">
+          <p className="text-[26px] font-bold tracking-[0.3em] uppercase opacity-80">Punto de encuentro</p>
+          <p className="mt-2 text-[46px] leading-[1.1] font-extrabold text-balance">{params.meetingPoint}</p>
+        </div>
+        <div className="bg-[#FBF5E7]/[0.08] px-9 py-8">
+          <p className="text-[26px] font-bold tracking-[0.3em] text-[#F5BB03] uppercase">Avisá</p>
+          <p className="mt-2 text-[36px] leading-[1.2] font-semibold text-balance">{params.contact}</p>
+        </div>
+        <div className="flex items-center gap-6 bg-[#F5BB03] px-9 py-6 text-black">
+          <span className="text-[26px] font-bold tracking-[0.3em] uppercase">Emergencias</span>
+          <span className="ml-auto text-[72px] leading-none font-extrabold tabular-nums">{params.phone}</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Transport — how to get home
+// ---------------------------------------------------------------------------
+
+export function Transport({ params }: SceneProps<"transport">) {
+  const columns = [
+    { icon: "🚌", title: "Ómnibus", text: params.bus },
+    { icon: "🚕", title: "Taxi · apps", text: params.taxi },
+    { icon: "🚲", title: "Bici · a pie", text: params.bike },
+  ];
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow={params.address} title="¿Cómo volvés?" />
+      <div className="absolute top-[330px] left-[340px] grid w-[1000px] grid-cols-1 gap-[18px]">
+        {columns.map((column, i) => (
+          <m.div
+            key={column.title}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-8 bg-[#FBF5E7]/[0.06] px-8 py-6"
+            initial={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.12, ease: EASE_OUT }}
+          >
+            <span className="text-[72px] leading-none">{column.icon}</span>
+            <span>
+              <span className="block text-[26px] font-bold tracking-[0.25em] text-[#F5BB03] uppercase">
+                {column.title}
+              </span>
+              <span className="mt-1 block text-[34px] leading-[1.2] font-semibold text-balance">{column.text}</span>
+            </span>
+          </m.div>
+        ))}
+      </div>
+      <div className="absolute top-[330px] right-[140px] flex w-[400px] flex-col items-center gap-5">
+        <QrCode size={400} value={MAPS_URLS.meetupLocation} />
+        <p className="text-center text-[26px] font-semibold text-[#FBF5E7]/70">Ubicación en Google Maps</p>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Coffee break — a steaming cup that empties as the break runs out
+// ---------------------------------------------------------------------------
+
+/** Lucide's `coffee` icon, animated: the steam rises and the coffee sits at `fill` (0 empty, 1 full). */
+function CoffeeCup({ fill, className }: { fill: number; className?: string }) {
+  // Two monitors on the desk can show the scene at once: each cup needs its own clip id.
+  const clip = useId();
+  // The surface, from just under the rim (full) to the bottom of the cup (empty).
+  const level = 9.5 + (1 - fill) * 11.5;
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke={BRAND.cream}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={1.5}
+      viewBox="0 -4 24 26"
+    >
+      <clipPath id={clip}>
+        <path d="M4 8h13v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z" />
+      </clipPath>
+      <g clipPath={`url(#${clip})`}>
+        <m.g animate={{ y: level }} initial={{ y: level }} transition={{ duration: 1, ease: "linear" }}>
+          {/* A wave one wavelength (7) wider than the cup each side, slid by one wavelength: it loops seamlessly */}
+          <m.path
+            animate={{ x: [0, 7] }}
+            d="M-11 0q1.75-.6 3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0t3.5 0V14H-11z"
+            fill={BRAND.yellow}
+            stroke="none"
+            transition={{ duration: 2.4, ease: "linear", repeat: Infinity }}
+          />
+        </m.g>
+      </g>
+      {[6, 10, 14].map((x, i) => (
+        <m.path
+          key={x}
+          animate={{ opacity: [0, 1, 0], y: [1, -3] }}
+          d={`M${x} 6q-1-1.25 0-2.5t0-2.5`}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 2.6, delay: i * 0.7, ease: "easeOut", repeat: Infinity }}
+        />
+      ))}
+      <path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1" />
+    </svg>
+  );
+}
+
+export function CoffeeBreak({ params }: SceneProps<"coffee">) {
+  useNow(1000);
+  const left = secondsUntil(params.talksAt);
+  const total = left - secondsUntil(params.breakAt);
+  const fill = total > 0 ? Math.min(1, Math.max(0, left / total)) : Number(left > 0);
+  const done = left <= 0;
+
+  return (
+    <>
+      <Ambient />
+      <m.div
+        animate={{ y: [0, -14, 0] }}
+        className="absolute top-[250px] left-[300px] h-[560px] w-[520px]"
+        transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
+      >
+        <CoffeeCup className="h-full w-full" fill={fill} />
+      </m.div>
+      <div className="absolute top-[330px] left-[940px] w-[880px]">
+        <Rise className="text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
+          {params.title}
+        </Rise>
+        <Rise className="mt-8 text-[34px] font-semibold tracking-[0.3em] text-[#FBF5E7]/60 uppercase" delay={0.15}>
+          {params.label}
+        </Rise>
+        {/* Ends on a pulsing cream 00:00: the stencil's «¡» hangs off the line and runs into the label */}
+        <div
+          className={`countdown-font mt-6 text-[250px] leading-none tracking-wider select-none ${done ? "animate-timer-pulse text-[#FBF5E7]" : "text-[#F5BB03]"}`}
+        >
+          {formatTime(Math.min(Math.max(left, 0), 5999))}
+        </div>
+        <Rise className="mt-4 text-[40px] leading-[1.15] font-semibold text-balance text-[#FBF5E7]/75" delay={0.3}>
+          {[params.talksAt, params.note].filter(Boolean).join(" · ")}
+        </Rise>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Food — the coffee break menu
+// ---------------------------------------------------------------------------
+
+export function Food({ params }: SceneProps<"food">) {
+  const now = useNow(1000);
+  const items = splitList(params.items).map(parseItem).slice(0, 8);
+  const seconds = /^\d{1,2}:\d{2}$/.test(params.time) ? secondsUntil(params.time.padStart(5, "0")) : 0;
+  const status = seconds > 0 ? `Empieza en ${formatTime(Math.min(seconds, 5999))}` : "Ahora";
+  void now;
+
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow={`${params.time} · ${status}`} title={params.title} />
+      <ul className="absolute top-[330px] right-[140px] left-[340px] grid grid-cols-2 gap-x-[40px] gap-y-[18px]">
+        {items.map((item, i) => (
+          <m.li
+            key={`${i}-${item.name}`}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-7 border-b-[3px] border-[#FBF5E7]/15 py-5"
+            initial={{ opacity: 0, y: 24 }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.08, ease: EASE_OUT }}
+          >
+            <span className="w-[80px] text-center text-[60px] leading-none">{item.icon || "•"}</span>
+            <span>
+              <span className="block text-[40px] leading-[1.1] font-extrabold">{item.name}</span>
+              {item.detail && <span className="mt-1 block text-[28px] text-[#FBF5E7]/65">{item.detail}</span>}
+            </span>
+          </m.li>
+        ))}
+      </ul>
+      <p className="absolute bottom-[90px] left-[340px] text-[30px] font-semibold text-[#FBF5E7]/60">{params.note}</p>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Feedback — the satisfaction survey
+// ---------------------------------------------------------------------------
+
+export function Feedback({ params }: SceneProps<"feedback">) {
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow="Tu opinión" title={params.title} />
+      <div className="absolute top-[360px] left-[340px] w-[900px]">
+        <div className="flex gap-4">
+          {Array.from({ length: 5 }, (_, i) => (
+            <m.span
+              key={i}
+              animate={{ opacity: [0.25, 1, 1, 0.25], scale: [0.9, 1.15, 1, 0.9] }}
+              className="text-[150px] leading-none text-[#F5BB03]"
+              transition={{ duration: 4, repeat: Infinity, delay: i * 0.3, times: [0, 0.15, 0.7, 1] }}
+            >
+              ★
+            </m.span>
+          ))}
+        </div>
+        <p className="mt-10 text-[48px] leading-[1.2] font-semibold text-balance text-[#FBF5E7]/85">
+          {params.subtitle}
+        </p>
+        <p className="mt-8 font-terminal text-[32px] text-[#F5BB03]">{params.url.replace(/^https?:\/\//, "")}</p>
+      </div>
+      <div className="absolute top-[340px] right-[140px]">
+        <QrCode size={440} value={params.url} />
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Checklist — before you leave
+// ---------------------------------------------------------------------------
+
+export function Checklist({ params }: SceneProps<"checklist">) {
+  const items = splitList(params.items).slice(0, 6);
+  return (
+    <>
+      <Ambient />
+      <Header eyebrow="Casi terminamos" title={params.title} />
+      <ul className="absolute top-[330px] right-[140px] left-[340px] flex flex-col gap-[22px]">
+        {items.map((item, i) => (
+          <m.li
+            key={`${i}-${item}`}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-8"
+            initial={{ opacity: 0, x: 40 }}
+            transition={{ duration: 0.5, delay: 0.3 + i * 0.12, ease: EASE_OUT }}
+          >
+            <span className="relative flex h-[84px] w-[84px] shrink-0 items-center justify-center border-[6px] border-[#FBF5E7]/60">
+              <m.span
+                animate={{ scale: 1, opacity: 1 }}
+                className="absolute inset-[-6px] flex items-center justify-center bg-[#F5BB03] text-[56px] font-extrabold text-black"
+                initial={{ scale: 0, opacity: 0 }}
+                transition={{ duration: 0.35, delay: 1.2 + i * 0.9, ease: EASE_OUT }}
+              >
+                ✓
+              </m.span>
+            </span>
+            <span className="text-[46px] leading-[1.15] font-semibold text-balance">{item}</span>
+          </m.li>
+        ))}
+      </ul>
+    </>
+  );
+}

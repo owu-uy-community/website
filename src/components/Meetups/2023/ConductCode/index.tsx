@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 type ConductCodeProps = {
   title: string;
   subtitle: string;
@@ -41,6 +43,13 @@ export default function CoductCode({
         <p className="mb-4">{consequences}</p>
         <p className="mb-4">{participationAgreement}</p>
         <p>{scope}</p>
+        <p className="mt-4 text-sm text-zinc-400">
+          Hoy rige un código para toda la comunidad:{" "}
+          <Link className="text-yellow-400 underline underline-offset-4" href="/codigo-de-conducta">
+            owu.uy/codigo-de-conducta
+          </Link>
+          .
+        </p>
       </div>
     </section>
   );

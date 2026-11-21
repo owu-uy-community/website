@@ -10,13 +10,13 @@ export default defineTool({
   inputSchema: z.object({
     track: z.string().min(1).describe("Card a borrar (id o parte del título)"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("program:manage"),
   async execute({ track }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
     const board = await getBoard();
     const card = findCard(board, track);
 
-    await owuApi().tracks.delete({ id: card.id });
+    await owuApi(ctx).tracks.delete({ id: card.id });
 
     return {
       ok: true,

@@ -1,655 +1,655 @@
 "use client";
 
-import * as React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, ClipboardList, Flag, Megaphone, Plus, UserRound } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  CalendarClock,
+  ClipboardList,
+  FileSpreadsheet,
+  Flag,
+  Megaphone,
+  Plus,
+  UserRoundCheck,
+  type LucideIcon,
+} from "lucide-react";
 
 import { cn } from "app/lib/utils";
-import { RealtimeIndicator } from "components/Meetups/OpenSpace/atoms/RealtimeIndicator";
-import { AnnouncementsPanel } from "components/Admin/tareas/AnnouncementsPanel";
-import { ScheduleTable, ShiftPopover } from "components/Admin/tareas/ScheduleTable";
-import { TaskCard } from "components/Admin/tareas/TaskCard";
-import { TaskFormDialog, type TaskFormValues } from "components/Admin/tareas/TaskFormDialog";
+import { AnnouncementComposer, AnnouncementList } from "components/Admin/tareas/AnnouncementsPanel";
 import {
-  DEFAULT_TASK_MINUTES,
-  formatClock,
+  eventClock,
   formatDayLabel,
   isMine,
-  taskWindow,
-  todayDayString,
+  missingPeople,
+  plural,
+  type OnShift,
   type RosterMember,
   type StaffAnnouncement,
+  type StaffArrival,
   type StaffTask,
-  type StaffTaskStatus,
+  TAREAS_TABS,
+  type TareasTab as Tab,
 } from "components/Admin/tareas/helpers";
-import { Badge } from "components/shared/ui/badge";
+import { ImportSheetPanel } from "components/Admin/tareas/ImportSheetPanel";
+import { ScheduleTable, ShiftPopover } from "components/Admin/tareas/ScheduleTable";
+import { ShiftTimeline } from "components/Admin/tareas/ShiftTimeline";
+import { SwapProvider } from "components/Admin/tareas/swap";
+import { TaskCard, type PeopleContext } from "components/Admin/tareas/TaskCard";
+import { TaskDetailPanel } from "components/Admin/tareas/TaskDetailPanel";
+import { TaskFormPanel } from "components/Admin/tareas/TaskFormPanel";
+import { staffKeys, useMembership, useSetStatus, useStaffLive, type Me } from "components/Admin/tareas/use-staff";
+import { useCommands } from "components/Admin/shell/commands";
+import { useShortcuts } from "components/Admin/shell/shortcuts";
+import { scopedAdminHref } from "components/Admin/shell/use-selected-event";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { EmptyState, ErrorState } from "components/Admin/ui/states";
+import { StatusDot } from "components/Admin/ui/status";
+import { useNow } from "components/Admin/ui/time";
+import { badgeVariants } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
-import { Empty } from "components/shared/ui/empty";
+import { Kbd } from "components/shared/ui/kbd";
+import { Switch } from "components/shared/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
-import { ToggleGroup, ToggleGroupItem } from "components/shared/ui/toggle-group";
-import { toast } from "components/shared/ui/toast-utils";
-import { eventChannel } from "lib/realtime/channels";
+import { useSwipeTabs } from "components/Admin/ui/swipe";
 import { orpc } from "lib/orpc";
-import type { CommunityMember } from "lib/orpc/communities/schemas";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { minuteOfDay, taskPhase } from "lib/orpc/staff-tasks/shift";
 
-/** Live clock, ticking twice a minute. */
-function useNow(intervalMs = 30_000): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
-}
+const TAB_LIST = "h-auto gap-[18px] rounded-none border-0 bg-transparent p-0";
+const TAB =
+  "relative h-9 rounded-none px-0 text-ui text-muted-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none data-[state=active]:after:bg-primary pointer-coarse:h-11 pointer-coarse:before:min-w-11";
 
 interface TareasClientProps {
   eventId: string;
   eventName: string;
-  meId: string;
-  meName: string;
+  eventSlug: string;
+  communitySlug: string;
+  timeZone: string;
+  /** The server's clock while rendering, so the first paint matches it. */
+  serverNow: number;
+  me: Me;
   canEdit: boolean;
+  initialTab: Tab;
   initialTasks: StaffTask[];
   initialAnnouncements: StaffAnnouncement[];
-  initialRoster: CommunityMember[];
+  initialRoster: RosterMember[];
+  initialArrivals: StaffArrival[];
+  initialOnShift: OnShift;
+}
+
+/** A lane of the "Ahora" tab. */
+function Lane({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  return (
+    <section aria-label={title} className={cn("space-y-2", count === 0 && "max-md:hidden")}>
+      <h3 className="flex items-center gap-2 font-terminal text-[10.5px] tracking-[0.14em] text-muted-foreground uppercase">
+        {title}
+        <span className="text-faint tabular-nums">{count}</span>
+      </h3>
+      {count === 0 ? (
+        <p className="rounded-lg border border-dashed border-input px-3 py-6 text-center text-meta text-muted-foreground">
+          Nada
+        </p>
+      ) : (
+        children
+      )}
+    </section>
+  );
+}
+
+/** "14 de 18 en turno · 2 atrasadas · 3 libres ahora", each a way into Turnos. */
+function ShiftChips({ shift, onOpen }: { shift: OnShift; onOpen: () => void }) {
+  const chip = (variant: "success" | "destructive" | "info", children: ReactNode, label: string) => (
+    <button
+      aria-label={`${label}: ver los turnos`}
+      className={cn(
+        badgeVariants({ variant }),
+        "relative cursor-pointer font-terminal tabular-nums focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:outline-hidden",
+        // A chip is 20 px; a finger gets the row's height.
+        "pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:top-1/2 pointer-coarse:before:h-11 pointer-coarse:before:-translate-y-1/2"
+      )}
+      type="button"
+      onClick={onOpen}
+    >
+      {children}
+    </button>
+  );
+  const onShift = `${shift.onSite} de ${shift.expected} en turno`;
+
+  return (
+    <>
+      {chip(
+        "success",
+        <>
+          <StatusDot tone="ok" />
+          {onShift}
+        </>,
+        onShift
+      )}
+      {shift.late > 0
+        ? chip(
+            "destructive",
+            plural(shift.late, "atrasada", "atrasadas"),
+            plural(shift.late, "persona atrasada", "personas atrasadas")
+          )
+        : null}
+      {shift.free > 0
+        ? chip(
+            "info",
+            plural(shift.free, "libre ahora", "libres ahora"),
+            plural(shift.free, "persona libre", "personas libres")
+          )
+        : null}
+    </>
+  );
 }
 
 export default function TareasClient({
   eventId,
   eventName,
-  meId,
-  meName,
+  eventSlug,
+  communitySlug,
+  timeZone,
+  serverNow,
+  me,
   canEdit,
+  initialTab,
   initialTasks,
   initialAnnouncements,
   initialRoster,
+  initialArrivals,
+  initialOnShift,
 }: TareasClientProps) {
   const queryClient = useQueryClient();
-  const now = useNow();
+  const keys = staffKeys(eventId);
+  const input = { eventId };
+  useStaffLive(eventId);
 
-  // ---------------------------------------------------------------- queries
-  const tasksKey = orpc.staffTasks.list.queryKey({ input: { eventId } });
-  const announcementsKey = orpc.staffTasks.announcements.list.queryKey({ input: { eventId } });
-
-  const { data: tasks = [] } = useQuery(
-    orpc.staffTasks.list.queryOptions({
-      input: { eventId },
-      initialData: initialTasks,
+  const tasksQuery = useQuery(
+    orpc.staffTasks.list.queryOptions({ input, initialData: initialTasks, staleTime: 30_000 })
+  );
+  const announcementsQuery = useQuery(
+    orpc.staffTasks.announcements.list.queryOptions({ input, initialData: initialAnnouncements, staleTime: 30_000 })
+  );
+  const arrivalsQuery = useQuery(
+    orpc.staffTasks.arrivals.list.queryOptions({ input, initialData: initialArrivals, staleTime: 30_000 })
+  );
+  const { data: roster } = useQuery(
+    orpc.staffTasks.roster.queryOptions({ input, initialData: initialRoster, staleTime: 5 * 60_000 })
+  );
+  // Who is late changes with the clock, not only with pings.
+  const { data: shift } = useQuery(
+    orpc.staffTasks.onShift.queryOptions({
+      input,
+      initialData: initialOnShift,
       staleTime: 30_000,
-      refetchOnWindowFocus: true,
+      refetchInterval: 60_000,
     })
   );
+  const tasks = tasksQuery.data;
+  const announcements = announcementsQuery.data;
+  const arrivals = arrivalsQuery.data;
+  const failed = [tasksQuery, announcementsQuery, arrivalsQuery].filter((query) => query.isError);
 
-  const { data: announcements = [] } = useQuery(
-    orpc.staffTasks.announcements.list.queryOptions({
-      input: { eventId },
-      initialData: initialAnnouncements,
-      staleTime: 30_000,
-      refetchOnWindowFocus: true,
-    })
-  );
+  const setStatus = useSetStatus(eventId);
+  const { join, leave } = useMembership(eventId, me);
+  const onSetStatus = (taskId: string, status: StaffTask["status"]) => setStatus.mutate({ eventId, taskId, status });
+  const onJoin = (taskId: string) => join.mutate({ eventId, taskId });
+  const onLeave = (taskId: string) => leave.mutate({ eventId, taskId });
 
-  const { data: roster = [] } = useQuery(
-    orpc.staffTasks.roster.queryOptions({
-      input: { eventId },
-      initialData: initialRoster,
-      staleTime: 5 * 60_000,
-    })
-  );
+  // ------------------------------------------------------------------ UI state
+  const now = useNow(30_000);
+  const clock = eventClock(now || serverNow, timeZone);
+  const days = [...new Set(tasks.map((task) => task.dayDate))].sort();
+  if (days.length === 0) days.push(clock.today);
+  const [dayChoice, setDayChoice] = useState<string | null>(null);
+  const day =
+    dayChoice && days.includes(dayChoice)
+      ? dayChoice
+      : days.includes(clock.today)
+        ? clock.today
+        : (days.find((candidate) => candidate >= clock.today) ?? days[days.length - 1]);
+  const isToday = day === clock.today;
+  const at = minuteOfDay(day, clock.today, clock.nowMin);
+  const people: PeopleContext = { arrivals, at, isToday, timeZone };
+  const free = new Set(shift.people.filter((person) => person.state === "free").map((person) => person.userId));
 
-  const invalidateTasks = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: orpc.staffTasks.list.key({ input: { eventId } }) }),
-    [queryClient, eventId]
-  );
-  const invalidateAnnouncements = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: orpc.staffTasks.announcements.list.key({ input: { eventId } }) }),
-    [queryClient, eventId]
-  );
-
-  // -------------------------------------------------------------- realtime
-  // Content-free pings; the data itself always comes from guarded oRPC reads.
-  const { isConnected } = useRealtimeChannel(eventChannel(eventId, "staff"), (event) => {
-    if (event === "tasks_changed") {
-      void invalidateTasks();
-      void invalidateAnnouncements();
-    } else if (event === "announcement_created") {
-      void invalidateAnnouncements();
-    }
-  });
-
-  // Toast + banner for announcements that arrive while the page is open.
-  const seenAnnouncementsRef = useRef<Set<string>>(new Set(initialAnnouncements.map((a) => a.id)));
-  useEffect(() => {
-    for (const announcement of announcements) {
-      if (seenAnnouncementsRef.current.has(announcement.id)) continue;
-      seenAnnouncementsRef.current.add(announcement.id);
-      if (announcement.author?.id === meId) continue;
-      const from = announcement.author?.name ?? "Staff";
-      if (announcement.urgent) {
-        toast.warning(`Urgente — ${from}`, announcement.body.slice(0, 140));
-      } else {
-        toast.info(`Anuncio de ${from}`, announcement.body.slice(0, 140));
-      }
-    }
-  }, [announcements, meId]);
-
-  const urgentUnacked = useMemo(
-    () => announcements.find((announcement) => announcement.urgent && !announcement.ackedByMe) ?? null,
-    [announcements]
-  );
-
-  // ------------------------------------------------------------- mutations
-  const setStatusMutation = useMutation(
-    orpc.staffTasks.setStatus.mutationOptions({
-      onMutate: ({ taskId, status }) => {
-        void queryClient.cancelQueries({ queryKey: orpc.staffTasks.list.key({ input: { eventId } }) });
-        const previous = queryClient.getQueryData<StaffTask[]>(tasksKey);
-        queryClient.setQueryData<StaffTask[]>(tasksKey, (old = []) =>
-          old.map((task) => (task.id === taskId ? { ...task, status: status as StaffTaskStatus } : task))
-        );
-        return { previous };
-      },
-      onError: (error, _variables, context) => {
-        if (context?.previous) queryClient.setQueryData(tasksKey, context.previous);
-        toast.error("No se pudo actualizar el estado", error instanceof Error ? error.message : "Error inesperado");
-      },
-    })
-  );
-
-  const membershipMutation = (kind: "join" | "leave") =>
-    orpc.staffTasks[kind].mutationOptions({
-      onMutate: ({ taskId }: { eventId: string; taskId: string }) => {
-        void queryClient.cancelQueries({ queryKey: orpc.staffTasks.list.key({ input: { eventId } }) });
-        const previous = queryClient.getQueryData<StaffTask[]>(tasksKey);
-        queryClient.setQueryData<StaffTask[]>(tasksKey, (old = []) =>
-          old.map((task) => {
-            if (task.id !== taskId) return task;
-            const without = task.assignees.filter((assignee) => assignee.userId !== meId);
-            return {
-              ...task,
-              assignees: kind === "join" ? [...without, { userId: meId, name: meName, image: null }] : without,
-            };
-          })
-        );
-        return { previous };
-      },
-      onError: (error: unknown, _variables: unknown, context: { previous?: StaffTask[] } | undefined) => {
-        if (context?.previous) queryClient.setQueryData(tasksKey, context.previous);
-        toast.error("No se pudo actualizar la asignación", error instanceof Error ? error.message : "Error inesperado");
-      },
-    });
-
-  const joinMutation = useMutation(membershipMutation("join"));
-  const leaveMutation = useMutation(membershipMutation("leave"));
-
-  const createMutation = useMutation(orpc.staffTasks.create.mutationOptions({}));
-  const updateMutation = useMutation(orpc.staffTasks.update.mutationOptions({}));
-  const deleteMutation = useMutation(
-    orpc.staffTasks.delete.mutationOptions({
-      onSuccess: (deleted) => {
-        toast.success("Tarea eliminada", `"${deleted.title}" fue eliminada.`);
-        void invalidateTasks();
-      },
-      onError: (error) =>
-        toast.error("No se pudo eliminar", error instanceof Error ? error.message : "Error inesperado"),
-    })
-  );
-
-  const shiftMutation = useMutation(
-    orpc.staffTasks.shiftFrom.mutationOptions({
-      onSuccess: ({ count }) => {
-        toast.success(
-          "Cronograma corrido",
-          count > 0 ? `${count} tarea${count > 1 ? "s" : ""} actualizadas.` : "No había tareas para correr."
-        );
-        void invalidateTasks();
-      },
-      onError: (error) =>
-        toast.error("No se pudo correr el cronograma", error instanceof Error ? error.message : "Error inesperado"),
-    })
-  );
-
-  const announceMutation = useMutation(
-    orpc.staffTasks.announcements.create.mutationOptions({
-      onSuccess: () => void invalidateAnnouncements(),
-      onError: (error) =>
-        toast.error("No se pudo enviar el anuncio", error instanceof Error ? error.message : "Error inesperado"),
-    })
-  );
-
-  const ackMutation = useMutation(
-    orpc.staffTasks.announcements.ack.mutationOptions({
-      onMutate: ({ announcementId }) => {
-        const previous = queryClient.getQueryData<StaffAnnouncement[]>(announcementsKey);
-        queryClient.setQueryData<StaffAnnouncement[]>(announcementsKey, (old = []) =>
-          old.map((announcement) =>
-            announcement.id === announcementId
-              ? { ...announcement, ackedByMe: true, ackCount: announcement.ackCount + 1 }
-              : announcement
-          )
-        );
-        return { previous };
-      },
-      onError: (_error, _variables, context) => {
-        if (context?.previous) queryClient.setQueryData(announcementsKey, context.previous);
-      },
-    })
-  );
-
-  // ------------------------------------------------------------- UI state
-  const today = todayDayString();
-  const days = useMemo(() => {
-    const unique = Array.from(new Set(tasks.map((task) => task.dayDate))).sort();
-    return unique.length > 0 ? unique : [today];
-  }, [tasks, today]);
-
-  const [dayState, setDayState] = useState<string | null>(null);
-  const selectedDay =
-    dayState && days.includes(dayState)
-      ? dayState
-      : days.includes(today)
-        ? today
-        : (days.find((day) => day >= today) ?? days[days.length - 1]);
-
+  const [tab, setTabState] = useState<Tab>(initialTab);
+  const setTab = (value: Tab) => {
+    setTabState(value);
+    const url = new URL(window.location.href);
+    if (value === "ahora") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", value);
+    window.history.replaceState(null, "", url);
+  };
+  // A sideways swipe over the tabs or their content moves to the next one, on touchscreens.
+  const swipeTabs = useSwipeTabs(TAREAS_TABS, tab, setTab);
   const [myOnly, setMyOnly] = useState(!canEdit);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<StaffTask | null>(null);
-
-  const dayTasks = useMemo(() => tasks.filter((task) => task.dayDate === selectedDay), [tasks, selectedDay]);
-  const visibleDayTasks = useMemo(
-    () => (myOnly ? dayTasks.filter((task) => task.type === "milestone" || isMine(task, meId)) : dayTasks),
-    [dayTasks, myOnly, meId]
-  );
-
-  // ------------------------------------------------------- "Ahora" derived
-  const nowMins = now.getHours() * 60 + now.getMinutes();
-  const isViewingToday = selectedDay === today;
-
-  const milestones = useMemo(() => dayTasks.filter((task) => task.type === "milestone"), [dayTasks]);
-  const currentMilestone = useMemo(() => {
-    if (!isViewingToday) return null;
-    const past = milestones.filter((m) => m.startTime && (taskWindow(m)?.start ?? 0) <= nowMins);
-    return past[past.length - 1] ?? null;
-  }, [milestones, nowMins, isViewingToday]);
-
-  const lanes = useMemo(() => {
-    const work = visibleDayTasks.filter((task) => task.type === "task");
-    const ongoing = visibleDayTasks.filter((task) => task.type === "ongoing" && task.status !== "done");
-
-    const active: StaffTask[] = [];
-    const upcoming: StaffTask[] = [];
-    const overdueIds = new Set<string>();
-
-    for (const task of work) {
-      if (task.status === "done") continue;
-      const window = taskWindow(task);
-      if (!window) {
-        upcoming.push(task);
-        continue;
-      }
-      if (task.status === "in_progress" || (window.start <= nowMins && window.end > nowMins)) {
-        active.push(task);
-      } else if (window.end <= nowMins) {
-        active.push(task);
-        overdueIds.add(task.id);
-      } else {
-        upcoming.push(task);
-      }
-    }
-
-    return { active, upcoming: upcoming.slice(0, 10), ongoing, overdueIds };
-  }, [visibleDayTasks, nowMins]);
-
-  const myNext = useMemo(() => {
-    const mine = dayTasks
-      .filter((task) => task.type !== "milestone" && task.status !== "done" && isMine(task, meId))
-      .sort((a, b) => (a.startTime ?? "99:99").localeCompare(b.startTime ?? "99:99"));
-    return mine.find((task) => {
-      const window = taskWindow(task);
-      return !window || window.end > nowMins || task.status === "in_progress";
-    });
-  }, [dayTasks, meId, nowMins]);
-
-  // ------------------------------------------------------------- handlers
-  const handleSetStatus = useCallback(
-    (taskId: string, status: StaffTaskStatus) => setStatusMutation.mutate({ eventId, taskId, status }),
-    [setStatusMutation, eventId]
-  );
-  const handleJoin = useCallback((taskId: string) => joinMutation.mutate({ eventId, taskId }), [joinMutation, eventId]);
-  const handleLeave = useCallback(
-    (taskId: string) => leaveMutation.mutate({ eventId, taskId }),
-    [leaveMutation, eventId]
-  );
-
-  const handleSaveTask = async (values: TaskFormValues) => {
-    try {
-      if (editingTask) {
-        await updateMutation.mutateAsync({ eventId, taskId: editingTask.id, data: values });
-        toast.success("Tarea actualizada", `"${values.title}" fue guardada.`);
-      } else {
-        await createMutation.mutateAsync({
-          eventId,
-          title: values.title,
-          type: values.type,
-          dayDate: values.dayDate,
-          startTime: values.startTime,
-          endTime: values.endTime,
-          minPeople: values.minPeople,
-          location: values.location,
-          notes: values.notes ?? undefined,
-          assigneeIds: values.assigneeIds,
-        });
-        toast.success("Tarea creada", `"${values.title}" ya está en el cronograma.`);
-      }
-      setFormOpen(false);
-      setEditingTask(null);
-      void invalidateTasks();
-    } catch (error) {
-      toast.error("No se pudo guardar la tarea", error instanceof Error ? error.message : "Error inesperado");
-    }
+  const [form, setForm] = useState<{ open: boolean; task: StaffTask | null }>({ open: false, task: null });
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const openCreate = () => setForm({ open: true, task: null });
+  const openEdit = (task: StaffTask) => {
+    setDetailId(null);
+    setForm({ open: true, task });
   };
 
-  const handleShift = async (fromTime: string, deltaMinutes: number) => {
-    await shiftMutation.mutateAsync({ eventId, dayDate: selectedDay, fromTime, deltaMinutes });
-  };
+  const dayTasks = tasks.filter((task) => task.dayDate === day);
+  const visible = myOnly ? dayTasks.filter((task) => task.type === "milestone" || isMine(task, me.id)) : dayTasks;
+  const milestones = dayTasks.filter((task) => task.type === "milestone" && task.startTime);
+  const currentMilestone = milestones.filter((task) => (task.startTime ?? "") <= clock.time && isToday).at(-1);
 
-  const handleSend = async (values: { body: string; urgent: boolean; taskId: string | null }) => {
-    await announceMutation.mutateAsync({
-      eventId,
-      body: values.body,
-      urgent: values.urgent,
-      audience: values.taskId ? "task" : "all",
-      taskId: values.taskId ?? undefined,
-    });
-  };
+  const myNext = dayTasks
+    .filter((task) => task.type !== "milestone" && isMine(task, me.id))
+    .map((task) => ({ task, phase: taskPhase(task, at) }))
+    .find(({ phase }) => phase === "now" || phase === "blocked" || phase === "upcoming" || phase === "ongoing");
+  // Your next task leads the tab on its own card, so the lanes skip it.
+  const lanes = { active: [] as StaffTask[], upcoming: [] as StaffTask[], ongoing: [] as StaffTask[] };
+  for (const task of visible) {
+    if (task.type === "milestone" || task.id === myNext?.task.id) continue;
+    const phase = taskPhase(task, at);
+    if (phase === "done") continue;
+    if (phase === "ongoing") lanes.ongoing.push(task);
+    else if (phase === "upcoming") lanes.upcoming.push(task);
+    else lanes.active.push(task);
+  }
+  const detail = tasks.find((task) => task.id === detailId) ?? null;
+  const waitingForMe = announcements.filter((item) => item.pending.some((person) => person.userId === me.id)).length;
+  const understaffed = dayTasks.filter((task) => missingPeople(task) > 0).length;
+  const workCount = dayTasks.filter((task) => task.type !== "milestone").length;
+  const liveShift = shift.expected > 0 && days.includes(shift.day);
 
-  const handleAck = useCallback(
-    (announcementId: string) => ackMutation.mutate({ eventId, announcementId }),
-    [ackMutation, eventId]
+  // ------------------------------------------------------------ keyboard, ⌘K
+  useShortcuts(
+    canEdit ? [{ id: "tareas.new", keys: "n", label: "Nueva tarea", group: "Staff y tareas", run: openCreate }] : []
+  );
+  const goTo = (value: Tab, title: string, icon: LucideIcon) => ({
+    id: `tareas.tab.${value}`,
+    title,
+    icon,
+    keywords: ["staff", "tareas"],
+    perform: { type: "run" as const, run: () => setTab(value) },
+  });
+  useCommands(
+    "tareas",
+    "page",
+    [
+      ...(canEdit
+        ? [
+            {
+              id: "tareas.new",
+              title: "Nueva tarea",
+              icon: Plus,
+              shortcut: "n",
+              keywords: ["crear", "turno"],
+              // The palette is closing; the panel opens once it's gone.
+              perform: { type: "run" as const, run: () => setTimeout(openCreate, 0) },
+            },
+            {
+              id: "tareas.import",
+              title: "Importar planilla",
+              icon: FileSpreadsheet,
+              keywords: ["google sheets", "excel", "pegar", "csv"],
+              perform: { type: "run" as const, run: () => setTimeout(() => setImportOpen(true), 0) },
+            },
+          ]
+        : []),
+      goTo("turnos", "Ver los turnos", CalendarClock),
+      goTo("anuncios", "Ver los anuncios", Megaphone),
+      {
+        id: "tareas.mi-turno",
+        title: "Abrir Mi turno",
+        icon: UserRoundCheck,
+        perform: { type: "navigate", href: scopedAdminHref(communitySlug, "/admin/mi-turno", eventSlug) },
+      },
+    ],
+    "Staff y tareas"
   );
 
-  const announcementsPanel = (
-    <AnnouncementsPanel
-      announcements={announcements}
-      canEdit={canEdit}
-      isSending={announceMutation.isPending}
-      tasks={dayTasks}
-      onAck={handleAck}
-      onSend={handleSend}
-    />
+  // ------------------------------------------------------------------- render
+  const rail = (
+    <>
+      {canEdit ? <AnnouncementComposer eventId={eventId} tasks={dayTasks} /> : null}
+      <AnnouncementList
+        announcements={announcements}
+        canEdit={canEdit}
+        eventId={eventId}
+        me={me}
+        timeZone={timeZone}
+        today={clock.today}
+      />
+    </>
   );
+  const withRail = tab === "ahora" || tab === "cronograma";
+  const newTask = canEdit ? (
+    <Button onClick={openCreate}>
+      <Plus />
+      Tarea
+      <Kbd className="pointer-coarse:hidden">N</Kbd>
+    </Button>
+  ) : null;
 
-  // ---------------------------------------------------------------- render
   return (
-    <div className="space-y-3 p-3 md:space-y-4 md:p-6">
-      {/* Header — one compact row on phones */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="font-display text-xl font-bold tracking-tight text-foreground md:text-2xl">Tareas</h1>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground md:text-sm">
-            {eventName}
-            <span className="hidden md:inline"> — coordinación del staff en tiempo real</span>
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="font-terminal text-sm font-semibold tabular-nums text-foreground">{formatClock(now)}</span>
-          <RealtimeIndicator isConnected={isConnected} />
-        </div>
-      </div>
-
-      {/* Urgent banner: persists until acknowledged */}
-      {urgentUnacked && (
-        <div className="rounded-lg border border-primary/60 bg-primary/[0.08] px-3 py-2.5 sm:flex sm:items-center sm:gap-3 sm:px-4">
-          <div className="flex items-start gap-2 sm:flex-1">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">{urgentUnacked.body}</p>
-              <p className="text-xs text-muted-foreground">{urgentUnacked.author?.name ?? "Staff"}</p>
-            </div>
-          </div>
-          <Button
-            className="mt-2.5 h-11 w-full shrink-0 sm:mt-0 sm:h-9 sm:w-auto"
-            size="sm"
-            onClick={() => handleAck(urgentUnacked.id)}
-          >
-            <Check />
-            Recibido
-          </Button>
-        </div>
-      )}
-
-      {/* Day picker — scrolls sideways when an event spans several days */}
-      {days.length > 1 && (
-        <div className="-mx-3 overflow-x-auto px-3 md:mx-0 md:px-0">
-          <ToggleGroup
-            className="w-max justify-start"
-            type="single"
-            value={selectedDay}
-            onValueChange={(value) => value && setDayState(value)}
-          >
-            {days.map((day) => (
-              <ToggleGroupItem key={day} className="h-11 gap-1.5 capitalize md:h-9" value={day}>
-                {formatDayLabel(day)}
-                {day === today && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-      )}
-
-      {/* Actions — 44px targets on phones */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          aria-pressed={myOnly}
-          className="h-11 md:h-9"
-          size="sm"
-          variant={myOnly ? "secondary" : "outline"}
-          onClick={() => setMyOnly((value) => !value)}
-        >
-          <UserRound />
-          {myOnly ? "Solo mis tareas" : "Todas"}
-        </Button>
-        {canEdit && (
-          <>
-            <ShiftPopover isShifting={shiftMutation.isPending} onShift={handleShift} />
-            <Button
-              className="ml-auto h-11 md:h-9"
-              size="sm"
-              onClick={() => {
-                setEditingTask(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus />
-              Tarea
+    <PageContainer size="large">
+      <PageHeader
+        actions={
+          canEdit ? (
+            <>
+              <Button aria-label="Importar planilla" variant="outline" onClick={() => setImportOpen(true)}>
+                <FileSpreadsheet />
+                <span className="max-sm:hidden">Importar planilla</span>
+              </Button>
+              <ShiftPopover dayDate={day} eventId={eventId} now={clock.time} />
+              {newTask}
+            </>
+          ) : (
+            <Button asChild variant="outline">
+              <Link href={scopedAdminHref(communitySlug, "/admin/mi-turno", eventSlug)}>
+                <UserRoundCheck />
+                Mi turno
+              </Link>
             </Button>
-          </>
-        )}
-      </div>
+          )
+        }
+        description="Quién hace qué y cuándo. Los cambios llegan al instante a los teléfonos del staff."
+        meta={
+          liveShift ? (
+            <ShiftChips shift={shift} onOpen={() => setTab("turnos")} />
+          ) : (
+            <span className="font-terminal text-meta text-muted-foreground tabular-nums">
+              {[eventName, plural(workCount, "tarea", "tareas"), understaffed > 0 ? `${understaffed} sin cubrir` : null]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )
+        }
+        title="Staff y tareas"
+      />
 
-      <Tabs defaultValue="ahora">
-        <TabsList className="sticky top-14 z-20 h-11 w-full justify-start md:static md:h-10 md:w-auto">
-          <TabsTrigger className="h-9 flex-1 md:flex-none" value="ahora">
-            Ahora
-          </TabsTrigger>
-          <TabsTrigger className="h-9 flex-1 md:flex-none" value="cronograma">
-            Cronograma
-          </TabsTrigger>
-          <TabsTrigger className="h-9 flex-1 lg:hidden" value="anuncios">
-            Anuncios
-            {urgentUnacked && <span aria-hidden className="ml-1.5 h-1.5 w-1.5 rounded-full bg-primary" />}
-          </TabsTrigger>
-        </TabsList>
+      {failed.length > 0 ? (
+        <ErrorState
+          className="mb-4"
+          description="Lo que ves puede estar desactualizado."
+          title="No se pudo actualizar"
+          onRetry={() => {
+            for (const key of [keys.tasks, keys.announcements, keys.arrivals])
+              void queryClient.invalidateQueries({ queryKey: key });
+          }}
+        />
+      ) : null}
 
-        <div className="mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-4">
-          <div className="min-w-0">
-            {/* AHORA */}
-            <TabsContent className="mt-0 space-y-4" value="ahora">
-              {!isViewingToday && (
-                <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  Estás viendo el {formatDayLabel(selectedDay)}; los carriles se calculan con la hora actual.
-                </p>
-              )}
+      <SwapProvider enabled={canEdit} eventId={eventId} tasks={tasks}>
+        <div ref={swipeTabs}>
+          <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border">
+              <div className="-mb-px max-w-full overflow-x-auto">
+                <TabsList className={TAB_LIST}>
+                  <TabsTrigger className={TAB} value="ahora">
+                    Ahora
+                  </TabsTrigger>
+                  <TabsTrigger className={TAB} value="cronograma">
+                    Cronograma
+                  </TabsTrigger>
+                  <TabsTrigger className={TAB} value="turnos">
+                    Turnos
+                  </TabsTrigger>
+                  <TabsTrigger className={TAB} value="anuncios">
+                    Anuncios
+                    {waitingForMe > 0 ? (
+                      <span className="font-terminal text-[10.5px] text-primary tabular-nums">
+                        {waitingForMe}
+                        <span className="sr-only"> sin leer</span>
+                      </span>
+                    ) : null}
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              <div className="ml-auto flex items-center gap-3 pb-1.5">
+                {days.length > 1 ? (
+                  <div
+                    aria-label="Día"
+                    className="inline-flex rounded-lg border border-input bg-background p-0.5"
+                    role="radiogroup"
+                  >
+                    {days.map((candidate) => (
+                      <button
+                        key={candidate}
+                        aria-checked={candidate === day}
+                        className={cn(
+                          "inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-meta font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:outline-hidden pointer-coarse:h-10",
+                          candidate === day &&
+                            "bg-raised text-foreground shadow-[inset_0_0_0_1px_hsl(var(--input)),0_1px_2px_rgb(0_0_0/0.5)]"
+                        )}
+                        role="radio"
+                        type="button"
+                        onClick={() => setDayChoice(candidate)}
+                      >
+                        {formatDayLabel(candidate)}
+                        {candidate === clock.today ? <StatusDot tone="ok" /> : null}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="font-terminal text-meta text-muted-foreground">{formatDayLabel(day)}</span>
+                )}
+                <label
+                  className="flex cursor-pointer items-center gap-2 text-meta text-subtle pointer-coarse:min-h-11"
+                  htmlFor="tareas-mine"
+                >
+                  <Switch checked={myOnly} id="tareas-mine" onCheckedChange={setMyOnly} />
+                  Solo mis tareas
+                </label>
+              </div>
+            </div>
 
-              {/* Agenda rhythm strip */}
-              {milestones.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Flag aria-hidden className="h-3.5 w-3.5 text-muted-foreground" />
-                  {milestones.map((milestone) => (
-                    <Badge
-                      key={milestone.id}
-                      className={cn(
-                        "gap-1.5 font-normal",
-                        currentMilestone?.id === milestone.id
-                          ? "border-primary/60 text-primary"
-                          : "text-muted-foreground"
-                      )}
-                      variant="outline"
+            <div
+              className={cn("mt-4", withRail && "lg:grid lg:grid-cols-[minmax(0,1fr)_336px] lg:items-start lg:gap-4")}
+            >
+              <div className="min-w-0">
+                <TabsContent className="mt-0 space-y-4" value="ahora">
+                  {milestones.length > 0 ? (
+                    <ol aria-label="Hitos del día" className="flex flex-wrap items-center gap-1.5">
+                      <Flag aria-hidden className="mr-0.5 size-3.5 text-muted-foreground" />
+                      {milestones.map((milestone) => {
+                        const passed = isToday ? (milestone.startTime ?? "") <= clock.time : day < clock.today;
+                        return (
+                          <li
+                            key={milestone.id}
+                            aria-current={milestone.id === currentMilestone?.id ? "step" : undefined}
+                            className={cn(
+                              "inline-flex h-6 items-center gap-1.5 rounded-full border border-border px-2 text-meta text-subtle",
+                              passed && "text-muted-foreground",
+                              milestone.id === currentMilestone?.id &&
+                                "border-info/40 bg-info-surface text-info-foreground"
+                            )}
+                          >
+                            <span className="font-terminal tabular-nums">{milestone.startTime}</span>
+                            {milestone.title}
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  ) : null}
+
+                  {myNext ? (
+                    <section
+                      aria-label="Tu próxima tarea"
+                      className="rounded-xl border border-primary/30 bg-primary-surface/40 p-2"
                     >
-                      {milestone.startTime && <span className="font-terminal tabular-nums">{milestone.startTime}</span>}
-                      {milestone.title}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+                      <p className="px-1.5 pt-0.5 pb-2 font-terminal text-[10.5px] tracking-[0.14em] text-primary uppercase">
+                        Tu próxima tarea
+                      </p>
+                      <TaskCard
+                        meId={me.id}
+                        people={people}
+                        phase={myNext.phase}
+                        task={myNext.task}
+                        onJoin={onJoin}
+                        onLeave={onLeave}
+                        onOpen={setDetailId}
+                        onSetStatus={onSetStatus}
+                      />
+                    </section>
+                  ) : null}
 
-              {/* My next task */}
-              {myNext && (
-                <div className="rounded-lg border border-primary/40 bg-primary/[0.05] p-3">
-                  <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-primary">
-                    <UserRound className="h-3.5 w-3.5" />
-                    Tu próxima tarea
-                  </p>
-                  <div className="mt-2">
-                    <TaskCard
-                      meId={meId}
-                      now={now}
-                      overdue={lanes.overdueIds.has(myNext.id)}
-                      task={myNext}
-                      onJoin={handleJoin}
-                      onLeave={handleLeave}
-                      onSetStatus={handleSetStatus}
+                  {lanes.active.length + lanes.upcoming.length + lanes.ongoing.length === 0 ? (
+                    myNext ? null : (
+                      <EmptyState
+                        action={workCount === 0 ? newTask : undefined}
+                        description={
+                          workCount === 0
+                            ? canEdit
+                              ? "Cargá la primera con «Tarea» o traelas de la planilla."
+                              : "Todavía no hay tareas cargadas para este día."
+                            : myOnly
+                              ? "No te queda nada pendiente este día."
+                              : "Todo lo de este día está listo."
+                        }
+                        owy={workCount > 0}
+                        title={workCount === 0 ? "Sin tareas para este día" : "Nada pendiente"}
+                      />
+                    )
+                  ) : (
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {(
+                        [
+                          ["En curso", lanes.active],
+                          ["Próximas", lanes.upcoming],
+                          ["Continuas", lanes.ongoing],
+                        ] as const
+                      ).map(([title, items]) => (
+                        <Lane key={title} count={items.length} title={title}>
+                          {items.slice(0, 10).map((task) => (
+                            <TaskCard
+                              key={task.id}
+                              meId={me.id}
+                              people={people}
+                              phase={taskPhase(task, at)}
+                              task={task}
+                              onJoin={onJoin}
+                              onLeave={onLeave}
+                              onOpen={setDetailId}
+                              onSetStatus={onSetStatus}
+                            />
+                          ))}
+                          {items.length > 10 ? (
+                            <button
+                              className="w-full rounded-md py-1.5 text-meta text-muted-foreground hover:text-foreground"
+                              type="button"
+                              onClick={() => setTab("cronograma")}
+                            >
+                              {items.length - 10} más en el cronograma
+                            </button>
+                          ) : null}
+                        </Lane>
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent className="mt-0" value="cronograma">
+                  {visible.length === 0 ? (
+                    <EmptyState
+                      action={newTask}
+                      description={
+                        canEdit
+                          ? "Cargá la primera con «Tarea» o traelas de la planilla."
+                          : "Todavía no hay tareas cargadas para este día."
+                      }
+                      icon={ClipboardList}
+                      title="El cronograma está vacío"
+                    />
+                  ) : (
+                    <ScheduleTable
+                      canEdit={canEdit}
+                      people={people}
+                      tasks={visible}
+                      onEdit={openEdit}
+                      onOpen={setDetailId}
+                    />
+                  )}
+                </TabsContent>
+
+                <TabsContent className="mt-0" value="turnos">
+                  <ShiftTimeline
+                    arrivals={arrivals}
+                    at={at}
+                    emptyAction={newTask}
+                    isToday={isToday}
+                    tasks={visible}
+                    timeZone={timeZone}
+                    onOpen={setDetailId}
+                  />
+                </TabsContent>
+
+                <TabsContent className="mt-0" value="anuncios">
+                  <div
+                    className={cn(
+                      "grid gap-4",
+                      canEdit ? "lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start" : "max-w-2xl"
+                    )}
+                  >
+                    {canEdit ? (
+                      <div className="lg:sticky lg:top-4">
+                        <AnnouncementComposer eventId={eventId} tasks={dayTasks} />
+                      </div>
+                    ) : null}
+                    <AnnouncementList
+                      announcements={announcements}
+                      canEdit={canEdit}
+                      eventId={eventId}
+                      me={me}
+                      timeZone={timeZone}
+                      today={clock.today}
+                      wide
                     />
                   </div>
-                </div>
-              )}
+                </TabsContent>
+              </div>
 
-              {lanes.active.length === 0 && lanes.upcoming.length === 0 && lanes.ongoing.length === 0 ? (
-                <Empty
-                  className="py-14"
-                  description={
-                    myOnly ? "No tenés tareas pendientes en este día." : "No hay tareas pendientes en este día."
-                  }
-                  icon={ClipboardList}
-                  title="Nada pendiente"
-                />
-              ) : (
-                /* Empty lanes are hidden on phones — a "Sin próximas" placeholder
-                   costs a third of the viewport for no information. */
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {[
-                    { key: "active", title: "En curso", empty: "Nada en curso", items: lanes.active, span: "" },
-                    { key: "upcoming", title: "Próximas", empty: "Sin próximas", items: lanes.upcoming, span: "" },
-                    {
-                      key: "ongoing",
-                      title: "Continuas (todo el día)",
-                      empty: "Sin tareas continuas",
-                      items: lanes.ongoing,
-                      span: "md:col-span-2 xl:col-span-1",
-                    },
-                  ].map((lane) => (
-                    <section
-                      key={lane.key}
-                      className={cn("space-y-2", lane.span, lane.items.length === 0 && "hidden md:block")}
-                    >
-                      <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                        {lane.title}
-                      </h3>
-                      {lane.items.length === 0 ? (
-                        <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-xs text-muted-foreground">
-                          {lane.empty}
-                        </p>
-                      ) : (
-                        lane.items.map((task) => (
-                          <TaskCard
-                            key={task.id}
-                            meId={meId}
-                            now={now}
-                            overdue={lanes.overdueIds.has(task.id)}
-                            task={task}
-                            onJoin={handleJoin}
-                            onLeave={handleLeave}
-                            onSetStatus={handleSetStatus}
-                          />
-                        ))
-                      )}
-                    </section>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* CRONOGRAMA */}
-            <TabsContent className="mt-0" value="cronograma">
-              {visibleDayTasks.length === 0 ? (
-                <Empty
-                  className="py-14"
-                  description={
-                    canEdit
-                      ? "Creá la primera tarea del día con el botón «Tarea»."
-                      : "Todavía no hay tareas cargadas para este día."
-                  }
-                  icon={ClipboardList}
-                  title="Cronograma vacío"
-                />
-              ) : (
-                <ScheduleTable
-                  canEdit={canEdit}
-                  isDeleting={deleteMutation.isPending}
-                  meId={meId}
-                  tasks={visibleDayTasks}
-                  onDelete={async (task) => {
-                    await deleteMutation.mutateAsync({ eventId, taskId: task.id });
-                  }}
-                  onEdit={(task) => {
-                    setEditingTask(task);
-                    setFormOpen(true);
-                  }}
-                  onSetStatus={handleSetStatus}
-                />
-              )}
-            </TabsContent>
-
-            {/* ANUNCIOS (mobile tab) */}
-            <TabsContent className="mt-0 lg:hidden" value="anuncios">
-              {announcementsPanel}
-            </TabsContent>
-          </div>
-
-          {/* Announcements rail (desktop) */}
-          <aside className="hidden lg:block">
-            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-              <Megaphone className="h-3.5 w-3.5" />
-              Anuncios
-            </h3>
-            {announcementsPanel}
-          </aside>
+              {withRail ? (
+                <aside aria-label="Anuncios" className="hidden space-y-3 lg:block">
+                  {rail}
+                </aside>
+              ) : null}
+            </div>
+          </Tabs>
         </div>
-      </Tabs>
 
-      <TaskFormDialog
-        defaultDay={selectedDay}
-        isSaving={createMutation.isPending || updateMutation.isPending}
-        open={formOpen}
-        roster={roster as RosterMember[]}
-        task={editingTask}
-        onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditingTask(null);
-        }}
-        onSave={handleSaveTask}
-      />
-    </div>
+        {canEdit ? (
+          <>
+            <TaskFormPanel
+              defaultDay={day}
+              eventId={eventId}
+              free={free}
+              open={form.open}
+              roster={roster}
+              task={form.task}
+              onOpenChange={(open) => setForm((current) => ({ ...current, open }))}
+            />
+            <ImportSheetPanel eventId={eventId} open={importOpen} onOpenChange={setImportOpen} />
+          </>
+        ) : null}
+        <TaskDetailPanel
+          canEdit={canEdit}
+          eventId={eventId}
+          free={free}
+          me={me}
+          open={detail !== null}
+          people={{
+            ...people,
+            at: minuteOfDay(detail?.dayDate ?? day, clock.today, clock.nowMin),
+            isToday: detail?.dayDate === clock.today,
+          }}
+          phase={detail ? taskPhase(detail, minuteOfDay(detail.dayDate, clock.today, clock.nowMin)) : "upcoming"}
+          roster={roster}
+          task={detail}
+          today={clock.today}
+          onEdit={openEdit}
+          onJoin={onJoin}
+          onLeave={onLeave}
+          onOpenChange={(open) => !open && setDetailId(null)}
+          onSetStatus={onSetStatus}
+        />
+      </SwapProvider>
+    </PageContainer>
   );
 }

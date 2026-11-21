@@ -6,15 +6,15 @@ import { requireStaff, staffOnly } from "../lib/staff";
 
 export default defineTool({
   description:
-    "SOLO STAFF: maneja el countdown/timer que se muestra en las pantallas del open space. Acciones: start, pause, reset, setDuration (con durationSeconds), setTargetTime (con targetTime ISO o 'HH:MM'), toggleSound.",
+    "SOLO STAFF: maneja el countdown/timer que se muestra en las pantallas del open space. Acciones: start, pause, reset, setDuration (con durationSeconds), setTargetTime (con targetTime ISO con zona horaria, ej. 2026-11-07T18:00:00-03:00; arranca solo), toggleSound.",
   inputSchema: z.object({
     action: z.enum(["start", "pause", "reset", "setDuration", "toggleSound", "setTargetTime"]),
     durationSeconds: z.number().int().positive().optional().describe("Para setDuration: duración en segundos"),
-    targetTime: z.string().optional().describe("Para setTargetTime: timestamp ISO o hora 'HH:MM'"),
+    targetTime: z.string().optional().describe("Para setTargetTime: timestamp ISO con zona horaria, ej. 2026-11-07T18:00:00-03:00"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("stage:operate"),
   async execute(input, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "stage:operate");
     if (input.action === "setDuration" && !input.durationSeconds) {
       throw new Error("setDuration necesita durationSeconds.");
     }
@@ -22,7 +22,7 @@ export default defineTool({
       throw new Error("setTargetTime necesita targetTime.");
     }
     const event = await resolveActiveEvent();
-    const state = await owuApi().countdown.updateState({
+    const state = await owuApi(ctx).countdown.updateState({
       action: input.action,
       eventId: event.id,
       ...(input.durationSeconds ? { durationSeconds: input.durationSeconds } : {}),

@@ -1,0 +1,175 @@
+import { VoiceAssistantEvent as E, type VoiceAssistantEventData, type VoiceAssistantRequest } from "esphome-client";
+import type { AudioPeer, DeviceTransport } from "../device/transport";
+import type { DeviceHandlers } from "../device/esphome";
+import type { FaceState, ScreenCard } from "../realtime/tools";
+import type { WebGrant } from "./tickets";
+
+/** Same 16 kHz frames and pipeline events as ESPHome; only the wire changes. */
+export class BrowserDevice implements DeviceTransport, AudioPeer {
+  run = 0;
+  private ready = false;
+  private active = false;
+  private accepted = false;
+  private closed = false;
+  private volume = 65;
+  /** Attached as another device's laptop audio: mic frames go to that device's turn. */
+  attachedTo: string | null = null;
+  private peerSink: ((pcm16k: Buffer) => void) | null = null;
+  constructor(
+    private handlers: DeviceHandlers,
+    readonly grant: WebGrant,
+    private send: (message: object | Buffer) => void,
+    private disconnect: () => void
+  ) {}
+  async request(options: { mode?: "pitch" } = {}) {
+    if (this.closed || this.active) return;
+    ++this.run;
+    this.active = true;
+    this.accepted = false;
+    this.ready = false;
+    // A pitch run is tagged the way the firmware tags it (`wake_word: "pitch"`).
+    await this.handlers.onRequestStart({
+      start: true,
+      ...(options.mode === "pitch" ? { wakeWordPhrase: "pitch" } : {}),
+    } as VoiceAssistantRequest);
+  }
+  async cancel() {
+    this.active = false;
+    this.accepted = false;
+    this.ready = false;
+    await this.handlers.onRequestStop();
+  }
+  microphone(frame: Buffer) {
+    if (frame.length !== 644) throw Error("Expected 20 ms PCM16 frame");
+    if (frame.readUInt32LE(0) !== this.run || !this.active || !this.accepted) return;
+    if (this.peerSink) this.peerSink(frame.subarray(4));
+    else this.handlers.onAudio({ data: frame.subarray(4), end: false });
+  }
+  commit(run: number) {
+    // Mirrored turns are closed by the physical device's pipeline, not the browser.
+    if (this.peerSink) return;
+    if (run === this.run && this.active && this.accepted) this.handlers.onAudio({ data: Buffer.alloc(0), end: true });
+  }
+
+  // ── AudioPeer: mirror a physical device's turn ─────────────────────────
+  attach(deviceId: string, sink: (pcm16k: Buffer) => void) {
+    this.attachedTo = deviceId;
+    this.peerSink = sink;
+    this.active = false;
+    this.accepted = false;
+    this.emit({ type: "attached", deviceId });
+  }
+  detach() {
+    const was = this.attachedTo;
+    this.attachedTo = null;
+    this.peerSink = null;
+    this.active = false;
+    this.accepted = false;
+    if (was) this.emit({ type: "detached", deviceId: was });
+  }
+  mirrorAccept(own = false) {
+    if (this.closed) return;
+    ++this.run;
+    this.active = true;
+    this.accepted = true;
+    this.ready = true;
+    this.emit(own ? { type: "accepted", own: true } : { type: "accepted" });
+  }
+  mirrorDecline() {
+    this.active = false;
+    this.accepted = false;
+    this.emit({ type: "declined" });
+  }
+  playbackReady(run: number) {
+    if (run === this.run && this.active) this.ready = true;
+  }
+  clientVolume(value: number) {
+    this.volume = Math.round(Math.max(0, Math.min(80, value)));
+  }
+  acceptRequest() {
+    this.accepted = true;
+    this.emit({ type: "accepted" });
+  }
+  declineRequest() {
+    this.active = false;
+    this.emit({ type: "declined" });
+  }
+  sendEvent(event: E, data?: VoiceAssistantEventData[]) {
+    this.emit({ type: "event", event: Object.entries(E).find(([, value]) => value === event)?.[0], data });
+    if (event === E.RUN_END) {
+      this.active = false;
+      this.accepted = false;
+    }
+  }
+  sendAudio(audio: Buffer, end = false) {
+    if (this.closed || end || !this.active) return;
+    const packet = Buffer.allocUnsafe(audio.length + 4);
+    packet.writeUInt32LE(this.run, 0);
+    audio.copy(packet, 4);
+    this.send(packet);
+  }
+  emit(message: object) {
+    if (!this.closed) this.send({ ...message, run: this.run });
+  }
+  isPlaybackReady() {
+    return this.ready;
+  }
+  setFace(state: FaceState) {
+    this.emit({ type: "screen", command: { kind: "face", state } });
+  }
+  sendExpression(expression: string, leadMs: number, strength: number) {
+    this.emit({ type: "screen", command: { kind: "expression", expression, leadMs, strength } });
+  }
+  /** The browser schedules playback a little ahead of the pacer. */
+  readonly expressionLeadMs = 250;
+  /** Lip shapes for the emulator's face while the browser plays the answer (input 39 there). */
+  sendMouthTrack(frames: string, leadMs: number) {
+    this.emit({ type: "screen", command: { kind: "mouth", frames, leadMs } });
+  }
+  /** A pre-rendered cue the browser plays from /companion-audio/clips/<id>.wav, whatever its stage. */
+  playClip(id: string) {
+    this.emit({ type: "screen", command: { kind: "clip", id } });
+  }
+  /** A tap or «Callar» on the device: the browser drops its queued reply and any cue, now. */
+  stopAudio() {
+    this.emit({ type: "screen", command: { kind: "stop" } });
+  }
+  /** Modo pitch: Owy asked for the topic or the name; the browser opens its mic for the answer ("idle" clears it). */
+  pitchPrompt(kind: "topic" | "name" | "idle") {
+    this.emit({ type: "screen", command: { kind: "pitchPrompt", prompt: kind } });
+  }
+  showCard(card: ScreenCard) {
+    this.emit({ type: "screen", command: { kind: "card", card } });
+  }
+  showQr(url: string, caption = "") {
+    this.emit({ type: "screen", command: { kind: "qr", url, caption } });
+  }
+  showText(text: string) {
+    this.emit({ type: "screen", command: { kind: "text", text } });
+  }
+  isStaffMode() {
+    return this.grant.staff;
+  }
+  isMarketplaceOpen() {
+    return this.grant.marketplace;
+  }
+  /** A browser is its own mic and speakers: the bridge's Mac routing never applies to it. */
+  getMicSource() {
+    return "device" as const;
+  }
+  getAudioOutput() {
+    return "device" as const;
+  }
+  getVolume() {
+    return this.volume;
+  }
+  setVolume(pct: number) {
+    this.clientVolume(pct);
+    this.emit({ type: "volume", value: this.volume });
+  }
+  close() {
+    if (this.closed) return;
+    this.closed = true;
+    this.disconnect();
+  }
+}

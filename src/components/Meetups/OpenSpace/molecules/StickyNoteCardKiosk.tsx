@@ -24,6 +24,7 @@ export const StickyNoteCardKiosk = React.memo(({ note, wasJustUpdated = false }:
   return (
     <div className="absolute inset-1.5">
       <StickyNoteSurface
+        wall
         className={cn("duration-200 animate-in fade-in", wasJustUpdated && "ring-2 ring-primary/70")}
         color={color}
         noteId={note.id}

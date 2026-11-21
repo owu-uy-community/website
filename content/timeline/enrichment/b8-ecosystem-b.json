@@ -1,0 +1,1625 @@
+{
+  "conf:ingenieria-demuestra:2009": {
+    "description": "La primera **Ingeniería deMuestra** fue una jornada de un solo día, el martes 17 de noviembre de 2009, en el Edificio Polifuncional de la Facultad de Ingeniería (UdelaR). La organizaron la Facultad y su Fundación Julio Ricaldoni, en el marco de la Semana Emprendedora Global y de Fotograma 2009, y nació a partir de la muestra anual de proyectos de fin de carrera del Instituto de Ingeniería Eléctrica.\n\nPor la mañana la Unidad de Extensión presentó sus proyectos y armó mesas redondas. A la tarde, con la presencia de María Simon (ex decana y entonces ministra de Educación y Cultura), el Instituto de Ingeniería Eléctrica pasó a llamarse \"Prof. Ing. Agustín Cisa\". Después vino la muestra: la 7.ª exposición de proyectos de fin de carrera de Ingeniería Eléctrica, stands de Emprendedores Dinámicos (Fundación Ricaldoni y Programa Emprender), el Taller Encararé, una demostración de sumo robótico del Grupo MINA (Instituto de Computación), la muestra fotográfica FotoFING y la obra \"Primos entre sí\".\n\nOcupó 600 metros cuadrados, con 24 proyectos y unas 400 personas. Ganaron sus categorías \"Calidad de video percibida en redes IP\", \"Sensor de humedad de suelos para redes de sensores inalámbricos\" y \"GloboSatII\", y el premio del público fue para \"SimCor - Simulador de Corazón CHS01\". Con los años, la muestra se transformó en la feria anual de ciencia y tecnología de la Facultad.",
+    "attendance": "más de 400 personas",
+    "venue": "Edificio Polifuncional de la Facultad de Ingeniería (UdelaR), Senda Nelson Landoni esq. Julio Herrera y Reissig",
+    "organizers": [
+      "Facultad de Ingeniería (UdelaR)",
+      "Fundación Julio Ricaldoni"
+    ],
+    "photos": [
+      {
+        "src": "https://idm.uy/2009/images/gente.jpg",
+        "alt": "Público recorriendo los stands y pósters de proyectos en el salón de la muestra",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto1.jpg",
+        "alt": "María Simon en las palabras de homenaje por el nuevo nombre del Instituto de Ingeniería Eléctrica \"Prof. Ing. Agustín Cisa\"",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto2.jpg",
+        "alt": "Estudiantes, docentes, empresarios y público general en la muestra de proyectos",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto3.jpg",
+        "alt": "Niños jugando con la mesa multitouch desarrollada por Juan Pablo Conde y Gabriel Soto",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto4.jpg",
+        "alt": "Álvaro Lamé (CUTI) conversa con Alejandro Landoni y Gerardo Agresta, de la Fundación Ricaldoni",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto5.jpg",
+        "alt": "Un asistente se inscribe a la revista enlaces.fing de la Fundación Ricaldoni",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto6.jpg",
+        "alt": "El decano Ismael Piedra-Cueva conversa con Gabriel Eirea y Gonzalo Casaravilla",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto7.jpg",
+        "alt": "Equipo del proyecto \"Sensor de humedad de suelos para redes de sensores inalámbricos\", primer premio en la categoría Electrónica",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "src": "https://idm.uy/2009/images/foto8.jpg",
+        "alt": "Gerardo Agresta entrega el premio del público al equipo de \"SimCor - Simulador de Corazón CHS01\"",
+        "by": "Fundación Julio Ricaldoni",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2009/multimedia.html"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2009",
+        "url": "https://idm.uy/2009/"
+      },
+      {
+        "label": "Programa de la jornada",
+        "url": "https://idm.uy/2009/programa.html"
+      },
+      {
+        "label": "Repercusiones en prensa",
+        "url": "https://idm.uy/2009/repercusiones.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ingeniería deMuestra 2009 (sitio oficial)",
+        "url": "https://idm.uy/2009/"
+      },
+      {
+        "label": "Ingeniería deMuestra 2009: videos y fotos",
+        "url": "https://idm.uy/2009/multimedia.html"
+      },
+      {
+        "label": "Facultad de Ingeniería: informe «Ingeniería deMuestra 10 años» (2018)",
+        "url": "https://www.fing.edu.uy/sites/default/files/noticias/2018/11/34413/IdM2018_informe.pdf"
+      }
+    ]
+  },
+  "conf:sharing-the-point-montevideo:2012-01-23": {
+    "description": "**Sharing the Point** fue una gira comunitaria y gratuita de expertos internacionales en SharePoint que en enero de 2012 recorrió Sudamérica: Buenos Aires (21 de enero), Montevideo (23 de enero), Santiago de Chile (24 de enero) y una parada en la Antártida. La gira la financiaron AvePoint y Fpweb.net, y en Argentina y Uruguay la recibió Microsoft.\n\nLa parada uruguaya fue una media jornada, de 9 a 14 h, en las oficinas de Microsoft Uruguay en el Mercosur Business Center (Cebollatí 1474, piso 5), con cupos limitados. El anuncio de la gira incluía para Montevideo las sesiones \"Building the Perfect SharePoint Farm\" de Michael Noel y \"Architecting SharePoint for Scalability and Enforceable Governance\" de Dan Holme.\n\nSegún Joel Oleson, uno de los organizadores, fue el evento de SharePoint más grande que había tenido Uruguay y aparentemente el primero, y sirvió para lanzar la comunidad local de SharePoint junto a Microsoft. En su crónica nombró a Ricardo Szyfer (Microsoft), al MVP Fabián Imaz y a Gabriel López (South Labs) como referentes locales, y recomendó sumarse a la Comunidad de Usuarios Microsoft Uruguay (CUMUY).",
+    "venue": "Oficinas de Microsoft Uruguay, Mercosur Business Center (Cebollatí 1474, piso 5)",
+    "organizers": [
+      "Sharing the Point",
+      "Microsoft Uruguay"
+    ],
+    "talks": [
+      {
+        "title": "Building the Perfect SharePoint Farm",
+        "speakers": [
+          "Michael Noel"
+        ]
+      },
+      {
+        "title": "Architecting SharePoint for Scalability and Enforceable Governance",
+        "speakers": [
+          "Dan Holme"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Crónica de Joel Oleson: Uruguay SharePoint Community Launch",
+        "url": "https://collabshow.com/2012/01/23/uruguay-sharepoint-community-launch"
+      },
+      {
+        "label": "Anuncio de las sedes de la gira",
+        "url": "https://collabshow.com/2012/01/10/sharing-the-point-venues-in-argentina-uruguay-and-chile-announced/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Collabshow (Joel Oleson): Uruguay SharePoint Community Launch, 23/01/2012",
+        "url": "https://collabshow.com/2012/01/23/uruguay-sharepoint-community-launch"
+      },
+      {
+        "label": "Collabshow: Sharing The Point venues in Argentina, Uruguay, and Chile announced, 10/01/2012",
+        "url": "https://collabshow.com/2012/01/10/sharing-the-point-venues-in-argentina-uruguay-and-chile-announced/"
+      },
+      {
+        "label": "Bamboo Solutions: Sharing the Point South America Tour to begin 1/21 in Buenos Aires",
+        "url": "https://bamboosolutions.com/?p=1660"
+      }
+    ]
+  },
+  "conf:condatos:2013-06-26": {
+    "description": "La **Conferencia Regional de Datos Abiertos para América Latina y el Caribe** se hizo en Montevideo el 26 y 27 de junio de 2013. Fue la primera de la región, el origen de lo que después se conoció como ConDatos. Uruguay la organizó a través de Agesic, junto con el Banco Mundial, la CEPAL, el IDRC, Open Data for Development (OD4D), Omidyar Network, la Red GEALC, el W3C Brasil y DATA, con el objetivo de desarrollar el ecosistema de datos abiertos de gobierno en la región y abrir un espacio para intercambiar experiencias.\n\nSegún Agesic, participaron 501 personas de Uruguay y 149 de 23 países, y 1917 la siguieron en línea. Hubo dos eventos paralelos: **AbreLatam**, una desconferencia sobre usos sociales de los datos abiertos que DATA y Ciudadano Inteligente organizaron el 24 y 25 de junio en el Centro Cultural de España, y \"Hackeando la conferencia\", el antecedente de los DataCamp que luego se hicieron en Uruguay.\n\nAl abrir la segunda edición en México, el director de Agesic, José Clastornik, recordó la cita de Montevideo como el inicio de una conversación y del encuentro de una comunidad regional, y explicó que fue tan exitosa que hubo que institucionalizarla.",
+    "attendance": "501 participantes locales y 149 de 23 países; 1917 personas la siguieron en línea",
+    "organizers": [
+      "Agesic",
+      "Banco Mundial",
+      "CEPAL",
+      "IDRC",
+      "OD4D",
+      "Omidyar Network",
+      "Red GEALC",
+      "W3C Brasil",
+      "DATA"
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/2852/9225210731_8bd4ccb02e_b.jpg",
+        "alt": "Sala llena durante una sesión de la Conferencia Regional de Datos Abiertos, con el escenario y dos pantallas",
+        "by": "Josema Alonso",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/josema_a/9225210731/",
+        "license": "CC BY-NC-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3787/9225212053_b35cf072a5_b.jpg",
+        "alt": "Foto de cierre: organizadores y panelistas en el escenario de la conferencia",
+        "by": "Josema Alonso",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/josema_a/9225212053/",
+        "license": "CC BY-NC-SA 2.0"
+      },
+      {
+        "src": "https://live.staticflickr.com/3719/9149376159_1d37a9fc68_b.jpg",
+        "alt": "Cartel de la Conferencia Regional de Datos Abiertos al comenzar el segundo día",
+        "by": "ABRELATAM",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/abrelatam/9149376159/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Fotos de AbreLatam 2013 en Flickr",
+        "url": "https://www.flickr.com/photos/abrelatam/"
+      },
+      {
+        "label": "Invitación a AbreLatam 2013 (lista de Open Knowledge)",
+        "url": "https://lists-archive.okfn.org/pipermail/okfn-br/2013-May/025986.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Agesic: Implementación de la estrategia de Datos Abiertos de Gobierno de Uruguay",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/comunicacion/publicaciones/implementacion-estrategia-datos-abiertos-gobierno-uruguay-1"
+      },
+      {
+        "label": "Agesic: II Conferencia Regional de Datos Abiertos en América Latina y el Caribe",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/comunicacion/noticias/ii-conferencia-regional-de-datos-abiertos-en-america-latina-y-el-caribe"
+      },
+      {
+        "label": "Lista okfn-br: «Estás invitado a ABRE LATAM» (mayo de 2013)",
+        "url": "https://lists-archive.okfn.org/pipermail/okfn-br/2013-May/025986.html"
+      },
+      {
+        "label": "Flickr (Josema Alonso): Conferencia Datos Abiertos Uruguay 2013",
+        "url": "https://www.flickr.com/photos/josema_a/9225210731/"
+      },
+      {
+        "label": "Agesic: AbreLatam y ConDatos, Uruguay recibió a la comunidad de datos (06/11/2023)",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/comunicacion/noticias/abrelatam-condatos-uruguay-recibio-comunidad-datos-america-latina-caribe"
+      }
+    ]
+  },
+  "conf:dateidea:2014-09-12": {
+    "description": "**DateIdea 2014** fue un concurso de Agesic para que organismos públicos y ciudadanos crearan aplicaciones con datos abiertos que mejoraran los servicios públicos. Formaba parte de un compromiso de Uruguay en su plan de acción ante la Alianza para el Gobierno Abierto (OGP), con apoyo del BID, y estaba abierto a estudiantes, emprendedores, periodistas, activistas, empresas, organizaciones sociales y organismos del Estado.\n\nTuvo tres fases. Primero, una convocatoria de problemas a resolver en educación, salud, políticas sociales y gobiernos locales, que recibió 79 propuestas. Después, la hackatón del 12 y 13 de setiembre de 2014 en Sinergia Cowork: unas 70 personas, entre ciudadanos y funcionarios, trabajaron 27 horas seguidas en 12 equipos (9 de desarrollo de prototipos y 3 de periodismo de datos). Por último, fondos concursables para implementar las soluciones más viables.\n\nEntre las propuestas ganadoras, el BID destacó una aplicación georreferenciada con los puntos de venta de garrafas de gas, con la opción de comprarlas en línea, y un mapa colaborativo de lugares accesibles para personas con discapacidad en todo el país.",
+    "attendance": "unos 70 participantes en 12 equipos",
+    "organizers": [
+      "Agesic",
+      "BID"
+    ],
+    "sources": [
+      {
+        "label": "BID Gobernarte: «La Hackatón de Montevideo (Uruguay)» (archivado)",
+        "url": "https://web.archive.org/web/20230722180828/https://blogs.iadb.org/administracion-publica/es/la-hackaton-de-montevideo-uruguay/"
+      },
+      {
+        "label": "BID Gobernarte: «Lecciones de una hackatón charrúa» (Nicolás Dassen, archivado)",
+        "url": "https://web.archive.org/web/20190723222602/https://blogs.iadb.org/administracion-publica/es/lecciones-de-una-hackaton-charrua/"
+      }
+    ]
+  },
+  "conf:clei:2014-09-15": {
+    "description": "La **XL Conferencia Latinoamericana en Informática (CLEI 2014)** se hizo en Montevideo del 15 al 19 de setiembre de 2014. CLEI es el encuentro anual del Centro Latinoamericano de Estudios en Informática, que reúne a investigadores, docentes y estudiantes de universidades y centros de investigación de la región para discutir investigación, enseñanza y desarrollo de la computación. Esta edición la organizaron juntas las cinco universidades uruguayas con carreras de informática: UdelaR, Universidad Católica del Uruguay, Universidad ORT Uruguay, Universidad de Montevideo y Universidad de la Empresa.\n\nSe desarrolló en salas y en el anfiteatro del Edificio Polifuncional \"José Luis Massera\" y en el auditorio de la Facultad de Ingeniería. Tuvo ocho simposios latinoamericanos (computación gráfica, informática y sociedad, infraestructura, ingeniería de software, investigación operativa e inteligencia artificial, informática empresarial, sistemas de datos y teoría de la computación) y varios eventos asociados: el XXII Congreso Iberoamericano de Educación Superior en Computación (CIESC), el XXI Concurso Latinoamericano de Tesis de Maestría, el VI Congreso de la Mujer Latinoamericana en la Computación (LAWCC), la 8.ª Latin American Networking Conference (LANC) y el III Simposio de Historia de la Informática de América Latina y el Caribe (SHIALC).\n\nLas conferencias centrales estuvieron a cargo de Gastón Gonnet (ETH Zúrich), Ernst Leiss (Universidad de Houston), Francisco Ruiz (Universidad de Castilla-La Mancha), Alfredo Weitzenfeld (Universidad del Sur de Florida), Andrés Almansa (Telecom ParisTech), Torsten Braun (Universidad de Berna) y Mario Gerla (UCLA). La asamblea general del CLEI sesionó en la Facultad de Ingeniería el 18 de setiembre.",
+    "organizers": [
+      "Universidad de la República",
+      "Universidad Católica del Uruguay",
+      "Universidad ORT Uruguay",
+      "Universidad de Montevideo",
+      "Universidad de la Empresa",
+      "CLEI"
+    ],
+    "talks": [
+      {
+        "title": "Bioinformatics: Algorithms applied to molecular sequences with practical applications",
+        "speakers": [
+          "Gastón Gonnet"
+        ]
+      },
+      {
+        "title": "Privacy Concerns: The Clash between Technological Capabilities and Societal Expectations",
+        "speakers": [
+          "Ernst L. Leiss"
+        ]
+      },
+      {
+        "title": "Models Engineering. Application to organizational alignment in software-intensive systems",
+        "speakers": [
+          "Francisco Ruiz"
+        ]
+      },
+      {
+        "title": "Spatial Cognition in Biologically Inspired Robots",
+        "speakers": [
+          "Alfredo Weitzenfeld"
+        ]
+      },
+      {
+        "title": "Recent Advances in Non-Local Image Restoration and Video Inpainting",
+        "speakers": [
+          "Andrés Almansa"
+        ]
+      },
+      {
+        "title": "Mobile Cloud Networking",
+        "speakers": [
+          "Torsten Braun"
+        ]
+      },
+      {
+        "title": "The Phone as Wellness Guardian",
+        "speakers": [
+          "Mario Gerla"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de CLEI 2014",
+        "url": "https://clei.org/clei2014/home/index.html"
+      },
+      {
+        "label": "Conferencias centrales (keynotes)",
+        "url": "https://clei.org/clei2014/keynotes-2/index.html"
+      },
+      {
+        "label": "Acta de la asamblea general del CLEI 2014 (PDF)",
+        "url": "https://clei.org/site/wp-content/uploads/2022/12/ActaAsamblea2014.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CLEI 2014: sitio oficial",
+        "url": "https://clei.org/clei2014/home/index.html"
+      },
+      {
+        "label": "CLEI 2014: keynotes",
+        "url": "https://clei.org/clei2014/keynotes-2/index.html"
+      },
+      {
+        "label": "Universidad ORT Uruguay: participación en la organización de la XL CLEI (29/09/2014)",
+        "url": "https://www.ort.edu.uy/en/57640/32/la-universidad-ort-uruguay-participo-en-la-organizacion-de-la-“xl-conferencia-latinoamericana-en-informatica”.html"
+      },
+      {
+        "label": "CLEI: acta de la asamblea general 2014",
+        "url": "https://clei.org/site/wp-content/uploads/2022/12/ActaAsamblea2014.pdf"
+      }
+    ]
+  },
+  "meetup:219613406": {
+    "description": "Única reunión registrada de **Montevideo Entrepreneurs Meetup**, un grupo de Meetup creado el 5 de enero de 2015 para compartir ideas de emprendimiento y experiencias de inversión y trading con instrumentos financieros, abierto a todos los niveles. Lo organizaban Daniel Schwed y Daniel Goldman, y en 2016 tenía unos 320 miembros, aunque su contenido era solo para miembros.\n\nEl encuentro, el viernes 6 de febrero de 2015 a las 19 h, proponía justamente eso: intercambiar experiencias sobre trading de instrumentos financieros y sobre cómo arrancar pequeños negocios.",
+    "organizers": [
+      "Daniel Schwed",
+      "Daniel Goldman"
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Montevideo Entrepreneurs Meetup (archivado, 2016)",
+        "url": "https://web.archive.org/web/20161114140136/http://www.meetup.com/Montevideo-Entrepreneurship-Meetup/events/219613406/"
+      }
+    ]
+  },
+  "meetup:230755466": {
+    "description": "Primer encuentro de **FinTech Montevideo**, un grupo de Meetup fundado el 29 de abril de 2016 para reunir a emprendedores del sector financiero y tecnológico: conocerse, intercambiar aprendizajes, hacer networking y enterarse de qué se estaba haciendo en Montevideo. Su lema era \"¡Finanzas y unas cervezas!\" y lo organizaban Nicolás Bardier y Ximena Alemán, entre otros.\n\nLa consigna fue simple: juntarse a tomar unas cervezas y hablar de fintech, el viernes 13 de mayo de 2016 a las 20 h en el bar HeyChopp (Juan Paullier esquina Rivera). En los comentarios previos, un asistente propuso compartir lo que había dejado la conferencia Digital Bank Latam.",
+    "attendance": "18 anotados",
+    "venue": "HeyChopp, Juan Paullier 1436 esq. Rivera",
+    "city": "Montevideo",
+    "organizers": [
+      "Nicolás Bardier",
+      "Ximena Alemán"
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Cervezas y FinTech (archivado, 10/05/2016)",
+        "url": "https://web.archive.org/web/20160510135130/http://www.meetup.com/FinTech-Montevideo/events/230755466/"
+      }
+    ]
+  },
+  "meetup:232142791": {
+    "description": "Segunda edición de **Cervezas y FinTech**, el encuentro informal del grupo FinTech Montevideo. Fue el viernes 15 de julio de 2016 a las 20 h, otra vez en el bar HeyChopp, con la idea de pasar un rato tomando cervezas y discutiendo temas de fintech, como la regulación y las expectativas del sector.",
+    "attendance": "8 asistentes",
+    "venue": "HeyChopp, Juan Paullier 1436 esq. Rivera",
+    "city": "Montevideo",
+    "organizers": [
+      "Nicolás Bardier",
+      "Ximena Alemán"
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Cervezas y FinTech 2 (archivado, 16/07/2016)",
+        "url": "https://web.archive.org/web/20160716035724/http://www.meetup.com/FinTech-Montevideo/events/232142791/"
+      }
+    ]
+  },
+  "conf:hackathon-agro:2016-09": {
+    "description": "La primera **Hackathon Agro** se hizo el 17 y 18 de setiembre de 2016 en la Expo Prado, en Montevideo. La organizaron la Embajada Británica, la Asociación Rural del Uruguay (ARU) y la Cámara Uruguaya de Tecnologías de la Información (CUTI), con el apoyo de IBM, la Universidad de Montevideo y Agesic, entre otros. El objetivo era buscar, con tecnología, soluciones a problemas concretos del sector agropecuario uruguayo.\n\nCompitieron 14 equipos de tres personas, con perfiles de agro, tecnología o negocios. Cada equipo eligió uno de cinco desafíos y trabajó desde el sábado a las 10 hasta el domingo a las 17 en un producto con su plan de negocios.\n\nGanó **Vigiator**, de Lucía San Román (estudiante de Agronomía de la UdelaR), Martín Alurralde y Sergio Gorrochategui: un sistema que, con el acelerómetro de un celular colgado al cuello del animal, detecta movimientos anormales en el rebaño y avisa al productor por SMS ante un posible abigeato o un ataque de predadores. El premio fue un viaje al Reino Unido para la conferencia REAP Agri-Tech de Cambridge y una visita a Harper Adams University. El jurado lo integraron Katharine Felton (Embajada Británica), José Bonica (ARU) y Álvaro Lamé (CUTI).",
+    "organizers": [
+      "Embajada Británica en Montevideo",
+      "Asociación Rural del Uruguay",
+      "CUTI"
+    ],
+    "photos": [
+      {
+        "src": "https://assets.publishing.service.gov.uk/media/5a60ceb940f0b65266e7879f/s960_20160917_115037.jpg",
+        "alt": "Equipos trabajando con sus laptops y un pizarrón de notas durante la Hackathon Agro en la Expo Prado",
+        "by": "Embajada Británica en Montevideo",
+        "source": "GOV.UK",
+        "page": "https://www.gov.uk/government/news/the-embassy-organised-the-first-agro-hackathon-in-uruguay"
+      },
+      {
+        "src": "https://assets.publishing.service.gov.uk/media/5a612b6eed915d7dfb583437/s300_IMG_3996.JPG",
+        "alt": "Premiación de la primera Hackathon Agro en el pabellón británico",
+        "by": "Embajada Británica en Montevideo",
+        "source": "GOV.UK",
+        "page": "https://www.gov.uk/government/news/the-embassy-organised-the-first-agro-hackathon-in-uruguay"
+      }
+    ],
+    "links": [
+      {
+        "label": "Video resumen de la HackathonAGRO 2016 (CUTI)",
+        "url": "https://www.youtube.com/watch?v=tLWuWnr3WCg"
+      },
+      {
+        "label": "Repercusión en prensa de la edición 2016 (PDF)",
+        "url": "https://assets.publishing.service.gov.uk/media/5a82068840f0b6230269a6f9/HACKATHON_comms_report_-_Expo_Prado_2016.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GOV.UK: The Embassy organised the First Agro Hackathon in Uruguay (29/09/2016)",
+        "url": "https://www.gov.uk/government/news/the-embassy-organised-the-first-agro-hackathon-in-uruguay"
+      },
+      {
+        "label": "CUTI: Primera Hackathon Agro fue todo un éxito (22/09/2016)",
+        "url": "https://cuti.org.uy/en/institucionales/primera-hackathon-agro-fue-todo-un-exito/"
+      },
+      {
+        "label": "GOV.UK: The British pavilion at Expo Prado 2016 was a great success",
+        "url": "https://www.gov.uk/government/news/the-british-pavilion-at-expo-prado-2016-was-a-great-success"
+      }
+    ]
+  },
+  "meetup:233373692": {
+    "description": "Encuentro de **FinTech Montevideo** con una visita desde Rusia: Natalia Rubtsova, jefa de proyectos internacionales de Cbonds, una plataforma con sede en San Petersburgo que provee datos de mercados globales de renta fija. Presentó la plataforma de datos de Cbonds en inglés, y después hubo networking con café y masas.\n\nFue el viernes 7 de octubre de 2016 a las 19 h. Para entonces el grupo tenía como sponsor a Pyxis, que le ofrecía su sala para los meetups.",
+    "attendance": "9 asistentes",
+    "city": "Montevideo",
+    "organizers": [
+      "Nicolás Bardier",
+      "Ximena Alemán"
+    ],
+    "talks": [
+      {
+        "title": "Desde Rusia, la plataforma Cbonds de información financiera",
+        "speakers": [
+          "Natalia Rubtsova"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Meetup: Desde Rusia, la plataforma Cbonds de información financiera (archivado, 23/09/2016)",
+        "url": "https://web.archive.org/web/20160923153209/http://www.meetup.com/FinTech-Montevideo/events/233373692/"
+      },
+      {
+        "label": "Meetup: FinTech Montevideo, página del grupo (archivada, 14/05/2019)",
+        "url": "https://web.archive.org/web/20190514134000/https://www.meetup.com/FinTech-Montevideo/"
+      }
+    ]
+  },
+  "meetup:235744548": {
+    "description": "Edición de fin de año de **Cervezas y FinTech**, el encuentro informal del grupo FinTech Montevideo para tomar unas cervezas y conversar sobre emprendimientos fintech. Fue el jueves 8 de diciembre de 2016 a las 20 h y, según Meetup, asistieron 22 personas.",
+    "attendance": "22 asistentes",
+    "city": "Montevideo",
+    "sources": [
+      {
+        "label": "Meetup: FinTech Montevideo, página del grupo (archivada, 14/05/2019)",
+        "url": "https://web.archive.org/web/20190514134000/https://www.meetup.com/FinTech-Montevideo/"
+      }
+    ]
+  },
+  "meetup:238601253": {
+    "description": "Edición de abril de **Cervezas y FinTech**, el encuentro informal del grupo FinTech Montevideo. Fue el jueves 6 de abril de 2017 a las 21 h y es la última de las cinco reuniones del historial del grupo, que en 2019 llegó a 407 miembros sin organizador activo.",
+    "attendance": "16 asistentes",
+    "city": "Montevideo",
+    "sources": [
+      {
+        "label": "Meetup: FinTech Montevideo, página del grupo (archivada, 14/05/2019)",
+        "url": "https://web.archive.org/web/20190514134000/https://www.meetup.com/FinTech-Montevideo/"
+      }
+    ]
+  },
+  "conf:24h-innovacion-uruguay:2017-05-23": {
+    "description": "**24 horas de innovación** es una competencia internacional de la École de Technologie Supérieure (ÉTS) de Montreal, Canadá: equipos de estudiantes de muchas sedes del mundo tienen menos de 24 horas para resolver un desafío propuesto por empresas y presentar la solución en un video de hasta dos minutos en YouTube. En Uruguay la impulsaba Antel, socia del certamen desde hacía seis años, junto con las facultades de Ingeniería de la UdelaR, la Universidad ORT, la Universidad Católica y la Universidad de Montevideo.\n\nLa edición 2017 se corrió el 23 y 24 de mayo. Los desafíos se publicaron a las 9 de la mañana de Montreal: fueron 24, y Antel propuso dos (sumar internet de las cosas o realidad virtual a la comunicación de una empresa con sus clientes, y diseñar robótica de bajo costo para pymes). En Uruguay participaron más de 100 jóvenes en 12 equipos, que también trabajaron sobre shows en vivo, IoT en accesorios de moda, suplementos alimenticios, reciclaje en grandes eventos y una incubadora virtual internacional.\n\nEl jurado local eligió como ganador al equipo **Renegades**, con una solución para recolectar y reciclar residuos en grandes eventos deportivos y musicales. Cada integrante recibió un iPhone SE, y los ganadores de cada sede pasaron a la evaluación del jurado internacional en Montreal.",
+    "attendance": "más de 100 jóvenes en 12 equipos",
+    "organizers": [
+      "Antel",
+      "Facultad de Ingeniería (UdelaR)",
+      "Universidad ORT Uruguay",
+      "Universidad Católica del Uruguay",
+      "Universidad de Montevideo",
+      "École de Technologie Supérieure (Montreal)"
+    ],
+    "sources": [
+      {
+        "label": "Presidencia: «100 jóvenes compitieron en desafío internacional para crear soluciones innovadoras» (26/05/2017)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/100-jovenes-compitieron-desafio-internacional-para-crear-soluciones"
+      }
+    ]
+  },
+  "conf:hackathon-agro:2017-09-09": {
+    "description": "La segunda **Hackathon Agro** se hizo el 9 y 10 de setiembre de 2017 en la 112.ª Expo Prado, en Montevideo. La organizaron la Embajada Británica, la ARU, la CUTI y la Fundación da Vinci, con apoyo del FOMIN/BID, el INIA y otras instituciones, y el Ministerio de Ganadería, Agricultura y Pesca la declaró de interés nacional. Antes hubo talleres de preparación el 6 y el 8 de setiembre.\n\nCompitieron equipos de tres personas que combinaban tecnología, agro y negocios: ocho según la CUTI, nueve según la Embajada. Trabajaron 36 horas, con 11 mentores, sobre cuatro desafíos: riego de cultivos de verano con agua limitada, prevención de enfermedades en trigo y cebada, compra y venta de productos para el engorde de ganado, y control del acceso del ganado al agua y las pasturas.\n\nGanaron Juan Francisco Kniazev, Carlos Capano y Agustín Ackermann, que se conocieron ese mismo día, con un sistema de sensores y una plataforma web con inteligencia artificial para anticipar la mancha en red de la cebada. El segundo puesto fue para María Inés Álvarez, Ignacio Figueredo y Marcelo Ortega (una plataforma de riego) y el tercero para Fabiana Mautone, Javier Rodríguez y Renzo Mayer (cercos virtuales). El jurado lo integraron Ana Castillo, Gerardo García Pintos y Leonardo Loureiro (CUTI). El premio fue un viaje al Reino Unido para la conferencia \"Game Changing Technologies for Agriculture and the Bioeconomy\" y una visita a Harper Adams University.",
+    "organizers": [
+      "Embajada Británica en Montevideo",
+      "Asociación Rural del Uruguay",
+      "CUTI",
+      "Fundación da Vinci"
+    ],
+    "photos": [
+      {
+        "src": "https://assets.publishing.service.gov.uk/media/5a6115f340f0b65266e7cd29/s960_20170909_102501.jpg",
+        "alt": "Participantes con remeras de la HackathonAGRO trabajando en el pabellón de la Expo Prado 2017",
+        "by": "Embajada Británica en Montevideo",
+        "source": "GOV.UK",
+        "page": "https://www.gov.uk/government/news/successful-second-hackathon-agro-in-montevideo"
+      },
+      {
+        "src": "https://assets.publishing.service.gov.uk/media/5a61921e40f0b60ab9a80210/s300_20170910_191232.jpg",
+        "alt": "Foto grupal de participantes, mentores y organizadores de la HackathonAGRO 2017",
+        "by": "Embajada Británica en Montevideo",
+        "source": "GOV.UK",
+        "page": "https://www.gov.uk/government/news/successful-second-hackathon-agro-in-montevideo"
+      },
+      {
+        "src": "https://assets.publishing.service.gov.uk/media/5a61bf5a40f0b60ab9a82b73/s960_20170910_192614.jpg",
+        "alt": "Premiación de los equipos en el escenario de la Expo Prado 2017",
+        "by": "Embajada Británica en Montevideo",
+        "source": "GOV.UK",
+        "page": "https://www.gov.uk/government/news/successful-second-hackathon-agro-in-montevideo"
+      },
+      {
+        "src": "https://assets.publishing.service.gov.uk/media/5a615709e5274a443e00c389/s300_DNe9N6hXcAAVPhb.jpg",
+        "alt": "El equipo ganador con el embajador británico Ian Duddy, a la vuelta del viaje a Inglaterra (noviembre de 2017)",
+        "by": "Embajada Británica en Montevideo",
+        "source": "GOV.UK",
+        "page": "https://www.gov.uk/government/news/hackathon-agro-winners-visited-england"
+      }
+    ],
+    "links": [
+      {
+        "label": "Convocatoria de la Hackathon Agro 2017",
+        "url": "https://www.gov.uk/government/news/hackathon-agro-2017"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GOV.UK: Successful second Hackathon Agro in Montevideo (12/09/2017)",
+        "url": "https://www.gov.uk/government/news/successful-second-hackathon-agro-in-montevideo"
+      },
+      {
+        "label": "GOV.UK: Hackathon Agro 2017 (convocatoria, 24/07/2017)",
+        "url": "https://www.gov.uk/government/news/hackathon-agro-2017"
+      },
+      {
+        "label": "CUTI: HackathonAGRO propuso enfrentar los desafíos del sector mediante el uso de las TIC",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/hackathonagro-propuso-enfrentar-los-desafios-del-sector-mediante-el-uso-de-las-tic/"
+      },
+      {
+        "label": "CUTI: Jóvenes desarrollaron una idea para reducir las pérdidas por manchas foliares en la cebada",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/jovenes-desarrollaron-una-idea-para-reducir-en-un-10-las-perdidas-de-los-productores-por-manchas-foliares-en-las-redes-de-cebada/"
+      },
+      {
+        "label": "GOV.UK: Hackathon Agro winners visited England (06/11/2017)",
+        "url": "https://www.gov.uk/government/news/hackathon-agro-winners-visited-england"
+      }
+    ]
+  },
+  "conf:ibm-code-montevideo:2018": {
+    "description": "En 2018 IBM Uruguay hizo por primera vez **IBM Code Day Montevideo**, un encuentro gratuito para la comunidad de desarrolladores. Según IBM, participaron más de 300 desarrolladores en más de 15 presentaciones técnicas, con oradores locales e internacionales.\n\nPor la buena respuesta, IBM repitió el formato en 2019 con una segunda edición más grande.",
+    "attendance": "más de 300 desarrolladores",
+    "organizers": [
+      "IBM Uruguay"
+    ],
+    "sources": [
+      {
+        "label": "CUTI: Segunda edición del encuentro de desarrolladores más grande de Uruguay (26/07/2019)",
+        "url": "https://cuti.org.uy/en/noticias/de-socios/segunda-edicion-del-encuentro-de-desarrolladores-mas-grande-de-uruguay/"
+      }
+    ]
+  },
+  "conf:jovenes-a-programar:2018-04-27": {
+    "description": "El viernes 27 de abril de 2018, la primera generación de **Jóvenes a Programar** recibió sus títulos en un acto en el LATU: unos 700 graduados. El programa del Plan Ceibal, creado a instancias del presidente Tabaré Vázquez, era un curso de nueve meses para personas de 17 a 26 años con ciclo básico aprobado, que entraban con una prueba de ingreso. Apuntaba a la inserción laboral en un sector con mucha demanda: se enseñaban .NET, Python, GeneXus, WebUI o testing.\n\nEl acto contó con el prosecretario de la Presidencia, Juan Andrés Roballo; el ministro de Trabajo, Ernesto Murro; la subsecretaria de Educación y Cultura, Edith Moraes; el presidente del Plan Ceibal, Miguel Brechner, y el presidente del Codicen, Wilson Netto. Brechner anunció que ese año el programa iba a más que duplicar sus participantes, y Murro informó que el Inefop había aportado 800.000 dólares. El programa contaba además con el apoyo de la CUTI y el BID.",
+    "attendance": "700 graduados de la primera generación",
+    "organizers": [
+      "Plan Ceibal",
+      "CUTI",
+      "BID",
+      "Inefop"
+    ],
+    "photos": [
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_01.jpg",
+        "alt": "Graduados de Jóvenes a Programar sentados en el salón del LATU durante la ceremonia",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_02.jpg",
+        "alt": "Autoridades en el escenario frente al público, con globos naranjas",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_03.jpg",
+        "alt": "Conversatorio en el escenario de la entrega de títulos del Plan Ceibal",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_04.jpg",
+        "alt": "Mesa de autoridades e invitados en el escenario",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_05.jpg",
+        "alt": "Vista general del público en la ceremonia de graduación",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_06.jpg",
+        "alt": "Oradores con micrófono en el escenario de la ceremonia",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_07.jpg",
+        "alt": "Graduados de pie entre los globos naranjas del evento",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_136/fgr_08.jpg",
+        "alt": "Asistentes reunidos en el salón del LATU al terminar el acto",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Presidencia: «Plan Ceibal entregó sus títulos a 700 jóvenes programadores» (27/04/2018)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/plan-ceibal-entrego-sus-titulos-700-jovenes-programadores"
+      }
+    ]
+  },
+  "conf:ingenieria-demuestra:2018-10-04": {
+    "description": "La décima **Ingeniería deMuestra** celebró los 10 años de la feria de ciencia y tecnología de la Facultad de Ingeniería (UdelaR) y su Fundación Julio Ricaldoni. Por primera vez salió al interior: además de Montevideo (4, 5 y 6 de octubre, en la sede central de la Facultad) hubo muestras en Salto (7 y 8 de setiembre), Tacuarembó (19 y 20 de octubre) y Rocha (8 y 9 de noviembre). Tuvo el apoyo especial del MIEM y de Antel y fue declarada de interés nacional.\n\nEn Montevideo se sumó el salón A01 para exponer más de un centenar de proyectos. Hubo \"Mi Tesis en 180 segundos\" con Bardo Científico, charlas para liceales, concursos de proyectos de grado del IIE, el INCO y el IIQ, la competencia de construcción de puentes con materiales no tradicionales y la mesa redonda \"Uruguay Tecnológico ¿Cómo construirlo?\" de la Red Alumni. El cierre fue un show audiovisual inmersivo al aire libre de Head Brothers y el MEDIALAB de la Facultad.\n\nEntre los premiados de Montevideo, el concurso del Instituto de Computación lo ganó \"Métodos cuantitativos aplicados a la planificación de la producción de neumáticos en FUNSACoop\" (Joaquín Velázquez). En Rocha se estimaron unas 1200 personas en dos días.",
+    "attendance": "más de 100 proyectos; la feria recibe más de 5000 visitantes por edición desde 2015",
+    "organizers": [
+      "Facultad de Ingeniería (UdelaR)",
+      "Fundación Julio Ricaldoni"
+    ],
+    "talks": [
+      {
+        "title": "Mesa redonda: Uruguay Tecnológico ¿Cómo construirlo?",
+        "speakers": [
+          "Álvaro García",
+          "Juan Grompone",
+          "Soledad Gutiérrez",
+          "Roberto Kreimerman"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://idm.uy/2018/img/apertura2018.jpg",
+        "alt": "Mesa de autoridades en la apertura de Ingeniería deMuestra 10 años",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2018/"
+      },
+      {
+        "src": "https://idm.uy/2018/img/IdM2108_2.jpg",
+        "alt": "La decana María Simon recorre un stand junto a niños y expositores",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2018/"
+      },
+      {
+        "src": "https://idm.uy/2018/img/IdM2018_1.jpg",
+        "alt": "Un niño prueba un proyecto interactivo frente a una pantalla en la muestra",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2018/"
+      },
+      {
+        "src": "https://idm.uy/2018/img/showfinal2018_615.jpg",
+        "alt": "Árboles iluminados durante el show audiovisual de cierre al aire libre",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2018/"
+      },
+      {
+        "src": "https://www.fing.edu.uy/sites/default/files/wysiwyg_imageupload/42/_DSC3094.jpg",
+        "alt": "Estudiantes premiados en la ceremonia de cierre de IdM 2018 en Montevideo",
+        "by": "Facultad de Ingeniería",
+        "source": "Sitio de la Facultad de Ingeniería",
+        "page": "https://www.fing.edu.uy/noticias/area-de-comunicacion/premios-de-idm-2018-montevideo"
+      },
+      {
+        "src": "https://www.fing.edu.uy/sites/default/files/wysiwyg_imageupload/42/_DSC3106.jpg",
+        "alt": "Equipo premiado con su diploma en el escenario de IdM 2018",
+        "by": "Facultad de Ingeniería",
+        "source": "Sitio de la Facultad de Ingeniería",
+        "page": "https://www.fing.edu.uy/noticias/area-de-comunicacion/premios-de-idm-2018-montevideo"
+      },
+      {
+        "src": "https://www.fing.edu.uy/sites/default/files/wysiwyg_imageupload/42/_DSC3135.jpg",
+        "alt": "Entrega de premios a un equipo de estudiantes en IdM 2018",
+        "by": "Facultad de Ingeniería",
+        "source": "Sitio de la Facultad de Ingeniería",
+        "page": "https://www.fing.edu.uy/noticias/area-de-comunicacion/premios-de-idm-2018-montevideo"
+      },
+      {
+        "src": "https://www.fing.edu.uy/sites/default/files/wysiwyg_imageupload/42/_DSC3151.jpg",
+        "alt": "Ganadoras de uno de los concursos de IdM 2018 con su premio",
+        "by": "Facultad de Ingeniería",
+        "source": "Sitio de la Facultad de Ingeniería",
+        "page": "https://www.fing.edu.uy/noticias/area-de-comunicacion/premios-de-idm-2018-montevideo"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_818/fgr_01.jpg",
+        "alt": "Lanzamiento de la edición (julio de 2018): Carolina Cosse, María Simon y Roberto Markarian",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/facultad-ingenieria-abre-sus-puertas-publico-se-cambian-vocaciones-se"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2018/noticias/AB_818/fgr_03.jpg",
+        "alt": "María Simon habla en el lanzamiento de IdM 10 años",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/facultad-ingenieria-abre-sus-puertas-publico-se-cambian-vocaciones-se"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2018",
+        "url": "https://idm.uy/2018/"
+      },
+      {
+        "label": "Proyectos premiados",
+        "url": "https://idm.uy/2018/premiados.html"
+      },
+      {
+        "label": "Álbum de fotos",
+        "url": "https://photos.app.goo.gl/fFd573QGuT1rfhhz8"
+      },
+      {
+        "label": "Informe «Ingeniería deMuestra 10 años» (PDF)",
+        "url": "https://www.fing.edu.uy/sites/default/files/noticias/2018/11/34413/IdM2018_informe.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Facultad de Ingeniería: informe «Ingeniería deMuestra 10 años» (noviembre de 2018)",
+        "url": "https://www.fing.edu.uy/sites/default/files/noticias/2018/11/34413/IdM2018_informe.pdf"
+      },
+      {
+        "label": "Facultad de Ingeniería: Premios de IdM 2018 Montevideo",
+        "url": "https://www.fing.edu.uy/noticias/area-de-comunicacion/premios-de-idm-2018-montevideo"
+      },
+      {
+        "label": "Ingeniería deMuestra 2018 (sitio oficial)",
+        "url": "https://idm.uy/2018/"
+      },
+      {
+        "label": "Presidencia: «Cuando la Facultad de Ingeniería abre sus puertas al público se cambian vocaciones»",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/facultad-ingenieria-abre-sus-puertas-publico-se-cambian-vocaciones-se"
+      }
+    ]
+  },
+  "conf:techy-por-el-dia:2019-04-25": {
+    "description": "La quinta edición de **Techy por el día** fue el jueves 25 de abril de 2019. Más de 40 empresas socias de la Cámara Uruguaya de Tecnologías de la Información (CUTI), de Montevideo y del interior, abrieron sus puertas a niñas, adolescentes y jóvenes en edad de elegir carrera, para que conocieran de primera mano el trabajo en la industria TI.\n\nLa actividad formaba parte del Día Internacional de las Niñas en las TIC, que promueve la Unión Internacional de Telecomunicaciones (ONU). La CUTI se sumaba a esa celebración desde 2014 para visibilizar la falta de mujeres en el sector y animar a más chicas a pensar su futuro en tecnología.\n\nParticiparon Abstracta, Arkano, Arbusta, BF Sistemas, Cualit, CodigoDelSur, December Labs, dLocal, Dvelop, GeneXus, GeneXus Consulting, Globant, ICA, InSwitch, Intermedia, Itapúa Consultores, ITC, ITSystems, K2B, Kreitech, Lithium, Loop Studio, Moove-it, Nareia, Nimacloud, Nublit, Octobot, Onetree, Perceptiva, Pronto, Pyxis, Quanam, ReconverTIte (Abstracta Salto), Redpagos, Roboprok, Rootstrap, Soluciones, Switch Software Solutions, Tangocode, ThalesLAB, Tmachine y Tryolabs. La cobertura se compartió en redes con el hashtag #Techyxeldia.",
+    "organizers": [
+      "CUTI"
+    ],
+    "sources": [
+      {
+        "label": "CUTI: Techy por el día celebró su quinta edición (26/04/2019)",
+        "url": "https://cuti.org.uy/en/noticias/de-cuti/techy-por-el-dia-celebro-su-quinta-edicion/"
+      }
+    ]
+  },
+  "conf:ibm-code-montevideo:2019-08-14": {
+    "description": "La segunda edición de **IBM Code Day Montevideo** se anunció para el 14 de agosto de 2019, de 17 a 21 h, en el Hyatt Centric Montevideo. IBM Uruguay la planteó como un encuentro abierto y gratuito, con cupos limitados, para desarrolladores, diseñadores, arquitectos y estudiantes, que solo tenían que llevar su laptop. Antes se abrió una convocatoria de oradores para charlas de hasta 30 minutos y talleres prácticos de una hora a una hora y media.\n\nEl programa anunciado tenía cinco salas en paralelo con talleres prácticos y una sala de conferencias, con charlas técnicas sobre blockchain, cloud, inteligencia artificial, ciencia de datos, computación cuántica e IoT. Entre los oradores anunciados estaban Sergio Gama (líder de developers para América Latina de IBM), Lee Zhang (developer advocate de IBM Estados Unidos), Gerónimo Guinzburg (arquitecto de soluciones de Red Hat Argentina) y, como invitado, Christopher Chancé, de 15 años, CEO de DataXype, con una charla sobre los avances de IBM en computación cuántica.",
+    "organizers": [
+      "IBM Uruguay"
+    ],
+    "talks": [
+      {
+        "title": "Avances de IBM Quantum Computing",
+        "speakers": [
+          "Christopher Chancé"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Convocatoria a oradores (CUTI)",
+        "url": "https://cuti.org.uy/en/noticias/de-socios/ibm-code-day-montevideo/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI: Segunda edición del encuentro de desarrolladores más grande de Uruguay (26/07/2019)",
+        "url": "https://cuti.org.uy/en/noticias/de-socios/segunda-edicion-del-encuentro-de-desarrolladores-mas-grande-de-uruguay/"
+      },
+      {
+        "label": "CUTI: IBM Code Day Montevideo, llamado a oradores (08/07/2019)",
+        "url": "https://cuti.org.uy/en/noticias/de-socios/ibm-code-day-montevideo/"
+      }
+    ]
+  },
+  "conf:ingenieria-demuestra:2019-10-10": {
+    "description": "La 11.ª **Ingeniería deMuestra** se hizo en dos sedes: el Centro Universitario Litoral Norte en Paysandú (13 y 14 de setiembre) y la Facultad de Ingeniería en Montevideo (10, 11 y 12 de octubre), en coincidencia con el fin de semana del Patrimonio y con el Día de la Ingeniería (12 de octubre). La organizaron la Facultad de Ingeniería (UdelaR) y su Fundación Julio Ricaldoni, con entrada libre. Ocupó más de 2000 metros cuadrados y mostró más de 140 proyectos de institutos y de estudiantes de fin de carrera.\n\nAl anunciarla, la decana María Simon la definió como una rendición de cuentas ante la sociedad y dijo que buscaba despertar vocaciones, sobre todo entre niñas y jóvenes mujeres, que eran apenas el 25 % de la matrícula. En Montevideo hubo coloquios de física, el lanzamiento de Timbó Biblo de la ANII, \"Mi Tesis en 180 segundos\", un seminario-taller sobre talento para la industria TIC, la competencia de puentes con materiales no tradicionales y un show final de Latasónica.\n\nEntre los premios: mejor stand de instituto para \"Física con las Manos\" (Instituto de Física), y en el concurso del IIE ganaron \"Termodron 2: Dron para termografía\", \"Bandonberry: simulador electrónico de bandoneón\" y \"ESpiDD: Epileptic Spike Detection Device\". En el INCO ganó \"Aplicaciones Lúdicas de Soporte a la Enseñanza de Lenguas\".",
+    "attendance": "más de 140 proyectos en más de 2000 m²",
+    "organizers": [
+      "Facultad de Ingeniería (UdelaR)",
+      "Fundación Julio Ricaldoni"
+    ],
+    "photos": [
+      {
+        "src": "https://idm.uy/2019/img/premiados_001.jpg",
+        "alt": "Equipo del Instituto de Física, ganador del premio a mejor stand de instituto",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/premiados.html"
+      },
+      {
+        "src": "https://idm.uy/2019/img/premiados_002.jpg",
+        "alt": "Equipo de \"Valorización del cuero ovino\", mejor stand de proyecto de grado",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/premiados.html"
+      },
+      {
+        "src": "https://idm.uy/2019/img/premiados_003.jpg",
+        "alt": "Premiados del concurso de proyectos de grado del Instituto de Ingeniería Eléctrica",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/premiados.html"
+      },
+      {
+        "src": "https://idm.uy/2019/img/premiados_004.jpg",
+        "alt": "Otro equipo premiado del concurso del Instituto de Ingeniería Eléctrica",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/premiados.html"
+      },
+      {
+        "src": "https://idm.uy/2019/img/premiados_005.jpg",
+        "alt": "Premiados del concurso de proyectos de grado del Instituto de Computación",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/premiados.html"
+      },
+      {
+        "src": "https://idm.uy/2019/img/galeria/galeria_04.jpg",
+        "alt": "Mesa de autoridades con intérprete de lengua de señas en una actividad de IdM 2019",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/galeria.html"
+      },
+      {
+        "src": "https://idm.uy/2019/img/galeria/galeria_05.jpg",
+        "alt": "Público en una actividad de presentación de IdM 2019",
+        "by": "Ingeniería deMuestra",
+        "source": "Sitio de Ingeniería deMuestra",
+        "page": "https://idm.uy/2019/galeria.html"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la edición 2019",
+        "url": "https://idm.uy/2019/"
+      },
+      {
+        "label": "Programa",
+        "url": "https://idm.uy/2019/programa.html"
+      },
+      {
+        "label": "Proyectos premiados",
+        "url": "https://idm.uy/2019/premiados.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ingeniería deMuestra 2019 (sitio oficial)",
+        "url": "https://idm.uy/2019/"
+      },
+      {
+        "label": "Ingeniería deMuestra 2019: programa",
+        "url": "https://idm.uy/2019/programa.html"
+      },
+      {
+        "label": "Ingeniería deMuestra 2019: premiados",
+        "url": "https://idm.uy/2019/premiados.html"
+      },
+      {
+        "label": "Presidencia: «Ingeniería de Muestra realizará su 11.ª edición en Montevideo y Paysandú»",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/ingenieria-muestra-realizara-su-11a-edicion-montevideo-paysandu"
+      }
+    ]
+  },
+  "conf:jovenes-a-programar:2019-12": {
+    "description": "En diciembre de 2019, **Jóvenes a Programar** (Plan Ceibal) graduó a 340 jóvenes mujeres en un acto en el Paraninfo de la Universidad de la República. Esa edición estuvo dedicada a mujeres de 18 a 30 años con ciclo básico aprobado, que durante un año hicieron cursos gratuitos de programación o testing.\n\nEl programa tenía el apoyo de la CUTI, el BID Lab, el Inefop y las principales empresas del sector. Además de tecnología, los cursos incluían inglés y competencias transversales. Con tres ediciones, ya sumaba más de 1800 egresados. Para 2020 había unos 3000 inscriptos, y la convocatoria volvía a abrirse también a hombres.",
+    "attendance": "340 egresadas",
+    "organizers": [
+      "Plan Ceibal",
+      "CUTI",
+      "BID Lab",
+      "Inefop"
+    ],
+    "sources": [
+      {
+        "label": "Presidencia: «Jóvenes a Programar del Plan Ceibal graduó a 340 uruguayas» (19/12/2019)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/jovenes-programar-del-plan-ceibal-graduo-340-uruguayas"
+      }
+    ]
+  },
+  "meetup:268739224": {
+    "description": "Encuentro del **TecMec meetup**, un grupo privado de Meetup en Montevideo dedicado a las nuevas tecnologías y pensado para tecnólogos mecánicos. Lo organizaban Luis F. y otras dos personas, y en 2021 tenía 168 miembros. Las reuniones solo mostraban el lugar a los miembros. Esta fue el martes 18 de febrero de 2020 a las 19 h.",
+    "attendance": "7 asistentes (según Meetup)",
+    "city": "Montevideo",
+    "sources": [
+      {
+        "label": "Meetup: TecMec meetup, página del grupo (archivada, 21/09/2021)",
+        "url": "https://web.archive.org/web/20210921152534/https://www.meetup.com/TecMec-meetup/"
+      }
+    ]
+  },
+  "meetup:270260103": {
+    "description": "Encuentro del **TecMec meetup**, un grupo privado de Meetup en Montevideo dedicado a las nuevas tecnologías y pensado para tecnólogos mecánicos (168 miembros en 2021). Fue el jueves 30 de abril de 2020 a las 19:30 h.",
+    "attendance": "9 asistentes (según Meetup)",
+    "city": "Montevideo",
+    "sources": [
+      {
+        "label": "Meetup: TecMec meetup, página del grupo (archivada, 21/09/2021)",
+        "url": "https://web.archive.org/web/20210921152534/https://www.meetup.com/TecMec-meetup/"
+      }
+    ]
+  },
+  "conf:ingenieria-demuestra:2020-10": {
+    "description": "Por la pandemia, la 12.ª **Ingeniería deMuestra** fue virtual, del lunes 19 al viernes 23 de octubre de 2020. La organizaron la Facultad de Ingeniería (UdelaR) y su Fundación Julio Ricaldoni, y todas las actividades quedaron grabadas en el canal de YouTube del evento.\n\nLa exposición de stands se convirtió en el concurso de videos \"Mi proyecto en 180 segundos\": casi una treintena de equipos presentó su proyecto de fin de carrera en tres minutos, con voto del público y jurados. Hubo, por ejemplo, un detector de discurso de odio en redes sociales, la app SIMIC 2.0 para seguir pacientes crónicos y el cuadricóptero Termodron III. El premio del público y el de mejor video fueron para \"Producción de Ácido Cítrico por fermentación de residuos forestales\".\n\nEl programa sumó charlas y mesas: ciencia, tecnología y soberanía con senadores y autoridades universitarias, el proyecto LUISA sobre los archivos militares, el Plan Maggiolo, sesgo en la web con Ricardo Baeza-Yates, videojuegos y realidad virtual con Esteban Clua, y los desafíos de la industria TI al 2030 con Leonardo Loureiro (CUTI).",
+    "organizers": [
+      "Facultad de Ingeniería (UdelaR)",
+      "Fundación Julio Ricaldoni"
+    ],
+    "talks": [
+      {
+        "title": "Mesa de debate: el rol de la ciencia y la tecnología en la soberanía nacional",
+        "speakers": [
+          "Rodrigo Arim",
+          "Omar Paganini",
+          "Guillermo Domenech",
+          "Liliam Kechichián",
+          "Silvia Nane",
+          "Cecilia Fernández",
+          "María Simon"
+        ]
+      },
+      {
+        "title": "LUISA: proyecto de sistematización de información de archivos militares",
+        "speakers": [
+          "Fernando Carpani",
+          "Lorena Etcheverry",
+          "Ignacio Ramírez",
+          "Gregory Randall",
+          "Aiala Rosá",
+          "Dina Wonsever",
+          "Guillermo Moncecchi",
+          "Diego Garat"
+        ],
+        "video": "https://www.youtube.com/watch?v=rD5kp3be8-4"
+      },
+      {
+        "title": "Futuro de los videojuegos y realidad virtual",
+        "speakers": [
+          "Esteban Clua"
+        ]
+      },
+      {
+        "title": "Los desafíos de la industria de tecnologías de la información al 2030",
+        "speakers": [
+          "Leonardo Loureiro"
+        ]
+      },
+      {
+        "title": "Calidad del software desde el desarrollo",
+        "speakers": [
+          "Rodrigo Quinta"
+        ]
+      },
+      {
+        "title": "Sesgo en la Web",
+        "speakers": [
+          "Ricardo Baeza-Yates"
+        ]
+      },
+      {
+        "title": "Coloquio de Física: aportes en la comprensión de la dinámica de Covid-19 en Uruguay",
+        "speakers": [
+          "Matías Arim",
+          "Paola Bermolen",
+          "Nicolás Wschebor"
+        ]
+      },
+      {
+        "title": "Plan Maggiolo",
+        "speakers": [
+          "Rodrigo Arim",
+          "Enrique Cabaña",
+          "Jorge Lanzaro",
+          "Vania Markarian"
+        ],
+        "video": "https://www.youtube.com/watch?v=aBtLuJgBrJA"
+      },
+      {
+        "title": "Megaestructuras: un ingeniero uruguayo diseñando estadios para el mundial de Qatar 2022",
+        "speakers": [
+          "Fernando Sima"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Programa de IdM 2020",
+        "url": "https://idm.uy/2020/programa.html"
+      },
+      {
+        "label": "Premiación 2020",
+        "url": "https://idm.uy/2020/premiacion.html"
+      },
+      {
+        "label": "Video resumen de #IdM20",
+        "url": "https://www.youtube.com/watch?v=5jzj6zU1B_c"
+      },
+      {
+        "label": "Canal de YouTube de Ingeniería deMuestra",
+        "url": "https://www.youtube.com/channel/UC1xGhEsCusMderBm01a8sqQ"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: ejemplos de Ingeniería deMuestra 2020 (19/10/2020)",
+        "url": "https://www.elobservador.com.uy/nota/identificacion-digital-del-odio-y-app-para-enfermedades-ejemplos-de-ingenieria-demuestra--202010195049"
+      },
+      {
+        "label": "Ingeniería deMuestra 2020: programa",
+        "url": "https://idm.uy/2020/programa.html"
+      },
+      {
+        "label": "Ingeniería deMuestra 2020: premiación",
+        "url": "https://idm.uy/2020/premiacion.html"
+      },
+      {
+        "label": "Ingeniería deMuestra: sitio de la edición 2020",
+        "url": "https://idm.uy/2020/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://i.ytimg.com/vi/5jzj6zU1B_c/maxresdefault.jpg",
+        "alt": "Fotograma del video resumen de #IdM20: participantes de las mesas virtuales en videollamada",
+        "by": "Ingeniería deMuestra",
+        "source": "YouTube",
+        "page": "https://www.youtube.com/watch?v=5jzj6zU1B_c"
+      }
+    ]
+  },
+  "meetup:274059478": {
+    "description": "Encuentro en línea del **TecMec meetup**, un grupo privado de Meetup de Montevideo dedicado a las nuevas tecnologías y pensado para tecnólogos mecánicos (168 miembros en 2021). Fue el miércoles 28 de octubre de 2020 a las 19 h.",
+    "attendance": "7 asistentes (según Meetup)",
+    "venue": "Online",
+    "sources": [
+      {
+        "label": "Meetup: TecMec meetup, página del grupo (archivada, 21/09/2021)",
+        "url": "https://web.archive.org/web/20210921152534/https://www.meetup.com/TecMec-meetup/"
+      }
+    ]
+  },
+  "meetup:276985658": {
+    "description": "Encuentro en línea del **TecMec meetup**, un grupo privado de Meetup de Montevideo dedicado a las nuevas tecnologías y pensado para tecnólogos mecánicos (168 miembros en 2021). Fue el miércoles 24 de marzo de 2021 a las 19 h y es el último evento que figura en el historial del grupo, que suma nueve reuniones.",
+    "attendance": "9 asistentes (según Meetup)",
+    "venue": "Online",
+    "sources": [
+      {
+        "label": "Meetup: TecMec meetup, página del grupo (archivada, 21/09/2021)",
+        "url": "https://web.archive.org/web/20210921152534/https://www.meetup.com/TecMec-meetup/"
+      }
+    ]
+  },
+  "conf:campus-party-uruguay:2024-08-09": {
+    "description": "**Campus Party**, el festival internacional de tecnología, innovación y gaming (con unas 80 ediciones en más de 15 países), llegó por primera vez a Montevideo del 9 al 11 de agosto de 2024, en el Centro de Eventos del Parque Tecnológico del LATU. Era la quinta vez que se hacía en Uruguay: las anteriores habían sido en Punta del Este. Antel lo coorganizó en el marco de sus 50 años, y la Presidencia lo declaró de interés nacional.\n\nSe anunciaron unos 100 conferencistas nacionales y extranjeros en dos escenarios simultáneos para charlas, paneles y entrevistas, además de tres áreas de talleres, un espacio de networking y negocios, y una jornada para fanáticos de los e-sports y el gaming. Las conferencias del escenario principal del 9 y 10 de agosto se transmitieron en vivo por Antel TV, y el 11 se jugaron las finales de los torneos de e-sports.\n\nEl lanzamiento se hizo el 5 de agosto en la Torre de las Telecomunicaciones, con la presidenta de Antel, Annabela Suburú, y Lucrecia Gratas y Ever Míguez, de Campus Party.",
+    "organizers": [
+      "Campus Party",
+      "Antel"
+    ],
+    "photos": [
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202408/_W933_80/891059.jpeg",
+        "alt": "Un asistente prueba un visor de realidad virtual en Campus Party Montevideo",
+        "by": "Montevideo Portal",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Arranco-este-viernes-9-el-Campus-Party-de-Antel-networking-gaming-y-tecnologia-de-punta-uc896676"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2024/noticias/AM_570/fgr_02.jpg",
+        "alt": "Lanzamiento en la Torre de las Telecomunicaciones: autoridades de Antel y de Campus Party frente a la pantalla del evento",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/uruguay-sera-sede-evento-internacional-sobre-tecnologia-innovacion"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2024/noticias/AM_570/fgr_04.jpg",
+        "alt": "Discurso en el atril durante el lanzamiento de Campus Party en Antel",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/uruguay-sera-sede-evento-internacional-sobre-tecnologia-innovacion"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2024/noticias/AM_570/fgr_06.jpg",
+        "alt": "Conversatorio en el escenario del lanzamiento de Campus Party Uruguay",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/uruguay-sera-sede-evento-internacional-sobre-tecnologia-innovacion"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2024/noticias/AM_570/fgr_08.jpg",
+        "alt": "Público y panelistas en el lanzamiento, con una oradora proyectada en la pantalla gigante",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/noticias/uruguay-sera-sede-evento-internacional-sobre-tecnologia-innovacion"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Presidencia: «Uruguay será sede de evento internacional sobre tecnología e innovación» (05/08/2024)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/uruguay-sera-sede-evento-internacional-sobre-tecnologia-innovacion"
+      },
+      {
+        "label": "DPL News: Lanzamiento de Campus Party Antel",
+        "url": "https://dplnews.com/uruguay-lanzamiento-de-campus-party-antel/"
+      },
+      {
+        "label": "Montevideo Portal: «Arrancó este viernes 9 el Campus Party de Antel»",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Arranco-este-viernes-9-el-Campus-Party-de-Antel-networking-gaming-y-tecnologia-de-punta-uc896676"
+      }
+    ]
+  },
+  "conf:punta-tech-week:2025-01": {
+    "description": "**Punta Tech Week** es la semana de actividades que rodea al Punta Tech Meetup, el encuentro anual de networking del ecosistema tecnológico y emprendedor que cada enero se hace en Punta del Este. Lo organizan Sergio Fogel (cofundador de dLocal), Pablo Brenner, Carolina Kind y Bruno Gadea (de la productora Lucero). La organización cuenta la edición de enero de 2027 como la tercera Punta Tech Week, así que la primera fue la de enero de 2025.\n\nEl evento central de 2025, la 17.ª edición del Punta Tech Meetup, fue el lunes 13 de enero en el Museo de Arte Contemporáneo Atchugarry (MACA), en Manantiales. Reunió a fondos de inversión, emprendedores y empresarios de varios países: según los organizadores, más de 2000 participantes. Asistieron la ministra de Industria, Elisa Facio; el canciller Omar Paganini y el subsecretario de Ganadería, Ignacio Buffa. Facio destacó a Uruguay Innovation Hub, que auspiciaba el encuentro por segunda vez. El formato prioriza las conversaciones informales sobre las conferencias, con pocas charlas en escenario.",
+    "attendance": "más de 2000 participantes (según la organización)",
+    "venue": "Museo de Arte Contemporáneo Atchugarry (MACA), Manantiales",
+    "organizers": [
+      "Sergio Fogel",
+      "Pablo Brenner",
+      "Carolina Kind",
+      "Bruno Gadea"
+    ],
+    "photos": [
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_04.jpg",
+        "alt": "Marco decorativo de «punta tech meetup '25» en el parque del MACA, con las carpas al fondo",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_02.jpg",
+        "alt": "El edificio del Museo de Arte Contemporáneo Atchugarry, sede del encuentro",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_05.jpg",
+        "alt": "Público sentado al aire libre frente al escenario del Punta Tech Meetup 2025",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_06.jpg",
+        "alt": "Vista general de los asistentes en el parque del MACA, con carpas blancas",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_07.jpg",
+        "alt": "Asistentes con credenciales escuchando una charla bajo las carpas",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_08.jpg",
+        "alt": "Primer plano del público atento al escenario",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_09.jpg",
+        "alt": "Una oradora en el escenario, proyectada en la pantalla del Punta Tech Meetup",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_10.jpg",
+        "alt": "Asistentes del ecosistema emprendedor durante una charla",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_11.jpg",
+        "alt": "Grupo de asistentes conversando junto a los carteles del evento",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "src": "https://medios.presidencia.gub.uy/tav_portal/2025/noticias/AN_177/fgr_12.jpg",
+        "alt": "Entrevista con la prensa en el parque del MACA durante el encuentro",
+        "by": "Presidencia de la República",
+        "source": "Sitio de Presidencia",
+        "page": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de Punta Tech",
+        "url": "https://puntatech.org/"
+      },
+      {
+        "label": "Galería de fotos de Presidencia",
+        "url": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Presidencia: «Facio asistió a espacio de debate sobre tecnología» (13/01/2025)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/noticias/facio-asistio-espacio-debate-sobre-tecnologia"
+      },
+      {
+        "label": "Presidencia: fotos del Punta Tech Meetup (14/01/2025)",
+        "url": "https://www.gub.uy/presidencia/comunicacion/fotos/lanzamiento-del-evento-punta-tech-meetup"
+      },
+      {
+        "label": "Uruguay XXI: Punta Tech Meetup 2025",
+        "url": "https://uruguayxxi.gub.uy/en/events/article/punta-tech-meetup-2025"
+      },
+      {
+        "label": "Montevideo Portal: Punta Tech Meetup 2026 (cifra de asistentes de 2025)",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Punta-Tech-Meetup-2026-vuelve-el-evento-de-networking-mas-importante-de-America-Latina-uc942419"
+      },
+      {
+        "label": "Punta Tech: sitio oficial (Punta Tech Week 2027 como tercera edición)",
+        "url": "https://puntatech.org/"
+      }
+    ]
+  },
+  "conf:campus-party-uruguay:2025-10": {
+    "description": "La edición 2025 de **Campus Party Uruguay** se hizo el 24 y 25 de octubre en el LATU, en Montevideo, otra vez con Antel como socia. Tuvo charlas, talleres, mentorías, hackatones y experiencias de realidad extendida, con conferencias sobre inteligencia artificial, computación cuántica, videojuegos, salud y neurotecnología.\n\nEntre los oradores anunciados estaban el divulgador MoureDev, la periodista Jini Channel, Martín Sciarrillo (CTO de Microsoft Argentina) y Julio Cella (IBM Security), y desde Uruguay Ana Inés Echevarren (Infocorp), Carla del Pup (Google Women Techmakers) y Hernán Haro (MrPink VC). Los talleres iban de chatbots y APIs a Python y desarrollo de videojuegos, y el Google Developers Group organizó una hackatón para crear un videojuego 2D con IA integrada usando Google AI Studio.\n\nA la apertura asistieron el secretario de Presidencia, Alejandro Sánchez, y autoridades de Antel, que puso el foco en la comunidad gamer y montó un desafío en su stand.",
+    "venue": "Centro de Eventos del Parque Tecnológico del LATU",
+    "organizers": [
+      "Campus Party",
+      "Antel"
+    ],
+    "links": [
+      {
+        "label": "Ficha del evento en Uruguay XXI",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/campus-party-2025"
+      }
+    ],
+    "sources": [
+      {
+        "label": "El Observador: «Se viene la Campus Party 2025: innovación, IA y cultura maker» (09/10/2025)",
+        "url": "https://www.elobservador.com.uy/ciencia-y-tecnologia/se-viene-la-campus-party-2025-innovacion-ia-y-cultura-maker-n6020240"
+      },
+      {
+        "label": "DPL News: Campus Party Antel en una nueva era digital (27/10/2025)",
+        "url": "https://dplnews.com/uruguay-campus-party-antel-en-una-nueva-era-digital/"
+      },
+      {
+        "label": "Uruguay XXI: Campus Party 2025",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/campus-party-2025"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://dplnews.com/wp-content/uploads/2025/10/01-3.jpg",
+        "alt": "Asistentes frente al stand iluminado de Antel en Campus Party 2025",
+        "by": "Prensa Antel",
+        "source": "DPL News",
+        "page": "https://dplnews.com/uruguay-campus-party-antel-en-una-nueva-era-digital/"
+      }
+    ]
+  },
+  "conf:punta-tech-week:2026-01": {
+    "description": "La segunda **Punta Tech Week** se armó alrededor de la 18.ª edición del Punta Tech Meetup, que en 2026 cumplió su \"mayoría de edad\" con el lema \"Let's Tech Together!\". El evento central fue el lunes 12 de enero en los jardines del Museo de Arte Contemporáneo Atchugarry (MACA), con más de 2000 asistentes de más de 30 países. El primer Punta Tech Meetup, hace 18 años, reunía a unas 50 personas. La semana sumó alrededor de 40 side events en distintos puntos de Punta del Este (encuentros temáticos, after offices, cumbres sectoriales), además de un cóctel de bienvenida y la cuarta edición de W Meetup, un espacio para mujeres.\n\nLo organizan Carolina Kind y Bruno Gadea (de la productora Lucero), Pablo Brenner y Sergio Fogel (cofundador de dLocal). Fiel a su formato de pocas charlas y mucho networking, el escenario tuvo a Paula Bellizia, vicepresidenta de Amazon Web Services para América Latina, y una entrevista del periodista de la BBC Elliott Gotkine al ministro de Economía, Gabriel Oddone, que destacó el acuerdo entre la Unión Europea y el Mercosur. Asistieron la vicepresidenta Carolina Cosse, Guibert Englebienne (cofundador de Globant) y fondos como Riverwood Capital y Kaszek.",
+    "attendance": "más de 2000 asistentes de más de 30 países",
+    "venue": "Museo de Arte Contemporáneo Atchugarry (MACA), Manantiales",
+    "organizers": [
+      "Carolina Kind",
+      "Bruno Gadea",
+      "Pablo Brenner",
+      "Sergio Fogel"
+    ],
+    "talks": [
+      {
+        "title": "Charla de Paula Bellizia (Amazon Web Services)",
+        "speakers": [
+          "Paula Bellizia"
+        ]
+      },
+      {
+        "title": "Entrevista al ministro de Economía y Finanzas",
+        "speakers": [
+          "Gabriel Oddone",
+          "Elliott Gotkine"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943448.JPG",
+        "alt": "Grupo de asistentes posando bajo el arco «Let's tech together» frente al MACA",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943464.JPG",
+        "alt": "El edificio del MACA y el arco de bienvenida del Punta Tech Meetup 2026",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943450.JPG",
+        "alt": "Apertura en el escenario con la pantalla de «punta tech meetup»",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943461.JPG",
+        "alt": "Entrevista en el escenario frente al público, con la pantalla «Punta Tech»",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943459.JPG",
+        "alt": "Conversación en sillones sobre el escenario, bajo el lema «Let's tech together»",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943452.JPG",
+        "alt": "Paula Bellizia, vicepresidenta de AWS para América Latina, habla en el escenario",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943460.JPG",
+        "alt": "Público sentado al aire libre frente al escenario",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943458.JPG",
+        "alt": "Multitud escuchando una charla bajo el sol de la tarde",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943454.JPG",
+        "alt": "Asistentes sentados en el pasto del MACA al atardecer",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943449.JPG",
+        "alt": "Networking bajo las carpas blancas del parque",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943453.JPG",
+        "alt": "Asistentes con credenciales conversando en el parque",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943447.JPG",
+        "alt": "Tres asistentes posan con sus credenciales del evento",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943446.JPG",
+        "alt": "Asistentes llegando por el sendero frente al edificio del MACA",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943457.JPG",
+        "alt": "La multitud entre las carpas del Punta Tech Meetup 2026",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943467.JPG",
+        "alt": "Zona de descanso con livings bajo carpas iluminadas en rosa",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943472.JPG",
+        "alt": "Networking al anochecer con el MACA iluminado de fondo",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943473.JPG",
+        "alt": "El MACA de noche con las letras «Punta Tech» en el césped",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "src": "https://imagenes.montevideo.com.uy/imgnoticias/202601/_W1200/943474.JPG",
+        "alt": "Show de luces sobre el escenario al cierre de la noche",
+        "by": "Javier Noceti",
+        "source": "Montevideo Portal",
+        "page": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de Punta Tech",
+        "url": "https://puntatech.org/"
+      },
+      {
+        "label": "Fotos en Montevideo Portal",
+        "url": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Montevideo Portal: así se vivió en imágenes el Punta Tech Meetup 2026",
+        "url": "https://www.montevideo.com.uy/Tiempo-libre/Innovacion-tecnologia-y-networking-asi-se-vivio-en-imagenes-el-Punta-Tech-Meetup-2026-uc949499"
+      },
+      {
+        "label": "Forbes Argentina: la edición n.º 18 reunió más de 2000 emprendedores (15/01/2026)",
+        "url": "https://www.forbesargentina.com/innovacion/punta-tech-meetup-edicion-n-18-reunio-mas-2000-emprendedores-una-experiencia-comunidad-global-n84785"
+      },
+      {
+        "label": "Forbes Argentina: Punta del Este se prepara para el evento tech más icónico de la región",
+        "url": "https://www.forbesargentina.com/innovacion/entre-fiestas-eventos-lujo-punta-prepara-evento-tech-mas-iconico-region-n84384"
+      },
+      {
+        "label": "Montevideo Portal: Punta Tech Meetup 2026, vuelve el evento de networking",
+        "url": "https://www.montevideo.com.uy/Negocios-y-Tendencias/Punta-Tech-Meetup-2026-vuelve-el-evento-de-networking-mas-importante-de-America-Latina-uc942419"
+      }
+    ]
+  },
+  "github:percona/community:2026-09-23:percona-university-uruguay-2026": {
+    "description": "**Percona University** es una serie de jornadas técnicas y gratuitas sobre bases de datos open source que Percona organiza en distintas ciudades del mundo. La de Montevideo fue el miércoles 23 de setiembre de 2026, de 9 a 18 h, en el Regency Way Montevideo Hotel (Av. Gral. Rivera 3377), con charlas en inglés y español. Según el anuncio de Agustín Gallego en el blog de Percona, era la tercera vez que el evento llegaba a Uruguay. La propuesta era educativa, no comercial: dirigida a DBAs, desarrolladores backend, SREs y estudiantes que trabajan con PostgreSQL, MySQL, MongoDB y el resto del ecosistema de datos abierto.\n\nEl programa publicado abría con Peter Zaitsev, cofundador de Percona, hablando del estado del ecosistema de bases de datos open source. Seguían charlas sobre monitoreo de PostgreSQL con Coroot, replicación en MySQL, MyRocks, migración a MySQL 8.4, TiDB, analítica histórica con DuckDB y Parquet, bpftrace, IA en la gestión de servicios y SQL como memoria para IA. Cerraba con lightning talks y un sorteo.",
+    "venue": "Regency Way Montevideo Hotel (Av. Gral. Rivera 3377)",
+    "organizers": [
+      "Percona"
+    ],
+    "talks": [
+      {
+        "title": "Opening Session, State of Open Source Database Ecosystem",
+        "speakers": [
+          "Peter Zaitsev"
+        ]
+      },
+      {
+        "title": "Beyond “Postgres is up”: detecting failures and performance tuning with Coroot",
+        "speakers": [
+          "Nikolay Sivko",
+          "Agustín Gallego"
+        ]
+      },
+      {
+        "title": "MySQL Replication Demystified",
+        "speakers": [
+          "Steffano Britos"
+        ]
+      },
+      {
+        "title": "MyRocks: What is it and why to use it",
+        "speakers": [
+          "Carlos Tutte"
+        ]
+      },
+      {
+        "title": "MySQL 8.4 Upgrade: Best Practices For Zero-Surprise Prod Migration",
+        "speakers": [
+          "Fernando Mattera"
+        ]
+      },
+      {
+        "title": "TiDB 101",
+        "speakers": [
+          "Fernando Ipar"
+        ]
+      },
+      {
+        "title": "Poor man's lakehouse: historical analytics & MySQL recovery w. DuckDB+Parquet",
+        "speakers": [
+          "Daniel Guzmán Burgos"
+        ]
+      },
+      {
+        "title": "bpftrace 301: tracing variables life cycle for advanced bug investigations",
+        "speakers": [
+          "Marcos Albe"
+        ]
+      },
+      {
+        "title": "From Reactive to Ready: How AI Changed My Work as a Service Delivery Manager",
+        "speakers": [
+          "Mariana Bonsignore"
+        ]
+      },
+      {
+        "title": "SQL for AI: Replacing text files with a versioned relational brain",
+        "speakers": [
+          "Martín Loy"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Inscripción y agenda en Eventbrite",
+        "url": "https://www.eventbrite.com/e/percona-university-montevideo-uruguay-tickets-1997688670590"
+      },
+      {
+        "label": "Anuncio en el blog de Percona",
+        "url": "https://www.percona.com/blog/percona-university-comes-to-uruguay/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Percona blog: Percona University Comes to Uruguay (Agustín Gallego, 17/08/2026)",
+        "url": "https://www.percona.com/blog/percona-university-comes-to-uruguay/"
+      },
+      {
+        "label": "Eventbrite: Percona University Montevideo, Uruguay (agenda)",
+        "url": "https://www.eventbrite.com/e/percona-university-montevideo-uruguay-tickets-1997688670590"
+      },
+      {
+        "label": "GitHub · percona/community: Percona University Uruguay 2026",
+        "url": "https://github.com/percona/community/blob/HEAD/content/events/2026-percona-university-uruguay/index.md"
+      }
+    ]
+  },
+  "conf:campus-party-uruguay:2026-10-30": {
+    "description": "El **Antel Campus Party 2026** está anunciado para el viernes 30 y el sábado 31 de octubre de 2026 y, por primera vez, en el Antel Arena. Se presentó el 19 de octubre en el edificio Joaquín Torres García, con el presidente de Antel, Alejandro Paz; el vicepresidente Pablo Álvarez; la directora Laura Raffo; el socio fundador de Campus Party, Ever Miguez, y la directora ejecutiva de Campus Party Cono Sur, Lucrecia Gratas.\n\nEl viernes 30 está anunciado con expositores nacionales y extranjeros: desde España, el divulgador científico Aythami Soto y Asier Arranz (Robotics & Physical AI, NVIDIA); desde Argentina, Jorge Cano (Lazo, Google Developer Expert), Sabri Kolod y Ezequiel Martínez. También habrá workshops como \"Futures Thinking\", \"Lego con IA\" y \"De Cero al Mercado\". El sábado 31 se dedica a Antel Gaming, con torneos de Free Fire, EA Sports FC, F1 en simuladores y Minecraft, finales en el escenario principal transmitidas por AntelTV, retrogaming, cosplay y espacios de comunidades. Las entradas se venden por Tickantel.",
+    "organizers": [
+      "Campus Party",
+      "Antel"
+    ],
+    "links": [
+      {
+        "label": "Agenda de Campus Party Montevideo",
+        "url": "https://www.campusparty.app/agenda/montevideo"
+      }
+    ],
+    "sources": [
+      {
+        "label": "DPL News: Antel Campus Party por primera vez en el Antel Arena (20/10/2026)",
+        "url": "https://dplnews.com/uruguay-antel-campus-party-por-primera-vez-en-el-antel-arena/"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://dplnews.com/wp-content/uploads/2026/10/lanzamiento-campus-party-01.jpg",
+        "alt": "Lanzamiento del Antel Campus Party 2026: autoridades de Antel y de Campus Party en el edificio Joaquín Torres García",
+        "by": "Prensa Antel",
+        "source": "DPL News",
+        "page": "https://dplnews.com/uruguay-antel-campus-party-por-primera-vez-en-el-antel-arena/"
+      }
+    ]
+  },
+  "conf:punta-tech-week:2027-01-06": {
+    "description": "La tercera **Punta Tech Week** está anunciada del 6 al 12 de enero de 2027 en Punta del Este, con más de 50 actividades alrededor del evento principal: la 19.ª edición del Punta Tech Meetup, el lunes 11 de enero de 2027 en el MACA.\n\nLa organización lo presenta como un encuentro de networking tech que conecta a emprendedores e inversores de todo el mundo en un formato distendido, con \"menos conferencias y más oportunidades reales\". Lo organizan Sergio Fogel, Carolina Kind, Bruno Gadea y Pablo Brenner, y las entradas se venden por Red Tickets.",
+    "venue": "MACA (Museo de Arte Contemporáneo Atchugarry)",
+    "organizers": [
+      "Sergio Fogel",
+      "Carolina Kind",
+      "Bruno Gadea",
+      "Pablo Brenner"
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial de Punta Tech Meetup '27",
+        "url": "https://puntatech.org/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Punta Tech Meetup '27: sitio oficial",
+        "url": "https://puntatech.org/"
+      }
+    ]
+  }
+}

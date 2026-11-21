@@ -29,7 +29,7 @@ export function AgendaSurface({
       data-fullscreen={isFullscreen}
     >
       <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 className="text-sm font-semibold uppercase tracking-widest text-zinc-500">
+        <h2 className="text-sm font-semibold tracking-widest text-zinc-500 uppercase">
           {isFullscreen ? eventName : "La grilla"}
         </h2>
         <div className="flex items-center gap-3">

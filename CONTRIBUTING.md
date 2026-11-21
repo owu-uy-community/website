@@ -11,6 +11,30 @@ Please adhere to our code of conduct in all interactions with the project.
 3. Increment version numbers in example files and the README.md to reflect the new version represented by this Pull Request. We use the [SemVer](http://semver.org/) versioning scheme.
 4. You can merge the Pull Request once you have approval from two other developers, or if you lack merge permissions, request the second reviewer to do it for you.
 
+## Checks
+
+CI runs all of these on every pull request; run them locally before pushing.
+
+| Command                 | What it does                                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`            | oxlint (type-aware) and oxfmt. `pnpm fix` applies what they can fix themselves.                                                                   |
+| `pnpm typecheck`        | `tsc --noEmit`                                                                                                                                    |
+| `pnpm test:unit`        | Vitest: `*.test.ts` runs in Node, `*.test.tsx` in happy-dom. `pnpm test` watches.                                                                 |
+| `pnpm test:integration` | Procedures against a real Postgres. Needs `docker compose up -d`; recreates the `owu_test` database each run (override with `TEST_DATABASE_URL`). |
+| `pnpm e2e`              | Playwright against the app, the realtime sidecar and a mock OBS. Recreates `owu_e2e` each run (override with `E2E_DATABASE_URL`).                 |
+
+### Writing tests
+
+- Unit tests sit next to the code as `*.test.ts(x)`; integration tests as `*.integration.test.ts`; end-to-end specs live in `e2e/` as `*.e2e.ts`.
+- A test must fail if the rule it covers were deleted or inverted: assert values, not just shapes; pin the arguments of a spy, not just that it was called; cover both sides of every boundary.
+- Use `test()`, not `it()`. Build each test's state with a local `setup()` function instead of `beforeEach`; hooks are for cleanup only.
+- No snapshots — write the expected value out.
+- Data that repeats across tests comes from the factories in `src/test/factories.ts`.
+- Outbound HTTP is mocked with MSW; a request nothing mocked fails the test. In hook and component tests, mock our own procedures with `api` from `src/test/orpc-msw.ts` (typed, served by a real RPC handler).
+- Procedures are called with `call(router.x.y, input, by(user))` (`src/test/context.ts`), which can also swap the AI models for mocks (`src/test/ai.ts`): no test talks to a real model.
+- A race is only tested if the calls really overlap: start from a row that already exists, and warm a connection per call (see the OBS tests).
+- Playwright never retries. A flaky spec is a race to find, not a timeout to raise.
+
 ### Our Responsibilities
 
 Project maintainers are responsible for defining acceptable behavior standards and taking appropriate, fair corrective actions in response to any unacceptable behavior.

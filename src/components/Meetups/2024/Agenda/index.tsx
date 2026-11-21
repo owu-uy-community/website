@@ -53,52 +53,53 @@ export default function Agenda({ lastUpdate, agenda }: AgendaProps) {
           <div className="flex min-h-[35px] flex-col gap-4">
             {agenda?.map(({ id, startTime, endTime, presenters, title, location, description }) => {
               const presenter = presenters && presenters.length > 0 ? presenters[0] : null;
-              
+
               return (
-              <div
-                key={id}
-                className="flex w-full flex-row items-center justify-between gap-3 rounded-lg border-[1.5px] border-gray-400 px-4 py-5 text-sm md:px-8 md:text-lg"
-              >
-                <div className="flex flex-row items-center justify-between gap-3">
-                  <span className="min-w-[6rem] text-yellow-400 sm:min-w-[7.5rem] md:mr-3">
-                    {format(parseISO(startTime), "HH:mm", { locale: es })} - {format(parseISO(endTime), "HH:mm", { locale: es })}
-                  </span>
-                  {presenter ? (
+                <div
+                  key={id}
+                  className="flex w-full flex-row items-center justify-between gap-3 rounded-lg border-[1.5px] border-gray-400 px-4 py-5 text-sm md:px-8 md:text-lg"
+                >
+                  <div className="flex flex-row items-center justify-between gap-3">
+                    <span className="min-w-[6rem] text-yellow-400 sm:min-w-[7.5rem] md:mr-3">
+                      {format(parseISO(startTime), "HH:mm", { locale: es })} -{" "}
+                      {format(parseISO(endTime), "HH:mm", { locale: es })}
+                    </span>
+                    {presenter ? (
+                      <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex flex-row items-center gap-2">
+                              <Avatar>
+                                <AvatarImage src={presenter.picture?.url ?? "/images/speakers/carpincho/picture.png"} />
+                              </Avatar>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent className="mb-1 border-[1.5px] border-gray-400">
+                            <p>{`${presenter.firstname} ${presenter.lastname ?? ""}`}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : null}
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-left text-xs sm:text-sm lg:text-base">{title}</span>
+                      <span className="text-left text-xs text-gray-400 sm:text-sm">{description}</span>
+                    </span>
+                  </div>
+                  <span className="flex h-[30px] flex-row flex-wrap gap-4 md:h-[35px]">
                     <TooltipProvider delayDuration={0}>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="flex flex-row items-center gap-2">
-                            <Avatar>
-                              <AvatarImage src={presenter.picture?.url ?? "/images/speakers/carpincho/picture.png"} />
-                            </Avatar>
+                          <span className="hidden min-w-[150px] flex-row items-center justify-center gap-1 rounded-md bg-blue-600 px-5 text-center text-sm font-semibold lg:flex">
+                            <FaMapMarkerAlt className="text-xs" /> {location?.name}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent className="mb-1 border-[1.5px] border-gray-400">
-                          <p>{`${presenter.firstname} ${presenter.lastname ?? ""}`}</p>
+                          <p>Ubicación: {location?.name}</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  ) : null}
-                  <span className="flex flex-col gap-0.5">
-                    <span className="text-left text-xs sm:text-sm lg:text-base">{title}</span>
-                    <span className="text-left text-xs text-gray-400 sm:text-sm">{description}</span>
                   </span>
                 </div>
-                <span className="flex h-[30px] flex-row flex-wrap gap-4 md:h-[35px]">
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="hidden min-w-[150px] flex-row items-center justify-center gap-1 rounded-md bg-blue-600 px-5 text-center text-sm font-semibold lg:flex">
-                          <FaMapMarkerAlt className="text-xs" /> {location?.name}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="mb-1 border-[1.5px] border-gray-400">
-                        <p>Ubicación: {location?.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </span>
-              </div>
               );
             })}
           </div>

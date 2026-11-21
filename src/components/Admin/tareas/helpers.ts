@@ -1,87 +1,108 @@
-// Client-safe helpers for the staff tasks page. Types come from the schemas
-// module directly — the staff-tasks barrel also exports services, which pull
-// `server-only` through publishServer.
-import type { StaffAnnouncement, StaffTask } from "lib/orpc/staff-tasks/schemas";
+// Client-safe helpers for Staff y tareas and Mi turno.
+import type { BadgeProps } from "components/shared/ui/badge";
+import type { OnShift, StaffAnnouncement, StaffArrival, StaffMember, StaffTask } from "lib/orpc/staff-tasks/schemas";
+import { isLateFor, toMinutes, type TaskPhase } from "lib/orpc/staff-tasks/shift";
+import { wallClock } from "lib/slot-day";
 
-export type { StaffAnnouncement, StaffTask };
-
+export type { OnShift, StaffAnnouncement, StaffArrival, StaffTask, TaskPhase };
+export type RosterMember = StaffMember;
 export type StaffTaskStatus = StaffTask["status"];
 export type StaffTaskType = StaffTask["type"];
+export type Assignee = StaffTask["assignees"][number];
 
-export interface RosterMember {
-  id: string;
-  userId: string;
-  role: string;
-  name: string;
-  email: string;
-  image: string | null;
-}
+/** The tabs of Staff y tareas, as `?tab=` says them. */
+export const TAREAS_TABS = ["ahora", "cronograma", "turnos", "anuncios"] as const;
+export type TareasTab = (typeof TAREAS_TABS)[number];
 
-export const timeToMinutes = (time: string): number => {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-};
+const dayParts = new Intl.DateTimeFormat("es-UY", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "UTC",
+});
 
-export const formatClock = (date: Date): string =>
-  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
-
-/** Local "YYYY-MM-DD" — the event day in the user's timezone. */
-export const todayDayString = (): string => {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-};
-
-/** "2025-11-08" → "sáb 8 nov" */
+/** "2026-11-07" → "sáb 7 nov", the same on every browser and on the server. */
 export const formatDayLabel = (day: string): string => {
-  const [y, m, d] = day.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return new Intl.DateTimeFormat("es-UY", { weekday: "short", day: "numeric", month: "short" }).format(date);
+  const parts = Object.fromEntries(
+    dayParts.formatToParts(new Date(`${day}T12:00:00.000Z`)).map((part) => [part.type, part.value.replace(".", "")])
+  );
+  return `${parts.weekday} ${parts.day} ${parts.month}`;
 };
 
-export const relativeTime = (iso: string): string => {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(diffMs / 60_000);
-  if (mins < 1) return "recién";
-  if (mins < 60) return `hace ${mins} min`;
-  const hours = Math.round(mins / 60);
-  if (hours < 24) return `hace ${hours} h`;
-  return `hace ${Math.round(hours / 24)} d`;
+/** Today, the minute of the day and "HH:MM" on the event's wall clock. */
+export const eventClock = (at: number, timeZone: string) => {
+  const clock = wallClock(new Date(at), timeZone);
+  return { today: clock.slice(0, 10), nowMin: toMinutes(clock.slice(11)), time: clock.slice(11) };
 };
 
-/** Default duration when a task has no endTime, for the "En curso" lane. */
-export const DEFAULT_TASK_MINUTES = 45;
+export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
-export const STATUS_META: Record<StaffTaskStatus, { label: string; dot: string }> = {
-  pending: { label: "Pendiente", dot: "bg-muted-foreground" },
-  in_progress: { label: "En curso", dot: "bg-primary" },
-  done: { label: "Lista", dot: "bg-emerald-500" },
-  blocked: { label: "Bloqueada", dot: "bg-destructive" },
-};
+export const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
-export const TYPE_META: Record<StaffTaskType, { label: string }> = {
-  task: { label: "Tarea" },
-  ongoing: { label: "Continuo" },
-  milestone: { label: "Agenda" },
-};
-
-export const isUnderstaffed = (task: StaffTask): boolean =>
-  task.type !== "milestone" && task.minPeople != null && task.assignees.length < task.minPeople;
+/** "16:00–18:30", "19:00", or null for an untimed task. */
+export const timeRange = (task: Pick<StaffTask, "startTime" | "endTime">) =>
+  task.startTime ? (task.endTime ? `${task.startTime}–${task.endTime}` : task.startTime) : null;
 
 export const isMine = (task: StaffTask, meId: string): boolean =>
   task.assignees.some((assignee) => assignee.userId === meId);
 
-/** Active window of a timed task, in minutes-of-day. */
-export const taskWindow = (task: StaffTask): { start: number; end: number } | null => {
-  if (!task.startTime) return null;
-  const start = timeToMinutes(task.startTime);
-  const end = task.endTime ? timeToMinutes(task.endTime) : start + DEFAULT_TASK_MINUTES;
-  return { start, end: Math.max(end, start + 5) };
-};
+/** How many more people the task needs to reach its minimum; whoever was marked absent doesn't count. */
+export const missingPeople = (task: StaffTask): number =>
+  task.type !== "milestone" && task.minPeople != null
+    ? Math.max(0, task.minPeople - task.assignees.filter((assignee) => !assignee.noShow).length)
+    : 0;
 
-export const initials = (name: string): string =>
-  name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0] ?? "")
-    .join("")
-    .toUpperCase();
+type BadgeVariant = NonNullable<BadgeProps["variant"]>;
+
+/** How a task's phase reads as a badge. */
+export function phaseBadge(task: StaffTask, phase: TaskPhase): { label: string; variant: BadgeVariant } {
+  switch (phase) {
+    case "done":
+      return { label: "Lista", variant: "success" };
+    case "blocked":
+      return { label: "Bloqueada", variant: "destructive" };
+    case "overdue":
+      return { label: "Atrasada", variant: "destructive" };
+    case "ongoing":
+      return { label: "Continua", variant: "info" };
+    case "now":
+      return { label: task.status === "in_progress" ? "En curso" : "Ahora", variant: "default" };
+    default:
+      return { label: "Pendiente", variant: "secondary" };
+  }
+}
+
+export type AssigneeState = "noshow" | "late" | "here" | "left" | "unknown";
+
+/** Where someone on a task stands at minute `at` of its day; arrivals only mean something today. */
+export function assigneeState(
+  task: StaffTask,
+  assignee: Assignee,
+  arrival: StaffArrival | undefined,
+  at: number,
+  isToday: boolean
+): AssigneeState {
+  if (assignee.noShow) return "noshow";
+  if (!isToday) return "unknown";
+  if (arrival?.leftAt) return "left";
+  if (arrival) return "here";
+
+  return isLateFor(task, assignee, false, at) ? "late" : "unknown";
+}
+
+/** "llegó 13:42", "no llegó"…: one person's state, said briefly. */
+export function assigneeNote(state: AssigneeState, arrival: StaffArrival | undefined, timeZone: string) {
+  const at = (iso: string) => wallClock(new Date(iso), timeZone).slice(11);
+  switch (state) {
+    case "noshow":
+      return "no vino";
+    case "late":
+      return "no llegó";
+    case "left":
+      return arrival?.leftAt ? `se fue ${at(arrival.leftAt)}` : "se fue";
+    case "here":
+      return arrival ? `llegó ${at(arrival.arrivedAt)}` : "llegó";
+    default:
+      return null;
+  }
+}

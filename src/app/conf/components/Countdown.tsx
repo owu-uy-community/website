@@ -29,8 +29,10 @@ const SIZES = {
   },
 } as const;
 
-function getRemaining(targetMs: number): Remaining {
-  const diff = targetMs - Date.now();
+const localClock = () => Date.now();
+
+function getRemaining(targetMs: number, now: number): Remaining {
+  const diff = targetMs - now;
   const left = Math.max(0, diff);
 
   return {
@@ -50,6 +52,8 @@ type CountdownProps = {
   size?: keyof typeof SIZES;
   /** Cells stretch to fill the container instead of keeping their fixed square width */
   fullWidth?: boolean;
+  /** Epoch-ms source; defaults to the visitor's clock (the ticket release passes the server's) */
+  clock?: () => number;
   className?: string;
 };
 
@@ -63,6 +67,7 @@ export default function Countdown({
   expiredLabel,
   size = "sm",
   fullWidth = false,
+  clock = localClock,
   className,
 }: CountdownProps) {
   const [remaining, setRemaining] = useState<Remaining | null>(null);
@@ -70,22 +75,18 @@ export default function Countdown({
 
   useEffect(() => {
     const targetMs = new Date(target).getTime();
-    const update = () => setRemaining(getRemaining(targetMs));
+    const update = () => setRemaining(getRemaining(targetMs, clock()));
 
     update();
     const id = setInterval(update, 1000);
 
     return () => clearInterval(id);
-  }, [target]);
+  }, [target, clock]);
 
   if (remaining?.expired) {
     return (
       <p
-        className={classNames(
-          "font-display font-bold uppercase leading-none text-[#F5BB03]",
-          sizes.expired,
-          className
-        )}
+        className={classNames("font-display font-bold uppercase leading-none text-[#F5BB03]", sizes.expired, className)}
       >
         {expiredLabel}
       </p>

@@ -1,66 +1,106 @@
 "use client";
 
-import * as React from "react";
-import classNames from "classnames";
+import * as Dialog from "@radix-ui/react-dialog";
+import { ArrowUpRight, Menu, X } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
-import { Separator } from "components/shared/Separator";
-import { Sheet, SheetContent, SheetTrigger } from "components/shared/Sheet";
-import { useNavigationContext } from "components/shared/Navbar/navigationProvider";
+import { SOCIAL_LINKS } from "app/lib/constants";
+import { cn } from "app/lib/utils";
+import { ButtonLink, Eyebrow, SmartLink } from "components/community/ui";
+import { isHiddenPath } from "lib/community/flags";
+import { NAV_LINKS, PAGES, SOCIALS } from "lib/community/site";
 
-import { navSections } from "./navSections";
-
-function NavItems() {
-  const { activeSection } = useNavigationContext();
-
-  return (
-    <ul className="lg:flex-between my-2 flex w-full flex-col items-start gap-5 lg:flex-row">
-      {Object.values(navSections).map(({ link, title, id }) => {
-        const isActive = activeSection === id;
-
-        return (
-          <li
-            key={link}
-            className="p-medium-16 flex w-full flex-row items-center whitespace-nowrap text-base font-semibold text-white"
-          >
-            <div
-              className={classNames("border-t-6 border-b-6 border-l-12 h-4 w-1.5 border-l-yellow-400", {
-                "bg-yellow-400": isActive,
-              })}
-            />
-            <SheetPrimitive.Close asChild>
-              <Link className="ml-3" href={link}>
-                {title}
-              </Link>
-            </SheetPrimitive.Close>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
+const SECONDARY = [
+  PAGES.primeraVez,
+  PAGES.darCharla,
+  PAGES.organizar,
+  PAGES.empresas,
+  PAGES.semanario,
+  PAGES.codigo,
+].filter((page) => !isHiddenPath(page.href));
 
 export default function MobileNav() {
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
-    <nav className="lg:hidden">
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        {!isOpen && (
-          <SheetTrigger className="align-middle">
-            <Image alt="menu" className="cursor-pointer" height={24} src="/icons/menu.svg" width={24} />
-          </SheetTrigger>
-        )}
-        <SheetContent className="z-[60] flex max-w-[240px] flex-col gap-6 lg:hidden">
-          <div className="flex w-full flex-row items-center justify-start gap-4">
-            <Image alt="logo" height={34} src="/images/speakers/carpincho/picture.png" width={34} />
+    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Dialog.Trigger
+        aria-label="Abrir menú"
+        className="inline-flex size-10 items-center justify-center rounded-xl text-zinc-200 transition-colors hover:bg-white/[0.06] lg:hidden"
+      >
+        <Menu aria-hidden className="size-6" />
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Content
+          aria-describedby={undefined}
+          className="owu-site fixed inset-0 z-[80] flex flex-col overflow-y-auto bg-[#09090b] data-[state=open]:animate-in data-[state=open]:fade-in-0 lg:hidden"
+        >
+          <div aria-hidden className="owu-furnace pointer-events-none absolute inset-x-0 top-0 h-80" />
+          <div className="relative flex h-16 shrink-0 items-center justify-between px-5">
+            <Image alt="OWU Uruguay" className="h-8 w-auto" height={32} src="/images/logos/owu.webp" width={75} />
+            <Dialog.Title className="sr-only">Menú</Dialog.Title>
+            <Dialog.Close
+              aria-label="Cerrar menú"
+              className="inline-flex size-10 items-center justify-center rounded-xl text-zinc-200 hover:bg-white/[0.06]"
+            >
+              <X aria-hidden className="size-6" />
+            </Dialog.Close>
           </div>
-          <NavItems />
-          <Separator />
-        </SheetContent>
-      </Sheet>
-    </nav>
+          <nav aria-label="Principal" className="relative flex flex-col px-5 pt-6 pb-4">
+            <ul className="flex flex-col">
+              {NAV_LINKS.map(({ href, label, external }, index) => (
+                <li
+                  key={href}
+                  className="owu-rise border-b border-white/[0.07]"
+                  style={{ "--d": `${index * 50}ms` } as React.CSSProperties}
+                >
+                  <SmartLink
+                    className={cn(
+                      "flex items-center justify-between py-4 font-title text-[28px] font-bold tracking-[-0.02em]",
+                      !external && pathname.startsWith(href) ? "text-yellow-400" : "text-white"
+                    )}
+                    href={href}
+                    utm="menu"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {label}
+                    {external ? <ArrowUpRight aria-hidden className="size-5 text-zinc-500" /> : null}
+                  </SmartLink>
+                </li>
+              ))}
+            </ul>
+            <Eyebrow className="mt-8">Participá</Eyebrow>
+            <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+              {SECONDARY.map(({ href, label }) => (
+                <li key={href}>
+                  <SmartLink
+                    className="text-[15px] text-zinc-400 transition-colors hover:text-white"
+                    href={href}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {label}
+                  </SmartLink>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="relative mt-auto flex flex-col gap-5 px-5 py-6">
+            <ButtonLink arrow href={SOCIAL_LINKS.slack} size="lg" utm="menu">
+              Sumate al Slack
+            </ButtonLink>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-zinc-500">
+              {SOCIALS.map(({ key, label, href }) => (
+                <SmartLink key={key} className="transition-colors hover:text-white" href={href} utm="menu">
+                  {label}
+                </SmartLink>
+              ))}
+            </div>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

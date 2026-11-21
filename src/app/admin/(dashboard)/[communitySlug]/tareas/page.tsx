@@ -1,44 +1,44 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { CalendarX2 } from "lucide-react";
 
-import { isSiteAdmin, requireStaffSession } from "app/lib/auth-helpers";
+import { hasPermission, requireDashboardAccess } from "app/lib/auth-helpers";
+import { TAREAS_TABS, type TareasTab } from "components/Admin/tareas/helpers";
+import { PageContainer, PageHeader } from "components/Admin/ui/page";
+import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
-import { Empty } from "components/shared/ui/empty";
 import { db } from "lib/db";
-import { communityMembers } from "lib/db/schema";
-import { listCommunityMembers } from "lib/orpc/communities/services";
-import { listStaffAnnouncements, listStaffTasks } from "lib/orpc/staff-tasks/services";
+import { events } from "lib/db/schema";
+import { caller } from "lib/orpc/server";
 
 import { resolveAdminCommunityScope } from "../scope";
 import TareasClient from "./TareasClient";
 
 /**
- * Event-day staff coordination, community-scoped in the path. Unlike the rest
- * of /admin this page admits any community member (helpers check their tasks
- * from their phones); a slug outside the member's communities is a 404.
+ * Event-day staff coordination, community-scoped in the path. Anyone who may read the community's
+ * tasks gets in (helpers check theirs from their phones); a slug where they can't is a 404.
  */
 export default async function TareasPage({
   params,
   searchParams,
 }: {
   params: Promise<{ communitySlug: string }>;
-  searchParams: Promise<{ event?: string }>;
+  searchParams: Promise<{ event?: string; tab?: string }>;
 }) {
-  const session = await requireStaffSession();
-  const admin = isSiteAdmin(session);
+  const { session } = await requireDashboardAccess();
+  const admin = await hasPermission("event:manage");
 
   const { communitySlug } = await params;
-  const { event: eventSlug } = await searchParams;
-  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, admin ? null : session.user.id);
+  const { event: eventSlug, tab } = await searchParams;
+  const scope = await resolveAdminCommunityScope(communitySlug, eventSlug, "task:read");
   if (!scope) notFound();
 
   if (!scope.selected) {
     return (
-      <div className="mx-auto w-full max-w-3xl space-y-4 p-4 md:p-6">
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Tareas</h1>
-        <Empty
+      <PageContainer size="small">
+        <PageHeader title="Staff y tareas" />
+        <EmptyState
           action={
             admin ? (
               <Button asChild size="sm" variant="outline">
@@ -46,44 +46,44 @@ export default async function TareasPage({
               </Button>
             ) : undefined
           }
-          className="py-16"
           description={`${scope.community.name} todavía no tiene eventos.`}
           icon={CalendarX2}
           title="Sin eventos"
         />
-      </div>
+      </PageContainer>
     );
   }
 
   const selected = scope.selected;
-
-  const [tasks, announcements, roster, membership] = await Promise.all([
-    listStaffTasks({ eventId: selected.id }),
-    listStaffAnnouncements({ eventId: selected.id }, session.user.id, selected.communityId),
-    listCommunityMembers({ communityId: selected.communityId }),
-    admin
-      ? Promise.resolve(null)
-      : db
-          .select({ role: communityMembers.role })
-          .from(communityMembers)
-          .where(
-            and(eq(communityMembers.communityId, selected.communityId), eq(communityMembers.userId, session.user.id))
-          )
-          .then((rows) => rows[0] ?? null),
+  const input = { eventId: selected.id };
+  const [tasks, announcements, roster, arrivals, onShift, [event], canEdit] = await Promise.all([
+    caller.staffTasks.list(input),
+    caller.staffTasks.announcements.list(input),
+    caller.staffTasks.roster(input),
+    caller.staffTasks.arrivals.list(input),
+    caller.staffTasks.onShift(input),
+    db.select({ timezone: events.timezone }).from(events).where(eq(events.id, selected.id)),
+    hasPermission("task:manage", selected.communityId),
   ]);
 
-  const canEdit = admin || (membership != null && ["owner", "admin", "editor"].includes(membership.role));
+  const initialTab = TAREAS_TABS.find((candidate): candidate is TareasTab => candidate === tab) ?? "ahora";
 
   return (
     <TareasClient
       canEdit={canEdit}
+      communitySlug={scope.community.slug}
       eventId={selected.id}
       eventName={selected.name}
+      eventSlug={selected.slug}
       initialAnnouncements={announcements}
+      initialArrivals={arrivals}
+      initialOnShift={onShift}
       initialRoster={roster}
+      initialTab={initialTab}
       initialTasks={tasks}
-      meId={session.user.id}
-      meName={session.user.name}
+      me={{ id: session.user.id, name: session.user.name, image: session.user.image ?? null }}
+      serverNow={Date.now()}
+      timeZone={event?.timezone ?? "America/Montevideo"}
     />
   );
 }

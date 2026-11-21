@@ -30,6 +30,22 @@ export function roomColorFor(roomId: string, explicit?: string | null): string {
   return ROOM_PALETTE[hashId(roomId) % ROOM_PALETTE.length];
 }
 
+/** Black or white, whichever reads better on a #rrggbb background (WCAG relative luminance). */
+export function readableOn(hex: string): "#000000" | "#FFFFFF" {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const [r, g, b] = [num >> 16, (num >> 8) & 0xff, num & 0xff].map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? "#000000" : "#FFFFFF";
+}
+
+/** A fill in `hex` with text that reads on it: black on most room colours, white on a dark one like Ventana's blue. */
+export function readableFill(hex: string): { background: string; color: string } {
+  return { background: hex, color: readableOn(hex) };
+}
+
 /** Lighten (positive pct) or darken (negative pct) a #rrggbb color. */
 export function shadeHex(hex: string, pct: number): string {
   const value = hex.replace("#", "");
@@ -74,20 +90,37 @@ export function stickyNoteRotation(noteId: string): number {
 }
 
 /**
- * Sticky-note surface shared by the admin board and the kiosk wall.
- * Slightly darkened gradient so the white title keeps contrast on the
- * lighter palette entries (amber, lime, cyan).
+ * Black or white text, whichever reads better on a #rrggbb background — by APCA, not WCAG 2:
+ * WCAG 2 puts black on orange/red/blue, APCA keeps white there and still flips white/yellow rooms.
+ */
+function inkOn(hex: string): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const y =
+    0.2126729 * ((num >> 16) / 255) ** 2.4 +
+    0.7151522 * (((num >> 8) & 0xff) / 255) ** 2.4 +
+    0.072175 * ((num & 0xff) / 255) ** 2.4;
+  const blackText = y ** 0.56 - 0.022 ** (Math.SQRT2 * 0.57); // soft-clamped black, APCA normal polarity
+  const whiteText = 1 - y ** 0.65; // APCA reverse polarity
+
+  return blackText > whiteText ? "#0a0a0a" : "#ffffff";
+}
+
+/**
+ * Sticky-note surface shared by the admin board and the kiosk wall. The ink is
+ * picked against the gradient's midpoint, so white and yellow rooms get black text.
  */
 export function stickyNoteStyle(color: string): {
   background: string;
   borderColor: string;
   borderRadius: string;
   boxShadow: string;
+  color: string;
 } {
   return {
     background: `linear-gradient(140deg, ${shadeHex(color, 6)}, ${shadeHex(color, -12)})`,
     borderColor: shadeHex(color, -26),
     borderRadius: "10px 14px 8px 16px",
     boxShadow: "0 4px 10px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22)",
+    color: inkOn(shadeHex(color, -3)),
   };
 }

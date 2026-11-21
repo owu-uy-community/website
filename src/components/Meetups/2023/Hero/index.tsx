@@ -19,7 +19,7 @@ export default function Hero({ title, subtitle, date, location, locationHref }: 
       className="relative flex min-h-[calc(100dvh-56px)] w-full flex-1 flex-col items-center justify-center gap-4"
       id="inicio"
     >
-      <h1 className="mb-12 -rotate-[10deg] text-center text-6xl font-black uppercase italic leading-none text-primary text-yellow-400 xl:text-[80px]">
+      <h1 className="mb-12 -rotate-[10deg] text-center text-6xl leading-none font-black text-primary text-yellow-400 uppercase italic xl:text-[80px]">
         {title}
         <span className="block text-6xl uppercase lg:text-8xl xl:text-9xl">{subtitle}</span>
       </h1>

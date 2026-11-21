@@ -19,14 +19,14 @@ export function TimeGridKioskSkeleton() {
           gridTemplateRows: `56px repeat(${skeletonTimeSlots}, minmax(0, 1fr))`,
         }}
       >
-        <div className="flex h-full items-center justify-center border-b border-r border-white/10 bg-white/[0.06]">
+        <div className="flex h-full items-center justify-center border-r border-b border-white/10 bg-white/[0.06]">
           <Skeleton className="h-6 w-14 bg-white/10" />
         </div>
 
         {Array.from({ length: skeletonRooms }).map((_, index) => (
           <div
             key={`skeleton-room-${index}`}
-            className="flex h-full items-center justify-center gap-3 border-b border-r border-white/10 bg-white/[0.06] px-3 last:border-r-0"
+            className="flex h-full items-center justify-center gap-3 border-r border-b border-white/10 bg-white/[0.06] px-3 last:border-r-0"
           >
             <Skeleton className="h-7 w-7 rounded-full bg-white/10" />
             <Skeleton className="h-6 w-24 bg-white/10" />
@@ -35,7 +35,7 @@ export function TimeGridKioskSkeleton() {
 
         {Array.from({ length: skeletonTimeSlots }).map((_, timeIndex) => (
           <React.Fragment key={`skeleton-timeslot-${timeIndex}`}>
-            <div className="flex h-full flex-col items-center justify-center gap-1.5 border-b border-r border-white/10 bg-white/[0.04] px-2">
+            <div className="flex h-full flex-col items-center justify-center gap-1.5 border-r border-b border-white/10 bg-white/[0.04] px-2">
               <Skeleton className="h-5 w-16 bg-white/10" />
               <Skeleton className="h-4 w-14 bg-white/10" />
             </div>
@@ -43,7 +43,7 @@ export function TimeGridKioskSkeleton() {
             {Array.from({ length: skeletonRooms }).map((_, roomIndex) => (
               <div
                 key={`skeleton-cell-${timeIndex}-${roomIndex}`}
-                className="relative h-full border-b border-r border-white/10 bg-white/[0.02] p-2 last:border-r-0"
+                className="relative h-full border-r border-b border-white/10 bg-white/[0.02] p-2 last:border-r-0"
               >
                 {(timeIndex + roomIndex) % 3 === 0 && <Skeleton className="h-full w-full rounded-lg bg-white/[0.06]" />}
               </div>

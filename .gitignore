@@ -50,3 +50,9 @@ dev.db
 
 # Playwright MCP run artifacts
 .playwright-mcp/
+
+# Test output
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/

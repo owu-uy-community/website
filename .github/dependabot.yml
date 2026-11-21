@@ -38,7 +38,6 @@ updates:
         patterns:
           - "next"
           - "@next/*"
-          - "eslint-config-next"
           - "react"
           - "react-dom"
         update-types:
@@ -48,9 +47,13 @@ updates:
         patterns:
           - "remotion"
           - "@remotion/*"
+      # oRPC v2 is a pinned beta and its Effect integration targets one Effect
+      # major; they move together and never auto-merge (see the auto-merge workflow).
       orpc:
         patterns:
           - "@orpc/*"
+          - "effect"
+          - "evlog"
       drizzle:
         patterns:
           - "drizzle-orm"
@@ -92,16 +95,16 @@ updates:
       tooling:
         dependency-type: "development"
         patterns:
-          - "eslint*"
-          - "prettier*"
-          - "@typescript-eslint/*"
-          - "@vercel/style-guide"
+          - "oxlint*"
+          - "oxfmt"
+          - "ultracite"
+          - "husky"
+          - "lint-staged"
+          - "knip"
           - "typescript"
           - "tsx"
           - "cross-env"
           - "@svgr/webpack"
-        exclude-patterns:
-          - "eslint-config-next"
       types:
         patterns:
           - "@types/*"

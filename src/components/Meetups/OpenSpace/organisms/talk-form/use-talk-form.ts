@@ -1,15 +1,61 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ORPCError } from "@orpc/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { client } from "lib/orpc";
 import type { StickyNote } from "lib/orpc";
 import { orpc } from "lib/orpc/client";
-import { toast } from "components/shared/ui/toast-utils";
+
+import type { FindFreeSpotResponse } from "lib/orpc/ocr/schemas";
 
 import { talkFormSchema } from "./types";
-import type { RoomWithResources, ScheduleSlot, SuggestionAlternative, SuggestionEntry, TalkFormData } from "./types";
+import type {
+  ReviewableField,
+  RoomWithResources,
+  ScheduleSlot,
+  SuggestionAlternative,
+  SuggestionEntry,
+  TalkFormData,
+  TalkSave,
+} from "./types";
+
+/**
+ * Long edge of the uploaded photo. ~1.5MP is the sweet spot for the vision models behind the OCR:
+ * more pixels get billed and then discarded, fewer start costing handwriting accuracy. At quality
+ * 0.85 a card lands around 150–400KB instead of several megabytes over venue wifi.
+ */
+const MAX_IMAGE_EDGE = 1600;
+const JPEG_QUALITY = 0.85;
+
+/** What to tell the staffer when saving fails; a taken place names the talk that has it. */
+function saveErrorMessage(error: unknown): string {
+  if (error instanceof ORPCError && error.code === "CONFLICT") {
+    const { occupiedBy } = (error.data ?? {}) as { occupiedBy?: string };
+    if (occupiedBy) return `Este espacio ya está ocupado por "${occupiedBy}"`;
+  }
+  if (error instanceof ORPCError && error.code === "INTERNAL_SERVER_ERROR") {
+    return "Error del servidor. Probá con otro lugar.";
+  }
+
+  return error instanceof Error && error.message ? error.message : "No se pudo guardar la charla";
+}
+
+/** What the form shows for a talk: the saved one, a new one in a picked cell, or a blank one. */
+function valuesFor(note: StickyNote | null, rooms: string[], timeSlots: string[]): TalkFormData {
+  const saved = note?.id ? note : null;
+
+  return {
+    title: saved?.title ?? "",
+    speaker: saved?.speaker ?? "",
+    description: saved?.description ?? "",
+    room: note?.room || rooms[0] || "",
+    timeSlot: note?.timeSlot || timeSlots[0] || "",
+    needsTV: saved?.needsTV ?? false,
+    needsWhiteboard: saved?.needsWhiteboard ?? false,
+  };
+}
 
 interface UseTalkFormParams {
   open: boolean;
@@ -19,7 +65,9 @@ interface UseTalkFormParams {
   rooms: string[];
   roomsData: RoomWithResources[];
   timeSlots: string[];
-  onSave: (noteData: Partial<StickyNote> & { skipResourceValidation?: boolean }) => void;
+  onSave: (noteData: TalkSave) => void | Promise<void>;
+  /** Opened from "Sugerir con IA": once the title is in, the AI places it without another click. */
+  suggestOnTitle?: boolean;
 }
 
 export function useTalkForm({
@@ -31,25 +79,19 @@ export function useTalkForm({
   roomsData,
   timeSlots,
   onSave,
+  suggestOnTitle = false,
 }: UseTalkFormParams) {
   const {
     control,
     register,
     handleSubmit: rhfHandleSubmit,
-    formState: { errors: formErrors },
+    formState: { errors: formErrors, isDirty },
     setValue,
     watch,
     reset,
   } = useForm<TalkFormData>({
     resolver: zodResolver(talkFormSchema),
-    defaultValues: {
-      title: "",
-      speaker: "",
-      room: rooms[0] || "",
-      timeSlot: timeSlots[0] || "",
-      needsTV: false,
-      needsWhiteboard: false,
-    },
+    defaultValues: valuesFor(null, rooms, timeSlots),
   });
 
   const watchedValues = watch();
@@ -59,6 +101,10 @@ export function useTalkForm({
   const [permissionMessage, setPermissionMessage] = useState<string | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("form");
+  /** Fields the OCR could not read confidently, so the form can ask for a human check. */
+  const [fieldsToReview, setFieldsToReview] = useState<ReviewableField[]>([]);
+  /** The fields came off a card photo: the activity log says so, so someone checks the handwriting. */
+  const fromPhotoRef = useRef(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -81,63 +127,110 @@ export function useTalkForm({
 
   const queryClient = useQueryClient();
 
-  const roomsWithResources = roomsData.map((r) => ({
-    name: r.name,
-    hasTV: r.hasTV || false,
-    hasWhiteboard: r.hasWhiteboard || false,
-  }));
+  const applySuggestion = (result: FindFreeSpotResponse) => {
+    setSuggestionHistory((prev) => [
+      ...prev,
+      {
+        room: result.suggestedRoom,
+        timeSlot: result.suggestedTimeSlot,
+        reasoning: result.reasoning,
+        alternatives: result.alternatives,
+        degraded: result.degraded,
+      },
+    ]);
+    setCurrentHistoryIndex((prev) => prev + 1);
 
-  const processImageMutation = useMutation({
-    mutationFn: async (imageData: string) => {
-      const result = await client.ocr.processImageWithSuggestion({
-        imageData,
-        existingNotes: notes,
-        roomsWithResources,
-        availableRooms: rooms,
-        availableTimeSlots: timeSlots,
-      });
+    setValue("room", result.suggestedRoom, { shouldDirty: true });
+    setValue("timeSlot", result.suggestedTimeSlot, { shouldDirty: true });
 
-      return result;
-    },
-    onSuccess: (data) => {
-      if (data.title) setValue("title", data.title);
-      if (data.speaker) setValue("speaker", data.speaker);
-      if (data.needsTV) setValue("needsTV", data.needsTV);
-      if (data.needsWhiteboard) setValue("needsWhiteboard", data.needsWhiteboard);
+    setAiReasoning(result.reasoning);
+    setShowAiReasoning(false);
+  };
 
-      if (data.suggestedRoom) setValue("room", data.suggestedRoom);
-      if (data.suggestedTimeSlot) setValue("timeSlot", data.suggestedTimeSlot);
+  /** Ask for a room + time slot ("Sugerir con IA"). The server knows the board, including which blocks already ended. */
+  const requestSuggestion = async (talk: Pick<TalkFormData, "title" | "speaker" | "needsTV" | "needsWhiteboard">) => {
+    setAiSuggesting(true);
+    setAiReasoning(null);
+    setValidationError("");
 
-      const mainSuggestion = {
-        room: data.suggestedRoom,
-        timeSlot: data.suggestedTimeSlot,
-        reasoning: data.reasoning,
-        alternatives: data.alternatives,
-        swapSuggestion: data.swapSuggestion,
-      };
+    try {
+      applySuggestion(
+        await client.ocr.findFreeSpot({
+          ...talk,
+          eventId: openSpaceId,
+          additionalContext: additionalContext.trim() || undefined,
+        })
+      );
+    } catch (error) {
+      console.error("Error getting AI suggestion:", error);
+      setValidationError("La IA no pudo sugerir un lugar. Probá de nuevo.");
+    } finally {
+      setAiSuggesting(false);
+    }
+  };
 
-      setSuggestionHistory((prev) => [...prev, mainSuggestion]);
-      setCurrentHistoryIndex((prev) => prev + 1);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  /** The card being read, so closing the dialog or starting over stops paying for it. */
+  const reading = useRef<AbortController | null>(null);
+  const stopReading = useCallback(() => {
+    reading.current?.abort();
+    reading.current = null;
+  }, []);
 
-      setAiReasoning(data.reasoning);
-      setShowAiReasoning(false);
+  /**
+   * Read the card as a stream: the name and title land in the form as the model writes them,
+   * then the whole card, then — for a card with a title — the slot suggestion, so the staffer
+   * can already check the handwriting while the place is being picked.
+   */
+  const readCard = async (imageData: string) => {
+    stopReading();
+    const controller = new AbortController();
+    reading.current = controller;
+    setIsProcessingImage(true);
 
-      setTimeout(() => setActiveTab("form"), 300);
-    },
-    onError: (error: any) => {
+    try {
+      const events = await client.ocr.extractCard(
+        { eventId: openSpaceId, imageData, additionalContext: additionalContext.trim() || undefined },
+        { signal: controller.signal }
+      );
+
+      for await (const event of events) {
+        if (event.type === "fields") {
+          fromPhotoRef.current = true;
+          setActiveTab("form");
+          if (event.fields.title) setValue("title", event.fields.title);
+          if (event.fields.speaker) setValue("speaker", event.fields.speaker);
+        } else if (event.type === "card") {
+          const { card } = event;
+          fromPhotoRef.current = true;
+          if (card.title) setValue("title", card.title);
+          if (card.speaker) setValue("speaker", card.speaker);
+          // Always set: a card that marked "NO" has to clear whatever was ticked before.
+          setValue("needsTV", card.needsTV);
+          setValue("needsWhiteboard", card.needsWhiteboard);
+          setFieldsToReview(card.revisar ?? []);
+          setActiveTab("form");
+          setIsProcessingImage(false);
+          // With no title there is nothing to place by topic: the button does it once they type one.
+          if (card.title) setAiSuggesting(true);
+        } else {
+          applySuggestion(event.suggestion);
+          setAiSuggesting(false);
+        }
+      }
+    } catch (error) {
+      if (controller.signal.aborted) return;
       console.error("Error processing image:", error);
 
-      let errorMessage = "Error al procesar la imagen con OCR.";
-
-      if (error?.message?.includes("Internal server error")) {
-        errorMessage = "Error del servidor. Verifica que la clave de OpenAI esté configurada correctamente.";
-      } else if (error?.message) {
-        errorMessage = error.message;
-      }
-
-      setOcrError(errorMessage);
-    },
-  });
+      // The server sends the real reason (a rejected gateway account reads very differently from
+      // an unreadable photo), so show it rather than a guess about which key is missing.
+      setOcrError(error instanceof Error && error.message ? error.message : "No se pudo leer la foto.");
+    } finally {
+      if (reading.current === controller) reading.current = null;
+      setIsProcessingImage(false);
+      setAiSuggesting(false);
+    }
+  };
 
   const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
@@ -150,21 +243,8 @@ export function useTalkForm({
     setCameraActive(false);
   }, []);
 
-  const resetAll = useCallback(() => {
-    reset({
-      title: "",
-      speaker: "",
-      room: rooms[0] || "",
-      timeSlot: timeSlots[0] || "",
-      needsTV: false,
-      needsWhiteboard: false,
-    });
-
-    stopCamera();
-    setCapturedImage(null);
-    setPermissionMessage(null);
-    setOcrError(null);
-
+  /** Forget the AI's picks and any message about the last attempt. */
+  const clearAttempt = useCallback(() => {
     setAiSuggesting(false);
     setAiReasoning(null);
     setShowAiReasoning(false);
@@ -177,40 +257,50 @@ export function useTalkForm({
     setValidationError("");
     setResourceWarning([]);
     confirmedProceedRef.current = false;
+  }, []);
+
+  const resetAll = useCallback(() => {
+    reset(valuesFor(null, rooms, timeSlots));
+
+    stopCamera();
+    stopReading();
+    setCapturedImage(null);
+    setPermissionMessage(null);
+    setOcrError(null);
+    setFieldsToReview([]);
+    fromPhotoRef.current = false;
+    clearAttempt();
 
     setActiveTab("form");
-  }, [rooms, timeSlots, stopCamera, reset]);
+  }, [rooms, timeSlots, stopCamera, stopReading, reset, clearAttempt]);
 
+  // The latest talk and axes, read by the effects below without re-running them.
+  const latest = useRef({ note, rooms, timeSlots });
   useEffect(() => {
-    if (note && note.id) {
-      reset({
-        title: note.title || "",
-        speaker: note.speaker || "",
-        room: note.room || rooms[0] || "",
-        timeSlot: note.timeSlot || timeSlots[0] || "",
-        needsTV: note.needsTV || false,
-        needsWhiteboard: note.needsWhiteboard || false,
-      });
-    } else if (note && !note.id) {
-      reset({
-        title: "",
-        speaker: "",
-        room: note.room || rooms[0] || "",
-        timeSlot: note.timeSlot || timeSlots[0] || "",
-        needsTV: false,
-        needsWhiteboard: false,
-      });
-    } else {
-      reset({
-        title: "",
-        speaker: "",
-        room: rooms[0] || "",
-        timeSlot: timeSlots[0] || "",
-        needsTV: false,
-        needsWhiteboard: false,
-      });
-    }
-  }, [note, rooms, timeSlots, reset]);
+    latest.current = { note, rooms, timeSlots };
+  });
+
+  // Load the form each time the panel opens or switches talk (or cell, for a new one) — not when
+  // rooms or slots change: any screen can change those mid-edit (they arrive live) and that must
+  // not wipe the typing.
+  const loadKey = note?.id || `${note?.room ?? ""}|${note?.timeSlot ?? ""}`;
+  useEffect(() => {
+    if (!open) return;
+    const { note, rooms, timeSlots } = latest.current;
+    reset(valuesFor(note, rooms, timeSlots));
+    fromPhotoRef.current = false;
+    clearAttempt();
+  }, [open, loadKey, reset, clearAttempt]);
+
+  // The saved talk changed under an open form (our own save, an edit or a move on another screen):
+  // follow it, but keep what is being typed here. Fields left untouched must take the new values,
+  // or saving this form would quietly undo the other screen's rename or move.
+  const savedKey = note?.id ? `${note.updatedAt}|${note.room}|${note.timeSlot}` : "";
+  useEffect(() => {
+    const { note, rooms, timeSlots } = latest.current;
+    if (!open || !savedKey) return;
+    reset(valuesFor(note, rooms, timeSlots), { keepDirtyValues: true });
+  }, [open, savedKey, reset]);
 
   // Changing room/slot/resources invalidates any warning shown for the previous
   // combination. The messages must NOT be dependencies: they are what this
@@ -224,36 +314,36 @@ export function useTalkForm({
   useEffect(() => {
     if (!open) {
       stopCamera();
+      stopReading();
       setPermissionMessage(null);
     }
-  }, [open, stopCamera]);
+  }, [open, stopCamera, stopReading]);
 
   useEffect(() => {
     return () => {
       stopCamera();
+      stopReading();
     };
-  }, [stopCamera]);
+  }, [stopCamera, stopReading]);
 
   const startCamera = async () => {
+    const denied = "Acceso a la cámara denegado. Habilitalo en la configuración del navegador.";
+    // Only a shortcut: browsers that can't answer for the camera still get to ask.
+    const permission = await navigator.permissions?.query({ name: "camera" as PermissionName }).catch(() => null);
+    if (permission?.state === "denied") {
+      setPermissionMessage(denied);
+
+      return;
+    }
+
     try {
-      if (navigator.permissions && navigator.permissions.query) {
-        const permissionStatus = await navigator.permissions.query({ name: "camera" as PermissionName });
-
-        if (permissionStatus.state === "denied") {
-          toast.error(
-            "Cámara bloqueada",
-            "El acceso a la cámara está bloqueado. Habilitalo en la configuración del navegador."
-          );
-
-          return;
-        }
-      }
-
       setCameraActive(true);
-      setPermissionMessage("Por favor permite el acceso a la cámara cuando se solicite");
+      setPermissionMessage("Permití el acceso a la cámara cuando el navegador te lo pida.");
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        // Without an explicit size the browser picks its default, often 640x480 — too coarse to
+        // read handwriting off a card.
+        video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
       });
 
       if (videoRef.current) {
@@ -261,44 +351,43 @@ export function useTalkForm({
         setPermissionMessage(null);
       }
     } catch (err) {
-      console.error("Error accessing camera:", err);
       setCameraActive(false);
 
-      if (err instanceof DOMException) {
-        if (err.name === "NotAllowedError") {
-          setPermissionMessage("Acceso a la cámara denegado.");
-        } else if (err.name === "NotFoundError") {
-          setPermissionMessage("No se encontró ninguna cámara.");
-        } else {
-          setPermissionMessage("No se puede acceder a la cámara.");
-        }
-      }
+      // Every failure says why: a browser without camera access (or on plain http) throws a TypeError.
+      const name = err instanceof DOMException ? err.name : "";
+      setPermissionMessage(
+        name === "NotAllowedError"
+          ? denied
+          : name === "NotFoundError"
+            ? "No se encontró ninguna cámara."
+            : "No se puede acceder a la cámara."
+      );
     }
   };
 
   const captureImage = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
 
-      const size = Math.min(video.videoWidth, video.videoHeight);
+    if (!video || !canvas) return;
 
-      canvas.width = size;
-      canvas.height = size;
+    // The whole frame, scaled down — never a centred crop. The card is landscape, so cropping to
+    // a square cuts the ends off the NOMBRE and CHARLA lines, which is exactly what we need to
+    // read, and it also means the preview would not be showing what the model receives.
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(video.videoWidth, video.videoHeight));
 
-      const xOffset = (video.videoWidth - size) / 2;
-      const yOffset = (video.videoHeight - size) / 2;
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
 
-      const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d");
 
-      if (ctx) {
-        ctx.drawImage(video, xOffset, yOffset, size, size, 0, 0, size, size);
-        const imageData = canvas.toDataURL("image/jpeg");
+    if (!ctx) return;
 
-        setCapturedImage(imageData);
-        stopCamera();
-      }
-    }
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    setCapturedImage(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+    stopCamera();
   };
 
   const deleteImage = () => {
@@ -313,20 +402,22 @@ export function useTalkForm({
   const handleProcessImage = () => {
     if (capturedImage) {
       setOcrError(null);
-      processImageMutation.mutate(capturedImage);
+      void readCard(capturedImage);
     }
   };
 
   const handleResetOCR = () => {
     stopCamera();
+    stopReading();
     setCapturedImage(null);
     setPermissionMessage(null);
     setOcrError(null);
+    setFieldsToReview([]);
   };
 
   const handleAiSuggest = async () => {
     if (!watchedValues.title?.trim()) {
-      setValidationError("Por favor ingresa un título antes de obtener sugerencias de AI");
+      setValidationError("Escribí un título para que la IA sugiera un lugar.");
 
       return;
     }
@@ -338,44 +429,18 @@ export function useTalkForm({
       });
     }
 
-    setAiSuggesting(true);
-    setAiReasoning(null);
-    setValidationError("");
+    await requestSuggestion({
+      title: watchedValues.title,
+      speaker: watchedValues.speaker,
+      needsTV: watchedValues.needsTV,
+      needsWhiteboard: watchedValues.needsWhiteboard,
+    });
+  };
 
-    try {
-      const result = await client.ocr.findFreeSpot({
-        title: watchedValues.title,
-        speaker: watchedValues.speaker,
-        needsTV: watchedValues.needsTV,
-        needsWhiteboard: watchedValues.needsWhiteboard,
-        additionalContext: additionalContext.trim() || undefined,
-        roomsWithResources,
-        existingNotes: notes,
-        availableRooms: rooms,
-        availableTimeSlots: timeSlots,
-      });
-
-      const mainSuggestion = {
-        room: result.suggestedRoom,
-        timeSlot: result.suggestedTimeSlot,
-        reasoning: result.reasoning,
-        alternatives: result.alternatives,
-        swapSuggestion: result.swapSuggestion,
-      };
-
-      setSuggestionHistory((prev) => [...prev, mainSuggestion]);
-      setCurrentHistoryIndex((prev) => prev + 1);
-
-      setValue("room", result.suggestedRoom);
-      setValue("timeSlot", result.suggestedTimeSlot);
-
-      setAiReasoning(result.reasoning);
-      setShowAiReasoning(false);
-    } catch (error) {
-      console.error("Error getting AI suggestion:", error);
-      setValidationError("Error al obtener sugerencias de AI. Por favor intenta nuevamente.");
-    } finally {
-      setAiSuggesting(false);
+  /** "Sugerir con IA" from the board: the first time the title is filled in, place it. */
+  const suggestIfAsked = () => {
+    if (suggestOnTitle && watchedValues.title?.trim() && suggestionHistory.length === 0 && !aiSuggesting) {
+      void handleAiSuggest();
     }
   };
 
@@ -386,16 +451,16 @@ export function useTalkForm({
       const suggestion = suggestionHistory[newIndex];
 
       setCurrentHistoryIndex(newIndex);
-      setValue("room", suggestion.room);
-      setValue("timeSlot", suggestion.timeSlot);
+      setValue("room", suggestion.room, { shouldDirty: true });
+      setValue("timeSlot", suggestion.timeSlot, { shouldDirty: true });
       setAiReasoning(suggestion.reasoning);
       setShowAiReasoning(false);
     }
   };
 
   const applyAlternative = (alternative: SuggestionAlternative) => {
-    setValue("room", alternative.room);
-    setValue("timeSlot", alternative.timeSlot);
+    setValue("room", alternative.room, { shouldDirty: true });
+    setValue("timeSlot", alternative.timeSlot, { shouldDirty: true });
     setAiReasoning(alternative.reasoning);
     setShowAiReasoning(true);
   };
@@ -403,13 +468,20 @@ export function useTalkForm({
   const handleResetToOriginal = () => {
     if (!originalSchedule) return;
 
-    setValue("room", originalSchedule.room);
-    setValue("timeSlot", originalSchedule.timeSlot);
+    setValue("room", originalSchedule.room, { shouldDirty: true });
+    setValue("timeSlot", originalSchedule.timeSlot, { shouldDirty: true });
     setAiReasoning(null);
     setShowAiReasoning(false);
     setSuggestionHistory([]);
     setCurrentHistoryIndex(-1);
     setOriginalSchedule(null);
+  };
+
+  /** Back to what is saved (the inspector's "Descartar"). */
+  const discardChanges = () => {
+    const { note, rooms, timeSlots } = latest.current;
+    reset(valuesFor(note, rooms, timeSlots));
+    clearAttempt();
   };
 
   const onSubmit = async (formData: TalkFormData) => {
@@ -425,13 +497,13 @@ export function useTalkForm({
           missingResources.push("TV");
         }
         if (formData.needsWhiteboard && !selectedRoomData.hasWhiteboard) {
-          missingResources.push("Pizarra");
+          missingResources.push("pizarra");
         }
 
         if (missingResources.length > 0) {
           setResourceWarning(
             missingResources.map(
-              (resource) => `"${formData.title}" necesita ${resource} y la sala "${formData.room}" no lo tiene`
+              (resource) => `"${formData.title}" necesita ${resource} pero la sala "${formData.room}" no tiene`
             )
           );
 
@@ -460,39 +532,26 @@ export function useTalkForm({
     try {
       await onSave({
         title: formData.title,
-        speaker: formData.speaker.trim() === "" ? undefined : formData.speaker,
+        // Sent even when empty: clearing a field has to clear it on the server too.
+        speaker: formData.speaker.trim(),
+        description: formData.description.trim(),
         room: formData.room,
         timeSlot: formData.timeSlot,
         needsTV: formData.needsTV,
         needsWhiteboard: formData.needsWhiteboard,
         skipResourceValidation: confirmedProceedRef.current,
+        origin: !note?.id && fromPhotoRef.current ? "photo" : undefined,
       });
-      resetAll();
-    } catch (error: any) {
-      console.error("Error saving talk (in modal):", error);
-
-      let errorMessage = "Error al guardar la charla";
-
-      if (error?.cause?.message) {
-        errorMessage = error.cause.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
-      } else if (typeof error === "string") {
-        errorMessage = error;
-      }
-
-      if (errorMessage.includes("Slot is already occupied")) {
-        const match = errorMessage.match(/occupied by "(.+)"/);
-        const occupiedBy = match ? match[1] : "otra charla";
-
-        setValidationError(`Este espacio ya está ocupado por "${occupiedBy}"`);
-      } else if (errorMessage.includes("Internal server error")) {
-        setValidationError("Error del servidor. Por favor intenta con otro espacio.");
+      if (note?.id) {
+        // An edit stays open in the inspector: keep what was just saved.
+        reset(formData);
+        clearAttempt();
       } else {
-        setValidationError(errorMessage);
+        resetAll();
       }
+    } catch (error) {
+      console.error("Error saving talk (in modal):", error);
+      setValidationError(saveErrorMessage(error));
     }
   };
 
@@ -529,8 +588,10 @@ export function useTalkForm({
     control,
     register,
     formErrors,
+    isDirty,
     watchedValues,
     submitForm,
+    discardChanges,
 
     activeTab,
     setActiveTab: handleTabChange,
@@ -541,7 +602,8 @@ export function useTalkForm({
     capturedImage,
     permissionMessage,
     ocrError,
-    isProcessingImage: processImageMutation.isPending,
+    isProcessingImage,
+    fieldsToReview,
     startCamera,
     captureImage,
     deleteImage,
@@ -566,6 +628,7 @@ export function useTalkForm({
     currentHistoryIndex,
     originalSchedule,
     handleAiSuggest,
+    suggestIfAsked,
     navigateHistory,
     applyAlternative,
     handleResetToOriginal,
