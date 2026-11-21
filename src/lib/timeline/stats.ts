@@ -1,10 +1,8 @@
 import "server-only";
 
-import { cache } from "react";
-
 import { topicLabel } from "lib/community/topics";
 
-import { getTimeline, isCommunityEvent } from "./data";
+import { getTimeline, isCommunityEvent, once } from "./data";
 import type { TimelineCommunity, TimelineEvent } from "./types";
 import { venueHref } from "./map";
 import { getVenues, plain, venueKey } from "./venues";
@@ -207,7 +205,7 @@ export function computeStats(events: TimelineEvent[], communities: TimelineCommu
   };
 }
 
-export const getTimelineStats = cache((): TimelineStats => {
+export const getTimelineStats = once((): TimelineStats => {
   const { events, communities } = getTimeline();
   // The places' ranking is /timeline/lugares' own, so the two lists can't disagree
   const venues = getVenues()

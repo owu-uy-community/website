@@ -18,6 +18,18 @@ import type { TimelineCommunity, TimelineEvent, TimelineKind, TimelinePerson, Ti
  * ships with every function (outputFileTracingIncludes), so this reads it from disk.
  */
 
+/**
+ * The dataset ships with the deploy and never changes under a running server, so each reader runs
+ * once per instance. React's cache() lasted one request, so every page render re-read and parsed
+ * the 6.6 MB of events. `next dev` still reads per request, so a rebuilt dataset shows on reload.
+ */
+export function once<T>(read: () => T): () => T {
+  if (process.env.NODE_ENV === "development") return cache(read);
+  let value: { current: T } | undefined;
+
+  return () => (value ??= { current: read() }).current;
+}
+
 const DIR = path.join(process.cwd(), "content/timeline");
 const read = <T>(file: string) => JSON.parse(readFileSync(path.join(DIR, file), "utf8")) as T;
 
@@ -27,7 +39,7 @@ const OWN_PHOTOS: Record<string, "ii" | "iii"> = {
   "2025-11-01-la-meetup-2025": "iii",
 };
 
-export const getTimeline = cache(() => {
+export const getTimeline = once(() => {
   const events = readdirSync(path.join(DIR, "events"))
     .filter((file) => file.endsWith(".json"))
     .sort()
@@ -180,7 +192,7 @@ export type ArchiveCommunity = Pick<TimelineCommunity, "slug" | "name" | "status
 };
 
 /** The archive's data (/timeline/archivo.json), also what the server draws the communities grid from */
-export const getArchive = cache(() => {
+export const getArchive = once(() => {
   const rows = getArchiveRows();
   const counts = new Map<string, number>();
   const milestones = new Map<string, number>();
@@ -229,7 +241,7 @@ const textHeight = (entry: StoryYear) =>
   (entry.lines.length - 1) * 16;
 
 /** The story rail: content/timeline/story.json resolved to Lifeline markers */
-export const getStory = cache((): LifelineMarker[] => {
+export const getStory = once((): LifelineMarker[] => {
   const { bySlug, community, events } = getTimeline();
   const perYear = new Map<number, number>();
   for (const event of events) {
