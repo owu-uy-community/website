@@ -30,6 +30,18 @@ export function streamingModel(pieces: string[]) {
   });
 }
 
+/** A model that answers every generate call with `answer` as JSON (structured output); calls land in `doGenerateCalls`. */
+export function answeringModel(answer: unknown) {
+  return new MockLanguageModelV4({
+    doGenerate: async () => ({
+      content: [{ type: "text" as const, text: JSON.stringify(answer) }],
+      finishReason: finish.finishReason,
+      usage,
+      warnings: [],
+    }),
+  });
+}
+
 /** A provider that is down: every call fails at once (and is not retried). */
 export function downModel() {
   const fail = async (): Promise<never> => {

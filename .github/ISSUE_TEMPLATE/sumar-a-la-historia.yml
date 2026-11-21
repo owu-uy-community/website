@@ -1,0 +1,52 @@
+name: Sumá a la historia
+description: Un evento que falta en owu.uy/timeline, fotos de uno que está, o algo para corregir.
+title: "Historia: "
+labels: ["historia"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        La historia se arma con lo que está publicado (Meetup, los repositorios de cada comunidad, los sitios de cada evento).
+        Si falta algo o algo está mal, contanos y dejá una fuente si la tenés. Este issue es **público**.
+  - type: dropdown
+    id: que
+    attributes:
+      label: ¿Qué querés sumar?
+      options:
+        - Un evento que falta
+        - Fotos o videos de un evento
+        - Una corrección (fecha, lugar, nombre…)
+    validations:
+      required: true
+  - type: input
+    id: evento
+    attributes:
+      label: Evento
+      description: El nombre, o el link a su página en owu.uy/timeline si ya está.
+    validations:
+      required: true
+  - type: input
+    id: fecha
+    attributes:
+      label: Fecha
+      description: Aunque sea aproximada.
+      placeholder: 2015-06-11, o "mediados de 2013"
+  - type: input
+    id: organiza
+    attributes:
+      label: Organizó
+      description: La comunidad o el grupo.
+  - type: textarea
+    id: fuente
+    attributes:
+      label: Fuente
+      description: Un link donde se vea (el sitio del evento, un álbum, un tweet, un video, el Wayback Machine…).
+  - type: textarea
+    id: fotos
+    attributes:
+      label: Fotos
+      description: Links a fotos o a un álbum. Si las sacaste vos, decinos con qué nombre darte el crédito y si podemos usarlas con licencia CC BY 4.0.
+  - type: textarea
+    id: notas
+    attributes:
+      label: Algo más

@@ -12,6 +12,7 @@ import {
 } from "react";
 import { LazyMotion, MotionConfig, domAnimation, m, useAnimationFrame } from "motion/react";
 
+import { inter, openSans, poppins } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { DEFAULT_CANVAS, type StageCanvas } from "lib/owy-stage/canvas";
 import "components/displays/countdown/countdown.css";
@@ -37,10 +38,23 @@ export const BRAND = {
 
 export type StageBackground = "black" | "transparent";
 
-export const StageContext = createContext<{ preview: boolean; bg: StageBackground; canvas: StageCanvas }>({
+export const StageContext = createContext<{
+  preview: boolean;
+  bg: StageBackground;
+  canvas: StageCanvas;
+  /** Fewer frames, same behaviour: the admin's monitors (see useStageFrame). */
+  throttle: boolean;
+  /** How late this screen shows Owy's face, in ms (`?lag=`): its faces act that much earlier. */
+  lag: number;
+  /** A pinned page (/owy/stage/<scene>, not a thumbnail): nobody drives it, so a deck takes the keyboard. */
+  pinned: boolean;
+}>({
   preview: false,
   bg: "black",
   canvas: DEFAULT_CANVAS,
+  throttle: false,
+  lag: 0,
+  pinned: false,
 });
 
 /** Canvas plus the two numbers every scene needs: type scale and "is it a strip?". */
@@ -51,22 +65,28 @@ export function useCanvas() {
 }
 
 const FONTS = [
-  "800 10px Poppins",
-  "700 10px Poppins",
-  "500 10px Inter",
-  "600 10px 'Open Sans'",
+  `800 10px ${poppins.style.fontFamily}`,
+  `700 10px ${poppins.style.fontFamily}`,
+  `500 10px ${inter.style.fontFamily}`,
+  `600 10px ${openSans.style.fontFamily}`,
   "10px 'Organic Stencil'",
 ];
 
 export function Stage({
   bg,
   preview,
+  throttle = preview,
   canvas = DEFAULT_CANVAS,
+  lag = 0,
+  pinned = false,
   children,
 }: {
   bg: StageBackground;
   preview: boolean;
+  throttle?: boolean;
   canvas?: StageCanvas | "fit";
+  lag?: number;
+  pinned?: boolean;
   children: ReactNode;
 }) {
   const [scale, setScale] = useState(1);
@@ -109,7 +129,7 @@ export function Stage({
   }, []);
 
   return (
-    <StageContext.Provider value={{ preview, bg, canvas: size }}>
+    <StageContext.Provider value={{ preview, bg, canvas: size, throttle, lag, pinned }}>
       {/* Unlayered, so it beats the `@layer base` body background while a stage is mounted */}
       <style>{`html,body{background:transparent!important;margin:0;overflow:hidden}`}</style>
       <MotionConfig reducedMotion="never">
@@ -133,24 +153,31 @@ export function Stage({
 
 /**
  * Per-frame callback on motion's shared frameloop. `dt` is clamped so a
- * throttled tab (CEF, background) catches up instead of teleporting physics;
- * previews run at ~15 fps to keep a grid of thumbnails cheap.
+ * throttled tab (CEF, background) catches up instead of teleporting physics.
+ * Thumbnails run at ~15 fps. The admin's monitors share the desk's main thread
+ * (same-origin iframes), so they get at most 60 fps (a 120 Hz screen would
+ * pay double for nothing at that size) and fewer when the scene is heavy for
+ * the device: a frame may cost a monitor about a sixth of the time between frames.
  */
 export function useStageFrame(callback: (t: number, dt: number) => void) {
-  const { preview } = useContext(StageContext);
+  const { preview, throttle } = useContext(StageContext);
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
   const last = useRef(0);
+  /** Moving average of what one frame of this scene costs here, in ms. */
+  const cost = useRef(0);
 
   useAnimationFrame(
     useCallback(
       (t: number) => {
         const elapsed = t - last.current;
-        if (preview && elapsed < 66) return;
+        if (elapsed < (preview ? 66 : throttle ? Math.max(12, cost.current * 6) : 0)) return;
+        const start = performance.now();
         callbackRef.current(t, Math.min(last.current ? elapsed : 16, 100));
+        cost.current = cost.current * 0.9 + (performance.now() - start) * 0.1;
         last.current = t;
       },
-      [preview]
+      [preview, throttle]
     )
   );
 }
@@ -233,14 +260,16 @@ export function Flag({ fill, className }: { fill: string; className?: string }) 
 // Caption (lower third) — used by the face scene transcripts and the caption effect
 // ---------------------------------------------------------------------------
 
-function useTyped(text: string) {
+export function useTyped(text: string) {
   const [count, setCount] = useState(0);
   const previous = useRef("");
   useEffect(() => {
     // A transcript that keeps growing continues typing; a different text restarts.
     if (!text.startsWith(previous.current)) setCount(0);
     previous.current = text;
-    const id = setInterval(() => setCount((n) => (n >= text.length ? n : n + 2)), 16);
+    // A whole pitch arrives at once: type it faster than a caption so it does not drag for 12 s.
+    const step = text.length > 400 ? 5 : 2;
+    const id = setInterval(() => setCount((n) => (n >= text.length ? n : n + step)), 16);
     return () => clearInterval(id);
   }, [text]);
 

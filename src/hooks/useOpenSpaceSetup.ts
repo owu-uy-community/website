@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useCallback } from "react";
+import type { Room, Schedule } from "../lib/orpc";
 import { orpc } from "../lib/orpc/client";
 import { eventChannel } from "../lib/realtime/channels";
 import { roomColorFor } from "../lib/rooms/palette";
@@ -15,8 +16,8 @@ import { useRealtimeChannel } from "./useRealtimeChannel";
 export const useOpenSpaceSetup = (
   openSpaceId: string,
   options?: {
-    initialRooms?: any[];
-    initialSchedules?: any[];
+    initialRooms?: Room[];
+    initialSchedules?: Schedule[];
     /** For always-on screens that never refire window focus (kiosks). */
     refetchInterval?: number;
     /** Public screens leave out rooms switched off; the admin board shows them dimmed. */
@@ -32,7 +33,12 @@ export const useOpenSpaceSetup = (
   });
 
   // Fetch rooms and schedules
-  const { data: allRooms = [], isLoading: roomsLoading } = useQuery(
+  const {
+    data: allRooms = [],
+    isLoading: roomsLoading,
+    isError: roomsFailed,
+    refetch: refetchRooms,
+  } = useQuery(
     orpc.rooms.getByOpenSpace.queryOptions({
       input: { openSpaceId },
       // Use server-side data as initial data for instant first render
@@ -49,7 +55,12 @@ export const useOpenSpaceSetup = (
     [allRooms, hideInactiveRooms]
   );
 
-  const { data: schedulesData = [], isLoading: schedulesLoading } = useQuery(
+  const {
+    data: schedulesData = [],
+    isLoading: schedulesLoading,
+    isError: schedulesFailed,
+    refetch: refetchSchedules,
+  } = useQuery(
     orpc.schedules.getByOpenSpace.queryOptions({
       input: { openSpaceId },
       // Use server-side data as initial data for instant first render
@@ -89,6 +100,9 @@ export const useOpenSpaceSetup = (
     return map;
   }, [roomsData]);
 
+  // The whole room per name: resources, capacity and the status its host sets on the day.
+  const roomsByName = useMemo(() => Object.fromEntries(roomsData.map((room) => [room.name, room])), [roomsData]);
+
   // Helper to find IDs from display strings
   const findIdsForPosition = useCallback(
     (room: string, timeSlot: string): { roomId: string; scheduleId: string } | null => {
@@ -118,9 +132,16 @@ export const useOpenSpaceSetup = (
     timeSlots,
     roomColors,
     roomIcons,
+    roomsByName,
     roomsData,
     schedulesData,
     isLoading: shouldShowLoading,
+    /** A read failed with nothing cached: the grid would look empty, so say it failed instead. */
+    loadFailed: (roomsFailed && allRooms.length === 0) || (schedulesFailed && schedulesData.length === 0),
+    retry: () => {
+      void refetchRooms();
+      void refetchSchedules();
+    },
     findIdsForPosition,
   };
 };

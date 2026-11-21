@@ -11,9 +11,9 @@ export default defineTool({
     trackA: z.string().min(1).describe("Primera card (id o parte del título)"),
     trackB: z.string().min(1).describe("Segunda card (id o parte del título)"),
   }),
-  approval: staffOnly(),
+  approval: staffOnly("program:manage"),
   async execute({ trackA, trackB }, ctx) {
-    requireStaff(ctx);
+    await requireStaff(ctx, "program:manage");
     const board = await getBoard();
     const cardA = findCard(board, trackA);
     const cardB = findCard(board, trackB);
@@ -21,7 +21,7 @@ export default defineTool({
       throw new Error("Las dos referencias apuntan a la misma card; indicá dos distintas.");
     }
 
-    await owuApi().tracks.swap({ trackAId: cardA.id, trackBId: cardB.id });
+    await owuApi(ctx).tracks.swap({ trackAId: cardA.id, trackBId: cardB.id });
 
     return {
       ok: true,

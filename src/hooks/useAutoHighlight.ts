@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { orpc, client } from "../lib/orpc";
 import type { Schedule } from "../lib/orpc";
@@ -74,14 +74,12 @@ export function useAutoHighlight({
       });
 
       toast.info(
-        newState ? "Auto-resaltado activado" : "Auto-resaltado desactivado",
-        newState
-          ? "Los horarios se resaltarán automáticamente según la hora actual"
-          : "El auto-resaltado ha sido desactivado"
+        newState ? "Resaltado automático activado" : "Resaltado automático desactivado",
+        newState ? "El kiosco destaca el bloque en curso." : "El bloque destacado queda como está hasta que lo cambies."
       );
     } catch (error) {
       console.error("Failed to toggle auto-highlight:", error);
-      toast.error("Error", "No se pudo actualizar la configuración de auto-resaltado");
+      toast.error("Error", "No se pudo cambiar el resaltado automático");
     }
   }, [autoHighlightEnabled, updateOpenSpaceMutation, queryClient, openSpaceId, broadcastScheduleChange]);
 
@@ -95,6 +93,10 @@ export function useAutoHighlight({
 
     return schedulesData.findIndex((schedule) => slotIsOn(schedule, now));
   }, [schedulesData]);
+
+  // The effect below re-runs whenever the mutation's state changes, i.e. in the middle of its own
+  // update: without this, one switch of block ran twice (two toasts, every request sent twice).
+  const checking = useRef(false);
 
   /**
    * Auto-highlight effect: Check every minute and update highlight
@@ -114,7 +116,8 @@ export function useAutoHighlight({
       const currentSchedule = schedulesData[currentIndex];
 
       // Only update if the current schedule is not already highlighted
-      if (!currentSchedule.highlightInKiosk) {
+      if (!currentSchedule.highlightInKiosk && !checking.current) {
+        checking.current = true;
         try {
           // Un-highlight all other schedules first
           const currentlyHighlighted = schedulesData.filter((s) => s.highlightInKiosk && s.id !== currentSchedule.id);
@@ -148,10 +151,12 @@ export function useAutoHighlight({
             auto: true,
           });
 
-          toast.info("Auto-resaltado", `El horario "${timeSlots[currentIndex]}" ahora se muestra en el kiosco`);
+          toast.info("Resaltado automático", `El kiosco destaca el bloque ${timeSlots[currentIndex]}.`);
         } catch (error) {
           console.error("Failed to auto-highlight schedule:", error);
-          toast.error("Error", "No se pudo actualizar el auto-resaltado");
+          toast.error("Error", "No se pudo actualizar el resaltado automático");
+        } finally {
+          checking.current = false;
         }
       }
     };

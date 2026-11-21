@@ -2,16 +2,16 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { cn } from "app/lib/utils";
-import { Badge } from "components/shared/ui/badge";
+import { formatClock } from "components/Admin/ui/time";
+import { Badge, type BadgeProps } from "components/shared/ui/badge";
 import { orpc } from "lib/orpc/client";
 import type { SerializedCommand } from "lib/orpc/obs-control/schemas";
 
-const STATUS: Record<SerializedCommand["status"], string> = {
-  pending: "border-amber-400/50 bg-amber-400/15 text-amber-100",
-  done: "border-green-500/40 bg-green-500/15 text-green-200",
-  failed: "border-red-500/50 bg-red-500/20 text-red-100",
-  skipped: "border-border bg-muted text-muted-foreground",
+const STATUS: Record<SerializedCommand["status"], { label: string; variant: BadgeProps["variant"] }> = {
+  pending: { label: "en cola", variant: "warning" },
+  done: { label: "hecho", variant: "success" },
+  failed: { label: "falló", variant: "destructive" },
+  skipped: { label: "salteado", variant: "secondary" },
 };
 
 function describe(command: SerializedCommand): string {
@@ -26,20 +26,22 @@ function describe(command: SerializedCommand): string {
     case "cut":
       return "CUT";
     case "studio":
-      return `Estudio ${p.enabled ? "on" : "off"}`;
+      return `Estudio ${p.enabled ? "activado" : "desactivado"}`;
     case "transition":
       return `Transición ${String(p.name ?? "")} ${p.durationMs != null ? `${String(p.durationMs)} ms` : ""}`.trim();
     case "mute":
-      return `${p.muted === undefined ? "Toggle mute" : p.muted ? "Mute" : "Unmute"} ${String(p.inputName)}`;
+      return `${p.muted === undefined ? "Silenciar o activar" : p.muted ? "Silenciar" : "Activar"} ${String(p.inputName)}`;
     case "volume":
       return `${String(p.inputName)} → ${String(p.db)} dB`;
     case "stream":
     case "record":
-      return `${command.type} ${String(p.action)}`;
+      return `${command.type === "stream" ? "Stream" : "Grabación"}: ${ACTION[String(p.action)] ?? String(p.action)}`;
     default:
       return command.type;
   }
 }
+
+const ACTION: Record<string, string> = { start: "empezar", stop: "detener", toggle: "alternar" };
 
 /** The last commands on the bus: who asked, what, and whether OBS did it. */
 export function HistoryPanel({ instanceId }: { instanceId: number }) {
@@ -47,27 +49,25 @@ export function HistoryPanel({ instanceId }: { instanceId: number }) {
     orpc.obsControl.history.queryOptions({ input: { instanceId, limit: 50 }, refetchInterval: 5_000 })
   );
 
-  if (!data?.length) return <p className="text-xs text-muted-foreground">Todavía no hay comandos.</p>;
+  if (!data?.length) return <p className="text-meta text-muted-foreground">Todavía no hay comandos.</p>;
 
   return (
-    <ul className="divide-y divide-border text-sm">
+    <ul className="divide-y divide-border text-ui">
       {data.map((command) => (
         <li key={command.id} className="flex items-center gap-3 py-1.5">
-          <span className="w-16 shrink-0 font-terminal text-xs text-muted-foreground">
-            {new Date(command.createdAt).toLocaleTimeString("es-UY", {
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-              hour12: false,
-            })}
+          <span className="w-16 shrink-0 font-terminal text-meta text-muted-foreground tabular-nums">
+            {formatClock(new Date(command.createdAt), undefined, true)}
           </span>
-          <span className="min-w-0 flex-1 truncate" title={command.error ?? undefined}>
+          {/* The whole error, wrapped: a touchscreen never shows the title. */}
+          <span className="min-w-0 flex-1 break-words">
             {describe(command)}
-            {command.error && <span className="ml-2 text-xs text-red-300">{command.error}</span>}
+            {command.error && <span className="ml-2 text-meta text-live-foreground">{command.error}</span>}
           </span>
-          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">{command.source}</span>
-          <Badge className={cn("shrink-0", STATUS[command.status])} variant="outline">
-            {command.status}
+          <span className="hidden shrink-0 font-terminal text-meta text-muted-foreground sm:inline">
+            {command.source}
+          </span>
+          <Badge className="shrink-0" variant={STATUS[command.status].variant}>
+            {STATUS[command.status].label}
           </Badge>
         </li>
       ))}

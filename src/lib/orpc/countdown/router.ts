@@ -1,6 +1,6 @@
 import { openapi } from "@orpc/openapi";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import {
   CountdownEndtimeSchema,
   CountdownStateSchema,
@@ -30,7 +30,7 @@ export const countdownRouter = {
       return { targetTime: state.targetTime ?? null };
     }),
 
-  updateState: staff
+  updateState: platform("stage:operate")
     .meta(docs("Start, pause, reset or set an event's countdown"))
     .input(UpdateCountdownStateSchema)
     .output(CountdownStateSchema)

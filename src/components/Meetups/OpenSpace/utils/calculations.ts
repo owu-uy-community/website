@@ -17,15 +17,21 @@ export const findNoteInCell = (
   return null;
 };
 
+/** Lowercase and without accents: on a phone "mujica" has to find "Mújica". */
+const fold = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+
 /**
  * Filter notes based on search term
  */
 export const filterNotes = (notes: StickyNote[], searchTerm: string): StickyNote[] => {
-  if (!searchTerm) return notes;
+  const term = fold(searchTerm.trim());
+  if (!term) return notes;
 
-  const lowerSearchTerm = searchTerm.toLowerCase();
   return notes.filter(
-    (note) =>
-      note.title.toLowerCase().includes(lowerSearchTerm) || note.speaker?.toLowerCase().includes(lowerSearchTerm)
+    (note) => fold(note.title).includes(term) || (note.speaker ? fold(note.speaker).includes(term) : false)
   );
 };

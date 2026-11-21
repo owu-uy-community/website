@@ -6,9 +6,11 @@ const isCI = Boolean(process.env.CI);
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 const REALTIME_PORT = Number(process.env.E2E_REALTIME_PORT ?? 3299);
 const OBS_PORT = Number(process.env.E2E_OBS_PORT ?? 4466);
+const EVENTBRITE_PORT = Number(process.env.E2E_EVENTBRITE_PORT ?? 4477);
 
 export const baseURL = `http://127.0.0.1:${PORT}`;
 export const E2E_AUTH_SECRET = "e2e-secret-that-is-at-least-32-characters-long";
+export const E2E_CRON_SECRET = "e2e-cron-secret";
 
 // Fixtures seed and mint sessions straight into the e2e database through the
 // app's own Drizzle client (lib/db), which reads DATABASE_URL at import time.
@@ -26,6 +28,19 @@ export const appEnv = {
   REALTIME_SIDECAR_URL: `http://127.0.0.1:${REALTIME_PORT}`,
   SLACK_CLIENT_ID: "e2e",
   SLACK_CLIENT_SECRET: "e2e",
+  // Sent mail stays in memory for /api/dev/mailbox, so specs can read sign-in codes.
+  EMAIL_MAILBOX: "1",
+  // A fake Eventbrite (scripts/mock-eventbrite.mjs): OAuth and publishing without a real app
+  EVENTBRITE_API_URL: `http://127.0.0.1:${EVENTBRITE_PORT}/v3`,
+  EVENTBRITE_OAUTH_URL: `http://127.0.0.1:${EVENTBRITE_PORT}/oauth`,
+  EVENTBRITE_CLIENT_ID: "e2e",
+  EVENTBRITE_CLIENT_SECRET: "e2e",
+  // The meetup-bot feed, served empty by the same mock: no spec needs the internet
+  MEETUP_BOT_URL: `http://127.0.0.1:${EVENTBRITE_PORT}/meetup-bot/json`,
+  // Specs run every scheduled sweep at once with GET /api/cron/tick (e2e/organizar/kit.ts runTick)
+  CRON_SECRET: E2E_CRON_SECRET,
+  // Organizá's entry points (follow, claim links, "Mis eventos"): inlined at build time
+  NEXT_PUBLIC_FLAG_ORGANIZAR: "1",
 };
 
 export default defineConfig({
@@ -64,6 +79,12 @@ export default defineConfig({
       command: "node scripts/mock-obs.mjs",
       env: { MOCK_OBS_PORT: String(OBS_PORT) },
       port: OBS_PORT,
+      reuseExistingServer: !isCI,
+    },
+    {
+      command: "node scripts/mock-eventbrite.mjs",
+      env: { MOCK_EVENTBRITE_PORT: String(EVENTBRITE_PORT) },
+      port: EVENTBRITE_PORT,
       reuseExistingServer: !isCI,
     },
     {

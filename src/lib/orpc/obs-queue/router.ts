@@ -1,6 +1,6 @@
 import { openapi } from "@orpc/openapi";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import { GetInstanceSchema, LoopActionSchema, OBSQueueStateSchema, UpdateStateSchema } from "./schemas";
 import * as Queue from "./service";
 
@@ -15,7 +15,7 @@ export const obsQueueRouter = {
       return yield* Queue.getQueue(input.instanceId);
     }),
 
-  updateState: staff
+  updateState: platform("obs:operate")
     .meta(docs("Save a rig's loop; only the fields sent change"))
     .input(UpdateStateSchema)
     .output(OBSQueueStateSchema)
@@ -23,7 +23,7 @@ export const obsQueueRouter = {
       return yield* Queue.updateQueue(input);
     }),
 
-  loop: staff
+  loop: platform("obs:operate")
     .meta(docs("Play, pause, stop or step a rig's loop as it is right now"))
     .input(LoopActionSchema)
     .output(OBSQueueStateSchema)

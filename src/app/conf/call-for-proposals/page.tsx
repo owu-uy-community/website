@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -43,7 +44,13 @@ const TOPICS = [
   { title: "IA & Datos", description: "Inteligencia artificial, machine learning y datos en la práctica." },
 ];
 
-export default function CallForProposalsPage() {
+export default async function CallForProposalsPage() {
+  "use cache";
+  // The deadline is checked hourly (it used to freeze at build time)
+  cacheLife("hours");
+
+  const isOpen = Date.now() < Date.parse(CONF_DATES.cfpDeadline);
+
   return (
     <MotionRoot>
       <div className="min-h-[100dvh] w-full overflow-x-clip bg-black">
@@ -84,7 +91,7 @@ export default function CallForProposalsPage() {
 
               <Reveal delay={0.28} y={18}>
                 <p className="mt-6 border-l-2 border-[#F5BB03] pl-5 text-base leading-7 text-[#FBF5E7]/80">
-                  Fecha límite para enviar propuestas:{" "}
+                  {isOpen ? "Fecha límite para enviar propuestas: " : "La convocatoria cerró el "}
                   <strong className="font-display font-bold text-[#F5BB03] uppercase">15 de septiembre</strong>
                 </p>
               </Reveal>

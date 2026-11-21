@@ -7,15 +7,21 @@ import type { BaseContext } from "lib/orpc/base";
 import type { router } from "lib/orpc/router";
 import { Ai, liveServices, Realtime } from "lib/orpc/services";
 
+import { models } from "./ai";
 import type { UserRow } from "./factories";
 
 type Overrides = {
-  /** Replace the AI model resolver, e.g. `{ model: () => new MockLanguageModelV3(…) }`. */
+  /** Replace the AI model resolver, e.g. `models({ card })`; by default every model is down. */
   ai?: Context.Service.Shape<typeof Ai>;
   realtime?: Context.Service.Shape<typeof Realtime>;
-  /** Simulate an API-key caller (the Owy bot) instead of a browser session. */
+  /** Simulate an API-key caller (the Owy bot) instead of a browser session; `actor` acting for someone. */
   apiKey?: boolean;
+  /** With `apiKey`: the person the bot acts for ("slack:U…", "telegram:…", "anonymous"). */
+  actor?: string;
 };
+
+/** The key a simulated API-key caller sends: Better Auth's key sessions carry the key as their token. */
+const TEST_KEY = "owu-test-api-key";
 
 /**
  * Call options for a procedure invoked as `actor`:
@@ -28,7 +34,7 @@ export function by(actor: UserRow | null, overrides: Overrides = {}): { context:
     ? ({
         session: {
           id: createId(),
-          token: createId(),
+          token: overrides.apiKey ? TEST_KEY : createId(),
           userId: actor.id,
           expiresAt: new Date(now.getTime() + 3_600_000),
           createdAt: now,
@@ -40,14 +46,21 @@ export function by(actor: UserRow | null, overrides: Overrides = {}): { context:
       } as Session)
     : null;
 
-  let services = liveServices;
-  if (overrides.ai) services = Context.add(services, Ai, overrides.ai);
+  // No test reaches the real gateway: models are down unless a test hands it its own
+  let services = Context.add(liveServices, Ai, overrides.ai ?? models({}));
   if (overrides.realtime) services = Context.add(services, Realtime, overrides.realtime);
 
   return {
     context: {
       getSession: async () => session,
-      ...(overrides.apiKey ? { requestHeaders: new Headers({ "x-api-key": "test" }) } : {}),
+      ...(overrides.apiKey
+        ? {
+            requestHeaders: new Headers({
+              "x-api-key": TEST_KEY,
+              ...(overrides.actor ? { "x-owu-actor": overrides.actor } : {}),
+            }),
+          }
+        : {}),
       "effect/context": services,
     },
   };

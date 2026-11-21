@@ -261,7 +261,8 @@ export function useScheduleManagement({
         } else {
           // Create new schedule (the server dates it on the event's day)
           const newScheduleData = {
-            name: `Time Slot ${schedulesData.length + 1}`,
+            // Read out by the activity log, Hoy and the run of show ("Bloque 3 · 17:00 – 17:25").
+            name: `Bloque ${schedulesData.length + 1}`,
             startTime: data.startTime,
             endTime: data.endTime,
             isActive: true,

@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 
 import { Client } from "pg";
 
+import { TRIGGERS_SQL } from "../lib/db/triggers";
+
 /**
  * Drops and recreates a throwaway database, then pushes the Drizzle schema
  * into it (the repo has no migration history — production is `db:push`-driven
@@ -45,5 +47,14 @@ export async function recreateDatabase(databaseUrl: string): Promise<void> {
     const { stdout = "", stderr = "" } = error as { stdout?: Buffer | string; stderr?: Buffer | string };
     const output = String(stdout) + String(stderr);
     throw new Error(`drizzle-kit push failed against ${name}:\n${output}`, { cause: error });
+  }
+
+  // What push can't express (see src/lib/db/triggers.ts)
+  const target = new Client({ connectionString: url.toString() });
+  await target.connect();
+  try {
+    await target.query(TRIGGERS_SQL);
+  } finally {
+    await target.end();
   }
 }

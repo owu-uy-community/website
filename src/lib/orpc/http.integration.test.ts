@@ -11,7 +11,8 @@ import { auth } from "app/lib/auth";
 import type { AppRouter } from "lib/orpc/router";
 import { aiLive } from "lib/orpc/services";
 import { models, streamingModel } from "test/ai";
-import { makeBoard, makeMember, makeSiteAdmin, makeTrack } from "test/factories";
+import { KEY_PRESETS, mintServiceKey } from "lib/authz/keys";
+import { makeBoard, makeMember, makeServiceAccount, makeSiteAdmin, makeTrack } from "test/factories";
 import { mintSession } from "test/session";
 
 /**
@@ -69,13 +70,29 @@ describe("/api/orpc", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  test("an API key acts as its owner, and a key Better Auth rejects is just anonymous", async () => {
-    const { community } = await makeBoard();
-    const bot = await makeSiteAdmin({ name: "Owy" });
-    const { key } = await auth.api.createApiKey({ body: { userId: bot.id, name: "test" } });
+  test("an API key acts as its service account within its permissions; anything else is anonymous", async () => {
+    const { community, event } = await makeBoard();
+    const bot = await makeServiceAccount({ id: `owy-${community.id}` });
+    const { key } = await mintServiceKey({
+      ownerId: bot.id,
+      name: "test",
+      permissions: KEY_PRESETS.owy,
+      expiresInDays: 1,
+      createdById: null,
+    });
+    const person = await makeSiteAdmin();
+    const { key: personal } = await auth.api.createApiKey({ body: { userId: person.id, name: "mine" } });
 
-    await expect(rpcClient({ "x-api-key": key }).openSpaces.create(eventInput(community.id))).resolves.toMatchObject({
-      communityId: community.id,
+    await expect(rpcClient({ "x-api-key": key }).openSpaces.listForAdmin()).resolves.toStrictEqual(
+      expect.arrayContaining([expect.objectContaining({ id: event.id })])
+    );
+    // A machine never sets up events, whatever its key says
+    await expect(rpcClient({ "x-api-key": key }).openSpaces.create(eventInput(community.id))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+    // Keys belong to service accounts: one minted for a person (any user could, before) opens nothing
+    await expect(rpcClient({ "x-api-key": personal }).communities.mine()).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
     });
     await expect(
       rpcClient({ "x-api-key": "owy_not-a-real-key" }).openSpaces.create(eventInput(community.id))
@@ -117,8 +134,14 @@ describe("/api/orpc", () => {
   });
 
   test("the now-playing script's raw JSON body works", async () => {
-    const bot = await makeSiteAdmin();
-    const { key } = await auth.api.createApiKey({ body: { userId: bot.id, name: "now-playing" } });
+    const bot = await makeServiceAccount({ id: `now-playing-${Date.now()}` });
+    const { key } = await mintServiceKey({
+      ownerId: bot.id,
+      name: "now-playing",
+      permissions: { stage: ["read"] },
+      expiresInDays: 1,
+      createdById: null,
+    });
 
     const response = await rpc(
       new Request(`${ORIGIN}/api/orpc/owyStage/nowPlaying`, {

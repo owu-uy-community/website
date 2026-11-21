@@ -1,31 +1,32 @@
-import { auth } from "app/lib/auth";
-import { isSiteAdmin } from "app/lib/auth-helpers";
+import { principalFromRequest } from "app/lib/auth-helpers";
+import { can } from "lib/authz/principal";
 import {
   assertVoiceRequest,
   readVoiceScopes,
   requestBridgeTicket,
+  signBridgeTicket,
   VoiceHttpError,
-  VoiceQuota,
   voiceFailure,
   voiceResponse,
 } from "lib/companion/voice-bridge.server";
 
-export const runtime = "nodejs";
 export const maxDuration = 20;
-const quota = new VoiceQuota();
+// No per-person quota: only staff (stage:operate) get here, and each session is capped at 30 min.
 export async function POST(request: Request) {
   try {
     assertVoiceRequest(request);
-    const session = await auth.api.getSession({ headers: request.headers });
-    if (!session) throw new VoiceHttpError(401, "Sign in to use web voice.");
-    if (!isSiteAdmin(session)) throw new VoiceHttpError(403, "Admin access required.");
+    const principal = await principalFromRequest(request.headers);
+    if (!principal) throw new VoiceHttpError(401, "Sign in to use web voice.");
+    if (!(await can(principal, "stage:operate"))) throw new VoiceHttpError(403, "Admin access required.");
     const scopes = await readVoiceScopes(request);
-    quota.take(session.user.id);
+    const origin = new URL(request.url).origin;
+    const secret = process.env.COMPANION_BRIDGE_SECRET;
+    // A reachable bridge issues its own tickets; a bridge on the venue laptop (only its browser
+    // reaches it) takes one the site signs with the shared secret.
     return voiceResponse(
-      await requestBridgeTicket(session.user.id, new URL(request.url).origin, scopes, {
-        url: process.env.COMPANION_BRIDGE_URL,
-        secret: process.env.COMPANION_BRIDGE_SECRET,
-      })
+      process.env.COMPANION_BRIDGE_URL || !process.env.COMPANION_BRIDGE_PUBLIC_URL
+        ? await requestBridgeTicket(principal.id, origin, scopes, { url: process.env.COMPANION_BRIDGE_URL, secret })
+        : signBridgeTicket(principal.id, origin, scopes, { publicUrl: process.env.COMPANION_BRIDGE_PUBLIC_URL, secret })
     );
   } catch (error) {
     return voiceFailure(error);

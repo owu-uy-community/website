@@ -3,6 +3,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
+import { poppins } from "app/fonts";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
@@ -83,6 +84,8 @@ export function Wheel({ params }: SceneProps<"wheel">) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const names = useMemo(() => splitList(params.names, ","), [params.names]);
   const spin = useRef({ from: 0, to: 0, start: 0, end: 0, angle: 0 });
+  /** What the canvas shows: a wheel at rest isn't drawn again (its rotated labels are the costly part). */
+  const drawn = useRef<{ angle: number; names: string[] } | null>(null);
   const [winner, setWinner] = useState<string | null>(null);
   const [round, setRound] = useState(0);
 
@@ -114,6 +117,8 @@ export function Wheel({ params }: SceneProps<"wheel">) {
         }
       }
     }
+    if (drawn.current?.angle === s.angle && drawn.current.names === names) return;
+    drawn.current = { angle: s.angle, names };
     ctx.clearRect(0, 0, W, H);
     const cx = 700;
     const cy = H / 2;
@@ -133,7 +138,7 @@ export function Wheel({ params }: SceneProps<"wheel">) {
       ctx.save();
       ctx.rotate((a0 + a1) / 2);
       ctx.fillStyle = BRAND.black;
-      ctx.font = `bold ${Math.min(40, 1800 / n)}px Poppins, sans-serif`;
+      ctx.font = `bold ${Math.min(40, 1800 / n)}px ${poppins.style.fontFamily}, sans-serif`;
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
       ctx.fillText(name.slice(0, 18), RADIUS - 30, 0);

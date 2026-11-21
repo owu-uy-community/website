@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { DAY_TIMES, OPEN_SPACE_TIMES, TALKS, type Talk } from "app/conf/talks";
+import { SOUNDS } from "lib/launchpad/sounds";
+
 /**
  * Owy Stage — the video-wall scene registry shared by the oRPC layer (what an
  * admin may set), the bridge (what it may push) and the stage pages (what they
@@ -8,9 +11,33 @@ import { z } from "zod";
 
 export const OWY_STAGE_CHANNEL = "owy-stage";
 
-/** The 2026 rundown (staff spreadsheet); editable from the admin on the day. */
-const DEFAULT_PROGRAM =
-  "14:30 Recepción y acreditación | 15:00 Bienvenida | 15:15 Explicación open space + marketplace | 16:00 Open Space | 18:25 Coffee Break | 19:00 Charla 1 | 19:45 Charla 2 | 20:25 Despedida + foto";
+const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+/** "HH:MM" moved by some minutes (negative = earlier). */
+export const shift = (time: string, minutes: number) => {
+  const total = toMinutes(time) + minutes;
+
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+};
+const speakerNames = (talk: Talk) => talk.speakers.map((speaker) => speaker.name).join(" y ");
+const FIRST_TALK = TALKS[0];
+const TALK_MINUTES = toMinutes(FIRST_TALK.end) - toMinutes(FIRST_TALK.start);
+const { mercado, sesiones, coffee } = OPEN_SPACE_TIMES;
+
+/** The day as /conf shows it (same times, from app/conf/talks); editable from the admin on the day. */
+const DEFAULT_PROGRAM = [
+  `${DAY_TIMES.recepcion.start} Recepción y acreditación`,
+  `${OPEN_SPACE_TIMES.bienvenida.start} Bienvenida`,
+  `${mercado.start} Mercado de ideas`,
+  `${sesiones.start} Open space`,
+  `${coffee.start} Coffee break`,
+  ...TALKS.map((talk) => `${talk.start} Charla · ${speakerNames(talk)}`),
+  `${DAY_TIMES.despedida.start} Despedida y foto`,
+  `${DAY_TIMES.after.start} After`,
+].join(" | ");
+
+/** A launchpad sound (by id) the wall plays itself when a clock reaches zero, or "off". */
+const WallSound = z.enum(["off", ...SOUNDS.map((sound) => sound.id)]);
+const DEVELOPERS = "29";
 
 const DEPARTMENTS =
   "Montevideo | Canelones | Maldonado | Colonia | San José | Salto | Paysandú | Rivera | Tacuarembó | Cerro Largo | Rocha | Florida | Lavalleja | Durazno | Soriano | Río Negro | Artigas | Treinta y Tres | Flores | Otro país";
@@ -44,9 +71,8 @@ const AGILES_OS_ROUNDS = "18:15-18:45 | 18:50-19:20 | 19:25-19:55";
 const AGILES_OS_CLOSING =
   "¿Qué te llevás de hoy? | ¿Qué conversación querés continuar? | ¿Con quién querés seguir en contacto? | ¿Qué vas a probar el lunes?";
 
+/** Display order of the full library; Ágiles (01 OCT, already happened) goes last. */
 export const SCENE_CATEGORIES = {
-  agiles: { title: "Ágiles Uruguay 2026" },
-  agilesOpenSpace: { title: "Ágiles · Open space" },
   opening: { title: "Apertura y cierre" },
   programme: { title: "Programa y horarios" },
   talks: { title: "Charlas y escenario" },
@@ -60,6 +86,8 @@ export const SCENE_CATEGORIES = {
   games: { title: "Juegos y humor" },
   visuals: { title: "Visuales y música" },
   utility: { title: "Utilidades" },
+  agiles: { title: "Ágiles Uruguay 2026" },
+  agilesOpenSpace: { title: "Ágiles · Open space" },
 } as const;
 export type SceneCategory = keyof typeof SCENE_CATEGORIES;
 export const SCENE_CATEGORY_IDS = Object.keys(SCENE_CATEGORIES) as SceneCategory[];
@@ -87,6 +115,16 @@ export const SCENES = {
       title: z.string().trim().max(60).default("Bienvenidos a OWU CONF"),
     }),
   },
+  "welcome-wall": {
+    category: "opening",
+    title: "Bienvenida en vivo",
+    description:
+      "Saluda a cada persona que se acredita y suma su avatar a la pared de acreditados, en vivo. La foto sale de su cuenta de OWU, Gravatar o GitHub; si no hay, sus iniciales. Quien tenga la etiqueta «sin fotos» o dijo que no a las fotos no aparece.",
+    params: z.object({
+      title: z.string().trim().max(60).default("Bienvenidos a OWU CONF"),
+      subtitle: z.string().trim().max(80).default("Qué bueno que viniste"),
+    }),
+  },
   message: {
     category: "opening",
     title: "Mensaje",
@@ -99,8 +137,12 @@ export const SCENES = {
   countdown: {
     category: "opening",
     title: "Countdown",
-    description: "El countdown del evento, en pantalla grande.",
-    params: z.object({ label: z.string().trim().max(40).default("") }),
+    description:
+      "El countdown del evento (el mismo de /countdown y del open space), en pantalla grande. Se controla desde el inspector; suena al llegar a cero si el sonido está activado.",
+    params: z.object({
+      label: z.string().trim().max(40).default(""),
+      sound: WallSound.default(DEVELOPERS),
+    }),
   },
   days: {
     category: "opening",
@@ -129,6 +171,13 @@ export const SCENES = {
       subtitle: z.string().trim().max(100).default("Nos vemos en la próxima"),
     }),
   },
+  unplugged: {
+    category: "opening",
+    title: "OWU Unplugged",
+    description:
+      "El título arranca con la marca OWU y se glitchea al pixel de OWU Unplugged (unplugged.owu.uy). La primera palabra queda blanca y el resto rosa.",
+    params: z.object({ title: z.string().trim().min(1).max(32).default("OWU REGRESARÁ") }),
+  },
   credits: {
     category: "opening",
     title: "Créditos",
@@ -151,6 +200,15 @@ export const SCENES = {
       venue: z.string().trim().max(40).default("MBC"),
       detail: z.string().trim().max(80).default("Montevideo Beer Company · a dos cuadras"),
       offer: z.string().trim().max(12).default("2x1"),
+    }),
+  },
+  mbc: {
+    category: "opening",
+    title: "After en MBC",
+    description:
+      "El after de enfrente, solo el logo de Montevideo Beer Company. La promo se muestra solo si tiene texto.",
+    params: z.object({
+      offer: z.string().trim().max(12).default(""),
     }),
   },
   // --- Programa y horarios ---
@@ -202,7 +260,7 @@ export const SCENES = {
     params: z.object({
       title: z.string().trim().max(40).default("Así va el día"),
       items: z.string().trim().max(1200).default(DEFAULT_PROGRAM),
-      end: z.string().trim().max(5).default("20:40"),
+      end: z.string().trim().max(5).default(DAY_TIMES.despedida.end),
     }),
   },
   pipeline: {
@@ -236,7 +294,28 @@ export const SCENES = {
         .string()
         .trim()
         .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
-        .default("17:30"),
+        .default(FIRST_TALK.start),
+    }),
+  },
+  coffee: {
+    category: "programme",
+    title: "Coffee break · reloj",
+    description: "Una taza que humea y se va vaciando, con la cuenta regresiva hasta que vuelven las charlas.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Coffee break"),
+      label: z.string().trim().max(40).default("Las charlas empiezan en"),
+      // Move `talksAt` when the talks slip: the countdown, the cup and the note's time all follow it.
+      breakAt: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default(coffee.start),
+      talksAt: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default(coffee.end),
+      note: z.string().trim().max(120).default(FIRST_TALK.title),
     }),
   },
   reminders: {
@@ -249,7 +328,13 @@ export const SCENES = {
         .trim()
         .max(1200)
         .default(
-          "15:55 El open space arranca en 5 minutos: buscá tu sala | 18:20 Coffee break en 5 minutos en el hall | 18:55 Las charlas empiezan a las 19:00 en el escenario | 20:20 Foto grupal en 5 minutos en el escenario"
+          [
+            `${shift(mercado.start, -5)} En 5 minutos arranca el mercado de ideas: pensá tu tema`,
+            `${shift(sesiones.start, -5)} El open space arranca en 5 minutos: buscá tu sala`,
+            `${shift(coffee.start, -5)} Coffee break en 5 minutos en el hall`,
+            `${shift(FIRST_TALK.start, -5)} Las charlas empiezan a las ${FIRST_TALK.start} en el escenario`,
+            `${shift(DAY_TIMES.despedida.start, -5)} Foto grupal en 5 minutos en el escenario`,
+          ].join(" | ")
         ),
       hold: z.number().int().min(1).max(60).default(8),
     }),
@@ -269,6 +354,22 @@ export const SCENES = {
     }),
   },
   // --- Charlas y escenario ---
+  "talk-intro": {
+    category: "talks",
+    title: "Presentación de charla",
+    description:
+      "Las charlas de OWU CONF: los speakers entran sobre sus formas, con título y horario. Con ?bg=transparent es el zócalo.",
+    params: z.object({ talk: z.coerce.number().int().min(1).max(TALKS.length).default(1) }),
+  },
+  speakers: {
+    category: "talks",
+    title: "Speakers",
+    description: "Las charlas del día con las caras de quienes las dan.",
+    params: z.object({
+      eyebrow: z.string().trim().max(60).default("Después del coffee"),
+      title: z.string().trim().max(40).default("Charlas"),
+    }),
+  },
   "up-next": {
     category: "talks",
     title: "A continuación",
@@ -286,8 +387,8 @@ export const SCENES = {
     title: "Lower third",
     description: "Nombre y charla del speaker; pensado para ?bg=transparent sobre la cámara.",
     params: z.object({
-      title: z.string().trim().max(60).default("Nombre Apellido"),
-      subtitle: z.string().trim().max(100).default("Título de la charla"),
+      title: z.string().trim().max(60).default(speakerNames(FIRST_TALK)),
+      subtitle: z.string().trim().max(100).default(FIRST_TALK.title),
     }),
   },
   speaker: {
@@ -295,9 +396,9 @@ export const SCENES = {
     title: "Speaker",
     description: "La tarjeta de presentación antes de una charla: nombre, empresa y título.",
     params: z.object({
-      name: z.string().trim().max(60).default("Nombre Apellido"),
-      company: z.string().trim().max(60).default(""),
-      talk: z.string().trim().max(120).default("Título de la charla"),
+      name: z.string().trim().max(60).default(speakerNames(FIRST_TALK)),
+      company: z.string().trim().max(60).default(FIRST_TALK.speakers[0].role),
+      talk: z.string().trim().max(120).default(FIRST_TALK.title),
     }),
   },
   talk: {
@@ -305,9 +406,9 @@ export const SCENES = {
     title: "Charla en curso",
     description: "Título, speaker y un reloj de charla que arranca al ponerla en pantalla.",
     params: z.object({
-      title: z.string().trim().max(90).default("Título de la charla"),
-      speaker: z.string().trim().max(60).default("Speaker"),
-      minutes: z.coerce.number().int().min(1).max(180).default(20),
+      title: z.string().trim().max(90).default(FIRST_TALK.title),
+      speaker: z.string().trim().max(60).default(speakerNames(FIRST_TALK)),
+      minutes: z.coerce.number().int().min(1).max(180).default(TALK_MINUTES),
     }),
   },
   lineup: {
@@ -317,12 +418,24 @@ export const SCENES = {
     params: z.object({
       eyebrow: z.string().trim().max(60).default("Después del coffee"),
       title: z.string().trim().max(40).default("Charlas"),
-      h1: z.string().trim().max(5).default("19:00"),
-      t1: z.string().trim().max(90).default("Charla 1"),
-      s1: z.string().trim().max(60).default(""),
-      h2: z.string().trim().max(5).default("19:45"),
-      t2: z.string().trim().max(90).default("Charla 2"),
-      s2: z.string().trim().max(60).default(""),
+      h1: z.string().trim().max(5).default(TALKS[0].start),
+      t1: z.string().trim().max(90).default(TALKS[0].title),
+      s1: z.string().trim().max(60).default(speakerNames(TALKS[0])),
+      h2: z
+        .string()
+        .trim()
+        .max(5)
+        .default(TALKS[1]?.start ?? ""),
+      t2: z
+        .string()
+        .trim()
+        .max(90)
+        .default(TALKS[1]?.title ?? ""),
+      s2: z
+        .string()
+        .trim()
+        .max(60)
+        .default(TALKS[1] ? speakerNames(TALKS[1]) : ""),
       h3: z.string().trim().max(5).default(""),
       t3: z.string().trim().max(90).default(""),
       s3: z.string().trim().max(60).default(""),
@@ -358,7 +471,7 @@ export const SCENES = {
     description: "Cuenta regresiva para quien habla: arranca al ponerla en pantalla, avisa al final.",
     params: z.object({
       title: z.string().trim().max(40).default("Tiempo de charla"),
-      minutes: z.number().int().min(1).max(180).default(20),
+      minutes: z.number().int().min(1).max(180).default(TALK_MINUTES),
       warn: z.number().int().min(0).max(60).default(5),
     }),
   },
@@ -408,6 +521,17 @@ export const SCENES = {
     }),
   },
   // --- Open space ---
+  "openspace-intro": {
+    category: "openspace",
+    title: "Intro al open space",
+    description:
+      "Las slides de la bienvenida: qué es, la dinámica, los principios, los dos pies, cómo proponer y Owy. Se pasan desde /admin/owy/intro; /owy/stage/openspace-intro anda sola con un clicker USB.",
+    params: z.object({
+      slide: z.string().trim().max(40).default("portada"),
+      build: z.number().int().min(0).max(20).default(0),
+      blank: z.boolean().default(false),
+    }),
+  },
   principles: {
     category: "openspace",
     title: "Principios del open space",
@@ -426,17 +550,35 @@ export const SCENES = {
     description: "La grilla salas × horarios con las sesiones del muro, en vivo; resalta el bloque en curso.",
     params: z.object({}),
   },
+  "owy-board": {
+    category: "openspace",
+    title: "Owy y la grilla",
+    description:
+      "La grilla en vivo con Owy en la esquina, hablando. Cada charla nueva sale como un sticky grande sobre la grilla desenfocada y vuela a su lugar. Desde «Owy» se pasa sin corte.",
+    params: z.object({
+      captions: z.boolean().default(true),
+      /** What the corner says while Owy waits; empty = nothing. */
+      hint: z.string().trim().max(120).default("¿Tenés un tema? Contáselo a Owy en la mesa y lo anota en la grilla."),
+    }),
+  },
   "rooms-now": {
     category: "openspace",
     title: "Ahora en cada sala",
     description: "Una tarjeta por sala: lo que pasa ahora y lo que sigue.",
     params: z.object({}),
   },
+  map: {
+    category: "openspace",
+    title: "Mapa del open space",
+    description:
+      "El plano del lugar con cada sala en su color; se ilumina una sala a la vez con lo que pasa ahí ahora, como el mapa de La Meetup.",
+    params: z.object({}),
+  },
   room: {
     category: "openspace",
     title: "Sala",
-    description: "El día completo de una sala del open space; para la pantalla de la puerta.",
-    params: z.object({ room: z.string().trim().max(40).default("Lobby") }),
+    description: "El día completo de una sala del open space; para la pantalla de la puerta. Vacío = la primera sala.",
+    params: z.object({ room: z.string().trim().max(40).default("") }),
   },
   "room-cards": {
     category: "openspace",
@@ -447,10 +589,19 @@ export const SCENES = {
   rounds: {
     category: "openspace",
     title: "Rondas del open space",
-    description: "Ronda actual, tiempo restante y las que faltan; el reloj facilita solo. Formato HH:MM-HH:MM | …",
+    description:
+      "Ronda actual, tiempo restante y las que faltan; el reloj facilita solo. Vacío = los bloques de la grilla; o a mano: HH:MM-HH:MM | …",
     params: z.object({
       title: z.string().trim().max(40).default("Open space"),
-      rounds: z.string().trim().max(300).default("16:00-16:40 | 16:45-17:25 | 17:30-18:10"),
+      rounds: z.string().trim().max(300).default(""),
+      /** Minutes every round moves on the wall when the day runs late (the grid itself stays). */
+      shift: z.number().int().min(-120).max(120).default(0),
+      list: z.boolean().default(true),
+      sound: WallSound.default("off"),
+      startsIn: z.string().trim().max(40).default("Empieza en"),
+      endsIn: z.string().trim().max(40).default("termina en"),
+      nextIn: z.string().trim().max(60).default("Cambio de sala · próxima ronda en"),
+      doneText: z.string().trim().max(60).default("Cierre · gracias por las sesiones"),
     }),
   },
   hosts: {
@@ -475,8 +626,31 @@ export const SCENES = {
   "owy-face": {
     category: "owy",
     title: "Owy",
-    description: "La cara de Owy reaccionando a las conversaciones (bridge del companion).",
+    description:
+      "La cara de Owy reaccionando a las conversaciones (bridge del companion); en el mercado de ideas, el pitch que escucha y la charla que acaba de ubicar.",
     params: z.object({ captions: z.boolean().default(true) }),
+  },
+  "owy-charla": {
+    category: "owy",
+    title: "Charla: Owy, en vivo",
+    description:
+      "Las slides de la charla de Owy en el open space (consola en /admin/owy/charla). Una sola ronda para toda la charla: las preguntas del celular llegan hasta el Q&A.",
+    params: z.object({
+      slide: z.string().trim().max(40).default("lobby"),
+      step: z.number().int().min(0).max(40).default(0),
+      /** Q&A: who answers the question in focus. */
+      who: z.enum(["", "agustin", "owy", "both"]).default(""),
+      /** Q&A: the question being answered (an input id), highlighted on the wall. */
+      focus: z.string().trim().max(40).default(""),
+      /** Overlays the console toggles without leaving the scene (a new take would start a new phone round). */
+      blank: z.boolean().default(false),
+      /** Owy's face over the whole slide. */
+      owy: z.boolean().default(false),
+      /** The /owy/play QR, big. */
+      qr: z.boolean().default(false),
+      /** Owy's subtitles: his words under his face, along the bottom, on the face slides and the live demo. */
+      captions: z.boolean().default(true),
+    }),
   },
   "owy-says": {
     category: "owy",
@@ -556,7 +730,7 @@ export const SCENES = {
     description: "Un link como QR gigante: compartí tus fotos, inscripción, lo que sea.",
     params: z.object({
       title: z.string().trim().max(50).default("Compartí tus fotos"),
-      url: z.string().trim().max(300).default("conf.owu.uy"),
+      url: z.string().trim().max(300).default("conf.owu.uy/fotos"),
       caption: z.string().trim().max(120).default("Subí las fotos que sacaste hoy"),
     }),
   },
@@ -605,7 +779,9 @@ export const SCENES = {
         .string()
         .trim()
         .max(600)
-        .default("WiFi: OWU-CONF · Próxima charla 16:00 · Proponé tu charla en el open space · #OWUCONF"),
+        .default(
+          `WiFi: OWU-CONF · Charlas desde las ${FIRST_TALK.start} · Proponé tu tema en el mercado de ideas · #OWUCONF`
+        ),
     }),
   },
   marquee: {
@@ -631,7 +807,11 @@ export const SCENES = {
     title: "Acreditación",
     description: "Los pasos de la recepción y el aviso de fotos, para la pantalla del lobby a las 14:30.",
     params: z.object({
-      eyebrow: z.string().trim().max(60).default("Bienvenidos · 14:30 a 15:00"),
+      eyebrow: z
+        .string()
+        .trim()
+        .max(60)
+        .default(`Bienvenidos · ${DAY_TIMES.recepcion.start} a ${DAY_TIMES.recepcion.end}`),
       step1: z.string().trim().max(90).default("Buscá tu nombre en la lista o mostrá tu entrada"),
       step2: z.string().trim().max(90).default("Retirá tu lanyard y los stickers"),
       step3: z.string().trim().max(90).default("Dejá el abrigo en guardarropa y pasá al hall"),
@@ -677,7 +857,7 @@ export const SCENES = {
     description: "Qué hay para comer y a qué hora. Formato: emoji Nombre: detalle | …",
     params: z.object({
       title: z.string().trim().max(40).default("Coffee break"),
-      time: z.string().trim().max(5).default("18:25"),
+      time: z.string().trim().max(5).default(coffee.start),
       items: z
         .string()
         .trim()
@@ -815,12 +995,30 @@ export const SCENES = {
     description: "Todos los logos a la vez, con entrada escalonada.",
     params: z.object({}),
   },
+  declarado: {
+    category: "sponsors",
+    title: "Declarado de interés",
+    description: "La conferencia, declarada de interés por el MEC y la ANII, con sus logos.",
+    params: z.object({}),
+  },
   // --- Comunidad y recuerdos ---
   team: {
     category: "community",
     title: "Equipo",
     description: "Créditos: el equipo de OWU CONF 2026.",
     params: z.object({}),
+  },
+  "team-wall": {
+    category: "community",
+    title: "Pared del equipo",
+    description: "Todo el equipo organizador a la vez, como foto grupal.",
+    params: z.object({ title: z.string().trim().max(40).default("El equipo") }),
+  },
+  "community-wall": {
+    category: "community",
+    title: "Pared de comunidades",
+    description: "Los logos de las comunidades de owu.uy/comunidades, todos a la vez.",
+    params: z.object({ title: z.string().trim().max(40).default("Comunidades amigas") }),
   },
   history: {
     category: "community",
@@ -963,12 +1161,12 @@ export const SCENES = {
     title: "Quiz en vivo",
     description: "Pregunta con cuatro opciones; se responde desde el celular y al terminar se revela quién acertó.",
     params: z.object({
-      question: z.string().trim().max(140).default("¿En qué año se fundó OWU?"),
-      a: z.string().trim().max(60).default("2019"),
-      b: z.string().trim().max(60).default("2021"),
-      c: z.string().trim().max(60).default("2023"),
-      d: z.string().trim().max(60).default("2024"),
-      answer: z.string().trim().max(1).default("C"),
+      question: z.string().trim().max(140).default("¿Desde qué año existe OWU?"),
+      a: z.string().trim().max(60).default("2011"),
+      b: z.string().trim().max(60).default("2015"),
+      c: z.string().trim().max(60).default("2019"),
+      d: z.string().trim().max(60).default("2023"),
+      answer: z.string().trim().max(1).default("A"),
       seconds: z.number().int().min(5).max(180).default(30),
     }),
   },
@@ -1357,11 +1555,11 @@ export const SCENES = {
     title: "Trivia",
     description: "Pregunta con cuatro opciones; cuenta regresiva y revela la correcta con confetti.",
     params: z.object({
-      question: z.string().trim().max(140).default("¿En qué año fue la primera OWU CONF?"),
-      a: z.string().trim().max(60).default("2019"),
-      b: z.string().trim().max(60).default("2022"),
-      c: z.string().trim().max(60).default("2024"),
-      d: z.string().trim().max(60).default("2025"),
+      question: z.string().trim().max(140).default("¿Cuántas ediciones de La Meetup hubo antes de OWU CONF?"),
+      a: z.string().trim().max(60).default("Una"),
+      b: z.string().trim().max(60).default("Dos"),
+      c: z.string().trim().max(60).default("Tres"),
+      d: z.string().trim().max(60).default("Cuatro"),
       answer: z.string().trim().max(1).default("C"),
       seconds: z.number().int().min(0).max(120).default(20),
     }),
@@ -1408,6 +1606,8 @@ export const SCENES = {
     params: z.object({
       title: z.string().trim().max(40).default("Sorteo"),
       names: z.string().trim().max(3000).default("Ana, Bruno, Camila, Diego, Elena, Fede, Gabi, Hernán"),
+      /** One of the names to land on (a draw made in Asistentes); empty: the scene picks. */
+      winner: z.string().trim().max(80).default(""),
     }),
   },
   wheel: {
@@ -1995,11 +2195,137 @@ export function isSceneId(value: string): value is SceneId {
   return value in SCENES;
 }
 
+/**
+ * Scenes that are one picture in two layouts: the wall moves between them in place (Owy glides
+ * from the middle to the corner and the grid comes in) instead of the brand wipe, because the
+ * same component stays up.
+ */
+const SCENE_FAMILIES: Partial<Record<SceneId, string>> = { "owy-face": "owy", "owy-board": "owy" };
+export const sceneFamily = (id: SceneId): string => SCENE_FAMILIES[id] ?? id;
+
+/**
+ * A talk the wall puts up big over the blurred grid, then sends to its cell: one that just landed
+ * on the board (`new`) or one the operator picked (`manual`). Public: it carries only what the
+ * board already shows. `id` is fresh per spotlight, so the same talk can be shown again.
+ */
+export const SpotlightSchema = z.object({
+  id: z.string().min(1).max(40),
+  how: z.enum(["new", "manual"]),
+  track: z.object({
+    id: z.string().min(1).max(40),
+    title: z.string().max(200),
+    speaker: z.string().max(200).optional(),
+    room: z.string().max(80),
+    timeSlot: z.string().max(40),
+    roomId: z.string().max(40),
+    scheduleId: z.string().max(40),
+    roomColor: z.string().max(20).optional(),
+  }),
+});
+export type Spotlight = z.infer<typeof SpotlightSchema>;
+
 export const EFFECTS = ["confetti", "flash", "owy-happy", "caption", "emoji"] as const;
 export type EffectId = (typeof EFFECTS)[number];
 
 export const FACE_STATES = ["idle", "listening", "thinking", "speaking", "happy", "error", "offline"] as const;
 export type FaceState = (typeof FACE_STATES)[number];
+
+/** Owy's per-sentence feelings (owy/companion/firmware/companion_model.h), hinted over the face state. */
+export const EXPRESSIONS = [
+  "neutral",
+  "happy",
+  "excited",
+  "curious",
+  "thinking",
+  "empathetic",
+  "playful",
+  "surprised",
+] as const;
+export type Expression = (typeof EXPRESSIONS)[number];
+
+/** A talk that just landed on the board, as the companion announces it. */
+export const FaceCardSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  speaker: z.string().trim().max(200).optional(),
+  room: z.string().trim().max(80).optional(),
+  timeSlot: z.string().trim().max(40).optional(),
+  reasoning: z.string().trim().max(500).optional(),
+});
+export type FaceCard = z.infer<typeof FaceCardSchema>;
+
+export const FaceEventSchema = z.object({
+  state: z.enum(FACE_STATES),
+  transcript: z
+    .object({
+      who: z.enum(["input", "output"]),
+      /** A running total per speaker; a spoken pitch runs to ~1500 characters. */
+      text: z.string().trim().max(2000),
+    })
+    .optional(),
+  /** A feeling over the state, what the device's face does per sentence. */
+  expression: z
+    .object({
+      name: z.enum(EXPRESSIONS),
+      strength: z.number().int().min(0).max(100).default(100),
+      /** Epoch ms when its sentence becomes audible: the faces change on the word, not on arrival. */
+      at: z.number().optional(),
+    })
+    .optional(),
+  /** "The card landed": the wall shows it with its place. */
+  card: FaceCardSchema.optional(),
+  /** Which Owy produced it (device id / web session): a wall follows the one that is doing something. */
+  source: z.string().max(80).optional(),
+  /** The tool Owy is running right now, while thinking (the talk's live diagram lights its box). */
+  tool: z.string().trim().max(60).optional(),
+  /**
+   * The bridge process that sent it and its place in that process's order: a page drops an event
+   * that arrives late or twice (the socket and the site's fallback can both carry one). Absent
+   * from older bridges, whose events always count.
+   */
+  boot: z.string().max(40).optional(),
+  seq: z.number().int().min(0).optional(),
+  /** A heartbeat: the face as it stands (its `seq` is the last event's); it only counts if a page missed that one. */
+  beat: z.boolean().optional(),
+  /** Pausa: the faces show it like the knob does. */
+  privacy: z.boolean().optional(),
+});
+export type FaceEvent = z.infer<typeof FaceEventSchema>;
+
+/** The level (0..100) of the mic Owy listens with, as the knob's halo gets it. Live only. */
+export const LevelEventSchema = z.object({
+  source: z.string().max(80),
+  level: z.number().min(0).max(100),
+});
+export type LevelEvent = z.infer<typeof LevelEventSchema>;
+
+/**
+ * What the knob's screen was told besides its face (the bridge's show_caption, show_heard,
+ * show_text, show_qr): the knob's twin on /admin/owy shows it the same way. Live only.
+ */
+export const ScreenEventSchema = z.object({
+  source: z.string().max(80),
+  kind: z.enum(["caption", "heard", "text", "qr"]),
+  text: z.string().max(600),
+  url: z.url().max(500).optional(),
+});
+export type ScreenEvent = z.infer<typeof ScreenEventSchema>;
+
+/**
+ * Owy's lip shapes, what the device's mouth_track gets: base64url, one char per 40 ms, the first
+ * heard at `at` (epoch ms). The bridge publishes them on the stage channel; never stored. Anyone
+ * who may operate the stage can publish there, so the wall checks every one.
+ */
+export const MouthEventSchema = z.object({
+  /** The Owy speaking (a FaceEvent's `source`): a wall only takes the one it follows. */
+  source: z.string().max(80),
+  at: z.number(),
+  frames: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+});
+export type MouthEvent = z.infer<typeof MouthEventSchema>;
+
+/** The face as kept on the stage row: the last state, feeling and card — never the transcript. */
+export const StoredFaceSchema = FaceEventSchema.omit({ transcript: true }).extend({ at: z.string() });
+export type StoredFace = z.infer<typeof StoredFaceSchema>;
 
 export const StageStateSchema = z.object({
   scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
@@ -2009,10 +2335,22 @@ export const StageStateSchema = z.object({
   round: z.string().default(""),
   /** ISO time of the take, so wall and phones agree on timers. */
   takenAt: z.string().default(""),
+  /** Owy's last face, so a wall that connects mid-conversation catches up. */
+  face: StoredFaceSchema.nullable().default(null),
+  /** How the wall gets there: the brand wipe, or a straight cut. Rides on the broadcast; never stored. */
+  transition: z.enum(["wipe", "cut"]).optional(),
 });
 export type StageState = z.infer<typeof StageStateSchema>;
+export type StageTransition = NonNullable<StageState["transition"]>;
 
-export const DEFAULT_STAGE_STATE: StageState = { scene: "black", params: {}, eventId: null, round: "", takenAt: "" };
+export const DEFAULT_STAGE_STATE: StageState = {
+  scene: "black",
+  params: {},
+  eventId: null,
+  round: "",
+  takenAt: "",
+  face: null,
+};
 
 /**
  * The rundown: the order the wall walks through on the day. One row per take,
@@ -2028,8 +2366,66 @@ export const RundownStepSchema = z.object({
 export const RundownSchema = z.array(RundownStepSchema).max(80);
 export type RundownStep = z.infer<typeof RundownStepSchema>;
 
+/** Admin-only (`private:`): the desk is the operator's notes, not something a wall needs. */
+export const OWY_DESK_CHANNEL = "private:owy-desk";
+
+/**
+ * The desk's monitors are stage pages in iframes, spoken to with postMessage:
+ * a monitor says it is ready, the preview is shown what the desk posts, and
+ * both are told which scenes are coming so their code is loaded before TAKE.
+ */
+export const MONITOR_READY = "owy-stage:ready";
+export const MONITOR_SHOW = "owy-stage:show";
+export const MONITOR_PREFETCH = "owy-stage:prefetch";
+
+/**
+ * One scene waiting on the desk. `params` empty means "the scene's defaults".
+ * `from` only matters for the preview: a step pulled out of the queue goes
+ * back to its front when something else replaces it, a `pick` is just
+ * dropped, and a `swap` is the scene that just left the air. `preset` is the
+ * preset it was recalled from, so the editor can save a change back to it.
+ */
+export const DeskStepSchema = z.object({
+  id: z.string().min(1).max(40),
+  scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
+  params: z.record(z.string(), z.unknown()).default({}),
+  from: z.enum(["pick", "queue", "swap"]).default("pick"),
+  preset: z.string().max(40).optional(),
+});
+export type DeskStep = z.infer<typeof DeskStepSchema>;
+
+/**
+ * A scene with its params, saved under a name so it comes back in one press:
+ * a tap, keys 1–9, the search, a Stream Deck. Empty params mean the scene's
+ * defaults; an empty name, the scene's title.
+ */
+export const PresetSchema = z.object({
+  id: z.string().min(1).max(40),
+  name: z.string().trim().max(60).default(""),
+  scene: z.enum(SCENE_IDS as [SceneId, ...SceneId[]]),
+  params: z.record(z.string(), z.unknown()).default({}),
+});
+export type Preset = z.infer<typeof PresetSchema>;
+
+/** What a preset is called on the desk: its name, or its scene's title. */
+export const presetLabel = (preset: Pick<Preset, "name" | "scene">) => preset.name || SCENES[preset.scene].title;
+
+/**
+ * The operator's desk, shared by every admin device: the scene staged in
+ * preview (what TAKE sends next), the queue that feeds it, and the presets
+ * (in order: the first nine are keys 1–9).
+ */
+export const DeskSchema = z.object({
+  preview: DeskStepSchema.nullable().default(null),
+  queue: z.array(DeskStepSchema).max(100).default([]),
+  presets: z.array(PresetSchema).max(100).default([]),
+});
+export type Desk = z.infer<typeof DeskSchema>;
+export const EMPTY_DESK: Desk = { preview: null, queue: [], presets: [] };
+
 /** Scenes that take input from phones at /owy/play. */
 export const INTERACTIVE_SCENES = [
+  "owy-charla",
   "live-poll",
   "word-cloud",
   "live-questions",
@@ -2068,8 +2464,20 @@ export const SubmitInputSchema = z.object({
   mode: InputModeSchema.default("single"),
 });
 export type SubmitInput = z.infer<typeof SubmitInputSchema>;
-export type StageInput = { id: string; key: string; value: string; voter: string; createdAt: string };
+/** Q&A moderation from the desk: hidden never reaches the wall, pinned leads it, answered dims. */
+export const MODERATIONS = ["", "hidden", "pinned", "answered"] as const;
+export type Moderation = (typeof MODERATIONS)[number];
+export type StageInput = {
+  id: string;
+  key: string;
+  value: string;
+  voter: string;
+  createdAt: string;
+  moderation: Moderation;
+};
 export type InputEvent = StageInput & { round: string; mode: z.infer<typeof InputModeSchema> };
+/** A moderation change, broadcast to every wall and phone following the round. */
+export type ModerationEvent = { id: string; round: string; moderation: Moderation };
 
 export const EffectEventSchema = z.object({
   effect: z.enum(EFFECTS),
@@ -2079,19 +2487,6 @@ export const EffectEventSchema = z.object({
     .optional(),
 });
 export type EffectEvent = z.infer<typeof EffectEventSchema>;
-
-export const FaceEventSchema = z.object({
-  state: z.enum(FACE_STATES),
-  transcript: z
-    .object({
-      who: z.enum(["input", "output"]),
-      text: z.string().trim().max(400),
-    })
-    .optional(),
-  /** Which Owy produced it (device id / web session); informational. */
-  source: z.string().max(80).optional(),
-});
-export type FaceEvent = z.infer<typeof FaceEventSchema>;
 
 /** Parse scene params against the scene's schema, applying defaults. */
 export function parseSceneParams<K extends SceneId>(scene: K, params: unknown): SceneParams<K> {

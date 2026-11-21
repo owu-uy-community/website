@@ -1,3 +1,4 @@
+import { cacheLife } from "next/cache";
 import Link from "next/link";
 import type { Metadata } from "next";
 
@@ -51,7 +52,13 @@ const REASONS = [
   },
 ];
 
-export default function SponsorsFormPage() {
+export default async function SponsorsFormPage() {
+  "use cache";
+  // The deadline is checked hourly (it used to freeze at build time)
+  cacheLife("hours");
+
+  const isOpen = Date.now() < Date.parse(CONF_DATES.sponsorsDeadline);
+
   return (
     <MotionRoot>
       <div className="min-h-[100dvh] w-full overflow-x-clip bg-black">
@@ -114,7 +121,8 @@ export default function SponsorsFormPage() {
 
               <Reveal delay={0.48} y={18}>
                 <p className="mt-10 font-display text-xs leading-none font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
-                  Aceptamos postulaciones hasta el <strong className="text-[#F5BB03]">15 de septiembre</strong>
+                  {isOpen ? "Aceptamos postulaciones hasta el " : "La convocatoria cerró el "}
+                  <strong className="text-[#F5BB03]">15 de septiembre</strong>
                 </p>
                 <Countdown className="mt-4" expiredLabel="CONVOCATORIA CERRADA" target={CONF_DATES.sponsorsDeadline} />
               </Reveal>

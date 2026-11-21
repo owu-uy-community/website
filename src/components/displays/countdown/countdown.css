@@ -22,3 +22,12 @@
 .animate-timer-pulse {
   animation: timerPulse 1s ease-in-out infinite;
 }
+
+/*
+ * Organic Stencil's digits sit 0.125em above the middle of their line box, and the last one plus
+ * the tracking leave about 0.1em more room on the right: this puts the ink itself in the center.
+ */
+.countdown-centered {
+  translate: 0 0.125em;
+  padding-left: 0.1em;
+}

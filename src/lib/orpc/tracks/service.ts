@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { Effect } from "effect";
 
 import {
@@ -10,12 +10,25 @@ import {
   type ScheduleRow,
   type TrackRow,
 } from "../../db/schema";
+import { later } from "../../later";
+import type { TrackTags } from "../../openspace/topics";
 import { eventChannel } from "../../realtime/channels";
 import { cardChanged } from "../board-events";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound } from "../errors";
-import { Realtime } from "../services";
-import type { CreateTrackInput, StickyNote, TrackWithRelations, UpdateTrackInput } from "./schemas";
+import { CARD_OCR_MODEL } from "../ocr/models";
+import { suggestCells } from "../ocr/service";
+import { opsPing, recordActivity } from "../ops";
+import { Ai, Realtime, type AppServices } from "../services";
+import type {
+  CreatePlacedTrackInput,
+  CreateTrackInput,
+  PlacedTrack as PlacedTalk,
+  StickyNote,
+  TrackWithRelations,
+  UpdateTrackInput,
+} from "./schemas";
+import { keywordTags, tagTrack } from "./tags";
 
 type PlacedTrack = TrackRow & { room?: RoomRow | null; schedule?: ScheduleRow | null };
 
@@ -32,7 +45,10 @@ export const toStickyNote = (track: PlacedTrack): StickyNote => ({
   roomId: track.roomId,
   room: track.room?.name || track.roomId,
   roomColor: track.room?.color ?? undefined,
+  roomIcon: track.room?.icon ?? undefined,
   timeSlot: track.schedule ? `${track.schedule.startTime} - ${track.schedule.endTime}` : track.scheduleId,
+  topics: track.topics ?? null,
+  format: track.format ?? null,
   createdAt: track.createdAt.toISOString(),
   updatedAt: track.updatedAt.toISOString(),
 });
@@ -64,10 +80,93 @@ const occupantOf = (scheduleId: string, roomId: string, exceptTrackId?: string) 
 const lostTheRace = (scheduleId: string, roomId: string) => () =>
   occupantOf(scheduleId, roomId).pipe(Effect.flatMap((title) => Effect.fail(slotTaken(title ?? "otra charla"))));
 
-const loadNote = (id: string) =>
+export const loadNote = (id: string) =>
   query((db) => db.query.tracks.findFirst({ where: eq(tracks.id, id), with: { room: true, schedule: true } })).pipe(
     Effect.flatMap((track) => (track ? Effect.succeed(toStickyNote(track)) : Effect.fail(trackNotFound)))
   );
+
+const sortedJoin = (topics: readonly string[] | null | undefined) => [...(topics ?? [])].toSorted().join(",");
+
+/** Whether the card already carries these tags (topic order aside). */
+const hasTags = (note: StickyNote, tags: TrackTags) =>
+  (note.format ?? null) === tags.format && sortedJoin(note.topics) === sortedJoin(tags.topics);
+
+/**
+ * The model's tags for a card, stored and announced. The write is conditional on the card still
+ * saying what was tagged: an edit in the meantime schedules its own tagging, and this one must not
+ * overwrite it.
+ */
+const retag = (note: StickyNote) =>
+  Effect.gen(function* () {
+    const ai = yield* Ai;
+    const tags = yield* Effect.promise(() => tagTrack(ai.model(CARD_OCR_MODEL.primary), note.title, note.description));
+    // The keyword tags written with the card already say this (always the case when the gateway is down)
+    if (hasTags(note, tags)) return;
+
+    const [updated] = yield* query((db) =>
+      db
+        .update(tracks)
+        .set({ topics: tags.topics, format: tags.format })
+        .where(
+          and(
+            eq(tracks.id, note.id),
+            eq(tracks.title, note.title),
+            note.description ? eq(tracks.description, note.description) : isNull(tracks.description)
+          )
+        )
+        .returning({ id: tracks.id })
+    );
+    if (!updated) return;
+
+    const tagged = yield* loadNote(note.id);
+    yield* cardChanged({
+      type: "CARD_UPDATE",
+      openSpaceId: tagged.openSpaceId,
+      cardId: tagged.id,
+      updatedCard: tagged,
+    });
+  });
+
+/**
+ * Tag a card with the model after the response, so a staffer at the table never waits on the
+ * gateway (AI_TIMEOUT_MS). Until it answers — and for good if it can't — the card keeps the
+ * keyword tags it was written with.
+ */
+const tagSoon = (note: StickyNote) =>
+  Effect.gen(function* () {
+    // Taken after the write's transaction: inside it, this would capture a transaction that has ended.
+    const services = yield* Effect.context<AppServices>();
+    later(() =>
+      Effect.runPromiseWith(services)(retag(note)).catch((error: unknown) =>
+        console.warn("[tracks] tagging failed", error)
+      )
+    );
+  });
+
+/** "Lobby · 16:30": where a talk sits, in the activity log's words. */
+const placeOf = (note: StickyNote) => `${note.room} · ${note.timeSlot.split(" - ")[0]}`;
+
+const logTalk = (note: StickyNote, line: { verb: string; summary: string }) =>
+  recordActivity({ eventId: note.openSpaceId, entityType: "track", entityId: note.id, ...line });
+
+/** What a save did to a talk, for the log; nothing when it changed nothing. */
+const changeLine = (before: TrackRow, after: StickyNote) => {
+  const moved = before.roomId !== after.roomId || before.scheduleId !== after.scheduleId;
+  const edited =
+    before.title !== after.title ||
+    (before.speaker ?? "") !== (after.speaker ?? "") ||
+    (before.description ?? "") !== (after.description ?? "") ||
+    before.needsTV !== after.needsTV ||
+    before.needsWhiteboard !== after.needsWhiteboard;
+
+  if (moved) {
+    return {
+      verb: "track.moved",
+      summary: `${edited ? "editó y movió" : "movió"} «${after.title}» a ${placeOf(after)}`,
+    };
+  }
+  return edited ? { verb: "track.updated", summary: `editó «${after.title}»` } : null;
+};
 
 /**
  * The slot and room a talk is going to: both must exist and belong to the
@@ -169,26 +268,95 @@ export const listWithPlaces = (openSpaceId: string, highlightedOnly: boolean) =>
 export const createNote = (input: CreateTrackInput) =>
   Effect.gen(function* () {
     const { schedule, room } = yield* checkPlace(input);
-    const [track] = yield* query((db) =>
-      db
-        .insert(tracks)
-        .values({
-          title: input.title,
-          speaker: input.speaker || null,
-          description: input.description || null,
-          needsTV: input.needsTV,
-          needsWhiteboard: input.needsWhiteboard,
-          openSpaceId: input.openSpaceId,
-          scheduleId: input.scheduleId,
-          roomId: input.roomId,
-        })
-        .returning()
+    // The log line commits with the talk. A lost race rolls both back first, so naming the
+    // winner runs outside the aborted transaction.
+    const note = yield* transaction(
+      Effect.gen(function* () {
+        const [track] = yield* query((db) =>
+          db
+            .insert(tracks)
+            .values({
+              title: input.title,
+              speaker: input.speaker || null,
+              description: input.description || null,
+              needsTV: input.needsTV,
+              needsWhiteboard: input.needsWhiteboard,
+              openSpaceId: input.openSpaceId,
+              scheduleId: input.scheduleId,
+              roomId: input.roomId,
+              ...keywordTags(input.title, input.description),
+            })
+            .returning()
+        );
+        const note = toStickyNote({ ...track, room, schedule });
+        yield* logTalk(
+          note,
+          input.origin === "undo"
+            ? { verb: "track.restored", summary: `restauró «${note.title}» en ${placeOf(note)}` }
+            : {
+                verb: "track.created",
+                summary: `agregó «${note.title}» en ${placeOf(note)}${input.origin === "photo" ? " desde una foto" : ""}`,
+              }
+        );
+        return note;
+      })
     ).pipe(Effect.catchTag("UniqueViolation", lostTheRace(input.scheduleId, input.roomId)));
 
-    const note = toStickyNote({ ...track, room, schedule });
     yield* cardChanged({ type: "CARD_CREATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
+    yield* opsPing(note.openSpaceId, "activity");
+    yield* tagSoon(note);
 
     return note;
+  });
+
+/**
+ * Place a talk where it fits best and put it on the board, in one call (the
+ * companion's spoken pitch). The decision models pick the cell; a cell taken
+ * between the pick and the write falls through to the next one, so the only
+ * failure left is a board with nothing free.
+ */
+export const createPlaced = (input: CreatePlacedTrackInput) =>
+  Effect.gen(function* () {
+    const { suggestion, cells, relaxed } = yield* suggestCells(input.openSpaceId, input);
+    const skipped: PlacedTalk["placement"]["skipped"] = [];
+
+    for (const cell of cells) {
+      const outcome = yield* createNote({
+        ...input,
+        scheduleId: cell.scheduleId,
+        roomId: cell.roomId,
+        // Only when no room had what the talk asked for: otherwise checkPlace keeps guarding resources.
+        skipResourceValidation: relaxed,
+      }).pipe(
+        Effect.map((note) => ({ note })),
+        Effect.catchTag("Conflict", (error) =>
+          error.reason === "slot_taken" ? Effect.succeed({ taken: error }) : Effect.fail(error)
+        )
+      );
+      if ("note" in outcome) {
+        return {
+          note: outcome.note,
+          placement: {
+            room: cell.room,
+            timeSlot: cell.timeSlot,
+            reasoning: cell.reasoning ?? suggestion.reasoning,
+            degraded: suggestion.degraded ?? false,
+            missing: [
+              ...(input.needsTV && !cell.hasTV ? (["tv"] as const) : []),
+              ...(input.needsWhiteboard && !cell.hasWhiteboard ? (["whiteboard"] as const) : []),
+            ],
+            skipped,
+          },
+        } satisfies PlacedTalk;
+      }
+      skipped.push({ room: cell.room, timeSlot: cell.timeSlot, occupiedBy: outcome.taken.occupiedBy });
+    }
+
+    return yield* new Conflict({
+      reason: "board_full",
+      message: "La grilla se llenó mientras hablábamos: no queda ningún lugar libre",
+      occupiedBy: skipped.at(-1)?.occupiedBy,
+    });
   });
 
 /** Edit a talk; moving it re-checks the new place. Only the fields sent change. */
@@ -199,6 +367,10 @@ export const updateNote = (id: string, data: UpdateTrackInput) =>
 
     const scheduleId = data.scheduleId ?? current.scheduleId;
     const roomId = data.roomId ?? current.roomId;
+    // A move keeps its tags; new words get new ones (keyword now, the model's after the response)
+    const title = data.title ?? current.title;
+    const description = data.description === undefined ? current.description : data.description || null;
+    const retitled = title !== current.title || description !== current.description;
     const placeChanges =
       data.scheduleId !== undefined || data.roomId !== undefined || data.needsTV || data.needsWhiteboard;
     if (placeChanges) {
@@ -213,23 +385,33 @@ export const updateNote = (id: string, data: UpdateTrackInput) =>
       });
     }
 
-    yield* query((db) =>
-      db
-        .update(tracks)
-        .set({
-          ...(data.title === undefined ? {} : { title: data.title }),
-          ...(data.speaker === undefined ? {} : { speaker: data.speaker || null }),
-          ...(data.description === undefined ? {} : { description: data.description || null }),
-          ...(data.needsTV === undefined ? {} : { needsTV: data.needsTV }),
-          ...(data.needsWhiteboard === undefined ? {} : { needsWhiteboard: data.needsWhiteboard }),
-          scheduleId,
-          roomId,
-        })
-        .where(eq(tracks.id, id))
+    const { note, logged } = yield* transaction(
+      Effect.gen(function* () {
+        yield* query((db) =>
+          db
+            .update(tracks)
+            .set({
+              ...(data.title === undefined ? {} : { title: data.title }),
+              ...(data.speaker === undefined ? {} : { speaker: data.speaker || null }),
+              ...(data.description === undefined ? {} : { description: data.description || null }),
+              ...(data.needsTV === undefined ? {} : { needsTV: data.needsTV }),
+              ...(data.needsWhiteboard === undefined ? {} : { needsWhiteboard: data.needsWhiteboard }),
+              ...(retitled ? keywordTags(title, description) : {}),
+              scheduleId,
+              roomId,
+            })
+            .where(eq(tracks.id, id))
+        );
+        const note = yield* loadNote(id);
+        const line = changeLine(current, note);
+        if (line) yield* logTalk(note, line);
+        return { note, logged: line !== null };
+      })
     ).pipe(Effect.catchTag("UniqueViolation", lostTheRace(scheduleId, roomId)));
 
-    const note = yield* loadNote(id);
     yield* cardChanged({ type: "CARD_UPDATE", openSpaceId: note.openSpaceId, cardId: note.id, updatedCard: note });
+    if (logged) yield* opsPing(note.openSpaceId, "activity");
+    if (retitled) yield* tagSoon(note);
 
     return note;
   });
@@ -244,13 +426,21 @@ export const deleteNote = (id: string) =>
         .from(eventLiveState)
         .where(eq(eventLiveState.eventId, note.openSpaceId))
     );
-    yield* query((db) => db.delete(tracks).where(eq(tracks.id, id)));
+    yield* transaction(
+      Effect.gen(function* () {
+        // Two screens deleting at once: only the one that removed the row logs it.
+        const [deleted] = yield* query((db) => db.delete(tracks).where(eq(tracks.id, id)).returning({ id: tracks.id }));
+        if (!deleted) return yield* trackNotFound;
+        yield* logTalk(note, { verb: "track.deleted", summary: `borró «${note.title}»` });
+      })
+    );
 
     yield* cardChanged({ type: "CARD_DELETE", openSpaceId: note.openSpaceId, cardId: note.id });
     if (live?.highlightedTrackId === id) {
       const realtime = yield* Realtime;
       yield* realtime.publish(eventChannel(note.openSpaceId, "cast"), "note_highlighted", { note: null });
     }
+    yield* opsPing(note.openSpaceId, "activity");
 
     return note;
   });
@@ -297,11 +487,13 @@ export const swapNotes = (trackAId: string, trackBId: string) =>
       yield* query((db) => db.delete(schedules).where(eq(schedules.id, parking.id)));
 
       const notes = [yield* loadNote(a.id), yield* loadNote(b.id)];
+      // One line for one gesture, filed under the first talk.
+      yield* logTalk(notes[0], { verb: "track.swapped", summary: `intercambió «${a.title}» y «${b.title}»` });
       yield* cardChanged({ type: "CARD_SWAP", openSpaceId: a.openSpaceId, cardIds: [a.id, b.id], updatedCards: notes });
 
       return notes;
     })
-  );
+  ).pipe(Effect.tap((notes) => opsPing(notes[0].openSpaceId, "activity")));
 
 /**
  * A slot's time changed (or its talks move to another slot of the same
@@ -339,6 +531,16 @@ export const moveSlot = (input: { scheduleId: string; newTimeSlot: string; newSc
 
       const notes = yield* Effect.forEach(moved, ({ id }) => loadNote(id));
       const relabelled = notes.map((note) => ({ ...note, timeSlot: input.newTimeSlot }));
+      if (relabelled.length > 0) {
+        // A slot moving is one gesture: one line for the block, not one per talk in it.
+        yield* recordActivity({
+          eventId: schedule.openSpaceId,
+          verb: "schedule.moved",
+          entityType: "schedule",
+          entityId: target,
+          summary: `movió ${relabelled.length === 1 ? "1 charla" : `${relabelled.length} charlas`} a las ${input.newTimeSlot.split(" - ")[0]}`,
+        });
+      }
       yield* Effect.forEach(
         relabelled,
         (note) =>
@@ -346,6 +548,9 @@ export const moveSlot = (input: { scheduleId: string; newTimeSlot: string; newSc
         { discard: true }
       );
 
-      return relabelled;
+      return { eventId: schedule.openSpaceId, relabelled };
     })
+  ).pipe(
+    Effect.tap(({ eventId, relabelled }) => (relabelled.length > 0 ? opsPing(eventId, "activity") : Effect.void)),
+    Effect.map(({ relabelled }) => relabelled)
   );

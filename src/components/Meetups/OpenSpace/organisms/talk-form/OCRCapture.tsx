@@ -37,18 +37,18 @@ export function OCRCapture({
   onRetakeImage,
 }: OCRCaptureProps) {
   return (
-    <div className="rounded-xl border border-border bg-muted/20 p-4">
+    <div className="rounded-lg border border-border bg-card p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">Capturar la tarjeta (OCR)</h3>
+        <h3 className="text-ui font-semibold text-foreground">Foto de la tarjeta</h3>
         {capturedImage && (
           <Button size="sm" type="button" variant="outline" onClick={onResetOCR}>
-            <RotateCcw className="h-3.5 w-3.5" />
+            <RotateCcw />
             Resetear
           </Button>
         )}
       </div>
 
-      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md bg-muted/60">
+      <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-md bg-background">
         {cameraActive ? (
           <>
             <video ref={videoRef} autoPlay className="absolute inset-0 h-full w-full object-cover" playsInline />
@@ -58,11 +58,11 @@ export function OCRCapture({
               aria-hidden
               className="pointer-events-none absolute inset-[5%] rounded-sm border-2 border-dashed border-white/70"
             />
-            <p className="absolute inset-x-0 bottom-2 text-center text-xs text-white drop-shadow">
+            <p className="absolute inset-x-0 bottom-2 text-center text-meta text-white drop-shadow">
               Encuadrá la tarjeta dentro del marco
             </p>
             {permissionMessage && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-sm text-foreground">
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4 text-center text-ui text-foreground">
                 <p>{permissionMessage}</p>
               </div>
             )}
@@ -71,15 +71,17 @@ export function OCRCapture({
           <Image fill alt="Tarjeta capturada" className="object-cover" src={capturedImage} />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2">
-            <Camera className="h-10 w-10 text-muted-foreground/60" />
-            <p className="text-sm text-muted-foreground">Capturá la tarjeta de la charla</p>
+            <Camera aria-hidden className="size-10 text-muted-foreground/60" />
+            <p className="text-ui text-muted-foreground">
+              Sacale una foto a la tarjeta: la IA la lee y sugiere el lugar.
+            </p>
           </div>
         )}
       </div>
 
       <canvas ref={canvasRef} className="hidden" />
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap [&>button]:h-11 sm:[&>button]:h-10">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap pointer-coarse:[&>button]:h-11">
         {!cameraActive && !capturedImage && (
           <Button className="flex-1" type="button" onClick={onStartCamera}>
             <Camera />
@@ -109,6 +111,10 @@ export function OCRCapture({
       </div>
 
       <div className="mt-3 space-y-2 empty:hidden">
+        {/* Over the video while the camera asks; down here once it couldn't start. */}
+        <Notice show={!cameraActive && Boolean(permissionMessage)} tone="danger">
+          {permissionMessage}
+        </Notice>
         <Notice show={isProcessingImage} tone="info">
           Leyendo la tarjeta…
         </Notice>

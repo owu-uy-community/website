@@ -1,14 +1,18 @@
 import { call } from "@orpc/server";
 import { sql } from "drizzle-orm";
+import { Effect } from "effect";
 import { http, HttpResponse } from "msw";
 import { describe, expect, test, vi } from "vitest";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 import { db } from "lib/db";
+import { presetQuestion } from "lib/organizar/presets";
+import { arrivalAvatar } from "lib/orpc/owy-stage/service";
+import { liveServices } from "lib/orpc/services";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { makeAttendee, makeBoard, makeCommunity, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 import { server } from "test/msw/server";
 
 /** The wall is one global row, so every test starts with nothing on air. */
@@ -135,6 +139,209 @@ describe("the wall", () => {
   });
 });
 
+describe("the desk", () => {
+  const step = (id: string, scene: "logo" | "message" | "program", params: Record<string, unknown> = {}) => ({
+    id,
+    scene,
+    params,
+    from: "pick" as const,
+  });
+
+  const preset = (id: string, scene: "logo" | "message", params: Record<string, unknown> = {}, name = "") => ({
+    id,
+    name,
+    scene,
+    params,
+  });
+
+  test("it round-trips and tells the other admin devices on a private channel", async () => {
+    const { staff } = await setup();
+    const publish = vi.spyOn(hub, "publish");
+    const desk = { preview: step("p", "message"), queue: [step("q1", "logo")], presets: [preset("a", "logo")] };
+
+    await call(router.owyStage.saveDesk, { desk }, by(staff));
+
+    // `favorites` (the presets' scenes) is for desk tabs opened before presets existed.
+    const sent = { ...desk, favorites: ["logo"] };
+    await expect(call(router.owyStage.getDesk, undefined, by(staff))).resolves.toStrictEqual(sent);
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", sent);
+  });
+
+  test("a step whose scene left the registry is dropped on read", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: null, queue: [step("q1", "logo")] } }, by(staff));
+    await db.execute(
+      sql`UPDATE owy_stage_state SET desk = jsonb_set(desk, '{queue}', desk->'queue' || '[{"id":"x","scene":"gone"}]')`
+    );
+
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(desk.queue.map((item) => item.id)).toStrictEqual(["q1"]);
+  });
+
+  test("TAKE puts the preview on air from scratch and moves the queue up", async () => {
+    const { staff, putOnAir } = await setup();
+    const before = await putOnAir({ scene: "message", params: { title: "Hola" } });
+    await call(
+      router.owyStage.saveDesk,
+      {
+        desk: { preview: step("p", "message", { title: "Chau" }), queue: [step("q1", "program"), step("q2", "logo")] },
+      },
+      by(staff)
+    );
+    const publish = vi.spyOn(hub, "publish");
+
+    const { state, desk } = await call(
+      router.owyStage.take,
+      { step: step("p", "message", { title: "Chau" }) },
+      by(staff)
+    );
+    const read = await call(router.owyStage.getState, undefined, by(null));
+
+    expect(state.round).not.toBe(before.round);
+    expect(read).toMatchObject({ scene: "message", params: { title: "Chau" }, round: state.round });
+    expect(desk).toMatchObject({ preview: { id: "q1", scene: "program", from: "queue" }, queue: [{ id: "q2" }] });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ round: state.round }));
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", desk);
+  });
+
+  test("with nothing queued, TAKE brings back what left the air, so TAKE again undoes", async () => {
+    const { staff, putOnAir } = await setup();
+    await putOnAir({ scene: "logo" });
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "message") } }, by(staff));
+
+    const first = await call(router.owyStage.take, { step: step("p", "message") }, by(staff));
+    const back = first.desk.preview;
+    const second = await call(router.owyStage.take, { step: back! }, by(staff));
+
+    expect(back).toMatchObject({ scene: "logo", from: "swap" });
+    expect(second.state.scene).toBe("logo");
+    expect(second.desk.preview).toMatchObject({ scene: "message", from: "swap" });
+  });
+
+  test("a CUT goes out like a TAKE, telling the walls to skip the wipe", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo") } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const { state } = await call(router.owyStage.take, { step: step("p", "logo"), transition: "cut" }, by(staff));
+
+    expect(state).toMatchObject({ scene: "logo", transition: "cut" });
+    expect(publish).toHaveBeenCalledWith("owy-stage", "scene", expect.objectContaining({ transition: "cut" }));
+    // The transition only rides on the broadcast: a wall that loads later just shows the scene.
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.not.toHaveProperty("transition");
+  });
+
+  test("a TAKE keeps the presets", async () => {
+    const { staff } = await setup();
+    const presets = [preset("a", "message")];
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo"), presets } }, by(staff));
+
+    const { desk } = await call(router.owyStage.take, { step: step("p", "logo") }, by(staff));
+
+    expect(desk.presets).toStrictEqual(presets);
+  });
+
+  test("a desk tab opened before presets saves without them, and the stored ones stay", async () => {
+    const { staff } = await setup();
+    const presets = [preset("a", "message", { title: "Volvemos" }, "Volvemos")];
+    await call(router.owyStage.saveDesk, { desk: { presets } }, by(staff));
+
+    // What such a tab sends: its favorites (unknown now, dropped) and no presets.
+    const old = { desk: { queue: [step("q1", "logo")], favorites: [] } } as RouterInputs["owyStage"]["saveDesk"];
+    await call(router.owyStage.saveDesk, old, by(staff));
+
+    await expect(call(router.owyStage.getDesk, undefined, by(staff))).resolves.toMatchObject({
+      queue: [{ id: "q1" }],
+      presets,
+    });
+  });
+
+  test("a queue edit only touches the preview and the queue: presets saved meanwhile stay", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { presets: [preset("a", "logo")] } }, by(staff));
+    // Another device adds a preset while this one, which never saw it, edits the queue.
+    await call(
+      router.owyStage.saveDesk,
+      { desk: { presets: [preset("a", "logo"), preset("b", "message")] } },
+      by(staff)
+    );
+
+    const saved = await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo") } }, by(staff));
+
+    expect(saved.presets.map((item) => item.id)).toStrictEqual(["a", "b"]);
+    expect(saved.preview).toMatchObject({ id: "p" });
+  });
+
+  test("a desk stored with favorites reads them as presets with the scene's defaults", async () => {
+    const { staff } = await setup();
+    await db.execute(
+      sql`INSERT INTO owy_stage_state (id, desk) VALUES ('global', '{"preview":null,"queue":[],"favorites":["logo","message"]}')`
+    );
+
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(desk.presets).toStrictEqual([preset("fav-logo", "logo"), preset("fav-message", "message")]);
+  });
+
+  test("a preset fired by its number lands in preview, remembering where it came from", async () => {
+    const { staff } = await setup();
+    const presets = [preset("a", "logo"), preset("b", "message", { title: "Volvemos" })];
+    await call(router.owyStage.saveDesk, { desk: { preview: step("p", "logo"), presets } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const fired = await call(router.owyStage.firePreset, { preset: "2" }, by(staff));
+    const desk = await call(router.owyStage.getDesk, undefined, by(staff));
+
+    expect(fired).toStrictEqual({ preset: presets[1], to: "preview" });
+    expect(desk.preview).toMatchObject({ scene: "message", params: { title: "Volvemos" }, preset: "b" });
+    expect(publish).toHaveBeenCalledWith("private:owy-desk", "desk", desk);
+    // Nothing went on air: TAKE does that.
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({ scene: "black" });
+  });
+
+  test("a preset fired by its id goes straight on air, with its params, from scratch", async () => {
+    const { staff, putOnAir } = await setup();
+    const before = await putOnAir({ scene: "message", params: { title: "Antes" } });
+    await call(
+      router.owyStage.saveDesk,
+      { desk: { presets: [preset("b", "message", { title: "Volvemos" })] } },
+      by(staff)
+    );
+
+    await call(router.owyStage.firePreset, { preset: "b", to: "air" }, by(staff));
+    const read = await call(router.owyStage.getState, undefined, by(null));
+
+    expect(read).toMatchObject({ scene: "message", params: { title: "Volvemos" } });
+    expect(read.round).not.toBe(before.round);
+  });
+
+  test("a preset that isn't there is NOT_FOUND; only site staff fire them", async () => {
+    const { staff } = await setup();
+    await call(router.owyStage.saveDesk, { desk: { presets: [preset("a", "logo")] } }, by(staff));
+
+    await expect(call(router.owyStage.firePreset, { preset: "2" }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(call(router.owyStage.firePreset, { preset: "zz", to: "air" }, by(staff))).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    await expect(call(router.owyStage.firePreset, { preset: "1" }, by(await makeUser()))).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
+  test("only site staff read or write the desk", async () => {
+    await setup();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.getDesk, undefined, by(user))).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(call(router.owyStage.take, { step: step("p", "logo") }, by(null))).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+  });
+});
+
 describe("phone inputs", () => {
   test("answers count only for the round on air; `once` keeps the first answer", async () => {
     const { putOnAir } = await setup();
@@ -169,6 +376,69 @@ describe("phone inputs", () => {
   });
 });
 
+describe("Q&A moderation", () => {
+  /** Questions on the wall, one from a phone, plus a vote for it. */
+  async function questions() {
+    const { staff, putOnAir } = await setup();
+    const { round } = await putOnAir({ scene: "live-questions" });
+    const ask = (value: string, voter: string) =>
+      call(router.owyStage.submit, { round, key: "question", value, voter, mode: "multi" }, by(null));
+    const { id } = await ask("¿Cuándo es la próxima?", "tel-1");
+    const vote = await call(router.owyStage.submit, { round, key: `up:${id}`, value: "1", voter: "tel-2" }, by(null));
+    const moderate = (inputId: string, moderation: "" | "hidden" | "pinned" | "answered") =>
+      call(router.owyStage.moderate, { inputId, moderation }, by(staff));
+
+    return { round, id: id ?? "", voteId: vote.id ?? "", moderate };
+  }
+
+  test("pinning a question tells every wall and phone, and the round's read carries it", async () => {
+    const { round, id, moderate } = await questions();
+    const publish = vi.spyOn(hub, "publish");
+
+    await expect(moderate(id, "pinned")).resolves.toStrictEqual({ id, round, moderation: "pinned" });
+
+    expect(publish).toHaveBeenCalledWith("owy-stage", "moderation", { id, round, moderation: "pinned" });
+    const inputs = await call(router.owyStage.inputs, { round }, by(null));
+    expect(inputs.map((input) => [input.key, input.moderation])).toStrictEqual([
+      ["question", "pinned"],
+      [`up:${id}`, ""],
+    ]);
+  });
+
+  test("a hidden question can come back", async () => {
+    const { round, id, moderate } = await questions();
+
+    await moderate(id, "hidden");
+    await moderate(id, "");
+
+    const [question] = await call(router.owyStage.inputs, { round }, by(null));
+    expect(question).toMatchObject({ id, moderation: "" });
+  });
+
+  test("only questions are moderated: a vote, or a question that is gone, is NOT_FOUND", async () => {
+    const { voteId, moderate } = await questions();
+
+    await expect(moderate(voteId, "hidden")).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(moderate("no-such-question", "hidden")).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("only site staff moderate", async () => {
+    const { id } = await questions();
+    const user = await makeUser();
+
+    await expect(call(router.owyStage.moderate, { inputId: id, moderation: "hidden" }, by(user))).rejects.toMatchObject(
+      {
+        code: "FORBIDDEN",
+      }
+    );
+    await expect(call(router.owyStage.moderate, { inputId: id, moderation: "hidden" }, by(null))).rejects.toMatchObject(
+      {
+        code: "UNAUTHORIZED",
+      }
+    );
+  });
+});
+
 describe("data-driven scenes", () => {
   test("the pulse counts an event's ideas and active rooms", async () => {
     await setup();
@@ -179,6 +449,21 @@ describe("data-driven scenes", () => {
     await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toStrictEqual({
       tickets: null,
       board: { ideas: 1, rooms: 2 },
+    });
+  });
+
+  test("the pulse counts the event's own attendees: who came in, out of who is attending", async () => {
+    await setup();
+    const { event } = await makeBoard();
+    const other = await makeBoard();
+    await makeAttendee(event.id, { checkedInAt: new Date() });
+    await makeAttendee(event.id);
+    await makeAttendee(event.id, { status: "refunded" });
+    // Another event's door never counts here.
+    await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toMatchObject({
+      tickets: { checkedIn: 1, active: 2, capacity: null },
     });
   });
 
@@ -253,6 +538,61 @@ describe("data-driven scenes", () => {
     expect(speakers.map((speaker) => speaker.slug)).not.toContain("openspace");
   });
 
+  test("the community wall shows the public directory: listed, active groups only", async () => {
+    const listed = await makeCommunity({ listed: true, logoUrl: "/images/communities/x/picture.webp" });
+    const unlisted = await makeCommunity({ listed: false });
+    const inactive = await makeCommunity({ listed: true, isActive: false });
+
+    const slugs = (await call(router.owyStage.getCommunities, undefined, by(null))).map(({ slug }) => slug);
+
+    expect(slugs).toContain(listed.slug);
+    expect(slugs).not.toContain(unlisted.slug);
+    expect(slugs).not.toContain(inactive.slug);
+  });
+
+  /** An event on the wall with people in every state the welcome wall tells apart. */
+  async function arrivalsOnAir() {
+    const { putOnAir } = await setup();
+    const { event } = await makeBoard({ event: { questions: [presetQuestion("foto")] } });
+    const other = await makeBoard();
+    await putOnAir({ scene: "welcome-wall", eventId: event.id });
+    const account = await makeUser({ image: "https://avatars.slack-edge.com/ana.png" });
+    const ana = await makeAttendee(event.id, {
+      name: "Ana González Pérez",
+      email: account.email.toUpperCase(),
+      checkedInAt: new Date("2026-11-07T17:30:00.000Z"),
+    });
+    const juan = await makeAttendee(event.id, { name: "Juan", checkedInAt: new Date("2026-11-07T17:31:00.000Z") });
+    await makeAttendee(event.id, { name: "Todavía no llegó" });
+    const tagged = await makeAttendee(event.id, { checkedInAt: new Date(), tags: ["Sin fotos"] });
+    await makeAttendee(event.id, { checkedInAt: new Date(), answers: { foto: "No" } });
+    // Another event's door never shows here.
+    const elsewhere = await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    return { account, ana, juan, tagged, elsewhere };
+  }
+
+  test("the welcome wall shows who came in to the wall's own event, as «Ana G.», minus anyone off photos", async () => {
+    await setup();
+    await expect(call(router.owyStage.getArrivals, undefined, by(null))).resolves.toStrictEqual([]);
+    const { ana, juan } = await arrivalsOnAir();
+
+    await expect(call(router.owyStage.getArrivals, undefined, by(null))).resolves.toStrictEqual([
+      { id: ana.id, name: "Ana G.", at: "2026-11-07T17:30:00.000Z" },
+      { id: juan.id, name: "Juan", at: "2026-11-07T17:31:00.000Z" },
+    ]);
+  });
+
+  test("a wall tile's picture is looked up only for someone the wall shows, by the ticket's email in any case", async () => {
+    const { account, ana, juan, tagged, elsewhere } = await arrivalsOnAir();
+    const avatar = (id: string) => Effect.runPromiseWith(liveServices)(arrivalAvatar(id));
+
+    await expect(avatar(ana.id)).resolves.toStrictEqual({ email: ana.email, image: account.image });
+    await expect(avatar(juan.id)).resolves.toStrictEqual({ email: juan.email, image: null });
+    await expect(avatar(tagged.id)).resolves.toBeNull();
+    await expect(avatar(elsewhere.id)).resolves.toBeNull();
+  });
+
   test("without Spotify configured the wall shows no track and the status says so", async () => {
     const { staff } = await setup();
 
@@ -260,6 +600,59 @@ describe("data-driven scenes", () => {
     await expect(call(router.owyStage.spotifyStatus, undefined, by(staff))).resolves.toStrictEqual({
       configured: false,
       account: null,
+    });
+  });
+});
+
+describe("«Owy y la grilla»", () => {
+  const newTalk = { needsTV: false, needsWhiteboard: false, skipResourceValidation: false };
+
+  test("with the autopilot on, a new talk brings the board (subtitles kept) and shows it big", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    await putOnAir({ scene: "owy-face", params: { captions: false }, eventId: event.id });
+    await call(router.owyStage.setAutopilot, { on: true }, by(staff));
+    // A desk save (it writes the same JSON) leaves the switch where it was.
+    await call(router.owyStage.saveDesk, { desk: { queue: [] } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const note = await call(
+      router.tracks.create,
+      { ...newTalk, title: "IA en el aula", openSpaceId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id },
+      by(staff)
+    );
+
+    await vi.waitFor(() =>
+      expect(publish).toHaveBeenCalledWith(
+        "owy-stage",
+        "spotlight",
+        expect.objectContaining({ how: "new", track: expect.objectContaining({ id: note.id, title: "IA en el aula" }) })
+      )
+    );
+    await expect(call(router.owyStage.getAutopilot, undefined, by(staff))).resolves.toStrictEqual({ on: true });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      params: { captions: false },
+      eventId: event.id,
+    });
+  });
+
+  test("«Destacar» brings the board for the talk's event and puts it up; only site staff do it", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    const talk = await makeTrack({ eventId: event.id, scheduleId: slots.late.id, roomId: rooms.tv.id });
+    await putOnAir({ scene: "agenda" });
+
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(staff))).resolves.toMatchObject({
+      how: "manual",
+      track: { id: talk.id, roomId: rooms.tv.id, scheduleId: slots.late.id },
+    });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      eventId: event.id,
+    });
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(await makeUser()))).rejects.toMatchObject({
+      code: "FORBIDDEN",
     });
   });
 });

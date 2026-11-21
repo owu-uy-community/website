@@ -1,6 +1,6 @@
 import { openapi } from "@orpc/openapi";
 
-import { pub, staff } from "../base";
+import { platform, pub } from "../base";
 import { CastStateSchema, GetCastStateSchema, SetHighlightedNoteSchema } from "./schemas";
 import * as Cast from "./service";
 
@@ -15,7 +15,7 @@ export const castRouter = {
       return yield* Cast.getCast(input.eventId);
     }),
 
-  setHighlightedNote: staff
+  setHighlightedNote: platform("stage:operate")
     .meta(docs("Put a talk on an event's screens, or clear them"))
     .input(SetHighlightedNoteSchema)
     .output(CastStateSchema)

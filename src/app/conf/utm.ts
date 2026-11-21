@@ -22,11 +22,13 @@ const CAMPAIGN = `owu-conf-${CONF_DATES.event.slice(0, 4)}`;
 /** Where in /conf the click happened. One name per placement, reused across pages. */
 export type ConfLinkPlacement =
   | "navbar-cta"
+  | "tickets"
   | "hero-venue"
   | "sponsor-marquee"
   | "sponsors-grid"
   | "institutional-support"
   | "team-linkedin"
+  | "speakers-linkedin"
   | "meetups-agenda"
   | "footer-social";
 

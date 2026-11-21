@@ -9,8 +9,8 @@ export default defineTool({
     "SOLO STAFF: estadísticas internas del evento — números del dashboard (grilla, salas, horarios) y resumen de inscripciones de Eventbrite (entradas). Nunca compartas estos números con gente que no sea staff.",
   inputSchema: z.object({}),
   async execute(_input, ctx) {
-    requireStaff(ctx);
-    const api = owuApi();
+    await requireStaff(ctx, "insight:read");
+    const api = owuApi(ctx);
     const event = await resolveActiveEvent();
 
     const [dashboard, eventbrite] = await Promise.allSettled([

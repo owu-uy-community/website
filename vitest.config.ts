@@ -38,7 +38,14 @@ export default defineConfig({
       reporter: isCI ? ["text-summary", "lcov"] : ["text", "lcov"],
       // Explicit include so files no test touches still count against the total.
       include: ["src/lib/**/*.ts", "src/app/api/**/*.ts"],
-      exclude: ["**/*.test.ts", "**/*.d.ts", "src/lib/db/seed.ts", "src/lib/db/create-owy-key.ts"],
+      exclude: [
+        "**/*.test.ts",
+        "**/*.d.ts",
+        "src/lib/db/seed.ts",
+        "src/lib/db/create-api-key.ts",
+        "src/lib/db/apply-triggers.ts",
+        "src/lib/db/migrate-rbac.ts",
+      ],
     },
     projects: [
       {

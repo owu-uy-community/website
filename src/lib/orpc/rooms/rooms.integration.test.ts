@@ -3,8 +3,9 @@ import { describe, expect, test, vi } from "vitest";
 
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
+import { ROOM_PALETTE, roomColorFor } from "lib/rooms/palette";
 import { by } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { makeBoard, makeMember, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 
 describe("rooms reads", () => {
   test("anyone lists an event's rooms in board order", async () => {
@@ -69,6 +70,41 @@ describe("rooms writes", () => {
         by(staff)
       )
     ).rejects.toMatchObject({ code: "CONFLICT" });
+  });
+
+  test("a new room takes a colour no other room of the event shows", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+    const colours = async () =>
+      (await call(router.rooms.getByOpenSpace, { openSpaceId: event.id }, by(null))).map((room) =>
+        roomColorFor(room.id, room.color)
+      );
+    // Counting rooms would pick the palette's fourth colour for the fourth room: make it taken.
+    await makeRoom(event.id, { name: "Pintada", color: ROOM_PALETTE[3] });
+    const inUse = await colours();
+
+    const room = await call(
+      router.rooms.create,
+      { name: "Patio", openSpaceId: event.id, hasTV: false, hasWhiteboard: false, isActive: true },
+      by(staff)
+    );
+
+    expect(inUse).not.toContain(room.color);
+  });
+
+  test("clearing a room's capacity and description in the editor clears them", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+    const room = await makeRoom(event.id, { capacity: 40, description: "Al fondo" });
+
+    const updated = await call(
+      router.rooms.update,
+      { id: room.id, data: { capacity: null, description: "" } },
+      by(staff)
+    );
+
+    expect(updated.capacity).toBeUndefined();
+    expect(updated.description).toBeUndefined();
   });
 
   test("#2 renaming a room keeps its TV and whiteboard", async () => {
@@ -178,5 +214,93 @@ describe("rooms writes", () => {
 
     const list = await call(router.rooms.getByOpenSpace, { openSpaceId: event.id }, by(null));
     expect(list.map((room) => room.id)).toStrictEqual([rooms.tv.id]);
+  });
+});
+
+describe("room status", () => {
+  test("a room's host marks it full; the board hears it and the log says who", async () => {
+    const { community, event, rooms } = await makeBoard();
+    const host = await makeMember(community.id, "member", { name: "Host Lobby" });
+    const publish = vi.spyOn(hub, "publish");
+
+    const room = await call(router.rooms.setStatus, { roomId: rooms.plain.id, status: "full" }, by(host));
+
+    expect(room).toMatchObject({ status: "full" });
+    expect(room.statusUpdatedAt).not.toBeNull();
+    expect(
+      publish.mock.calls.some(([channel, name]) => channel === `event:${event.id}:sync` && name === "structure_change")
+    ).toBe(true);
+    const [line] = await call(
+      router.activity.list,
+      { eventId: event.id, entityId: room.id },
+      by(await makeSiteAdmin())
+    );
+    expect(line).toMatchObject({ verb: "room.status", actor: { id: host.id } });
+  });
+
+  test("someone outside the community can't touch a room's status", async () => {
+    const { rooms } = await makeBoard();
+
+    await expect(
+      call(router.rooms.setStatus, { roomId: rooms.plain.id, status: "evacuate" }, by(await makeUser()))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  test("a member of another community can't touch this one's rooms; the room decides the community", async () => {
+    const ours = await makeBoard();
+    const theirs = await makeBoard();
+    const neighbour = await makeMember(theirs.community.id, "owner");
+
+    await expect(
+      call(router.rooms.setStatus, { roomId: ours.rooms.plain.id, status: "full" }, by(neighbour))
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(
+      call(router.rooms.setStatus, { roomId: "does-not-exist", status: "full" }, by(neighbour))
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  test("evacuating alerts the whole staff once, and the all-clear goes out calmly", async () => {
+    const { community, event, rooms } = await makeBoard();
+    const host = await makeMember(community.id, "member", { name: "Host Cueva" });
+    const setStatus = (status: "open" | "full" | "evacuate") =>
+      call(router.rooms.setStatus, { roomId: rooms.plain.id, status }, by(host));
+    const announcements = async () =>
+      (await call(router.staffTasks.announcements.list, { eventId: event.id }, by(host)))
+        .map((item) => [item.body, item.urgent])
+        .toReversed();
+
+    await setStatus("full");
+    await expect(announcements()).resolves.toStrictEqual([]);
+
+    await setStatus("evacuate");
+    await setStatus("evacuate");
+    await setStatus("open");
+
+    await expect(announcements()).resolves.toStrictEqual([
+      [`Evacuar ${rooms.plain.name}`, true],
+      [`${rooms.plain.name} vuelve a estar abierta`, false],
+    ]);
+  });
+});
+
+describe("rooms activity", () => {
+  test("adding, renaming and deleting a room each leave a line", async () => {
+    const { event } = await makeBoard();
+    const staff = await makeSiteAdmin();
+
+    const room = await call(
+      router.rooms.create,
+      { name: "Patio", openSpaceId: event.id, hasTV: false, hasWhiteboard: false, isActive: true },
+      by(staff)
+    );
+    await call(router.rooms.update, { id: room.id, data: { name: "Terraza" } }, by(staff));
+    await call(router.rooms.delete, { id: room.id }, by(staff));
+
+    const lines = await call(router.activity.list, { eventId: event.id, entityId: room.id }, by(staff));
+    expect(lines.map((line) => line.summary)).toStrictEqual([
+      "borró la sala Terraza",
+      "renombró la sala Patio a Terraza",
+      "agregó la sala Patio",
+    ]);
   });
 });

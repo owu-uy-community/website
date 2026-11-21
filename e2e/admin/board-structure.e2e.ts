@@ -5,6 +5,12 @@ import { expect, test } from "../fixtures";
 
 const grid = (screen: Page) => screen.getByRole("region", { name: "Grilla de charlas" });
 
+/** "Salas y horarios" lives in the board's overflow menu. */
+async function openStructure(screen: Page) {
+  await screen.getByRole("button", { name: "Más opciones" }).click();
+  await screen.getByRole("menuitem", { name: "Salas y horarios" }).click();
+}
+
 test("a deleted talk comes back with Deshacer", async ({ page, board }) => {
   await makeTrack(
     { eventId: board.event.id, scheduleId: board.slots.early.id, roomId: board.rooms.plain.id },
@@ -16,8 +22,11 @@ test("a deleted talk comes back with Deshacer", async ({ page, board }) => {
   await page.getByRole("button", { name: "Eliminar charla" }).click();
   await expect(grid(page).getByText("Volveré", { exact: true })).toBeHidden();
 
+  // The card comes back at once; the reload waits for the server to have it, or it would abort the write
+  const restored = page.waitForResponse("**/api/orpc/tracks/create");
   await page.getByRole("button", { name: "Deshacer" }).click();
   await expect(grid(page).getByText("Volveré", { exact: true })).toBeVisible();
+  await restored;
   await page.reload();
   await expect(grid(page).getByText("Volveré", { exact: true })).toBeVisible();
 });
@@ -28,7 +37,7 @@ test("deleting a room that holds talks says how many go with it", async ({ page,
   await makeTrack({ ...where, scheduleId: board.slots.late.id }, { title: "Dos" });
   await page.goto(board.url);
 
-  await page.getByRole("button", { name: "Salas y horarios" }).click();
+  await openStructure(page);
   await page.getByRole("button", { name: `Eliminar ${board.rooms.plain.name}` }).click();
   await expect(page.getByRole("alertdialog")).toContainText("Las 2 charlas de esta sala también se eliminan");
   await page.getByRole("button", { name: "Eliminar sala" }).click();
@@ -45,7 +54,7 @@ test("rooms reordered from the panel keep their new order", async ({ page, board
   const x = async (name: string) => (await grid(page).getByText(name, { exact: true }).boundingBox())!.x;
   expect(await x(board.rooms.plain.name)).toBeLessThan(await x(board.rooms.tv.name));
 
-  await page.getByRole("button", { name: "Salas y horarios" }).click();
+  await openStructure(page);
   const saved = page.waitForResponse("**/api/orpc/rooms/reorder");
   await page.getByRole("button", { name: `Mover ${board.rooms.tv.name}` }).press("ArrowUp");
   await saved;
@@ -56,7 +65,7 @@ test("rooms reordered from the panel keep their new order", async ({ page, board
 
 test("a room switched off leaves the kiosk but stays, dimmed, on the board", async ({ page, pageAs, board }) => {
   await page.goto(board.url);
-  await page.getByRole("button", { name: "Salas y horarios" }).click();
+  await openStructure(page);
   const saved = page.waitForResponse("**/api/orpc/rooms/update");
   await page.getByRole("switch", { name: `${board.rooms.tv.name} activa` }).click();
   await saved;
@@ -74,10 +83,10 @@ test("a room switched off leaves the kiosk but stays, dimmed, on the board", asy
 test("a room added on one screen shows up on the others without a reload", async ({ page, pageAs, board }) => {
   const other = await pageAs("admin");
   await Promise.all([page.goto(board.url), other.goto(board.url)]);
-  // Listening: the board's live channel is open (the sidebar has an "En vivo" section too).
-  await expect(other.getByRole("main").getByText("En vivo", { exact: true })).toBeVisible();
+  // Listening: the realtime socket is open (the header's one connection pill says so).
+  await expect(other.getByText("Tiempo real", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Salas y horarios" }).click();
+  await openStructure(page);
   await page.getByRole("button", { name: "Nueva sala" }).click();
   await page.getByLabel("Nombre").fill("Patio");
   await page.getByRole("button", { name: "Crear sala" }).click();

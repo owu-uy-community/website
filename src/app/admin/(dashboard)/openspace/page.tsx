@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { caller } from "lib/orpc/server";
 
 /**
@@ -9,7 +9,7 @@ import { caller } from "lib/orpc/server";
  * forward there, keeping the selection.
  */
 export default async function OpenSpaceLegacyPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
-  await requireAdmin();
+  await requirePermission("program:manage");
 
   const { event: eventSlug } = await searchParams;
   const events = await caller.openSpaces.listForAdmin();

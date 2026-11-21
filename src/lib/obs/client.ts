@@ -7,6 +7,8 @@ import { OBS_CONFIG } from "app/lib/constants";
 import { toast } from "components/shared/ui/toast-utils";
 import type { Command } from "lib/orpc/obs-control/schemas";
 
+import { streamKbps, type BytesSample } from "./health";
+
 /**
  * The tab's one connection to OBS (obs-websocket v5) as an external store:
  * `useObs()` renders confirmed state (what OBS said in an event), actions mark
@@ -43,6 +45,12 @@ export interface ObsState {
   recordMs: number;
   skippedFrames: number;
   totalFrames: number;
+  /** Bitrate over the last poll; `null` until two polls of the same stream. */
+  streamKbps: number | null;
+  /** OBS's congestion reading, 0–1. */
+  streamCongestion: number;
+  /** The stream dropped and OBS is retrying. */
+  streamReconnecting: boolean;
   fps: number;
   cpu: number;
   /** pending key → issued at (ms). Keys: program:<scene> preview:<scene> studio mute:<input> stream record. */
@@ -79,6 +87,9 @@ const INITIAL: ObsState = {
   recordMs: 0,
   skippedFrames: 0,
   totalFrames: 0,
+  streamKbps: null,
+  streamCongestion: 0,
+  streamReconnecting: false,
   fps: 0,
   cpu: 0,
   pending: {},
@@ -87,7 +98,8 @@ const INITIAL: ObsState = {
 const SETTINGS_KEY = "obs-connection";
 /** Same key the previous page used, so already-captured previews show up. */
 const THUMBS_KEY = "obs-scene-previews";
-const STATS_INTERVAL_MS = 5_000;
+/** How often OBS is asked for the stream's and the recording's stats (and so their durations). */
+export const STATS_INTERVAL_MS = 5_000;
 const THUMBS_INTERVAL_MS = 5_000;
 const THUMB_WIDTH = 320;
 const RECONNECT_MAX_MS = 30_000;
@@ -172,6 +184,7 @@ class ObsClient {
   private thumbListeners = new Set<() => void>();
   private thumbs: Record<string, string> = loadThumbs();
   private walking = false;
+  private lastBytes: BytesSample | null = null;
 
   constructor() {
     this.bind();
@@ -320,6 +333,7 @@ class ObsClient {
     ]);
 
     const inputs = await this.loadInputs(inputList.inputs as { inputName: string; inputKind: string }[]);
+    this.lastBytes = { bytes: stream.outputBytes, at: Date.now() };
 
     this.set({
       scenes: sceneNames(sceneList.scenes),
@@ -334,6 +348,9 @@ class ObsClient {
       streamMs: stream.outputDuration,
       skippedFrames: stream.outputSkippedFrames,
       totalFrames: stream.outputTotalFrames,
+      streamKbps: null,
+      streamCongestion: stream.outputCongestion,
+      streamReconnecting: stream.outputReconnecting,
       recording: record.outputActive,
       recordMs: record.outputDuration,
       pending: {},
@@ -371,18 +388,24 @@ class ObsClient {
     this.statsTimer = setInterval(() => {
       if (this.state.connection !== "connected") return;
       Promise.all([this.obs.call("GetStreamStatus"), this.obs.call("GetRecordStatus"), this.obs.call("GetStats")])
-        .then(([stream, record, stats]) =>
+        .then(([stream, record, stats]) => {
+          const at = Date.now();
+          const kbps = streamKbps(stream, this.lastBytes, at);
+          this.lastBytes = stream.outputActive ? { bytes: stream.outputBytes, at } : null;
           this.set({
             streaming: stream.outputActive,
             streamMs: stream.outputDuration,
             skippedFrames: stream.outputSkippedFrames,
             totalFrames: stream.outputTotalFrames,
+            streamKbps: kbps,
+            streamCongestion: stream.outputCongestion,
+            streamReconnecting: stream.outputReconnecting,
             recording: record.outputActive,
             recordMs: record.outputDuration,
             fps: stats.activeFps,
             cpu: stats.cpuUsage,
-          })
-        )
+          });
+        })
         .catch(() => {
           // connection is going away; ConnectionClosed handles it
         });
@@ -544,7 +567,14 @@ class ObsClient {
     });
     obs.on("StreamStateChanged", ({ outputActive, outputState }) => {
       if (outputState.endsWith("_STARTED") || outputState.endsWith("_STOPPED")) this.clearPending("stream");
-      this.set({ streaming: outputActive, streamMs: outputActive ? this.state.streamMs : 0 });
+      if (!outputActive) this.lastBytes = null;
+      this.set({
+        streaming: outputActive,
+        streamMs: outputActive ? this.state.streamMs : 0,
+        // Told at once, not on the next poll: a dropped stream is what the operator must see first.
+        streamReconnecting: outputState.endsWith("_RECONNECTING"),
+        ...(outputActive ? {} : { streamKbps: null, streamCongestion: 0 }),
+      });
     });
     obs.on("RecordStateChanged", ({ outputActive, outputState }) => {
       if (outputState.endsWith("_STARTED") || outputState.endsWith("_STOPPED")) this.clearPending("record");

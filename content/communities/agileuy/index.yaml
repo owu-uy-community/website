@@ -1,0 +1,12 @@
+name: "AgileUY"
+picture: /images/communities/agileuy/picture.webp
+description: "Comunidad de agilidad: charlas, talleres y open spaces para aprender y compartir experiencias. No hace falta experiencia previa."
+topics:
+  - general
+status: activa
+linkedin: https://www.linkedin.com/company/agileuy/
+instagram: https://www.instagram.com/agiles.uy/
+meetup: https://www.meetup.com/agileuy/
+feedNames:
+  - "AgileUY"
+confPartner: false

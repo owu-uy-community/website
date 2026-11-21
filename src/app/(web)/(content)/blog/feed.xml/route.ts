@@ -1,8 +1,6 @@
+import { cacheLife } from "next/cache";
 import { BLOG_DESCRIPTION, BLOG_NAME, SITE_URL } from "../(posts)/post-metadata";
 import { getBlogPosts } from "../(posts)/posts";
-
-// Generated at build time (getBlogPosts reads the filesystem, absent at runtime on Vercel)
-export const dynamic = "force-static";
 
 function escapeXml(value: string) {
   return value
@@ -13,7 +11,13 @@ function escapeXml(value: string) {
     .replace(/'/g, "&apos;");
 }
 
-export async function GET() {
+// Built with the deploy: getBlogPosts reads the filesystem, absent at runtime on Vercel
+async function render() {
+  "use cache";
+  // A year: it never regenerates between deploys (the files it reads only exist at build), the way
+  // `dynamic = "force-static"` behaved
+  cacheLife({ stale: 300, revalidate: 31_536_000, expire: 31_536_000 });
+
   const posts = await getBlogPosts();
 
   const items = posts
@@ -48,7 +52,11 @@ export async function GET() {
     "</channel>" +
     "</rss>";
 
-  return new Response(xml, {
+  return xml;
+}
+
+export async function GET() {
+  return new Response(await render(), {
     headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
   });
 }

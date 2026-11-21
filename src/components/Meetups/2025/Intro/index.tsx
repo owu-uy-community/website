@@ -331,7 +331,7 @@ export default function IntroSection() {
                 fill
                 className="object-contain"
                 crossOrigin="anonymous"
-                priority
+                loading="eager"
               />
             </div>
 

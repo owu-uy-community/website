@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { ClipboardList } from "lucide-react";
 
-import { requireStaffSession } from "app/lib/auth-helpers";
+import { requireDashboardAccess } from "app/lib/auth-helpers";
 import { Empty } from "components/shared/ui/empty";
 import { caller } from "lib/orpc/server";
 
 /** Legacy URL: tareas now live under /admin/<communitySlug>/tareas. */
 export default async function TareasLegacyPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
-  await requireStaffSession();
+  await requireDashboardAccess();
 
   const { event: eventSlug } = await searchParams;
   const events = await caller.openSpaces.listForAdmin();

@@ -162,7 +162,7 @@ export function ScheduleFormModal({
         isEditMode && onDelete ? (
           <Button
             aria-label="Eliminar horario"
-            className="h-11 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive sm:h-10"
+            className="h-11 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive pointer-fine:sm:h-10"
             disabled={isSaving}
             type="button"
             variant="ghost"

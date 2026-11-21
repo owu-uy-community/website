@@ -7,6 +7,8 @@ import { cn } from "app/lib/utils";
 import type { ObsView } from "lib/obs/actions";
 import { getObsClient } from "lib/obs/client";
 
+import { TALLY, tallyChip } from "./tally";
+
 /**
  * Preview | Program, refreshed from OBS at 1 fps (0.5 fps on narrow screens,
  * paused while the tab is hidden) when this tab has the socket; name-only
@@ -30,8 +32,7 @@ function Monitor({
     <div
       className={cn(
         "relative aspect-video w-full overflow-hidden rounded-lg border-2 bg-black",
-        tone === "program" ? "border-red-500/80" : "border-green-500/70",
-        pending && "animate-pulse border-amber-400"
+        pending ? [TALLY.pending.border, "motion-safe:animate-pulse"] : TALLY[tone].border
       )}
     >
       {image ? (
@@ -39,30 +40,22 @@ function Monitor({
       ) : (
         <div className="flex h-full w-full items-center justify-center text-muted-foreground">
           {scene ? (
-            <span className="line-clamp-2 px-4 pt-4 text-center text-lg font-bold text-white/80">{scene}</span>
+            <span className="line-clamp-2 px-4 pt-4 text-center text-lg font-semibold text-white/80">{scene}</span>
           ) : (
-            <MonitorOff className="h-8 w-8 opacity-40" />
+            <MonitorOff aria-hidden className="size-8 opacity-40" />
           )}
         </div>
       )}
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-2">
-        <span
-          className={cn(
-            "rounded px-2 py-0.5 text-[11px] font-bold tracking-wider uppercase",
-            tone === "program" ? "bg-red-600 text-white" : "bg-green-600 text-white"
-          )}
-        >
+        <span className={tallyChip(tone, "flex items-center gap-1.5 backdrop-blur")}>
+          <span aria-hidden className={cn("size-1.5 rounded-full", TALLY[tone].dot)} />
           {label}
         </span>
-        {pending && (
-          <span className="rounded bg-amber-400 px-2 py-0.5 text-[11px] font-bold tracking-wider text-black uppercase">
-            Pendiente…
-          </span>
-        )}
+        {pending && <span className={tallyChip("pending", "backdrop-blur")}>Pendiente…</span>}
       </div>
       {(image || !scene) && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 pt-6">
-          <p className="truncate text-sm font-semibold text-white">{scene || "—"}</p>
+          <p className="truncate text-ui font-semibold text-white">{scene || "—"}</p>
         </div>
       )}
     </div>
@@ -75,7 +68,9 @@ export function Monitors({ view }: { view: ObsView }) {
     preview: null,
     program: null,
   });
-  const showPreview = view.studioMode;
+  // Until OBS answers, keep the studio layout (the usual one): a single monitor twice as tall would
+  // drop everything below it by half a screen once the preview shows up.
+  const showPreview = view.studioMode || !view.connected;
   const previewName = view.preview;
   const programName = view.program;
 
@@ -120,13 +115,7 @@ export function Monitors({ view }: { view: ObsView }) {
       {showPreview && (
         <Monitor image={images.preview} label="Preview" pending={previewPending} scene={view.preview} tone="preview" />
       )}
-      <Monitor
-        image={images.program}
-        label="Program · al aire"
-        pending={programPending}
-        scene={view.program}
-        tone="program"
-      />
+      <Monitor image={images.program} label="Al aire" pending={programPending} scene={view.program} tone="program" />
     </div>
   );
 }

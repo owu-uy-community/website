@@ -1,10 +1,17 @@
-import { owuApi, type AdminEventOption, type Room, type Schedule, type StickyNote } from "./owu-api";
+import { owuApi, type AdminEventOption, type Room, type RoomStatus, type Schedule, type StickyNote } from "./owu-api";
 
 /**
  * Openspace board composition + friendly-name resolution shared by the grid
  * tools. A board cell is (schedule, room) and holds at most one track/card
  * (enforced by the API with a unique constraint + slot-conflict validation).
  */
+
+/** How a room's status reads in Owy's answers. */
+export const ROOM_STATUS_WORDS: Record<RoomStatus, string> = {
+  open: "abierta",
+  full: "llena",
+  evacuate: "en evacuación",
+};
 
 export interface BoardSnapshot {
   openSpace: { id: string; name: string; community?: string };
@@ -19,18 +26,18 @@ export interface BoardSnapshot {
  * events), so pin it with OWY_EVENT_ID; without a pin, Owy takes the most
  * recent event it can operate (`listForAdmin` returns them newest first).
  */
-export async function resolveActiveEvent(): Promise<AdminEventOption> {
+/** `pinned`: an event id or slug that wins over OWY_EVENT_ID (the companion's pitch target). */
+export async function resolveActiveEvent(pinned = process.env.OWY_EVENT_ID?.trim()): Promise<AdminEventOption> {
   const events = await owuApi().openSpaces.listForAdmin();
   if (events.length === 0) {
     throw new Error("No hay ningún evento cargado en el sistema todavía.");
   }
 
-  const pinned = process.env.OWY_EVENT_ID?.trim();
   if (pinned) {
     const match = events.find((event) => event.id === pinned || event.slug === pinned);
     if (!match) {
       const options = events.map((event) => `${event.name} (${event.slug}, id ${event.id})`).join("; ");
-      throw new Error(`OWY_EVENT_ID="${pinned}" no matchea ningún evento. Disponibles: ${options}.`);
+      throw new Error(`El evento "${pinned}" no matchea ningún evento. Disponibles: ${options}.`);
     }
     return match;
   }

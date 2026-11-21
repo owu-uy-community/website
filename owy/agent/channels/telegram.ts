@@ -9,7 +9,8 @@ import { telegramChannel } from "eve/channels/telegram";
  *
  * Defaults handle dispatch: private chats always reach Owy; in groups only
  * /commands, @mentions of the bot, or replies to Owy's messages wake it.
- * Staff-only tools verify the OWY_STAFF_TELEGRAM_IDS allowlist themselves.
+ * Staff-only tools ask the site with the person's Telegram id, once they
+ * linked it (owu.uy → /acceso → Vincular Telegram, then /vincular <código>).
  */
 export default telegramChannel({
   botUsername: process.env.TELEGRAM_BOT_USERNAME ?? "owy_bot",

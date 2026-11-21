@@ -20,12 +20,22 @@ const config = {
     },
     extend: {
       fontFamily: {
-        pixel: ['"Press Start 2P"', "monospace"],
-        display: ["Poppins", "sans-serif"],
-        title: ["Poppins", "sans-serif"],
-        terminal: ['"Geist Mono"', "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        display: ["var(--font-poppins)", "sans-serif"],
+        title: ["var(--font-poppins)", "sans-serif"],
+        terminal: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        open: ["var(--font-open-sans)", "sans-serif"],
       },
       colors: {
+        // Community site surfaces (owu.uy public pages): near-black ink and white hairlines
+        ink: {
+          DEFAULT: "#09090b",
+          elev: "#0f0f11",
+          card: "#131316",
+        },
+        line: {
+          DEFAULT: "rgb(255 255 255 / 0.08)",
+          strong: "rgb(255 255 255 / 0.14)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -34,6 +44,31 @@ const config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          surface: "hsl(var(--primary-surface))",
+        },
+        app: "hsl(var(--app))",
+        raised: "hsl(var(--raised))",
+        subtle: "hsl(var(--subtle))",
+        faint: "hsl(var(--faint))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+          surface: "hsl(var(--success-surface))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+          surface: "hsl(var(--warning-surface))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+          surface: "hsl(var(--info-surface))",
+        },
+        live: {
+          DEFAULT: "hsl(var(--live))",
+          foreground: "hsl(var(--live-foreground))",
+          surface: "hsl(var(--live-surface))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -84,6 +119,20 @@ const config = {
       },
       blur: {
         "4xl": "128px",
+      },
+      /* The admin's dense type scale: 13px interface text, 12px meta, then labels. */
+      fontSize: {
+        ui: ["13px", { lineHeight: "20px" }],
+        meta: ["12px", { lineHeight: "16px" }],
+        "2xs": ["11px", { lineHeight: "14px" }],
+        "3xs": ["10px", { lineHeight: "12px" }],
+      },
+      boxShadow: {
+        /* A 1px top highlight: surfaces read as lit from above. */
+        edge: "inset 0 1px 0 rgb(255 255 255 / 0.04)",
+        "edge-primary": "inset 0 1px 0 rgb(255 255 255 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4)",
+        overlay:
+          "0 24px 80px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.04)",
       },
       keyframes: {
         "accordion-down": {
@@ -208,6 +257,30 @@ const config = {
           "12%, 88%": { opacity: "1" },
           "100%": { transform: "translateY(130%)", opacity: "0" },
         },
+        /* Admin "needs you" signal: two discrete states, so it never repaints between them. */
+        "blink-step": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.3" },
+        },
+        /* OWU Unplugged (unplugged.owu.uy): the site's twinkle, and its flickering letter as its
+           script plays it, lit with short bursts (its CSS fallback leaves the letter dim half the time). */
+        "unplugged-twinkle": {
+          "0%, 100%": { opacity: "0.3", transform: "scale(1)" },
+          "50%": { opacity: "0.9", transform: "scale(1.2)" },
+        },
+        "unplugged-flicker": {
+          "0%, 42%, 47%, 83%, 100%": { opacity: "1" },
+          "40%, 80%": { opacity: "0.3" },
+          "44%": { opacity: "0.5" },
+        },
+        "unplugged-glow": {
+          "0%, 100%": { opacity: "0.35" },
+          "50%": { opacity: "1" },
+        },
+        "unplugged-sweep": {
+          from: { transform: "translateY(-40px)" },
+          to: { transform: "translateY(1120px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -232,6 +305,11 @@ const config = {
         "terminal-pulse": "terminal-pulse 0.55s ease-out",
         sheen: "sheen 6s ease-in-out infinite",
         "barcode-scan": "barcode-scan 2.4s ease-in-out infinite",
+        "blink-step": "blink-step 1.4s steps(1, end) infinite",
+        "unplugged-twinkle": "unplugged-twinkle 3s ease-in-out infinite",
+        "unplugged-flicker": "unplugged-flicker 2.2s step-end infinite",
+        "unplugged-glow": "unplugged-glow 2.4s ease-in-out infinite",
+        "unplugged-sweep": "unplugged-sweep 8s linear infinite",
       },
     },
   },

@@ -31,6 +31,7 @@ export const SPONSORS_2026: Sponsor[] = [
   { name: "Streaver", logo: "/images/conf/sponsors/streaver.svg", website: "https://www.streaver.com/" },
   { name: "Trupropel", logo: "/images/conf/sponsors/trupropel.svg", website: "https://www.trupropel.com/" },
   { name: "Tryolabs", logo: "/images/conf/sponsors/tryolabs.svg", website: "https://tryolabs.com/" },
+  { name: "Universidad de Montevideo", logo: "/images/conf/sponsors/um.svg", website: "https://www.um.edu.uy/" },
   {
     name: "Universidad ORT Uruguay",
     logo: "/images/conf/sponsors/ort.webp",
@@ -42,6 +43,9 @@ export const SPONSORS_2026: Sponsor[] = [
 ];
 
 export default function Sponsors() {
+  // The copy follows the deadline (the countdown alone would keep saying "we accept" next to "closed")
+  const isOpen = Date.now() < Date.parse(CONF_DATES.sponsorsDeadline);
+
   return (
     <section className="mx-auto mt-16 w-full max-w-[1440px] scroll-mt-24 px-8 sm:mt-[96px]" id="sponsors">
       <SectionHeader eyebrow="EMPRESAS" title="SPONSORS" />
@@ -61,10 +65,10 @@ export default function Sponsors() {
         <div className="mt-12 flex flex-col gap-8 border-2 border-[#FBF5E7]/15 p-5 sm:p-8 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="font-display text-xs leading-none font-semibold tracking-[0.18em] text-[#FBF5E7]/60 uppercase">
-              Aceptamos postulaciones
+              {isOpen ? "Aceptamos postulaciones" : "Convocatoria 2026"}
             </p>
             <p className="mt-3 font-display text-2xl leading-none font-extrabold tracking-[-0.02em] text-balance text-[#F5BB03] uppercase sm:text-3xl">
-              Hasta el 15 de septiembre
+              {isOpen ? "Hasta el 15 de septiembre" : "Cerró el 15 de septiembre"}
             </p>
           </div>
           <Countdown

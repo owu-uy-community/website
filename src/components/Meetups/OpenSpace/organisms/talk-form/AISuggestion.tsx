@@ -34,60 +34,55 @@ export function AISuggestion({
   return (
     <div className="space-y-2">
       <Notice show={Boolean(current?.degraded)} tone="warning">
-        La AI no pudo sugerir nada: esto es apenas el primer espacio libre. Elegí sala y horario a mano.
+        La IA no pudo sugerir nada: este es apenas el primer lugar libre. Elegí sala y bloque a mano.
       </Notice>
 
       <Button
         aria-expanded={showAiReasoning}
-        className="w-full justify-between rounded-lg border border-border bg-muted/30 text-foreground hover:bg-muted/60"
+        className="w-full justify-between rounded-lg border border-border bg-raised text-foreground hover:bg-accent"
         size="sm"
         type="button"
         variant="ghost"
         onClick={onToggleReasoning}
       >
         <span className="flex items-center gap-2">
-          <Info className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">Razonamiento de la AI</span>
+          <Info className="text-muted-foreground" />
+          <span className="text-ui font-medium">Razonamiento de la IA</span>
         </span>
         <ChevronDown
-          className={cn(
-            "h-4 w-4 text-muted-foreground transition-transform duration-200",
-            showAiReasoning && "rotate-180"
-          )}
+          className={cn("text-muted-foreground transition-transform duration-200", showAiReasoning && "rotate-180")}
         />
       </Button>
 
       <Collapse className="space-y-3" show={showAiReasoning}>
-        <div className="rounded-md border border-border bg-muted/30 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-primary/10 p-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium text-foreground">¿Por qué este horario?</p>
-              <p className="text-sm leading-relaxed text-muted-foreground">{aiReasoning}</p>
+        <div className="rounded-lg border border-border bg-raised p-3">
+          <div className="flex items-start gap-2.5">
+            <Sparkles aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-ui font-medium text-foreground">¿Por qué acá?</p>
+              <p className="text-ui leading-relaxed text-muted-foreground">{aiReasoning}</p>
             </div>
           </div>
         </div>
 
         {current?.alternatives && current.alternatives.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Alternativas sugeridas</p>
+            <p className="text-meta font-medium text-muted-foreground">Otras opciones</p>
             {current.alternatives.map((alt, idx) => (
               <button
                 key={idx}
-                className="w-full rounded-md border border-border bg-muted/20 p-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/50"
+                className="w-full rounded-md border border-border bg-raised p-2 text-left transition-colors hover:border-white/15 hover:bg-accent"
                 type="button"
                 onClick={() => onApplyAlternative(alt)}
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1">
-                    <p className="font-terminal text-xs font-medium text-foreground">
+                    <p className="font-terminal text-meta font-medium text-foreground tabular-nums">
                       {alt.room} · {alt.timeSlot}
                     </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{alt.reasoning}</p>
+                    <p className="mt-0.5 text-meta text-muted-foreground">{alt.reasoning}</p>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 </div>
               </button>
             ))}
@@ -108,7 +103,7 @@ export function AISuggestion({
             <ChevronLeft className="h-4 w-4" />
             Anterior
           </Button>
-          <span className="font-terminal text-xs text-muted-foreground tabular-nums">
+          <span className="font-terminal text-meta text-muted-foreground tabular-nums">
             {currentHistoryIndex + 1} / {suggestionHistory.length}
           </span>
           <Button

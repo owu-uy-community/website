@@ -315,8 +315,10 @@ export default function StickyNoteDisplay({ eventId }: { eventId: string }) {
                   </div>
 
                   <div className="text-center">
-                    <p className="text-5xl font-bold text-gray-800">Esperando un track</p>
-                    <p className="mt-4 text-2xl text-gray-600">Selecciona un track desde el panel de administración</p>
+                    <p className="text-5xl font-bold text-gray-800">Esperando una charla</p>
+                    <p className="mt-4 text-2xl text-gray-600">
+                      Mandá una charla a esta pantalla desde la agenda del admin
+                    </p>
                   </div>
                 </div>
               )}

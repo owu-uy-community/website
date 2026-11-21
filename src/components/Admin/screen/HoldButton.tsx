@@ -4,11 +4,33 @@ import { useEffect, useRef, useState, type ComponentProps } from "react";
 
 import { cn } from "app/lib/utils";
 import { Button } from "components/shared/ui/button";
+import { toast } from "components/shared/ui/toast-utils";
+
+/**
+ * Once it fires, what replaces this button sits under the finger (Stream, after stopping the
+ * stream), and Safari clicks on the lift after a long press: drop that one click. The next press
+ * re-arms clicks.
+ */
+function dropTheLiftClick() {
+  const done = new AbortController();
+  const options = { capture: true, signal: done.signal };
+  document.addEventListener(
+    "click",
+    (event) => {
+      if (event.detail === 0) return; // the keyboard's, not the lift's
+      event.preventDefault();
+      event.stopPropagation();
+      done.abort();
+    },
+    options
+  );
+  document.addEventListener("pointerdown", () => done.abort(), options);
+}
 
 /**
  * Press and hold to fire — for the two things you never want to hit by
  * accident on a tablet on show day (stop stream, stop recording). A ring fills
- * while held; letting go early cancels.
+ * while held; letting go early cancels and shows the title, which a touchscreen never shows.
  */
 export function HoldButton({
   holdMs = 1200,
@@ -22,6 +44,7 @@ export function HoldButton({
   const frame = useRef<number | null>(null);
   const startedAt = useRef<number | null>(null);
   const fired = useRef(false);
+  const hintedAt = useRef(0);
 
   const stop = () => {
     if (frame.current) cancelAnimationFrame(frame.current);
@@ -41,6 +64,7 @@ export function HoldButton({
       if (value >= 1) {
         if (!fired.current) {
           fired.current = true;
+          dropTheLiftClick();
           onHold();
         }
         stop();
@@ -50,6 +74,15 @@ export function HoldButton({
       frame.current = requestAnimationFrame(tick);
     };
     frame.current = requestAnimationFrame(tick);
+  };
+
+  const release = () => {
+    // Let go early: say how it works, once per toast rather than once per tap.
+    if (startedAt.current !== null && !fired.current && performance.now() - hintedAt.current > 4000) {
+      hintedAt.current = performance.now();
+      toast.info(props.title ?? "Mantené apretado para confirmar");
+    }
+    stop();
   };
 
   useEffect(() => stop, []);
@@ -62,7 +95,7 @@ export function HoldButton({
       onPointerCancel={stop}
       onPointerDown={start}
       onPointerLeave={stop}
-      onPointerUp={stop}
+      onPointerUp={release}
       {...props}
     >
       <span
@@ -70,7 +103,7 @@ export function HoldButton({
         className="pointer-events-none absolute inset-y-0 left-0 bg-white/25"
         style={{ width: `${progress * 100}%`, transition: progress === 0 ? "width 120ms" : undefined }}
       />
-      <span className="relative">{children}</span>
+      <span className="relative flex items-center gap-1.5">{children}</span>
     </Button>
   );
 }

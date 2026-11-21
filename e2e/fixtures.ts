@@ -21,9 +21,23 @@ export const signedOut = { cookies: [], origins: [] };
 const contextOptions = { baseURL, locale: "es-UY", timezoneId: "America/Montevideo", storageState: signedOut };
 
 type Board = Awaited<ReturnType<typeof makeBoard>> & { url: string };
+type BoardEvent = NonNullable<Parameters<typeof makeBoard>[0]>["event"];
+
+const DAY_MS = 86_400_000;
+/** Hoy is Preparación only before the day: tests about it `test.use` an event a month out, whatever today is. */
+export const MONTH_AHEAD: BoardEvent = {
+  startDate: new Date(Date.now() + 30 * DAY_MS),
+  endDate: new Date(Date.now() + 30 * DAY_MS + DAY_MS / 4),
+};
 
 export const test = base.extend<
-  { pageAs: (role: Role | "anonymous") => Promise<Page>; board: Board },
+  {
+    pageAs: (role: Role | "anonymous") => Promise<Page>;
+    pageFor: (user: UserRow) => Promise<Page>;
+    board: Board;
+    /** Overrides for the `board` event (the factory puts it on a fixed date). */
+    boardEvent: BoardEvent;
+  },
   { tenant: Tenant }
 >({
   /** Each worker gets its own community, event, rooms, slots and people — no shared seed. */
@@ -47,8 +61,10 @@ export const test = base.extend<
   },
 
   /** A board of its own for one test (community, event, two rooms, two slots), and its admin URL. */
-  board: async ({}, use) => {
-    const board = await makeBoard();
+  boardEvent: [{}, { option: true }],
+
+  board: async ({ boardEvent }, use) => {
+    const board = await makeBoard({ event: boardEvent });
     await use({ ...board, url: `/admin/${board.community.slug}/openspace?event=${board.event.slug}` });
   },
 
@@ -59,6 +75,19 @@ export const test = base.extend<
       const context = await browser.newContext(contextOptions);
       contexts.push(context);
       if (role !== "anonymous") await context.addCookies([await sessionCookie(tenant.users[role])]);
+
+      return context.newPage();
+    });
+    await Promise.all(contexts.map((context) => context.close()));
+  },
+
+  /** A fresh page signed in as someone the test made (an organizer of another community…). */
+  pageFor: async ({ browser }, use) => {
+    const contexts: BrowserContext[] = [];
+    await use(async (user) => {
+      const context = await browser.newContext(contextOptions);
+      contexts.push(context);
+      await context.addCookies([await sessionCookie(user)]);
 
       return context.newPage();
     });

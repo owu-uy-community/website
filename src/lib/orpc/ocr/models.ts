@@ -64,12 +64,23 @@ export function gatewayFallbacks(model: { readonly fallbacks: readonly string[] 
  * longer exists anywhere in this codebase.
  */
 export function describeAiFailure(error: unknown): string {
-  const detail = error instanceof Error ? error.message : String(error);
-  const status =
-    typeof error === "object" && error !== null ? (error as { statusCode?: number }).statusCode : undefined;
+  // The SDK colours its messages for terminals; a screen shows the escape codes as garbage.
+  // oxlint-disable-next-line no-control-regex -- matching the ESC character is the point
+  const detail = (error instanceof Error ? error.message : String(error)).replace(/\u001b\[[0-9;]*m/g, "").trim();
+  const { statusCode: status, name } =
+    typeof error === "object" && error !== null ? (error as { statusCode?: number; name?: string }) : {};
 
-  if (status === 401 || status === 403) return `La AI Gateway rechazó el pedido (${status}): ${detail}`;
+  // No key on this server (a local or preview deploy). Card reading gets the gateway's auth error without its
+  // status code, slot picking a 401, Owy's chat the SDK's setup text: all say in English how to set up a key,
+  // which helps nobody at the table.
+  const auth = name === "GatewayAuthenticationError" || status === 401;
+  if ((auth && /^unauthenticated|no authentication provided/i.test(detail)) || detail.includes("AI_GATEWAY_API_KEY")) {
+    return "La IA no está configurada en este servidor: falta la clave de la AI Gateway (AI_GATEWAY_API_KEY).";
+  }
+  if (status === 401 || status === 403 || name === "GatewayAuthenticationError") {
+    return `La AI Gateway rechazó el pedido${status ? ` (${status})` : ""}: ${detail}`;
+  }
   if (status === 429) return `La AI Gateway está limitando los pedidos: ${detail}`;
 
-  return `Falló la llamada a la AI: ${detail}`;
+  return `Falló la llamada a la IA: ${detail}`;
 }

@@ -1,0 +1,48 @@
+[
+  {
+    "skills": ["timeline-sync"],
+    "query": "/timeline-sync",
+    "files": [],
+    "expected_behavior": [
+      "Runs pnpm timeline:sync, then pnpm timeline:build, pnpm timeline:photos (building again if broken-photos.json changed) and pnpm timeline:check, in that order",
+      "Fixes every error pnpm timeline:check reports and runs it again until it reports no errors",
+      "Reports new events by community, new people, photos added and dropped, and groups renamed or gone, with git diff --stat",
+      "Does not edit content/timeline/events/*.json, communities.json or people.json by hand",
+      "Does not commit unless the user asked"
+    ]
+  },
+  {
+    "skills": ["timeline-sync"],
+    "query": "There's a new Rust group on Meetup in Montevideo, can you add it to the historia?",
+    "files": [],
+    "expected_behavior": [
+      "Finds the group's Meetup urlname (pnpm timeline:sync --discover, or the URL the user gives)",
+      "Classifies it with the rubric in reference/curation.md and runs pnpm timeline:sync --add <urlname>=tech",
+      "Checks whether it is an existing community under a new group and, if so, maps it in overrides.json groupCommunity",
+      "Builds and runs pnpm timeline:check with no errors, then says how many of its events are now in the timeline"
+    ]
+  },
+  {
+    "skills": ["timeline-sync"],
+    "query": "Gabriel wrote to the privacy email: he wants his photo off his profile page on the historia, but to keep the profile.",
+    "files": [],
+    "expected_behavior": [
+      "Finds his profile slug and Meetup profile URL in content/timeline/people.json",
+      "Adds both to overrides.json people.noPhoto (not people.hide, which removes the whole profile), even if the photo already doesn't show",
+      "Runs pnpm timeline:build and pnpm timeline:check; the check reports the takedown in effect and no errors",
+      "Says what is left (the page with his initials, the link to his Meetup profile) and offers to hide event photos he appears in",
+      "Ships it on its own branch, not mixed with a sync"
+    ]
+  },
+  {
+    "skills": ["timeline-sync"],
+    "query": "Add JSConf Uruguay 2027 to the timeline: it's on 2027-04-16 and 17 at the Antel Arena.",
+    "files": [],
+    "expected_behavior": [
+      "Adds an entry to scripts/timeline/sources/conferences/editions.json reusing series_slug jsconfuy, with start_date 2027-04-16 and end_date 2027-04-17",
+      "Sets confidence and date_source from what it could verify, and says when it couldn't verify the date",
+      "Does not edit any existing edition's start_date or series_slug",
+      "Builds and checks; notes the edition shows as upcoming only within 120 days of its date"
+    ]
+  }
+]

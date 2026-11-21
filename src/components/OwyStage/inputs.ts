@@ -4,33 +4,53 @@ import { useEffect, useState } from "react";
 
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client } from "lib/orpc";
-import { OWY_STAGE_CHANNEL, type InputEvent, type StageInput } from "lib/owy-stage/scenes";
+import { OWY_STAGE_CHANNEL, type InputEvent, type ModerationEvent, type StageInput } from "lib/owy-stage/scenes";
 
 /**
  * Everything the phones sent during `round`: the stored rows on mount, then
  * live events. `single`/`once` keys keep one row per voter; `multi` appends.
+ * A question the desk moderates changes in place.
  */
 export function useInputs(round: string, live = true): StageInput[] {
   return useInputsWithStatus(round, live).inputs;
 }
 
-/** Same, plus whether the stored rows have arrived (so live arrivals can be told from the backlog). */
-export function useInputsWithStatus(round: string, live = true): { inputs: StageInput[]; loaded: boolean } {
+/**
+ * Same, plus whether the stored rows have arrived (so live arrivals can be told from the backlog)
+ * and whether reading them failed — the wall shrugs that off, the desk offers `retry`.
+ */
+export function useInputsWithStatus(
+  round: string,
+  live = true
+): { inputs: StageInput[]; loaded: boolean; failed: boolean; retry: () => void } {
   const [inputs, setInputs] = useState<StageInput[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setInputs([]);
     setLoaded(false);
+    setFailed(false);
     if (!round) return;
     client.owyStage
       .inputs({ round })
       .then(setInputs)
-      .catch(() => setInputs([]))
+      .catch(() => {
+        setInputs([]);
+        setFailed(true);
+      })
       .finally(() => setLoaded(true));
-  }, [round]);
+  }, [round, attempt]);
 
   useRealtimeChannel(live && round ? OWY_STAGE_CHANNEL : null, (event, payload) => {
+    if (event === "moderation") {
+      const change = payload as ModerationEvent;
+      if (change.round === round) {
+        setInputs((list) => list.map((i) => (i.id === change.id ? { ...i, moderation: change.moderation } : i)));
+      }
+      return;
+    }
     if (event !== "input") return;
     const input = payload as InputEvent;
     if (input.round !== round) return;
@@ -40,12 +60,19 @@ export function useInputsWithStatus(round: string, live = true): { inputs: Stage
       if (rest.some((i) => i.id === input.id)) return list;
       return [
         ...rest,
-        { id: input.id, key: input.key, value: input.value, voter: input.voter, createdAt: input.createdAt },
+        {
+          id: input.id,
+          key: input.key,
+          value: input.value,
+          voter: input.voter,
+          createdAt: input.createdAt,
+          moderation: input.moderation,
+        },
       ];
     });
   });
 
-  return { inputs, loaded };
+  return { inputs, loaded, failed, retry: () => setAttempt((value) => value + 1) };
 }
 
 /** Counts of `value` for one key, most voted first. */
@@ -79,6 +106,10 @@ export function useVoterId(): string {
   }, []);
   return id;
 }
+
+/** Shared by the wall and the phones: the reactions on offer and the emoji that names each group. */
+export const REACTION_EMOJIS = ["👏", "🔥", "❤️", "😂", "🤯", "🧉"];
+export const GROUP_EMOJIS = ["🦁", "🐙", "🦜", "🐸", "🦋", "🐢", "🐺", "🦈", "🐝", "🦩"];
 
 export const PIXEL_SIZE = 16;
 export const PIXEL_COLORS = ["transparent", "#F5BB03", "#0162C8", "#FBF5E7"];

@@ -1,156 +1,151 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  Copy,
-  ExternalLink,
-  Music,
-  PartyPopper,
-  Radio,
-  Smile,
-  Sparkles,
-  Subtitles,
-  Zap,
-} from "lucide-react";
+import { MotionConfig } from "motion/react";
+import { Search } from "lucide-react";
+import { useDefaultLayout } from "react-resizable-panels";
 
 import { cn } from "app/lib/utils";
+import { OwyPanel } from "components/Admin/owy/OwyPanel";
+import { HeaderActions } from "components/Admin/shell/HeaderActions";
+import { openShortcutSheet } from "components/Admin/shell/shortcuts";
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
-import { RundownCard, useRundown } from "components/Admin/stage/Rundown";
-import { ScaledFrame } from "components/Admin/stage/ScaledFrame";
-import { SceneParams } from "components/Admin/stage/SceneParams";
-
-import { SceneLibrary } from "./SceneLibrary";
-import { Badge } from "components/shared/ui/badge";
+import { haptic } from "components/Admin/stage/haptics";
+import { Inspector } from "components/Admin/stage/Inspector";
+import { Monitors, TakeControls, type Flight } from "components/Admin/stage/Monitors";
+import { PHONE_TABS, PhoneTabs, type PhoneTab } from "components/Admin/stage/PhoneTabs";
+import { PresetsPanel, type PresetActions } from "components/Admin/stage/Presets";
+import { Queue } from "components/Admin/stage/Queue";
+import { RundownPanel, useRundown } from "components/Admin/stage/Rundown";
+import { SceneLibrary, type LibraryActions, type LibraryTally } from "components/Admin/stage/SceneLibrary";
+import { ScenePalette } from "components/Admin/stage/ScenePalette";
+import { readParams } from "components/Admin/stage/SceneParams";
+import {
+  StageSettingsSheet,
+  copyText,
+  useSpotifyReturn,
+  type OutputSettings,
+} from "components/Admin/stage/StageSettingsSheet";
+import { StageToolbar } from "components/Admin/stage/StageToolbar";
+import { StatusBar } from "components/Admin/stage/StatusBar";
+import { useDesk } from "components/Admin/stage/useDesk";
+import { releaseFocus, useStageHotkeys } from "components/Admin/stage/useStageHotkeys";
+import { useStoredState } from "components/Admin/stage/useStoredState";
 import { Button } from "components/shared/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "components/shared/ui/card";
-import { Input } from "components/shared/ui/input";
-import { Label } from "components/shared/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "components/shared/ui/select";
-import { Switch } from "components/shared/ui/switch";
+import { Kbd } from "components/shared/ui/kbd";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "components/shared/ui/resizable";
+import { Skeleton } from "components/shared/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "components/shared/ui/tabs";
 import { toast } from "components/shared/ui/toast-utils";
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
+import { useWakeLock } from "hooks/useWakeLock";
 import { orpc } from "lib/orpc";
+import { CANVAS_PRESETS, DEFAULT_CANVAS } from "lib/owy-stage/canvas";
 import {
   DEFAULT_STAGE_STATE,
-  FACE_STATES,
   OWY_STAGE_CHANNEL,
-  SCENES,
+  SCENE_IDS,
+  isSceneId,
   parseSceneParams,
-  type FaceState,
+  type DeskStep,
+  type Preset,
   type SceneId,
   type StageState,
+  type StageTransition,
 } from "lib/owy-stage/scenes";
 
-const FACE_LABELS: Record<FaceState, string> = {
-  idle: "Idle",
-  listening: "Escuchando",
-  thinking: "Pensando",
-  speaking: "Hablando",
-  happy: "Feliz",
-  error: "Error",
-  offline: "Offline",
-};
+type Target = "preview" | "program";
+type Tab = "library" | "presets" | "guion" | "owy";
+type Params = Record<string, unknown>;
 
-/**
- * A card whose body folds away: the panels you only touch while setting up
- * (el simulador, Spotify) stay out of the way of the ones used on air. Closed
- * by default and remembered, so the page opens the way the operator left it.
- */
-function FoldCard({
-  id,
-  icon,
-  title,
-  description,
-  children,
-}: {
-  id: string;
-  icon?: ReactNode;
-  title: string;
-  description: ReactNode;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
+const isOutput = (value: unknown): value is OutputSettings =>
+  Boolean(value) &&
+  typeof (value as OutputSettings).transparent === "boolean" &&
+  ["", "ucu", "fit"].includes((value as OutputSettings).canvas);
+const isSceneList = (value: unknown): value is SceneId[] =>
+  Array.isArray(value) && value.every((id) => typeof id === "string" && isSceneId(id));
+const isPhoneTab = (value: unknown): value is PhoneTab => PHONE_TABS.includes(value as PhoneTab);
 
-  useEffect(() => {
-    setOpen(window.localStorage.getItem(`owy-stage-fold-${id}`) === "1");
-  }, [id]);
+/** The shell's content area (under its header; it clears the notch in a home-screen app too). */
+const DESK_HEIGHT = "h-(--admin-content-h)";
 
-  const toggle = () =>
-    setOpen((current) => {
-      window.localStorage.setItem(`owy-stage-fold-${id}`, current ? "0" : "1");
+const noop = () => () => undefined;
+/** True once on the client: the desk reads localStorage while it renders (layout, filters, settings). */
+const useMounted = () =>
+  useSyncExternalStore(
+    noop,
+    () => true,
+    () => false
+  );
 
-      return !current;
-    });
+const WIDE = "(min-width: 1024px)";
+/** Landscape tablets and laptops get the studio; phones and portrait tablets, the compact desk. */
+const useWide = () =>
+  useSyncExternalStore(
+    (onChange) => {
+      const query = window.matchMedia(WIDE);
+      query.addEventListener("change", onChange);
+
+      return () => query.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(WIDE).matches,
+    () => true
+  );
+
+export default function ScenesClient() {
+  const mounted = useMounted();
+
+  if (!mounted)
+    return (
+      <div className={`${DESK_HEIGHT} p-2`}>
+        <Skeleton className="h-full w-full rounded-xl" />
+      </div>
+    );
 
   return (
-    <Card>
-      <CardHeader className={open ? "" : "py-4"}>
-        {/* heading > button: the accordion pattern, so it is reachable by keyboard and screen readers */}
-        <CardTitle>
-          <button
-            aria-expanded={open}
-            className="flex w-full items-center gap-2 text-left"
-            onClick={toggle}
-            type="button"
-          >
-            {icon}
-            <span className="flex-1">{title}</span>
-            <ChevronDown className={cn("h-5 w-5 shrink-0 transition-transform", open && "rotate-180")} />
-          </button>
-        </CardTitle>
-        {open && <CardDescription className="mt-1.5">{description}</CardDescription>}
-      </CardHeader>
-      {open && <CardContent className="space-y-3">{children}</CardContent>}
-    </Card>
+    // Animations follow the system's "reduce motion"; taps never flash or zoom.
+    <MotionConfig reducedMotion="user">
+      <Desk />
+    </MotionConfig>
   );
 }
 
-function copy(text: string) {
-  navigator.clipboard
-    .writeText(text)
-    .then(() => toast.success("URL copiada", text))
-    .catch(() => toast.error("No se pudo copiar", text));
-}
-
-export default function ScenesClient() {
+/**
+ * The wall's control desk: PREVIEW → TAKE → AL AIRE, with the queue feeding
+ * the preview, the library to pick from, the presets one press away, the
+ * guion for unattended loops and the params of whatever is being prepared. Shared state lives on the server
+ * (the wall, the desk, the guion), so the laptop, the tablet and the phone run
+ * the same show; layout and filters are per device.
+ */
+function Desk() {
   const queryClient = useQueryClient();
   const { events, selected } = useSelectedEvent();
   const stateKey = orpc.owyStage.getState.queryKey();
   const { data } = useQuery(orpc.owyStage.getState.queryOptions());
   const live: StageState = data ?? DEFAULT_STAGE_STATE;
-  const [origin, setOrigin] = useState("");
-  const [transparent, setTransparent] = useState(false);
-  // The wall is not always 16:9 — UCU's screen is a 3584×960 strip.
-  const [canvas, setCanvas] = useState("");
-  const [caption, setCaption] = useState("");
-  const [transcript, setTranscript] = useState("");
-  const [who, setWho] = useState<"input" | "output">("output");
+  const liveRef = useRef(live);
+  liveRef.current = live;
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const wide = useWide();
 
-  useEffect(() => setOrigin(window.location.origin), []);
-
-  const spotify = useQuery(orpc.owyStage.spotifyStatus.queryOptions());
-  const disconnectSpotify = useMutation(
-    orpc.owyStage.disconnectSpotify.mutationOptions({
-      onSuccess: () => {
-        toast.success("Spotify desconectado");
-        queryClient.invalidateQueries({ queryKey: orpc.owyStage.spotifyStatus.queryKey() });
-      },
-      onError: (error) => toast.error("No se pudo desconectar", error.message),
-    })
+  const [target, setTarget] = useState<Target>("preview");
+  const [tab, setTab] = useState<Tab>("library");
+  const [phoneTab, setPhoneTab] = useStoredState<PhoneTab>("owy-stage-phone-tab", "library", isPhoneTab);
+  const [replay, setReplay] = useState(0);
+  const [flight, setFlight] = useState<Flight | null>(null);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [output, setOutput] = useStoredState<OutputSettings>(
+    "owy-stage-output",
+    { transparent: false, canvas: "" },
+    isOutput
   );
-  // Back from the OAuth dance: /api/spotify/callback sends ?spotify=ok|error.
-  useEffect(() => {
-    const result = new URLSearchParams(window.location.search).get("spotify");
-    if (!result) return;
-    if (result === "ok") toast.success("Spotify conectado", "La escena Sonando ya sigue lo que se reproduce.");
-    else if (result === "unconfigured")
-      toast.error("Falta configurar Spotify", "SPOTIFY_CLIENT_ID y SPOTIFY_CLIENT_SECRET en el env.");
-    else toast.error("No se pudo conectar Spotify");
-    window.history.replaceState(null, "", window.location.pathname);
-    queryClient.invalidateQueries({ queryKey: orpc.owyStage.spotifyStatus.queryKey() });
-  }, [queryClient]);
+  const [recent, setRecent] = useStoredState<SceneId[]>("owy-stage-recent", [], isSceneList);
+
+  useWakeLock(true);
+  useSpotifyReturn();
 
   // Server publishes carry no sender id, so our own takes echo back too: the cache is the truth.
   const { isConnected } = useRealtimeChannel(OWY_STAGE_CHANNEL, (event, payload) => {
@@ -163,279 +158,448 @@ export default function ScenesClient() {
       onError: (error) => toast.error("No se pudo cambiar la escena", error.message),
     })
   );
-  const fireEffect = useMutation(
-    orpc.owyStage.fireEffect.mutationOptions({
-      onError: (error) => toast.error("No se pudo disparar el efecto", error.message),
-    })
-  );
-  const setFace = useMutation(
-    orpc.owyStage.setFace.mutationOptions({
-      onError: (error) => toast.error("No se pudo actualizar la cara", error.message),
-    })
+  const setSceneRef = useRef(setScene.mutate);
+  setSceneRef.current = setScene.mutate;
+
+  const markRecent = useCallback(
+    (id: SceneId) => setRecent((previous) => [id, ...previous.filter((other) => other !== id)].slice(0, 12)),
+    [setRecent]
   );
 
-  /** `restart` is for putting a scene on air from scratch; a param edit keeps the round. */
-  const take = (scene: SceneId, params?: Record<string, unknown>, restart?: boolean) =>
-    setScene.mutate({
-      scene,
-      // An empty object means "the scene's own defaults"; the guion stores params only when pinned.
-      params: params && Object.keys(params).length ? params : live.scene === scene ? live.params : {},
-      eventId: live.eventId ?? selected?.id ?? null,
-      restart,
+  /**
+   * Straight to the wall: the guion, «Al aire ya», live edits. `restart` puts
+   * the scene on air from scratch (new round); an edit keeps it. Empty params
+   * mean the scene's defaults — or what is already up, for the scene on air.
+   */
+  const put = useCallback(
+    (scene: SceneId, params: Params | undefined, restart: boolean) => {
+      const current = liveRef.current;
+      setSceneRef.current({
+        scene,
+        params: params && Object.keys(params).length ? params : current.scene === scene ? current.params : {},
+        eventId: current.eventId ?? selectedRef.current?.id ?? null,
+        restart,
+      });
+      if (restart) markRecent(scene);
+    },
+    [markRecent]
+  );
+
+  const rundown = useRundown(put, live.scene);
+  const rundownRef = useRef(rundown);
+  rundownRef.current = rundown;
+
+  const onAir = useCallback(
+    (state: StageState) => {
+      queryClient.setQueryData(orpc.owyStage.getState.queryKey(), state);
+      markRecent(state.scene);
+    },
+    [queryClient, markRecent]
+  );
+  const { desk, taking, actions } = useDesk(live, onAir);
+  const deskRef = useRef(desk);
+  deskRef.current = desk;
+
+  const stageUrl = useCallback(
+    (path: string) => {
+      const query = new URLSearchParams();
+      if (output.transparent) query.set("bg", "transparent");
+      if (output.canvas) query.set("canvas", output.canvas);
+      const search = query.toString();
+
+      return `${window.location.origin}${path}${search ? `?${search}` : ""}`;
+    },
+    [output]
+  );
+  const stageUrlRef = useRef(stageUrl);
+  stageUrlRef.current = stageUrl;
+  const canvas = output.canvas === "ucu" ? CANVAS_PRESETS.ucu : DEFAULT_CANVAS;
+
+  const libraryActions = useMemo<LibraryActions>(
+    () => ({
+      pick: (id) => {
+        actions.pick(id);
+        setTarget("preview");
+        haptic(5);
+      },
+      queue: (id) => actions.enqueue(id),
+      airNow: (id) => {
+        put(id, {}, true);
+        haptic(18);
+      },
+      guion: (id) => rundownRef.current.add(id),
+      preset: (id) => {
+        actions.savePreset(id, {}, "");
+        haptic(8);
+      },
+      copyUrl: (id) => copyText(stageUrlRef.current(`/owy/stage/${id}`)),
+    }),
+    [actions, put]
+  );
+  const presetActions = useMemo<PresetActions>(
+    () => ({
+      pick: (preset) => {
+        actions.pickPreset(preset);
+        setTarget("preview");
+        haptic(5);
+      },
+      // Spelled out, defaults included: empty params would keep what is up when the scene is already on air.
+      air: (preset) => {
+        put(preset.scene, readParams(preset.scene, preset.params), true);
+        haptic(18);
+      },
+      queue: actions.enqueuePreset,
+      guion: (preset) => rundownRef.current.add(preset.scene, preset.params),
+      rename: actions.renamePreset,
+      saveFromPreview: actions.savePreview,
+      saveFromLive: (name) => {
+        const { scene, params } = liveRef.current;
+        actions.savePreset(scene, params, name);
+      },
+      updateFromPreview: actions.updateFromPreview,
+      duplicate: actions.duplicatePreset,
+      remove: actions.removePreset,
+      restore: actions.restorePreset,
+      reorder: actions.reorderPresets,
+      persistOrder: actions.persistPresets,
+      copyUrl: (preset) =>
+        copyText(`${window.location.origin}/api/owy-stage/preset/${preset.id}`, "URL para Stream Deck copiada"),
+    }),
+    [actions, put]
+  );
+  const queueActions = useMemo(
+    () => ({
+      ...actions,
+      cueQueued: (id: string) => {
+        actions.cueQueued(id);
+        setTarget("preview");
+        haptic(5);
+      },
+      // Spelled out like TAKE reads them: empty params would keep what is up when the scene is already on air.
+      airNow: (step: DeskStep) => {
+        put(step.scene, readParams(step.scene, step.params), true);
+        actions.remove(step.id);
+        haptic(18);
+      },
+    }),
+    [actions, put]
+  );
+
+  const tally = useMemo<LibraryTally>(() => {
+    const queued = new Map<SceneId, number>();
+    desk.queue.forEach((step, index) => {
+      if (!queued.has(step.scene)) queued.set(step.scene, index + 1);
     });
-  const rundown = useRundown(take, live.scene);
 
-  // The guion's pin copies whatever is on air into a step.
-  const liveParams = parseSceneParams(live.scene, live.params) as Record<string, unknown>;
-  const stageUrl = (path: string) => {
-    const query = new URLSearchParams();
-    if (transparent) query.set("bg", "transparent");
-    if (canvas) query.set("canvas", canvas);
-    const search = query.toString();
+    return { live: live.scene, preview: desk.preview?.scene ?? null, queued };
+  }, [live.scene, desk.preview?.scene, desk.queue]);
 
-    return `${origin}${path}${search ? `?${search}` : ""}`;
-  };
+  /** TAKE or CUT, from the button or the keyboard: felt on the phone, drawn on the monitors. */
+  const take = useCallback(
+    (transition: StageTransition) => {
+      const step = deskRef.current.preview;
+      if (!step || !actions.canTake()) return;
+      haptic(transition === "cut" ? [14, 50, 14] : 22);
+      setFlight({ id: Date.now(), scene: step.scene });
+      void actions.take(transition);
+    },
+    [actions]
+  );
+  const clearPreview = actions.clearPreview;
+  const copyLive = useCallback(() => {
+    actions.copyLive();
+    setTarget("preview");
+  }, [actions]);
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const openSettings = useCallback(() => setSettingsOpen(true), []);
+  const openGuion = useCallback(() => (wide ? setTab("guion") : setPhoneTab("guion")), [wide, setPhoneTab]);
+  const replayPreview = useCallback(() => setReplay((value) => value + 1), []);
+  const onLiveParams = useCallback((params: Params) => put(liveRef.current.scene, params, false), [put]);
+  // On a phone, tapping a monitor also opens what edits it.
+  const pickTarget = useCallback(
+    (next: Target) => {
+      setTarget(next);
+      if (!wide) setPhoneTab("edit");
+    },
+    [wide, setPhoneTab]
+  );
+  // No success toasts on the desk: they'd sit on the inspector mid-show, and the queue shows the change.
+  const choose = useCallback(
+    (id: SceneId, intent: "preview" | "queue" | "air") => {
+      if (intent === "queue") actions.enqueue(id);
+      else if (intent === "air") libraryActions.airNow(id);
+      else libraryActions.pick(id);
+    },
+    [actions, libraryActions]
+  );
+  const choosePreset = useCallback(
+    (preset: Preset, intent: "preview" | "queue" | "air") => {
+      if (intent === "queue") presetActions.queue(preset);
+      else if (intent === "air") presetActions.air(preset);
+      else presetActions.pick(preset);
+    },
+    [presetActions]
+  );
+
+  useStageHotkeys({
+    take: () => take("wipe"),
+    cut: () => take("cut"),
+    search: openPalette,
+    queue: actions.enqueuePreview,
+    preset: (index, air) => {
+      const preset = deskRef.current.presets[index];
+      if (!preset) return;
+      if (air) presetActions.air(preset);
+      else presetActions.pick(preset);
+    },
+    guionToggle: rundown.toggle,
+    guionStep: rundown.skip,
+  });
+
+  const liveParams = useMemo(() => parseSceneParams(live.scene, live.params) as Params, [live.scene, live.params]);
+  const mainLayout = useDefaultLayout({ id: "owy-desk", storage: localStorage });
+  const stageLayout = useDefaultLayout({ id: "owy-desk-stage", storage: localStorage });
+  const listsLayout = useDefaultLayout({ id: "owy-desk-lists", storage: localStorage });
+
+  const next = desk.queue[0] ?? null;
+  const takeControls = (layout: "column" | "bar") => (
+    <TakeControls layout={layout} live={live} next={next} preview={desk.preview} taking={taking} onTake={take} />
+  );
+  const takeColumn = useMemo(
+    () => <TakeControls layout="column" live={live} next={next} preview={desk.preview} taking={taking} onTake={take} />,
+    [live, next, desk.preview, taking, take]
+  );
+  const monitors = (compact: boolean) => (
+    <Monitors
+      canvas={canvas}
+      center={compact ? undefined : takeColumn}
+      compact={compact}
+      flight={flight}
+      live={live}
+      next={next}
+      preview={desk.preview}
+      replay={replay}
+      taking={taking}
+      target={target}
+      onClearPreview={clearPreview}
+      onCopyLive={copyLive}
+      onReplay={replayPreview}
+      onSearch={openPalette}
+      onTarget={pickTarget}
+    />
+  );
+  const inspector = (
+    <Inspector
+      live={live}
+      pending={setScene.isPending}
+      presetActions={presetActions}
+      presets={desk.presets}
+      preview={desk.preview}
+      target={target}
+      onCopyLive={copyLive}
+      onEnqueuePreview={actions.enqueuePreview}
+      onLiveParams={onLiveParams}
+      onPreviewParams={actions.editPreview}
+      onTarget={setTarget}
+    />
+  );
+  const queue = <Queue actions={queueActions} queue={desk.queue} />;
+  const library = (lead?: ReactNode) => (
+    <SceneLibrary actions={libraryActions} lead={lead} recent={recent} tally={tally} />
+  );
+  const presets = <PresetsPanel actions={presetActions} live={live} presets={desk.presets} preview={desk.preview} />;
+  const guion = <RundownPanel liveParams={liveParams} liveScene={live.scene} rundown={rundown} />;
+  const owy = <OwyPanel eventId={live.eventId ?? selected?.id ?? null} />;
+  const searchLead = useMemo(
+    () => (
+      <Button
+        aria-label="Buscar escena"
+        className="h-10 w-10 shrink-0 rounded-full"
+        size="icon"
+        variant="outline"
+        onClick={(event) => {
+          openPalette();
+          releaseFocus(event);
+        }}
+      >
+        <Search className="h-4 w-4" />
+      </Button>
+    ),
+    [openPalette]
+  );
+  const searchButton = (
+    <Button
+      className="ml-auto h-9 w-full max-w-60 justify-start gap-2 px-3 font-normal text-muted-foreground pointer-coarse:h-10"
+      variant="outline"
+      onClick={(event) => {
+        openPalette();
+        releaseFocus(event);
+      }}
+    >
+      <Search className="h-4 w-4" />
+      Buscar escena…
+      <Kbd className="ml-auto pointer-coarse:hidden">/</Kbd>
+    </Button>
+  );
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-6 p-4 md:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">Escenas Owy</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Lo que muestra la pantalla grande. Cada escena es una página que OBS embebe como browser source (1920×1080).
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant={isConnected ? "default" : "destructive"}>
-            <Radio className="mr-1 h-3 w-3" />
-            {isConnected ? "Realtime conectado" : "Sin realtime"}
-          </Badge>
-          <Select
-            value={live.eventId ?? ""}
-            onValueChange={(eventId) => setScene.mutate({ scene: live.scene, params: live.params, eventId })}
-          >
-            <SelectTrigger className="w-[320px]">
-              <SelectValue placeholder="Evento para countdown / cast" />
-            </SelectTrigger>
-            <SelectContent>
-              {events.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.name} · {event.communityName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <div className="[-webkit-tap-highlight-color:transparent]">
+      <HeaderActions>
+        <StageToolbar rundown={rundown} onGuion={openGuion} onHelp={openShortcutSheet} onSettings={openSettings} />
+      </HeaderActions>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <span className="inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-red-500" />
-                Al aire · {SCENES[live.scene].title}
-              </CardTitle>
-              <CardDescription>La URL que va en OBS: sigue lo que elijas acá.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={() => copy(stageUrl("/owy/stage"))}>
-                <Copy className="mr-1 h-4 w-4" /> Copiar URL
-              </Button>
-              <Button asChild size="sm" variant="ghost">
-                <a href="/owy/stage" rel="noopener" target="_blank">
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <ScaledFrame src="/owy/stage" title="Al aire" />
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-              <label className="flex items-center gap-2">
-                <Switch checked={transparent} onCheckedChange={setTransparent} />
-                Fondo transparente en las URLs (overlay sobre cámara)
-              </label>
-              <label className="flex items-center gap-2">
-                Pantalla
-                <Select
-                  value={canvas || "default"}
-                  onValueChange={(value) => setCanvas(value === "default" ? "" : value)}
-                >
-                  <SelectTrigger className="h-8 w-[230px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">16:9 · 1920×1080</SelectItem>
-                    <SelectItem value="ucu">UCU · 3584×960 (56:15)</SelectItem>
-                    <SelectItem value="fit">Ajustar a la pantalla</SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
-              <span>
-                {canvas === "ucu"
-                  ? "OBS / navegador: 3584×960 · las escenas de Ágiles se reacomodan solas a la tira"
-                  : canvas === "fit"
-                    ? "Toma la forma de la pantalla donde se abra (pantalla completa)"
-                    : 'OBS: 1920×1080 · 60 fps · "Shutdown source when not visible" OFF · "Refresh when scene becomes active" OFF'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Parámetros · {SCENES[live.scene].title}</CardTitle>
-              <CardDescription>{SCENES[live.scene].description}</CardDescription>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <SceneParams
-                apply={(params) => take(live.scene, params)}
-                params={live.params}
-                pending={setScene.isPending}
-                scene={live.scene}
-              />
-            </CardContent>
-          </Card>
-
-          <FoldCard
-            description="Se superponen a la escena actual y desaparecen solos."
-            icon={<Sparkles className="h-5 w-5" />}
-            id="efectos"
-            title="Efectos"
-          >
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => fireEffect.mutate({ effect: "confetti" })}>
-                <PartyPopper className="mr-1 h-4 w-4" /> Confetti
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => fireEffect.mutate({ effect: "flash" })}>
-                <Zap className="mr-1 h-4 w-4" /> Flash
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => fireEffect.mutate({ effect: "owy-happy" })}>
-                <Smile className="mr-1 h-4 w-4" /> Owy feliz
-              </Button>
-              {["👏", "🎉", "🧉", "❤️", "🔥"].map((emoji) => (
-                <Button
-                  key={emoji}
-                  size="sm"
-                  title={`Lluvia de ${emoji}`}
-                  variant="outline"
-                  onClick={() => fireEffect.mutate({ effect: "emoji", payload: { text: emoji } })}
-                >
-                  {emoji}
-                </Button>
-              ))}
-            </div>
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!caption.trim()) return;
-                fireEffect.mutate({ effect: "caption", payload: { text: caption.trim() } });
-                setCaption("");
-              }}
+      {wide ? (
+        <div className={`${DESK_HEIGHT} flex min-h-[540px] flex-col gap-2 p-2`}>
+          <div className="min-h-0 flex-1">
+            <ResizablePanelGroup
+              defaultLayout={mainLayout.defaultLayout}
+              id="owy-desk"
+              orientation="horizontal"
+              resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
+              onLayoutChanged={mainLayout.onLayoutChanged}
             >
-              <Input
-                placeholder="Texto para un lower third…"
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-              />
-              <Button size="sm" type="submit" variant="secondary">
-                <Subtitles className="mr-1 h-4 w-4" /> Mostrar
-              </Button>
-            </form>
-          </FoldCard>
-
-          <FoldCard
-            description="Lo que el bridge del companion manda solo cuando alguien habla con Owy — para probar sin el dispositivo."
-            id="owy-sim"
-            title="Simulador de Owy"
-          >
-            <div className="flex flex-wrap gap-2">
-              {FACE_STATES.map((state) => (
-                <Button
-                  key={state}
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setFace.mutate({ state, source: "admin" })}
+              <ResizablePanel id="stage" minSize="50%">
+                <ResizablePanelGroup
+                  defaultLayout={stageLayout.defaultLayout}
+                  id="owy-desk-stage"
+                  orientation="vertical"
+                  resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
+                  onLayoutChanged={stageLayout.onLayoutChanged}
                 >
-                  {FACE_LABELS[state]}
-                </Button>
-              ))}
-            </div>
-            <form
-              className="flex gap-2"
-              onSubmit={(event) => {
-                event.preventDefault();
-                if (!transcript.trim()) return;
-                setFace.mutate({
-                  state: who === "input" ? "listening" : "speaking",
-                  transcript: { who, text: transcript.trim() },
-                  source: "admin",
-                });
-                setTranscript("");
-              }}
-            >
-              <Select value={who} onValueChange={(value) => setWho(value as "input" | "output")}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="input">Visitante</SelectItem>
-                  <SelectItem value="output">Owy</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input placeholder="Subtítulo…" value={transcript} onChange={(e) => setTranscript(e.target.value)} />
-              <Button size="sm" type="submit" variant="secondary">
-                <Sparkles className="mr-1 h-4 w-4" /> Enviar
-              </Button>
-            </form>
-          </FoldCard>
-
-          <FoldCard
-            description={
-              <>
-                Conectá la cuenta que reproduce la música y la escena <strong>Sonando</strong> muestra el tema en vivo,
-                con tapa y progreso. Sin micrófono, sin cuota.
-              </>
-            }
-            icon={<Music className="h-5 w-5" />}
-            id="spotify"
-            title="Spotify"
-          >
-            <div className="flex flex-wrap items-center gap-3">
-              {spotify.data?.account ? (
-                <>
-                  <Badge variant="secondary">Conectado · {spotify.data.account}</Badge>
-                  <Button size="sm" variant="outline" onClick={() => disconnectSpotify.mutate()}>
-                    Desconectar
-                  </Button>
-                </>
-              ) : spotify.data?.configured ? (
-                <Button asChild size="sm">
-                  <a href="/api/spotify/connect">Conectar Spotify</a>
-                </Button>
-              ) : null}
-              {spotify.data && !spotify.data.configured && (
-                <span className="text-xs text-muted-foreground">
-                  Falta SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET en el env (redirect URI: {origin}
-                  /api/spotify/callback).
-                </span>
-              )}
-            </div>
-          </FoldCard>
+                  <ResizablePanel defaultSize="42%" id="monitors" maxSize="72%" minSize="24%">
+                    <div className="h-full overflow-hidden rounded-xl border bg-card">{monitors(false)}</div>
+                  </ResizablePanel>
+                  <ResizableHandle />
+                  <ResizablePanel id="lists" minSize="24%">
+                    <ResizablePanelGroup
+                      defaultLayout={listsLayout.defaultLayout}
+                      id="owy-desk-lists"
+                      orientation="horizontal"
+                      resizeTargetMinimumSize={{ coarse: 32, fine: 12 }}
+                      onLayoutChanged={listsLayout.onLayoutChanged}
+                    >
+                      <ResizablePanel defaultSize="32%" id="queue" maxSize="55%" minSize="20%">
+                        <div className="h-full overflow-hidden rounded-xl border bg-card">{queue}</div>
+                      </ResizablePanel>
+                      <ResizableHandle />
+                      <ResizablePanel id="library" minSize="35%">
+                        <Tabs
+                          className="flex h-full flex-col overflow-hidden rounded-xl border bg-card"
+                          value={tab}
+                          onValueChange={(value) => setTab(value as Tab)}
+                        >
+                          <div className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
+                            <TabsList className="h-9">
+                              <TabsTrigger className="gap-1.5" value="library">
+                                Biblioteca <span className="text-xs text-muted-foreground">{SCENE_IDS.length}</span>
+                              </TabsTrigger>
+                              <TabsTrigger className="gap-1.5" value="presets">
+                                Presets <span className="text-xs text-muted-foreground">{desk.presets.length}</span>
+                              </TabsTrigger>
+                              <TabsTrigger className="gap-1.5" value="guion">
+                                Guion <span className="text-xs text-muted-foreground">{rundown.steps.length}</span>
+                              </TabsTrigger>
+                              <TabsTrigger className="gap-1.5" value="owy">
+                                Owy
+                              </TabsTrigger>
+                            </TabsList>
+                            {searchButton}
+                          </div>
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="library"
+                          >
+                            {library()}
+                          </TabsContent>
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="presets"
+                          >
+                            {presets}
+                          </TabsContent>
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="guion"
+                          >
+                            {guion}
+                          </TabsContent>
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="owy"
+                          >
+                            {owy}
+                          </TabsContent>
+                        </Tabs>
+                      </ResizablePanel>
+                    </ResizablePanelGroup>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+              </ResizablePanel>
+              <ResizableHandle />
+              <ResizablePanel
+                defaultSize={340}
+                groupResizeBehavior="preserve-pixel-size"
+                id="inspector"
+                maxSize="42%"
+                minSize={290}
+              >
+                <div className="h-full overflow-hidden rounded-xl border bg-card">{inspector}</div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </div>
+          <StatusBar connected={isConnected} live={live} queued={desk.queue.length} rundown={rundown} />
         </div>
-      </div>
+      ) : (
+        // Phones and portrait tablets: monitors and TAKE always in reach, one section at a time below.
+        <div className={`${DESK_HEIGHT} flex flex-col overflow-hidden`}>
+          <div className="shrink-0 space-y-2 pt-2 pr-[max(0.5rem,env(safe-area-inset-right))] pb-2 pl-[max(0.5rem,env(safe-area-inset-left))]">
+            <div className="h-[clamp(124px,33vw,300px)]">{monitors(true)}</div>
+            {takeControls("bar")}
+          </div>
+          {/*
+            Every section stays mounted and a tab switch only shows it: the library is two hundred
+            cards to rebuild otherwise. Hidden with CSS, so what animates out (a taken step, a tag)
+            still finishes while out of sight.
+          */}
+          <section aria-label="Sección" className="min-h-0 flex-1 overflow-hidden border-t bg-card">
+            <div className={cn("h-full", phoneTab !== "queue" && "hidden")}>{queue}</div>
+            <div className={cn("h-full", phoneTab !== "library" && "hidden")}>{library(searchLead)}</div>
+            <div className={cn("h-full", phoneTab !== "presets" && "hidden")}>{presets}</div>
+            <div className={cn("h-full", phoneTab !== "edit" && "hidden")}>{inspector}</div>
+            <div className={cn("h-full", phoneTab !== "guion" && "hidden")}>{guion}</div>
+            <div className={cn("h-full", phoneTab !== "owy" && "hidden")}>{owy}</div>
+          </section>
+          <PhoneTabs
+            guionPlaying={rundown.playing}
+            preview={Boolean(desk.preview)}
+            queued={desk.queue.length}
+            tab={phoneTab}
+            onTab={setPhoneTab}
+          />
+        </div>
+      )}
 
-      <RundownCard liveParams={liveParams} liveScene={live.scene} rundown={rundown} />
-
-      <SceneLibrary
-        copyUrl={(id) => copy(stageUrl(`/owy/stage/${id}`))}
-        liveScene={live.scene}
-        pending={setScene.isPending}
-        queue={rundown.add}
-        take={(id) => take(id, undefined, true)}
+      <ScenePalette
+        open={paletteOpen}
+        presets={desk.presets}
+        recent={recent}
+        onChoose={choose}
+        onChoosePreset={choosePreset}
+        onOpenChange={setPaletteOpen}
+      />
+      <StageSettingsSheet
+        events={events}
+        live={live}
+        open={settingsOpen}
+        output={output}
+        stageUrl={stageUrl}
+        onEvent={(eventId) => setScene.mutate({ scene: live.scene, params: live.params, eventId })}
+        onOpenChange={setSettingsOpen}
+        onOutput={setOutput}
       />
     </div>
   );

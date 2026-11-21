@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Reorder } from "motion/react";
-import { Bookmark, Minus, Pause, Play, Plus, Square, Trash2, X } from "lucide-react";
+import { Reorder, useDragControls } from "motion/react";
+import { Bookmark, GripVertical, Minus, Pause, Play, Plus, Square, Trash2, X } from "lucide-react";
 
 import { OBS_CONFIG } from "app/lib/constants";
 import { calculateProgressRing, clampValue, cn } from "app/lib/utils";
+import { MicroLabel, Meter } from "components/Admin/ui/page";
+import { StatusDot } from "components/Admin/ui/status";
 import { Badge } from "components/shared/ui/badge";
 import { Button } from "components/shared/ui/button";
 import { Input } from "components/shared/ui/input";
@@ -37,13 +39,17 @@ function QueueCard({
   onJump: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  // Only the grip drags: a finger swiping across the strip scrolls it.
+  const controls = useDragControls();
 
   return (
     <Reorder.Item
       className={cn(
-        "relative flex w-40 shrink-0 cursor-grab flex-col gap-1.5 rounded-lg border-2 p-1.5 select-none active:cursor-grabbing sm:w-44",
-        active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-muted-foreground/40"
+        "relative flex w-40 shrink-0 flex-col gap-1.5 rounded-lg border-2 p-1.5 select-none sm:w-44",
+        active ? "border-primary bg-primary-surface" : "border-border bg-card hover:border-input"
       )}
+      dragControls={controls}
+      dragListener={false}
       value={item}
       whileDrag={{ scale: 1.04, zIndex: 50, boxShadow: "0 8px 24px rgba(0,0,0,.45)" }}
     >
@@ -52,13 +58,13 @@ function QueueCard({
         <div className="absolute top-1 right-1">
           {active && remaining !== null && (
             <svg aria-hidden className="absolute -inset-1 z-0 h-8 w-8" viewBox="0 0 32 32">
-              <circle cx="16" cy="16" fill="white" r="14" stroke="rgba(34,197,94,.3)" strokeWidth="3" />
+              <circle className="stroke-success/30" cx="16" cy="16" fill="white" r="14" strokeWidth="3" />
               <circle
+                className="stroke-success"
                 cx="16"
                 cy="16"
                 fill="none"
                 r="14"
-                stroke="rgb(34,197,94)"
                 strokeDasharray={`${2 * Math.PI * 14}`}
                 strokeDashoffset={calculateProgressRing(item.delay - remaining, item.delay, 14)}
                 strokeLinecap="round"
@@ -68,43 +74,64 @@ function QueueCard({
               />
             </svg>
           )}
-          <Badge className="relative z-10 flex h-6 w-6 items-center justify-center rounded-full bg-white p-0 text-xs font-bold text-black shadow-lg">
+          <Badge className="relative z-10 flex size-6 items-center justify-center rounded-full border-0 bg-white p-0 font-terminal text-2xs font-semibold text-black shadow-lg">
             {index + 1}
           </Badge>
         </div>
-        {active && (
-          <span className="absolute top-1 left-1 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-black uppercase">
-            {remaining !== null ? `${remaining}s` : "▶"}
+        {active ? (
+          <span className="absolute top-1 left-1 rounded-sm bg-primary px-1.5 py-0.5 font-terminal text-3xs font-semibold text-primary-foreground tabular-nums">
+            {remaining !== null ? `${remaining} s` : "▶"}
           </span>
+        ) : (
+          // A touchscreen has no double click: the same jump, as a button.
+          <button
+            aria-label={`Saltar a ${item.sceneName}`}
+            className="absolute top-1 left-1 hidden items-center gap-1 rounded-sm bg-black/70 px-1.5 py-0.5 font-terminal text-3xs font-semibold text-white pointer-coarse:flex pointer-coarse:after:absolute pointer-coarse:after:-inset-3.5"
+            type="button"
+            onClick={onJump}
+          >
+            <Play aria-hidden className="size-2.5 fill-current" />
+            Saltar
+          </button>
         )}
       </div>
       <div className="flex items-center gap-1">
-        <span className={cn("min-w-0 flex-1 truncate text-xs font-semibold", active && "text-primary")}>
+        <button
+          aria-label={`Mover ${item.sceneName}`}
+          className="relative cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing pointer-coarse:after:absolute pointer-coarse:after:-inset-3.5"
+          type="button"
+          onPointerDown={(event) => controls.start(event)}
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
+        <span className={cn("min-w-0 flex-1 truncate text-meta font-semibold", active && "text-primary")}>
           {item.sceneName}
         </span>
-        <button
+        <Button
           aria-label="Quitar del loop"
-          className="rounded p-0.5 text-muted-foreground hover:bg-red-500/20 hover:text-red-200"
-          type="button"
+          className="text-muted-foreground hover:bg-live-surface hover:text-live-foreground"
+          size="icon-xs"
+          variant="ghost"
           onClick={onRemove}
         >
-          <X className="h-3.5 w-3.5" />
-        </button>
+          <X />
+        </Button>
       </div>
-      <div className="flex items-center justify-between rounded bg-black/30 px-1 py-0.5">
-        <button
+      <div className="flex items-center justify-between rounded-sm bg-background px-1 py-0.5">
+        <Button
           aria-label="Menos tiempo"
-          className="rounded p-0.5 hover:bg-white/10 disabled:opacity-30"
+          className="size-5 disabled:opacity-30"
           disabled={item.delay <= OBS_CONFIG.delays.min}
-          type="button"
+          size="icon-xs"
+          variant="ghost"
           onClick={() => onDelay(item.delay - 1)}
         >
-          <Minus className="h-3 w-3" />
-        </button>
+          <Minus />
+        </Button>
         {editing ? (
           <Input
             autoFocus
-            className="h-5 w-14 border-0 bg-white p-0 text-center text-xs text-black"
+            className="h-5 w-14 border-0 p-0 text-center font-terminal text-2xs sm:h-5 pointer-coarse:sm:h-5"
             defaultValue={item.delay}
             max={OBS_CONFIG.delays.max}
             min={OBS_CONFIG.delays.min}
@@ -118,22 +145,23 @@ function QueueCard({
           />
         ) : (
           <button
-            className="w-14 text-xs font-medium tabular-nums hover:underline"
+            className="w-14 font-terminal text-2xs tabular-nums hover:underline pointer-coarse:h-8"
             type="button"
             onClick={() => setEditing(true)}
           >
-            {item.delay}s
+            {item.delay} s
           </button>
         )}
-        <button
+        <Button
           aria-label="Más tiempo"
-          className="rounded p-0.5 hover:bg-white/10 disabled:opacity-30"
+          className="size-5 disabled:opacity-30"
           disabled={item.delay >= OBS_CONFIG.delays.max}
-          type="button"
+          size="icon-xs"
+          variant="ghost"
           onClick={() => onDelay(item.delay + 1)}
         >
-          <Plus className="h-3 w-3" />
-        </button>
+          <Plus />
+        </Button>
       </div>
     </Reorder.Item>
   );
@@ -178,18 +206,17 @@ export function LoopPanel({
     <div className="min-w-0 space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button
-          className="h-10"
           disabled={queueItems.length === 0 || directMode}
-          variant={isPlaying ? "outline" : "default"}
+          variant="outline"
           onClick={() => queue.setIsPlaying(!isPlaying)}
         >
-          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-current" />}
+          {isPlaying ? <Pause /> : <Play className="fill-current" />}
           {isPlaying ? "Pausar" : "Reproducir"}
         </Button>
-        <Button className="h-10" disabled={!isPlaying && currentItemIndex === 0} variant="outline" onClick={stop}>
-          <Square className="h-4 w-4" /> Detener
+        <Button disabled={!isPlaying && currentItemIndex === 0} variant="outline" onClick={stop}>
+          <Square /> Detener
         </Button>
-        <label className="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm">
+        <label className="flex h-8 cursor-pointer items-center gap-2 rounded-md border border-input px-2.5 text-ui">
           <Switch
             checked={directMode}
             onCheckedChange={(direct) => queue.update({ directMode: direct, ...(direct ? { isPlaying: false } : {}) })}
@@ -198,7 +225,7 @@ export function LoopPanel({
         </label>
         <div className="ml-auto flex items-center gap-2">
           <Select value="" onValueChange={addScene}>
-            <SelectTrigger className="h-9 w-52" disabled={view.scenes.length === 0}>
+            <SelectTrigger aria-label="Agregar una escena al loop" className="w-52" disabled={view.scenes.length === 0}>
               <SelectValue placeholder={view.scenes.length ? "+ Agregar escena" : "Conectate a OBS"} />
             </SelectTrigger>
             <SelectContent>
@@ -212,7 +239,6 @@ export function LoopPanel({
             </SelectContent>
           </Select>
           <Button
-            className="h-9"
             disabled={queueItems.length === 0}
             size="sm"
             variant="ghost"
@@ -221,51 +247,42 @@ export function LoopPanel({
               stop();
             }}
           >
-            <Trash2 className="h-4 w-4" /> Vaciar
+            <Trash2 /> Vaciar
           </Button>
         </div>
       </div>
 
       {(isPlaying || queueItems.length > 0) && (
-        <div className="flex items-center gap-4 rounded-lg border border-border bg-card px-3 py-2 text-sm">
+        <div className="flex items-center gap-4 rounded-lg border border-border bg-background px-3 py-2 text-ui">
           {isPlaying && current ? (
             <>
               <span className="flex items-center gap-2">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                <StatusDot tone="live" />
                 <span className="font-medium">{current.sceneName}</span>
               </span>
               {isExecutor ? (
                 <span className="text-muted-foreground">
-                  <span className="font-terminal text-foreground">{remaining}s</span> para la siguiente
+                  <span className="font-terminal text-foreground tabular-nums">{remaining} s</span> para la siguiente
                 </span>
               ) : (
                 <span className="text-muted-foreground">rotando en el puesto de control</span>
               )}
-              {progress !== null && (
-                <span className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-muted">
-                  <span
-                    className="block h-full bg-primary"
-                    style={{ width: `${Math.round(progress * 100)}%`, transition: "width .3s linear" }}
-                  />
-                </span>
-              )}
+              {progress !== null && <Meter className="min-w-16 flex-1" value={Math.round(progress * 100)} />}
             </>
           ) : (
             <span className="text-muted-foreground">
               {directMode ? "Modo directo: la escena no rota." : "Loop en pausa."}
             </span>
           )}
-          {drift && (
-            <Badge className="border-amber-400/50 bg-amber-400/15 text-amber-100" variant="outline">
-              OBS muestra otra escena
-            </Badge>
-          )}
-          <span className="ml-auto text-xs text-muted-foreground">{queueItems.length} escenas en el loop</span>
+          {drift && <Badge variant="warning">OBS muestra otra escena</Badge>}
+          <span className="ml-auto font-terminal text-meta whitespace-nowrap text-muted-foreground tabular-nums">
+            {queueItems.length} en el loop
+          </span>
         </div>
       )}
 
       {queueItems.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-input p-4 text-center text-meta text-muted-foreground">
           Agregá escenas con el + de cada tarjeta (o el selector) para armar una rotación automática: sponsors, avisos…
         </p>
       ) : (
@@ -290,13 +307,13 @@ export function LoopPanel({
           ))}
         </Reorder.Group>
       )}
-      <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Presets</span>
-        {presets.length === 0 && <span className="text-xs text-muted-foreground">ninguno guardado</span>}
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+        <MicroLabel>Presets</MicroLabel>
+        {presets.length === 0 && <span className="text-meta text-muted-foreground">ninguno guardado</span>}
         {presets.map((preset) => (
           <span key={preset.id} className="flex items-center">
             <Button
-              className={cn("h-8 rounded-r-none", currentPreset === preset.id && "border-primary text-primary")}
+              className={cn("rounded-r-none", currentPreset === preset.id && "border-primary/40 text-primary")}
               size="sm"
               title={preset.items.map((item) => item.sceneName).join(" → ")}
               variant="outline"
@@ -310,11 +327,12 @@ export function LoopPanel({
               }
             >
               {preset.name}
-              <span className="text-xs text-muted-foreground">{preset.items.length}</span>
+              <span className="font-terminal text-muted-foreground tabular-nums">{preset.items.length}</span>
             </Button>
             <Button
-              className="h-8 w-8 rounded-l-none border-l-0"
-              size="icon"
+              aria-label={`Eliminar el preset ${preset.name}`}
+              className="rounded-l-none border-l-0"
+              size="icon-sm"
               title="Eliminar preset"
               variant="outline"
               onClick={() => {
@@ -325,7 +343,7 @@ export function LoopPanel({
                 });
               }}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 />
             </Button>
           </span>
         ))}
@@ -343,20 +361,21 @@ export function LoopPanel({
           }}
         >
           <Input
-            className="h-8 w-44"
+            aria-label="Nombre del preset"
+            className="h-7 w-44 sm:h-7 pointer-coarse:h-10"
             disabled={queueItems.length === 0}
             placeholder="Guardar loop como…"
             value={presetName}
             onChange={(event) => setPresetName(event.target.value)}
           />
           <Button
-            className="h-8"
+            aria-label="Guardar el loop como preset"
             disabled={!presetName.trim() || queueItems.length === 0}
-            size="sm"
+            size="icon-sm"
             type="submit"
             variant="outline"
           >
-            <Bookmark className="h-4 w-4" />
+            <Bookmark />
           </Button>
         </form>
       </div>

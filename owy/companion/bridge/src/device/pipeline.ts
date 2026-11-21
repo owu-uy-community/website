@@ -54,7 +54,7 @@ export class VoiceTurn {
   private readonly onPhase?: (phase: TurnPhase) => void;
   private readonly noSpeechMs: number;
   private readonly ttsStallMs: number;
-  private readonly thinkingMs: number;
+  private thinkingMs: number;
   private readonly playbackReadyTimeoutMs: number;
 
   private _phase: TurnPhase = "created";
@@ -126,6 +126,21 @@ export class VoiceTurn {
     this.link.sendEvent(VoiceAssistantEvent.STT_END, [{ name: "text", value: transcript }]);
     this.setPhase("thinking");
     this.armThinkingTimer();
+  }
+
+  /**
+   * The answer takes the slower road (the bridge's own transcribe → answer →
+   * speak cascade): give "thinking" more time, restarting the timer.
+   */
+  extendThinking(ms: number): void {
+    this.thinkingMs = Math.max(this.thinkingMs, ms);
+    if (this._phase === "thinking") this.armThinkingTimer();
+  }
+
+  /** The bridge transcribed the turn itself after the mic closed: show the device what it heard. */
+  heard(text: string): void {
+    if (this._phase !== "thinking" || !text) return;
+    this.link.sendEvent(VoiceAssistantEvent.STT_END, [{ name: "text", value: text.slice(0, 480) }]);
   }
 
   /**

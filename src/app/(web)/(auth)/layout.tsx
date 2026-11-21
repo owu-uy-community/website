@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+import { AppProviders } from "components/providers/AppProviders";
+
 export default function AuthLayout({
   children,
 }: Readonly<{
@@ -15,7 +17,8 @@ export default function AuthLayout({
           alt="Tech Community"
           fill
           className="object-cover opacity-75"
-          priority
+          preload
+          sizes="50vw"
         />
         <div className="absolute bottom-8 left-8 z-20 text-white">
           <h2 className="mb-2 text-3xl font-bold">
@@ -30,7 +33,9 @@ export default function AuthLayout({
 
       {/* Right Side - Form Content */}
       <div className="flex w-full items-center justify-center p-6 lg:w-1/2 lg:p-12">
-        <div className="w-full max-w-md">{children}</div>
+        <div className="w-full max-w-md">
+          <AppProviders>{children}</AppProviders>
+        </div>
       </div>
     </div>
   );

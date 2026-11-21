@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 
 import type { Room, Schedule, StickyNote } from "lib/orpc";
+import { RoomStatusBadge } from "components/Meetups/OpenSpace/atoms/RoomStatusBadge";
 import { StickyNoteCardKiosk } from "components/Meetups/OpenSpace/molecules/StickyNoteCardKiosk";
 import { roomIconFor } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
@@ -68,6 +69,7 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
               >
                 {room.name}
               </span>
+              <RoomStatusBadge status={room.status} />
             </div>
           );
         })}
@@ -90,7 +92,12 @@ export function EventAgenda({ rooms, schedules, tracks }: Props) {
                 const cellNotes = notesAt(room.id, slot);
 
                 return (
-                  <div key={room.id} className="relative h-28 border-r border-b border-white/10 md:h-32">
+                  <div
+                    key={room.id}
+                    // Size containment, like the kiosk's cells: the shared post-it sizes its type in
+                    // container units, and without a container they measure the viewport instead.
+                    className="[container-type:size] relative h-28 border-r border-b border-white/10 md:h-32"
+                  >
                     {cellNotes.length === 0 ? (
                       <div className="flex h-full items-center justify-center">
                         <span aria-hidden className="h-1 w-1 rounded-full bg-white/15" />

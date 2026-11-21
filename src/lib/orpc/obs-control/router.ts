@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import * as z from "zod";
 
-import { staff } from "../base";
+import { platform } from "../base";
 import type { Actor } from "../services";
 import {
   AckCommandSchema,
@@ -31,7 +31,7 @@ const commandSource = (user: Actor) =>
 
 // The OBS desk's command bus: other devices queue commands, the one executor tab runs them in OBS.
 export const obsControlRouter = {
-  send: staff
+  send: platform("obs:operate")
     .meta(docs("Queue a command for the executor tab; CUT/TAKE right after another is the same press"))
     .input(SendCommandSchema)
     .output(z.object({ id: z.string(), executorOnline: z.boolean() }))
@@ -39,7 +39,7 @@ export const obsControlRouter = {
       return yield* Obs.sendCommand(input, commandSource(context.user));
     }),
 
-  pending: staff
+  pending: platform("obs:read")
     .meta(docs("Commands still waiting for the executor, oldest first"))
     .input(InstanceSchema)
     .output(z.array(SerializedCommandSchema))
@@ -47,7 +47,7 @@ export const obsControlRouter = {
       return yield* Obs.pendingCommands(input.instanceId);
     }),
 
-  ack: staff
+  ack: platform("obs:operate")
     .meta(docs("The executor reports a command done or failed"))
     .input(AckCommandSchema)
     .output(z.object({ ok: z.literal(true) }))
@@ -55,7 +55,7 @@ export const obsControlRouter = {
       return yield* Obs.ackCommand(input);
     }),
 
-  claim: staff
+  claim: platform("obs:operate")
     .meta(docs("Take the executor seat if it is free, stale, yours, or forced"))
     .input(ClaimExecutorSchema)
     .output(ObsStatusSchema)
@@ -63,7 +63,7 @@ export const obsControlRouter = {
       return yield* Obs.claimExecutor(input);
     }),
 
-  release: staff
+  release: platform("obs:operate")
     .meta(docs("Give the executor seat up"))
     .input(ReleaseExecutorSchema)
     .output(ObsStatusSchema)
@@ -71,7 +71,7 @@ export const obsControlRouter = {
       return yield* Obs.releaseExecutor(input);
     }),
 
-  report: staff
+  report: platform("obs:operate")
     .meta(docs("The executor's heartbeat and its view of OBS"))
     .input(ReportStatusSchema)
     .output(ObsStatusSchema)
@@ -79,7 +79,7 @@ export const obsControlRouter = {
       return yield* Obs.reportStatus(input);
     }),
 
-  status: staff
+  status: platform("obs:read")
     .meta(docs("What OBS is doing, as the executor last reported it"))
     .input(InstanceSchema)
     .output(ObsStatusSchema)
@@ -87,7 +87,7 @@ export const obsControlRouter = {
       return yield* Obs.getStatus(input.instanceId);
     }),
 
-  history: staff
+  history: platform("obs:read")
     .meta(docs("Recent commands, newest first"))
     .input(ListCommandsSchema)
     .output(z.array(SerializedCommandSchema))
@@ -98,7 +98,7 @@ export const obsControlRouter = {
 
 // The rundown: one press = OBS scene + wall scene + launchpad sound.
 export const obsCueRouter = {
-  list: staff
+  list: platform("obs:read")
     .meta(docs("A rig's rundown in order"))
     .input(InstanceSchema)
     .output(z.array(CueSchema))
@@ -106,7 +106,7 @@ export const obsCueRouter = {
       return yield* Obs.listCues(input.instanceId);
     }),
 
-  create: staff
+  create: platform("obs:operate")
     .meta(docs("Add a cue at the end of the rundown"))
     .input(CreateCueSchema)
     .output(CueSchema)
@@ -114,7 +114,7 @@ export const obsCueRouter = {
       return yield* Obs.createCue(input);
     }),
 
-  update: staff
+  update: platform("obs:operate")
     .meta(docs("Edit a cue"))
     .input(UpdateCueSchema)
     .output(CueSchema)
@@ -122,7 +122,7 @@ export const obsCueRouter = {
       return yield* Obs.updateCue(input);
     }),
 
-  remove: staff
+  remove: platform("obs:operate")
     .meta(docs("Delete a cue"))
     .input(CueIdSchema)
     .output(z.object({ ok: z.literal(true) }))
@@ -130,7 +130,7 @@ export const obsCueRouter = {
       return yield* Obs.removeCue(input.id);
     }),
 
-  reorder: staff
+  reorder: platform("obs:operate")
     .meta(docs("Rewrite the rundown order"))
     .input(ReorderCuesSchema)
     .output(z.array(CueSchema))
@@ -138,7 +138,7 @@ export const obsCueRouter = {
       return yield* Obs.reorderCues(input);
     }),
 
-  fire: staff
+  fire: platform("obs:operate")
     .meta(docs("Fire a cue"))
     .input(CueIdSchema)
     .output(FiredCueSchema)
@@ -146,7 +146,7 @@ export const obsCueRouter = {
       return yield* Obs.fireCue(input.id, commandSource(context.user));
     }),
 
-  step: staff
+  step: platform("obs:operate")
     .meta(docs("Fire the next or previous cue, wrapping around; null on an empty rundown"))
     .input(StepCueSchema)
     .output(FiredCueSchema.nullable())

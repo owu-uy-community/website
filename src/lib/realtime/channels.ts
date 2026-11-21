@@ -1,9 +1,15 @@
+import type { COMPANION_CHANNEL as ContractCompanionChannel } from "../../../owy/companion/bridge/src/web/contract";
+
 /**
  * Realtime channel naming. Event-scoped channels carry a topic suffix so one
  * subscription key never leaks across tenants.
  */
 
-export type EventChannelTopic = "sync" | "countdown" | "highlights" | "cast" | "staff";
+/**
+ * `ops` carries content-free pings about the event day (incidents, rooms, check-ins, the run of
+ * show, screens, activity): it is public, so the data always comes from guarded reads.
+ */
+export type EventChannelTopic = "sync" | "countdown" | "highlights" | "cast" | "staff" | "ops";
 
 export function eventChannel(eventId: string, topic: EventChannelTopic): string {
   return `event:${eventId}:${topic}`;
@@ -14,7 +20,14 @@ export const GLOBAL_CHANNELS = {
   launchpad: "launchpad-sounds",
   /** Owy Stage: what the video wall shows + Owy face events (see src/lib/owy-stage). */
   owyStage: "owy-stage",
+  /** Venue screens: "identify" / "reload" for one screen id (harmless, server-sent only). */
+  screens: "screens",
 } as const;
+
+/** Who has the admin open for an event, and on which page. Admin sessions only. */
+export function presenceChannel(eventId: string): string {
+  return `private:presence:${eventId}`;
+}
 
 /**
  * OBS queue state per rig instance (1 = admin screen, 2 = standalone app).
@@ -33,3 +46,17 @@ export function obsQueueChannel(instanceId: number): string {
 export function obsControlChannel(instanceId: number): string {
   return `private:obs:${instanceId}`;
 }
+
+/**
+ * «Owy, en vivo»: the presenter's phone sends Owy commands here and the Mac console that holds
+ * the bridge socket (the seat) runs them and reports its status back. `private:` — admin only.
+ */
+export const OWY_TALK_CHANNEL = "private:owy-talk";
+
+/**
+ * The companion's control plane: settings rows and commands for the bridge on the venue Mac, its
+ * status and command results for the panels (/admin/owy, /admin/companion). `private:` — `stage:operate` (the bridge's key
+ * has it; OBS stays out of its reach). The bridge's contract owns the name; typed against it here,
+ * so client bundles that import channels don't carry the contract.
+ */
+export const COMPANION_CHANNEL: typeof ContractCompanionChannel = "private:companion";

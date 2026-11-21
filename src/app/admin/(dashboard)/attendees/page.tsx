@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 
-import { requireAdmin } from "app/lib/auth-helpers";
+import { requirePermission } from "app/lib/auth-helpers";
 import { caller } from "lib/orpc/server";
 
 /** Legacy URL: attendees now live under /admin/<communitySlug>/attendees. */
 export default async function AttendeesLegacyPage({ searchParams }: { searchParams: Promise<{ event?: string }> }) {
-  await requireAdmin();
+  await requirePermission("raffle:read");
 
   const { event: eventSlug } = await searchParams;
   const events = await caller.openSpaces.listForAdmin();

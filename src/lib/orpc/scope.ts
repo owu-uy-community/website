@@ -70,7 +70,7 @@ export const resolveScope = (
     return null;
   });
 
-export const ROLE_RANK: Record<CommunityRoleValue, number> = { member: 0, editor: 1, admin: 2, owner: 3 };
+export { ROLE_RANK } from "../roles";
 
 /** The caller's role in a community, if they belong to it. */
 export const memberRole = (communityId: string, userId: string) =>

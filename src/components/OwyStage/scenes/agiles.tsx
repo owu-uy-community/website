@@ -38,7 +38,7 @@ export const AGILES = {
 /** The accent order used across the brand: teal, pink, salmon. */
 export const ACCENTS = [AGILES.teal, AGILES.pink, AGILES.salmon] as const;
 
-const BODY = "font-['Open_Sans']";
+const BODY = "font-open";
 
 /**
  * Type on a strip is sized against the canvas height, not the 1080 baseline:

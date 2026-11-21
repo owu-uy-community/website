@@ -27,10 +27,10 @@ stats:
     count: 20
   - title: Personas
     subtitle: conectadas
-    count: 5000
+    count: 5600
   - title: Personas
-    subtitle: activas diariamente
-    count: 950
+    subtitle: activas cada mes
+    count: 850
   - title: Años
     subtitle: desde su creación
     count: 11

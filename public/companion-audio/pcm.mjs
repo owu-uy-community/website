@@ -30,3 +30,10 @@ export function pcmLevel(bytes) {
   for(let i=0;i+1<view.byteLength;i+=2){const v=view.getInt16(i,true)/32768;total+=v*v;}
   return Math.sqrt(total/Math.max(1,view.byteLength/2));
 }
+/** One block of the capture: the left side (a mono mic is only that), the right one, or both averaged into `scratch`. */
+export function pickChannel(channels, pick, scratch) {
+  if(pick==='R'&&channels[1])return channels[1];
+  if(pick!=='mix'||!channels[1])return channels[0];
+  for(let i=0;i<scratch.length;i++)scratch[i]=(channels[0][i]+channels[1][i])/2;
+  return scratch;
+}

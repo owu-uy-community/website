@@ -1,0 +1,13 @@
+name: "GDG Montevideo"
+picture: /images/communities/gdg-montevideo/picture.webp
+description: "Google Developer Group de Montevideo: web, mobile, cloud e IA."
+topics:
+  - web
+  - mobile
+  - cloud
+status: activa
+instagram: https://www.instagram.com/gdgmontevideook/
+meetup: https://gdg.community.dev/gdg-montevideo/
+feedNames:
+  - "GDG"
+confPartner: false

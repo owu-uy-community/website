@@ -31,6 +31,23 @@ describe("openSpaces.listByCommunity", () => {
   });
 });
 
+describe("openSpaces.board", () => {
+  test("anyone reads an event's rooms, blocks and talks in one call, the same as the separate reads", async () => {
+    const board = await makeBoard();
+    await makeTrack({ eventId: board.event.id, scheduleId: board.slots.late.id, roomId: board.rooms.tv.id });
+    const input = { openSpaceId: board.event.id };
+
+    const read = await call(router.openSpaces.board, input, by(null));
+
+    expect(read).toStrictEqual({
+      rooms: await call(router.rooms.getByOpenSpace, input, by(null)),
+      schedules: await call(router.schedules.getByOpenSpace, input, by(null)),
+      tracks: await call(router.tracks.list, input, by(null)),
+    });
+    expect(read.tracks).toHaveLength(1);
+  });
+});
+
 describe("openSpaces.listForAdmin", () => {
   test("site staff sees every event; members only their communities' events", async () => {
     const mine = await makeCommunity();
@@ -67,6 +84,24 @@ describe("openSpaces.get", () => {
     await expect(call(router.openSpaces.get, { id: "no-existe" }, by(null))).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("drafts", () => {
+  test("stay in the organizer panel: not on the site, the admin lists or the screens", async () => {
+    const community = await makeCommunity();
+    const [draft, published] = await Promise.all([
+      makeEvent(community.id, { status: "draft" }),
+      makeEvent(community.id),
+    ]);
+    const staff = await makeSiteAdmin();
+
+    await expect(call(router.openSpaces.get, { id: draft.id }, by(null))).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const listed = await call(router.openSpaces.listByCommunity, { communityId: community.id }, by(staff));
+    expect(listed.map((event) => event.id)).toStrictEqual([published.id]);
+    const operated = (await call(router.openSpaces.listForAdmin, undefined, by(staff))).map((event) => event.id);
+    expect(operated).toContain(published.id);
+    expect(operated).not.toContain(draft.id);
   });
 });
 
@@ -142,6 +177,60 @@ describe("openSpaces.update", () => {
     const [row] = await db.select().from(events).where(eq(events.id, event.id));
 
     expect(row).toMatchObject(data);
+  });
+
+  test("an update that would end the event before it starts is a BAD_REQUEST and changes nothing", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const staff = await makeSiteAdmin();
+
+    // Only the end moves, to before the stored start (17:30 UTC).
+    await expect(
+      call(
+        router.openSpaces.update,
+        { id: event.id, data: { name: "No", endDate: "2026-11-07T16:00:00.000Z" } },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST", message: "La fecha de fin tiene que ser posterior a la de inicio" });
+    await expect(
+      call(
+        router.openSpaces.update,
+        { id: event.id, data: { ...EVENT_DATES, endDate: EVENT_DATES.startDate } },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    const [row] = await db.select().from(events).where(eq(events.id, event.id));
+    expect(row).toMatchObject({ name: event.name, endDate: event.endDate });
+  });
+
+  test("the venue map link is a web address, nothing a browser would run", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const staff = await makeSiteAdmin();
+
+    await expect(
+      call(
+        router.openSpaces.update,
+        { id: event.id, data: { venueMapUrl: "data:text/html,<script>alert(1)</script>" } },
+        by(staff)
+      )
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  test("a time zone or an Eventbrite id that can't be real is a BAD_REQUEST", async () => {
+    const community = await makeCommunity();
+    const event = await makeEvent(community.id);
+    const staff = await makeSiteAdmin();
+
+    await expect(
+      call(router.openSpaces.update, { id: event.id, data: { timezone: "America/Atlantida" } }, by(staff))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      call(router.openSpaces.update, { id: event.id, data: { eventbriteEventId: "../users/me" } }, by(staff))
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(
+      call(router.openSpaces.update, { id: event.id, data: { eventbriteEventId: "" } }, by(staff))
+    ).resolves.toMatchObject({ eventbriteEventId: null });
   });
 });
 

@@ -17,11 +17,12 @@ the Owy bot — goes through the server's command bus.
 
 ## Stream Deck (Bitfocus Companion, Generic HTTP)
 
-1. Mint a key: `pnpm owy:key -- --name "stream deck"` (printed once; Better Auth stores the hash).
+1. Mint a key for the deck's own service account, preset `stream-deck` (fires presets and drives OBS,
+   nothing else; expires in a year): /admin/acceso → Llaves API, or
+   `pnpm auth:key -- --owner stream-deck --preset stream-deck --name "Stream Deck"` (printed once).
 2. Companion → Connections → **Generic: HTTP**, base URL `https://owu.uy/api/obs/`.
 3. Per button: `POST`, URL from the table, headers `{"x-api-key":"…"}`, body `{}`.
-   The key only travels in the header — it is a full admin credential and
-   query strings end up in access logs.
+   The key only travels in the header — query strings end up in access logs.
 4. Feedback: `GET status` every 2 s into a variable; the JSON has `programScene`,
    `previewScene`, `studioMode`, `streaming`, `recording`, `executorOnline`,
    `currentCue` and `cues[]`.

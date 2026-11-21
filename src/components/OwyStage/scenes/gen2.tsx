@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 
+import { poppins } from "app/fonts";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
 import { BRAND, H, W, useStageFrame } from "../Stage";
@@ -666,10 +667,10 @@ function sampleText(text: string): [number, number][] {
   const ctx = off.getContext("2d");
   if (!ctx) return [];
   let size = 300;
-  ctx.font = `800 ${size}px Poppins, sans-serif`;
+  ctx.font = `800 ${size}px ${poppins.style.fontFamily}, sans-serif`;
   while (ctx.measureText(text).width > W - 200 && size > 80) {
     size -= 20;
-    ctx.font = `800 ${size}px Poppins, sans-serif`;
+    ctx.font = `800 ${size}px ${poppins.style.fontFamily}, sans-serif`;
   }
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";

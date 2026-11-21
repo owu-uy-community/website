@@ -1,0 +1,3455 @@
+{
+  "conf:genexus-meeting:1990": {
+    "description": "El **I Encuentro GeneXus** se hizo en 1990 en la Cámara de Comercio Uruguayo-Española, en Montevideo. Artech, fundada en 1988, había lanzado GeneXus 1.0 en 1989 y tenía un problema serio de performance en AS/400. Convocó a sus primeros clientes para contarles el problema y anunciarles una versión corregida.\n\nSegún recordó Jorge Mastropietro, uno de los primeros integrantes del equipo, fueron entre 30 y 40 personas. Se habló de las experiencias de los usuarios con la herramienta y de lo que esperaban de ella, y varias de sus sugerencias entraron en la versión siguiente. Karina Santo recordó la analogía que hizo Gonda ese día: según los estudios, los pelícanos no deberían poder volar, pero como no lo saben, vuelan igual.\n\nGonda contó que, en lo inmediato, el encuentro tuvo un efecto negativo: Artech no vendió nada en los ocho meses siguientes. Con los años, en cambio, se volvió la cita anual de la comunidad GeneXus. Al año siguiente, el II Encuentro triplicó la cantidad de clientes y recibió a los primeros usuarios de la región.",
+    "organizers": [
+      "Artech"
+    ],
+    "attendance": "entre 30 y 40 personas",
+    "links": [
+      {
+        "label": "La historia del I Encuentro contada por sus protagonistas (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/i-encuentro-genexus-la-historia-del-i-encuentro-genexus-a-traves-de-sus-protagonistas/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: 1st GeneXus Meeting, the story as told by its main figures",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/1st-genexus-meeting-the-story-of-the-first-genexus-meeting-as-told-by-its-main-figures/auto/351/0"
+      }
+    ]
+  },
+  "conf:icann-montevideo:2001-09-07": {
+    "description": "Del 7 al 10 de setiembre de 2001 Montevideo recibió una de las rondas de reuniones públicas de **ICANN**, la organización que coordina los nombres de dominio y las direcciones de Internet. Todas las sesiones fueron en el Radisson Victoria Plaza, eran gratuitas y abiertas a cualquier interesado, y se transmitieron por Internet con participación remota coordinada por el Berkman Center de Harvard. El comité anfitrión local se organizó desde el Servicio Central de Informática de la Universidad de la República (SeCIU), con ANTEL como sponsor oficial.\n\nEl viernes 7 se reunieron el Comité Asesor Gubernamental (GAC), las constituencies de la DNSO y el comité de estudio At Large. El sábado 8 sesionaron la Asamblea General de la DNSO, el Names Council y la Address Supporting Organization, y el domingo 9 fue el Foro Público, con temas como los nombres de dominio internacionalizados, la evaluación de los nuevos dominios genéricos, el futuro de .org, Whois y las transferencias entre registradores.\n\nEl lunes 10 sesionó el Board. Entre otras resoluciones, autorizó el contrato del dominio patrocinado **.museum**, aprobó el acuerdo con auDA para el dominio de país de Australia, extendió el memorando de entendimiento con el Departamento de Comercio de Estados Unidos y creó un comité para los nombres de dominio internacionalizados (IDN).\n\nEl comité anfitrión publicó una galería con más de cien fotos: el armado de las salas, las reuniones, Vinton Cerf y autoridades uruguayas, un espectáculo de tango de la Intendencia y uno de candombe de Mundo Afro.",
+    "venue": "Radisson Montevideo Victoria Plaza",
+    "organizers": [
+      "ICANN",
+      "Comité anfitrión local (SeCIU, Universidad de la República)"
+    ],
+    "photos": [
+      {
+        "src": "https://web.archive.org/web/20030130092953im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0218.JPG",
+        "alt": "Vinton G. Cerf, presidente del Board de ICANN, habla al micrófono",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011119012424im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0245.JPG",
+        "alt": "Raúl Echeverría, María Olga Vázquez, Vinton G. Cerf, Rodolfo Farielo e Ida Holz, durante la reunión",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20030507225148im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0216.JPG",
+        "alt": "Fernando Bracco, presidente de ANTEL, habla en el salón del Radisson",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011109235519im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0215.JPG",
+        "alt": "Raúl Echeverría en el escenario, con los banners de ANTEL, sponsor oficial",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20030511000448im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0247.JPG",
+        "alt": "El vicepresidente de la República, Luis Hierro López, en el atril",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011109233941im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0193.JPG",
+        "alt": "El Grand Ballroom del Radisson preparado para la reunión, la mañana del 8 de setiembre",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011110015742im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0204.JPG",
+        "alt": "La mesa del Board de ICANN con sus monitores, vista desde un costado",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20030126163610im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0203.JPG",
+        "alt": "El Grand Ballroom visto desde el podio",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011110020930im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0162.JPG",
+        "alt": "Reunión de los registros de dominios de país (ccTLD) el 6 de setiembre",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011110023249im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0207.JPG",
+        "alt": "Reunión de AfriNIC durante la semana de ICANN en Montevideo",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20030109021437im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0170.JPG",
+        "alt": "La sala de terminales para los participantes, el 7 de setiembre",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20021229092928im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0160.JPG",
+        "alt": "Ben Edelman, del Berkman Center de Harvard, instala el equipo de transmisión en el Grand Ballroom",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20011110004533im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0177.JPG",
+        "alt": "Espectáculo «Galas del Tango» de la Intendencia de Montevideo para los participantes, el 7 de setiembre",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "src": "https://web.archive.org/web/20030130091823im_/http://www.icannuruguay.org.uy:80/fotos/DSCF0220.JPG",
+        "alt": "Espectáculo de candombe de la agrupación Mundo Afro para los participantes",
+        "by": "Comité anfitrión de ICANN Montevideo",
+        "source": "Sitio del comité anfitrión (archivado)",
+        "page": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de la reunión (archivo de ICANN)",
+        "url": "https://archive.icann.org/en/meetings/montevideo/index.html"
+      },
+      {
+        "label": "Videos y notas de las sesiones (Berkman Center, Harvard)",
+        "url": "http://cyber.law.harvard.edu/icann/montevideo/archive/"
+      },
+      {
+        "label": "Galería de fotos del comité anfitrión (archivada)",
+        "url": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      },
+      {
+        "label": "Resoluciones del Board del 10 de setiembre de 2001",
+        "url": "https://www.icann.org/resources/board-material/prelim-report-2001-09-10-en"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ICANN: ICANN Meetings in Montevideo, 7-10 September 2001",
+        "url": "https://archive.icann.org/en/meetings/montevideo/index.html"
+      },
+      {
+        "label": "ICANN: anuncio de las reuniones en Montevideo",
+        "url": "https://www.icann.org/en/announcements/details/icann-meetings-in-montevideo-uruguay--7-10-september-2001-12-6-2001-en"
+      },
+      {
+        "label": "ICANN: Preliminary Report, Board meeting 10 September 2001",
+        "url": "https://www.icann.org/resources/board-material/prelim-report-2001-09-10-en"
+      },
+      {
+        "label": "Berkman Center: ICANN-Montevideo Public Meeting Archive",
+        "url": "http://cyber.law.harvard.edu/icann/montevideo/archive/"
+      },
+      {
+        "label": "Comité anfitrión: sponsors de la reunión (archivado)",
+        "url": "https://web.archive.org/web/20010815003806/http://www.icannuruguay.org.uy:80/english/docs/sponsors.htm"
+      },
+      {
+        "label": "Comité anfitrión: galería de fotos (archivada)",
+        "url": "https://web.archive.org/web/20010917032234/http://www.icannuruguay.org.uy:80/fotos/"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2001-09-17": {
+    "description": "El **XII Encuentro Internacional GeneXus** fue del 17 al 19 de setiembre de 2001 en el Radisson Victoria Plaza de Montevideo, y reunió a casi 2.000 asistentes presenciales.\n\nEl eje fue .NET. Artech acababa de lanzar su generador para la plataforma de Microsoft y presentó 18 aplicaciones desarrolladas con él, y Artech y Microsoft reconocieron como «early adopters» a varias empresas de la comunidad. Michael Culver, del equipo de .NET y Visual Studio de Microsoft, presentó la plataforma, y Ambrose Ramsahai, gerente general de Microsoft Uruguay, habló de la alianza con Artech.\n\nEn la apertura, Breogán Gonda, presidente de Artech, sostuvo que los sistemas operativos se iban a volver commodities y que la industria entendería que la programación manual ya no era razonable. También dijo que el paradigma del desarrollo basado en conocimiento estaba cerca de imponerse.",
+    "attendance": "casi 2.000 asistentes presenciales",
+    "organizers": [
+      "Artech"
+    ],
+    "talks": [
+      {
+        "title": "Apertura del XII Encuentro",
+        "speakers": [
+          "Breogán Gonda"
+        ]
+      },
+      {
+        "title": "Presentación de la plataforma .NET",
+        "speakers": [
+          "Michael Culver"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Crónica del XII Encuentro (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/leer-noticia/xii-encuentro-internacional-genexus-1277090"
+      },
+      {
+        "label": "Historia de los Encuentros IX a XII (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/ix-a-xii-encuentros-genexus-historia-de-los-encuentros-anos-1998-1999-2000-y-2001/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XII GeneXus International Meeting",
+        "url": "https://www.genexus.com/en/news/read-news/xii-genexus-international-meeting"
+      },
+      {
+        "label": "GeneXus: IX to XII GeneXus Meetings, the Meetings through time",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/ix-to-xii-genexus-meetings-the-meetings-through-time-years-1998-1999-2000-and-2001/auto/351/0"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2002-09-30": {
+    "description": "En marzo de 2002 Artech anunció el **XIII Encuentro Internacional GeneXus** para el 30 de setiembre al 2 de octubre de ese año, en el Radisson Victoria Plaza de Montevideo. Pero en setiembre de 2002 el sitio de GeneXus ya lo daba para el 31 de marzo al 2 de abril de 2003, y abría un buzón de sugerencias para armar el programa. **En 2002 no hubo Encuentro**: el XIII se hizo en 2003.\n\nSegún la historia oficial de los Encuentros, el XIII superó los 2.500 asistentes presenciales y tuvo más de 2.000 participantes por Internet, en el Radisson. El programa anunciaba alrededor de cien conferencias, laboratorios prácticos y reuniones cara a cara con el equipo de desarrollo de Artech. En su conferencia «El futuro, una visión personal», Breogán Gonda habló de workflow, servidores de metadatos y de la división del mercado entre Java y .NET.",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Sitio de GeneXus, setiembre de 2002 (archivado)",
+        "url": "https://web.archive.org/web/20020927052252/http://www.genexus.com/main/hmain.aspx"
+      },
+      {
+        "label": "Historia de los Encuentros XIII a XVI (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xiii-a-xvi-encuentros-genexus-historia-de-los-encuentros-anos-2003-2004-2005-y-2006/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XIII GeneXus International Meeting (anuncio de marzo de 2002)",
+        "url": "https://www.genexus.com/en/news/read-news/xiii-genexus-international-meeting"
+      },
+      {
+        "label": "Sitio de GeneXus, setiembre de 2002: XIII Encuentro del 31 de marzo al 2 de abril de 2003 (archivado)",
+        "url": "https://web.archive.org/web/20020927052252/http://www.genexus.com/main/hmain.aspx"
+      },
+      {
+        "label": "Sitio de GeneXus, marzo de 2003: programa del XIII Encuentro (archivado)",
+        "url": "https://web.archive.org/web/20030320150009/http://www.genexus.com/main/hmain.aspx"
+      },
+      {
+        "label": "GeneXus: XIII-XVI GeneXus Meetings, the Meetings through time",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/xiii-xvi-genexus-meetings-the-meetings-through-time-years-2003-2004-and-2005/auto/351/0"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2004-06-14": {
+    "description": "El **XIV Encuentro Internacional de Usuarios GeneXus** fue del 14 al 16 de junio de 2004 en el Radisson Montevideo Victoria Plaza. Según Artech, reunió a 3.000 personas de 21 países, y otras 1.500 lo siguieron por Internet, porque las conferencias se transmitieron en vivo.\n\nHubo más de 120 sesiones, entre conferencias y laboratorios, con oradores de Argentina, Brasil, Chile, España, Estados Unidos, Japón, México y Uruguay. El anuncio prometía expositores de los laboratorios de IBM, Microsoft, Oracle y Sun, y también a Enrique Baliño (director de Zonamérica), Mariano Larrobla (De Larrobla & Asociados) y Juan Grompone (Interfase), además de Breogán Gonda y Nicolás Jodal. En paralelo se hizo la X Exposición de Bases de Conocimiento GeneXus, donde empresas de software mostraron sus soluciones.",
+    "attendance": "3.000 personas de 21 países, más 1.500 por Internet",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Historia de los Encuentros XIII a XVI (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xiii-a-xvi-encuentros-genexus-historia-de-los-encuentros-anos-2003-2004-2005-y-2006/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: Register for XIV GeneXus International Meeting",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/register-for-xiv-genexus-international-meeting/auto/351/0"
+      },
+      {
+        "label": "GeneXus: XIII-XVI GeneXus Meetings, the Meetings through time",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/xiii-xvi-genexus-meetings-the-meetings-through-time-years-2003-2004-and-2005/auto/351/0"
+      }
+    ]
+  },
+  "conf:jiap:2004-08-18": {
+    "description": "Las **JIAP 2004**, Jornadas de Informática de la Administración Pública, fueron del 18 al 20 de agosto de 2004 en el Centro de Conferencias de la Intendencia Municipal de Montevideo. Las organizaron AsIAP (Asociación de Informáticos de la Administración Pública) y la CONADI (Comisión Nacional de Informática de Presidencia de la República).\n\nComo era año electoral, el programa incluyó un **foro político** para conocer la posición de los candidatos a la presidencia sobre el manejo de la tecnología, y un **foro tecnológico** donde grupos de trabajo formados desde mayo presentaron sus propuestas para el área. Participaron, como en otras ediciones, Breogán Gonda y Juan Grompone, y representantes del Ministerio de Ciencia y Tecnología de Venezuela. Se presentaron proyectos del Instituto Nacional de Estadística, UTE, la Intendencia de Montevideo, Conaprole y la Universidad de la República.\n\nLas charlas técnicas y académicas abarcaron seguridad, COBIT, gestión de proyectos y modelos de madurez, gestión de servicios, alta disponibilidad, Itanium y calidad de software. Dos docentes de la Universidad ORT dieron conferencias: Juan Carlos Nogueira sobre planificación presupuestal en entornos de crisis y Amalia Álvarez sobre la guía ISO/IEC 90003:2004.",
+    "venue": "Centro de Conferencias de la Intendencia Municipal de Montevideo",
+    "organizers": [
+      "AsIAP (Asociación de Informáticos de la Administración Pública)",
+      "CONADI (Comisión Nacional de Informática)"
+    ],
+    "talks": [
+      {
+        "title": "Planificación presupuestal en entornos de crisis",
+        "speakers": [
+          "Juan Carlos Nogueira"
+        ]
+      },
+      {
+        "title": "ISO 9000:2000 para software: nueva guía ISO/IEC 90003:2004",
+        "speakers": [
+          "Amalia Álvarez Balbi"
+        ]
+      },
+      {
+        "title": "Incorporando tecnología sin generar brechas de seguridad",
+        "speakers": [
+          "Graciela Ricci"
+        ]
+      },
+      {
+        "title": "Aplicación de COBIT",
+        "speakers": [
+          "Leonardo Sena"
+        ]
+      },
+      {
+        "title": "OPM3 - PMI Capítulo Montevideo",
+        "speakers": [
+          "Liliana Buchtik",
+          "Gonzalo Noya"
+        ]
+      },
+      {
+        "title": "Modelos de madurez de gestión de proyectos",
+        "speakers": [
+          "Mario Pippolo"
+        ]
+      },
+      {
+        "title": "Optimización de servicios",
+        "speakers": [
+          "Maximiliano Schlez"
+        ]
+      },
+      {
+        "title": "Gerenciando servicios, deleitando clientes",
+        "speakers": [
+          "Francisco Noya"
+        ]
+      },
+      {
+        "title": "Proyecto Yukon",
+        "speakers": [
+          "Gustavo Larriera"
+        ]
+      },
+      {
+        "title": "Balance de carga y alta disponibilidad para servicios de IP",
+        "speakers": [
+          "Mario Bonilla"
+        ]
+      },
+      {
+        "title": "Tecnología Itanium",
+        "speakers": [
+          "Walter Valle"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de las JIAP 2004 (archivado)",
+        "url": "https://web.archive.org/web/20040814021448/http://www.jiap.org.uy/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sitio de las JIAP 2004 (archivado, agosto de 2004)",
+        "url": "https://web.archive.org/web/20040814021448/http://www.jiap.org.uy/"
+      },
+      {
+        "label": "Universidad ORT: Docentes de ORT participan en las Jornadas de Informática de la Administración Pública",
+        "url": "https://www.ort.edu.uy/en/news/docentes-de-ort-participan-en-las-jornadas-de-informatica-de-la-administracion-publica"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2005-09-12": {
+    "description": "El **XV Encuentro Internacional de Usuarios GeneXus** fue del 12 al 14 de setiembre de 2005 en Montevideo. Según Artech, asistieron 3.300 personas de 30 países.\n\nEl anuncio principal fue **GeneXus 9.0**, que según Breogán Gonda duplicaba la productividad de la versión anterior. Nicolás Jodal llamó a la comunidad a liderar la nueva generación de aplicaciones de negocio. También hubo anuncios con socios:\n\n- un laboratorio con IBM Uruguay y el INCO (Facultad de Ingeniería) para probar grandes aplicaciones GeneXus en iSeries;\n- los resultados de un año del laboratorio .NET con Microsoft en Zonamérica, donde 15 empresas desarrollaron 100.000 objetos GeneXus y generaron 200 millones de líneas de C#;\n- el Grid LAB, con Oracle, HP y Tilsor, para demostrar tecnologías de grid computing.\n\nComo cada año, hubo convocatoria abierta a oradores, sponsors y expositores para la 11.ª Exposición de Bases de Conocimiento GeneXus.",
+    "attendance": "3.300 personas de 30 países",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Historia de los Encuentros XIII a XVI (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xiii-a-xvi-encuentros-genexus-historia-de-los-encuentros-anos-2003-2004-2005-y-2006/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XV GeneXus International Meeting, September 2005",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/xv-genexus-international-meeting-september-2005/auto/351/0"
+      },
+      {
+        "label": "GeneXus: XIII-XVI GeneXus Meetings, the Meetings through time",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/xiii-xvi-genexus-meetings-the-meetings-through-time-years-2003-2004-and-2005/auto/351/0"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2006-09-18": {
+    "description": "El **XVI Encuentro Internacional de Usuarios GeneXus** fue del 18 al 20 de setiembre de 2006 en el Centro de Convenciones del Radisson Montevideo Victoria Plaza, con más de 3.000 participantes.\n\nEl foco estuvo en extender y consolidar el desarrollo basado en conocimiento que propone GeneXus, en una comunidad que ya llegaba a 50.000 miembros. Se presentó el primer libro publicado para la comunidad, *Guía Práctica GeneXus: Desarrollo Basado en el Conocimiento*, del profesor Daniel Márquez Lisboa, y se inauguró en Uruguay el laboratorio iSeries de IBM para que las empresas que usan GeneXus se capacitaran en esa plataforma.\n\nEse año Artech invitó a la comunidad a votar por el miembro que más valor le había aportado, para reconocerlo en el Encuentro. La lista de conferencias se publicó en línea antes del evento.",
+    "attendance": "más de 3.000 participantes",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Historia de los Encuentros XIII a XVI (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xiii-a-xvi-encuentros-genexus-historia-de-los-encuentros-anos-2003-2004-2005-y-2006/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XVI GeneXus International Meeting - News",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/xvi-genexus-international-meeting-news/auto/351/0"
+      },
+      {
+        "label": "GeneXus: XIII a XVI Encuentros GeneXus, Historia de los Encuentros",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xiii-a-xvi-encuentros-genexus-historia-de-los-encuentros-anos-2003-2004-2005-y-2006/auto/351/0"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2007-09-24": {
+    "description": "El **XVII Encuentro Internacional GeneXus** fue del 24 al 26 de setiembre de 2007 en el Radisson Victoria Plaza de Montevideo, con el lema **«Create More!»** y más de 3.000 participantes presenciales.\n\nEl centro fue la **versión Rocha**, la nueva generación de GeneXus que la comunidad venía probando en versiones preliminares y que terminaría llamándose GeneXus X. Breogán Gonda y Nicolás Jodal la presentaron como un salto mayor que cualquier versión anterior y usaron el Encuentro para explicar su filosofía, mostrar funcionalidades nuevas y compartir casos de éxito con GeneXus 9.0.\n\nUna de las novedades fue el **GeneXus Challenge**, una competencia entre equipos de la comunidad con dos categorías: bases de conocimiento y desarrollo de GXextensions, la base de la nueva versión.",
+    "attendance": "más de 3.000 participantes",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Historia de los Encuentros XVII a XIX (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xvii-a-xix-encuentros-genexus-historia-de-los-encuentros-anos-2007-2008-y-2009/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XVII GeneXus International Meeting",
+        "url": "https://www.genexus.com/en/news/read-news/xvii-genexus-international-meeting"
+      },
+      {
+        "label": "GeneXus: XVII a XIX Encuentros GeneXus, Historia de los Encuentros",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xvii-a-xix-encuentros-genexus-historia-de-los-encuentros-anos-2007-2008-y-2009/auto/351/0"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2008": {
+    "description": "El **XVIII Encuentro Internacional GeneXus** fue del 22 al 24 de setiembre de 2008, con el lema **«It's time to release your talent»** y más de 3.000 participantes. Según Artech, solo el primer día fueron 2.500 personas, que llenaron las salas con actividades en simultáneo.\n\nLas novedades giraron en torno a **GeneXus X**, recién liberado, y su Evolution 1, que sumaba generadores Win a los Web; también se mostraron herramientas Web 2.0 y de administración de aplicaciones. Breogán Gonda recomendó migrar las aplicaciones a plataformas actuales y anunció dos innovaciones próximas: GXserver (GeneXus Server), pensado para instalaciones con muchos desarrolladores, y Change Defender. También presentó el proyecto Guichón, de De Larrobla & Asociados con apoyo de Artech y la Intendencia de Paysandú, que formaba desarrolladores GeneXus en pueblos del interior.\n\nAl cierre, Nicolás Jodal señaló a la Web 2.0 y al éxito de Facebook como la dirección a seguir y habló de Google Chrome y del cloud computing, con el software como servicio como nuevo modelo de negocio.",
+    "attendance": "más de 3.000 participantes",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Historia de los Encuentros XVII a XIX (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xvii-a-xix-encuentros-genexus-historia-de-los-encuentros-anos-2007-2008-y-2009/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XVII a XIX Encuentros GeneXus, Historia de los Encuentros",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xvii-a-xix-encuentros-genexus-historia-de-los-encuentros-anos-2007-2008-y-2009/auto/351/0"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2009-09-14": {
+    "description": "El **XIX Encuentro Internacional GeneXus** fue del 14 al 16 de setiembre de 2009 en el Radisson de Montevideo, con más de 3.600 inscriptos. Según Artech, asistieron casi mil personas de más de 30 países.\n\nArtech lanzó **GeneXus X Evolution 1**, con soporte para Windows e iSeries, y el primer día liberó **GeneXus Server**, para trabajo en equipo, disponible con licencia o como SaaS. En la apertura, Breogán Gonda insistió en que las plataformas que no son web no tenían futuro y pidió a la comunidad migrar cuanto antes.\n\nHubo más conferencias de negocios y desarrollo profesional que en años anteriores, y una feria de partners renovada, la Expo 2.0, con más de 15 expositores. Nicolás Jodal repasó los acuerdos con IBM, Microsoft y Amazon, reconoció a los 20 beta testers más activos y lanzó los Collaborative Projects 2.0. Microsoft anunció en su blog de Azure una charla de Steve Marx sobre cloud computing.",
+    "attendance": "más de 3.600 inscriptos",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Historia de los Encuentros XVII a XIX (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xvii-a-xix-encuentros-genexus-historia-de-los-encuentros-anos-2007-2008-y-2009/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: XVII a XIX Encuentros GeneXus, Historia de los Encuentros",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/xvii-a-xix-encuentros-genexus-historia-de-los-encuentros-anos-2007-2008-y-2009/auto/351/0"
+      },
+      {
+        "label": "Microsoft Azure Blog: Steve Marx to talk about cloud computing at XIX GeneXus International Meeting",
+        "url": "https://azure.microsoft.com/de-de/blog/steve-marx-to-talk-about-cloud-computing-at-xix-genexus-international-meeting-in-montevideo-uruguay-monday-91409/"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2010": {
+    "description": "Fue la primera vez que el **OTN Tour Latin America** de Oracle Technology Network pasó por Montevideo. UYOUG (Grupo de Usuarios Oracle del Uruguay), que había hecho su primer evento en junio de ese año, anunció en setiembre de 2010 una jornada entera de charlas técnicas para el sábado 16 de octubre. Al año siguiente, el grupo presentó el tour de 2011 como su segunda edición.\n\nLos expertos anunciados eran Daniel Morgan (DBA, Estados Unidos), Hans Forbrich (desarrollo y aplicaciones, Canadá), Ben Prusinski (DBA y E-Business Suite, Estados Unidos), Ronald Bradford (MySQL, Estados Unidos), Francisco Muñoz Alvarez (DBA, Nueva Zelanda) y Juan Camilo Ruiz (product manager de ADF).\n\nLa gira de ese año pasó por Lima (12 de octubre), Santiago (14), Montevideo (16), São Paulo (18), Bogotá (20), Quito (22) y San José de Costa Rica (25).",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "links": [
+      {
+        "label": "Anuncio en el sitio de UYOUG (archivado)",
+        "url": "https://web.archive.org/web/20100927095549/http://www.uyoug.org.uy/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: «OTN Day - 16 de octubre - Montevideo» (archivado, setiembre de 2010)",
+        "url": "https://web.archive.org/web/20100927095549/http://www.uyoug.org.uy/"
+      },
+      {
+        "label": "UYOUG: OTN Tour 2011, presentado como segunda edición (archivado)",
+        "url": "https://web.archive.org/web/20110822123452/http://www.uyoug.org.uy/index.php"
+      }
+    ]
+  },
+  "conf:segurinfo-uruguay:2010": {
+    "description": "**Segurinfo Uruguay 2010** fue la primera edición uruguaya de Segurinfo, el congreso de seguridad de la información que organiza la asociación argentina Usuaria. Se hizo el 6 de mayo de 2010 en el Radisson Montevideo Victoria Plaza, como parte de la octava edición del congreso, con el lema «La seguridad agrega valor».\n\nUn comité académico local definió los contenidos. Lo presidió Jorge Moleri, secretario general de CUTI, y lo integraron, entre otros, Miguel Brechner (presidente del LATU), José Clastornik (director ejecutivo de AGESIC), Juan Grompone y docentes de facultades de ingeniería públicas y privadas. Hubo conferencias en tres salones y una exposición de stands de empresas del sector.\n\nSegún Usuaria, se acreditaron más de 500 personas, de los ámbitos corporativo privado y público. La conferencia inaugural, de Miguel Brechner sobre seguridad de la información en el Plan Ceibal, llenó la sala: hubo gente parada y otros se quedaron afuera.",
+    "venue": "Radisson Montevideo Victoria Plaza",
+    "attendance": "más de 500 acreditados",
+    "organizers": [
+      "Usuaria"
+    ],
+    "talks": [
+      {
+        "title": "Plan Ceibal: lecciones aprendidas sobre seguridad de la información",
+        "speakers": [
+          "Miguel Brechner"
+        ]
+      },
+      {
+        "title": "Botnets: ¿tiene zombis en su empresa?",
+        "speakers": [
+          "Sebastián Bortnik"
+        ]
+      },
+      {
+        "title": "Autenticación en la nube: un nuevo desafío",
+        "speakers": [
+          "Armando Carratalá"
+        ]
+      },
+      {
+        "title": "Soluciones eficientes para la gestión y auditoría de los riesgos de TI",
+        "speakers": [
+          "Diego Fojo"
+        ]
+      },
+      {
+        "title": "Cómo la piratería hace menos segura a su organización",
+        "speakers": [
+          "Martín Moreno"
+        ]
+      },
+      {
+        "title": "Experiencias en la gestión de respuesta a incidentes",
+        "speakers": [
+          "Horacio Barroso",
+          "Guillermo Cassani"
+        ]
+      },
+      {
+        "title": "PCI y medidas de seguridad para medios electrónicos de pagos",
+        "speakers": [
+          "Carlos Díaz"
+        ]
+      },
+      {
+        "title": "Seguridad sin fronteras: fortaleciendo la colaboración virtual",
+        "speakers": [
+          "Carlos Rienzi"
+        ]
+      },
+      {
+        "title": "Eficiencia en la operación de seguridad: implementando una solución de Identity Management",
+        "speakers": [
+          "Néstor Díaz"
+        ]
+      },
+      {
+        "title": "Implementando un programa de administración de vulnerabilidades a través de herramientas eficientes",
+        "speakers": [
+          "Ariel M. Sánchez"
+        ]
+      },
+      {
+        "title": "Chief Security Officer: nuevos estándares de administración de riesgos, dirección de seguridad y protección patrimonial",
+        "speakers": [
+          "Andrés Ciapessoni",
+          "José María Piscione"
+        ]
+      },
+      {
+        "title": "Panel de gerentes de auditoría interna (Instituto Uruguayo de Auditores Internos)"
+      }
+    ],
+    "links": [
+      {
+        "label": "Reseña de Segurinfo Uruguay 2010 (archivada)",
+        "url": "https://web.archive.org/web/20101228201347/http://www.segurinfo.org/detalle.php?a=resena-segurinfo-uruguay-2010&t=20&d=71"
+      },
+      {
+        "label": "Programa (archivado)",
+        "url": "https://web.archive.org/web/20100427055002/http://www.segurinfo.org/detalle.php?a=programa&t=20&d=58"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Usuaria: Reseña SEGURINFO Uruguay 2010 (archivada)",
+        "url": "https://web.archive.org/web/20101228201347/http://www.segurinfo.org/detalle.php?a=resena-segurinfo-uruguay-2010&t=20&d=71"
+      },
+      {
+        "label": "Usuaria: Programa de Segurinfo Uruguay 2010 (archivado)",
+        "url": "https://web.archive.org/web/20100427055002/http://www.segurinfo.org/detalle.php?a=programa&t=20&d=58"
+      },
+      {
+        "label": "WeLiveSecurity (ESET): Segurinfo llegó a Uruguay por primera vez en 2010",
+        "url": "https://www.welivesecurity.com/la-es/2010/10/29/sorteo-de-entradas-para-segurinfo-peru/"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2010-09-13": {
+    "description": "El **XX Encuentro Internacional GeneXus** fue del 13 al 15 de setiembre de 2010 en el centro de conferencias del Radisson de Montevideo, y marcó los 20 años de los Encuentros. Antes del evento, la prensa anunciaba unos 3.500 profesionales.\n\nEl lanzamiento central fue **GeneXus X Evolution 2**. También se presentaron los resultados de GeneXus Server y se discutieron tendencias en modelos de desarrollo. Hubo unas 150 actividades entre charlas técnicas, talleres y laboratorios, con tracks de negocios y de desarrollo profesional, y las conferencias principales se transmitieron en vivo.\n\nEn los meses previos, GeneXus publicó una serie sobre la historia de los Encuentros desde 1990, con testimonios de sus protagonistas.",
+    "organizers": [
+      "Artech"
+    ],
+    "links": [
+      {
+        "label": "Sitio del XX Encuentro (archivado)",
+        "url": "https://web.archive.org/web/20100723152747/http://www.genexus.com/encuentro2010/"
+      },
+      {
+        "label": "Serie «Historia de los Encuentros» (GeneXus)",
+        "url": "https://www.genexus.com/es/noticias/noticias-capacitacion/i-encuentro-genexus-la-historia-del-i-encuentro-genexus-a-traves-de-sus-protagonistas/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Baguete: Artech promove encontro GeneXus no Uruguai",
+        "url": "https://www.baguete.com.br/noticias/artech-promove-encontro-genexus-no-uruguai"
+      },
+      {
+        "label": "GeneXus: 1st GeneXus Meeting (serie por los 20 años)",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/1st-genexus-meeting-the-story-of-the-first-genexus-meeting-as-told-by-its-main-figures/auto/351/0"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2011": {
+    "description": "El **Montevideo OTN Tour 2011** fue la segunda vez que UYOUG (Grupo de Usuarios Oracle del Uruguay) recibió la gira latinoamericana de Oracle Technology Network. Se hizo el martes 19 de julio, de 8:30 a 20:30, en el Auditorio de ANTEL del Complejo Torre de las Telecomunicaciones.\n\nHubo dos salas en paralelo, la principal con traducción simultánea inglés-español, y webcasts con Arup Nanda desde Estados Unidos y Francisco Muñoz desde Nueva Zelanda. Llegaron cuatro Oracle ACE Directors (Hans Forbrich, Kai Yu, Debra Lilley y Ronald Bradford) y dos especialistas de Oracle: Graham Wood, arquitecto de Oracle Database y uno de los creadores de statspack, AWR y ADDM, y Patanjali Venkatacharya. También hablaron Edelweiss Kammermann, Nelson Calero y Federico Blezio. Los temas: RAC, base de datos, Fusion Middleware y Business Intelligence.\n\nSegún el balance de Oracle, la gira de 2011 recorrió siete países con 35 oradores y reunió 1.855 asistentes, un 61 % más que en 2010.",
+    "venue": "Auditorio de ANTEL, Complejo Torre de las Telecomunicaciones",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "OTN América Latina",
+        "speakers": [
+          "Pablo Ciccarello"
+        ]
+      },
+      {
+        "title": "How Fusion Middleware Built the Fusion User Experience",
+        "speakers": [
+          "Patanjali Venkatacharya"
+        ]
+      },
+      {
+        "title": "11g New Functionalities for DBAs",
+        "speakers": [
+          "Francisco Muñoz Alvarez"
+        ]
+      },
+      {
+        "title": "Some security considerations for Oracle BI 11g",
+        "speakers": [
+          "Hans Forbrich"
+        ]
+      },
+      {
+        "title": "Scaling",
+        "speakers": [
+          "Graham Wood"
+        ]
+      },
+      {
+        "title": "Explaining the MySQL EXPLAIN",
+        "speakers": [
+          "Ronald Bradford"
+        ]
+      },
+      {
+        "title": "BI Publisher 11g: buenas noticias",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      },
+      {
+        "title": "42 Real Life Examples of Fusion Middleware with Apps",
+        "speakers": [
+          "Debra Lilley"
+        ]
+      },
+      {
+        "title": "RAC sin sorpresas: introducción",
+        "speakers": [
+          "Nelson Calero"
+        ]
+      },
+      {
+        "title": "Oracle 11g R2 Clusterware and RAC: Architecture, Configuration, Troubleshooting",
+        "speakers": [
+          "Kai Yu"
+        ]
+      },
+      {
+        "title": "Introduction to Project E2EO (End to End Oracle)",
+        "speakers": [
+          "Hans Forbrich"
+        ]
+      },
+      {
+        "title": "Hidden features",
+        "speakers": [
+          "Graham Wood"
+        ]
+      },
+      {
+        "title": "Virtualized Oracle 11g/R2 RAC Database on Oracle VM: Methods/Tips",
+        "speakers": [
+          "Kai Yu"
+        ]
+      },
+      {
+        "title": "Overview of Fusion Applications",
+        "speakers": [
+          "Debra Lilley"
+        ]
+      },
+      {
+        "title": "Exadata for DBAs",
+        "speakers": [
+          "Arup Nanda"
+        ]
+      },
+      {
+        "title": "10 reasons to upgrade to Oracle Fusion Middleware 11g",
+        "speakers": [
+          "Hans Forbrich"
+        ]
+      },
+      {
+        "title": "Improving Performance with Better Indexes",
+        "speakers": [
+          "Ronald Bradford"
+        ]
+      },
+      {
+        "title": "Oracle Exadata live",
+        "speakers": [
+          "Graham Wood"
+        ]
+      },
+      {
+        "title": "Database Vault y Audit Vault en la medida justa",
+        "speakers": [
+          "Federico Blezio"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de UYOUG con la agenda (archivado)",
+        "url": "https://web.archive.org/web/20110822123452/http://www.uyoug.org.uy/index.php"
+      },
+      {
+        "label": "OTN América Latina Tour 2011 (Oracle)",
+        "url": "https://www.oracle.com/technetwork/pt/community/developer-day/otn-america-latina-tour-406482-ptb.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: Speakers y agenda OTN Tour 2011 (archivado)",
+        "url": "https://web.archive.org/web/20110822123452/http://www.uyoug.org.uy/index.php"
+      },
+      {
+        "label": "Oracle: OTN América Latina Tour 2011, escala Montevideo y balance",
+        "url": "https://www.oracle.com/technetwork/pt/community/developer-day/otn-america-latina-tour-406482-ptb.html"
+      }
+    ]
+  },
+  "conf:cigras:2011-07-28": {
+    "description": "Segunda edición del **CIGRAS**, el Congreso Internacional sobre Gobierno, Riesgos, Auditoría y Seguridad de TI que organiza el Capítulo Montevideo de ISACA (la asociación internacional de profesionales de auditoría, control y seguridad de sistemas de información). Se hizo el 28 y 29 de julio de 2011 en el Centro de Convenciones de la Torre de los Profesionales (piso 4, sala Anacahuita).\n\nEl capítulo había estrenado el congreso en julio de 2010 y, por el éxito de esa primera edición, repitió en 2011 con expositores de México, Colombia, Argentina, Chile, Brasil y Uruguay. Hubo charlas sobre auditoría proactiva, seguridad en el ciclo de vida del software, ISO/IEC 20000, ISO 31000 y PCI-DSS, entre otras. El segundo día incluyó un bloque con las universidades (UdelaR, ORT, Católica y de Montevideo). Cerró Peter Siegenthaler, representante del Banco Mundial en Uruguay, que habló de la gestión eficaz de las TI en proyectos de desarrollo.\n\nAGESIC fue sponsor: dio becas y descuentos a funcionarios públicos y participó con una conferencia.",
+    "venue": "Torre de los Profesionales, Centro de Convenciones (sala Anacahuita)",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "Auditoría proactiva en el marco de gobierno de TI",
+        "speakers": [
+          "Rodolfo Szuster"
+        ]
+      },
+      {
+        "title": "Seguridad en el ciclo de vida del software",
+        "speakers": [
+          "Pablo Miño"
+        ]
+      },
+      {
+        "title": "ISO/IEC 20000 ed. 2011 y su aporte a la Economía de Servicios",
+        "speakers": [
+          "Judit Laguardia"
+        ]
+      },
+      {
+        "title": "ISO 31000:2009. Herramienta para evaluar la gestión de riesgos",
+        "speakers": [
+          "Carlos Serra"
+        ]
+      },
+      {
+        "title": "PCI-DSS 2.0: experiencias prácticas",
+        "speakers": [
+          "Julio César Ardita"
+        ]
+      },
+      {
+        "title": "Factor clave de éxito para proyectos de desarrollo (cierre)",
+        "speakers": [
+          "Peter Siegenthaler"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página de CIGRAS 2011 (archivada)",
+        "url": "https://web.archive.org/web/20140811100624/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page3.aspx"
+      },
+      {
+        "label": "Folleto con el programa (archivado)",
+        "url": "https://web.archive.org/web/20170519190529/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/brochure_cigras_2011.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2011 (archivado)",
+        "url": "https://web.archive.org/web/20140811100624/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page3.aspx"
+      },
+      {
+        "label": "Folleto y programa de CIGRAS 2011 (archivado)",
+        "url": "https://web.archive.org/web/20170519190529/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/brochure_cigras_2011.pdf"
+      },
+      {
+        "label": "AGESIC: Resolución N° 21/011",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-21011-13042011"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2012": {
+    "description": "En 2012 UYOUG (Grupo de Usuarios Oracle del Uruguay) armó dos jornadas seguidas en el Auditorio de ANTEL del Complejo Torre de las Telecomunicaciones, con Oracle como sponsor.\n\n- **OTN Tour 2012**, lunes 6 de agosto, de 9 a 18. Tom Kyte dio la keynote de apertura, y también hablaron Sergio Tribst, Dimitri Gielis, Tim Tow, Patanjali Venkatacharya, Dana Singleterry y Francisco Muñoz Alvarez. Los temas fueron SOA, ADF, APEX, Hyperion/EPM/Essbase, Fusion Applications y bases de datos.\n- **Real World Performance Tour**, martes 7 de agosto: un día de performance de bases de datos Oracle para desarrolladores y administradores, con Tom Kyte, Graham Wood y Andrew Holdsworth.\n\nEl apoyo de Oracle permitió bajar la entrada anticipada a 80 dólares para ambos eventos. En su balance, Oracle contó 11 países, 224 sesiones, 66 oradores y 6.229 asistentes en toda la gira de ese año.",
+    "venue": "Auditorio de ANTEL, Complejo Torre de las Telecomunicaciones",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "Keynote de apertura del OTN Tour 2012",
+        "speakers": [
+          "Tom Kyte"
+        ]
+      },
+      {
+        "title": "Real World Performance Tour",
+        "speakers": [
+          "Tom Kyte",
+          "Graham Wood",
+          "Andrew Holdsworth"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de UYOUG con el anuncio (archivado)",
+        "url": "https://web.archive.org/web/20120808225943/http://www.uyoug.org.uy/"
+      },
+      {
+        "label": "OTN Latinoamérica Tour 2012 (Oracle)",
+        "url": "https://www.oracle.com/technetwork/es/community/user-groups/otn-latinoamerica-tour-2012-1634120-esa.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: «Comienza el OTN Tour & Real World Performance Tour 2012!» (archivado)",
+        "url": "https://web.archive.org/web/20120808225943/http://www.uyoug.org.uy/"
+      },
+      {
+        "label": "Oracle: OTN Latinoamérica Tour 2012, escala Montevideo y balance",
+        "url": "https://www.oracle.com/technetwork/es/community/user-groups/otn-latinoamerica-tour-2012-1634120-esa.html"
+      }
+    ]
+  },
+  "conf:cigras:2012-08-02": {
+    "description": "Tercera edición del **CIGRAS**, el Congreso Internacional sobre Gobierno, Riesgos, Auditoría y Seguridad que organiza el Capítulo Montevideo de ISACA. Fue el 2 y 3 de agosto de 2012 en la Torre de los Profesionales, en Montevideo.\n\nProfesionales uruguayos y de la región presentaron tendencias en gobierno de TI, seguridad de la información y auditoría. Los temas fueron la nueva normativa de seguridad, incidentes en empresas, virtualización segura, seguridad en el desarrollo, dispositivos móviles y BYOD, y datos personales en la nube. Gonzalo Casaravilla (UTE) habló del papel de la alta dirección en el gobierno de TI.\n\nAGESIC fue sponsor del congreso, con becas y descuentos para funcionarios públicos, y un representante suyo habló de la implantación de sistemas de gestión de seguridad de la información en organismos del Estado.",
+    "venue": "Torre de los Profesionales",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "El papel de la alta dirección en el gobierno de TI",
+        "speakers": [
+          "Gonzalo Casaravilla"
+        ]
+      },
+      {
+        "title": "Nueva normativa asociada a la gobernabilidad y seguridad de la información",
+        "speakers": [
+          "Graciela Ricci"
+        ]
+      },
+      {
+        "title": "Incidentes de seguridad en las empresas",
+        "speakers": [
+          "Gustavo Betarte"
+        ]
+      },
+      {
+        "title": "Virtualizando en forma segura",
+        "speakers": [
+          "Julio César Ardita"
+        ]
+      },
+      {
+        "title": "Seguridad integrada como respuesta al negocio",
+        "speakers": [
+          "Fabián Descalzo"
+        ]
+      },
+      {
+        "title": "Seguridad en el ciclo de vida de desarrollo",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "La importancia de la educación y la formación continua en el entorno actual",
+        "speakers": [
+          "Daniel Canoniero"
+        ]
+      },
+      {
+        "title": "Seguridad de la información digital y el problema de los datos personales en la nube",
+        "speakers": [
+          "Flavia Meleras Bekerman"
+        ]
+      },
+      {
+        "title": "Seguridad en los dispositivos móviles y tendencia en BYOD/CYOD",
+        "speakers": [
+          "Milthon Chávez"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página de CIGRAS 2012 con presentaciones (archivada)",
+        "url": "https://web.archive.org/web/20140811100618/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page2.aspx"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2012 (archivado)",
+        "url": "https://web.archive.org/web/20140811100618/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page2.aspx"
+      },
+      {
+        "label": "AGESIC: Resolución N° 26/012",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-26012-04072012-cdh"
+      }
+    ]
+  },
+  "conf:lacnic-montevideo:2012-10-28": {
+    "description": "**LACNIC 18 – LACNOG 2012** fue del 28 de octubre al 1 de noviembre de 2012 en Montevideo. LACNIC es el registro de direcciones de Internet de América Latina y el Caribe, y LACNOG, el foro regional de operadores de redes. Lo organizaron LACNIC, ANTEL y LACNOG, y fue también la celebración de los **10 años de LACNIC**. Asistieron 434 personas de 35 países: operadores e ingenieros de redes, puntos de intercambio de tráfico, proveedores de contenido, carriers, academia, sociedad civil y personal de los registros regionales y de ICANN.\n\nHubo tutoriales técnicos sobre DNSSEC, seguridad en IPv6, gestión de incidentes, recursos de numeración y RPKI, además de una sesión sobre la IETF y encuentros informales sobre BGP y DNS. El primer día se dedicó a keynotes y a paneles sobre gobernanza de Internet (rumbo al IGF y a la conferencia de la UIT de 2012) y sobre infraestructura regional. En el Foro de Políticas Públicas hubo consenso en cuatro propuestas, entre ellas las asignaciones de IPv4 posteriores al agotamiento.\n\nEl martes 30, en el Club Uruguay, LACNIC homenajeó a quienes impulsaron su creación y entregó los premios a la trayectoria de su décimo aniversario a diez personalidades de la región. El miércoles 31 hubo un almuerzo de Mujeres y TIC con la presidenta de ANTEL, Carolina Cosse, y la secretaria general de la CTU, Bernadette Lewis. En paralelo se hizo el 3.er Encuentro Regional de equipos de respuesta a incidentes (CSIRT). Las sesiones plenarias tuvieron interpretación simultánea en español, inglés y portugués y se transmitieron por Internet.",
+    "attendance": "434 participantes de 35 países",
+    "organizers": [
+      "LACNIC",
+      "ANTEL",
+      "LACNOG"
+    ],
+    "links": [
+      {
+        "label": "Sitio del evento con el informe final",
+        "url": "https://www2.lacnic.net/en/eventos/lacnicxviii/index.html"
+      },
+      {
+        "label": "Videos de las charlas (YouTube de LACNIC)",
+        "url": "http://www.youtube.com/playlist?list=PLU6Q4ZhHN2Q5fr9CBkOUkqC0HjRvYrN8n"
+      },
+      {
+        "label": "Homenajes por los 10 años",
+        "url": "http://www.lacnic.net/en/web/anuncios/2012-homenajes"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LACNIC: LACNIC 18 – LACNOG 2012, informe final",
+        "url": "https://www2.lacnic.net/en/eventos/lacnicxviii/index.html"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2013-08-05": {
+    "description": "La escala uruguaya del **OTN Tour Latinoamérica 2013**, la gira anual de expertos de Oracle por los grupos de usuarios de la región, la organizó UYOUG (Grupo de Usuarios Oracle del Uruguay) en el Campus Centro de la Universidad ORT.\n\nFueron dos días. El lunes 5 de agosto hubo talleres prácticos en dos laboratorios con PC: actualización a Oracle Database 12c, desarrollo de una aplicación Java EE 7 y desarrollo de aplicaciones móviles con ADF. El martes 6 fue la conferencia: dos salas en paralelo, 16 presentaciones y siete expertos internacionales, con traducción simultánea en la sala principal.\n\nEntre los oradores estuvieron Jonathan Lewis, Tim Hall y Alex Gorbachev, junto a especialistas de Oracle Corporation como Roy Swonger, Mike Dietrich, Bruno Borges, Dana Singleterry y Ultan O'Broin. Tim Hall contó en su blog que dio tres charlas y que, al terminar la última, corrió al puerto para tomar el ferry a Buenos Aires, la siguiente parada de la gira.",
+    "venue": "Universidad ORT Uruguay, Campus Centro",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "Taller: upgrade a la base de datos Oracle 12c",
+        "speakers": [
+          "Roy Swonger",
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "Taller: construyendo una aplicación Java EE 7",
+        "speakers": [
+          "Bruno Borges"
+        ]
+      },
+      {
+        "title": "Taller: desarrollo de aplicaciones móviles en ADF",
+        "speakers": [
+          "Dana Singleterry"
+        ]
+      },
+      {
+        "title": "Histograms in 12c",
+        "speakers": [
+          "Jonathan Lewis"
+        ]
+      },
+      {
+        "title": "Still on EBS 11i? Why You Should Upgrade Now Instead of Wait and See",
+        "speakers": [
+          "Gustavo Gonzalez"
+        ]
+      },
+      {
+        "title": "Under the Hood of Pluggable Databases",
+        "speakers": [
+          "Alex Gorbachev"
+        ]
+      },
+      {
+        "title": "New Features Database 12c. RMAN: Cross-Platform Transporting Databases using RMAN Backup Sets",
+        "speakers": [
+          "Joel Pérez"
+        ]
+      },
+      {
+        "title": "Analytic Functions: The Oracle Developer's Best Friend",
+        "speakers": [
+          "Tim Hall"
+        ]
+      },
+      {
+        "title": "What's New in Oracle VM Server for x86",
+        "speakers": [
+          "Hernán Petitti"
+        ]
+      },
+      {
+        "title": "Reading AWR Reports",
+        "speakers": [
+          "Jonathan Lewis"
+        ]
+      },
+      {
+        "title": "How E-Business Suite R12.2 Gives a New Ground for ADF Developments",
+        "speakers": [
+          "Gustavo Gonzalez"
+        ]
+      },
+      {
+        "title": "Migrate and Consolidate our Databases to 12c using Data Pump",
+        "speakers": [
+          "Roy Swonger",
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "Building Better Apps User Experiences with Fusion Apps Design Patterns",
+        "speakers": [
+          "Ultan O'Broin"
+        ]
+      },
+      {
+        "title": "PL/SQL: Stop Making the Same Performance Mistakes",
+        "speakers": [
+          "Tim Hall"
+        ]
+      },
+      {
+        "title": "Hadoop for Oracle Database Professionals",
+        "speakers": [
+          "Alex Gorbachev"
+        ]
+      },
+      {
+        "title": "Designing Optimal SQL",
+        "speakers": [
+          "Jonathan Lewis"
+        ]
+      },
+      {
+        "title": "12c Databases: nuevas características para DBAs",
+        "speakers": [
+          "Joel Pérez"
+        ]
+      },
+      {
+        "title": "Benchmarking Oracle I/O Performance with ORION",
+        "speakers": [
+          "Alex Gorbachev"
+        ]
+      },
+      {
+        "title": "Upgrade a Oracle BI 11.1.1.7",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2013-otn-tour"
+      },
+      {
+        "label": "OTN América Latina Tour 2013 (Oracle)",
+        "url": "https://www.oracle.com/technetwork/pt/community/user-groups/otn-america-latina-tour-2013-1952285-ptb.html"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2013 OTN Tour, agenda y oradores",
+        "url": "http://www.uyoug.org.uy/eventos/2013-otn-tour"
+      },
+      {
+        "label": "Oracle: OTN América Latina Tour 2013",
+        "url": "https://www.oracle.com/technetwork/pt/community/user-groups/otn-america-latina-tour-2013-1952285-ptb.html"
+      },
+      {
+        "label": "Tim Hall (oracle-base.com): LAOTN Tour (Southern Leg): UYOUG",
+        "url": "https://oracle-base.com/blog/2013/08/07/laotn-tour-southern-leg-uyoug/"
+      }
+    ]
+  },
+  "conf:cigras:2013-08-29": {
+    "description": "Cuarta edición del **CIGRAS**, el congreso de gobierno, riesgos, auditoría y seguridad de TI del Capítulo Montevideo de ISACA. Se hizo el 29 y 30 de agosto de 2013 en el Centro de Convenciones de la Torre de los Profesionales (Yaguarón 1411, sala Anacahuita).\n\nSegún el capítulo, en los dos días asistieron más de 200 profesionales y gerentes de TI de Uruguay y de la región, con oradores de Argentina, Brasil, Chile, Colombia y Uruguay. El programa abordó incidentes de seguridad, fraude, riesgos de TI, COBIT 5, continuidad del negocio y bitcoin. El CERTuy habló de los principales desafíos de seguridad del Estado y hubo un bloque de proyectos de estudiantes de la Universidad ORT y la Universidad de la República. Cerró la presidenta de ANTEL, Carolina Cosse.",
+    "venue": "Torre de los Profesionales, Centro de Convenciones (sala Anacahuita)",
+    "attendance": "más de 200 profesionales",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "Principales desafíos de seguridad en el Estado",
+        "speakers": [
+          "Ignacio Lagomarsino"
+        ]
+      },
+      {
+        "title": "Prácticas efectivas para la gestión de riesgo empresarial",
+        "speakers": [
+          "Miguel Ángel Aranguren"
+        ]
+      },
+      {
+        "title": "Manejo de incidentes de seguridad en la organización",
+        "speakers": [
+          "Julio César Ardita"
+        ]
+      },
+      {
+        "title": "Tendencias regionales del gobierno corporativo y TI",
+        "speakers": [
+          "Ernesto Scayola"
+        ]
+      },
+      {
+        "title": "Bitcoins: entendiendo una criptomoneda",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "COBIT 5 for Information Security",
+        "speakers": [
+          "Cristina Ledesma"
+        ]
+      },
+      {
+        "title": "Gestión integral de fraudes y abusos",
+        "speakers": [
+          "Leonardo Loureiro"
+        ]
+      },
+      {
+        "title": "Riesgos de TI",
+        "speakers": [
+          "Andre Pitkowski"
+        ]
+      },
+      {
+        "title": "Integrando un BCMS a las prácticas de gestión de la empresa",
+        "speakers": [
+          "Graciela Ricci"
+        ]
+      },
+      {
+        "title": "Auditoría y seguridad de TI: estado del arte y aplicación en entidades bancarias",
+        "speakers": [
+          "Nicolás Serrano"
+        ]
+      },
+      {
+        "title": "SGSI: de la academia a la práctica",
+        "speakers": [
+          "María Emilia Irrazábal",
+          "Darío Gómez",
+          "Walther Cardoso"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página de CIGRAS 2013 con presentaciones (archivada)",
+        "url": "https://web.archive.org/web/20140811100847/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page1.aspx"
+      },
+      {
+        "label": "Folleto con el programa (archivado)",
+        "url": "https://web.archive.org/web/20170519191803/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/CIGRAS2013.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2013 (archivado)",
+        "url": "https://web.archive.org/web/20140811100847/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page1.aspx"
+      },
+      {
+        "label": "Programa de CIGRAS 2013 (archivado)",
+        "url": "https://web.archive.org/web/20170519191803/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/CIGRAS2013.pdf"
+      },
+      {
+        "label": "AGESIC: Resolución N° 31/013",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-31013-21082013-cdh"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2013-09-30": {
+    "description": "El **XXIII Encuentro GeneXus (GX23)** fue del lunes 30 de setiembre al miércoles 2 de octubre de 2013 en el Hotel Radisson de Montevideo, con especialistas de Argentina, Brasil, México, Uruguay, China, Japón y Estados Unidos. Antes del evento, Breogán Gonda proyectaba más de 3.500 participantes: profesionales de TI, consultores, académicos y desarrolladores.\n\nEn la previa, Nicolás Jodal, CEO de GeneXus International, describió el momento como una etapa «muy fértil» para innovar en aplicaciones móviles. Para entonces la comunidad GeneXus tenía más de 90.000 integrantes y la herramienta la usaban más de 7.000 empresas en 45 países.\n\nGeneXus publicó en Flickr un álbum con más de 1.200 fotos del encuentro: keynotes en el escenario principal, charlas en salas, laboratorios y paneles.",
+    "attendance": "más de 3.500 participantes (proyección previa)",
+    "venue": "Hotel Radisson Montevideo Victoria Plaza",
+    "organizers": [
+      "Artech (GeneXus)"
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/5330/10023869874_a55b67ca62_b.jpg",
+        "alt": "Escenario principal del GX23 con las pantallas gigantes y una cámara de transmisión en primer plano",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10023869874/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/2893/10023922586_807604c952_b.jpg",
+        "alt": "Sala llena durante una conferencia del GX23 en el Radisson de Montevideo",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10023922586/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/2810/10023926096_7d1554b9f6_b.jpg",
+        "alt": "Orador en el escenario principal, frente a la escenografía del GX23",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10023926096/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7379/10022874745_37773155ba_b.jpg",
+        "alt": "Charla en una de las salas, con el atril y el telón de GeneXus",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10022874745/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7397/10023817795_5c74aae1bf_b.jpg",
+        "alt": "Oradora presentando en una de las salas del Encuentro",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10023817795/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/3665/10026509565_715f8d64a9_b.jpg",
+        "alt": "Asistentes alrededor de una notebook durante una actividad práctica",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10026509565/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/3768/10026479954_f7c599f760_b.jpg",
+        "alt": "Orador junto al atril del GX23 en una sala de conferencias",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10026479954/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/2880/10026686743_7b72a51007_b.jpg",
+        "alt": "Vista del escenario principal con el logo de GeneXus y el público",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10026686743/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5345/10026684843_1e6070c4e2_b.jpg",
+        "alt": "Público en una de las salas del GX23",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10026684843/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/3703/10041153606_5a6fdffde8_b.jpg",
+        "alt": "Panel de oradores sentados a una mesa durante el Encuentro",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10041153606/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7405/10041157315_409698fd05_b.jpg",
+        "alt": "Asistentes trabajando con notebooks en un laboratorio",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/10041157315/in/album-72157635947286953/",
+        "license": "Todos los derechos reservados"
+      }
+    ],
+    "links": [
+      {
+        "label": "Fotos en Flickr (álbum GX23)",
+        "url": "https://www.flickr.com/photos/genexus/albums/72157635947286953"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Baguete: GeneXus, encontro em Montevidéu em 30 de setembro",
+        "url": "https://www.baguete.com.br/noticias/genexus-encontro-em-montevideu-em-30-de-setembro"
+      },
+      {
+        "label": "GeneXus en Flickr: álbum GX23",
+        "url": "https://www.flickr.com/photos/genexus/albums/72157635947286953"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2014-08": {
+    "description": "UYOUG (Grupo de Usuarios Oracle del Uruguay) organizó la escala montevideana del **OTN Tour Latinoamérica 2014** en el Campus Centro de la Universidad ORT: el jueves 14 de agosto fue el día de conferencias y el viernes 15, el de talleres.\n\nEl afiche anunciaba a Mike Dietrich, Gustavo Gonzalez, Hans Forbrich, Michelle Malcher, Edward Roske, Marcelo Ochoa, Hernán Petitti y Kamran Agayev. Según el relato de Edelweiss Kammermann, entonces vicepresidenta de UYOUG, las charlas cubrieron desde BI móvil y E-Business Suite hasta la migración a Oracle Database 12c, virtualización y RAC, y las salas estuvieron llenas.\n\nEl segundo día hubo laboratorios con PC: un **RAC Attack!** conducido por Kamran Agayev, con Michelle Malcher, Hans Forbrich y Nelson Calero como ayudantes, y un taller de virtualización Oracle de siete horas a cargo de Hernán Petitti.",
+    "venue": "Universidad ORT Uruguay, Campus Centro",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "Taller: RAC Attack! (Oracle RAC)",
+        "speakers": [
+          "Kamran Agayev",
+          "Michelle Malcher",
+          "Hans Forbrich",
+          "Nelson Calero"
+        ]
+      },
+      {
+        "title": "Taller: Oracle Linux y virtualización",
+        "speakers": [
+          "Hernán Petitti"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://storage.ghost.io/c/a3/6b/a36b5d7a-7ebf-48b4-a634-7224d6a30825/content/images/2016/05/07792Mike-session-300x170.jpg",
+        "alt": "Sala llena en la Universidad ORT durante la charla de Mike Dietrich en el OTN Tour 2014",
+        "by": "Edelweiss Kammermann",
+        "source": "Blog de Rittman Mead",
+        "page": "https://www.rittmanmead.com/blog/2014/08/rittman-mead-in-the-otn-tour-latin-america-2014/"
+      },
+      {
+        "src": "https://storage.ghost.io/c/a3/6b/a36b5d7a-7ebf-48b4-a634-7224d6a30825/content/images/2016/05/07791Edel-session-300x171.jpg",
+        "alt": "Asistentes en una de las sesiones del OTN Tour 2014 en Montevideo",
+        "by": "Edelweiss Kammermann",
+        "source": "Blog de Rittman Mead",
+        "page": "https://www.rittmanmead.com/blog/2014/08/rittman-mead-in-the-otn-tour-latin-america-2014/"
+      },
+      {
+        "src": "https://storage.ghost.io/c/a3/6b/a36b5d7a-7ebf-48b4-a634-7224d6a30825/content/images/2016/05/07790Rac-Attack-300x171.jpg",
+        "alt": "Laboratorio RAC Attack!: participantes frente a las PC de la sala",
+        "by": "Edelweiss Kammermann",
+        "source": "Blog de Rittman Mead",
+        "page": "https://www.rittmanmead.com/blog/2014/08/rittman-mead-in-the-otn-tour-latin-america-2014/"
+      },
+      {
+        "src": "https://storage.ghost.io/c/a3/6b/a36b5d7a-7ebf-48b4-a634-7224d6a30825/content/images/2016/05/07787RAC-Attack2-300x227.jpg",
+        "alt": "Segundo día de talleres: asistentes con sus notebooks en el laboratorio RAC Attack!",
+        "by": "Edelweiss Kammermann",
+        "source": "Blog de Rittman Mead",
+        "page": "https://www.rittmanmead.com/blog/2014/08/rittman-mead-in-the-otn-tour-latin-america-2014/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2014-otn-tour"
+      },
+      {
+        "label": "Crónica de Rittman Mead",
+        "url": "https://www.rittmanmead.com/blog/2014/08/rittman-mead-in-the-otn-tour-latin-america-2014/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2014 OTN Tour (afiche con fechas y oradores)",
+        "url": "http://www.uyoug.org.uy/eventos/2014-otn-tour"
+      },
+      {
+        "label": "Rittman Mead: Rittman Mead in the OTN Tour Latin America 2014",
+        "url": "https://www.rittmanmead.com/blog/2014/08/rittman-mead-in-the-otn-tour-latin-america-2014/"
+      }
+    ]
+  },
+  "conf:cigras:2014-09": {
+    "description": "Quinta edición del **CIGRAS**, el congreso de gobierno, riesgos, auditoría y seguridad de la información del Capítulo Montevideo de ISACA. Se hizo el 4 y 5 de setiembre de 2014 en la Torre de los Profesionales, con expositores nacionales e internacionales sobre auditoría, normas y seguridad informática.\n\nEntre las charlas hubo seguridad en tiempos de big data, ISO 20000 e ISO 27001, niveles de capacidad de COBIT 5, preparación para una auditoría integrada, privacidad en la nube, fuga de datos en dispositivos móviles y factura electrónica. Leonardo Abbondanza, de Arcos Dorados, contó cómo protegen «millones de datos al día».",
+    "venue": "Torre de los Profesionales",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "Fuga de datos en dispositivos móviles... batalla (casi) perdida",
+        "speakers": [
+          "Juan Dávila"
+        ]
+      },
+      {
+        "title": "Preparándose para una auditoría integral",
+        "speakers": [
+          "José Luis Mauro Vera"
+        ]
+      },
+      {
+        "title": "Cuantificación del riesgo en etapas tempranas del proyecto",
+        "speakers": [
+          "Pablo Ortiz"
+        ]
+      },
+      {
+        "title": "Seguridad en tiempos de Big Data",
+        "speakers": [
+          "Rodrigo Guirado"
+        ]
+      },
+      {
+        "title": "Implementación exitosa de ISO 20000",
+        "speakers": [
+          "Rodrigo Baldecchi"
+        ]
+      },
+      {
+        "title": "Implementación efectiva de un SGSI ISO 27001",
+        "speakers": [
+          "Rodrigo Baldecchi"
+        ]
+      },
+      {
+        "title": "COBIT 5: niveles de capacidad",
+        "speakers": [
+          "Cristina Borrazás"
+        ]
+      },
+      {
+        "title": "Proteger millones de datos al día",
+        "speakers": [
+          "Leonardo Abbondanza"
+        ]
+      },
+      {
+        "title": "Seguridad y privacidad en la nube",
+        "speakers": [
+          "Jorge Cella"
+        ]
+      },
+      {
+        "title": "Factura electrónica",
+        "speakers": [
+          "Adriné Kupelián"
+        ]
+      },
+      {
+        "title": "COBIT y gobernanza de TI",
+        "speakers": [
+          "Carlos Francavilla"
+        ]
+      },
+      {
+        "title": "Riesgo, fraude, continuidad y productividad",
+        "speakers": [
+          "Miguel Ángel Aranguren"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página de CIGRAS 2014 con presentaciones (archivada)",
+        "url": "https://web.archive.org/web/20151107161844/http://www.isaca.org/chapters8/Montevideo/cigras/Pages/Page10.aspx"
+      },
+      {
+        "label": "Programa (archivado)",
+        "url": "https://web.archive.org/web/20140912145520/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/Programa%20CIGRAS%202014.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2014 (archivado)",
+        "url": "https://web.archive.org/web/20151107161844/http://www.isaca.org/chapters8/Montevideo/cigras/Pages/Page10.aspx"
+      },
+      {
+        "label": "ISACA Capítulo Montevideo: anuncio de CIGRAS 2014 (archivado)",
+        "url": "https://web.archive.org/web/20140810030759/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/Page10.aspx"
+      },
+      {
+        "label": "AGESIC: Resolución 011/2014",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/sites/agencia-gobierno-electronico-sociedad-informacion-conocimiento/files/documentos/actas/resolucion_011_2014.pdf"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2015-08-03": {
+    "description": "El 3 y 4 de agosto de 2015 UYOUG (Grupo de Usuarios Oracle del Uruguay) recibió en Montevideo la primera escala del tramo sur del **OTN Tour of Latin America 2015**, que después siguió por Argentina, Brasil, Chile y Perú. La inscripción se hizo por Eventbrite.\n\nTim Hall, uno de los Oracle ACE Directors invitados, dejó en su blog el orden del primer día. Abrió Pablo Ciccarello con una presentación de OTN y del programa Oracle ACE. Mike Dietrich habló de cómo Oracle Multitenant cambia la vida del DBA y de migraciones a 12c con Full Transportable Export/Import, y Debra Lilley presentó un caso de PaaS para extender aplicaciones SaaS. El propio Hall dio tres charlas sobre bases de datos enchufables, consolidación y bases de datos en la nube.\n\nEl segundo día cerró con un panel de Ronald Bradford, Mike Dietrich, Nelson Calero y Tim Hall, centrado en cuándo elegir MySQL y cuándo Oracle.",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "How Oracle Single/Multitenant will change a DBA's life",
+        "speakers": [
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "Pluggable Databases: What they will break and why you should use them anyway!",
+        "speakers": [
+          "Tim Hall"
+        ]
+      },
+      {
+        "title": "PaaS4SaaS",
+        "speakers": [
+          "Debra Lilley"
+        ]
+      },
+      {
+        "title": "Oracle Database Consolidation: It's not all about Oracle database 12c",
+        "speakers": [
+          "Tim Hall"
+        ]
+      },
+      {
+        "title": "Simple Minimal Downtime Migration to Oracle 12c using Full Transportable Export/Import",
+        "speakers": [
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "Are cloud apps really ready?",
+        "speakers": [
+          "Debra Lilley"
+        ]
+      },
+      {
+        "title": "It's raining data! Oracle Databases in the Cloud",
+        "speakers": [
+          "Tim Hall"
+        ]
+      },
+      {
+        "title": "Panel: MySQL y Oracle",
+        "speakers": [
+          "Ronald Bradford",
+          "Mike Dietrich",
+          "Nelson Calero",
+          "Tim Hall"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2015-otn-tour"
+      },
+      {
+        "label": "Crónica del día 1 (Tim Hall)",
+        "url": "https://oracle-base.com/blog/2015/08/03/otn-tour-of-latin-america-2015-uyoug-uruguay-day-1/"
+      },
+      {
+        "label": "Crónica del día 2 (Tim Hall)",
+        "url": "https://oracle-base.com/blog/2015/08/05/otn-tour-of-latin-america-2015-uyoug-uruguay-day-2/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Tim Hall: OTN Tour of Latin America 2015, southern leg",
+        "url": "https://oracle-base.com/blog/2015/07/26/otn-tour-of-latin-america-2015-southern-leg/"
+      },
+      {
+        "label": "Tim Hall: UYOUG, Uruguay, día 1",
+        "url": "https://oracle-base.com/blog/2015/08/03/otn-tour-of-latin-america-2015-uyoug-uruguay-day-1/"
+      },
+      {
+        "label": "Tim Hall: UYOUG, Uruguay, día 2",
+        "url": "https://oracle-base.com/blog/2015/08/05/otn-tour-of-latin-america-2015-uyoug-uruguay-day-2/"
+      },
+      {
+        "label": "UYOUG: 2015 OTN Tour",
+        "url": "http://www.uyoug.org.uy/eventos/2015-otn-tour"
+      }
+    ]
+  },
+  "conf:cigras:2015-09-09": {
+    "description": "Sexta edición del **CIGRAS**, el congreso de gobierno, riesgos, auditoría y seguridad de la información del Capítulo Montevideo de ISACA. Fue el 9 y 10 de setiembre de 2015 en el hotel NH Columbia de Montevideo.\n\nLa ceremonia de apertura estuvo a cargo de Nicolás Jodal, CEO de Artech (GeneXus). Entre los oradores estuvieron Aury M. Curbelo (Puerto Rico), con una charla sobre redes sociales y sus riesgos; Pablo Caneo, presidente de ISACA Chile, sobre COBIT 5 para riesgos, y Enrique Larrieu-Let, vicepresidente de ISACA Buenos Aires, sobre ciberataques. Otros temas fueron la nube, el gobierno de datos, IoT, análisis forense en entornos virtuales, el método Monte Carlo para evaluar riesgos y la ciberseguridad de los trámites en línea del Estado. Las conferencias quedaron grabadas en el canal de YouTube del capítulo.\n\nAGESIC patrocinó el congreso y dio becas para funcionarios públicos.",
+    "venue": "Hotel NH Columbia",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "Ceremonia de apertura",
+        "speakers": [
+          "Nicolás Jodal"
+        ]
+      },
+      {
+        "title": "Redes sociales y los riesgos asociados a su uso",
+        "speakers": [
+          "Aury M. Curbelo"
+        ]
+      },
+      {
+        "title": "Trusted Cloud",
+        "speakers": [
+          "Fernando Machado"
+        ]
+      },
+      {
+        "title": "Seguridad en la nube",
+        "speakers": [
+          "Mauro Flores"
+        ]
+      },
+      {
+        "title": "Gobierno de datos",
+        "speakers": [
+          "Gustavo Mesa",
+          "Héctor Cotelo"
+        ]
+      },
+      {
+        "title": "Nos importa la ciberseguridad",
+        "speakers": [
+          "Felipe Sotuyo"
+        ]
+      },
+      {
+        "title": "COBIT 5 para riesgos. Metodología: una visión general",
+        "speakers": [
+          "Pablo Caneo"
+        ]
+      },
+      {
+        "title": "Caso de éxito COBIT 5: una experiencia práctica",
+        "speakers": [
+          "Pablo Caneo"
+        ]
+      },
+      {
+        "title": "Gestión de riesgos y continuidad operativa de IT: recomendaciones prácticas",
+        "speakers": [
+          "Rodrigo Guirado"
+        ]
+      },
+      {
+        "title": "Cómo incrementar su productividad mediante controles continuos",
+        "speakers": [
+          "Emilio Nicola"
+        ]
+      },
+      {
+        "title": "Análisis forense técnico en entornos virtuales",
+        "speakers": [
+          "Julio Ardita"
+        ]
+      },
+      {
+        "title": "Internet of Things: tendencias y desafíos",
+        "speakers": [
+          "Bruno Baccino"
+        ]
+      },
+      {
+        "title": "Cloud: ¿moda o necesidad?",
+        "speakers": [
+          "André Paris"
+        ]
+      },
+      {
+        "title": "Trámites en línea: su marco de ciberseguridad",
+        "speakers": [
+          "Santiago Paz",
+          "Ignacio Lagomarsino"
+        ]
+      },
+      {
+        "title": "Ciberataques: ¿estamos preparados?",
+        "speakers": [
+          "Enrique Larrieu-Let"
+        ]
+      },
+      {
+        "title": "El método Monte Carlo en la evaluación de riesgos de la seguridad de la información",
+        "speakers": [
+          "Pablo Ortiz"
+        ]
+      },
+      {
+        "title": "Data analytics: riesgos en infraestructura y plataformas de servicios en cloud",
+        "speakers": [
+          "Rodolfo Szuster"
+        ]
+      },
+      {
+        "title": "El desafío de gestionar la diversidad generacional en Uruguay",
+        "speakers": [
+          "Beatriz Martínez"
+        ]
+      },
+      {
+        "title": "Solo cumplir o empoderar a las personas para actuar ante la inseguridad de la información",
+        "speakers": [
+          "Reinaldo de la Fuente"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página de CIGRAS 2015 con presentaciones (archivada)",
+        "url": "https://web.archive.org/web/20151109142802/http://www.isaca.org/chapters8/Montevideo/cigras/Pages/CIGRAS-2015.aspx"
+      },
+      {
+        "label": "Videos de las conferencias (canal de YouTube del capítulo)",
+        "url": "https://www.youtube.com/channel/UCOu84XK43GkoTompAtYxHww"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2015 (archivado, después del evento)",
+        "url": "https://web.archive.org/web/20151109142802/http://www.isaca.org/chapters8/Montevideo/cigras/Pages/CIGRAS-2015.aspx"
+      },
+      {
+        "label": "ISACA Capítulo Montevideo: conferencistas confirmados (archivado)",
+        "url": "https://web.archive.org/web/20150904044025/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/CIGRAS-2015.aspx"
+      },
+      {
+        "label": "AGESIC: Resolución N° 16/015",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-16015-22072015-cdh"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2016": {
+    "description": "El **XXVI Encuentro GeneXus (GX26)** se hizo en Montevideo a fines de setiembre de 2016. Las fotos oficiales están fechadas entre el 26 y el 28 de ese mes, y la escenografía llevaba el lema **«Dream digital»**.\n\nGeneXus publicó dos álbumes en Flickr, con más de 1.600 fotos: el salón principal lleno, charlas en salas, espacios de networking y hasta un artista pintando un cuadro en vivo. Gabriel Simonet, de GeneXus, publicó después una crónica personal del encuentro, en la que recuerda el medio año de preparación previa.",
+    "organizers": [
+      "GeneXus"
+    ],
+    "photos": [
+      {
+        "src": "https://live.staticflickr.com/7539/30119204956_6efe37526e_b.jpg",
+        "alt": "Salón principal del GX26 lleno, con el escenario iluminado al fondo",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30119204956/in/album-72157671413905873/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/8412/30154299575_674f1908e0_b.jpg",
+        "alt": "Asistentes conversando durante un corte del Encuentro",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30154299575/in/album-72157671413905873/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5140/30040951882_007fdef7ba_b.jpg",
+        "alt": "Grupo de asistentes charlando en un espacio de networking",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30040951882/in/album-72157671413905873/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5020/30154290525_23416f7e57_b.jpg",
+        "alt": "Un artista pinta un cuadro en vivo durante el GX26",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30154290525/in/album-72157671413905873/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/7503/30069755521_7400f7a741_b.jpg",
+        "alt": "Orador en el escenario del GX26, visto desde atrás del público",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30069755521/in/album-72157671413905873/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5303/30069755471_d01274fe56_b.jpg",
+        "alt": "Foto grupal de una multitud en el salón del Encuentro",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30069755471/in/album-72157671413905873/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5707/30119201426_18c04d5b8c_b.jpg",
+        "alt": "Orador en el escenario con la escenografía «Dream digital» del GX26",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/30119201426/in/album-72157673037932662/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/5267/29316150843_1e704158bd_b.jpg",
+        "alt": "Vista general del escenario del GX26 con presentación en pantalla",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/29316150843/in/album-72157673037932662/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/8340/29828534802_afbb7890c0_b.jpg",
+        "alt": "Público en el salón principal durante una conferencia",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/29828534802/in/album-72157673037932662/",
+        "license": "Todos los derechos reservados"
+      },
+      {
+        "src": "https://live.staticflickr.com/8758/29861757541_85e6a7f961_b.jpg",
+        "alt": "Charla en una sala con el atril «Dream digital» del GX26",
+        "by": "GeneXus",
+        "source": "Flickr",
+        "page": "https://www.flickr.com/photos/genexus/29861757541/in/album-72157673037932662/",
+        "license": "Todos los derechos reservados"
+      }
+    ],
+    "links": [
+      {
+        "label": "Fotos en Flickr: GX26 Moments",
+        "url": "https://www.flickr.com/photos/genexus/albums/72157671413905873"
+      },
+      {
+        "label": "Fotos en Flickr: álbum GX26",
+        "url": "https://www.flickr.com/photos/genexus/albums/72157673037932662"
+      },
+      {
+        "label": "Crónica de Gabriel Simonet (GeneXus)",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/gx26-genexus-2016-international-meeting-recap-by-gabriel-simonet/auto/351/0"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus en Flickr: GX26 GeneXus International Meeting 2016 Moments",
+        "url": "https://www.flickr.com/photos/genexus/albums/72157671413905873"
+      },
+      {
+        "label": "GeneXus en Flickr: álbum GX26",
+        "url": "https://www.flickr.com/photos/genexus/albums/72157673037932662"
+      },
+      {
+        "label": "GeneXus: #GX26 International Meeting Recap (Gabriel Simonet)",
+        "url": "https://www.genexus.com/en/news/noticias-capacitacion/gx26-genexus-2016-international-meeting-recap-by-gabriel-simonet/auto/351/0"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2016": {
+    "description": "El **Montevideo OTN Tour 2016**, organizado por UYOUG (Grupo de Usuarios Oracle del Uruguay), se hizo el 1 y 2 de agosto en el Campus Centro de la Universidad ORT. Estudiantes, egresados y docentes de la universidad entraron sin costo.\n\nEl lunes 1 hubo dos salas en paralelo, la principal con traducción simultánea, con temas de base de datos, SOA, Business Intelligence y Engineered Systems a cargo de Oracle ACE Directors y especialistas de Oracle. El martes 2 hubo tres charlas por la mañana y dos laboratorios por la tarde: ajuste de SQL en Oracle con Carlos Sierra y una introducción práctica a Oracle APEX con Daniel Bozzolo.",
+    "venue": "Universidad ORT Uruguay, Campus Centro",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "OTN Updates y ACE Program"
+      },
+      {
+        "title": "Misconfigured by Default: Installing the Oracle Database for Expert Oracle DBAs",
+        "speakers": [
+          "Dan Morgan"
+        ]
+      },
+      {
+        "title": "WebLogic 101 for DBA",
+        "speakers": [
+          "Osama Mustafa"
+        ]
+      },
+      {
+        "title": "Oracle Service Bus 12c: Everything You Always Wanted to Know About OSB 12c But Were Afraid to Ask",
+        "speakers": [
+          "Frank Munz"
+        ]
+      },
+      {
+        "title": "Oracle Fusion Middleware High Availability",
+        "speakers": [
+          "Osama Mustafa"
+        ]
+      },
+      {
+        "title": "El desafío de administrar CDBs y PDBs",
+        "speakers": [
+          "Rita Nuñez"
+        ]
+      },
+      {
+        "title": "Docker in the Oracle Universe",
+        "speakers": [
+          "Frank Munz"
+        ]
+      },
+      {
+        "title": "A Deep Introduction into Oracle Cloud and Amazon AWS",
+        "speakers": [
+          "Deiby Gómez"
+        ]
+      },
+      {
+        "title": "Data Visualization Tips for OBICS and DVCS",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      },
+      {
+        "title": "Oracle Database Performance Tuning: The Not SQL Option",
+        "speakers": [
+          "Dan Morgan"
+        ]
+      },
+      {
+        "title": "Sizing 101: Which Engineered System is right for your needs?",
+        "speakers": [
+          "Carlos Sierra"
+        ]
+      },
+      {
+        "title": "Deploying Oracle Database in the Cloud with Oracle Exadata: Technical Deep Dive",
+        "speakers": [
+          "Manish Shah"
+        ]
+      },
+      {
+        "title": "Supercharge OBIEE 12c with Continuous Integration and Delivery",
+        "speakers": [
+          "Stewart Bryson"
+        ]
+      },
+      {
+        "title": "Oracle Business Intelligence 12c, and Why You Should Care",
+        "speakers": [
+          "Stewart Bryson"
+        ]
+      },
+      {
+        "title": "Hybrid Cloud Test/Dev, Backup, Disaster Recovery Using Oracle Database Appliance",
+        "speakers": [
+          "Ricardo Gonzalez"
+        ]
+      },
+      {
+        "title": "Evolution of Performance Management with Oracle 12c: Adaptive Optimization",
+        "speakers": [
+          "Nelson Calero"
+        ]
+      },
+      {
+        "title": "The Best Features of Oracle Multitenant",
+        "speakers": [
+          "Deiby Gómez"
+        ]
+      },
+      {
+        "title": "Oracle RAC 12c: mejores prácticas y nuevas funcionalidades",
+        "speakers": [
+          "Ricardo Gonzalez"
+        ]
+      },
+      {
+        "title": "Laboratorio: Oracle SQL tuning",
+        "speakers": [
+          "Carlos Sierra"
+        ]
+      },
+      {
+        "title": "Laboratorio: creando una aplicación con Oracle APEX",
+        "speakers": [
+          "Daniel Bozzolo"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2016-otn-tour"
+      },
+      {
+        "label": "Inscripciones (Eventbrite)",
+        "url": "https://otn-tour-montevideo-2016.eventbrite.com"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2016 OTN Tour, afiche y agenda de ambos días",
+        "url": "http://www.uyoug.org.uy/eventos/2016-otn-tour"
+      },
+      {
+        "label": "Universidad ORT Uruguay: Montevideo OTN Tour",
+        "url": "https://www.ort.edu.uy/en/news/montevideo-otn-tour-42745"
+      }
+    ]
+  },
+  "conf:cigras:2016-08-31": {
+    "description": "Séptima edición del **CIGRAS**, el congreso de gobierno, riesgos, auditoría y seguridad de la información del Capítulo Montevideo de ISACA. Se hizo el 31 de agosto y el 1 de setiembre de 2016 en el hotel NH Columbia, con más de 15 conferencias y más de 15 horas de capacitación.\n\nEl primer día se habló de gobierno corporativo, madurez en el gobierno de datos, prevención del lavado de dinero, fraude y pagos electrónicos. El segundo día tuvo dos paneles sobre ciberseguridad, uno con LACNIC, AGESIC e ISOC y otro desde la academia (ORT y UM), moderados por Felipe Sotuyo. Hablaron también Andre Pitkowski, vicepresidente internacional de ISACA, y Rodolfo Szuster sobre las filtraciones de WikiLeaks a los Panama Papers. Cerró una keynote de Daniel Goldman sobre gestión del conocimiento e innovación.",
+    "venue": "Hotel NH Columbia",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "La gobernanza de las empresas: una historia vieja… y muy actual",
+        "speakers": [
+          "Jorge Otavianelli"
+        ]
+      },
+      {
+        "title": "Madurez en el gobierno de datos: en dónde estamos y cómo avanzamos",
+        "speakers": [
+          "Gustavo Mesa",
+          "Gastón Mazzone"
+        ]
+      },
+      {
+        "title": "Prevención en el lavado de dinero: mejores prácticas",
+        "speakers": [
+          "Ronny Miranda"
+        ]
+      },
+      {
+        "title": "Una visión global de la seguridad de la empresa",
+        "speakers": [
+          "Matías Davyt"
+        ]
+      },
+      {
+        "title": "Riesgo de fraude: la ley de los números anómalos por parte de los auditores",
+        "speakers": [
+          "Carlos Serra"
+        ]
+      },
+      {
+        "title": "Servicio de pagos electrónicos",
+        "speakers": [
+          "Joaquín Figueredo"
+        ]
+      },
+      {
+        "title": "Anticipando la jugada… seguridad para millennials",
+        "speakers": [
+          "María Emilia Irrazábal",
+          "Walther Cardoso",
+          "Darío Gómez"
+        ]
+      },
+      {
+        "title": "Dominando nuestro riesgo con un programa de GRC basado en datos",
+        "speakers": [
+          "Emilio Nicola"
+        ]
+      },
+      {
+        "title": "Aplicando COBIT para riesgos: casos reales",
+        "speakers": [
+          "Pablo Caneo"
+        ]
+      },
+      {
+        "title": "Panel: estado de la ciberseguridad en América y la visión desde nuestro país",
+        "speakers": [
+          "Graciela Martínez",
+          "Santiago Paz",
+          "Mauro D. Ríos",
+          "Felipe Sotuyo"
+        ]
+      },
+      {
+        "title": "Panel: ciberseguridad, visión desde la academia",
+        "speakers": [
+          "Roberto Ambrosoni",
+          "Daniel Canoniero",
+          "Felipe Sotuyo"
+        ]
+      },
+      {
+        "title": "Ciberseguridad: un desafío para los ejecutivos de negocios",
+        "speakers": [
+          "Andre Pitkowski"
+        ]
+      },
+      {
+        "title": "Ciberseguridad: fuga de datos desde WikiLeaks a los Panamá Papers. ¿Qué sigue?",
+        "speakers": [
+          "Rodolfo Szuster"
+        ]
+      },
+      {
+        "title": "Gestión de la información y el conocimiento como clave de la innovación (keynote)",
+        "speakers": [
+          "Daniel Goldman"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página de CIGRAS 2016 (archivada)",
+        "url": "https://web.archive.org/web/20160822175244/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/CIGRAS-2016.aspx"
+      },
+      {
+        "label": "Programa (archivado)",
+        "url": "https://web.archive.org/web/20160909103251/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/VII%20Congreso%20CIGRAS_PROGRAMA2016.pdf"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2016 (archivado)",
+        "url": "https://web.archive.org/web/20160822175244/http://www.isaca.org:80/chapters8/Montevideo/cigras/Pages/CIGRAS-2016.aspx"
+      },
+      {
+        "label": "Programa de CIGRAS 2016 (archivado)",
+        "url": "https://web.archive.org/web/20160909103251/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/VII%20Congreso%20CIGRAS_PROGRAMA2016.pdf"
+      },
+      {
+        "label": "AGESIC: Resolución N° 28/016",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-28016-13072016-cdh"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2017": {
+    "description": "El **Montevideo OTN Tour 2017** de UYOUG (Grupo de Usuarios Oracle del Uruguay) se hizo el 31 de julio y el 1 de agosto en el Campus Centro de la Universidad ORT, con el apoyo de Oracle y empresas locales. Fue declarado de interés por el Ministerio de Turismo.\n\nEl lunes 31 hubo dos salas, con temas de base de datos y Business Intelligence: DevOps para DBAs, carreras de DBA en la nube, RAC 12c Release 2, Multitenant, ACFS, respaldos en la nube y seguridad de bases de datos (Arup Nanda participó en forma remota). El martes 1 de agosto hubo charlas, un panel sobre cloud computing con Craig Shallahamer, Mike Dietrich, Markus Michalewicz y Bjoern Rost, y dos laboratorios: diagnóstico de performance con ASH y upgrade a Oracle 12c R2.",
+    "venue": "Universidad ORT Uruguay, Campus Centro",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle Technology Network"
+    ],
+    "talks": [
+      {
+        "title": "DevOps for DBAs",
+        "speakers": [
+          "Björn Rost"
+        ]
+      },
+      {
+        "title": "Navigating your DBA career in the Oracle Cloud",
+        "speakers": [
+          "Craig Shallahamer"
+        ]
+      },
+      {
+        "title": "Oracle ACFS 12c Release 2: Deep Dive",
+        "speakers": [
+          "Ricardo Gonzalez"
+        ]
+      },
+      {
+        "title": "Under the Hood of Oracle Real Application Clusters (RAC) 12c Release 2",
+        "speakers": [
+          "Markus Michalewicz"
+        ]
+      },
+      {
+        "title": "Backup de bases en la nube",
+        "speakers": [
+          "Rita Nuñez"
+        ]
+      },
+      {
+        "title": "What's new with Oracle Multitenant 12.2, and how will it affect you?",
+        "speakers": [
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "How can you choose between BICS, DVCS and Oracle Analytics Cloud Services?",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      },
+      {
+        "title": "Maximizing Oracle Cloud Buffer Cache Throughput",
+        "speakers": [
+          "Craig Shallahamer"
+        ]
+      },
+      {
+        "title": "Database Security in a Single Day",
+        "speakers": [
+          "Arup Nanda"
+        ]
+      },
+      {
+        "title": "Oracle ACFS 12.2: Test and Dev Provisioning",
+        "speakers": [
+          "Ricardo Gonzalez"
+        ]
+      },
+      {
+        "title": "Make services work for you",
+        "speakers": [
+          "Björn Rost"
+        ]
+      },
+      {
+        "title": "Redefining Tables Online without Surprises",
+        "speakers": [
+          "Nelson Calero"
+        ]
+      },
+      {
+        "title": "Oracle Real Application Clusters 12c Release 2 Best Practices",
+        "speakers": [
+          "Markus Michalewicz"
+        ]
+      },
+      {
+        "title": "Ensure Performance Stability when Upgrading Oracle Databases",
+        "speakers": [
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "Hitchhiker's Guide to Open Source Tuning Tools",
+        "speakers": [
+          "Björn Rost"
+        ]
+      },
+      {
+        "title": "Panel: Cloud Computing",
+        "speakers": [
+          "Craig Shallahamer",
+          "Mike Dietrich",
+          "Markus Michalewicz",
+          "Björn Rost"
+        ]
+      },
+      {
+        "title": "Laboratorio: Diagnosing Random Oracle Performance Incidents Using ASH",
+        "speakers": [
+          "Craig Shallahamer"
+        ]
+      },
+      {
+        "title": "Laboratorio: Database Upgrade to 12c R2",
+        "speakers": [
+          "Mike Dietrich"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2017-otn-tour"
+      },
+      {
+        "label": "Inscripciones (Eventbrite)",
+        "url": "https://otn17-uyoug.eventbrite.com"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2017 OTN Tour, afiche y agenda de ambos días",
+        "url": "http://www.uyoug.org.uy/eventos/2017-otn-tour"
+      }
+    ]
+  },
+  "conf:segurinfo-uruguay:2017-03-30": {
+    "description": "**Segurinfo Uruguay 2017**, el congreso y feria iberoamericana de seguridad de la información que organiza Usuaria, se hizo el 30 de marzo de 2017 en la Intendencia de Montevideo. CUTI lo describió como el principal congreso anual de seguridad de la información de la región.\n\nLa apertura estuvo a cargo del intendente de Montevideo, Daniel Martínez; el director ejecutivo de AGESIC, José Clastornik; la directora de CUTI, Sylvia González, y el director ejecutivo de Usuaria, Juan José Dell’Acqua. González destacó que estos encuentros permiten que distintos actores colaboren frente a un problema cambiante como la seguridad de la información, e invitó a intercambiar ideas en busca de soluciones.\n\nLa agenda abordó los desafíos de seguridad que trae el uso creciente de las TIC y las soluciones disponibles.",
+    "venue": "Intendencia de Montevideo",
+    "organizers": [
+      "Usuaria"
+    ],
+    "links": [
+      {
+        "label": "Nota de CUTI sobre la apertura",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/cuti-participo-en-la-apertura-de-segurinfo-uruguay-2017/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI: CUTI participó en la apertura de Segurinfo Uruguay 2017",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/cuti-participo-en-la-apertura-de-segurinfo-uruguay-2017/"
+      }
+    ]
+  },
+  "conf:cigras:2017-08-30": {
+    "description": "Octava edición del **CIGRAS**, el congreso de gobierno, riesgos, auditoría y seguridad de la información del Capítulo Montevideo de ISACA. Se hizo el 30 y 31 de agosto de 2017 en el hotel NH Columbia, con más de 15 conferencias y más de 15 horas de capacitación.\n\nEl capítulo publicó después varias presentaciones: Fernando Brum sobre innovación abierta, Hernán Conosciuto sobre cómo la seguridad y la innovación van de la mano, Juan Dávila sobre planes de gestión de crisis, Orlando Tuzzolo sobre la implementación práctica de un programa de seguridad de la información e Ivonne Casulo sobre cómo impulsar la innovación en una organización.\n\nComo en ediciones anteriores, AGESIC apoyó el congreso: su logo estuvo en la difusión y dio becas de inscripción.",
+    "venue": "Hotel NH Columbia",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "Innovación abierta",
+        "speakers": [
+          "Fernando Brum"
+        ]
+      },
+      {
+        "title": "Seguridad IT: la seguridad y la innovación van de la mano",
+        "speakers": [
+          "Hernán Conosciuto"
+        ]
+      },
+      {
+        "title": "Planes de gestión de crisis: aprendiendo",
+        "speakers": [
+          "Juan Dávila"
+        ]
+      },
+      {
+        "title": "Implementación del programa de seguridad de la información: un enfoque práctico",
+        "speakers": [
+          "Orlando Tuzzolo"
+        ]
+      },
+      {
+        "title": "Cómo puedes impulsar la innovación en tu organización",
+        "speakers": [
+          "Ivonne Casulo"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio de CIGRAS del Capítulo Montevideo (archivado, noviembre de 2017)",
+        "url": "https://web.archive.org/web/20171106184519/http://www.isaca.org/chapters8/Montevideo/cigras/Pages/default.aspx"
+      }
+    ],
+    "sources": [
+      {
+        "label": "ISACA Capítulo Montevideo: CIGRAS 2017 (archivado)",
+        "url": "https://web.archive.org/web/20171106184519/http://www.isaca.org/chapters8/Montevideo/cigras/Pages/default.aspx"
+      },
+      {
+        "label": "Presentación de Fernando Brum en CIGRAS 2017 (archivada)",
+        "url": "https://web.archive.org/web/20171215052013/http://www.isaca.org:80/chapters8/Montevideo/cigras/Documents/CIGRAS_2017/Fernando%20Brum%20Innovacio%CC%81n%20abierta.pdf"
+      },
+      {
+        "label": "AGESIC: Resolución N° 21/017",
+        "url": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/institucional/normativa/resolucion-n-21017-02082017-cdh"
+      }
+    ]
+  },
+  "conf:lacnic-montevideo:2017-09-18": {
+    "description": "**LACNIC 28 – LACNOG 2017** fue del 18 al 22 de setiembre de 2017 en el Hotel Radisson Victoria Plaza de Montevideo, y celebró los **15 años de LACNIC**, el registro de direcciones de Internet de América Latina y el Caribe. La escenografía combinaba los 15 años de LACNIC con los 10 años de AGESIC y la marca de ANTEL.\n\nLa agenda cubrió seguridad, privacidad, despliegue de IPv6 y gobernanza de Internet, con keynotes y una hackatón sobre innovación. El miércoles 20 Steve Crocker, presidente del Board de ICANN y uno de los pioneros de Internet, dio una keynote centrada en IPv6: dijo que solo hay dos clases de direcciones, IPv6 y las que no lo son. El programa también preveía su visita a la Casa de Internet de Latinoamérica y el Caribe. Por el aniversario hubo un panel, «15 años construyendo comunidad», moderado por Oscar Robles, director ejecutivo de LACNIC, con Mariela Rocha, Cristine Hoepers, Oscar Messano, Clara Collado, Vivian Valverde y Edmundo Vitale.\n\nEn el Foro de Políticas hubo consenso en cuatro propuestas, entre ellas cambios en las asignaciones de IPv6 y en el proceso de recuperación de recursos. En paralelo se hizo la reunión anual de LACNOG, el foro de operadores de redes.",
+    "venue": "Hotel Radisson Victoria Plaza",
+    "organizers": [
+      "LACNIC",
+      "LACNOG"
+    ],
+    "talks": [
+      {
+        "title": "Keynote sobre IPv6",
+        "speakers": [
+          "Steve Crocker"
+        ],
+        "video": "https://www.youtube.com/watch?v=Fx9h13Rq18g"
+      },
+      {
+        "title": "Panel: 15 años construyendo comunidad",
+        "speakers": [
+          "Oscar Robles",
+          "Mariela Rocha",
+          "Cristine Hoepers",
+          "Oscar Messano",
+          "Clara Collado",
+          "Vivian Valverde",
+          "Edmundo Vitale"
+        ],
+        "video": "https://www.youtube.com/watch?v=urKDla5mMmM"
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://blog.lacnic.net/wp-content/uploads/2017/09/steve_crocker.png",
+        "alt": "Steve Crocker, presidente del Board de ICANN, en el atril de LACNIC 28, con la imagen de los 15 años de LACNIC de fondo",
+        "by": "LACNIC",
+        "source": "Blog de LACNIC",
+        "page": "https://blog.lacnic.net/en/steve-crocker-there-are-only-two-kinds-of-ip-addresses-ipv6-and-non-ipv6/"
+      },
+      {
+        "src": "https://blog.lacnic.net/wp-content/uploads/2017/09/panel.png",
+        "alt": "Panel «15 años construyendo comunidad» en el escenario de LACNIC 28, frente al público",
+        "by": "LACNIC",
+        "source": "Blog de LACNIC",
+        "page": "https://blog.lacnic.net/en/stories-behind-fifteen-years-of-the-lacnic-community/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Anuncio del evento (blog de LACNIC)",
+        "url": "https://blog.lacnic.net/en/celebrating-15-years-with-the-community/"
+      },
+      {
+        "label": "Crónica de la keynote de Steve Crocker",
+        "url": "https://blog.lacnic.net/en/steve-crocker-there-are-only-two-kinds-of-ip-addresses-ipv6-and-non-ipv6/"
+      },
+      {
+        "label": "Crónica del panel de los 15 años",
+        "url": "https://blog.lacnic.net/en/stories-behind-fifteen-years-of-the-lacnic-community/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LACNIC Blog: Celebrating 15 Years with the Community",
+        "url": "https://blog.lacnic.net/en/celebrating-15-years-with-the-community/"
+      },
+      {
+        "label": "LACNIC Blog: Steve Crocker, «There Are Only Two Kinds of IP Addresses»",
+        "url": "https://blog.lacnic.net/en/steve-crocker-there-are-only-two-kinds-of-ip-addresses-ipv6-and-non-ipv6/"
+      },
+      {
+        "label": "LACNIC Blog: Stories behind Fifteen Years of the LACNIC Community",
+        "url": "https://blog.lacnic.net/en/stories-behind-fifteen-years-of-the-lacnic-community/"
+      },
+      {
+        "label": "LACNIC Blog: New Policies for IPv6 and the Resource Recovery Process",
+        "url": "https://blog.lacnic.net/en/new-policies-for-ipv6-and-the-resource-recovery-process/"
+      },
+      {
+        "label": "ARIN: LACNIC 28",
+        "url": "https://www.arin.net/events/lacnic-28/"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2018": {
+    "description": "En 2018 la gira cambió de nombre a **Oracle Developer Tour**. UYOUG (Grupo de Usuarios Oracle del Uruguay) la organizó el 6 y 7 de agosto en el Campus Centro de la Universidad ORT, con charlas y laboratorios.\n\nEl afiche anunciaba a Alexis Lopez, Anil Nair, Rolando Carrasco, Marc Sewtz, Jim Czuprynski, Connor McDonald, Roy Swonger y Gerald Venzi, además de expertos regionales. La agenda del lunes 6 tuvo dos salas, con temas de base de datos, Oracle Cloud, Java y APEX. Abrió Jennifer Nicholson, del programa Oracle ACE, y siguió Connor McDonald con «20 years of Hints and Tips».",
+    "venue": "Universidad ORT Uruguay, Campus Centro",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle"
+    ],
+    "talks": [
+      {
+        "title": "20 years of Hints and Tips",
+        "speakers": [
+          "Connor McDonald"
+        ]
+      },
+      {
+        "title": "Oracle Database features every developer should know about!",
+        "speakers": [
+          "Gerald Venzi"
+        ]
+      },
+      {
+        "title": "Integración continua en aplicaciones Java",
+        "speakers": [
+          "Alexis Lopez"
+        ]
+      },
+      {
+        "title": "Caveat Nuba Emptor: Matching Your Organization's 12cR2 Needs to the Best OPC DB",
+        "speakers": [
+          "Jim Czuprynski"
+        ]
+      },
+      {
+        "title": "Desarrollo Java en la nube de Oracle",
+        "speakers": [
+          "Alexis Lopez"
+        ]
+      },
+      {
+        "title": "How to Diagnose Oracle Database Upgrade Issues",
+        "speakers": [
+          "Roy Swonger"
+        ]
+      },
+      {
+        "title": "Autonomous Data Warehouse & Data Visualization",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      },
+      {
+        "title": "Oracle RAC Performance Internals",
+        "speakers": [
+          "Anil Nair"
+        ]
+      },
+      {
+        "title": "Function as a Service with the Fn project: a serverless introduction",
+        "speakers": [
+          "Rolando Carrasco"
+        ]
+      },
+      {
+        "title": "Understanding the New Release and Patching Model for Oracle Database",
+        "speakers": [
+          "Roy Swonger"
+        ]
+      },
+      {
+        "title": "Oracle APEX 18.1 New Features",
+        "speakers": [
+          "Marc Sewtz"
+        ]
+      },
+      {
+        "title": "Oracle Client Failover Best Practices",
+        "speakers": [
+          "Anil Nair"
+        ]
+      },
+      {
+        "title": "APEX 18.1 and the REST of the world",
+        "speakers": [
+          "Marc Sewtz"
+        ]
+      },
+      {
+        "title": "Best Practices for API Design Using Oracle Apiary",
+        "speakers": [
+          "Rolando Carrasco"
+        ]
+      },
+      {
+        "title": "Automate the operation of your Oracle Cloud infrastructure",
+        "speakers": [
+          "Nelson Calero"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2018-developer-tour"
+      },
+      {
+        "label": "Inscripciones (Eventbrite)",
+        "url": "https://odt18uy.eventbrite.com"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2018 Developer Tour, afiche y agenda del 6 de agosto",
+        "url": "http://www.uyoug.org.uy/eventos/2018-developer-tour"
+      }
+    ]
+  },
+  "conf:jiap:2018-06-05": {
+    "description": "Las **JIAP 2018**, las jornadas anuales de actualización en tecnologías de la información que organiza AsIAP (Asociación de Informáticos de la Administración Pública), fueron del 5 al 7 de junio de 2018 en el Auditorio de Antel. Se hacen sin interrupción desde 1992, y esta edición tuvo más de 60 conferencias y más de 1.800 asistentes.\n\nEl primer día habló la ministra de Industria, Energía y Minería, Carolina Cosse. Dijo que la forma de vender productos está cambiando y que Uruguay tiene mucho por hacer, incluida la transformación de su base industrial. Pidió reducir los obstáculos al desarrollo de tecnologías, aprovechar las oportunidades sin dejar afuera a la mitad de la población y no repetir «los mismos errores que en la antigua economía».",
+    "attendance": "más de 1.800 asistentes",
+    "organizers": [
+      "AsIAP (Asociación de Informáticos de la Administración Pública)"
+    ],
+    "talks": [
+      {
+        "title": "Apertura",
+        "speakers": [
+          "Carolina Cosse"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Nota en CUTI (vía Montevideo Portal)",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/no-cometamos-los-mismos-errores-que-en-la-antigua-economia-advirtio-la-ministra-cosse-en-jiap-2018/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CUTI: «No cometamos los mismos errores que en la antigua economía», advirtió la ministra Cosse en JIAP 2018",
+        "url": "https://cuti.org.uy/en/noticias/de-interes/no-cometamos-los-mismos-errores-que-en-la-antigua-economia-advirtio-la-ministra-cosse-en-jiap-2018/"
+      },
+      {
+        "label": "AsIAP: certificado de asistencia JIAP 2018 (archivado)",
+        "url": "https://web.archive.org/web/20180615111848/http://www.asiap.org/AsIAP/index.php/certificado-jiap-2018"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2018-09-24": {
+    "description": "El **GX28**, el Encuentro GeneXus de 2018, fue del 24 al 26 de setiembre en el Radisson Montevideo Victoria Plaza (Plaza Independencia 759), con el lema **«The power of doing»**. GeneXus lo presentó como el mayor evento de innovación en negocios y tecnología de América Latina.\n\nSegún el sitio del evento hubo más de 3.500 participantes, más de 150 actividades y más de 100 oradores de más de 20 países, y quedaron grabadas más de 120 charlas. En su keynote, Nicolás Jodal describió a GeneXus como un ecosistema de más de 100.000 miembros en casi todo el planeta. Entre los oradores destacados estuvieron Breogán Gonda, Karina Santo, Facundo Ponce de León, José Clastornik (AGESIC), Sylvia Chebi (ThalesLab), Mayda Kurdian (K2B), Virginia Robano (UTEC), el divulgador José Elías (Eliax) y Favio Chávez, de la Orquesta de Instrumentos Reciclados de Cateura.\n\nFue declarado de interés turístico y cultural.",
+    "attendance": "más de 3.500 participantes",
+    "venue": "Radisson Montevideo Victoria Plaza (Plaza Independencia 759)",
+    "organizers": [
+      "GeneXus"
+    ],
+    "talks": [
+      {
+        "title": "Keynote",
+        "speakers": [
+          "Nicolás Jodal"
+        ]
+      },
+      {
+        "title": "GeneXus en el corto plazo"
+      },
+      {
+        "title": "Creando el Design System para grandes aplicaciones"
+      },
+      {
+        "title": "Innovación, startups y transformación digital de la mano de ThalesLab",
+        "speakers": [
+          "Sylvia Chebi"
+        ]
+      },
+      {
+        "title": "Construyendo naciones digitales",
+        "speakers": [
+          "José Clastornik"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto8.png?timestamp=20181018153227",
+        "alt": "El salón principal del GX28 con la consigna «The power of doing» en pantalla",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto10.png?timestamp=20181018153231",
+        "alt": "Platea colmada durante una conferencia del GX28",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto9.png?timestamp=20181018153236",
+        "alt": "Fernando Brum en el escenario del GX28, con su nombre en la pantalla",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto14.png?timestamp=20181018154000",
+        "alt": "Gastón Milano en el escenario del GX28",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto6.png?timestamp=20181018153226",
+        "alt": "Úrsula Bartram en el escenario del GX28, con su nombre en la pantalla",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto16.png?timestamp=20181018154001",
+        "alt": "Orador en el escenario frente a la palabra «doing»",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto13.png?timestamp=20181018153959",
+        "alt": "Músicos tocando violines y guitarra en el escenario del GX28",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto1.png?timestamp=20181018153219",
+        "alt": "Grupo de personas en el escenario con sus reconocimientos en la mano",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto4.png?timestamp=20181018153225",
+        "alt": "Mesas de acreditación del Encuentro",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto7.png?timestamp=20181018153240",
+        "alt": "Asistentes conversando en el hall del Encuentro",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto12.png?timestamp=20181018153233",
+        "alt": "Balcón del salón con el cartel «The power of doing»",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto3.png?timestamp=20181018153234",
+        "alt": "Dos asistentes conversan durante un corte",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx28_foto2.png?timestamp=20181018153238",
+        "alt": "Tres asistentes miran un teléfono durante el Encuentro",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio del GX28",
+        "url": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "label": "El evento en la agenda de Uruguay XXI",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/gx28-the-annual-genexus-meeting"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: GX28 Encuentro GeneXus",
+        "url": "https://www.genexus.com/es/encuentros/encuentro2018/gx28"
+      },
+      {
+        "label": "Uruguay XXI: GX28 The Annual GeneXus Meeting",
+        "url": "https://www.uruguayxxi.gub.uy/en/events/article/gx28-the-annual-genexus-meeting"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2019-08": {
+    "description": "La edición 2019, bajo el nombre **Oracle Groundbreakers Tour**, se concentró en un solo día: el lunes 5 de agosto, de 9 a 17:30, en el Campus Centro de la Universidad ORT. La organizó UYOUG (Grupo de Usuarios Oracle del Uruguay).\n\nHubo dos salas con temas de base de datos, Java, cloud y analítica. Mike Dietrich abrió con la actualización desatendida de cientos de bases a 19c, Markus Michalewicz habló de alta disponibilidad, Doug Hood presentó Oracle NoSQL y Edelweiss Kammermann dio un taller de Autonomous Data Warehouse. En la grilla también figuraron Ian Cookson, Alex Zaballa, Matheus Boesing, Ricardo Gonzalez, Rolando Carrasco, Alberto Salazar, Hillmer Chona, Vicente Romero y Nelson Calero.",
+    "venue": "Universidad ORT Uruguay, Campus Centro",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "Oracle"
+    ],
+    "talks": [
+      {
+        "title": "Life's good: Upgrading hundreds of databases unattended to 19c",
+        "speakers": [
+          "Mike Dietrich"
+        ]
+      },
+      {
+        "title": "Styleguide for Designing Web APIs with Oracle Apiary with Swagger & API Blueprint",
+        "speakers": [
+          "Rolando Carrasco"
+        ]
+      },
+      {
+        "title": "No outages: operations without impact!",
+        "speakers": [
+          "Ian Cookson"
+        ]
+      },
+      {
+        "title": "Moving your Oracle Databases to the Oracle Cloud: Exploring all options",
+        "speakers": [
+          "Alex Zaballa"
+        ]
+      },
+      {
+        "title": "Best Practices for the most Impactful Oracle Database HA Features in 12c, 18c & 19c",
+        "speakers": [
+          "Markus Michalewicz"
+        ]
+      },
+      {
+        "title": "ODBCS+OGG+Standby in Cloud: Building an Elastic Data Environment for your Business",
+        "speakers": [
+          "Matheus Boesing"
+        ]
+      },
+      {
+        "title": "A Cloud Journey: Move to the Oracle Cloud",
+        "speakers": [
+          "Ricardo Gonzalez"
+        ]
+      },
+      {
+        "title": "Introduction to Oracle NoSQL: fast, simple and highly available",
+        "speakers": [
+          "Doug Hood"
+        ]
+      },
+      {
+        "title": "Nowadays Architecture Trends, from Monolith to Microservices and Serverless",
+        "speakers": [
+          "Alberto Salazar"
+        ]
+      },
+      {
+        "title": "Workshop: Getting Started with Autonomous Data Warehouse",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      },
+      {
+        "title": "Dockerizing Java applications with Oracle Cloud",
+        "speakers": [
+          "Hillmer Chona"
+        ]
+      },
+      {
+        "title": "Project Amber: proving again that less is more",
+        "speakers": [
+          "Vicente Romero"
+        ]
+      },
+      {
+        "title": "Oracle Exadata Cloud Services guide from Practical Experience",
+        "speakers": [
+          "Nelson Calero"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2019-groundbreakers-tour"
+      },
+      {
+        "label": "Inscripciones (Eventbrite)",
+        "url": "https://uyoug19.eventbrite.com"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2019 Groundbreakers Tour, afiche y agenda",
+        "url": "http://www.uyoug.org.uy/eventos/2019-groundbreakers-tour"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2019-09-23": {
+    "description": "El **GX29**, el Encuentro GeneXus de 2019, fue del 23 al 25 de setiembre en el Radisson de Montevideo, bajo la consigna **«builders»**. Fue el último Encuentro presencial en Montevideo hasta el GX30 de 2023: entre medio, GeneXus hizo eventos en línea.\n\nLa keynote central fue de Bibop G. Gresta, cofundador y presidente de Hyperloop Transportation Technologies. También hablaron Breogán Gonda y Nicolás Jodal, y entre los oradores destacados estuvieron Sylvia Chebi (ThalesLab), Alberto Oppenheimer (SAP América Latina), Eduardo Mangarelli y Roberto Icasuriaga (Microsoft América Latina), Fernando Brum (ANII), Ana Laura Pérez Bertrán (El País), Mayda Kurdian (K2B), José Elías (Eliax), Daniel Fernández (Memética) y Gastón Milano y Armin Bachmann, de GeneXus.",
+    "venue": "Radisson Montevideo Victoria Plaza",
+    "organizers": [
+      "GeneXus"
+    ],
+    "talks": [
+      {
+        "title": "Keynote",
+        "speakers": [
+          "Bibop G. Gresta"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-2.jpg?timestamp=20190925020528",
+        "alt": "Vista general del escenario principal del GX29, con la consigna «builders» en pantalla",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-3.jpg?timestamp=20190925020528",
+        "alt": "El salón principal del Radisson iluminado en azul durante una conferencia del GX29",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-1.jpg?timestamp=20190925020525",
+        "alt": "Una oradora y un orador comparten el escenario del GX29",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-9.jpg?timestamp=20190925020658",
+        "alt": "Orador en el escenario frente a la pantalla con la palabra «builders»",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-4.jpg?timestamp=20190925020528",
+        "alt": "Orador muestra su teléfono frente a la pantalla del escenario",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-6.jpg?timestamp=20190925020636",
+        "alt": "Oradora en el escenario durante su charla",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-13.jpg?timestamp=20190925020702",
+        "alt": "Orador en el escenario junto a la pantalla con la frase «entre gigantes»",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-5.jpg?timestamp=20190925020528",
+        "alt": "Dos oradores en el escenario del GX29",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-11.jpg?timestamp=20190925020659",
+        "alt": "Orador frente a una pantalla con publicidades en chino",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-7.jpg?timestamp=20190925020637",
+        "alt": "Vista del público desde el fondo del salón principal",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-12.jpg?timestamp=20190925020701",
+        "alt": "Público aplaudiendo durante una charla",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-14.jpg?timestamp=20190925020701",
+        "alt": "Asistentes sonriendo en la platea",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-15.jpg?timestamp=20190925020731",
+        "alt": "Asistentes siguiendo una conferencia",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-16.jpg?timestamp=20190925020759",
+        "alt": "Conversación de networking alrededor de una mesa",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-8.jpg?timestamp=20190925020529",
+        "alt": "Asistentes conversando en los pasillos del Encuentro",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx29-foto-10.jpg?timestamp=20190925020731",
+        "alt": "Un grupo de asistentes se saca una selfie en el GX29",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio del GX29",
+        "url": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "label": "Encuentros anteriores (GeneXus)",
+        "url": "https://www.genexus.com/en/meetings"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: GX29 GeneXus Meeting",
+        "url": "https://www.genexus.com/en/meetings/meeting2019/gx29"
+      },
+      {
+        "label": "GeneXus: GX29 GeneXus Meeting, previa",
+        "url": "https://genexus.com/en/meetings/meeting2019/gx29-genexus-meeting-previa"
+      },
+      {
+        "label": "GeneXus: listado de eventos",
+        "url": "https://genexus.com/en/meetings/anteriores"
+      },
+      {
+        "label": "GeneXus: GX30, con el GX29 como el último Encuentro presencial",
+        "url": "https://www.genexus.com/en/meetings/meeting2023"
+      }
+    ]
+  },
+  "conf:lacnic-montevideo:2021-10-11": {
+    "description": "**LACNIC 36 – LACNOG 2021** fue del 11 al 15 de octubre de 2021 y fue el primer evento híbrido de LACNIC: combinó la participación en línea con dos instancias presenciales, una en el Auditorio del LATU en Montevideo y otra en Pergamino, Argentina.\n\nMás de 220 participantes se conectaron a la apertura del segundo día. Desde el LATU hablaron Javier Salazar, vicepresidente del directorio de LACNIC; Oscar Robles, director ejecutivo de LACNIC, y Omar Paganini, ministro de Industria, Energía y Minería. Ariel Weher, presidente de LACNOG, participó desde Pergamino. Salazar recordó que la región había llegado a 400 millones de usuarios de Internet, que el stock de direcciones IPv4 se había agotado el año anterior y que era urgente desplegar IPv6.\n\nEn una charla con Robles, Paganini explicó por qué Uruguay atrae a grandes empresas tecnológicas: 30 años de desarrollo del sector, con la mayor exportación de software per cápita de América Latina; buena infraestructura, con 80 % de cobertura de fibra óptica al hogar, y estabilidad institucional.",
+    "venue": "Auditorio del LATU (presencial) y en línea",
+    "organizers": [
+      "LACNIC",
+      "LACNOG"
+    ],
+    "photos": [
+      {
+        "src": "https://blog.lacnic.net/wp-content/uploads/2021/10/apertura_lacnic_36_lacnog_2021_dia2.png",
+        "alt": "Panel de apertura del segundo día de LACNIC 36 en el Auditorio del LATU, con Javier Salazar, Oscar Robles y el ministro Omar Paganini",
+        "by": "LACNIC",
+        "source": "Blog de LACNIC",
+        "page": "https://blog.lacnic.net/en/lacnic-36-lacnog-2021-opens-its-first-hybrid-event/"
+      }
+    ],
+    "links": [
+      {
+        "label": "Crónica de la apertura (blog de LACNIC)",
+        "url": "https://blog.lacnic.net/en/lacnic-36-lacnog-2021-opens-its-first-hybrid-event/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "LACNIC Blog: LACNIC 36 LACNOG 2021 Opens Its First Hybrid Event",
+        "url": "https://blog.lacnic.net/en/lacnic-36-lacnog-2021-opens-its-first-hybrid-event/"
+      },
+      {
+        "label": "LACNIC: LACNIC 36 - LACNOG 2021 to be held as a blended event",
+        "url": "https://www.lacnic.net/5546/2/lacnic/lacnic-36---lacnog-2021-to-be-held-as-a-blended-event"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2023-08-14": {
+    "description": "En 2023 el encuentro anual de los grupos de usuarios Oracle de América Latina se llamó **Oracle Community Tour LATAM 2023**. Pasó por Montevideo el lunes 14 de agosto, en la sede Centro de la Universidad ORT (Cuareim 1451), organizado por UYOUG (Grupo de Usuarios Oracle del Uruguay).\n\nLa gira recorrió diez países en tres semanas, con expertos en bases de datos, Oracle Cloud Infrastructure, cloud native, Java, analítica, APEX, chatbots, desarrollo móvil y desarrollo moderno. La inscripción se hizo por Eventbrite.",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "LAOUC (Latin America Oracle Users Community)"
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2023-oracle-community-tour-latam"
+      },
+      {
+        "label": "La gira en el sitio de LAOUC",
+        "url": "https://www.laouc.org/laouc-community-tour-2023/"
+      },
+      {
+        "label": "Inscripciones (Eventbrite)",
+        "url": "https://uyoug2023.eventbrite.com"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2023 Oracle Community Tour LATAM",
+        "url": "http://www.uyoug.org.uy/eventos/2023-oracle-community-tour-latam"
+      }
+    ]
+  },
+  "conf:genexus-meeting:2023-11-28": {
+    "description": "El **GX30** fue del 28 al 30 de noviembre de 2023 en el Radisson de Montevideo. Fue el primer Encuentro GeneXus presencial desde el GX29 de 2019, porque entre medio la empresa hizo eventos en línea, y el primer evento internacional que GeneXus, ya parte de Globant, organizó junto a esa empresa.\n\nFueron tres días con más de 100 oradores y más de 150 actividades, también transmitidas en streaming. Hubo tres ejes: inteligencia artificial aplicada al desarrollo de software, super apps y low-code empresarial con GeneXus 18. Hablaron Nicolás Jodal, Breogán Gonda y Gastón Milano, Martín Migoya (CEO de Globant), Ichak Adizes, José Elías (Eliax), Sylvia Chebi (ThalesLab) y Agustín Huerta, de Globant, que dio una keynote sobre computación cuántica.",
+    "venue": "Radisson Montevideo Victoria Plaza",
+    "organizers": [
+      "GeneXus (Globant)"
+    ],
+    "talks": [
+      {
+        "title": "Opening Keynote",
+        "speakers": [
+          "Nicolás Jodal"
+        ]
+      },
+      {
+        "title": "Keynote",
+        "speakers": [
+          "Ichak Adizes"
+        ]
+      },
+      {
+        "title": "Keynote: Quantum computing",
+        "speakers": [
+          "Agustín Huerta"
+        ]
+      },
+      {
+        "title": "Simplifying Software Development with GeneXus in the Age of AI",
+        "speakers": [
+          "Armin Bachmann",
+          "Gastón Milano"
+        ]
+      },
+      {
+        "title": "Artificial Intelligence in GeneXus",
+        "speakers": [
+          "José Lamas"
+        ]
+      },
+      {
+        "title": "GeneXus Enterprise AI: Integrate the power of Generative AI into your systems",
+        "speakers": [
+          "Eugenio García"
+        ]
+      },
+      {
+        "title": "Exploring the intersection of Generative AI and Software Testing: Challenges & Applications",
+        "speakers": [
+          "Federico Moreira"
+        ]
+      },
+      {
+        "title": "Beyond Theory: Real Cases of AI in the Corporate World",
+        "speakers": [
+          "Matías Burcheri"
+        ]
+      },
+      {
+        "title": "GeneXus as an innovative component of a software factory",
+        "speakers": [
+          "Sebastián Arriada"
+        ]
+      },
+      {
+        "title": "Closing Keynote",
+        "speakers": [
+          "Nicolás Jodal"
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "src": "https://www.genexus.com/media/images/gx30-foto_1.jpg?timestamp=20231201193920",
+        "alt": "Escenario principal del GX30 en el Radisson de Montevideo, con las pantallas de GeneXus",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2023"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx30-foto_2.jpg?timestamp=20231201193939",
+        "alt": "El salón principal del GX30 visto desde el fondo, con el escenario encendido",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2023"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx30-foto_3.jpg?timestamp=20231201193939",
+        "alt": "Platea llena durante una charla del GX30",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2023"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx30-foto_4.jpg?timestamp=20231201194007",
+        "alt": "Orador en el escenario del GX30 frente a una pantalla gigante",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2023"
+      },
+      {
+        "src": "https://www.genexus.com/media/images/gx30-foto_5.jpg?timestamp=20231201194008",
+        "alt": "Dos oradores en el escenario del GX30",
+        "by": "GeneXus",
+        "source": "Sitio de GeneXus",
+        "page": "https://www.genexus.com/en/meetings/meeting2023"
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio del GX30",
+        "url": "https://www.genexus.com/en/meetings/meeting2023"
+      }
+    ],
+    "sources": [
+      {
+        "label": "GeneXus: GX30 GeneXus Meeting",
+        "url": "https://www.genexus.com/en/meetings/meeting2023"
+      },
+      {
+        "label": "GeneXus: listado de eventos",
+        "url": "https://genexus.com/en/meetings/anteriores"
+      }
+    ]
+  },
+  "conf:oracle-tour-montevideo:2024-08-19": {
+    "description": "El **LAOUC Community Tour 2024**, el encuentro anual de los grupos de usuarios Oracle de América Latina, pasó por Montevideo el lunes 19 de agosto, en la sede Centro de la Universidad ORT (Cuareim 1451). Lo organizó UYOUG (Grupo de Usuarios Oracle del Uruguay), fue gratuito y la inscripción se hizo con un evento de LinkedIn. La gira recorrió diez países en tres semanas.\n\nLa jornada fue de 8:30 a 17, en un auditorio dedicado a Oracle Database y una sala con temas de Oracle Cloud. Hubo charlas sobre IA en la nube de Oracle, seguridad de bases de datos, búsqueda vectorial en Oracle 23ai, PostgreSQL gestionado en OCI, visualización de datos en APEX, PL/SQL, Java con JSON en 23ai y zero trust en Kubernetes con OpenZiti.",
+    "organizers": [
+      "UYOUG (Grupo de Usuarios Oracle del Uruguay)",
+      "LAOUC (Latin America Oracle Users Community)"
+    ],
+    "talks": [
+      {
+        "title": "Oracle AI in Action: Understanding Cloud Services for Beginners",
+        "speakers": [
+          "Edelweiss Kammermann"
+        ]
+      },
+      {
+        "title": "Haga que su base de datos Oracle sea invisible para los atacantes",
+        "speakers": [
+          "Sean Scott"
+        ]
+      },
+      {
+        "title": "What's Our Vector, Victor? Exploring Oracle 23ai AI Vector Search",
+        "speakers": [
+          "Niall McPhillips"
+        ]
+      },
+      {
+        "title": "PostgreSQL OCI managed service: deep dive",
+        "speakers": [
+          "Nelson Calero"
+        ]
+      },
+      {
+        "title": "Data Viz is In: Add Pizzazz with Charts in APEX",
+        "speakers": [
+          "Karen Cannell"
+        ]
+      },
+      {
+        "title": "Chatea con tus datos en una base de datos autónoma usando IA generativa",
+        "speakers": [
+          "Diego Sanchez"
+        ]
+      },
+      {
+        "title": "Key Principles for Modernizing Your User Interface",
+        "speakers": [
+          "Peter Koletzke"
+        ]
+      },
+      {
+        "title": "PL/SQL Hidden Features for Devs & DBAs",
+        "speakers": [
+          "Matheus Boesing"
+        ]
+      },
+      {
+        "title": "Boas práticas para desenvolvimento de aplicações modernas usando JSON e Java usando Oracle Database 23ai",
+        "speakers": [
+          "Mario Barduchi"
+        ]
+      },
+      {
+        "title": "Kubernetes se encuentra con los servicios oscuros a través de OpenZiti.io: zero trust aplicado a tus microservicios",
+        "speakers": [
+          "Rolando Carrasco"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Página del evento (UYOUG)",
+        "url": "http://www.uyoug.org.uy/eventos/2024-laouc-community-tour"
+      },
+      {
+        "label": "La gira en el sitio de LAOUC",
+        "url": "https://www.laouc.org/laouc-community-tour-2024/"
+      },
+      {
+        "label": "Evento en LinkedIn",
+        "url": "https://www.linkedin.com/events/laouccommunitytour2024-montevid7228426732054183937/comments/"
+      }
+    ],
+    "sources": [
+      {
+        "label": "UYOUG: 2024 LAOUC Community Tour, descripción y agenda",
+        "url": "http://www.uyoug.org.uy/eventos/2024-laouc-community-tour"
+      }
+    ]
+  },
+  "conf:cigras:2026-08-03": {
+    "description": "Edición XVII del **CIGRAS**, el congreso de gobierno, riesgos, auditoría y seguridad que organiza el Capítulo Montevideo de ISACA desde 2010. Fue del 3 al 7 de agosto de 2026 en formato mixto: tres días virtuales (3 al 5), un día virtual y presencial el jueves 6 y un taller presencial el viernes 7, sobre ransomware, respuesta, recuperación y peritaje forense.\n\nEl programa tuvo más de 30 sesiones con oradores de Uruguay y de Brasil, Colombia, Ecuador, España, Panamá, Perú y Puerto Rico. La inteligencia artificial atravesó buena parte de la agenda: IA aplicada a la auditoría, gobernanza y COBIT 2019 para la IA, y un panel sobre innovación, regulación y talento. También hubo charlas sobre resiliencia ante incidentes, hospitales ciberresilientes, crimeware, la evolución del SOC y el modelo RAFA de Jeimy Cano para el riesgo cibernético.\n\nAbrió José Luis Mauro Vera, presidente del capítulo. La entrada era gratuita para socios del capítulo y costaba 90 dólares para el público general.",
+    "organizers": [
+      "ISACA Capítulo Montevideo"
+    ],
+    "talks": [
+      {
+        "title": "Potenciando la AuditorIA",
+        "speakers": [
+          "Natascha Martinez",
+          "Diego Suarez"
+        ]
+      },
+      {
+        "title": "Resiliencia real cuando el plan falla y el breach es inevitable",
+        "speakers": [
+          "Esteban Sandoval",
+          "Edgar Salazar"
+        ]
+      },
+      {
+        "title": "Protegiendo al protector: especialistas de control frente al burnout, la presión y la crisis",
+        "speakers": [
+          "Miguel Saavedra"
+        ]
+      },
+      {
+        "title": "De la auditoría reactiva a la gestión predictiva: cómo la IA revoluciona el riesgo en las instituciones de salud",
+        "speakers": [
+          "Christian Patricio Vaca"
+        ]
+      },
+      {
+        "title": "PAARA: un modelo para atender los tres momentos de verdad de una crisis cibernética",
+        "speakers": [
+          "Andrés Almanza"
+        ]
+      },
+      {
+        "title": "Aplicando COBIT 2019 Gobierno de las Tecnologías e Información a la IA",
+        "speakers": [
+          "Andrés Calisiotti"
+        ]
+      },
+      {
+        "title": "Gobierno, riesgo y cumplimiento en tiempos de IA: una aproximación práctica",
+        "speakers": [
+          "Graciela Ricci",
+          "Juan Garcia Morgado"
+        ]
+      },
+      {
+        "title": "Fortalecimiento de la seguridad en la nube con seis controles esenciales",
+        "speakers": [
+          "Romulo Lomparte"
+        ]
+      },
+      {
+        "title": "¿Seguro, conforme o viable? Dos perspectivas para una misma decisión de negocio",
+        "speakers": [
+          "Mauricio Campiglia",
+          "Gabriel Croci"
+        ]
+      },
+      {
+        "title": "Hospitales ciberresilientes: ¿mito o realidad?",
+        "speakers": [
+          "Mireia Nager"
+        ]
+      },
+      {
+        "title": "Crimeware 2026: amenazas reales, auditorías obsoletas y los riesgos que nadie está midiendo",
+        "speakers": [
+          "Aury Curbelo"
+        ]
+      },
+      {
+        "title": "Auditoría de madurez en la gestión de riesgos de ciberdelincuencia: aplicación de normas NIST e ISO",
+        "speakers": [
+          "Martin Pecoy"
+        ]
+      },
+      {
+        "title": "¿Estás listo para asegurar la IA? El mapa de competencias del nuevo profesional con el marco AAISM",
+        "speakers": [
+          "Helton Garcia"
+        ]
+      },
+      {
+        "title": "Evolución del SOC: de SIEM a TDIR",
+        "speakers": [
+          "Americo Alonso"
+        ]
+      },
+      {
+        "title": "Gobernanza y soberanía en la era de los espacios de datos",
+        "speakers": [
+          "José Manuel Ballester"
+        ]
+      },
+      {
+        "title": "Modelo RAFA: repensando la gestión del riesgo cibernético en las organizaciones",
+        "speakers": [
+          "Jeimy Cano"
+        ]
+      },
+      {
+        "title": "Fortaleciendo las auditorías de seguridad de la información en el sector público: un enfoque basado en riesgos",
+        "speakers": [
+          "Nicolás Serrano",
+          "Claudia Larrea",
+          "Jonnathan Silva",
+          "Pablo Bicudo"
+        ]
+      },
+      {
+        "title": "Panel de IA, la agenda que nos convoca: innovación, regulación, talento",
+        "speakers": [
+          "Agustina Pérez Comenale",
+          "Mauro Ríos",
+          "Bruno Gili",
+          "Jimena Hernández"
+        ]
+      },
+      {
+        "title": "Tu política de seguridad no detiene a un insider motivado. Cómo la ISO 37001 apoya tu estrategia de ciberseguridad",
+        "speakers": [
+          "Carlos Serra"
+        ]
+      },
+      {
+        "title": "Mano a mano con Ruben Sosenke",
+        "speakers": [
+          "Ruben Sosenke"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "label": "Sitio oficial",
+        "url": "https://cigras.com.uy/"
+      },
+      {
+        "label": "Programa completo",
+        "url": "https://cigras.com.uy/programa/"
+      },
+      {
+        "label": "ISACA Capítulo Montevideo",
+        "url": "https://engage.isaca.org/montevideochapter/home"
+      }
+    ],
+    "sources": [
+      {
+        "label": "CIGRAS 2026: sitio oficial",
+        "url": "https://cigras.com.uy/"
+      },
+      {
+        "label": "CIGRAS 2026: programa",
+        "url": "https://cigras.com.uy/programa/"
+      }
+    ]
+  }
+}

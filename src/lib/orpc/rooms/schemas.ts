@@ -4,7 +4,8 @@ import * as z from "zod";
 const RoomFields = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio"),
   description: z.string().optional(),
-  capacity: z.number().int().positive().optional(),
+  /** null clears it. */
+  capacity: z.number().int().positive().nullable().optional(),
   hasTV: z.boolean().describe("Room has a TV/projector available"),
   hasWhiteboard: z.boolean().describe("Room has a whiteboard available"),
   isActive: z.boolean(),
@@ -19,6 +20,9 @@ const RoomFields = z.object({
   sortOrder: z.number().int(),
 });
 
+/** Set by the room's host on the day: kiosks, the agenda and Owy show it. */
+export const RoomStatusSchema = z.enum(["open", "full", "evacuate"]);
+
 /** What the API returns. Shapes only — input rules don't apply to rows already stored. */
 export const RoomSchema = z.object({
   id: z.string(),
@@ -32,6 +36,8 @@ export const RoomSchema = z.object({
   color: z.string().nullable(),
   icon: z.string().nullable(),
   sortOrder: z.number(),
+  status: RoomStatusSchema,
+  statusUpdatedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -48,6 +54,7 @@ export const CreateRoomSchema = RoomFields.extend({
 
 export const UpdateRoomInputSchema = z.object({ id: z.string().min(1), data: RoomFields.partial() });
 export const RoomIdSchema = z.object({ id: z.string().min(1) });
+export const SetRoomStatusSchema = z.object({ roomId: z.string().min(1), status: RoomStatusSchema });
 export const GetRoomsByOpenSpaceSchema = z.object({ openSpaceId: z.string().min(1) });
 export const ReorderRoomsSchema = z.object({
   openSpaceId: z.string().min(1),
@@ -55,4 +62,5 @@ export const ReorderRoomsSchema = z.object({
 });
 
 export type Room = z.infer<typeof RoomSchema>;
+export type RoomStatus = z.infer<typeof RoomStatusSchema>;
 export type CreateRoomInput = z.infer<typeof CreateRoomSchema>;

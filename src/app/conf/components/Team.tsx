@@ -1,4 +1,4 @@
-import { confUtm } from "../utm";
+import { confUtm, type ConfLinkPlacement } from "../utm";
 
 import Reveal from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -43,6 +43,7 @@ export const TEAM_2026: TeamMember[] = [
     lastname: "García",
     picture: "/images/conf/staff/javier-garcia.webp",
     jobTitle: "Product Designer",
+    linkedin: "https://www.linkedin.com/in/javiergarciacedres/",
   },
   {
     firstname: "Javier",
@@ -86,14 +87,57 @@ export const TEAM_2026: TeamMember[] = [
     jobTitle: "Software Developer",
     linkedin: "https://www.linkedin.com/in/mauricio-mena-7bb13271/",
   },
-  {
-    firstname: "Santiago",
-    lastname: "Ferreira",
-    picture: "/images/conf/staff/santiago-ferreira.webp",
-    jobTitle: "Software Developer",
-    linkedin: "https://www.linkedin.com/in/santiagoferreira/",
-  },
 ];
+
+type PersonCardProps = {
+  name: string;
+  picture: string;
+  /** Crossfades in over `picture` on hover or keyboard focus */
+  reveal?: string;
+  role: string;
+  linkedin?: string;
+  placement: ConfLinkPlacement;
+};
+
+/* Portrait, name and role; links to LinkedIn when there is one. Shared with Speakers. */
+export function PersonCard({ name, picture, reveal, role, linkedin, placement }: PersonCardProps) {
+  const tile = (
+    <>
+      <div className="relative mx-auto aspect-square w-full max-w-[240px]">
+        <img
+          alt={`Fotografía de ${name}`}
+          className={`h-full w-full object-contain transition duration-300 group-hover:scale-[1.03] ${reveal ? "group-hover:opacity-0 group-focus-visible:opacity-0" : ""}`}
+          loading="lazy"
+          src={picture}
+        />
+        {reveal && (
+          <img
+            alt=""
+            className="absolute inset-0 h-full w-full object-contain opacity-0 transition duration-300 group-hover:scale-[1.03] group-hover:opacity-100 group-focus-visible:opacity-100"
+            loading="lazy"
+            src={reveal}
+          />
+        )}
+      </div>
+      <p className="mt-5 text-center font-display text-base leading-none font-bold text-[#F5BB03] uppercase">{name}</p>
+      <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{role}</p>
+    </>
+  );
+
+  return linkedin ? (
+    <a
+      aria-label={`Perfil de LinkedIn de ${name}`}
+      className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
+      href={confUtm(linkedin, placement)}
+      rel="noopener"
+      target="_blank"
+    >
+      {tile}
+    </a>
+  ) : (
+    <div className="group">{tile}</div>
+  );
+}
 
 export default function Team() {
   return (
@@ -110,39 +154,16 @@ export default function Team() {
         {TEAM_2026.map(({ firstname, lastname, picture, jobTitle, linkedin }, i) => {
           const fullName = `${firstname} ${lastname}`;
 
-          const tile = (
-            <>
-              <div className="relative mx-auto aspect-square w-full max-w-[240px]">
-                <img
-                  alt={`Fotografía de ${fullName}`}
-                  className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
-                  loading="lazy"
-                  src={picture}
-                />
-              </div>
-              <p className="mt-5 text-center font-display text-base leading-none font-bold text-[#F5BB03] uppercase">
-                {fullName}
-              </p>
-              <p className="mt-2 text-center text-sm leading-5 text-[#FBF5E7]/85">{jobTitle}</p>
-            </>
-          );
-
           return (
             <li key={fullName}>
               <Reveal amount={0.3} delay={(i % 4) * 0.09} scale={0.93} y={34}>
-                {linkedin ? (
-                  <a
-                    aria-label={`Perfil de LinkedIn de ${fullName}`}
-                    className="group block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F5BB03]"
-                    href={confUtm(linkedin, "team-linkedin")}
-                    rel="noopener"
-                    target="_blank"
-                  >
-                    {tile}
-                  </a>
-                ) : (
-                  <div className="group">{tile}</div>
-                )}
+                <PersonCard
+                  linkedin={linkedin}
+                  name={fullName}
+                  picture={picture}
+                  placement="team-linkedin"
+                  role={jobTitle}
+                />
               </Reveal>
             </li>
           );

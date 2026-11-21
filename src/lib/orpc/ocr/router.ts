@@ -1,7 +1,7 @@
 import { openapi } from "@orpc/openapi";
 import { eventIterator } from "@orpc/server";
 
-import { staff } from "../base";
+import { platform } from "../base";
 import { toWireError } from "../errors";
 import {
   CardEventSchema,
@@ -16,7 +16,7 @@ import * as Ocr from "./service";
 const docs = (summary: string) => openapi({ tags: ["Talk cards"], summary });
 
 export const ocrRouter = {
-  extractCard: staff
+  extractCard: platform("program:manage")
     .meta(docs("Read a talk card from a photo: the name and title as they are read, the card, then a place for it"))
     .input(ExtractCardSchema)
     .output(eventIterator(CardEventSchema))
@@ -29,7 +29,7 @@ export const ocrRouter = {
       }
     }),
 
-  findFreeSpot: staff
+  findFreeSpot: platform("program:manage")
     .meta(docs("Suggest a room and time for a talk on the event's board"))
     .input(FindFreeSpotSchema)
     .output(FindFreeSpotResponseSchema)
@@ -37,7 +37,7 @@ export const ocrRouter = {
       return yield* Ocr.suggestSlot(input.eventId, input);
     }),
 
-  processImageWithSuggestion: staff
+  processImageWithSuggestion: platform("program:manage")
     .meta(docs("Read a talk card and suggest a place for it, in one answer"))
     .input(ProcessImageWithSuggestionSchema)
     .output(ProcessImageWithSuggestionResponseSchema)

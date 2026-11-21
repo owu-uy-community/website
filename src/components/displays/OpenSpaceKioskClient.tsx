@@ -68,6 +68,7 @@ export default function OpenSpaceKioskClient({
     rooms,
     roomColors,
     roomIcons,
+    roomsByName,
     timeSlots,
     schedulesData,
     isLoading: setupLoading,
@@ -145,6 +146,7 @@ export default function OpenSpaceKioskClient({
           roomColors={roomColors}
           roomIcons={roomIcons}
           rooms={rooms}
+          roomsByName={roomsByName}
           schedulesData={schedulesData}
           timeSlots={timeSlots}
         />

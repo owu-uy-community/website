@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 
+import { ScreenBeacon } from "components/Admin/screens/ScreenBeacon";
 import MapKioskClient from "components/displays/MapKioskClient";
 import { getEventBySlugs } from "lib/tenant-server";
+
+// A live screen at the venue: rendered per request, allowed to block (Cache Components)
+export const instant = false;
 
 export default async function EventKioskMapPage({
   params,
@@ -12,5 +16,10 @@ export default async function EventKioskMapPage({
   const resolved = await getEventBySlugs(communitySlug, eventSlug);
   if (!resolved) notFound();
 
-  return <MapKioskClient eventId={resolved.event.id} />;
+  return (
+    <>
+      <ScreenBeacon eventId={resolved.event.id} />
+      <MapKioskClient eventId={resolved.event.id} />
+    </>
+  );
 }

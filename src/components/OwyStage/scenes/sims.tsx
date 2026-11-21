@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 
+import { geistMono, poppins } from "app/fonts";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
 import { BRAND, H, W, useStageFrame } from "../Stage";
@@ -826,9 +827,9 @@ export function Sorting() {
       ctx.fillRect(80 + i * bw, H - 120 - h, bw - 4, h);
     });
     ctx.fillStyle = BRAND.cream;
-    ctx.font = "800 64px Poppins, sans-serif";
+    ctx.font = `800 64px ${poppins.style.fontFamily}, sans-serif`;
     ctx.fillText(ALGORITHMS[s.algo].name, 80, 120);
-    ctx.font = "28px 'Geist Mono', ui-monospace, monospace";
+    ctx.font = `28px ${geistMono.style.fontFamily}, ui-monospace, monospace`;
     ctx.fillStyle = "rgba(251,245,231,0.55)";
     ctx.fillText(`n = ${BARS}${s.doneAt ? " · ordenado" : ""}`, 80, 170);
   });
@@ -897,7 +898,7 @@ export function Pong() {
     ctx.fillStyle = "rgba(251,245,231,0.25)";
     for (let y = 20; y < H; y += 60) ctx.fillRect(W / 2 - 4, y, 8, 32);
     ctx.fillStyle = BRAND.cream;
-    ctx.font = "800 150px Poppins, sans-serif";
+    ctx.font = `800 150px ${poppins.style.fontFamily}, sans-serif`;
     ctx.textAlign = "center";
     ctx.fillText(String(s.score[0]), W / 2 - 200, 200);
     ctx.fillText(String(s.score[1]), W / 2 + 200, 200);

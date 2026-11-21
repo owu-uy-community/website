@@ -25,7 +25,12 @@ export interface PostInfo {
   image?: string;
   /** Lowercase, short, reusable across posts, e.g. ["meetups", "comunidad"] */
   tags?: string[];
+  /** Work in progress: shown in development with a banner, never published to production */
+  draft?: boolean;
 }
+
+/** Drafts only render in development, or in a deploy that sets SHOW_DRAFTS (e.g. a review preview) */
+export const showDrafts = () => process.env.NODE_ENV !== "production" || Boolean(process.env.SHOW_DRAFTS);
 
 /** JSON-LD-safe serialization: escapes "<" so content can never close the script tag */
 export function serializeJsonLd(data: unknown) {
@@ -49,7 +54,7 @@ export function resolvePostImage(post: PostInfo) {
 // A page's `openGraph` replaces the root layout's entirely (shallow merge),
 // so every post needs a complete object — images included — or og:image is lost.
 export function postMetadata(post: PostInfo): Metadata {
-  const { author = DEFAULT_POST_AUTHOR, date, description, slug, tags = [], title, updated } = post;
+  const { author = DEFAULT_POST_AUTHOR, date, description, draft, slug, tags = [], title, updated } = post;
   const url = `${SITE_URL}/blog/${slug}`;
   const image = resolvePostImage(post);
 
@@ -59,6 +64,7 @@ export function postMetadata(post: PostInfo): Metadata {
     authors: [{ name: author }],
     keywords: tags,
     category: tags[0],
+    ...(draft ? { robots: { index: false, follow: false } } : {}),
     alternates: {
       canonical: `/blog/${slug}`,
       types: { "application/rss+xml": "/blog/feed.xml" },

@@ -1,6 +1,6 @@
 import { expect, test } from "../fixtures";
 
-for (const path of ["/", "/conf"]) {
+for (const path of ["/", "/conf", "/conf/openspace"]) {
   test(`${path} renders without page errors`, async ({ pageAs }) => {
     const page = await pageAs("anonymous");
     const errors: string[] = [];

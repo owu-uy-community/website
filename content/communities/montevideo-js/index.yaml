@@ -1,0 +1,13 @@
+name: "Montevideo JS"
+picture: /images/communities/montevideo-js/picture.webp
+description: "JavaScript en todas sus formas, del navegador al servidor."
+topics:
+  - web
+  - lenguajes
+status: activa
+website: https://www.javascript.uy/
+meetup: https://www.meetup.com/montevideojs/
+slackChannel: javascript
+feedNames:
+  - "Uruguay Javascript Meetup Group"
+confPartner: false

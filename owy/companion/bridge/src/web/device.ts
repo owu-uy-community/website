@@ -21,13 +21,17 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
     private send: (message: object | Buffer) => void,
     private disconnect: () => void
   ) {}
-  async request() {
+  async request(options: { mode?: "pitch" } = {}) {
     if (this.closed || this.active) return;
     ++this.run;
     this.active = true;
     this.accepted = false;
     this.ready = false;
-    await this.handlers.onRequestStart({ start: true } as VoiceAssistantRequest);
+    // A pitch run is tagged the way the firmware tags it (`wake_word: "pitch"`).
+    await this.handlers.onRequestStart({
+      start: true,
+      ...(options.mode === "pitch" ? { wakeWordPhrase: "pitch" } : {}),
+    } as VoiceAssistantRequest);
   }
   async cancel() {
     this.active = false;
@@ -63,13 +67,13 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
     this.accepted = false;
     if (was) this.emit({ type: "detached", deviceId: was });
   }
-  mirrorAccept() {
+  mirrorAccept(own = false) {
     if (this.closed) return;
     ++this.run;
     this.active = true;
     this.accepted = true;
     this.ready = true;
-    this.emit({ type: "accepted" });
+    this.emit(own ? { type: "accepted", own: true } : { type: "accepted" });
   }
   mirrorDecline() {
     this.active = false;
@@ -118,6 +122,22 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   }
   /** The browser schedules playback a little ahead of the pacer. */
   readonly expressionLeadMs = 250;
+  /** Lip shapes for the emulator's face while the browser plays the answer (input 39 there). */
+  sendMouthTrack(frames: string, leadMs: number) {
+    this.emit({ type: "screen", command: { kind: "mouth", frames, leadMs } });
+  }
+  /** A pre-rendered cue the browser plays from /companion-audio/clips/<id>.wav, whatever its stage. */
+  playClip(id: string) {
+    this.emit({ type: "screen", command: { kind: "clip", id } });
+  }
+  /** A tap or «Callar» on the device: the browser drops its queued reply and any cue, now. */
+  stopAudio() {
+    this.emit({ type: "screen", command: { kind: "stop" } });
+  }
+  /** Modo pitch: Owy asked for the topic or the name; the browser opens its mic for the answer ("idle" clears it). */
+  pitchPrompt(kind: "topic" | "name" | "idle") {
+    this.emit({ type: "screen", command: { kind: "pitchPrompt", prompt: kind } });
+  }
   showCard(card: ScreenCard) {
     this.emit({ type: "screen", command: { kind: "card", card } });
   }
@@ -132,6 +152,13 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   }
   isMarketplaceOpen() {
     return this.grant.marketplace;
+  }
+  /** A browser is its own mic and speakers: the bridge's Mac routing never applies to it. */
+  getMicSource() {
+    return "device" as const;
+  }
+  getAudioOutput() {
+    return "device" as const;
   }
   getVolume() {
     return this.volume;

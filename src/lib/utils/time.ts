@@ -15,6 +15,16 @@ export function formatTime(totalSeconds: number): string {
 }
 
 /**
+ * A countdown: "04:59", or "1:30:00" past an hour (a countdown to the end of the day would read 290 minutes).
+ */
+export function formatCountdown(totalSeconds: number): string {
+  if (totalSeconds < 3600) return formatTime(totalSeconds);
+  const pad = (value: number) => value.toString().padStart(2, "0");
+
+  return `${Math.floor(totalSeconds / 3600)}:${pad(Math.floor((totalSeconds % 3600) / 60))}:${pad(totalSeconds % 60)}`;
+}
+
+/**
  * Format seconds into HH:MM:SS format
  * @param totalSeconds - Total number of seconds to format
  * @returns Formatted time string (HH:MM:SS)

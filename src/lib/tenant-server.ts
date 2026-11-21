@@ -1,7 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
+import { cacheLife } from "next/cache";
 
 import { db } from "./db";
 import { communities, events, type CommunityRow, type EventRow } from "./db/schema";
@@ -18,16 +19,15 @@ export const getCommunityBySlug = cache(async (slug: string): Promise<CommunityR
 
 export const getEventBySlugs = cache(
   async (communitySlug: string, eventSlug: string): Promise<{ community: CommunityRow; event: EventRow } | null> => {
-    const community = await getCommunityBySlug(communitySlug);
-    if (!community) return null;
-
-    const [event] = await db
-      .select()
+    // One round trip: request-time pages (the live board) run this on every visit
+    const [row] = await db
+      .select({ community: communities, event: events })
       .from(events)
-      .where(and(eq(events.communityId, community.id), eq(events.slug, eventSlug)))
+      .innerJoin(communities, eq(events.communityId, communities.id))
+      .where(and(eq(communities.slug, communitySlug), eq(events.slug, eventSlug), ne(events.status, "draft")))
       .limit(1);
 
-    return event ? { community, event } : null;
+    return row ?? null;
   }
 );
 
@@ -35,6 +35,27 @@ export const listCommunityEvents = cache(async (communityId: string): Promise<Ev
   return db
     .select()
     .from(events)
-    .where(and(eq(events.communityId, communityId), eq(events.isActive, true)))
+    .where(and(eq(events.communityId, communityId), eq(events.isActive, true), ne(events.status, "draft")))
     .orderBy(desc(events.startDate));
 });
+
+/*
+ * The same lookups for the public community pages, cached (Cache Components): pages built on them
+ * prerender, refresh on their cacheLife, and publishing refreshes them sooner (revalidatePath). The
+ * API and the per-request screens keep reading the database directly.
+ */
+
+export async function publicCommunity(slug: string): Promise<CommunityRow | null> {
+  "use cache";
+  cacheLife("hours");
+
+  return getCommunityBySlug(slug);
+}
+
+export async function publicEvent(communitySlug: string, eventSlug: string) {
+  "use cache";
+  // Seats left and who's going change; a minute old is fine
+  cacheLife("minutes");
+
+  return getEventBySlugs(communitySlug, eventSlug);
+}

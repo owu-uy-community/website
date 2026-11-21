@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { client } from "lib/orpc";
 import type { StickyNote } from "lib/orpc";
 import { orpc } from "lib/orpc/client";
-import { toast } from "components/shared/ui/toast-utils";
 
 import type { FindFreeSpotResponse } from "lib/orpc/ocr/schemas";
 
@@ -19,6 +18,7 @@ import type {
   SuggestionAlternative,
   SuggestionEntry,
   TalkFormData,
+  TalkSave,
 } from "./types";
 
 /**
@@ -36,10 +36,25 @@ function saveErrorMessage(error: unknown): string {
     if (occupiedBy) return `Este espacio ya está ocupado por "${occupiedBy}"`;
   }
   if (error instanceof ORPCError && error.code === "INTERNAL_SERVER_ERROR") {
-    return "Error del servidor. Por favor intenta con otro espacio.";
+    return "Error del servidor. Probá con otro lugar.";
   }
 
-  return error instanceof Error && error.message ? error.message : "Error al guardar la charla";
+  return error instanceof Error && error.message ? error.message : "No se pudo guardar la charla";
+}
+
+/** What the form shows for a talk: the saved one, a new one in a picked cell, or a blank one. */
+function valuesFor(note: StickyNote | null, rooms: string[], timeSlots: string[]): TalkFormData {
+  const saved = note?.id ? note : null;
+
+  return {
+    title: saved?.title ?? "",
+    speaker: saved?.speaker ?? "",
+    description: saved?.description ?? "",
+    room: note?.room || rooms[0] || "",
+    timeSlot: note?.timeSlot || timeSlots[0] || "",
+    needsTV: saved?.needsTV ?? false,
+    needsWhiteboard: saved?.needsWhiteboard ?? false,
+  };
 }
 
 interface UseTalkFormParams {
@@ -50,7 +65,9 @@ interface UseTalkFormParams {
   rooms: string[];
   roomsData: RoomWithResources[];
   timeSlots: string[];
-  onSave: (noteData: Partial<StickyNote> & { skipResourceValidation?: boolean }) => void;
+  onSave: (noteData: TalkSave) => void | Promise<void>;
+  /** Opened from "Sugerir con IA": once the title is in, the AI places it without another click. */
+  suggestOnTitle?: boolean;
 }
 
 export function useTalkForm({
@@ -62,25 +79,19 @@ export function useTalkForm({
   roomsData,
   timeSlots,
   onSave,
+  suggestOnTitle = false,
 }: UseTalkFormParams) {
   const {
     control,
     register,
     handleSubmit: rhfHandleSubmit,
-    formState: { errors: formErrors },
+    formState: { errors: formErrors, isDirty },
     setValue,
     watch,
     reset,
   } = useForm<TalkFormData>({
     resolver: zodResolver(talkFormSchema),
-    defaultValues: {
-      title: "",
-      speaker: "",
-      room: rooms[0] || "",
-      timeSlot: timeSlots[0] || "",
-      needsTV: false,
-      needsWhiteboard: false,
-    },
+    defaultValues: valuesFor(null, rooms, timeSlots),
   });
 
   const watchedValues = watch();
@@ -92,6 +103,8 @@ export function useTalkForm({
   const [activeTab, setActiveTab] = useState<string>("form");
   /** Fields the OCR could not read confidently, so the form can ask for a human check. */
   const [fieldsToReview, setFieldsToReview] = useState<ReviewableField[]>([]);
+  /** The fields came off a card photo: the activity log says so, so someone checks the handwriting. */
+  const fromPhotoRef = useRef(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -127,14 +140,14 @@ export function useTalkForm({
     ]);
     setCurrentHistoryIndex((prev) => prev + 1);
 
-    setValue("room", result.suggestedRoom);
-    setValue("timeSlot", result.suggestedTimeSlot);
+    setValue("room", result.suggestedRoom, { shouldDirty: true });
+    setValue("timeSlot", result.suggestedTimeSlot, { shouldDirty: true });
 
     setAiReasoning(result.reasoning);
     setShowAiReasoning(false);
   };
 
-  /** Ask for a room + time slot ("Sugerir con AI"). The server knows the board, including which blocks already ended. */
+  /** Ask for a room + time slot ("Sugerir con IA"). The server knows the board, including which blocks already ended. */
   const requestSuggestion = async (talk: Pick<TalkFormData, "title" | "speaker" | "needsTV" | "needsWhiteboard">) => {
     setAiSuggesting(true);
     setAiReasoning(null);
@@ -150,7 +163,7 @@ export function useTalkForm({
       );
     } catch (error) {
       console.error("Error getting AI suggestion:", error);
-      setValidationError("Error al obtener sugerencias de AI. Por favor intenta nuevamente.");
+      setValidationError("La IA no pudo sugerir un lugar. Probá de nuevo.");
     } finally {
       setAiSuggesting(false);
     }
@@ -183,11 +196,13 @@ export function useTalkForm({
 
       for await (const event of events) {
         if (event.type === "fields") {
+          fromPhotoRef.current = true;
           setActiveTab("form");
           if (event.fields.title) setValue("title", event.fields.title);
           if (event.fields.speaker) setValue("speaker", event.fields.speaker);
         } else if (event.type === "card") {
           const { card } = event;
+          fromPhotoRef.current = true;
           if (card.title) setValue("title", card.title);
           if (card.speaker) setValue("speaker", card.speaker);
           // Always set: a card that marked "NO" has to clear whatever was ticked before.
@@ -209,7 +224,7 @@ export function useTalkForm({
 
       // The server sends the real reason (a rejected gateway account reads very differently from
       // an unreadable photo), so show it rather than a guess about which key is missing.
-      setOcrError(error instanceof Error && error.message ? error.message : "Error al procesar la imagen con OCR.");
+      setOcrError(error instanceof Error && error.message ? error.message : "No se pudo leer la foto.");
     } finally {
       if (reading.current === controller) reading.current = null;
       setIsProcessingImage(false);
@@ -228,23 +243,8 @@ export function useTalkForm({
     setCameraActive(false);
   }, []);
 
-  const resetAll = useCallback(() => {
-    reset({
-      title: "",
-      speaker: "",
-      room: rooms[0] || "",
-      timeSlot: timeSlots[0] || "",
-      needsTV: false,
-      needsWhiteboard: false,
-    });
-
-    stopCamera();
-    stopReading();
-    setCapturedImage(null);
-    setPermissionMessage(null);
-    setOcrError(null);
-    setFieldsToReview([]);
-
+  /** Forget the AI's picks and any message about the last attempt. */
+  const clearAttempt = useCallback(() => {
     setAiSuggesting(false);
     setAiReasoning(null);
     setShowAiReasoning(false);
@@ -257,49 +257,50 @@ export function useTalkForm({
     setValidationError("");
     setResourceWarning([]);
     confirmedProceedRef.current = false;
+  }, []);
+
+  const resetAll = useCallback(() => {
+    reset(valuesFor(null, rooms, timeSlots));
+
+    stopCamera();
+    stopReading();
+    setCapturedImage(null);
+    setPermissionMessage(null);
+    setOcrError(null);
+    setFieldsToReview([]);
+    fromPhotoRef.current = false;
+    clearAttempt();
 
     setActiveTab("form");
-  }, [rooms, timeSlots, stopCamera, stopReading, reset]);
+  }, [rooms, timeSlots, stopCamera, stopReading, reset, clearAttempt]);
 
-  // Load the form each time the panel opens (or switches talk) — not when rooms or slots change:
-  // any screen can change those mid-edit (they arrive live) and that must not wipe the typing.
-  const axesRef = useRef({ rooms, timeSlots });
+  // The latest talk and axes, read by the effects below without re-running them.
+  const latest = useRef({ note, rooms, timeSlots });
   useEffect(() => {
-    axesRef.current = { rooms, timeSlots };
-  }, [rooms, timeSlots]);
+    latest.current = { note, rooms, timeSlots };
+  });
 
+  // Load the form each time the panel opens or switches talk (or cell, for a new one) — not when
+  // rooms or slots change: any screen can change those mid-edit (they arrive live) and that must
+  // not wipe the typing.
+  const loadKey = note?.id || `${note?.room ?? ""}|${note?.timeSlot ?? ""}`;
   useEffect(() => {
     if (!open) return;
-    const { rooms, timeSlots } = axesRef.current;
-    if (note && note.id) {
-      reset({
-        title: note.title || "",
-        speaker: note.speaker || "",
-        room: note.room || rooms[0] || "",
-        timeSlot: note.timeSlot || timeSlots[0] || "",
-        needsTV: note.needsTV || false,
-        needsWhiteboard: note.needsWhiteboard || false,
-      });
-    } else if (note && !note.id) {
-      reset({
-        title: "",
-        speaker: "",
-        room: note.room || rooms[0] || "",
-        timeSlot: note.timeSlot || timeSlots[0] || "",
-        needsTV: false,
-        needsWhiteboard: false,
-      });
-    } else {
-      reset({
-        title: "",
-        speaker: "",
-        room: rooms[0] || "",
-        timeSlot: timeSlots[0] || "",
-        needsTV: false,
-        needsWhiteboard: false,
-      });
-    }
-  }, [open, note, reset]);
+    const { note, rooms, timeSlots } = latest.current;
+    reset(valuesFor(note, rooms, timeSlots));
+    fromPhotoRef.current = false;
+    clearAttempt();
+  }, [open, loadKey, reset, clearAttempt]);
+
+  // The saved talk changed under an open form (our own save, an edit or a move on another screen):
+  // follow it, but keep what is being typed here. Fields left untouched must take the new values,
+  // or saving this form would quietly undo the other screen's rename or move.
+  const savedKey = note?.id ? `${note.updatedAt}|${note.room}|${note.timeSlot}` : "";
+  useEffect(() => {
+    const { note, rooms, timeSlots } = latest.current;
+    if (!open || !savedKey) return;
+    reset(valuesFor(note, rooms, timeSlots), { keepDirtyValues: true });
+  }, [open, savedKey, reset]);
 
   // Changing room/slot/resources invalidates any warning shown for the previous
   // combination. The messages must NOT be dependencies: they are what this
@@ -326,22 +327,18 @@ export function useTalkForm({
   }, [stopCamera, stopReading]);
 
   const startCamera = async () => {
+    const denied = "Acceso a la cámara denegado. Habilitalo en la configuración del navegador.";
+    // Only a shortcut: browsers that can't answer for the camera still get to ask.
+    const permission = await navigator.permissions?.query({ name: "camera" as PermissionName }).catch(() => null);
+    if (permission?.state === "denied") {
+      setPermissionMessage(denied);
+
+      return;
+    }
+
     try {
-      if (navigator.permissions && navigator.permissions.query) {
-        const permissionStatus = await navigator.permissions.query({ name: "camera" as PermissionName });
-
-        if (permissionStatus.state === "denied") {
-          toast.error(
-            "Cámara bloqueada",
-            "El acceso a la cámara está bloqueado. Habilitalo en la configuración del navegador."
-          );
-
-          return;
-        }
-      }
-
       setCameraActive(true);
-      setPermissionMessage("Por favor permite el acceso a la cámara cuando se solicite");
+      setPermissionMessage("Permití el acceso a la cámara cuando el navegador te lo pida.");
 
       const stream = await navigator.mediaDevices.getUserMedia({
         // Without an explicit size the browser picks its default, often 640x480 — too coarse to
@@ -354,18 +351,17 @@ export function useTalkForm({
         setPermissionMessage(null);
       }
     } catch (err) {
-      console.error("Error accessing camera:", err);
       setCameraActive(false);
 
-      if (err instanceof DOMException) {
-        if (err.name === "NotAllowedError") {
-          setPermissionMessage("Acceso a la cámara denegado.");
-        } else if (err.name === "NotFoundError") {
-          setPermissionMessage("No se encontró ninguna cámara.");
-        } else {
-          setPermissionMessage("No se puede acceder a la cámara.");
-        }
-      }
+      // Every failure says why: a browser without camera access (or on plain http) throws a TypeError.
+      const name = err instanceof DOMException ? err.name : "";
+      setPermissionMessage(
+        name === "NotAllowedError"
+          ? denied
+          : name === "NotFoundError"
+            ? "No se encontró ninguna cámara."
+            : "No se puede acceder a la cámara."
+      );
     }
   };
 
@@ -421,7 +417,7 @@ export function useTalkForm({
 
   const handleAiSuggest = async () => {
     if (!watchedValues.title?.trim()) {
-      setValidationError("Por favor ingresa un título antes de obtener sugerencias de AI");
+      setValidationError("Escribí un título para que la IA sugiera un lugar.");
 
       return;
     }
@@ -441,6 +437,13 @@ export function useTalkForm({
     });
   };
 
+  /** "Sugerir con IA" from the board: the first time the title is filled in, place it. */
+  const suggestIfAsked = () => {
+    if (suggestOnTitle && watchedValues.title?.trim() && suggestionHistory.length === 0 && !aiSuggesting) {
+      void handleAiSuggest();
+    }
+  };
+
   const navigateHistory = (direction: "prev" | "next") => {
     const newIndex = direction === "prev" ? currentHistoryIndex - 1 : currentHistoryIndex + 1;
 
@@ -448,16 +451,16 @@ export function useTalkForm({
       const suggestion = suggestionHistory[newIndex];
 
       setCurrentHistoryIndex(newIndex);
-      setValue("room", suggestion.room);
-      setValue("timeSlot", suggestion.timeSlot);
+      setValue("room", suggestion.room, { shouldDirty: true });
+      setValue("timeSlot", suggestion.timeSlot, { shouldDirty: true });
       setAiReasoning(suggestion.reasoning);
       setShowAiReasoning(false);
     }
   };
 
   const applyAlternative = (alternative: SuggestionAlternative) => {
-    setValue("room", alternative.room);
-    setValue("timeSlot", alternative.timeSlot);
+    setValue("room", alternative.room, { shouldDirty: true });
+    setValue("timeSlot", alternative.timeSlot, { shouldDirty: true });
     setAiReasoning(alternative.reasoning);
     setShowAiReasoning(true);
   };
@@ -465,13 +468,20 @@ export function useTalkForm({
   const handleResetToOriginal = () => {
     if (!originalSchedule) return;
 
-    setValue("room", originalSchedule.room);
-    setValue("timeSlot", originalSchedule.timeSlot);
+    setValue("room", originalSchedule.room, { shouldDirty: true });
+    setValue("timeSlot", originalSchedule.timeSlot, { shouldDirty: true });
     setAiReasoning(null);
     setShowAiReasoning(false);
     setSuggestionHistory([]);
     setCurrentHistoryIndex(-1);
     setOriginalSchedule(null);
+  };
+
+  /** Back to what is saved (the inspector's "Descartar"). */
+  const discardChanges = () => {
+    const { note, rooms, timeSlots } = latest.current;
+    reset(valuesFor(note, rooms, timeSlots));
+    clearAttempt();
   };
 
   const onSubmit = async (formData: TalkFormData) => {
@@ -487,13 +497,13 @@ export function useTalkForm({
           missingResources.push("TV");
         }
         if (formData.needsWhiteboard && !selectedRoomData.hasWhiteboard) {
-          missingResources.push("Pizarra");
+          missingResources.push("pizarra");
         }
 
         if (missingResources.length > 0) {
           setResourceWarning(
             missingResources.map(
-              (resource) => `"${formData.title}" necesita ${resource} y la sala "${formData.room}" no lo tiene`
+              (resource) => `"${formData.title}" necesita ${resource} pero la sala "${formData.room}" no tiene`
             )
           );
 
@@ -522,14 +532,23 @@ export function useTalkForm({
     try {
       await onSave({
         title: formData.title,
-        speaker: formData.speaker.trim() === "" ? undefined : formData.speaker,
+        // Sent even when empty: clearing a field has to clear it on the server too.
+        speaker: formData.speaker.trim(),
+        description: formData.description.trim(),
         room: formData.room,
         timeSlot: formData.timeSlot,
         needsTV: formData.needsTV,
         needsWhiteboard: formData.needsWhiteboard,
         skipResourceValidation: confirmedProceedRef.current,
+        origin: !note?.id && fromPhotoRef.current ? "photo" : undefined,
       });
-      resetAll();
+      if (note?.id) {
+        // An edit stays open in the inspector: keep what was just saved.
+        reset(formData);
+        clearAttempt();
+      } else {
+        resetAll();
+      }
     } catch (error) {
       console.error("Error saving talk (in modal):", error);
       setValidationError(saveErrorMessage(error));
@@ -569,8 +588,10 @@ export function useTalkForm({
     control,
     register,
     formErrors,
+    isDirty,
     watchedValues,
     submitForm,
+    discardChanges,
 
     activeTab,
     setActiveTab: handleTabChange,
@@ -607,6 +628,7 @@ export function useTalkForm({
     currentHistoryIndex,
     originalSchedule,
     handleAiSuggest,
+    suggestIfAsked,
     navigateHistory,
     applyAlternative,
     handleResetToOriginal,

@@ -1,5 +1,7 @@
 import { defaultSlackAuth, slackChannel, type SlackContext, type SlackMessage } from "eve/channels/slack";
 
+import { may } from "../lib/staff";
+
 /**
  * Slack channel for the OWU community workspace (slack.owu.uy).
  *
@@ -8,27 +10,21 @@ import { defaultSlackAuth, slackChannel, type SlackContext, type SlackMessage } 
  * `credentials: connectSlackCredentials("slack/owy")` from `@vercel/connect/eve`
  * — see the README runbook.
  *
- * Everyone in the workspace can talk to Owy (it's a community bot). Staff
- * detection is a context hint here; the sensitive tools re-verify against the
- * OWY_STAFF_SLACK_IDS allowlist on their own.
+ * Everyone in the workspace can talk to Owy (it's a community bot). Whether
+ * the person is staff comes from their roles on the site (asked with their
+ * Slack id); it's a context hint here, and every sensitive tool and API call
+ * checks it again.
  */
 
-function staffIds(): Set<string> {
-  return new Set(
-    (process.env.OWY_STAFF_SLACK_IDS ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-  );
-}
-
-function buildTurn(ctx: SlackContext, message: SlackMessage) {
+async function buildTurn(ctx: SlackContext, message: SlackMessage) {
   const auth = defaultSlackAuth(message, ctx);
   if (!auth) return null;
 
   const userId = message.author?.userId;
   const name = message.author?.fullName ?? message.author?.userName ?? "alguien";
-  const isStaff = userId !== undefined && staffIds().has(userId);
+  const isStaff =
+    userId !== undefined &&
+    (await may({ session: { auth: { current: { authenticator: "slack-webhook", attributes: { user_id: userId } } } } }, "program:manage"));
 
   const context = [
     [

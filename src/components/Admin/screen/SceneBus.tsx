@@ -1,18 +1,28 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, ListPlus, Loader2, Monitor, MonitorOff } from "lucide-react";
+import { Camera, Clapperboard, ListPlus, Loader2, Monitor, MonitorOff } from "lucide-react";
 
 import { cn } from "app/lib/utils";
+import { Panel, PanelHead } from "components/Admin/ui/page";
+import { EmptyState } from "components/Admin/ui/states";
 import { Button } from "components/shared/ui/button";
 import { Kbd } from "components/shared/ui/kbd";
 import { toast } from "components/shared/ui/toast-utils";
 import type { ObsActions, ObsView } from "lib/obs/actions";
 import { getObsClient, useObsThumbnails } from "lib/obs/client";
 
-import { tallyClass, tallyOf } from "./tally";
+import { tallyChip, tallyClass, tallyOf } from "./tally";
 
 const LONG_PRESS_MS = 550;
+
+/**
+ * After a click or a tap, give the focus back to the page, so the next Space or Enter is TAKE and
+ * not the same control again. Keyboard activations (detail 0) keep their focus.
+ */
+export const releaseFocus = (event: { detail: number; currentTarget: HTMLElement }) => {
+  if (event.detail > 0) event.currentTarget.blur();
+};
 
 /** Put a scene where the operator expects: preview in studio mode, straight to air otherwise. */
 export function selectScene(view: ObsView, actions: ObsActions, name: string, direct = false) {
@@ -32,7 +42,7 @@ export function SceneThumbnail({ name, className }: { name: string; className?: 
         <img alt="" className="h-full w-full object-cover" draggable={false} src={src} />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-          <Monitor className="h-6 w-6 opacity-40" />
+          <Monitor aria-hidden className="size-6 opacity-40" />
         </div>
       )}
     </div>
@@ -90,44 +100,53 @@ export function SceneBus({
 
   if (!view.connected) {
     return (
-      <div className="flex min-h-40 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-sm text-muted-foreground">
-        <MonitorOff className="h-6 w-6 opacity-50" />
-        Sin conexión a OBS: conectate desde esta pestaña o abrí el panel en la máquina de OBS.
-      </div>
+      <Panel>
+        <PanelHead icon={Clapperboard} title="Escenas" />
+        <EmptyState
+          className="m-3.5"
+          description="Conectate desde esta pestaña o abrí esta página en la máquina de OBS."
+          icon={MonitorOff}
+          title="Sin conexión a OBS"
+        />
+      </Panel>
     );
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          {view.studioMode ? (
-            <>
-              Click: preview · <Kbd>⇧</Kbd>+click o mantener: al aire
-            </>
-          ) : (
-            "Click: al aire (modo directo)"
-          )}
-          {view.source === "remote" && " · vía el puesto de control"}
-        </span>
-        <span className="flex items-center gap-2">
-          {local && (
+    <Panel>
+      <PanelHead
+        actions={
+          local && (
             <Button
-              className="h-7 px-2 text-xs"
               disabled={walking}
               size="sm"
               title="Recorre cada escena al aire un segundo y guarda su preview"
               variant="ghost"
               onClick={walk}
             >
-              {walking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+              {walking ? <Loader2 className="animate-spin" /> : <Camera />}
               Capturar previews
             </Button>
-          )}
-          <span className="shrink-0 whitespace-nowrap">{view.scenes.length} escenas</span>
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+          )
+        }
+        icon={Clapperboard}
+        meta={`${view.scenes.length} ${view.scenes.length === 1 ? "escena" : "escenas"}`}
+        title="Escenas"
+      />
+      <p className="px-3.5 pt-2.5 text-meta text-muted-foreground">
+        {view.studioMode ? (
+          <>
+            <span className="pointer-coarse:hidden">
+              Click: preview · <Kbd>⇧</Kbd>+click o mantener: al aire
+            </span>
+            <span className="pointer-fine:hidden">Tocá: preview · mantené apretado: al aire</span>
+          </>
+        ) : (
+          "Click: al aire (modo directo)"
+        )}
+        {view.source === "remote" && " · vía el puesto de control"}
+      </p>
+      <div className="grid grid-cols-2 gap-2 p-3.5 pt-2.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
         {view.scenes.map((name, index) => {
           const tally = tallyOf(name, view);
           const position = queued[name];
@@ -139,6 +158,7 @@ export function SceneBus({
                 tally,
                 "group focus-visible:ring-ring relative flex cursor-pointer touch-manipulation flex-col gap-1.5 rounded-lg p-1.5 select-none focus-visible:ring-2 focus-visible:outline-hidden active:scale-[.98]"
               )}
+              aria-label={tally === "program" ? `${name}, al aire` : tally === "preview" ? `${name}, en preview` : name}
               role="button"
               tabIndex={0}
               onContextMenu={(event) => {
@@ -156,6 +176,7 @@ export function SceneBus({
               onPointerLeave={cancelHold}
               onPointerUp={cancelHold}
               onClick={(event) => {
+                releaseFocus(event);
                 if (held.current) {
                   held.current = false;
 
@@ -166,15 +187,15 @@ export function SceneBus({
             >
               <SceneThumbnail name={name} />
               <div className="flex items-center gap-1 px-0.5">
-                {index < 9 && <Kbd className="h-4 shrink-0 px-1 text-[9px] opacity-70">{index + 1}</Kbd>}
-                <span className="min-w-0 flex-1 truncate text-xs font-semibold">{name}</span>
+                {index < 9 && <Kbd className="shrink-0 pointer-coarse:hidden">{index + 1}</Kbd>}
+                <span className="min-w-0 flex-1 truncate text-meta font-semibold">{name}</span>
                 <button
-                  aria-label={position ? "Quitar del loop" : "Agregar al loop"}
+                  aria-label={position ? `Quitar ${name} del loop` : `Agregar ${name} al loop`}
                   className={cn(
-                    "flex h-5 min-w-5 shrink-0 items-center justify-center rounded px-1 text-[10px] font-bold",
+                    "relative flex h-5 min-w-5 shrink-0 items-center justify-center rounded-sm px-1 font-terminal text-3xs font-semibold tabular-nums pointer-coarse:after:absolute pointer-coarse:after:-inset-3",
                     position
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent focus-visible:opacity-100"
+                      ? "bg-raised text-foreground ring-1 ring-input"
+                      : "text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-accent focus-visible:opacity-100 pointer-coarse:opacity-100"
                   )}
                   title={position ? `#${position} en el loop · click para quitar` : "Agregar al loop"}
                   type="button"
@@ -182,29 +203,29 @@ export function SceneBus({
                     event.stopPropagation();
                     toggleQueued(name);
                   }}
+                  // Holding it must not count as holding the card (which puts the scene on air).
+                  onPointerDown={(event) => event.stopPropagation()}
                 >
-                  {position ?? <ListPlus className="h-3.5 w-3.5" />}
+                  {position ? (
+                    <>
+                      {/* A bare number says little to a finger, which never sees the title. */}
+                      <span className="mr-0.5 pointer-fine:hidden">Loop</span>
+                      {position}
+                    </>
+                  ) : (
+                    <ListPlus className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
-              {tally === "program" && (
-                <span className="absolute top-2.5 left-2.5 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase shadow">
-                  Al aire
-                </span>
-              )}
-              {tally === "preview" && (
-                <span className="absolute top-2.5 left-2.5 rounded bg-green-600 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-white uppercase shadow">
-                  Preview
-                </span>
-              )}
-              {tally === "pending" && (
-                <span className="absolute top-2.5 left-2.5 rounded bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold tracking-wider text-black uppercase shadow">
-                  Enviando…
+              {tally !== "none" && (
+                <span className={tallyChip(tally, "absolute top-2.5 left-2.5 backdrop-blur")}>
+                  {tally === "program" ? "Al aire" : tally === "preview" ? "Preview" : "Enviando…"}
                 </span>
               )}
             </div>
           );
         })}
       </div>
-    </div>
+    </Panel>
   );
 }

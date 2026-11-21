@@ -1,8 +1,15 @@
 import { openapi } from "@orpc/openapi";
+import { Effect } from "effect";
 import * as z from "zod";
 
-import { authed, inCommunity, staff, pub } from "../base";
+import { grantsHold } from "../../authz/catalog";
+import { platformGrants } from "../../authz/principal";
+import { publicBoard } from "../../openspace/public-board";
+import { authed, inCommunity, platform, pub } from "../base";
+import { RoomSchema } from "../rooms/schemas";
+import { GetSchedulesByOpenSpaceSchema, ScheduleSchema } from "../schedules/schemas";
 import { CurrentUser } from "../services";
+import { StickyNoteSchema } from "../tracks/schemas";
 import {
   AdminEventOptionSchema,
   CreateOpenSpaceSchema,
@@ -19,7 +26,7 @@ export const openSpacesRouter = {
   listByCommunity: authed
     .meta(docs("List a community's events, newest first"))
     .input(ListOpenSpacesByCommunitySchema)
-    .use(inCommunity("member"))
+    .use(inCommunity("event:list"))
     .output(z.array(OpenSpaceSchema))
     .effect(function* ({ input }) {
       return yield* Events.listByCommunity(input.communityId);
@@ -31,7 +38,13 @@ export const openSpacesRouter = {
     .effect(function* () {
       const user = yield* CurrentUser;
 
-      return yield* Events.listEventsForOperator(user.role === "admin" ? null : user.id);
+      // Who holds event:list on the platform (site staff, the bot) sees every event; others their communities'
+      const everywhere = grantsHold(platformGrants(user.principal), "event:list");
+
+      if (everywhere) return yield* Events.listEventsForOperator(null);
+      // Nobody in particular (someone anonymous behind the bot) operates nothing
+
+      return user.principal.memberOf ? yield* Events.listEventsForOperator(user.principal.memberOf) : [];
     }),
 
   get: pub
@@ -42,7 +55,17 @@ export const openSpacesRouter = {
       return yield* Events.getEvent(input.id);
     }),
 
-  create: staff
+  board: pub
+    .meta(docs("An event's rooms, time slots and talks in one read, from the shared cache board writes expire"))
+    .input(GetSchedulesByOpenSpaceSchema)
+    .output(
+      z.object({ rooms: z.array(RoomSchema), schedules: z.array(ScheduleSchema), tracks: z.array(StickyNoteSchema) })
+    )
+    .effect(function* ({ input }) {
+      return yield* Effect.promise(() => publicBoard(input.openSpaceId));
+    }),
+
+  create: platform("event:manage")
     .meta(docs("Create an event in a community"))
     .input(CreateOpenSpaceSchema)
     .output(OpenSpaceSchema)
@@ -50,7 +73,7 @@ export const openSpacesRouter = {
       return yield* Events.createEvent(input);
     }),
 
-  update: staff
+  update: platform("event:manage")
     .meta(docs("Edit an event; only the fields sent change"))
     .input(UpdateOpenSpaceInputSchema)
     .output(OpenSpaceSchema)
@@ -58,7 +81,7 @@ export const openSpacesRouter = {
       return yield* Events.updateEvent(input.id, input.data);
     }),
 
-  delete: staff
+  delete: platform("event:manage")
     .meta(docs("Delete an event and everything in it"))
     .input(EventIdSchema)
     .output(OpenSpaceSchema)

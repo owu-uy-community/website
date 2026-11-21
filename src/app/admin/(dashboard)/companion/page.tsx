@@ -1,7 +1,9 @@
-import { requireAdmin } from "app/lib/auth-helpers";
-import CompanionWorkbench from "components/Companion/CompanionWorkbench";
+import { requirePermission } from "app/lib/auth-helpers";
+import CompanionControl from "components/Companion/CompanionControl";
 
+/** «Ajustes de Owy»: every setting of the physical Owys and the bridge. The day's buttons are on /admin/owy. */
 export default async function CompanionPage() {
-  await requireAdmin();
-  return <CompanionWorkbench />;
+  await requirePermission("stage:read");
+
+  return <CompanionControl />;
 }

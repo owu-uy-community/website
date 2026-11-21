@@ -6,6 +6,7 @@ import { cache } from "react";
 
 import { requestContext } from "./handlers";
 import { router } from "./router";
+import { liveServices } from "./services";
 
 /**
  * Procedures called from server components and route handlers, in-process:
@@ -19,3 +20,12 @@ export const caller = createRouterClient(router, {
 
 /** The same for route handlers, which have the request's headers at hand. */
 export const callerFor = (headers: Headers) => createRouterClient(router, { context: requestContext(headers) });
+
+/**
+ * An anonymous caller that never reads the request: for statically generated
+ * (ISR) pages that only show public data. Asking for the session would make
+ * them dynamic.
+ */
+export const publicCaller = createRouterClient(router, {
+  context: { getSession: async () => null, "effect/context": liveServices },
+});

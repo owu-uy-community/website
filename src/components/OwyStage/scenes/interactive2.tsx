@@ -6,13 +6,12 @@ import { AnimatePresence, m } from "motion/react";
 import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
-import { tally, useInputs, usePlayUrl } from "../inputs";
+import { GROUP_EMOJIS, tally, useInputs, usePlayUrl } from "../inputs";
 import { Ambient, BRAND, StageContext, useStageFrame } from "../Stage";
 import { QrCode } from "./parts";
 import { Header, splitList } from "./service";
 
 const COLORS = [BRAND.yellow, BRAND.blue, BRAND.cream];
-export const GROUP_EMOJIS = ["🦁", "🐙", "🦜", "🐸", "🦋", "🐢", "🐺", "🦈", "🐝", "🦩"];
 
 function JoinCard({ label = "Participá" }: { label?: string }) {
   const url = usePlayUrl();
