@@ -4,6 +4,23 @@ Allow: /
 Disallow: /admin
 Disallow: /keystatic
 Disallow: /api/
+# The history archive is noindex: thousands of pages no crawler needs. Link previews (below)
+# still read it, so a shared /timeline link keeps its card.
+Disallow: /timeline
+
+# Link previews
+User-agent: Twitterbot
+User-agent: facebookexternalhit
+User-agent: LinkedInBot
+User-agent: Slackbot
+User-agent: Slackbot-LinkExpanding
+User-agent: Discordbot
+User-agent: WhatsApp
+User-agent: TelegramBot
+Allow: /
+Disallow: /admin
+Disallow: /keystatic
+Disallow: /api/
 
 # Host
 Host: https://www.owu.uy

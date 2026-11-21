@@ -1,8 +1,6 @@
 import "server-only";
 
-import { cache } from "react";
-
-import { getTimeline } from "./data";
+import { getTimeline, once } from "./data";
 import { formatDate, photoCredit } from "./format";
 import type { TimelineCommunity } from "./types";
 
@@ -25,7 +23,7 @@ export type PhotoGroup = {
 };
 
 /** Each community's events that have photos, oldest first */
-const getGroups = cache(() => {
+const getGroups = once(() => {
   const groups = new Map<string, PhotoGroup[]>();
   for (const event of getTimeline().events) {
     if (!event.photos?.length || event.kind === "hito") continue;
@@ -61,7 +59,7 @@ export type PhotoCommunity = {
 };
 
 /** Communities with photos, the most photographed first */
-export const getPhotoCommunities = cache((): PhotoCommunity[] => {
+export const getPhotoCommunities = once((): PhotoCommunity[] => {
   const { community } = getTimeline();
   return [...getGroups()]
     .flatMap(([slug, groups]) => {
