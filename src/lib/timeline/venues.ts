@@ -3,9 +3,7 @@ import "server-only";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { cache } from "react";
-
-import { getTimeline, isCommunityEvent } from "./data";
+import { getTimeline, isCommunityEvent, once } from "./data";
 import { type MapDot, type MapView, project } from "./map";
 import type { TimelineEvent } from "./types";
 
@@ -72,7 +70,7 @@ const median = (values: number[]) => values.toSorted((a, b) => a - b)[values.len
  * Places where communities held two events or more (one is often a one-off, or someone's home),
  * busiest first, then by name
  */
-export const getVenues = cache(() => {
+export const getVenues = once(() => {
   const grouped = new Map<string, { names: string[]; events: TimelineEvent[]; others: TimelineEvent[] }>();
   for (const event of getTimeline().events) {
     if (event.online || !event.venue || event.kind === "hito") continue;
@@ -127,7 +125,7 @@ export const getVenues = cache(() => {
 });
 
 /** The maps (content/timeline/map.json, drawn by scripts/timeline/map.ts) */
-export const getMaps = cache(
+export const getMaps = once(
   () =>
     JSON.parse(readFileSync(path.join(process.cwd(), "content/timeline/map.json"), "utf8")) as {
       uruguay: MapView;
