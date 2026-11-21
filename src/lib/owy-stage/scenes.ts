@@ -206,9 +206,8 @@ export const SCENES = {
     category: "opening",
     title: "After en MBC",
     description:
-      "El after de enfrente, con el logo de Montevideo Beer Company. La promo se muestra solo si tiene texto.",
+      "El after de enfrente, solo el logo de Montevideo Beer Company. La promo se muestra solo si tiene texto.",
     params: z.object({
-      detail: z.string().trim().max(80).default(`Hasta las ${DAY_TIMES.after.start} · cruzando la calle`),
       offer: z.string().trim().max(12).default(""),
     }),
   },
@@ -296,6 +295,27 @@ export const SCENES = {
         .trim()
         .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
         .default(FIRST_TALK.start),
+    }),
+  },
+  coffee: {
+    category: "programme",
+    title: "Coffee break · reloj",
+    description: "Una taza que humea y se va vaciando, con la cuenta regresiva hasta que vuelven las charlas.",
+    params: z.object({
+      title: z.string().trim().max(40).default("Coffee break"),
+      label: z.string().trim().max(40).default("Las charlas empiezan en"),
+      // Move `talksAt` when the talks slip: the countdown, the cup and the note's time all follow it.
+      breakAt: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default(coffee.start),
+      talksAt: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "HH:MM")
+        .default(coffee.end),
+      note: z.string().trim().max(120).default(FIRST_TALK.title),
     }),
   },
   reminders: {

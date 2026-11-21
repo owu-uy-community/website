@@ -323,7 +323,7 @@ export function Mbc({ params }: SceneProps<"mbc">) {
       {/* MBC's logo is black on their yellow, so it sits on ours as a sign */}
       <m.div
         animate={{ clipPath: "inset(0 0% 0 0)" }}
-        className="absolute top-[230px] left-[460px] h-[470px] w-[1000px]"
+        className="absolute top-[305px] left-[460px] h-[470px] w-[1000px]"
         initial={{ clipPath: "inset(0 100% 0 0)" }}
         transition={{ duration: 0.8, delay: 0.1, ease: EASE_OUT }}
       >
@@ -338,15 +338,10 @@ export function Mbc({ params }: SceneProps<"mbc">) {
           />
         </div>
       </m.div>
-      <div className="absolute inset-x-[160px] top-[760px] text-center">
-        <Rise className="text-[52px] font-medium tracking-[0.08em] text-[#FBF5E7]/80 uppercase" delay={0.5}>
-          {params.detail}
-        </Rise>
-      </div>
       {params.offer && (
         <m.div
           animate={{ rotate: -12, scale: 1, opacity: 1 }}
-          className="absolute top-[130px] left-[1340px] flex h-[200px] w-[200px] items-center justify-center rounded-full bg-[#0162C8] text-center text-[52px] leading-none font-extrabold text-[#FBF5E7] uppercase"
+          className="absolute top-[205px] left-[1340px] flex h-[200px] w-[200px] items-center justify-center rounded-full bg-[#0162C8] text-center text-[52px] leading-none font-extrabold text-[#FBF5E7] uppercase"
           initial={{ rotate: 20, scale: 0.4, opacity: 0 }}
           transition={{ duration: 0.7, delay: 1, ease: EASE_OUT }}
         >
