@@ -16,7 +16,7 @@ importers:
         version: 6.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@hookform/resolvers':
         specifier: 5.7.1
-        version: 5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@4.0.1)(react-hook-form@7.84.0(react@19.3.0))(superstruct@1.0.4)(zod@4.6.7)
+        version: 5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@4.0.2)(react-hook-form@7.84.0(react@19.3.0))(superstruct@1.0.4)(zod@4.6.7)
       '@iconify/react':
         specifier: 6.0.2
         version: 6.0.2(react@19.3.0)
@@ -43,7 +43,7 @@ importers:
         version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(evlog@2.30.1(@orpc/server@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22)))(ai@7.0.159(zod@4.6.7))(next@16.4.2(@babel/core@7.29.13(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(@types/node@25.9.1)(babel-plugin-macros@3.1.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(vite@8.3.3(@types/node@25.9.1)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.39.0)(tsx@4.23.12)(yaml@2.9.1)))
       '@orpc/experimental-effect':
         specifier: 2.0.0-beta.44
-        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)
+        version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.2)
       '@orpc/openapi':
         specifier: 2.0.0-beta.44
         version: 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
@@ -228,8 +228,8 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@prisma/client@6.19.3(prisma@6.19.3(typescript@6.0.3))(typescript@6.0.3))(@types/pg@8.20.0)(kysely@0.28.17)(pg@8.21.0)(prisma@6.19.3(typescript@6.0.3))
       effect:
-        specifier: 4.0.1
-        version: 4.0.1
+        specifier: 4.0.2
+        version: 4.0.2
       embla-carousel-autoplay:
         specifier: 8.6.0
         version: 8.6.0(embla-carousel@8.6.0)
@@ -6721,8 +6721,8 @@ packages:
   effect@3.21.0:
     resolution: {integrity: sha512-PPN80qRokCd1f015IANNhrwOnLO7GrrMQfk4/lnZRE/8j7UPWrNNjPV0uBrZutI/nHzernbW+J0hdqQysHiSnQ==}
 
-  effect@4.0.1:
-    resolution: {integrity: sha512-b1VlQG9g8fwxE5QnIZuPoOP/0MsqHJSRKxUijjoM80E5q95FXrX5yWtY5XI8G+GJsBQAVSDbLS458z9a++uVvw==}
+  effect@4.0.2:
+    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
 
   electron-to-chromium@1.5.492:
     resolution: {integrity: sha512-4uMs7omhajKiud0GqALLTazS/zyvHLTLmDWVTR+e6BnyJo5bSNrph/JoRWEFJJmY75ct9hCiSGsbFF9fLe5gDw==}
@@ -11514,7 +11514,7 @@ snapshots:
     dependencies:
       graphql: 16.10.0
 
-  '@hookform/resolvers@5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@4.0.1)(react-hook-form@7.84.0(react@19.3.0))(superstruct@1.0.4)(zod@4.6.7)':
+  '@hookform/resolvers@5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@4.0.2)(react-hook-form@7.84.0(react@19.3.0))(superstruct@1.0.4)(zod@4.6.7)':
     dependencies:
       '@standard-schema/utils': 0.3.0
       react-hook-form: 7.84.0(react@19.3.0)
@@ -11522,7 +11522,7 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       ajv: 8.20.0
       ajv-formats: 2.1.1(ajv@8.20.0)
-      effect: 4.0.1
+      effect: 4.0.2
       superstruct: 1.0.4
       zod: 4.6.7
 
@@ -12083,14 +12083,14 @@ snapshots:
       - crossws
       - fastify
 
-  '@orpc/experimental-effect@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.1)':
+  '@orpc/experimental-effect@2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))(effect@4.0.2)':
     dependencies:
       '@orpc/client': 2.0.0-beta.44
       '@orpc/contract': 2.0.0-beta.44
       '@orpc/json-schema': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       '@orpc/server': 2.0.0-beta.44(crossws@0.4.10(srvx@0.11.22))
       '@orpc/shared': 2.0.0-beta.44
-      effect: 4.0.1
+      effect: 4.0.2
     transitivePeerDependencies:
       - crossws
       - fastify
@@ -16354,7 +16354,7 @@ snapshots:
       fast-check: 3.23.2
     optional: true
 
-  effect@4.0.1: {}
+  effect@4.0.2: {}
 
   electron-to-chromium@1.5.492: {}
 
