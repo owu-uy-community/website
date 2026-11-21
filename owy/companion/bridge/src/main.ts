@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   const logger = createLogger("bridge", config.COMPANION_LOG_LEVEL);
   if (rejected.length) logger.error(`los ajustes guardados no cargan (${rejected[0].error}); arranco con el env`);
   // A bug in one turn costs that turn: log it and keep Owy up. An exception that unwound the stack
-  // leaves state nobody can trust: exit, and the supervisor (companion:serve, Docker) restarts us in a second.
+  // leaves state nobody can trust: exit, and the supervisor (companion:serve) restarts us in a second.
   process.on("unhandledRejection", (reason) => logger.error("unhandled rejection (kept running)", reason));
   process.on("uncaughtException", (error) => {
     logger.error("uncaught exception; exiting for a clean restart", error);
@@ -67,7 +67,6 @@ async function main(): Promise<void> {
   const web = config.COMPANION_WEB_BRIDGE
     ? await startWebBridge(shared, {
         port: config.COMPANION_WEB_PORT,
-        host: config.COMPANION_BIND_HOST,
         origins: config.COMPANION_WEB_ORIGINS.split(",")
           .map((v) => v.trim())
           .filter(Boolean),
@@ -97,6 +96,8 @@ async function main(): Promise<void> {
       logger: logger.child(spec.id),
       source: spec.id,
       publish: shared.publishStage,
+      // Read on the mirror's first beat, a second from now: the session exists by then.
+      paused: () => session.setting("privacy") === true,
     });
     const session: DeviceSession = new DeviceSession(spec, shared, {
       connectDevice: async (...args) => mirror.wrap(await CompanionDevice.connect(...args)),
@@ -104,6 +105,7 @@ async function main(): Promise<void> {
       onTranscript: mirror.transcript,
       onExpression: mirror.expression,
       onMouth: mirror.mouth,
+      onLevel: mirror.level,
       onTool: (event) => mirror.tool(event.status === "running" ? event.name : null),
       onSetting: (key, value, setBy) => control?.deviceSetting(session, key, value, setBy),
       onLinkUp: () => control?.linkUp(session),
@@ -142,7 +144,7 @@ async function main(): Promise<void> {
     version: version(),
     rejected,
     ...(api ? { report: (input) => api.companion.report(input) } : {}),
-    // Not 0: companion:serve and Docker start it again; Ctrl-C (0) stops it for good.
+    // Not 0: companion:serve starts it again; Ctrl-C (0) stops it for good.
     restart: () => void shutdown(75),
   });
   const plane = control;
@@ -166,7 +168,7 @@ async function main(): Promise<void> {
     logger.warn(`settings UI not started: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   });
-  if (settings) logger.info(`página de respaldo en ${settings.url} (el lugar de siempre: /admin/companion → Control)`);
+  if (settings) logger.info(`página de respaldo en ${settings.url} (el lugar de siempre: /admin/owy)`);
 
   process.on("SIGINT", () => void shutdown());
   process.on("SIGTERM", () => void shutdown());

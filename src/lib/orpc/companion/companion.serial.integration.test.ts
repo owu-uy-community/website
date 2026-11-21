@@ -35,7 +35,7 @@ const status = (): Report["status"] => ({
       staff: false,
       voice: { tier: null, realtime: "disconnected", lastPath: null },
       turns: [],
-      values: { volume: 40 },
+      values: { brightness: 40 },
       held: ["talk"],
     },
   ],
@@ -68,13 +68,13 @@ describe("the companion's settings", () => {
     const { staff, set, state, sent } = await setup();
 
     const first = await set(
-      { target: KNOB, key: "volume", value: 40 },
+      { target: KNOB, key: "brightness", value: 40 },
       { target: "bridge", key: "brain", value: "local" }
     );
-    const again = await set({ target: KNOB, key: "volume", value: 40 });
+    const again = await set({ target: KNOB, key: "brightness", value: 40 });
 
     expect(first.rows).toStrictEqual([
-      { target: KNOB, key: "volume", value: 40, setBy: "admin:Ana", setAt: expect.any(String) },
+      { target: KNOB, key: "brightness", value: 40, setBy: "admin:Ana", setAt: expect.any(String) },
       { target: "bridge", key: "brain", value: "local", setBy: "admin:Ana", setAt: expect.any(String) },
     ]);
     expect(again.rows).toStrictEqual([first.rows[0]]);
@@ -92,7 +92,7 @@ describe("the companion's settings", () => {
       {
         data: {
           changes: [
-            { target: KNOB, setting: "volume", before: null, after: 40 },
+            { target: KNOB, setting: "brightness", before: null, after: 40 },
             { target: "bridge", setting: "brain", before: null, after: "local" },
           ],
         },
@@ -120,12 +120,12 @@ describe("the companion's settings", () => {
     const { set, state, sent } = await setup();
     const rejected = (...changes: Change[]) => expect(set(...changes)).rejects.toMatchObject({ code: "BAD_REQUEST" });
 
-    await rejected({ target: KNOB, key: "volumen", value: 40 });
-    await rejected({ target: "bridge", key: "volume", value: 40 });
+    await rejected({ target: KNOB, key: "brillo", value: 40 });
+    await rejected({ target: "bridge", key: "brightness", value: 40 });
     await rejected({ target: KNOB, key: "brain", value: "eve" });
     await rejected({ target: "bridge", key: "status", value: {} });
-    await rejected({ target: KNOB, key: "brightness", value: 30 }, { target: KNOB, key: "volume", value: 95 });
-    await rejected({ target: "Owy Knob", key: "volume", value: 40 });
+    await rejected({ target: KNOB, key: "reduced_motion", value: true }, { target: KNOB, key: "brightness", value: 5 });
+    await rejected({ target: "Owy Knob", key: "brightness", value: 40 });
 
     await expect(state()).resolves.toMatchObject({ rows: [] });
     expect(sent("rows")).toStrictEqual([]);
@@ -135,13 +135,13 @@ describe("the companion's settings", () => {
 describe("the bridge's report", () => {
   test("keeps its status, answers every stored row and tells the panels", async () => {
     const { set, report, state, sent } = await setup();
-    await set({ target: KNOB, key: "volume", value: 40 });
+    await set({ target: KNOB, key: "brightness", value: 40 });
 
     const reply = await report({ results: [{ id: "c1", ok: true, data: { peak: 0.4 } }] });
     const now = await state();
 
     expect(reply.rows).toStrictEqual(now.rows);
-    expect(reply.rows.map((row) => row.key)).toStrictEqual(["volume"]);
+    expect(reply.rows.map((row) => row.key)).toStrictEqual(["brightness"]);
     expect(now).toMatchObject({ status: { machine: "owu-mac", devices: [{ id: KNOB }] }, seenAt: expect.any(String) });
     // The panel's row went out when it was set; the report itself changed none.
     expect({ rows: sent("rows").length, status: sent("status"), result: sent("result") }).toStrictEqual({
@@ -153,19 +153,19 @@ describe("the bridge's report", () => {
 
   test("a change made on the device wins over an older row and loses to a newer one", async () => {
     const { set, report, sent } = await setup();
-    await set({ target: KNOB, key: "volume", value: 40 });
+    await set({ target: KNOB, key: "brightness", value: 40 });
     const device = (value: number, setAt: string, setBy = "dispositivo") =>
-      report({ changes: [{ target: KNOB, key: "volume", value, setBy, setAt }] });
+      report({ changes: [{ target: KNOB, key: "brightness", value, setBy, setAt }] });
 
     const older = await device(55, ago(60_000));
     await tick();
     // A board's clock ahead of the site's counts as now, so the panel's next change still wins.
     const newer = await device(60, new Date(Date.now() + 3_600_000).toISOString());
     await tick();
-    const admin = await set({ target: KNOB, key: "volume", value: 30 });
+    const admin = await set({ target: KNOB, key: "brightness", value: 30 });
 
-    expect(older.rows).toMatchObject([{ key: "volume", value: 40, setBy: "admin:Ana" }]);
-    expect(newer.rows).toMatchObject([{ key: "volume", value: 60, setBy: "dispositivo" }]);
+    expect(older.rows).toMatchObject([{ key: "brightness", value: 40, setBy: "admin:Ana" }]);
+    expect(newer.rows).toMatchObject([{ key: "brightness", value: 60, setBy: "dispositivo" }]);
     expect(Date.parse(newer.rows[0]!.setAt)).toBeLessThanOrEqual(Date.now());
     expect(admin.rows).toMatchObject([{ value: 30, setBy: "admin:Ana" }]);
     expect(sent("rows").map((payload) => (payload as { rows: { value: unknown }[] }).rows[0]?.value)).toStrictEqual([
@@ -179,15 +179,15 @@ describe("the bridge's report", () => {
 
     const reply = await report({
       changes: [
-        { target: KNOB, key: "volume", value: 50, setBy: "admin:Mallory", setAt: now },
-        { target: KNOB, key: "volume", value: 500, setBy: "voz", setAt: now },
-        { target: "bridge", key: "volume", value: 50, setBy: "local", setAt: now },
-        { target: "Owy Knob", key: "volume", value: 50, setBy: "dispositivo", setAt: now },
-        { target: KNOB, key: "quiet_mode", value: true, setBy: "voz", setAt: now },
+        { target: KNOB, key: "brightness", value: 50, setBy: "admin:Mallory", setAt: now },
+        { target: KNOB, key: "brightness", value: 500, setBy: "voz", setAt: now },
+        { target: "bridge", key: "brightness", value: 50, setBy: "local", setAt: now },
+        { target: "Owy Knob", key: "brightness", value: 50, setBy: "dispositivo", setAt: now },
+        { target: KNOB, key: "reduced_motion", value: true, setBy: "voz", setAt: now },
       ],
     });
 
-    expect(reply.rows).toMatchObject([{ target: KNOB, key: "quiet_mode", value: true, setBy: "voz" }]);
+    expect(reply.rows).toMatchObject([{ target: KNOB, key: "reduced_motion", value: true, setBy: "voz" }]);
     expect(sent("rows")).toHaveLength(1);
   });
 

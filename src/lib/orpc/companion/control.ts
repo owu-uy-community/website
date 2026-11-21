@@ -29,7 +29,7 @@ import {
 } from "./schemas";
 
 /**
- * The companion's control plane. /admin/companion → Control writes the settings, the bridge on the
+ * The companion's control plane. The panels (/admin/owy, /admin/companion) write the settings, the bridge on the
  * venue Mac reports every 15 s (what is in effect, changes made on a device, command results) and
  * gets every row back, so each heartbeat is a full sync. Both hear the changes on
  * COMPANION_CHANNEL as they happen; commands only ever go out live.

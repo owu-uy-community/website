@@ -61,6 +61,7 @@ export function CommunityProfile({
   organizers,
   claimHref,
   canFollow = false,
+  history,
 }: {
   community: CommunityRow;
   upcoming: CommunityEvent[];
@@ -74,6 +75,8 @@ export function CommunityProfile({
   claimHref: string | null;
   /** "Seguir", once Organizá is open (its emails come with it) */
   canFollow?: boolean;
+  /** Its record in /timeline, the history rebuilt from Meetup and its archives */
+  history?: { events: number; since: string } | null;
 }) {
   const [next, ...later] = upcoming;
   const status = STATUS[community.status];
@@ -199,6 +202,19 @@ export function CommunityProfile({
               ))}
             </ul>
           </section>
+        ) : null}
+
+        {history && history.events > 0 ? (
+          <Link
+            className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-white/[0.08] px-5 py-4 text-[15px] text-zinc-300 transition-colors hover:border-white/20 hover:text-white"
+            href={`/timeline?comunidad=${community.slug}#archivo`}
+          >
+            <span>
+              Su historia: <span className="text-zinc-100">{history.events} eventos</span> desde{" "}
+              {history.since.slice(0, 4)}
+            </span>
+            <span className="shrink-0 text-[14px] text-yellow-300">Ver en la historia →</span>
+          </Link>
         ) : null}
 
         {organizers.length > 0 ? (

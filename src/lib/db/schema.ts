@@ -927,9 +927,11 @@ export const owyStageState = pgTable("owy_stage_state", {
   /**
    * The operator's desk: what is in preview, the queue behind it and the presets; see DeskSchema. The
    * default still says `favorites`, as desks did before presets: readDesk carries them over.
+   * `autopilot` (new talks bring the wall to «Owy y la grilla») rides along, read and written on
+   * its own.
    */
   desk: jsonb("desk")
-    .$type<{ preview: unknown; queue: unknown[]; presets?: unknown[]; favorites?: string[] }>()
+    .$type<{ preview: unknown; queue: unknown[]; presets?: unknown[]; favorites?: string[]; autopilot?: boolean }>()
     .notNull()
     .default({ preview: null, queue: [], favorites: [] }),
   updatedAt: ts("updatedAt")
@@ -937,6 +939,26 @@ export const owyStageState = pgTable("owy_stage_state", {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+/**
+ * Photos attendees upload from conf.owu.uy/fotos to Vercel Blob (public URLs). A row is
+ * reserved before the upload, so the per-phone and event-wide caps hold under concurrency;
+ * `url` stays null until the Blob upload lands (a failed one deletes its row).
+ */
+export const confPhotos = pgTable(
+  "conf_photos",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    /** Random id the phone keeps in a cookie; not a person. */
+    phone: text("phone").notNull(),
+    url: text("url"),
+    bytes: integer("bytes").notNull(),
+    createdAt: ts("createdAt").notNull().defaultNow(),
+  },
+  (t) => [index("conf_photos_phone_idx").on(t.phone)]
+);
 
 /** What attendees send from /owy/play: votes, words, questions, reactions… */
 export const owyStageInputs = pgTable(
@@ -963,7 +985,7 @@ export const owyStageInputs = pgTable(
 );
 
 /**
- * The companion's settings as /admin/companion → Control keeps them: one row per setting of a
+ * The companion's settings as the panels (/admin/owy, /admin/companion) keep them: one row per setting of a
  * device (`target` = its id) or of the bridge (`target` = "bridge"), keys from the bridge's
  * registry. The last writer wins, by `setAt`. The bridge's last report lives here too (target
  * "bridge", key "status"), stamped when it arrived.

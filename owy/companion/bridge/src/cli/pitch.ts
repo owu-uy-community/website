@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { Pcm16Resampler, DEVICE_SAMPLE_RATE, fromWav, toWav } from "../audio/pcm";
 import { loadConfig } from "../config";
 import { createLogger } from "../log";
-import { PITCH_LINES, QUESTION, announcementText, gatewayPitchExtractor, type PitchField } from "../pitch";
+import { PITCH_LINES, announcementText, gatewayPitchExtractor } from "../pitch";
 import { draftFromCard, mergeAnswer, nextStep } from "../pitch-flow";
 
 /**
@@ -44,26 +44,22 @@ async function main(): Promise<void> {
   for (const answerFile of files.slice(1)) {
     const step = nextStep(draft, true);
     if (!("ask" in step)) break;
-    const field: PitchField = step.ask;
-    console.log(`\nOwy pregunta: «${PITCH_LINES[QUESTION[field]]}»`);
+    const question = PITCH_LINES[step.line];
+    console.log(`\nOwy pregunta: «${question}»`);
     started = Date.now();
-    const answer = await extractor.answer(
-      read(answerFile),
-      { field, question: PITCH_LINES[QUESTION[field]], transcript: draft.transcript },
-      signal
-    );
+    const answer = await extractor.answer(read(answerFile), { field: step.ask, question, transcript: draft.transcript }, signal);
     console.log(JSON.stringify(answer), `(${Date.now() - started} ms)`);
-    draft = mergeAnswer(draft, field, answer);
+    draft = mergeAnswer(draft, step.ask, answer);
   }
 
   const step = nextStep(draft, true);
-  if ("ask" in step) return console.log(`\nOwy preguntaría: «${PITCH_LINES[QUESTION[step.ask]]}» (pasá la respuesta como otro WAV)`);
+  if ("ask" in step) return console.log(`\nOwy preguntaría: «${PITCH_LINES[step.line]}» (pasá la respuesta como otro WAV)`);
   if ("reject" in step) return console.log(`\nOwy diría: «${PITCH_LINES[step.reject]}»`);
   console.log(
     "\nLa card:",
     JSON.stringify({ title: draft.title, speaker: draft.speaker, description: draft.description }),
     "\nOwy diría:",
-    announcementText({ title: draft.title!, speaker: draft.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" })
+    announcementText({ title: draft.title!, speaker: draft.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" }, draft.nominated)
   );
 }
 

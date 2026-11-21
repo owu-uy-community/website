@@ -46,12 +46,15 @@ export const StageContext = createContext<{
   throttle: boolean;
   /** How late this screen shows Owy's face, in ms (`?lag=`): its faces act that much earlier. */
   lag: number;
+  /** A pinned page (/owy/stage/<scene>, not a thumbnail): nobody drives it, so a deck takes the keyboard. */
+  pinned: boolean;
 }>({
   preview: false,
   bg: "black",
   canvas: DEFAULT_CANVAS,
   throttle: false,
   lag: 0,
+  pinned: false,
 });
 
 /** Canvas plus the two numbers every scene needs: type scale and "is it a strip?". */
@@ -75,6 +78,7 @@ export function Stage({
   throttle = preview,
   canvas = DEFAULT_CANVAS,
   lag = 0,
+  pinned = false,
   children,
 }: {
   bg: StageBackground;
@@ -82,6 +86,7 @@ export function Stage({
   throttle?: boolean;
   canvas?: StageCanvas | "fit";
   lag?: number;
+  pinned?: boolean;
   children: ReactNode;
 }) {
   const [scale, setScale] = useState(1);
@@ -124,7 +129,7 @@ export function Stage({
   }, []);
 
   return (
-    <StageContext.Provider value={{ preview, bg, canvas: size, throttle, lag }}>
+    <StageContext.Provider value={{ preview, bg, canvas: size, throttle, lag, pinned }}>
       {/* Unlayered, so it beats the `@layer base` body background while a stage is mounted */}
       <style>{`html,body{background:transparent!important;margin:0;overflow:hidden}`}</style>
       <MotionConfig reducedMotion="never">

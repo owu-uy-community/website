@@ -24,6 +24,8 @@ export default defineConfig({
     ...(ultracite.ignorePatterns ?? []),
     "owy/**",
     "content/**",
+    // The timeline's harvested sources: one record per line, written by scripts/timeline/sync.ts
+    "scripts/timeline/sources/**",
     "public/**",
     "data/**",
     "pnpm-lock.yaml",

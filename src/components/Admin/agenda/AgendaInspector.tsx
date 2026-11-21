@@ -23,6 +23,7 @@ import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { orpc, type Schedule, type StickyNote } from "lib/orpc";
 import type { ActivityItem } from "lib/orpc/activity/router";
 import { eventChannel } from "lib/realtime/channels";
+import { RoomMark } from "lib/rooms/icons";
 
 import { slotPhase } from "./agenda-state";
 import { PhaseBadge } from "./AgendaList";
@@ -299,7 +300,7 @@ export function AgendaInspector({
             <>
               <div className="min-h-0 flex-1 scrollbar-thin space-y-5 overflow-y-auto overscroll-contain p-4">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <RoomMark className="size-2.5" color={color} icon={note.roomIcon} />
                   <span className="truncate font-terminal text-2xs tracking-[0.08em] text-muted-foreground uppercase tabular-nums">
                     {note.room} · {note.timeSlot.replace(" - ", " – ")}
                   </span>

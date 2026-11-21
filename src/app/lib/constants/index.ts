@@ -36,7 +36,7 @@ export const CONF_DATES = {
  */
 export const CONF_EVENT = {
   communitySlug: "owu",
-  eventSlug: "owu-conf-2026",
+  eventSlug: "owu-conf",
 } as const;
 
 // OpenSpace Room Colors

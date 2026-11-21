@@ -7,14 +7,17 @@ import {
   EffectEventSchema,
   FaceEventSchema,
   RundownSchema,
+  SpotlightSchema,
   StageStateSchema,
   SubmitInputSchema,
   type SubmitInput,
 } from "../../owy-stage/scenes";
 import { disconnectSpotify, getSpotifyNowPlaying, spotifyStatus } from "../../owy-stage/spotify";
 import { platform, pub } from "../base";
+import { loadNote } from "../tracks/service";
 import { limiter } from "../ratelimit";
 import {
+  AutopilotSchema,
   DeskWireSchema,
   FireEffectSchema,
   FirePresetResultSchema,
@@ -29,6 +32,9 @@ import {
   SetNowPlayingSchema,
   SetSceneSchema,
   SpotifyTrackSchema,
+  SpotlightInputSchema,
+  StageArrivalSchema,
+  StageCommunitySchema,
   StageInputSchema,
   StageMeetupSchema,
   StagePulseSchema,
@@ -117,6 +123,29 @@ export const owyStageRouter = {
       return yield* Stage.firePreset(input.preset, input.to);
     }),
 
+  getAutopilot: platform("stage:read")
+    .meta(docs("Whether new talks bring the wall to «Owy y la grilla» on their own"))
+    .output(AutopilotSchema)
+    .effect(function* () {
+      return yield* Stage.getAutopilot();
+    }),
+
+  setAutopilot: platform("stage:operate")
+    .meta(docs("Switch the autopilot: new talks bring the wall to «Owy y la grilla» and up as a spotlight"))
+    .input(AutopilotSchema)
+    .output(AutopilotSchema)
+    .effect(function* ({ input }) {
+      return yield* Stage.setAutopilot(input.on);
+    }),
+
+  spotlight: platform("stage:operate")
+    .meta(docs("Put a talk up big on «Owy y la grilla» (bringing that scene up), then into its cell"))
+    .input(SpotlightInputSchema)
+    .output(SpotlightSchema)
+    .effect(function* ({ input }) {
+      return yield* Stage.spotlightTalk(yield* loadNote(input.trackId));
+    }),
+
   fireEffect: platform("stage:operate")
     .meta(docs("A one-shot overlay: confetti, flash, a caption…"))
     .input(FireEffectSchema)
@@ -160,6 +189,20 @@ export const owyStageRouter = {
     .output(z.array(StageSpeakerSchema))
     .effect(function* () {
       return yield* Stage.getSpeakers();
+    }),
+
+  getCommunities: pub
+    .meta(docs("The communities in OWU's public directory"))
+    .output(z.array(StageCommunitySchema))
+    .effect(function* () {
+      return yield* Stage.getCommunities();
+    }),
+
+  getArrivals: pub
+    .meta(docs("Who has checked in to the wall's event, by first name and initial"))
+    .output(z.array(StageArrivalSchema))
+    .effect(function* () {
+      return yield* Stage.getArrivals();
     }),
 
   submit: pub

@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { cn } from "app/lib/utils";
+import { OwyPanel } from "components/Admin/owy/OwyPanel";
 import { HeaderActions } from "components/Admin/shell/HeaderActions";
 import { openShortcutSheet } from "components/Admin/shell/shortcuts";
 import { useSelectedEvent } from "components/Admin/shell/use-selected-event";
@@ -55,7 +56,7 @@ import {
 } from "lib/owy-stage/scenes";
 
 type Target = "preview" | "program";
-type Tab = "library" | "presets" | "guion";
+type Tab = "library" | "presets" | "guion" | "owy";
 type Params = Record<string, unknown>;
 
 const isOutput = (value: unknown): value is OutputSettings =>
@@ -408,6 +409,7 @@ function Desk() {
   );
   const presets = <PresetsPanel actions={presetActions} live={live} presets={desk.presets} preview={desk.preview} />;
   const guion = <RundownPanel liveParams={liveParams} liveScene={live.scene} rundown={rundown} />;
+  const owy = <OwyPanel eventId={live.eventId ?? selected?.id ?? null} />;
   const searchLead = useMemo(
     () => (
       <Button
@@ -497,6 +499,9 @@ function Desk() {
                               <TabsTrigger className="gap-1.5" value="guion">
                                 Guion <span className="text-xs text-muted-foreground">{rundown.steps.length}</span>
                               </TabsTrigger>
+                              <TabsTrigger className="gap-1.5" value="owy">
+                                Owy
+                              </TabsTrigger>
                             </TabsList>
                             {searchButton}
                           </div>
@@ -520,6 +525,13 @@ function Desk() {
                             value="guion"
                           >
                             {guion}
+                          </TabsContent>
+                          <TabsContent
+                            forceMount
+                            className="mt-0 min-h-0 flex-1 data-[state=inactive]:hidden"
+                            value="owy"
+                          >
+                            {owy}
                           </TabsContent>
                         </Tabs>
                       </ResizablePanel>
@@ -559,6 +571,7 @@ function Desk() {
             <div className={cn("h-full", phoneTab !== "presets" && "hidden")}>{presets}</div>
             <div className={cn("h-full", phoneTab !== "edit" && "hidden")}>{inspector}</div>
             <div className={cn("h-full", phoneTab !== "guion" && "hidden")}>{guion}</div>
+            <div className={cn("h-full", phoneTab !== "owy" && "hidden")}>{owy}</div>
           </section>
           <PhoneTabs
             guionPlaying={rundown.playing}

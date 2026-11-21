@@ -3,14 +3,13 @@ import { spawnSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
-import { createRequire } from "node:module";
 import { buildInputHashes, protocolFiles } from "./provenance.mjs";
 const here = fileURLToPath(new URL(".", import.meta.url));
 const root = resolve(here, "../../..");
 const sdk = resolve(here, "../.eve/emsdk");
 const emcc = process.env.EMCC || join(sdk, "upstream/emscripten/emcc");
 const emxx = process.env.EMXX || join(sdk, "upstream/emscripten/em++");
-const lvgl = process.env.LVGL_DIR || resolve(here, "../.eve/esphome-build/owy-companion/managed_components/lvgl__lvgl");
+const lvgl = process.env.LVGL_DIR || resolve(here, "../.eve/esphome-build/owy-knob/managed_components/lvgl__lvgl");
 if (!existsSync(emcc) || !existsSync(lvgl)) throw Error("See emulator/README.md for pinned SDK/LVGL setup.");
 const out = resolve(root, "public/companion-runtime");
 const cache = resolve(here, "../.eve/emulator-build");
@@ -92,7 +91,7 @@ const link = spawnSync(
     // OBS 30's browser source is Chromium 103: never emit anything newer.
     "-sMIN_CHROME_VERSION=103",
     '-sEXPORTED_RUNTIME_METHODS=["HEAPU8","HEAPU16","HEAP32","HEAPF32","UTF8ToString","stringToUTF8"]',
-    '-sEXPORTED_FUNCTIONS=["_malloc","_free","_owy_init","_owy_advance","_owy_input","_owy_snapshot","_owy_pixels","_owy_rgba","_owy_dirty","_owy_cue","_owy_cue_size","_owy_trace","_owy_phase","_owy_audio_received","_owy_audio_buffered"]',
+    '-sEXPORTED_FUNCTIONS=["_malloc","_free","_owy_init","_owy_advance","_owy_input","_owy_snapshot","_owy_pixels","_owy_rgba","_owy_dirty"]',
     "-o",
     join(out, "owy-runtime.mjs"),
   ],
@@ -100,19 +99,6 @@ const link = spawnSync(
 );
 if (link.status !== 0) throw Error(link.stderr);
 const manifest = JSON.parse(readFileSync(join(here, "generated/manifest.json"), "utf8"));
-const require = createRequire(join(root, "package.json"));
-const { build: bundle } = require("esbuild");
-await bundle({
-  entryPoints: [join(here, "bridge-adapter.ts")],
-  bundle: true,
-  format: "esm",
-  platform: "browser",
-  outfile: join(here, "bridge.mjs"),
-  alias: { "esphome-client": join(root, "owy/node_modules/esphome-client/dist/api-constants.js") },
-  banner: {
-    js: "// Generated from the real bridge VoiceTurn/PacedSpeaker + fixture transport adapter. Do not hand-edit.",
-  },
-});
 manifest.wasmHash = createHash("sha256")
   .update(readFileSync(join(out, "owy-runtime.wasm")))
   .digest("hex");

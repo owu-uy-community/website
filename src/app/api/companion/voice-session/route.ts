@@ -6,13 +6,12 @@ import {
   requestBridgeTicket,
   signBridgeTicket,
   VoiceHttpError,
-  VoiceQuota,
   voiceFailure,
   voiceResponse,
 } from "lib/companion/voice-bridge.server";
 
 export const maxDuration = 20;
-const quota = new VoiceQuota();
+// No per-person quota: only staff (stage:operate) get here, and each session is capped at 30 min.
 export async function POST(request: Request) {
   try {
     assertVoiceRequest(request);
@@ -20,7 +19,6 @@ export async function POST(request: Request) {
     if (!principal) throw new VoiceHttpError(401, "Sign in to use web voice.");
     if (!(await can(principal, "stage:operate"))) throw new VoiceHttpError(403, "Admin access required.");
     const scopes = await readVoiceScopes(request);
-    quota.take(principal.id);
     const origin = new URL(request.url).origin;
     const secret = process.env.COMPANION_BRIDGE_SECRET;
     // A reachable bridge issues its own tickets; a bridge on the venue laptop (only its browser

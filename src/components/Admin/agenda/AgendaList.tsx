@@ -9,6 +9,7 @@ import { StatusDot } from "components/Admin/ui/status";
 import { Badge } from "components/shared/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "components/shared/ui/table";
 import type { Room, Schedule, StickyNote } from "lib/orpc";
+import { RoomMark } from "lib/rooms/icons";
 import { slotDay } from "lib/slot-day";
 
 import { slotPhase, type SlotPhase } from "./agenda-state";
@@ -119,11 +120,7 @@ export function AgendaList({
               </TableCell>
               <TableCell>
                 <span className="flex min-w-0 items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: roomColors[note.room] ?? "#a1a1aa" }}
-                  />
+                  <RoomMark className="size-2.5" color={roomColors[note.room] ?? "#a1a1aa"} icon={note.roomIcon} />
                   <span className="truncate">{note.room}</span>
                 </span>
               </TableCell>

@@ -137,8 +137,11 @@ describe("events.upcoming", () => {
   test("anyone can GET the published events still ahead, never drafts or past ones", async () => {
     const community = await makeCommunity();
     const soon = new Date(Date.now() + 3 * 86_400_000);
+    // The endpoint lists the 100 soonest events whose end is still ahead, and the shared test
+    // database holds well over 100 from other tests at the factory's fixed date (2026-11-07).
+    // An event that began long ago and ends in three days comes first on any day.
     const [published, draft, past] = await Promise.all([
-      makeEvent(community.id, { status: "published", startDate: soon, endDate: new Date(soon.getTime() + 7_200_000) }),
+      makeEvent(community.id, { status: "published", startDate: new Date("2025-06-01"), endDate: soon }),
       makeEvent(community.id, { status: "draft", startDate: soon, endDate: new Date(soon.getTime() + 7_200_000) }),
       makeEvent(community.id, {
         status: "published",

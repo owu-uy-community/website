@@ -7,6 +7,7 @@ import {
   Clapperboard,
   ClipboardCheck,
   DoorOpen,
+  Footprints,
   Gauge,
   HandHeart,
   LayoutGrid,
@@ -41,9 +42,11 @@ export type NavKey =
   | "comunicacion"
   | "escenas"
   | "charla"
+  | "intro"
   | "obs"
   | "sonidos"
   | "owy"
+  | "ajustes-owy"
   | "pantallas"
   | "incidentes"
   | "mi-turno"
@@ -171,6 +174,13 @@ export const ADMIN_NAV: AdminNavGroup[] = [
         keywords: ["owy", "slides", "presentación", "charla", "en vivo", "open space"],
       },
       {
+        key: "intro",
+        title: "Intro open space",
+        href: "/admin/owy/intro",
+        icon: Footprints,
+        keywords: ["open space", "intro", "bienvenida", "slides", "clicker", "presentación", "principios", "dos pies"],
+      },
+      {
         key: "obs",
         title: "OBS",
         href: "/admin/screen",
@@ -189,9 +199,18 @@ export const ADMIN_NAV: AdminNavGroup[] = [
       {
         key: "owy",
         title: "Owy",
+        href: "/admin/owy",
+        icon: Bot,
+        // Scenes and the talk console live under /admin/owy too, with their own items.
+        match: "exact",
+        keywords: ["owy", "knob", "mesa", "mercado", "pitch", "companion", "countdown"],
+      },
+      {
+        key: "ajustes-owy",
+        title: "Ajustes de Owy",
         href: "/admin/companion",
         icon: Bot,
-        keywords: ["companion", "voz", "dispositivo", "emulador"],
+        keywords: ["companion", "bridge", "voz", "modelos", "cerebro", "dispositivo"],
       },
       {
         key: "pantallas",

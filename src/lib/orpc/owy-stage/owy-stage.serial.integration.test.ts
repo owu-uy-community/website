@@ -1,14 +1,18 @@
 import { call } from "@orpc/server";
 import { sql } from "drizzle-orm";
+import { Effect } from "effect";
 import { http, HttpResponse } from "msw";
 import { describe, expect, test, vi } from "vitest";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 import { db } from "lib/db";
+import { presetQuestion } from "lib/organizar/presets";
+import { arrivalAvatar } from "lib/orpc/owy-stage/service";
+import { liveServices } from "lib/orpc/services";
 import { router } from "lib/orpc/router";
 import { hub } from "lib/realtime/hub";
 import { by, type RouterInputs } from "test/context";
-import { makeBoard, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
+import { makeAttendee, makeBoard, makeCommunity, makeRoom, makeSiteAdmin, makeTrack, makeUser } from "test/factories";
 import { server } from "test/msw/server";
 
 /** The wall is one global row, so every test starts with nothing on air. */
@@ -448,6 +452,21 @@ describe("data-driven scenes", () => {
     });
   });
 
+  test("the pulse counts the event's own attendees: who came in, out of who is attending", async () => {
+    await setup();
+    const { event } = await makeBoard();
+    const other = await makeBoard();
+    await makeAttendee(event.id, { checkedInAt: new Date() });
+    await makeAttendee(event.id);
+    await makeAttendee(event.id, { status: "refunded" });
+    // Another event's door never counts here.
+    await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    await expect(call(router.owyStage.getPulse, { eventId: event.id }, by(null))).resolves.toMatchObject({
+      tickets: { checkedIn: 1, active: 2, capacity: null },
+    });
+  });
+
   test("meetups are the next eight, soonest first; a feed outage is an empty list", async () => {
     await setup();
     vi.useFakeTimers({ toFake: ["Date"] });
@@ -519,6 +538,61 @@ describe("data-driven scenes", () => {
     expect(speakers.map((speaker) => speaker.slug)).not.toContain("openspace");
   });
 
+  test("the community wall shows the public directory: listed, active groups only", async () => {
+    const listed = await makeCommunity({ listed: true, logoUrl: "/images/communities/x/picture.webp" });
+    const unlisted = await makeCommunity({ listed: false });
+    const inactive = await makeCommunity({ listed: true, isActive: false });
+
+    const slugs = (await call(router.owyStage.getCommunities, undefined, by(null))).map(({ slug }) => slug);
+
+    expect(slugs).toContain(listed.slug);
+    expect(slugs).not.toContain(unlisted.slug);
+    expect(slugs).not.toContain(inactive.slug);
+  });
+
+  /** An event on the wall with people in every state the welcome wall tells apart. */
+  async function arrivalsOnAir() {
+    const { putOnAir } = await setup();
+    const { event } = await makeBoard({ event: { questions: [presetQuestion("foto")] } });
+    const other = await makeBoard();
+    await putOnAir({ scene: "welcome-wall", eventId: event.id });
+    const account = await makeUser({ image: "https://avatars.slack-edge.com/ana.png" });
+    const ana = await makeAttendee(event.id, {
+      name: "Ana González Pérez",
+      email: account.email.toUpperCase(),
+      checkedInAt: new Date("2026-11-07T17:30:00.000Z"),
+    });
+    const juan = await makeAttendee(event.id, { name: "Juan", checkedInAt: new Date("2026-11-07T17:31:00.000Z") });
+    await makeAttendee(event.id, { name: "Todavía no llegó" });
+    const tagged = await makeAttendee(event.id, { checkedInAt: new Date(), tags: ["Sin fotos"] });
+    await makeAttendee(event.id, { checkedInAt: new Date(), answers: { foto: "No" } });
+    // Another event's door never shows here.
+    const elsewhere = await makeAttendee(other.event.id, { checkedInAt: new Date() });
+
+    return { account, ana, juan, tagged, elsewhere };
+  }
+
+  test("the welcome wall shows who came in to the wall's own event, as «Ana G.», minus anyone off photos", async () => {
+    await setup();
+    await expect(call(router.owyStage.getArrivals, undefined, by(null))).resolves.toStrictEqual([]);
+    const { ana, juan } = await arrivalsOnAir();
+
+    await expect(call(router.owyStage.getArrivals, undefined, by(null))).resolves.toStrictEqual([
+      { id: ana.id, name: "Ana G.", at: "2026-11-07T17:30:00.000Z" },
+      { id: juan.id, name: "Juan", at: "2026-11-07T17:31:00.000Z" },
+    ]);
+  });
+
+  test("a wall tile's picture is looked up only for someone the wall shows, by the ticket's email in any case", async () => {
+    const { account, ana, juan, tagged, elsewhere } = await arrivalsOnAir();
+    const avatar = (id: string) => Effect.runPromiseWith(liveServices)(arrivalAvatar(id));
+
+    await expect(avatar(ana.id)).resolves.toStrictEqual({ email: ana.email, image: account.image });
+    await expect(avatar(juan.id)).resolves.toStrictEqual({ email: juan.email, image: null });
+    await expect(avatar(tagged.id)).resolves.toBeNull();
+    await expect(avatar(elsewhere.id)).resolves.toBeNull();
+  });
+
   test("without Spotify configured the wall shows no track and the status says so", async () => {
     const { staff } = await setup();
 
@@ -526,6 +600,59 @@ describe("data-driven scenes", () => {
     await expect(call(router.owyStage.spotifyStatus, undefined, by(staff))).resolves.toStrictEqual({
       configured: false,
       account: null,
+    });
+  });
+});
+
+describe("«Owy y la grilla»", () => {
+  const newTalk = { needsTV: false, needsWhiteboard: false, skipResourceValidation: false };
+
+  test("with the autopilot on, a new talk brings the board (subtitles kept) and shows it big", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    await putOnAir({ scene: "owy-face", params: { captions: false }, eventId: event.id });
+    await call(router.owyStage.setAutopilot, { on: true }, by(staff));
+    // A desk save (it writes the same JSON) leaves the switch where it was.
+    await call(router.owyStage.saveDesk, { desk: { queue: [] } }, by(staff));
+    const publish = vi.spyOn(hub, "publish");
+
+    const note = await call(
+      router.tracks.create,
+      { ...newTalk, title: "IA en el aula", openSpaceId: event.id, scheduleId: slots.early.id, roomId: rooms.plain.id },
+      by(staff)
+    );
+
+    await vi.waitFor(() =>
+      expect(publish).toHaveBeenCalledWith(
+        "owy-stage",
+        "spotlight",
+        expect.objectContaining({ how: "new", track: expect.objectContaining({ id: note.id, title: "IA en el aula" }) })
+      )
+    );
+    await expect(call(router.owyStage.getAutopilot, undefined, by(staff))).resolves.toStrictEqual({ on: true });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      params: { captions: false },
+      eventId: event.id,
+    });
+  });
+
+  test("«Destacar» brings the board for the talk's event and puts it up; only site staff do it", async () => {
+    const { staff, putOnAir } = await setup();
+    const { event, rooms, slots } = await makeBoard();
+    const talk = await makeTrack({ eventId: event.id, scheduleId: slots.late.id, roomId: rooms.tv.id });
+    await putOnAir({ scene: "agenda" });
+
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(staff))).resolves.toMatchObject({
+      how: "manual",
+      track: { id: talk.id, roomId: rooms.tv.id, scheduleId: slots.late.id },
+    });
+    await expect(call(router.owyStage.getState, undefined, by(null))).resolves.toMatchObject({
+      scene: "owy-board",
+      eventId: event.id,
+    });
+    await expect(call(router.owyStage.spotlight, { trackId: talk.id }, by(await makeUser()))).rejects.toMatchObject({
+      code: "FORBIDDEN",
     });
   });
 });

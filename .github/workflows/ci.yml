@@ -49,7 +49,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm test:coverage
-      # The companion emulator: checked-in WASM matches the firmware and the bridge it pins,
+      # The companion face runtime: checked-in WASM matches the firmware sources,
       # and the browser voice client still speaks the bridge's protocol.
       - run: pnpm companion:emulator:test
       - run: pnpm companion:voice:test
@@ -71,8 +71,7 @@ jobs:
       - run: pnpm -C owy install --frozen-lockfile
       - run: pnpm -C owy typecheck
       - run: pnpm -C owy companion:test
-      # The firmware's own C++ (face model, speaker start-up, voice buffer) under ASan/UBSan.
-      - run: pnpm -C owy companion:driver-test
+      # The firmware's own C++ (gestures, the face model) under ASan/UBSan.
       - run: pnpm -C owy companion:interaction-test
 
   integration:

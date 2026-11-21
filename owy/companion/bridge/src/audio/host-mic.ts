@@ -6,8 +6,7 @@ import { BYTES_PER_SAMPLE, DEVICE_SAMPLE_RATE, FrameChunker, rmsLevel, toWav } f
 /**
  * A microphone of the Mac running the bridge (the built-in one, a DJI
  * receiver on USB-C…), captured with ffmpeg's avfoundation input as 16 kHz
- * PCM16 mono — the same frames a board streams. macOS only: Docker Desktop's
- * VM has no sound device, so in a container this reports `unavailable`.
+ * PCM16 mono. macOS only: elsewhere this reports `unavailable`.
  *
  * It stays open while selected (no open latency, no clipped first word; an
  * unplugged receiver is noticed at once) and restarts with backoff when ffmpeg
@@ -142,7 +141,7 @@ export class HostMic {
     this.channel = options.channel ?? "mix";
     this.now = options.now ?? Date.now;
     if ((options.platform ?? process.platform) !== "darwin") {
-      this.setHealth("unavailable", "el micrófono de la Mac solo se lee con el bridge corriendo en macOS (no en Docker)");
+      this.setHealth("unavailable", "el micrófono de la Mac solo se lee con el bridge corriendo en macOS");
     } else if (this.wanted) void this.open();
   }
 

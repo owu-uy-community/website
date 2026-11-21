@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, lt, lte, ne, or, type SQL } from "drizzle-orm";
 import { Effect, Result } from "effect";
+import { cacheLife, cacheTag } from "next/cache";
 import type * as z from "zod";
 
 import {
@@ -21,10 +22,11 @@ import {
   sendSlackDm,
   sendTelegram,
 } from "../../owy/messaging";
+import { feedTag } from "../../revalidate";
 import { query, transaction } from "../db";
 import { Conflict, Invalid, NotFound, UpstreamFailed, type ForeignKeyViolation, type UniqueViolation } from "../errors";
 import { opsPing, recordActivity } from "../ops";
-import { CommunityScope, CurrentUser, type Database } from "../services";
+import { CommunityScope, CurrentUser, liveServices, type Database } from "../services";
 import * as StaffTasks from "../staff-tasks/service";
 import { CADENCE_STEPS, cadencePlan, formatWhen, type CadenceStepKey } from "./cadence";
 import type {
@@ -312,6 +314,19 @@ export const feed = (eventId: string) =>
         .slice(0, 20);
     })
   );
+
+/**
+ * The feed as every phone on the live board reads it, from the cache all server instances share.
+ * Each change to it ends in a «comms» ops ping, which expires it (opsPing); the minutes profile only
+ * bounds an edit made outside the app.
+ */
+export async function publicFeed(eventId: string) {
+  "use cache: remote";
+  cacheTag(feedTag(eventId));
+  cacheLife("minutes");
+
+  return Effect.runPromiseWith(liveServices)(feed(eventId));
+}
 
 /** Which channels Owy can write to from the site. */
 export const channels = (): Channels => ({ ...owyChannels(), telegramHandle: telegramHandle() });

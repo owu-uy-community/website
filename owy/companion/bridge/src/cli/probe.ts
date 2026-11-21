@@ -7,11 +7,12 @@ import { encodeMouth } from "../audio/mouth";
 import { sleep } from "../timings";
 
 /**
- * Hardware probe over the native API — no Gemini, no site. Connects to the
+ * Hardware probe over the native API — no model, no site. Connects to the
  * first device in COMPANION_DEVICES, lists what the firmware exposes, cycles
- * the face, plays the test tone, shows a card and reads the mode switches.
+ * the face, moves the mouth, shows a card and a caption, and counts taps for
+ * a few seconds.
  *
- *   COMPANION_DEVICES='owy-1@owy-companion.local#<api_key>' pnpm companion:probe
+ *   COMPANION_DEVICES='owy-knob@192.168.1.56#secrets' pnpm companion:probe
  */
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -23,16 +24,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  let taps = 0;
   const device = await CompanionDevice.connect(
     spec,
     {
-      onRequestStart: (request) => {
-        logger.info(
-          `pipeline start received (wake="${request.wakeWordPhrase ?? ""}") — declining, this is only a probe`
-        );
-        device.declineRequest();
-      },
-      onRequestStop: () => logger.info("pipeline stop received"),
+      onTap: () => logger.info(`tap #${++taps}`),
+      onRequestStart: () => {},
+      onRequestStop: () => {},
       onAudio: () => {},
     },
     logger
@@ -51,19 +49,21 @@ async function main(): Promise<void> {
 
   const required = [
     entityId("select", "face_state"),
+    entityId("sensor", "taps"),
     entityId("switch", "staff_mode"),
-    entityId("switch", "marketplace_open"),
-    entityId("switch", "quiet_mode"),
+    entityId("switch", "microphone_privacy"),
+    entityId("number", "screen_brightness"),
     entityId("sensor", "render_time"),
   ];
   const ids = new Set(entities.map((entity) => entity.id));
   for (const id of required) {
     logger[ids.has(id) ? "info" : "error"](`${ids.has(id) ? "ok " : "MISSING"} ${id}`);
   }
-
-  logger.info(
-    `modes: staff=${device.isStaffMode()} marketplace=${device.isMarketplaceOpen()} quiet=${device.isQuietMode()}`
-  );
+  for (const action of ["show_caption", "show_heard", "express", "mouth_track", "mic_level"])
+    logger[services.some((s) => s.name === action) ? "info" : "error"](
+      `${services.some((s) => s.name === action) ? "ok " : "MISSING"} action ${action}`
+    );
+  logger.info(`staff=${device.isStaffMode()} privacy=${String(device.readSetting("privacy"))} brillo=${String(device.readSetting("brightness"))}`);
 
   for (const face of FACE_STATES.filter((f) => f !== "offline")) {
     device.setFace(face);
@@ -71,18 +71,23 @@ async function main(): Promise<void> {
     await sleep(1500);
   }
 
+  // The listening halo follows the Mac's mic: a sweep from quiet to loud.
+  device.setFace("listening");
+  for (let level = 0; level <= 100; level += 10) {
+    device.sendMicLevel?.(level);
+    await sleep(120);
+  }
+  device.showHeard?.("¿qué hay ahora?");
+
   // The mouth only moves while the face is speaking; a synthetic track opens
   // and closes through every shape (wide → round) for ~1.6 s.
   logger.info("mouth track sweep");
   device.setFace("speaking");
   const sweep = Array.from({ length: 40 }, (_, i) => encodeMouth(Math.abs(Math.sin(i / 3)), Math.sin(i / 7))).join("");
   device.sendMouthTrack?.(sweep, 0);
+  device.showCaption?.("Probando la cara, la boca y los subtítulos.");
   await sleep(1800);
   device.setFace("idle");
-
-  logger.info("test tone");
-  device.client.command(entityId("button", "tono_de_prueba"), {});
-  await sleep(1500);
 
   logger.info("show card");
   device.showCard({ title: "Lambdas en producción", speaker: "Ana", room: "Cueva", timeSlot: "15:30 - 15:55" });
@@ -91,7 +96,9 @@ async function main(): Promise<void> {
   await sleep(2000);
   device.setFace("idle");
 
-  logger.info("probe done");
+  logger.info("tocá la cara: cuento taps por 8 s");
+  await sleep(8000);
+  logger.info(`probe done (${taps} taps)`);
   device.close();
 }
 

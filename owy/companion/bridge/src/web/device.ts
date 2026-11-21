@@ -130,6 +130,10 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   playClip(id: string) {
     this.emit({ type: "screen", command: { kind: "clip", id } });
   }
+  /** A tap or «Callar» on the device: the browser drops its queued reply and any cue, now. */
+  stopAudio() {
+    this.emit({ type: "screen", command: { kind: "stop" } });
+  }
   /** Modo pitch: Owy asked for the topic or the name; the browser opens its mic for the answer ("idle" clears it). */
   pitchPrompt(kind: "topic" | "name" | "idle") {
     this.emit({ type: "screen", command: { kind: "pitchPrompt", prompt: kind } });
@@ -148,6 +152,13 @@ export class BrowserDevice implements DeviceTransport, AudioPeer {
   }
   isMarketplaceOpen() {
     return this.grant.marketplace;
+  }
+  /** A browser is its own mic and speakers: the bridge's Mac routing never applies to it. */
+  getMicSource() {
+    return "device" as const;
+  }
+  getAudioOutput() {
+    return "device" as const;
   }
   getVolume() {
     return this.volume;

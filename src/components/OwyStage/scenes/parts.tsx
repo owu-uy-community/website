@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { m } from "motion/react";
 import { encode } from "uqr";
 
@@ -84,16 +84,26 @@ export function SponsorRow({ reverse, height = 110 }: { reverse?: boolean; heigh
   );
 }
 
-/** The La Meetup III gallery (public/images/conf/gallery); #10 was never published. */
-export const MOMENT_PHOTOS = Array.from({ length: 30 }, (_, i) => i + 1)
-  .filter((n) => n !== 10)
-  .map((n) => `/images/conf/gallery/momento-${String(n).padStart(2, "0")}.webp`);
+export { MOMENT_PHOTOS } from "lib/owy-stage/photos";
 
 /** "HH:MM" in the event's timezone, comparable to the schedule strings. */
 export function nowHHMM(timeZone = "America/Montevideo"): string {
   return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hour12: false }).format(
     new Date()
   );
+}
+
+/**
+ * The wall clock (HH:MM), re-rendering every `everyMs`. It re-renders on every tick, not only when
+ * the minute changes: countdowns read `secondsUntil` during that render.
+ */
+export function useNow(everyMs = 1000) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((tick) => tick + 1), everyMs);
+    return () => clearInterval(id);
+  }, [everyMs]);
+  return nowHHMM();
 }
 
 /** QR on a cream card (dark modules on light stays scannable on any wall). */

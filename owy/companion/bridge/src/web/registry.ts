@@ -1,8 +1,9 @@
 /**
  * Every setting of the companion, in one place. The site stores and edits them
- * (/admin/companion → Control), the bridge applies them (devices through their
- * ESPHome entities, the rest in its own runtime), and Owy reads and changes the
- * ones its voice may touch (tool `ajustes`). Env vars stay as the defaults.
+ * (/admin/owy and /admin/companion), the bridge applies them (the knob's few
+ * entities — pausa, brillo, animaciones — through ESPHome, everything else in
+ * its own runtime: modes, routing, models), and Owy reads and changes the ones
+ * its voice may touch (tool `ajustes`). Env vars stay as the defaults.
  *
  * zod only, like ./contract: the site imports this file.
  */
@@ -13,15 +14,13 @@ import { GEMINI_VOICES, MODELS } from "../../../../agent/lib/models";
 export type SettingApply = "now" | "turn" | "restart";
 /** Who may change it by voice: anyone talking to Owy, or staff only. Absent: nobody (the panel only). */
 export type SettingVoice = "public" | "staff";
-export type SettingGroup = "modo" | "audio" | "mac" | "sonido" | "pantalla" | "conversacion" | "pitch" | "voz" | "cerebro" | "avanzado";
+export type SettingGroup = "modo" | "audio" | "mac" | "pantalla" | "pitch" | "voz" | "cerebro" | "avanzado";
 
 export const SETTING_GROUPS: Record<SettingGroup, string> = {
   modo: "Modo",
   audio: "Audio",
   mac: "La Mac",
-  sonido: "Sonido",
   pantalla: "Pantalla y movimiento",
-  conversacion: "Conversación",
   pitch: "Modo pitch",
   voz: "Voz y modelos",
   cerebro: "Cerebro",
@@ -63,12 +62,11 @@ const ON_OFF: readonly Option[] = [
   ["on", "sí"],
   ["off", "no"],
 ];
+/** The knob neither hears nor speaks: Owy's audio is the Mac's (DJI in, PA out); a browser is the fallback. */
 const ROUTES: readonly Option[] = [
-  ["device", "Owy"],
   ["host", "Mac"],
   ["laptop", "Navegador"],
 ];
-const ROUTES_ON_BOARD = { device: "dispositivo", host: "mac", laptop: "laptop" } as const;
 const spec = (value: string) => value.replace(/#.*$/, "");
 const REALTIME_MODELS: readonly Option[] = [
   [MODELS.realtime, "Gemini 3.8 Live"],
@@ -77,10 +75,9 @@ const REALTIME_MODELS: readonly Option[] = [
 ];
 
 export const SETTINGS = {
-  // ── Modo (per device) ──────────────────────────────────────────────────
+  // ── Modo (per device; the bridge holds them, the knob has no switches) ──
   pitch_mode: {
     scope: "device",
-    entity: "switch.pitch_mode",
     env: "COMPANION_PITCH_MODE",
     type: "boolean",
     label: "Modo pitch",
@@ -102,16 +99,15 @@ export const SETTINGS = {
     scope: "device",
     entity: "switch.microphone_privacy",
     type: "boolean",
-    label: "Micrófono en pausa",
+    label: "Pausa",
     group: "modo",
     apply: "now",
     voice: "public",
     voiceValues: [true],
-    hint: "Por voz sólo se puede pausar; para volver a escuchar, la pantalla o el panel.",
+    hint: "Owy no escucha ni responde a los toques. Por voz sólo se pausa; para volver, la pantalla o el panel.",
   },
   marketplace_open: {
-    scope: "device",
-    entity: "switch.marketplace_open",
+    scope: "bridge",
     env: "COMPANION_MARKETPLACE_OPEN",
     type: "boolean",
     label: "Mercado abierto",
@@ -121,11 +117,9 @@ export const SETTINGS = {
     hint: "El público puede proponer charlas hablando con Owy.",
   },
 
-  // ── Audio (per device) ─────────────────────────────────────────────────
+  // ── Audio (per device; the bridge holds them) ──────────────────────────
   mic: {
     scope: "device",
-    entity: "select.mic_source",
-    board: ROUTES_ON_BOARD,
     env: "COMPANION_MIC_SOURCE",
     type: "enum",
     options: ROUTES,
@@ -133,11 +127,10 @@ export const SETTINGS = {
     group: "audio",
     apply: "turn",
     voice: "staff",
+    hint: "La Mac (el DJI o el integrado); un navegador enchufado como respaldo.",
   },
   output: {
     scope: "device",
-    entity: "select.audio_output",
-    board: ROUTES_ON_BOARD,
     env: "COMPANION_AUDIO_OUTPUT",
     type: "enum",
     options: ROUTES,
@@ -145,69 +138,7 @@ export const SETTINGS = {
     group: "audio",
     apply: "turn",
     voice: "staff",
-  },
-  volume: {
-    scope: "device",
-    entity: "number.volumen",
-    type: "number",
-    min: 0,
-    max: 80,
-    step: 5,
-    unit: "%",
-    label: "Volumen",
-    group: "sonido",
-    apply: "now",
-    voice: "public",
-    hint: "El amplificador satura arriba de 80.",
-  },
-  quiet_mode: {
-    scope: "device",
-    entity: "switch.quiet_mode",
-    type: "boolean",
-    label: "Modo silencioso",
-    group: "sonido",
-    apply: "now",
-    voice: "public",
-    hint: "Sin anuncios ni tono de escucha.",
-  },
-  listening_chime: {
-    scope: "device",
-    entity: "switch.listening_chime",
-    type: "boolean",
-    label: "Tono de escucha",
-    group: "sonido",
-    apply: "now",
-    voice: "public",
-  },
-  interaction_sounds: {
-    scope: "device",
-    entity: "switch.interaction_sounds",
-    type: "boolean",
-    label: "Sonidos al tocarlo",
-    group: "sonido",
-    apply: "now",
-    voice: "staff",
-  },
-
-  // ── Conversación (per device) ──────────────────────────────────────────
-  continuous_conversation: {
-    scope: "device",
-    entity: "switch.continuous_conversation",
-    type: "boolean",
-    label: "Charla continua",
-    group: "conversacion",
-    apply: "now",
-    voice: "public",
-    hint: "Después de cada respuesta vuelve a escuchar.",
-  },
-  wake_word: {
-    scope: "device",
-    entity: "switch.wake_word",
-    type: "boolean",
-    label: "Palabra de activación",
-    group: "conversacion",
-    apply: "now",
-    voice: "staff",
+    hint: "La Mac (la PA de la sala); un navegador enchufado como respaldo.",
   },
 
   // ── Pantalla y movimiento (per device) ─────────────────────────────────
@@ -233,38 +164,10 @@ export const SETTINGS = {
     apply: "now",
     voice: "public",
   },
-  motion_face: {
-    scope: "device",
-    entity: "switch.motion_face",
-    type: "boolean",
-    label: "Seguir el movimiento",
-    group: "pantalla",
-    apply: "now",
-    voice: "staff",
-  },
-  motion_reverse_x: {
-    scope: "device",
-    entity: "switch.motion_reverse_x",
-    type: "boolean",
-    label: "Invertir horizontal",
-    group: "pantalla",
-    apply: "now",
-    voice: "staff",
-  },
-  motion_reverse_y: {
-    scope: "device",
-    entity: "switch.motion_reverse_y",
-    type: "boolean",
-    label: "Invertir vertical",
-    group: "pantalla",
-    apply: "now",
-    voice: "staff",
-  },
 
   // ── Modo pitch (per device + the bridge's knobs) ───────────────────────
   pitch_voice: {
     scope: "device",
-    entity: "select.pitch_voice",
     env: "COMPANION_PITCH_VOICE",
     type: "enum",
     options: [
@@ -455,17 +358,6 @@ export const SETTINGS = {
     apply: "restart",
     voice: "staff",
   },
-  realtime_fallbacks: {
-    scope: "bridge",
-    env: "COMPANION_REALTIME_FALLBACKS",
-    type: "text",
-    max: 400,
-    label: "Respaldos de voz",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-    hint: "Specs separados por coma; `#voz` elige la voz de cada uno.",
-  },
   cascade: {
     scope: "bridge",
     env: "COMPANION_CASCADE",
@@ -488,99 +380,6 @@ export const SETTINGS = {
     ],
     label: "Caras mientras habla",
     group: "voz",
-    apply: "turn",
-    voice: "staff",
-  },
-  transcribe_models: {
-    scope: "bridge",
-    env: "COMPANION_TRANSCRIBE_MODELS",
-    type: "text",
-    max: 400,
-    label: "Transcripción (respaldo)",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  tts_models: {
-    scope: "bridge",
-    env: "COMPANION_TTS_MODELS",
-    type: "text",
-    max: 400,
-    label: "Voz hablada (respaldo)",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  text_model: {
-    scope: "bridge",
-    env: "COMPANION_TEXT_MODEL",
-    type: "text",
-    max: 120,
-    label: "Modelo de texto (respaldo)",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  text_fallback_models: {
-    scope: "bridge",
-    env: "COMPANION_TEXT_FALLBACK_MODELS",
-    type: "text",
-    max: 400,
-    label: "Respaldos del modelo de texto",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  expression_model: {
-    scope: "bridge",
-    env: "COMPANION_EXPRESSION_MODEL",
-    type: "text",
-    max: 120,
-    label: "Modelo de las caras",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  pitch_model: {
-    scope: "bridge",
-    env: "COMPANION_PITCH_MODEL",
-    type: "text",
-    max: 120,
-    label: "Modelo del pitch",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  pitch_fallback_models: {
-    scope: "bridge",
-    env: "COMPANION_PITCH_FALLBACK_MODELS",
-    type: "text",
-    max: 400,
-    label: "Respaldos del pitch",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  pitch_hedge_model: {
-    scope: "bridge",
-    env: "COMPANION_PITCH_HEDGE_MODEL",
-    type: "text",
-    max: 120,
-    label: "Modelo rápido del pitch",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  pitch_hedge_ms: {
-    scope: "bridge",
-    env: "COMPANION_PITCH_HEDGE_MS",
-    type: "number",
-    min: 500,
-    max: 20_000,
-    step: 500,
-    unit: "ms",
-    label: "Cuándo pedirle al modelo rápido",
-    group: "avanzado",
     apply: "turn",
     voice: "staff",
   },
@@ -636,7 +435,7 @@ export const SETTINGS = {
     voice: "staff",
   },
 
-  // ── Avanzado (the bridge's timings) ────────────────────────────────────
+  // ── Avanzado: the one timing worth touching at the venue, and the plumbing ──
   ack_ms: {
     scope: "bridge",
     env: "COMPANION_ACK_MS",
@@ -650,60 +449,6 @@ export const SETTINGS = {
     apply: "turn",
     voice: "staff",
   },
-  pacer_lead_ms: {
-    scope: "bridge",
-    env: "COMPANION_PACER_LEAD_MS",
-    type: "number",
-    min: 20,
-    max: 1000,
-    step: 10,
-    unit: "ms",
-    label: "Audio por adelantado",
-    group: "avanzado",
-    apply: "turn",
-    voice: "staff",
-  },
-  mouth_latency_ms: {
-    scope: "bridge",
-    env: "COMPANION_MOUTH_LATENCY_MS",
-    type: "number",
-    min: 0,
-    max: 2000,
-    step: 10,
-    unit: "ms",
-    label: "Demora del navegador",
-    group: "avanzado",
-    apply: "turn",
-    voice: "staff",
-  },
-  token_timeout_ms: {
-    scope: "bridge",
-    env: "COMPANION_TOKEN_TIMEOUT_MS",
-    type: "number",
-    min: 1000,
-    max: 60_000,
-    step: 500,
-    unit: "ms",
-    label: "Espera del token de voz",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-  realtime_connect_ms: {
-    scope: "bridge",
-    env: "COMPANION_REALTIME_CONNECT_MS",
-    type: "number",
-    min: 2000,
-    max: 60_000,
-    step: 500,
-    unit: "ms",
-    label: "Espera de la conexión de voz",
-    group: "avanzado",
-    apply: "restart",
-    voice: "staff",
-  },
-
-  // ── Plumbing the panel may fix without touching the Mac ────────────────
   host: {
     scope: "device",
     type: "text",
@@ -825,7 +570,7 @@ export function voiceMay(key: SettingKey, value: unknown, staff: boolean): { ok:
 export const MODES = {
   conversacion: { label: "Conversación", values: { pitch_mode: false, talk: false, privacy: false } },
   pitch: { label: "Pitch", values: { pitch_mode: true, talk: false, privacy: false } },
-  charla: { label: "Charla", values: { talk: true, pitch_mode: false, privacy: false, mic: "host", output: "host" } },
+  charla: { label: "Charla", values: { talk: true, pitch_mode: false, privacy: false } },
   pausa: { label: "Pausa", values: { privacy: true } },
 } as const satisfies Record<string, { label: string; values: Partial<Record<SettingKey, unknown>> }>;
 export type ModeKey = keyof typeof MODES;

@@ -3,49 +3,19 @@
 import { Mic, Server, Speaker, Volume2 } from "lucide-react";
 
 import { Panel, PanelHead } from "components/Admin/ui/page";
-import { Badge, type BadgeProps } from "components/shared/ui/badge";
 import type { CompanionState } from "lib/orpc/companion/schemas";
 
 import { BRIDGE_TARGET, type SettingKey } from "../../../../owy/companion/bridge/src/web/registry";
 import { CommandButton, type SendCommand } from "./commands";
-import { probeText, settingGroups, settingView } from "./model";
+import { macAudioChoices, probeText, settingGroups, settingView } from "./model";
 import { SettingField, SettingGroup, type Choices, type OnSet, type SetValue } from "./SettingField";
-
-const HEALTH: Record<string, [NonNullable<BadgeProps["variant"]>, string]> = {
-  open: ["success", "abierto"],
-  starting: ["secondary", "abriendo…"],
-  off: ["outline", "apagado"],
-  "no-signal": ["warning", "sin señal"],
-  gone: ["destructive", "no está"],
-  unavailable: ["outline", "no disponible"],
-};
-
-function Health({
-  icon: Icon,
-  label,
-  health,
-  detail,
-}: {
-  icon: typeof Mic;
-  label: string;
-  health?: string;
-  detail?: string;
-}) {
-  const [variant, text] = (health && HEALTH[health]) || ["outline", health ?? "sin datos"];
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-meta">
-      <Icon aria-hidden className="size-3.5 text-muted-foreground" />
-      <span className="text-foreground">{label}</span>
-      <Badge variant={variant}>{text}</Badge>
-      {detail ? <span className="text-muted-foreground">{detail}</span> : null}
-    </div>
-  );
-}
+import { Health } from "./ui";
 
 /**
- * The bridge and the Mac it runs on: the Mac's input and output (with a level test and a tone),
- * then the voice and models, the brain, modo pitch's knobs and the advanced timings (closed).
+ * The bridge and the Mac it runs on — Owy's ears and voice, where the knob is only face and
+ * button: the mode's bridge-wide switch (mercado abierto), the Mac's input and output (with a level
+ * test and a tone), the voice and models, the brain, modo pitch's knobs and the one advanced timing
+ * (closed).
  */
 export function BridgeCard({
   state,
@@ -60,15 +30,16 @@ export function BridgeCard({
 }) {
   const status = state.status;
   const setValue: SetValue = (key, value) => onSet([{ target: BRIDGE_TARGET, key, value }]);
-  const choices: Partial<Record<SettingKey, Choices>> = {
-    host_mic: { items: status?.hostMic?.available ?? [], none: "el micrófono integrado" },
-    host_speaker: { items: status?.hostSpeaker?.available ?? [], none: "la salida del sistema" },
-  };
+  const choices: Partial<Record<SettingKey, Choices>> = macAudioChoices(status);
 
   return (
     <Panel>
-      <PanelHead icon={Server} meta={status?.machine} title="Bridge y Mac" />
+      <PanelHead icon={Server} meta={status?.machine} title="La Mac (bridge)" />
       <div className="p-3.5">
+        <p className="pb-1 text-ui text-muted-foreground">
+          El programa que escucha y habla por Owy: el micrófono y el parlante de la Mac, la voz, el cerebro y el modo
+          pitch. Vale para todos los Owys.
+        </p>
         {settingGroups("bridge").map(({ group, label, keys }) => {
           const views = keys.map((key) => settingView(state, BRIDGE_TARGET, key, online));
           return (

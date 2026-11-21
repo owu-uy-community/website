@@ -47,7 +47,9 @@ function runtime() {
       transcript: "Quiero proponer una charla sobre Effect",
       kind: "pitch" as const,
       title: "Effect en producción",
+      titleSaid: true,
       speaker: null,
+      nominated: false,
       needsTV: false,
       needsWhiteboard: false,
       description: null,
@@ -55,7 +57,7 @@ function runtime() {
       reaction: null,
       appropriate: true,
     })),
-    answer: vi.fn(async (_wav: Buffer, _context: unknown) => ({ title: null, speaker: "Ana", description: null, appropriate: true })),
+    answer: vi.fn(async (_wav: Buffer, _context: unknown) => ({ title: null, speaker: "Ana", nominated: false, description: null, appropriate: true })),
   };
   const placed = vi.fn(async (input: { title: string; speaker?: string }) => ({
     note: { id: "t1", title: input.title, speaker: input.speaker, room: "Cueva", timeSlot: "15:00 - 15:45" },

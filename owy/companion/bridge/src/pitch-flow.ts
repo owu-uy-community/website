@@ -1,7 +1,6 @@
 import type { Logger } from "./log";
 import {
   PITCH_LINES,
-  QUESTION,
   announcementText,
   duplicateText,
   type PitchAnswer,
@@ -16,10 +15,11 @@ import type { ScreenCard } from "./realtime/tools";
 
 /**
  * One visitor's pitch, from the first tap to the card on the board: the pitch,
- * then at most one question for each thing it missed (the topic, the name),
- * then one `createPlaced`. It spans one to three device runs (the board opens
- * its mic by itself for an answer) and reads as the steps it takes; every wait
- * is bounded and every result is checked against the flow still being wanted.
+ * then at most one question for each thing it missed (the topic, or a title
+ * in the person's own words; the name), then one `createPlaced`. It spans one
+ * to three device runs (the board opens its mic by itself for an answer) and
+ * reads as the steps it takes; every wait is bounded and every result is
+ * checked against the flow still being wanted.
  *
  *   tap → record → tap → extract → [ask topic] → [ask name] → place → confirm
  *
@@ -33,7 +33,11 @@ export type PitchVoice = "silent" | "confirm" | "react";
 export interface PitchDraft {
   transcript: string;
   title: string | null;
+  /** The title is the person's words; false: the model put it together from a long pitch (asked once, kept if unanswered). */
+  titleSaid: boolean;
   speaker: string | null;
+  /** The speaker is someone else, put forward by the person talking. */
+  nominated: boolean;
   description: string | null;
   needsTV: boolean;
   needsWhiteboard: boolean;
@@ -53,10 +57,14 @@ const clean = (value: string | null | undefined): string | null => value?.trim()
 export function draftFromCard(card: PitchCard): PitchDraft | null {
   const transcript = card.transcript.trim();
   if (card.kind === "not_pitch" || !transcript) return null;
+  const title = card.kind === "pitch" ? clean(card.title) : null;
+  const speaker = clean(card.speaker);
   return {
     transcript,
-    title: card.kind === "pitch" ? clean(card.title) : null,
-    speaker: clean(card.speaker),
+    title,
+    titleSaid: !!title && card.titleSaid,
+    speaker,
+    nominated: !!speaker && card.nominated,
     description: clean(card.description),
     needsTV: card.needsTV,
     needsWhiteboard: card.needsWhiteboard,
@@ -67,33 +75,42 @@ export function draftFromCard(card: PitchCard): PitchDraft | null {
   };
 }
 
-export type PitchStep = { ask: PitchField } | { place: true } | { reject: "unclear" | "declined" };
+/** What Owy asks (`line`) for the field the answer fills. */
+export type PitchQuestion = { ask: PitchField; line: PitchLine };
+export type PitchStep = PitchQuestion | { place: true } | { reject: "unclear" | "declined" };
 
 /**
  * Not fit for the public board: turned away, nothing asked. The topic is required (no title, no
- * card); the name is wanted. Each is asked at most once.
+ * card); a title the model put together is asked for in the person's words (no answer keeps it);
+ * the name is wanted. Each is asked at most once.
  */
 export function nextStep(draft: PitchDraft, canAsk: boolean): PitchStep {
   if (!draft.appropriate) return { reject: "declined" };
-  if (!draft.title) return canAsk && !draft.asked.includes("topic") ? { ask: "topic" } : { reject: "unclear" };
-  if (!draft.speaker && canAsk && !draft.asked.includes("name")) return { ask: "name" };
+  const askTopic = canAsk && !draft.asked.includes("topic");
+  if (!draft.title) return askTopic ? { ask: "topic", line: "askTopic" } : { reject: "unclear" };
+  if (!draft.titleSaid && askTopic) return { ask: "topic", line: "askTitle" };
+  if (!draft.speaker && canAsk && !draft.asked.includes("name")) return { ask: "name", line: "askName" };
   return { place: true };
 }
 
 /**
  * An answer fills what was asked (a topic answer may also bring the
- * description, and anyone may say their name); it never overwrites what the
- * pitch already said.
+ * description, and anyone may say who gives the talk); it never overwrites
+ * what the pitch already said — a title the model put together is not that.
  */
 export function mergeAnswer(draft: PitchDraft, field: PitchField, answer: PitchAnswer | null): PitchDraft {
   const next: PitchDraft = { ...draft, asked: [...draft.asked, field] };
   if (!answer) return next;
   next.appropriate = draft.appropriate && answer.appropriate;
   if (field === "topic") {
-    next.title ??= clean(answer.title);
+    if (!draft.title || !draft.titleSaid) next.title = clean(answer.title) ?? draft.title;
     next.description ??= clean(answer.description);
   }
-  next.speaker ??= clean(answer.speaker);
+  const speaker = clean(answer.speaker);
+  if (!draft.speaker && speaker) {
+    next.speaker = speaker;
+    next.nominated = answer.nominated;
+  }
   return next;
 }
 
@@ -216,9 +233,9 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
         return this.tell(run, step.reject);
       }
       if ("place" in step) break;
-      run = await this.ask(run, step.ask);
+      run = await this.ask(run, step);
       if (signal.aborted) return;
-      const answer = run ? await this.hear(run, step.ask) : null;
+      const answer = run ? await this.hear(run, step) : null;
       if (signal.aborted) return;
       this.draft = mergeAnswer(this.draft, step.ask, answer);
       this.checkDuplicate();
@@ -227,14 +244,14 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
   }
 
   /** Says the question in `run`, then waits for the board to open its mic for the answer. */
-  private async ask(run: R | null, field: PitchField): Promise<R | null> {
+  private async ask(run: R | null, { ask: field, line }: PitchQuestion): Promise<R | null> {
     const answered = new Promise<R | null>((resolve) => (this.waiting = { field, resolve }));
-    await this.port.say(this.live(run), QUESTION[field]);
+    await this.port.say(this.live(run), line);
     if (this.abort.signal.aborted || this.detached) {
       this.resolveWaiting(null);
       return null;
     }
-    this.port.log.info(`pitch: falta ${field === "topic" ? "el tema" : "el nombre"}; pregunto`);
+    this.port.log.info(`pitch: pregunto «${PITCH_LINES[line]}»`);
     this.port.prompt(field);
     const timer = setTimeout(() => {
       if (this.resolveWaiting(null)) this.port.log.warn("pitch: el dispositivo no abrió el micrófono para la respuesta");
@@ -246,7 +263,7 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
   }
 
   /** The answer, understood (null: nobody answered, it was noise, or the model failed — the field stays empty). */
-  private async hear(run: R, field: PitchField): Promise<PitchAnswer | null> {
+  private async hear(run: R, { ask: field, line }: PitchQuestion): Promise<PitchAnswer | null> {
     const wav = await run.done;
     if (!wav || this.abort.signal.aborted || !this.draft) return null;
     if (run.recorder.speechMs < run.recorder.limits.minSpeechMs) {
@@ -256,7 +273,7 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
     try {
       const answer = await this.port.extract.answer(
         wav,
-        { field, question: PITCH_LINES[QUESTION[field]], transcript: this.draft.transcript },
+        { field, question: PITCH_LINES[line], transcript: this.draft.transcript },
         this.abort.signal
       );
       this.port.log.info(`pitch: respuesta (${field}) → ${JSON.stringify(answer)}`);
@@ -293,7 +310,7 @@ export class PitchFlow<R extends PitchRecording = PitchRecording> {
     if (this.detached) return;
     this.port.showCard(placed);
     const extra = this.port.voice() === "react" ? draft.reaction : null;
-    await this.port.announce(this.live(run), `${announcementText(placed)}${extra ? ` ${extra}` : ""}`);
+    await this.port.announce(this.live(run), `${announcementText(placed, draft.nominated)}${extra ? ` ${extra}` : ""}`);
   }
 
   /** Is this talk already on the board? Asked once, as soon as there is a title to compare. */

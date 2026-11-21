@@ -22,12 +22,12 @@ function mediaTypeFor(path: string): string {
 
 export default defineTool({
   description:
-    "SOLO STAFF: digitaliza la foto de una card física del open space (post-it/pizarra). Lee la imagen adjunta al mensaje (queda en /workspace/attachments/...), extrae título/speaker/requisitos con el OCR del sitio y sugiere sala+horario libre según la grilla actual. NO crea la card: mostrale el resultado al staff, confirmá, y recién ahí usá create_track.",
+    "SOLO STAFF: digitaliza la foto de una card física del open space (post-it/pizarra). Lee la imagen adjunta al mensaje (queda en /workspace/.eve/attachments/...), extrae título/speaker/requisitos con el OCR del sitio y sugiere sala+horario libre según la grilla actual. NO crea la card: mostrale el resultado al staff, confirmá, y recién ahí usá create_track.",
   inputSchema: z.object({
     imagePath: z
       .string()
       .min(1)
-      .describe("Ruta de la foto en el sandbox, ej: /workspace/attachments/foto.jpg (aparece en el mensaje adjunto)"),
+      .describe("Ruta de la foto en el sandbox, ej: /workspace/.eve/attachments/<hash>/foto.jpg (aparece en el mensaje adjunto)"),
     additionalContext: z
       .string()
       .optional()
@@ -40,7 +40,7 @@ export default defineTool({
     const bytes = await sandbox.readBinaryFile({ path: imagePath });
     if (!bytes) {
       throw new Error(
-        `No encontré la imagen en "${imagePath}". Las fotos adjuntas quedan en /workspace/attachments/ — verificá la ruta con list_files.`
+        `No encontré la imagen en "${imagePath}". Las fotos adjuntas quedan en /workspace/.eve/attachments/ — buscá la ruta con glob.`
       );
     }
     if (bytes.byteLength > MAX_IMAGE_BYTES) {

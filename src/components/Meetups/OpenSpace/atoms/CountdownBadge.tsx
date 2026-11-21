@@ -2,6 +2,7 @@
 
 import * as React from "react";
 
+import { readableOn } from "lib/rooms/palette";
 import { formatCountdown } from "lib/utils";
 
 interface CountdownBadgeProps {
@@ -10,7 +11,8 @@ interface CountdownBadgeProps {
 }
 
 /**
- * Displays the remaining time ("04:59", "1:30:00" past an hour) with a colored border
+ * Displays the remaining time ("04:59", "1:30:00" past an hour) with a colored border.
+ * The digits take the colour too, except on a dark one (Ventana's blue), where they go white like the header title.
  */
 export const CountdownBadge = React.memo(({ seconds, color }: CountdownBadgeProps) => {
   return (
@@ -20,7 +22,7 @@ export const CountdownBadge = React.memo(({ seconds, color }: CountdownBadgeProp
     >
       <span
         className="text-center font-terminal text-3xl font-bold tabular-nums transition-colors duration-300 sm:text-4xl md:text-5xl lg:text-6xl xl:text-[64px]"
-        style={{ color }}
+        style={{ color: readableOn(color) === "#FFFFFF" ? "#FFFFFF" : color }}
       >
         {formatCountdown(seconds)}
       </span>

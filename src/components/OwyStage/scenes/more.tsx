@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { EASE_OUT } from "app/conf/components/Reveal";
 import { TEAM_2026 } from "app/conf/components/Team";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type Room, type Schedule, type StickyNote } from "lib/orpc";
+import type { Schedule } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
+import { RoomMark } from "lib/rooms/icons";
 import { roomColorFor } from "lib/rooms/palette";
 
 import { Confetti } from "../effects";
 import { Ambient, BRAND, Flag, H, StageContext, W, useStageFrame } from "../Stage";
+import { useBoard } from "../board";
 import { DATE_LABEL, LogoReveal, MOMENT_PHOTOS, Rise, SponsorRow, nowHHMM } from "./parts";
 
 // ---------------------------------------------------------------------------
@@ -23,30 +23,13 @@ const AGENDA_ROWS = 3;
 
 export function Agenda({ params, eventId }: SceneProps<"agenda">) {
   const { preview } = useContext(StageContext);
-  const [data, setData] = useState<{ rooms: Room[]; schedules: Schedule[]; tracks: StickyNote[] } | null>(null);
+  // Any board change (admin, kiosk, Owy) reaches the grid live.
+  const data = useBoard(eventId, preview);
   const [now, setNow] = useState(nowHHMM);
-
-  const load = useCallback(() => {
-    if (!eventId) return;
-    Promise.all([
-      client.rooms.getByOpenSpace({ openSpaceId: eventId }),
-      client.schedules.getByOpenSpace({ openSpaceId: eventId }),
-      client.tracks.list({ openSpaceId: eventId }),
-    ])
-      .then(([rooms, schedules, tracks]) => setData({ rooms, schedules, tracks }))
-      .catch((error) => console.error("[stage] agenda", error));
-  }, [eventId]);
-
   useEffect(() => {
-    load();
     const id = setInterval(() => setNow(nowHHMM()), 15_000);
     return () => clearInterval(id);
-  }, [load]);
-
-  // Any board change (admin, kiosk, Owy) re-reads the grid.
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change" || event === "structure_change") load();
-  });
+  }, []);
 
   const view = useMemo(() => {
     if (!data) return null;
@@ -105,10 +88,7 @@ export function Agenda({ params, eventId }: SceneProps<"agenda">) {
         <div />
         {view.rooms.map((room) => (
           <div key={room.id} className="flex items-center gap-3 pb-2 text-[26px] font-bold tracking-[0.06em] uppercase">
-            <span
-              className="h-[18px] w-[18px] shrink-0 rounded-full"
-              style={{ background: roomColorFor(room.id, room.color) }}
-            />
+            <RoomMark className="h-[22px] w-[22px]" color={roomColorFor(room.id, room.color)} icon={room.icon} />
             <span className="truncate">{room.name}</span>
           </div>
         ))}
@@ -520,6 +500,43 @@ export function Team() {
             </div>
           ))}
         </div>
+      </div>
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// TeamWall — every organizer at once, the group photo
+// ---------------------------------------------------------------------------
+
+export function TeamWall({ params }: SceneProps<"team-wall">) {
+  return (
+    <>
+      {/* No Ambient: every portrait already carries its own brand shape */}
+      <div className="absolute inset-x-0 top-[80px] text-center">
+        <Rise className="text-[96px] leading-none font-extrabold tracking-[-0.02em] uppercase" delay={0.05}>
+          {params.title}
+        </Rise>
+      </div>
+      {/* Five to a row (1480 px fits five 280 px tiles, not six): the ten of 2026 sit 5 + 5 */}
+      <div className="absolute inset-x-[220px] top-[236px] flex flex-wrap justify-center gap-x-[16px] gap-y-[28px]">
+        {TEAM_2026.map((member, i) => (
+          <m.div
+            key={member.picture}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-[280px] text-center"
+            initial={{ opacity: 0, scale: 0.85, y: 30 }}
+            transition={{ duration: 0.6, delay: 0.25 + i * 0.07, ease: EASE_OUT }}
+          >
+            <img alt="" className="h-[280px] w-[280px] object-contain" src={member.picture} />
+            <p className="mt-3 text-[30px] leading-none font-extrabold tracking-[0.02em] text-[#F5BB03] uppercase">
+              {member.firstname}
+            </p>
+            <p className="mt-2 text-[24px] leading-none font-semibold tracking-[0.06em] text-[#FBF5E7]/80 uppercase">
+              {member.lastname}
+            </p>
+          </m.div>
+        ))}
       </div>
     </>
   );

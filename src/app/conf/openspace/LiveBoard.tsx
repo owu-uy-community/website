@@ -10,13 +10,12 @@ import { RoomStatusBadge } from "components/Meetups/OpenSpace/atoms/RoomStatusBa
 import { useCountdownState } from "hooks/useCountdownState";
 import { useFullscreen } from "hooks/useFullscreen";
 import { useMounted } from "hooks/useMounted";
-import { useOpenSpaceNotesORPC } from "hooks/useOpenSpaceNotesORPC";
-import { useOpenSpaceSetup } from "hooks/useOpenSpaceSetup";
 import { useWakeLock } from "hooks/useWakeLock";
 import { INTERNAL_ROUTES } from "app/lib/constants";
 import type { Room, Schedule, StickyNote } from "lib/orpc";
 import { resolveNowNext } from "lib/openspace/now-next";
 import { matchTrack, tagsOf, type TrackTags } from "lib/openspace/topics";
+import { RoomMark } from "lib/rooms/icons";
 
 import { TALKS } from "../talks";
 import Announcements from "./Announcements";
@@ -30,6 +29,7 @@ import { buildBoardRooms, trackAt, type BoardRoom } from "./board";
 import { dayState } from "./phase";
 import type { Selection } from "./selection";
 import { useInterests } from "./use-interests";
+import { usePublicBoard } from "./use-public-board";
 
 type LiveBoardProps = {
   eventId: string;
@@ -45,8 +45,6 @@ type LiveBoardProps = {
 
 /** In a block's last five minutes the question is «¿y después?»: Próximo goes first. */
 const LAST_MINUTES_S = 5 * 60;
-/** Rooms and slots also refetch on a slow timer: a phone that slept may have missed a ping. */
-const REFETCH_MS = 60_000;
 
 function clock(seconds: number): string {
   const total = Math.max(0, Math.floor(seconds));
@@ -60,9 +58,9 @@ const label = "font-display text-xs leading-none font-semibold tracking-[0.18em]
 const panel = "border border-[#FBF5E7]/12 bg-[#FBF5E7]/[0.02]";
 
 /**
- * conf.owu.uy/openspace on the day. The server hands over a snapshot; from then on the kiosk's
- * own hooks keep it current (card changes apply as they arrive, room and slot changes refetch),
- * and the clock runs here, so the countdowns keep going if the socket drops.
+ * conf.owu.uy/openspace on the day. The server hands over a snapshot; from then on the WebSocket
+ * keeps it current (usePublicBoard: card changes apply as they arrive, room and slot changes re-read
+ * the cached board), and the clock runs here, so the countdowns keep going if the socket drops.
  *
  * What leads changes with the afternoon (phase.ts): the countdown to the mercado, the grid
  * filling up while it runs, «what's on now and where» during the sessions, the full grid after.
@@ -76,17 +74,13 @@ export default function LiveBoard({
   initialNotes,
   shareUrl,
 }: LiveBoardProps) {
-  const { roomsData, schedulesData } = useOpenSpaceSetup(eventId, {
-    initialRooms,
-    initialSchedules,
-    refetchInterval: REFETCH_MS,
-    hideInactiveRooms: true,
-  });
-  const { notes, isConnected, recentlyUpdatedIds } = useOpenSpaceNotesORPC({
-    openSpaceId: eventId,
-    initialData: initialNotes,
-    refetchInterval: REFETCH_MS,
-  });
+  const {
+    rooms: roomsData,
+    schedules: schedulesData,
+    tracks: notes,
+    isConnected,
+    pulsing: recentlyUpdatedIds,
+  } = usePublicBoard(eventId, { rooms: initialRooms, schedules: initialSchedules, tracks: initialNotes });
   const { state: countdown } = useCountdownState({ eventId, enableRealtime: true });
   const { interests, ready, save, clear } = useInterests();
   const mounted = useMounted();
@@ -104,7 +98,8 @@ export default function LiveBoard({
   const [lastSync, setLastSync] = useState(at);
   useEffect(() => setLastSync(Date.now()), [notes, roomsData, schedulesData]);
 
-  const rooms = useMemo(() => buildBoardRooms(roomsData), [roomsData]);
+  // A room switched off leaves the public board
+  const rooms = useMemo(() => buildBoardRooms(roomsData.filter((room) => room.isActive)), [roomsData]);
   const blocks = useMemo(() => schedulesData.filter((schedule) => schedule.isActive), [schedulesData]);
   const nowNext = useMemo(() => resolveNowNext(blocks, timezone, new Date(now)), [blocks, timezone, now]);
   const day = useMemo(() => dayState(blocks, timezone, new Date(now)), [blocks, timezone, now]);
@@ -568,11 +563,7 @@ function NowAndNext({
                   type="button"
                   onClick={() => current && onSelect({ roomId: room.id, scheduleId: current.id })}
                 >
-                  <span
-                    aria-hidden="true"
-                    className="mt-1.5 h-2.5 w-2.5 shrink-0 rotate-45"
-                    style={{ backgroundColor: room.color }}
-                  />
+                  <RoomMark className="mt-1 h-3 w-3" color={room.color} icon={room.icon} />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-display text-[11px] leading-none font-bold tracking-[0.14em] text-[#FBF5E7]/75 uppercase">
@@ -616,11 +607,7 @@ function NowAndNext({
                 type="button"
                 onClick={() => onSelect({ roomId: room.id, scheduleId: next.id })}
               >
-                <span
-                  aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rotate-45"
-                  style={{ backgroundColor: room.color }}
-                />
+                <RoomMark className="h-2.5 w-2.5" color={room.color} icon={room.icon} />
                 <span className="w-20 shrink-0 truncate font-display text-[10px] font-bold tracking-[0.12em] text-[#FBF5E7]/70 uppercase">
                   {room.name}
                 </span>
