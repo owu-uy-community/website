@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
   // into. Partial Prefetching: links prefetch one App Shell per route instead of one per link.
   cacheComponents: true,
   partialPrefetching: true,
+  // Bots on this list skip the cached page for a fresh render with metadata in <head>. Next's
+  // default list also names the search crawlers (Bingbot, Applebot, Yandex…), so each of their
+  // requests ran a function; prerendered pages already carry their metadata in <head>, and
+  // Googlebot was never on the list. Only link previews (which can't run scripts) keep it.
+  htmlLimitedBots:
+    /facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|TelegramBot|SkypeUriPreview|redditbot|vkShare|quora link preview|bitlybot|tumblr|BingPreview/i,
   images: {
     // AVIF first (~20% smaller than WebP) for browsers that take it
     formats: ["image/avif", "image/webp"],

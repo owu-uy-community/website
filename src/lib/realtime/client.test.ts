@@ -209,6 +209,56 @@ describe("the realtime client's reconnect", () => {
     expect(FakeSocket.made).toHaveLength(2);
   });
 
+  test("a tab hidden 5 minutes lets its socket go, queues publishes, and dials again when shown", async () => {
+    const client = await connect();
+    Object.assign(window, { location: { pathname: "/admin/agenda" } });
+    client.subscribe("presence", () => undefined);
+    FakeSocket.made[0]?.open();
+    const hide = (state: "hidden" | "visible") => {
+      Object.assign(document, { visibilityState: state });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+
+    // A glance at another tab: kept
+    hide("hidden");
+    await vi.advanceTimersByTimeAsync(60_000);
+    hide("visible");
+    expect(FakeSocket.made).toHaveLength(1);
+
+    // Left in the background: closed, and nothing redials it, not even a publish or the network
+    // (the sockets made meanwhile are rotations that never opened)
+    hide("hidden");
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    expect(FakeSocket.made.every((socket) => socket.readyState === 3)).toBe(true);
+    expect(client.getStatus()).toBe("closed");
+    const made = FakeSocket.made.length;
+    client.publish("presence", "here", 1);
+    window.dispatchEvent(new Event("online"));
+    await vi.advanceTimersByTimeAsync(60 * 60_000);
+    expect(FakeSocket.made).toHaveLength(made);
+
+    // Shown: a new socket at once, with the channel and the held publish
+    hide("visible");
+    await vi.advanceTimersByTimeAsync(0);
+    FakeSocket.made[made]?.open();
+    expect(FakeSocket.made[made]?.sent.slice(0, 2)).toStrictEqual([
+      { t: "sub", ch: "presence" },
+      { t: "pub", ch: "presence", ev: "here", pl: 1, sid: client.senderId },
+    ]);
+  });
+
+  test("the stage and the venue's screens never sleep", async () => {
+    const client = await connect();
+    Object.assign(window, { location: { pathname: "/admin/owy/scenes" } });
+    client.subscribe("owy-stage", () => undefined);
+    FakeSocket.made[0]?.open();
+    Object.assign(document, { visibilityState: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(FakeSocket.made[0]?.closedWith).toBeUndefined();
+    expect(client.getStatus()).toBe("open");
+  });
+
   test("while down only publishes wait, the newest 100; channels are subscribed from the handlers", async () => {
     const client = await connect();
     const off = client.subscribe("a", () => undefined);

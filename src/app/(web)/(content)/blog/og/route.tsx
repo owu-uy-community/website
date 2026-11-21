@@ -137,6 +137,8 @@ export async function GET(request: Request) {
         { name: "Poppins", data: bold, weight: 700 },
         { name: "Poppins", data: medium, weight: 500 },
       ],
+      // The CDN keeps each card (one per query string); max-age alone left every request to the function
+      headers: { "Cache-Control": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=86400" },
     }
   );
 }
