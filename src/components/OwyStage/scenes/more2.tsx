@@ -9,7 +9,7 @@ import type { StageSpeaker } from "lib/orpc/owy-stage/schemas";
 import type { SpotifyTrack } from "lib/owy-stage/spotify";
 import type { SceneProps } from "lib/owy-stage/scenes";
 import { roomIconFor } from "lib/rooms/icons";
-import { roomColorFor } from "lib/rooms/palette";
+import { readableFill, roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Ambient, BRAND, StageContext, useStageFrame } from "../Stage";
@@ -89,9 +89,9 @@ export function RoomCards({ eventId }: SceneProps<"room-cards">) {
             <m.li
               key={room.id}
               animate={{ opacity: 1, y: 0 }}
-              className="flex min-h-[250px] flex-col justify-between p-7 text-black"
+              className="flex min-h-[250px] flex-col justify-between p-7"
               initial={{ opacity: 0, y: 30 }}
-              style={{ background: color }}
+              style={readableFill(color)}
               transition={{ duration: 0.5, delay: 0.3 + i * 0.1, ease: EASE_OUT }}
             >
               <div className="flex items-start justify-between">
@@ -99,7 +99,7 @@ export function RoomCards({ eventId }: SceneProps<"room-cards">) {
                 {Icon && <Icon className="h-[56px] w-[56px] shrink-0" strokeWidth={2.5} />}
               </div>
               {room.description && (
-                <p className="mt-3 line-clamp-2 text-[24px] leading-[1.2] text-black/70">{room.description}</p>
+                <p className="mt-3 line-clamp-2 text-[24px] leading-[1.2] opacity-70">{room.description}</p>
               )}
               <div className="mt-4 flex flex-wrap gap-2 text-[22px] font-bold">
                 {room.capacity && <span className="bg-black/15 px-3 py-1">👥 {room.capacity}</span>}

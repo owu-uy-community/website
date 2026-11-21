@@ -7,8 +7,9 @@ import { EASE_OUT } from "app/conf/components/Reveal";
 import type { SceneProps } from "lib/owy-stage/scenes";
 
 import { Confetti } from "../effects";
+import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Caption, H, StageContext, W, useStageFrame } from "../Stage";
-import { HAPPY_MS, drawFace, initialSim } from "./OwyFace";
+import { WALL_FACE } from "./OwyFace";
 import { MOMENT_PHOTOS, Rise } from "./parts";
 import { useNow } from "./useful";
 
@@ -197,23 +198,21 @@ export function Lineup({ params }: SceneProps<"lineup">) {
 
 export function OwySays({ params }: SceneProps<"owy-says">) {
   const { preview } = useContext(StageContext);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef(initialSim());
+  const face = useRef<FaceApi>(null);
   const [caption, setCaption] = useState<string | null>(preview ? params.text : null);
 
   useEffect(() => {
     if (preview) return;
-    const s = sim.current;
-    s.mood = "thinking";
+    face.current?.state("thinking");
     const timers = [
       setTimeout(() => {
-        s.mood = "speaking";
+        face.current?.state("speaking");
         setCaption(params.text);
       }, 900),
       setTimeout(
         () => {
-          s.mood = "idle";
-          s.happyUntil = s.now + HAPPY_MS;
+          face.current?.state("idle");
+          face.current?.smile();
         },
         900 + 1200 + params.text.length * 55
       ),
@@ -221,15 +220,10 @@ export function OwySays({ params }: SceneProps<"owy-says">) {
     return () => timers.forEach(clearTimeout);
   }, [params.text, preview]);
 
-  useStageFrame((t, dt) => {
-    const ctx = canvas.current?.getContext("2d");
-    if (ctx) drawFace(ctx, sim.current, t, dt);
-  });
-
   return (
     <>
       <Ambient />
-      <canvas ref={canvas} className="absolute inset-0" height={H} width={W} />
+      <OwyFace ref={face} {...WALL_FACE} />
       <AnimatePresence>{caption && <Caption key={caption} text={caption} />}</AnimatePresence>
     </>
   );

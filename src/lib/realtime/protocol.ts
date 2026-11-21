@@ -10,7 +10,9 @@ export type ClientFrame =
   | { t: "ping" };
 
 export type ServerFrame =
-  | { t: "msg"; ch: string; ev: string; pl: unknown; sid?: string }
+  // `id`: one per published message, the same on every socket, so a client rotating its socket
+  // delivers it once. An older server sends none.
+  | { t: "msg"; ch: string; ev: string; pl: unknown; sid?: string; id?: string }
   | { t: "ok"; ch: string }
   | { t: "err"; msg: string; ch?: string }
   | { t: "pong" };

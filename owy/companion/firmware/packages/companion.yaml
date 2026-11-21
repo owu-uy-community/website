@@ -1,7 +1,8 @@
-# Local personality, deliberate input, quick controls. No new audio owner.
-# Board hardware (IMU, PMIC/battery → power_status) lives in packages/boards/*.
+# Local personality, deliberate input, quick controls. The board has no audio
+# and no motion sensor: its hardware (panel, touch, knob, haptics) lives in
+# packages/boards/*; what Owy says and hears lives on the Mac (the bridge).
 
-# Page geometry for the 466 px panel; a smaller board overrides these in its root.
+# Page geometry for the 466 px panel; the knob overrides these in its root.
 substitutions:
   tile_w: "136"        # quick-settings tiles, two per row
   tile_h: "112"
@@ -13,25 +14,10 @@ substitutions:
   row_step: "124"      # tile_h + tile_gap
   pill_w: "148"
   pill_h: "44"
-  level_px: "150"      # calibration bubble level
-  level_inner: "80"
-  level_y: "-40"        # bubble level centre
-  bubble_px: "30"
-  calib_status_y: "76"
-  calib_bar_y: "118"
-  calib_btn_w: "100"
-  calib_btn_x: "54"
   help_w: "340"
   help_h: "290"
-  # Speaker chunks reach the ear one DMA queue later (5 × 10 ms) plus the
-  # chunk itself: stamp lip shapes that far ahead. Tune by eye on hardware.
-  speaker_latency_ms: "60"
 
 globals:
-  - id: saved_motion_calibration
-    type: std::array<float, 7>
-    restore_value: true
-    initial_value: '{0, 0, 0, 0, 0, 0, 1}'
   - id: companion
     type: owy::Companion
     restore_value: false
@@ -71,8 +57,8 @@ esphome:
     - priority: -90
       then:
         - script.execute: wake_display
-    # After LVGL built the pages: the rim, render timing, the speaker tap and
-    # the boot wordmark (the eyes stay shut until it leaves, then open).
+    # After LVGL built the pages: the rim, render timing and the boot wordmark
+    # (the eyes stay shut until it leaves, then open).
     - priority: -100
       then:
         - lambda: |-
@@ -85,21 +71,13 @@ esphome:
               id(render_us_sum) += us; ++id(render_count);
               if (us > id(render_us_max)) id(render_us_max) = us;
             }, LV_EVENT_RENDER_READY, nullptr);
-            // Lips follow the audio actually leaving the speaker (see components/README.md).
-            esphome::i2s_audio::I2SAudioSpeakerBase::set_pcm_tap(+[](const uint8_t *data, size_t bytes, uint8_t channels) {
-              static owy::SpeechAnalyzer analyzer;
-              analyzer.feed(data, bytes, channels, millis() + ${speaker_latency_ms}, id(companion).speech_tap);
-            });
             id(companion).wake_at(millis() + 1600);
         - delay: 1400ms
         - lvgl.widget.hide: boot_logo
 
 switch:
-  - platform: template
-    id: interaction_sounds
-    name: Interaction Sounds
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_ON
+  # "Pausa": Owy ignores taps (the bridge sees the switch and stops listening too).
+  # The entity keeps its original name: the bridge's registry maps it.
   - platform: template
     id: mic_privacy
     name: Microphone Privacy
@@ -107,30 +85,12 @@ switch:
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
-      - script.execute: cancel_turn
-      - script.execute: apply_face
+      - script.execute: animate_companion
     on_turn_off:
-      - script.execute: resume_wake_word
-  - platform: template
-    id: motion_follow
-    name: Motion Face
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_ON
+      - script.execute: animate_companion
   - platform: template
     id: reduced_motion
     name: Reduced Motion
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_OFF
-  - platform: template
-    id: motion_invert_x
-    name: Motion Reverse X
-    entity_category: config
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_OFF
-  - platform: template
-    id: motion_invert_y
-    name: Motion Reverse Y
-    entity_category: config
     optimistic: true
     restore_mode: RESTORE_DEFAULT_OFF
 
@@ -156,26 +116,9 @@ number:
 
 button:
   - platform: template
-    name: Calibrate Motion
-    on_press:
-      - script.execute: start_motion_calibration
-  - platform: template
-    name: Cancel Motion Calibration
-    on_press:
-      - script.execute: open_quick_controls
-  - platform: template
-    name: Center Motion Face
-    on_press:
-      - lambda: id(companion).center();
-  - platform: template
     name: Smile
     on_press:
       - lambda: id(companion).delight(millis());
-  - platform: template
-    name: Companion Sound
-    entity_category: diagnostic
-    on_press:
-      - script.execute: play_companion_feedback
   - platform: template
     name: Quick Controls
     on_press:
@@ -185,37 +128,8 @@ button:
     on_press:
       - script.execute: companion_home
 
-binary_sensor:
-  - platform: template
-    name: Motion Sensor Ready
-    id: motion_sensor_ready
-    entity_category: diagnostic
-    lambda: return id(companion).motion_ok(millis());
-
 sensor:
-  - platform: template
-    name: Motion Poll Rate
-    entity_category: diagnostic
-    unit_of_measurement: Hz
-    accuracy_decimals: 1
-    update_interval: 5s
-    lambda: return id(companion).tracker.cadence.read(millis());
-  - platform: template
-    name: Motion Maximum Gap
-    entity_category: diagnostic
-    unit_of_measurement: ms
-    accuracy_decimals: 0
-    update_interval: 5s
-    lambda: return id(companion).tracker.cadence.take_gap();
-  - platform: template
-    name: Animation Tick Rate
-    entity_category: diagnostic
-    unit_of_measurement: Hz
-    accuracy_decimals: 1
-    update_interval: 5s
-    lambda: return id(companion).animation_cadence.read(millis());
-  # LVGL render time per refresh (RENDER_START → RENDER_READY on the main loop
-  # that also feeds the speaker): mean and worst over the last 5 s.
+  # LVGL render time per refresh (RENDER_START → RENDER_READY): mean and worst over the last 5 s.
   - platform: template
     name: Render Time
     id: render_time
@@ -256,20 +170,6 @@ sensor:
 
 text_sensor:
   - platform: template
-    name: Saved Motion Calibration
-    entity_category: diagnostic
-    update_interval: 10s
-    lambda: |-
-      const auto &s=id(saved_motion_calibration);
-      char text[160];
-      snprintf(text,sizeof(text),"v%d bias %.4f %.4f %.4f neutral %.4f %.4f %.4f",int(s[0]),s[1],s[2],s[3],s[4],s[5],s[6]);
-      return std::string(text);
-  - platform: template
-    name: Motion Calibration
-    entity_category: diagnostic
-    update_interval: 250ms
-    lambda: return std::string(id(companion).tracker.calibration_name());
-  - platform: template
     id: last_gesture
     name: Last Gesture
     entity_category: diagnostic
@@ -284,7 +184,6 @@ text_sensor:
       if (page == id(face_page)->obj) return {"face"};
       if (page == id(quick_page)->obj) return {"controls"};
       if (page == id(help_page)->obj) return {"help"};
-      if (page == id(calibration_page)->obj) return {"calibration"};
       if (page == id(pin_page)->obj) return {"pin"};
       if (page == id(settings_page)->obj) return {"staff"};
       if (page == id(qr_page)->obj) return {"qr"};
@@ -293,6 +192,23 @@ text_sensor:
       return {"unknown"};
 
 script:
+  # A tap on the face: the bridge takes it from here (it opens the Mac's mic, or
+  # stops what Owy is saying). In pausa a tap opens the settings instead.
+  - id: tap_to_talk
+    mode: single
+    then:
+      - if:
+          condition:
+            lambda: return id(mic_privacy).state;
+          then:
+            - script.execute: open_quick_controls
+          else:
+            - script.execute: wake_display
+            - lambda: id(tap_count)++;
+            - sensor.template.publish:
+                id: taps
+                state: !lambda return id(tap_count);
+
   - id: wake_display
     mode: restart
     then:
@@ -305,7 +221,7 @@ script:
                 id: screen_light
                 brightness: !lambda return id(screen_brightness).state / 100.0f;
       - lambda: id(display_dimmed) = false;
-      # Asleep: the lids stay shut a beat, then spring open (a stretch).
+      # Asleep: the lids stay shut a beat, then spring open (a stretch) on the bridge's face.
       - if:
           condition:
             lambda: return id(face_sleeping);
@@ -314,7 +230,9 @@ script:
             - lambda: |-
                 id(face_sleeping) = false;
                 id(companion).wake_at(millis() + 250);
-            - script.execute: apply_face
+            - script.execute:
+                id: show_face
+                state: !lambda return std::string(id(face_state).current_option().c_str());
 
   - id: animate_companion
     mode: single
@@ -337,9 +255,7 @@ script:
           if (id(mic_privacy).state) mood = owy::Mood::PRIVACY;
           // Every page shares one frame (the knob's answer view mirrors it).
           auto &frame = id(face_frame);
-          frame = id(companion).frame(now, mood, id(motion_follow).state,
-              id(reduced_motion).state || id(audio_recovering), id(motion_invert_x).state,
-              id(motion_invert_y).state, 0);
+          frame = id(companion).frame(now, mood, id(reduced_motion).state, 0);
           const bool on_face = lv_display_get_screen_active(id(ui).get_disp()) == id(face_page)->obj;
           const bool overlay = int32_t(id(overlay_until) - now) > 0;
           id(face_ring).apply(overlay ? owy::ring_frame(owy::RingMode::LEVEL, now, id(overlay_level), 0, 0)
@@ -361,8 +277,7 @@ script:
           id(face_renderer).render(frame, objects);
 
   # What the face says under the mouth: rotating idle hints (attract mode),
-  # or what went wrong. Hidden while a turn runs: the rim carries that —
-  # except a pitch, where the hint is the instruction ("tocá al terminar").
+  # or what went wrong. Hidden while a turn runs: the rim carries that.
   - id: sync_face_hint
     mode: single
     then:
@@ -373,19 +288,12 @@ script:
           const bool overlay = int32_t(id(overlay_until) - now) > 0;
           const auto &state = id(current_face);
           const char *text = nullptr;
-          if (id(mic_privacy).state) text = "micrófono apagado · mantené: ajustes";
+          if (id(mic_privacy).state) text = "en pausa · mantené: ajustes";
           else if (state == "offline") text = "buscando a owy...";
-          else if (state == "error") text = "ups, me trabé · probá de nuevo";
-          else if (state == "record") text = id(pitch_name_step) ? "decime tu nombre · tocá al terminar" : "contá tu charla · tocá al terminar";
-          else if (state == "invite") text = "¿cómo te llamás? · tocá y decime";
-          else if (state == "thinking" && id(pitch_active)) text = "armando tu tarjeta...";
-          else if (state == "idle" && id(va_phase) == 1 && !id(turn_pending)) {
-            if (id(pitch_mode).state) text = "modo pitch · tocá y contá tu charla";
-            else {
-              const char *hints[] = {id(wake_word_enabled).state ? "decí okay nabu o tocame" : "tocame y hablame",
-                                     "¿buscás una charla?", "proponé tu tema"};
-              text = hints[(now / 4200) % (id(marketplace_open).state ? 3 : 2)];
-            }
+          else if (state == "error") text = "ups, me trabé · tocá para probar de nuevo";
+          else if (state == "idle") {
+            const char *hints[] = {"tocame y hablame", "¿buscás una charla?", "proponé tu tema"};
+            text = hints[(now / 4200) % 3];
           }
           if (text && strcmp(lv_label_get_text(id(face_hint)), text)) lv_label_set_text(id(face_hint), text);
           auto show = [](lv_obj_t *o, bool on) {
@@ -403,9 +311,7 @@ script:
       - script.stop: return_to_face_later
       - lambda: |-
           id(companion).contact.cancel();
-          id(companion).tracker.cancel_calibration();
-      - script.execute: resume_wake_word
-      - lambda: lv_obj_scroll_to_y(id(quick_list), 0, LV_ANIM_OFF);
+          lv_obj_scroll_to_y(id(quick_list), 0, LV_ANIM_OFF);
       - lvgl.page.show: quick_page
       - script.execute: sync_quick_controls
 
@@ -433,13 +339,10 @@ script:
   - id: companion_home
     mode: restart
     then:
-      - lambda: |-
-          id(companion).contact.cancel();
-          id(companion).tracker.cancel_calibration();
-      - script.execute: resume_wake_word
+      - lambda: id(companion).contact.cancel();
       - script.execute: wake_display
       - lvgl.page.show: face_page
-      - script.execute: apply_face
+      - script.execute: animate_companion
 
   # Tile values, plus blue = on for the toggles.
   - id: sync_quick_controls
@@ -455,77 +358,19 @@ script:
             if (!lv_color_eq(lv_obj_get_style_bg_color(button, LV_PART_MAIN), color))
               lv_obj_set_style_bg_color(button, color, LV_PART_MAIN);
           };
-          const bool connected = id(va).get_api_connection() != nullptr;
+          const bool connected = !(id(face_state).current_option() == "offline");
           std::string status = std::string(connected ? "owy conectado · " : "sin bridge · ") + id(power_status).state;
           if (strcmp(lv_label_get_text(id(quick_power)), status.c_str())) lv_label_set_text(id(quick_power), status.c_str());
-          tile(id(quick_mic), id(mic_privacy).state ? "apagado" : "encendido", !id(mic_privacy).state);
-          tile(id(quick_continue), id(continuous_conversation).state ? "continua" : "una vez", id(continuous_conversation).state);
-          tile(id(quick_chime), id(listening_chime).state ? "al escuchar" : "apagado", id(listening_chime).state);
-          tile(id(quick_sounds), id(interaction_sounds).state ? "al jugar" : "apagados", id(interaction_sounds).state);
-          tile(id(quick_mic_source), id(mic_source).current_option() == "laptop" ? "laptop" : "dispositivo", -1);
-          tile(id(quick_audio_output), id(audio_output).current_option() == "laptop" ? "laptop" : "dispositivo", -1);
-          tile(id(quick_motion), !id(companion).motion_ok(millis()) ? "sin sensor" : id(motion_follow).state ? "me sigue" : "quieto",
-               id(motion_follow).state && id(companion).motion_ok(millis()));
+          tile(id(quick_mic), id(mic_privacy).state ? "en pausa" : "activo", !id(mic_privacy).state);
           tile(id(quick_reduce), id(reduced_motion).state ? "mínimas" : "completas", !id(reduced_motion).state);
           char text[16];
-          snprintf(text, sizeof(text), "%d%%", int(id(volume).state));
-          tile(id(quick_volume), text, -1);
           snprintf(text, sizeof(text), "%d%%", int(id(screen_brightness).state));
           tile(id(quick_brightness), text, -1);
 
-  - id: start_motion_calibration
-    mode: restart
-    then:
-      - script.execute: cancel_turn
-      - script.execute: wake_display
-      - script.stop: return_to_face_later
-      - micro_wake_word.stop:
-      - lambda: |-
-          id(companion).contact.cancel();
-          id(companion).tracker.begin_calibration(millis());
-      - lvgl.page.show: calibration_page
-
-  - id: sync_motion_calibration
-    mode: single
-    then:
-      - lambda: |-
-          auto &tracker=id(companion).tracker;
-          const bool visible=lv_display_get_screen_active(id(ui).get_disp())==id(calibration_page)->obj;
-          if (!visible && tracker.calibrating()) { tracker.cancel_calibration(); id(resume_wake_word).execute(); }
-          const bool was_active=tracker.calibrating();
-          tracker.tick_calibration(millis());
-          using Cal=owy::MotionTracker::Calibration;
-          static bool saved=false;
-          if (tracker.calibrating()) saved=false;
-          if (tracker.calibration==Cal::SUCCESS && !saved) {
-            const auto bias=tracker.bias(), neutral=tracker.neutral();
-            id(saved_motion_calibration)={1,bias.x,bias.y,bias.z,neutral.x,neutral.y,neutral.z};
-            saved=true;
-            id(resume_wake_word).execute();
-          }
-          if (was_active && !tracker.calibrating()) id(resume_wake_word).execute();
-          if (!visible) return;
-          const char *message=tracker.calibration_message();
-          if (strcmp(lv_label_get_text(id(calibration_status)),message)) lv_label_set_text(id(calibration_status),message);
-          lv_bar_set_value(id(calibration_progress),tracker.calibration_progress(millis()),LV_ANIM_OFF);
-          // The bubble level: the real tilt, so "stay still" is something you can see.
-          const auto tilt = tracker.offset();
-          const int reach = (${level_px} - ${bubble_px}) / 2;
-          lv_obj_set_pos(id(calib_bubble), int(owy::bound(tilt.x * 4 * reach, -reach, reach)),
-                         int(owy::bound(-tilt.y * 4 * reach, -reach, reach)) + (${level_y}));
-
 interval:
-  - interval: 100ms
-    then:
-      - script.execute: sync_motion_calibration
   - interval: 16ms
     then:
-      - lambda: |-
-          // Target ~60Hz idle / ~30Hz voice, not a measured panel FPS claim.
-          static bool voice_frame = false;
-          voice_frame = !voice_frame;
-          if (id(va).is_running() && !voice_frame) return;
-          id(animate_companion).execute();
+      - script.execute: animate_companion
   - interval: 250ms
     then:
       - script.execute: sync_face_hint
@@ -606,47 +451,17 @@ lvgl:
                         text_font: font_icons
                         text_color: 0xFBF5E7
                     - label:
-                        text: "micrófono"
+                        text: "owy"
                         text_font: font_small
                         text_color: 0xFBF5E7
                     - label:
                         id: quick_mic
-                        text: "encendido"
+                        text: "activo"
                         text_font: font_small
                         text_color: 0xCFC8B8
                   on_click:
                     - switch.toggle: mic_privacy
                     - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E050"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "volumen"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_volume
-                        text: "80%"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - number.set:
-                        id: volume
-                        value: !lambda |-
-                          const float v = id(volume).state;
-                          return v >= 80 ? 0.0f : std::min(80.0f, std::floor(v / 20 + 1) * 20);
-                    - script.execute: show_volume
               - button:
                   styles: companion_tile
                   layout:
@@ -688,162 +503,6 @@ lvgl:
                     pad_row: 2
                   widgets:
                     - label:
-                        text: "\U0000E8AF"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "charla"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_continue
-                        text: "continua"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - switch.toggle: continuous_conversation
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E7F5"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "tono"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_chime
-                        text: "al escuchar"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - switch.toggle: listening_chime
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E405"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "sonidos"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_sounds
-                        text: "al jugar"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - switch.toggle: interaction_sounds
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E320"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "mic en"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_mic_source
-                        text: "dispositivo"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - select.next: mic_source
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E32D"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "audio en"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_audio_output
-                        text: "dispositivo"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - select.next: audio_output
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000F2D5"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "movimiento"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        id: quick_motion
-                        text: "me sigue"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - switch.toggle: motion_follow
-                    - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
                         text: "\U0000E71C"
                         text_font: font_icons
                         text_color: 0xFBF5E7
@@ -859,56 +518,6 @@ lvgl:
                   on_click:
                     - switch.toggle: reduced_motion
                     - script.execute: sync_quick_controls
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E3B4"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "calibrar"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "movimiento"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - script.stop: return_to_face_later
-                    - lvgl.page.show: calibration_page
-              - button:
-                  styles: companion_tile
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 2
-                  widgets:
-                    - label:
-                        text: "\U0000E3DC"
-                        text_font: font_icons
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "centrar"
-                        text_font: font_small
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "la mirada"
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                  on_click:
-                    - lambda: id(companion).center();
-                    - script.execute: companion_home
               - button:
                   styles: companion_tile
                   layout:
@@ -1023,98 +632,6 @@ lvgl:
             on_click:
               - script.execute: companion_home
 
-    # ── Calibrar: a bubble level that really reads the IMU ────────────────
-    - id: calibration_page
-      bg_color: 0x000000
-      widgets:
-        - label:
-            align: TOP_MID
-            y: 30
-            text: "calibrar"
-            text_font: font_brand
-            text_color: 0xF5BB03
-        - obj:
-            align: CENTER
-            y: ${level_y}
-            width: ${level_px}
-            height: ${level_px}
-            radius: 999
-            bg_opa: TRANSP
-            border_width: 2
-            border_color: 0x3A3A3A
-        - obj:
-            align: CENTER
-            y: ${level_y}
-            width: ${level_inner}
-            height: ${level_inner}
-            radius: 999
-            bg_opa: TRANSP
-            border_width: 2
-            border_color: 0x555555
-        - obj:
-            id: calib_bubble
-            align: CENTER
-            y: ${level_y}
-            width: ${bubble_px}
-            height: ${bubble_px}
-            radius: 999
-            bg_color: 0xF5BB03
-            border_width: 0
-        - label:
-            id: calibration_status
-            align: CENTER
-            y: ${calib_status_y}
-            width: ${help_w}
-            text_align: CENTER
-            long_mode: WRAP
-            text_font: font_small
-            text_color: 0xFBF5E7
-            text: "Apoyame en una superficie\nestable, mirando al frente.\nLuego tocá Comenzar."
-        - bar:
-            id: calibration_progress
-            align: CENTER
-            y: ${calib_bar_y}
-            width: ${level_px}
-            height: 8
-            value: 0
-            bg_color: 0x1F1F1F
-            indicator:
-              bg_color: 0x0162C8
-        - button:
-            align: BOTTOM_MID
-            x: -${calib_btn_x}
-            y: -26
-            width: ${calib_btn_w}
-            height: ${pill_h}
-            radius: 22
-            bg_color: 0x0162C8
-            shadow_width: 0
-            widgets:
-              - label:
-                  align: CENTER
-                  text: "medir"
-                  text_font: font_small
-                  text_color: 0xFBF5E7
-            on_click:
-              - script.execute: start_motion_calibration
-        - button:
-            align: BOTTOM_MID
-            x: ${calib_btn_x}
-            y: -26
-            width: ${calib_btn_w}
-            height: ${pill_h}
-            radius: 22
-            bg_color: 0x1F1F1F
-            shadow_width: 0
-            widgets:
-              - label:
-                  align: CENTER
-                  text: "volver"
-                  text_font: font_small
-                  text_color: 0xFBF5E7
-            on_click:
-              - script.execute: open_quick_controls
-
     # ── Cómo jugar: one gesture per card, swipe sideways ──────────────────
     - id: help_page
       bg_color: 0x000000
@@ -1165,7 +682,7 @@ lvgl:
                         text_font: font_small
                         text_color: 0xCFC8B8
                     - label:
-                        text: "1 / 5"
+                        text: "1 / 4"
                         text_font: font_small
                         text_color: 0x5D5A52
               - obj:
@@ -1197,39 +714,7 @@ lvgl:
                         text_font: font_small
                         text_color: 0xCFC8B8
                     - label:
-                        text: "2 / 5"
-                        text_font: font_small
-                        text_color: 0x5D5A52
-              - obj:
-                  width: ${help_w}
-                  height: 100%
-                  bg_opa: TRANSP
-                  border_width: 0
-                  pad_all: 0
-                  scrollable: false
-                  layout:
-                    type: flex
-                    flex_flow: COLUMN
-                    flex_align_main: CENTER
-                    flex_align_cross: CENTER
-                    flex_align_track: CENTER
-                    pad_row: 10
-                  widgets:
-                    - label:
-                        text: "\U0000E8AF"
-                        text_font: font_icons
-                        text_color: 0xF5BB03
-                    - label:
-                        text: "seguimos?"
-                        text_font: font_brand
-                        text_color: 0xFBF5E7
-                    - label:
-                        text: "después de responder te escucho\n8 segundos más: el aro azul\nse vacía mientras espero."
-                        text_align: CENTER
-                        text_font: font_small
-                        text_color: 0xCFC8B8
-                    - label:
-                        text: "3 / 5"
+                        text: "2 / 4"
                         text_font: font_small
                         text_color: 0x5D5A52
               - obj:
@@ -1261,7 +746,7 @@ lvgl:
                         text_font: font_small
                         text_color: 0xCFC8B8
                     - label:
-                        text: "4 / 5"
+                        text: "3 / 4"
                         text_font: font_small
                         text_color: 0x5D5A52
               - obj:
@@ -1293,7 +778,7 @@ lvgl:
                         text_font: font_small
                         text_color: 0xCFC8B8
                     - label:
-                        text: "5 / 5"
+                        text: "4 / 4"
                         text_font: font_small
                         text_color: 0x5D5A52
         - button:

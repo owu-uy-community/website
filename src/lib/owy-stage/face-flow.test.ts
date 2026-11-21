@@ -4,15 +4,24 @@ import type { StickyNote } from "../orpc/tracks/schemas";
 import {
   CARD_MS,
   DEDUPE_MS,
-  EXPRESSION_MS,
+  FACE_LOST_MS,
+  FACE_RESUME_MS,
   RECENT_CREATE_MS,
+  applyFaceEvent,
+  follow,
+  forget,
   initialFlow,
+  initialFollower,
+  lost,
+  release,
   nextTick,
+  parseLag,
   reduceFlow,
+  resumable,
   type CardChange,
   type Flow,
 } from "./face-flow";
-import type { FaceEvent } from "./scenes";
+import { FaceEventSchema, MouthEventSchema, type FaceEvent } from "./scenes";
 
 const T0 = 1_700_000_000_000;
 
@@ -81,7 +90,7 @@ describe("the Owy scene's flow", () => {
     expect(flow.landed?.key).toBe("Effect|Cueva|");
   });
 
-  test("going back to listening is a new turn: card, feeling and caption are gone", () => {
+  test("going back to listening is a new turn: card and caption are gone", () => {
     let flow = face(initialFlow(), {
       state: "speaking",
       expression: { name: "happy", strength: 90 },
@@ -96,7 +105,7 @@ describe("the Owy scene's flow", () => {
     flow = face(flow, { state: "listening", transcript: { who: "input", text: "Hola" } }, T0 + 600);
     flow = face(flow, { state: "listening", transcript: { who: "input", text: "Hola, soy" } }, T0 + 900);
 
-    expect(cleared).toMatchObject({ landed: null, expression: null, transcript: null });
+    expect(cleared).toMatchObject({ landed: null, transcript: null });
     expect(flow.transcript).toStrictEqual({ key: `input-${T0 + 600}`, who: "input", text: "Hola, soy" });
   });
 
@@ -131,18 +140,16 @@ describe("the Owy scene's flow", () => {
     expect(flow.landed).toMatchObject({ key: "Effect en producción|Cueva|15:00 - 15:45", at: T0, roomId: "r1" });
   });
 
-  test("a card and a feeling expire on the clock", () => {
+  test("a card expires on the clock; a feeling is the face's to keep", () => {
     let flow = face(initialFlow(), {
       state: "speaking",
       expression: { name: "surprised", strength: 70 },
       card: { title: "X" },
     });
-    expect(nextTick(flow)).toBe(T0 + EXPRESSION_MS);
-
-    flow = reduceFlow(flow, { type: "tick", now: T0 + EXPRESSION_MS });
-    expect(flow).toMatchObject({ expression: null, landed: { title: "X" } });
     expect(nextTick(flow)).toBe(T0 + CARD_MS);
 
+    flow = reduceFlow(flow, { type: "tick", now: T0 + CARD_MS - 1 });
+    expect(flow.landed).toMatchObject({ title: "X" });
     flow = reduceFlow(flow, { type: "tick", now: T0 + CARD_MS });
     expect(flow.landed).toBeNull();
     expect(nextTick(flow)).toBeNull();
@@ -155,5 +162,176 @@ describe("the Owy scene's flow", () => {
     expect(flow.transcript).not.toBeNull();
     flow = reduceFlow(flow, { type: "clear_transcript", key: `output-${T0}` });
     expect(flow.transcript).toBeNull();
+  });
+});
+
+describe("a face event on a face", () => {
+  const calls = (event: FaceEvent) => {
+    const log: unknown[][] = [];
+    applyFaceEvent(
+      {
+        state: (state) => log.push(["state", state]),
+        express: (name, strength, at) => log.push(["express", name, strength, at]),
+        smile: () => log.push(["smile"]),
+      },
+      event
+    );
+
+    return log;
+  };
+
+  test("the state, then the feeling on the word it belongs to", () => {
+    expect(calls({ state: "speaking", expression: { name: "curious", strength: 80, at: T0 + 400 } })).toStrictEqual([
+      ["state", "speaking"],
+      ["express", "curious", 80, T0 + 400],
+    ]);
+  });
+
+  test("a card is a smile, like the device after it shows one", () => {
+    expect(calls({ state: "happy", card: { title: "X" } })).toStrictEqual([["state", "happy"], ["smile"]]);
+  });
+
+  test("a feeling from an older bridge (no `at`) shows on arrival", () => {
+    const event = FaceEventSchema.parse({ state: "speaking", expression: { name: "happy" } });
+
+    expect(calls(event)).toStrictEqual([
+      ["state", "speaking"],
+      ["express", "happy", 100, undefined],
+    ]);
+  });
+});
+
+describe("a page follows one Owy", () => {
+  /** Feeds events in order; returns which ones counted. */
+  const run = (events: FaceEvent[], start = initialFollower()) => {
+    let follower = start;
+    const taken = events.map((event, i) => {
+      const next = follow(follower, event, T0 + i);
+      follower = next.follower;
+      return next.take;
+    });
+    return { taken, follower };
+  };
+
+  test("the source of the latest face that is not idle; another Owy's idle face doesn't count", () => {
+    const { taken, follower } = run([
+      { state: "listening", source: "owy-knob" },
+      { state: "idle", source: "web:abc" },
+      { state: "speaking", source: "web:abc" },
+      { state: "idle", source: "owy-knob" },
+    ]);
+    expect(taken).toStrictEqual([true, false, true, false]);
+    expect(follower.source).toBe("web:abc");
+  });
+
+  test("a numbered event that arrives late or twice doesn't count; a new bridge process starts over", () => {
+    const knob = (state: FaceEvent["state"], seq: number, boot = "b1"): FaceEvent => ({
+      state,
+      source: "owy-knob",
+      boot,
+      seq,
+    });
+    const { taken } = run([
+      knob("listening", 1),
+      knob("thinking", 2),
+      knob("listening", 1),
+      knob("thinking", 2),
+      knob("speaking", 3),
+      knob("idle", 1, "b2"),
+    ]);
+    expect(taken).toStrictEqual([true, true, false, false, true, true]);
+  });
+
+  test("a heartbeat counts only when it says something the page missed", () => {
+    const beat = (seq: number): FaceEvent => ({ state: "speaking", source: "owy-knob", boot: "b1", seq, beat: true });
+    const { taken } = run([{ state: "thinking", source: "owy-knob", boot: "b1", seq: 4 }, beat(4), beat(5)]);
+    expect(taken).toStrictEqual([true, false, true]);
+  });
+
+  test("events from older bridges (no numbers) always count", () => {
+    const { taken } = run([
+      { state: "speaking", source: "owy-knob" },
+      { state: "speaking", source: "owy-knob" },
+    ]);
+    expect(taken).toStrictEqual([true, true]);
+  });
+
+  test("lets go of an Owy whose bridge stopped beating, and takes its next word again", () => {
+    let { follower } = run([{ state: "speaking", source: "owy-knob", boot: "b1", seq: 7 }]);
+    expect(lost(follower, T0 + FACE_LOST_MS)).toBe(false);
+    expect(lost(follower, T0 + FACE_LOST_MS + 1)).toBe(true);
+    follower = release(follower);
+    expect([follower.source, lost(follower, T0 + 60_000)]).toStrictEqual([undefined, false]);
+    // Back with the same number (it never knew it was let go): it counts.
+    expect(follow(follower, { state: "speaking", source: "owy-knob", boot: "b1", seq: 7, beat: true }, T0).take).toBe(
+      true
+    );
+  });
+
+  test("after the page shows a face of its own, the next heartbeat counts", () => {
+    const { follower } = run([{ state: "speaking", source: "owy-knob", boot: "b1", seq: 9 }]);
+    const beat: FaceEvent = { state: "speaking", source: "owy-knob", boot: "b1", seq: 9, beat: true };
+    expect(follow(follower, beat, T0).take).toBe(false);
+    expect(follow(forget(follower), beat, T0).take).toBe(true);
+    expect(forget(follower).source).toBe("owy-knob");
+  });
+
+  test("an older bridge (it never beats) is never let go", () => {
+    const { follower } = run([{ state: "thinking", source: "owy-knob" }]);
+    expect(lost(follower, T0 + 10 * FACE_LOST_MS)).toBe(false);
+  });
+
+  test("a stored face doesn't make an Owy look alive after the fact", () => {
+    const { follower } = run([{ state: "thinking", source: "owy-knob", boot: "b1", seq: 3 }]);
+    const stored = follow(follower, { state: "speaking", source: "owy-knob", boot: "b1", seq: 2 }, T0 - 30_000);
+    expect(stored.take).toBe(false);
+    expect(lost(stored.follower, T0 + FACE_LOST_MS + 1)).toBe(true);
+  });
+});
+
+describe("the wall follows one Owy's mouth", () => {
+  const mouth = { source: "owy-knob", at: T0, frames: "AbC-_9" };
+  const valid = (event: unknown) => MouthEventSchema.safeParse(event).success;
+
+  test("mouth frames are 1 to 64 base64url characters", () => {
+    expect([valid(mouth), valid({ ...mouth, frames: "A".repeat(64) })]).toStrictEqual([true, true]);
+    expect([valid({ ...mouth, frames: "A".repeat(65) }), valid({ ...mouth, frames: "" })]).toStrictEqual([
+      false,
+      false,
+    ]);
+    expect(valid({ ...mouth, frames: "ab+/" })).toBe(false);
+  });
+
+  test("a mouth without its Owy or its time is dropped", () => {
+    expect(valid({ ...mouth, at: "now" })).toBe(false);
+    expect(valid({ at: T0, frames: "AA" })).toBe(false);
+  });
+});
+
+describe("a wall that (re)connects", () => {
+  const stored = { state: "speaking" as const, card: { title: "X" }, source: "owy-knob" };
+  const at = (ms: number) => new Date(T0 - ms).toISOString();
+
+  test("resumes a face under a minute old, with its card while the card still shows", () => {
+    expect(resumable({ ...stored, at: at(5000) }, T0)).toStrictEqual({
+      face: { ...stored, card: { title: "X" } },
+      at: T0 - 5000,
+    });
+    expect(resumable({ ...stored, at: at(CARD_MS + 1) }, T0)?.face.card).toBeUndefined();
+  });
+
+  test("leaves history alone", () => {
+    expect(resumable({ ...stored, at: at(FACE_RESUME_MS + 1) }, T0)).toBeNull();
+    expect(resumable({ ...stored, at: "never" }, T0)).toBeNull();
+    expect(resumable(null, T0)).toBeNull();
+  });
+});
+
+describe("a screen that shows the face late", () => {
+  test("?lag= is whole ms within ±2 s; anything else is 0", () => {
+    expect([parseLag("180"), parseLag("-90.6"), parseLag("9000"), parseLag("-9000")]).toStrictEqual([
+      180, -91, 2000, -2000,
+    ]);
+    expect([parseLag(undefined), parseLag(""), parseLag("abc"), parseLag(["1", "2"])]).toStrictEqual([0, 0, 0, 0]);
   });
 });

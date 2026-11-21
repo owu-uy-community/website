@@ -1,0 +1,1547 @@
+{
+ "conf:devfest-montevideo:2012-11-05": {
+  "description": "El **DevFest Uruguay 2012** fue el primer DevFest del país, organizado por GDG Uruguay como parte de la primera temporada mundial de DevFest, los encuentros para desarrolladores que los grupos GDG organizaban sobre tecnologías de Google. Fue el lunes 5 de noviembre de 2012, de 15:00 a 20:00, en la Universidad Católica del Uruguay (Av. 8 de Octubre), con inscripción a través de Eventioz.\n\nDespués del registro y de una introducción sobre los Google Developer Groups y el área de relaciones con desarrolladores de Google, hubo siete charlas. Nicolás Bortolotti, de Google, habló de la evolución de la arquitectura para servicios en la nube y Greg Schechter, de YouTube, presentó la nueva versión 3 de la API de YouTube por Hangout. Le siguieron una introducción al lenguaje Go, una mirada a las tecnologías web que venían (de WebSockets a WebRTC), Android Binding para aplicar MVVM en Android, Google Analytics para startups y Google Cloud Endpoints sobre App Engine, a cargo de Gabriel Kouyoumdjian, de GDG Uruguay. El cierre fue con sorteos.\n\nEl blog de Google Developers incluyó a DevFest Uruguay, con GDG Uruguay como anfitrión, entre los DevFest recientes de esa temporada.",
+  "talks": [
+   {
+    "title": "Introducción a Google Developers Groups y Developer Relations"
+   },
+   {
+    "title": "Desafíos de la evolución arquitectónica para los servicios en la nube",
+    "speakers": [
+     "Nicolás Bortolotti"
+    ]
+   },
+   {
+    "title": "Mastering the New YouTube API (por Hangout)",
+    "speakers": [
+     "Greg Schechter"
+    ]
+   },
+   {
+    "title": "Introduction to Go",
+    "speakers": [
+     "Chris Kowalik"
+    ]
+   },
+   {
+    "title": "The Web of Tomorrow",
+    "speakers": [
+     "Bruno Aguirre"
+    ]
+   },
+   {
+    "title": "Android Binding",
+    "speakers": [
+     "Martín Martínez"
+    ]
+   },
+   {
+    "title": "Google Analytics for Startups",
+    "speakers": [
+     "Bruno Barbieri"
+    ]
+   },
+   {
+    "title": "Google Cloud Endpoints",
+    "speakers": [
+     "Gabriel Kouyoumdjian"
+    ]
+   }
+  ],
+  "venue": "Universidad Católica del Uruguay (Av. 8 de Octubre)",
+  "city": "Montevideo",
+  "organizers": [
+   "GDG Uruguay"
+  ],
+  "links": [
+   {
+    "label": "Agenda en Eventioz (copia en Wayback Machine)",
+    "url": "https://web.archive.org/web/20140207121550/https://eventioz.com.ar/e/devfest-uruguay/agenda"
+   },
+   {
+    "label": "Google Developers Blog: «DevFest season in the final stretch»",
+    "url": "https://developers.googleblog.com/2012/11/devfest-season-in-final-stretch.html"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Agenda de DevFest Uruguay en Eventioz (Wayback Machine)",
+    "url": "https://web.archive.org/web/20140207121550/https://eventioz.com.ar/e/devfest-uruguay/agenda"
+   },
+   {
+    "label": "Google Developers Blog, noviembre de 2012",
+    "url": "https://developers.googleblog.com/2012/11/devfest-season-in-final-stretch.html"
+   },
+   {
+    "label": "Google Developers Blog, septiembre de 2012: la primera temporada de GDG DevFest",
+    "url": "https://developers.googleblog.com/gdg-devfest-season-community-organized-developer-events/"
+   }
+  ]
+ },
+ "conf:devfest-montevideo:2020-10-17": {
+  "description": "En 2020, con la pandemia, GDG Montevideo no hizo un DevFest presencial: se sumó al **DevFest Latam 2020**, una edición virtual organizada en conjunto por grupos GDG de América Latina, que se transmitió del viernes 16 al domingo 18 de octubre de 2020.\n\nLa convocatoria lo planteaba como una celebración de la comunidad tecnológica de la región, abierta a todas las comunidades activas de América Latina, con charlas y talleres sobre distintas tecnologías a cargo de especialistas de toda la región. Del lado uruguayo, el evento de Meetup de GDG Montevideo figura organizado por Gabriel Kouyoumdjian, Nicolás Bianchi, Alejandro Magnani y Martín Peruchena. La inscripción se hacía en la plataforma de GDG.",
+  "city": "Online",
+  "organizers": [
+   "GDG Montevideo",
+   "Grupos GDG de América Latina"
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-devfest-latam-2020-1/"
+   },
+   {
+    "label": "Evento en Meetup (GDG Montevideo)",
+    "url": "https://www.meetup.com/GDGMontevideo/events/273839037/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento en gdg.community.dev",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-devfest-latam-2020-1/"
+   },
+   {
+    "label": "Evento «DevFest Latam 2020» en Meetup (organizadores)",
+    "url": "https://www.meetup.com/GDGMontevideo/events/273839037/"
+   }
+  ]
+ },
+ "conf:devfest-montevideo:2022-12-03": {
+  "description": "El **DevFest Latam 2022** fue un DevFest virtual organizado en conjunto por grupos GDG y clubes estudiantiles GDSC de Perú, Argentina, Costa Rica, México, Bolivia y Uruguay; GDG Montevideo fue uno de los coorganizadores. Se transmitió el sábado 3 de diciembre de 2022, de 11:00 a 17:00 (hora de Uruguay).\n\nLa página del evento en el capítulo GDG Open lista 18 oradores de la región: entre ellos Alejandra Stamato (HubSpot), Dinorah Tovar (Konfio), Oscar Barajas Tavares (Platzi), Joel Humberto Gómez Paredes (IBM), los Google Developer Experts Jorge Cano (Angular) y Yury Camacho (Android y Kotlin) y Tomás Piaggio (Very Good Ventures). Como anfitriones figuran, en su mayoría, líderes de clubes GDSC de Bolivia, México y Perú. En esa misma página se registraron 368 personas.",
+  "city": "Online",
+  "organizers": [
+   "GDG Montevideo",
+   "GDGs y GDSCs de Perú, Argentina, Costa Rica, México y Bolivia"
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG (GDG Montevideo)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-devfest-latam-2022/"
+   },
+   {
+    "label": "Evento en la plataforma de GDG (GDG Open, con oradores)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-open-presents-devfest-latam-2022/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento de GDG Montevideo en gdg.community.dev",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-devfest-latam-2022/"
+   },
+   {
+    "label": "Página del evento de GDG Open en gdg.community.dev (oradores, presentadores y registrados)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-open-presents-devfest-latam-2022/"
+   }
+  ]
+ },
+ "conf:devfest-montevideo:2024-11-16": {
+  "description": "El **DevFest Montevideo 2024** fue la conferencia anual de GDG Montevideo: un día entero de charlas y talleres el sábado 16 de noviembre de 2024, de 9:00 a 18:00, en el Auditorio del LATU. La entrada era gratuita y la convocatoria destacaba el foco que los DevFest tuvieron ese año en la inteligencia artificial responsable.\n\nEl programa corrió en dos líneas en paralelo, una de charlas y otra de talleres, con más de veinte oradores. Hubo charlas sobre Angular y Firebase, Next.js multitenant, IA en empresas, blockchain, monitoreo de modelos con TensorFlow y patrones de arquitectura frontend, y talleres de Flutter y Flame, LLMs, Design Sprint remoto y OpenTelemetry, además de un panel de Sabre sobre su uso de Google Cloud. Participaron, entre otros, Jorge Cano, Nicolás Bello, Máximo Gurmendez, Eduardo Mangarelli y Paula Martinez. El día cerró con un after.\n\nLo apoyaron empresas como Globant, Qubika, Sabre, UKG, Zaelot y LoopStudio, Ingenio y las universidades ORT y Católica. La plataforma de GDG registra 700 asistentes, y el grupo publicó en YouTube un video resumen de la jornada.",
+  "talks": [
+   {
+    "title": "¡Bienvenidos a CodeMatic 3000: La Revolución Angular-Firebase!",
+    "speakers": [
+     "Jorge Cano",
+     "Andrés Villanueva"
+    ]
+   },
+   {
+    "title": "Panel: Sabre & Google: Building the Future of Travel",
+    "speakers": [
+     "Pablo Abayian",
+     "Luis Azevedo",
+     "Gabriel Bouzout",
+     "Gastón Gordillo",
+     "Marcos Lucas",
+     "Rodolfo Paiva"
+    ]
+   },
+   {
+    "title": "Taller: Automatización Inteligente: Diseño de Asistentes y Flujos con LLMs",
+    "speakers": [
+     "Javier Nonis"
+    ]
+   },
+   {
+    "title": "Google Firebase aplicado al desarrollo de aplicaciones de computación espacial",
+    "speakers": [
+     "Horacio Torrendell"
+    ]
+   },
+   {
+    "title": "Creando webs multitenant con Next.js",
+    "speakers": [
+     "Nicolás Bello"
+    ]
+   },
+   {
+    "title": "Enterprise AI: Claves para apalancar la innovación con AI",
+    "speakers": [
+     "Máximo Gurmendez"
+    ]
+   },
+   {
+    "title": "Taller: Creating a space shooter game with Flutter and Flame",
+    "speakers": [
+     "Erick Zanardo"
+    ]
+   },
+   {
+    "title": "Taller: Responsible AI Session",
+    "speakers": [
+     "Franco Galeano"
+    ]
+   },
+   {
+    "title": "Patrones para mejorar el performance y la mantenibilidad de las aplicaciones",
+    "speakers": [
+     "Joel Humberto Gómez Paredes"
+    ]
+   },
+   {
+    "title": "Taller: El Valor del Design Sprint Remoto: De la Teoría a la Práctica",
+    "speakers": [
+     "Cecilia Ogara",
+     "Sebastián Cabrera"
+    ]
+   },
+   {
+    "title": "The Blockchain Revolution",
+    "speakers": [
+     "Federico Sendra"
+    ]
+   },
+   {
+    "title": "Taller: Creando tu primera app en Flutter: De la idea al código",
+    "speakers": [
+     "Bettina Carrizo"
+    ]
+   },
+   {
+    "title": "TensorFlow Data Validation para monitoreo de modelos",
+    "speakers": [
+     "Diego González Maneyro"
+    ]
+   },
+   {
+    "title": "Inteligencia Artificial: qué es relevante para mi proyecto o mi emprendimiento, y para mi carrera",
+    "speakers": [
+     "Eduardo Mangarelli"
+    ]
+   },
+   {
+    "title": "Taller: De cero a trazabilidad total con OpenTelemetry",
+    "speakers": [
+     "Guillermo Chao"
+    ]
+   },
+   {
+    "title": "Experiencias de Inteligencia Artificial en proyectos reales",
+    "speakers": [
+     "Paula Martinez"
+    ]
+   },
+   {
+    "title": "Taller: Optimising AI cost: mindful use of AI",
+    "speakers": [
+     "Akash Awase"
+    ]
+   },
+   {
+    "title": "World simulators - Un experimento",
+    "speakers": [
+     "Ramiro Visca",
+     "Christian Clark"
+    ]
+   }
+  ],
+  "attendance": "700 asistentes registrados en la plataforma de GDG",
+  "venue": "Auditorio del LATU (Av. Italia 6201)",
+  "city": "Montevideo",
+  "organizers": [
+   "GDG Montevideo"
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-devfest-montevideo-2024/"
+   },
+   {
+    "label": "Video resumen del DevFest Montevideo 2024 (YouTube)",
+    "url": "https://www.youtube.com/watch?v=rUU81k8H56M"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento en gdg.community.dev (descripción, agenda y oradores)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-devfest-montevideo-2024/"
+   },
+   {
+    "label": "Video «DevFest Montevideo 2024» en el canal de GDG Uruguay",
+    "url": "https://www.youtube.com/watch?v=rUU81k8H56M"
+   }
+  ]
+ },
+ "meetup:120887702": {
+  "description": "Reunión de junio de 2013 de **DevOps MVD**, el grupo que juntaba a gente de desarrollo y operaciones en Montevideo, organizado en Meetup por Diego Sapriza, Federico Silva y Martín Loy. El grupo se había creado en febrero de 2013 y tenía como sponsor a CASE UY, que además ponía «pizza and stuff». Fue el miércoles 19 de junio en la oficina 11 de CASE UY (San José 1337, esquina Ejido). Ese día era feriado y la reunión se hizo igual.\n\nSegún los comentarios del evento, la noche giró en torno a los contenedores en Linux: Gustavo Muslera dio una charla sobre Docker y después subió sus diapositivas al grupo, y también se habló de nginx. Esa noche y al día siguiente siguieron compartiendo material sobre LXC y sobre Dokku, un PaaS armado sobre Docker, y Diego Sapriza juntó los enlaces en una página del grupo dedicada a Linux Containers. Diego también se comprometió a transmitir o grabar las siguientes reuniones, porque había gente que lo pedía desde lejos. En Meetup se anotaron 10 personas.",
+  "talks": [
+   {
+    "title": "Docker",
+    "speakers": [
+     "Gustavo Muslera"
+    ]
+   }
+  ],
+  "venue": "CASE UY, oficina 11 (San José 1337, esquina Ejido)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "Federico Silva",
+   "Martín Loy"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/DevOps-MVD/events/120887702/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/120887702/"
+   },
+   {
+    "label": "Evento «Mysql integration!!!» de DevOps MVD en Wayback Machine (datos del grupo: fundación, organizadores, sponsors)",
+    "url": "https://web.archive.org/web/20140822121020/http://www.meetup.com/DevOps-MVD/events/125606362/"
+   }
+  ]
+ },
+ "meetup:125606362": {
+  "description": "En julio de 2013, **DevOps MVD** hizo su reunión en conjunto con el grupo de MySQL de Montevideo (The Montevideo MySQL Meetup Group): Diego Sapriza les pidió a los miembros que se anotaran en el evento de ese grupo. Fue el miércoles 17 de julio a las 19:15, en el salón comunal del edificio Puerta del Sol (Bvar. España 2666).\n\nPara el grupo de MySQL era la vuelta a la actividad después de un tiempo parado. El evento de ese grupo, a cargo de Fernando Ipar y Martín Arrieta, prometía estufa a leña y un par de charlas sobre MySQL. Se anotaron 11 personas en el evento de DevOps MVD y 13 en el de MySQL.",
+  "venue": "Salón comunal del edificio Puerta del Sol (Bvar. España 2666)",
+  "city": "Montevideo",
+  "organizers": [
+   "DevOps MVD",
+   "The Montevideo MySQL Meetup Group"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup (DevOps MVD)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/125606362/"
+   },
+   {
+    "label": "Evento en Meetup (grupo de MySQL)",
+    "url": "https://www.meetup.com/the-montevideo-mysql-meetup-group/events/125664702/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/125606362/"
+   },
+   {
+    "label": "Evento «Reunión de Julio» del Montevideo MySQL Meetup Group",
+    "url": "https://www.meetup.com/the-montevideo-mysql-meetup-group/events/125664702/"
+   }
+  ]
+ },
+ "meetup:131495332": {
+  "description": "Reunión de agosto de 2013 de **DevOps MVD**, el miércoles 21 a las 19:00 en CASE UY (San José 1337, oficina 11). En los días previos se propusieron temas en los comentarios: Federico Silva ofreció una demo corta de Chef y Berkshelf y Gustavo Muslera sugirió discutir la seguridad en infraestructuras modernas.\n\nLa charla que sí quedó registrada fue la de Sebastián Moreno, «The bright side of the moon», sobre Lua junto con nginx y Redis. Al día siguiente compartió las diapositivas y una lista de lecturas, y otro asistente comentó que le había parecido muy interesante. En Meetup se anotaron 10 personas.",
+  "talks": [
+   {
+    "title": "The bright side of the moon (Lua con nginx y Redis)",
+    "speakers": [
+     "Sebastián Moreno"
+    ],
+    "slides": "https://slides.com/kernelp4nic/the-bright-side-of-the-moon-rb"
+   }
+  ],
+  "venue": "CASE UY, oficina 11 (San José 1337, esquina Ejido)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "Federico Silva",
+   "Martín Loy"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/DevOps-MVD/events/131495332/"
+   },
+   {
+    "label": "Diapositivas de «The bright side of the moon»",
+    "url": "https://slides.com/kernelp4nic/the-bright-side-of-the-moon-rb"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/131495332/"
+   }
+  ]
+ },
+ "meetup:170284512": {
+  "description": "Primera reunión de 2014 de **DevOps MVD**, el miércoles 19 de marzo en la sede de CASE UY (Martí 3214, esquina Ellauri). Martín Loy propuso arrancar el año retomando el tema de los contenedores y Docker con más profundidad, y en los comentarios se armó una lista de posibles charlas: Docker para integración continua con Drone.io, provisioning de Vagrant para Docker, una introducción a Docker, Dokku y Docker en OS X.\n\nAl final hubo dos charlas: David Giordano presentó «Vagrant + Docker», cuyas diapositivas publicó en SlideShare esa misma noche, y Gustavo Muslera dio una introducción a Docker. Martín Loy les agradeció a los dos al día siguiente. En Meetup se anotaron 9 personas.",
+  "talks": [
+   {
+    "title": "Vagrant + Docker",
+    "speakers": [
+     "David Giordano"
+    ],
+    "slides": "https://www.slideshare.net/3dgiordano/vagrant-docker"
+   },
+   {
+    "title": "Introducción a Docker",
+    "speakers": [
+     "Gustavo Muslera"
+    ]
+   }
+  ],
+  "venue": "CASE UY (Martí 3214, esquina Ellauri)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "Federico Silva",
+   "Martín Loy"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/DevOps-MVD/events/170284512/"
+   },
+   {
+    "label": "Diapositivas de «Vagrant + Docker» (SlideShare)",
+    "url": "https://www.slideshare.net/3dgiordano/vagrant-docker"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/170284512/"
+   }
+  ]
+ },
+ "meetup:171955532": {
+  "description": "Reunión de abril de 2014 de **DevOps MVD**, el miércoles 16 a las 19:00 en CASE UY (Martí 3214, esquina Ellauri). La reunión se planteó sin charlas fijas: ese mismo día Martín Loy propuso dedicar la noche al lado «dev» del tema y pidió que cada uno llevara preguntas, experiencias y sus herramientas favoritas para compartir. En los comentarios quedaron pendientes para otra reunión una charla sobre Packer, que había propuesto David Giordano, y una presentación de Fabián Baptista. En Meetup se anotaron 9 personas.",
+  "venue": "CASE UY (Martí 3214, esquina Ellauri)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "Federico Silva",
+   "Martín Loy"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/DevOps-MVD/events/171955532/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/171955532/"
+   }
+  ]
+ },
+ "meetup:186270642": {
+  "description": "Reunión de junio de 2014 de **DevOps MVD**, el miércoles 18 en CASE UY (Martí 3214, esquina Ellauri). El programa que anunció Martín Loy arrancaba con un resumen breve de las novedades de la DockerCon y seguía con dos charlas: Marcelo Odin contó cómo usaban Elasticsearch y el stack ELK para visualizar y monitorear logs, y Diego Woitasen, que viajó desde Argentina para la reunión, habló de sus experiencias con grandes despliegues de OpenStack. Gastón Acosta iba a contar cómo hacer deploys seguros en servidores que no están en tu propia infraestructura, pero a último momento tuvo que atender un lanzamiento y dejó la charla para otra ocasión.\n\nEsa noche Martín Loy les agradeció a Marcelo y a Diego, y Woitasen escribió que la había pasado muy bien con el grupo. En Meetup se anotaron 10 personas.",
+  "talks": [
+   {
+    "title": "Elasticsearch y el stack ELK para visualizar y monitorear logs",
+    "speakers": [
+     "Marcelo Odin"
+    ]
+   },
+   {
+    "title": "Experiencias con grandes despliegues de OpenStack",
+    "speakers": [
+     "Diego Woitasen"
+    ]
+   }
+  ],
+  "venue": "CASE UY (Martí 3214, esquina Ellauri)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "Federico Silva",
+   "Martín Loy"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/DevOps-MVD/events/186270642/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/DevOps-MVD/events/186270642/"
+   }
+  ]
+ },
+ "conf:gdg-montevideo-hackathons:2025-07-26": {
+  "description": "La **AI Hackathon: Build your MCP** fue una hackatón de un día que GDG Montevideo organizó el sábado 26 de julio de 2025 en las oficinas de Xmartlabs (Bvar. España 2529). El desafío era construir servidores MCP (Model Context Protocol) para conectar herramientas y datos con modelos de inteligencia artificial, en equipos de hasta cuatro personas. No hacía falta experiencia técnica previa: la invitación sugería investigar un poco sobre MCP, armar el equipo y llegar con una idea.\n\nLa jornada arrancó a las 9:30 con la bienvenida y la presentación del cronograma; se programó de 11:00 a 19:00 y después vinieron las demos, la deliberación del jurado y la entrega de premios, cerca de las 21:00. Fueron anfitriones Matías Irland y Federico Balarini, de Xmartlabs, y el jurado lo integraron Franco Galeano (Mercado Libre), Santiago Toscanini (Canary Technologies), Gabriel Labrada (Process Street) y Francisco Solsona (Google). Apoyaron Xmartlabs, Canary Technologies, Monster y Antigravity Capital.\n\nEl cupo era de 50 personas y la plataforma de GDG registra 45 asistentes.",
+  "attendance": "45 asistentes registrados en la plataforma de GDG (cupo de 50)",
+  "venue": "Xmartlabs (Bvar. España 2529)",
+  "city": "Montevideo",
+  "organizers": [
+   "GDG Montevideo",
+   "Xmartlabs"
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-ai-hackathon-build-your-mcp/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento en gdg.community.dev (consigna, agenda, anfitriones y jurado)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-ai-hackathon-build-your-mcp/"
+   }
+  ]
+ },
+ "conf:gdg-montevideo-hackathons:2025-10-24": {
+  "description": "En la **Campus Party Uruguay 2025**, que se hizo el 24 y 25 de octubre en el Parque de Innovación del LATU, GDG Montevideo tuvo un espacio propio con charlas y talleres, y organizó dentro del evento una **hackatón de videojuegos**.\n\nEl desafío era hacer un juego 2D para un jugador, en JavaScript y jugable en el navegador, en el que la inteligencia artificial cambiara de verdad la jugabilidad, la narrativa o el mundo del juego. Era obligatorio integrarlo con Google AI Studio, por ejemplo para generar niveles, diálogos, misiones o reglas, y todos los equipos (de hasta cuatro personas) partían del mismo prompt inicial. No hacía falta experiencia previa en el lenguaje. Gracias a la organización de Campus Party, los miembros del grupo podían conseguir entrada sin costo anotándose en un formulario.",
+  "venue": "Centro de Eventos del Parque de Innovación del LATU",
+  "city": "Montevideo",
+  "organizers": [
+   "GDG Montevideo"
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-hackathon-de-videojuegos-en-campus-party/"
+   },
+   {
+    "label": "Nota previa en El Observador",
+    "url": "https://www.elobservador.com.uy/ciencia-y-tecnologia/se-viene-la-campus-party-2025-innovacion-ia-y-cultura-maker-n6020240"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento en gdg.community.dev (consigna y fechas)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-hackathon-de-videojuegos-en-campus-party/"
+   },
+   {
+    "label": "El Observador: «Se viene la Campus Party 2025: innovación, IA y cultura maker»",
+    "url": "https://www.elobservador.com.uy/ciencia-y-tecnologia/se-viene-la-campus-party-2025-innovacion-ia-y-cultura-maker-n6020240"
+   }
+  ]
+ },
+ "meetup:173913102": {
+  "description": "Encuentro de abril de 2014 de **Hackers / Founders MVD**, la versión montevideana de Hackers / Founders, que el propio grupo presentaba como una comunidad global de fundadores de startups tecnológicas en sus primeras etapas. La propuesta era juntarse una vez al mes, el cuarto jueves, de marzo a octubre, a conversar y generar valor juntos, «sin protocolos, sin agenda». Este encuentro fue el jueves 24 a las 20:30 en Bitácora Bar (Sarmiento y Luis de la Torre).\n\nEl grupo había empezado a usar cada encuentro para que los asistentes probaran las apps de otros miembros: en el anterior se había probado HashFly, y en este le tocó a Global Hub, como contó Sergio Delgado, uno de los organizadores. Nicolás Bianchi invitó a quien quisiera mostrar su app en los siguientes encuentros a coordinarlo con los organizadores. Una asistente comentó después lo bueno del ambiente y de la gente que había conocido. En Meetup se anotaron 32 personas.",
+  "venue": "Bitácora Bar (Sarmiento y Luis de la Torre)",
+  "city": "Montevideo",
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/173913102/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/173913102/"
+   },
+   {
+    "label": "Evento en Meetup, copia de agosto de 2014 en Wayback Machine (descripción del grupo y comentarios)",
+    "url": "https://web.archive.org/web/20140817192659/http://www.meetup.com/Hackers-Founders-MVD/events/173913102/"
+   }
+  ],
+  "organizers": [
+   "Sergio Delgado",
+   "Nicolás Bianchi"
+  ]
+ },
+ "meetup:181498302": {
+  "description": "Encuentro de junio de 2014 de **Hackers / Founders MVD**, el jueves 26 a las 20:30 en Bitácora Bar (Sarmiento y Luis de la Torre), con Sergio Delgado, Bruno Barbieri y Nicolás Bianchi como anfitriones. Por invitación de Nicolás, el estudio uruguayo Pomelo Games llevó Bullet Boy, su primer juego 3D para móviles, todavía en desarrollo: un juego de acción y timing en el que un niño se traslada disparándose de cañón en cañón, inspirado en los niveles de barriles de Donkey Kong Country. Federico Romero, del estudio, adelantó que mostrarían una versión más nueva que el tráiler publicado y que buscaban comentarios para mejorarlo. En Meetup se anotaron 20 personas.",
+  "venue": "Bitácora Bar (Sarmiento y Luis de la Torre)",
+  "city": "Montevideo",
+  "organizers": [
+   "Sergio Delgado",
+   "Bruno Barbieri",
+   "Nicolás Bianchi"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/181498302/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/181498302/"
+   },
+   {
+    "label": "Evento en Meetup, copia de julio de 2014 en Wayback Machine (anfitriones y comentarios)",
+    "url": "https://web.archive.org/web/20140703035533/http://www.meetup.com/Hackers-Founders-MVD/events/181498302/"
+   }
+  ]
+ },
+ "meetup:184809592": {
+  "description": "Encuentro de julio de 2014 de **Hackers / Founders MVD**, el jueves 24 a las 20:30 en Bitácora Bar (Sarmiento y Luis de la Torre), con Sergio Delgado, Bruno Barbieri y Nicolás Bianchi como anfitriones. Al día siguiente, los asistentes destacaron en los comentarios el buen ambiente y las pizzas. Uno de ellos dejó sugerencias para los próximos: buscar un lugar más cómodo para hacer networking, porque con la música del pub costaba charlar y por momentos el espacio quedaba chico para tanta gente; conseguir sponsors, quizás la propia red H/F, y proponer un tema central para cada encuentro. En Meetup se anotaron 25 personas.",
+  "venue": "Bitácora Bar (Sarmiento y Luis de la Torre)",
+  "city": "Montevideo",
+  "organizers": [
+   "Sergio Delgado",
+   "Bruno Barbieri",
+   "Nicolás Bianchi"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/184809592/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/184809592/"
+   },
+   {
+    "label": "Evento en Meetup, copia de agosto de 2014 en Wayback Machine (anfitriones y comentarios)",
+    "url": "https://web.archive.org/web/20140817201338/http://www.meetup.com/Hackers-Founders-MVD/events/184809592/"
+   }
+  ]
+ },
+ "meetup:220195965": {
+  "description": "Primer encuentro de 2015 de **Hackers / Founders MVD**, el jueves 26 de marzo a las 21:00, con la consigna del título: compartir en qué estás trabajando, conocer gente nueva y conectar. Ese año el grupo tuvo que mudarse: Sergio Delgado, uno de los organizadores, avisó que Bitácora Bar, donde se habían hecho los encuentros de 2014, había cerrado, así que esta vez se juntaron en Mess Bar (Gabriel Pereira 3064, esquina Ellauri). Quedaba por ver si se quedaban ahí o si los encuentros pasaban a ser itinerantes; además, desde las 23:00 el bar cobraba un cubierto por el show de stand-up.\n\nLos anfitriones fueron Sergio Delgado, Bruno Barbieri y Nicolás Bianchi, y en Meetup figuran 16 asistentes. Al mes siguiente el grupo cambió otra vez de lugar porque en Mess había demasiado ruido para conversar.",
+  "venue": "Mess Bar (Gabriel Pereira 3064, esquina Ellauri)",
+  "city": "Montevideo",
+  "organizers": [
+   "Sergio Delgado",
+   "Bruno Barbieri",
+   "Nicolás Bianchi"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/220195965/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup, copia de marzo de 2015 en Wayback Machine (aviso del cambio de bar)",
+    "url": "https://web.archive.org/web/20150329234315/http://www.meetup.com/Hackers-Founders-MVD/events/220195965/"
+   },
+   {
+    "label": "Evento de abril de 2015 en Meetup (comentario sobre el ruido en Mess Bar)",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/221460179/"
+   }
+  ]
+ },
+ "meetup:221460179": {
+  "description": "Encuentro de abril de 2015 de **Hackers / Founders MVD**, con la consigna que daba título a la convocatoria: compartir en qué estás trabajando, conocer gente nueva y conectar. Ese mes se pasó al jueves 30 y se cambió de lugar: el anterior había sido en Mess Bar, pero ahí había demasiado ruido para conversar, así que este fue a las 21:00 en Brickell (Juan Manuel Blanes 1175), en el sótano del pub. Lo organizaron Bruno Barbieri y Nicolás Bianchi, que repitió la invitación a llevar proyectos o apps para mostrar o probar con el grupo.\n\nPara ese encuentro se sumó Daniel Fernández Melo, de DocMontevideo, que invitó a diseñadores y programadores a la hackatón de documentales interactivos del festival, tutoreada por el National Film Board de Canadá y el Open Documentary Lab del MIT. En Meetup se anotaron 18 personas.",
+  "venue": "Brickell (Juan Manuel Blanes 1175)",
+  "city": "Montevideo",
+  "organizers": [
+   "Bruno Barbieri",
+   "Nicolás Bianchi"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/221460179/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/Hackers-Founders-MVD/events/221460179/"
+   }
+  ]
+ },
+ "conf:io-extended-montevideo:2023-06-14": {
+  "description": "El **Google I/O Extended 2023 Montevideo** fue el encuentro de GDG Montevideo para repasar lo que Google había presentado en Google I/O y Google I/O Connect ese año. Se hizo el miércoles 14 de junio de 2023 en el auditorio de la Universidad ORT Uruguay, Campus Pocitos, con puertas abiertas a las 18:45.\n\nAbrió con un panel de repaso de las novedades, con Nicolás Bianchi (Mercado Libre), Martín Peruchena, Paula Martinez (Marvik) y la moderación de Joaquín Oribe (CreateThrive). Siguieron dos charlas técnicas: Damián Siré contó lo nuevo de Angular 16 y David DeRemer, fundador y CEO de Very Good Ventures, vino desde Estados Unidos para hablar de Flutter. Después hubo networking en el MBC Ombú.\n\nApoyaron el Centro de Innovación y Emprendimientos de la ORT, CreateThrive, Mercado Libre y Marvik. La plataforma de GDG registra 85 asistentes.",
+  "talks": [
+   {
+    "title": "Panel de repaso de Google I/O y Google I/O Connect",
+    "speakers": [
+     "Nicolás Bianchi",
+     "Martín Peruchena",
+     "Paula Martinez",
+     "Joaquín Oribe"
+    ]
+   },
+   {
+    "title": "Angular: What's new in Angular v16",
+    "speakers": [
+     "Damián Siré"
+    ]
+   },
+   {
+    "title": "Flutter: A Framework for Transformation",
+    "speakers": [
+     "David DeRemer"
+    ]
+   }
+  ],
+  "attendance": "85 asistentes registrados en la plataforma de GDG",
+  "venue": "Auditorio de la Universidad ORT Uruguay, Campus Pocitos (Bvar. España 2633)",
+  "city": "Montevideo",
+  "organizers": [
+   "GDG Montevideo"
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2023-montevideo/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento en gdg.community.dev (descripción, agenda y oradores)",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2023-montevideo/"
+   }
+  ]
+ },
+ "conf:io-extended-montevideo:2024-06-13": {
+  "description": "El **Google I/O Extended 2024 Montevideo** fue la edición local del evento con el que las comunidades repasan las novedades de Google I/O. Lo organizó GDG Montevideo el jueves 13 de junio de 2024, de 19:00 a 21:00, en el auditorio de la Universidad ORT Uruguay (Campus Pocitos), con entrada gratuita y apoyo de la ORT y de Angular MVD.\n\nEl programa tuvo tres charlas a cargo de Google Developer Experts que vinieron como invitados: Jorge Cano habló de Gemini, Nicolás Bello de Firebase y Yury Camacho de Kotlin Multiplatform. Al cierre hubo un after de networking en el MBC Ombú. La plataforma de GDG registra 104 asistentes y el grupo publicó un video del evento en su canal de YouTube.",
+  "talks": [
+   {
+    "title": "Gemini: la magIA de Google",
+    "speakers": [
+     "Jorge Cano"
+    ]
+   },
+   {
+    "title": "A todo Firebase, IO Race",
+    "speakers": [
+     "Nicolás Bello"
+    ]
+   },
+   {
+    "title": "El futuro de cross-platform: Kotlin Multiplatform",
+    "speakers": [
+     "Yury Camacho"
+    ]
+   }
+  ],
+  "attendance": "104 asistentes registrados en la plataforma de GDG",
+  "venue": "Auditorio de la Universidad ORT Uruguay, Campus Pocitos (Bvar. España 2633)",
+  "city": "Montevideo",
+  "organizers": [
+   "GDG Montevideo"
+  ],
+  "photos": [
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/IMG_20240613_195149.jpg",
+    "alt": "El auditorio de la ORT con el público sentado mientras un orador habla al frente",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/IMG_20240613_200645.jpg",
+    "alt": "Banner de Google con la leyenda «Learn new skills with GDG Montevideo» en la entrada del auditorio",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/IMG_20240613_204731.jpg",
+    "alt": "Un orador con remera de Firebase presenta frente a la pantalla del auditorio",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/IMG_20240613_204635.jpg",
+    "alt": "Orador con remera de Firebase y micrófono junto a la mesa del auditorio, con una laptop abierta",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/IMG_20240613_210928-EDIT.jpg",
+    "alt": "Foto grupal de oradores y organizadores frente al logo de la Universidad ORT",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/IMG_20240613_210920.jpg",
+    "alt": "Oradores y organizadores posan juntos frente a la pantalla con el logo de ORT",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_221710430.MP.jpg",
+    "alt": "Vista desde el fondo del auditorio lleno durante una charla",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_222906096.jpg",
+    "alt": "Charla con una diapositiva sobre Google Cloud proyectada en la pantalla",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_225713860.MP.jpg",
+    "alt": "Charla sobre Kotlin Multiplatform, con la diapositiva proyectada y el público en primer plano",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_225717518.jpg",
+    "alt": "Otra vista de la charla sobre Kotlin Multiplatform en el auditorio de la ORT",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_233210732.MP.jpg",
+    "alt": "Diapositiva de Gemini proyectada durante la charla sobre la inteligencia artificial de Google",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_233212972.jpg",
+    "alt": "El orador habla con la diapositiva de Gemini detrás, frente al público",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_233217000.jpg",
+    "alt": "Público en las gradas del auditorio durante la última charla",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "src": "https://res.cloudinary.com/startup-grind/image/upload/c_limit,f_auto,h_1080,q_auto:good,w_1440/v1/gcs/platform-data-goog/event_wrapup/PXL_20240613_221441664.jpg",
+    "alt": "Un asistente con su laptop en primera fila mientras sigue una charla",
+    "by": "GDG Montevideo",
+    "source": "Sitio de GDG Montevideo (gdg.community.dev)",
+    "page": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   }
+  ],
+  "links": [
+   {
+    "label": "Evento en la plataforma de GDG",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "label": "Video del evento (YouTube, GDG Uruguay)",
+    "url": "https://www.youtube.com/watch?v=ktHMgUa2Smw"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del evento en gdg.community.dev",
+    "url": "https://gdg.community.dev/events/details/google-gdg-montevideo-presents-google-io-extended-2024-montevideo/"
+   },
+   {
+    "label": "Video «Google I/O Extended 2024 Montevideo» en YouTube",
+    "url": "https://www.youtube.com/watch?v=ktHMgUa2Smw"
+   }
+  ]
+ },
+ "meetup:239483269": {
+  "description": "La primera **Mercado Libre Tech Talk** en Montevideo fue el miércoles 31 de mayo de 2017 a las 19:00, en las oficinas de Mercado Libre en el piso 39 de la Torre 4 del World Trade Center. Con estos encuentros, el equipo de tecnología de la empresa en Uruguay abría sus puertas para mostrar qué tecnologías y metodologías usaba y cómo trabajaba.\n\nHubo dos charlas. La primera explicó por qué la empresa había elegido Node.js y React para sus interfaces web, con sus ventajas y desventajas. La segunda contó cómo se desarrollaban las apps nativas de Mercado Libre entre más de 70 personas repartidas en siete centros de desarrollo: trabajo distribuido, comunicación, coordinación, producto, metodología y proceso de release. La charla se transmitió en vivo por YouTube y 47 personas confirmaron asistencia en Meetup.",
+  "talks": [
+   {
+    "title": "¿Por qué elegimos Node y React para nuestras interfaces web?"
+   },
+   {
+    "title": "¿Cómo desarrollar una app mobile entre +70 personas y no morir en el intento?"
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/239483269/"
+   },
+   {
+    "label": "Transmisión del evento (YouTube)",
+    "url": "https://www.youtube.com/watch?v=W9oxsBjlCkw"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Transmisión «Meetup» del 31 de mayo de 2017, enlazada desde el evento",
+    "url": "https://www.youtube.com/watch?v=W9oxsBjlCkw"
+   }
+  ]
+ },
+ "meetup:242359948": {
+  "description": "La segunda **Mercado Libre Tech Talk** se hizo el miércoles 23 de agosto de 2017 a las 19:00 en las oficinas de Mercado Libre en Montevideo. Para esta edición vinieron colegas de Argentina y hubo dos temas. Uno fue **Mercado Libre Open Source**: cómo la empresa, que unos años antes había abierto su API a desarrolladores de todo el mundo, iba a publicar el código de librerías y herramientas que usaba a diario. El otro, a pedido de la mayoría, fue **Fury**, la plataforma interna basada en Docker y AWS con la que Mercado Libre desarrollaba y operaba sus aplicaciones: su infraestructura, sus decisiones de diseño y la escala que manejaba. Los cupos eran limitados y 45 personas confirmaron asistencia en Meetup. El encuentro se transmitió por YouTube.",
+  "talks": [
+   {
+    "title": "Mercado Libre Open Source"
+   },
+   {
+    "title": "Infraestructura y backend: Fury, la plataforma de Mercado Libre basada en Docker y AWS"
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/242359948/"
+   },
+   {
+    "label": "Transmisión del evento (YouTube)",
+    "url": "https://www.youtube.com/watch?v=I6vzQmZ6ZEs"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Transmisión «Mercado Libre Tech Talk» del 23 de agosto de 2017 (YouTube)",
+    "url": "https://www.youtube.com/watch?v=I6vzQmZ6ZEs"
+   }
+  ]
+ },
+ "meetup:244684904": {
+  "description": "Última **Mercado Libre Tech Talk** de 2017, el jueves 23 de noviembre a las 19:00 en las oficinas de Mercado Libre en el World Trade Center de Montevideo. Esta vez el público eran sobre todo diseñadores con curiosidad por saber cómo trabajaba el equipo de UX de la empresa.\n\nFederico Codino, General Design Manager, y Martín Rodríguez, Lead UX Designer, contaron lo que significó para el equipo encarar un rediseño a gran escala: cómo fallaron, aprendieron e iteraron, y por qué construir buenos productos implica animarse a grandes apuestas, desde lo visual hasta el flujo de la experiencia. El cupo era chico: se completó con 19 personas.",
+  "talks": [
+   {
+    "title": "Iterar, hasta el infinito y más allá",
+    "speakers": [
+     "Federico Codino",
+     "Martín Rodríguez"
+    ]
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "photos": [
+   {
+    "src": "https://secure.meetupstatic.com/photos/event/5/6/a/8/highres_465802184.jpeg",
+    "alt": "Imagen de difusión de la charla (no hay fotos publicadas del evento): el rediseño de la página de producto de Mercado Libre",
+    "by": "Mercado Libre Tech Talks",
+    "source": "Meetup",
+    "page": "https://www.meetup.com/Mercado-Libre-Tech-Talks/photos/27798891/465802184/"
+   }
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/244684904/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   }
+  ]
+ },
+ "meetup:249637181": {
+  "description": "Con «Revolución de datos en MercadoLibre» volvieron las **Mercado Libre Tech Talks** el miércoles 25 de abril de 2018 a las 19:00, en el auditorio de la Torre 4 del World Trade Center de Montevideo. El tema fue el enorme volumen de información que procesan los sistemas actuales: cómo lo manejaba Mercado Libre, qué desafíos tenía a diario y qué decisiones tomaba a partir de los resultados.\n\nHubo dos tracks. En **Big Data – Melidata** se repasó la arquitectura con la que la empresa recolectaba y explotaba la actividad diaria de sus usuarios para hacer mejores productos. En **Machine Learning – Recomendaciones** hubo una introducción a los word embeddings y se explicó meta-prod2vec, el algoritmo central de su motor de recomendaciones de visitas a compras. Se completaron los 120 lugares disponibles y la jornada se transmitió por YouTube.",
+  "talks": [
+   {
+    "title": "Big Data – Melidata"
+   },
+   {
+    "title": "Machine Learning – Recomendaciones: word embeddings y meta-prod2vec"
+   }
+  ],
+  "venue": "Auditorio WTC Torre 4 (Luis Bonavita esquina Lecueder)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/249637181/"
+   },
+   {
+    "label": "Transmisión del evento (YouTube)",
+    "url": "https://www.youtube.com/watch?v=ZPdRjh9B8mY"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Transmisión «Mercadolibre Tech Talk» del 25 de abril de 2018 (YouTube)",
+    "url": "https://www.youtube.com/watch?v=ZPdRjh9B8mY"
+   }
+  ]
+ },
+ "meetup:256355047": {
+  "description": "Última **Mercado Libre Tech Talk** de 2018, el miércoles 21 de noviembre a las 19:00 en las oficinas de Mercado Libre en el piso 39 de la Torre 4 del WTC de Montevideo, con dos charlas que vinieron de Argentina.\n\nEn **Machine Learning – Computer Vision**, parte del equipo de Machine Learning de Córdoba (ex Machinalis) presentó las tareas principales de la visión artificial moderna: clasificación, detección y segmentación de imágenes. Era una charla que ya habían dado en PyData London y PyCon Italia. En **Site Reliability Engineering**, Juan Rossi, líder técnico del área en Mercado Libre y organizador de la SRE Meetup de Buenos Aires, contó cómo monitoreaban, medían y hacían más resilientes más de 4000 aplicaciones interconectadas para prevenir incidentes. Confirmaron asistencia 85 personas en Meetup y el evento se transmitió por YouTube.",
+  "talks": [
+   {
+    "title": "Machine Learning – Computer Vision"
+   },
+   {
+    "title": "Site Reliability Engineering: monitoreando más de 4000 aplicaciones",
+    "speakers": [
+     "Juan Rossi"
+    ]
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "photos": [
+   {
+    "src": "https://secure.meetupstatic.com/photos/event/1/c/f/5/600_476647413.jpeg",
+    "alt": "Público sentado en las oficinas de Mercado Libre siguiendo una charla proyectada en pantallas",
+    "by": "Mercado Libre Tech Talks",
+    "source": "Meetup",
+    "page": "https://www.meetup.com/Mercado-Libre-Tech-Talks/photos/29475238/476647413/"
+   }
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/256355047/"
+   },
+   {
+    "label": "Transmisión del evento (YouTube)",
+    "url": "https://www.youtube.com/watch?v=8Xf-KjMb8Ik"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Transmisión «Mercado Libre tech talk - Machine Learning - Computer vision / Site Reliability Engineering» (YouTube)",
+    "url": "https://www.youtube.com/watch?v=8Xf-KjMb8Ik"
+   }
+  ]
+ },
+ "meetup:260505105": {
+  "description": "«**La escala MELI**» fue la Mercado Libre Tech Talk del miércoles 24 de abril de 2019, a las 19:00 en las oficinas de la empresa en el piso 39 de la Torre 4 del WTC de Montevideo. Ignacio Alvarez, Gonzalo Mangado y Diego Romero recorrieron la historia tecnológica de Mercado Libre, desde el primer proyecto de garage hecho en PHP hasta un ecosistema que atendía más de 100 millones de requests por minuto y 250 millones de usuarios registrados, y explicaron qué había motivado cada transformación técnica en casi 20 años.\n\nEntre los temas estuvieron arquitecturas monolíticas frente a microservicios a gran escala, su IaaS sobre OpenStack, su PaaS propio multiproveedor, cloud computing, monitoreo, escalabilidad y los lenguajes de programación que usaba la empresa. Confirmaron asistencia 96 personas en Meetup y la charla se transmitió por YouTube.",
+  "talks": [
+   {
+    "title": "La escala MELI",
+    "speakers": [
+     "Ignacio Alvarez",
+     "Gonzalo Mangado",
+     "Diego Romero"
+    ],
+    "video": "https://www.youtube.com/watch?v=5Aj_5uGsMg4"
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/260505105/"
+   },
+   {
+    "label": "Transmisión de la charla (YouTube)",
+    "url": "https://www.youtube.com/watch?v=5Aj_5uGsMg4"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Página del grupo en Meetup, copia de enero de 2022 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20220126085253/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Transmisión «Mercado Libre Tech Talk - La escala MELI» (YouTube)",
+    "url": "https://www.youtube.com/watch?v=5Aj_5uGsMg4"
+   }
+  ]
+ },
+ "meetup:264502782": {
+  "description": "Taller de las **Mercado Libre Tech Talks** del sábado 14 de septiembre de 2019, de mañana (10:00), en las oficinas de Mercado Libre en el piso 39 de la Torre 4 del WTC de Montevideo. Fue una introducción al deep learning y al procesamiento de lenguaje natural aplicada a un problema real de la plataforma: elegir la categoría correcta de un producto entre miles de opciones. Con datos reales de productos del sitio, los participantes entrenaron modelos que predicen la categoría a partir del título.\n\nLo dieron Pablo Zamudio y Agustín Sarasúa, del equipo de IT de Mercado Libre Uruguay. Bastaba con saber programar un poco en Python y llevar una notebook, sin conocimientos previos de machine learning, y el contenido servía de base para el desafío de machine learning MeLi Data Challenge. Los 50 lugares se completaron.",
+  "talks": [
+   {
+    "title": "Workshop: Categorización de productos con deep learning",
+    "speakers": [
+     "Pablo Zamudio",
+     "Agustín Sarasúa"
+    ]
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "photos": [
+   {
+    "src": "https://secure.meetupstatic.com/photos/event/a/3/2/5/highres_484541765.jpeg",
+    "alt": "Afiche del taller (no hay fotos publicadas del evento): «Workshop Categorización de Productos con Deep Learning», sábado 14 de setiembre, 10 am, Torre 4 WTC, piso 39",
+    "by": "Mercado Libre Tech Talks",
+    "source": "Meetup",
+    "page": "https://www.meetup.com/Mercado-Libre-Tech-Talks/photos/27798891/484541765/"
+   }
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/264502782/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de octubre de 2019 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20191006134900/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   },
+   {
+    "label": "Página del grupo en Meetup, copia de enero de 2022 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20220126085253/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   }
+  ]
+ },
+ "meetup:266053471": {
+  "description": "Taller de **SwiftUI** de las Mercado Libre Tech Talks, el sábado 9 de noviembre de 2019 a las 10:00 en las oficinas de Mercado Libre en el piso 39 de la Torre 4 del WTC de Montevideo. SwiftUI, el framework declarativo para construir interfaces en las plataformas de Apple, se había presentado en la WWDC de ese año, y el taller proponía repasar sus fundamentos armando una app desde cero.\n\nLo dio Samuel Sainz, del equipo de IT de Mercado Libre Uruguay. Hacía falta saber algo de iOS (Objective-C o Swift) y llevar una MacBook con Xcode 11.1; quien no tuviera Mac podía anotarse en un formulario aparte. Confirmaron asistencia 35 personas en Meetup.",
+  "talks": [
+   {
+    "title": "Workshop: Introducción a SwiftUI",
+    "speakers": [
+     "Samuel Sainz"
+    ]
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39 (Dr. Luis Bonavita 1248)",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/266053471/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de enero de 2022 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20220126085253/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   }
+  ]
+ },
+ "meetup:266949319": {
+  "description": "«**Creando experiencias de diseño: ¿cómo trabaja un diseñador UX en Mercado Libre?**» fue la meetup del jueves 12 de diciembre de 2019 a las 19:00, en las oficinas de Mercado Libre en el piso 39 de la Torre 4 del World Trade Center de Montevideo. La invitación proponía conocer las oficinas y escuchar cómo la empresa diseñaba experiencias para toda América Latina.\n\nHubo dos charlas. Agustín Castro Gatti, UX Leader de Mercado Libre en Argentina, contó cómo Mercado Puntos, el programa de beneficios, ayudó a potenciar el diálogo entre Mercado Libre y Mercado Pago. Virginia Cabrera, UX Leader en Uruguay, presentó el equipo de diseño local y el desafío de crear el catálogo de productos de Mercado Libre. Para entrar había que llevar cédula y confirmaron asistencia 57 personas en Meetup.",
+  "talks": [
+   {
+    "title": "Mercado Puntos: un programa de beneficios para todo el ecosistema",
+    "speakers": [
+     "Agustín Castro Gatti"
+    ]
+   },
+   {
+    "title": "Crear el catálogo de Mercado Libre: ¡La Odisea!",
+    "speakers": [
+     "Virginia Cabrera"
+    ]
+   }
+  ],
+  "venue": "Mercado Libre, World Trade Center Torre 4, piso 39",
+  "city": "Montevideo",
+  "organizers": [
+   "Mercado Libre"
+  ],
+  "photos": [
+   {
+    "src": "https://secure.meetupstatic.com/photos/event/8/2/b/9/highres_487353465.jpeg",
+    "alt": "Diapositiva proyectada durante una de las charlas, con dos objetivos: afianzar el liderazgo en e-commerce y convertirse en referentes en fintech",
+    "by": "Mercado Libre Tech Talks",
+    "source": "Meetup",
+    "page": "https://www.meetup.com/Mercado-Libre-Tech-Talks/photos/30576257/487353465/"
+   },
+   {
+    "src": "https://secure.meetupstatic.com/photos/event/6/8/a/highres_487141674.jpeg",
+    "alt": "Afiche de la meetup «Creando experiencias de diseño», jueves 12 de diciembre a las 19 h, con los oradores Agustín Castro Gatti y Virginia Cabrera",
+    "by": "Mercado Libre Tech Talks",
+    "source": "Meetup",
+    "page": "https://www.meetup.com/Mercado-Libre-Tech-Talks/photos/30576257/487141674/"
+   }
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/Mercado-Libre-Tech-Talks/events/266949319/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Página del grupo en Meetup, copia de enero de 2022 en Wayback Machine (descripción del evento)",
+    "url": "https://web.archive.org/web/20220126085253/https://www.meetup.com/Mercado-Libre-Tech-Talks/"
+   }
+  ]
+ },
+ "meetup:135095232": {
+  "description": "Reunión de septiembre de 2013 de **PHP Montevideo** (PHPmvd), el grupo de usuarios de PHP organizado en Meetup por Diego Sapriza y José Capelán. Fue el miércoles 25 a las 19:00 en CASE UY (San José 1337, oficina 11) y, como siempre, era gratis: solo había que reservar lugar. El grupo se había creado en mayo de 2013 para juntar a quienes programaban en PHP en Montevideo, y CASE UY le prestaba su oficina para las reuniones.\n\nEl título anunciaba Symfony, Boris (una consola interactiva para PHP), Faker y «otras yerbas». Según los comentarios, hubo una presentación de Symfony, que hasta ese momento no se había visto en el grupo (la reunión anterior había sido sobre Laravel), y se mostraron Faker y Boris; un asistente contó que al otro día ya estaban usando Faker. Tabaré Caorsi iba a hablar de Twig, pero no pudo ir y prometió llevarlo a la siguiente. También se mostró una colección de enlaces útiles para PHP. En Meetup se anotaron 23 personas.",
+  "venue": "CASE UY, oficina 11 (San José 1337, esquina Ejido)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "José Capelán"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/PHPmvd/events/135095232/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/PHPmvd/events/135095232/"
+   },
+   {
+    "label": "Evento en Meetup, copia de marzo de 2014 en Wayback Machine",
+    "url": "https://web.archive.org/web/20140315204538/http://www.meetup.com/PHPmvd/events/135095232/"
+   },
+   {
+    "label": "Página de eventos pasados de PHP MVD, copia de mayo de 2014 en Wayback Machine (datos del grupo y sponsors)",
+    "url": "https://web.archive.org/web/20140529182414/http://www.meetup.com/PHPmvd/events/past/?scroll=true"
+   }
+  ]
+ },
+ "meetup:153903482": {
+  "description": "Primera reunión de 2014 de **PHP Montevideo**, el miércoles 26 de febrero a las 19:00 en CASE UY (San José 1337, oficina 11). José Capelán la planteó como una reunión de apertura del año, sin charla de PHP preparada y abierta a lo que cada uno quisiera llevar. En los comentarios de esa mañana surgieron como temas posibles Composer, testing y, por sugerencia de Diego Sapriza, el phpday, la conferencia que el grupo terminaría haciendo en 2015. En Meetup se anotaron 16 personas.",
+  "venue": "CASE UY, oficina 11 (San José 1337, esquina Ejido)",
+  "city": "Montevideo",
+  "organizers": [
+   "José Capelán"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/PHPmvd/events/153903482/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/PHPmvd/events/153903482/"
+   }
+  ]
+ },
+ "meetup:169552302": {
+  "description": "Reunión de marzo de 2014 de **PHP Montevideo**, el miércoles 26 a las 19:30 en la sede de CASE UY (Martí 3214, esquina Ellauri, a una cuadra de Av. Brasil). La charla de la noche fue de Martín Loy, que contó su experiencia perfilando una aplicación de terceros con el profiler de Xdebug. Los asistentes destacaron en los comentarios lo útil que fue ver opciones de depuración, sobre todo para trabajar con código ajeno, y le pidieron que publicara la presentación. En Meetup se anotaron 20 personas.",
+  "talks": [
+   {
+    "title": "Profiling de una aplicación de terceros con Xdebug profiler",
+    "speakers": [
+     "Martín Loy"
+    ]
+   }
+  ],
+  "venue": "CASE UY (Martí 3214, esquina Ellauri)",
+  "city": "Montevideo",
+  "organizers": [
+   "Diego Sapriza",
+   "José Capelán"
+  ],
+  "links": [
+   {
+    "label": "Evento en Meetup",
+    "url": "https://www.meetup.com/PHPmvd/events/169552302/"
+   }
+  ],
+  "sources": [
+   {
+    "label": "Evento en Meetup (comentarios de los asistentes)",
+    "url": "https://www.meetup.com/PHPmvd/events/169552302/"
+   }
+  ]
+ },
+ "github:PHPmvd/phpday-website:2015-07-25:phpday-uruguay-2015-1-edicion": {
+  "description": "El **PHPDay Uruguay 2015** fue la primera conferencia del país dedicada a PHP y a las tecnologías web. La organizó el grupo de usuarios PHP Montevideo (PHPmvd), con Diego Sapriza, Ismael Ambrosi y José Capelán como contactos. La primera convocatoria lo anunciaba para el 25 de julio, pero se hizo el **sábado 8 de agosto de 2015**, de 9:00 a 18:00, en la Escuela Superior de Informática del Buceo (Av. Rivera 3729 bis). La entrada era gratuita, con inscripción previa en phpday.uy.\n\nLa idea era potenciar la comunidad PHP, acercar a estudiantes de informática y ofrecer un día de actualización profesional y networking. La grilla final tuvo 24 charlas en cuatro salas en paralelo, con oradores de Uruguay, Argentina y Brasil, sobre frameworks (Symfony, Laravel, Yii), CMS (Drupal, WordPress), testing y BDD, APIs REST, bases de datos, Docker, Ansible y Vagrant, git, metodologías ágiles y visualización con D3. Hubo además casos locales, como el uso de Laravel en Plan Ceibal y la experiencia de Proyecto Nahual, que forma jóvenes en testing de software.\n\nLos organizadores venían de la comunidad PHPmvd, de TechMeetup y de los grupos DevOps y MySQL de Montevideo. Apoyaron la ESI, Percona, JetBrains, DigitalOcean y TechMeetup.",
+  "talks": [
+   {
+    "title": "Deployando con Rocketeer",
+    "speakers": [
+     "Matías Fuster"
+    ]
+   },
+   {
+    "title": "Cómo diseñar APIs RESTful sin morir en el intento",
+    "speakers": [
+     "Diego Sapriza"
+    ],
+    "slides": "https://speakerdeck.com/av4tar/restful-para-todos"
+   },
+   {
+    "title": "Intro a D3 para los más chambones",
+    "speakers": [
+     "Miguel Trias"
+    ]
+   },
+   {
+    "title": "Desarrollo ágil de software: Scrum y XP",
+    "speakers": [
+     "Pablo Lischinsky"
+    ],
+    "slides": "https://www.slideshare.net/pablolis/introduccin-al-desarrollo-gil-de-software-en-php-day-2015"
+   },
+   {
+    "title": "Testing como herramienta de inclusión social y laboral para nuestros jóvenes (Proyecto Nahual)",
+    "speakers": [
+     "Gabriel Montero",
+     "Rodrigo Gómez"
+    ],
+    "slides": "https://docs.google.com/presentation/d/1E6rexbnrm8cb_mkrLwz0IlgkrGOncNTCMfTio0r4x-I/edit?usp=sharing"
+   },
+   {
+    "title": "HTML5 + jQuery + PHP",
+    "speakers": [
+     "Alan Yusim Silva"
+    ]
+   },
+   {
+    "title": "PHP endemoniado, una plataforma de mensajería sobre PHP y MySQL",
+    "speakers": [
+     "Marcelo Bagnasco",
+     "Iván Baldo"
+    ]
+   },
+   {
+    "title": "Docker from the basics to orchestration",
+    "speakers": [
+     "Wellington Figueira da Silva"
+    ],
+    "slides": "https://speakerdeck.com/wsilva/talk-on-php-day-uruguay-about-docker"
+   },
+   {
+    "title": "¿Qué pasa con git?",
+    "speakers": [
+     "José Capelán",
+     "Gastón Acosta"
+    ]
+   },
+   {
+    "title": "Procesando Salesforce Outbound Messages con PHP en Heroku",
+    "speakers": [
+     "Aldo Fernández"
+    ],
+    "slides": "https://speakerdeck.com/aldoforce/procesando-salesforce-outbound-messages-con-php-en-heroku"
+   },
+   {
+    "title": "Dentro de un backend: ¿está mi aplicación funcionando?",
+    "speakers": [
+     "Sandino Núñez Acuña"
+    ],
+    "slides": "https://www.slideshare.net/sandinosaso/dentro-de-un-backend"
+   },
+   {
+    "title": "Intro a BDD",
+    "speakers": [
+     "Ismael Ambrosi"
+    ],
+    "slides": "https://speakerdeck.com/iambrosi/introduccion-a-bdd-phpdayuy-2015"
+   },
+   {
+    "title": "Introducción a Symfony 2",
+    "speakers": [
+     "Fabián Vallejos"
+    ],
+    "slides": "https://github.com/vallejos/phpday-2015-symfony-presentation"
+   },
+   {
+    "title": "Introduction to MongoDB",
+    "speakers": [
+     "Marcos Albe"
+    ]
+   },
+   {
+    "title": "reload? no seas malo!",
+    "speakers": [
+     "José Capelán"
+    ]
+   },
+   {
+    "title": "WordPress, mucho más que un CMS para blogs",
+    "speakers": [
+     "Daniel Bertinat"
+    ],
+    "slides": "https://www.slideshare.net/dbertinat1/wordpress-mucho-ms-que-un-cms-para-blogsphpday-uy"
+   },
+   {
+    "title": "Yii inicios",
+    "speakers": [
+     "Federico Rodríguez"
+    ],
+    "slides": "https://www.slideshare.net/slideshow/embed_code/key/q3OfQVstdxGD6R"
+   },
+   {
+    "title": "Blog de noticias tecnológicas",
+    "speakers": [
+     "Fabián Larrosa"
+    ],
+    "slides": "https://es.slideshare.net/FabiLarrosa/blog-tecnologico"
+   },
+   {
+    "title": "Composer y el país del nunca jamás",
+    "speakers": [
+     "Diego Sapriza",
+     "Ismael Ambrosi",
+     "Sebastián Martínez"
+    ]
+   },
+   {
+    "title": "Drupal: ¿qué es? Y qué hay de nuevo en la versión 8",
+    "speakers": [
+     "Mauricio Stekl"
+    ]
+   },
+   {
+    "title": "Laravel en Plan Ceibal",
+    "speakers": [
+     "Martín Migliónico"
+    ],
+    "slides": "https://speakerdeck.com/martinm/laravel-en-plan-ceibal"
+   },
+   {
+    "title": "Ansible, Vagrant y otras yerbas",
+    "speakers": [
+     "Gastón Acosta"
+    ]
+   },
+   {
+    "title": "Unicornios y navegadores, del mobile a la web",
+    "speakers": [
+     "Gabriel Chertok"
+    ]
+   },
+   {
+    "title": "Aplicaciones modernas en PHP",
+    "speakers": [
+     "Ismael Ambrosi",
+     "Diego Sapriza",
+     "José Capelán"
+    ]
+   }
+  ],
+  "venue": "Escuela Superior de Informática del Buceo (Av. Rivera 3729 bis)",
+  "city": "Montevideo",
+  "organizers": [
+   "PHP Montevideo (PHPmvd)",
+   "Diego Sapriza",
+   "Ismael Ambrosi",
+   "José Capelán"
+  ],
+  "photos": [
+   {
+    "src": "https://raw.githubusercontent.com/PHPmvd/phpday-website/master/web/assets/flyer-phpday-2015.png",
+    "alt": "Afiche del PHPDay 2015 (no hay fotos publicadas del evento): sábado 8 de agosto de 2015 en la Escuela Superior de Informática, Av. Rivera 3729 bis, con inscripción gratuita en phpday.uy y los logos de PHPmvd y de quienes apoyaron",
+    "by": "PHP Montevideo (PHPmvd)",
+    "source": "GitHub · PHPmvd/phpday-website",
+    "page": "https://github.com/PHPmvd/phpday-website/blob/master/web/assets/flyer-phpday-2015.png"
+   }
+  ],
+  "links": [
+   {
+    "label": "Código del sitio phpday.uy en GitHub (grilla y oradores)",
+    "url": "https://github.com/PHPmvd/phpday-website"
+   },
+   {
+    "label": "Nota de la Universidad ORT",
+    "url": "https://www.ort.edu.uy/en/news/phpday-web-technology-day-31185"
+   }
+  ],
+  "sources": [
+   {
+    "label": "GitHub · PHPmvd/phpday-website: SOBREPHPDAY.md",
+    "url": "https://github.com/PHPmvd/phpday-website/blob/master/SOBREPHPDAY.md"
+   },
+   {
+    "label": "GitHub · PHPmvd/phpday-website: grilla (config/schedule.yml)",
+    "url": "https://github.com/PHPmvd/phpday-website/blob/master/config/schedule.yml"
+   },
+   {
+    "label": "GitHub · PHPmvd/phpday-website: oradores (config/speakers.yml)",
+    "url": "https://github.com/PHPmvd/phpday-website/blob/master/config/speakers.yml"
+   },
+   {
+    "label": "Afiche del PHPDay 2015 en el repositorio del sitio",
+    "url": "https://github.com/PHPmvd/phpday-website/blob/master/web/assets/flyer-phpday-2015.png"
+   },
+   {
+    "label": "Universidad ORT: «PHPday, el día de la tecnología web» (30/07/2015)",
+    "url": "https://www.ort.edu.uy/en/news/phpday-web-technology-day-31185"
+   }
+  ]
+ },
+ "meetup:239386263": {
+  "description": "La primera juntada de **Tacuarembó Desarrolla**, un grupo creado en Meetup en marzo de 2017 para reunir a la comunidad de desarrolladores de software de Tacuarembó: conocerse, ayudar a quienes recién arrancan, intercambiar información y pasar un buen rato. La organizaron Gabriel Roldán y Santiago Ferreira el sábado 29 de abril en **Living** (Treinta y Tres 156), y la anunciaron con charlas, sorpresas y regalos.\n\nEl grupo llegó a 22 miembros y se juntó cuatro veces en 2017, siempre un sábado de tarde: el 29 de abril, el 3 de junio, el 22 de julio y el 28 de octubre.",
+  "organizers": [
+   "Gabriel Roldán",
+   "Santiago Ferreira"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ },
+ "meetup:239829708": {
+  "organizers": [
+   "Gabriel Roldán"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ },
+ "meetup:241001996": {
+  "organizers": [
+   "Gabriel Roldán"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ },
+ "meetup:244315150": {
+  "description": "La cuarta y última juntada de **Tacuarembó Desarrolla**, el grupo de desarrolladores de software de Tacuarembó. El recordatorio que mandó Meetup el día antes la ubicaba en **Living** (Treinta y Tres 156), como las anteriores; la página del evento terminó marcando el **Hotel Tacuarembó** (18 de Julio 133).",
+  "organizers": [
+   "Gabriel Roldán"
+  ],
+  "sources": [
+   {
+    "label": "Tacuarembó Desarrolla en Meetup (Wayback Machine, agosto de 2017)",
+    "url": "https://web.archive.org/web/20170825012755/https://www.meetup.com/tacuarembo-desarrolla/"
+   }
+  ]
+ }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 
 import { poppins } from "app/fonts";
@@ -9,16 +9,16 @@ import { SPONSORS_2026 } from "app/conf/components/Sponsors";
 import { TANGRAM_PIECES } from "app/conf/components/TangramGallery";
 import { CONF_DATES } from "app/lib/constants";
 import { motivationalPhrases } from "components/displays/StickyNoteDisplay";
-import { useRealtimeChannel } from "hooks/useRealtimeChannel";
-import { client, type StickyNote } from "lib/orpc";
+import type { StickyNote } from "lib/orpc";
 import type { SceneProps } from "lib/owy-stage/scenes";
-import { eventChannel } from "lib/realtime/channels";
 import { roomColorFor } from "lib/rooms/palette";
 import { formatTime } from "lib/utils";
 
 import { Confetti } from "../effects";
+import { OwyFace, type FaceApi } from "../Face";
 import { Ambient, BRAND, Caption, Flag, H, StageContext, W, useStageFrame } from "../Stage";
-import { HAPPY_MS, drawFace, initialSim } from "./OwyFace";
+import { useBoard } from "../board";
+import { WALL_FACE } from "./OwyFace";
 import { LogoReveal, MOMENT_PHOTOS, Rise } from "./parts";
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
@@ -110,14 +110,7 @@ type TermLine = { text: string; kind: "cmd" | "ok" | "info" | "big" };
 
 export function Terminal({ eventId }: SceneProps<"terminal">) {
   const { preview } = useContext(StageContext);
-  const [tracks, setTracks] = useState<number | null>(null);
-  useEffect(() => {
-    if (!eventId) return;
-    client.tracks
-      .list({ openSpaceId: eventId })
-      .then((list) => setTracks(list.length))
-      .catch(() => setTracks(null));
-  }, [eventId]);
+  const tracks = useBoard(eventId, preview)?.tracks.length ?? null;
 
   const lines = useMemo<TermLine[]>(
     () => [
@@ -194,38 +187,30 @@ export function Ideas({ eventId }: SceneProps<"ideas">) {
   const { preview } = useContext(StageContext);
   const canvas = useRef<HTMLCanvasElement>(null);
   const ideas = useRef<Idea[]>([]);
-  const [count, setCount] = useState<number | null>(null);
+  const notes = useBoard(eventId, preview)?.tracks ?? null;
+  const count = notes ? notes.length : null;
 
-  const load = useCallback(() => {
-    if (!eventId) return;
-    client.tracks
-      .list({ openSpaceId: eventId })
-      .then((notes) => {
-        ideas.current = notes.map((note, i) => {
-          const angle = i * 2.4; // golden-angle spiral keeps them spread without overlap checks
-          const radius = 120 + Math.sqrt(i) * 110;
-          return {
-            note,
-            x: Math.min(Math.max(W / 2 + Math.cos(angle) * radius * 1.4, 80), W - 700),
-            y: Math.min(Math.max(H / 2 + Math.sin(angle) * radius * 0.85, 80), H - 80),
-            vx: rand(-8, 8),
-            vy: rand(-6, 6),
-            size: rand(26, 40),
-            phase: rand(0, Math.PI * 2),
-            w: 0,
-          };
-        });
-        setCount(notes.length);
-      })
-      .catch((error) => console.error("[stage] ideas", error));
-  }, [eventId]);
-
+  // A new card joins the galaxy where the spiral has room; the ones already drifting stay where they are.
   useEffect(() => {
-    load();
-  }, [load]);
-  useRealtimeChannel(eventId && !preview ? eventChannel(eventId, "sync") : null, (event) => {
-    if (event === "card_change" || event === "structure_change") load();
-  });
+    if (!notes) return;
+    const drifting = new Map(ideas.current.map((idea) => [idea.note.id, idea]));
+    ideas.current = notes.map((note, i) => {
+      const known = drifting.get(note.id);
+      if (known) return known.note === note ? known : { ...known, note, w: 0 };
+      const angle = i * 2.4; // golden-angle spiral keeps them spread without overlap checks
+      const radius = 120 + Math.sqrt(i) * 110;
+      return {
+        note,
+        x: Math.min(Math.max(W / 2 + Math.cos(angle) * radius * 1.4, 80), W - 700),
+        y: Math.min(Math.max(H / 2 + Math.sin(angle) * radius * 0.85, 80), H - 80),
+        vx: rand(-8, 8),
+        vy: rand(-6, 6),
+        size: rand(26, 40),
+        phase: rand(0, Math.PI * 2),
+        w: 0,
+      };
+    });
+  }, [notes]);
 
   useStageFrame((t, dt) => {
     const ctx = canvas.current?.getContext("2d");
@@ -459,8 +444,7 @@ export function Kaleidoscope() {
 
 export function OwyTalks() {
   const { preview } = useContext(StageContext);
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const sim = useRef(initialSim());
+  const face = useRef<FaceApi>(null);
   const [line, setLine] = useState<{ id: number; text: string } | null>(null);
 
   useEffect(() => {
@@ -468,15 +452,14 @@ export function OwyTalks() {
     let timer: ReturnType<typeof setTimeout>;
     const say = () => {
       const text = motivationalPhrases[Math.floor(Math.random() * motivationalPhrases.length)];
-      const s = sim.current;
-      s.mood = "thinking";
+      face.current?.state("thinking");
       timer = setTimeout(() => {
-        s.mood = "speaking";
+        face.current?.state("speaking");
         setLine({ id: Date.now(), text });
         const speaking = 1200 + text.length * 55;
         timer = setTimeout(() => {
-          s.mood = "idle";
-          s.happyUntil = s.now + HAPPY_MS;
+          face.current?.state("idle");
+          face.current?.smile();
           timer = setTimeout(() => {
             setLine(null);
             timer = setTimeout(say, rand(3000, 7000));
@@ -488,15 +471,10 @@ export function OwyTalks() {
     return () => clearTimeout(timer);
   }, [preview]);
 
-  useStageFrame((t, dt) => {
-    const ctx = canvas.current?.getContext("2d");
-    if (ctx) drawFace(ctx, sim.current, t, dt);
-  });
-
   return (
     <>
       <Ambient />
-      <canvas ref={canvas} className="absolute inset-0" height={H} width={W} />
+      <OwyFace ref={face} {...WALL_FACE} />
       <AnimatePresence>{line && <Caption key={line.id} text={line.text} />}</AnimatePresence>
     </>
   );

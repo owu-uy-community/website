@@ -26,18 +26,18 @@ export interface BoardSnapshot {
  * events), so pin it with OWY_EVENT_ID; without a pin, Owy takes the most
  * recent event it can operate (`listForAdmin` returns them newest first).
  */
-export async function resolveActiveEvent(): Promise<AdminEventOption> {
+/** `pinned`: an event id or slug that wins over OWY_EVENT_ID (the companion's pitch target). */
+export async function resolveActiveEvent(pinned = process.env.OWY_EVENT_ID?.trim()): Promise<AdminEventOption> {
   const events = await owuApi().openSpaces.listForAdmin();
   if (events.length === 0) {
     throw new Error("No hay ningún evento cargado en el sistema todavía.");
   }
 
-  const pinned = process.env.OWY_EVENT_ID?.trim();
   if (pinned) {
     const match = events.find((event) => event.id === pinned || event.slug === pinned);
     if (!match) {
       const options = events.map((event) => `${event.name} (${event.slug}, id ${event.id})`).join("; ");
-      throw new Error(`OWY_EVENT_ID="${pinned}" no matchea ningún evento. Disponibles: ${options}.`);
+      throw new Error(`El evento "${pinned}" no matchea ningún evento. Disponibles: ${options}.`);
     }
     return match;
   }

@@ -1,17 +1,21 @@
 import { createId } from "@paralleldrive/cuid2";
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 import { Effect } from "effect";
+import { cacheLife } from "next/cache";
 import * as z from "zod";
 
 import { EXTERNAL_SERVICES } from "app/lib/constants";
 
-import { owyStageInputs, owyStageState, rooms, tracks } from "../../db/schema";
+import { attendees, communities, events, owyStageInputs, owyStageState, user } from "../../db/schema";
+import { publicBoard } from "../../openspace/public-board";
+import { photoPreference } from "../../organizar/presets";
 import { afterTake, cue, findPreset, presetStep, readDesk } from "../../owy-stage/desk";
 import {
   DEFAULT_STAGE_STATE,
   OWY_DESK_CHANNEL,
   OWY_STAGE_CHANNEL,
   RundownStepSchema,
+  SCENES,
   StoredFaceSchema,
   isSceneId,
   parseSceneParams,
@@ -23,25 +27,34 @@ import {
   type ModerationEvent,
   type RundownStep,
   type SceneId,
+  type Spotlight,
   type StageInput,
   type StageState,
   type StageTransition,
   type StoredFace,
   type SubmitInput,
 } from "../../owy-stage/scenes";
+import * as Attendees from "../attendees/service";
 import { query, transaction } from "../db";
 import { Invalid, NotFound } from "../errors";
-import * as Eventbrite from "../eventbrite/service";
+import { shortName } from "../events/service";
 import { fetchJson } from "../http";
-import { Realtime } from "../services";
+import { later } from "../../later";
+import { OWY_TALK_CHANNEL } from "../../realtime/channels";
+import { Realtime, type AppServices } from "../services";
+import type { StickyNote } from "../tracks/schemas";
 import type {
   SaveDeskInput,
+  SeatStatus,
   SetNowPlayingInput,
   SetSceneInput,
+  StageArrival,
+  StageCommunity,
   StageMeetup,
   StagePulse,
   StageSpeaker,
   StageWeather,
+  TalkCommand,
 } from "./schemas";
 
 const ROW_ID = "global";
@@ -171,13 +184,19 @@ const readStoredDesk = (lock = false) =>
     return lock ? select.for("update") : select;
   }).pipe(Effect.map(([row]) => readDesk(row?.desk)));
 
-/** Not a take: `updatedAt` stays (phones time their rounds off it), like the rundown. */
+/**
+ * Not a take: `updatedAt` stays (phones time their rounds off it), like the rundown. Merged over
+ * the stored desk, so what rides along in it (the autopilot) stays.
+ */
 const writeDesk = (desk: Desk) =>
   query((db) =>
     db
       .insert(owyStageState)
       .values({ id: ROW_ID, desk })
-      .onConflictDoUpdate({ target: owyStageState.id, set: { desk, updatedAt: sql`${owyStageState.updatedAt}` } })
+      .onConflictDoUpdate({
+        target: owyStageState.id,
+        set: { desk: sql`${owyStageState.desk} || excluded."desk"`, updatedAt: sql`${owyStageState.updatedAt}` },
+      })
   );
 
 /**
@@ -281,6 +300,127 @@ export const take = (step: DeskStep, transition?: StageTransition) =>
     yield* broadcast("desk", wire(desk), OWY_DESK_CHANNEL);
 
     return { state, desk: wire(desk) };
+  });
+
+// ---------------------------------------------------------------------------
+// Spotlights and the autopilot: new talks on «Owy y la grilla»
+// ---------------------------------------------------------------------------
+
+const autopilotOf = (desk: unknown) =>
+  Boolean(desk && typeof desk === "object" && (desk as { autopilot?: unknown }).autopilot === true);
+
+/** Whether a new talk brings the wall to «Owy y la grilla» on its own. */
+export const getAutopilot = () =>
+  query((db) => db.select({ desk: owyStageState.desk }).from(owyStageState).where(eq(owyStageState.id, ROW_ID))).pipe(
+    Effect.map(([row]) => ({ on: autopilotOf(row?.desk) }))
+  );
+
+/** Switch the autopilot; kept in the desk's JSON, merged in, so the desk itself is left alone. */
+export const setAutopilot = (on: boolean) =>
+  Effect.gen(function* () {
+    yield* query((db) =>
+      db
+        .insert(owyStageState)
+        .values({ id: ROW_ID, desk: { preview: null, queue: [], presets: [], autopilot: on } })
+        .onConflictDoUpdate({
+          target: owyStageState.id,
+          set: {
+            desk: sql`${owyStageState.desk} || ${JSON.stringify({ autopilot: on })}::jsonb`,
+            updatedAt: sql`${owyStageState.updatedAt}`,
+          },
+        })
+    );
+    yield* broadcast("autopilot", { on }, OWY_DESK_CHANNEL);
+
+    return { on };
+  });
+
+/** What the spotlight needs to know about the wall: what is on air, for which event, the autopilot. */
+const wallNow = () =>
+  query((db) =>
+    db
+      .select({
+        scene: owyStageState.scene,
+        params: owyStageState.params,
+        eventId: owyStageState.eventId,
+        desk: owyStageState.desk,
+      })
+      .from(owyStageState)
+      .where(eq(owyStageState.id, ROW_ID))
+  ).pipe(Effect.map(([row]) => row));
+
+/** «Owy y la grilla» on air for the talk's event; from «Owy» it keeps the captions setting (and morphs in place). */
+const bringBoard = (wall: { scene: string; params: Record<string, unknown> } | undefined, note: StickyNote) =>
+  Effect.gen(function* () {
+    if (wall?.scene === "owy-board") return;
+    const captions =
+      wall?.scene === "owy-face" ? SCENES["owy-face"].params.safeParse(wall.params).data?.captions : undefined;
+    yield* setScene({
+      scene: "owy-board",
+      params: captions === undefined ? {} : { captions },
+      eventId: note.openSpaceId,
+    });
+  });
+
+/** The spotlight itself (SpotlightSchema), on the public stage channel: only what the board already shows. */
+const shine = (note: StickyNote, how: Spotlight["how"]) =>
+  Effect.gen(function* () {
+    const spot: Spotlight = {
+      id: createId(),
+      how,
+      track: {
+        id: note.id,
+        title: note.title,
+        speaker: note.speaker,
+        room: note.room,
+        timeSlot: note.timeSlot,
+        roomId: note.roomId,
+        scheduleId: note.scheduleId,
+        roomColor: note.roomColor,
+      },
+    };
+    yield* broadcast("spotlight", spot);
+
+    return spot;
+  });
+
+/**
+ * The operator picked a talk: «Owy y la grilla» comes up if the wall shows something else, puts it
+ * up big over the blurred grid and sends it back to its cell.
+ */
+export const spotlightTalk = (note: StickyNote) =>
+  Effect.gen(function* () {
+    yield* bringBoard(yield* wallNow(), note);
+
+    return yield* shine(note, "manual");
+  });
+
+/**
+ * A talk just landed on the board: «Owy y la grilla» shows it if it is on air, and with the
+ * autopilot on, the wall goes there first. A talk of another event than the wall's is none of the
+ * wall's business.
+ */
+export const announceNewTalk = (note: StickyNote) =>
+  Effect.gen(function* () {
+    const wall = yield* wallNow();
+    if (wall?.eventId && wall.eventId !== note.openSpaceId) return;
+    if (autopilotOf(wall?.desk)) yield* bringBoard(wall, note);
+    yield* shine(note, "new");
+  });
+
+/**
+ * The wall hears about a new talk after the response (spotlight, autopilot): never in the way of
+ * the write. Called by the routes that create talks (a service import would close a cycle through
+ * the public board).
+ */
+export const announceSoon = (note: StickyNote) =>
+  Effect.gen(function* () {
+    const services = yield* Effect.context<AppServices>();
+    later(() =>
+      Effect.runPromiseWith(services)(announceNewTalk(note)).catch((error: unknown) =>
+        console.warn("[owy-stage] the wall missed a new talk", error)
+      )
+    );
   });
 
 /** The operator's rundown, dropping any step whose scene no longer exists. */
@@ -470,42 +610,38 @@ export const moderate = ({ inputId, moderation }: { inputId: string; moderation:
 // ---------------------------------------------------------------------------
 
 /** Ticket counts over every attendee page. */
-const tickets = () =>
-  Effect.all([Eventbrite.getEvent(), Eventbrite.everyAttendee], { concurrency: "unbounded" }).pipe(
-    Effect.map(([event, attendees]) => {
-      const active = attendees.filter((attendee) => !attendee.cancelled && !attendee.refunded);
-
-      return {
-        checkedIn: active.filter((attendee) => attendee.checked_in).length,
-        active: active.length,
-        capacity: event.capacity ?? null,
-      };
-    }),
-    Effect.orElseSucceed(() => null)
-  );
-
+/**
+ * The wall's «Ya somos N»: the event's own attendees, the rows the door scans and the Eventbrite
+ * mirror keep current (so it agrees with the door's dashboard), and the board from the shared cache.
+ * Aggregates only. `tickets` is null for an event with nobody registered.
+ */
 export const getPulse = (eventId: string | null | undefined) =>
-  Effect.gen(function* () {
-    const [ticketCounts, board] = yield* Effect.all(
-      [
-        Eventbrite.isConfigured() ? tickets() : Effect.succeed(null),
-        eventId
-          ? Effect.all([
-              query((db) => db.select({ count: count() }).from(tracks).where(eq(tracks.openSpaceId, eventId))),
-              query((db) =>
-                db
-                  .select({ count: count() })
-                  .from(rooms)
-                  .where(and(eq(rooms.openSpaceId, eventId), eq(rooms.isActive, true)))
-              ),
-            ]).pipe(Effect.map(([[ideas], [activeRooms]]) => ({ ideas: ideas.count, rooms: activeRooms.count })))
-          : Effect.succeed(null),
-      ],
-      { concurrency: "unbounded" }
-    );
-
-    return { tickets: ticketCounts, board } satisfies StagePulse;
-  });
+  eventId
+    ? Effect.all(
+        [
+          query((db) =>
+            db
+              .select({
+                checkedIn: sql<number>`(count(*) filter (where ${attendees.checkedInAt} is not null))::int`,
+                active: sql<number>`(count(*) filter (where ${attendees.status} = 'attending'))::int`,
+              })
+              .from(attendees)
+              .where(eq(attendees.eventId, eventId))
+          ),
+          query((db) => db.select({ capacity: events.capacity }).from(events).where(eq(events.id, eventId))),
+          Effect.promise(() => publicBoard(eventId)),
+        ],
+        { concurrency: "unbounded" }
+      ).pipe(
+        Effect.map(([[people], [event], board]): StagePulse => ({
+          tickets:
+            people && (people.active > 0 || people.checkedIn > 0)
+              ? { checkedIn: people.checkedIn, active: people.active, capacity: event?.capacity ?? null }
+              : null,
+          board: { ideas: board.tracks.length, rooms: board.rooms.filter((room) => room.isActive).length },
+        }))
+      )
+    : Effect.succeed<StagePulse>({ tickets: null, board: null });
 
 const MeetupFeedSchema = z.object({
   meetups: z.array(
@@ -519,9 +655,21 @@ const MeetupFeedSchema = z.object({
   ),
 });
 
+/**
+ * The feeds below come from a cache every server instance shares, refreshed in the background and
+ * never older than its expiry: the fetch cache they used before had no ceiling, so the first read
+ * after a quiet night served the evening before. A failed read throws, so it is never cached.
+ */
+async function meetupFeed() {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 1800, expire: 6 * 3600 });
+
+  return Effect.runPromise(fetchJson("meetup-bot", EXTERNAL_SERVICES.meetupBot, MeetupFeedSchema));
+}
+
 /** The community calendar (meetup-bot feed); the browser can't read it directly (no CORS). */
 export const getMeetups = () =>
-  fetchJson("meetup-bot", EXTERNAL_SERVICES.meetupBot, MeetupFeedSchema, { next: { revalidate: 1800 } }).pipe(
+  Effect.tryPromise(() => meetupFeed()).pipe(
     Effect.map(({ meetups }): StageMeetup[] => {
       const recent = Date.now() - 3_600_000;
 
@@ -561,9 +709,16 @@ const FORECAST_URL =
   "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m" +
   "&hourly=temperature_2m,precipitation_probability,weather_code&forecast_days=2&timezone=America%2FMontevideo";
 
-/** Montevideo right now, from Open-Meteo (no key); cached 15 minutes. */
+async function forecast() {
+  "use cache: remote";
+  cacheLife({ stale: 300, revalidate: 900, expire: 3600 });
+
+  return Effect.runPromise(fetchJson("Open-Meteo", FORECAST_URL, ForecastSchema));
+}
+
+/** Montevideo right now, from Open-Meteo (no key): refreshed every 15 minutes, never over an hour old. */
 export const getWeather = () =>
-  fetchJson("Open-Meteo", FORECAST_URL, ForecastSchema, { next: { revalidate: 900 } }).pipe(
+  Effect.tryPromise(() => forecast()).pipe(
     Effect.map(({ current, hourly }): StageWeather => {
       const start = hourly.time.findIndex((time) => time > current.time);
 
@@ -603,3 +758,97 @@ export const getSpeakers = () =>
       }))
       .toSorted((a, b) => a.name.localeCompare(b.name));
   });
+
+/** An attendee tag that keeps someone off the welcome wall, as the door's photo chip says it. */
+const NO_PHOTOS_TAG = "sin fotos";
+
+/** The event on the wall: the only one whose arrivals the public reads below show. */
+const wallEvent = query((db) =>
+  db.select({ eventId: owyStageState.eventId }).from(owyStageState).where(eq(owyStageState.id, ROW_ID))
+).pipe(Effect.map(([row]) => row?.eventId ?? null));
+
+/**
+ * Who has checked in to an event, oldest first, minus anyone tagged «sin fotos» or who answered
+ * "No" to the RSVP's photo question. `only` narrows it to one attendee (the avatar route).
+ */
+const arrivals = (eventId: string, only?: string) =>
+  query((db) =>
+    db
+      .select({
+        id: attendees.id,
+        name: attendees.name,
+        email: attendees.email,
+        at: attendees.checkedInAt,
+        tags: attendees.tags,
+        answers: attendees.answers,
+        questions: events.questions,
+        // Their OWU account's picture (the Slack one), when the ticket's email has an account
+        image: user.image,
+      })
+      .from(attendees)
+      .innerJoin(events, eq(events.id, attendees.eventId))
+      .leftJoin(user, sql`lower(${user.email}) = lower(${attendees.email})`)
+      .where(
+        and(eq(attendees.eventId, eventId), isNotNull(attendees.checkedInAt), only ? eq(attendees.id, only) : undefined)
+      )
+      .orderBy(asc(attendees.checkedInAt), asc(attendees.id))
+  ).pipe(
+    Effect.map((rows) =>
+      rows.filter(
+        (row) =>
+          photoPreference(row.questions, row.answers) !== "Sin fotos" &&
+          !row.tags.some((tag) => tag.trim().toLowerCase() === NO_PHOTOS_TAG)
+      )
+    )
+  );
+
+/**
+ * The welcome wall: who has arrived at the wall's event, as "Ana G." (pictures go through
+ * /api/owy-stage/avatar/<id>, so no email leaves the server). The wall asks every 30 s, so like an
+ * open door screen it keeps the Eventbrite mirror current (throttled per event): check-ins made
+ * in Eventbrite Organizer reach it too.
+ */
+export const getArrivals = () =>
+  Effect.gen(function* () {
+    const eventId = yield* wallEvent;
+    if (!eventId) return [];
+    yield* Effect.ignoreCause(Attendees.sync(eventId, false));
+
+    return (yield* arrivals(eventId)).map((row): StageArrival => ({
+      id: row.id,
+      name: shortName(row.name),
+      at: row.at?.toISOString() ?? "",
+    }));
+  });
+
+/** Where one wall tile's picture may come from: only for someone the wall shows. */
+export const arrivalAvatar = (id: string) =>
+  Effect.gen(function* () {
+    const eventId = yield* wallEvent;
+    const [row] = eventId ? yield* arrivals(eventId, id) : [];
+
+    return row ? { email: row.email, image: row.image } : null;
+  });
+
+/** The groups on /comunidades: listed and active, the same rows the public directory reads. */
+export const getCommunities = () =>
+  query((db) =>
+    db
+      .select({ slug: communities.slug, name: communities.name, logo: communities.logoUrl })
+      .from(communities)
+      .where(and(eq(communities.listed, true), eq(communities.isActive, true)))
+  ).pipe(Effect.map((rows): StageCommunity[] => rows.toSorted((a, b) => a.name.localeCompare(b.name, "es"))));
+
+// ---------------------------------------------------------------------------
+// «Owy, en vivo»: broadcast-only relay between the presenter's phone and the Mac seat
+// ---------------------------------------------------------------------------
+
+/** A phone's command for the seat. Nothing is stored: with no seat listening it is simply gone. */
+export const talkCommand = (command: TalkCommand) =>
+  broadcast("command", command, OWY_TALK_CHANNEL).pipe(Effect.as({ ok: true as const }));
+
+/** The seat's heartbeat, stamped with the server's clock so every phone ages it the same way. */
+export const talkStatus = (status: SeatStatus) =>
+  broadcast("status", { ...status, at: new Date().toISOString() }, OWY_TALK_CHANNEL).pipe(
+    Effect.as({ ok: true as const })
+  );

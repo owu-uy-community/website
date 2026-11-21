@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Check, EyeOff, MessageCircleQuestion, Pin, type LucideIcon } from "lucide-react";
 
@@ -12,7 +12,7 @@ import { Button } from "components/shared/ui/button";
 import { Skeleton } from "components/shared/ui/skeleton";
 import { toast } from "components/shared/ui/toast-utils";
 import { orpc } from "lib/orpc";
-import { rankQuestions } from "lib/owy-stage/questions";
+import { rankQuestions, type RankedQuestion } from "lib/owy-stage/questions";
 import type { Moderation } from "lib/owy-stage/scenes";
 
 /** How many the wall lists (the live questions scene). */
@@ -31,7 +31,14 @@ const ACTIONS: Action[] = [
  * The questions of the round on air, ranked like the wall shows them, with what the moderator
  * can do to each: pin it on top, mark it answered (it dims), or hide it (from the phones too).
  */
-export function QuestionsPanel({ round }: { round: string }) {
+export function QuestionsPanel({
+  round,
+  extra,
+}: {
+  round: string;
+  /** More actions under each question (the talk console: Owy reads it, Owy answers it…). */
+  extra?: (question: RankedQuestion) => ReactNode;
+}) {
   const { inputs, loaded, failed, retry } = useInputsWithStatus(round);
   const questions = rankQuestions(inputs);
   const hidden = questions.filter((question) => question.moderation === "hidden").length;
@@ -94,14 +101,17 @@ export function QuestionsPanel({ round }: { round: string }) {
                   >
                     {question.moderation === "answered" ? "✓" : "▲"} {question.votes}
                   </span>
-                  <p
-                    className={cn(
-                      "line-clamp-3 min-w-0 flex-1 text-ui text-pretty",
-                      question.moderation === "hidden" && "line-through"
-                    )}
-                  >
-                    {question.value}
-                  </p>
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={cn(
+                        "line-clamp-3 text-ui text-pretty",
+                        question.moderation === "hidden" && "line-through"
+                      )}
+                    >
+                      {question.value}
+                    </p>
+                    {extra?.(question)}
+                  </div>
                   <span className="flex shrink-0 gap-1">
                     {ACTIONS.map(({ moderation, on, off, icon: Icon }) => {
                       const active = question.moderation === moderation;

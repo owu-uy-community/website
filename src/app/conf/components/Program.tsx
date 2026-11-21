@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { CONF_DATES } from "app/lib/constants";
 
-import { OPEN_SPACE_TIMES, TALKS, type Talk } from "../talks";
+import { DAY_TIMES, OPEN_SPACE_TIMES, TALKS, type Talk } from "../talks";
 
 import Reveal, { EASE_OUT } from "./Reveal";
 import SectionHeader from "./SectionHeader";
@@ -174,13 +174,12 @@ function TopicNote() {
 const speakerNames = ({ speakers }: Talk) => speakers.map(({ name }) => name).join(" y ");
 
 /*
- * The 19:40–19:45 speaker changeover is deliberately absent: it is internal
+ * The 19:50–19:55 speaker changeover is deliberately absent: it is internal
  * logistics, and the gap between the two talks already shows it.
  */
 const SESSIONS: Session[] = [
   {
-    start: "14:30",
-    end: "15:00",
+    ...DAY_TIMES.recepcion,
     title: "Recepción y acreditación",
     blurb: "Registro, credenciales y café de bienvenida",
     description: (
@@ -283,8 +282,7 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-tap",
   },
   {
-    start: "20:25",
-    end: "20:40",
+    ...DAY_TIMES.despedida,
     title: "Despedida y foto",
     blurb: "Agradecimientos y foto de toda la comunidad",
     description: (
@@ -297,14 +295,14 @@ const SESSIONS: Session[] = [
     iconAnim: "group-hover:animate-agenda-flash",
   },
   {
-    start: "20:40",
-    title: "After",
-    blurb: "Te invitamos a seguirla un rato más",
+    ...DAY_TIMES.after,
+    title: "After en MBC",
+    blurb: "Cruzando la calle: te invitamos a seguirla un rato más",
     description: (
       <>
-        Cuando termina la parte formal seguimos cerca, sin agenda y sin horarios. <Hl>Es totalmente opcional</Hl>, pero
-        es donde las conversaciones que quedaron por la mitad siguen sin reloj y donde{" "}
-        <Hl yellow>se conoce a la gente sin apuro</Hl>. El lugar se anuncia el mismo día.
+        Cuando termina la parte formal cruzamos la calle: el after es <Hl yellow>enfrente, en MBC</Hl>, sin agenda y sin
+        horarios. <Hl>Es totalmente opcional</Hl>, pero es donde las conversaciones que quedaron por la mitad siguen sin
+        reloj y donde se conoce a la gente sin apuro.
       </>
     ),
     Icon: Beer,
@@ -331,7 +329,8 @@ export default function Program() {
 
       <Reveal delay={0.15} y={20}>
         <p className="mt-6 max-w-[620px] text-base leading-relaxed text-[#FBF5E7]/80 min-[1440px]:text-lg">
-          De 14:30 a 20:40 en Sinergia Faro: open space construido por la comunidad, charlas para cerrar y after.
+          De 14:30 a 20:50 en Sinergia Faro: open space construido por la comunidad, charlas para cerrar y after
+          enfrente, en MBC.
         </p>
       </Reveal>
 

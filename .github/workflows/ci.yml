@@ -49,6 +49,30 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm test:coverage
+      # The companion face runtime: checked-in WASM matches the firmware sources,
+      # and the browser voice client still speaks the bridge's protocol.
+      - run: pnpm companion:emulator:test
+      - run: pnpm companion:voice:test
+
+  owy:
+    name: Owy agent and companion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          # owy/ is its own pnpm root (Node >=24 for eve); same pnpm as the bridge's Docker image.
+          version: 11.10.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: owy/pnpm-lock.yaml
+      - run: pnpm -C owy install --frozen-lockfile
+      - run: pnpm -C owy typecheck
+      - run: pnpm -C owy companion:test
+      # The firmware's own C++ (gestures, the face model) under ASan/UBSan.
+      - run: pnpm -C owy companion:interaction-test
 
   integration:
     name: Integration tests
@@ -138,7 +162,7 @@ jobs:
   ci-success:
     name: CI passed
     if: always()
-    needs: [check, unit, integration, e2e]
+    needs: [check, unit, owy, integration, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Every job succeeded

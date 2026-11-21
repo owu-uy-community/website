@@ -45,6 +45,7 @@ export const toStickyNote = (track: PlacedTrack): StickyNote => ({
   roomId: track.roomId,
   room: track.room?.name || track.roomId,
   roomColor: track.room?.color ?? undefined,
+  roomIcon: track.room?.icon ?? undefined,
   timeSlot: track.schedule ? `${track.schedule.startTime} - ${track.schedule.endTime}` : track.scheduleId,
   topics: track.topics ?? null,
   format: track.format ?? null,
@@ -79,7 +80,7 @@ const occupantOf = (scheduleId: string, roomId: string, exceptTrackId?: string) 
 const lostTheRace = (scheduleId: string, roomId: string) => () =>
   occupantOf(scheduleId, roomId).pipe(Effect.flatMap((title) => Effect.fail(slotTaken(title ?? "otra charla"))));
 
-const loadNote = (id: string) =>
+export const loadNote = (id: string) =>
   query((db) => db.query.tracks.findFirst({ where: eq(tracks.id, id), with: { room: true, schedule: true } })).pipe(
     Effect.flatMap((track) => (track ? Effect.succeed(toStickyNote(track)) : Effect.fail(trackNotFound)))
   );

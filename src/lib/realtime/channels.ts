@@ -1,3 +1,5 @@
+import type { COMPANION_CHANNEL as ContractCompanionChannel } from "../../../owy/companion/bridge/src/web/contract";
+
 /**
  * Realtime channel naming. Event-scoped channels carry a topic suffix so one
  * subscription key never leaks across tenants.
@@ -44,3 +46,17 @@ export function obsQueueChannel(instanceId: number): string {
 export function obsControlChannel(instanceId: number): string {
   return `private:obs:${instanceId}`;
 }
+
+/**
+ * «Owy, en vivo»: the presenter's phone sends Owy commands here and the Mac console that holds
+ * the bridge socket (the seat) runs them and reports its status back. `private:` — admin only.
+ */
+export const OWY_TALK_CHANNEL = "private:owy-talk";
+
+/**
+ * The companion's control plane: settings rows and commands for the bridge on the venue Mac, its
+ * status and command results for the panels (/admin/owy, /admin/companion). `private:` — `stage:operate` (the bridge's key
+ * has it; OBS stays out of its reach). The bridge's contract owns the name; typed against it here,
+ * so client bundles that import channels don't carry the contract.
+ */
+export const COMPANION_CHANNEL: typeof ContractCompanionChannel = "private:companion";

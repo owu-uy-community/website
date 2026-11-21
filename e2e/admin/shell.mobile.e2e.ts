@@ -15,5 +15,7 @@ test("on a phone the tab bar is solid, and a settings save bar sits above it", a
 
   // "Más" opens the whole menu. (A dispatched click: in dev the query devtools' button covers that corner.)
   await tabs.getByRole("button", { name: "Más" }).dispatchEvent("click");
-  await expect(page.getByRole("dialog", { name: "Menú" }).getByRole("link", { name: "Ajustes" })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Menú" }).getByRole("link", { name: "Ajustes", exact: true })
+  ).toBeVisible();
 });

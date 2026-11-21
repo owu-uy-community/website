@@ -17,6 +17,7 @@ import {
 import { useRealtimeChannel } from "hooks/useRealtimeChannel";
 import { client, type StickyNote } from "lib/orpc";
 import { visibleQuestions } from "lib/owy-stage/questions";
+import { inputKey, slideInput, slideSteps, talkSlide, vsRevealed, vsRound } from "lib/owy-stage/talk/deck";
 import {
   DEFAULT_STAGE_STATE,
   INTERACTIVE_SCENES,
@@ -124,6 +125,8 @@ function Activity({
         );
       case "live-questions":
         return <Questions round={state.round} send={send} voter={voter} />;
+      case "owy-charla":
+        return <Talk params={params as SceneParams<"owy-charla">} round={state.round} send={send} voter={voter} />;
       case "reactions":
         return <ReactButtons send={(v) => send("reaction", v, "multi")} />;
       case "quiz": {
@@ -350,10 +353,12 @@ function Questions({
   round,
   voter,
   send,
+  prompt = "¿Qué le preguntarías al escenario?",
 }: {
   round: string;
   voter: string;
   send: (key: string, value: string, mode?: Mode) => Promise<boolean>;
+  prompt?: string;
 }) {
   const inputs = useInputs(round);
   const [text, setText] = useState("");
@@ -362,7 +367,7 @@ function Questions({
   const questions = visibleQuestions(inputs);
   return (
     <>
-      <Prompt>¿Qué le preguntarías al escenario?</Prompt>
+      <Prompt>{prompt}</Prompt>
       <form
         className="mt-6 flex gap-2"
         onSubmit={async (e) => {
@@ -399,6 +404,61 @@ function Questions({
           </li>
         ))}
       </ul>
+    </>
+  );
+}
+
+/**
+ * «Owy, en vivo»: the slide on the wall decides the input (a vote, stars, reactions), and a question
+ * for Owy is always one tap away: the whole talk is one round, so it reaches the Q&A.
+ */
+function Talk({
+  params,
+  round,
+  voter,
+  send,
+}: {
+  params: SceneParams<"owy-charla">;
+  round: string;
+  voter: string;
+  send: (key: string, value: string, mode?: Mode) => Promise<boolean>;
+}) {
+  const [asking, setAsking] = useState(false);
+  const slide = talkSlide(params.slide);
+  const step = Math.min(params.step, slideSteps(slide) - 1);
+  const input = slideInput(slide);
+  const key = inputKey(slide, step);
+  const ask = <Questions prompt="Mandale tu pregunta a Owy" round={round} send={send} voter={voter} />;
+  if (input.kind === "question") return ask;
+
+  const body =
+    slide.layout === "vs" && vsRevealed(step) ? (
+      <Prompt>¡Mirá la pantalla! 👀</Prompt>
+    ) : input.kind === "vote" ? (
+      <Choice
+        key={key}
+        options={input.options}
+        prompt={slide.layout === "vs" ? `${input.prompt} (ronda ${vsRound(step) + 1})` : input.prompt}
+        send={(v) => send(key, v)}
+      />
+    ) : input.kind === "stars" ? (
+      <Stars key={key} prompt={input.prompt} send={(v) => send(key, v)} />
+    ) : (
+      <ReactButtons send={(v) => send(key, v, "multi")} />
+    );
+
+  return (
+    <>
+      {body}
+      <div className="mt-10 border-t border-[#FBF5E7]/15 pt-6">
+        {asking ? (
+          ask
+        ) : (
+          <button className="text-lg font-bold text-[#F5BB03]" onClick={() => setAsking(true)} type="button">
+            ¿Tenés una pregunta para Owy? →
+          </button>
+        )}
+      </div>
     </>
   );
 }

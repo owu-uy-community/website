@@ -7,9 +7,10 @@ import { MonitorPlay, PencilRuler, Users } from "lucide-react";
 import OpenSpaceMap from "components/Meetups/2024/OpenSpace/Map";
 import { RoomStatusBadge } from "components/Meetups/OpenSpace/atoms/RoomStatusBadge";
 import type { Schedule, StickyNote } from "lib/orpc";
+import { RoomMark } from "lib/rooms/icons";
 
 import type { BoardRoom } from "./board";
-import { trackAt } from "./board";
+import { trackAt, zoneColors } from "./board";
 import type { Selection } from "./selection";
 
 type LiveMapProps = {
@@ -75,6 +76,7 @@ export default function LiveMap({
             {/* The SVG lights a zone by name; rooms bind to zones in board.ts */}
             <div className="mx-auto aspect-[1315/654] w-full max-w-[720px]">
               <OpenSpaceMap
+                colors={zoneColors(onMap)}
                 event={lit?.zone ? { location: lit.zone } : null}
                 onRoomClick={(zone) => {
                   const roomId = roomByZone.get(zone);
@@ -101,11 +103,7 @@ export default function LiveMap({
                     type="button"
                     onClick={() => pick(room.id)}
                   >
-                    <span
-                      aria-hidden="true"
-                      className="h-2.5 w-2.5 shrink-0 rotate-45"
-                      style={{ backgroundColor: room.color }}
-                    />
+                    <RoomMark className="h-3 w-3" color={room.color} icon={room.icon} />
                     <span className="min-w-0">
                       <span className="flex items-center gap-2">
                         <span className="font-display text-[11px] leading-none font-bold tracking-[0.12em] text-[#FBF5E7]/75 uppercase">

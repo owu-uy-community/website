@@ -4,7 +4,17 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { tool, type ToolSet } from "ai";
 import { z } from "zod";
-import { getBoard, resolveActiveEvent } from "../../../../agent/lib/board";
+import { resolveActiveEvent } from "../../../../agent/lib/board";
+import { PROPOSE_TALK_DESCRIPTION, ProposeTalkSchema, proposalRefusal } from "../../../../agent/lib/proposals";
+import {
+  describeValue,
+  settingSpec,
+  VOICE_KEYS,
+  voiceMay,
+  voiceValue,
+  type SettingCheck,
+  type SettingKey,
+} from "../web/registry";
 import type { Logger } from "../log";
 
 /**
@@ -21,7 +31,11 @@ import type { Logger } from "../log";
 export const TOOLS_DIR = path.resolve(import.meta.dirname, "../../../../agent/tools");
 
 /** Tools that need eve runtime features the bridge cannot provide. */
-export const SKIPPED_TOOLS = new Set<string>(["digitize_board_photo"]);
+export const SKIPPED_TOOLS = new Set<string>([
+  "digitize_board_photo",
+  // `defineDynamic` (eve's per-channel tools): only makes sense inside eve; the local brain has its own `propose_talk`.
+  "companion",
+]);
 
 /** Structural view of an eve `defineTool` module (kept local so the bridge does not depend on eve's type exports). */
 export interface OwyToolDefinition {
@@ -75,6 +89,15 @@ export interface ToolRuntime {
   setVolume?(pct: number): void;
   logger: Logger;
   now?: () => Date;
+  /**
+   * Owy's settings by voice (tool `ajustes`): read one in effect, or change it (the session picks
+   * the target: its own board for device settings, the bridge for the rest). Absent: only the
+   * volume (`set_volume`), as on a browser's virtual Owy.
+   */
+  settings?: {
+    get(key: SettingKey): unknown;
+    set(key: SettingKey, value: unknown): SettingCheck & { later?: string };
+  };
 }
 
 export const DEFAULT_TOOL_TIMEOUT_MS = 20_000;
@@ -91,16 +114,6 @@ function isToolDefinition(value: unknown): value is OwyToolDefinition {
   );
 }
 
-function isDynamicDefinition(value: unknown): boolean {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "events" in value &&
-    typeof (value as { events: unknown }).events === "object" &&
-    !("execute" in value)
-  );
-}
-
 export async function loadOwyToolDefinitions(dir = TOOLS_DIR): Promise<Map<string, OwyToolDefinition>> {
   const files = (await readdir(dir)).filter((file) => file.endsWith(".ts") && !file.endsWith(".d.ts"));
   const definitions = new Map<string, OwyToolDefinition>();
@@ -109,9 +122,6 @@ export async function loadOwyToolDefinitions(dir = TOOLS_DIR): Promise<Map<strin
     const name = file.slice(0, -3);
     if (SKIPPED_TOOLS.has(name)) continue;
     const module = (await import(pathToFileURL(path.join(dir, file)).href)) as { default?: unknown };
-    // `defineDynamic` resolvers (per-channel tools such as agent/tools/companion.ts)
-    // only make sense inside eve; the local brain has its own `propose_talk`.
-    if (isDynamicDefinition(module.default)) continue;
     if (!isToolDefinition(module.default)) {
       throw new Error(`agent/tools/${file} no exporta un defineTool por defecto`);
     }
@@ -279,16 +289,6 @@ export function trimForVoice(name: string, output: unknown): unknown {
 
 // ── Bridge-only tools ─────────────────────────────────────────────────────
 
-const proposeTalkSchema = z.object({
-  title: z.string().min(2).describe("Título de la charla, como lo dijo la persona"),
-  speaker: z.string().min(1).describe("Nombre de quien la da"),
-  room: z.string().min(1).describe("Sala elegida (nombre)"),
-  timeSlot: z.string().min(1).describe("Horario elegido (nombre del bloque o hora, ej: '15:30')"),
-  needsTV: z.boolean().optional().describe("Necesita tele/proyector"),
-  needsWhiteboard: z.boolean().optional().describe("Necesita pizarra"),
-  description: z.string().optional().describe("Una línea opcional sobre el tema"),
-});
-
 const showOnScreenSchema = z.object({
   kind: z.enum(["qr", "text", "card", "face"]).describe("qr = QR de la grilla; text = un texto corto; card = una card; face = expresión"),
   text: z.string().max(120).optional().describe("Texto corto para kind=text o caption del QR"),
@@ -298,24 +298,6 @@ const showOnScreenSchema = z.object({
   timeSlot: z.string().optional(),
   face: z.enum(["idle", "listening", "thinking", "speaking", "happy", "error", "offline"]).optional(),
 });
-
-function nowInMontevideo(now: Date): { hhmm: string; minutes: number } {
-  const parts = new Intl.DateTimeFormat("es-UY", {
-    timeZone: "America/Montevideo",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-  const hour = Number(parts.find((p) => p.type === "hour")?.value ?? 0) % 24;
-  const minute = Number(parts.find((p) => p.type === "minute")?.value ?? 0);
-  return { hhmm: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`, minutes: hour * 60 + minute };
-}
-
-function toMinutes(hhmm: string): number | null {
-  const match = /^(\d{1,2}):(\d{2})/.exec(hhmm.trim());
-  if (!match) return null;
-  return Number(match[1]) * 60 + Number(match[2]);
-}
 
 export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition>, runtime: ToolRuntime): ToolSet {
   const set: ToolSet = {};
@@ -332,24 +314,18 @@ export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition
   const createTrack = definitions.get("create_track");
 
   set.propose_talk = tool({
-    description:
-      "Carga en la grilla del open space una charla propuesta en el mercado de ideas. Usala SOLO después de confirmar en voz alta título, speaker, sala y horario con la persona. Funciona mientras el mercado de ideas está abierto (o en modo staff).",
-    inputSchema: proposeTalkSchema,
+    description: PROPOSE_TALK_DESCRIPTION,
+    inputSchema: ProposeTalkSchema,
     execute: async (input) => {
-      const staff = runtime.isStaff();
-      if (!staff && !runtime.isMarketplaceOpen()) {
-        return {
-          ok: false,
-          error:
-            "El mercado de ideas está cerrado en este momento: las propuestas se toman solo durante el mercado. Que hablen con el staff.",
-        };
-      }
       const now = (runtime.now ?? (() => new Date()))().getTime();
-      const last = lastProposalAt.get(runtime.deviceId) ?? 0;
-      if (!staff && now - last < runtime.proposalCooldownMs) {
-        const wait = Math.ceil((runtime.proposalCooldownMs - (now - last)) / 1000);
-        return { ok: false, error: `Acabo de cargar una propuesta; esperá ${wait} segundos para la siguiente.` };
-      }
+      const refusal = proposalRefusal({
+        staff: runtime.isStaff(),
+        marketplaceOpen: runtime.isMarketplaceOpen(),
+        lastAt: lastProposalAt.get(runtime.deviceId) ?? null,
+        now,
+        cooldownMs: runtime.proposalCooldownMs,
+      });
+      if (refusal) return { ok: false, error: refusal };
       if (!createTrack) {
         return { ok: false, error: "La herramienta create_track no está disponible." };
       }
@@ -403,40 +379,50 @@ export function buildCompanionToolSet(definitions: Map<string, OwyToolDefinition
     },
   });
 
-  set.event_now = tool({
-    description:
-      "Qué hora es en Montevideo y qué bloque del open space está pasando ahora y cuál viene después, con las charlas del bloque actual. Usala para 'qué hay ahora', 'cuándo empieza el próximo bloque'.",
-    inputSchema: z.object({}),
-    execute: async () => {
-      const board = await getBoard();
-      const { hhmm, minutes } = nowInMontevideo((runtime.now ?? (() => new Date()))());
-      const slots = board.schedules
-        .map((schedule) => ({
-          name: schedule.name,
-          startTime: schedule.startTime,
-          endTime: schedule.endTime,
-          start: toMinutes(schedule.startTime),
-          end: toMinutes(schedule.endTime),
-        }))
-        .filter((slot) => slot.start !== null)
-        .sort((a, b) => (a.start as number) - (b.start as number));
-
-      const current = slots.find((slot) => (slot.start as number) <= minutes && (slot.end ?? Infinity) > minutes) ?? null;
-      const next = slots.find((slot) => (slot.start as number) > minutes) ?? null;
-      const talksNow = current
-        ? board.cards
-            .filter((card) => card.timeSlot === `${current.startTime} - ${current.endTime}` || card.timeSlot === current.name)
-            .map((card) => `«${card.title}» en ${card.room ?? "sala sin definir"}`)
-        : [];
-
-      return {
-        now: hhmm,
-        openSpace: board.openSpace.name,
-        currentBlock: current ? { name: current.name, from: current.startTime, to: current.endTime, talks: talksNow } : null,
-        nextBlock: next ? { name: next.name, from: next.startTime, to: next.endTime } : null,
-      };
-    },
-  });
+  const settings = runtime.settings;
+  if (settings) {
+    set.ajustes = tool({
+      description:
+        "Lee o cambia los ajustes de Owy (el que te habla). Sin `clave`: la lista de los que podés tocar, con su valor. Con `clave` sola: lee uno. Con `valor` (\"sí\", \"no\", un número o una opción, como lo dijo la persona) o `paso` (cuánto subir o bajar, ej. volumen +15 / -15): lo cambia. Cualquiera puede cambiar el brillo y las animaciones mínimas, y ponerte en pausa; lo demás es solo para staff. Contá el resultado en una frase.",
+      inputSchema: z.object({
+        clave: z
+          .enum(VOICE_KEYS as [string, ...string[]])
+          .optional()
+          .describe(VOICE_KEYS.map((key) => `${key}: ${settingSpec(key).label}`).join("; ")),
+        valor: z.string().max(200).optional().describe("El valor pedido, en palabras o número"),
+        paso: z.number().min(-100).max(100).optional().describe("Para números: cuánto sumar (negativo: restar)"),
+      }),
+      execute: async ({ clave, valor, paso }) => {
+        const staff = runtime.isStaff();
+        if (!clave)
+          return {
+            ajustes: VOICE_KEYS.filter((key) => staff || settingSpec(key).voice === "public").map((key) => ({
+              clave: key,
+              nombre: settingSpec(key).label,
+              valor: describeValue(key, settings.get(key)),
+            })),
+          };
+        const key = clave as SettingKey;
+        const spec = settingSpec(key);
+        if (valor === undefined && paso === undefined) return { nombre: spec.label, valor: describeValue(key, settings.get(key)) };
+        const wanted = voiceValue(key, valor, paso, settings.get(key));
+        if (!wanted.ok) return { ok: false, error: wanted.error };
+        const may = voiceMay(key, wanted.value, staff);
+        if (!may.ok) return { ok: false, error: may.error };
+        const result = settings.set(key, wanted.value);
+        if (!result.ok) return { ok: false, error: result.error };
+        return {
+          ok: true,
+          nombre: spec.label,
+          valor: describeValue(key, result.value),
+          cuando:
+            result.later ??
+            (spec.apply === "now" ? "ya" : spec.apply === "turn" ? "desde el próximo turno" : "cuando el bridge se reinicie, en un momento sin charlas"),
+        };
+      },
+    });
+    return set;
+  }
 
   set.set_volume = tool({
     description:

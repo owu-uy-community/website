@@ -8,7 +8,9 @@ import { defineEval } from "eve/evals";
  *
  * Needs the site API reachable (`digitize_board_photo` calls the site's OCR), hence `live`.
  */
-const card = await readFile(new URL("../fixtures/card-en-blanco.png", import.meta.url));
+// From the app root (eve runs evals there, like its own fixture loaders): eve compiles this
+// module into node_modules/.cache, so a path relative to import.meta.url points nowhere.
+const card = await readFile("evals/fixtures/card-en-blanco.png");
 
 export default defineEval({
   description: "Una card en blanco se digitaliza sin inventar datos ni tocar la grilla.",
@@ -16,7 +18,7 @@ export default defineEval({
   async test(t) {
     await t.send([
       { type: "text", text: "Che, cargá esta card del open space" },
-      { type: "file", mediaType: "image/png", data: card },
+      { type: "file", mediaType: "image/png", data: card.toString("base64") },
     ]);
 
     t.succeeded();
