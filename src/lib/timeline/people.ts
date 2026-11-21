@@ -1,8 +1,6 @@
 import "server-only";
 
-import { cache } from "react";
-
-import { getTimeline } from "./data";
+import { getTimeline, once } from "./data";
 import type { TimelineCommunity, TimelineEvent, TimelinePerson, TimelinePersonChip, TimelineTalk } from "./types";
 
 /*
@@ -22,7 +20,7 @@ export function organizersOf(event: TimelineEvent): TimelinePersonChip[] {
 export type GivenTalk = { event: TimelineEvent; talk: TimelineTalk };
 
 /** Each profile's events and talks, oldest first */
-const byPerson = cache(() => {
+const byPerson = once(() => {
   const events = new Map<string, TimelineEvent[]>();
   const talks = new Map<string, GivenTalk[]>();
   for (const event of getTimeline().events) {
