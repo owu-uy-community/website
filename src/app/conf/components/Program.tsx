@@ -174,7 +174,7 @@ function TopicNote() {
 const speakerNames = ({ speakers }: Talk) => speakers.map(({ name }) => name).join(" y ");
 
 /*
- * The 19:40–19:45 speaker changeover is deliberately absent: it is internal
+ * The 19:50–19:55 speaker changeover is deliberately absent: it is internal
  * logistics, and the gap between the two talks already shows it.
  */
 const SESSIONS: Session[] = [
@@ -329,7 +329,7 @@ export default function Program() {
 
       <Reveal delay={0.15} y={20}>
         <p className="mt-6 max-w-[620px] text-base leading-relaxed text-[#FBF5E7]/80 min-[1440px]:text-lg">
-          De 14:30 a 20:40 en Sinergia Faro: open space construido por la comunidad, charlas para cerrar y after
+          De 14:30 a 20:50 en Sinergia Faro: open space construido por la comunidad, charlas para cerrar y after
           enfrente, en MBC.
         </p>
       </Reveal>

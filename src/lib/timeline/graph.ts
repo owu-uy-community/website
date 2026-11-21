@@ -2,9 +2,8 @@ import "server-only";
 
 import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
-import { cache } from "react";
 
-import { getTimeline, isCommunityEvent } from "./data";
+import { getTimeline, isCommunityEvent, once } from "./data";
 import { getVenues } from "./venues";
 
 /*
@@ -38,7 +37,7 @@ const hash = (text: string, seed: number) => {
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
-export const getGraph = cache((): TimelineGraph => {
+export const getGraph = once((): TimelineGraph => {
   const { events, community, person } = getTimeline();
   const { venues } = getVenues();
 
