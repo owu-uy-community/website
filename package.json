@@ -111,7 +111,7 @@
     "@vercel/blob": "2.8.2",
     "@vercel/functions": "3.9.3",
     "@vercel/speed-insights": "2.0.0",
-    "ai": "7.0.159",
+    "ai": "7.0.173",
     "atropos": "2.0.2",
     "barcode-detector": "3.2.2",
     "better-auth": "1.7.12",
